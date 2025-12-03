@@ -15,14 +15,18 @@ import {
   ExternalLink,
   Upload,
   X,
-  AlertCircle,
-  Check
+  Check,
+  Plus,
+  Minus,
+  Sliders,
+  Palette
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import { Button, Textarea, Input, Modal } from '../components/ui';
 import { FeatureSelector, FEATURES, type Feature } from '../components/FeatureSelector';
 import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
+import { ImageSelector, type SelectedImage, type ReferenceType } from '../components/ImageSelector';
 import toast from 'react-hot-toast';
 
 const stylePresets = [
@@ -50,6 +54,7 @@ const backgroundOptions = [
   { id: 'urban', name: '都市', prompt: 'urban city background, street scene' },
   { id: 'nature', name: '自然', prompt: 'nature background, forest or garden' },
   { id: 'custom', name: 'カスタム', prompt: '' },
+  { id: 'reference', name: '参考画像から', prompt: '' },
 ];
 
 const colorOptions = [
@@ -67,11 +72,113 @@ const colorOptions = [
   { id: 'gray', name: 'グレー', color: '#6b7280' },
 ];
 
-// Features that require image upload
-const IMAGE_REQUIRED_FEATURES = ['remove-bg', 'upscale', 'variations', 'colorize'];
+const patternOptions = [
+  { id: 'solid', name: '無地', icon: '◼' },
+  { id: 'stripe', name: 'ストライプ', icon: '▤' },
+  { id: 'check', name: 'チェック', icon: '▦' },
+  { id: 'dot', name: 'ドット', icon: '⚬' },
+  { id: 'floral', name: '花柄', icon: '✿' },
+  { id: 'geometric', name: '幾何学', icon: '◆' },
+  { id: 'camo', name: '迷彩', icon: '🌿' },
+  { id: 'animal', name: 'アニマル', icon: '🐆' },
+  { id: 'custom', name: 'カスタム', icon: '📷' },
+];
 
-// Features that are text-to-image only
-const TEXT_ONLY_FEATURES = ['campaign-image', 'scene-coordinate', 'design-gacha', 'product-shots', 'model-matrix', 'multilingual-banner', 'optimize-prompt'];
+const sceneOptions = [
+  { id: 'cafe', name: 'カフェ', prompt: 'in a cozy cafe, warm lighting' },
+  { id: 'street', name: 'ストリート', prompt: 'on urban street, city background' },
+  { id: 'office', name: 'オフィス', prompt: 'in modern office, professional setting' },
+  { id: 'outdoor', name: 'アウトドア', prompt: 'outdoor nature, park or garden' },
+  { id: 'beach', name: 'ビーチ', prompt: 'beach seaside, summer vibe' },
+  { id: 'studio', name: 'スタジオ', prompt: 'professional studio, clean background' },
+];
+
+// Feature configuration for reference images
+const FEATURE_CONFIG: Record<string, {
+  requiresImage: boolean;
+  allowedReferenceTypes: ReferenceType[];
+  defaultReferenceType: ReferenceType;
+  referenceLabel: string;
+  referenceHint: string;
+}> = {
+  'campaign-image': {
+    requiresImage: false,
+    allowedReferenceTypes: ['style', 'composition'],
+    defaultReferenceType: 'style',
+    referenceLabel: '参考画像（任意）',
+    referenceHint: 'スタイルや構図の参考として使用されます',
+  },
+  'scene-coordinate': {
+    requiresImage: true,
+    allowedReferenceTypes: ['base'],
+    defaultReferenceType: 'base',
+    referenceLabel: '商品画像',
+    referenceHint: 'この商品を様々なシーンに配置します',
+  },
+  'colorize': {
+    requiresImage: true,
+    allowedReferenceTypes: ['base', 'pattern'],
+    defaultReferenceType: 'base',
+    referenceLabel: '対象画像',
+    referenceHint: 'カラバリや柄を変更する画像',
+  },
+  'design-gacha': {
+    requiresImage: false,
+    allowedReferenceTypes: ['style', 'base'],
+    defaultReferenceType: 'style',
+    referenceLabel: '参考画像（任意）',
+    referenceHint: 'スタイルの参考またはベース画像として使用',
+  },
+  'product-shots': {
+    requiresImage: false,
+    allowedReferenceTypes: ['base', 'style'],
+    defaultReferenceType: 'base',
+    referenceLabel: '実物商品画像（任意）',
+    referenceHint: 'アップロードすると、この画像を元に4方向のカットを生成します',
+  },
+  'model-matrix': {
+    requiresImage: false,
+    allowedReferenceTypes: ['base', 'style'],
+    defaultReferenceType: 'base',
+    referenceLabel: '商品画像（任意）',
+    referenceHint: 'モデルに着用させる商品の参考画像',
+  },
+  'multilingual-banner': {
+    requiresImage: false,
+    allowedReferenceTypes: ['base', 'style'],
+    defaultReferenceType: 'base',
+    referenceLabel: 'ベース画像（任意）',
+    referenceHint: 'バナーの背景やベースとして使用',
+  },
+  'remove-bg': {
+    requiresImage: true,
+    allowedReferenceTypes: ['base'],
+    defaultReferenceType: 'base',
+    referenceLabel: '対象画像',
+    referenceHint: '背景を削除する画像',
+  },
+  'upscale': {
+    requiresImage: true,
+    allowedReferenceTypes: ['base'],
+    defaultReferenceType: 'base',
+    referenceLabel: '対象画像',
+    referenceHint: '高解像度化する画像',
+  },
+  'variations': {
+    requiresImage: true,
+    allowedReferenceTypes: ['base'],
+    defaultReferenceType: 'base',
+    referenceLabel: '元画像',
+    referenceHint: 'この画像のバリエーションを生成します',
+  },
+  'optimize-prompt': {
+    requiresImage: false,
+    allowedReferenceTypes: ['style'],
+    defaultReferenceType: 'style',
+    referenceLabel: '参考画像（任意）',
+    referenceHint: 'この画像のスタイルを参考にプロンプトを最適化',
+  },
+};
 
 interface GeneratedResult {
   id: string;
@@ -95,11 +202,12 @@ export function GeneratePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedResult[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [generateCount, setGenerateCount] = useState(4);
   
-  // Image upload state
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  // Reference image state
+  const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
+  const [backgroundReferenceImage, setBackgroundReferenceImage] = useState<SelectedImage | null>(null);
+  const [patternReferenceImage, setPatternReferenceImage] = useState<SelectedImage | null>(null);
   
   // Feature-specific state
   const [productDescription, setProductDescription] = useState('');
@@ -108,85 +216,45 @@ export function GeneratePage() {
   const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
   const [selectedBodyTypes, setSelectedBodyTypes] = useState(['slim', 'regular', 'plus']);
   const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s', '30s', '40s']);
+  const [selectedScenes, setSelectedScenes] = useState(['cafe', 'street', 'office']);
   
   // Background & Color options
   const [selectedBackground, setSelectedBackground] = useState('white');
   const [customBackground, setCustomBackground] = useState('');
   const [selectedColors, setSelectedColors] = useState<string[]>(['red', 'blue', 'green']);
+  const [customColor, setCustomColor] = useState('#000000');
+  const [selectedPattern, setSelectedPattern] = useState('solid');
   const [upscaleScale, setUpscaleScale] = useState<2 | 4>(2);
   const [variationCount, setVariationCount] = useState(4);
+  const [variationStrength, setVariationStrength] = useState(50);
+  
+  // Upscale options
+  const [denoiseLevel, setDenoiseLevel] = useState<'low' | 'medium' | 'high'>('medium');
+  const [sharpness, setSharpness] = useState(50);
+  
+  // Model options
+  const [skinTone, setSkinTone] = useState<'light' | 'medium' | 'dark'>('medium');
+  const [hairStyle, setHairStyle] = useState<'short' | 'medium' | 'long'>('medium');
+
+  const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
 
   const handleFeatureSelect = (feature: Feature) => {
     setSelectedFeature(feature);
     setGeneratedImages([]);
-    setUploadedImage(null);
-    setUploadedFile(null);
+    setReferenceImage(null);
+    setBackgroundReferenceImage(null);
+    setPatternReferenceImage(null);
     setShowSuccessCard(false);
   };
 
   const handleBack = () => {
     setSelectedFeature(null);
     setGeneratedImages([]);
-    setUploadedImage(null);
-    setUploadedFile(null);
+    setReferenceImage(null);
+    setBackgroundReferenceImage(null);
+    setPatternReferenceImage(null);
     setShowSuccessCard(false);
   };
-
-  // Image upload handlers
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      processFile(file);
-    }
-  };
-
-  const processFile = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      toast.error('画像ファイルを選択してください');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('ファイルサイズは10MB以下にしてください');
-      return;
-    }
-
-    setUploadedFile(file);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setUploadedImage(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      processFile(file);
-    }
-  };
-
-  const removeUploadedImage = () => {
-    setUploadedImage(null);
-    setUploadedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const requiresImageUpload = selectedFeature && IMAGE_REQUIRED_FEATURES.includes(selectedFeature.id);
 
   const handleGenerate = async () => {
     if (!currentBrand) {
@@ -194,8 +262,8 @@ export function GeneratePage() {
       return;
     }
 
-    // Validate image upload for features that require it
-    if (requiresImageUpload && !uploadedImage) {
+    // Validate required image
+    if (featureConfig?.requiresImage && !referenceImage) {
       toast.error('画像をアップロードしてください');
       return;
     }
@@ -206,21 +274,24 @@ export function GeneratePage() {
       let data;
       let error;
 
+      const baseBody = {
+        brandId: currentBrand.id,
+        referenceImage: referenceImage?.url,
+        referenceType: referenceImage?.referenceType,
+      };
+
       switch (selectedFeature?.id) {
         case 'remove-bg':
-          if (!uploadedImage) {
-            toast.error('画像をアップロードしてください');
-            setIsGenerating(false);
-            return;
-          }
           const bgPrompt = selectedBackground === 'custom' ? customBackground : 
+            selectedBackground === 'reference' && backgroundReferenceImage ? 'use reference image' :
             backgroundOptions.find(b => b.id === selectedBackground)?.prompt || '';
           
           ({ data, error } = await supabase.functions.invoke('remove-background', {
             body: { 
-              imageUrl: uploadedImage, 
-              brandId: currentBrand.id,
-              newBackground: bgPrompt
+              ...baseBody,
+              imageUrl: referenceImage?.url, 
+              newBackground: bgPrompt,
+              backgroundReferenceImage: backgroundReferenceImage?.url,
             }
           }));
           if (data?.resultUrl) {
@@ -234,16 +305,14 @@ export function GeneratePage() {
           break;
 
         case 'colorize':
-          if (!uploadedImage) {
-            toast.error('画像をアップロードしてください');
-            setIsGenerating(false);
-            return;
-          }
           ({ data, error } = await supabase.functions.invoke('colorize', {
             body: { 
-              imageUrl: uploadedImage, 
-              brandId: currentBrand.id,
-              colors: selectedColors
+              ...baseBody,
+              imageUrl: referenceImage?.url, 
+              colors: selectedColors.includes('custom') ? [...selectedColors.filter(c => c !== 'custom'), customColor] : selectedColors,
+              pattern: selectedPattern,
+              patternReferenceImage: patternReferenceImage?.url,
+              count: generateCount,
             }
           }));
           if (data?.variations) {
@@ -257,16 +326,13 @@ export function GeneratePage() {
           break;
 
         case 'upscale':
-          if (!uploadedImage) {
-            toast.error('画像をアップロードしてください');
-            setIsGenerating(false);
-            return;
-          }
           ({ data, error } = await supabase.functions.invoke('upscale', {
             body: { 
-              imageUrl: uploadedImage, 
-              brandId: currentBrand.id,
-              scale: upscaleScale
+              ...baseBody,
+              imageUrl: referenceImage?.url, 
+              scale: upscaleScale,
+              denoiseLevel,
+              sharpness,
             }
           }));
           if (data?.resultUrl) {
@@ -280,16 +346,12 @@ export function GeneratePage() {
           break;
 
         case 'variations':
-          if (!uploadedImage) {
-            toast.error('画像をアップロードしてください');
-            setIsGenerating(false);
-            return;
-          }
           ({ data, error } = await supabase.functions.invoke('generate-variations', {
             body: { 
-              imageUrl: uploadedImage, 
-              brandId: currentBrand.id,
+              ...baseBody,
+              imageUrl: referenceImage?.url, 
               count: variationCount,
+              strength: variationStrength / 100,
               prompt: prompt || undefined
             }
           }));
@@ -303,6 +365,30 @@ export function GeneratePage() {
           }
           break;
 
+        case 'scene-coordinate':
+          if (!referenceImage) {
+            toast.error('商品画像をアップロードしてください');
+            setIsGenerating(false);
+            return;
+          }
+          ({ data, error } = await supabase.functions.invoke('generate-variations', {
+            body: { 
+              ...baseBody,
+              imageUrl: referenceImage.url,
+              scenes: selectedScenes.map(s => sceneOptions.find(sc => sc.id === s)?.prompt),
+              count: selectedScenes.length,
+            }
+          }));
+          if (data?.variations) {
+            setGeneratedImages(data.variations.map((v: any, i: number) => ({
+              id: v.storagePath || Date.now().toString() + i,
+              imageUrl: v.imageUrl,
+              prompt: selectedScenes[i],
+              label: sceneOptions.find(s => s.id === selectedScenes[i])?.name || `シーン ${i + 1}`
+            })));
+          }
+          break;
+
         case 'design-gacha':
           if (!prompt.trim()) {
             toast.error('ブリーフを入力してください');
@@ -310,7 +396,11 @@ export function GeneratePage() {
             return;
           }
           ({ data, error } = await supabase.functions.invoke('design-gacha', {
-            body: { brief: prompt, brandId: currentBrand.id, directions: 4 }
+            body: { 
+              ...baseBody,
+              brief: prompt, 
+              directions: generateCount 
+            }
           }));
           if (data?.variations) {
             setGeneratedImages(data.variations.map((v: any) => ({
@@ -323,13 +413,18 @@ export function GeneratePage() {
           break;
 
         case 'product-shots':
-          if (!productDescription.trim()) {
-            toast.error('商品説明を入力してください');
+          if (!productDescription.trim() && !referenceImage) {
+            toast.error('商品説明または商品画像を入力してください');
             setIsGenerating(false);
             return;
           }
           ({ data, error } = await supabase.functions.invoke('product-shots', {
-            body: { productDescription, brandId: currentBrand.id }
+            body: { 
+              ...baseBody,
+              productDescription,
+              selectedShots: ['front', 'side', 'back', 'detail'].slice(0, generateCount),
+              background: selectedBackground,
+            }
           }));
           if (data?.shots) {
             setGeneratedImages(data.shots.map((s: any) => ({
@@ -342,17 +437,19 @@ export function GeneratePage() {
           break;
 
         case 'model-matrix':
-          if (!productDescription.trim()) {
-            toast.error('商品説明を入力してください');
+          if (!productDescription.trim() && !referenceImage) {
+            toast.error('商品説明または商品画像を入力してください');
             setIsGenerating(false);
             return;
           }
           ({ data, error } = await supabase.functions.invoke('model-matrix', {
             body: { 
+              ...baseBody,
               productDescription, 
-              brandId: currentBrand.id,
               bodyTypes: selectedBodyTypes,
-              ageGroups: selectedAgeGroups
+              ageGroups: selectedAgeGroups,
+              skinTone,
+              hairStyle,
             }
           }));
           if (data?.matrix) {
@@ -373,9 +470,9 @@ export function GeneratePage() {
           }
           ({ data, error } = await supabase.functions.invoke('multilingual-banner', {
             body: { 
+              ...baseBody,
               headline, 
               subheadline,
-              brandId: currentBrand.id,
               languages: selectedLanguages,
               aspectRatio: selectedRatio
             }
@@ -397,7 +494,11 @@ export function GeneratePage() {
             return;
           }
           ({ data, error } = await supabase.functions.invoke('optimize-prompt', {
-            body: { prompt, style: selectedStyle }
+            body: { 
+              prompt, 
+              style: selectedStyle,
+              referenceImageUrl: referenceImage?.url,
+            }
           }));
           if (data?.optimized_prompt) {
             toast.success('プロンプトを最適化しました');
@@ -409,7 +510,6 @@ export function GeneratePage() {
           break;
 
         case 'campaign-image':
-        case 'scene-coordinate':
         default:
           if (!prompt.trim()) {
             toast.error('プロンプトを入力してください');
@@ -426,11 +526,12 @@ export function GeneratePage() {
           const ratio = aspectRatios.find(r => r.id === selectedRatio) || aspectRatios[0];
           ({ data, error } = await supabase.functions.invoke('generate-image', {
             body: {
+              ...baseBody,
               prompt: fullPrompt,
               negativePrompt,
               width: ratio.width,
               height: ratio.height,
-              brandId: currentBrand.id
+              count: generateCount,
             }
           }));
           if (data?.images) {
@@ -474,70 +575,37 @@ export function GeneratePage() {
     }
   };
 
-  // Render image upload section
-  const renderImageUpload = () => (
-    <div className="mb-6">
+  // Render generation count selector
+  const renderCountSelector = (label: string = '生成数', min: number = 1, max: number = 8) => (
+    <div className="mb-4">
       <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-        <Upload className="w-4 h-4 inline-block mr-1" />
-        元画像をアップロード <span className="text-red-500">*</span>
+        {label}
       </label>
-      
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-
-      {!uploadedImage ? (
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`
-            border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all
-            ${isDragging 
-              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' 
-              : 'border-neutral-300 dark:border-neutral-600 hover:border-primary-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
-            }
-          `}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setGenerateCount(Math.max(min, generateCount - 1))}
+          disabled={generateCount <= min}
+          className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-700 disabled:opacity-50"
         >
-          <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-700 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Upload className="w-8 h-8 text-neutral-400" />
-          </div>
-          <p className="text-neutral-600 dark:text-neutral-300 font-medium mb-1">
-            クリックまたはドラッグ&ドロップ
-          </p>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            PNG, JPG, WebP（最大10MB）
-          </p>
-        </div>
-      ) : (
-        <div className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-          <img
-            src={uploadedImage}
-            alt="Uploaded"
-            className="w-full max-h-64 object-contain"
-          />
-          <button
-            onClick={removeUploadedImage}
-            className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-black/70 rounded-lg text-white transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-          <div className="absolute bottom-2 left-2 px-2 py-1 bg-green-500 text-white text-xs rounded-lg flex items-center gap-1">
-            <Check className="w-3 h-3" />
-            アップロード完了
-          </div>
-        </div>
-      )}
+          <Minus className="w-4 h-4" />
+        </button>
+        <span className="w-12 text-center font-semibold text-lg">{generateCount}</span>
+        <button
+          onClick={() => setGenerateCount(Math.min(max, generateCount + 1))}
+          disabled={generateCount >= max}
+          className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-700 disabled:opacity-50"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+        <span className="text-sm text-neutral-500">枚</span>
+      </div>
     </div>
   );
 
   const renderFeatureForm = () => {
     if (!selectedFeature) return null;
+
+    const config = FEATURE_CONFIG[selectedFeature.id];
 
     switch (selectedFeature.id) {
       // === IMAGE REQUIRED FEATURES ===
@@ -545,13 +613,21 @@ export function GeneratePage() {
       case 'remove-bg':
         return (
           <div className="space-y-4">
-            {renderImageUpload()}
+            <ImageSelector
+              label={config?.referenceLabel || '対象画像'}
+              required
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={['base']}
+              defaultReferenceType="base"
+              hint={config?.referenceHint}
+            />
             
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                 新しい背景
               </label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 {backgroundOptions.map((bg) => (
                   <button
                     key={bg.id}
@@ -575,6 +651,19 @@ export function GeneratePage() {
                   onChange={(e) => setCustomBackground(e.target.value)}
                 />
               )}
+
+              {selectedBackground === 'reference' && (
+                <div className="mt-3">
+                  <ImageSelector
+                    label="背景参考画像"
+                    value={backgroundReferenceImage}
+                    onChange={setBackgroundReferenceImage}
+                    allowedReferenceTypes={['base']}
+                    defaultReferenceType="base"
+                    hint="この画像を背景として合成します"
+                  />
+                </div>
+              )}
             </div>
           </div>
         );
@@ -582,7 +671,15 @@ export function GeneratePage() {
       case 'colorize':
         return (
           <div className="space-y-4">
-            {renderImageUpload()}
+            <ImageSelector
+              label={config?.referenceLabel || '対象画像'}
+              required
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={['base']}
+              defaultReferenceType="base"
+              hint={config?.referenceHint}
+            />
             
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
@@ -612,18 +709,86 @@ export function GeneratePage() {
                     <span className="text-xs text-neutral-600 dark:text-neutral-400">{color.name}</span>
                   </button>
                 ))}
+                {/* Custom color */}
+                <button
+                  onClick={() => {
+                    setSelectedColors(prev => 
+                      prev.includes('custom')
+                        ? prev.filter(c => c !== 'custom')
+                        : [...prev, 'custom']
+                    );
+                  }}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                    selectedColors.includes('custom')
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
+                      : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
+                  }`}
+                >
+                  <input
+                    type="color"
+                    value={customColor}
+                    onChange={(e) => setCustomColor(e.target.value)}
+                    className="w-8 h-8 rounded-full cursor-pointer"
+                  />
+                  <span className="text-xs text-neutral-600 dark:text-neutral-400">カスタム</span>
+                </button>
               </div>
               <p className="text-xs text-neutral-500 mt-2">
                 {selectedColors.length}色選択中
               </p>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                パターン/柄
+              </label>
+              <div className="grid grid-cols-5 gap-2">
+                {patternOptions.map((pattern) => (
+                  <button
+                    key={pattern.id}
+                    onClick={() => setSelectedPattern(pattern.id)}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                      selectedPattern === pattern.id
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
+                    }`}
+                  >
+                    <span className="text-xl">{pattern.icon}</span>
+                    <span className="text-xs text-neutral-600 dark:text-neutral-400">{pattern.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              {selectedPattern === 'custom' && (
+                <div className="mt-3">
+                  <ImageSelector
+                    label="パターン参考画像"
+                    value={patternReferenceImage}
+                    onChange={setPatternReferenceImage}
+                    allowedReferenceTypes={['pattern']}
+                    defaultReferenceType="pattern"
+                    hint="この柄・テクスチャを適用します"
+                  />
+                </div>
+              )}
+            </div>
+
+            {renderCountSelector('生成数', 1, 12)}
           </div>
         );
 
       case 'upscale':
         return (
           <div className="space-y-4">
-            {renderImageUpload()}
+            <ImageSelector
+              label={config?.referenceLabel || '対象画像'}
+              required
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={['base']}
+              defaultReferenceType="base"
+              hint={config?.referenceHint}
+            />
             
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
@@ -642,10 +807,54 @@ export function GeneratePage() {
                   >
                     <div className="text-2xl font-bold text-neutral-800 dark:text-white">{scale}x</div>
                     <div className="text-sm text-neutral-500 dark:text-neutral-400">
-                      {scale === 2 ? '標準' : '最大'}
+                      {scale === 2 ? '2048×2048' : '4096×4096'}
                     </div>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                <Sliders className="w-4 h-4 inline mr-1" />
+                品質オプション
+              </label>
+              <div className="space-y-3 p-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-neutral-600 dark:text-neutral-400">ノイズ除去</span>
+                    <span className="text-neutral-800 dark:text-neutral-200">{denoiseLevel === 'low' ? '弱' : denoiseLevel === 'medium' ? '中' : '強'}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {(['low', 'medium', 'high'] as const).map((level) => (
+                      <button
+                        key={level}
+                        onClick={() => setDenoiseLevel(level)}
+                        className={`flex-1 py-1.5 text-xs rounded-lg transition-all ${
+                          denoiseLevel === level
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
+                        }`}
+                      >
+                        {level === 'low' ? '弱' : level === 'medium' ? '中' : '強'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-neutral-600 dark:text-neutral-400">シャープネス</span>
+                    <span className="text-neutral-800 dark:text-neutral-200">{sharpness}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={sharpness}
+                    onChange={(e) => setSharpness(Number(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -654,26 +863,34 @@ export function GeneratePage() {
       case 'variations':
         return (
           <div className="space-y-4">
-            {renderImageUpload()}
+            <ImageSelector
+              label={config?.referenceLabel || '元画像'}
+              required
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={['base']}
+              defaultReferenceType="base"
+              hint={config?.referenceHint}
+            />
             
+            {renderCountSelector('生成数', 2, 8)}
+
             <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                生成数
-              </label>
-              <div className="flex gap-2">
-                {[2, 4, 6, 8].map((count) => (
-                  <button
-                    key={count}
-                    onClick={() => setVariationCount(count)}
-                    className={`px-4 py-2 rounded-lg border-2 transition-all ${
-                      variationCount === count
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
-                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
-                    }`}
-                  >
-                    {count}枚
-                  </button>
-                ))}
+              <div className="flex justify-between text-sm mb-2">
+                <span className="font-medium text-neutral-700 dark:text-neutral-300">類似度</span>
+                <span className="text-neutral-500">{variationStrength}%</span>
+              </div>
+              <input
+                type="range"
+                min="10"
+                max="90"
+                value={variationStrength}
+                onChange={(e) => setVariationStrength(Number(e.target.value))}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-neutral-500 mt-1">
+                <span>大きく変化</span>
+                <span>ほぼ同じ</span>
               </div>
             </div>
             
@@ -687,7 +904,52 @@ export function GeneratePage() {
           </div>
         );
 
-      // === TEXT-TO-IMAGE FEATURES ===
+      case 'scene-coordinate':
+        return (
+          <div className="space-y-4">
+            <ImageSelector
+              label="商品画像"
+              required
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={['base']}
+              defaultReferenceType="base"
+              hint="この商品を様々なシーンに配置します"
+            />
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                シーン選択（複数選択可）
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {sceneOptions.map((scene) => (
+                  <button
+                    key={scene.id}
+                    onClick={() => {
+                      setSelectedScenes(prev =>
+                        prev.includes(scene.id)
+                          ? prev.filter(s => s !== scene.id)
+                          : [...prev, scene.id]
+                      );
+                    }}
+                    className={`px-3 py-2 text-sm rounded-lg border-2 transition-all ${
+                      selectedScenes.includes(scene.id)
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
+                    }`}
+                  >
+                    {scene.name}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-neutral-500 mt-2">
+                {selectedScenes.length}シーンを生成します
+              </p>
+            </div>
+          </div>
+        );
+
+      // === TEXT-TO-IMAGE FEATURES WITH OPTIONAL REFERENCE ===
 
       case 'design-gacha':
         return (
@@ -699,9 +961,21 @@ export function GeneratePage() {
               onChange={(e) => setPrompt(e.target.value)}
               rows={3}
             />
+
+            <ImageSelector
+              label={config?.referenceLabel || '参考画像（任意）'}
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={config?.allowedReferenceTypes || ['style', 'base']}
+              defaultReferenceType={config?.defaultReferenceType || 'style'}
+              hint={config?.referenceHint}
+            />
+
+            {renderCountSelector('スタイル数', 2, 8)}
+
             <div className="bg-primary-50 dark:bg-primary-900/20 rounded-xl p-4">
               <p className="text-sm text-primary-800 dark:text-primary-200">
-                💡 8つのスタイル方向（ミニマル、ラグジュアリー、ストリート等）から4つをランダムに選んで生成します
+                💡 {generateCount}つのスタイル方向（ミニマル、ラグジュアリー、ストリート等）から生成します
               </p>
             </div>
           </div>
@@ -717,9 +991,42 @@ export function GeneratePage() {
               onChange={(e) => setProductDescription(e.target.value)}
               rows={3}
             />
+
+            <ImageSelector
+              label={config?.referenceLabel || '実物商品画像（任意）'}
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={config?.allowedReferenceTypes || ['base', 'style']}
+              defaultReferenceType={config?.defaultReferenceType || 'base'}
+              hint={config?.referenceHint}
+            />
+
+            {renderCountSelector('カット数', 1, 4)}
+
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                背景
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {['white', 'studio', 'transparent'].map((bg) => (
+                  <button
+                    key={bg}
+                    onClick={() => setSelectedBackground(bg)}
+                    className={`px-4 py-2 text-sm rounded-lg border-2 transition-all ${
+                      selectedBackground === bg
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
+                    }`}
+                  >
+                    {backgroundOptions.find(b => b.id === bg)?.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                📸 正面・側面・背面・ディテールの4カットを自動生成します
+                📸 正面・側面・背面・ディテールの{generateCount}カットを生成します
               </p>
             </div>
           </div>
@@ -735,6 +1042,16 @@ export function GeneratePage() {
               onChange={(e) => setProductDescription(e.target.value)}
               rows={3}
             />
+
+            <ImageSelector
+              label={config?.referenceLabel || '商品画像（任意）'}
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={config?.allowedReferenceTypes || ['base', 'style']}
+              defaultReferenceType={config?.defaultReferenceType || 'base'}
+              hint={config?.referenceHint}
+            />
+
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">体型</label>
               <div className="flex gap-2 flex-wrap">
@@ -759,6 +1076,7 @@ export function GeneratePage() {
                 ))}
               </div>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">年代</label>
               <div className="flex gap-2 flex-wrap">
@@ -779,9 +1097,62 @@ export function GeneratePage() {
                 ))}
               </div>
             </div>
-            <p className="text-xs text-neutral-500">
-              {selectedBodyTypes.length * selectedAgeGroups.length}パターンを生成します
-            </p>
+
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700"
+            >
+              <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+              モデル詳細オプション
+            </button>
+
+            {showAdvanced && (
+              <div className="space-y-3 p-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl">
+                <div>
+                  <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1">肌トーン</label>
+                  <div className="flex gap-2">
+                    {(['light', 'medium', 'dark'] as const).map((tone) => (
+                      <button
+                        key={tone}
+                        onClick={() => setSkinTone(tone)}
+                        className={`flex-1 py-1.5 text-xs rounded-lg transition-all ${
+                          skinTone === tone
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
+                        }`}
+                      >
+                        {tone === 'light' ? '明るめ' : tone === 'medium' ? '中間' : '暗め'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1">髪の長さ</label>
+                  <div className="flex gap-2">
+                    {(['short', 'medium', 'long'] as const).map((style) => (
+                      <button
+                        key={style}
+                        onClick={() => setHairStyle(style)}
+                        className={`flex-1 py-1.5 text-xs rounded-lg transition-all ${
+                          hairStyle === style
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-400'
+                        }`}
+                      >
+                        {style === 'short' ? 'ショート' : style === 'medium' ? 'ミディアム' : 'ロング'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                ⚠️ {selectedBodyTypes.length * selectedAgeGroups.length}パターンを生成します
+                {selectedBodyTypes.length * selectedAgeGroups.length > 6 && '（生成に時間がかかる場合があります）'}
+              </p>
+            </div>
           </div>
         );
 
@@ -800,6 +1171,16 @@ export function GeneratePage() {
               value={subheadline}
               onChange={(e) => setSubheadline(e.target.value)}
             />
+
+            <ImageSelector
+              label={config?.referenceLabel || 'ベース画像（任意）'}
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={config?.allowedReferenceTypes || ['base', 'style']}
+              defaultReferenceType={config?.defaultReferenceType || 'base'}
+              hint={config?.referenceHint}
+            />
+
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">言語</label>
               <div className="flex gap-2 flex-wrap">
@@ -825,6 +1206,7 @@ export function GeneratePage() {
                 ))}
               </div>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">サイズ</label>
               <div className="flex gap-2 flex-wrap">
@@ -856,6 +1238,16 @@ export function GeneratePage() {
               onChange={(e) => setPrompt(e.target.value)}
               rows={3}
             />
+
+            <ImageSelector
+              label={config?.referenceLabel || '参考画像（任意）'}
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={config?.allowedReferenceTypes || ['style']}
+              defaultReferenceType={config?.defaultReferenceType || 'style'}
+              hint={config?.referenceHint}
+            />
+
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">スタイル</label>
               <div className="flex flex-wrap gap-2">
@@ -874,6 +1266,7 @@ export function GeneratePage() {
                 ))}
               </div>
             </div>
+
             <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-4">
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
                 ✨ 日本語プロンプトを英語に翻訳し、AI画像生成に最適化します
@@ -914,6 +1307,16 @@ export function GeneratePage() {
               onChange={(e) => setPrompt(e.target.value)}
               rows={4}
             />
+
+            <ImageSelector
+              label={config?.referenceLabel || '参考画像（任意）'}
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={config?.allowedReferenceTypes || ['style', 'composition']}
+              defaultReferenceType={config?.defaultReferenceType || 'style'}
+              hint={config?.referenceHint}
+            />
+
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">スタイルプリセット</label>
               <div className="flex flex-wrap gap-2">
@@ -932,6 +1335,7 @@ export function GeneratePage() {
                 ))}
               </div>
             </div>
+
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">アスペクト比</label>
               <div className="flex flex-wrap gap-2">
@@ -950,6 +1354,9 @@ export function GeneratePage() {
                 ))}
               </div>
             </div>
+
+            {renderCountSelector('生成数', 1, 4)}
+
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700"
@@ -1008,12 +1415,12 @@ export function GeneratePage() {
             </button>
             <div className="flex items-center gap-3">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                requiresImageUpload 
+                featureConfig?.requiresImage 
                   ? 'bg-purple-100 dark:bg-purple-900/50' 
                   : 'bg-primary-100 dark:bg-primary-900/50'
               }`}>
                 <selectedFeature.icon className={`w-6 h-6 ${
-                  requiresImageUpload 
+                  featureConfig?.requiresImage 
                     ? 'text-purple-600 dark:text-purple-400' 
                     : 'text-primary-600 dark:text-primary-400'
                 }`} />
@@ -1029,19 +1436,9 @@ export function GeneratePage() {
             </div>
           </div>
 
-          {/* Feature type indicator */}
-          {requiresImageUpload && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-              <Upload className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span className="text-sm text-purple-700 dark:text-purple-300">
-                この機能は画像のアップロードが必要です
-              </span>
-            </div>
-          )}
-
           <div className="card dark:bg-neutral-800 dark:border-neutral-700">
-            {/* Prompt History Button (for text-based features) */}
-            {!requiresImageUpload && selectedFeature.id !== 'chat-edit' && (
+            {/* Prompt History Button */}
+            {!featureConfig?.requiresImage && selectedFeature.id !== 'chat-edit' && (
               <div className="flex justify-end mb-4">
                 <button
                   onClick={() => setShowPromptHistory(true)}
@@ -1059,7 +1456,7 @@ export function GeneratePage() {
               <Button
                 onClick={handleGenerate}
                 isLoading={isGenerating}
-                disabled={isGenerating || (requiresImageUpload && !uploadedImage)}
+                disabled={isGenerating || (featureConfig?.requiresImage && !referenceImage)}
                 className="w-full mt-6"
                 size="lg"
                 leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
@@ -1091,7 +1488,7 @@ export function GeneratePage() {
           </div>
 
           {isGenerating && (
-            <div className="bg-white dark:bg-neutral-800 rounded-2xl p-12 text-center shadow-soft animate-pulse">
+            <div className="bg-white dark:bg-neutral-800 rounded-2xl p-12 text-center shadow-soft">
               <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-accent-100 dark:from-primary-900/50 dark:to-accent-900/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
               </div>
@@ -1101,6 +1498,9 @@ export function GeneratePage() {
               <p className="text-neutral-500 dark:text-neutral-400">
                 {selectedFeature.id === 'model-matrix' ? '複数画像の生成には時間がかかります' : '通常20〜30秒かかります'}
               </p>
+              <div className="mt-4 w-48 h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full mx-auto overflow-hidden">
+                <div className="h-full bg-primary-500 rounded-full animate-pulse" style={{ width: '60%' }} />
+              </div>
             </div>
           )}
 
@@ -1111,7 +1511,7 @@ export function GeneratePage() {
                 生成結果がここに表示されます
               </h3>
               <p className="text-neutral-500 dark:text-neutral-400">
-                {requiresImageUpload 
+                {featureConfig?.requiresImage 
                   ? '画像をアップロードして開始' 
                   : '左のフォームに入力して開始'
                 }

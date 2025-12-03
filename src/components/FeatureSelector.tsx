@@ -50,7 +50,8 @@ export const FEATURES: Feature[] = [
     icon: Camera,
     category: 'marketing',
     apiEndpoint: 'generate-variations',
-    examplePrompt: '白いTシャツ × カフェ/ストリート/オフィス',
+    examplePrompt: '商品画像をアップロード → シーンを選択',
+    requiresImage: true,
   },
   
   // Design

@@ -7,3 +7,5 @@ export { DerivationTree } from './DerivationTree';
 export { CollaboratorCursors } from './CollaboratorCursors';
 export { ImageEditModal } from './ImageEditModal';
 export { CanvasGuide, useCanvasGuide } from './CanvasGuide';
+export { ContextMenu } from './ContextMenu';
+export { EmptyCanvasGuide } from './EmptyCanvasGuide';
