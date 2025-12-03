@@ -7,11 +7,16 @@ import {
   ArrowRight,
   Clock,
   TrendingUp,
-  Layout
+  Layout,
+  HelpCircle,
+  BookOpen,
+  Lightbulb,
+  Zap
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import { Button, Modal, Input, Textarea } from '../components/ui';
+import { Onboarding, useOnboarding } from '../components/Onboarding';
 import type { GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
 
@@ -42,9 +47,28 @@ const quickActions = [
   }
 ];
 
+const tips = [
+  {
+    icon: Lightbulb,
+    title: '日本語でOK',
+    description: 'プロンプトは日本語で入力できます。AIが自動で最適化します。'
+  },
+  {
+    icon: Zap,
+    title: 'デザインガチャ',
+    description: '1つのブリーフから複数スタイルを一括生成できます。'
+  },
+  {
+    icon: BookOpen,
+    title: 'チャット編集',
+    description: '「もっと明るく」など対話形式で画像を編集できます。'
+  }
+];
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user, profile, currentBrand, setCurrentBrand } = useAuthStore();
+  const { showOnboarding, completeOnboarding, resetOnboarding } = useOnboarding();
   const [recentImages, setRecentImages] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showBrandModal, setShowBrandModal] = useState(false);
@@ -57,7 +81,6 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (!currentBrand && user) {
-      // Show brand creation modal if no brand exists
       checkBrands();
     } else if (currentBrand) {
       fetchRecentImages();
@@ -160,15 +183,28 @@ export function DashboardPage() {
 
   return (
     <>
+      {/* Onboarding */}
+      {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-display font-semibold text-neutral-900 mb-2">
-            こんにちは、{profile?.name || 'ユーザー'}さん
-          </h1>
-          <p className="text-neutral-600">
-            今日も素敵な画像を生成しましょう。
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-display font-semibold text-neutral-900 mb-2">
+              こんにちは、{profile?.name || 'ユーザー'}さん
+            </h1>
+            <p className="text-neutral-600">
+              今日も素敵な画像を生成しましょう。
+            </p>
+          </div>
+          <button
+            onClick={resetOnboarding}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
+            title="チュートリアルを再表示"
+          >
+            <HelpCircle className="w-4 h-4" />
+            <span className="hidden sm:inline">ヘルプ</span>
+          </button>
         </div>
 
         {/* Quick Actions */}
@@ -228,22 +264,49 @@ export function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="bg-neutral-50 rounded-2xl p-12 text-center">
-              <Image className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-neutral-700 mb-2">
+            <div className="bg-gradient-to-br from-neutral-50 to-neutral-100 rounded-2xl p-12 text-center border border-neutral-200">
+              <div className="w-20 h-20 bg-gradient-to-br from-primary-100 to-accent-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Image className="w-10 h-10 text-primary-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-neutral-800 mb-2">
                 まだ画像がありません
               </h3>
-              <p className="text-neutral-500 mb-6">
-                最初の画像を生成してみましょう
+              <p className="text-neutral-500 mb-6 max-w-md mx-auto">
+                最初の画像を生成してみましょう。日本語でプロンプトを入力するだけで、AIがプロ品質の画像を作成します。
               </p>
-              <Link to="/generate">
-                <Button leftIcon={<Plus className="w-4 h-4" />}>
-                  画像を生成
-                </Button>
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link to="/generate">
+                  <Button size="lg" leftIcon={<Sparkles className="w-5 h-5" />}>
+                    画像を生成
+                  </Button>
+                </Link>
+                <Link to="/canvas">
+                  <Button size="lg" variant="secondary" leftIcon={<Layout className="w-5 h-5" />}>
+                    キャンバスを開く
+                  </Button>
+                </Link>
+              </div>
             </div>
           )}
         </div>
+
+        {/* Tips for new users */}
+        {recentImages.length === 0 && (
+          <div className="mb-12">
+            <h2 className="text-lg font-semibold text-neutral-800 mb-4">💡 使い方のヒント</h2>
+            <div className="grid sm:grid-cols-3 gap-4">
+              {tips.map((tip, i) => (
+                <div key={i} className="bg-white rounded-xl p-5 shadow-soft">
+                  <div className="w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center mb-3">
+                    <tip.icon className="w-5 h-5 text-primary-600" />
+                  </div>
+                  <h3 className="font-medium text-neutral-800 mb-1">{tip.title}</h3>
+                  <p className="text-sm text-neutral-500">{tip.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid sm:grid-cols-3 gap-6">
@@ -285,9 +348,11 @@ export function DashboardPage() {
         size="md"
       >
         <form onSubmit={handleCreateBrand} className="space-y-4">
-          <p className="text-neutral-600 mb-4">
-            まずはブランドを作成しましょう。ブランド情報は後から編集できます。
-          </p>
+          <div className="bg-primary-50 rounded-xl p-4 mb-4">
+            <p className="text-sm text-primary-800">
+              🎉 ようこそ！まずはブランドを作成しましょう。ブランドごとに画像やスタイルを管理できます。
+            </p>
+          </div>
           
           <Input
             label="ブランド名"
@@ -318,11 +383,10 @@ export function DashboardPage() {
             className="w-full"
             size="lg"
           >
-            ブランドを作成
+            ブランドを作成してはじめる
           </Button>
         </form>
       </Modal>
     </>
   );
 }
-

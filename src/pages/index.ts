@@ -7,3 +7,5 @@ export { GeneratePage } from './GeneratePage';
 export { GalleryPage } from './GalleryPage';
 export { CanvasEditorPage } from './CanvasEditorPage';
 export { AdminDashboard } from './AdminDashboard';
+export { ForgotPasswordPage } from './ForgotPasswordPage';
+export { BrandSettingsPage } from './BrandSettingsPage';

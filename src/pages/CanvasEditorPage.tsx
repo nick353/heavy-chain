@@ -8,7 +8,19 @@ import {
   Upload,
   Wand2,
   Save,
-  Users
+  Users,
+  MessageSquare,
+  X,
+  Sparkles,
+  Image,
+  Palette,
+  Scissors,
+  ZoomIn,
+  RefreshCw,
+  Layout,
+  FileText,
+  Globe,
+  Grid3x3
 } from 'lucide-react';
 import {
   InfiniteCanvas,
@@ -17,26 +29,54 @@ import {
   Minimap,
   PropertiesPanel,
   DerivationTree,
+  ImageEditModal,
 } from '../components/canvas';
 import { useCanvasStore } from '../stores/canvasStore';
-import { Button, Modal } from '../components/ui';
+import { ChatEditor } from '../components/ChatEditor';
+import { TemplateSelector } from '../components/TemplateSelector';
+import { Button, Modal, Textarea, Input } from '../components/ui';
+import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';
 
 type ViewMode = 'canvas' | 'tree';
-type SidePanel = 'properties' | 'layers' | null;
+type SidePanel = 'properties' | 'chat' | 'templates' | null;
+type GenerateMode = 'basic' | 'gacha' | 'product-shots' | 'model-matrix' | 'multilingual';
+
+const GENERATE_MODES = [
+  { id: 'basic', name: '基本生成', icon: Image, description: 'テキストから画像を生成' },
+  { id: 'gacha', name: 'デザインガチャ', icon: Sparkles, description: '複数スタイルを一括生成' },
+  { id: 'product-shots', name: '商品カット', icon: Grid3x3, description: '4方向の商品画像' },
+  { id: 'model-matrix', name: 'モデルマトリクス', icon: Users, description: '体型×年齢の組み合わせ' },
+  { id: 'multilingual', name: '多言語バナー', icon: Globe, description: '日/英/中/韓バナー' },
+] as const;
 
 export function CanvasEditorPage() {
-  useParams(); // projectId for future use
+  useParams();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const { currentBrand } = useAuthStore();
   
   const [viewMode, setViewMode] = useState<ViewMode>('canvas');
   const [sidePanel, setSidePanel] = useState<SidePanel>('properties');
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [selectedPosition, setSelectedPosition] = useState({ x: 0, y: 0 });
+  
+  // Generate modal states
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateMode, setGenerateMode] = useState<GenerateMode>('basic');
   const [generatePrompt, setGeneratePrompt] = useState('');
+  const [productDescription, setProductDescription] = useState('');
+  const [headline, setHeadline] = useState('');
+  const [subheadline, setSubheadline] = useState('');
+  const [selectedBodyTypes, setSelectedBodyTypes] = useState(['slim', 'regular', 'plus']);
+  const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s', '30s', '40s']);
+  const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingImage, setEditingImage] = useState<string | null>(null);
   
   const {
     objects,
@@ -46,12 +86,10 @@ export function CanvasEditorPage() {
     redo,
   } = useCanvasStore();
 
-  // Get selected object
   const selectedObject = selectedIds.length === 1
     ? objects.find((obj) => obj.id === selectedIds[0]) || null
     : null;
 
-  // Update canvas size on resize
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
@@ -68,7 +106,6 @@ export function CanvasEditorPage() {
     return () => window.removeEventListener('resize', updateSize);
   }, [sidePanel]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -103,7 +140,6 @@ export function CanvasEditorPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
 
-  // Handle object selection for floating toolbar position
   const handleObjectSelect = useCallback((id: string | null) => {
     if (id && containerRef.current) {
       const obj = objects.find((o) => o.id === id);
@@ -116,7 +152,6 @@ export function CanvasEditorPage() {
     }
   }, [objects]);
 
-  // Add text
   const handleAddText = () => {
     addObject({
       type: 'text',
@@ -137,7 +172,6 @@ export function CanvasEditorPage() {
     });
   };
 
-  // Add shape
   const handleAddShape = (shapeType: 'rect' | 'circle') => {
     addObject({
       type: 'shape',
@@ -158,7 +192,6 @@ export function CanvasEditorPage() {
     });
   };
 
-  // Add frame
   const handleAddFrame = () => {
     addObject({
       type: 'frame',
@@ -177,7 +210,6 @@ export function CanvasEditorPage() {
     });
   };
 
-  // Handle file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -186,7 +218,7 @@ export function CanvasEditorPage() {
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = (event) => {
-          const img = new Image();
+          const img = new window.Image();
           img.onload = () => {
             addObject({
               type: 'image',
@@ -210,64 +242,439 @@ export function CanvasEditorPage() {
     });
   };
 
-  // Handle AI generation
-  const handleGenerate = async () => {
-    if (!generatePrompt.trim()) return;
-    
-    setIsGenerating(true);
-    try {
-      // TODO: Call actual AI generation API
-      toast.success('画像を生成中...');
-      
-      // Simulate generation delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      
-      // Add placeholder image
+  const addImageToCanvas = (imageUrl: string, label?: string) => {
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
       addObject({
         type: 'image',
-        x: canvasSize.width / 2 - 150,
-        y: canvasSize.height / 2 - 150,
-        width: 300,
-        height: 300,
+        x: 100 + Math.random() * 300,
+        y: 100 + Math.random() * 200,
+        width: Math.min(img.width, 300),
+        height: Math.min(img.height, 300),
         rotation: 0,
         scaleX: 1,
         scaleY: 1,
         opacity: 1,
         locked: false,
         visible: true,
-        src: 'https://via.placeholder.com/300',
+        src: imageUrl,
+        label,
       });
+    };
+    img.src = imageUrl;
+  };
+
+  const handleGenerate = async () => {
+    if (!currentBrand) {
+      toast.error('ブランドを選択してください');
+      return;
+    }
+    
+    setIsGenerating(true);
+    try {
+      let data;
+      let error;
+
+      switch (generateMode) {
+        case 'gacha':
+          if (!generatePrompt.trim()) {
+            toast.error('ブリーフを入力してください');
+            setIsGenerating(false);
+            return;
+          }
+          ({ data, error } = await supabase.functions.invoke('design-gacha', {
+            body: { brief: generatePrompt, brandId: currentBrand.id, directions: 4 }
+          }));
+          if (data?.variations) {
+            data.variations.forEach((v: any) => {
+              addImageToCanvas(v.imageUrl, v.directionName);
+            });
+            toast.success(`${data.variations.length}つのデザインを生成しました`);
+          }
+          break;
+
+        case 'product-shots':
+          if (!productDescription.trim()) {
+            toast.error('商品説明を入力してください');
+            setIsGenerating(false);
+            return;
+          }
+          ({ data, error } = await supabase.functions.invoke('product-shots', {
+            body: { productDescription, brandId: currentBrand.id }
+          }));
+          if (data?.shots) {
+            data.shots.forEach((s: any) => {
+              addImageToCanvas(s.imageUrl, s.shotName);
+            });
+            toast.success('商品カット（4方向）を生成しました');
+          }
+          break;
+
+        case 'model-matrix':
+          if (!productDescription.trim()) {
+            toast.error('商品説明を入力してください');
+            setIsGenerating(false);
+            return;
+          }
+          ({ data, error } = await supabase.functions.invoke('model-matrix', {
+            body: { 
+              productDescription, 
+              brandId: currentBrand.id,
+              bodyTypes: selectedBodyTypes,
+              ageGroups: selectedAgeGroups
+            }
+          }));
+          if (data?.matrix) {
+            data.matrix.forEach((m: any) => {
+              addImageToCanvas(m.imageUrl, `${m.bodyTypeName} × ${m.ageGroupName}`);
+            });
+            toast.success(`${data.matrix.length}パターンのモデル画像を生成しました`);
+          }
+          break;
+
+        case 'multilingual':
+          if (!headline.trim()) {
+            toast.error('ヘッドラインを入力してください');
+            setIsGenerating(false);
+            return;
+          }
+          ({ data, error } = await supabase.functions.invoke('multilingual-banner', {
+            body: { 
+              headline, 
+              subheadline,
+              brandId: currentBrand.id,
+              languages: selectedLanguages,
+              aspectRatio: '1:1'
+            }
+          }));
+          if (data?.banners) {
+            data.banners.forEach((b: any) => {
+              addImageToCanvas(b.imageUrl, b.languageName);
+            });
+            toast.success(`${data.banners.length}言語のバナーを生成しました`);
+          }
+          break;
+
+        default:
+          if (!generatePrompt.trim()) {
+            toast.error('プロンプトを入力してください');
+            setIsGenerating(false);
+            return;
+          }
+          ({ data, error } = await supabase.functions.invoke('generate-image', {
+            body: {
+              prompt: generatePrompt,
+              width: 1024,
+              height: 1024,
+              brandId: currentBrand.id
+            }
+          }));
+          if (data?.images && data.images.length > 0) {
+            data.images.forEach((img: any) => {
+              addImageToCanvas(img.imageUrl);
+            });
+            toast.success('画像を生成しました');
+          }
+      }
+
+      if (error) throw error;
       
       setShowGenerateModal(false);
       setGeneratePrompt('');
-      toast.success('画像を生成しました');
-    } catch (error) {
-      toast.error('画像生成に失敗しました');
+      setProductDescription('');
+      setHeadline('');
+      setSubheadline('');
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      toast.error(error.message || '画像生成に失敗しました');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  // Floating toolbar action handler
-  const handleFloatingAction = (action: string) => {
+  // Floating toolbar action handler - now with real API calls
+  const handleFloatingAction = async (action: string) => {
+    if (!selectedObject || selectedObject.type !== 'image') {
+      toast.error('画像を選択してください');
+      return;
+    }
+
+    const imageSrc = (selectedObject as any).src;
+    if (!imageSrc) return;
+
     switch (action) {
       case 'remove-bg':
-        toast('背景削除を実行中...', { icon: '✂️' });
+        toast.loading('背景削除を実行中...', { id: 'remove-bg' });
+        try {
+          const { data, error } = await supabase.functions.invoke('remove-background', {
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id }
+          });
+          if (error) throw error;
+          if (data?.resultUrl) {
+            addImageToCanvas(data.resultUrl, '背景削除');
+            toast.success('背景を削除しました', { id: 'remove-bg' });
+          }
+        } catch (err: any) {
+          toast.error(err.message || '背景削除に失敗しました', { id: 'remove-bg' });
+        }
         break;
+
       case 'colorize':
-        toast('カラバリを生成中...', { icon: '🎨' });
+        toast.loading('カラバリを生成中...', { id: 'colorize' });
+        try {
+          const { data, error } = await supabase.functions.invoke('colorize', {
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id, colors: ['red', 'blue', 'green', 'yellow'] }
+          });
+          if (error) throw error;
+          if (data?.variations) {
+            data.variations.forEach((v: any) => {
+              addImageToCanvas(v.imageUrl, v.colorName);
+            });
+            toast.success('カラバリを生成しました', { id: 'colorize' });
+          }
+        } catch (err: any) {
+          toast.error(err.message || 'カラバリ生成に失敗しました', { id: 'colorize' });
+        }
         break;
+
       case 'upscale':
-        toast('アップスケール中...', { icon: '📐' });
+        toast.loading('アップスケール中...', { id: 'upscale' });
+        try {
+          const { data, error } = await supabase.functions.invoke('upscale', {
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id, scale: 2 }
+          });
+          if (error) throw error;
+          if (data?.resultUrl) {
+            addImageToCanvas(data.resultUrl, '高解像度');
+            toast.success('アップスケールしました', { id: 'upscale' });
+          }
+        } catch (err: any) {
+          toast.error(err.message || 'アップスケールに失敗しました', { id: 'upscale' });
+        }
         break;
+
       case 'variations':
-        toast('バリエーションを生成中...', { icon: '🔄' });
+        toast.loading('バリエーションを生成中...', { id: 'variations' });
+        try {
+          const { data, error } = await supabase.functions.invoke('generate-variations', {
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id, count: 4 }
+          });
+          if (error) throw error;
+          if (data?.variations) {
+            data.variations.forEach((v: any, i: number) => {
+              addImageToCanvas(v.imageUrl, `バリエーション ${i + 1}`);
+            });
+            toast.success('バリエーションを生成しました', { id: 'variations' });
+          }
+        } catch (err: any) {
+          toast.error(err.message || 'バリエーション生成に失敗しました', { id: 'variations' });
+        }
         break;
+
+      case 'edit':
+        setEditingImage(imageSrc);
+        setShowEditModal(true);
+        break;
+
       case 'download':
-        toast.success('ダウンロードを開始しました');
+        try {
+          const response = await fetch(imageSrc);
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'image.png';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          toast.success('ダウンロードしました');
+        } catch {
+          toast.error('ダウンロードに失敗しました');
+        }
         break;
+
       default:
         break;
+    }
+  };
+
+  // Handle chat edit result
+  const handleChatEditResult = (imageUrl: string) => {
+    addImageToCanvas(imageUrl, '編集結果');
+  };
+
+  // Handle template select
+  const handleTemplateSelect = (template: any) => {
+    // Add template as frame with preset size
+    addObject({
+      type: 'frame',
+      x: canvasSize.width / 2 - template.width / 4,
+      y: canvasSize.height / 2 - template.height / 4,
+      width: template.width / 2,
+      height: template.height / 2,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      locked: false,
+      visible: true,
+      stroke: '#806a54',
+      strokeWidth: 2,
+      label: template.name,
+    });
+    toast.success(`${template.name}を追加しました`);
+    setSidePanel('properties');
+  };
+
+  // Handle image edit modal result
+  const handleEditModalResult = (imageUrl: string) => {
+    addImageToCanvas(imageUrl, '編集結果');
+    setShowEditModal(false);
+    setEditingImage(null);
+  };
+
+  const renderGenerateForm = () => {
+    switch (generateMode) {
+      case 'gacha':
+        return (
+          <div className="space-y-4">
+            <Textarea
+              label="ブリーフ（商品コンセプト）"
+              placeholder="例: 20代女性向けのカジュアルなサマードレス"
+              value={generatePrompt}
+              onChange={(e) => setGeneratePrompt(e.target.value)}
+              rows={3}
+            />
+            <p className="text-sm text-neutral-500">
+              ミニマル、ラグジュアリー、ストリート等の8スタイルから4つを生成します
+            </p>
+          </div>
+        );
+
+      case 'product-shots':
+        return (
+          <div className="space-y-4">
+            <Textarea
+              label="商品説明"
+              placeholder="例: 白いコットンTシャツ、クルーネック"
+              value={productDescription}
+              onChange={(e) => setProductDescription(e.target.value)}
+              rows={3}
+            />
+            <p className="text-sm text-neutral-500">
+              正面・側面・背面・ディテールの4カットを生成します
+            </p>
+          </div>
+        );
+
+      case 'model-matrix':
+        return (
+          <div className="space-y-4">
+            <Textarea
+              label="商品説明"
+              placeholder="例: ネイビーのスリムフィットジーンズ"
+              value={productDescription}
+              onChange={(e) => setProductDescription(e.target.value)}
+              rows={3}
+            />
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">体型</label>
+              <div className="flex gap-2 flex-wrap">
+                {['slim', 'regular', 'plus'].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedBodyTypes(prev =>
+                      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+                    )}
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                      selectedBodyTypes.includes(type)
+                        ? 'bg-primary-100 border-primary-300 text-primary-700'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    {type === 'slim' ? 'スリム' : type === 'regular' ? 'レギュラー' : 'プラス'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">年代</label>
+              <div className="flex gap-2 flex-wrap">
+                {['20s', '30s', '40s', '50s'].map((age) => (
+                  <button
+                    key={age}
+                    onClick={() => setSelectedAgeGroups(prev =>
+                      prev.includes(age) ? prev.filter(a => a !== age) : [...prev, age]
+                    )}
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                      selectedAgeGroups.includes(age)
+                        ? 'bg-primary-100 border-primary-300 text-primary-700'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    {age}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'multilingual':
+        return (
+          <div className="space-y-4">
+            <Input
+              label="ヘッドライン"
+              placeholder="例: SUMMER SALE"
+              value={headline}
+              onChange={(e) => setHeadline(e.target.value)}
+            />
+            <Input
+              label="サブヘッドライン（任意）"
+              placeholder="例: 最大50%OFF"
+              value={subheadline}
+              onChange={(e) => setSubheadline(e.target.value)}
+            />
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">言語</label>
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { code: 'ja', name: '日本語' },
+                  { code: 'en', name: 'English' },
+                  { code: 'zh', name: '中文' },
+                  { code: 'ko', name: '한국어' }
+                ].map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => setSelectedLanguages(prev =>
+                      prev.includes(lang.code) ? prev.filter(l => l !== lang.code) : [...prev, lang.code]
+                    )}
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+                      selectedLanguages.includes(lang.code)
+                        ? 'bg-primary-100 border-primary-300 text-primary-700'
+                        : 'border-neutral-200 hover:border-neutral-300'
+                    }`}
+                  >
+                    {lang.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <Textarea
+            label="プロンプト"
+            placeholder="生成したい画像を日本語で説明してください..."
+            value={generatePrompt}
+            onChange={(e) => setGeneratePrompt(e.target.value)}
+            rows={4}
+          />
+        );
     }
   };
 
@@ -293,7 +700,6 @@ export function CanvasEditorPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View mode toggle */}
           <div className="flex items-center bg-neutral-100 rounded-lg p-1">
             <button
               onClick={() => setViewMode('canvas')}
@@ -321,7 +727,6 @@ export function CanvasEditorPage() {
 
           <div className="w-px h-6 bg-neutral-200 mx-2" />
 
-          {/* Collaborators */}
           <div className="flex -space-x-2">
             <div className="w-8 h-8 rounded-full bg-primary-100 border-2 border-white flex items-center justify-center">
               <span className="text-xs font-medium text-primary-700">Y</span>
@@ -367,11 +772,43 @@ export function CanvasEditorPage() {
           >
             <Wand2 className="w-5 h-5 text-primary-600" />
           </button>
+
+          <div className="w-8 h-px bg-neutral-200 my-2" />
+
+          {/* Side panel toggles */}
+          <button
+            onClick={() => setSidePanel(sidePanel === 'chat' ? null : 'chat')}
+            className={`p-3 rounded-xl transition-colors ${
+              sidePanel === 'chat' ? 'bg-primary-100 text-primary-600' : 'hover:bg-neutral-100 text-neutral-600'
+            }`}
+            title="チャットエディター"
+          >
+            <MessageSquare className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => setSidePanel(sidePanel === 'templates' ? null : 'templates')}
+            className={`p-3 rounded-xl transition-colors ${
+              sidePanel === 'templates' ? 'bg-primary-100 text-primary-600' : 'hover:bg-neutral-100 text-neutral-600'
+            }`}
+            title="テンプレート"
+          >
+            <Layout className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => setSidePanel(sidePanel === 'properties' ? null : 'properties')}
+            className={`p-3 rounded-xl transition-colors ${
+              sidePanel === 'properties' ? 'bg-primary-100 text-primary-600' : 'hover:bg-neutral-100 text-neutral-600'
+            }`}
+            title="プロパティ"
+          >
+            <Settings2 className="w-5 h-5" />
+          </button>
         </aside>
 
         {/* Canvas area */}
         <main className="flex-1 flex flex-col">
-          {/* Toolbar */}
           <div className="p-3 flex justify-center">
             <CanvasToolbar
               onAddText={handleAddText}
@@ -380,7 +817,6 @@ export function CanvasEditorPage() {
             />
           </div>
 
-          {/* Canvas/Tree view */}
           <div ref={containerRef} className="flex-1 relative">
             {viewMode === 'canvas' ? (
               <>
@@ -390,7 +826,6 @@ export function CanvasEditorPage() {
                   onObjectSelect={handleObjectSelect}
                 />
                 
-                {/* Floating toolbar */}
                 {selectedObject && (
                   <FloatingToolbar
                     selectedObject={selectedObject}
@@ -399,7 +834,6 @@ export function CanvasEditorPage() {
                   />
                 )}
 
-                {/* Minimap */}
                 <div className="absolute bottom-4 right-4">
                   <Minimap
                     canvasWidth={canvasSize.width}
@@ -413,21 +847,36 @@ export function CanvasEditorPage() {
           </div>
         </main>
 
-        {/* Right sidebar - Properties */}
+        {/* Right sidebar */}
         {sidePanel && (
-          <aside className="w-72 bg-white border-l border-neutral-200 overflow-y-auto">
+          <aside className="w-80 bg-white border-l border-neutral-200 flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
               <h2 className="font-semibold text-neutral-800">
-                {sidePanel === 'properties' ? 'プロパティ' : 'レイヤー'}
+                {sidePanel === 'properties' && 'プロパティ'}
+                {sidePanel === 'chat' && 'チャットエディター'}
+                {sidePanel === 'templates' && 'テンプレート'}
               </h2>
               <button
                 onClick={() => setSidePanel(null)}
                 className="p-1 hover:bg-neutral-100 rounded transition-colors"
               >
-                <Settings2 className="w-4 h-4 text-neutral-500" />
+                <X className="w-4 h-4 text-neutral-500" />
               </button>
             </div>
-            <PropertiesPanel selectedObject={selectedObject} />
+            <div className="flex-1 overflow-y-auto">
+              {sidePanel === 'properties' && (
+                <PropertiesPanel selectedObject={selectedObject} />
+              )}
+              {sidePanel === 'chat' && (
+                <ChatEditor 
+                  selectedImageUrl={selectedObject?.type === 'image' ? (selectedObject as any).src : undefined}
+                  onEditResult={handleChatEditResult}
+                />
+              )}
+              {sidePanel === 'templates' && (
+                <TemplateSelector onSelectTemplate={handleTemplateSelect} />
+              )}
+            </div>
           </aside>
         )}
       </div>
@@ -437,20 +886,39 @@ export function CanvasEditorPage() {
         isOpen={showGenerateModal}
         onClose={() => setShowGenerateModal(false)}
         title="AI画像生成"
+        size="lg"
       >
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Mode selector */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
-              プロンプト
+            <label className="block text-sm font-medium text-neutral-700 mb-3">
+              生成モード
             </label>
-            <textarea
-              value={generatePrompt}
-              onChange={(e) => setGeneratePrompt(e.target.value)}
-              placeholder="生成したい画像を日本語で説明してください..."
-              className="w-full h-32 px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-            />
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {GENERATE_MODES.map((mode) => (
+                <button
+                  key={mode.id}
+                  onClick={() => setGenerateMode(mode.id as GenerateMode)}
+                  className={`p-3 rounded-xl border-2 transition-all text-left ${
+                    generateMode === mode.id
+                      ? 'border-primary-500 bg-primary-50'
+                      : 'border-neutral-200 hover:border-neutral-300'
+                  }`}
+                >
+                  <mode.icon className={`w-5 h-5 mb-2 ${
+                    generateMode === mode.id ? 'text-primary-600' : 'text-neutral-500'
+                  }`} />
+                  <div className="font-medium text-sm text-neutral-800">{mode.name}</div>
+                  <div className="text-xs text-neutral-500 mt-0.5">{mode.description}</div>
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex justify-end gap-2">
+
+          {/* Dynamic form */}
+          {renderGenerateForm()}
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100">
             <Button
               variant="secondary"
               onClick={() => setShowGenerateModal(false)}
@@ -459,14 +927,27 @@ export function CanvasEditorPage() {
             </Button>
             <Button
               onClick={handleGenerate}
-              disabled={!generatePrompt.trim() || isGenerating}
+              disabled={isGenerating}
+              leftIcon={isGenerating ? undefined : <Sparkles className="w-4 h-4" />}
             >
               {isGenerating ? '生成中...' : '生成'}
             </Button>
           </div>
         </div>
       </Modal>
+
+      {/* Edit Modal */}
+      {showEditModal && editingImage && (
+        <ImageEditModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingImage(null);
+          }}
+          imageUrl={editingImage}
+          onEditResult={handleEditModalResult}
+        />
+      )}
     </div>
   );
 }
-

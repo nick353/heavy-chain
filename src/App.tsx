@@ -12,7 +12,9 @@ import {
   GeneratePage,
   GalleryPage,
   CanvasEditorPage,
-  AdminDashboard
+  AdminDashboard,
+  ForgotPasswordPage,
+  BrandSettingsPage
 } from './pages';
 
 const queryClient = new QueryClient({
@@ -89,9 +91,17 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPasswordPage />
+          </PublicRoute>
+        }
+      />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
-      {/* Protected routes */}
+      {/* Protected routes with layout */}
       <Route element={<Layout />}>
         <Route
           path="/dashboard"
@@ -114,6 +124,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <GalleryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/brand/settings"
+          element={
+            <ProtectedRoute>
+              <BrandSettingsPage />
             </ProtectedRoute>
           }
         />
