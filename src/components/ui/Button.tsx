@@ -32,23 +32,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     `;
 
     const variants = {
-      primary: `
-        bg-primary-800 text-white
-        hover:bg-primary-700 active:bg-primary-900
-        shadow-soft hover:shadow-elegant
-        focus:ring-primary-500
-      `,
-      secondary: `
-        bg-white text-primary-800 border border-primary-200
-        hover:bg-primary-50 active:bg-primary-100
-        shadow-soft hover:shadow-elegant
-        focus:ring-primary-500
-      `,
-      ghost: `
-        text-neutral-600
-        hover:bg-neutral-100 active:bg-neutral-200
-        focus:ring-neutral-400
-      `,
+      primary: 'btn-primary rounded-lg', // Use rounded-lg to match current design even if class has rounded-none
+      secondary: 'btn-secondary rounded-lg',
+      ghost: 'btn-ghost rounded-lg',
       danger: `
         bg-red-600 text-white
         hover:bg-red-700 active:bg-red-800

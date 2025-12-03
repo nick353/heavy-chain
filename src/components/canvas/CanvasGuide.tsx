@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { 
-  X, 
   Upload, 
   Wand2, 
   MousePointer2, 
-  Move, 
   ZoomIn,
   MessageSquare,
   Layers,
@@ -224,5 +222,6 @@ export function useCanvasGuide() {
 
   return { showGuide, completeGuide, resetGuide };
 }
+
 
 

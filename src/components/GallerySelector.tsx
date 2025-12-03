@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, X, Check, Image as ImageIcon, Heart, Clock } from 'lucide-react';
+import { Search, Check, Image as ImageIcon, Heart, Clock } from 'lucide-react';
 import { Modal } from './ui';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
@@ -83,7 +83,6 @@ export function GallerySelector({
 
   const handleImageClick = (image: GeneratedImage) => {
     if (multiple) {
-      const imageUrl = getImageUrl(image.storage_path);
       const newSelected = new Set(selectedImages);
       
       if (newSelected.has(image.id)) {
@@ -112,7 +111,7 @@ export function GallerySelector({
     onClose();
   };
 
-  const filteredImages = images.filter(image => {
+  const filteredImages = images.filter(() => {
     if (!searchQuery) return true;
     // Search in prompt if available
     return true; // TODO: Add proper search when prompt is stored
@@ -264,5 +263,6 @@ export function GallerySelector({
     </Modal>
   );
 }
+
 
 

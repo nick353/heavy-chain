@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Wand2, 
@@ -13,18 +13,14 @@ import {
   History,
   FolderOpen,
   ExternalLink,
-  Upload,
-  X,
-  Check,
   Plus,
   Minus,
-  Sliders,
-  Palette
+  Sliders
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
-import { Button, Textarea, Input, Modal } from '../components/ui';
-import { FeatureSelector, FEATURES, type Feature } from '../components/FeatureSelector';
+import { Button, Textarea, Input } from '../components/ui';
+import { FeatureSelector, type Feature } from '../components/FeatureSelector';
 import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
 import { ImageSelector, type SelectedImage, type ReferenceType } from '../components/ImageSelector';
 import toast from 'react-hot-toast';
@@ -190,7 +186,6 @@ interface GeneratedResult {
 export function GeneratePage() {
   const { currentBrand } = useAuthStore();
   const { addToHistory } = usePromptHistory();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
   const [prompt, setPrompt] = useState('');
@@ -225,7 +220,6 @@ export function GeneratePage() {
   const [customColor, setCustomColor] = useState('#000000');
   const [selectedPattern, setSelectedPattern] = useState('solid');
   const [upscaleScale, setUpscaleScale] = useState<2 | 4>(2);
-  const [variationCount, setVariationCount] = useState(1);
   const [variationStrength, setVariationStrength] = useState(50);
   
   // Upscale options
@@ -271,8 +265,8 @@ export function GeneratePage() {
     setIsGenerating(true);
     
     try {
-      let data;
-      let error;
+      let data: any;
+      let error: any;
 
       const baseBody = {
         brandId: currentBrand.id,
@@ -350,7 +344,7 @@ export function GeneratePage() {
             body: { 
               ...baseBody,
               imageUrl: referenceImage?.url, 
-              count: variationCount,
+              count: generateCount,
               strength: variationStrength / 100,
               prompt: prompt || undefined
             }
@@ -1411,7 +1405,7 @@ export function GeneratePage() {
   // Feature detail view
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid lg:grid-cols-[450px,1fr] gap-8">
+      <div className="grid xl:grid-cols-[400px,1fr] lg:grid-cols-1 gap-8">
         {/* Left Panel */}
         <div className="space-y-6">
           <div>

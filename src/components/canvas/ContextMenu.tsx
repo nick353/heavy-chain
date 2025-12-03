@@ -15,8 +15,7 @@ import {
   Unlock,
   Eye,
   EyeOff,
-  Group,
-  Ungroup
+  Group
 } from 'lucide-react';
 
 interface ContextMenuProps {
@@ -80,18 +79,27 @@ export function ContextMenu({
     }
   }, [x, y]);
 
-  const menuItems = selectedObjectId ? [
+interface MenuItem {
+  type?: string;
+  label: string;
+  id?: string;
+  icon?: any;
+  shortcut?: string;
+  danger?: boolean;
+}
+
+  const menuItems: MenuItem[] = selectedObjectId ? [
     // Edit actions
     { type: 'header', label: '編集' },
     { id: 'duplicate', label: '複製', icon: Copy, shortcut: '⌘D' },
     { id: 'delete', label: '削除', icon: Trash2, shortcut: 'Del', danger: true },
-    { type: 'separator' },
+    { type: 'separator', label: '' },
     
     // Transform actions
     { type: 'header', label: '配置' },
     { id: 'bringToFront', label: '最前面へ', icon: ChevronUp },
     { id: 'sendToBack', label: '最背面へ', icon: ChevronDown },
-    { type: 'separator' },
+    { type: 'separator', label: '' },
 
     // Visibility & Lock
     { 
@@ -104,7 +112,7 @@ export function ContextMenu({
       label: isVisible ? '非表示' : '表示', 
       icon: isVisible ? EyeOff : Eye 
     },
-    { type: 'separator' },
+    { type: 'separator', label: '' },
 
     // Group actions (if multiple selected)
     ...(hasMultipleSelected ? [
@@ -118,7 +126,7 @@ export function ContextMenu({
     { id: 'colorVariations', label: 'カラバリ生成', icon: Palette },
     { id: 'upscale', label: 'アップスケール', icon: Maximize2 },
     { id: 'generateVariations', label: 'バリエーション生成', icon: RefreshCw },
-    { type: 'separator' },
+    { type: 'separator', label: '' },
 
     // Export
     { id: 'download', label: 'ダウンロード', icon: Download },
@@ -128,7 +136,7 @@ export function ContextMenu({
     { id: 'addImage', label: '画像を追加', icon: Layers },
     { id: 'addText', label: 'テキストを追加', icon: Edit3 },
     { id: 'paste', label: '貼り付け', icon: Copy, shortcut: '⌘V' },
-    { type: 'separator' },
+    { type: 'separator', label: '' },
     { id: 'selectAll', label: 'すべて選択', shortcut: '⌘A' },
     { id: 'resetView', label: '表示をリセット' },
   ];
@@ -186,5 +194,6 @@ export function ContextMenu({
     </div>
   );
 }
+
 
 

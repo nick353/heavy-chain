@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Image, 
-  Download, 
   Heart, 
   Trash2, 
   X,
@@ -12,8 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit3,
-  ExternalLink,
-  Copy,
   RefreshCw,
   Info,
   Clock,
@@ -21,12 +18,11 @@ import {
   Wand2,
   CheckSquare,
   Square,
-  DownloadCloud,
-  MoreHorizontal
+  DownloadCloud
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
-import { Button, Modal } from '../components/ui';
+import { Button } from '../components/ui';
 import type { GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
 
@@ -239,11 +235,6 @@ export function GalleryPage() {
     navigate(`/generate?feature=${featureId}`);
   };
 
-  const handleCopyPrompt = (prompt: string) => {
-    navigator.clipboard.writeText(prompt);
-    toast.success('プロンプトをコピーしました');
-  };
-
   const toggleSelectImage = (id: string) => {
     const newSelected = new Set(selectedIds);
     if (newSelected.has(id)) {
@@ -421,8 +412,8 @@ export function GalleryPage() {
         {filteredImages.length > 0 ? (
           <div className={`grid gap-4 ${
             gridSize === 'large' 
-              ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4' 
-              : 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-6'
+              ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4' 
+              : 'grid-cols-3 sm:grid-cols-4 xl:grid-cols-6'
           }`}>
             {filteredImages.map((image) => (
               <div

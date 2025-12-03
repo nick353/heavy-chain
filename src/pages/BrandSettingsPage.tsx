@@ -8,7 +8,6 @@ import {
   Save,
   Trash2,
   Plus,
-  Mail,
   Copy,
   Check
 } from 'lucide-react';
@@ -66,8 +65,8 @@ export function BrandSettingsPage() {
         name: currentBrand.name || '',
         toneDescription: currentBrand.tone_description || '',
         targetAudience: currentBrand.target_audience || '',
-        primaryColor: currentBrand.brand_colors?.primary || '#806a54',
-        secondaryColor: currentBrand.brand_colors?.secondary || '#c4a57c',
+        primaryColor: (currentBrand.brand_colors as any)?.primary || '#806a54',
+        secondaryColor: (currentBrand.brand_colors as any)?.secondary || '#c4a57c',
       });
       fetchMembers();
     }
@@ -508,7 +507,6 @@ export function BrandSettingsPage() {
                 placeholder="member@example.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                leftIcon={<Mail className="w-4 h-4" />}
               />
 
               <div>
@@ -550,5 +548,6 @@ export function BrandSettingsPage() {
     </div>
   );
 }
+
 
 

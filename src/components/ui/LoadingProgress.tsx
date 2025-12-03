@@ -14,7 +14,6 @@ export function LoadingProgress({
   steps = ['準備中...', '画像を生成中...', '最適化中...'],
   estimatedTime = 30,
   title = '生成しています...',
-  onComplete,
 }: LoadingProgressProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -159,5 +158,6 @@ export function LoadingOverlay({ message = '処理中...' }: { message?: string 
     </div>
   );
 }
+
 
 

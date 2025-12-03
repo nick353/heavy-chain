@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   Sparkles, 
   Image, 
-  Plus, 
   ArrowRight,
   Clock,
   TrendingUp,
@@ -208,7 +207,7 @@ export function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
           {quickActions.map((action) => (
             <Link
               key={action.id}
@@ -248,7 +247,7 @@ export function DashboardPage() {
           </div>
 
           {recentImages.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
               {recentImages.map((image) => (
                 <div
                   key={image.id}

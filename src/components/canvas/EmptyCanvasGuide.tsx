@@ -2,7 +2,6 @@ import {
   Upload, 
   Wand2, 
   Type, 
-  Square, 
   FolderOpen,
   Sparkles,
   MousePointer2,
@@ -14,7 +13,6 @@ interface EmptyCanvasGuideProps {
   onAddImage: () => void;
   onGenerateImage: () => void;
   onAddText: () => void;
-  onAddShape: () => void;
   onOpenGallery: () => void;
 }
 
@@ -22,7 +20,6 @@ export function EmptyCanvasGuide({
   onAddImage,
   onGenerateImage,
   onAddText,
-  onAddShape,
   onOpenGallery,
 }: EmptyCanvasGuideProps) {
   return (
@@ -116,5 +113,6 @@ export function EmptyCanvasGuide({
     </div>
   );
 }
+
 
 

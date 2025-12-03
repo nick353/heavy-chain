@@ -26,6 +26,8 @@ export interface CanvasObject {
   // Parent relationship for derived images
   parentId?: string | null;
   derivedFrom?: string | null;
+  // Label for display purposes
+  label?: string;
 }
 
 export interface CanvasState {
@@ -311,5 +313,6 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     return ancestors;
   },
 }));
+
 
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   Layers, 
   Home, 
@@ -11,10 +11,9 @@ import {
   ChevronRight,
   Moon,
   Sun,
-  Shield,
   PenTool
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuthStore } from '../../stores/authStore';
 import clsx from 'clsx';
 
@@ -24,7 +23,6 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed = false }: SidebarProps) {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, profile, signOut, currentBrand } = useAuthStore();
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -70,7 +68,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       initial={false}
       animate={{ width: collapsed ? 80 : 280 }}
       className={clsx(
-        "fixed left-0 top-0 h-full z-50",
+        "fixed left-0 top-0 h-screen z-50 w-[280px]",
         "glass-panel border-r border-white/20",
         "flex flex-col transition-all duration-500 ease-out"
       )}
@@ -204,4 +202,5 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
     </motion.aside>
   );
 }
+
 

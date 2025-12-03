@@ -13,12 +13,7 @@ import {
   X,
   Sparkles,
   Image,
-  Palette,
-  Scissors,
-  ZoomIn,
-  RefreshCw,
   Layout,
-  FileText,
   Globe,
   Grid3x3
 } from 'lucide-react';
@@ -877,7 +872,10 @@ export function CanvasEditorPage() {
                 />
               )}
               {sidePanel === 'templates' && (
-                <TemplateSelector onSelectTemplate={handleTemplateSelect} />
+                <TemplateSelector 
+                  mode="size" 
+                  onSelectSize={handleTemplateSelect} 
+                />
               )}
             </div>
           </aside>
@@ -948,7 +946,13 @@ export function CanvasEditorPage() {
             setEditingImage(null);
           }}
           imageUrl={editingImage}
-          onEditResult={handleEditModalResult}
+          onEdit={async (action, _params) => {
+            // Handle the edit result
+            if (action === 'prompt') {
+              // The modal handles showing result, we just need to add to canvas
+              handleEditModalResult(editingImage);
+            }
+          }}
         />
       )}
 

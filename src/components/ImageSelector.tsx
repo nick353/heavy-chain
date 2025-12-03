@@ -3,14 +3,12 @@ import {
   Upload, 
   X, 
   Check, 
-  Image as ImageIcon,
   FolderOpen,
   Sparkles,
   Layout,
   Palette,
   Layers
 } from 'lucide-react';
-import { Modal } from './ui';
 import { GallerySelector } from './GallerySelector';
 
 export type ReferenceType = 'style' | 'composition' | 'base' | 'pattern';
@@ -398,5 +396,6 @@ export function ImageSelector({
     </div>
   );
 }
+
 
 

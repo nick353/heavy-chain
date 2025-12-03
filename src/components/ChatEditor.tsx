@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Wand2, Image, Plus } from 'lucide-react';
+import { Send, Loader2, Plus } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { editImageWithPrompt, generateImage } from '../lib/imageApi';
 import toast from 'react-hot-toast';

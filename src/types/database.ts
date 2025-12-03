@@ -272,3 +272,4 @@ export type Folder = Database['public']['Tables']['folders']['Row']
 export type Tag = Database['public']['Tables']['tags']['Row']
 
 
+

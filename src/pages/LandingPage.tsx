@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { 
   Layers, 
   Sparkles, 
-  Image, 
   Palette, 
   Zap, 
   ArrowRight,
@@ -14,11 +13,9 @@ import {
   Scissors,
   RefreshCw,
   Globe,
-  Layout,
   Camera,
   ShoppingBag,
-  ChevronRight,
-  Play
+  ChevronRight
 } from 'lucide-react';
 import { Button } from '../components/ui';
 
