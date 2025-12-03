@@ -271,3 +271,4 @@ export type GeneratedImage = Database['public']['Tables']['generated_images']['R
 export type Folder = Database['public']['Tables']['folders']['Row']
 export type Tag = Database['public']['Tables']['tags']['Row']
 
+

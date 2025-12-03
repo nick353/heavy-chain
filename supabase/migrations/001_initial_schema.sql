@@ -318,3 +318,4 @@ CREATE TRIGGER update_brands_updated_at
 -- INSERT INTO storage.buckets (id, name, public) 
 -- VALUES ('generated-images', 'generated-images', true);
 
+

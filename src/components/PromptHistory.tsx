@@ -277,3 +277,4 @@ export function PromptHistory({ onSelect, isOpen, onClose }: PromptHistoryProps)
   );
 }
 
+

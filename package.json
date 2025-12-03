@@ -17,6 +17,8 @@
     "@reactflow/minimap": "^11.7.14",
     "@supabase/supabase-js": "^2.86.0",
     "@tanstack/react-query": "^5.90.11",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.23.25",
     "konva": "^10.0.12",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
@@ -25,6 +27,7 @@
     "react-konva": "^19.2.1",
     "react-router-dom": "^7.10.0",
     "reactflow": "^11.11.4",
+    "tailwind-merge": "^3.4.0",
     "y-webrtc": "^10.3.0",
     "yjs": "^13.6.27",
     "zustand": "^5.0.9"

@@ -202,7 +202,7 @@ export function GeneratePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedResult[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [generateCount, setGenerateCount] = useState(4);
+  const [generateCount, setGenerateCount] = useState(1);
   
   // Reference image state
   const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
@@ -225,7 +225,7 @@ export function GeneratePage() {
   const [customColor, setCustomColor] = useState('#000000');
   const [selectedPattern, setSelectedPattern] = useState('solid');
   const [upscaleScale, setUpscaleScale] = useState<2 | 4>(2);
-  const [variationCount, setVariationCount] = useState(4);
+  const [variationCount, setVariationCount] = useState(1);
   const [variationStrength, setVariationStrength] = useState(50);
   
   // Upscale options
@@ -551,7 +551,16 @@ export function GeneratePage() {
       }
     } catch (error: any) {
       console.error('Generation error:', error);
-      toast.error(error.message || '生成に失敗しました');
+      // Try to get detailed error from response
+      let errorMessage = error.message || '生成に失敗しました';
+      if (error.context?.body) {
+        try {
+          const body = JSON.parse(error.context.body);
+          errorMessage = body.error || body.details || errorMessage;
+          console.error('Error details:', body);
+        } catch {}
+      }
+      toast.error(errorMessage);
     } finally {
       setIsGenerating(false);
     }
