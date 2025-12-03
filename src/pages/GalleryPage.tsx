@@ -25,6 +25,7 @@ import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui';
 import type { GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type FilterType = 'all' | 'favorites' | 'recent';
 type SortType = 'newest' | 'oldest' | 'name';
@@ -272,10 +273,14 @@ export function GalleryPage() {
   }
 
   return (
-    <>
+    <AnimatePresence>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
+        >
           <div>
             <h1 className="text-2xl font-display font-semibold text-neutral-900 dark:text-white mb-1">
               ギャラリー
@@ -294,21 +299,21 @@ export function GalleryPage() {
                 placeholder="検索..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-48"
+                className="pl-9 pr-4 py-2 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-48 transition-all"
               />
             </div>
 
             {/* Grid Size Toggle */}
-            <div className="flex items-center bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg p-1">
+            <div className="flex items-center bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200 dark:border-neutral-700 rounded-lg p-1">
               <button
                 onClick={() => setGridSize('large')}
-                className={`p-1.5 rounded ${gridSize === 'large' ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300' : 'text-neutral-400 hover:text-neutral-600'}`}
+                className={`p-1.5 rounded transition-colors ${gridSize === 'large' ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300' : 'text-neutral-400 hover:text-neutral-600'}`}
               >
                 <Grid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setGridSize('small')}
-                className={`p-1.5 rounded ${gridSize === 'small' ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300' : 'text-neutral-400 hover:text-neutral-600'}`}
+                className={`p-1.5 rounded transition-colors ${gridSize === 'small' ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300' : 'text-neutral-400 hover:text-neutral-600'}`}
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
@@ -323,74 +328,83 @@ export function GalleryPage() {
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectMode
                   ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-                  : 'bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50'
+                  : 'glass-panel text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
               }`}
             >
               {selectMode ? '選択解除' : '選択'}
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Select Mode Actions */}
-        {selectMode && (
-          <div className="flex items-center gap-3 mb-6 p-4 bg-primary-50 dark:bg-primary-900/20 rounded-xl">
-            <span className="text-sm text-primary-700 dark:text-primary-300">
-              {selectedIds.size}枚選択中
-            </span>
-            <button
-              onClick={selectAll}
-              className="text-sm text-primary-600 hover:text-primary-700"
+        <AnimatePresence>
+          {selectMode && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6 overflow-hidden"
             >
-              すべて選択
-            </button>
-            <button
-              onClick={deselectAll}
-              className="text-sm text-primary-600 hover:text-primary-700"
-            >
-              選択解除
-            </button>
-            <div className="flex-1" />
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleBulkDownload}
-              disabled={selectedIds.size === 0}
-              leftIcon={<DownloadCloud className="w-4 h-4" />}
-            >
-              一括ダウンロード
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleBulkDelete}
-              disabled={selectedIds.size === 0}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              leftIcon={<Trash2 className="w-4 h-4" />}
-            >
-              削除
-            </Button>
-          </div>
-        )}
+              <div className="flex items-center gap-3 p-4 bg-primary-50/50 dark:bg-primary-900/20 backdrop-blur-sm border border-primary-100 dark:border-primary-800/30 rounded-xl">
+                <span className="text-sm text-primary-700 dark:text-primary-300">
+                  {selectedIds.size}枚選択中
+                </span>
+                <button
+                  onClick={selectAll}
+                  className="text-sm text-primary-600 hover:text-primary-700"
+                >
+                  すべて選択
+                </button>
+                <button
+                  onClick={deselectAll}
+                  className="text-sm text-primary-600 hover:text-primary-700"
+                >
+                  選択解除
+                </button>
+                <div className="flex-1" />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleBulkDownload}
+                  disabled={selectedIds.size === 0}
+                  leftIcon={<DownloadCloud className="w-4 h-4" />}
+                >
+                  一括ダウンロード
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleBulkDelete}
+                  disabled={selectedIds.size === 0}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  leftIcon={<Trash2 className="w-4 h-4" />}
+                >
+                  削除
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Filters */}
         <div className="flex items-center justify-between gap-2 mb-6">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 filter === 'all'
-                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-                  : 'bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50'
+                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 shadow-sm'
+                  : 'hover:bg-white/50 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-400'
               }`}
             >
               すべて
             </button>
             <button
               onClick={() => setFilter('favorites')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
                 filter === 'favorites'
-                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-                  : 'bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50'
+                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 shadow-sm'
+                  : 'hover:bg-white/50 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-400'
               }`}
             >
               <Heart className="w-4 h-4" />
@@ -401,7 +415,7 @@ export function GalleryPage() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortType)}
-            className="px-3 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-600 dark:text-neutral-400"
+            className="px-3 py-2 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-600 dark:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="newest">新しい順</option>
             <option value="oldest">古い順</option>
@@ -410,55 +424,69 @@ export function GalleryPage() {
 
         {/* Gallery Grid */}
         {filteredImages.length > 0 ? (
-          <div className={`grid gap-4 ${
-            gridSize === 'large' 
-              ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4' 
-              : 'grid-cols-3 sm:grid-cols-4 xl:grid-cols-6'
-          }`}>
-            {filteredImages.map((image) => (
-              <div
-                key={image.id}
-                className={`group relative aspect-square rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 cursor-pointer transition-all ${
-                  selectMode && selectedIds.has(image.id) ? 'ring-2 ring-primary-500 ring-offset-2' : 'hover:ring-2 hover:ring-primary-500'
-                }`}
-                onClick={() => selectMode ? toggleSelectImage(image.id) : setSelectedImage(image)}
-              >
-                <img
-                  src={getImageUrl(image.storage_path)}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-                
-                {/* Select checkbox */}
-                {selectMode && (
-                  <div className="absolute top-2 left-2">
-                    {selectedIds.has(image.id) ? (
-                      <CheckSquare className="w-6 h-6 text-primary-500" />
-                    ) : (
-                      <Square className="w-6 h-6 text-white drop-shadow" />
-                    )}
-                  </div>
-                )}
-                
-                {/* Favorite Badge */}
-                {image.is_favorite && !selectMode && (
-                  <div className="absolute top-2 right-2 w-7 h-7 bg-white dark:bg-neutral-800 rounded-full flex items-center justify-center shadow-md">
-                    <Heart className="w-4 h-4 text-red-500 fill-current" />
-                  </div>
-                )}
+          <motion.div 
+            layout
+            className={`grid gap-4 ${
+              gridSize === 'large' 
+                ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4' 
+                : 'grid-cols-3 sm:grid-cols-4 xl:grid-cols-6'
+            }`}
+          >
+            <AnimatePresence mode="popLayout">
+              {filteredImages.map((image) => (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.3 }}
+                  key={image.id}
+                  className={`group relative aspect-square rounded-xl overflow-hidden bg-white dark:bg-neutral-800 cursor-pointer transition-all shadow-sm hover:shadow-lg ${
+                    selectMode && selectedIds.has(image.id) ? 'ring-2 ring-primary-500 ring-offset-2' : 'hover:ring-2 hover:ring-primary-500'
+                  }`}
+                  onClick={() => selectMode ? toggleSelectImage(image.id) : setSelectedImage(image)}
+                >
+                  <img
+                    src={getImageUrl(image.storage_path)}
+                    alt=""
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                  
+                  {/* Select checkbox */}
+                  {selectMode && (
+                    <div className="absolute top-2 left-2">
+                      {selectedIds.has(image.id) ? (
+                        <CheckSquare className="w-6 h-6 text-primary-500 bg-white rounded-md" />
+                      ) : (
+                        <Square className="w-6 h-6 text-white drop-shadow-md" />
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Favorite Badge */}
+                  {image.is_favorite && !selectMode && (
+                    <div className="absolute top-2 right-2 w-7 h-7 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
+                      <Heart className="w-4 h-4 text-red-500 fill-current" />
+                    </div>
+                  )}
 
-                {/* Hover Overlay */}
-                {!selectMode && (
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">詳細を見る</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                  {/* Hover Overlay */}
+                  {!selectMode && (
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                      <span className="text-white text-sm font-medium px-4 py-2 border border-white/50 rounded-lg">詳細を見る</span>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         ) : (
-          <div className="bg-neutral-50 dark:bg-neutral-800 rounded-2xl p-12 text-center">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="glass-panel rounded-2xl p-12 text-center"
+          >
             <Image className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-200 mb-2">
               {filter === 'favorites' ? 'お気に入りの画像がありません' : '画像がありません'}
@@ -472,145 +500,160 @@ export function GalleryPage() {
             <Link to="/generate">
               <Button>画像を生成する</Button>
             </Link>
-          </div>
+          </motion.div>
         )}
       </div>
 
       {/* Image Detail Modal */}
-      {selectedImage && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex">
-          {/* Close Button */}
-          <button
-            onClick={() => {
-              setSelectedImage(null);
-              setSearchParams({});
-            }}
-            className="absolute top-4 right-4 p-2 text-white/70 hover:text-white transition-colors z-10"
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex"
           >
-            <X className="w-6 h-6" />
-          </button>
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setSelectedImage(null);
+                setSearchParams({});
+              }}
+              className="absolute top-4 right-4 p-2 text-white/70 hover:text-white transition-colors z-10 bg-black/20 hover:bg-black/40 rounded-full"
+            >
+              <X className="w-6 h-6" />
+            </button>
 
-          {/* Navigation */}
-          <button
-            onClick={() => navigateImage('prev')}
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 text-white/70 hover:text-white transition-colors"
-          >
-            <ChevronLeft className="w-8 h-8" />
-          </button>
-          <button
-            onClick={() => navigateImage('next')}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-white/70 hover:text-white transition-colors"
-          >
-            <ChevronRight className="w-8 h-8" />
-          </button>
+            {/* Navigation */}
+            <button
+              onClick={() => navigateImage('prev')}
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full"
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </button>
+            <button
+              onClick={() => navigateImage('next')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full"
+            >
+              <ChevronRight className="w-8 h-8" />
+            </button>
 
-          {/* Main Content */}
-          <div className="flex-1 flex items-center justify-center p-16">
-            <img
-              src={getImageUrl(selectedImage.storage_path)}
-              alt=""
-              className="max-w-full max-h-full object-contain rounded-lg"
-            />
-          </div>
-
-          {/* Side Panel */}
-          <div className="w-80 bg-neutral-900 border-l border-neutral-800 p-6 overflow-y-auto">
-            <h3 className="text-white font-semibold mb-4">画像の詳細</h3>
-            
-            {/* Info */}
-            <div className="space-y-3 mb-6">
-              <div className="flex items-center gap-2 text-sm text-neutral-400">
-                <Clock className="w-4 h-4" />
-                <span>{new Date(selectedImage.created_at).toLocaleString('ja-JP')}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-neutral-400">
-                <Info className="w-4 h-4" />
-                <span>ID: {selectedImage.id.slice(0, 8)}...</span>
-              </div>
+            {/* Main Content */}
+            <div className="flex-1 flex items-center justify-center p-16" onClick={() => setSelectedImage(null)}>
+              <motion.img
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                src={getImageUrl(selectedImage.storage_path)}
+                alt=""
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
             </div>
 
-            {/* Quick Actions */}
-            <div className="space-y-2 mb-6">
-              <h4 className="text-sm font-medium text-neutral-500 mb-2">クイックアクション</h4>
-              <button
-                onClick={() => handleEditInCanvas(selectedImage)}
-                className="w-full flex items-center gap-2 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm transition-colors"
-              >
-                <Edit3 className="w-4 h-4" />
-                キャンバスで編集
-              </button>
-              <button
-                onClick={() => handleEditWithFeature('variations', selectedImage)}
-                className="w-full flex items-center gap-2 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm transition-colors"
-              >
-                <RefreshCw className="w-4 h-4" />
-                バリエーションを生成
-              </button>
-              <button
-                onClick={() => handleEditWithFeature('colorize', selectedImage)}
-                className="w-full flex items-center gap-2 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm transition-colors"
-              >
-                <Palette className="w-4 h-4" />
-                カラバリを生成
-              </button>
-              <button
-                onClick={() => handleEditWithFeature('remove-bg', selectedImage)}
-                className="w-full flex items-center gap-2 px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg text-sm transition-colors"
-              >
-                <Wand2 className="w-4 h-4" />
-                背景を変更
-              </button>
-            </div>
+            {/* Side Panel */}
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              className="w-80 bg-white/10 backdrop-blur-md border-l border-white/10 p-6 overflow-y-auto"
+            >
+              <h3 className="text-white font-semibold mb-6 text-lg border-b border-white/10 pb-4">画像の詳細</h3>
+              
+              {/* Info */}
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center gap-3 text-sm text-white/80">
+                  <Clock className="w-4 h-4" />
+                  <span>{new Date(selectedImage.created_at).toLocaleString('ja-JP')}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-white/80">
+                  <Info className="w-4 h-4" />
+                  <span className="font-mono">ID: {selectedImage.id.slice(0, 8)}</span>
+                </div>
+              </div>
 
-            {/* Download Options */}
-            <div className="space-y-2 mb-6">
-              <h4 className="text-sm font-medium text-neutral-500 mb-2">ダウンロード</h4>
-              <div className="grid grid-cols-3 gap-2">
+              {/* Quick Actions */}
+              <div className="space-y-3 mb-8">
+                <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">クイックアクション</h4>
                 <button
-                  onClick={() => handleDownload(selectedImage, 'png')}
-                  className="px-3 py-2 bg-white text-neutral-800 rounded-lg text-sm font-medium hover:bg-neutral-100 transition-colors"
+                  onClick={() => handleEditInCanvas(selectedImage)}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
                 >
-                  PNG
+                  <Edit3 className="w-4 h-4" />
+                  キャンバスで編集
                 </button>
                 <button
-                  onClick={() => handleDownload(selectedImage, 'jpeg')}
-                  className="px-3 py-2 bg-neutral-800 text-white rounded-lg text-sm font-medium hover:bg-neutral-700 transition-colors"
+                  onClick={() => handleEditWithFeature('variations', selectedImage)}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
                 >
-                  JPEG
+                  <RefreshCw className="w-4 h-4" />
+                  バリエーションを生成
                 </button>
                 <button
-                  onClick={() => handleDownload(selectedImage, 'webp')}
-                  className="px-3 py-2 bg-neutral-800 text-white rounded-lg text-sm font-medium hover:bg-neutral-700 transition-colors"
+                  onClick={() => handleEditWithFeature('colorize', selectedImage)}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
                 >
-                  WebP
+                  <Palette className="w-4 h-4" />
+                  カラバリを生成
+                </button>
+                <button
+                  onClick={() => handleEditWithFeature('remove-bg', selectedImage)}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  背景を変更
                 </button>
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="space-y-2">
-              <button
-                onClick={() => handleToggleFavorite(selectedImage)}
-                className={`w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm transition-colors ${
-                  selectedImage.is_favorite
-                    ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                    : 'bg-neutral-800 hover:bg-neutral-700 text-white'
-                }`}
-              >
-                <Heart className={`w-4 h-4 ${selectedImage.is_favorite ? 'fill-current' : ''}`} />
-                {selectedImage.is_favorite ? 'お気に入りから削除' : 'お気に入りに追加'}
-              </button>
-              <button
-                onClick={() => handleDelete(selectedImage)}
-                className="w-full flex items-center gap-2 px-4 py-2.5 bg-neutral-800 hover:bg-red-900/50 text-neutral-400 hover:text-red-400 rounded-lg text-sm transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                削除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+              {/* Download Options */}
+              <div className="space-y-3 mb-8">
+                <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">ダウンロード</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => handleDownload(selectedImage, 'png')}
+                    className="px-3 py-2 bg-primary-500 text-white rounded-lg text-xs font-medium hover:bg-primary-600 transition-colors"
+                  >
+                    PNG
+                  </button>
+                  <button
+                    onClick={() => handleDownload(selectedImage, 'jpeg')}
+                    className="px-3 py-2 bg-white/10 text-white rounded-lg text-xs font-medium hover:bg-white/20 transition-colors"
+                  >
+                    JPEG
+                  </button>
+                  <button
+                    onClick={() => handleDownload(selectedImage, 'webp')}
+                    className="px-3 py-2 bg-white/10 text-white rounded-lg text-xs font-medium hover:bg-white/20 transition-colors"
+                  >
+                    WebP
+                  </button>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-3 pt-6 border-t border-white/10">
+                <button
+                  onClick={() => handleToggleFavorite(selectedImage)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${
+                    selectedImage.is_favorite
+                      ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                      : 'bg-white/10 hover:bg-white/20 text-white'
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 ${selectedImage.is_favorite ? 'fill-current' : ''}`} />
+                  {selectedImage.is_favorite ? 'お気に入りから削除' : 'お気に入りに追加'}
+                </button>
+                <button
+                  onClick={() => handleDelete(selectedImage)}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-white/5 hover:bg-red-900/30 text-white/70 hover:text-red-400 rounded-xl text-sm transition-all"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  削除
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </AnimatePresence>
   );
 }

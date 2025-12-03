@@ -16,6 +16,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { Button, Input, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 interface DashboardStats {
   totalUsers: number;
@@ -163,24 +164,24 @@ export function AdminDashboard() {
   );
 
   const StatCard = ({ icon: Icon, label, value, trend, color }: any) => (
-    <div className="bg-white rounded-xl p-6 shadow-soft border border-neutral-100">
+    <div className="glass-card p-6 hover:shadow-elegant transition-all duration-300">
       <div className="flex items-center justify-between mb-4">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md ${color}`}>
           <Icon className="w-6 h-6 text-white" />
         </div>
         {trend && (
-          <span className="flex items-center gap-1 text-sm font-medium text-green-600">
-            <TrendingUp className="w-4 h-4" />
+          <span className="flex items-center gap-1 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">
+            <TrendingUp className="w-3 h-3" />
             {trend}%
           </span>
         )}
       </div>
-      <p className="text-3xl font-bold text-neutral-800 mb-1">
+      <p className="text-3xl font-bold text-neutral-800 dark:text-white mb-1 font-display">
         {typeof value === 'number' && label.includes('コスト') 
           ? `$${value.toFixed(2)}` 
           : value.toLocaleString()}
       </p>
-      <p className="text-sm text-neutral-500">{label}</p>
+      <p className="text-sm text-neutral-500 dark:text-neutral-400">{label}</p>
     </div>
   );
 
@@ -193,17 +194,18 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
       {/* Header */}
-      <header className="bg-white border-b border-neutral-200 px-6 py-4">
+      <header className="glass-nav px-6 py-4 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-neutral-800">管理者ダッシュボード</h1>
-            <p className="text-sm text-neutral-500">Heavy Chain システム管理</p>
+            <h1 className="text-2xl font-bold text-neutral-800 dark:text-white">管理者ダッシュボード</h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">Heavy Chain システム管理</p>
           </div>
           <Button
             leftIcon={<Bell className="w-4 h-4" />}
             onClick={() => setShowAnnouncementModal(true)}
+            className="shadow-glow hover:shadow-glow-lg"
           >
             お知らせ配信
           </Button>
@@ -212,7 +214,7 @@ export function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-neutral-100 rounded-xl mb-8 w-fit">
+        <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl mb-8 w-fit shadow-inner">
           {[
             { id: 'overview', label: '概要' },
             { id: 'users', label: 'ユーザー' },
@@ -223,10 +225,10 @@ export function AdminDashboard() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={`
-                px-4 py-2 text-sm font-medium rounded-lg transition-colors
+                px-4 py-2 text-sm font-medium rounded-lg transition-all
                 ${activeTab === tab.id
-                  ? 'bg-white text-neutral-800 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-700'
+                  ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
                 }
               `}
             >
@@ -237,7 +239,12 @@ export function AdminDashboard() {
 
         {/* Overview */}
         {activeTab === 'overview' && (
-          <div className="space-y-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="space-y-8"
+          >
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <StatCard
@@ -270,19 +277,23 @@ export function AdminDashboard() {
             </div>
 
             {/* Usage chart placeholder */}
-            <div className="bg-white rounded-xl p-6 shadow-soft border border-neutral-100">
-              <h2 className="text-lg font-semibold text-neutral-800 mb-4">利用状況</h2>
-              <div className="h-64 flex items-center justify-center bg-neutral-50 rounded-lg">
-                <p className="text-neutral-500">グラフ表示エリア</p>
+            <div className="glass-panel rounded-2xl p-8 shadow-soft">
+              <h2 className="text-lg font-semibold text-neutral-800 dark:text-white mb-4">利用状況</h2>
+              <div className="h-64 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800/50 rounded-xl border border-neutral-100 dark:border-neutral-700/50">
+                <p className="text-neutral-500 dark:text-neutral-400">グラフ表示エリア</p>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Users */}
         {activeTab === 'users' && (
-          <div className="bg-white rounded-xl shadow-soft border border-neutral-100">
-            <div className="p-4 border-b border-neutral-100">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-panel rounded-2xl overflow-hidden"
+          >
+            <div className="p-6 border-b border-neutral-100 dark:border-neutral-700">
               <div className="flex items-center gap-4">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
@@ -291,7 +302,7 @@ export function AdminDashboard() {
                     placeholder="ユーザーを検索..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                   />
                 </div>
                 <Button variant="secondary" size="sm" leftIcon={<Filter className="w-4 h-4" />}>
@@ -302,59 +313,57 @@ export function AdminDashboard() {
 
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-neutral-50 text-left">
+                <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-left">
                   <tr>
-                    <th className="px-4 py-3 text-xs font-medium text-neutral-500 uppercase">ユーザー</th>
-                    <th className="px-4 py-3 text-xs font-medium text-neutral-500 uppercase">登録日</th>
-                    <th className="px-4 py-3 text-xs font-medium text-neutral-500 uppercase">ステータス</th>
-                    <th className="px-4 py-3 text-xs font-medium text-neutral-500 uppercase">アクション</th>
+                    <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">ユーザー</th>
+                    <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">登録日</th>
+                    <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">ステータス</th>
+                    <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">アクション</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-100">
+                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
                   {filteredUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-neutral-50">
-                      <td className="px-4 py-3">
+                    <tr key={user.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 transition-colors">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                            <span className="text-sm font-medium text-primary-700">
-                              {user.name?.charAt(0) || user.email?.charAt(0).toUpperCase()}
-                            </span>
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 flex items-center justify-center text-primary-700 dark:text-primary-300 font-medium">
+                            {user.name?.charAt(0) || user.email?.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-neutral-800">{user.name || 'Unknown'}</p>
-                            <p className="text-xs text-neutral-500">{user.email}</p>
+                            <p className="text-sm font-medium text-neutral-800 dark:text-white">{user.name || 'Unknown'}</p>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400">{user.email}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-neutral-600">
+                      <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">
                         {new Date(user.created_at).toLocaleDateString('ja-JP')}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-6 py-4">
                         <span className={`
-                          inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
+                          inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
                           ${user.status === 'suspended'
-                            ? 'bg-red-100 text-red-700'
-                            : 'bg-green-100 text-green-700'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                           }
                         `}>
                           {user.status === 'suspended' ? (
-                            <XCircle className="w-3 h-3" />
+                            <XCircle className="w-3.5 h-3.5" />
                           ) : (
-                            <CheckCircle className="w-3 h-3" />
+                            <CheckCircle className="w-3.5 h-3.5" />
                           )}
                           {user.status === 'suspended' ? '停止中' : 'アクティブ'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <button className="p-1 hover:bg-neutral-100 rounded">
-                            <Eye className="w-4 h-4 text-neutral-500" />
+                          <button className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition-colors text-neutral-500 dark:text-neutral-400">
+                            <Eye className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleSuspendUser(user.id)}
-                            className="p-1 hover:bg-red-100 rounded"
+                            className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-red-500 hover:text-red-600"
                           >
-                            <Ban className="w-4 h-4 text-red-500" />
+                            <Ban className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -363,36 +372,48 @@ export function AdminDashboard() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Moderation */}
         {activeTab === 'moderation' && (
-          <div className="bg-white rounded-xl shadow-soft border border-neutral-100 p-8 text-center">
-            <AlertTriangle className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-neutral-700 mb-2">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-panel rounded-2xl p-12 text-center"
+          >
+            <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertTriangle className="w-10 h-10 text-neutral-400" />
+            </div>
+            <h3 className="text-xl font-medium text-neutral-700 dark:text-white mb-2">
               レビュー待ちのコンテンツはありません
             </h3>
-            <p className="text-neutral-500">
+            <p className="text-neutral-500 dark:text-neutral-400">
               不適切なコンテンツが報告されると、ここに表示されます
             </p>
-          </div>
+          </motion.div>
         )}
 
         {/* Announcements */}
         {activeTab === 'announcements' && (
-          <div className="bg-white rounded-xl shadow-soft border border-neutral-100 p-8 text-center">
-            <Bell className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-neutral-700 mb-2">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-panel rounded-2xl p-12 text-center"
+          >
+            <div className="w-20 h-20 bg-primary-50 dark:bg-primary-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Bell className="w-10 h-10 text-primary-500" />
+            </div>
+            <h3 className="text-xl font-medium text-neutral-700 dark:text-white mb-2">
               お知らせ履歴
             </h3>
-            <p className="text-neutral-500 mb-4">
+            <p className="text-neutral-500 dark:text-neutral-400 mb-8">
               過去に配信したお知らせが表示されます
             </p>
-            <Button onClick={() => setShowAnnouncementModal(true)}>
+            <Button onClick={() => setShowAnnouncementModal(true)} className="shadow-glow">
               新規お知らせを作成
             </Button>
-          </div>
+          </motion.div>
         )}
       </div>
 
@@ -403,7 +424,7 @@ export function AdminDashboard() {
         title="お知らせを配信"
         size="md"
       >
-        <div className="space-y-4">
+        <div className="space-y-5">
           <Input
             label="タイトル"
             placeholder="お知らせのタイトル"
@@ -412,20 +433,20 @@ export function AdminDashboard() {
           />
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1">
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
               内容
             </label>
             <textarea
               value={announcementForm.content}
               onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
-              className="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-neutral-900 dark:text-white transition-all resize-none"
               rows={4}
               placeholder="お知らせの内容を入力..."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-2">
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
               種類
             </label>
             <div className="flex gap-2">
@@ -438,10 +459,10 @@ export function AdminDashboard() {
                   key={type.id}
                   onClick={() => setAnnouncementForm({ ...announcementForm, type: type.id as any })}
                   className={`
-                    px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                    px-4 py-2 rounded-lg text-sm font-medium transition-all
                     ${announcementForm.type === type.id
-                      ? 'bg-primary-500 text-white'
-                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                      ? 'bg-primary-500 text-white shadow-md'
+                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
                     }
                   `}
                 >
@@ -451,11 +472,11 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <Button variant="ghost" onClick={() => setShowAnnouncementModal(false)}>
               キャンセル
             </Button>
-            <Button onClick={handlePublishAnnouncement}>
+            <Button onClick={handlePublishAnnouncement} className="shadow-glow">
               配信
             </Button>
           </div>
@@ -464,4 +485,3 @@ export function AdminDashboard() {
     </div>
   );
 }
-

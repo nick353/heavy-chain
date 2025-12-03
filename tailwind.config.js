@@ -84,13 +84,17 @@ export default {
         'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
         'elegant': '0 10px 40px -10px rgba(0, 0, 0, 0.08)',
         'floating': '0 20px 60px -15px rgba(0, 0, 0, 0.12)',
-        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)', // グラスモーフィズム用
-        'glow': '0 0 15px rgba(212, 175, 55, 0.3)', // ゴールドの輝き
+        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+        'glass-hover': '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+        'glass-inset': 'inset 0 0 32px 0 rgba(255, 255, 255, 0.05)',
+        'glow': '0 0 15px rgba(212, 175, 55, 0.3)',
+        'glow-lg': '0 0 30px rgba(212, 175, 55, 0.5)',
       },
       backgroundImage: {
         'luxury-gradient': 'linear-gradient(135deg, #fbf8f3 0%, #f5eee2 100%)',
         'gold-gradient': 'linear-gradient(135deg, #D4AF37 0%, #AA8C2C 100%)',
         'dark-luxury': 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)',
+        'shimmer': 'linear-gradient(45deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0) 60%)',
       },
       animation: {
         'fade-in': 'fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -98,6 +102,8 @@ export default {
         'slide-in-right': 'slideInRight 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
         'scale-slow': 'scaleSlow 10s linear infinite alternate',
         'shimmer': 'shimmer 2.5s linear infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
       keyframes: {
         fadeIn: {
@@ -119,6 +125,10 @@ export default {
         shimmer: {
           '0%': { backgroundPosition: '-1000px 0' },
           '100%': { backgroundPosition: '1000px 0' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-20px)' },
         },
       },
       backdropBlur: {

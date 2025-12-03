@@ -86,8 +86,9 @@ export function Layout() {
           <main className="flex-1 ml-0 lg:ml-[280px] p-4 pt-16 lg:pt-8 lg:p-12 transition-all duration-500 relative">
             {/* Background decorative elements */}
             <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-              <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-primary-200/20 blur-[100px] dark:bg-primary-900/10" />
-              <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] rounded-full bg-accent-200/20 blur-[120px] dark:bg-accent-900/10" />
+              <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-primary-200/20 blur-[100px] dark:bg-primary-900/10 animate-float" />
+              <div className="absolute bottom-[-10%] left-[-5%] w-[600px] h-[600px] rounded-full bg-accent-200/20 blur-[120px] dark:bg-accent-900/10 animate-pulse-slow" />
+              <div className="absolute top-[40%] left-[30%] w-[300px] h-[300px] rounded-full bg-gold-light/10 blur-[80px] animate-float" style={{ animationDelay: '2s' }} />
             </div>
 
             <AnimatePresence mode="wait">

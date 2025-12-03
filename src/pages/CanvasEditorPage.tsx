@@ -35,6 +35,7 @@ import { Button, Modal, Textarea, Input } from '../components/ui';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
@@ -545,7 +546,7 @@ export function CanvasEditorPage() {
               onChange={(e) => setGeneratePrompt(e.target.value)}
               rows={3}
             />
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
               ミニマル、ラグジュアリー、ストリート等の8スタイルから4つを生成します
             </p>
           </div>
@@ -561,7 +562,7 @@ export function CanvasEditorPage() {
               onChange={(e) => setProductDescription(e.target.value)}
               rows={3}
             />
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
               正面・側面・背面・ディテールの4カットを生成します
             </p>
           </div>
@@ -578,7 +579,7 @@ export function CanvasEditorPage() {
               rows={3}
             />
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">体型</label>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">体型</label>
               <div className="flex gap-2 flex-wrap">
                 {['slim', 'regular', 'plus'].map((type) => (
                   <button
@@ -588,8 +589,8 @@ export function CanvasEditorPage() {
                     )}
                     className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                       selectedBodyTypes.includes(type)
-                        ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'border-neutral-200 hover:border-neutral-300'
+                        ? 'bg-primary-100 dark:bg-primary-900/30 border-primary-300 text-primary-700 dark:text-primary-300'
+                        : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:text-neutral-300'
                     }`}
                   >
                     {type === 'slim' ? 'スリム' : type === 'regular' ? 'レギュラー' : 'プラス'}
@@ -598,7 +599,7 @@ export function CanvasEditorPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">年代</label>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">年代</label>
               <div className="flex gap-2 flex-wrap">
                 {['20s', '30s', '40s', '50s'].map((age) => (
                   <button
@@ -608,8 +609,8 @@ export function CanvasEditorPage() {
                     )}
                     className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                       selectedAgeGroups.includes(age)
-                        ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'border-neutral-200 hover:border-neutral-300'
+                        ? 'bg-primary-100 dark:bg-primary-900/30 border-primary-300 text-primary-700 dark:text-primary-300'
+                        : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:text-neutral-300'
                     }`}
                   >
                     {age}
@@ -636,7 +637,7 @@ export function CanvasEditorPage() {
               onChange={(e) => setSubheadline(e.target.value)}
             />
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">言語</label>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">言語</label>
               <div className="flex gap-2 flex-wrap">
                 {[
                   { code: 'ja', name: '日本語' },
@@ -651,8 +652,8 @@ export function CanvasEditorPage() {
                     )}
                     className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                       selectedLanguages.includes(lang.code)
-                        ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'border-neutral-200 hover:border-neutral-300'
+                        ? 'bg-primary-100 dark:bg-primary-900/30 border-primary-300 text-primary-700 dark:text-primary-300'
+                        : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:text-neutral-300'
                     }`}
                   >
                     {lang.name}
@@ -677,34 +678,34 @@ export function CanvasEditorPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-neutral-50">
+    <div className="h-screen flex flex-col bg-neutral-50 dark:bg-neutral-950">
       {/* Header */}
-      <header className="h-14 bg-white border-b border-neutral-200 flex items-center justify-between px-4">
+      <header className="glass-nav h-14 flex items-center justify-between px-4 z-20">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/dashboard')}
-            className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-600 dark:text-neutral-400"
           >
-            <ArrowLeft className="w-5 h-5 text-neutral-600" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="font-semibold text-neutral-800">
+            <h1 className="font-semibold text-neutral-800 dark:text-white">
               プロジェクト名
             </h1>
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
               最終更新: たった今
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-neutral-100 rounded-lg p-1">
+          <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1 border border-neutral-200 dark:border-neutral-700">
             <button
               onClick={() => setViewMode('canvas')}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'canvas'
-                  ? 'bg-white text-neutral-800 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-700'
+                  ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
               }`}
             >
               <Layers className="w-4 h-4 inline-block mr-1.5" />
@@ -714,8 +715,8 @@ export function CanvasEditorPage() {
               onClick={() => setViewMode('tree')}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'tree'
-                  ? 'bg-white text-neutral-800 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-700'
+                  ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
               }`}
             >
               <GitBranch className="w-4 h-4 inline-block mr-1.5" />
@@ -723,20 +724,20 @@ export function CanvasEditorPage() {
             </button>
           </div>
 
-          <div className="w-px h-6 bg-neutral-200 mx-2" />
+          <div className="w-px h-6 bg-neutral-200 dark:bg-neutral-700 mx-2" />
 
           <div className="flex -space-x-2">
-            <div className="w-8 h-8 rounded-full bg-primary-100 border-2 border-white flex items-center justify-center">
-              <span className="text-xs font-medium text-primary-700">Y</span>
+            <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900 border-2 border-white dark:border-neutral-800 flex items-center justify-center">
+              <span className="text-xs font-medium text-primary-700 dark:text-primary-300">Y</span>
             </div>
           </div>
           
-          <Button variant="secondary" size="sm">
+          <Button variant="secondary" size="sm" className="shadow-sm">
             <Users className="w-4 h-4 mr-1.5" />
             招待
           </Button>
 
-          <Button size="sm">
+          <Button size="sm" className="shadow-glow hover:shadow-glow-lg">
             <Save className="w-4 h-4 mr-1.5" />
             保存
           </Button>
@@ -746,7 +747,7 @@ export function CanvasEditorPage() {
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar - Tools */}
-        <aside className="w-14 bg-white border-r border-neutral-200 flex flex-col items-center py-4 gap-2">
+        <aside className="w-14 glass-panel border-r border-white/20 dark:border-white/5 flex flex-col items-center py-4 gap-2 z-10">
           <input
             type="file"
             id="file-upload"
@@ -757,27 +758,29 @@ export function CanvasEditorPage() {
           />
           <label
             htmlFor="file-upload"
-            className="p-3 hover:bg-neutral-100 rounded-xl cursor-pointer transition-colors"
+            className="p-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl cursor-pointer transition-colors text-neutral-600 dark:text-neutral-400"
             title="画像をアップロード"
           >
-            <Upload className="w-5 h-5 text-neutral-600" />
+            <Upload className="w-5 h-5" />
           </label>
           
           <button
             onClick={() => setShowGenerateModal(true)}
-            className="p-3 bg-primary-50 hover:bg-primary-100 rounded-xl transition-colors"
+            className="p-3 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 rounded-xl transition-colors text-primary-600 dark:text-primary-400"
             title="AI画像生成"
           >
-            <Wand2 className="w-5 h-5 text-primary-600" />
+            <Wand2 className="w-5 h-5" />
           </button>
 
-          <div className="w-8 h-px bg-neutral-200 my-2" />
+          <div className="w-8 h-px bg-neutral-200 dark:bg-neutral-700 my-2" />
 
           {/* Side panel toggles */}
           <button
             onClick={() => setSidePanel(sidePanel === 'chat' ? null : 'chat')}
             className={`p-3 rounded-xl transition-colors ${
-              sidePanel === 'chat' ? 'bg-primary-100 text-primary-600' : 'hover:bg-neutral-100 text-neutral-600'
+              sidePanel === 'chat' 
+                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
+                : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
             }`}
             title="チャットエディター"
           >
@@ -787,7 +790,9 @@ export function CanvasEditorPage() {
           <button
             onClick={() => setSidePanel(sidePanel === 'templates' ? null : 'templates')}
             className={`p-3 rounded-xl transition-colors ${
-              sidePanel === 'templates' ? 'bg-primary-100 text-primary-600' : 'hover:bg-neutral-100 text-neutral-600'
+              sidePanel === 'templates' 
+                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
+                : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
             }`}
             title="テンプレート"
           >
@@ -797,7 +802,9 @@ export function CanvasEditorPage() {
           <button
             onClick={() => setSidePanel(sidePanel === 'properties' ? null : 'properties')}
             className={`p-3 rounded-xl transition-colors ${
-              sidePanel === 'properties' ? 'bg-primary-100 text-primary-600' : 'hover:bg-neutral-100 text-neutral-600'
+              sidePanel === 'properties' 
+                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
+                : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
             }`}
             title="プロパティ"
           >
@@ -806,16 +813,22 @@ export function CanvasEditorPage() {
         </aside>
 
         {/* Canvas area */}
-        <main className="flex-1 flex flex-col">
-          <div className="p-3 flex justify-center">
-            <CanvasToolbar
-              onAddText={handleAddText}
-              onAddShape={handleAddShape}
-              onAddFrame={handleAddFrame}
-            />
+        <main className="flex-1 flex flex-col relative">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+            <div className="glass-panel rounded-xl p-1.5 shadow-lg border border-white/40 dark:border-white/10">
+              <CanvasToolbar
+                onAddText={handleAddText}
+                onAddShape={handleAddShape}
+                onAddFrame={handleAddFrame}
+              />
+            </div>
           </div>
 
-          <div ref={containerRef} className="flex-1 relative">
+          <div ref={containerRef} className="flex-1 relative bg-neutral-50/50 dark:bg-neutral-950/50">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(200,200,200,0.1)_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-[radial-gradient(circle_at_center,rgba(50,50,50,0.3)_1px,transparent_1px)]" />
+            </div>
+
             {viewMode === 'canvas' ? (
               <>
                 <InfiniteCanvas
@@ -832,11 +845,13 @@ export function CanvasEditorPage() {
                   />
                 )}
 
-                <div className="absolute bottom-4 right-4">
-                  <Minimap
-                    canvasWidth={canvasSize.width}
-                    canvasHeight={canvasSize.height}
-                  />
+                <div className="absolute bottom-4 right-4 z-10">
+                  <div className="glass-panel rounded-xl overflow-hidden border border-white/40 dark:border-white/10 shadow-lg">
+                    <Minimap
+                      canvasWidth={canvasSize.width}
+                      canvasHeight={canvasSize.height}
+                    />
+                  </div>
                 </div>
               </>
             ) : (
@@ -846,40 +861,47 @@ export function CanvasEditorPage() {
         </main>
 
         {/* Right sidebar */}
-        {sidePanel && (
-          <aside className="w-80 bg-white border-l border-neutral-200 flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100">
-              <h2 className="font-semibold text-neutral-800">
-                {sidePanel === 'properties' && 'プロパティ'}
-                {sidePanel === 'chat' && 'チャットエディター'}
-                {sidePanel === 'templates' && 'テンプレート'}
-              </h2>
-              <button
-                onClick={() => setSidePanel(null)}
-                className="p-1 hover:bg-neutral-100 rounded transition-colors"
-              >
-                <X className="w-4 h-4 text-neutral-500" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {sidePanel === 'properties' && (
-                <PropertiesPanel selectedObject={selectedObject} />
-              )}
-              {sidePanel === 'chat' && (
-                <ChatEditor 
-                  selectedImageUrl={selectedObject?.type === 'image' ? (selectedObject as any).src : undefined}
-                  onEditResult={handleChatEditResult}
-                />
-              )}
-              {sidePanel === 'templates' && (
-                <TemplateSelector 
-                  mode="size" 
-                  onSelectSize={handleTemplateSelect} 
-                />
-              )}
-            </div>
-          </aside>
-        )}
+        <AnimatePresence>
+          {sidePanel && (
+            <motion.aside 
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 320, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              className="glass-panel border-l border-white/20 dark:border-white/5 flex flex-col overflow-hidden z-10"
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+                <h2 className="font-semibold text-neutral-800 dark:text-white">
+                  {sidePanel === 'properties' && 'プロパティ'}
+                  {sidePanel === 'chat' && 'チャットエディター'}
+                  {sidePanel === 'templates' && 'テンプレート'}
+                </h2>
+                <button
+                  onClick={() => setSidePanel(null)}
+                  className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors text-neutral-500 dark:text-neutral-400"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                {sidePanel === 'properties' && (
+                  <PropertiesPanel selectedObject={selectedObject} />
+                )}
+                {sidePanel === 'chat' && (
+                  <ChatEditor 
+                    selectedImageUrl={selectedObject?.type === 'image' ? (selectedObject as any).src : undefined}
+                    onEditResult={handleChatEditResult}
+                  />
+                )}
+                {sidePanel === 'templates' && (
+                  <TemplateSelector 
+                    mode="size" 
+                    onSelectSize={handleTemplateSelect} 
+                  />
+                )}
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Generate Modal */}
@@ -892,7 +914,7 @@ export function CanvasEditorPage() {
         <div className="space-y-6">
           {/* Mode selector */}
           <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-3">
+            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
               生成モード
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -902,15 +924,15 @@ export function CanvasEditorPage() {
                   onClick={() => setGenerateMode(mode.id as GenerateMode)}
                   className={`p-3 rounded-xl border-2 transition-all text-left ${
                     generateMode === mode.id
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-neutral-200 hover:border-neutral-300'
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
+                      : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
                   }`}
                 >
                   <mode.icon className={`w-5 h-5 mb-2 ${
-                    generateMode === mode.id ? 'text-primary-600' : 'text-neutral-500'
+                    generateMode === mode.id ? 'text-primary-600 dark:text-primary-400' : 'text-neutral-500 dark:text-neutral-400'
                   }`} />
-                  <div className="font-medium text-sm text-neutral-800">{mode.name}</div>
-                  <div className="text-xs text-neutral-500 mt-0.5">{mode.description}</div>
+                  <div className="font-medium text-sm text-neutral-800 dark:text-white">{mode.name}</div>
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{mode.description}</div>
                 </button>
               ))}
             </div>
@@ -919,7 +941,7 @@ export function CanvasEditorPage() {
           {/* Dynamic form */}
           {renderGenerateForm()}
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100">
+          <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <Button
               variant="secondary"
               onClick={() => setShowGenerateModal(false)}
@@ -930,6 +952,7 @@ export function CanvasEditorPage() {
               onClick={handleGenerate}
               disabled={isGenerating}
               leftIcon={isGenerating ? undefined : <Sparkles className="w-4 h-4" />}
+              className="shadow-glow"
             >
               {isGenerating ? '生成中...' : '生成'}
             </Button>

@@ -24,6 +24,7 @@ import { FeatureSelector, type Feature } from '../components/FeatureSelector';
 import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
 import { ImageSelector, type SelectedImage, type ReferenceType } from '../components/ImageSelector';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const stylePresets = [
   { id: 'minimal', name: 'ミニマル', prompt: 'minimalist, clean, simple' },
@@ -1384,7 +1385,11 @@ export function GeneratePage() {
   // Feature selection view
   if (!selectedFeature) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
         <div className="mb-8">
           <h1 className="text-2xl font-display font-semibold text-neutral-900 dark:text-white mb-2">
             画像生成
@@ -1398,7 +1403,7 @@ export function GeneratePage() {
           onSelectFeature={handleFeatureSelect}
           selectedFeatureId={selectedFeature}
         />
-      </div>
+      </motion.div>
     );
   }
 
@@ -1407,17 +1412,22 @@ export function GeneratePage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="grid xl:grid-cols-[400px,1fr] lg:grid-cols-1 gap-8">
         {/* Left Panel */}
-        <div className="space-y-6">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-6"
+        >
           <div>
             <button
               onClick={handleBack}
-              className="flex items-center gap-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 mb-4"
+              className="flex items-center gap-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 mb-4 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               機能選択に戻る
             </button>
             <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md ${
                 featureConfig?.requiresImage 
                   ? 'bg-purple-100 dark:bg-purple-900/50' 
                   : 'bg-primary-100 dark:bg-primary-900/50'
@@ -1439,13 +1449,13 @@ export function GeneratePage() {
             </div>
           </div>
 
-          <div className="card dark:bg-neutral-800 dark:border-neutral-700">
+          <div className="glass-panel p-6 rounded-2xl dark:bg-neutral-800/50 dark:border-neutral-700/50">
             {/* Prompt History Button */}
             {!featureConfig?.requiresImage && selectedFeature.id !== 'chat-edit' && (
               <div className="flex justify-end mb-4">
                 <button
                   onClick={() => setShowPromptHistory(true)}
-                  className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                  className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 transition-colors"
                 >
                   <History className="w-4 h-4" />
                   履歴から選ぶ
@@ -1460,7 +1470,7 @@ export function GeneratePage() {
                 onClick={handleGenerate}
                 isLoading={isGenerating}
                 disabled={isGenerating || (featureConfig?.requiresImage && !referenceImage)}
-                className="w-full mt-6"
+                className="w-full mt-6 shadow-glow hover:shadow-glow-lg transition-all duration-300"
                 size="lg"
                 leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
               >
@@ -1468,13 +1478,22 @@ export function GeneratePage() {
               </Button>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Right Panel - Results */}
-        <div>
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
+            <h2 className="text-lg font-semibold text-neutral-800 dark:text-white flex items-center gap-2">
               生成結果
+              {generatedImages.length > 0 && (
+                <span className="text-xs font-normal text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
+                  {generatedImages.length}枚
+                </span>
+              )}
             </h2>
             {generatedImages.length > 0 && (
               <button
@@ -1482,7 +1501,7 @@ export function GeneratePage() {
                   setGeneratedImages([]);
                   setShowSuccessCard(false);
                 }}
-                className="text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 flex items-center gap-1"
+                className="text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
               >
                 <RefreshCw className="w-4 h-4" />
                 クリア
@@ -1491,25 +1510,33 @@ export function GeneratePage() {
           </div>
 
           {isGenerating && (
-            <div className="bg-white dark:bg-neutral-800 rounded-2xl p-12 text-center shadow-soft">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-accent-100 dark:from-primary-900/50 dark:to-accent-900/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
+            <div className="glass-panel rounded-2xl p-12 text-center shadow-soft min-h-[400px] flex flex-col items-center justify-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-primary-100 to-accent-100 dark:from-primary-900/50 dark:to-accent-900/50 rounded-2xl flex items-center justify-center mb-6 relative">
+                <Loader2 className="w-10 h-10 text-primary-600 animate-spin relative z-10" />
+                <div className="absolute inset-0 bg-primary-400/20 blur-xl animate-pulse-slow" />
               </div>
-              <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-200 mb-2">
+              <h3 className="text-xl font-medium text-neutral-700 dark:text-neutral-200 mb-2 font-display">
                 生成しています...
               </h3>
-              <p className="text-neutral-500 dark:text-neutral-400">
-                {selectedFeature.id === 'model-matrix' ? '複数画像の生成には時間がかかります' : '通常20〜30秒かかります'}
+              <p className="text-neutral-500 dark:text-neutral-400 max-w-xs mx-auto mb-8">
+                {selectedFeature.id === 'model-matrix' ? '複数画像の生成には時間がかかります' : 'AIが画像を生成中です。通常20〜30秒ほどかかります。'}
               </p>
-              <div className="mt-4 w-48 h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full mx-auto overflow-hidden">
-                <div className="h-full bg-primary-500 rounded-full animate-pulse" style={{ width: '60%' }} />
+              <div className="w-64 h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-gradient-to-r from-primary-400 to-accent-400 rounded-full" 
+                  initial={{ x: '-100%' }}
+                  animate={{ x: '100%' }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                />
               </div>
             </div>
           )}
 
           {!isGenerating && generatedImages.length === 0 && (
-            <div className="bg-neutral-50 dark:bg-neutral-800 rounded-2xl p-12 text-center border-2 border-dashed border-neutral-200 dark:border-neutral-700">
-              <ImageIcon className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
+            <div className="glass-panel rounded-2xl p-12 text-center border-2 border-dashed border-neutral-200/50 dark:border-neutral-700/50 min-h-[400px] flex flex-col items-center justify-center">
+              <div className="w-20 h-20 bg-neutral-50 dark:bg-neutral-800/50 rounded-full flex items-center justify-center mb-6">
+                <ImageIcon className="w-10 h-10 text-neutral-300 dark:text-neutral-600" />
+              </div>
               <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-200 mb-2">
                 生成結果がここに表示されます
               </h3>
@@ -1523,12 +1550,17 @@ export function GeneratePage() {
           )}
 
           {generatedImages.length > 0 && (
-            <>
+            <AnimatePresence>
               {/* Success Card */}
               {showSuccessCard && (
-                <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-4">
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-6 bg-green-50/50 dark:bg-green-900/20 border border-green-200/50 dark:border-green-800/50 rounded-2xl p-4 backdrop-blur-sm"
+                >
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 bg-green-100 dark:bg-green-800/50 rounded-full flex items-center justify-center flex-shrink-0">
                       <Sparkles className="w-5 h-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div className="flex-1">
@@ -1540,13 +1572,13 @@ export function GeneratePage() {
                       </p>
                       <div className="flex items-center gap-3">
                         <Link to="/gallery">
-                          <Button size="sm" variant="secondary">
+                          <Button size="sm" variant="secondary" className="bg-white/50 dark:bg-black/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 hover:bg-white/80">
                             <FolderOpen className="w-4 h-4 mr-1.5" />
                             ギャラリーで見る
                           </Button>
                         </Link>
                         <Link to="/canvas">
-                          <Button size="sm" variant="ghost">
+                          <Button size="sm" variant="ghost" className="text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30">
                             キャンバスで編集
                             <ExternalLink className="w-4 h-4 ml-1.5" />
                           </Button>
@@ -1555,55 +1587,62 @@ export function GeneratePage() {
                     </div>
                     <button
                       onClick={() => setShowSuccessCard(false)}
-                      className="text-green-600 hover:text-green-800 dark:text-green-400"
+                      className="text-green-600 hover:text-green-800 dark:text-green-400 p-1 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors"
                     >
                       ✕
                     </button>
                   </div>
-                </div>
+                </motion.div>
               )}
 
-              <div className={`grid gap-4 ${
+              <div className={`grid gap-6 ${
                 generatedImages.length === 1 ? 'grid-cols-1' :
                 generatedImages.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'
               }`}>
                 {generatedImages.map((image, index) => (
-                  <div
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.1 }}
                     key={image.id || index}
-                    className="group relative bg-white dark:bg-neutral-800 rounded-2xl overflow-hidden shadow-soft hover:shadow-elegant transition-all"
+                    className="group relative glass-card overflow-hidden hover:shadow-elegant transition-all duration-500 hover:-translate-y-1"
                   >
                     {image.label && (
-                      <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-black/50 rounded-lg text-white text-xs font-medium">
+                      <div className="absolute top-3 left-3 z-10 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-white text-xs font-medium border border-white/10">
                         {image.label}
                       </div>
                     )}
                     <img
                       src={image.imageUrl}
                       alt={image.prompt}
-                      className="w-full aspect-square object-cover"
+                      className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                        <p className="text-white text-sm line-clamp-2 mb-3 opacity-90">
+                          {image.prompt}
+                        </p>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleDownload(image.imageUrl, `${image.label || 'image'}.png`)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-sm font-medium text-neutral-800 hover:bg-neutral-100 transition-colors"
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white rounded-lg text-sm font-medium text-neutral-900 hover:bg-neutral-100 transition-colors"
                           >
                             <Download className="w-4 h-4" />
                             保存
                           </button>
-                          <button className="p-1.5 bg-white/20 rounded-lg text-white hover:bg-white/30 transition-colors">
+                          <button className="p-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white hover:bg-white/30 transition-colors">
                             <Heart className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-            </>
+            </AnimatePresence>
           )}
-        </div>
+        </motion.div>
       </div>
 
       {/* Prompt History Modal */}

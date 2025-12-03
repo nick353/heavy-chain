@@ -18,6 +18,7 @@ import { Button, Modal, Input, Textarea } from '../components/ui';
 import { Onboarding, useOnboarding } from '../components/Onboarding';
 import type { GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 const quickActions = [
   {
@@ -63,6 +64,28 @@ const tips = [
     description: '「もっと明るく」など対話形式で画像を編集できます。'
   }
 ];
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: "easeOut"
+    }
+  }
+};
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -185,73 +208,79 @@ export function DashboardPage() {
       {/* Onboarding */}
       {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      >
         {/* Welcome */}
-        <div className="mb-8 flex items-start justify-between">
+        <motion.div variants={itemVariants} className="mb-8 flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-display font-semibold text-neutral-900 mb-2">
+            <h1 className="text-3xl font-display font-semibold text-neutral-900 dark:text-white mb-2">
               こんにちは、{profile?.name || 'ユーザー'}さん
             </h1>
-            <p className="text-neutral-600">
+            <p className="text-neutral-600 dark:text-neutral-400">
               今日も素敵な画像を生成しましょう。
             </p>
           </div>
           <button
             onClick={resetOnboarding}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors glass-panel border-0"
             title="チュートリアルを再表示"
           >
             <HelpCircle className="w-4 h-4" />
             <span className="hidden sm:inline">ヘルプ</span>
           </button>
-        </div>
+        </motion.div>
 
         {/* Quick Actions */}
-        <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
+        <motion.div variants={itemVariants} className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
           {quickActions.map((action) => (
             <Link
               key={action.id}
               to={action.href}
-              className="group relative overflow-hidden bg-white rounded-2xl p-6 shadow-soft hover:shadow-elegant transition-all duration-300"
+              className="group relative overflow-hidden glass-card p-6 transition-all duration-300"
             >
-              <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${action.color} opacity-10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500`} />
+              <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${action.color} opacity-10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500 blur-2xl`} />
               
               <div className="relative">
-                <div className={`w-12 h-12 bg-gradient-to-br ${action.color} rounded-xl flex items-center justify-center mb-4 shadow-lg`}>
+                <div className={`w-12 h-12 bg-gradient-to-br ${action.color} rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                   <action.icon className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-neutral-800 mb-1 group-hover:text-primary-700 transition-colors">
+                <h3 className="text-xl font-semibold text-neutral-800 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                   {action.title}
                 </h3>
-                <p className="text-neutral-500">{action.description}</p>
-                <ArrowRight className="absolute bottom-0 right-0 w-5 h-5 text-neutral-300 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
+                <p className="text-neutral-500 dark:text-neutral-400">{action.description}</p>
+                <ArrowRight className="absolute bottom-0 right-0 w-5 h-5 text-neutral-300 dark:text-neutral-600 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
               </div>
             </Link>
           ))}
-        </div>
+        </motion.div>
 
         {/* Recent Images */}
-        <div className="mb-12">
+        <motion.div variants={itemVariants} className="mb-12">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-neutral-400" />
-              <h2 className="text-xl font-semibold text-neutral-800">最近の生成画像</h2>
+              <h2 className="text-xl font-semibold text-neutral-800 dark:text-white">最近の生成画像</h2>
             </div>
             <Link
               to="/gallery"
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+              className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium flex items-center gap-1 group"
             >
               すべて見る
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
           {recentImages.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
               {recentImages.map((image) => (
-                <div
+                <motion.div
                   key={image.id}
-                  className="aspect-square rounded-xl overflow-hidden bg-neutral-100 hover:ring-2 hover:ring-primary-500 transition-all cursor-pointer"
+                  whileHover={{ scale: 1.05 }}
+                  className="aspect-square rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 hover:ring-2 hover:ring-primary-500 transition-all cursor-pointer shadow-sm hover:shadow-lg"
                   onClick={() => navigate(`/gallery?image=${image.id}`)}
                 >
                   <img
@@ -259,18 +288,18 @@ export function DashboardPage() {
                     alt=""
                     className="w-full h-full object-cover"
                   />
-                </div>
+                </motion.div>
               ))}
             </div>
           ) : (
-            <div className="bg-gradient-to-br from-neutral-50 to-neutral-100 rounded-2xl p-12 text-center border border-neutral-200">
-              <div className="w-20 h-20 bg-gradient-to-br from-primary-100 to-accent-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <div className="glass-panel rounded-2xl p-12 text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-primary-100 to-accent-100 dark:from-primary-900/50 dark:to-accent-900/50 rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float">
                 <Image className="w-10 h-10 text-primary-500" />
               </div>
-              <h3 className="text-xl font-semibold text-neutral-800 mb-2">
+              <h3 className="text-xl font-semibold text-neutral-800 dark:text-white mb-2">
                 まだ画像がありません
               </h3>
-              <p className="text-neutral-500 mb-6 max-w-md mx-auto">
+              <p className="text-neutral-500 dark:text-neutral-400 mb-6 max-w-md mx-auto">
                 最初の画像を生成してみましょう。日本語でプロンプトを入力するだけで、AIがプロ品質の画像を作成します。
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -287,57 +316,57 @@ export function DashboardPage() {
               </div>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Tips for new users */}
         {recentImages.length === 0 && (
-          <div className="mb-12">
-            <h2 className="text-lg font-semibold text-neutral-800 mb-4">💡 使い方のヒント</h2>
+          <motion.div variants={itemVariants} className="mb-12">
+            <h2 className="text-lg font-semibold text-neutral-800 dark:text-white mb-4">💡 使い方のヒント</h2>
             <div className="grid sm:grid-cols-3 gap-4">
               {tips.map((tip, i) => (
-                <div key={i} className="bg-white rounded-xl p-5 shadow-soft">
-                  <div className="w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center mb-3">
-                    <tip.icon className="w-5 h-5 text-primary-600" />
+                <div key={i} className="glass-card p-5">
+                  <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mb-3">
+                    <tip.icon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                   </div>
-                  <h3 className="font-medium text-neutral-800 mb-1">{tip.title}</h3>
-                  <p className="text-sm text-neutral-500">{tip.description}</p>
+                  <h3 className="font-medium text-neutral-800 dark:text-white mb-1">{tip.title}</h3>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">{tip.description}</p>
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Stats */}
-        <div className="grid sm:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl p-6 shadow-soft">
+        <motion.div variants={itemVariants} className="grid sm:grid-cols-3 gap-6">
+          <div className="glass-card p-6">
             <div className="flex items-center gap-3 mb-2">
               <TrendingUp className="w-5 h-5 text-primary-500" />
-              <span className="text-sm font-medium text-neutral-500">今月の生成数</span>
+              <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">今月の生成数</span>
             </div>
-            <p className="text-3xl font-semibold text-neutral-800">
+            <p className="text-3xl font-semibold text-neutral-800 dark:text-white">
               {recentImages.length}
             </p>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-soft">
+          <div className="glass-card p-6">
             <div className="flex items-center gap-3 mb-2">
               <Image className="w-5 h-5 text-accent-500" />
-              <span className="text-sm font-medium text-neutral-500">保存済み画像</span>
+              <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">保存済み画像</span>
             </div>
-            <p className="text-3xl font-semibold text-neutral-800">
+            <p className="text-3xl font-semibold text-neutral-800 dark:text-white">
               {recentImages.length}
             </p>
           </div>
-          <div className="bg-white rounded-xl p-6 shadow-soft">
+          <div className="glass-card p-6">
             <div className="flex items-center gap-3 mb-2">
               <Sparkles className="w-5 h-5 text-yellow-500" />
-              <span className="text-sm font-medium text-neutral-500">お気に入り</span>
+              <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">お気に入り</span>
             </div>
-            <p className="text-3xl font-semibold text-neutral-800">
+            <p className="text-3xl font-semibold text-neutral-800 dark:text-white">
               {recentImages.filter(img => img.is_favorite).length}
             </p>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Brand Creation Modal */}
       <Modal
@@ -347,8 +376,8 @@ export function DashboardPage() {
         size="md"
       >
         <form onSubmit={handleCreateBrand} className="space-y-4">
-          <div className="bg-primary-50 rounded-xl p-4 mb-4">
-            <p className="text-sm text-primary-800">
+          <div className="bg-primary-50 dark:bg-primary-900/30 rounded-xl p-4 mb-4">
+            <p className="text-sm text-primary-800 dark:text-primary-200">
               🎉 ようこそ！まずはブランドを作成しましょう。ブランドごとに画像やスタイルを管理できます。
             </p>
           </div>

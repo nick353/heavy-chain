@@ -15,6 +15,7 @@ import { Button, Input, Textarea, Modal } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface BrandMember {
   id: string;
@@ -245,33 +246,42 @@ export function BrandSettingsPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
+      <motion.div 
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="flex items-center gap-4 mb-8"
+      >
         <button
           onClick={() => navigate('/dashboard')}
-          className="p-2 hover:bg-neutral-100 rounded-lg transition-colors"
+          className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-600 dark:text-neutral-400"
         >
-          <ArrowLeft className="w-5 h-5 text-neutral-600" />
+          <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-display font-semibold text-neutral-900">
+          <h1 className="text-2xl font-display font-semibold text-neutral-900 dark:text-white">
             ブランド設定
           </h1>
-          <p className="text-neutral-500">
+          <p className="text-neutral-500 dark:text-neutral-400">
             ブランド情報とチームメンバーを管理
           </p>
         </div>
-      </div>
+      </motion.div>
 
       <div className="space-y-8">
         {/* Brand Info */}
-        <div className="bg-white rounded-2xl shadow-soft p-6">
-          <h2 className="text-lg font-semibold text-neutral-800 mb-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="glass-panel rounded-2xl p-8"
+        >
+          <h2 className="text-lg font-semibold text-neutral-800 dark:text-white mb-6">
             ブランド情報
           </h2>
 
           {/* Logo */}
-          <div className="flex items-center gap-6 mb-6">
-            <div className="w-24 h-24 bg-neutral-100 rounded-xl flex items-center justify-center overflow-hidden">
+          <div className="flex items-center gap-6 mb-8">
+            <div className="w-24 h-24 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center overflow-hidden shadow-inner">
               {currentBrand.logo_url ? (
                 <img 
                   src={currentBrand.logo_url} 
@@ -279,7 +289,7 @@ export function BrandSettingsPage() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-3xl font-bold text-neutral-400">
+                <span className="text-3xl font-bold text-neutral-400 dark:text-neutral-600 font-display">
                   {form.name.charAt(0).toUpperCase()}
                 </span>
               )}
@@ -296,17 +306,18 @@ export function BrandSettingsPage() {
                 variant="secondary"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
+                className="shadow-sm"
               >
                 <Upload className="w-4 h-4 mr-2" />
                 ロゴをアップロード
               </Button>
-              <p className="text-xs text-neutral-500 mt-2">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
                 推奨: 512x512px, PNG/JPG
               </p>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             <Input
               label="ブランド名"
               value={form.name}
@@ -330,60 +341,77 @@ export function BrandSettingsPage() {
 
             {/* Brand Colors */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                <Palette className="w-4 h-4 inline-block mr-1" />
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                <Palette className="w-4 h-4 inline-block mr-1.5" />
                 ブランドカラー
               </label>
-              <div className="flex gap-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={form.primaryColor}
-                    onChange={(e) => setForm({ ...form, primaryColor: e.target.value })}
-                    className="w-10 h-10 rounded-lg cursor-pointer border border-neutral-200"
-                  />
-                  <span className="text-sm text-neutral-600">プライマリ</span>
+              <div className="flex gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <input
+                      type="color"
+                      value={form.primaryColor}
+                      onChange={(e) => setForm({ ...form, primaryColor: e.target.value })}
+                      className="w-12 h-12 rounded-xl cursor-pointer border-0 p-0 opacity-0 absolute inset-0"
+                    />
+                    <div 
+                      className="w-12 h-12 rounded-xl border-2 border-white dark:border-neutral-700 shadow-sm"
+                      style={{ backgroundColor: form.primaryColor }}
+                    />
+                  </div>
+                  <span className="text-sm text-neutral-600 dark:text-neutral-400">プライマリ</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={form.secondaryColor}
-                    onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })}
-                    className="w-10 h-10 rounded-lg cursor-pointer border border-neutral-200"
-                  />
-                  <span className="text-sm text-neutral-600">セカンダリ</span>
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <input
+                      type="color"
+                      value={form.secondaryColor}
+                      onChange={(e) => setForm({ ...form, secondaryColor: e.target.value })}
+                      className="w-12 h-12 rounded-xl cursor-pointer border-0 p-0 opacity-0 absolute inset-0"
+                    />
+                    <div 
+                      className="w-12 h-12 rounded-xl border-2 border-white dark:border-neutral-700 shadow-sm"
+                      style={{ backgroundColor: form.secondaryColor }}
+                    />
+                  </div>
+                  <span className="text-sm text-neutral-600 dark:text-neutral-400">セカンダリ</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end mt-6 pt-6 border-t border-neutral-100">
-            <Button onClick={handleSave} isLoading={isSaving}>
+          <div className="flex justify-end mt-8 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+            <Button onClick={handleSave} isLoading={isSaving} className="shadow-glow hover:shadow-glow-lg transition-all">
               <Save className="w-4 h-4 mr-2" />
               保存
             </Button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Team Members */}
-        <div className="bg-white rounded-2xl shadow-soft p-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="glass-panel rounded-2xl p-8"
+        >
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-neutral-800">
+            <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
               <Users className="w-5 h-5 inline-block mr-2" />
               チームメンバー
             </h2>
-            <Button size="sm" onClick={() => setShowInviteModal(true)}>
+            <Button size="sm" onClick={() => setShowInviteModal(true)} className="shadow-sm">
               <Plus className="w-4 h-4 mr-1" />
               招待
             </Button>
           </div>
 
           {isLoading ? (
-            <div className="py-8 text-center">
+            <div className="py-12 text-center">
               <div className="spinner mx-auto" />
             </div>
           ) : members.length === 0 ? (
-            <div className="py-8 text-center text-neutral-500">
+            <div className="py-12 text-center text-neutral-500 dark:text-neutral-400 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">
               チームメンバーはまだいません
             </div>
           ) : (
@@ -391,10 +419,10 @@ export function BrandSettingsPage() {
               {members.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between p-4 bg-neutral-50 rounded-xl"
+                  className="flex items-center justify-between p-4 bg-white/50 dark:bg-neutral-800/50 rounded-xl border border-neutral-100 dark:border-neutral-700/50 transition-all hover:bg-white/80 dark:hover:bg-neutral-800"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
                       {member.user?.avatar_url ? (
                         <img 
                           src={member.user.avatar_url} 
@@ -402,25 +430,25 @@ export function BrandSettingsPage() {
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
-                        <span className="text-sm font-medium text-primary-700">
+                        <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
                           {member.user?.name?.charAt(0) || '?'}
                         </span>
                       )}
                     </div>
                     <div>
-                      <p className="font-medium text-neutral-800">
+                      <p className="font-medium text-neutral-800 dark:text-white">
                         {member.user?.name || 'Unknown'}
                         {member.user_id === user?.id && (
-                          <span className="ml-2 text-xs text-neutral-500">(あなた)</span>
+                          <span className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">(あなた)</span>
                         )}
                       </p>
-                      <p className="text-sm text-neutral-500">{member.user?.email}</p>
+                      <p className="text-sm text-neutral-500 dark:text-neutral-400">{member.user?.email}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     {member.role === 'owner' ? (
-                      <span className="px-3 py-1 bg-primary-100 text-primary-700 text-sm font-medium rounded-full">
+                      <span className="px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm font-medium rounded-full border border-primary-200 dark:border-primary-800">
                         {ROLE_LABELS[member.role]}
                       </span>
                     ) : member.user_id !== user?.id ? (
@@ -428,7 +456,7 @@ export function BrandSettingsPage() {
                         <select
                           value={member.role}
                           onChange={(e) => handleRoleChange(member.id, e.target.value)}
-                          className="px-3 py-1.5 bg-white border border-neutral-200 rounded-lg text-sm"
+                          className="px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
                         >
                           <option value="admin">管理者</option>
                           <option value="editor">編集者</option>
@@ -436,13 +464,13 @@ export function BrandSettingsPage() {
                         </select>
                         <button
                           onClick={() => handleRemoveMember(member.id)}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </>
                     ) : (
-                      <span className="px-3 py-1 bg-neutral-100 text-neutral-600 text-sm rounded-full">
+                      <span className="px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 text-sm rounded-full border border-neutral-200 dark:border-neutral-700">
                         {ROLE_LABELS[member.role]}
                       </span>
                     )}
@@ -451,7 +479,7 @@ export function BrandSettingsPage() {
               ))}
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
 
       {/* Invite Modal */}
@@ -464,27 +492,33 @@ export function BrandSettingsPage() {
         }}
         title="メンバーを招待"
       >
-        <div className="space-y-4">
+        <div className="space-y-6">
           {inviteCode ? (
-            <>
-              <div className="bg-green-50 rounded-xl p-4 text-center">
-                <Check className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <p className="text-green-800 font-medium mb-1">招待を作成しました</p>
-                <p className="text-sm text-green-600">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-6"
+            >
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-6 text-center border border-green-100 dark:border-green-800">
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-800/50 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Check className="w-6 h-6 text-green-600 dark:text-green-400" />
+                </div>
+                <p className="text-green-800 dark:text-green-200 font-medium mb-1">招待を作成しました</p>
+                <p className="text-sm text-green-600 dark:text-green-300">
                   以下の招待コードを{inviteEmail}に共有してください
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex-1 px-4 py-3 bg-neutral-100 rounded-lg font-mono text-lg text-center">
+                <div className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 rounded-xl font-mono text-lg text-center tracking-wider border border-neutral-200 dark:border-neutral-700">
                   {inviteCode}
                 </div>
-                <Button onClick={handleCopyCode}>
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <Button onClick={handleCopyCode} variant="secondary" className="h-full aspect-square p-0 w-12 flex items-center justify-center">
+                  {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
                 </Button>
               </div>
 
-              <p className="text-xs text-neutral-500 text-center">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center">
                 この招待コードは7日間有効です
               </p>
 
@@ -498,9 +532,9 @@ export function BrandSettingsPage() {
               >
                 別のメンバーを招待
               </Button>
-            </>
+            </motion.div>
           ) : (
-            <>
+            <div className="space-y-4">
               <Input
                 label="メールアドレス"
                 type="email"
@@ -510,13 +544,13 @@ export function BrandSettingsPage() {
               />
 
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
                   権限
                 </label>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-neutral-900 dark:text-white"
                 >
                   <option value="admin">管理者 - 全機能利用可能</option>
                   <option value="editor">編集者 - 画像生成・編集可能</option>
@@ -524,7 +558,7 @@ export function BrandSettingsPage() {
                 </select>
               </div>
 
-              <div className="flex gap-2 pt-4">
+              <div className="flex gap-3 pt-4">
                 <Button
                   variant="secondary"
                   className="flex-1"
@@ -541,13 +575,10 @@ export function BrandSettingsPage() {
                   招待を作成
                 </Button>
               </div>
-            </>
+            </div>
           )}
         </div>
       </Modal>
     </div>
   );
 }
-
-
-
