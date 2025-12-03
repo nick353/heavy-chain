@@ -6,7 +6,8 @@ import {
   Plus, 
   ArrowRight,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Layout
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
@@ -22,6 +23,14 @@ const quickActions = [
     icon: Sparkles,
     href: '/generate',
     color: 'from-primary-500 to-accent-500'
+  },
+  {
+    id: 'canvas',
+    title: 'キャンバスエディター',
+    description: 'フリーキャンバスで編集',
+    icon: Layout,
+    href: '/canvas',
+    color: 'from-blue-500 to-purple-500'
   },
   {
     id: 'gallery',
@@ -163,7 +172,7 @@ export function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid sm:grid-cols-2 gap-6 mb-12">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {quickActions.map((action) => (
             <Link
               key={action.id}

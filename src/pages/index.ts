@@ -5,4 +5,4 @@ export { AuthCallbackPage } from './AuthCallbackPage';
 export { DashboardPage } from './DashboardPage';
 export { GeneratePage } from './GeneratePage';
 export { GalleryPage } from './GalleryPage';
-
+export { CanvasEditorPage } from './CanvasEditorPage';

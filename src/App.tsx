@@ -10,7 +10,8 @@ import {
   AuthCallbackPage,
   DashboardPage,
   GeneratePage,
-  GalleryPage
+  GalleryPage,
+  CanvasEditorPage
 } from './pages';
 
 const queryClient = new QueryClient({
@@ -116,6 +117,16 @@ function AppRoutes() {
           }
         />
       </Route>
+
+      {/* Canvas Editor (full screen, no layout) */}
+      <Route
+        path="/canvas/:projectId?"
+        element={
+          <ProtectedRoute>
+            <CanvasEditorPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Catch all */}
       <Route path="*" element={<Navigate to="/" replace />} />

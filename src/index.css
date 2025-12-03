@@ -136,3 +136,43 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Range slider styling */
+input[type="range"] {
+  @apply appearance-none w-full h-2 bg-neutral-200 rounded-full;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  @apply appearance-none w-4 h-4 bg-primary-600 rounded-full cursor-pointer
+         hover:bg-primary-700 transition-colors;
+}
+
+input[type="range"]::-moz-range-thumb {
+  @apply w-4 h-4 bg-primary-600 rounded-full cursor-pointer border-none
+         hover:bg-primary-700 transition-colors;
+}
+
+/* React Flow customization */
+.react-flow__node {
+  cursor: pointer;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__controls {
+  @apply shadow-soft rounded-lg overflow-hidden;
+}
+
+.react-flow__controls-button {
+  @apply bg-white border-neutral-200;
+}
+
+.react-flow__controls-button:hover {
+  @apply bg-neutral-50;
+}
+
+.react-flow__minimap {
+  @apply rounded-lg overflow-hidden;
+}
