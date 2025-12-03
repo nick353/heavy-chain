@@ -11,7 +11,8 @@ import {
   DashboardPage,
   GeneratePage,
   GalleryPage,
-  CanvasEditorPage
+  CanvasEditorPage,
+  AdminDashboard
 } from './pages';
 
 const queryClient = new QueryClient({
@@ -124,6 +125,16 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <CanvasEditorPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Admin Dashboard */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminDashboard />
           </ProtectedRoute>
         }
       />

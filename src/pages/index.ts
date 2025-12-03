@@ -6,3 +6,4 @@ export { DashboardPage } from './DashboardPage';
 export { GeneratePage } from './GeneratePage';
 export { GalleryPage } from './GalleryPage';
 export { CanvasEditorPage } from './CanvasEditorPage';
+export { AdminDashboard } from './AdminDashboard';
