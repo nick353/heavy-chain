@@ -13,6 +13,11 @@
     @apply bg-neutral-50 text-neutral-800 font-sans;
     font-feature-settings: "kern" 1, "liga" 1;
   }
+
+  /* Dark mode base styles */
+  html.dark body {
+    @apply bg-neutral-900 text-neutral-100;
+  }
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
@@ -25,7 +30,8 @@
            hover:bg-primary-700 active:bg-primary-900
            transition-all duration-200 ease-out
            shadow-soft hover:shadow-elegant
-           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           dark:bg-primary-600 dark:hover:bg-primary-500;
   }
   
   .btn-secondary {
@@ -34,32 +40,39 @@
            hover:bg-primary-50 active:bg-primary-100
            transition-all duration-200 ease-out
            shadow-soft hover:shadow-elegant
-           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           dark:bg-neutral-800 dark:text-primary-200 dark:border-neutral-700
+           dark:hover:bg-neutral-700;
   }
   
   .btn-ghost {
     @apply px-4 py-2 text-neutral-600 font-medium rounded-lg
            hover:bg-neutral-100 active:bg-neutral-200
            transition-all duration-200 ease-out
-           focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2;
+           focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2
+           dark:text-neutral-300 dark:hover:bg-neutral-800;
   }
   
   .input-field {
     @apply w-full px-4 py-3 bg-white border border-neutral-200 rounded-lg
            text-neutral-800 placeholder:text-neutral-400
            focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
-           transition-all duration-200;
+           transition-all duration-200
+           dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-100
+           dark:placeholder:text-neutral-500;
   }
   
   .card {
     @apply bg-white rounded-xl shadow-soft p-6
            border border-neutral-100
-           hover:shadow-elegant transition-shadow duration-300;
+           hover:shadow-elegant transition-shadow duration-300
+           dark:bg-neutral-800 dark:border-neutral-700;
   }
   
   .card-elevated {
     @apply bg-white rounded-xl shadow-elegant p-8
-           border border-neutral-100;
+           border border-neutral-100
+           dark:bg-neutral-800 dark:border-neutral-700;
   }
 }
 
@@ -116,20 +129,21 @@
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-neutral-100;
+  @apply bg-neutral-100 dark:bg-neutral-800;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-neutral-300 rounded-full;
+  @apply bg-neutral-300 rounded-full dark:bg-neutral-600;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-neutral-400;
+  @apply bg-neutral-400 dark:bg-neutral-500;
 }
 
 /* Loading spinner */
 .spinner {
-  @apply w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full;
+  @apply w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full
+         dark:border-primary-800 dark:border-t-primary-400;
   animation: spin 1s linear infinite;
 }
 
@@ -139,7 +153,8 @@
 
 /* Range slider styling */
 input[type="range"] {
-  @apply appearance-none w-full h-2 bg-neutral-200 rounded-full;
+  @apply appearance-none w-full h-2 bg-neutral-200 rounded-full
+         dark:bg-neutral-700;
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -166,13 +181,26 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .react-flow__controls-button {
-  @apply bg-white border-neutral-200;
+  @apply bg-white border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700;
 }
 
 .react-flow__controls-button:hover {
-  @apply bg-neutral-50;
+  @apply bg-neutral-50 dark:bg-neutral-700;
 }
 
 .react-flow__minimap {
   @apply rounded-lg overflow-hidden;
+}
+
+/* Color input styling */
+input[type="color"] {
+  @apply cursor-pointer;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  @apply rounded-lg border-none;
 }

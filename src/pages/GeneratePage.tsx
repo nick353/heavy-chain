@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Wand2, 
   Image, 
@@ -8,12 +9,16 @@ import {
   Heart,
   RefreshCw,
   ArrowLeft,
-  Sparkles
+  Sparkles,
+  History,
+  FolderOpen,
+  ExternalLink
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import { Button, Textarea, Input, Modal } from '../components/ui';
 import { FeatureSelector, FEATURES, type Feature } from '../components/FeatureSelector';
+import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
 import toast from 'react-hot-toast';
 
 const stylePresets = [
@@ -42,9 +47,12 @@ interface GeneratedResult {
 
 export function GeneratePage() {
   const { currentBrand } = useAuthStore();
+  const { addToHistory } = usePromptHistory();
   
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
   const [prompt, setPrompt] = useState('');
+  const [showPromptHistory, setShowPromptHistory] = useState(false);
+  const [showSuccessCard, setShowSuccessCard] = useState(false);
   const [negativePrompt, setNegativePrompt] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [selectedRatio, setSelectedRatio] = useState('1:1');
@@ -219,6 +227,12 @@ export function GeneratePage() {
 
       if (error) throw error;
       if (selectedFeature?.id !== 'optimize-prompt') {
+        // Add to history
+        const promptToSave = prompt || productDescription || headline;
+        if (promptToSave) {
+          addToHistory(promptToSave, selectedFeature?.name);
+        }
+        setShowSuccessCard(true);
         toast.success('生成が完了しました');
       }
     } catch (error: any) {
@@ -549,6 +563,17 @@ export function GeneratePage() {
           </div>
 
           <div className="card">
+            {/* Prompt History Button */}
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setShowPromptHistory(true)}
+                className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+              >
+                <History className="w-4 h-4" />
+                履歴から選ぶ
+              </button>
+            </div>
+
             {renderFeatureForm()}
 
             <Button
@@ -608,47 +633,95 @@ export function GeneratePage() {
           )}
 
           {generatedImages.length > 0 && (
-            <div className={`grid gap-4 ${
-              generatedImages.length === 1 ? 'grid-cols-1' :
-              generatedImages.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'
-            }`}>
-              {generatedImages.map((image, index) => (
-                <div
-                  key={image.id || index}
-                  className="group relative bg-white rounded-2xl overflow-hidden shadow-soft hover:shadow-elegant transition-all"
-                >
-                  {image.label && (
-                    <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-black/50 rounded-lg text-white text-xs font-medium">
-                      {image.label}
+            <>
+              {/* Success Card */}
+              {showSuccessCard && (
+                <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-green-100 dark:bg-green-800 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-5 h-5 text-green-600 dark:text-green-400" />
                     </div>
-                  )}
-                  <img
-                    src={image.imageUrl}
-                    alt={image.prompt}
-                    className="w-full aspect-square object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleDownload(image.imageUrl, `${image.label || 'image'}.png`)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-sm font-medium text-neutral-800 hover:bg-neutral-100 transition-colors"
-                        >
-                          <Download className="w-4 h-4" />
-                          保存
-                        </button>
-                        <button className="p-1.5 bg-white/20 rounded-lg text-white hover:bg-white/30 transition-colors">
-                          <Heart className="w-4 h-4" />
-                        </button>
+                    <div className="flex-1">
+                      <h3 className="font-medium text-green-800 dark:text-green-200 mb-1">
+                        生成が完了しました！
+                      </h3>
+                      <p className="text-sm text-green-700 dark:text-green-300 mb-3">
+                        {generatedImages.length}枚の画像がギャラリーに保存されました。
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <Link to="/gallery">
+                          <Button size="sm" variant="secondary">
+                            <FolderOpen className="w-4 h-4 mr-1.5" />
+                            ギャラリーで見る
+                          </Button>
+                        </Link>
+                        <Link to="/canvas">
+                          <Button size="sm" variant="ghost">
+                            キャンバスで編集
+                            <ExternalLink className="w-4 h-4 ml-1.5" />
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowSuccessCard(false)}
+                      className="text-green-600 hover:text-green-800 dark:text-green-400"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className={`grid gap-4 ${
+                generatedImages.length === 1 ? 'grid-cols-1' :
+                generatedImages.length <= 4 ? 'grid-cols-2' : 'grid-cols-3'
+              }`}>
+                {generatedImages.map((image, index) => (
+                  <div
+                    key={image.id || index}
+                    className="group relative bg-white dark:bg-neutral-800 rounded-2xl overflow-hidden shadow-soft hover:shadow-elegant transition-all"
+                  >
+                    {image.label && (
+                      <div className="absolute top-2 left-2 z-10 px-2 py-1 bg-black/50 rounded-lg text-white text-xs font-medium">
+                        {image.label}
+                      </div>
+                    )}
+                    <img
+                      src={image.imageUrl}
+                      alt={image.prompt}
+                      className="w-full aspect-square object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleDownload(image.imageUrl, `${image.label || 'image'}.png`)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-sm font-medium text-neutral-800 hover:bg-neutral-100 transition-colors"
+                          >
+                            <Download className="w-4 h-4" />
+                            保存
+                          </button>
+                          <button className="p-1.5 bg-white/20 rounded-lg text-white hover:bg-white/30 transition-colors">
+                            <Heart className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
+
+      {/* Prompt History Modal */}
+      <PromptHistory
+        isOpen={showPromptHistory}
+        onClose={() => setShowPromptHistory(false)}
+        onSelect={(selectedPrompt) => setPrompt(selectedPrompt)}
+      />
     </div>
   );
 }

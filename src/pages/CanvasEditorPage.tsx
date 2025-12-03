@@ -30,6 +30,8 @@ import {
   PropertiesPanel,
   DerivationTree,
   ImageEditModal,
+  CanvasGuide,
+  useCanvasGuide,
 } from '../components/canvas';
 import { useCanvasStore } from '../stores/canvasStore';
 import { ChatEditor } from '../components/ChatEditor';
@@ -56,6 +58,7 @@ export function CanvasEditorPage() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const { currentBrand } = useAuthStore();
+  const { showGuide, completeGuide } = useCanvasGuide();
   
   const [viewMode, setViewMode] = useState<ViewMode>('canvas');
   const [sidePanel, setSidePanel] = useState<SidePanel>('properties');
@@ -948,6 +951,9 @@ export function CanvasEditorPage() {
           onEditResult={handleEditModalResult}
         />
       )}
+
+      {/* Canvas Guide for first-time users */}
+      {showGuide && <CanvasGuide onComplete={completeGuide} />}
     </div>
   );
 }
