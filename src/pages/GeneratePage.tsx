@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Wand2, 
-  Image, 
+  Image as ImageIcon, 
   ChevronDown,
   Loader2,
   Download,
@@ -12,7 +12,11 @@ import {
   Sparkles,
   History,
   FolderOpen,
-  ExternalLink
+  ExternalLink,
+  Upload,
+  X,
+  AlertCircle,
+  Check
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
@@ -38,6 +42,37 @@ const aspectRatios = [
   { id: '9:16', name: 'ストーリー', width: 576, height: 1024 }
 ];
 
+const backgroundOptions = [
+  { id: 'white', name: '白背景', prompt: 'white background, studio lighting' },
+  { id: 'transparent', name: '透明', prompt: 'transparent background' },
+  { id: 'studio', name: 'スタジオ', prompt: 'professional studio background, soft lighting' },
+  { id: 'outdoor', name: '屋外', prompt: 'outdoor natural background, daylight' },
+  { id: 'urban', name: '都市', prompt: 'urban city background, street scene' },
+  { id: 'nature', name: '自然', prompt: 'nature background, forest or garden' },
+  { id: 'custom', name: 'カスタム', prompt: '' },
+];
+
+const colorOptions = [
+  { id: 'red', name: '赤', color: '#ef4444' },
+  { id: 'blue', name: '青', color: '#3b82f6' },
+  { id: 'green', name: '緑', color: '#22c55e' },
+  { id: 'yellow', name: '黄', color: '#eab308' },
+  { id: 'purple', name: '紫', color: '#a855f7' },
+  { id: 'pink', name: 'ピンク', color: '#ec4899' },
+  { id: 'orange', name: 'オレンジ', color: '#f97316' },
+  { id: 'black', name: '黒', color: '#171717' },
+  { id: 'white', name: '白', color: '#f5f5f5' },
+  { id: 'beige', name: 'ベージュ', color: '#d4b896' },
+  { id: 'navy', name: 'ネイビー', color: '#1e3a5f' },
+  { id: 'gray', name: 'グレー', color: '#6b7280' },
+];
+
+// Features that require image upload
+const IMAGE_REQUIRED_FEATURES = ['remove-bg', 'upscale', 'variations', 'colorize'];
+
+// Features that are text-to-image only
+const TEXT_ONLY_FEATURES = ['campaign-image', 'scene-coordinate', 'design-gacha', 'product-shots', 'model-matrix', 'multilingual-banner', 'optimize-prompt'];
+
 interface GeneratedResult {
   id: string;
   imageUrl: string;
@@ -48,6 +83,7 @@ interface GeneratedResult {
 export function GeneratePage() {
   const { currentBrand } = useAuthStore();
   const { addToHistory } = usePromptHistory();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
   const [prompt, setPrompt] = useState('');
@@ -60,6 +96,11 @@ export function GeneratePage() {
   const [generatedImages, setGeneratedImages] = useState<GeneratedResult[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
   
+  // Image upload state
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  
   // Feature-specific state
   const [productDescription, setProductDescription] = useState('');
   const [headline, setHeadline] = useState('');
@@ -67,20 +108,95 @@ export function GeneratePage() {
   const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
   const [selectedBodyTypes, setSelectedBodyTypes] = useState(['slim', 'regular', 'plus']);
   const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s', '30s', '40s']);
+  
+  // Background & Color options
+  const [selectedBackground, setSelectedBackground] = useState('white');
+  const [customBackground, setCustomBackground] = useState('');
+  const [selectedColors, setSelectedColors] = useState<string[]>(['red', 'blue', 'green']);
+  const [upscaleScale, setUpscaleScale] = useState<2 | 4>(2);
+  const [variationCount, setVariationCount] = useState(4);
 
   const handleFeatureSelect = (feature: Feature) => {
     setSelectedFeature(feature);
     setGeneratedImages([]);
+    setUploadedImage(null);
+    setUploadedFile(null);
+    setShowSuccessCard(false);
   };
 
   const handleBack = () => {
     setSelectedFeature(null);
     setGeneratedImages([]);
+    setUploadedImage(null);
+    setUploadedFile(null);
+    setShowSuccessCard(false);
   };
+
+  // Image upload handlers
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const processFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('画像ファイルを選択してください');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('ファイルサイズは10MB以下にしてください');
+      return;
+    }
+
+    setUploadedFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setUploadedImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const removeUploadedImage = () => {
+    setUploadedImage(null);
+    setUploadedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const requiresImageUpload = selectedFeature && IMAGE_REQUIRED_FEATURES.includes(selectedFeature.id);
 
   const handleGenerate = async () => {
     if (!currentBrand) {
       toast.error('ブランドを選択してください');
+      return;
+    }
+
+    // Validate image upload for features that require it
+    if (requiresImageUpload && !uploadedImage) {
+      toast.error('画像をアップロードしてください');
       return;
     }
 
@@ -91,6 +207,102 @@ export function GeneratePage() {
       let error;
 
       switch (selectedFeature?.id) {
+        case 'remove-bg':
+          if (!uploadedImage) {
+            toast.error('画像をアップロードしてください');
+            setIsGenerating(false);
+            return;
+          }
+          const bgPrompt = selectedBackground === 'custom' ? customBackground : 
+            backgroundOptions.find(b => b.id === selectedBackground)?.prompt || '';
+          
+          ({ data, error } = await supabase.functions.invoke('remove-background', {
+            body: { 
+              imageUrl: uploadedImage, 
+              brandId: currentBrand.id,
+              newBackground: bgPrompt
+            }
+          }));
+          if (data?.resultUrl) {
+            setGeneratedImages([{
+              id: Date.now().toString(),
+              imageUrl: data.resultUrl,
+              prompt: `背景: ${backgroundOptions.find(b => b.id === selectedBackground)?.name || customBackground}`,
+              label: '背景変更'
+            }]);
+          }
+          break;
+
+        case 'colorize':
+          if (!uploadedImage) {
+            toast.error('画像をアップロードしてください');
+            setIsGenerating(false);
+            return;
+          }
+          ({ data, error } = await supabase.functions.invoke('colorize', {
+            body: { 
+              imageUrl: uploadedImage, 
+              brandId: currentBrand.id,
+              colors: selectedColors
+            }
+          }));
+          if (data?.variations) {
+            setGeneratedImages(data.variations.map((v: any) => ({
+              id: v.storagePath || Date.now().toString(),
+              imageUrl: v.imageUrl,
+              prompt: v.colorName,
+              label: v.colorName
+            })));
+          }
+          break;
+
+        case 'upscale':
+          if (!uploadedImage) {
+            toast.error('画像をアップロードしてください');
+            setIsGenerating(false);
+            return;
+          }
+          ({ data, error } = await supabase.functions.invoke('upscale', {
+            body: { 
+              imageUrl: uploadedImage, 
+              brandId: currentBrand.id,
+              scale: upscaleScale
+            }
+          }));
+          if (data?.resultUrl) {
+            setGeneratedImages([{
+              id: Date.now().toString(),
+              imageUrl: data.resultUrl,
+              prompt: `${upscaleScale}倍アップスケール`,
+              label: `${upscaleScale}x 高解像度`
+            }]);
+          }
+          break;
+
+        case 'variations':
+          if (!uploadedImage) {
+            toast.error('画像をアップロードしてください');
+            setIsGenerating(false);
+            return;
+          }
+          ({ data, error } = await supabase.functions.invoke('generate-variations', {
+            body: { 
+              imageUrl: uploadedImage, 
+              brandId: currentBrand.id,
+              count: variationCount,
+              prompt: prompt || undefined
+            }
+          }));
+          if (data?.variations) {
+            setGeneratedImages(data.variations.map((v: any, i: number) => ({
+              id: v.storagePath || Date.now().toString() + i,
+              imageUrl: v.imageUrl,
+              prompt: prompt || 'バリエーション',
+              label: `バリエーション ${i + 1}`
+            })));
+          }
+          break;
+
         case 'design-gacha':
           if (!prompt.trim()) {
             toast.error('ブリーフを入力してください');
@@ -196,8 +408,9 @@ export function GeneratePage() {
           }
           break;
 
+        case 'campaign-image':
+        case 'scene-coordinate':
         default:
-          // Standard image generation
           if (!prompt.trim()) {
             toast.error('プロンプトを入力してください');
             setIsGenerating(false);
@@ -226,8 +439,8 @@ export function GeneratePage() {
       }
 
       if (error) throw error;
+      
       if (selectedFeature?.id !== 'optimize-prompt') {
-        // Add to history
         const promptToSave = prompt || productDescription || headline;
         if (promptToSave) {
           addToHistory(promptToSave, selectedFeature?.name);
@@ -261,10 +474,221 @@ export function GeneratePage() {
     }
   };
 
+  // Render image upload section
+  const renderImageUpload = () => (
+    <div className="mb-6">
+      <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+        <Upload className="w-4 h-4 inline-block mr-1" />
+        元画像をアップロード <span className="text-red-500">*</span>
+      </label>
+      
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
+      {!uploadedImage ? (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`
+            border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all
+            ${isDragging 
+              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' 
+              : 'border-neutral-300 dark:border-neutral-600 hover:border-primary-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
+            }
+          `}
+        >
+          <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-700 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Upload className="w-8 h-8 text-neutral-400" />
+          </div>
+          <p className="text-neutral-600 dark:text-neutral-300 font-medium mb-1">
+            クリックまたはドラッグ&ドロップ
+          </p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            PNG, JPG, WebP（最大10MB）
+          </p>
+        </div>
+      ) : (
+        <div className="relative rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+          <img
+            src={uploadedImage}
+            alt="Uploaded"
+            className="w-full max-h-64 object-contain"
+          />
+          <button
+            onClick={removeUploadedImage}
+            className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-black/70 rounded-lg text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="absolute bottom-2 left-2 px-2 py-1 bg-green-500 text-white text-xs rounded-lg flex items-center gap-1">
+            <Check className="w-3 h-3" />
+            アップロード完了
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const renderFeatureForm = () => {
     if (!selectedFeature) return null;
 
     switch (selectedFeature.id) {
+      // === IMAGE REQUIRED FEATURES ===
+      
+      case 'remove-bg':
+        return (
+          <div className="space-y-4">
+            {renderImageUpload()}
+            
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                新しい背景
+              </label>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {backgroundOptions.map((bg) => (
+                  <button
+                    key={bg.id}
+                    onClick={() => setSelectedBackground(bg.id)}
+                    className={`px-3 py-2 text-sm rounded-lg border-2 transition-all ${
+                      selectedBackground === bg.id
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
+                    }`}
+                  >
+                    {bg.name}
+                  </button>
+                ))}
+              </div>
+              
+              {selectedBackground === 'custom' && (
+                <Input
+                  className="mt-3"
+                  placeholder="カスタム背景の説明（例: 海辺のビーチ）"
+                  value={customBackground}
+                  onChange={(e) => setCustomBackground(e.target.value)}
+                />
+              )}
+            </div>
+          </div>
+        );
+
+      case 'colorize':
+        return (
+          <div className="space-y-4">
+            {renderImageUpload()}
+            
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                生成するカラー（複数選択可）
+              </label>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                {colorOptions.map((color) => (
+                  <button
+                    key={color.id}
+                    onClick={() => {
+                      setSelectedColors(prev => 
+                        prev.includes(color.id)
+                          ? prev.filter(c => c !== color.id)
+                          : [...prev, color.id]
+                      );
+                    }}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                      selectedColors.includes(color.id)
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
+                    }`}
+                  >
+                    <div 
+                      className="w-8 h-8 rounded-full border border-neutral-200"
+                      style={{ backgroundColor: color.color }}
+                    />
+                    <span className="text-xs text-neutral-600 dark:text-neutral-400">{color.name}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-neutral-500 mt-2">
+                {selectedColors.length}色選択中
+              </p>
+            </div>
+          </div>
+        );
+
+      case 'upscale':
+        return (
+          <div className="space-y-4">
+            {renderImageUpload()}
+            
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                アップスケール倍率
+              </label>
+              <div className="flex gap-3">
+                {([2, 4] as const).map((scale) => (
+                  <button
+                    key={scale}
+                    onClick={() => setUpscaleScale(scale)}
+                    className={`flex-1 py-4 rounded-xl border-2 transition-all ${
+                      upscaleScale === scale
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
+                    }`}
+                  >
+                    <div className="text-2xl font-bold text-neutral-800 dark:text-white">{scale}x</div>
+                    <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                      {scale === 2 ? '標準' : '最大'}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'variations':
+        return (
+          <div className="space-y-4">
+            {renderImageUpload()}
+            
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                生成数
+              </label>
+              <div className="flex gap-2">
+                {[2, 4, 6, 8].map((count) => (
+                  <button
+                    key={count}
+                    onClick={() => setVariationCount(count)}
+                    className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                      variationCount === count
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
+                    }`}
+                  >
+                    {count}枚
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <Textarea
+              label="追加の指示（任意）"
+              placeholder="例: 色味を少し明るくして、背景をぼかして"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={2}
+            />
+          </div>
+        );
+
+      // === TEXT-TO-IMAGE FEATURES ===
+
       case 'design-gacha':
         return (
           <div className="space-y-4">
@@ -275,9 +699,11 @@ export function GeneratePage() {
               onChange={(e) => setPrompt(e.target.value)}
               rows={3}
             />
-            <p className="text-sm text-neutral-500">
-              8つのスタイル方向（ミニマル、ラグジュアリー、ストリート等）から4つをランダムに選んで生成します
-            </p>
+            <div className="bg-primary-50 dark:bg-primary-900/20 rounded-xl p-4">
+              <p className="text-sm text-primary-800 dark:text-primary-200">
+                💡 8つのスタイル方向（ミニマル、ラグジュアリー、ストリート等）から4つをランダムに選んで生成します
+              </p>
+            </div>
           </div>
         );
 
@@ -291,9 +717,11 @@ export function GeneratePage() {
               onChange={(e) => setProductDescription(e.target.value)}
               rows={3}
             />
-            <p className="text-sm text-neutral-500">
-              正面・側面・背面・ディテールの4カットを自動生成します
-            </p>
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                📸 正面・側面・背面・ディテールの4カットを自動生成します
+              </p>
+            </div>
           </div>
         );
 
@@ -308,38 +736,42 @@ export function GeneratePage() {
               rows={3}
             />
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">体型</label>
-              <div className="flex gap-2">
-                {['slim', 'regular', 'plus'].map((type) => (
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">体型</label>
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { id: 'slim', name: 'スリム' },
+                  { id: 'regular', name: 'レギュラー' },
+                  { id: 'plus', name: 'プラス' }
+                ].map((type) => (
                   <button
-                    key={type}
+                    key={type.id}
                     onClick={() => setSelectedBodyTypes(prev =>
-                      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+                      prev.includes(type.id) ? prev.filter(t => t !== type.id) : [...prev, type.id]
                     )}
-                    className={`px-3 py-1.5 text-sm rounded-full border ${
-                      selectedBodyTypes.includes(type)
-                        ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'border-neutral-200'
+                    className={`px-4 py-2 rounded-lg border-2 transition-all ${
+                      selectedBodyTypes.includes(type.id)
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
                     }`}
                   >
-                    {type === 'slim' ? 'スリム' : type === 'regular' ? 'レギュラー' : 'プラス'}
+                    {type.name}
                   </button>
                 ))}
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">年代</label>
-              <div className="flex gap-2">
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">年代</label>
+              <div className="flex gap-2 flex-wrap">
                 {['20s', '30s', '40s', '50s'].map((age) => (
                   <button
                     key={age}
                     onClick={() => setSelectedAgeGroups(prev =>
                       prev.includes(age) ? prev.filter(a => a !== age) : [...prev, age]
                     )}
-                    className={`px-3 py-1.5 text-sm rounded-full border ${
+                    className={`px-4 py-2 rounded-lg border-2 transition-all ${
                       selectedAgeGroups.includes(age)
-                        ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'border-neutral-200'
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
                     }`}
                   >
                     {age}
@@ -347,6 +779,9 @@ export function GeneratePage() {
                 ))}
               </div>
             </div>
+            <p className="text-xs text-neutral-500">
+              {selectedBodyTypes.length * selectedAgeGroups.length}パターンを生成します
+            </p>
           </div>
         );
 
@@ -366,8 +801,8 @@ export function GeneratePage() {
               onChange={(e) => setSubheadline(e.target.value)}
             />
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">言語</label>
-              <div className="flex gap-2">
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">言語</label>
+              <div className="flex gap-2 flex-wrap">
                 {[
                   { code: 'ja', name: '日本語' },
                   { code: 'en', name: 'English' },
@@ -379,10 +814,10 @@ export function GeneratePage() {
                     onClick={() => setSelectedLanguages(prev =>
                       prev.includes(lang.code) ? prev.filter(l => l !== lang.code) : [...prev, lang.code]
                     )}
-                    className={`px-3 py-1.5 text-sm rounded-full border ${
+                    className={`px-4 py-2 rounded-lg border-2 transition-all ${
                       selectedLanguages.includes(lang.code)
-                        ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'border-neutral-200'
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
                     }`}
                   >
                     {lang.name}
@@ -391,16 +826,16 @@ export function GeneratePage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">アスペクト比</label>
-              <div className="flex gap-2">
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">サイズ</label>
+              <div className="flex gap-2 flex-wrap">
                 {aspectRatios.map((ratio) => (
                   <button
                     key={ratio.id}
                     onClick={() => setSelectedRatio(ratio.id)}
-                    className={`px-3 py-1.5 text-sm rounded-full border ${
+                    className={`px-4 py-2 rounded-lg border-2 transition-all ${
                       selectedRatio === ratio.id
-                        ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'border-neutral-200'
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
                     }`}
                   >
                     {ratio.name}
@@ -422,16 +857,16 @@ export function GeneratePage() {
               rows={3}
             />
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">スタイル</label>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">スタイル</label>
               <div className="flex flex-wrap gap-2">
                 {stylePresets.map((style) => (
                   <button
                     key={style.id}
                     onClick={() => setSelectedStyle(selectedStyle === style.id ? null : style.id)}
-                    className={`px-3 py-1.5 text-sm rounded-full border ${
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
                       selectedStyle === style.id
                         ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'border-neutral-200'
+                        : 'border-neutral-200 hover:border-neutral-300'
                     }`}
                   >
                     {style.name}
@@ -439,12 +874,36 @@ export function GeneratePage() {
                 ))}
               </div>
             </div>
-            <p className="text-sm text-neutral-500">
-              日本語プロンプトを英語に翻訳し、AI画像生成に最適化します
-            </p>
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-4">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                ✨ 日本語プロンプトを英語に翻訳し、AI画像生成に最適化します
+              </p>
+            </div>
           </div>
         );
 
+      case 'chat-edit':
+        return (
+          <div className="space-y-4">
+            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-6 text-center">
+              <Wand2 className="w-12 h-12 text-purple-500 mx-auto mb-3" />
+              <h3 className="font-semibold text-neutral-800 dark:text-white mb-2">
+                チャットベース編集
+              </h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-4">
+                対話形式で画像を編集できます。キャンバスエディターでお使いください。
+              </p>
+              <Link to="/canvas">
+                <Button>
+                  キャンバスを開く
+                  <ExternalLink className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+        );
+
+      // === DEFAULT TEXT-TO-IMAGE ===
       default:
         return (
           <div className="space-y-4">
@@ -456,16 +915,16 @@ export function GeneratePage() {
               rows={4}
             />
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">スタイルプリセット</label>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">スタイルプリセット</label>
               <div className="flex flex-wrap gap-2">
                 {stylePresets.map((style) => (
                   <button
                     key={style.id}
                     onClick={() => setSelectedStyle(selectedStyle === style.id ? null : style.id)}
-                    className={`px-3 py-1.5 text-sm rounded-full border ${
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
                       selectedStyle === style.id
                         ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'border-neutral-200'
+                        : 'border-neutral-200 hover:border-neutral-300'
                     }`}
                   >
                     {style.name}
@@ -474,16 +933,16 @@ export function GeneratePage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">アスペクト比</label>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">アスペクト比</label>
               <div className="flex flex-wrap gap-2">
                 {aspectRatios.map((ratio) => (
                   <button
                     key={ratio.id}
                     onClick={() => setSelectedRatio(ratio.id)}
-                    className={`px-3 py-1.5 text-sm rounded-full border ${
+                    className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
                       selectedRatio === ratio.id
                         ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'border-neutral-200'
+                        : 'border-neutral-200 hover:border-neutral-300'
                     }`}
                   >
                     {ratio.name}
@@ -517,10 +976,10 @@ export function GeneratePage() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-display font-semibold text-neutral-900 mb-2">
+          <h1 className="text-2xl font-display font-semibold text-neutral-900 dark:text-white mb-2">
             画像生成
           </h1>
-          <p className="text-neutral-600">
+          <p className="text-neutral-600 dark:text-neutral-400">
             生成したい機能を選択してください
           </p>
         </div>
@@ -536,69 +995,94 @@ export function GeneratePage() {
   // Feature detail view
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid lg:grid-cols-[400px,1fr] gap-8">
+      <div className="grid lg:grid-cols-[450px,1fr] gap-8">
         {/* Left Panel */}
         <div className="space-y-6">
           <div>
             <button
               onClick={handleBack}
-              className="flex items-center gap-2 text-neutral-500 hover:text-neutral-700 mb-4"
+              className="flex items-center gap-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 mb-4"
             >
               <ArrowLeft className="w-4 h-4" />
               機能選択に戻る
             </button>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center">
-                <selectedFeature.icon className="w-6 h-6 text-primary-600" />
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                requiresImageUpload 
+                  ? 'bg-purple-100 dark:bg-purple-900/50' 
+                  : 'bg-primary-100 dark:bg-primary-900/50'
+              }`}>
+                <selectedFeature.icon className={`w-6 h-6 ${
+                  requiresImageUpload 
+                    ? 'text-purple-600 dark:text-purple-400' 
+                    : 'text-primary-600 dark:text-primary-400'
+                }`} />
               </div>
               <div>
-                <h1 className="text-xl font-display font-semibold text-neutral-900">
+                <h1 className="text-xl font-display font-semibold text-neutral-900 dark:text-white">
                   {selectedFeature.name}
                 </h1>
-                <p className="text-sm text-neutral-500">
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   {selectedFeature.description}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="card">
-            {/* Prompt History Button */}
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setShowPromptHistory(true)}
-                className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-              >
-                <History className="w-4 h-4" />
-                履歴から選ぶ
-              </button>
+          {/* Feature type indicator */}
+          {requiresImageUpload && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+              <Upload className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <span className="text-sm text-purple-700 dark:text-purple-300">
+                この機能は画像のアップロードが必要です
+              </span>
             </div>
+          )}
+
+          <div className="card dark:bg-neutral-800 dark:border-neutral-700">
+            {/* Prompt History Button (for text-based features) */}
+            {!requiresImageUpload && selectedFeature.id !== 'chat-edit' && (
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setShowPromptHistory(true)}
+                  className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                >
+                  <History className="w-4 h-4" />
+                  履歴から選ぶ
+                </button>
+              </div>
+            )}
 
             {renderFeatureForm()}
 
-            <Button
-              onClick={handleGenerate}
-              isLoading={isGenerating}
-              disabled={isGenerating}
-              className="w-full mt-6"
-              size="lg"
-              leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
-            >
-              {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : '生成'}
-            </Button>
+            {selectedFeature.id !== 'chat-edit' && (
+              <Button
+                onClick={handleGenerate}
+                isLoading={isGenerating}
+                disabled={isGenerating || (requiresImageUpload && !uploadedImage)}
+                className="w-full mt-6"
+                size="lg"
+                leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
+              >
+                {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : '生成'}
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Right Panel - Results */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-neutral-800">
+            <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
               生成結果
             </h2>
             {generatedImages.length > 0 && (
               <button
-                onClick={() => setGeneratedImages([])}
-                className="text-sm text-neutral-500 hover:text-neutral-700 flex items-center gap-1"
+                onClick={() => {
+                  setGeneratedImages([]);
+                  setShowSuccessCard(false);
+                }}
+                className="text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 flex items-center gap-1"
               >
                 <RefreshCw className="w-4 h-4" />
                 クリア
@@ -607,27 +1091,30 @@ export function GeneratePage() {
           </div>
 
           {isGenerating && (
-            <div className="bg-white rounded-2xl p-12 text-center shadow-soft animate-pulse">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-accent-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="bg-white dark:bg-neutral-800 rounded-2xl p-12 text-center shadow-soft animate-pulse">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-accent-100 dark:from-primary-900/50 dark:to-accent-900/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
               </div>
-              <h3 className="text-lg font-medium text-neutral-700 mb-2">
+              <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-200 mb-2">
                 生成しています...
               </h3>
-              <p className="text-neutral-500">
+              <p className="text-neutral-500 dark:text-neutral-400">
                 {selectedFeature.id === 'model-matrix' ? '複数画像の生成には時間がかかります' : '通常20〜30秒かかります'}
               </p>
             </div>
           )}
 
           {!isGenerating && generatedImages.length === 0 && (
-            <div className="bg-neutral-50 rounded-2xl p-12 text-center border-2 border-dashed border-neutral-200">
-              <Image className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-neutral-700 mb-2">
+            <div className="bg-neutral-50 dark:bg-neutral-800 rounded-2xl p-12 text-center border-2 border-dashed border-neutral-200 dark:border-neutral-700">
+              <ImageIcon className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-200 mb-2">
                 生成結果がここに表示されます
               </h3>
-              <p className="text-neutral-500">
-                左のフォームに入力して開始
+              <p className="text-neutral-500 dark:text-neutral-400">
+                {requiresImageUpload 
+                  ? '画像をアップロードして開始' 
+                  : '左のフォームに入力して開始'
+                }
               </p>
             </div>
           )}

@@ -14,7 +14,9 @@ import {
   MessageSquare,
   Star,
   TrendingUp,
-  Zap
+  Zap,
+  Upload,
+  Type
 } from 'lucide-react';
 
 export interface Feature {
@@ -26,6 +28,7 @@ export interface Feature {
   apiEndpoint: string;
   badge?: 'recommended' | 'popular' | 'new';
   examplePrompt?: string;
+  requiresImage?: boolean; // true if feature requires image upload
 }
 
 export const FEATURES: Feature[] = [
@@ -59,7 +62,8 @@ export const FEATURES: Feature[] = [
     category: 'design',
     apiEndpoint: 'colorize',
     badge: 'popular',
-    examplePrompt: 'ネイビー/ベージュ/グレーのカラー展開',
+    examplePrompt: '画像をアップロード → カラーを選択',
+    requiresImage: true,
   },
   {
     id: 'design-gacha',
@@ -112,7 +116,8 @@ export const FEATURES: Feature[] = [
     category: 'utility',
     apiEndpoint: 'remove-background',
     badge: 'popular',
-    examplePrompt: '商品写真の背景を白に変更',
+    examplePrompt: '画像をアップロード → 背景を選択',
+    requiresImage: true,
   },
   {
     id: 'upscale',
@@ -121,7 +126,8 @@ export const FEATURES: Feature[] = [
     icon: Maximize2,
     category: 'utility',
     apiEndpoint: 'upscale',
-    examplePrompt: '画像を2倍に高解像度化',
+    examplePrompt: '画像をアップロード → 倍率を選択',
+    requiresImage: true,
   },
   {
     id: 'variations',
@@ -130,7 +136,8 @@ export const FEATURES: Feature[] = [
     icon: RefreshCw,
     category: 'utility',
     apiEndpoint: 'generate-variations',
-    examplePrompt: '似たスタイルで4パターン生成',
+    examplePrompt: '画像をアップロード → バリエーション数を選択',
+    requiresImage: true,
   },
   
   // Workflow
@@ -282,6 +289,25 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
                   {badge.label}
                 </div>
               )}
+
+              {/* Input type indicator */}
+              <div className={`absolute top-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                feature.requiresImage 
+                  ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
+                  : 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+              }`}>
+                {feature.requiresImage ? (
+                  <>
+                    <Upload className="w-3 h-3" />
+                    画像から
+                  </>
+                ) : (
+                  <>
+                    <Type className="w-3 h-3" />
+                    テキストから
+                  </>
+                )}
+              </div>
 
               <div className="flex items-start gap-4 mb-3">
                 <div className={`
