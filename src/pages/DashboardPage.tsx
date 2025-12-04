@@ -10,15 +10,23 @@ import {
   HelpCircle,
   BookOpen,
   Lightbulb,
-  Zap
+  Zap,
+  Plus,
+  ChevronRight,
+  Palette,
+  Folder,
+  MoreVertical,
+  Trash2,
+  Edit3
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { useCanvasStore, type CanvasProject } from '../stores/canvasStore';
 import { supabase } from '../lib/supabase';
 import { Button, Modal, Input, Textarea } from '../components/ui';
 import { Onboarding, useOnboarding } from '../components/Onboarding';
 import type { GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const quickActions = [
   {
@@ -27,15 +35,17 @@ const quickActions = [
     description: 'プロンプトから画像を生成',
     icon: Sparkles,
     href: '/generate',
-    color: 'from-primary-500 to-accent-500'
+    color: 'from-primary-500 to-gold-DEFAULT',
+    delay: 0
   },
   {
     id: 'canvas',
-    title: 'キャンバスエディター',
+    title: 'キャンバス',
     description: 'フリーキャンバスで編集',
     icon: Layout,
-    href: '/canvas',
-    color: 'from-blue-500 to-purple-500'
+    href: '/canvas/new',
+    color: 'from-blue-500 to-purple-500',
+    delay: 0.1
   },
   {
     id: 'gallery',
@@ -43,7 +53,8 @@ const quickActions = [
     description: '生成した画像を管理',
     icon: Image,
     href: '/gallery',
-    color: 'from-accent-500 to-primary-500'
+    color: 'from-accent-500 to-pink-500',
+    delay: 0.2
   }
 ];
 
@@ -70,7 +81,8 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
+      staggerChildren: 0.1,
+      delayChildren: 0.1
     }
   }
 };
@@ -81,8 +93,8 @@ const itemVariants = {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.5,
-      ease: "easeOut"
+      duration: 0.6,
+      ease: [0.22, 1, 0.36, 1]
     }
   }
 };
@@ -90,16 +102,22 @@ const itemVariants = {
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user, profile, currentBrand, setCurrentBrand } = useAuthStore();
+  const { projects, createProject, deleteProject, loadProject, clearCanvas, getRecentProjects } = useCanvasStore();
   const { showOnboarding, completeOnboarding, resetOnboarding } = useOnboarding();
   const [recentImages, setRecentImages] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showBrandModal, setShowBrandModal] = useState(false);
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [projectMenuOpen, setProjectMenuOpen] = useState<string | null>(null);
   const [brandForm, setBrandForm] = useState({
     name: '',
     toneDescription: '',
     targetAudience: ''
   });
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
+
+  const recentProjects = getRecentProjects(6);
 
   useEffect(() => {
     if (!currentBrand && user) {
@@ -190,18 +208,70 @@ export function DashboardPage() {
     }
   };
 
+  const handleCreateNewProject = () => {
+    if (!newProjectName.trim()) {
+      toast.error('プロジェクト名を入力してください');
+      return;
+    }
+    
+    const projectId = createProject(newProjectName, currentBrand?.id);
+    setShowNewProjectModal(false);
+    setNewProjectName('');
+    toast.success('新規プロジェクトを作成しました');
+    navigate(`/canvas/${projectId}`);
+  };
+
+  const handleOpenProject = (project: CanvasProject) => {
+    loadProject(project.id);
+    navigate(`/canvas/${project.id}`);
+  };
+
+  const handleDeleteProject = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteProject(projectId);
+    setProjectMenuOpen(null);
+    toast.success('プロジェクトを削除しました');
+  };
+
+  const handleNewCanvas = () => {
+    clearCanvas();
+    navigate('/canvas/new');
+  };
+
   const getImageUrl = (path: string) => {
     const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
     return data.publicUrl;
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 1) return 'たった今';
+    if (diffMins < 60) return `${diffMins}分前`;
+    if (diffHours < 24) return `${diffHours}時間前`;
+    if (diffDays < 7) return `${diffDays}日前`;
+    return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="spinner" />
       </div>
     );
   }
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'おはようございます';
+    if (hour < 18) return 'こんにちは';
+    return 'こんばんは';
+  };
 
   return (
     <>
@@ -214,60 +284,202 @@ export function DashboardPage() {
         animate="visible"
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
       >
-        {/* Welcome */}
-        <motion.div variants={itemVariants} className="mb-8 flex items-start justify-between">
+        {/* Welcome Section */}
+        <motion.div variants={itemVariants} className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-semibold text-neutral-900 dark:text-white mb-2">
-              こんにちは、{profile?.name || 'ユーザー'}さん
+            <p className="text-sm font-medium text-primary-600 dark:text-primary-400 mb-2 uppercase tracking-wider">Dashboard</p>
+            <h1 className="text-2xl md:text-3xl font-display font-semibold text-neutral-900 dark:text-white">
+              {getGreeting()}、
+              <br className="hidden md:block" />
+              <span className="text-neutral-500 dark:text-neutral-400">{profile?.name || 'ゲスト'}さん</span>
             </h1>
-            <p className="text-neutral-600 dark:text-neutral-400">
-              今日も素敵な画像を生成しましょう。
-            </p>
           </div>
           <button
             onClick={resetOnboarding}
-            className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors glass-panel border-0"
-            title="チュートリアルを再表示"
+            className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-white/50 dark:hover:bg-white/5 rounded-full transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"
           >
             <HelpCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">ヘルプ</span>
+            <span>チュートリアルを見る</span>
           </button>
         </motion.div>
 
         {/* Quick Actions */}
-        <motion.div variants={itemVariants} className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
+        <motion.div variants={itemVariants} className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-16">
           {quickActions.map((action) => (
             <Link
               key={action.id}
               to={action.href}
-              className="group relative overflow-hidden glass-card p-6 transition-all duration-300"
+              className="group relative overflow-hidden rounded-3xl bg-white dark:bg-surface-900 border border-neutral-100 dark:border-white/5 p-8 shadow-sm hover:shadow-floating transition-all duration-500 hover:-translate-y-1"
             >
-              <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${action.color} opacity-10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-500 blur-2xl`} />
+              {/* Background Gradient */}
+              <div className={`absolute top-0 right-0 w-48 h-48 bg-gradient-to-br ${action.color} opacity-[0.08] rounded-full -translate-y-1/4 translate-x-1/4 group-hover:scale-125 transition-transform duration-700 blur-3xl`} />
               
-              <div className="relative">
-                <div className={`w-12 h-12 bg-gradient-to-br ${action.color} rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <action.icon className="w-6 h-6 text-white" />
+              <div className="relative z-10">
+                <div className={`w-14 h-14 bg-gradient-to-br ${action.color} rounded-2xl flex items-center justify-center mb-6 shadow-md group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
+                  <action.icon className="w-7 h-7 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-neutral-800 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                <h3 className="text-2xl font-semibold text-neutral-900 dark:text-white mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                   {action.title}
                 </h3>
-                <p className="text-neutral-500 dark:text-neutral-400">{action.description}</p>
-                <ArrowRight className="absolute bottom-0 right-0 w-5 h-5 text-neutral-300 dark:text-neutral-600 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
+                <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed mb-4">
+                  {action.description}
+                </p>
+                
+                <div className="flex items-center text-sm font-medium text-neutral-400 group-hover:text-primary-500 transition-colors">
+                  開始する <ChevronRight className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" />
+                </div>
               </div>
             </Link>
           ))}
         </motion.div>
 
+        {/* Canvas Projects */}
+        <motion.div variants={itemVariants} className="mb-16">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <Folder className="w-5 h-5 text-blue-500" />
+              </div>
+              <h2 className="text-2xl font-semibold text-neutral-900 dark:text-white font-display">キャンバスプロジェクト</h2>
+            </div>
+            <button
+              onClick={() => setShowNewProjectModal(true)}
+              className="px-4 py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium transition-colors flex items-center gap-2 shadow-md hover:shadow-lg"
+            >
+              <Plus className="w-4 h-4" />
+              新規作成
+            </button>
+          </div>
+
+          {recentProjects.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-6">
+              {/* New Canvas Card */}
+              <button
+                onClick={handleNewCanvas}
+                className="group aspect-[4/3] rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-3 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all duration-300"
+              >
+                <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-white dark:group-hover:bg-neutral-700">
+                  <Plus className="w-6 h-6 text-neutral-400 group-hover:text-blue-500" />
+                </div>
+                <span className="text-sm font-medium text-neutral-400 group-hover:text-blue-600">新しいキャンバス</span>
+              </button>
+
+              {/* Project Cards */}
+              {recentProjects.map((project, i) => (
+                <motion.div
+                  key={project.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                  onClick={() => handleOpenProject(project)}
+                  className="group aspect-[4/3] rounded-2xl overflow-hidden bg-white dark:bg-neutral-800 cursor-pointer relative shadow-sm hover:shadow-lg transition-all duration-300 border border-neutral-100 dark:border-neutral-700"
+                >
+                  {/* Thumbnail or Placeholder */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+                    {project.thumbnail ? (
+                      <img src={project.thumbnail} alt={project.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Layout className="w-12 h-12 text-neutral-300 dark:text-neutral-600" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                  {/* Project Info */}
+                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm">
+                    <h3 className="font-medium text-sm text-neutral-800 dark:text-white truncate">
+                      {project.name}
+                    </h3>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {formatDate(project.updatedAt)}
+                    </p>
+                  </div>
+
+                  {/* Menu Button */}
+                  <div className="absolute top-2 right-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProjectMenuOpen(projectMenuOpen === project.id ? null : project.id);
+                      }}
+                      className="p-1.5 rounded-lg bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white dark:hover:bg-neutral-700"
+                    >
+                      <MoreVertical className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
+                    </button>
+
+                    {/* Dropdown Menu */}
+                    <AnimatePresence>
+                      {projectMenuOpen === project.id && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                          className="absolute top-full right-0 mt-1 w-32 bg-white dark:bg-neutral-800 rounded-xl shadow-xl border border-neutral-100 dark:border-neutral-700 py-1 z-20"
+                        >
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenProject(project);
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                            開く
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteProject(project.id, e)}
+                            className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            削除
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-3xl p-12 border border-neutral-200/50 dark:border-white/5 text-center">
+              <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100/50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float">
+                <Layout className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-2xl font-semibold text-neutral-900 dark:text-white mb-4 font-display">
+                キャンバスで自由に編集
+              </h3>
+              <p className="text-neutral-600 dark:text-neutral-400 mb-8 max-w-md mx-auto leading-relaxed">
+                生成した画像を配置して、派生画像を管理。デザインワークフローを効率化できます。
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button 
+                  size="lg" 
+                  className="rounded-full shadow-glow hover:shadow-glow-lg" 
+                  leftIcon={<Plus className="w-5 h-5" />}
+                  onClick={() => setShowNewProjectModal(true)}
+                >
+                  新規プロジェクト作成
+                </Button>
+              </div>
+            </div>
+          )}
+        </motion.div>
+
         {/* Recent Images */}
-        <motion.div variants={itemVariants} className="mb-12">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-neutral-400" />
-              <h2 className="text-xl font-semibold text-neutral-800 dark:text-white">最近の生成画像</h2>
+        <motion.div variants={itemVariants} className="mb-16">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                <Clock className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
+              </div>
+              <h2 className="text-2xl font-semibold text-neutral-900 dark:text-white font-display">最近の生成</h2>
             </div>
             <Link
               to="/gallery"
-              className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium flex items-center gap-1 group"
+              className="px-4 py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center gap-2 group"
             >
               すべて見る
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -275,42 +487,55 @@ export function DashboardPage() {
           </div>
 
           {recentImages.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
-              {recentImages.map((image) => (
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-6">
+              {recentImages.map((image, i) => (
                 <motion.div
                   key={image.id}
-                  whileHover={{ scale: 1.05 }}
-                  className="aspect-square rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 hover:ring-2 hover:ring-primary-500 transition-all cursor-pointer shadow-sm hover:shadow-lg"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="group aspect-square rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 cursor-pointer relative shadow-sm hover:shadow-lg transition-all duration-300"
                   onClick={() => navigate(`/gallery?image=${image.id}`)}
                 >
                   <img
                     src={getImageUrl(image.storage_path)}
                     alt=""
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <p className="text-white text-xs font-medium truncate opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                        {new Date(image.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
                 </motion.div>
               ))}
+              
+              {/* Add New Button */}
+              <Link to="/generate" className="group aspect-square rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-3 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all duration-300">
+                <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-white dark:group-hover:bg-neutral-700">
+                  <Plus className="w-6 h-6 text-neutral-400 group-hover:text-primary-500" />
+                </div>
+                <span className="text-sm font-medium text-neutral-400 group-hover:text-primary-600">新規作成</span>
+              </Link>
             </div>
           ) : (
-            <div className="glass-panel rounded-2xl p-12 text-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-primary-100 to-accent-100 dark:from-primary-900/50 dark:to-accent-900/50 rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float">
-                <Image className="w-10 h-10 text-primary-500" />
+            <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-3xl p-12 border border-neutral-200/50 dark:border-white/5 text-center">
+              <div className="w-24 h-24 bg-gradient-to-br from-primary-100 to-gold-light/50 dark:from-primary-900/30 dark:to-gold-dark/30 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float">
+                <Palette className="w-10 h-10 text-primary-600 dark:text-primary-400" />
               </div>
-              <h3 className="text-xl font-semibold text-neutral-800 dark:text-white mb-2">
-                まだ画像がありません
+              <h3 className="text-2xl font-semibold text-neutral-900 dark:text-white mb-4 font-display">
+                クリエイティブな旅を始めましょう
               </h3>
-              <p className="text-neutral-500 dark:text-neutral-400 mb-6 max-w-md mx-auto">
-                最初の画像を生成してみましょう。日本語でプロンプトを入力するだけで、AIがプロ品質の画像を作成します。
+              <p className="text-neutral-600 dark:text-neutral-400 mb-8 max-w-md mx-auto leading-relaxed">
+                まだ画像がありません。日本語でプロンプトを入力するだけで、AIがあなたの想像を形にします。
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/generate">
-                  <Button size="lg" leftIcon={<Sparkles className="w-5 h-5" />}>
-                    画像を生成
-                  </Button>
-                </Link>
-                <Link to="/canvas">
-                  <Button size="lg" variant="secondary" leftIcon={<Layout className="w-5 h-5" />}>
-                    キャンバスを開く
+                  <Button size="lg" className="rounded-full shadow-glow hover:shadow-glow-lg" leftIcon={<Sparkles className="w-5 h-5" />}>
+                    画像を生成する
                   </Button>
                 </Link>
               </div>
@@ -318,51 +543,44 @@ export function DashboardPage() {
           )}
         </motion.div>
 
-        {/* Tips for new users */}
-        {recentImages.length === 0 && (
-          <motion.div variants={itemVariants} className="mb-12">
-            <h2 className="text-lg font-semibold text-neutral-800 dark:text-white mb-4">💡 使い方のヒント</h2>
-            <div className="grid sm:grid-cols-3 gap-4">
-              {tips.map((tip, i) => (
-                <div key={i} className="glass-card p-5">
-                  <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/30 rounded-lg flex items-center justify-center mb-3">
-                    <tip.icon className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                  </div>
-                  <h3 className="font-medium text-neutral-800 dark:text-white mb-1">{tip.title}</h3>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">{tip.description}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Stats */}
+        {/* Stats Grid */}
         <motion.div variants={itemVariants} className="grid sm:grid-cols-3 gap-6">
-          <div className="glass-card p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="w-5 h-5 text-primary-500" />
+          <div className="bg-white dark:bg-surface-900 rounded-2xl p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-blue-500" />
+              </div>
               <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">今月の生成数</span>
             </div>
-            <p className="text-3xl font-semibold text-neutral-800 dark:text-white">
+            <p className="text-4xl font-bold text-neutral-900 dark:text-white font-display">
               {recentImages.length}
+              <span className="text-base font-normal text-neutral-400 ml-2">枚</span>
             </p>
           </div>
-          <div className="glass-card p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <Image className="w-5 h-5 text-accent-500" />
-              <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">保存済み画像</span>
+          
+          <div className="bg-white dark:bg-surface-900 rounded-2xl p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                <Folder className="w-5 h-5 text-purple-500" />
+              </div>
+              <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">プロジェクト数</span>
             </div>
-            <p className="text-3xl font-semibold text-neutral-800 dark:text-white">
-              {recentImages.length}
+            <p className="text-4xl font-bold text-neutral-900 dark:text-white font-display">
+              {projects.length}
+              <span className="text-base font-normal text-neutral-400 ml-2">個</span>
             </p>
           </div>
-          <div className="glass-card p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <Sparkles className="w-5 h-5 text-yellow-500" />
+
+          <div className="bg-white dark:bg-surface-900 rounded-2xl p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                <Sparkles className="w-5 h-5 text-yellow-500" />
+              </div>
               <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">お気に入り</span>
             </div>
-            <p className="text-3xl font-semibold text-neutral-800 dark:text-white">
+            <p className="text-4xl font-bold text-neutral-900 dark:text-white font-display">
               {recentImages.filter(img => img.is_favorite).length}
+              <span className="text-base font-normal text-neutral-400 ml-2">枚</span>
             </p>
           </div>
         </motion.div>
@@ -375,45 +593,91 @@ export function DashboardPage() {
         title="ブランドを作成"
         size="md"
       >
-        <form onSubmit={handleCreateBrand} className="space-y-4">
-          <div className="bg-primary-50 dark:bg-primary-900/30 rounded-xl p-4 mb-4">
-            <p className="text-sm text-primary-800 dark:text-primary-200">
-              🎉 ようこそ！まずはブランドを作成しましょう。ブランドごとに画像やスタイルを管理できます。
-            </p>
+        <form onSubmit={handleCreateBrand} className="space-y-6">
+          <div className="bg-primary-50/50 dark:bg-primary-900/20 rounded-2xl p-6 border border-primary-100 dark:border-primary-800/30">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-800 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+              </div>
+              <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                <span className="font-semibold text-primary-700 dark:text-primary-300 block mb-1">ようこそ、Heavy Chainへ！</span>
+                まずはあなたのブランドを作成しましょう。AIがブランドの世界観を学習し、最適な画像を生成します。
+              </p>
+            </div>
           </div>
           
-          <Input
-            label="ブランド名"
-            placeholder="例: URBAN STYLE"
-            value={brandForm.name}
-            onChange={(e) => setBrandForm({ ...brandForm, name: e.target.value })}
-            required
-          />
-          
-          <Textarea
-            label="世界観・トーン（任意）"
-            placeholder="例: シンプルで洗練された大人のカジュアルスタイル"
-            value={brandForm.toneDescription}
-            onChange={(e) => setBrandForm({ ...brandForm, toneDescription: e.target.value })}
-            rows={3}
-          />
-          
-          <Input
-            label="ターゲット層（任意）"
-            placeholder="例: 30代〜40代の働く男性"
-            value={brandForm.targetAudience}
-            onChange={(e) => setBrandForm({ ...brandForm, targetAudience: e.target.value })}
-          />
+          <div className="space-y-4">
+            <Input
+              label="ブランド名"
+              placeholder="例: URBAN STYLE"
+              value={brandForm.name}
+              onChange={(e) => setBrandForm({ ...brandForm, name: e.target.value })}
+              required
+              className="text-lg"
+            />
+            
+            <Textarea
+              label="世界観・トーン（任意）"
+              placeholder="例: シンプルで洗練された大人のカジュアルスタイル。都会的でありながらリラックス感のある雰囲気。"
+              value={brandForm.toneDescription}
+              onChange={(e) => setBrandForm({ ...brandForm, toneDescription: e.target.value })}
+              rows={3}
+            />
+            
+            <Input
+              label="ターゲット層（任意）"
+              placeholder="例: 30代〜40代の働く男性"
+              value={brandForm.targetAudience}
+              onChange={(e) => setBrandForm({ ...brandForm, targetAudience: e.target.value })}
+            />
+          </div>
 
-          <Button
-            type="submit"
-            isLoading={isCreatingBrand}
-            className="w-full"
-            size="lg"
-          >
-            ブランドを作成してはじめる
-          </Button>
+          <div className="pt-4">
+            <Button
+              type="submit"
+              isLoading={isCreatingBrand}
+              className="w-full py-4 text-lg shadow-glow"
+              size="lg"
+            >
+              ブランドを作成してはじめる
+            </Button>
+          </div>
         </form>
+      </Modal>
+
+      {/* New Project Modal */}
+      <Modal
+        isOpen={showNewProjectModal}
+        onClose={() => setShowNewProjectModal(false)}
+        title="新規プロジェクト"
+        size="sm"
+      >
+        <div className="space-y-6">
+          <Input
+            label="プロジェクト名"
+            placeholder="例: 夏コレクション2024"
+            value={newProjectName}
+            onChange={(e) => setNewProjectName(e.target.value)}
+            autoFocus
+          />
+          
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setShowNewProjectModal(false)}
+              className="flex-1"
+            >
+              キャンセル
+            </Button>
+            <Button
+              onClick={handleCreateNewProject}
+              className="flex-1"
+              leftIcon={<Plus className="w-4 h-4" />}
+            >
+              作成
+            </Button>
+          </div>
+        </div>
       </Modal>
     </>
   );

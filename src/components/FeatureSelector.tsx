@@ -16,8 +16,10 @@ import {
   TrendingUp,
   Zap,
   Upload,
-  Type
+  Type,
+  ArrowRight
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export interface Feature {
   id: string;
@@ -28,7 +30,7 @@ export interface Feature {
   apiEndpoint: string;
   badge?: 'recommended' | 'popular' | 'new';
   examplePrompt?: string;
-  requiresImage?: boolean; // true if feature requires image upload
+  requiresImage?: boolean;
 }
 
 export const FEATURES: Feature[] = [
@@ -173,22 +175,25 @@ const CATEGORIES = [
   { id: 'workflow', name: 'ワークフロー' },
 ];
 
-const BADGE_STYLES = {
+const BADGE_CONFIG = {
   recommended: {
-    bg: 'bg-primary-100 dark:bg-primary-900/50',
-    text: 'text-primary-700 dark:text-primary-300',
+    bg: 'bg-amber-50 dark:bg-amber-900/30',
+    text: 'text-amber-700 dark:text-amber-300',
+    border: 'border-amber-200 dark:border-amber-800',
     icon: Star,
     label: 'おすすめ',
   },
   popular: {
-    bg: 'bg-orange-100 dark:bg-orange-900/50',
-    text: 'text-orange-700 dark:text-orange-300',
+    bg: 'bg-rose-50 dark:bg-rose-900/30',
+    text: 'text-rose-700 dark:text-rose-300',
+    border: 'border-rose-200 dark:border-rose-800',
     icon: TrendingUp,
     label: '人気',
   },
   new: {
-    bg: 'bg-green-100 dark:bg-green-900/50',
-    text: 'text-green-700 dark:text-green-300',
+    bg: 'bg-emerald-50 dark:bg-emerald-900/30',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    border: 'border-emerald-200 dark:border-emerald-800',
     icon: Zap,
     label: '新機能',
   },
@@ -201,13 +206,11 @@ interface FeatureSelectorProps {
 
 export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureSelectorProps) {
   const [activeCategory, setActiveCategory] = useState('all');
-  const [hoveredFeature, setHoveredFeature] = useState<string | null>(null);
 
   const filteredFeatures = activeCategory === 'all'
     ? FEATURES
     : FEATURES.filter(f => f.category === activeCategory);
 
-  // Sort to show recommended first, then popular, then new
   const sortedFeatures = [...filteredFeatures].sort((a, b) => {
     const priority = { recommended: 0, popular: 1, new: 2 };
     const aPriority = a.badge ? priority[a.badge] : 3;
@@ -216,43 +219,49 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Quick start section */}
       {activeCategory === 'all' && (
-        <div className="bg-gradient-to-r from-primary-50 to-accent-50 dark:from-primary-900/30 dark:to-accent-900/30 rounded-2xl p-6 mb-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-white dark:bg-neutral-800 rounded-xl flex items-center justify-center shadow-sm">
-              <Sparkles className="w-6 h-6 text-primary-600" />
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-600 dark:to-primary-800 rounded-2xl p-6 text-white"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+          <div className="relative z-10 flex items-start gap-5">
+            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-7 h-7" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-neutral-800 dark:text-white mb-1">
+              <h3 className="text-lg font-semibold mb-2">
                 🚀 まずはこれから始めよう
               </h3>
-              <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-3">
+              <p className="text-white/80 text-sm mb-4 leading-relaxed">
                 初めての方は「デザインガチャ」がおすすめ。1つのコンセプトから4つのスタイルを一気に生成できます。
               </p>
               <button
                 onClick={() => onSelectFeature(FEATURES.find(f => f.id === 'design-gacha')!)}
-                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-primary-700 text-sm font-semibold rounded-xl hover:bg-white/90 transition-colors shadow-lg"
               >
-                デザインガチャを試す →
+                デザインガチャを試す
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Category tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-2 -mx-1 px-1">
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {CATEGORIES.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
             className={`
-              px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors
+              px-4 py-2.5 text-sm font-medium rounded-xl whitespace-nowrap transition-all duration-200
               ${activeCategory === cat.id
-                ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
-                : 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
+                ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md'
+                : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
               }
             `}
           >
@@ -262,101 +271,127 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
       </div>
 
       {/* Feature grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {sortedFeatures.map((feature) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {sortedFeatures.map((feature, index) => {
           const Icon = feature.icon;
           const isSelected = selectedFeatureId === feature.id;
-          const isHovered = hoveredFeature === feature.id;
-          const badge = feature.badge ? BADGE_STYLES[feature.badge] : null;
+          const badge = feature.badge ? BADGE_CONFIG[feature.badge] : null;
 
           return (
-            <button
+            <motion.button
               key={feature.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
               onClick={() => onSelectFeature(feature)}
-              onMouseEnter={() => setHoveredFeature(feature.id)}
-              onMouseLeave={() => setHoveredFeature(null)}
               className={`
-                relative flex flex-col p-5 rounded-2xl border-2 text-left transition-all duration-200
+                group relative text-left p-5 rounded-2xl border-2 transition-all duration-300
                 ${isSelected
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 shadow-lg shadow-primary-500/10'
-                  : 'border-neutral-200 dark:border-neutral-700 hover:border-primary-300 dark:hover:border-primary-600 bg-white dark:bg-neutral-800'
+                  ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-900/20 ring-4 ring-primary-500/10'
+                  : 'border-neutral-200 dark:border-neutral-700/50 bg-white dark:bg-neutral-800/50 hover:border-neutral-300 dark:hover:border-neutral-600 hover:shadow-lg'
                 }
               `}
             >
-              {/* Badge */}
-              {badge && (
-                <div className={`absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`}>
-                  <badge.icon className="w-3 h-3" />
-                  {badge.label}
-                </div>
-              )}
-
-              {/* Input type indicator */}
-              <div className={`absolute top-3 left-3 flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                feature.requiresImage 
-                  ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
-                  : 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
-              }`}>
-                {feature.requiresImage ? (
-                  <>
-                    <Upload className="w-3 h-3" />
-                    画像から
-                  </>
-                ) : (
-                  <>
-                    <Type className="w-3 h-3" />
-                    テキストから
-                  </>
-                )}
-              </div>
-
-              <div className="flex items-start gap-4 mb-3">
+              {/* Header row with icon and badges */}
+              <div className="flex items-start justify-between gap-3 mb-4">
+                {/* Icon */}
                 <div className={`
-                  w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors
+                  w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300
                   ${isSelected 
-                    ? 'bg-primary-500 text-white' 
-                    : 'bg-neutral-100 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'
+                    ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30' 
+                    : 'bg-neutral-100 dark:bg-neutral-700/50 text-neutral-500 dark:text-neutral-400 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/30 group-hover:text-primary-600 dark:group-hover:text-primary-400'
                   }
                 `}>
-                  <Icon className="w-6 h-6" />
+                  <Icon className="w-5 h-5" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-neutral-800 dark:text-white mb-1">
-                    {feature.name}
-                  </h3>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                    {feature.description}
-                  </p>
+
+                {/* Badges */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {/* Input type badge */}
+                  <span className={`
+                    inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold uppercase tracking-wide
+                    ${feature.requiresImage 
+                      ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
+                      : 'bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300'
+                    }
+                  `}>
+                    {feature.requiresImage ? (
+                      <>
+                        <Upload className="w-3 h-3" />
+                        画像
+                      </>
+                    ) : (
+                      <>
+                        <Type className="w-3 h-3" />
+                        テキスト
+                      </>
+                    )}
+                  </span>
+
+                  {/* Status badge */}
+                  {badge && (
+                    <span className={`
+                      inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold
+                      ${badge.bg} ${badge.text}
+                    `}>
+                      <badge.icon className="w-3 h-3" />
+                      {badge.label}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Example prompt (shown on hover or select) */}
-              {feature.examplePrompt && (isHovered || isSelected) && (
-                <div className="mt-2 pt-3 border-t border-neutral-100 dark:border-neutral-700">
-                  <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-1">例:</p>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-300 italic">
-                    "{feature.examplePrompt}"
-                  </p>
-                </div>
-              )}
-            </button>
+              {/* Content */}
+              <div>
+                <h3 className={`
+                  text-base font-semibold mb-1.5 transition-colors
+                  ${isSelected 
+                    ? 'text-primary-700 dark:text-primary-300' 
+                    : 'text-neutral-800 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400'
+                  }
+                `}>
+                  {feature.name}
+                </h3>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                  {feature.description}
+                </p>
+              </div>
+
+              {/* Hover arrow indicator */}
+              <div className={`
+                absolute right-4 bottom-4 w-8 h-8 rounded-full flex items-center justify-center
+                transition-all duration-300 opacity-0 translate-x-2
+                ${isSelected 
+                  ? 'opacity-100 translate-x-0 bg-primary-500 text-white' 
+                  : 'group-hover:opacity-100 group-hover:translate-x-0 bg-neutral-100 dark:bg-neutral-700 text-neutral-400'
+                }
+              `}>
+                <ArrowRight className="w-4 h-4" />
+              </div>
+            </motion.button>
           );
         })}
       </div>
 
       {/* Stats footer */}
-      <div className="flex items-center justify-center gap-6 pt-4 text-sm text-neutral-500 dark:text-neutral-400">
-        <div className="flex items-center gap-2">
-          <Star className="w-4 h-4 text-primary-500" />
-          <span>{FEATURES.filter(f => f.badge === 'recommended').length}件のおすすめ</span>
+      <div className="flex items-center justify-center gap-8 pt-6 border-t border-neutral-100 dark:border-neutral-800">
+        <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
+          <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <Star className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+          </div>
+          <span>{FEATURES.filter(f => f.badge === 'recommended').length} おすすめ</span>
         </div>
-        <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-orange-500" />
-          <span>{FEATURES.filter(f => f.badge === 'popular').length}件の人気機能</span>
+        <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
+          <div className="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+            <TrendingUp className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+          </div>
+          <span>{FEATURES.filter(f => f.badge === 'popular').length} 人気</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-green-500" />
-          <span>{FEATURES.filter(f => f.badge === 'new').length}件の新機能</span>
+        <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
+          <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+            <Zap className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+          </div>
+          <span>{FEATURES.filter(f => f.badge === 'new').length} 新機能</span>
         </div>
       </div>
     </div>

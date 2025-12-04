@@ -50,9 +50,10 @@ const GENERATE_MODES = [
 ] as const;
 
 export function CanvasEditorPage() {
-  useParams();
+  const { projectId } = useParams();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  const projectNameInputRef = useRef<HTMLInputElement>(null);
   const { currentBrand } = useAuthStore();
   const { showGuide, completeGuide } = useCanvasGuide();
   
@@ -60,6 +61,7 @@ export function CanvasEditorPage() {
   const [sidePanel, setSidePanel] = useState<SidePanel>('properties');
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [selectedPosition, setSelectedPosition] = useState({ x: 0, y: 0 });
+  const [isEditingName, setIsEditingName] = useState(false);
   
   // Generate modal states
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -83,7 +85,31 @@ export function CanvasEditorPage() {
     addObject,
     undo,
     redo,
+    currentProjectId,
+    currentProjectName,
+    projects,
+    loadProject,
+    createProject,
+    saveCurrentProject,
+    renameProject,
+    clearCanvas,
   } = useCanvasStore();
+
+  // Load project when projectId changes
+  useEffect(() => {
+    if (projectId && projectId !== 'new' && projectId !== currentProjectId) {
+      const project = projects.find(p => p.id === projectId);
+      if (project) {
+        loadProject(projectId);
+      } else {
+        // Project not found, redirect to new
+        navigate('/canvas/new', { replace: true });
+      }
+    } else if (projectId === 'new' && currentProjectId) {
+      // Starting fresh
+      clearCanvas();
+    }
+  }, [projectId, currentProjectId, projects, loadProject, clearCanvas, navigate]);
 
   const selectedObject = selectedIds.length === 1
     ? objects.find((obj) => obj.id === selectedIds[0]) || null
@@ -138,6 +164,49 @@ export function CanvasEditorPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
+
+  // Focus input when editing name
+  useEffect(() => {
+    if (isEditingName && projectNameInputRef.current) {
+      projectNameInputRef.current.focus();
+      projectNameInputRef.current.select();
+    }
+  }, [isEditingName]);
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    if (currentProjectId) {
+      renameProject(currentProjectId, newName);
+    }
+  };
+
+  const handleNameBlur = () => {
+    setIsEditingName(false);
+    if (currentProjectId) {
+      toast.success(`プロジェクト名を更新しました`);
+    }
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
+    }
+    if (e.key === 'Escape') {
+      setIsEditingName(false);
+    }
+  };
+
+  const handleSave = () => {
+    if (!currentProjectId && !currentProjectName) {
+      // Need to create a project first
+      const newId = createProject('無題のプロジェクト', currentBrand?.id);
+      navigate(`/canvas/${newId}`, { replace: true });
+      toast.success('プロジェクトを作成しました');
+    } else {
+      saveCurrentProject();
+      toast.success('保存しました');
+    }
+  };
 
   const handleObjectSelect = useCallback((id: string | null) => {
     if (id && containerRef.current) {
@@ -689,11 +758,26 @@ export function CanvasEditorPage() {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="font-semibold text-neutral-800 dark:text-white">
-              プロジェクト名
-            </h1>
+            {isEditingName ? (
+              <input
+                ref={projectNameInputRef}
+                type="text"
+                value={currentProjectName}
+                onChange={handleNameChange}
+                onBlur={handleNameBlur}
+                onKeyDown={handleNameKeyDown}
+                className="text-base font-semibold text-neutral-800 dark:text-white bg-transparent border-b border-primary-500 outline-none px-0 py-0.5 min-w-[100px]"
+              />
+            ) : (
+              <h1
+                onClick={() => setIsEditingName(true)}
+                className="text-base font-semibold text-neutral-800 dark:text-white cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+              >
+                {currentProjectName || '無題のプロジェクト'}
+              </h1>
+            )}
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              最終更新: たった今
+              {currentProjectId ? '自動保存' : '未保存'}
             </p>
           </div>
         </div>
@@ -737,7 +821,7 @@ export function CanvasEditorPage() {
             招待
           </Button>
 
-          <Button size="sm" className="shadow-glow hover:shadow-glow-lg">
+          <Button size="sm" className="shadow-glow hover:shadow-glow-lg" onClick={handleSave}>
             <Save className="w-4 h-4 mr-1.5" />
             保存
           </Button>

@@ -18,8 +18,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Button } from '../components/ui';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import { useRef } from 'react';
+import { motion, useScroll, useTransform, useSpring, useMotionTemplate } from 'framer-motion';
+import { useRef, useEffect } from 'react';
 
 const stats = [
   { value: '30秒', label: '平均生成時間', icon: Clock },
@@ -153,21 +153,62 @@ const containerVariants = {
     opacity: 1,
     transition: {
       staggerChildren: 0.1,
+      delayChildren: 0.2,
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.6,
-      ease: "easeOut",
+      duration: 0.8,
+      ease: [0.22, 1, 0.36, 1],
     },
   },
 };
+
+function MouseParallax() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll();
+  const mouseX = useSpring(0, { stiffness: 50, damping: 20 });
+  const mouseY = useSpring(0, { stiffness: 50, damping: 20 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const { clientX, clientY } = e;
+      const { innerWidth, innerHeight } = window;
+      mouseX.set(clientX / innerWidth - 0.5);
+      mouseY.set(clientY / innerHeight - 0.5);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [mouseX, mouseY]);
+
+  const x1 = useTransform(mouseX, (val) => val * 40);
+  const y1 = useTransform(mouseY, (val) => val * 40);
+  const x2 = useTransform(mouseX, (val) => val * -30);
+  const y2 = useTransform(mouseY, (val) => val * -30);
+
+  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+
+  return (
+    <motion.div ref={ref} style={{ opacity }} className="absolute inset-0 pointer-events-none overflow-hidden">
+      <motion.div 
+        style={{ x: x1, y: y1 }}
+        className="absolute top-[10%] right-[10%] w-[600px] h-[600px] bg-primary-200/40 dark:bg-primary-900/20 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen animate-pulse-slow" 
+      />
+      <motion.div 
+        style={{ x: x2, y: y2 }}
+        className="absolute bottom-[10%] left-[10%] w-[500px] h-[500px] bg-accent-200/40 dark:bg-accent-900/20 rounded-full blur-[100px] mix-blend-multiply dark:mix-blend-screen animate-float-delayed" 
+      />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gold-light/10 rounded-full blur-[150px] mix-blend-overlay" />
+    </motion.div>
+  );
+}
 
 export function LandingPage() {
   const targetRef = useRef(null);
@@ -180,69 +221,82 @@ export function LandingPage() {
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-900 overflow-hidden">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-950 overflow-hidden selection:bg-primary-200 selection:text-primary-900">
       {/* Hero */}
       <section ref={targetRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Parallax Background */}
-        <motion.div style={{ y, opacity }} className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-br from-neutral-50 via-primary-50/40 to-accent-50/30 dark:from-neutral-900 dark:via-primary-900/20 dark:to-accent-900/10" />
-          <div className="absolute top-20 right-20 w-72 h-72 bg-primary-200 dark:bg-primary-800 rounded-full blur-[100px] animate-float opacity-60" />
-          <div className="absolute bottom-20 left-20 w-96 h-96 bg-accent-200 dark:bg-accent-800 rounded-full blur-[120px] animate-pulse-slow opacity-60" />
-        </motion.div>
+        <MouseParallax />
+        
+        {/* Noise Texture */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32 z-10">
-          <div className="text-center max-w-4xl mx-auto">
+          <div className="text-center max-w-5xl mx-auto">
             {/* Badge */}
             <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/50 backdrop-blur-md dark:bg-neutral-800/50 rounded-full shadow-glass mb-8 border border-white/50 dark:border-white/10"
+              initial={{ opacity: 0, y: 20, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-white/40 backdrop-blur-xl dark:bg-white/5 rounded-full shadow-glass mb-10 border border-white/60 dark:border-white/10 hover:scale-105 transition-transform cursor-default"
             >
-              <Sparkles className="w-4 h-4 text-accent-500 animate-pulse" />
-              <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300 tracking-wide">
+              <div className="relative flex items-center justify-center">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-75 animate-ping" />
+                <Sparkles className="relative w-4 h-4 text-accent-500" />
+              </div>
+              <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200 tracking-wide">
                 アパレル専用AI画像生成プラットフォーム
               </span>
             </motion.div>
 
             {/* Headline */}
             <motion.h1 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="text-5xl sm:text-6xl lg:text-8xl font-display font-semibold text-neutral-900 dark:text-white leading-tight mb-8 tracking-tight"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+              className="text-6xl sm:text-7xl lg:text-9xl font-display font-bold text-neutral-900 dark:text-white leading-[0.95] mb-10 tracking-tight"
             >
               アパレル画像を
-              <span className="block text-gradient-gold drop-shadow-sm">
-                AIで自動生成
+              <br />
+              <span className="relative inline-block mt-2">
+                <span className="absolute -inset-2 bg-gradient-to-r from-primary-200/50 to-gold-light/30 blur-xl rounded-full opacity-50 animate-pulse-slow" />
+                <span className="relative text-gradient-gold drop-shadow-sm bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-gold-DEFAULT to-primary-500">
+                  AIで自動生成
+                </span>
               </span>
             </motion.h1>
 
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto mb-12 leading-relaxed"
+              transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+              className="text-xl sm:text-2xl text-neutral-600 dark:text-neutral-300 max-w-2xl mx-auto mb-14 leading-relaxed font-light"
             >
               商品画像、カラバリ、バナー、背景編集まで。
               <br className="hidden sm:block" />
-              <strong>12種類のAI機能</strong>でアパレルビジネスを加速。
+              <strong className="text-neutral-900 dark:text-white font-semibold">12種類のAI機能</strong>でアパレルビジネスを加速。
             </motion.p>
 
             {/* CTA */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-16"
+              transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-20"
             >
               <Link to="/signup">
-                <Button size="lg" rightIcon={<ArrowRight className="w-5 h-5" />} className="shadow-glow-lg hover:scale-105 transition-transform duration-300">
+                <Button 
+                  size="lg" 
+                  className="text-lg px-10 py-4 rounded-full shadow-glow-lg hover:scale-105 hover:shadow-glow-xl transition-all duration-500 bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-0"
+                  rightIcon={<ArrowRight className="w-5 h-5" />}
+                >
                   無料で始める
                 </Button>
               </Link>
               <Link to="/login">
-                <Button variant="secondary" size="lg" className="bg-white/50 backdrop-blur-sm hover:bg-white/80 border-primary-200">
+                <Button 
+                  variant="ghost" 
+                  size="lg" 
+                  className="text-lg px-10 py-4 rounded-full bg-white/30 backdrop-blur-md hover:bg-white/50 border border-white/40 dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                >
                   ログイン
                 </Button>
               </Link>
@@ -260,8 +314,10 @@ export function LandingPage() {
                 '即座に利用開始',
                 '全機能無料開放中'
               ].map((text, i) => (
-                <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/30 backdrop-blur-sm border border-white/20">
-                  <Check className="w-4 h-4 text-green-500" />
+                <div key={i} className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/40 backdrop-blur-sm border border-white/30 shadow-sm dark:bg-white/5 dark:border-white/10">
+                  <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                  </div>
                   {text}
                 </div>
               ))}
@@ -272,23 +328,25 @@ export function LandingPage() {
 
       {/* Stats bar */}
       <motion.div 
-        initial={{ opacity: 0, y: 50 }}
+        initial={{ opacity: 0, y: 100 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.8 }}
-        className="relative z-20 -mt-20 mx-4 sm:mx-8 lg:mx-auto max-w-7xl"
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-20 -mt-32 mx-4 sm:mx-8 lg:mx-auto max-w-7xl"
       >
-        <div className="glass-panel rounded-2xl p-8 md:p-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="glass-panel rounded-3xl p-10 md:p-14 shadow-floating border border-white/60 dark:border-white/10 bg-white/80 dark:bg-surface-900/80 backdrop-blur-2xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-8 divide-x-0 md:divide-x divide-neutral-200 dark:divide-neutral-800/50">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center group">
-                <div className="flex items-center justify-center gap-2 mb-2 transform group-hover:scale-110 transition-transform duration-300">
-                  <stat.icon className="w-6 h-6 text-primary-500" />
-                  <span className="text-3xl sm:text-4xl font-bold text-neutral-800 dark:text-white font-display">
+              <div key={index} className="text-center group px-2">
+                <div className="flex flex-col items-center justify-center gap-3 transform group-hover:-translate-y-1 transition-transform duration-500">
+                  <div className="p-3 rounded-2xl bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 mb-2">
+                    <stat.icon className="w-6 h-6" />
+                  </div>
+                  <span className="text-4xl sm:text-5xl font-bold text-neutral-900 dark:text-white font-display tracking-tight">
                     {stat.value}
                   </span>
                 </div>
-                <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 tracking-wider uppercase">{stat.label}</p>
+                <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 tracking-widest uppercase mt-2">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -296,18 +354,18 @@ export function LandingPage() {
       </motion.div>
 
       {/* How it works */}
-      <section className="py-32 bg-neutral-50/50 dark:bg-neutral-900/50 relative">
+      <section className="py-40 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-20"
+            className="text-center mb-24"
           >
-            <h2 className="text-3xl sm:text-5xl font-display font-semibold text-neutral-900 dark:text-white mb-6">
+            <h2 className="text-4xl sm:text-6xl font-display font-semibold text-neutral-900 dark:text-white mb-6 tracking-tight">
               4ステップで簡単生成
             </h2>
-            <p className="text-lg text-neutral-600 dark:text-neutral-400">
+            <p className="text-xl text-neutral-600 dark:text-neutral-400 font-light">
               日本語で指示するだけ。専門知識は不要です。
             </p>
           </motion.div>
@@ -316,22 +374,22 @@ export function LandingPage() {
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
             className="grid md:grid-cols-4 gap-8"
           >
             {workflowSteps.map((item, index) => (
               <motion.div key={index} variants={itemVariants} className="relative group">
                 {index < workflowSteps.length - 1 && (
-                  <div className="hidden md:block absolute top-10 left-full w-full h-[2px] bg-gradient-to-r from-primary-200/50 to-transparent -translate-x-8 z-0" />
+                  <div className="hidden md:block absolute top-12 left-2/3 w-full h-[2px] bg-gradient-to-r from-neutral-200 to-transparent dark:from-neutral-800 -z-10" />
                 )}
-                <div className="relative z-10 bg-white dark:bg-neutral-800 rounded-2xl p-8 shadow-soft hover:shadow-elegant transition-all duration-500 hover:-translate-y-2 border border-neutral-100 dark:border-neutral-700">
-                  <div className="w-14 h-14 bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/50 dark:to-primary-800/30 rounded-xl flex items-center justify-center mb-6 shadow-inner group-hover:scale-110 transition-transform duration-500">
-                    <span className="text-xl font-bold text-primary-600 dark:text-primary-400 font-display">{item.step}</span>
+                <div className="relative z-10 h-full bg-white dark:bg-surface-900/50 rounded-3xl p-8 shadow-sm hover:shadow-elegant transition-all duration-500 hover:-translate-y-2 border border-neutral-100 dark:border-white/5">
+                  <div className="w-16 h-16 bg-gradient-to-br from-neutral-100 to-white dark:from-neutral-800 dark:to-neutral-900 rounded-2xl flex items-center justify-center mb-8 shadow-inner group-hover:scale-110 transition-transform duration-500 border border-white/50 dark:border-white/5">
+                    <span className="text-2xl font-bold text-neutral-900 dark:text-white font-display">{item.step}</span>
                   </div>
-                  <h3 className="text-xl font-semibold text-neutral-800 dark:text-white mb-3">
+                  <h3 className="text-xl font-semibold text-neutral-900 dark:text-white mb-4">
                     {item.title}
                   </h3>
-                  <p className="text-neutral-600 dark:text-neutral-400 text-sm leading-relaxed">
+                  <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
                     {item.description}
                   </p>
                 </div>
@@ -342,21 +400,24 @@ export function LandingPage() {
       </section>
 
       {/* Features Grid */}
-      <section className="py-32 bg-white dark:bg-neutral-900 relative overflow-hidden">
+      <section className="py-40 bg-surface-100/50 dark:bg-black/20 relative overflow-hidden">
         {/* Decorative background */}
-        <div className="absolute top-0 right-0 w-1/2 h-full bg-primary-50/30 dark:bg-primary-900/10 skew-x-12 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-[-20%] right-[-10%] w-[800px] h-[800px] rounded-full bg-primary-100/30 dark:bg-primary-900/10 blur-[120px]" />
+          <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-accent-100/30 dark:bg-accent-900/10 blur-[100px]" />
+        </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-20"
+            className="text-center mb-24"
           >
-            <h2 className="text-3xl sm:text-5xl font-display font-semibold text-neutral-900 dark:text-white mb-6">
+            <h2 className="text-4xl sm:text-6xl font-display font-semibold text-neutral-900 dark:text-white mb-6 tracking-tight">
               12種類のAI機能
             </h2>
-            <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto">
+            <p className="text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto font-light">
               アパレルビジネスに必要な画像生成・編集機能をワンストップで提供。
             </p>
           </motion.div>
@@ -365,41 +426,44 @@ export function LandingPage() {
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-50px" }}
             className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
           >
             {features.map((feature, index) => (
               <motion.div
                 key={index}
                 variants={itemVariants}
-                className="glass-card p-8 group cursor-pointer"
+                className="glass-card p-8 group cursor-pointer flex flex-col h-full bg-white/60 dark:bg-surface-800/40"
               >
                 {feature.badge && (
-                  <div className="absolute top-4 right-4 px-3 py-1 bg-primary-100/80 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 text-xs font-bold rounded-full tracking-wide backdrop-blur-sm">
+                  <div className="absolute top-4 right-4 px-3 py-1 bg-gradient-to-r from-primary-500 to-gold-DEFAULT text-white text-[10px] font-bold rounded-full tracking-widest uppercase shadow-glow">
                     {feature.badge}
                   </div>
                 )}
-                <div className="w-14 h-14 bg-gradient-to-br from-primary-100 to-accent-50 dark:from-primary-900/50 dark:to-accent-900/30 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-sm">
-                  <feature.icon className="w-7 h-7 text-primary-700 dark:text-primary-400" />
+                <div className="w-16 h-16 bg-surface-50 dark:bg-surface-900 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-sm border border-white/50 dark:border-white/5">
+                  <feature.icon className="w-8 h-8 text-neutral-700 dark:text-neutral-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />
                 </div>
-                <h3 className="text-lg font-semibold text-neutral-800 dark:text-white mb-3 group-hover:text-primary-600 transition-colors">
+                <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-3 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                   {feature.title}
                 </h3>
-                <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 leading-relaxed flex-grow">
                   {feature.description}
                 </p>
+                <div className="mt-6 flex items-center text-primary-600 dark:text-primary-400 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
+                  詳しく見る <ArrowRight className="w-4 h-4 ml-1" />
+                </div>
               </motion.div>
             ))}
           </motion.div>
 
           <motion.div 
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mt-16"
+            className="text-center mt-20"
           >
             <Link to="/signup">
-              <Button size="lg" variant="secondary" rightIcon={<ChevronRight className="w-5 h-5" />} className="px-12">
+              <Button size="lg" variant="secondary" rightIcon={<ChevronRight className="w-5 h-5" />} className="px-12 rounded-full border-neutral-300 dark:border-neutral-700 hover:border-primary-500 dark:hover:border-primary-500">
                 すべての機能を見る
               </Button>
             </Link>
@@ -408,48 +472,53 @@ export function LandingPage() {
       </section>
 
       {/* Use Cases */}
-      <section className="py-32 bg-surface-50 dark:bg-surface-950">
+      <section className="py-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-20"
+            className="text-center mb-24"
           >
-            <h2 className="text-3xl sm:text-5xl font-display font-semibold text-neutral-900 dark:text-white mb-6">
+            <h2 className="text-4xl sm:text-6xl font-display font-semibold text-neutral-900 dark:text-white mb-6 tracking-tight">
               あらゆるシーンで活躍
             </h2>
-            <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto">
+            <p className="text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto font-light">
               ECサイト、SNS、商品企画まで。アパレル業界のあらゆる場面で活用できます。
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-10">
+          <div className="grid md:grid-cols-3 gap-8">
             {useCases.map((useCase, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white dark:bg-neutral-800 rounded-3xl overflow-hidden shadow-soft hover:shadow-floating transition-all duration-500 group"
+                transition={{ delay: index * 0.1, duration: 0.8, ease: "easeOut" }}
+                className="bg-white dark:bg-surface-900 rounded-[2rem] overflow-hidden shadow-soft hover:shadow-floating transition-all duration-500 group border border-neutral-100 dark:border-white/5"
               >
-                <div className={`h-56 bg-gradient-to-br ${useCase.color} flex items-center justify-center relative overflow-hidden`}>
-                  <useCase.icon className="w-24 h-24 text-white/20 transform group-hover:scale-125 transition-transform duration-700 rotate-12" />
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-500" />
-                  <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/20 to-transparent opacity-50" />
+                <div className={`h-64 bg-gradient-to-br ${useCase.color} flex items-center justify-center relative overflow-hidden`}>
+                  <useCase.icon className="w-32 h-32 text-white/10 transform group-hover:scale-125 transition-transform duration-1000 rotate-12 absolute -right-4 -bottom-4" />
+                  <div className="relative z-10 p-8 w-full h-full flex flex-col justify-end">
+                    <div className="w-14 h-14 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-4 border border-white/20">
+                      <useCase.icon className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-semibold text-white font-display">
+                      {useCase.title}
+                    </h3>
+                  </div>
                 </div>
                 <div className="p-8">
-                  <h3 className="text-2xl font-semibold text-neutral-800 dark:text-white mb-3 font-display">
-                    {useCase.title}
-                  </h3>
-                  <p className="text-neutral-600 dark:text-neutral-400 mb-6 leading-relaxed">
+                  <p className="text-neutral-600 dark:text-neutral-400 mb-8 leading-relaxed">
                     {useCase.description}
                   </p>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {useCase.metrics.map((metric, i) => (
-                      <div key={i} className="flex items-center gap-3 text-sm text-neutral-600 dark:text-neutral-300 bg-neutral-50 dark:bg-neutral-700/50 px-3 py-2 rounded-lg">
-                        <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      <div key={i} className="flex items-center gap-3 text-sm text-neutral-700 dark:text-neutral-300 bg-surface-50 dark:bg-surface-800 px-4 py-3 rounded-xl border border-neutral-100 dark:border-neutral-700">
+                        <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                          <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                        </div>
                         {metric}
                       </div>
                     ))}
@@ -462,15 +531,21 @@ export function LandingPage() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-32 bg-white dark:bg-neutral-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-40 bg-neutral-900 text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-900/30 rounded-full blur-[100px]" />
+           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-900/30 rounded-full blur-[100px]" />
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-20"
+            className="text-center mb-24"
           >
-            <h2 className="text-3xl sm:text-5xl font-display font-semibold text-neutral-900 dark:text-white mb-6">
+            <h2 className="text-4xl sm:text-6xl font-display font-semibold mb-6 tracking-tight">
               ユーザーの声
             </h2>
           </motion.div>
@@ -479,30 +554,30 @@ export function LandingPage() {
             {testimonials.map((testimonial, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl p-8 relative border border-neutral-100 dark:border-neutral-700"
+                transition={{ delay: index * 0.1, duration: 0.8 }}
+                className="bg-white/5 backdrop-blur-lg rounded-3xl p-10 relative border border-white/10 hover:bg-white/10 transition-colors duration-300"
               >
-                <div className="absolute top-6 right-8 text-6xl text-primary-200 dark:text-primary-900 font-serif opacity-50">"</div>
-                <div className="flex gap-1 mb-6">
+                <div className="absolute top-6 right-8 text-6xl text-primary-500/20 font-serif">"</div>
+                <div className="flex gap-1 mb-8">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-5 h-5 text-yellow-500 fill-current drop-shadow-sm" />
+                    <Star key={i} className="w-4 h-4 text-gold-DEFAULT fill-current" />
                   ))}
                 </div>
-                <p className="text-lg text-neutral-700 dark:text-neutral-300 mb-8 relative z-10 italic font-serif">
+                <p className="text-lg text-neutral-300 mb-10 relative z-10 italic font-serif leading-relaxed">
                   {testimonial.quote}
                 </p>
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-primary-400 to-accent-400 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-lg">
                     {testimonial.author[0]}
                   </div>
                   <div>
-                    <p className="font-bold text-neutral-900 dark:text-white">
+                    <p className="font-bold text-white text-lg">
                       {testimonial.author}
                     </p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                    <p className="text-xs text-neutral-400 uppercase tracking-wider mt-1">
                       {testimonial.role}
                     </p>
                   </div>
@@ -514,82 +589,79 @@ export function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-32 bg-neutral-900 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20 blur-sm mix-blend-overlay" />
-        <div className="absolute inset-0 bg-gradient-to-b from-neutral-900/80 to-neutral-900" />
+      <section className="py-32 relative overflow-hidden bg-surface-50 dark:bg-surface-950">
         
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <motion.h2 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="text-4xl sm:text-6xl font-display font-semibold text-white mb-8 leading-tight"
+            transition={{ duration: 0.8 }}
+            className="bg-white dark:bg-neutral-900 rounded-[3rem] p-12 md:p-20 shadow-floating border border-neutral-100 dark:border-neutral-800 relative overflow-hidden"
           >
-            あなたのブランドを
-            <br />
-            <span className="text-gradient-gold">次のレベルへ</span>
-          </motion.h2>
-          
-          <motion.p 
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="text-xl text-neutral-300 mb-12 max-w-2xl mx-auto"
-          >
-            全機能無料で利用可能。クレジットカード不要。
-            <br />
-            30秒で最初の画像を生成できます。
-          </motion.p>
+             <div className="absolute inset-0 bg-gradient-to-br from-primary-50/50 to-transparent dark:from-primary-900/20 pointer-events-none" />
+             
+            <motion.h2 
+              className="text-4xl sm:text-7xl font-display font-semibold text-neutral-900 dark:text-white mb-10 leading-tight tracking-tight relative z-10"
+            >
+              あなたのブランドを
+              <br />
+              <span className="text-gradient-gold">次のレベルへ</span>
+            </motion.h2>
+            
+            <motion.p 
+              className="text-xl text-neutral-600 dark:text-neutral-300 mb-12 max-w-2xl mx-auto font-light relative z-10"
+            >
+              全機能無料で利用可能。クレジットカード不要。
+              <br />
+              30秒で最初の画像を生成できます。
+            </motion.p>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.4 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-6"
-          >
-            <Link to="/signup">
-              <Button
-                size="lg"
-                className="px-10 py-6 text-lg bg-white text-neutral-900 hover:bg-neutral-100 border-none shadow-glow hover:scale-105 transition-all duration-300"
-                rightIcon={<ArrowRight className="w-5 h-5" />}
-              >
-                無料アカウントを作成
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button
-                size="lg"
-                variant="ghost"
-                className="px-10 py-6 text-lg text-white border-white/30 hover:bg-white/10"
-              >
-                ログイン
-              </Button>
-            </Link>
+            <motion.div 
+              className="flex flex-col sm:flex-row items-center justify-center gap-6 relative z-10"
+            >
+              <Link to="/signup">
+                <Button
+                  size="lg"
+                  className="px-12 py-5 text-lg bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-glow hover:shadow-glow-lg hover:scale-105 transition-all duration-300"
+                  rightIcon={<ArrowRight className="w-5 h-5" />}
+                >
+                  無料アカウントを作成
+                </Button>
+              </Link>
+            </motion.div>
+            
+            <p className="mt-8 text-sm text-neutral-400 relative z-10">
+              登録から1分で生成開始できます
+            </p>
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-16 bg-neutral-950 border-t border-neutral-900">
+      <footer className="py-20 bg-surface-50 dark:bg-surface-950 border-t border-neutral-200 dark:border-neutral-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-accent-600 rounded-xl flex items-center justify-center shadow-glow">
-                <Layers className="w-5 h-5 text-white" />
+          <div className="flex flex-col md:flex-row items-center justify-between gap-10">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl flex items-center justify-center shadow-lg">
+                <Layers className="w-6 h-6 text-white" />
               </div>
-              <span className="font-display text-xl font-semibold text-white tracking-wide">
-                Heavy Chain
-              </span>
+              <div className="flex flex-col">
+                <span className="font-display text-2xl font-semibold text-neutral-900 dark:text-white tracking-wide">
+                  Heavy Chain
+                </span>
+                <span className="text-xs text-neutral-500 uppercase tracking-[0.2em]">
+                  Design Suite
+                </span>
+              </div>
             </div>
-            <div className="flex flex-wrap justify-center gap-8 text-sm text-neutral-400">
-              <a href="#" className="hover:text-primary-400 transition-colors duration-300">利用規約</a>
-              <a href="#" className="hover:text-primary-400 transition-colors duration-300">プライバシーポリシー</a>
-              <a href="#" className="hover:text-primary-400 transition-colors duration-300">お問い合わせ</a>
-              <a href="#" className="hover:text-primary-400 transition-colors duration-300">特定商取引法に基づく表記</a>
+            <div className="flex flex-wrap justify-center gap-10 text-sm text-neutral-500 dark:text-neutral-400 font-medium">
+              <a href="#" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">利用規約</a>
+              <a href="#" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">プライバシーポリシー</a>
+              <a href="#" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">お問い合わせ</a>
+              <a href="#" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">特商法表記</a>
             </div>
-            <p className="text-xs text-neutral-600">
+            <p className="text-xs text-neutral-400">
               © 2024 Heavy Chain. All rights reserved.
             </p>
           </div>
