@@ -18,7 +18,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Button } from '../components/ui';
-import { motion, useScroll, useTransform, useSpring, useMotionTemplate } from 'framer-motion';
+import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import { useRef, useEffect } from 'react';
 
 const stats = [
