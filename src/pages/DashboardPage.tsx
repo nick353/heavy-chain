@@ -8,9 +8,6 @@ import {
   TrendingUp,
   Layout,
   HelpCircle,
-  BookOpen,
-  Lightbulb,
-  Zap,
   Plus,
   ChevronRight,
   Palette,
@@ -55,24 +52,6 @@ const quickActions = [
     href: '/gallery',
     color: 'from-accent-500 to-pink-500',
     delay: 0.2
-  }
-];
-
-const tips = [
-  {
-    icon: Lightbulb,
-    title: '日本語でOK',
-    description: 'プロンプトは日本語で入力できます。AIが自動で最適化します。'
-  },
-  {
-    icon: Zap,
-    title: 'デザインガチャ',
-    description: '1つのブリーフから複数スタイルを一括生成できます。'
-  },
-  {
-    icon: BookOpen,
-    title: 'チャット編集',
-    description: '「もっと明るく」など対話形式で画像を編集できます。'
   }
 ];
 

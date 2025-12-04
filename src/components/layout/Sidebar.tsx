@@ -8,13 +8,11 @@ import {
   Settings, 
   LogOut, 
   Users, 
-  ChevronRight,
   Moon,
   Sun,
-  PenTool,
-  Command
+  PenTool
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuthStore } from '../../stores/authStore';
 import clsx from 'clsx';
 

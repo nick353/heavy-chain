@@ -15,7 +15,7 @@ import { Button, Input, Textarea, Modal } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface BrandMember {
   id: string;
