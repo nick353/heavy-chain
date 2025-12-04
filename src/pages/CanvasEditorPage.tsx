@@ -133,8 +133,14 @@ export function CanvasEditorPage() {
     };
 
     updateSize();
+    // サイドパネルのアニメーション完了後にもサイズを更新
+    const timeoutId = setTimeout(updateSize, 350);
+    
     window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    return () => {
+      window.removeEventListener('resize', updateSize);
+      clearTimeout(timeoutId);
+    };
   }, [sidePanel]);
 
   useEffect(() => {
@@ -867,10 +873,10 @@ export function CanvasEditorPage() {
 
           <div className="w-6 sm:w-8 h-px bg-neutral-200 dark:bg-neutral-700 my-1 sm:my-2" />
 
-          {/* Side panel toggles - hidden on small mobile */}
+          {/* Side panel toggles */}
           <button
             onClick={() => setSidePanel(sidePanel === 'chat' ? null : 'chat')}
-            className={`hidden sm:block p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
+            className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
               sidePanel === 'chat' 
                 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
                 : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
@@ -882,7 +888,7 @@ export function CanvasEditorPage() {
 
           <button
             onClick={() => setSidePanel(sidePanel === 'templates' ? null : 'templates')}
-            className={`hidden sm:block p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
+            className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
               sidePanel === 'templates' 
                 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
                 : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
@@ -894,7 +900,7 @@ export function CanvasEditorPage() {
 
           <button
             onClick={() => setSidePanel(sidePanel === 'properties' ? null : 'properties')}
-            className={`hidden sm:block p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
+            className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
               sidePanel === 'properties' 
                 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
                 : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'

@@ -59,8 +59,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   ];
 
   const bottomItems = [
-    { icon: Users, label: 'チーム管理', path: '/brand/settings' },
-    { icon: Settings, label: '設定', path: '/settings' },
+    { icon: Settings, label: 'ブランド設定', path: '/brand/settings' },
   ];
 
   return (
