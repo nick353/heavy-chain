@@ -1,25 +1,25 @@
 import { useState } from 'react';
-import {
-  Sparkles,
-  Palette,
-  Users,
-  Globe,
-  Scissors,
-  Maximize2,
-  RefreshCw,
-  Wand2,
-  ShoppingBag,
-  Camera,
-  LayoutGrid,
-  MessageSquare,
-  Star,
-  TrendingUp,
-  Zap,
-  Upload,
-  Type,
-  ArrowRight
-} from 'lucide-react';
 import { motion } from 'framer-motion';
+import {
+  IconSparkles,
+  IconPalette,
+  IconUsers,
+  IconGlobe,
+  IconScissors,
+  IconMaximize,
+  IconRefresh,
+  IconWand,
+  IconShoppingBag,
+  IconCamera,
+  IconGrid,
+  IconMessage,
+  IconStar,
+  IconTrending,
+  IconZap,
+  IconUpload,
+  IconType,
+  IconArrowRight
+} from './icons';
 
 export interface Feature {
   id: string;
@@ -39,7 +39,7 @@ export const FEATURES: Feature[] = [
     id: 'campaign-image',
     name: 'キャンペーン画像',
     description: '季節・セール情報からSNS向け画像を生成',
-    icon: Sparkles,
+    icon: IconSparkles,
     category: 'marketing',
     apiEndpoint: 'generate-image',
     badge: 'recommended',
@@ -49,7 +49,7 @@ export const FEATURES: Feature[] = [
     id: 'scene-coordinate',
     name: 'シーン別コーディネート',
     description: '同商品を複数シーンで生成',
-    icon: Camera,
+    icon: IconCamera,
     category: 'marketing',
     apiEndpoint: 'generate-variations',
     examplePrompt: '商品画像をアップロード → シーンを選択',
@@ -61,7 +61,7 @@ export const FEATURES: Feature[] = [
     id: 'colorize',
     name: 'カラバリ・柄モックアップ',
     description: '色違い・柄違いバリエーション生成',
-    icon: Palette,
+    icon: IconPalette,
     category: 'design',
     apiEndpoint: 'colorize',
     badge: 'popular',
@@ -72,7 +72,7 @@ export const FEATURES: Feature[] = [
     id: 'design-gacha',
     name: 'デザインガチャ',
     description: '複数スタイルから一気に4案生成',
-    icon: LayoutGrid,
+    icon: IconGrid,
     category: 'design',
     apiEndpoint: 'design-gacha',
     badge: 'recommended',
@@ -84,7 +84,7 @@ export const FEATURES: Feature[] = [
     id: 'product-shots',
     name: '商品ページ標準カット',
     description: '正面/側面/背面/ディテール自動生成',
-    icon: ShoppingBag,
+    icon: IconShoppingBag,
     category: 'ec',
     apiEndpoint: 'product-shots',
     badge: 'popular',
@@ -94,7 +94,7 @@ export const FEATURES: Feature[] = [
     id: 'model-matrix',
     name: '体型・年齢違い着用イメージ',
     description: 'S/M/L、20代〜40代のマトリクス生成',
-    icon: Users,
+    icon: IconUsers,
     category: 'ec',
     apiEndpoint: 'model-matrix',
     badge: 'new',
@@ -104,7 +104,7 @@ export const FEATURES: Feature[] = [
     id: 'multilingual-banner',
     name: '多言語ECバナー',
     description: '日/英/中/韓テキスト入りバナー',
-    icon: Globe,
+    icon: IconGlobe,
     category: 'ec',
     apiEndpoint: 'multilingual-banner',
     examplePrompt: 'SUMMER SALE 最大50%OFF',
@@ -115,7 +115,7 @@ export const FEATURES: Feature[] = [
     id: 'remove-bg',
     name: '背景削除・差し替え',
     description: '白背景化、シーン背景合成',
-    icon: Scissors,
+    icon: IconScissors,
     category: 'utility',
     apiEndpoint: 'remove-background',
     badge: 'popular',
@@ -126,7 +126,7 @@ export const FEATURES: Feature[] = [
     id: 'upscale',
     name: 'アップスケール',
     description: '高解像度再生成（2x/4x）',
-    icon: Maximize2,
+    icon: IconMaximize,
     category: 'utility',
     apiEndpoint: 'upscale',
     examplePrompt: '画像をアップロード → 倍率を選択',
@@ -136,7 +136,7 @@ export const FEATURES: Feature[] = [
     id: 'variations',
     name: 'バリエーション生成',
     description: '類似画像を複数生成',
-    icon: RefreshCw,
+    icon: IconRefresh,
     category: 'utility',
     apiEndpoint: 'generate-variations',
     examplePrompt: '画像をアップロード → バリエーション数を選択',
@@ -148,7 +148,7 @@ export const FEATURES: Feature[] = [
     id: 'optimize-prompt',
     name: 'プロンプト最適化',
     description: '日本語→英語変換＆最適化',
-    icon: Wand2,
+    icon: IconWand,
     category: 'workflow',
     apiEndpoint: 'optimize-prompt',
     badge: 'recommended',
@@ -158,7 +158,7 @@ export const FEATURES: Feature[] = [
     id: 'chat-edit',
     name: 'チャットベース編集',
     description: '対話形式で画像を編集',
-    icon: MessageSquare,
+    icon: IconMessage,
     category: 'workflow',
     apiEndpoint: 'edit-image',
     badge: 'new',
@@ -180,7 +180,7 @@ const BADGE_CONFIG = {
     bg: 'bg-amber-50 dark:bg-amber-900/30',
     text: 'text-amber-700 dark:text-amber-300',
     border: 'border-amber-200 dark:border-amber-800',
-    icon: Star,
+    icon: IconStar,
     label: 'おすすめ',
     shortLabel: '★',
   },
@@ -188,7 +188,7 @@ const BADGE_CONFIG = {
     bg: 'bg-rose-50 dark:bg-rose-900/30',
     text: 'text-rose-700 dark:text-rose-300',
     border: 'border-rose-200 dark:border-rose-800',
-    icon: TrendingUp,
+    icon: IconTrending,
     label: '人気',
     shortLabel: '🔥',
   },
@@ -196,7 +196,7 @@ const BADGE_CONFIG = {
     bg: 'bg-emerald-50 dark:bg-emerald-900/30',
     text: 'text-emerald-700 dark:text-emerald-300',
     border: 'border-emerald-200 dark:border-emerald-800',
-    icon: Zap,
+    icon: IconZap,
     label: '新機能',
     shortLabel: 'NEW',
   },
@@ -233,7 +233,7 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
           <div className="absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
           <div className="relative z-10 flex flex-col sm:flex-row items-start gap-3 sm:gap-5">
             <div className="w-10 h-10 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-sm rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-5 h-5 sm:w-7 sm:h-7" />
+              <IconSparkles className="w-5 h-5 sm:w-7 sm:h-7" size={28} />
             </div>
             <div className="flex-1">
               <h3 className="text-base sm:text-lg font-semibold mb-1 sm:mb-2">
@@ -247,7 +247,7 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
                 className="inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-white text-primary-700 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl hover:bg-white/90 transition-colors shadow-lg"
               >
                 試してみる
-                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <IconArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" size={16} />
               </button>
             </div>
           </div>
@@ -321,12 +321,12 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
                   `}>
                     {feature.requiresImage ? (
                       <>
-                        <Upload className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                        <IconUpload className="w-2.5 h-2.5 sm:w-3 sm:h-3" size={12} />
                         <span className="hidden sm:inline">画像</span>
                       </>
                     ) : (
                       <>
-                        <Type className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                        <IconType className="w-2.5 h-2.5 sm:w-3 sm:h-3" size={12} />
                         <span className="hidden sm:inline">テキスト</span>
                       </>
                     )}
@@ -370,7 +370,7 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
                   : 'group-hover:opacity-100 group-hover:translate-x-0 bg-neutral-100 dark:bg-neutral-700 text-neutral-400'
                 }
               `}>
-                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
+                <IconArrowRight className="w-3 h-3 sm:w-4 sm:h-4" size={16} />
               </div>
             </motion.button>
           );
@@ -381,19 +381,19 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
       <div className="hidden sm:flex items-center justify-center gap-4 sm:gap-8 pt-4 sm:pt-6 border-t border-neutral-100 dark:border-neutral-800">
         <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
           <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-600 dark:text-amber-400" />
+            <IconStar className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-600 dark:text-amber-400" size={12} />
           </div>
           <span>{FEATURES.filter(f => f.badge === 'recommended').length} おすすめ</span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
           <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
-            <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-rose-600 dark:text-rose-400" />
+            <IconTrending className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-rose-600 dark:text-rose-400" size={12} />
           </div>
           <span>{FEATURES.filter(f => f.badge === 'popular').length} 人気</span>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
           <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-            <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-600 dark:text-emerald-400" />
+            <IconZap className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-600 dark:text-emerald-400" size={12} />
           </div>
           <span>{FEATURES.filter(f => f.badge === 'new').length} 新機能</span>
         </div>

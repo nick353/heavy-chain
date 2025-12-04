@@ -1,78 +1,78 @@
 import { Link } from 'react-router-dom';
-import { 
-  Layers, 
-  Sparkles, 
-  Palette, 
-  Zap, 
-  ArrowRight,
-  Check,
-  Clock,
-  DollarSign,
-  Users,
-  Star,
-  Scissors,
-  RefreshCw,
-  Globe,
-  Camera,
-  ShoppingBag,
-  ChevronRight
-} from 'lucide-react';
 import { Button } from '../components/ui';
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import { useRef, useEffect } from 'react';
+import {
+  IconSparkles,
+  IconPalette,
+  IconZap,
+  IconArrowRight,
+  IconCheck,
+  IconClock,
+  IconDollar,
+  IconUsers,
+  IconStar,
+  IconScissors,
+  IconRefresh,
+  IconGlobe,
+  IconCamera,
+  IconShoppingBag,
+  IconChevronRight,
+  HeavyChainLogo
+} from '../components/icons';
 
 const stats = [
-  { value: '30秒', label: '平均生成時間', icon: Clock },
-  { value: '90%', label: 'コスト削減', icon: DollarSign },
-  { value: '12種', label: 'AI機能', icon: Sparkles },
-  { value: '24/7', label: '利用可能', icon: Zap },
+  { value: '30秒', label: '平均生成時間', icon: IconClock },
+  { value: '90%', label: 'コスト削減', icon: IconDollar },
+  { value: '12種', label: 'AI機能', icon: IconSparkles },
+  { value: '24/7', label: '利用可能', icon: IconZap },
 ];
 
 const features = [
   {
-    icon: Sparkles,
+    icon: IconSparkles,
     title: 'AI画像生成',
     description: '日本語プロンプトを入力するだけで、高品質なアパレル画像を30秒で生成。',
     badge: '人気No.1',
   },
   {
-    icon: Palette,
+    icon: IconPalette,
     title: 'カラバリ生成',
     description: '1枚の画像から12色以上のカラーバリエーションを一括生成。パターン/柄にも対応。',
     badge: null,
   },
   {
-    icon: Scissors,
+    icon: IconScissors,
     title: '背景削除・差し替え',
     description: 'ワンクリックで背景を削除。白背景、スタジオ、屋外など7種類のプリセット。',
     badge: null,
   },
   {
-    icon: RefreshCw,
+    icon: IconRefresh,
     title: 'バリエーション生成',
     description: '類似度を調整しながら、元画像から複数のバリエーションを生成。',
     badge: null,
   },
   {
-    icon: Camera,
+    icon: IconCamera,
     title: 'シーン別コーディネート',
     description: '同じ商品をカフェ、ストリート、オフィスなど複数シーンに自動配置。',
     badge: '新機能',
   },
   {
-    icon: ShoppingBag,
+    icon: IconShoppingBag,
     title: '商品カット自動生成',
     description: '正面・側面・背面・ディテールの4カットを自動生成。ECサイトに最適。',
     badge: null,
   },
   {
-    icon: Users,
+    icon: IconUsers,
     title: 'モデルマトリクス',
     description: '体型・年齢違いの着用イメージをマトリクス生成。サイズ感の訴求に。',
     badge: null,
   },
   {
-    icon: Globe,
+    icon: IconGlobe,
     title: '多言語バナー',
     description: '日本語・英語・中国語・韓国語の多言語ECバナーを一括生成。',
     badge: null,
@@ -84,21 +84,21 @@ const useCases = [
     title: 'ECサイト運営',
     description: '商品ページ用の標準カット、ライフスタイルカットを大量生成。撮影コストを90%削減。',
     metrics: ['撮影コスト90%削減', '商品登録時間1/3に', '画像品質均一化'],
-    icon: ShoppingBag,
+    icon: IconShoppingBag,
     color: 'from-blue-500 to-cyan-500',
   },
   {
     title: 'SNSマーケティング',
     description: 'Instagram、X、TikTok向けのバナー・投稿画像を数秒で作成。A/Bテストも簡単。',
     metrics: ['投稿頻度3倍', 'エンゲージメント向上', 'クリエイティブ制作時間削減'],
-    icon: Camera,
+    icon: IconCamera,
     color: 'from-purple-500 to-pink-500',
   },
   {
     title: '商品企画・デザイン',
     description: '新作デザインのモックアップ、カラバリ検討をAIでスピーディに。意思決定を加速。',
     metrics: ['企画サイクル短縮', 'カラバリ検討効率化', 'プレゼン資料作成迅速化'],
-    icon: Palette,
+    icon: IconPalette,
     color: 'from-orange-500 to-red-500',
   },
 ];
@@ -241,7 +241,7 @@ export function LandingPage() {
             >
               <div className="relative flex items-center justify-center">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-75 animate-ping" />
-                <Sparkles className="relative w-4 h-4 text-accent-500" />
+                <IconSparkles className="relative w-4 h-4 text-accent-500" size={16} />
               </div>
               <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200 tracking-wide">
                 アパレル専用AI画像生成プラットフォーム
@@ -286,7 +286,7 @@ export function LandingPage() {
                 <Button 
                   size="lg" 
                   className="text-sm sm:text-lg px-6 sm:px-10 py-3 sm:py-4 rounded-full shadow-glow-lg hover:scale-105 hover:shadow-glow-xl transition-all duration-500 bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-0"
-                  rightIcon={<ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />}
+                  rightIcon={<IconArrowRight className="w-4 h-4 sm:w-5 sm:h-5" size={20} />}
                 >
                   無料で始める
                 </Button>
@@ -316,7 +316,7 @@ export function LandingPage() {
               ].map((text, i) => (
                 <div key={i} className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/40 backdrop-blur-sm border border-white/30 shadow-sm dark:bg-white/5 dark:border-white/10">
                   <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                    <IconCheck className="w-3 h-3 text-green-600 dark:text-green-400" size={12} />
                   </div>
                   {text}
                 </div>
@@ -340,7 +340,7 @@ export function LandingPage() {
               <div key={index} className="text-center group px-2">
                 <div className="flex flex-col items-center justify-center gap-3 transform group-hover:-translate-y-1 transition-transform duration-500">
                   <div className="p-3 rounded-2xl bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 mb-2">
-                    <stat.icon className="w-6 h-6" />
+                    <stat.icon className="w-6 h-6" size={24} />
                   </div>
                   <span className="text-4xl sm:text-5xl font-bold text-neutral-900 dark:text-white font-display tracking-tight">
                     {stat.value}
@@ -441,7 +441,7 @@ export function LandingPage() {
                   </div>
                 )}
                 <div className="w-16 h-16 bg-surface-50 dark:bg-surface-900 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-sm border border-white/50 dark:border-white/5">
-                  <feature.icon className="w-8 h-8 text-neutral-700 dark:text-neutral-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />
+                  <feature.icon className="w-8 h-8 text-neutral-700 dark:text-neutral-300 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" size={32} />
                 </div>
                 <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-3 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                   {feature.title}
@@ -450,7 +450,7 @@ export function LandingPage() {
                   {feature.description}
                 </p>
                 <div className="mt-6 flex items-center text-primary-600 dark:text-primary-400 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
-                  詳しく見る <ArrowRight className="w-4 h-4 ml-1" />
+                  詳しく見る <IconArrowRight className="w-4 h-4 ml-1" size={16} />
                 </div>
               </motion.div>
             ))}
@@ -463,7 +463,7 @@ export function LandingPage() {
             className="text-center mt-20"
           >
             <Link to="/signup">
-              <Button size="lg" variant="secondary" rightIcon={<ChevronRight className="w-5 h-5" />} className="px-12 rounded-full border-neutral-300 dark:border-neutral-700 hover:border-primary-500 dark:hover:border-primary-500">
+              <Button size="lg" variant="secondary" rightIcon={<IconChevronRight className="w-5 h-5" size={20} />} className="px-12 rounded-full border-neutral-300 dark:border-neutral-700 hover:border-primary-500 dark:hover:border-primary-500">
                 すべての機能を見る
               </Button>
             </Link>
@@ -499,10 +499,10 @@ export function LandingPage() {
                 className="bg-white dark:bg-surface-900 rounded-[2rem] overflow-hidden shadow-soft hover:shadow-floating transition-all duration-500 group border border-neutral-100 dark:border-white/5"
               >
                 <div className={`h-64 bg-gradient-to-br ${useCase.color} flex items-center justify-center relative overflow-hidden`}>
-                  <useCase.icon className="w-32 h-32 text-white/10 transform group-hover:scale-125 transition-transform duration-1000 rotate-12 absolute -right-4 -bottom-4" />
+                  <useCase.icon className="w-32 h-32 text-white/10 transform group-hover:scale-125 transition-transform duration-1000 rotate-12 absolute -right-4 -bottom-4" size={128} />
                   <div className="relative z-10 p-8 w-full h-full flex flex-col justify-end">
                     <div className="w-14 h-14 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-4 border border-white/20">
-                      <useCase.icon className="w-7 h-7 text-white" />
+                      <useCase.icon className="w-7 h-7 text-white" size={28} />
                     </div>
                     <h3 className="text-2xl font-semibold text-white font-display">
                       {useCase.title}
@@ -517,7 +517,7 @@ export function LandingPage() {
                     {useCase.metrics.map((metric, i) => (
                       <div key={i} className="flex items-center gap-3 text-sm text-neutral-700 dark:text-neutral-300 bg-surface-50 dark:bg-surface-800 px-4 py-3 rounded-xl border border-neutral-100 dark:border-neutral-700">
                         <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-                          <Check className="w-3 h-3 text-green-600 dark:text-green-400" />
+                          <IconCheck className="w-3 h-3 text-green-600 dark:text-green-400" size={12} />
                         </div>
                         {metric}
                       </div>
@@ -563,7 +563,7 @@ export function LandingPage() {
                 <div className="absolute top-6 right-8 text-6xl text-primary-500/20 font-serif">"</div>
                 <div className="flex gap-1 mb-8">
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-gold-DEFAULT fill-current" />
+                    <IconStar key={i} className="w-4 h-4 text-gold-DEFAULT fill-current" size={16} />
                   ))}
                 </div>
                 <p className="text-lg text-neutral-300 mb-10 relative z-10 italic font-serif leading-relaxed">
@@ -624,7 +624,7 @@ export function LandingPage() {
                 <Button
                   size="lg"
                   className="px-12 py-5 text-lg bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-glow hover:shadow-glow-lg hover:scale-105 transition-all duration-300"
-                  rightIcon={<ArrowRight className="w-5 h-5" />}
+                  rightIcon={<IconArrowRight className="w-5 h-5" size={20} />}
                 >
                   無料アカウントを作成
                 </Button>
@@ -642,18 +642,8 @@ export function LandingPage() {
       <footer className="py-20 bg-surface-50 dark:bg-surface-950 border-t border-neutral-200 dark:border-neutral-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-10">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl flex items-center justify-center shadow-lg">
-                <Layers className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-display text-2xl font-semibold text-neutral-900 dark:text-white tracking-wide">
-                  Heavy Chain
-                </span>
-                <span className="text-xs text-neutral-500 uppercase tracking-[0.2em]">
-                  Design Suite
-                </span>
-              </div>
+            <div className="flex items-center">
+              <HeavyChainLogo height={48} showText={true} />
             </div>
             <div className="flex flex-wrap justify-center gap-10 text-sm text-neutral-500 dark:text-neutral-400 font-medium">
               <a href="#" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">利用規約</a>

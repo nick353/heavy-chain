@@ -1,20 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Layers, 
-  Home, 
-  Sparkles, 
-  Image as ImageIcon, 
-  Settings, 
-  LogOut, 
-  Users, 
-  Moon,
-  Sun,
-  PenTool
-} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../../stores/authStore';
 import clsx from 'clsx';
+import {
+  IconHome,
+  IconSparkles,
+  IconImage,
+  IconSettings,
+  IconLogout,
+  IconMoon,
+  IconSun,
+  IconPen,
+  HeavyChainLogo
+} from '../icons';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -52,14 +51,14 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
   };
 
   const menuItems = [
-    { icon: Home, label: 'ダッシュボード', path: '/dashboard' },
-    { icon: Sparkles, label: '画像生成', path: '/generate' },
-    { icon: PenTool, label: 'キャンバス', path: '/canvas' },
-    { icon: ImageIcon, label: 'ギャラリー', path: '/gallery' },
+    { icon: IconHome, label: 'ダッシュボード', path: '/dashboard' },
+    { icon: IconSparkles, label: '画像生成', path: '/generate' },
+    { icon: IconPen, label: 'キャンバス', path: '/canvas' },
+    { icon: IconImage, label: 'ギャラリー', path: '/gallery' },
   ];
 
   const bottomItems = [
-    { icon: Settings, label: 'ブランド設定', path: '/brand/settings' },
+    { icon: IconSettings, label: 'ブランド設定', path: '/brand/settings' },
   ];
 
   return (
@@ -74,29 +73,10 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       )}
     >
       {/* Logo Area */}
-      <div className="h-24 flex items-center px-8 border-b border-white/10 relative overflow-hidden">
+      <div className="h-24 flex items-center px-4 border-b border-white/10 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary-500/5 to-transparent opacity-50" />
-        <Link to="/dashboard" className="flex items-center gap-4 group relative z-10">
-          <div className="w-10 h-10 relative">
-            <div className="absolute inset-0 bg-primary-500 rounded-xl rotate-3 opacity-20 group-hover:rotate-6 transition-transform duration-500" />
-            <div className="absolute inset-0 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center shadow-glow group-hover:shadow-glow-lg transition-all duration-500">
-              <Layers className="w-5 h-5 text-white" />
-            </div>
-          </div>
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex flex-col"
-            >
-              <span className="font-display text-xl font-semibold text-primary-900 dark:text-primary-100 tracking-wide leading-none">
-                Heavy Chain
-              </span>
-              <span className="text-[10px] text-neutral-400 uppercase tracking-[0.2em] mt-1">
-                Design Suite
-              </span>
-            </motion.div>
-          )}
+        <Link to="/dashboard" className="flex items-center group relative z-10 hover:scale-105 transition-transform duration-300">
+          <HeavyChainLogo height={collapsed ? 40 : 36} showText={!collapsed} />
         </Link>
       </div>
 
@@ -233,7 +213,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                 className="flex-1 flex items-center justify-center p-2 rounded-lg hover:bg-white/80 dark:hover:bg-white/10 transition-all duration-300 text-neutral-500 dark:text-neutral-400 hover:text-primary-600 dark:hover:text-primary-300"
                 title="Toggle Theme"
               >
-                {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {isDarkMode ? <IconSun className="w-4 h-4" size={16} /> : <IconMoon className="w-4 h-4" size={16} />}
               </button>
               <div className="w-[1px] bg-neutral-200/50 dark:bg-white/10 h-8" />
               <button
@@ -241,7 +221,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
                 className="flex-1 flex items-center justify-center p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-all duration-300 text-neutral-500 dark:text-neutral-400"
                 title="Sign Out"
               >
-                <LogOut className="w-4 h-4" />
+                <IconLogout className="w-4 h-4" size={16} />
               </button>
             </div>
           )}

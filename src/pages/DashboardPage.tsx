@@ -1,22 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Sparkles, 
-  Image, 
-  ArrowRight,
-  Clock,
-  TrendingUp,
-  Layout,
-  HelpCircle,
-  Plus,
-  ChevronRight,
-  Palette,
-  Folder,
-  MoreVertical,
-  Trash2,
-  Edit3
-} from 'lucide-react';
+import { MoreVertical, Trash2, Edit3 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import {
+  IconSparkles,
+  IconImage,
+  IconArrowRight,
+  IconClock,
+  IconTrending,
+  IconLayout,
+  IconHelp,
+  IconPlus,
+  IconChevronRight,
+  IconPalette,
+  IconFolder
+} from '../components/icons';
 import { useCanvasStore, type CanvasProject } from '../stores/canvasStore';
 import { supabase } from '../lib/supabase';
 import { Button, Modal, Input, Textarea } from '../components/ui';
@@ -30,7 +28,7 @@ const quickActions = [
     id: 'text-to-image',
     title: '画像生成',
     description: 'プロンプトから画像を生成',
-    icon: Sparkles,
+    icon: IconSparkles,
     href: '/generate',
     color: 'from-primary-500 to-gold-DEFAULT',
     delay: 0
@@ -39,7 +37,7 @@ const quickActions = [
     id: 'canvas',
     title: 'キャンバス',
     description: 'フリーキャンバスで編集',
-    icon: Layout,
+    icon: IconLayout,
     href: '/canvas/new',
     color: 'from-blue-500 to-purple-500',
     delay: 0.1
@@ -48,7 +46,7 @@ const quickActions = [
     id: 'gallery',
     title: 'ギャラリー',
     description: '生成した画像を管理',
-    icon: Image,
+    icon: IconImage,
     href: '/gallery',
     color: 'from-accent-500 to-pink-500',
     delay: 0.2
@@ -275,7 +273,7 @@ export function DashboardPage() {
             onClick={resetOnboarding}
             className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-white/50 dark:hover:bg-white/5 rounded-full transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"
           >
-            <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <IconHelp className="w-3.5 h-3.5 sm:w-4 sm:h-4" size={16} />
             <span className="hidden sm:inline">チュートリアルを見る</span>
             <span className="sm:hidden">ヘルプ</span>
           </button>
@@ -294,7 +292,7 @@ export function DashboardPage() {
               
               <div className="relative z-10 flex items-start gap-4">
                 <div className={`w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br ${action.color} rounded-xl sm:rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 flex-shrink-0`}>
-                  <action.icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                  <action.icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" size={28} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-neutral-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
@@ -304,7 +302,7 @@ export function DashboardPage() {
                     {action.description}
                   </p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                <IconChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all flex-shrink-0" size={20} />
               </div>
             </Link>
           ))}
@@ -315,7 +313,7 @@ export function DashboardPage() {
           <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                <IconFolder className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" size={20} />
               </div>
               <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-neutral-900 dark:text-white font-display">プロジェクト</h2>
             </div>
@@ -323,7 +321,7 @@ export function DashboardPage() {
               onClick={() => setShowNewProjectModal(true)}
               className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 sm:gap-2 shadow-md hover:shadow-lg"
             >
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <IconPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" size={16} />
               <span className="hidden sm:inline">新規作成</span>
               <span className="sm:hidden">新規</span>
             </button>
@@ -337,7 +335,7 @@ export function DashboardPage() {
                 className="group aspect-[4/3] rounded-xl sm:rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-2 sm:gap-3 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all duration-300"
               >
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-white dark:group-hover:bg-neutral-700">
-                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-400 group-hover:text-blue-500" />
+                  <IconPlus className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-400 group-hover:text-blue-500" size={24} />
                 </div>
                 <span className="text-xs sm:text-sm font-medium text-neutral-400 group-hover:text-blue-600">新規</span>
               </button>
@@ -358,7 +356,7 @@ export function DashboardPage() {
                       <img src={project.thumbnail} alt={project.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Layout className="w-8 h-8 sm:w-12 sm:h-12 text-neutral-300 dark:text-neutral-600" />
+                        <IconLayout className="w-8 h-8 sm:w-12 sm:h-12 text-neutral-300 dark:text-neutral-600" size={48} />
                       </div>
                     )}
                   </div>
@@ -425,7 +423,7 @@ export function DashboardPage() {
           ) : (
             <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-3xl p-12 border border-neutral-200/50 dark:border-white/5 text-center">
               <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100/50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float">
-                <Layout className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                <IconLayout className="w-10 h-10 text-blue-600 dark:text-blue-400" size={40} />
               </div>
               <h3 className="text-2xl font-semibold text-neutral-900 dark:text-white mb-4 font-display">
                 キャンバスで自由に編集
@@ -437,7 +435,7 @@ export function DashboardPage() {
                 <Button 
                   size="lg" 
                   className="rounded-full shadow-glow hover:shadow-glow-lg" 
-                  leftIcon={<Plus className="w-5 h-5" />}
+                  leftIcon={<IconPlus className="w-5 h-5" size={20} />}
                   onClick={() => setShowNewProjectModal(true)}
                 >
                   新規プロジェクト作成
@@ -452,7 +450,7 @@ export function DashboardPage() {
           <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-1.5 sm:p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-500 dark:text-neutral-400" />
+                <IconClock className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-500 dark:text-neutral-400" size={20} />
               </div>
               <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-neutral-900 dark:text-white font-display">最近の生成</h2>
             </div>
@@ -462,7 +460,7 @@ export function DashboardPage() {
             >
               <span className="hidden sm:inline">すべて見る</span>
               <span className="sm:hidden">全て</span>
-              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
+              <IconArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" size={16} />
             </Link>
           </div>
 
@@ -496,7 +494,7 @@ export function DashboardPage() {
               {/* Add New Button */}
               <Link to="/generate" className="group aspect-square rounded-xl sm:rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-2 sm:gap-3 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all duration-300">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-white dark:group-hover:bg-neutral-700">
-                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-400 group-hover:text-primary-500" />
+                  <IconPlus className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-400 group-hover:text-primary-500" size={24} />
                 </div>
                 <span className="text-xs sm:text-sm font-medium text-neutral-400 group-hover:text-primary-600">新規</span>
               </Link>
@@ -504,7 +502,7 @@ export function DashboardPage() {
           ) : (
             <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-3xl p-12 border border-neutral-200/50 dark:border-white/5 text-center">
               <div className="w-24 h-24 bg-gradient-to-br from-primary-100 to-gold-light/50 dark:from-primary-900/30 dark:to-gold-dark/30 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float">
-                <Palette className="w-10 h-10 text-primary-600 dark:text-primary-400" />
+                <IconPalette className="w-10 h-10 text-primary-600 dark:text-primary-400" size={40} />
               </div>
               <h3 className="text-2xl font-semibold text-neutral-900 dark:text-white mb-4 font-display">
                 クリエイティブな旅を始めましょう
@@ -514,7 +512,7 @@ export function DashboardPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/generate">
-                  <Button size="lg" className="rounded-full shadow-glow hover:shadow-glow-lg" leftIcon={<Sparkles className="w-5 h-5" />}>
+                  <Button size="lg" className="rounded-full shadow-glow hover:shadow-glow-lg" leftIcon={<IconSparkles className="w-5 h-5" size={20} />}>
                     画像を生成する
                   </Button>
                 </Link>
@@ -528,7 +526,7 @@ export function DashboardPage() {
           <div className="bg-white dark:bg-surface-900 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
             <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
               <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                <IconTrending className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" size={20} />
               </div>
               <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-neutral-500 dark:text-neutral-400 hidden sm:block">今月の生成数</span>
             </div>
@@ -542,7 +540,7 @@ export function DashboardPage() {
           <div className="bg-white dark:bg-surface-900 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
             <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
               <div className="p-1.5 sm:p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
+                <IconFolder className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" size={20} />
               </div>
               <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-neutral-500 dark:text-neutral-400 hidden sm:block">プロジェクト数</span>
             </div>
@@ -556,7 +554,7 @@ export function DashboardPage() {
           <div className="bg-white dark:bg-surface-900 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
             <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
               <div className="p-1.5 sm:p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+                <IconSparkles className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" size={20} />
               </div>
               <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-neutral-500 dark:text-neutral-400 hidden sm:block">お気に入り</span>
             </div>
@@ -580,7 +578,7 @@ export function DashboardPage() {
           <div className="bg-primary-50/50 dark:bg-primary-900/20 rounded-2xl p-6 border border-primary-100 dark:border-primary-800/30">
             <div className="flex gap-3">
               <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-800 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                <IconSparkles className="w-5 h-5 text-primary-600 dark:text-primary-400" size={20} />
               </div>
               <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
                 <span className="font-semibold text-primary-700 dark:text-primary-300 block mb-1">ようこそ、Heavy Chainへ！</span>
@@ -655,7 +653,7 @@ export function DashboardPage() {
             <Button
               onClick={handleCreateNewProject}
               className="flex-1"
-              leftIcon={<Plus className="w-4 h-4" />}
+              leftIcon={<IconPlus className="w-4 h-4" size={16} />}
             >
               作成
             </Button>
