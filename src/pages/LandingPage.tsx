@@ -165,7 +165,7 @@ const itemVariants = {
     y: 0,
     transition: {
       duration: 0.8,
-      ease: [0.22, 1, 0.36, 1],
+      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
     },
   },
 };
@@ -212,13 +212,14 @@ function MouseParallax() {
 
 export function LandingPage() {
   const targetRef = useRef(null);
-  const { scrollYProgress } = useScroll({
+  const { scrollYProgress: _scrollYProgress } = useScroll({
     target: targetRef,
     offset: ["start start", "end start"],
   });
 
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "50%"]);
-  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  // Reserved for future parallax effects
+  // const y = useTransform(_scrollYProgress, [0, 1], ["0%", "50%"]);
+  // const opacity = useTransform(_scrollYProgress, [0, 0.5], [1, 0]);
 
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950 overflow-hidden selection:bg-primary-200 selection:text-primary-900">
