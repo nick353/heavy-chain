@@ -133,21 +133,23 @@ export function InfiniteCanvas({ width, height, onObjectSelect }: InfiniteCanvas
     onObjectSelect?.(id);
   }, [selectObject, onObjectSelect]);
 
-  // Render grid
+  // Render grid - extend beyond visible area for smooth resizing
   const renderGrid = () => {
     if (!gridVisible) return null;
     
     const lines = [];
-    const stageWidth = width / zoom + Math.abs(panX / zoom) * 2;
-    const stageHeight = height / zoom + Math.abs(panY / zoom) * 2;
-    const startX = Math.floor(-panX / zoom / gridSize) * gridSize - gridSize;
-    const startY = Math.floor(-panY / zoom / gridSize) * gridSize - gridSize;
+    // Add extra padding to ensure grid covers the entire area even during resize
+    const padding = 500;
+    const stageWidth = (width + padding * 2) / zoom + Math.abs(panX / zoom) * 2;
+    const stageHeight = (height + padding * 2) / zoom + Math.abs(panY / zoom) * 2;
+    const startX = Math.floor((-panX / zoom - padding / zoom) / gridSize) * gridSize - gridSize;
+    const startY = Math.floor((-panY / zoom - padding / zoom) / gridSize) * gridSize - gridSize;
 
     for (let i = startX; i < stageWidth + startX; i += gridSize) {
       lines.push(
         <Line
           key={`v-${i}`}
-          points={[i, startY, i, startY + stageHeight]}
+          points={[i, startY - padding, i, startY + stageHeight + padding]}
           stroke="#e5e5e5"
           strokeWidth={0.5 / zoom}
         />
@@ -158,7 +160,7 @@ export function InfiniteCanvas({ width, height, onObjectSelect }: InfiniteCanvas
       lines.push(
         <Line
           key={`h-${i}`}
-          points={[startX, i, startX + stageWidth, i]}
+          points={[startX - padding, i, startX + stageWidth + padding, i]}
           stroke="#e5e5e5"
           strokeWidth={0.5 / zoom}
         />

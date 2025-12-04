@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../../stores/authStore';
 import clsx from 'clsx';
@@ -21,9 +21,15 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed = false }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, profile, signOut, currentBrand } = useAuthStore();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [hoveredPath, setHoveredPath] = useState<string | null>(null);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('darkMode');
@@ -217,7 +223,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
               </button>
               <div className="w-[1px] bg-neutral-200/50 dark:bg-white/10 h-8" />
               <button
-                onClick={() => signOut()}
+                onClick={handleSignOut}
                 className="flex-1 flex items-center justify-center p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 transition-all duration-300 text-neutral-500 dark:text-neutral-400"
                 title="Sign Out"
               >

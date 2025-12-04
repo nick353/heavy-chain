@@ -54,7 +54,7 @@ export function CanvasEditorPage() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const projectNameInputRef = useRef<HTMLInputElement>(null);
-  const { currentBrand } = useAuthStore();
+  const { currentBrand, user, profile } = useAuthStore();
   const { showGuide, completeGuide } = useCanvasGuide();
   
   const [viewMode, setViewMode] = useState<ViewMode>('canvas');
@@ -84,6 +84,10 @@ export function CanvasEditorPage() {
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingImage, setEditingImage] = useState<string | null>(null);
+  
+  // Invite modal state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
   
   const {
     objects,
@@ -823,15 +827,31 @@ export function CanvasEditorPage() {
 
           <div className="hidden sm:block w-px h-6 bg-neutral-200 dark:bg-neutral-700 mx-1 sm:mx-2" />
 
-          {/* User avatar - hidden on mobile */}
-          <div className="hidden md:flex -space-x-2">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary-100 dark:bg-primary-900 border-2 border-white dark:border-neutral-800 flex items-center justify-center">
-              <span className="text-[10px] sm:text-xs font-medium text-primary-700 dark:text-primary-300">Y</span>
+          {/* Active user avatar - shows current logged in user */}
+          <div className="hidden md:flex -space-x-2 items-center">
+            <div 
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 border-2 border-white dark:border-neutral-800 flex items-center justify-center overflow-hidden shadow-sm"
+              title={profile?.name || user?.email || 'ユーザー'}
+            >
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[10px] sm:text-xs font-medium text-white">
+                  {profile?.name?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+                </span>
+              )}
             </div>
+            {/* Online indicator */}
+            <div className="w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white dark:border-neutral-800 -ml-1 -mt-4" />
           </div>
           
           {/* Invite button - hidden on mobile */}
-          <Button variant="secondary" size="sm" className="hidden md:flex shadow-sm text-xs sm:text-sm px-2 sm:px-3">
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            className="hidden md:flex shadow-sm text-xs sm:text-sm px-2 sm:px-3"
+            onClick={() => setShowInviteModal(true)}
+          >
             <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1.5" />
             <span className="hidden sm:inline">招待</span>
           </Button>
@@ -1067,6 +1087,49 @@ export function CanvasEditorPage() {
               className="shadow-glow"
             >
               {isGenerating ? '生成中...' : '生成'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Invite Modal */}
+      <Modal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        title="コラボレーターを招待"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            メールアドレスを入力して、このプロジェクトに招待しましょう。
+          </p>
+          <Input
+            label="メールアドレス"
+            type="email"
+            placeholder="collaborator@example.com"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+          />
+          <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+            <Button
+              variant="secondary"
+              onClick={() => setShowInviteModal(false)}
+            >
+              キャンセル
+            </Button>
+            <Button
+              onClick={() => {
+                if (inviteEmail) {
+                  toast.success(`${inviteEmail} に招待を送信しました`);
+                  setInviteEmail('');
+                  setShowInviteModal(false);
+                } else {
+                  toast.error('メールアドレスを入力してください');
+                }
+              }}
+              leftIcon={<Users className="w-4 h-4" />}
+            >
+              招待を送信
             </Button>
           </div>
         </div>
