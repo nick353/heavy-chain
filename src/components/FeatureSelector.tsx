@@ -167,12 +167,12 @@ export const FEATURES: Feature[] = [
 ];
 
 const CATEGORIES = [
-  { id: 'all', name: 'すべて' },
-  { id: 'marketing', name: 'マーケティング・SNS' },
-  { id: 'design', name: '商品企画・デザイン' },
-  { id: 'ec', name: 'EC' },
-  { id: 'utility', name: '編集・ユーティリティ' },
-  { id: 'workflow', name: 'ワークフロー' },
+  { id: 'all', name: 'すべて', shortName: '全て' },
+  { id: 'marketing', name: 'マーケティング・SNS', shortName: 'SNS' },
+  { id: 'design', name: '商品企画・デザイン', shortName: 'デザイン' },
+  { id: 'ec', name: 'EC', shortName: 'EC' },
+  { id: 'utility', name: '編集・ユーティリティ', shortName: '編集' },
+  { id: 'workflow', name: 'ワークフロー', shortName: 'WF' },
 ];
 
 const BADGE_CONFIG = {
@@ -182,6 +182,7 @@ const BADGE_CONFIG = {
     border: 'border-amber-200 dark:border-amber-800',
     icon: Star,
     label: 'おすすめ',
+    shortLabel: '★',
   },
   popular: {
     bg: 'bg-rose-50 dark:bg-rose-900/30',
@@ -189,6 +190,7 @@ const BADGE_CONFIG = {
     border: 'border-rose-200 dark:border-rose-800',
     icon: TrendingUp,
     label: '人気',
+    shortLabel: '🔥',
   },
   new: {
     bg: 'bg-emerald-50 dark:bg-emerald-900/30',
@@ -196,6 +198,7 @@ const BADGE_CONFIG = {
     border: 'border-emerald-200 dark:border-emerald-800',
     icon: Zap,
     label: '新機能',
+    shortLabel: 'NEW',
   },
 };
 
@@ -219,32 +222,32 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       {/* Quick start section */}
       {activeCategory === 'all' && (
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-600 dark:to-primary-800 rounded-2xl p-6 text-white"
+          className="relative overflow-hidden bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-600 dark:to-primary-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white"
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
-          <div className="relative z-10 flex items-start gap-5">
-            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-7 h-7" />
+          <div className="absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+          <div className="relative z-10 flex flex-col sm:flex-row items-start gap-3 sm:gap-5">
+            <div className="w-10 h-10 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-sm rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-5 h-5 sm:w-7 sm:h-7" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-2">
-                🚀 まずはこれから始めよう
+              <h3 className="text-base sm:text-lg font-semibold mb-1 sm:mb-2">
+                🚀 まずはこれから
               </h3>
-              <p className="text-white/80 text-sm mb-4 leading-relaxed">
-                初めての方は「デザインガチャ」がおすすめ。1つのコンセプトから4つのスタイルを一気に生成できます。
+              <p className="text-white/80 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">
+                「デザインガチャ」で4つのスタイルを一気に生成
               </p>
               <button
                 onClick={() => onSelectFeature(FEATURES.find(f => f.id === 'design-gacha')!)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-primary-700 text-sm font-semibold rounded-xl hover:bg-white/90 transition-colors shadow-lg"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-white text-primary-700 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl hover:bg-white/90 transition-colors shadow-lg"
               >
-                デザインガチャを試す
-                <ArrowRight className="w-4 h-4" />
+                試してみる
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
           </div>
@@ -252,26 +255,27 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
       )}
 
       {/* Category tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
         {CATEGORIES.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
             className={`
-              px-4 py-2.5 text-sm font-medium rounded-xl whitespace-nowrap transition-all duration-200
+              px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg sm:rounded-xl whitespace-nowrap transition-all duration-200
               ${activeCategory === cat.id
                 ? 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-md'
                 : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800'
               }
             `}
           >
-            {cat.name}
+            <span className="sm:hidden">{cat.shortName}</span>
+            <span className="hidden sm:inline">{cat.name}</span>
           </button>
         ))}
       </div>
 
       {/* Feature grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {sortedFeatures.map((feature, index) => {
           const Icon = feature.icon;
           const isSelected = selectedFeatureId === feature.id;
@@ -282,34 +286,34 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
               key={feature.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+              transition={{ delay: index * 0.03 }}
               onClick={() => onSelectFeature(feature)}
               className={`
-                group relative text-left p-5 rounded-2xl border-2 transition-all duration-300
+                group relative text-left p-3 sm:p-4 lg:p-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-300
                 ${isSelected
-                  ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-900/20 ring-4 ring-primary-500/10'
-                  : 'border-neutral-200 dark:border-neutral-700/50 bg-white dark:bg-neutral-800/50 hover:border-neutral-300 dark:hover:border-neutral-600 hover:shadow-lg'
+                  ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-900/20 ring-2 sm:ring-4 ring-primary-500/10'
+                  : 'border-neutral-200 dark:border-neutral-700/50 bg-white dark:bg-neutral-800/50 hover:border-neutral-300 dark:hover:border-neutral-600 hover:shadow-lg active:scale-[0.98]'
                 }
               `}
             >
               {/* Header row with icon and badges */}
-              <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex items-start justify-between gap-2 sm:gap-3 mb-2 sm:mb-3">
                 {/* Icon */}
                 <div className={`
-                  w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300
+                  w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300
                   ${isSelected 
                     ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30' 
                     : 'bg-neutral-100 dark:bg-neutral-700/50 text-neutral-500 dark:text-neutral-400 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/30 group-hover:text-primary-600 dark:group-hover:text-primary-400'
                   }
                 `}>
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
 
                 {/* Badges */}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 flex-wrap justify-end">
                   {/* Input type badge */}
                   <span className={`
-                    inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold uppercase tracking-wide
+                    inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[11px] font-semibold uppercase tracking-wide
                     ${feature.requiresImage 
                       ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'
                       : 'bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300'
@@ -317,13 +321,13 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
                   `}>
                     {feature.requiresImage ? (
                       <>
-                        <Upload className="w-3 h-3" />
-                        画像
+                        <Upload className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                        <span className="hidden sm:inline">画像</span>
                       </>
                     ) : (
                       <>
-                        <Type className="w-3 h-3" />
-                        テキスト
+                        <Type className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                        <span className="hidden sm:inline">テキスト</span>
                       </>
                     )}
                   </span>
@@ -331,11 +335,11 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
                   {/* Status badge */}
                   {badge && (
                     <span className={`
-                      inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold
+                      inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[11px] font-semibold
                       ${badge.bg} ${badge.text}
                     `}>
-                      <badge.icon className="w-3 h-3" />
-                      {badge.label}
+                      <badge.icon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                      <span className="hidden sm:inline">{badge.label}</span>
                     </span>
                   )}
                 </div>
@@ -344,7 +348,7 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
               {/* Content */}
               <div>
                 <h3 className={`
-                  text-base font-semibold mb-1.5 transition-colors
+                  text-sm sm:text-base font-semibold mb-0.5 sm:mb-1.5 transition-colors
                   ${isSelected 
                     ? 'text-primary-700 dark:text-primary-300' 
                     : 'text-neutral-800 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400'
@@ -352,44 +356,44 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
                 `}>
                   {feature.name}
                 </h3>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed line-clamp-2">
                   {feature.description}
                 </p>
               </div>
 
-              {/* Hover arrow indicator */}
+              {/* Hover arrow indicator - hidden on mobile */}
               <div className={`
-                absolute right-4 bottom-4 w-8 h-8 rounded-full flex items-center justify-center
-                transition-all duration-300 opacity-0 translate-x-2
+                absolute right-3 sm:right-4 bottom-3 sm:bottom-4 w-6 h-6 sm:w-8 sm:h-8 rounded-full items-center justify-center
+                transition-all duration-300 opacity-0 translate-x-2 hidden sm:flex
                 ${isSelected 
                   ? 'opacity-100 translate-x-0 bg-primary-500 text-white' 
                   : 'group-hover:opacity-100 group-hover:translate-x-0 bg-neutral-100 dark:bg-neutral-700 text-neutral-400'
                 }
               `}>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
             </motion.button>
           );
         })}
       </div>
 
-      {/* Stats footer */}
-      <div className="flex items-center justify-center gap-8 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-        <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
-          <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-            <Star className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+      {/* Stats footer - hidden on mobile */}
+      <div className="hidden sm:flex items-center justify-center gap-4 sm:gap-8 pt-4 sm:pt-6 border-t border-neutral-100 dark:border-neutral-800">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-600 dark:text-amber-400" />
           </div>
           <span>{FEATURES.filter(f => f.badge === 'recommended').length} おすすめ</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
-          <div className="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
-            <TrendingUp className="w-3 h-3 text-rose-600 dark:text-rose-400" />
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+            <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-rose-600 dark:text-rose-400" />
           </div>
           <span>{FEATURES.filter(f => f.badge === 'popular').length} 人気</span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
-          <div className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-            <Zap className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+            <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-emerald-600 dark:text-emerald-400" />
           </div>
           <span>{FEATURES.filter(f => f.badge === 'new').length} 新機能</span>
         </div>

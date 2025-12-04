@@ -133,17 +133,17 @@ const workflowSteps = [
   {
     step: '02',
     title: '日本語で指示',
-    description: 'プロンプトを日本語で入力。AIが自動で最適化',
+    description: 'プロンプトを日本語で入力',
   },
   {
     step: '03',
     title: '画像を生成',
-    description: '約30秒で高品質な画像が生成完了',
+    description: '約30秒で高品質な画像が完成',
   },
   {
     step: '04',
     title: 'ダウンロード',
-    description: 'PNG/JPEG/WebP形式で即座にダウンロード',
+    description: 'PNG/JPEG/WebPで即座に保存',
   },
 ];
 
@@ -248,17 +248,17 @@ export function LandingPage() {
             </motion.div>
 
             {/* Headline */}
-            <motion.h1 
+<motion.h1
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-              className="text-6xl sm:text-7xl lg:text-9xl font-display font-bold text-neutral-900 dark:text-white leading-[0.95] mb-10 tracking-tight"
+              className="text-4xl sm:text-6xl lg:text-8xl xl:text-9xl font-display font-bold text-neutral-900 dark:text-white leading-[1] sm:leading-[0.95] mb-6 sm:mb-10 tracking-tight"
             >
-              アパレル画像を
+              <span className="whitespace-nowrap">アパレル画像を</span>
               <br />
-              <span className="relative inline-block mt-2">
+              <span className="relative inline-block mt-1 sm:mt-2">
                 <span className="absolute -inset-2 bg-gradient-to-r from-primary-200/50 to-gold-light/30 blur-xl rounded-full opacity-50 animate-pulse-slow" />
-                <span className="relative text-gradient-gold drop-shadow-sm bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-gold-DEFAULT to-primary-500">
+                <span className="relative text-gradient-gold drop-shadow-sm bg-clip-text text-transparent bg-gradient-to-r from-primary-600 via-gold-DEFAULT to-primary-500 whitespace-nowrap">
                   AIで自動生成
                 </span>
               </span>
@@ -268,10 +268,9 @@ export function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-              className="text-xl sm:text-2xl text-neutral-600 dark:text-neutral-300 max-w-2xl mx-auto mb-14 leading-relaxed font-light"
+              className="text-base sm:text-xl lg:text-2xl text-neutral-600 dark:text-neutral-300 max-w-2xl mx-auto mb-8 sm:mb-14 leading-relaxed font-light px-4"
             >
               商品画像、カラバリ、バナー、背景編集まで。
-              <br className="hidden sm:block" />
               <strong className="text-neutral-900 dark:text-white font-semibold">12種類のAI機能</strong>でアパレルビジネスを加速。
             </motion.p>
 
@@ -280,13 +279,13 @@ export function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-20"
+              className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mb-12 sm:mb-20 px-4"
             >
               <Link to="/signup">
                 <Button 
                   size="lg" 
-                  className="text-lg px-10 py-4 rounded-full shadow-glow-lg hover:scale-105 hover:shadow-glow-xl transition-all duration-500 bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-0"
-                  rightIcon={<ArrowRight className="w-5 h-5" />}
+                  className="text-sm sm:text-lg px-6 sm:px-10 py-3 sm:py-4 rounded-full shadow-glow-lg hover:scale-105 hover:shadow-glow-xl transition-all duration-500 bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 border-0"
+                  rightIcon={<ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />}
                 >
                   無料で始める
                 </Button>
@@ -295,7 +294,7 @@ export function LandingPage() {
                 <Button 
                   variant="ghost" 
                   size="lg" 
-                  className="text-lg px-10 py-4 rounded-full bg-white/30 backdrop-blur-md hover:bg-white/50 border border-white/40 dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                  className="text-sm sm:text-lg px-6 sm:px-10 py-3 sm:py-4 rounded-full bg-white/30 backdrop-blur-md hover:bg-white/50 border border-white/40 dark:border-white/10 dark:text-white dark:hover:bg-white/10"
                 >
                   ログイン
                 </Button>
@@ -356,40 +355,40 @@ export function LandingPage() {
       {/* How it works */}
       <section className="py-40 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div 
+<motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-24"
+            className="text-center mb-10 sm:mb-16 lg:mb-24"
           >
-            <h2 className="text-4xl sm:text-6xl font-display font-semibold text-neutral-900 dark:text-white mb-6 tracking-tight">
+            <h2 className="text-2xl sm:text-4xl lg:text-6xl font-display font-semibold text-neutral-900 dark:text-white mb-3 sm:mb-6 tracking-tight">
               4ステップで簡単生成
             </h2>
-            <p className="text-xl text-neutral-600 dark:text-neutral-400 font-light">
+            <p className="text-sm sm:text-lg lg:text-xl text-neutral-600 dark:text-neutral-400 font-light px-4">
               日本語で指示するだけ。専門知識は不要です。
             </p>
           </motion.div>
 
-          <motion.div 
+<motion.div
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
-            className="grid md:grid-cols-4 gap-8"
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 lg:gap-8"
           >
             {workflowSteps.map((item, index) => (
               <motion.div key={index} variants={itemVariants} className="relative group">
                 {index < workflowSteps.length - 1 && (
                   <div className="hidden md:block absolute top-12 left-2/3 w-full h-[2px] bg-gradient-to-r from-neutral-200 to-transparent dark:from-neutral-800 -z-10" />
                 )}
-                <div className="relative z-10 h-full bg-white dark:bg-surface-900/50 rounded-3xl p-8 shadow-sm hover:shadow-elegant transition-all duration-500 hover:-translate-y-2 border border-neutral-100 dark:border-white/5">
-                  <div className="w-16 h-16 bg-gradient-to-br from-neutral-100 to-white dark:from-neutral-800 dark:to-neutral-900 rounded-2xl flex items-center justify-center mb-8 shadow-inner group-hover:scale-110 transition-transform duration-500 border border-white/50 dark:border-white/5">
-                    <span className="text-2xl font-bold text-neutral-900 dark:text-white font-display">{item.step}</span>
+                <div className="relative z-10 h-full bg-white dark:bg-surface-900/50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-sm hover:shadow-elegant transition-all duration-500 hover:-translate-y-2 border border-neutral-100 dark:border-white/5">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-neutral-100 to-white dark:from-neutral-800 dark:to-neutral-900 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 lg:mb-8 shadow-inner group-hover:scale-110 transition-transform duration-500 border border-white/50 dark:border-white/5">
+                    <span className="text-lg sm:text-xl lg:text-2xl font-bold text-neutral-900 dark:text-white font-display">{item.step}</span>
                   </div>
-                  <h3 className="text-xl font-semibold text-neutral-900 dark:text-white mb-4">
+                  <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-neutral-900 dark:text-white mb-2 sm:mb-4">
                     {item.title}
                   </h3>
-                  <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                  <p className="text-xs sm:text-sm lg:text-base text-neutral-600 dark:text-neutral-400 leading-relaxed">
                     {item.description}
                   </p>
                 </div>
@@ -412,12 +411,12 @@ export function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-24"
+            className="text-center mb-10 sm:mb-16 lg:mb-24"
           >
-            <h2 className="text-4xl sm:text-6xl font-display font-semibold text-neutral-900 dark:text-white mb-6 tracking-tight">
+            <h2 className="text-2xl sm:text-4xl lg:text-6xl font-display font-semibold text-neutral-900 dark:text-white mb-3 sm:mb-6 tracking-tight">
               12種類のAI機能
             </h2>
-            <p className="text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto font-light">
+            <p className="text-sm sm:text-lg lg:text-xl text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto font-light px-4">
               アパレルビジネスに必要な画像生成・編集機能をワンストップで提供。
             </p>
           </motion.div>

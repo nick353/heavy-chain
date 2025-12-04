@@ -282,86 +282,85 @@ export function DashboardPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8"
       >
         {/* Welcome Section */}
-        <motion.div variants={itemVariants} className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <motion.div variants={itemVariants} className="mb-6 sm:mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
           <div>
-            <p className="text-sm font-medium text-primary-600 dark:text-primary-400 mb-2 uppercase tracking-wider">Dashboard</p>
-            <h1 className="text-2xl md:text-3xl font-display font-semibold text-neutral-900 dark:text-white">
-              {getGreeting()}、
-              <br className="hidden md:block" />
-              <span className="text-neutral-500 dark:text-neutral-400">{profile?.name || 'ゲスト'}さん</span>
+            <p className="text-xs sm:text-sm font-medium text-primary-600 dark:text-primary-400 mb-1 sm:mb-2 uppercase tracking-wider">Dashboard</p>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-semibold text-neutral-900 dark:text-white">
+              {getGreeting()}、<span className="text-neutral-500 dark:text-neutral-400">{profile?.name || 'ゲスト'}さん</span>
             </h1>
           </div>
           <button
             onClick={resetOnboarding}
-            className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-white/50 dark:hover:bg-white/5 rounded-full transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-white/50 dark:hover:bg-white/5 rounded-full transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"
           >
-            <HelpCircle className="w-4 h-4" />
-            <span>チュートリアルを見る</span>
+            <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">チュートリアルを見る</span>
+            <span className="sm:hidden">ヘルプ</span>
           </button>
         </motion.div>
 
         {/* Quick Actions */}
-        <motion.div variants={itemVariants} className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-16">
+        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-8 sm:mb-12 lg:mb-16">
           {quickActions.map((action) => (
             <Link
               key={action.id}
               to={action.href}
-              className="group relative overflow-hidden rounded-3xl bg-white dark:bg-surface-900 border border-neutral-100 dark:border-white/5 p-8 shadow-sm hover:shadow-floating transition-all duration-500 hover:-translate-y-1"
+              className="group relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white dark:bg-surface-900 border border-neutral-100 dark:border-white/5 p-5 sm:p-6 lg:p-8 shadow-sm hover:shadow-floating transition-all duration-500 hover:-translate-y-1"
             >
               {/* Background Gradient */}
-              <div className={`absolute top-0 right-0 w-48 h-48 bg-gradient-to-br ${action.color} opacity-[0.08] rounded-full -translate-y-1/4 translate-x-1/4 group-hover:scale-125 transition-transform duration-700 blur-3xl`} />
+              <div className={`absolute top-0 right-0 w-32 sm:w-48 h-32 sm:h-48 bg-gradient-to-br ${action.color} opacity-[0.08] rounded-full -translate-y-1/4 translate-x-1/4 group-hover:scale-125 transition-transform duration-700 blur-3xl`} />
               
-              <div className="relative z-10">
-                <div className={`w-14 h-14 bg-gradient-to-br ${action.color} rounded-2xl flex items-center justify-center mb-6 shadow-md group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
-                  <action.icon className="w-7 h-7 text-white" />
+              <div className="relative z-10 flex items-start gap-4">
+                <div className={`w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br ${action.color} rounded-xl sm:rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 flex-shrink-0`}>
+                  <action.icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                 </div>
-                <h3 className="text-2xl font-semibold text-neutral-900 dark:text-white mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                  {action.title}
-                </h3>
-                <p className="text-neutral-500 dark:text-neutral-400 leading-relaxed mb-4">
-                  {action.description}
-                </p>
-                
-                <div className="flex items-center text-sm font-medium text-neutral-400 group-hover:text-primary-500 transition-colors">
-                  開始する <ChevronRight className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-neutral-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                    {action.title}
+                  </h3>
+                  <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                    {action.description}
+                  </p>
                 </div>
+                <ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
               </div>
             </Link>
           ))}
         </motion.div>
 
         {/* Canvas Projects */}
-        <motion.div variants={itemVariants} className="mb-16">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <Folder className="w-5 h-5 text-blue-500" />
+        <motion.div variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
+          <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
               </div>
-              <h2 className="text-2xl font-semibold text-neutral-900 dark:text-white font-display">キャンバスプロジェクト</h2>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-neutral-900 dark:text-white font-display">プロジェクト</h2>
             </div>
             <button
               onClick={() => setShowNewProjectModal(true)}
-              className="px-4 py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium transition-colors flex items-center gap-2 shadow-md hover:shadow-lg"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 sm:gap-2 shadow-md hover:shadow-lg"
             >
-              <Plus className="w-4 h-4" />
-              新規作成
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">新規作成</span>
+              <span className="sm:hidden">新規</span>
             </button>
           </div>
 
           {recentProjects.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
               {/* New Canvas Card */}
               <button
                 onClick={handleNewCanvas}
-                className="group aspect-[4/3] rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-3 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all duration-300"
+                className="group aspect-[4/3] rounded-xl sm:rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-2 sm:gap-3 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all duration-300"
               >
-                <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-white dark:group-hover:bg-neutral-700">
-                  <Plus className="w-6 h-6 text-neutral-400 group-hover:text-blue-500" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-white dark:group-hover:bg-neutral-700">
+                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-400 group-hover:text-blue-500" />
                 </div>
-                <span className="text-sm font-medium text-neutral-400 group-hover:text-blue-600">新しいキャンバス</span>
+                <span className="text-xs sm:text-sm font-medium text-neutral-400 group-hover:text-blue-600">新規</span>
               </button>
 
               {/* Project Cards */}
@@ -372,7 +371,7 @@ export function DashboardPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.05 }}
                   onClick={() => handleOpenProject(project)}
-                  className="group aspect-[4/3] rounded-2xl overflow-hidden bg-white dark:bg-neutral-800 cursor-pointer relative shadow-sm hover:shadow-lg transition-all duration-300 border border-neutral-100 dark:border-neutral-700"
+                  className="group aspect-[4/3] rounded-xl sm:rounded-2xl overflow-hidden bg-white dark:bg-neutral-800 cursor-pointer relative shadow-sm hover:shadow-lg transition-all duration-300 border border-neutral-100 dark:border-neutral-700"
                 >
                   {/* Thumbnail or Placeholder */}
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
@@ -380,7 +379,7 @@ export function DashboardPage() {
                       <img src={project.thumbnail} alt={project.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Layout className="w-12 h-12 text-neutral-300 dark:text-neutral-600" />
+                        <Layout className="w-8 h-8 sm:w-12 sm:h-12 text-neutral-300 dark:text-neutral-600" />
                       </div>
                     )}
                   </div>
@@ -389,25 +388,26 @@ export function DashboardPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                   {/* Project Info */}
-                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm">
-                    <h3 className="font-medium text-sm text-neutral-800 dark:text-white truncate">
+                  <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm">
+                    <h3 className="font-medium text-xs sm:text-sm text-neutral-800 dark:text-white truncate">
                       {project.name}
                     </h3>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    <p className="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">
                       {formatDate(project.updatedAt)}
                     </p>
                   </div>
 
                   {/* Menu Button */}
-                  <div className="absolute top-2 right-2">
+                  <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setProjectMenuOpen(projectMenuOpen === project.id ? null : project.id);
                       }}
-                      className="p-1.5 rounded-lg bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white dark:hover:bg-neutral-700"
+                      className="p-1 sm:p-1.5 rounded-lg bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 sm:transition-opacity hover:bg-white dark:hover:bg-neutral-700"
+                      style={{ opacity: projectMenuOpen === project.id ? 1 : undefined }}
                     >
-                      <MoreVertical className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
+                      <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-600 dark:text-neutral-300" />
                     </button>
 
                     {/* Dropdown Menu */}
@@ -417,23 +417,23 @@ export function DashboardPage() {
                           initial={{ opacity: 0, scale: 0.95, y: -10 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                          className="absolute top-full right-0 mt-1 w-32 bg-white dark:bg-neutral-800 rounded-xl shadow-xl border border-neutral-100 dark:border-neutral-700 py-1 z-20"
+                          className="absolute top-full right-0 mt-1 w-28 sm:w-32 bg-white dark:bg-neutral-800 rounded-lg sm:rounded-xl shadow-xl border border-neutral-100 dark:border-neutral-700 py-1 z-20"
                         >
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenProject(project);
                             }}
-                            className="w-full px-3 py-2 text-left text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2"
+                            className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2"
                           >
-                            <Edit3 className="w-4 h-4" />
+                            <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             開く
                           </button>
                           <button
                             onClick={(e) => handleDeleteProject(project.id, e)}
-                            className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                            className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             削除
                           </button>
                         </motion.div>
@@ -469,32 +469,33 @@ export function DashboardPage() {
         </motion.div>
 
         {/* Recent Images */}
-        <motion.div variants={itemVariants} className="mb-16">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
-                <Clock className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />
+        <motion.div variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
+          <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-500 dark:text-neutral-400" />
               </div>
-              <h2 className="text-2xl font-semibold text-neutral-900 dark:text-white font-display">最近の生成</h2>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-neutral-900 dark:text-white font-display">最近の生成</h2>
             </div>
             <Link
               to="/gallery"
-              className="px-4 py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center gap-2 group"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-xs sm:text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors flex items-center gap-1.5 sm:gap-2 group"
             >
-              すべて見る
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              <span className="hidden sm:inline">すべて見る</span>
+              <span className="sm:hidden">全て</span>
+              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
           {recentImages.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
               {recentImages.map((image, i) => (
                 <motion.div
                   key={image.id}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.05 }}
-                  className="group aspect-square rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 cursor-pointer relative shadow-sm hover:shadow-lg transition-all duration-300"
+                  className="group aspect-square rounded-xl sm:rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 cursor-pointer relative shadow-sm hover:shadow-lg transition-all duration-300"
                   onClick={() => navigate(`/gallery?image=${image.id}`)}
                 >
                   <img
@@ -504,8 +505,8 @@ export function DashboardPage() {
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <p className="text-white text-xs font-medium truncate opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                    <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3">
+                      <p className="text-white text-[10px] sm:text-xs font-medium truncate opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
                         {new Date(image.created_at).toLocaleDateString()}
                       </p>
                     </div>
@@ -514,11 +515,11 @@ export function DashboardPage() {
               ))}
               
               {/* Add New Button */}
-              <Link to="/generate" className="group aspect-square rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-3 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all duration-300">
-                <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-white dark:group-hover:bg-neutral-700">
-                  <Plus className="w-6 h-6 text-neutral-400 group-hover:text-primary-500" />
+              <Link to="/generate" className="group aspect-square rounded-xl sm:rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-2 sm:gap-3 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all duration-300">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-white dark:group-hover:bg-neutral-700">
+                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-400 group-hover:text-primary-500" />
                 </div>
-                <span className="text-sm font-medium text-neutral-400 group-hover:text-primary-600">新規作成</span>
+                <span className="text-xs sm:text-sm font-medium text-neutral-400 group-hover:text-primary-600">新規</span>
               </Link>
             </div>
           ) : (
@@ -544,44 +545,47 @@ export function DashboardPage() {
         </motion.div>
 
         {/* Stats Grid */}
-        <motion.div variants={itemVariants} className="grid sm:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-surface-900 rounded-2xl p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-blue-500" />
+        <motion.div variants={itemVariants} className="grid grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+          <div className="bg-white dark:bg-surface-900 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
+              <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
               </div>
-              <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">今月の生成数</span>
+              <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-neutral-500 dark:text-neutral-400 hidden sm:block">今月の生成数</span>
             </div>
-            <p className="text-4xl font-bold text-neutral-900 dark:text-white font-display">
+            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 dark:text-white font-display">
               {recentImages.length}
-              <span className="text-base font-normal text-neutral-400 ml-2">枚</span>
+              <span className="text-xs sm:text-sm lg:text-base font-normal text-neutral-400 ml-1 sm:ml-2">枚</span>
             </p>
+            <span className="text-[10px] text-neutral-400 sm:hidden">生成数</span>
           </div>
           
-          <div className="bg-white dark:bg-surface-900 rounded-2xl p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                <Folder className="w-5 h-5 text-purple-500" />
+          <div className="bg-white dark:bg-surface-900 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
+              <div className="p-1.5 sm:p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
               </div>
-              <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">プロジェクト数</span>
+              <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-neutral-500 dark:text-neutral-400 hidden sm:block">プロジェクト数</span>
             </div>
-            <p className="text-4xl font-bold text-neutral-900 dark:text-white font-display">
+            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 dark:text-white font-display">
               {projects.length}
-              <span className="text-base font-normal text-neutral-400 ml-2">個</span>
+              <span className="text-xs sm:text-sm lg:text-base font-normal text-neutral-400 ml-1 sm:ml-2">個</span>
             </p>
+            <span className="text-[10px] text-neutral-400 sm:hidden">プロジェクト</span>
           </div>
 
-          <div className="bg-white dark:bg-surface-900 rounded-2xl p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <Sparkles className="w-5 h-5 text-yellow-500" />
+          <div className="bg-white dark:bg-surface-900 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
+              <div className="p-1.5 sm:p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
               </div>
-              <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">お気に入り</span>
+              <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-neutral-500 dark:text-neutral-400 hidden sm:block">お気に入り</span>
             </div>
-            <p className="text-4xl font-bold text-neutral-900 dark:text-white font-display">
+            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 dark:text-white font-display">
               {recentImages.filter(img => img.is_favorite).length}
-              <span className="text-base font-normal text-neutral-400 ml-2">枚</span>
+              <span className="text-xs sm:text-sm lg:text-base font-normal text-neutral-400 ml-1 sm:ml-2">枚</span>
             </p>
+            <span className="text-[10px] text-neutral-400 sm:hidden">お気に入り</span>
           </div>
         </motion.div>
       </motion.div>

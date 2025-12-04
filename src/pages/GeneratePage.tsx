@@ -1388,13 +1388,13 @@ export function GeneratePage() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8"
       >
-        <div className="mb-8">
-          <h1 className="text-2xl font-display font-semibold text-neutral-900 dark:text-white mb-2">
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-display font-semibold text-neutral-900 dark:text-white mb-1 sm:mb-2">
             画像生成
           </h1>
-          <p className="text-neutral-600 dark:text-neutral-400">
+          <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400">
             生成したい機能を選択してください
           </p>
         </div>
@@ -1409,8 +1409,8 @@ export function GeneratePage() {
 
   // Feature detail view
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid xl:grid-cols-[400px,1fr] lg:grid-cols-1 gap-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="grid xl:grid-cols-[400px,1fr] lg:grid-cols-1 gap-4 sm:gap-6 lg:gap-8">
         {/* Left Panel */}
         <motion.div 
           initial={{ opacity: 0, x: -20 }}

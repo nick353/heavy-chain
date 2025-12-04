@@ -58,7 +58,13 @@ export function CanvasEditorPage() {
   const { showGuide, completeGuide } = useCanvasGuide();
   
   const [viewMode, setViewMode] = useState<ViewMode>('canvas');
-  const [sidePanel, setSidePanel] = useState<SidePanel>('properties');
+  // Start with no side panel on mobile, properties on desktop
+  const [sidePanel, setSidePanel] = useState<SidePanel>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return null;
+    }
+    return 'properties';
+  });
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [selectedPosition, setSelectedPosition] = useState({ x: 0, y: 0 });
   const [isEditingName, setIsEditingName] = useState(false);
@@ -749,15 +755,15 @@ export function CanvasEditorPage() {
   return (
     <div className="h-screen flex flex-col bg-neutral-50 dark:bg-neutral-950">
       {/* Header */}
-      <header className="glass-nav h-14 flex items-center justify-between px-4 z-20">
-        <div className="flex items-center gap-4">
+      <header className="glass-nav h-12 sm:h-14 flex items-center justify-between px-2 sm:px-4 z-20">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <button
             onClick={() => navigate('/dashboard')}
-            className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-600 dark:text-neutral-400"
+            className="p-1.5 sm:p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-600 dark:text-neutral-400 flex-shrink-0"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
-          <div>
+          <div className="min-w-0 flex-1">
             {isEditingName ? (
               <input
                 ref={projectNameInputRef}
@@ -766,64 +772,67 @@ export function CanvasEditorPage() {
                 onChange={handleNameChange}
                 onBlur={handleNameBlur}
                 onKeyDown={handleNameKeyDown}
-                className="text-base font-semibold text-neutral-800 dark:text-white bg-transparent border-b border-primary-500 outline-none px-0 py-0.5 min-w-[100px]"
+                className="text-sm sm:text-base font-semibold text-neutral-800 dark:text-white bg-transparent border-b border-primary-500 outline-none px-0 py-0.5 w-full max-w-[150px] sm:max-w-[200px]"
               />
             ) : (
               <h1
                 onClick={() => setIsEditingName(true)}
-                className="text-base font-semibold text-neutral-800 dark:text-white cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                className="text-sm sm:text-base font-semibold text-neutral-800 dark:text-white cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"
               >
-                {currentProjectName || '無題のプロジェクト'}
+                {currentProjectName || '無題'}
               </h1>
             )}
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            <p className="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">
               {currentProjectId ? '自動保存' : '未保存'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1 border border-neutral-200 dark:border-neutral-700">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          {/* View mode toggle - hidden on mobile */}
+          <div className="hidden sm:flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1 border border-neutral-200 dark:border-neutral-700">
             <button
               onClick={() => setViewMode('canvas')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'canvas'
                   ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
               }`}
             >
-              <Layers className="w-4 h-4 inline-block mr-1.5" />
-              キャンバス
+              <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block sm:mr-1.5" />
+              <span className="hidden sm:inline">キャンバス</span>
             </button>
             <button
               onClick={() => setViewMode('tree')}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'tree'
                   ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
                   : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
               }`}
             >
-              <GitBranch className="w-4 h-4 inline-block mr-1.5" />
-              派生ツリー
+              <GitBranch className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block sm:mr-1.5" />
+              <span className="hidden sm:inline">派生ツリー</span>
             </button>
           </div>
 
-          <div className="w-px h-6 bg-neutral-200 dark:bg-neutral-700 mx-2" />
+          <div className="hidden sm:block w-px h-6 bg-neutral-200 dark:bg-neutral-700 mx-1 sm:mx-2" />
 
-          <div className="flex -space-x-2">
-            <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900 border-2 border-white dark:border-neutral-800 flex items-center justify-center">
-              <span className="text-xs font-medium text-primary-700 dark:text-primary-300">Y</span>
+          {/* User avatar - hidden on mobile */}
+          <div className="hidden md:flex -space-x-2">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary-100 dark:bg-primary-900 border-2 border-white dark:border-neutral-800 flex items-center justify-center">
+              <span className="text-[10px] sm:text-xs font-medium text-primary-700 dark:text-primary-300">Y</span>
             </div>
           </div>
           
-          <Button variant="secondary" size="sm" className="shadow-sm">
-            <Users className="w-4 h-4 mr-1.5" />
-            招待
+          {/* Invite button - hidden on mobile */}
+          <Button variant="secondary" size="sm" className="hidden md:flex shadow-sm text-xs sm:text-sm px-2 sm:px-3">
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">招待</span>
           </Button>
 
-          <Button size="sm" className="shadow-glow hover:shadow-glow-lg" onClick={handleSave}>
-            <Save className="w-4 h-4 mr-1.5" />
-            保存
+          <Button size="sm" className="shadow-glow hover:shadow-glow-lg text-xs sm:text-sm px-2 sm:px-3" onClick={handleSave}>
+            <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">保存</span>
           </Button>
         </div>
       </header>
@@ -831,7 +840,7 @@ export function CanvasEditorPage() {
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar - Tools */}
-        <aside className="w-14 glass-panel border-r border-white/20 dark:border-white/5 flex flex-col items-center py-4 gap-2 z-10">
+        <aside className="w-10 sm:w-14 glass-panel border-r border-white/20 dark:border-white/5 flex flex-col items-center py-2 sm:py-4 gap-1 sm:gap-2 z-10">
           <input
             type="file"
             id="file-upload"
@@ -842,64 +851,65 @@ export function CanvasEditorPage() {
           />
           <label
             htmlFor="file-upload"
-            className="p-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl cursor-pointer transition-colors text-neutral-600 dark:text-neutral-400"
+            className="p-2 sm:p-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg sm:rounded-xl cursor-pointer transition-colors text-neutral-600 dark:text-neutral-400"
             title="画像をアップロード"
           >
-            <Upload className="w-5 h-5" />
+            <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
           </label>
           
           <button
             onClick={() => setShowGenerateModal(true)}
-            className="p-3 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 rounded-xl transition-colors text-primary-600 dark:text-primary-400"
+            className="p-2 sm:p-3 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 rounded-lg sm:rounded-xl transition-colors text-primary-600 dark:text-primary-400"
             title="AI画像生成"
           >
-            <Wand2 className="w-5 h-5" />
+            <Wand2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
-          <div className="w-8 h-px bg-neutral-200 dark:bg-neutral-700 my-2" />
+          <div className="w-6 sm:w-8 h-px bg-neutral-200 dark:bg-neutral-700 my-1 sm:my-2" />
 
-          {/* Side panel toggles */}
+          {/* Side panel toggles - hidden on small mobile */}
           <button
             onClick={() => setSidePanel(sidePanel === 'chat' ? null : 'chat')}
-            className={`p-3 rounded-xl transition-colors ${
+            className={`hidden sm:block p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
               sidePanel === 'chat' 
                 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
                 : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
             }`}
             title="チャットエディター"
           >
-            <MessageSquare className="w-5 h-5" />
+            <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           <button
             onClick={() => setSidePanel(sidePanel === 'templates' ? null : 'templates')}
-            className={`p-3 rounded-xl transition-colors ${
+            className={`hidden sm:block p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
               sidePanel === 'templates' 
                 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
                 : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
             }`}
             title="テンプレート"
           >
-            <Layout className="w-5 h-5" />
+            <Layout className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           <button
             onClick={() => setSidePanel(sidePanel === 'properties' ? null : 'properties')}
-            className={`p-3 rounded-xl transition-colors ${
+            className={`hidden sm:block p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
               sidePanel === 'properties' 
                 ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
                 : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
             }`}
             title="プロパティ"
           >
-            <Settings2 className="w-5 h-5" />
+            <Settings2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </aside>
 
         {/* Canvas area */}
-        <main className="flex-1 flex flex-col relative">
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-            <div className="glass-panel rounded-xl p-1.5 shadow-lg border border-white/40 dark:border-white/10">
+        <main className="flex-1 flex flex-col relative overflow-hidden">
+          {/* Toolbar container - centered on desktop, full width on mobile */}
+          <div className="absolute top-2 sm:top-4 inset-x-2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-10 flex justify-center pointer-events-none">
+            <div className="pointer-events-auto glass-panel rounded-lg sm:rounded-xl p-0 sm:p-1 shadow-lg border border-white/40 dark:border-white/10">
               <CanvasToolbar
                 onAddText={handleAddText}
                 onAddShape={handleAddShape}
@@ -929,8 +939,9 @@ export function CanvasEditorPage() {
                   />
                 )}
 
-                <div className="absolute bottom-4 right-4 z-10">
-                  <div className="glass-panel rounded-xl overflow-hidden border border-white/40 dark:border-white/10 shadow-lg">
+                {/* Minimap - hidden on mobile */}
+                <div className="hidden sm:block absolute bottom-2 sm:bottom-4 right-2 sm:right-4 z-10">
+                  <div className="glass-panel rounded-lg sm:rounded-xl overflow-hidden border border-white/40 dark:border-white/10 shadow-lg">
                     <Minimap
                       canvasWidth={canvasSize.width}
                       canvasHeight={canvasSize.height}
@@ -944,39 +955,49 @@ export function CanvasEditorPage() {
           </div>
         </main>
 
-        {/* Right sidebar */}
+        {/* Right sidebar - overlay on mobile, panel on desktop */}
         <AnimatePresence>
           {sidePanel && (
-            <motion.aside 
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 320, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              className="glass-panel border-l border-white/20 dark:border-white/5 flex flex-col overflow-hidden z-10"
-            >
-              <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
-                <h2 className="font-semibold text-neutral-800 dark:text-white">
-                  {sidePanel === 'properties' && 'プロパティ'}
-                  {sidePanel === 'chat' && 'チャットエディター'}
-                  {sidePanel === 'templates' && 'テンプレート'}
-                </h2>
-                <button
-                  onClick={() => setSidePanel(null)}
-                  className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors text-neutral-500 dark:text-neutral-400"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                {sidePanel === 'properties' && (
-                  <PropertiesPanel selectedObject={selectedObject} />
-                )}
-                {sidePanel === 'chat' && (
-                  <ChatEditor 
-                    selectedImageUrl={selectedObject?.type === 'image' ? (selectedObject as any).src : undefined}
-                    onEditResult={handleChatEditResult}
-                  />
-                )}
-                {sidePanel === 'templates' && (
+            <>
+              {/* Mobile overlay backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setSidePanel(null)}
+                className="md:hidden fixed inset-0 bg-black/50 z-20"
+              />
+              <motion.aside 
+                initial={{ x: '100%', opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: '100%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="fixed md:relative right-0 top-0 bottom-0 w-[85vw] max-w-[320px] md:w-80 glass-panel border-l border-white/20 dark:border-white/5 flex flex-col overflow-hidden z-30 md:z-10"
+              >
+                <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b border-neutral-100 dark:border-neutral-800">
+                  <h2 className="font-semibold text-sm sm:text-base text-neutral-800 dark:text-white">
+                    {sidePanel === 'properties' && 'プロパティ'}
+                    {sidePanel === 'chat' && 'チャット'}
+                    {sidePanel === 'templates' && 'テンプレート'}
+                  </h2>
+                  <button
+                    onClick={() => setSidePanel(null)}
+                    className="p-1.5 sm:p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors text-neutral-500 dark:text-neutral-400"
+                  >
+                    <X className="w-5 h-5 sm:w-4 sm:h-4" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+                  {sidePanel === 'properties' && (
+                    <PropertiesPanel selectedObject={selectedObject} />
+                  )}
+                  {sidePanel === 'chat' && (
+                    <ChatEditor 
+                      selectedImageUrl={selectedObject?.type === 'image' ? (selectedObject as any).src : undefined}
+                      onEditResult={handleChatEditResult}
+                    />
+                  )}
+                  {sidePanel === 'templates' && (
                   <TemplateSelector 
                     mode="size" 
                     onSelectSize={handleTemplateSelect} 
@@ -984,6 +1005,7 @@ export function CanvasEditorPage() {
                 )}
               </div>
             </motion.aside>
+            </>
           )}
         </AnimatePresence>
       </div>
