@@ -43,4 +43,7 @@ coverage/
 # Supabase
 supabase/.branches
 supabase/.temp
+<<<<<<< HEAD
 
+=======
+>>>>>>> f9c51b029f0e960bafbaa8addbcc261ce886e54b
