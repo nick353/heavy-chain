@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.zeabur.app/template.json",
+  "name": "Heavy Chain",
+  "description": "AI駆動のアパレル向け画像生成プラットフォーム",
+  "build": {
+    "build_command": "npm install && npm run build",
+    "output_dir": "dist"
+  }
+}
+
+
+
