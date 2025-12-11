@@ -1805,7 +1805,7 @@ export function GeneratePage() {
 
         <FeatureSelector 
           onSelectFeature={handleFeatureSelect}
-          selectedFeatureId={selectedFeature?.id ?? null}
+          selectedFeatureId={null}
         />
       </motion.div>
     );
