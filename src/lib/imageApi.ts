@@ -1,5 +1,15 @@
 import { supabase } from './supabase';
 
+export interface TextOverlayPayload {
+  text: string;
+  language?: 'ja' | 'en' | 'zh' | 'ko';
+  position?: 'top' | 'center' | 'bottom';
+  font?: string;
+  color?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+}
+
 export interface ImageEditResult {
   success: boolean;
   imageUrl?: string;
@@ -98,11 +108,15 @@ export async function generateVariations(
   imageUrl: string,
   brandId: string,
   prompt?: string,
-  count?: number
+  count?: number,
+  options?: {
+    strength?: number;
+    textOverlay?: TextOverlayPayload;
+  }
 ): Promise<VariationsResult> {
   try {
     const { data, error } = await supabase.functions.invoke('generate-variations', {
-      body: { imageUrl, brandId, prompt, count },
+      body: { imageUrl, brandId, prompt, count, ...options },
     });
 
     if (error) throw error;
@@ -123,6 +137,11 @@ export async function generateImage(
     style?: string;
     aspectRatio?: string;
     negativePrompt?: string;
+    width?: number;
+    height?: number;
+    count?: number;
+    textOverlay?: TextOverlayPayload;
+    campaignMeta?: Record<string, any>;
   }
 ): Promise<ImageEditResult> {
   try {
@@ -193,7 +212,12 @@ export async function optimizePrompt(
 export async function designGacha(
   brief: string,
   brandId: string,
-  directions?: number
+  directions?: number,
+  options?: {
+    fixedElements?: string[];
+    randomizedElements?: string[];
+    textOverlay?: TextOverlayPayload;
+  }
 ): Promise<{
   success: boolean;
   variations?: Array<{
@@ -206,7 +230,7 @@ export async function designGacha(
 }> {
   try {
     const { data, error } = await supabase.functions.invoke('design-gacha', {
-      body: { brief, brandId, directions },
+      body: { brief, brandId, directions, ...options },
     });
 
     if (error) throw error;
@@ -223,7 +247,11 @@ export async function designGacha(
 export async function generateProductShots(
   productDescription: string,
   brandId: string,
-  shots?: string[]
+  shots?: string[],
+  options?: {
+    background?: string;
+    textOverlay?: TextOverlayPayload;
+  }
 ): Promise<{
   success: boolean;
   shots?: Array<{
@@ -236,7 +264,7 @@ export async function generateProductShots(
 }> {
   try {
     const { data, error } = await supabase.functions.invoke('product-shots', {
-      body: { productDescription, brandId, shots },
+      body: { productDescription, brandId, shots, ...options },
     });
 
     if (error) throw error;
@@ -257,6 +285,7 @@ export async function generateModelMatrix(
     bodyTypes?: string[];
     ageGroups?: string[];
     gender?: 'male' | 'female';
+    textOverlay?: TextOverlayPayload;
   }
 ): Promise<{
   success: boolean;
@@ -293,6 +322,7 @@ export async function generateMultilingualBanners(
     languages?: string[];
     style?: string;
     aspectRatio?: string;
+    textOverlay?: TextOverlayPayload;
   }
 ): Promise<{
   success: boolean;

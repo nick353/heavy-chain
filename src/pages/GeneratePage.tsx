@@ -27,20 +27,20 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const stylePresets = [
-  { id: 'minimal', name: 'ミニマル', prompt: 'minimalist, clean, simple' },
-  { id: 'luxury', name: 'ラグジュアリー', prompt: 'luxury, premium, elegant' },
-  { id: 'street', name: 'ストリート', prompt: 'street fashion, urban, casual' },
-  { id: 'vintage', name: 'ヴィンテージ', prompt: 'vintage, retro, classic' },
-  { id: 'modern', name: 'モダン', prompt: 'modern, contemporary, sleek' },
-  { id: 'natural', name: 'ナチュラル', prompt: 'natural, organic, soft' }
+  { id: 'minimal', name: 'ミニマル', prompt: 'minimalist, clean, simple', description: '余白多め・無彩色中心のシンプル' },
+  { id: 'luxury', name: 'ラグジュアリー', prompt: 'luxury, premium, elegant', description: '高級感・ゴールド/ブラック基調' },
+  { id: 'street', name: 'ストリート', prompt: 'street fashion, urban, casual', description: 'ポップな配色・都会的・カジュアル' },
+  { id: 'vintage', name: 'ヴィンテージ', prompt: 'vintage, retro, classic', description: 'フィルム調・レトロトーン' },
+  { id: 'modern', name: 'モダン', prompt: 'modern, contemporary, sleek', description: 'シャープで現代的・クリーン' },
+  { id: 'natural', name: 'ナチュラル', prompt: 'natural, organic, soft', description: '柔らかい質感・自然光・オーガニック' }
 ];
 
 const aspectRatios = [
-  { id: '1:1', name: '正方形', width: 1024, height: 1024 },
-  { id: '4:3', name: '横長', width: 1024, height: 768 },
-  { id: '3:4', name: '縦長', width: 768, height: 1024 },
-  { id: '16:9', name: 'ワイド', width: 1024, height: 576 },
-  { id: '9:16', name: 'ストーリー', width: 576, height: 1024 }
+  { id: '1:1', name: '正方形', width: 1024, height: 1024, usage: 'Instagram投稿・汎用' },
+  { id: '4:3', name: '横長', width: 1024, height: 768, usage: 'Webバナー・LP' },
+  { id: '3:4', name: '縦長', width: 768, height: 1024, usage: 'Pinterest/フライヤー' },
+  { id: '16:9', name: 'ワイド', width: 1024, height: 576, usage: 'YouTubeサムネ/ヒーロー' },
+  { id: '9:16', name: 'ストーリー', width: 576, height: 1024, usage: 'IG/LINEストーリー・縦動画' }
 ];
 
 const backgroundOptions = [
@@ -199,6 +199,14 @@ export function GeneratePage() {
   const [generatedImages, setGeneratedImages] = useState<GeneratedResult[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [generateCount, setGenerateCount] = useState(1);
+  const [overlayEnabled, setOverlayEnabled] = useState(false);
+  const [overlayText, setOverlayText] = useState('');
+  const [overlayLanguage, setOverlayLanguage] = useState<'ja' | 'en' | 'zh' | 'ko'>('ja');
+  const [overlayPosition, setOverlayPosition] = useState<'top' | 'center' | 'bottom'>('center');
+  const [overlayFont, setOverlayFont] = useState('Noto Sans');
+  const [overlayColor, setOverlayColor] = useState('#ffffff');
+  const [overlayStrokeColor, setOverlayStrokeColor] = useState('#000000');
+  const [overlayStrokeWidth, setOverlayStrokeWidth] = useState(2);
   
   // Reference image state
   const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
@@ -213,6 +221,17 @@ export function GeneratePage() {
   const [selectedBodyTypes, setSelectedBodyTypes] = useState(['slim', 'regular', 'plus']);
   const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s', '30s', '40s']);
   const [selectedScenes, setSelectedScenes] = useState(['cafe', 'street', 'office']);
+  const [selectedShots, setSelectedShots] = useState(['front', 'side', 'back', 'detail']);
+  const [fixedElements, setFixedElements] = useState<string[]>(['logo']);
+  const [randomizedElements, setRandomizedElements] = useState<string[]>(['color', 'layout']);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [campaignTitle, setCampaignTitle] = useState('');
+  const [campaignSubheadline, setCampaignSubheadline] = useState('');
+  const [campaignDiscount, setCampaignDiscount] = useState('');
+  const [campaignPeriod, setCampaignPeriod] = useState('');
+  const [campaignCTA, setCampaignCTA] = useState('');
+  const [campaignBrandColor, setCampaignBrandColor] = useState('#ff6b6b');
+  const [campaignTextPosition, setCampaignTextPosition] = useState<'top' | 'center' | 'bottom'>('center');
   
   // Background & Color options
   const [selectedBackground, setSelectedBackground] = useState('white');
@@ -240,6 +259,9 @@ export function GeneratePage() {
     setBackgroundReferenceImage(null);
     setPatternReferenceImage(null);
     setShowSuccessCard(false);
+    setGenerateCount(feature.id === 'design-gacha' ? 4 : 1);
+    setOverlayEnabled(false);
+    setSelectedShots(['front', 'side', 'back', 'detail']);
   };
 
   const handleBack = () => {
@@ -257,6 +279,11 @@ export function GeneratePage() {
       return;
     }
 
+    if (overlayEnabled && !overlayText.trim()) {
+      toast.error('画像内テキストを入力してください');
+      return;
+    }
+
     // Validate required image
     if (featureConfig?.requiresImage && !referenceImage) {
       toast.error('画像をアップロードしてください');
@@ -268,11 +295,21 @@ export function GeneratePage() {
     try {
       let data: any;
       let error: any;
+      const textOverlay = overlayEnabled && overlayText.trim() ? {
+        text: overlayText.trim(),
+        language: overlayLanguage,
+        position: overlayPosition,
+        font: overlayFont,
+        color: overlayColor,
+        strokeColor: overlayStrokeColor,
+        strokeWidth: overlayStrokeWidth,
+      } : undefined;
 
       const baseBody = {
         brandId: currentBrand.id,
         referenceImage: referenceImage?.url,
         referenceType: referenceImage?.referenceType,
+        textOverlay,
       };
 
       switch (selectedFeature?.id) {
@@ -394,7 +431,9 @@ export function GeneratePage() {
             body: { 
               ...baseBody,
               brief: prompt, 
-              directions: generateCount 
+              directions: generateCount,
+              fixedElements,
+              randomizedElements,
             }
           }));
           if (data?.variations) {
@@ -417,7 +456,7 @@ export function GeneratePage() {
             body: { 
               ...baseBody,
               productDescription,
-              selectedShots: ['front', 'side', 'back', 'detail'].slice(0, generateCount),
+              selectedShots: (selectedShots.length ? selectedShots : ['front']).slice(0, generateCount || 1),
               background: selectedBackground,
             }
           }));
@@ -504,7 +543,50 @@ export function GeneratePage() {
           }
           break;
 
-        case 'campaign-image':
+        case 'campaign-image': {
+          if (!prompt.trim() && !campaignTitle.trim()) {
+            toast.error('ベースコンセプトまたはタイトルを入力してください');
+            setIsGenerating(false);
+            return;
+          }
+          const ratio = aspectRatios.find(r => r.id === selectedRatio) || aspectRatios[0];
+          const campaignParts = [
+            campaignTitle && `Headline: ${campaignTitle}`,
+            campaignSubheadline && `Subheadline: ${campaignSubheadline}`,
+            campaignDiscount && `Discount: ${campaignDiscount}`,
+            campaignPeriod && `Period: ${campaignPeriod}`,
+            campaignCTA && `CTA: ${campaignCTA}`,
+            campaignBrandColor && `Brand color: ${campaignBrandColor}`,
+            `Typography area at ${campaignTextPosition}`,
+          ].filter(Boolean).join(', ');
+
+          const campaignPrompt = `${prompt || 'campaign visual'}, ${campaignParts}, readable typography, high contrast, balanced layout`;
+
+          ({ data, error } = await supabase.functions.invoke('generate-image', {
+            body: {
+              ...baseBody,
+              prompt: campaignPrompt,
+              negativePrompt,
+              width: ratio.width,
+              height: ratio.height,
+              count: generateCount,
+              campaignMeta: {
+                title: campaignTitle,
+                subheadline: campaignSubheadline,
+                discount: campaignDiscount,
+                period: campaignPeriod,
+                cta: campaignCTA,
+                brandColor: campaignBrandColor,
+                textPosition: campaignTextPosition,
+              },
+            }
+          }));
+          if (data?.images) {
+            setGeneratedImages(prev => [...data.images, ...prev]);
+          }
+          break;
+        }
+
         default:
           if (!prompt.trim()) {
             toast.error('プロンプトを入力してください');
@@ -537,7 +619,7 @@ export function GeneratePage() {
       if (error) throw error;
       
       if (selectedFeature?.id !== 'optimize-prompt') {
-        const promptToSave = prompt || productDescription || headline;
+        const promptToSave = prompt || productDescription || headline || campaignTitle;
         if (promptToSave) {
           addToHistory(promptToSave, selectedFeature?.name);
         }
@@ -579,6 +661,28 @@ export function GeneratePage() {
     }
   };
 
+  const handleBulkDownload = async () => {
+    if (!currentBrand || generatedImages.length === 0) return;
+    const imageIds = generatedImages.map(img => img.id).filter(Boolean);
+    if (imageIds.length === 0) {
+      toast.error('ダウンロード可能な画像IDがありません');
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('bulk-download', {
+        body: { brandId: currentBrand.id, imageIds }
+      });
+      if (error || !data?.downloadUrl) {
+        throw new Error(error?.message || '一括ダウンロードに失敗しました');
+      }
+      window.open(data.downloadUrl, '_blank');
+      toast.success(`${imageIds.length}件をまとめてダウンロードします`);
+    } catch (e: any) {
+      console.error('Bulk download error', e);
+      toast.error(e.message || '一括ダウンロードに失敗しました');
+    }
+  };
+
   // Render generation count selector
   const renderCountSelector = (label: string = '生成数', min: number = 1, max: number = 8) => (
     <div className="mb-4">
@@ -603,6 +707,139 @@ export function GeneratePage() {
         </button>
         <span className="text-sm text-neutral-500">枚</span>
       </div>
+    </div>
+  );
+
+  const renderAspectRatioSelector = (label: string = 'アスペクト比') => (
+    <div>
+      <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">{label}</label>
+      <div className="flex flex-wrap gap-2">
+        {aspectRatios.map((ratio) => (
+          <button
+            key={ratio.id}
+            onClick={() => setSelectedRatio(ratio.id)}
+            className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
+              selectedRatio === ratio.id
+                ? 'bg-primary-100 border-primary-300 text-primary-700'
+                : 'border-neutral-200 hover:border-neutral-300'
+            }`}
+          >
+            <div className="flex flex-col items-start leading-tight">
+              <span>{ratio.name}</span>
+              {ratio.usage && (
+                <span className="text-[11px] text-neutral-500">{ratio.usage}</span>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderTextOverlayControls = () => (
+    <div className="space-y-3 p-4 bg-neutral-50 dark:bg-neutral-800 rounded-xl border border-neutral-200/60 dark:border-neutral-700/60">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-neutral-800 dark:text-neutral-100">画像内テキスト</p>
+          <p className="text-xs text-neutral-500">言語・位置・色を指定して生成時に文字を入れます</p>
+        </div>
+        <button
+          onClick={() => setOverlayEnabled(!overlayEnabled)}
+          className={`px-3 py-1.5 text-sm rounded-lg border ${
+            overlayEnabled
+              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+              : 'border-neutral-300 dark:border-neutral-600 text-neutral-600'
+          }`}
+        >
+          {overlayEnabled ? '有効' : '無効'}
+        </button>
+      </div>
+
+      {overlayEnabled && (
+        <div className="space-y-3">
+          <Textarea
+            label="テキスト内容"
+            placeholder="例: SUMMER SALE 50% OFF / 8.1-8.10"
+            value={overlayText}
+            onChange={(e) => setOverlayText(e.target.value)}
+            rows={2}
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1">言語</label>
+              <select
+                value={overlayLanguage}
+                onChange={(e) => setOverlayLanguage(e.target.value as any)}
+                className="w-full rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm"
+              >
+                <option value="ja">日本語</option>
+                <option value="en">English</option>
+                <option value="zh">中文</option>
+                <option value="ko">한국어</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-1">位置</label>
+              <div className="flex gap-2">
+                {(['top', 'center', 'bottom'] as const).map((pos) => (
+                  <button
+                    key={pos}
+                    onClick={() => setOverlayPosition(pos)}
+                    className={`flex-1 py-2 rounded-lg border text-sm ${
+                      overlayPosition === pos
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                        : 'border-neutral-200 dark:border-neutral-700'
+                    }`}
+                  >
+                    {pos === 'top' ? '上' : pos === 'center' ? '中央' : '下'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="フォント名"
+              placeholder="例: Noto Sans, Inter"
+              value={overlayFont}
+              onChange={(e) => setOverlayFont(e.target.value)}
+            />
+            <div className="grid grid-cols-[auto,1fr] items-center gap-2">
+              <label className="text-sm text-neutral-600 dark:text-neutral-400">文字色</label>
+              <input
+                type="color"
+                className="h-10 w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent"
+                value={overlayColor}
+                onChange={(e) => setOverlayColor(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr,auto] gap-3 items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-neutral-600 dark:text-neutral-400">縁取り色</span>
+              <input
+                type="color"
+                className="h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent"
+                value={overlayStrokeColor}
+                onChange={(e) => setOverlayStrokeColor(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-neutral-600 dark:text-neutral-400">太さ</span>
+              <input
+                type="range"
+                min={0}
+                max={8}
+                value={overlayStrokeWidth}
+                onChange={(e) => setOverlayStrokeWidth(Number(e.target.value))}
+              />
+              <span className="text-sm text-neutral-600 dark:text-neutral-400 w-8 text-right">{overlayStrokeWidth}px</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -955,6 +1192,92 @@ export function GeneratePage() {
 
       // === TEXT-TO-IMAGE FEATURES WITH OPTIONAL REFERENCE ===
 
+      case 'campaign-image':
+        return (
+          <div className="space-y-4">
+            <Textarea
+              label="ベースコンセプト"
+              placeholder="例: 夏のサマーセール告知、爽やかな海辺の雰囲気"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={3}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="タイトル"
+                placeholder="例: SUMMER SALE"
+                value={campaignTitle}
+                onChange={(e) => setCampaignTitle(e.target.value)}
+              />
+              <Input
+                label="サブコピー"
+                placeholder="例: 最大50% OFF / 8.1-8.10"
+                value={campaignSubheadline}
+                onChange={(e) => setCampaignSubheadline(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Input
+                label="割引率"
+                placeholder="例: 50% OFF"
+                value={campaignDiscount}
+                onChange={(e) => setCampaignDiscount(e.target.value)}
+              />
+              <Input
+                label="期間"
+                placeholder="例: 8/1 - 8/10"
+                value={campaignPeriod}
+                onChange={(e) => setCampaignPeriod(e.target.value)}
+              />
+              <Input
+                label="CTA"
+                placeholder="例: 今すぐ見る"
+                value={campaignCTA}
+                onChange={(e) => setCampaignCTA(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-[auto,1fr] items-center gap-2">
+                <label className="text-sm text-neutral-600 dark:text-neutral-400">ブランドカラー</label>
+                <input
+                  type="color"
+                  className="h-10 w-full rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent"
+                  value={campaignBrandColor}
+                  onChange={(e) => setCampaignBrandColor(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-neutral-700 dark:text-neutral-300 mb-2">テキスト位置</label>
+                <div className="flex gap-2">
+                  {(['top', 'center', 'bottom'] as const).map(pos => (
+                    <button
+                      key={pos}
+                    onClick={() => {
+                      setCampaignTextPosition(pos);
+                      setOverlayPosition(pos);
+                    }}
+                      className={`flex-1 py-2 rounded-lg border text-sm ${
+                        campaignTextPosition === pos
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                          : 'border-neutral-200 dark:border-neutral-700'
+                      }`}
+                    >
+                      {pos === 'top' ? '上' : pos === 'center' ? '中央' : '下'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {renderAspectRatioSelector('アスペクト比（用途ラベル付き）')}
+            {renderTextOverlayControls()}
+            {renderCountSelector('生成数', 1, 6)}
+          </div>
+        );
+
       case 'design-gacha':
         return (
           <div className="space-y-4">
@@ -966,6 +1289,53 @@ export function GeneratePage() {
               rows={3}
             />
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">固定する要素</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'logo', label: 'ロゴ/ブランド' },
+                    { id: 'text', label: 'テキスト' },
+                    { id: 'product', label: '商品/構図' },
+                  ].map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => setFixedElements(prev => prev.includes(item.id) ? prev.filter(i => i !== item.id) : [...prev, item.id])}
+                      className={`px-3 py-1.5 rounded-lg border text-sm ${
+                        fixedElements.includes(item.id)
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                          : 'border-neutral-200 dark:border-neutral-700'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">ランダム化する要素</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'color', label: '色/配色' },
+                    { id: 'layout', label: 'レイアウト' },
+                    { id: 'texture', label: '質感/背景' },
+                  ].map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => setRandomizedElements(prev => prev.includes(item.id) ? prev.filter(i => i !== item.id) : [...prev, item.id])}
+                      className={`px-3 py-1.5 rounded-lg border text-sm ${
+                        randomizedElements.includes(item.id)
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                          : 'border-neutral-200 dark:border-neutral-700'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <ImageSelector
               label={config?.referenceLabel || '参考画像（任意）'}
               value={referenceImage}
@@ -976,6 +1346,7 @@ export function GeneratePage() {
             />
 
             {renderCountSelector('スタイル数', 2, 8)}
+            {renderTextOverlayControls()}
 
             <div className="bg-primary-50 dark:bg-primary-900/20 rounded-xl p-4">
               <p className="text-sm text-primary-800 dark:text-primary-200">
@@ -1005,7 +1376,42 @@ export function GeneratePage() {
               hint={config?.referenceHint}
             />
 
-            {renderCountSelector('カット数', 1, 4)}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                生成するカット
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { id: 'front', label: '正面' },
+                  { id: 'side', label: '側面' },
+                  { id: 'back', label: '背面' },
+                  { id: 'detail', label: 'ディテール' },
+                ].map(shot => (
+                  <button
+                    key={shot.id}
+                    onClick={() => {
+                      setSelectedShots(prev => {
+                        const next = prev.includes(shot.id)
+                          ? prev.filter(s => s !== shot.id)
+                          : [...prev, shot.id];
+                        setGenerateCount(Math.max(1, Math.min(4, next.length)));
+                        return next;
+                      });
+                    }}
+                    className={`px-3 py-1.5 text-sm rounded-lg border-2 transition-all ${
+                      selectedShots.includes(shot.id)
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
+                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
+                    }`}
+                  >
+                    {shot.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-neutral-500 mt-1">{selectedShots.length}カット選択中</p>
+            </div>
+
+            {renderCountSelector('生成枚数上限', 1, 4)}
 
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
@@ -1211,24 +1617,8 @@ export function GeneratePage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">サイズ</label>
-              <div className="flex gap-2 flex-wrap">
-                {aspectRatios.map((ratio) => (
-                  <button
-                    key={ratio.id}
-                    onClick={() => setSelectedRatio(ratio.id)}
-                    className={`px-4 py-2 rounded-lg border-2 transition-all ${
-                      selectedRatio === ratio.id
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700'
-                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
-                    }`}
-                  >
-                    {ratio.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {renderAspectRatioSelector('サイズ')}
+            {renderTextOverlayControls()}
           </div>
         );
 
@@ -1266,6 +1656,9 @@ export function GeneratePage() {
                     }`}
                   >
                     {style.name}
+                    {style.description && (
+                      <span className="block text-[11px] text-neutral-500">{style.description}</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -1335,29 +1728,16 @@ export function GeneratePage() {
                     }`}
                   >
                     {style.name}
+                    {style.description && (
+                      <span className="block text-[11px] text-neutral-500">{style.description}</span>
+                    )}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">アスペクト比</label>
-              <div className="flex flex-wrap gap-2">
-                {aspectRatios.map((ratio) => (
-                  <button
-                    key={ratio.id}
-                    onClick={() => setSelectedRatio(ratio.id)}
-                    className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
-                      selectedRatio === ratio.id
-                        ? 'bg-primary-100 border-primary-300 text-primary-700'
-                        : 'border-neutral-200 hover:border-neutral-300'
-                    }`}
-                  >
-                    {ratio.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {renderAspectRatioSelector()}
+            {renderTextOverlayControls()}
 
             {renderCountSelector('生成数', 1, 4)}
 
@@ -1382,6 +1762,30 @@ export function GeneratePage() {
     }
   };
 
+  const isGenerateDisabled = (() => {
+    if (!selectedFeature) return true;
+    if (isGenerating) return true;
+    if (featureConfig?.requiresImage && !referenceImage) return true;
+    switch (selectedFeature.id) {
+      case 'design-gacha':
+        return !prompt.trim();
+      case 'campaign-image':
+        return !prompt.trim() && !campaignTitle.trim();
+      case 'multilingual-banner':
+        return !headline.trim();
+      case 'optimize-prompt':
+        return !prompt.trim();
+      case 'product-shots':
+        return !productDescription.trim() && !referenceImage;
+      case 'model-matrix':
+        return !productDescription.trim() && !referenceImage;
+      default:
+        if (selectedFeature.id === 'chat-edit') return false;
+        if (!featureConfig?.requiresImage && !prompt.trim()) return true;
+        return false;
+    }
+  })();
+
   // Feature selection view
   if (!selectedFeature) {
     return (
@@ -1401,7 +1805,7 @@ export function GeneratePage() {
 
         <FeatureSelector 
           onSelectFeature={handleFeatureSelect}
-          selectedFeatureId={selectedFeature}
+          selectedFeatureId={selectedFeature?.id ?? null}
         />
       </motion.div>
     );
@@ -1469,7 +1873,7 @@ export function GeneratePage() {
               <Button
                 onClick={handleGenerate}
                 isLoading={isGenerating}
-                disabled={isGenerating || (featureConfig?.requiresImage && !referenceImage)}
+                disabled={isGenerateDisabled}
                 className="w-full mt-6 shadow-glow hover:shadow-glow-lg transition-all duration-300"
                 size="lg"
                 leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
@@ -1496,16 +1900,25 @@ export function GeneratePage() {
               )}
             </h2>
             {generatedImages.length > 0 && (
-              <button
-                onClick={() => {
-                  setGeneratedImages([]);
-                  setShowSuccessCard(false);
-                }}
-                className="text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
-              >
-                <RefreshCw className="w-4 h-4" />
-                クリア
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleBulkDownload}
+                  className="text-sm text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 flex items-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  一括DL
+                </button>
+                <button
+                  onClick={() => {
+                    setGeneratedImages([]);
+                    setShowSuccessCard(false);
+                  }}
+                  className="text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  クリア
+                </button>
+              </div>
             )}
           </div>
 
@@ -1631,8 +2044,29 @@ export function GeneratePage() {
                             <Download className="w-4 h-4" />
                             保存
                           </button>
-                          <button className="p-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg text-white hover:bg-white/30 transition-colors">
-                            <Heart className="w-4 h-4" />
+                          <button
+                            onClick={() => !isGenerating && handleGenerate()}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white/80 rounded-lg text-sm font-medium text-neutral-900 hover:bg-white transition-colors border border-neutral-200"
+                            disabled={isGenerating}
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                            再生成
+                          </button>
+                          <button
+                            onClick={() => {
+                              setFavoriteIds((prev) =>
+                                prev.includes(image.id)
+                                  ? prev.filter((id) => id !== image.id)
+                                  : [...prev, image.id]
+                              );
+                            }}
+                            className={`p-2 backdrop-blur-sm border rounded-lg transition-colors ${
+                              favoriteIds.includes(image.id)
+                                ? 'bg-white text-rose-500 border-rose-100'
+                                : 'bg-white/20 border-white/30 text-white hover:bg-white/30'
+                            }`}
+                          >
+                            <Heart className="w-4 h-4" fill={favoriteIds.includes(image.id) ? 'currentColor' : 'none'} />
                           </button>
                         </div>
                       </div>

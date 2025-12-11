@@ -62,17 +62,17 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
               relative w-full ${sizes[size]} 
               bg-white/90 dark:bg-surface-900/90 backdrop-blur-xl 
               rounded-3xl shadow-2xl border border-white/50 dark:border-surface-700
-              overflow-hidden flex flex-col max-h-[90vh]
+              overflow-hidden flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-4rem)]
             `}
           >
             {title && (
-              <div className="flex items-center justify-between px-8 py-6 border-b border-neutral-100/50 dark:border-white/10">
-                <h2 className="text-xl font-display font-semibold text-neutral-900 dark:text-white tracking-wide">
+              <div className="flex items-center justify-between px-6 py-4 sm:px-8 sm:py-6 border-b border-neutral-100/50 dark:border-white/10 shrink-0">
+                <h2 className="text-lg sm:text-xl font-display font-semibold text-neutral-900 dark:text-white tracking-wide truncate pr-4">
                   {title}
                 </h2>
                 <button
                   onClick={onClose}
-                  className="p-2 text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5 rounded-full transition-colors duration-300"
+                  className="p-2 text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5 rounded-full transition-colors duration-300 shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -80,7 +80,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             )}
             
             {/* Content Area - Scrollable if needed */}
-            <div className="p-8 overflow-y-auto scrollbar-hide">
+            <div className="p-5 sm:p-6 md:p-8 overflow-y-auto scrollbar-hide flex-1">
               {children}
             </div>
 

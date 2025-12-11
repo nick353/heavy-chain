@@ -121,9 +121,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden animate-scale-in">
+      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden animate-scale-in flex flex-col max-h-[calc(100dvh-2rem)]">
         {/* Header */}
-        <div className="relative h-40 bg-gradient-to-br from-primary-500 via-primary-600 to-accent-600 flex items-center justify-center">
+        <div className="relative h-40 bg-gradient-to-br from-primary-500 via-primary-600 to-accent-600 flex items-center justify-center shrink-0">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNC0xLjggNC00IDQtNC0xLjgtNC00eiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
           
           <button
@@ -141,7 +141,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         </div>
 
         {/* Progress */}
-        <div className="flex gap-1 px-6 -mt-2 relative z-10">
+        <div className="flex gap-1 px-6 -mt-2 relative z-10 shrink-0">
           {ONBOARDING_STEPS.map((s, i) => (
             <div
               key={s.id}
@@ -152,8 +152,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           ))}
         </div>
 
-        {/* Content */}
-        <div className="p-8">
+        {/* Content - Scrollable */}
+        <div className="p-6 sm:p-8 overflow-y-auto flex-1">
           <h2 className="text-2xl font-display font-bold text-neutral-900 mb-3">
             {step.title}
           </h2>
@@ -161,7 +161,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             {step.description}
           </p>
 
-          <div className="space-y-3 mb-8">
+          <div className="space-y-3 mb-4">
             {step.tips.map((tip, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -171,9 +171,12 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               </div>
             ))}
           </div>
+        </div>
 
+        {/* Footer - Fixed */}
+        <div className="p-6 sm:p-8 pt-0 bg-white shrink-0">
           {/* Navigation */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <button
               onClick={handleSkip}
               className="text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
@@ -203,13 +206,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               </Button>
             </div>
           </div>
-        </div>
 
-        {/* Step indicator */}
-        <div className="px-8 pb-6 text-center">
-          <span className="text-xs text-neutral-400">
-            {currentStep + 1} / {ONBOARDING_STEPS.length}
-          </span>
+          {/* Step indicator */}
+          <div className="text-center">
+            <span className="text-xs text-neutral-400">
+              {currentStep + 1} / {ONBOARDING_STEPS.length}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -238,8 +241,3 @@ export function useOnboarding() {
 
   return { showOnboarding, completeOnboarding, resetOnboarding };
 }
-
-
-
-
-
