@@ -29,6 +29,15 @@ export interface CanvasObject {
   derivedFrom?: string | null;
   // Label for display purposes
   label?: string;
+  // Generation metadata
+  metadata?: {
+    feature: string;        // 使用した機能 ('generate', 'remove-bg', 'colorize'等)
+    prompt?: string;        // プロンプト
+    parentId?: string;      // 親画像のID
+    generation: number;     // 世代数 (0=最初の生成, 1=1回派生...)
+    parameters?: any;       // 使用したパラメータ
+    timestamp?: string;     // 生成日時
+  };
 }
 
 export interface CanvasProject {

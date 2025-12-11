@@ -15,7 +15,12 @@ import {
   Unlock,
   Eye,
   EyeOff,
-  Group
+  Group,
+  Sparkles,
+  Grid3x3,
+  Users,
+  Globe,
+  Layout
 } from 'lucide-react';
 
 interface ContextMenuProps {
@@ -27,6 +32,7 @@ interface ContextMenuProps {
   isLocked?: boolean;
   isVisible?: boolean;
   hasMultipleSelected?: boolean;
+  objectType?: 'image' | 'text' | 'shape' | 'frame' | null;
 }
 
 export function ContextMenu({
@@ -38,6 +44,7 @@ export function ContextMenu({
   isLocked = false,
   isVisible = true,
   hasMultipleSelected = false,
+  objectType = null,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -120,13 +127,22 @@ interface MenuItem {
     ] : []),
 
     // AI Edit actions (for images only)
-    { type: 'header', label: 'AI編集' },
-    { id: 'editWithPrompt', label: 'プロンプトで編集', icon: Edit3 },
-    { id: 'removeBackground', label: '背景削除', icon: Scissors },
-    { id: 'colorVariations', label: 'カラバリ生成', icon: Palette },
-    { id: 'upscale', label: 'アップスケール', icon: Maximize2 },
-    { id: 'generateVariations', label: 'バリエーション生成', icon: RefreshCw },
-    { type: 'separator', label: '' },
+    ...(objectType === 'image' ? [
+      { type: 'header', label: 'AI編集' },
+      { id: 'editWithPrompt', label: 'プロンプトで編集', icon: Edit3 },
+      { id: 'removeBackground', label: '背景削除', icon: Scissors },
+      { id: 'colorVariations', label: 'カラバリ生成', icon: Palette },
+      { id: 'upscale', label: 'アップスケール', icon: Maximize2 },
+      { id: 'generateVariations', label: 'バリエーション生成', icon: RefreshCw },
+      { type: 'separator', label: '' },
+      { type: 'header', label: 'さらに生成' },
+      { id: 'designGacha', label: 'デザインガチャ', icon: Sparkles },
+      { id: 'productShots', label: '商品カット生成', icon: Grid3x3 },
+      { id: 'modelMatrix', label: 'モデルマトリクス', icon: Users },
+      { id: 'multilingualBanner', label: '多言語バナー', icon: Globe },
+      { id: 'sceneCoordinate', label: 'シーン別配置', icon: Layout },
+      { type: 'separator', label: '' },
+    ] as MenuItem[] : []),
 
     // Export
     { id: 'download', label: 'ダウンロード', icon: Download },

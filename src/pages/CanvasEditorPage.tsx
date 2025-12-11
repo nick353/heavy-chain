@@ -326,11 +326,11 @@ export function CanvasEditorPage() {
     });
   };
 
-  const addImageToCanvas = (imageUrl: string, label?: string) => {
+  const addImageToCanvas = (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
     const img = new window.Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      addObject({
+      const newId = addObject({
         type: 'image',
         x: 100 + Math.random() * 300,
         y: 100 + Math.random() * 200,
@@ -344,7 +344,14 @@ export function CanvasEditorPage() {
         visible: true,
         src: imageUrl,
         label,
+        derivedFrom: parentId || null,
+        metadata: metadata ? {
+          ...metadata,
+          timestamp: new Date().toISOString(),
+          parentId: parentId || undefined,
+        } : undefined,
       });
+      return newId;
     };
     img.src = imageUrl;
   };
@@ -372,7 +379,12 @@ export function CanvasEditorPage() {
           }));
           if (data?.variations) {
             data.variations.forEach((v: any) => {
-              addImageToCanvas(v.imageUrl, v.directionName);
+              addImageToCanvas(v.imageUrl, v.directionName, {
+                feature: 'design-gacha',
+                prompt: generatePrompt,
+                generation: 0,
+                parameters: { direction: v.directionName },
+              });
             });
             toast.success(`${data.variations.length}つのデザインを生成しました`);
           }
@@ -389,7 +401,12 @@ export function CanvasEditorPage() {
           }));
           if (data?.shots) {
             data.shots.forEach((s: any) => {
-              addImageToCanvas(s.imageUrl, s.shotName);
+              addImageToCanvas(s.imageUrl, s.shotName, {
+                feature: 'product-shots',
+                prompt: productDescription,
+                generation: 0,
+                parameters: { shotType: s.shotType },
+              });
             });
             toast.success('商品カット（4方向）を生成しました');
           }
@@ -411,7 +428,12 @@ export function CanvasEditorPage() {
           }));
           if (data?.matrix) {
             data.matrix.forEach((m: any) => {
-              addImageToCanvas(m.imageUrl, `${m.bodyTypeName} × ${m.ageGroupName}`);
+              addImageToCanvas(m.imageUrl, `${m.bodyTypeName} × ${m.ageGroupName}`, {
+                feature: 'model-matrix',
+                prompt: productDescription,
+                generation: 0,
+                parameters: { bodyType: m.bodyType, ageGroup: m.ageGroup },
+              });
             });
             toast.success(`${data.matrix.length}パターンのモデル画像を生成しました`);
           }
@@ -434,7 +456,12 @@ export function CanvasEditorPage() {
           }));
           if (data?.banners) {
             data.banners.forEach((b: any) => {
-              addImageToCanvas(b.imageUrl, b.languageName);
+              addImageToCanvas(b.imageUrl, b.languageName, {
+                feature: 'multilingual-banner',
+                prompt: headline,
+                generation: 0,
+                parameters: { language: b.language, subheadline },
+              });
             });
             toast.success(`${data.banners.length}言語のバナーを生成しました`);
           }
@@ -456,7 +483,11 @@ export function CanvasEditorPage() {
           }));
           if (data?.images && data.images.length > 0) {
             data.images.forEach((img: any) => {
-              addImageToCanvas(img.imageUrl);
+              addImageToCanvas(img.imageUrl, undefined, {
+                feature: 'generate-image',
+                prompt: generatePrompt,
+                generation: 0,
+              });
             });
             toast.success('画像を生成しました');
           }
@@ -477,17 +508,97 @@ export function CanvasEditorPage() {
     }
   };
 
-  // Floating toolbar action handler - now with real API calls
-  const handleFloatingAction = async (action: string) => {
-    if (!selectedObject || selectedObject.type !== 'image') {
-      toast.error('画像を選択してください');
+  // Context menu and floating toolbar action handler - now with real API calls
+  const handleContextAction = async (action: string, objectId: string | null) => {
+    // Handle canvas-level actions
+    if (!objectId) {
+      switch (action) {
+        case 'addImage':
+          document.getElementById('file-upload')?.click();
+          break;
+        case 'addText':
+          handleAddText();
+          break;
+        case 'selectAll':
+          useCanvasStore.getState().selectAll();
+          break;
+        case 'resetView':
+          setZoom(1);
+          setPan(0, 0);
+          toast.success('表示をリセットしました');
+          break;
+      }
       return;
     }
 
-    const imageSrc = (selectedObject as any).src;
-    if (!imageSrc) return;
+    const obj = objects.find(o => o.id === objectId);
+    if (!obj) return;
+
+    // Handle object-level actions
+    switch (action) {
+      case 'duplicate':
+        useCanvasStore.getState().duplicateSelected();
+        toast.success('複製しました');
+        break;
+      case 'delete':
+        useCanvasStore.getState().deleteObject(objectId);
+        toast.success('削除しました');
+        break;
+      case 'bringToFront':
+        useCanvasStore.getState().bringToFront(objectId);
+        break;
+      case 'sendToBack':
+        useCanvasStore.getState().sendToBack(objectId);
+        break;
+      case 'lock':
+        updateObject(objectId, { locked: true });
+        toast.success('ロックしました');
+        break;
+      case 'unlock':
+        updateObject(objectId, { locked: false });
+        toast.success('ロック解除しました');
+        break;
+      case 'hide':
+        updateObject(objectId, { visible: false });
+        toast.success('非表示にしました');
+        break;
+      case 'show':
+        updateObject(objectId, { visible: true });
+        toast.success('表示しました');
+        break;
+      case 'download':
+        if (obj.type === 'image' && obj.src) {
+          try {
+            const response = await fetch(obj.src);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${obj.label || 'image'}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            toast.success('ダウンロードしました');
+          } catch {
+            toast.error('ダウンロードに失敗しました');
+          }
+        }
+        break;
+    }
+
+    // Handle AI actions for images
+    if (obj.type !== 'image' || !obj.src) {
+      if (action.startsWith('edit') || action.startsWith('remove') || action.startsWith('color') || action.startsWith('upscale') || action.startsWith('generate') || action.startsWith('design') || action.startsWith('product') || action.startsWith('model') || action.startsWith('multilingual') || action.startsWith('scene')) {
+        toast.error('画像を選択してください');
+      }
+      return;
+    }
+
+    const imageSrc = obj.src;
 
     switch (action) {
+      case 'removeBackground':
       case 'remove-bg':
         toast.loading('背景削除を実行中...', { id: 'remove-bg' });
         try {
@@ -496,7 +607,11 @@ export function CanvasEditorPage() {
           });
           if (error) throw error;
           if (data?.resultUrl) {
-            addImageToCanvas(data.resultUrl, '背景削除');
+            addImageToCanvas(data.resultUrl, '背景削除', {
+              feature: 'remove-background',
+              parentId: objectId,
+              generation: (obj.metadata?.generation || 0) + 1,
+            }, objectId);
             toast.success('背景を削除しました', { id: 'remove-bg' });
           }
         } catch (err: any) {
@@ -504,6 +619,7 @@ export function CanvasEditorPage() {
         }
         break;
 
+      case 'colorVariations':
       case 'colorize':
         toast.loading('カラバリを生成中...', { id: 'colorize' });
         try {
@@ -513,7 +629,12 @@ export function CanvasEditorPage() {
           if (error) throw error;
           if (data?.variations) {
             data.variations.forEach((v: any) => {
-              addImageToCanvas(v.imageUrl, v.colorName);
+              addImageToCanvas(v.imageUrl, v.colorName, {
+                feature: 'colorize',
+                parentId: objectId,
+                generation: (obj.metadata?.generation || 0) + 1,
+                parameters: { color: v.colorName },
+              }, objectId);
             });
             toast.success('カラバリを生成しました', { id: 'colorize' });
           }
@@ -955,6 +1076,7 @@ export function CanvasEditorPage() {
                   width={canvasSize.width}
                   height={canvasSize.height}
                   onObjectSelect={handleObjectSelect}
+                  onContextAction={handleContextAction}
                 />
                 
                 {selectedObject && (
