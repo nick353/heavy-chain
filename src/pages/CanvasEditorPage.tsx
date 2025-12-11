@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -128,6 +128,23 @@ export function CanvasEditorPage() {
     ? objects.find((obj) => obj.id === selectedIds[0]) || null
     : null;
 
+  // コンテナリサイズを確実に検知（サイドパネル開閉時も）
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        setCanvasSize({ width, height });
+      }
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // フォールバックとして window リサイズ & サイドパネル切替時にも計測
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
@@ -140,9 +157,7 @@ export function CanvasEditorPage() {
     };
 
     updateSize();
-    // サイドパネルのアニメーション完了後にもサイズを更新
     const timeoutId = setTimeout(updateSize, 350);
-    
     window.addEventListener('resize', updateSize);
     return () => {
       window.removeEventListener('resize', updateSize);
