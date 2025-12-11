@@ -95,6 +95,9 @@ export function CanvasEditorPage() {
     addObject,
     undo,
     redo,
+    setZoom,
+    setPan,
+    updateObject,
     currentProjectId,
     currentProjectName,
     projects,
@@ -702,6 +705,15 @@ export function CanvasEditorPage() {
 
       default:
         break;
+    }
+  };
+
+  // Keep compatibility with FloatingToolbar actions
+  const handleFloatingAction = (action: string) => {
+    if (selectedObject) {
+      handleContextAction(action, selectedObject.id);
+    } else {
+      handleContextAction(action, null);
     }
   };
 

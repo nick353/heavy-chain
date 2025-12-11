@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { Stage, Layer, Rect, Image as KonvaImage, Text, Transformer, Line, Circle } from 'react-konva';
 import type Konva from 'konva';
 import { useCanvasStore, type CanvasObject } from '../../stores/canvasStore';
@@ -297,7 +297,7 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction 
 
   // Render derivation connections
   const renderDerivationLines = () => {
-    const lines: JSX.Element[] = [];
+    const lines: React.ReactNode[] = [];
     
     objects.forEach((obj) => {
       if (obj.derivedFrom) {
