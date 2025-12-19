@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, Check, Sparkles, Image, Users, AlertCircle, ChevronRight } from 'lucide-react';
+import { Bell, X, Check, Sparkles, AlertCircle, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
 

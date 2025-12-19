@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Cloud, CloudOff, Check, Loader2, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -104,7 +104,7 @@ export function useAutoSave<T>(
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const previousDataRef = useRef<string>('');
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Track online/offline status
   useEffect(() => {

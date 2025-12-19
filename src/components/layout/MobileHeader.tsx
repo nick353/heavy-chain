@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Bell, Moon, Sun } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { HeavyChainLogo } from '../icons';
-import clsx from 'clsx';
 
 interface MobileHeaderProps {
   onMenuToggle: () => void;
@@ -13,9 +12,9 @@ interface MobileHeaderProps {
 
 export function MobileHeader({ onMenuToggle, isMenuOpen }: MobileHeaderProps) {
   const location = useLocation();
-  const { profile, currentBrand } = useAuthStore();
+  const { profile } = useAuthStore();
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [hasNotifications, setHasNotifications] = useState(true); // Demo
+  const [hasNotifications] = useState(true); // Demo
 
   useEffect(() => {
     const saved = localStorage.getItem('darkMode');

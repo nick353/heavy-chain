@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, ShoppingBag, Camera, Palette, Globe, Zap } from 'lucide-react';
+import { ArrowRight, ShoppingBag, Camera, Palette, Globe, Zap } from 'lucide-react';
 
 interface Workflow {
   id: string;

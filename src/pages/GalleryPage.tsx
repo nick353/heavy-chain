@@ -56,30 +56,6 @@ export function GalleryPage() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeydown = (e: KeyboardEvent) => {
-      if (!selectedImage) return;
-      
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        navigateImage('prev');
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        navigateImage('next');
-      } else if (e.key === 'Escape') {
-        setSelectedImage(null);
-        setSearchParams({});
-      } else if (e.key === 'f' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        handleToggleFavorite(selectedImage);
-      }
-    };
-    
-    document.addEventListener('keydown', handleKeydown);
-    return () => document.removeEventListener('keydown', handleKeydown);
-  }, [selectedImage, filteredImages]);
-
   useEffect(() => {
     if (currentBrand) {
       fetchImages();
@@ -335,6 +311,30 @@ export function GalleryPage() {
       return false;
     });
   }, [images, searchQuery]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (!selectedImage) return;
+      
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        navigateImage('prev');
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        navigateImage('next');
+      } else if (e.key === 'Escape') {
+        setSelectedImage(null);
+        setSearchParams({});
+      } else if (e.key === 'f' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        handleToggleFavorite(selectedImage);
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeydown);
+    return () => document.removeEventListener('keydown', handleKeydown);
+  }, [selectedImage, filteredImages]);
 
   if (isLoading) {
     return (

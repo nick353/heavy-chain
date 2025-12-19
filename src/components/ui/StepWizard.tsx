@@ -1,4 +1,5 @@
-import { useState, createContext, useContext, ReactNode } from 'react';
+import { useState, createContext, useContext } from 'react';
+import type { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ChevronRight, ChevronLeft } from 'lucide-react';
 import clsx from 'clsx';
