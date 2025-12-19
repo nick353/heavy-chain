@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Layers, Chrome } from 'lucide-react';
-import { Button, Input } from '../components/ui';
+import { Button, Input, PasswordStrengthMeter } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -164,16 +164,19 @@ export function SignupPage() {
               disabled={isLoading}
               className="bg-white/50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
             />
-            <Input
-              type="password"
-              label="パスワード"
-              placeholder="8文字以上"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              error={errors.password}
-              disabled={isLoading}
-              className="bg-white/50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
-            />
+            <div className="space-y-2">
+              <Input
+                type="password"
+                label="パスワード"
+                placeholder="8文字以上"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                error={errors.password}
+                disabled={isLoading}
+                className="bg-white/50 dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-700 focus:ring-primary-500"
+              />
+              <PasswordStrengthMeter password={password} />
+            </div>
             <Input
               type="password"
               label="パスワード（確認）"

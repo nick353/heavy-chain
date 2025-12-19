@@ -120,28 +120,28 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden animate-scale-in flex flex-col max-h-[calc(100dvh-2rem)]">
-        {/* Header */}
-        <div className="relative h-40 bg-gradient-to-br from-primary-500 via-primary-600 to-accent-600 flex items-center justify-center shrink-0">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="w-full max-w-2xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden animate-scale-in flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)]">
+        {/* Header - Responsive height */}
+        <div className="relative h-24 sm:h-32 md:h-40 bg-gradient-to-br from-primary-500 via-primary-600 to-accent-600 flex items-center justify-center shrink-0">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNC0xLjggNC00IDQtNC0xLjgtNC00eiIvPjwvZz48L2c+PC9zdmc+')] opacity-30" />
           
           <button
             onClick={handleSkip}
-            className="absolute top-4 right-4 p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="absolute top-2 right-2 sm:top-4 sm:right-4 p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           <div className="relative z-10 text-center">
-            <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 backdrop-blur-sm">
-              <step.icon className="w-10 h-10 text-white" />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white/20 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-2 sm:mb-3 backdrop-blur-sm">
+              <step.icon className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 text-white" />
             </div>
           </div>
         </div>
 
         {/* Progress */}
-        <div className="flex gap-1 px-6 -mt-2 relative z-10 shrink-0">
+        <div className="flex gap-1 px-4 sm:px-6 -mt-1 sm:-mt-2 relative z-10 shrink-0">
           {ONBOARDING_STEPS.map((s, i) => (
             <div
               key={s.id}
@@ -153,54 +153,54 @@ export function Onboarding({ onComplete }: OnboardingProps) {
         </div>
 
         {/* Content - Scrollable */}
-        <div className="p-6 sm:p-8 overflow-y-auto flex-1">
-          <h2 className="text-2xl font-display font-bold text-neutral-900 mb-3">
+        <div className="p-4 sm:p-6 md:p-8 overflow-y-auto flex-1 min-h-0">
+          <h2 className="text-lg sm:text-xl md:text-2xl font-display font-bold text-neutral-900 mb-2 sm:mb-3">
             {step.title}
           </h2>
-          <p className="text-neutral-600 mb-6">
+          <p className="text-sm sm:text-base text-neutral-600 mb-4 sm:mb-6">
             {step.description}
           </p>
 
-          <div className="space-y-3 mb-4">
+          <div className="space-y-2 sm:space-y-3 mb-2 sm:mb-4">
             {step.tips.map((tip, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Check className="w-3 h-3 text-primary-600" />
+              <div key={i} className="flex items-start gap-2 sm:gap-3">
+                <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-primary-600" />
                 </div>
-                <p className="text-sm text-neutral-700">{tip}</p>
+                <p className="text-xs sm:text-sm text-neutral-700">{tip}</p>
               </div>
             ))}
           </div>
         </div>
 
         {/* Footer - Fixed */}
-        <div className="p-6 sm:p-8 pt-0 bg-white shrink-0">
+        <div className="p-3 sm:p-4 md:p-6 pt-2 sm:pt-3 bg-white border-t border-neutral-100 shrink-0">
           {/* Navigation */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
             <button
               onClick={handleSkip}
-              className="text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
+              className="text-xs sm:text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
             >
               スキップ
             </button>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {!isFirstStep && (
-                <Button variant="secondary" onClick={handlePrev}>
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  戻る
+                <Button variant="secondary" size="sm" onClick={handlePrev} className="px-2 sm:px-3">
+                  <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4 mr-0.5 sm:mr-1" />
+                  <span className="hidden sm:inline">戻る</span>
                 </Button>
               )}
-              <Button onClick={handleNext}>
+              <Button onClick={handleNext} size="sm" className="px-3 sm:px-4">
                 {isLastStep ? (
                   <>
-                    始める
-                    <Sparkles className="w-4 h-4 ml-1" />
+                    <span className="text-sm">始める</span>
+                    <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
                   </>
                 ) : (
                   <>
-                    次へ
-                    <ChevronRight className="w-4 h-4 ml-1" />
+                    <span className="text-sm">次へ</span>
+                    <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 ml-0.5 sm:ml-1" />
                   </>
                 )}
               </Button>
@@ -209,7 +209,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
           {/* Step indicator */}
           <div className="text-center">
-            <span className="text-xs text-neutral-400">
+            <span className="text-[10px] sm:text-xs text-neutral-400">
               {currentStep + 1} / {ONBOARDING_STEPS.length}
             </span>
           </div>

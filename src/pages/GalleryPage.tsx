@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { 
   Image, 
@@ -7,7 +7,6 @@ import {
   X,
   Grid,
   LayoutGrid,
-  Search,
   ChevronLeft,
   ChevronRight,
   Edit3,
@@ -18,11 +17,15 @@ import {
   Wand2,
   CheckSquare,
   Square,
-  DownloadCloud
+  DownloadCloud,
+  Copy,
+  Sparkles,
+  Tag,
+  FileText
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
-import { Button } from '../components/ui';
+import { Button, SearchInput } from '../components/ui';
 import type { GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,6 +49,36 @@ export function GalleryPage() {
   // Multi-select mode
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  
+  // Recent searches
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    const saved = localStorage.getItem('gallery_recent_searches');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (!selectedImage) return;
+      
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        navigateImage('prev');
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        navigateImage('next');
+      } else if (e.key === 'Escape') {
+        setSelectedImage(null);
+        setSearchParams({});
+      } else if (e.key === 'f' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        handleToggleFavorite(selectedImage);
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeydown);
+    return () => document.removeEventListener('keydown', handleKeydown);
+  }, [selectedImage, filteredImages]);
 
   useEffect(() => {
     if (currentBrand) {
@@ -254,15 +287,54 @@ export function GalleryPage() {
     setSelectedIds(new Set());
   };
 
-  const filteredImages = images.filter(image => {
-    if (!searchQuery) return true;
-    // Search in any available metadata
+  // Save search to recent searches
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim() && !recentSearches.includes(query.trim())) {
+      const newRecent = [query.trim(), ...recentSearches.slice(0, 9)];
+      setRecentSearches(newRecent);
+      localStorage.setItem('gallery_recent_searches', JSON.stringify(newRecent));
+    }
+  };
+
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+    localStorage.removeItem('gallery_recent_searches');
+  };
+
+  // Copy prompt to clipboard
+  const copyPrompt = (prompt: string) => {
+    navigator.clipboard.writeText(prompt);
+    toast.success('プロンプトをコピーしました');
+  };
+
+  // Get unique feature types for suggestions
+  const featureSuggestions = useMemo(() => {
+    const features = new Set<string>();
+    images.forEach(img => {
+      if (img.feature_type) features.add(img.feature_type);
+    });
+    return Array.from(features);
+  }, [images]);
+
+  const filteredImages = useMemo(() => {
+    if (!searchQuery) return images;
+    
     const searchLower = searchQuery.toLowerCase();
-    return (
-      image.id.toLowerCase().includes(searchLower) ||
-      image.storage_path.toLowerCase().includes(searchLower)
-    );
-  });
+    return images.filter(image => {
+      // Search in prompt
+      if (image.prompt?.toLowerCase().includes(searchLower)) return true;
+      // Search in feature type
+      if (image.feature_type?.toLowerCase().includes(searchLower)) return true;
+      // Search in style preset
+      if (image.style_preset?.toLowerCase().includes(searchLower)) return true;
+      // Search in ID
+      if (image.id.toLowerCase().includes(searchLower)) return true;
+      // Search in storage path (fallback)
+      if (image.storage_path.toLowerCase().includes(searchLower)) return true;
+      return false;
+    });
+  }, [images, searchQuery]);
 
   if (isLoading) {
     return (
@@ -291,17 +363,17 @@ export function GalleryPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-              <input
-                type="text"
-                placeholder="検索..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-48 transition-all"
-              />
-            </div>
+            {/* Enhanced Search */}
+            <SearchInput
+              value={searchQuery}
+              onChange={handleSearch}
+              placeholder="プロンプトで検索..."
+              recentSearches={recentSearches}
+              suggestions={featureSuggestions}
+              onClearRecent={clearRecentSearches}
+              showAIHint={true}
+              className="w-48 sm:w-64"
+            />
 
             {/* Grid Size Toggle */}
             <div className="flex items-center bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200 dark:border-neutral-700 rounded-lg p-1">
@@ -559,17 +631,54 @@ export function GalleryPage() {
             >
               <h3 className="text-white font-semibold mb-6 text-lg border-b border-white/10 pb-4">画像の詳細</h3>
               
-              {/* Info */}
+              {/* Metadata */}
               <div className="space-y-4 mb-8">
                 <div className="flex items-center gap-3 text-sm text-white/80">
                   <Clock className="w-4 h-4" />
                   <span>{new Date(selectedImage.created_at).toLocaleString('ja-JP')}</span>
                 </div>
+                
+                {selectedImage.feature_type && (
+                  <div className="flex items-center gap-3 text-sm text-white/80">
+                    <Sparkles className="w-4 h-4" />
+                    <span>{selectedImage.feature_type}</span>
+                  </div>
+                )}
+                
+                {selectedImage.style_preset && (
+                  <div className="flex items-center gap-3 text-sm text-white/80">
+                    <Tag className="w-4 h-4" />
+                    <span>{selectedImage.style_preset}</span>
+                  </div>
+                )}
+                
                 <div className="flex items-center gap-3 text-sm text-white/80">
                   <Info className="w-4 h-4" />
                   <span className="font-mono">ID: {selectedImage.id.slice(0, 8)}</span>
                 </div>
               </div>
+
+              {/* Prompt Display */}
+              {selectedImage.prompt && (
+                <div className="mb-8">
+                  <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <FileText className="w-3 h-3" />
+                    プロンプト
+                  </h4>
+                  <div className="relative group">
+                    <p className="text-sm text-white/80 bg-white/5 rounded-xl p-4 leading-relaxed">
+                      {selectedImage.prompt}
+                    </p>
+                    <button
+                      onClick={() => copyPrompt(selectedImage.prompt!)}
+                      className="absolute top-2 right-2 p-2 rounded-lg bg-white/10 hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-all"
+                      title="プロンプトをコピー"
+                    >
+                      <Copy className="w-4 h-4 text-white/70" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Quick Actions */}
               <div className="space-y-3 mb-8">

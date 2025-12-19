@@ -53,7 +53,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
           />
 
           {/* Modal Container - Centers content properly */}
-          <div className="min-h-full flex items-center justify-center p-4 sm:p-6">
+          <div className="min-h-full flex items-center justify-center p-2 sm:p-4 md:p-6">
             {/* Modal Content */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -63,26 +63,26 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
               className={`
                 relative w-full ${sizes[size]} 
                 bg-white/90 dark:bg-surface-900/90 backdrop-blur-xl 
-                rounded-3xl shadow-2xl border border-white/50 dark:border-surface-700
-                overflow-hidden flex flex-col max-h-[85vh] my-auto
+                rounded-2xl sm:rounded-3xl shadow-2xl border border-white/50 dark:border-surface-700
+                overflow-hidden flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[calc(100dvh-4rem)] my-auto
               `}
             >
               {title && (
-                <div className="flex items-center justify-between px-6 sm:px-8 py-4 sm:py-6 border-b border-neutral-100/50 dark:border-white/10 flex-shrink-0">
-                  <h2 className="text-lg sm:text-xl font-display font-semibold text-neutral-900 dark:text-white tracking-wide">
+                <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 border-b border-neutral-100/50 dark:border-white/10 flex-shrink-0">
+                  <h2 className="text-base sm:text-lg md:text-xl font-display font-semibold text-neutral-900 dark:text-white tracking-wide truncate pr-4">
                     {title}
                   </h2>
                   <button
                     onClick={onClose}
-                    className="p-2 text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5 rounded-full transition-colors duration-300"
+                    className="p-1.5 sm:p-2 text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5 rounded-full transition-colors duration-300 flex-shrink-0"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 </div>
               )}
               
               {/* Content Area - Scrollable if needed */}
-              <div className="p-6 sm:p-8 overflow-y-auto scrollbar-hide flex-1">
+              <div className="p-4 sm:p-5 md:p-6 lg:p-8 overflow-y-auto scrollbar-hide flex-1 min-h-0">
                 {children}
               </div>
 

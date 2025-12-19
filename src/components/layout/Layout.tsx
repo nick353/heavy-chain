@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
+import { MobileNav } from './MobileNav';
+import { MobileHeader } from './MobileHeader';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import { FeedbackButton } from '../ui/FeedbackForm';
+import { SkipLink, KeyboardShortcuts, defaultShortcuts } from '../ui';
 
 export function Layout() {
   const { user } = useAuthStore();
@@ -45,6 +48,12 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950 text-neutral-800 dark:text-neutral-100 font-sans transition-colors duration-700 overflow-x-hidden selection:bg-primary-200 selection:text-primary-900">
+      {/* Skip Link for Accessibility */}
+      <SkipLink />
+      
+      {/* Keyboard Shortcuts Help */}
+      {showSidebar && <KeyboardShortcuts shortcuts={defaultShortcuts} />}
+      
       {/* Grainy Texture Overlay for Film Look */}
       <div className="grain-overlay" />
 
@@ -57,19 +66,11 @@ export function Layout() {
 
       {showSidebar ? (
         <div className="flex min-h-screen relative z-10">
-          {/* Mobile Menu Button */}
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="lg:hidden fixed top-4 left-4 z-[60] p-3 rounded-xl bg-white/80 dark:bg-surface-900/80 backdrop-blur-md shadow-soft border border-white/50 dark:border-surface-700 hover:shadow-glow transition-all duration-300"
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6 text-neutral-700 dark:text-neutral-300" />
-            ) : (
-              <Menu className="w-6 h-6 text-neutral-700 dark:text-neutral-300" />
-            )}
-          </motion.button>
+          {/* Mobile Header */}
+          <MobileHeader
+            isMenuOpen={isMobileMenuOpen}
+            onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          />
 
           {/* Mobile Overlay */}
           <AnimatePresence>
@@ -90,7 +91,7 @@ export function Layout() {
             <Sidebar />
           </div>
           
-          {/* Mobile Sidebar */}
+          {/* Mobile Sidebar Drawer */}
           <AnimatePresence>
             {isMobileMenuOpen && (
               <motion.div
@@ -105,7 +106,7 @@ export function Layout() {
             )}
           </AnimatePresence>
 
-          <main className="flex-1 w-full min-w-0 p-4 pt-20 lg:pt-8 lg:p-10 transition-all duration-500 relative perspective-1000">
+          <main id="main-content" className="flex-1 w-full min-w-0 p-4 pt-16 pb-20 lg:pt-8 lg:pb-10 lg:p-10 transition-all duration-500 relative perspective-1000" tabIndex={-1}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
@@ -119,13 +120,19 @@ export function Layout() {
               </motion.div>
             </AnimatePresence>
           </main>
+
+          {/* Mobile Bottom Navigation */}
+          <MobileNav />
+
+          {/* Feedback Button */}
+          <FeedbackButton />
         </div>
       ) : (
         <>
           <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'glass-nav py-2' : 'bg-transparent py-4'}`}>
             <Header />
           </div>
-          <main className="pt-20 min-h-screen">
+          <main id="main-content" className="pt-20 min-h-screen" tabIndex={-1}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}

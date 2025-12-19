@@ -150,6 +150,12 @@ export interface Database {
           is_favorite: boolean
           created_at: string
           expires_at: string
+          // Metadata fields
+          prompt: string | null
+          negative_prompt: string | null
+          feature_type: string | null
+          style_preset: string | null
+          metadata: Json | null
         }
         Insert: {
           id?: string
@@ -163,6 +169,11 @@ export interface Database {
           is_favorite?: boolean
           created_at?: string
           expires_at?: string
+          prompt?: string | null
+          negative_prompt?: string | null
+          feature_type?: string | null
+          style_preset?: string | null
+          metadata?: Json | null
         }
         Update: {
           id?: string
@@ -176,6 +187,11 @@ export interface Database {
           is_favorite?: boolean
           created_at?: string
           expires_at?: string
+          prompt?: string | null
+          negative_prompt?: string | null
+          feature_type?: string | null
+          style_preset?: string | null
+          metadata?: Json | null
         }
       }
       folders: {
@@ -270,6 +286,27 @@ export type GenerationJob = Database['public']['Tables']['generation_jobs']['Row
 export type GeneratedImage = Database['public']['Tables']['generated_images']['Row']
 export type Folder = Database['public']['Tables']['folders']['Row']
 export type Tag = Database['public']['Tables']['tags']['Row']
+
+// Extended types with metadata
+export interface ImageMetadata {
+  prompt?: string
+  negativePrompt?: string
+  featureType?: string
+  stylePreset?: string
+  aspectRatio?: string
+  width?: number
+  height?: number
+  referenceImageId?: string
+  tags?: string[]
+  colors?: string[]
+  generationParams?: Record<string, unknown>
+}
+
+export interface GeneratedImageWithMeta extends GeneratedImage {
+  tags?: Tag[]
+  folders?: Folder[]
+  parsedMetadata?: ImageMetadata
+}
 
 
 

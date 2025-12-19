@@ -144,7 +144,8 @@ export function CanvasEditorPage() {
     return () => observer.disconnect();
   }, []);
 
-  // フォールバックとして window リサイズ & サイドパネル切替時にも計測
+  // フォールバックとして window リサイズ時にも計測
+  // サイドパネルはfixed positionなので、開閉時にはサイズ計算不要
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current) {
@@ -157,13 +158,11 @@ export function CanvasEditorPage() {
     };
 
     updateSize();
-    const timeoutId = setTimeout(updateSize, 350);
     window.addEventListener('resize', updateSize);
     return () => {
       window.removeEventListener('resize', updateSize);
-      clearTimeout(timeoutId);
     };
-  }, [sidePanel]);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1093,8 +1092,9 @@ export function CanvasEditorPage() {
           </div>
 
           <div ref={containerRef} className="flex-1 relative bg-neutral-50/50 dark:bg-neutral-950/50">
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(200,200,200,0.1)_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-[radial-gradient(circle_at_center,rgba(50,50,50,0.3)_1px,transparent_1px)]" />
+            {/* 背景パターン - position:fixedで固定し、サイドパネル開閉時に動かない */}
+            <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(200,200,200,0.1)_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-[radial-gradient(circle_at_center,rgba(50,50,50,0.3)_1px,transparent_1px)]" />
             </div>
 
             {viewMode === 'canvas' ? (
@@ -1131,7 +1131,7 @@ export function CanvasEditorPage() {
         </main>
 
         {/* Right sidebar - overlay on mobile, panel on desktop */}
-        <AnimatePresence>
+        <AnimatePresence mode="sync">
           {sidePanel && (
             <>
               {/* Mobile overlay backdrop */}
@@ -1139,6 +1139,7 @@ export function CanvasEditorPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
                 onClick={() => setSidePanel(null)}
                 className="md:hidden fixed inset-0 bg-black/50 z-20"
               />
@@ -1146,8 +1147,8 @@ export function CanvasEditorPage() {
                 initial={{ x: '100%', opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: '100%', opacity: 0 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="fixed md:relative right-0 top-0 bottom-0 w-[85vw] max-w-[320px] md:w-80 glass-panel border-l border-white/20 dark:border-white/5 flex flex-col overflow-hidden z-30 md:z-10"
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="fixed right-0 top-12 sm:top-14 bottom-0 w-[85vw] max-w-[320px] md:w-80 glass-panel border-l border-white/20 dark:border-white/5 flex flex-col overflow-hidden z-30"
               >
                 <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b border-neutral-100 dark:border-neutral-800">
                   <h2 className="font-semibold text-sm sm:text-base text-neutral-800 dark:text-white">
