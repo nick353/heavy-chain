@@ -80,7 +80,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             )}
             
             {/* Content Area - Scrollable if needed */}
-            <div className="p-4 sm:p-5 md:p-6 lg:p-8 overflow-y-auto scrollbar-hide flex-1 min-h-0">
+            <div className="p-4 sm:p-5 md:p-6 lg:p-8 overflow-y-auto flex-1 min-h-0">
               {children}
             </div>
 
