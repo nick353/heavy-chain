@@ -14,6 +14,90 @@ const SHOT_TYPES = [
   { id: '45deg', name: '斜め45度', angle: '45 degree angle, three-quarter view' },
 ];
 
+// 画像をBase64にエンコード
+async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; mimeType: string }> {
+  console.log('📷 Fetching image from URL:', imageUrl);
+  const response = await fetch(imageUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.status}`);
+  }
+  
+  const contentType = response.headers.get('content-type') || 'image/jpeg';
+  const arrayBuffer = await response.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+  
+  console.log('✅ Image fetched successfully, size:', arrayBuffer.byteLength, 'bytes');
+  return { base64, mimeType: contentType };
+}
+
+// Gemini 2.0で画像を分析
+async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string): Promise<string> {
+  console.log('🔍 Analyzing image with Gemini 2.0 Flash...');
+  
+  // Try multiple model versions for compatibility
+  const models = [
+    'gemini-2.0-flash-exp',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-pro-latest'
+  ];
+  
+  let lastError = null;
+  
+  for (const model of models) {
+    console.log(`🔄 Trying model: ${model}`);
+    
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                {
+                  text: 'Describe this fashion product image in detail for AI image regeneration. Include: exact item type (shirt, dress, pants, etc.), primary and secondary colors, material texture (cotton, silk, leather, etc.), style (casual, formal, vintage, etc.), key design features (buttons, zippers, patterns, prints), and overall aesthetic. Be specific and concise. Output only the English description.'
+                },
+                {
+                  inlineData: {
+                    mimeType: mimeType,
+                    data: base64
+                  }
+                }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 500
+            }
+          }),
+        }
+      );
+      
+      const data = await response.json();
+      console.log(`📊 ${model} response status:`, response.status);
+      
+      if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const description = data.candidates[0].content.parts[0].text;
+        console.log('✅ Image analysis successful with', model);
+        console.log('📝 Description:', description);
+        return description;
+      }
+      
+      // Log error but continue to next model
+      console.log(`⚠️ ${model} failed:`, JSON.stringify(data));
+      lastError = data;
+      
+    } catch (e) {
+      console.log(`⚠️ ${model} exception:`, e.message);
+      lastError = e;
+    }
+  }
+  
+  // All models failed
+  throw new Error(`画像分析に失敗しました: ${JSON.stringify(lastError)}`);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -38,101 +122,40 @@ serve(async (req) => {
     const body = await req.json();
     console.log('📥 Received request body:', JSON.stringify(body, null, 2));
     
-    const { productDescription, brandId, shots = ['front', 'side', 'back', 'detail'], imageUrl, referenceImage } = body;
+    let { productDescription, brandId, imageUrl, shots = ['front', 'side', 'back', 'detail'] } = body;
 
     // Validate required parameters
     if (!brandId) {
       console.error('❌ Missing brandId');
       throw new Error('ブランドIDが指定されていません');
     }
-    
-    // Either productDescription or imageUrl/referenceImage is required
-    const hasDescription = productDescription && productDescription.trim() !== '';
-    const hasImage = imageUrl || referenceImage;
-    
-    if (!hasDescription && !hasImage) {
-      console.error('❌ Missing both productDescription and image');
-      throw new Error('商品説明または商品画像を入力してください');
-    }
-    
-    console.log('✅ Parameters validated:', { 
-      hasDescription, 
-      hasImage, 
-      productDescription: hasDescription ? productDescription : 'will analyze from image',
-      brandId, 
-      shots 
-    });
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
       throw new Error('Gemini API key not configured');
     }
 
-    // If no description but has image, analyze the image first
-    let finalDescription = productDescription;
-    if (!hasDescription && hasImage) {
-      console.log('🔍 Analyzing product image with Gemini...');
-      const imageToAnalyze = imageUrl || referenceImage;
-      
+    // 画像分析: 商品説明がない場合、画像から分析
+    let finalDescription = productDescription?.trim() || '';
+    
+    if (!finalDescription && imageUrl) {
+      console.log('🖼️ No product description provided, analyzing uploaded image...');
       try {
-        // First, fetch the image and convert to base64
-        const imageResponse = await fetch(imageToAnalyze);
-        if (!imageResponse.ok) {
-          throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
-        }
-        
-        const imageBuffer = await imageResponse.arrayBuffer();
-        const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
-        
-        // Use Gemini 1.5 Flash to analyze the image
-        const analysisResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [
-                  { text: 'Describe this fashion product in detail for product photography. Include: item type, color, material, style, key features. Be concise but specific. Focus on visual details that would be important for e-commerce product shots.' },
-                  {
-                    inlineData: {
-                      mimeType: 'image/jpeg',
-                      data: base64Image
-                    }
-                  }
-                ]
-              }],
-              generationConfig: { 
-                temperature: 0.4,
-                maxOutputTokens: 200
-              }
-            }),
-          }
-        );
-
-        if (!analysisResponse.ok) {
-          const errorText = await analysisResponse.text();
-          console.error('❌ Gemini API error:', errorText);
-          throw new Error(`Gemini API error: ${analysisResponse.status}`);
-        }
-
-        const analysisData = await analysisResponse.json();
-        console.log('📄 Gemini response:', JSON.stringify(analysisData, null, 2));
-        
-        if (analysisData.candidates?.[0]?.content?.parts?.[0]?.text) {
-          finalDescription = analysisData.candidates[0].content.parts[0].text.trim();
-          console.log('✅ Image analysis complete:', finalDescription);
-        } else {
-          console.error('❌ No text in Gemini response');
-          throw new Error('画像の分析結果が取得できませんでした');
-        }
+        const { base64, mimeType } = await fetchImageAsBase64(imageUrl);
+        finalDescription = await analyzeImageWithGemini(base64, mimeType, GEMINI_API_KEY);
       } catch (e) {
-        console.error('❌ Image analysis error:', e);
-        throw new Error('画像の分析中にエラーが発生しました: ' + e.message + '. 商品説明を入力してお試しください。');
+        console.error('❌ Image analysis failed:', e);
+        throw new Error(`画像分析エラー: ${e.message}. 商品説明を手動で入力してください。`);
       }
     }
     
-    console.log('🎨 Generating product shots with description:', finalDescription);
+    if (!finalDescription) {
+      console.error('❌ No description available');
+      throw new Error('商品説明を入力するか、商品画像をアップロードしてください。');
+    }
+    
+    console.log('✅ Using description:', finalDescription);
+    console.log('🎨 Generating', shots.length, 'product shots...');
 
     const selectedShots = SHOT_TYPES.filter(s => shots.includes(s.id));
     const results = [];
@@ -140,29 +163,34 @@ serve(async (req) => {
     for (const shot of selectedShots) {
       const prompt = `${finalDescription}, ${shot.angle}, professional product photography, clean white background, studio lighting, e-commerce ready, high resolution, commercial quality`;
 
-      // Generate with Gemini
+      console.log(`📸 Generating ${shot.name} (${shot.id})...`);
+
+      // Generate with Gemini Image Model
       const generateResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseModalities: ["IMAGE", "TEXT"] }
+            generationConfig: { 
+              responseModalities: ["IMAGE", "TEXT"],
+              temperature: 0.8
+            }
           }),
         }
       );
 
-      if (generateResponse.ok) {
-        const data = await generateResponse.json();
+      const generateData = await generateResponse.json();
+      console.log(`📊 Generation response for ${shot.id}:`, generateResponse.status);
+
+      if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
         let imageBase64 = null;
         
-        if (data.candidates?.[0]?.content?.parts) {
-          for (const part of data.candidates[0].content.parts) {
-            if (part.inlineData?.data) {
-              imageBase64 = part.inlineData.data;
-              break;
-            }
+        for (const part of generateData.candidates[0].content.parts) {
+          if (part.inlineData?.data) {
+            imageBase64 = part.inlineData.data;
+            break;
           }
         }
 
@@ -185,7 +213,7 @@ serve(async (req) => {
             user_id: user.id,
             storage_path: fileName,
             prompt,
-            model_used: 'gemini-2.5-flash-image',
+            model_used: 'gemini-2.0-flash-exp-image-generation',
             generation_params: { shotType: shot.id, productDescription: finalDescription },
           });
 
@@ -195,8 +223,18 @@ serve(async (req) => {
             imageUrl: urlData.publicUrl,
             storagePath: fileName,
           });
+          
+          console.log(`✅ ${shot.name} generated successfully`);
+        } else {
+          console.log(`⚠️ No image data in response for ${shot.id}`);
         }
+      } else {
+        console.log(`⚠️ Generation failed for ${shot.id}:`, JSON.stringify(generateData));
       }
+    }
+
+    if (results.length === 0) {
+      throw new Error('画像の生成に失敗しました。しばらく待ってからもう一度お試しください。');
     }
 
     await supabaseClient.from('api_usage_logs').insert({
@@ -207,18 +245,20 @@ serve(async (req) => {
       cost_usd: 0, // Gemini free tier
     });
 
+    console.log(`🎉 Successfully generated ${results.length}/${selectedShots.length} shots`);
+
     return new Response(
       JSON.stringify({
         success: true,
         productDescription: finalDescription,
-        analyzedFromImage: !hasDescription && hasImage,
         shots: results,
+        analyzedFromImage: !productDescription?.trim() && !!imageUrl,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('❌ Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
