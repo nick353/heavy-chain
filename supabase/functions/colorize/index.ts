@@ -6,6 +6,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// 画像をBase64に変換
+async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; mimeType: string }> {
+  const response = await fetch(imageUrl);
+  if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+  const contentType = response.headers.get('content-type') || 'image/jpeg';
+  const arrayBuffer = await response.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+  return { base64, mimeType: contentType };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -33,12 +43,38 @@ serve(async (req) => {
       throw new Error('Missing required parameters');
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured');
     }
 
-    // Generate color variations using DALL-E 3 image editing
+    // Fetch and analyze the original image
+    console.log('🖼️ Fetching original image...');
+    const { base64: originalBase64, mimeType } = await fetchImageAsBase64(imageUrl);
+
+    // Analyze the image
+    console.log('🔍 Analyzing image...');
+    const analysisResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: 'Describe this fashion product in detail: item type, style, composition, lighting. Be specific. Output only English description.' },
+              { inlineData: { mimeType, data: originalBase64 } }
+            ]
+          }],
+          generationConfig: { temperature: 0.3 }
+        }),
+      }
+    );
+
+    const analysisData = await analysisResponse.json();
+    const description = analysisData.candidates?.[0]?.content?.parts?.[0]?.text || 'Fashion product';
+
+    // Generate color variations
     const colorPrompts = colors?.length > 0 
       ? colors 
       : ['red', 'blue', 'green', 'black', 'white'].slice(0, count);
@@ -46,91 +82,75 @@ serve(async (req) => {
     const results = [];
 
     for (const color of colorPrompts) {
-      // Use GPT-4 Vision to analyze and recreate with new color
-      const response = await fetch('https://api.openai.com/v1/images/edits', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: await createFormData(imageUrl, `Change the main color to ${color}, keep the same style and composition`),
-      });
+      console.log(`🎨 Generating ${color} variation...`);
 
-      if (!response.ok) {
-        // Fallback: Use DALL-E 3 to generate similar image with new color
-        const generateResponse = await fetch('https://api.openai.com/v1/images/generations', {
+      const prompt = `${description}, but in ${color} color. Same style, composition, and quality. Professional product photography, clean background.`;
+
+      const generateResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
+        {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${OPENAI_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'dall-e-3',
-            prompt: `A fashion product photo similar in style, but in ${color} color. Professional product photography, clean background.`,
-            n: 1,
-            size: '1024x1024',
-            quality: 'standard',
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { 
+              responseModalities: ["IMAGE", "TEXT"],
+              temperature: 0.7
+            }
           }),
-        });
+        }
+      );
 
-        if (generateResponse.ok) {
-          const data = await generateResponse.json();
-          const generatedUrl = data.data[0].url;
-          
-          // Download and upload
-          const imgResponse = await fetch(generatedUrl);
-          const imgBuffer = await imgResponse.arrayBuffer();
-          
+      const generateData = await generateResponse.json();
+
+      if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
+        let imageBase64 = null;
+        for (const part of generateData.candidates[0].content.parts) {
+          if (part.inlineData?.data) {
+            imageBase64 = part.inlineData.data;
+            break;
+          }
+        }
+
+        if (imageBase64) {
+          const imageDataUrl = `data:image/png;base64,${imageBase64}`;
           const fileName = `${user.id}/${brandId}/${Date.now()}_${color}.png`;
-          await supabaseClient.storage
-            .from('generated-images')
-            .upload(fileName, new Uint8Array(imgBuffer), {
-              contentType: 'image/png',
-            });
 
-          const { data: urlData } = supabaseClient.storage
-            .from('generated-images')
-            .getPublicUrl(fileName);
+          try {
+            const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
+            await supabaseClient.storage
+              .from('generated-images')
+              .upload(fileName, imgBuffer, { contentType: 'image/png' });
+          } catch (storageError) {
+            console.log('⚠️ Storage warning:', storageError.message);
+          }
 
           results.push({
             color,
-            imageUrl: urlData.publicUrl,
+            imageUrl: imageDataUrl,
             storagePath: fileName,
           });
+          
+          console.log(`✅ ${color} variation generated`);
         }
-      } else {
-        const data = await response.json();
-        const editedUrl = data.data[0].url;
-        
-        const imgResponse = await fetch(editedUrl);
-        const imgBuffer = await imgResponse.arrayBuffer();
-        
-        const fileName = `${user.id}/${brandId}/${Date.now()}_${color}.png`;
-        await supabaseClient.storage
-          .from('generated-images')
-          .upload(fileName, new Uint8Array(imgBuffer), {
-            contentType: 'image/png',
-          });
-
-        const { data: urlData } = supabaseClient.storage
-          .from('generated-images')
-          .getPublicUrl(fileName);
-
-        results.push({
-          color,
-          imageUrl: urlData.publicUrl,
-          storagePath: fileName,
-        });
       }
     }
 
-    // Log API usage
-    await supabaseClient.from('api_usage_logs').insert({
-      user_id: user.id,
-      brand_id: brandId,
-      provider: 'openai',
-      tokens_used: results.length * 1000,
-      cost_usd: results.length * 0.04,
-    });
+    if (results.length === 0) {
+      throw new Error('カラーバリエーションの生成に失敗しました。しばらく待ってからもう一度お試しください。');
+    }
+
+    try {
+      await supabaseClient.from('api_usage_logs').insert({
+        user_id: user.id,
+        brand_id: brandId,
+        provider: 'gemini',
+        tokens_used: results.length * 500,
+        cost_usd: 0,
+      });
+    } catch (e) {
+      console.log('⚠️ Usage log warning:', e.message);
+    }
 
     return new Response(
       JSON.stringify({
@@ -151,24 +171,3 @@ serve(async (req) => {
     );
   }
 });
-
-async function createFormData(imageUrl: string, prompt: string): Promise<FormData> {
-  const formData = new FormData();
-  
-  // Download image
-  const response = await fetch(imageUrl);
-  const blob = await response.blob();
-  
-  formData.append('image', blob, 'image.png');
-  formData.append('prompt', prompt);
-  formData.append('n', '1');
-  formData.append('size', '1024x1024');
-  
-  return formData;
-}
-
-
-
-
-
-

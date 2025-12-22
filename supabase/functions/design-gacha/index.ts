@@ -44,9 +44,9 @@ serve(async (req) => {
       throw new Error('Missing required parameters: brief, brandId');
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured');
     }
 
     // Select random directions
@@ -57,71 +57,93 @@ serve(async (req) => {
     const results = [];
 
     for (const direction of selectedDirections) {
-      const fullPrompt = `${brief}, ${direction.prompt}, professional fashion photography, high quality`;
+      const fullPrompt = `${brief}, ${direction.prompt}, professional fashion photography, high quality, studio lighting`;
 
-      // Generate image with DALL-E 3
-      const generateResponse = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'dall-e-3',
-          prompt: fullPrompt,
-          n: 1,
-          size: '1024x1024',
-          quality: 'standard',
-        }),
-      });
+      console.log(`🎨 Generating ${direction.name}...`);
 
-      if (generateResponse.ok) {
-        const data = await generateResponse.json();
-        const generatedUrl = data.data[0].url;
-        
-        // Download and upload
-        const imgResponse = await fetch(generatedUrl);
-        const imgBuffer = await imgResponse.arrayBuffer();
-        
-        const fileName = `${user.id}/${brandId}/${Date.now()}_gacha_${direction.id}.png`;
-        await supabaseClient.storage
-          .from('generated-images')
-          .upload(fileName, new Uint8Array(imgBuffer), {
-            contentType: 'image/png',
+      // Generate image with Gemini
+      const generateResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: fullPrompt }] }],
+            generationConfig: { 
+              responseModalities: ["IMAGE", "TEXT"],
+              temperature: 0.8
+            }
+          }),
+        }
+      );
+
+      const generateData = await generateResponse.json();
+
+      if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
+        let imageBase64 = null;
+        for (const part of generateData.candidates[0].content.parts) {
+          if (part.inlineData?.data) {
+            imageBase64 = part.inlineData.data;
+            break;
+          }
+        }
+
+        if (imageBase64) {
+          // Base64 Data URLを作成
+          const imageDataUrl = `data:image/png;base64,${imageBase64}`;
+          
+          const fileName = `${user.id}/${brandId}/${Date.now()}_gacha_${direction.id}.png`;
+
+          // Storage保存（非同期、エラー無視）
+          try {
+            const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
+            await supabaseClient.storage
+              .from('generated-images')
+              .upload(fileName, imgBuffer, { contentType: 'image/png' });
+
+            await supabaseClient.from('generated_images').insert({
+              brand_id: brandId,
+              user_id: user.id,
+              storage_path: fileName,
+              prompt: fullPrompt,
+              model_used: 'gemini-2.0-flash-exp-image-generation',
+              generation_params: { direction: direction.id, brief },
+            });
+          } catch (storageError) {
+            console.log('⚠️ Storage warning:', storageError.message);
+          }
+
+          results.push({
+            direction: direction.id,
+            directionName: direction.name,
+            imageUrl: imageDataUrl,
+            storagePath: fileName,
+            prompt: fullPrompt,
           });
-
-        const { data: urlData } = supabaseClient.storage
-          .from('generated-images')
-          .getPublicUrl(fileName);
-
-        // Save to database
-        await supabaseClient.from('generated_images').insert({
-          brand_id: brandId,
-          user_id: user.id,
-          storage_path: fileName,
-          prompt: fullPrompt,
-          model_used: 'dall-e-3',
-          generation_params: { direction: direction.id, brief },
-        });
-
-        results.push({
-          direction: direction.id,
-          directionName: direction.name,
-          imageUrl: urlData.publicUrl,
-          storagePath: fileName,
-          prompt: fullPrompt,
-        });
+          
+          console.log(`✅ ${direction.name} generated`);
+        }
+      } else {
+        console.log(`⚠️ Generation failed for ${direction.name}:`, JSON.stringify(generateData).substring(0, 200));
       }
     }
 
+    if (results.length === 0) {
+      throw new Error('画像の生成に失敗しました。しばらく待ってからもう一度お試しください。');
+    }
+
     // Log API usage
-    await supabaseClient.from('api_usage_logs').insert({
-      user_id: user.id,
-      brand_id: brandId,
-      provider: 'openai',
-      tokens_used: results.length * 1000,
-      cost_usd: results.length * 0.04,
-    });
+    try {
+      await supabaseClient.from('api_usage_logs').insert({
+        user_id: user.id,
+        brand_id: brandId,
+        provider: 'gemini',
+        tokens_used: results.length * 500,
+        cost_usd: 0,
+      });
+    } catch (e) {
+      console.log('⚠️ Usage log warning:', e.message);
+    }
 
     return new Response(
       JSON.stringify({
@@ -143,9 +165,3 @@ serve(async (req) => {
     );
   }
 });
-
-
-
-
-
-

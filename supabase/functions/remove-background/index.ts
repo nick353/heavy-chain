@@ -6,8 +6,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// 画像をBase64に変換
+async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; mimeType: string }> {
+  const response = await fetch(imageUrl);
+  if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`);
+  const contentType = response.headers.get('content-type') || 'image/jpeg';
+  const arrayBuffer = await response.arrayBuffer();
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+  return { base64, mimeType: contentType };
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -23,165 +32,125 @@ serve(async (req) => {
       }
     );
 
-    // Get user
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
       throw new Error('Unauthorized');
     }
 
-    const { imageUrl, brandId } = await req.json();
+    const { imageUrl, brandId, newBackground } = await req.json();
 
     if (!imageUrl || !brandId) {
       throw new Error('Missing required parameters: imageUrl, brandId');
     }
 
-    // Use Replicate API for background removal (rembg model)
-    const REPLICATE_API_KEY = Deno.env.get('REPLICATE_API_KEY');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured');
+    }
+
+    // Fetch and analyze the original image
+    console.log('🖼️ Fetching original image...');
+    const { base64: originalBase64, mimeType } = await fetchImageAsBase64(imageUrl);
+
+    // Analyze the product in the image
+    console.log('🔍 Analyzing image...');
+    const analysisResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: 'Describe this product in detail for image regeneration. Include: item type, exact colors, textures, design features. Be very specific. Output only English description.' },
+              { inlineData: { mimeType, data: originalBase64 } }
+            ]
+          }],
+          generationConfig: { temperature: 0.2 }
+        }),
+      }
+    );
+
+    const analysisData = await analysisResponse.json();
+    const description = analysisData.candidates?.[0]?.content?.parts?.[0]?.text || 'Product';
+
+    console.log('📝 Description:', description);
+
+    // Determine background prompt
+    const backgroundPrompt = newBackground || 'pure white background, clean studio lighting, no shadows';
     
-    if (!REPLICATE_API_KEY) {
-      // Fallback: Use remove.bg API
-      const REMOVEBG_API_KEY = Deno.env.get('REMOVEBG_API_KEY');
-      
-      if (REMOVEBG_API_KEY) {
-        const response = await fetch('https://api.remove.bg/v1.0/removebg', {
-          method: 'POST',
-          headers: {
-            'X-Api-Key': REMOVEBG_API_KEY,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            image_url: imageUrl,
-            size: 'auto',
-            format: 'png',
-          }),
-        });
+    // Generate image with new background
+    console.log('🎨 Generating with new background...');
+    const prompt = `${description}, isolated product, ${backgroundPrompt}, professional product photography, high quality, e-commerce ready`;
 
-        if (!response.ok) {
-          throw new Error(`Remove.bg API error: ${response.statusText}`);
-        }
+    const generateResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { 
+            responseModalities: ["IMAGE", "TEXT"],
+            temperature: 0.6
+          }
+        }),
+      }
+    );
 
-        const imageBuffer = await response.arrayBuffer();
-        const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+    const generateData = await generateResponse.json();
 
-        // Upload to Supabase Storage
-        const fileName = `${user.id}/${brandId}/${Date.now()}_nobg.png`;
-        const { error: uploadError } = await supabaseClient.storage
-          .from('generated-images')
-          .upload(fileName, new Uint8Array(imageBuffer), {
-            contentType: 'image/png',
-          });
+    if (!generateResponse.ok || !generateData.candidates?.[0]?.content?.parts) {
+      throw new Error('背景変更に失敗しました。しばらく待ってからもう一度お試しください。');
+    }
 
-        if (uploadError) {
-          throw new Error(`Failed to upload: ${uploadError.message}`);
-        }
-
-        // Get public URL
-        const { data: urlData } = supabaseClient.storage
-          .from('generated-images')
-          .getPublicUrl(fileName);
-
-        // Log API usage
-        await supabaseClient.from('api_usage_logs').insert({
-          user_id: user.id,
-          brand_id: brandId,
-          provider: 'removebg',
-          tokens_used: 1,
-          cost_usd: 0.01, // Approximate cost
-        });
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            imageUrl: urlData.publicUrl,
-            storagePath: fileName,
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    let imageBase64 = null;
+    for (const part of generateData.candidates[0].content.parts) {
+      if (part.inlineData?.data) {
+        imageBase64 = part.inlineData.data;
+        break;
       }
     }
 
-    // Use Replicate rembg model
-    if (REPLICATE_API_KEY) {
-      const prediction = await fetch('https://api.replicate.com/v1/predictions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${REPLICATE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          version: 'fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003',
-          input: {
-            image: imageUrl,
-          },
-        }),
-      });
+    if (!imageBase64) {
+      throw new Error('画像生成に失敗しました。');
+    }
 
-      if (!prediction.ok) {
-        throw new Error('Failed to start background removal');
-      }
+    const imageDataUrl = `data:image/png;base64,${imageBase64}`;
+    const fileName = `${user.id}/${brandId}/${Date.now()}_nobg.png`;
 
-      const predictionData = await prediction.json();
-      
-      // Poll for completion
-      let result = predictionData;
-      while (result.status !== 'succeeded' && result.status !== 'failed') {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const pollResponse = await fetch(
-          `https://api.replicate.com/v1/predictions/${result.id}`,
-          {
-            headers: {
-              'Authorization': `Token ${REPLICATE_API_KEY}`,
-            },
-          }
-        );
-        result = await pollResponse.json();
-      }
-
-      if (result.status === 'failed') {
-        throw new Error('Background removal failed');
-      }
-
-      const outputUrl = result.output;
-
-      // Download and upload to Supabase
-      const imageResponse = await fetch(outputUrl);
-      const imageBuffer = await imageResponse.arrayBuffer();
-
-      const fileName = `${user.id}/${brandId}/${Date.now()}_nobg.png`;
-      const { error: uploadError } = await supabaseClient.storage
+    try {
+      const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
+      await supabaseClient.storage
         .from('generated-images')
-        .upload(fileName, new Uint8Array(imageBuffer), {
-          contentType: 'image/png',
-        });
+        .upload(fileName, imgBuffer, { contentType: 'image/png' });
+    } catch (storageError) {
+      console.log('⚠️ Storage warning:', storageError.message);
+    }
 
-      if (uploadError) {
-        throw new Error(`Failed to upload: ${uploadError.message}`);
-      }
-
-      const { data: urlData } = supabaseClient.storage
-        .from('generated-images')
-        .getPublicUrl(fileName);
-
-      // Log API usage
+    try {
       await supabaseClient.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
-        provider: 'replicate',
-        tokens_used: 1,
-        cost_usd: 0.005,
+        provider: 'gemini',
+        tokens_used: 500,
+        cost_usd: 0,
       });
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          imageUrl: urlData.publicUrl,
-          storagePath: fileName,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    } catch (e) {
+      console.log('⚠️ Usage log warning:', e.message);
     }
 
-    throw new Error('No background removal API configured');
+    console.log('✅ Background removed/changed successfully');
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        resultUrl: imageDataUrl,
+        imageUrl: imageDataUrl,
+        storagePath: fileName,
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
     console.error('Error:', error);
@@ -194,9 +163,3 @@ serve(async (req) => {
     );
   }
 });
-
-
-
-
-
-
