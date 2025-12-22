@@ -22,6 +22,10 @@ export default defineConfig({
           'ui-vendor': ['framer-motion', 'lucide-react'],
           'canvas-vendor': ['konva', 'react-konva', 'reactflow'],
         },
+        // ファイル名にタイムスタンプを含めてキャッシュを無効化
+        entryFileNames: `assets/[name].[hash].js`,
+        chunkFileNames: `assets/[name].[hash].js`,
+        assetFileNames: `assets/[name].[hash].[ext]`
       },
     },
     // Increase chunk size warning limit
