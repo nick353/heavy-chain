@@ -202,3 +202,4 @@ export function ImageCompare({ images, onClose, className }: ImageCompareProps) 
     </div>
   );
 }
+

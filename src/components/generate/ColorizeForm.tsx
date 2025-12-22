@@ -129,3 +129,4 @@ export function ColorizeForm({ referenceImage, onReferenceImageChange }: Coloriz
     </div>
   );
 }
+

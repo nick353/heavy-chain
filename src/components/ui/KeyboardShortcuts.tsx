@@ -161,3 +161,4 @@ export const defaultShortcuts: Shortcut[] = [
   { keys: ['⌘', 'Shift', 'Z'], description: 'やり直し', category: 'キャンバス' },
   { keys: ['Space'], description: 'キャンバスをパン', category: 'キャンバス' },
 ];
+

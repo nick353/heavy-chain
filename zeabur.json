@@ -1,12 +1,28 @@
+# Zeabur Deployment Configuration
 {
   "$schema": "https://schema.zeabur.app/template.json",
   "name": "Heavy Chain",
-  "description": "AI駆動のアパレル向け画像生成プラットフォーム",
+  "description": "AI-powered Image Generation Platform for Fashion | AI駆動のアパレル向け画像生成プラットフォーム",
+  "icon": "⚡",
+  "tags": ["react", "typescript", "ai", "image-generation", "fashion"],
   "build": {
     "build_command": "npm install && npm run build",
-    "output_dir": "dist"
+    "output_dir": "dist",
+    "install_command": "npm install",
+    "framework": "vite"
+  },
+  "env": {
+    "VITE_SUPABASE_URL": {
+      "description": "Your Supabase project URL",
+      "required": true
+    },
+    "VITE_SUPABASE_ANON_KEY": {
+      "description": "Your Supabase anonymous key",
+      "required": true
+    },
+    "VITE_STRIPE_PUBLISHABLE_KEY": {
+      "description": "Stripe publishable key (optional, for future payment features)",
+      "required": false
+    }
   }
 }
-
-
-

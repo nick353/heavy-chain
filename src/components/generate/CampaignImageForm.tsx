@@ -94,3 +94,4 @@ export function CampaignImageForm({ prompt, setPrompt }: CampaignImageFormProps)
     </div>
   );
 }
+
