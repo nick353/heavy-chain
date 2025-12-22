@@ -456,7 +456,8 @@ export function GeneratePage() {
             body: { 
               ...baseBody,
               productDescription,
-              selectedShots: (selectedShots.length ? selectedShots : ['front']).slice(0, generateCount || 1),
+              imageUrl: referenceImage?.url, // 画像分析用
+              shots: (selectedShots.length ? selectedShots : ['front']).slice(0, generateCount || 1),
               background: selectedBackground,
             }
           }));
