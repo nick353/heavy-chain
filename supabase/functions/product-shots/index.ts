@@ -195,38 +195,40 @@ serve(async (req) => {
         }
 
         if (imageBase64) {
-          const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
+          // Base64をData URLに変換（ブラウザで直接表示可能）
+          const imageDataUrl = `data:image/png;base64,${imageBase64}`;
           
+          // Storageにも保存（履歴用）
+          const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
           const fileName = `${user.id}/${brandId}/${Date.now()}_product_${shot.id}.png`;
-          await supabaseClient.storage
+          
+          // Upload to storage (non-blocking, ignore errors)
+          supabaseClient.storage
             .from('generated-images')
             .upload(fileName, imgBuffer, {
               contentType: 'image/png',
-            });
+            })
+            .catch(err => console.log('⚠️ Storage upload warning:', err.message));
 
-          const { data: urlData } = supabaseClient.storage
-            .from('generated-images')
-            .getPublicUrl(fileName);
-
-          console.log(`🔗 Generated URL for ${shot.id}:`, urlData.publicUrl);
-
-          await supabaseClient.from('generated_images').insert({
+          // Save to database (non-blocking, ignore errors)
+          supabaseClient.from('generated_images').insert({
             brand_id: brandId,
             user_id: user.id,
             storage_path: fileName,
             prompt,
             model_used: 'gemini-2.0-flash-exp-image-generation',
             generation_params: { shotType: shot.id, productDescription: finalDescription },
-          });
+          }).catch(err => console.log('⚠️ Database insert warning:', err.message));
 
+          // フロントエンドにBase64 Data URLを返す（確実に表示可能）
           results.push({
             shotType: shot.id,
             shotName: shot.name,
-            imageUrl: urlData.publicUrl,
+            imageUrl: imageDataUrl,
             storagePath: fileName,
           });
           
-          console.log(`✅ ${shot.name} generated successfully, URL:`, urlData.publicUrl);
+          console.log(`✅ ${shot.name} generated successfully with Data URL`);
         } else {
           console.log(`⚠️ No image data in response for ${shot.id}`);
         }
