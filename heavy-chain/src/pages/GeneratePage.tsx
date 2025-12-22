@@ -417,7 +417,7 @@ export function GeneratePage() {
             body: { 
               ...baseBody,
               productDescription,
-              selectedShots: ['front', 'side', 'back', 'detail'].slice(0, generateCount),
+              shots: ['front', 'side', 'back', 'detail'].slice(0, generateCount),
               background: selectedBackground,
             }
           }));

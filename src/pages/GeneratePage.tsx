@@ -456,7 +456,7 @@ export function GeneratePage() {
             body: { 
               ...baseBody,
               productDescription,
-              selectedShots: (selectedShots.length ? selectedShots : ['front']).slice(0, generateCount || 1),
+              shots: (selectedShots.length ? selectedShots : ['front']).slice(0, generateCount || 1),
               background: selectedBackground,
             }
           }));
