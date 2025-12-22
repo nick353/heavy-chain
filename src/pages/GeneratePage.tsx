@@ -484,7 +484,7 @@ export function GeneratePage() {
           // imageUrlが長すぎる場合（Base64 Data URL）はログに表示しない
           const logBody = { 
             ...requestBody, 
-            imageUrl: requestBody.imageUrl?.substring(0, 100) + (requestBody.imageUrl?.length > 100 ? '...' : '')
+            imageUrl: requestBody.imageUrl?.substring(0, 100) + ((requestBody.imageUrl?.length ?? 0) > 100 ? '...' : '')
           };
           console.log('📤 Request body (truncated):', logBody);
           console.log('📤 imageUrl length:', requestBody.imageUrl?.length || 0);
