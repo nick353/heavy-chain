@@ -123,6 +123,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        resultUrl: urlData.publicUrl,
         imageUrl: urlData.publicUrl,
         storagePath: fileName,
         scale,
