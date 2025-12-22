@@ -16,7 +16,6 @@ import {
   Plus,
   Minus,
   Sliders,
-  AlertCircle,
   XCircle
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';

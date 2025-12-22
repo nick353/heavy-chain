@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heavy Chain - 設定チェック</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .status {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .status.ok {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .icon {
+            font-size: 20px;
+            margin-right: 12px;
+        }
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 12px;
+        }
+        button:hover {
+            background: #4338ca;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #1f2937;
+            color: #10b981;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 20px 0 12px 0;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+        }
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Heavy Chain 設定チェック</h1>
+    <p style="color: #666; margin-bottom: 24px;">
+        このページでHeavy Chainの設定状況を確認できます。<br>
+        Zeaburの環境変数は設定済みとのことなので、Supabase側の設定を確認します。
+    </p>
+
+    <div class="card">
+        <div class="section-title">✅ フロントエンド環境変数（Zeabur）</div>
+        <div id="env-check"></div>
+    </div>
+
+    <div class="card">
+        <div class="section-title">🗄️ Supabase接続テスト</div>
+        <div id="supabase-check"></div>
+        <button onclick="testSupabaseConnection()">接続テスト</button>
+    </div>
+
+    <div class="card">
+        <div class="section-title">📊 データベーステーブル確認</div>
+        <div id="tables-check"></div>
+        <button onclick="checkTables()">テーブル確認</button>
+    </div>
+
+    <div class="card">
+        <div class="section-title">🚀 Edge Functions確認</div>
+        <div id="functions-check"></div>
+        <button onclick="checkEdgeFunctions()">Edge Functions確認</button>
+    </div>
+
+    <div class="card">
+        <div class="section-title">📝 デバッグログ</div>
+        <div id="debug-log" class="log">ログがここに表示されます...</div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+        let supabase;
+        let logContent = '';
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            logContent += `[${timestamp}] ${prefix} ${message}\n`;
+            document.getElementById('debug-log').textContent = logContent;
+        }
+
+        // Check environment variables
+        function checkEnvVariables() {
+            const envCheck = document.getElementById('env-check');
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+            let html = '';
+
+            if (supabaseUrl) {
+                html += `<div class="status ok"><span class="icon">✅</span><div><strong>VITE_SUPABASE_URL</strong><br><code>${supabaseUrl.substring(0, 30)}...</code></div></div>`;
+                log(`VITE_SUPABASE_URL: ${supabaseUrl}`, 'success');
+            } else {
+                html += `<div class="status error"><span class="icon">❌</span><div><strong>VITE_SUPABASE_URL</strong><br>未設定</div></div>`;
+                log('VITE_SUPABASE_URL: 未設定', 'error');
+            }
+
+            if (supabaseKey) {
+                html += `<div class="status ok"><span class="icon">✅</span><div><strong>VITE_SUPABASE_ANON_KEY</strong><br><code>${supabaseKey.substring(0, 20)}...</code></div></div>`;
+                log('VITE_SUPABASE_ANON_KEY: 設定済み', 'success');
+            } else {
+                html += `<div class="status error"><span class="icon">❌</span><div><strong>VITE_SUPABASE_ANON_KEY</strong><br>未設定</div></div>`;
+                log('VITE_SUPABASE_ANON_KEY: 未設定', 'error');
+            }
+
+            envCheck.innerHTML = html;
+
+            if (supabaseUrl && supabaseKey) {
+                supabase = createClient(supabaseUrl, supabaseKey);
+                log('Supabaseクライアント初期化成功', 'success');
+            }
+        }
+
+        // Test Supabase connection
+        window.testSupabaseConnection = async function() {
+            const checkDiv = document.getElementById('supabase-check');
+            checkDiv.innerHTML = '<div class="status warning"><span class="icon">⏳</span><div>接続テスト中...</div></div>';
+            log('Supabase接続テスト開始...');
+
+            if (!supabase) {
+                checkDiv.innerHTML = '<div class="status error"><span class="icon">❌</span><div>Supabaseクライアントが初期化されていません</div></div>';
+                log('接続テスト失敗: 環境変数未設定', 'error');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase.auth.getSession();
+                if (error) throw error;
+
+                checkDiv.innerHTML = `<div class="status ok"><span class="icon">✅</span><div><strong>接続成功</strong><br>${data.session ? 'ログイン済み' : '未ログイン'}</div></div>`;
+                log('Supabase接続成功', 'success');
+                if (data.session) {
+                    log(`ユーザーID: ${data.session.user.id}`, 'success');
+                }
+            } catch (error) {
+                checkDiv.innerHTML = `<div class="status error"><span class="icon">❌</span><div><strong>接続エラー</strong><br>${error.message}</div></div>`;
+                log(`接続エラー: ${error.message}`, 'error');
+            }
+        };
+
+        // Check tables
+        window.checkTables = async function() {
+            const checkDiv = document.getElementById('tables-check');
+            checkDiv.innerHTML = '<div class="status warning"><span class="icon">⏳</span><div>テーブル確認中...</div></div>';
+            log('データベーステーブル確認開始...');
+
+            if (!supabase) {
+                checkDiv.innerHTML = '<div class="status error"><span class="icon">❌</span><div>Supabaseクライアントが初期化されていません</div></div>';
+                log('テーブル確認失敗: 環境変数未設定', 'error');
+                return;
+            }
+
+            const requiredTables = ['brands', 'generated_images', 'folders'];
+            let html = '';
+            let allOk = true;
+
+            for (const table of requiredTables) {
+                try {
+                    const { data, error } = await supabase.from(table).select('*').limit(1);
+                    if (error && error.code !== 'PGRST116') throw error;
+                    
+                    html += `<div class="status ok"><span class="icon">✅</span><div><strong>${table}</strong> テーブル存在</div></div>`;
+                    log(`テーブル ${table}: 存在`, 'success');
+                } catch (error) {
+                    html += `<div class="status error"><span class="icon">❌</span><div><strong>${table}</strong> テーブルエラー<br><code>${error.message}</code></div></div>`;
+                    log(`テーブル ${table}: エラー - ${error.message}`, 'error');
+                    allOk = false;
+                }
+            }
+
+            if (!allOk) {
+                html += '<div class="status warning"><span class="icon">⚠️</span><div><strong>対処方法</strong><br>Supabase Dashboard → SQL Editor で<br><code>supabase/migrations/001_initial_schema.sql</code>を実行してください</div></div>';
+            }
+
+            checkDiv.innerHTML = html;
+        };
+
+        // Check Edge Functions
+        window.checkEdgeFunctions = async function() {
+            const checkDiv = document.getElementById('functions-check');
+            checkDiv.innerHTML = '<div class="status warning"><span class="icon">⏳</span><div>Edge Functions確認中...</div></div>';
+            log('Edge Functions確認開始...');
+
+            if (!supabase) {
+                checkDiv.innerHTML = '<div class="status error"><span class="icon">❌</span><div>Supabaseクライアントが初期化されていません</div></div>';
+                log('Edge Functions確認失敗: 環境変数未設定', 'error');
+                return;
+            }
+
+            const functions = [
+                'generate-image',
+                'product-shots',
+                'colorize',
+                'remove-background',
+                'upscale'
+            ];
+
+            let html = '';
+            let deployedCount = 0;
+
+            for (const func of functions) {
+                try {
+                    // Try to invoke with minimal data to check if function exists
+                    const { error } = await supabase.functions.invoke(func, {
+                        body: { test: true }
+                    });
+                    
+                    // If we get a response (even error), function is deployed
+                    if (error && error.message.includes('not found')) {
+                        html += `<div class="status error"><span class="icon">❌</span><div><strong>${func}</strong><br>デプロイされていません</div></div>`;
+                        log(`Edge Function ${func}: 未デプロイ`, 'error');
+                    } else {
+                        html += `<div class="status ok"><span class="icon">✅</span><div><strong>${func}</strong><br>デプロイ済み</div></div>`;
+                        log(`Edge Function ${func}: デプロイ済み`, 'success');
+                        deployedCount++;
+                    }
+                } catch (error) {
+                    html += `<div class="status warning"><span class="icon">⚠️</span><div><strong>${func}</strong><br>確認できませんでした</div></div>`;
+                    log(`Edge Function ${func}: 確認エラー - ${error.message}`, 'error');
+                }
+            }
+
+            html += `<div class="status ${deployedCount === functions.length ? 'ok' : 'warning'}"><span class="icon">${deployedCount === functions.length ? '✅' : '⚠️'}</span><div><strong>デプロイ状況</strong><br>${deployedCount} / ${functions.length} 関数がデプロイ済み</div></div>`;
+
+            if (deployedCount < functions.length) {
+                html += '<div class="status warning"><span class="icon">⚠️</span><div><strong>対処方法</strong><br>Supabase CLIで関数をデプロイしてください：<br><code>supabase functions deploy [function-name]</code></div></div>';
+            }
+
+            checkDiv.innerHTML = html;
+        };
+
+        // Initialize on page load
+        checkEnvVariables();
+    </script>
+</body>
+</html>
+
