@@ -274,6 +274,15 @@ export function GeneratePage() {
   };
 
   const handleGenerate = async () => {
+    console.log('🚀 handleGenerate called');
+    console.log('📊 Current state:', {
+      isGenerating,
+      selectedFeature: selectedFeature?.id,
+      currentBrand: currentBrand?.id,
+      referenceImage: referenceImage?.url,
+      selectedBackground,
+    });
+    
     if (!currentBrand) {
       toast.error('ブランドを選択してください');
       return;
@@ -447,25 +456,54 @@ export function GeneratePage() {
           break;
 
         case 'product-shots':
+          console.log('🔍 product-shots validation check:', {
+            productDescription: productDescription,
+            hasProductDescription: !!productDescription.trim(),
+            referenceImage: referenceImage,
+            hasReferenceImage: !!referenceImage
+          });
           if (!productDescription.trim() && !referenceImage) {
+            console.log('❌ Validation failed: no description and no image');
             toast.error('商品説明または商品画像を入力してください');
             setIsGenerating(false);
             return;
           }
+          console.log('✅ Validation passed, starting generation...');
           // 選択されたショットをすべて生成（制限なし）
           const shotsToGenerate = selectedShots.length ? selectedShots : ['front', 'side', 'back', 'detail'];
           console.log('🎬 Generating shots:', shotsToGenerate);
-          ({ data, error } = await supabase.functions.invoke('product-shots', {
-            body: { 
-              ...baseBody,
-              productDescription,
-              imageUrl: referenceImage?.url, // 画像分析用
-              shots: shotsToGenerate,
-              background: selectedBackground,
-            }
-          }));
+          console.log('🎨 Background setting:', selectedBackground);
+          console.log('🖼️ Reference image URL:', referenceImage?.url);
+          const requestBody = { 
+            ...baseBody,
+            productDescription,
+            imageUrl: referenceImage?.url,
+            shots: shotsToGenerate,
+            background: selectedBackground,
+          };
+          // imageUrlが長すぎる場合（Base64 Data URL）はログに表示しない
+          const logBody = { 
+            ...requestBody, 
+            imageUrl: requestBody.imageUrl?.substring(0, 100) + (requestBody.imageUrl?.length > 100 ? '...' : '')
+          };
+          console.log('📤 Request body (truncated):', logBody);
+          console.log('📤 imageUrl length:', requestBody.imageUrl?.length || 0);
+          
+          try {
+            ({ data, error } = await supabase.functions.invoke('product-shots', {
+              body: requestBody
+            }));
+          } catch (invokeError: any) {
+            console.error('🚨 Invoke error:', invokeError);
+            throw new Error(`API呼び出しエラー: ${invokeError.message}`);
+          }
           console.log('📥 Product-shots response:', data);
-          if (data?.shots) {
+          console.log('❌ Product-shots error:', error);
+          if (error) {
+            console.error('🚨 Function invocation error:', error);
+            throw error;
+          }
+          if (data?.shots && data.shots.length > 0) {
             const images = data.shots.map((s: any) => ({
               id: s.storagePath,
               imageUrl: s.imageUrl,
@@ -474,6 +512,11 @@ export function GeneratePage() {
             }));
             console.log('🖼️ Setting images:', images);
             setGeneratedImages(images);
+          } else {
+            console.warn('⚠️ No shots returned in data:', data);
+            if (data?.error) {
+              throw new Error(data.error);
+            }
           }
           break;
 

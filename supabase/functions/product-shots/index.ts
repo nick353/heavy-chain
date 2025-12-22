@@ -169,7 +169,7 @@ DO NOT change any aspect of the garment itself - only change the camera angle.`;
         }],
         generationConfig: { 
           responseModalities: ["IMAGE", "TEXT"],
-          temperature: 0.5  // Balanced for consistency with creativity
+          temperature: 0.7
         }
       }),
     }
