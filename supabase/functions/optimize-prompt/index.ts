@@ -33,13 +33,13 @@ serve(async (req) => {
       throw new Error('Missing required parameter: prompt');
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured');
     }
 
-    // Optimize prompt using GPT-4
-    const systemPrompt = `You are an expert fashion image prompt engineer. Your task is to optimize Japanese prompts for AI image generation (DALL-E 3, Stable Diffusion).
+    // Optimize prompt using Gemini
+    const systemPrompt = `You are an expert fashion image prompt engineer. Your task is to optimize Japanese prompts for AI image generation.
 
 Rules:
 1. Translate Japanese to English
@@ -58,33 +58,38 @@ Output format:
   "style_tags": ["relevant", "style", "tags"],
   "suggested_settings": {
     "aspect_ratio": "1:1 or 16:9 etc",
-    "quality": "standard or hd"
+    "quality": "standard or high"
   }
 }`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Optimize this prompt: ${prompt}` },
-        ],
-        response_format: { type: 'json_object' },
-        max_tokens: 500,
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            { 
+              role: 'user',
+              parts: [{ text: `${systemPrompt}\n\nOptimize this prompt: ${prompt}` }] 
+            }
+          ],
+          generationConfig: { 
+            temperature: 0.7,
+            topP: 0.9,
+            topK: 40
+          }
+        }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error('Failed to optimize prompt');
     }
 
     const data = await response.json();
-    const result = JSON.parse(data.choices[0].message.content);
+    const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const result = JSON.parse(resultText.replace(/```json\n?/g, '').replace(/```\n?/g, ''));
 
     return new Response(
       JSON.stringify({
@@ -106,9 +111,3 @@ Output format:
     );
   }
 });
-
-
-
-
-
-

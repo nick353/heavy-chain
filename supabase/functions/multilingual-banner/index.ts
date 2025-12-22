@@ -47,49 +47,39 @@ serve(async (req) => {
       throw new Error('Missing required parameters');
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured');
     }
 
-    // First, translate the text
-    const translateResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a professional translator for fashion/retail marketing. Translate the given text naturally for each market. Return JSON format.',
-          },
-          {
-            role: 'user',
-            content: `Translate this for EC banners:
+    // Use Gemini for translation
+    const translatePrompt = `Translate this fashion banner text for EC/retail marketing. Return JSON format.
+    
 Headline: ${headline}
 Subheadline: ${subheadline || ''}
 
 Languages needed: ${languages.join(', ')}
 
-Return JSON: { "translations": { "ja": { "headline": "", "subheadline": "" }, "en": {...}, ... } }`,
-          },
-        ],
-        response_format: { type: 'json_object' },
-      }),
-    });
+Return JSON: { "translations": { "ja": { "headline": "", "subheadline": "" }, "en": {...}, ... } }`;
+
+    const translateResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: translatePrompt }] }],
+          generationConfig: { temperature: 0.3 }
+        }),
+      }
+    );
 
     const translateData = await translateResponse.json();
-    const translations = JSON.parse(translateData.choices[0].message.content).translations;
+    const translationText = translateData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const translations = JSON.parse(translationText.replace(/```json\n?/g, '').replace(/```\n?/g, '')).translations;
 
     const selectedLanguages = LANGUAGES.filter(l => languages.includes(l.code));
     const results = [];
-
-    // Determine size based on aspect ratio
-    const size = aspectRatio === '16:9' ? '1792x1024' : 
-                 aspectRatio === '9:16' ? '1024x1792' : '1024x1024';
 
     for (const lang of selectedLanguages) {
       const translation = translations[lang.code];
@@ -99,73 +89,80 @@ Return JSON: { "translations": { "ja": { "headline": "", "subheadline": "" }, "e
         ? `"${translation.headline}" and "${translation.subheadline}"`
         : `"${translation.headline}"`;
 
-      const prompt = `Fashion e-commerce banner with text ${textContent} in ${lang.name}, ${style} design style, clean layout, professional typography, promotional banner, eye-catching, high contrast text`;
+      const bannerPrompt = `Create a professional fashion/retail banner image with text ${textContent}. ${style} style, aspect ratio ${aspectRatio}, high quality design for e-commerce.`;
 
-      const generateResponse = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'dall-e-3',
-          prompt,
-          n: 1,
-          size,
-          quality: 'standard',
-        }),
-      });
+      const generateResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: bannerPrompt }] }],
+            generationConfig: { responseModalities: ["IMAGE", "TEXT"] }
+          }),
+        }
+      );
 
       if (generateResponse.ok) {
         const data = await generateResponse.json();
-        const generatedUrl = data.data[0].url;
+        let imageBase64 = null;
         
-        const imgResponse = await fetch(generatedUrl);
-        const imgBuffer = await imgResponse.arrayBuffer();
-        
-        const fileName = `${user.id}/${brandId}/${Date.now()}_banner_${lang.code}.png`;
-        await supabaseClient.storage
-          .from('generated-images')
-          .upload(fileName, new Uint8Array(imgBuffer), {
-            contentType: 'image/png',
+        if (data.candidates?.[0]?.content?.parts) {
+          for (const part of data.candidates[0].content.parts) {
+            if (part.inlineData?.data) {
+              imageBase64 = part.inlineData.data;
+              break;
+            }
+          }
+        }
+
+        if (imageBase64) {
+          const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
+          
+          const fileName = `${user.id}/${brandId}/${Date.now()}_banner_${lang.code}.png`;
+          await supabaseClient.storage
+            .from('generated-images')
+            .upload(fileName, imgBuffer, {
+              contentType: 'image/png',
+            });
+
+          const { data: urlData } = supabaseClient.storage
+            .from('generated-images')
+            .getPublicUrl(fileName);
+
+          await supabaseClient.from('generated_images').insert({
+            brand_id: brandId,
+            user_id: user.id,
+            storage_path: fileName,
+            prompt: bannerPrompt,
+            model_used: 'gemini-2.5-flash-image',
+            generation_params: { 
+              language: lang.code, 
+              headline: translation.headline,
+              subheadline: translation.subheadline,
+              style,
+              aspectRatio 
+            },
           });
 
-        const { data: urlData } = supabaseClient.storage
-          .from('generated-images')
-          .getPublicUrl(fileName);
-
-        await supabaseClient.from('generated_images').insert({
-          brand_id: brandId,
-          user_id: user.id,
-          storage_path: fileName,
-          prompt,
-          model_used: 'dall-e-3',
-          generation_params: { 
+          results.push({
             language: lang.code,
+            languageName: lang.name,
             headline: translation.headline,
             subheadline: translation.subheadline,
-            style,
-            aspectRatio
-          },
-        });
-
-        results.push({
-          language: lang.code,
-          languageName: lang.name,
-          headline: translation.headline,
-          subheadline: translation.subheadline,
-          imageUrl: urlData.publicUrl,
-          storagePath: fileName,
-        });
+            imageUrl: urlData.publicUrl,
+            storagePath: fileName,
+          });
+        }
       }
     }
 
     await supabaseClient.from('api_usage_logs').insert({
       user_id: user.id,
       brand_id: brandId,
-      provider: 'openai',
-      tokens_used: 500 + results.length * 1000, // Translation + Images
-      cost_usd: 0.01 + results.length * 0.04,
+      provider: 'gemini',
+      tokens_used: results.length * 600,
+      cost_usd: 0, // Gemini free tier
     });
 
     return new Response(
@@ -189,9 +186,3 @@ Return JSON: { "translations": { "ja": { "headline": "", "subheadline": "" }, "e
     );
   }
 });
-
-
-
-
-
-

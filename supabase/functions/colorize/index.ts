@@ -33,12 +33,12 @@ serve(async (req) => {
       throw new Error('Missing required parameters');
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OpenAI API key not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    if (!GEMINI_API_KEY) {
+      throw new Error('Gemini API key not configured');
     }
 
-    // Generate color variations using DALL-E 3 image editing
+    // Generate color variations using Gemini
     const colorPrompts = colors?.length > 0 
       ? colors 
       : ['red', 'blue', 'green', 'black', 'white'].slice(0, count);
@@ -46,44 +46,40 @@ serve(async (req) => {
     const results = [];
 
     for (const color of colorPrompts) {
-      // Use GPT-4 Vision to analyze and recreate with new color
-      const response = await fetch('https://api.openai.com/v1/images/edits', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: await createFormData(imageUrl, `Change the main color to ${color}, keep the same style and composition`),
-      });
-
-      if (!response.ok) {
-        // Fallback: Use DALL-E 3 to generate similar image with new color
-        const generateResponse = await fetch('https://api.openai.com/v1/images/generations', {
+      const prompt = `A fashion product photo in ${color} color. Professional product photography, clean background, studio lighting, high resolution, commercial quality.`;
+      
+      const generateResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`,
+        {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${OPENAI_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'dall-e-3',
-            prompt: `A fashion product photo similar in style, but in ${color} color. Professional product photography, clean background.`,
-            n: 1,
-            size: '1024x1024',
-            quality: 'standard',
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseModalities: ["IMAGE", "TEXT"] }
           }),
-        });
+        }
+      );
 
-        if (generateResponse.ok) {
-          const data = await generateResponse.json();
-          const generatedUrl = data.data[0].url;
-          
-          // Download and upload
-          const imgResponse = await fetch(generatedUrl);
-          const imgBuffer = await imgResponse.arrayBuffer();
+      if (generateResponse.ok) {
+        const data = await generateResponse.json();
+        let imageBase64 = null;
+        
+        if (data.candidates?.[0]?.content?.parts) {
+          for (const part of data.candidates[0].content.parts) {
+            if (part.inlineData?.data) {
+              imageBase64 = part.inlineData.data;
+              break;
+            }
+          }
+        }
+
+        if (imageBase64) {
+          const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
           
           const fileName = `${user.id}/${brandId}/${Date.now()}_${color}.png`;
           await supabaseClient.storage
             .from('generated-images')
-            .upload(fileName, new Uint8Array(imgBuffer), {
+            .upload(fileName, imgBuffer, {
               contentType: 'image/png',
             });
 
