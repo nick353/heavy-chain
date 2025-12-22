@@ -71,18 +71,22 @@ serve(async (req) => {
     // If no description but has image, analyze the image first
     let finalDescription = productDescription;
     if (!hasDescription && hasImage) {
-      console.log('🔍 Analyzing product image with Gemini Vision...');
+      console.log('🔍 Analyzing product image with Gemini...');
       const imageToAnalyze = imageUrl || referenceImage;
       
       try {
         // First, fetch the image and convert to base64
         const imageResponse = await fetch(imageToAnalyze);
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
+        }
+        
         const imageBuffer = await imageResponse.arrayBuffer();
         const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
         
-        // Use Gemini Pro Vision to analyze the image
+        // Use Gemini 1.5 Flash to analyze the image
         const analysisResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${GEMINI_API_KEY}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -91,8 +95,8 @@ serve(async (req) => {
                 parts: [
                   { text: 'Describe this fashion product in detail for product photography. Include: item type, color, material, style, key features. Be concise but specific. Focus on visual details that would be important for e-commerce product shots.' },
                   {
-                    inline_data: {
-                      mime_type: 'image/jpeg',
+                    inlineData: {
+                      mimeType: 'image/jpeg',
                       data: base64Image
                     }
                   }
@@ -106,17 +110,25 @@ serve(async (req) => {
           }
         );
 
+        if (!analysisResponse.ok) {
+          const errorText = await analysisResponse.text();
+          console.error('❌ Gemini API error:', errorText);
+          throw new Error(`Gemini API error: ${analysisResponse.status}`);
+        }
+
         const analysisData = await analysisResponse.json();
+        console.log('📄 Gemini response:', JSON.stringify(analysisData, null, 2));
+        
         if (analysisData.candidates?.[0]?.content?.parts?.[0]?.text) {
           finalDescription = analysisData.candidates[0].content.parts[0].text.trim();
           console.log('✅ Image analysis complete:', finalDescription);
         } else {
-          console.error('❌ Failed to analyze image:', analysisData);
-          throw new Error('画像の分析に失敗しました。商品説明を入力してください。');
+          console.error('❌ No text in Gemini response');
+          throw new Error('画像の分析結果が取得できませんでした');
         }
       } catch (e) {
         console.error('❌ Image analysis error:', e);
-        throw new Error('画像の分析中にエラーが発生しました: ' + e.message);
+        throw new Error('画像の分析中にエラーが発生しました: ' + e.message + '. 商品説明を入力してお試しください。');
       }
     }
     
@@ -145,7 +157,6 @@ serve(async (req) => {
         const data = await generateResponse.json();
         let imageBase64 = null;
         
-        // Extract image from response
         if (data.candidates?.[0]?.content?.parts) {
           for (const part of data.candidates[0].content.parts) {
             if (part.inlineData?.data) {
@@ -175,7 +186,7 @@ serve(async (req) => {
             storage_path: fileName,
             prompt,
             model_used: 'gemini-2.5-flash-image',
-            generation_params: { shotType: shot.id, productDescription },
+            generation_params: { shotType: shot.id, productDescription: finalDescription },
           });
 
           results.push({
@@ -217,9 +228,3 @@ serve(async (req) => {
     );
   }
 });
-
-
-
-
-
-

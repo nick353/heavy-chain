@@ -71,34 +71,37 @@ serve(async (req) => {
       throw new Error('Brand ID is required')
     }
 
-    // Optimize prompt using Gemini
+    // Optimize prompt using OpenAI
     let optimizedPrompt = prompt
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
     
-    if (geminiApiKey) {
+    if (openaiApiKey) {
       try {
-        const optimizeResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{
-                  text: `You are an expert at writing image generation prompts. Convert this Japanese description into an optimized English prompt for fashion/apparel image generation. Focus on: lighting, composition, style, details. Keep it concise but detailed. Output only the English prompt, nothing else.\n\nPrompt: ${prompt}`
-                }]
-              }],
-              generationConfig: { 
-                temperature: 0.7,
-                maxOutputTokens: 300
+        const optimizeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: `You are an expert at writing image generation prompts. Convert the user's Japanese description into an optimized English prompt for fashion/apparel image generation. Focus on: lighting, composition, style, details. Keep it concise but detailed. Output only the English prompt, nothing else.`
+              },
+              {
+                role: 'user',
+                content: prompt
               }
-            }),
-          }
-        )
+            ],
+            max_tokens: 300,
+          }),
+        })
 
         const optimizeData = await optimizeResponse.json()
-        if (optimizeData.candidates?.[0]?.content?.parts?.[0]?.text) {
-          optimizedPrompt = optimizeData.candidates[0].content.parts[0].text.trim()
+        if (optimizeData.choices?.[0]?.message?.content) {
+          optimizedPrompt = optimizeData.choices[0].message.content
         }
       } catch (e) {
         console.error('Prompt optimization failed:', e)
@@ -237,8 +240,53 @@ serve(async (req) => {
       }
     }
 
+    // Fallback to DALL-E 3 if Gemini failed
+    if (!imageBase64 && openaiApiKey) {
+      console.log('Falling back to DALL-E 3...')
+      
+      let dalleSize: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024'
+      if (width > height) {
+        dalleSize = '1792x1024'
+      } else if (height > width) {
+        dalleSize = '1024x1792'
+      }
+
+      const dalleResponse = await fetchWithTimeout('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'dall-e-3',
+          prompt: `Professional fashion photography: ${optimizedPrompt}. High quality, commercial style, clean composition. ${negativePrompt ? `Avoid: ${negativePrompt}` : ''}`,
+          n: 1,
+          size: dalleSize,
+          quality: 'standard',
+          response_format: 'b64_json'
+        }),
+      }, 50000)
+
+      const dalleData = await dalleResponse.json()
+      
+      if (!dalleResponse.ok) {
+        console.error('DALL-E API error:', JSON.stringify(dalleData))
+        
+        await supabaseClient
+          .from('generation_jobs')
+          .update({ status: 'failed', error_message: dalleData.error?.message || 'Image generation API error' })
+          .eq('id', job.id)
+
+        throw new Error(`Image generation failed: ${dalleData.error?.message || 'API error'}`)
+      }
+
+      imageBase64 = dalleData.data?.[0]?.b64_json
+      usedModel = 'dall-e-3'
+      console.log('Image generated successfully with DALL-E 3')
+    }
+
     if (!imageBase64) {
-      throw new Error('Gemini image generation failed - please try again')
+      throw new Error('No image generation API available or all APIs failed')
     }
     console.log(`Image generated with model: ${usedModel}`)
 
