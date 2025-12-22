@@ -7,11 +7,11 @@ const corsHeaders = {
 };
 
 const SHOT_TYPES = [
-  { id: 'front', name: '正面', angle: 'front view, facing camera directly' },
-  { id: 'side', name: '側面', angle: 'side view, profile, 90 degree angle' },
-  { id: 'back', name: '背面', angle: 'back view, rear, showing back details' },
-  { id: 'detail', name: 'ディテール', angle: 'close-up detail shot, macro, texture focus' },
-  { id: '45deg', name: '斜め45度', angle: '45 degree angle, three-quarter view' },
+  { id: 'front', name: '正面', angle: 'front view, facing the camera directly, showing the front of the product', prompt: 'Show this exact same product from the front view, facing the camera directly. Keep ALL details, colors, textures, logos, and design features exactly the same.' },
+  { id: 'side', name: '側面', angle: 'side view, profile, 90 degree angle from the right', prompt: 'Show this exact same product from the side view (right profile, 90 degree angle). Keep ALL details, colors, textures, logos, and design features exactly the same.' },
+  { id: 'back', name: '背面', angle: 'back view, rear, showing the back of the product', prompt: 'Show this exact same product from the back view (rear). Keep ALL details, colors, textures, logos, and design features exactly the same.' },
+  { id: 'detail', name: 'ディテール', angle: 'close-up detail shot of texture and material', prompt: 'Show a close-up detail shot of this exact same product, focusing on the texture, material, and fine details. Keep ALL colors and design features exactly the same.' },
+  { id: '45deg', name: '斜め45度', angle: '45 degree angle, three-quarter view', prompt: 'Show this exact same product from a 45 degree angle (three-quarter view). Keep ALL details, colors, textures, logos, and design features exactly the same.' },
 ];
 
 // 画像をBase64にエンコード
@@ -34,7 +34,6 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
 async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string): Promise<string> {
   console.log('🔍 Analyzing image with Gemini 2.0 Flash...');
   
-  // Try multiple model versions for compatibility
   const models = [
     'gemini-2.0-flash-exp',
     'gemini-1.5-flash-latest',
@@ -56,7 +55,7 @@ async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: 
             contents: [{
               parts: [
                 {
-                  text: 'Describe this fashion product image in detail for AI image regeneration. Include: exact item type (shirt, dress, pants, etc.), primary and secondary colors, material texture (cotton, silk, leather, etc.), style (casual, formal, vintage, etc.), key design features (buttons, zippers, patterns, prints), and overall aesthetic. Be specific and concise. Output only the English description.'
+                  text: 'Describe this fashion product image in extreme detail for AI image regeneration. Include: exact item type, all colors (primary, secondary, accent), material texture, style, ALL design features (buttons, zippers, pockets, logos, labels, stitching), patterns, and overall aesthetic. Be very specific. Output only the English description.'
                 },
                 {
                   inlineData: {
@@ -67,15 +66,14 @@ async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: 
               ]
             }],
             generationConfig: {
-              temperature: 0.4,
-              maxOutputTokens: 500
+              temperature: 0.2,
+              maxOutputTokens: 800
             }
           }),
         }
       );
       
       const data = await response.json();
-      console.log(`📊 ${model} response status:`, response.status);
       
       if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
         const description = data.candidates[0].content.parts[0].text;
@@ -84,18 +82,117 @@ async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: 
         return description;
       }
       
-      // Log error but continue to next model
-      console.log(`⚠️ ${model} failed:`, JSON.stringify(data));
       lastError = data;
       
     } catch (e) {
-      console.log(`⚠️ ${model} exception:`, e.message);
       lastError = e;
     }
   }
   
-  // All models failed
   throw new Error(`画像分析に失敗しました: ${JSON.stringify(lastError)}`);
+}
+
+// 元画像を参照して異なるアングルを生成
+async function generateAngleWithReference(
+  originalBase64: string, 
+  originalMimeType: string, 
+  shot: typeof SHOT_TYPES[0], 
+  description: string,
+  apiKey: string
+): Promise<string | null> {
+  console.log(`🎨 Generating ${shot.name} with reference image...`);
+  
+  // プロンプト: 元画像を参照して同じ商品の別アングルを生成
+  const prompt = `${shot.prompt}
+
+Product description for reference: ${description}
+
+IMPORTANT: 
+- This must be the EXACT SAME product shown in the reference image
+- Maintain identical colors, materials, textures, logos, and all design details
+- Only change the viewing angle to: ${shot.angle}
+- Use professional product photography style with clean white background and studio lighting
+- High resolution, e-commerce quality`;
+
+  const generateResponse = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            {
+              text: prompt
+            },
+            {
+              inlineData: {
+                mimeType: originalMimeType,
+                data: originalBase64
+              }
+            }
+          ]
+        }],
+        generationConfig: { 
+          responseModalities: ["IMAGE", "TEXT"],
+          temperature: 0.4  // Lower temperature for more consistent results
+        }
+      }),
+    }
+  );
+
+  const generateData = await generateResponse.json();
+  console.log(`📊 Generation response for ${shot.id}:`, generateResponse.status);
+
+  if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
+    for (const part of generateData.candidates[0].content.parts) {
+      if (part.inlineData?.data) {
+        console.log(`✅ ${shot.name} generated with reference`);
+        return part.inlineData.data;
+      }
+    }
+  }
+  
+  console.log(`⚠️ Reference-based generation failed for ${shot.id}:`, JSON.stringify(generateData).substring(0, 500));
+  return null;
+}
+
+// テキストのみで生成（フォールバック）
+async function generateAngleFromText(
+  shot: typeof SHOT_TYPES[0], 
+  description: string,
+  apiKey: string
+): Promise<string | null> {
+  console.log(`🎨 Generating ${shot.name} from text (fallback)...`);
+  
+  const prompt = `${description}, ${shot.angle}, professional product photography, clean white background, studio lighting, e-commerce ready, high resolution, commercial quality`;
+
+  const generateResponse = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { 
+          responseModalities: ["IMAGE", "TEXT"],
+          temperature: 0.8
+        }
+      }),
+    }
+  );
+
+  const generateData = await generateResponse.json();
+
+  if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
+    for (const part of generateData.candidates[0].content.parts) {
+      if (part.inlineData?.data) {
+        return part.inlineData.data;
+      }
+    }
+  }
+  
+  return null;
 }
 
 serve(async (req) => {
@@ -124,9 +221,7 @@ serve(async (req) => {
     
     let { productDescription, brandId, imageUrl, shots = ['front', 'side', 'back', 'detail'] } = body;
 
-    // Validate required parameters
     if (!brandId) {
-      console.error('❌ Missing brandId');
       throw new Error('ブランドIDが指定されていません');
     }
 
@@ -135,14 +230,28 @@ serve(async (req) => {
       throw new Error('Gemini API key not configured');
     }
 
-    // 画像分析: 商品説明がない場合、画像から分析
+    // 元画像のBase64を取得（参照画像として使用）
+    let originalImageBase64: string | null = null;
+    let originalMimeType: string = 'image/jpeg';
+    
+    if (imageUrl) {
+      console.log('🖼️ Fetching original image for reference...');
+      try {
+        const imageData = await fetchImageAsBase64(imageUrl);
+        originalImageBase64 = imageData.base64;
+        originalMimeType = imageData.mimeType;
+      } catch (e) {
+        console.error('❌ Failed to fetch original image:', e);
+      }
+    }
+
+    // 商品説明を取得または画像から分析
     let finalDescription = productDescription?.trim() || '';
     
-    if (!finalDescription && imageUrl) {
-      console.log('🖼️ No product description provided, analyzing uploaded image...');
+    if (!finalDescription && originalImageBase64) {
+      console.log('📝 Analyzing image to get description...');
       try {
-        const { base64, mimeType } = await fetchImageAsBase64(imageUrl);
-        finalDescription = await analyzeImageWithGemini(base64, mimeType, GEMINI_API_KEY);
+        finalDescription = await analyzeImageWithGemini(originalImageBase64, originalMimeType, GEMINI_API_KEY);
       } catch (e) {
         console.error('❌ Image analysis failed:', e);
         throw new Error(`画像分析エラー: ${e.message}. 商品説明を手動で入力してください。`);
@@ -150,93 +259,67 @@ serve(async (req) => {
     }
     
     if (!finalDescription) {
-      console.error('❌ No description available');
       throw new Error('商品説明を入力するか、商品画像をアップロードしてください。');
     }
     
-    console.log('✅ Using description:', finalDescription);
+    console.log('✅ Description:', finalDescription);
     console.log('🎨 Generating', shots.length, 'product shots...');
+    console.log('📌 Reference image available:', !!originalImageBase64);
 
     const selectedShots = SHOT_TYPES.filter(s => shots.includes(s.id));
     const results = [];
 
     for (const shot of selectedShots) {
-      const prompt = `${finalDescription}, ${shot.angle}, professional product photography, clean white background, studio lighting, e-commerce ready, high resolution, commercial quality`;
+      let imageBase64: string | null = null;
+      
+      // 元画像がある場合は参照生成、ない場合はテキスト生成
+      if (originalImageBase64) {
+        imageBase64 = await generateAngleWithReference(
+          originalImageBase64, 
+          originalMimeType, 
+          shot, 
+          finalDescription,
+          GEMINI_API_KEY
+        );
+      }
+      
+      // 参照生成が失敗した場合はテキストのみで生成
+      if (!imageBase64) {
+        imageBase64 = await generateAngleFromText(shot, finalDescription, GEMINI_API_KEY);
+      }
 
-      console.log(`📸 Generating ${shot.name} (${shot.id})...`);
-
-      // Generate with Gemini Image Model
-      const generateResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { 
-              responseModalities: ["IMAGE", "TEXT"],
-              temperature: 0.8
-            }
-          }),
-        }
-      );
-
-      const generateData = await generateResponse.json();
-      console.log(`📊 Generation response for ${shot.id}:`, generateResponse.status);
-
-      if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
-        let imageBase64 = null;
+      if (imageBase64) {
+        const imageDataUrl = `data:image/png;base64,${imageBase64}`;
+        const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
+        const fileName = `${user.id}/${brandId}/${Date.now()}_product_${shot.id}.png`;
         
-        for (const part of generateData.candidates[0].content.parts) {
-          if (part.inlineData?.data) {
-            imageBase64 = part.inlineData.data;
-            break;
-          }
-        }
+        try {
+          await supabaseClient.storage
+            .from('generated-images')
+            .upload(fileName, imgBuffer, { contentType: 'image/png' });
 
-        if (imageBase64) {
-          // Base64をData URLに変換（ブラウザで直接表示可能）
-          const imageDataUrl = `data:image/png;base64,${imageBase64}`;
-          
-          // Storageにも保存（履歴用、エラーは無視）
-          const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
-          const fileName = `${user.id}/${brandId}/${Date.now()}_product_${shot.id}.png`;
-          
-          try {
-            // Upload to storage
-            await supabaseClient.storage
-              .from('generated-images')
-              .upload(fileName, imgBuffer, {
-                contentType: 'image/png',
-              });
-
-            // Save to database
-            await supabaseClient.from('generated_images').insert({
-              brand_id: brandId,
-              user_id: user.id,
-              storage_path: fileName,
-              prompt,
-              model_used: 'gemini-2.0-flash-exp-image-generation',
-              generation_params: { shotType: shot.id, productDescription: finalDescription },
-            });
-          } catch (storageError) {
-            console.log('⚠️ Storage/DB warning (non-critical):', storageError.message);
-          }
-
-          // フロントエンドにBase64 Data URLを返す（確実に表示可能）
-          results.push({
-            shotType: shot.id,
-            shotName: shot.name,
-            imageUrl: imageDataUrl,
-            storagePath: fileName,
+          await supabaseClient.from('generated_images').insert({
+            brand_id: brandId,
+            user_id: user.id,
+            storage_path: fileName,
+            prompt: finalDescription,
+            model_used: 'gemini-2.0-flash-exp-image-generation',
+            generation_params: { shotType: shot.id, productDescription: finalDescription, hasReferenceImage: !!originalImageBase64 },
           });
-          
-          console.log(`✅ ${shot.name} generated successfully with Data URL`);
-        } else {
-          console.log(`⚠️ No image data in response for ${shot.id}`);
+        } catch (storageError) {
+          console.log('⚠️ Storage warning:', storageError.message);
         }
+
+        results.push({
+          shotType: shot.id,
+          shotName: shot.name,
+          imageUrl: imageDataUrl,
+          storagePath: fileName,
+        });
+        
+        console.log(`✅ ${shot.name} complete`);
       } else {
-        console.log(`⚠️ Generation failed for ${shot.id}:`, JSON.stringify(generateData));
+        console.log(`⚠️ Failed to generate ${shot.name}`);
       }
     }
 
@@ -244,27 +327,28 @@ serve(async (req) => {
       throw new Error('画像の生成に失敗しました。しばらく待ってからもう一度お試しください。');
     }
 
-    await supabaseClient.from('api_usage_logs').insert({
-      user_id: user.id,
-      brand_id: brandId,
-      provider: 'gemini',
-      tokens_used: results.length * 500,
-      cost_usd: 0, // Gemini free tier
-    });
+    try {
+      await supabaseClient.from('api_usage_logs').insert({
+        user_id: user.id,
+        brand_id: brandId,
+        provider: 'gemini',
+        tokens_used: results.length * 500,
+        cost_usd: 0,
+      });
+    } catch (e) {
+      console.log('⚠️ Usage log warning:', e.message);
+    }
 
-    console.log(`🎉 Successfully generated ${results.length}/${selectedShots.length} shots`);
-
-    const response = {
-      success: true,
-      productDescription: finalDescription,
-      shots: results,
-      analyzedFromImage: !productDescription?.trim() && !!imageUrl,
-    };
-    
-    console.log('📤 Sending response:', JSON.stringify(response, null, 2));
+    console.log(`🎉 Generated ${results.length}/${selectedShots.length} shots`);
 
     return new Response(
-      JSON.stringify(response),
+      JSON.stringify({
+        success: true,
+        productDescription: finalDescription,
+        shots: results,
+        analyzedFromImage: !productDescription?.trim() && !!imageUrl,
+        usedReferenceImage: !!originalImageBase64,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -279,3 +363,4 @@ serve(async (req) => {
     );
   }
 });
+
