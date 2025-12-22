@@ -35,22 +35,98 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { productDescription, brandId, shots = ['front', 'side', 'back', 'detail'] } = await req.json();
+    const body = await req.json();
+    console.log('📥 Received request body:', JSON.stringify(body, null, 2));
+    
+    const { productDescription, brandId, shots = ['front', 'side', 'back', 'detail'], imageUrl, referenceImage } = body;
 
-    if (!productDescription || !brandId) {
-      throw new Error('Missing required parameters');
+    // Validate required parameters
+    if (!brandId) {
+      console.error('❌ Missing brandId');
+      throw new Error('ブランドIDが指定されていません');
     }
+    
+    // Either productDescription or imageUrl/referenceImage is required
+    const hasDescription = productDescription && productDescription.trim() !== '';
+    const hasImage = imageUrl || referenceImage;
+    
+    if (!hasDescription && !hasImage) {
+      console.error('❌ Missing both productDescription and image');
+      throw new Error('商品説明または商品画像を入力してください');
+    }
+    
+    console.log('✅ Parameters validated:', { 
+      hasDescription, 
+      hasImage, 
+      productDescription: hasDescription ? productDescription : 'will analyze from image',
+      brandId, 
+      shots 
+    });
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
       throw new Error('Gemini API key not configured');
     }
 
+    // If no description but has image, analyze the image first
+    let finalDescription = productDescription;
+    if (!hasDescription && hasImage) {
+      console.log('🔍 Analyzing product image with Gemini Vision...');
+      const imageToAnalyze = imageUrl || referenceImage;
+      
+      try {
+        // First, fetch the image and convert to base64
+        const imageResponse = await fetch(imageToAnalyze);
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+        
+        // Use Gemini Pro Vision to analyze the image
+        const analysisResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: 'Describe this fashion product in detail for product photography. Include: item type, color, material, style, key features. Be concise but specific. Focus on visual details that would be important for e-commerce product shots.' },
+                  {
+                    inline_data: {
+                      mime_type: 'image/jpeg',
+                      data: base64Image
+                    }
+                  }
+                ]
+              }],
+              generationConfig: { 
+                temperature: 0.4,
+                maxOutputTokens: 200
+              }
+            }),
+          }
+        );
+
+        const analysisData = await analysisResponse.json();
+        if (analysisData.candidates?.[0]?.content?.parts?.[0]?.text) {
+          finalDescription = analysisData.candidates[0].content.parts[0].text.trim();
+          console.log('✅ Image analysis complete:', finalDescription);
+        } else {
+          console.error('❌ Failed to analyze image:', analysisData);
+          throw new Error('画像の分析に失敗しました。商品説明を入力してください。');
+        }
+      } catch (e) {
+        console.error('❌ Image analysis error:', e);
+        throw new Error('画像の分析中にエラーが発生しました: ' + e.message);
+      }
+    }
+    
+    console.log('🎨 Generating product shots with description:', finalDescription);
+
     const selectedShots = SHOT_TYPES.filter(s => shots.includes(s.id));
     const results = [];
 
     for (const shot of selectedShots) {
-      const prompt = `${productDescription}, ${shot.angle}, professional product photography, clean white background, studio lighting, e-commerce ready, high resolution, commercial quality`;
+      const prompt = `${finalDescription}, ${shot.angle}, professional product photography, clean white background, studio lighting, e-commerce ready, high resolution, commercial quality`;
 
       // Generate with Gemini
       const generateResponse = await fetch(
@@ -123,7 +199,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        productDescription,
+        productDescription: finalDescription,
+        analyzedFromImage: !hasDescription && hasImage,
         shots: results,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

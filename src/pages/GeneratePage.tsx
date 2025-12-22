@@ -486,6 +486,7 @@ export function GeneratePage() {
           break;
 
         case 'product-shots':
+          // Either description or image is required
           if (!productDescription.trim() && !referenceImage) {
             toast.error('商品説明または商品画像を入力してください');
             setIsGenerating(false);
@@ -494,7 +495,8 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('product-shots', {
             body: { 
               ...baseBody,
-              productDescription,
+              productDescription: productDescription.trim(),
+              imageUrl: referenceImage?.url,
               shots: (selectedShots.length ? selectedShots : ['front']).slice(0, generateCount || 1),
               background: selectedBackground,
             }
@@ -503,9 +505,16 @@ export function GeneratePage() {
             setGeneratedImages(data.shots.map((s: any) => ({
               id: s.storagePath,
               imageUrl: s.imageUrl,
-              prompt: productDescription,
+              prompt: data.analyzedFromImage 
+                ? `${data.productDescription} (画像から自動分析)` 
+                : productDescription,
               label: s.shotName
             })));
+            
+            // Show success message with analysis info
+            if (data.analyzedFromImage) {
+              toast.success(`画像を分析して4つのアングルを生成しました！\n分析結果: ${data.productDescription.substring(0, 50)}...`);
+            }
           }
           break;
 
