@@ -7,10 +7,11 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -83,6 +84,13 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             <div className="p-4 sm:p-5 md:p-6 lg:p-8 overflow-y-auto flex-1 min-h-0">
               {children}
             </div>
+
+            {/* Footer - Fixed at bottom */}
+            {footer && (
+              <div className="px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 border-t border-neutral-100/50 dark:border-white/10 shrink-0 bg-white/90 dark:bg-surface-900/90">
+                {footer}
+              </div>
+            )}
 
             {/* Decorative Glow */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-[50px] pointer-events-none" />

@@ -573,8 +573,19 @@ export function DashboardPage() {
         onClose={() => {}}
         title="ブランドを作成"
         size="md"
+        footer={
+          <Button
+            type="submit"
+            form="brand-create-form"
+            isLoading={isCreatingBrand}
+            className="w-full py-4 text-lg shadow-glow"
+            size="lg"
+          >
+            ブランドを作成してはじめる
+          </Button>
+        }
       >
-        <form onSubmit={handleCreateBrand} className="space-y-6">
+        <form id="brand-create-form" onSubmit={handleCreateBrand} className="space-y-6">
           <div className="bg-primary-50/50 dark:bg-primary-900/20 rounded-2xl p-6 border border-primary-100 dark:border-primary-800/30">
             <div className="flex gap-3">
               <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-800 flex items-center justify-center flex-shrink-0">
@@ -611,17 +622,6 @@ export function DashboardPage() {
               value={brandForm.targetAudience}
               onChange={(e) => setBrandForm({ ...brandForm, targetAudience: e.target.value })}
             />
-          </div>
-
-          <div className="pt-4">
-            <Button
-              type="submit"
-              isLoading={isCreatingBrand}
-              className="w-full py-4 text-lg shadow-glow"
-              size="lg"
-            >
-              ブランドを作成してはじめる
-            </Button>
           </div>
         </form>
       </Modal>
