@@ -452,22 +452,28 @@ export function GeneratePage() {
             setIsGenerating(false);
             return;
           }
+          // 選択されたショットをすべて生成（制限なし）
+          const shotsToGenerate = selectedShots.length ? selectedShots : ['front', 'side', 'back', 'detail'];
+          console.log('🎬 Generating shots:', shotsToGenerate);
           ({ data, error } = await supabase.functions.invoke('product-shots', {
             body: { 
               ...baseBody,
               productDescription,
               imageUrl: referenceImage?.url, // 画像分析用
-              shots: (selectedShots.length ? selectedShots : ['front']).slice(0, generateCount || 1),
+              shots: shotsToGenerate,
               background: selectedBackground,
             }
           }));
+          console.log('📥 Product-shots response:', data);
           if (data?.shots) {
-            setGeneratedImages(data.shots.map((s: any) => ({
+            const images = data.shots.map((s: any) => ({
               id: s.storagePath,
               imageUrl: s.imageUrl,
-              prompt: productDescription,
+              prompt: productDescription || data.productDescription,
               label: s.shotName
-            })));
+            }));
+            console.log('🖼️ Setting images:', images);
+            setGeneratedImages(images);
           }
           break;
 

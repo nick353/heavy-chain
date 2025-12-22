@@ -208,6 +208,8 @@ serve(async (req) => {
             .from('generated-images')
             .getPublicUrl(fileName);
 
+          console.log(`🔗 Generated URL for ${shot.id}:`, urlData.publicUrl);
+
           await supabaseClient.from('generated_images').insert({
             brand_id: brandId,
             user_id: user.id,
@@ -224,7 +226,7 @@ serve(async (req) => {
             storagePath: fileName,
           });
           
-          console.log(`✅ ${shot.name} generated successfully`);
+          console.log(`✅ ${shot.name} generated successfully, URL:`, urlData.publicUrl);
         } else {
           console.log(`⚠️ No image data in response for ${shot.id}`);
         }
@@ -247,13 +249,17 @@ serve(async (req) => {
 
     console.log(`🎉 Successfully generated ${results.length}/${selectedShots.length} shots`);
 
+    const response = {
+      success: true,
+      productDescription: finalDescription,
+      shots: results,
+      analyzedFromImage: !productDescription?.trim() && !!imageUrl,
+    };
+    
+    console.log('📤 Sending response:', JSON.stringify(response, null, 2));
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        productDescription: finalDescription,
-        shots: results,
-        analyzedFromImage: !productDescription?.trim() && !!imageUrl,
-      }),
+      JSON.stringify(response),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
