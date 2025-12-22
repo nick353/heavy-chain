@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Wand2, 
   Image as ImageIcon, 
@@ -184,7 +184,102 @@ interface GeneratedResult {
   label?: string;
 }
 
+// Image Modal Component
+function ImageModal({ 
+  image, 
+  isOpen, 
+  onClose,
+  onDownload,
+  onNext,
+  onPrev,
+  hasNext,
+  hasPrev
+}: { 
+  image: GeneratedResult | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onDownload: (url: string, filename: string) => void;
+  onNext?: () => void;
+  onPrev?: () => void;
+  hasNext?: boolean;
+  hasPrev?: boolean;
+}) {
+  if (!isOpen || !image) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div 
+        className="relative max-w-[90vw] max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute -top-12 right-0 text-white/80 hover:text-white p-2 z-10"
+        >
+          <span className="text-2xl">✕</span>
+        </button>
+
+        {/* Navigation arrows */}
+        {hasPrev && (
+          <button
+            onClick={onPrev}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-14 text-white/80 hover:text-white p-3 bg-white/10 hover:bg-white/20 rounded-full transition-all"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+        )}
+        {hasNext && (
+          <button
+            onClick={onNext}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-14 text-white/80 hover:text-white p-3 bg-white/10 hover:bg-white/20 rounded-full transition-all rotate-180"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+        )}
+
+        {/* Label */}
+        {image.label && (
+          <div className="absolute top-4 left-4 px-4 py-2 bg-black/60 backdrop-blur-md rounded-lg text-white text-sm font-medium">
+            {image.label}
+          </div>
+        )}
+
+        {/* Image */}
+        <img
+          src={image.imageUrl}
+          alt={image.prompt}
+          className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl"
+        />
+
+        {/* Info and actions */}
+        <div className="mt-4 flex items-center justify-between gap-4">
+          <p className="text-white/80 text-sm line-clamp-2 flex-1">
+            {image.prompt}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onDownload(image.imageUrl, `${image.label || 'image'}.png`)}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-neutral-900 rounded-lg hover:bg-neutral-100 transition-colors font-medium"
+            >
+              <Download className="w-4 h-4" />
+              ダウンロード
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export function GeneratePage() {
+  const navigate = useNavigate();
   const { currentBrand } = useAuthStore();
   const { addToHistory } = usePromptHistory();
   
@@ -225,6 +320,7 @@ export function GeneratePage() {
   const [fixedElements, setFixedElements] = useState<string[]>(['logo']);
   const [randomizedElements, setRandomizedElements] = useState<string[]>(['color', 'layout']);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [campaignTitle, setCampaignTitle] = useState('');
   const [campaignSubheadline, setCampaignSubheadline] = useState('');
   const [campaignDiscount, setCampaignDiscount] = useState('');
@@ -273,13 +369,44 @@ export function GeneratePage() {
     setShowSuccessCard(false);
   };
 
+  // 画像を圧縮する関数
+  const compressImage = async (dataUrl: string, maxWidth: number = 1024): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // 画像が大きすぎる場合はリサイズ
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // JPEG形式で圧縮（品質0.8）
+        const compressed = canvas.toDataURL('image/jpeg', 0.8);
+        console.log(`🗜️ Image compressed: ${(dataUrl.length / 1024).toFixed(0)}KB → ${(compressed.length / 1024).toFixed(0)}KB`);
+        resolve(compressed);
+      };
+      img.onerror = () => resolve(dataUrl); // エラー時は元の画像を返す
+      img.src = dataUrl;
+    });
+  };
+
   const handleGenerate = async () => {
-    console.log('🚀 handleGenerate called');
+    console.log('🚀 handleGenerate called at', new Date().toISOString());
     console.log('📊 Current state:', {
       isGenerating,
       selectedFeature: selectedFeature?.id,
       currentBrand: currentBrand?.id,
-      referenceImage: referenceImage?.url,
+      hasReferenceImage: !!referenceImage,
+      referenceImageSize: referenceImage?.url?.length ? `${(referenceImage.url.length / 1024).toFixed(0)}KB` : 'N/A',
       selectedBackground,
     });
     
@@ -300,8 +427,17 @@ export function GeneratePage() {
     }
 
     setIsGenerating(true);
+    console.log('⏳ Generation started, isGenerating set to true');
     
     try {
+      // 画像が大きすぎる場合は圧縮
+      let processedImageUrl = referenceImage?.url;
+      if (processedImageUrl && processedImageUrl.startsWith('data:') && processedImageUrl.length > 500000) {
+        console.log('🗜️ Image too large, compressing...');
+        toast.loading('画像を圧縮中...', { id: 'compress' });
+        processedImageUrl = await compressImage(processedImageUrl);
+        toast.dismiss('compress');
+      }
       let data: any;
       let error: any;
       const textOverlay = overlayEnabled && overlayText.trim() ? {
@@ -316,10 +452,12 @@ export function GeneratePage() {
 
       const baseBody = {
         brandId: currentBrand.id,
-        referenceImage: referenceImage?.url,
+        referenceImage: processedImageUrl,
         referenceType: referenceImage?.referenceType,
         textOverlay,
       };
+      
+      console.log('📤 Base body prepared, referenceImage size:', processedImageUrl?.length ? `${(processedImageUrl.length / 1024).toFixed(0)}KB` : 'none');
 
       switch (selectedFeature?.id) {
         case 'remove-bg':
@@ -330,7 +468,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('remove-background', {
             body: { 
               ...baseBody,
-              imageUrl: referenceImage?.url, 
+              imageUrl: processedImageUrl, 
               newBackground: bgPrompt,
               backgroundReferenceImage: backgroundReferenceImage?.url,
             }
@@ -349,7 +487,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('colorize', {
             body: { 
               ...baseBody,
-              imageUrl: referenceImage?.url, 
+              imageUrl: processedImageUrl, 
               colors: selectedColors.includes('custom') ? [...selectedColors.filter(c => c !== 'custom'), customColor] : selectedColors,
               pattern: selectedPattern,
               patternReferenceImage: patternReferenceImage?.url,
@@ -370,7 +508,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('upscale', {
             body: { 
               ...baseBody,
-              imageUrl: referenceImage?.url, 
+              imageUrl: processedImageUrl, 
               scale: upscaleScale,
               denoiseLevel,
               sharpness,
@@ -390,7 +528,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('generate-variations', {
             body: { 
               ...baseBody,
-              imageUrl: referenceImage?.url, 
+              imageUrl: processedImageUrl, 
               count: generateCount,
               strength: variationStrength / 100,
               prompt: prompt || undefined
@@ -412,10 +550,11 @@ export function GeneratePage() {
             setIsGenerating(false);
             return;
           }
+          console.log('🌆 Invoking scene-coordinate with imageUrl:', !!processedImageUrl);
           ({ data, error } = await supabase.functions.invoke('generate-variations', {
             body: { 
               ...baseBody,
-              imageUrl: referenceImage.url,
+              imageUrl: processedImageUrl,
               scenes: selectedScenes.map(s => sceneOptions.find(sc => sc.id === s)?.prompt),
               count: selectedScenes.length,
             }
@@ -431,15 +570,17 @@ export function GeneratePage() {
           break;
 
         case 'design-gacha':
-          if (!prompt.trim()) {
-            toast.error('ブリーフを入力してください');
+          if (!prompt.trim() && !referenceImage) {
+            toast.error('ブリーフまたは商品画像を入力してください');
             setIsGenerating(false);
             return;
           }
+          console.log('🎲 Invoking design-gacha with imageUrl:', !!processedImageUrl, 'fixedElements:', fixedElements);
           ({ data, error } = await supabase.functions.invoke('design-gacha', {
             body: { 
               ...baseBody,
-              brief: prompt, 
+              brief: prompt,
+              imageUrl: processedImageUrl, // 画像参照用
               directions: generateCount,
               fixedElements,
               randomizedElements,
@@ -477,7 +618,7 @@ export function GeneratePage() {
           const requestBody = { 
             ...baseBody,
             productDescription,
-            imageUrl: referenceImage?.url,
+            imageUrl: processedImageUrl,
             shots: shotsToGenerate,
             background: selectedBackground,
           };
@@ -489,12 +630,24 @@ export function GeneratePage() {
           console.log('📤 Request body (truncated):', logBody);
           console.log('📤 imageUrl length:', requestBody.imageUrl?.length || 0);
           
+          console.log('🚀 Invoking product-shots function...', new Date().toISOString());
           try {
-            ({ data, error } = await supabase.functions.invoke('product-shots', {
+            // タイムアウト処理付きのAPI呼び出し
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('リクエストがタイムアウトしました（60秒）')), 60000)
+            );
+            
+            const invokePromise = supabase.functions.invoke('product-shots', {
               body: requestBody
-            }));
+            });
+            
+            const result = await Promise.race([invokePromise, timeoutPromise]) as any;
+            data = result.data;
+            error = result.error;
+            console.log('✅ Function invoke completed', new Date().toISOString());
           } catch (invokeError: any) {
             console.error('🚨 Invoke error:', invokeError);
+            console.error('🚨 Invoke error type:', invokeError?.constructor?.name);
             throw new Error(`API呼び出しエラー: ${invokeError.message}`);
           }
           console.log('📥 Product-shots response:', data);
@@ -526,10 +679,12 @@ export function GeneratePage() {
             setIsGenerating(false);
             return;
           }
+          console.log('🎭 Invoking model-matrix with imageUrl:', !!processedImageUrl);
           ({ data, error } = await supabase.functions.invoke('model-matrix', {
             body: { 
               ...baseBody,
-              productDescription, 
+              productDescription,
+              imageUrl: processedImageUrl, // 画像参照用
               bodyTypes: selectedBodyTypes,
               ageGroups: selectedAgeGroups,
               skinTone,
@@ -677,18 +832,40 @@ export function GeneratePage() {
         toast.success('生成が完了しました');
       }
     } catch (error: any) {
-      console.error('Generation error:', error);
+      console.error('❌ Generation error:', error);
+      console.error('❌ Error stack:', error?.stack);
+      console.error('❌ Error name:', error?.name);
+      
       // Try to get detailed error from response
       let errorMessage = error.message || '生成に失敗しました';
+      
+      // ネットワークエラーの場合
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMessage = 'ネットワークエラーが発生しました。接続を確認してください。';
+      }
+      
+      // タイムアウトの場合
+      if (error.name === 'AbortError' || error.message?.includes('timeout')) {
+        errorMessage = 'リクエストがタイムアウトしました。画像サイズを小さくして再試行してください。';
+      }
+      
+      // Supabaseエラーの詳細を取得
       if (error.context?.body) {
         try {
           const body = JSON.parse(error.context.body);
           errorMessage = body.error || body.details || errorMessage;
-          console.error('Error details:', body);
+          console.error('Error details from context:', body);
         } catch {}
       }
+      
+      // FunctionsFetchError の場合
+      if (error.__isStorageError || error.message?.includes('FunctionsFetchError')) {
+        errorMessage = 'サーバーへの接続に失敗しました。しばらく待ってから再試行してください。';
+      }
+      
       toast.error(errorMessage);
     } finally {
+      console.log('🏁 Generation finished, setting isGenerating to false');
       setIsGenerating(false);
     }
   };
@@ -1818,7 +1995,7 @@ export function GeneratePage() {
     if (featureConfig?.requiresImage && !referenceImage) return true;
     switch (selectedFeature.id) {
       case 'design-gacha':
-        return !prompt.trim();
+        return !prompt.trim() && !referenceImage;
       case 'campaign-image':
         return !prompt.trim() && !campaignTitle.trim();
       case 'multilingual-banner':
@@ -2034,18 +2211,24 @@ export function GeneratePage() {
                         {generatedImages.length}枚の画像がギャラリーに保存されました。
                       </p>
                       <div className="flex items-center gap-3">
-                        <Link to="/gallery">
-                          <Button size="sm" variant="secondary" className="bg-white/50 dark:bg-black/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 hover:bg-white/80">
-                            <FolderOpen className="w-4 h-4 mr-1.5" />
-                            ギャラリーで見る
-                          </Button>
-                        </Link>
-                        <Link to="/canvas">
-                          <Button size="sm" variant="ghost" className="text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30">
-                            キャンバスで編集
-                            <ExternalLink className="w-4 h-4 ml-1.5" />
-                          </Button>
-                        </Link>
+                        <Button 
+                          size="sm" 
+                          variant="secondary" 
+                          className="bg-white/50 dark:bg-black/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 hover:bg-white/80"
+                          onClick={() => navigate('/gallery')}
+                        >
+                          <FolderOpen className="w-4 h-4 mr-1.5" />
+                          ギャラリーで見る
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30"
+                          onClick={() => navigate('/canvas')}
+                        >
+                          キャンバスで編集
+                          <ExternalLink className="w-4 h-4 ml-1.5" />
+                        </Button>
                       </div>
                     </div>
                     <button
@@ -2079,7 +2262,8 @@ export function GeneratePage() {
                     <img
                       src={image.imageUrl}
                       alt={image.prompt}
-                      className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-105"
+                      onClick={() => setSelectedImageIndex(index)}
+                      className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
                       <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
@@ -2135,6 +2319,22 @@ export function GeneratePage() {
         onClose={() => setShowPromptHistory(false)}
         onSelect={(selectedPrompt) => setPrompt(selectedPrompt)}
       />
+
+      {/* Image Modal for enlarged view */}
+      <AnimatePresence>
+        {selectedImageIndex !== null && generatedImages[selectedImageIndex] && (
+          <ImageModal
+            image={generatedImages[selectedImageIndex]}
+            isOpen={selectedImageIndex !== null}
+            onClose={() => setSelectedImageIndex(null)}
+            onDownload={handleDownload}
+            onNext={() => setSelectedImageIndex(prev => prev !== null && prev < generatedImages.length - 1 ? prev + 1 : prev)}
+            onPrev={() => setSelectedImageIndex(prev => prev !== null && prev > 0 ? prev - 1 : prev)}
+            hasNext={selectedImageIndex < generatedImages.length - 1}
+            hasPrev={selectedImageIndex > 0}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
