@@ -15,7 +15,9 @@ import {
   ExternalLink,
   Plus,
   Minus,
-  Sliders
+  Sliders,
+  AlertCircle,
+  XCircle
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
@@ -192,6 +194,7 @@ export function GeneratePage() {
   const [prompt, setPrompt] = useState('');
   const [showPromptHistory, setShowPromptHistory] = useState(false);
   const [showSuccessCard, setShowSuccessCard] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [negativePrompt, setNegativePrompt] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [selectedRatio, setSelectedRatio] = useState('1:1');
@@ -259,6 +262,7 @@ export function GeneratePage() {
     setBackgroundReferenceImage(null);
     setPatternReferenceImage(null);
     setShowSuccessCard(false);
+    setErrorMessage(null);
     setGenerateCount(feature.id === 'design-gacha' ? 4 : 1);
     setOverlayEnabled(false);
     setSelectedShots(['front', 'side', 'back', 'detail']);
@@ -271,6 +275,7 @@ export function GeneratePage() {
     setBackgroundReferenceImage(null);
     setPatternReferenceImage(null);
     setShowSuccessCard(false);
+    setErrorMessage(null);
   };
 
   const handleGenerate = async () => {
@@ -290,7 +295,32 @@ export function GeneratePage() {
       return;
     }
 
+    // Check if Supabase is configured
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      setErrorMessage('Supabaseが設定されていません。環境変数（VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY）を設定してください。');
+      toast.error('Supabase設定エラー：環境変数が設定されていません', {
+        duration: 8000,
+      });
+      return;
+    }
+
     setIsGenerating(true);
+    setErrorMessage(null); // Clear previous errors
+    
+    // Show loading message
+    const loadingToastId = toast.loading('AI画像生成を開始しています...', {
+      duration: Infinity,
+    });
+    
+    // Debug logging
+    console.log('🚀 画像生成開始:', {
+      feature: selectedFeature?.id,
+      brand: currentBrand?.id,
+      hasReferenceImage: !!referenceImage,
+    });
     
     try {
       let data: any;
@@ -318,6 +348,8 @@ export function GeneratePage() {
             selectedBackground === 'reference' && backgroundReferenceImage ? 'use reference image' :
             backgroundOptions.find(b => b.id === selectedBackground)?.prompt || '';
           
+          console.log('📤 API呼び出し: remove-background', { imageUrl: referenceImage?.url, newBackground: bgPrompt });
+          
           ({ data, error } = await supabase.functions.invoke('remove-background', {
             body: { 
               ...baseBody,
@@ -326,6 +358,9 @@ export function GeneratePage() {
               backgroundReferenceImage: backgroundReferenceImage?.url,
             }
           }));
+          
+          console.log('📥 APIレスポンス:', { data, error });
+          
           if (data?.resultUrl) {
             setGeneratedImages([{
               id: Date.now().toString(),
@@ -337,6 +372,8 @@ export function GeneratePage() {
           break;
 
         case 'colorize':
+          console.log('📤 API呼び出し: colorize');
+          
           ({ data, error } = await supabase.functions.invoke('colorize', {
             body: { 
               ...baseBody,
@@ -347,6 +384,9 @@ export function GeneratePage() {
               count: generateCount,
             }
           }));
+          
+          console.log('📥 APIレスポンス:', { data, error });
+          
           if (data?.variations) {
             setGeneratedImages(data.variations.map((v: any) => ({
               id: v.storagePath || Date.now().toString(),
@@ -616,7 +656,21 @@ export function GeneratePage() {
           }
       }
 
-      if (error) throw error;
+      // Dismiss loading toast
+      toast.dismiss(loadingToastId);
+      
+      if (error) {
+        // Parse and display error message
+        let errorMsg = '生成に失敗しました';
+        if (typeof error === 'string') {
+          errorMsg = error;
+        } else if (error?.message) {
+          errorMsg = error.message;
+        } else if (error?.error) {
+          errorMsg = error.error;
+        }
+        throw new Error(errorMsg);
+      }
       
       if (selectedFeature?.id !== 'optimize-prompt') {
         const promptToSave = prompt || productDescription || headline || campaignTitle;
@@ -624,20 +678,52 @@ export function GeneratePage() {
           addToHistory(promptToSave, selectedFeature?.name);
         }
         setShowSuccessCard(true);
-        toast.success('生成が完了しました');
+        toast.success('生成が完了しました', { duration: 4000 });
       }
     } catch (error: any) {
       console.error('Generation error:', error);
-      // Try to get detailed error from response
-      let errorMessage = error.message || '生成に失敗しました';
-      if (error.context?.body) {
+      
+      // Extract detailed error message
+      let errorMessage = '生成に失敗しました';
+      
+      // Try to get error from various sources
+      if (error?.context?.body) {
         try {
-          const body = JSON.parse(error.context.body);
-          errorMessage = body.error || body.details || errorMessage;
+          const body = typeof error.context.body === 'string' 
+            ? JSON.parse(error.context.body) 
+            : error.context.body;
+          errorMessage = body.error || body.details || body.message || errorMessage;
           console.error('Error details:', body);
-        } catch {}
+        } catch (parseError) {
+          console.error('Failed to parse error body:', parseError);
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
       }
-      toast.error(errorMessage);
+      
+      // Add helpful context based on the feature
+      if (selectedFeature) {
+        errorMessage = `${selectedFeature.name}の生成に失敗しました: ${errorMessage}`;
+      }
+      
+      // Show error to user
+      toast.error(errorMessage, {
+        duration: 6000,
+        style: {
+          maxWidth: '500px',
+        },
+      });
+      
+      // Set error state for display in UI
+      setErrorMessage(errorMessage);
+      
+      // Log full error for debugging
+      console.error('Full error object:', JSON.stringify(error, null, 2));
+      
+      // Dismiss loading toast
+      toast.dismiss(loadingToastId);
     } finally {
       setIsGenerating(false);
     }
@@ -1912,6 +1998,7 @@ export function GeneratePage() {
                   onClick={() => {
                     setGeneratedImages([]);
                     setShowSuccessCard(false);
+                    setErrorMessage(null);
                   }}
                   className="text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
                 >
@@ -1945,7 +2032,7 @@ export function GeneratePage() {
             </div>
           )}
 
-          {!isGenerating && generatedImages.length === 0 && (
+          {!isGenerating && generatedImages.length === 0 && !errorMessage && (
             <div className="glass-panel rounded-2xl p-12 text-center border-2 border-dashed border-neutral-200/50 dark:border-neutral-700/50 min-h-[400px] flex flex-col items-center justify-center">
               <div className="w-20 h-20 bg-neutral-50 dark:bg-neutral-800/50 rounded-full flex items-center justify-center mb-6">
                 <ImageIcon className="w-10 h-10 text-neutral-300 dark:text-neutral-600" />
@@ -1960,6 +2047,53 @@ export function GeneratePage() {
                 }
               </p>
             </div>
+          )}
+
+          {/* Error Display */}
+          {!isGenerating && errorMessage && generatedImages.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="glass-panel rounded-2xl p-12 text-center border-2 border-red-200/50 dark:border-red-800/50 min-h-[400px] flex flex-col items-center justify-center bg-red-50/50 dark:bg-red-900/10"
+            >
+              <div className="w-20 h-20 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center mb-6">
+                <XCircle className="w-10 h-10 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-3">
+                エラーが発生しました
+              </h3>
+              <div className="max-w-md mx-auto mb-6 p-4 bg-white dark:bg-neutral-900 rounded-xl border border-red-200 dark:border-red-800">
+                <p className="text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap text-left">
+                  {errorMessage}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => {
+                    setErrorMessage(null);
+                    handleGenerate();
+                  }}
+                  leftIcon={<RefreshCw className="w-4 h-4" />}
+                  variant="secondary"
+                >
+                  再試行
+                </Button>
+                <Button
+                  onClick={() => setErrorMessage(null)}
+                  variant="ghost"
+                >
+                  閉じる
+                </Button>
+              </div>
+              <div className="mt-6 text-xs text-neutral-500 dark:text-neutral-400">
+                <p>問題が解決しない場合は、以下をお試しください：</p>
+                <ul className="mt-2 text-left inline-block">
+                  <li>• プロンプトや設定を変更する</li>
+                  <li>• ページを再読み込みする</li>
+                  <li>• しばらく時間をおいてから再度お試しください</li>
+                </ul>
+              </div>
+            </motion.div>
           )}
 
           {generatedImages.length > 0 && (

@@ -4,7 +4,9 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Missing Supabase environment variables - using demo mode');
+  console.error('❌ Supabase環境変数が設定されていません！');
+  console.error('VITE_SUPABASE_URL:', supabaseUrl ? '✅ 設定済み' : '❌ 未設定');
+  console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? '✅ 設定済み' : '❌ 未設定');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
