@@ -40,32 +40,34 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6">
+        <div className="fixed inset-0 z-[100] overflow-y-auto">
           {/* Backdrop */}
           <motion.div
             ref={overlayRef}
             initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
             animate={{ opacity: 1, backdropFilter: 'blur(8px)' }}
             exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-            className="absolute inset-0 bg-black/40 dark:bg-black/70"
+            className="fixed inset-0 bg-black/40 dark:bg-black/70"
             onClick={(e) => {
               if (e.target === overlayRef.current) onClose();
             }}
           />
 
-          {/* Modal Content */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className={`
-              relative w-full ${sizes[size]} 
-              bg-white/90 dark:bg-surface-900/90 backdrop-blur-xl 
-              rounded-2xl sm:rounded-3xl shadow-2xl border border-white/50 dark:border-surface-700
-              overflow-hidden flex flex-col max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[calc(100dvh-4rem)]
-            `}
-          >
+          {/* Modal Container */}
+          <div className="min-h-full flex items-start justify-center p-2 sm:p-4 md:p-6 pt-8 sm:pt-12 md:pt-16">
+            {/* Modal Content */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className={`
+                relative w-full ${sizes[size]} 
+                bg-white/90 dark:bg-surface-900/90 backdrop-blur-xl 
+                rounded-2xl sm:rounded-3xl shadow-2xl border border-white/50 dark:border-surface-700
+                overflow-hidden flex flex-col max-h-[calc(100dvh-4rem)] sm:max-h-[calc(100dvh-6rem)] md:max-h-[calc(100dvh-8rem)] my-4
+              `}
+            >
             {title && (
               <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 border-b border-neutral-100/50 dark:border-white/10 shrink-0">
                 <h2 className="text-base sm:text-lg md:text-xl font-display font-semibold text-neutral-900 dark:text-white tracking-wide truncate pr-4">
@@ -92,10 +94,11 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
               </div>
             )}
 
-            {/* Decorative Glow */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-[50px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent-500/10 rounded-full blur-[50px] pointer-events-none" />
-          </motion.div>
+              {/* Decorative Glow */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-[50px] pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent-500/10 rounded-full blur-[50px] pointer-events-none" />
+            </motion.div>
+          </div>
         </div>
       )}
     </AnimatePresence>
