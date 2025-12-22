@@ -198,27 +198,30 @@ serve(async (req) => {
           // Base64をData URLに変換（ブラウザで直接表示可能）
           const imageDataUrl = `data:image/png;base64,${imageBase64}`;
           
-          // Storageにも保存（履歴用）
+          // Storageにも保存（履歴用、エラーは無視）
           const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
           const fileName = `${user.id}/${brandId}/${Date.now()}_product_${shot.id}.png`;
           
-          // Upload to storage (non-blocking, ignore errors)
-          supabaseClient.storage
-            .from('generated-images')
-            .upload(fileName, imgBuffer, {
-              contentType: 'image/png',
-            })
-            .catch(err => console.log('⚠️ Storage upload warning:', err.message));
+          try {
+            // Upload to storage
+            await supabaseClient.storage
+              .from('generated-images')
+              .upload(fileName, imgBuffer, {
+                contentType: 'image/png',
+              });
 
-          // Save to database (non-blocking, ignore errors)
-          supabaseClient.from('generated_images').insert({
-            brand_id: brandId,
-            user_id: user.id,
-            storage_path: fileName,
-            prompt,
-            model_used: 'gemini-2.0-flash-exp-image-generation',
-            generation_params: { shotType: shot.id, productDescription: finalDescription },
-          }).catch(err => console.log('⚠️ Database insert warning:', err.message));
+            // Save to database
+            await supabaseClient.from('generated_images').insert({
+              brand_id: brandId,
+              user_id: user.id,
+              storage_path: fileName,
+              prompt,
+              model_used: 'gemini-2.0-flash-exp-image-generation',
+              generation_params: { shotType: shot.id, productDescription: finalDescription },
+            });
+          } catch (storageError) {
+            console.log('⚠️ Storage/DB warning (non-critical):', storageError.message);
+          }
 
           // フロントエンドにBase64 Data URLを返す（確実に表示可能）
           results.push({
