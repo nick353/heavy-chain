@@ -32,6 +32,7 @@ import { useCanvasStore } from '../stores/canvasStore';
 import { ChatEditor } from '../components/ChatEditor';
 import { TemplateSelector } from '../components/TemplateSelector';
 import { Button, Modal, Textarea, Input } from '../components/ui';
+import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';
@@ -80,6 +81,9 @@ export function CanvasEditorPage() {
   const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s', '30s', '40s']);
   const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Reference image states for generate modal
+  const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
   
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -384,15 +388,27 @@ export function CanvasEditorPage() {
       let data;
       let error;
 
+      // 共通のベースボディ（参照画像を含む）
+      const baseBody = {
+        brandId: currentBrand.id,
+        referenceImage: referenceImage?.url,
+        referenceType: referenceImage?.referenceType,
+      };
+
       switch (generateMode) {
         case 'gacha':
-          if (!generatePrompt.trim()) {
-            toast.error('ブリーフを入力してください');
+          if (!generatePrompt.trim() && !referenceImage) {
+            toast.error('ブリーフまたは参考画像を入力してください');
             setIsGenerating(false);
             return;
           }
           ({ data, error } = await supabase.functions.invoke('design-gacha', {
-            body: { brief: generatePrompt, brandId: currentBrand.id, directions: 4 }
+            body: { 
+              ...baseBody,
+              brief: generatePrompt, 
+              imageUrl: referenceImage?.url,
+              directions: 4 
+            }
           }));
           if (data?.variations) {
             data.variations.forEach((v: any) => {
@@ -408,13 +424,17 @@ export function CanvasEditorPage() {
           break;
 
         case 'product-shots':
-          if (!productDescription.trim()) {
-            toast.error('商品説明を入力してください');
+          if (!productDescription.trim() && !referenceImage) {
+            toast.error('商品説明または商品画像を入力してください');
             setIsGenerating(false);
             return;
           }
           ({ data, error } = await supabase.functions.invoke('product-shots', {
-            body: { productDescription, brandId: currentBrand.id }
+            body: { 
+              ...baseBody,
+              productDescription, 
+              imageUrl: referenceImage?.url,
+            }
           }));
           if (data?.shots) {
             data.shots.forEach((s: any) => {
@@ -430,15 +450,16 @@ export function CanvasEditorPage() {
           break;
 
         case 'model-matrix':
-          if (!productDescription.trim()) {
-            toast.error('商品説明を入力してください');
+          if (!productDescription.trim() && !referenceImage) {
+            toast.error('商品説明または商品画像を入力してください');
             setIsGenerating(false);
             return;
           }
           ({ data, error } = await supabase.functions.invoke('model-matrix', {
             body: { 
+              ...baseBody,
               productDescription, 
-              brandId: currentBrand.id,
+              imageUrl: referenceImage?.url,
               bodyTypes: selectedBodyTypes,
               ageGroups: selectedAgeGroups
             }
@@ -464,9 +485,10 @@ export function CanvasEditorPage() {
           }
           ({ data, error } = await supabase.functions.invoke('multilingual-banner', {
             body: { 
+              ...baseBody,
               headline, 
               subheadline,
-              brandId: currentBrand.id,
+              imageUrl: referenceImage?.url,
               languages: selectedLanguages,
               aspectRatio: '1:1'
             }
@@ -492,10 +514,10 @@ export function CanvasEditorPage() {
           }
           ({ data, error } = await supabase.functions.invoke('generate-image', {
             body: {
+              ...baseBody,
               prompt: generatePrompt,
               width: 1024,
               height: 1024,
-              brandId: currentBrand.id
             }
           }));
           if (data?.images && data.images.length > 0) {
@@ -517,6 +539,7 @@ export function CanvasEditorPage() {
       setProductDescription('');
       setHeadline('');
       setSubheadline('');
+      setReferenceImage(null);
     } catch (error: any) {
       console.error('Generation error:', error);
       toast.error(error.message || '画像生成に失敗しました');
@@ -778,6 +801,14 @@ export function CanvasEditorPage() {
               onChange={(e) => setGeneratePrompt(e.target.value)}
               rows={3}
             />
+            <ImageSelector
+              label="参考画像（任意）"
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={['style', 'base']}
+              defaultReferenceType="style"
+              hint="スタイルの参考またはベース画像として使用します"
+            />
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
               ミニマル、ラグジュアリー、ストリート等の8スタイルから4つを生成します
             </p>
@@ -794,6 +825,14 @@ export function CanvasEditorPage() {
               onChange={(e) => setProductDescription(e.target.value)}
               rows={3}
             />
+            <ImageSelector
+              label="実物商品画像（任意）"
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={['base', 'style']}
+              defaultReferenceType="base"
+              hint="アップロードすると、この画像を元に4方向のカットを生成します"
+            />
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
               正面・側面・背面・ディテールの4カットを生成します
             </p>
@@ -809,6 +848,14 @@ export function CanvasEditorPage() {
               value={productDescription}
               onChange={(e) => setProductDescription(e.target.value)}
               rows={3}
+            />
+            <ImageSelector
+              label="商品画像（任意）"
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={['base', 'style']}
+              defaultReferenceType="base"
+              hint="モデルに着用させる商品の参考画像"
             />
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">体型</label>
@@ -868,6 +915,14 @@ export function CanvasEditorPage() {
               value={subheadline}
               onChange={(e) => setSubheadline(e.target.value)}
             />
+            <ImageSelector
+              label="ベース画像（任意）"
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={['base', 'style']}
+              defaultReferenceType="base"
+              hint="バナーの背景やベースとして使用します"
+            />
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">言語</label>
               <div className="flex gap-2 flex-wrap">
@@ -898,13 +953,23 @@ export function CanvasEditorPage() {
 
       default:
         return (
-          <Textarea
-            label="プロンプト"
-            placeholder="生成したい画像を日本語で説明してください..."
-            value={generatePrompt}
-            onChange={(e) => setGeneratePrompt(e.target.value)}
-            rows={4}
-          />
+          <div className="space-y-4">
+            <Textarea
+              label="プロンプト"
+              placeholder="生成したい画像を日本語で説明してください..."
+              value={generatePrompt}
+              onChange={(e) => setGeneratePrompt(e.target.value)}
+              rows={4}
+            />
+            <ImageSelector
+              label="参考画像（任意）"
+              value={referenceImage}
+              onChange={setReferenceImage}
+              allowedReferenceTypes={['style', 'composition']}
+              defaultReferenceType="style"
+              hint="スタイルや構図の参考として使用します"
+            />
+          </div>
         );
     }
   };
@@ -1189,7 +1254,10 @@ export function CanvasEditorPage() {
       {/* Generate Modal */}
       <Modal
         isOpen={showGenerateModal}
-        onClose={() => setShowGenerateModal(false)}
+        onClose={() => {
+          setShowGenerateModal(false);
+          setReferenceImage(null);
+        }}
         title="AI画像生成"
         size="lg"
       >
@@ -1226,7 +1294,10 @@ export function CanvasEditorPage() {
           <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <Button
               variant="secondary"
-              onClick={() => setShowGenerateModal(false)}
+              onClick={() => {
+                setShowGenerateModal(false);
+                setReferenceImage(null);
+              }}
             >
               キャンセル
             </Button>
