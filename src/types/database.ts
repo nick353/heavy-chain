@@ -140,57 +140,66 @@ export interface Database {
       generated_images: {
         Row: {
           id: string
-          job_id: string
+          job_id: string | null
           brand_id: string
           user_id: string
           storage_path: string
+          image_url: string | null
           thumbnail_path: string | null
           version: number
           parent_image_id: string | null
           is_favorite: boolean
           created_at: string
-          expires_at: string
+          expires_at: string | null
           // Metadata fields
           prompt: string | null
           negative_prompt: string | null
           feature_type: string | null
           style_preset: string | null
+          model_used: string | null
+          generation_params: Json | null
           metadata: Json | null
         }
         Insert: {
           id?: string
-          job_id: string
+          job_id?: string | null
           brand_id: string
           user_id: string
           storage_path: string
+          image_url?: string | null
           thumbnail_path?: string | null
           version?: number
           parent_image_id?: string | null
           is_favorite?: boolean
           created_at?: string
-          expires_at?: string
+          expires_at?: string | null
           prompt?: string | null
           negative_prompt?: string | null
           feature_type?: string | null
           style_preset?: string | null
+          model_used?: string | null
+          generation_params?: Json | null
           metadata?: Json | null
         }
         Update: {
           id?: string
-          job_id?: string
+          job_id?: string | null
           brand_id?: string
           user_id?: string
           storage_path?: string
+          image_url?: string | null
           thumbnail_path?: string | null
           version?: number
           parent_image_id?: string | null
           is_favorite?: boolean
           created_at?: string
-          expires_at?: string
+          expires_at?: string | null
           prompt?: string | null
           negative_prompt?: string | null
           feature_type?: string | null
           style_preset?: string | null
+          model_used?: string | null
+          generation_params?: Json | null
           metadata?: Json | null
         }
       }

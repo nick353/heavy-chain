@@ -136,18 +136,34 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
         if (imageBase64) {
           const imageDataUrl = `data:image/png;base64,${imageBase64}`;
           const fileName = `${user.id}/${brandId}/${Date.now()}_banner_${lang.code}.png`;
+          let storageUrl = '';
 
           try {
             const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
-            await supabaseClient.storage
+            const { error: uploadError } = await supabaseClient.storage
               .from('generated-images')
               .upload(fileName, imgBuffer, { contentType: 'image/png' });
 
+            if (!uploadError) {
+              const { data: urlData } = supabaseClient.storage.from('generated-images').getPublicUrl(fileName);
+              storageUrl = urlData.publicUrl || '';
+              console.log('✅ Image uploaded to storage:', storageUrl);
+            } else {
+              console.log('⚠️ Storage upload error:', uploadError.message);
+            }
+          } catch (storageError) {
+            console.log('⚠️ Storage warning:', storageError.message);
+          }
+
+          // Always save record with image_url as fallback
+          try {
             await supabaseClient.from('generated_images').insert({
               brand_id: brandId,
               user_id: user.id,
               storage_path: fileName,
+              image_url: storageUrl || imageDataUrl,
               prompt,
+              feature_type: 'multilingual-banner',
               model_used: 'gemini-2.0-flash-exp-image-generation',
               generation_params: { 
                 language: lang.code,
@@ -157,8 +173,9 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
                 aspectRatio
               },
             });
-          } catch (storageError) {
-            console.log('⚠️ Storage warning:', storageError.message);
+            console.log('✅ Image record saved to database');
+          } catch (dbError) {
+            console.log('⚠️ Database warning:', dbError.message);
           }
 
           results.push({

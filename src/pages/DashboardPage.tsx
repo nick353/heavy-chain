@@ -241,16 +241,27 @@ export function DashboardPage() {
     navigate('/canvas/new');
   };
 
-  const getImageUrl = (path: string) => {
+  const getImageUrl = (image: GeneratedImage) => {
+    // まずimage_urlを確認（直接URL）
+    if (image.image_url) {
+      return image.image_url;
+    }
+    
+    // storage_pathを使用
+    const path = image.storage_path;
     if (!path) {
-      console.warn('Image path is empty');
+      console.warn('Image path is empty for image:', image.id);
       return '';
     }
     try {
+      // storage_pathがすでに完全なURLの場合はそのまま返す
+      if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+        return path;
+      }
       const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
       return data.publicUrl || '';
     } catch (error) {
-      console.error('Failed to get image URL:', error);
+      console.error('Failed to get image URL:', error, 'path:', path);
       return '';
     }
   };
@@ -510,20 +521,20 @@ export function DashboardPage() {
                   className="group aspect-square rounded-xl sm:rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 cursor-pointer relative shadow-sm hover:shadow-lg transition-all duration-300"
                   onClick={() => navigate(`/gallery?image=${image.id}`)}
                 >
-                  {getImageUrl(image.storage_path) ? (
+                  {getImageUrl(image) ? (
                     <img
-                      src={getImageUrl(image.storage_path)}
+                      src={getImageUrl(image)}
                       alt=""
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       loading="lazy"
                       onError={(e) => {
-                        console.error('Failed to load image:', image.storage_path);
+                        console.error('Failed to load image:', image.storage_path, 'image_url:', image.image_url);
                         e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3E画像なし%3C/text%3E%3C/svg%3E';
                       }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700">
-                      <span className="text-neutral-400 text-sm">読込失敗</span>
+                      <span className="text-neutral-400 text-sm">画像なし</span>
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">

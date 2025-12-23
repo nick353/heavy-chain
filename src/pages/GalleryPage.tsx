@@ -117,23 +117,34 @@ export function GalleryPage() {
     }
   };
 
-  const getImageUrl = (path: string) => {
+  const getImageUrl = (image: GeneratedImage) => {
+    // まずimage_urlを確認（直接URL）
+    if (image.image_url) {
+      return image.image_url;
+    }
+    
+    // storage_pathを使用
+    const path = image.storage_path;
     if (!path) {
-      console.warn('Image path is empty');
+      console.warn('Image path is empty for image:', image.id);
       return '';
     }
     try {
+      // storage_pathがすでに完全なURLの場合はそのまま返す
+      if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+        return path;
+      }
       const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
       return data.publicUrl || '';
     } catch (error) {
-      console.error('Failed to get image URL:', error);
+      console.error('Failed to get image URL:', error, 'path:', path);
       return '';
     }
   };
 
   const handleDownload = async (image: GeneratedImage, format: 'png' | 'jpeg' | 'webp' = 'png') => {
     try {
-      const imageUrl = getImageUrl(image.storage_path);
+      const imageUrl = getImageUrl(image);
       const response = await fetch(imageUrl);
       const blob = await response.blob();
       
@@ -254,13 +265,13 @@ export function GalleryPage() {
 
   const handleEditInCanvas = (image: GeneratedImage) => {
     // Store the image URL in sessionStorage for the canvas to pick up
-    sessionStorage.setItem('canvas_load_image', getImageUrl(image.storage_path));
+    sessionStorage.setItem('canvas_load_image', getImageUrl(image));
     navigate('/canvas');
   };
 
   const handleEditWithFeature = (featureId: string, image: GeneratedImage) => {
     sessionStorage.setItem('generate_load_image', JSON.stringify({
-      url: getImageUrl(image.storage_path),
+      url: getImageUrl(image),
       id: image.id,
     }));
     navigate(`/generate?feature=${featureId}`);
@@ -539,14 +550,14 @@ export function GalleryPage() {
                   }`}
                   onClick={() => selectMode ? toggleSelectImage(image.id) : setSelectedImage(image)}
                 >
-                  {getImageUrl(image.storage_path) ? (
+                  {getImageUrl(image) ? (
                     <img
-                      src={getImageUrl(image.storage_path)}
+                      src={getImageUrl(image)}
                       alt=""
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
                       onError={(e) => {
-                        console.error('Failed to load image:', image.storage_path);
+                        console.error('Failed to load image:', image.storage_path, 'image_url:', image.image_url);
                         e.currentTarget.style.display = 'none';
                         const parent = e.currentTarget.parentElement;
                         if (parent) {
@@ -559,7 +570,7 @@ export function GalleryPage() {
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700">
-                      <span className="text-neutral-400 text-sm">読込失敗</span>
+                      <span className="text-neutral-400 text-sm">画像なし</span>
                     </div>
                   )}
                   
@@ -650,16 +661,16 @@ export function GalleryPage() {
 
             {/* Main Content */}
             <div className="flex-1 flex items-center justify-center p-16" onClick={() => setSelectedImage(null)}>
-                  {getImageUrl(selectedImage.storage_path) ? (
+                  {getImageUrl(selectedImage) ? (
                 <motion.img
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  src={getImageUrl(selectedImage.storage_path)}
+                  src={getImageUrl(selectedImage)}
                   alt=""
                   className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                   onClick={(e) => e.stopPropagation()}
                   onError={() => {
-                    console.error('Failed to load image in modal:', selectedImage.storage_path);
+                    console.error('Failed to load image in modal:', selectedImage.storage_path, 'image_url:', selectedImage.image_url);
                     toast.error('画像の読み込みに失敗しました');
                   }}
                 />

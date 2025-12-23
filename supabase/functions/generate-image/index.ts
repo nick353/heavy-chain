@@ -298,9 +298,10 @@ serve(async (req) => {
 
     // Upload to Supabase Storage (non-blocking)
     const fileName = `${brandId}/${user.id}/${job.id}.png`
+    let storageUrl = ''
     
     try {
-      await supabaseClient
+      const { error: uploadError } = await supabaseClient
         .storage
         .from('generated-images')
         .upload(fileName, imageBuffer, {
@@ -308,11 +309,24 @@ serve(async (req) => {
           upsert: false
         })
 
-      // Calculate expiry (30 days)
-      const expiresAt = new Date()
-      expiresAt.setDate(expiresAt.getDate() + 30)
+      if (!uploadError) {
+        // Get public URL
+        const { data: urlData } = supabaseClient.storage.from('generated-images').getPublicUrl(fileName)
+        storageUrl = urlData.publicUrl || ''
+        console.log('✅ Image uploaded to storage:', storageUrl)
+      } else {
+        console.log('⚠️ Storage upload error:', uploadError.message)
+      }
+    } catch (storageError) {
+      console.log('⚠️ Storage warning (non-critical):', storageError.message)
+    }
 
-      // Save generated image record
+    // Calculate expiry (30 days)
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 30)
+
+    // Save generated image record (always save, with image_url as fallback)
+    try {
       await supabaseClient
         .from('generated_images')
         .insert({
@@ -320,16 +334,21 @@ serve(async (req) => {
           brand_id: brandId,
           user_id: user.id,
           storage_path: fileName,
+          image_url: storageUrl || imageDataUrl, // Fallback to data URL if storage failed
+          prompt: optimizedPrompt,
+          feature_type: 'text-to-image',
+          model_used: usedModel,
           expires_at: expiresAt.toISOString()
         })
+      console.log('✅ Image record saved to database')
 
       // Update job status to completed
       await supabaseClient
         .from('generation_jobs')
         .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', job.id)
-    } catch (storageError) {
-      console.log('⚠️ Storage warning (non-critical):', storageError.message)
+    } catch (dbError) {
+      console.log('⚠️ Database warning:', dbError.message)
     }
 
     // Base64 Data URLを返す（確実に表示可能）
