@@ -59,6 +59,9 @@ export function GalleryPage() {
   useEffect(() => {
     if (currentBrand) {
       fetchImages();
+    } else {
+      // ブランドがない場合はローディングを解除
+      setIsLoading(false);
     }
   }, [currentBrand, filter, sortBy]);
 
@@ -74,7 +77,10 @@ export function GalleryPage() {
   }, [searchParams, images]);
 
   const fetchImages = async () => {
-    if (!currentBrand) return;
+    if (!currentBrand) {
+      setIsLoading(false);
+      return;
+    }
     
     setIsLoading(true);
     try {
@@ -95,19 +101,34 @@ export function GalleryPage() {
 
       const { data, error } = await query;
 
-      if (error) throw error;
-      setImages(data || []);
+      if (error) {
+        console.error('Failed to fetch images:', error);
+        toast.error('画像の読み込みに失敗しました');
+        setImages([]);
+      } else {
+        setImages(data || []);
+      }
     } catch (error) {
       console.error('Failed to fetch images:', error);
       toast.error('画像の読み込みに失敗しました');
+      setImages([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   const getImageUrl = (path: string) => {
-    const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
-    return data.publicUrl;
+    if (!path) {
+      console.warn('Image path is empty');
+      return '';
+    }
+    try {
+      const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
+      return data.publicUrl || '';
+    } catch (error) {
+      console.error('Failed to get image URL:', error);
+      return '';
+    }
   };
 
   const handleDownload = async (image: GeneratedImage, format: 'png' | 'jpeg' | 'webp' = 'png') => {
@@ -518,12 +539,29 @@ export function GalleryPage() {
                   }`}
                   onClick={() => selectMode ? toggleSelectImage(image.id) : setSelectedImage(image)}
                 >
-                  <img
-                    src={getImageUrl(image.storage_path)}
-                    alt=""
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy"
-                  />
+                  {getImageUrl(image.storage_path) ? (
+                    <img
+                      src={getImageUrl(image.storage_path)}
+                      alt=""
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error('Failed to load image:', image.storage_path);
+                        e.currentTarget.style.display = 'none';
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
+                          const errorDiv = document.createElement('div');
+                          errorDiv.className = 'w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700';
+                          errorDiv.innerHTML = '<span class="text-neutral-400 text-sm">読込失敗</span>';
+                          parent.appendChild(errorDiv);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700">
+                      <span className="text-neutral-400 text-sm">読込失敗</span>
+                    </div>
+                  )}
                   
                   {/* Select checkbox */}
                   {selectMode && (
@@ -612,14 +650,25 @@ export function GalleryPage() {
 
             {/* Main Content */}
             <div className="flex-1 flex items-center justify-center p-16" onClick={() => setSelectedImage(null)}>
-              <motion.img
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                src={getImageUrl(selectedImage.storage_path)}
-                alt=""
-                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-              />
+                  {getImageUrl(selectedImage.storage_path) ? (
+                <motion.img
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  src={getImageUrl(selectedImage.storage_path)}
+                  alt=""
+                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                  onError={() => {
+                    console.error('Failed to load image in modal:', selectedImage.storage_path);
+                    toast.error('画像の読み込みに失敗しました');
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-white">
+                  <div className="text-6xl mb-4">⚠️</div>
+                  <p className="text-xl">画像を読み込めませんでした</p>
+                </div>
+              )}
             </div>
 
             {/* Side Panel */}

@@ -89,10 +89,18 @@ export function BrandSettingsPage() {
         `)
         .eq('brand_id', currentBrand.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to fetch members:', error);
+        toast.error('メンバー情報の取得に失敗しました');
+        setMembers([]);
+        return;
+      }
+      
       setMembers((data || []) as unknown as BrandMember[]);
     } catch (error) {
       console.error('Failed to fetch members:', error);
+      toast.error('メンバー情報の取得に失敗しました');
+      setMembers([]);
     } finally {
       setIsLoading(false);
     }

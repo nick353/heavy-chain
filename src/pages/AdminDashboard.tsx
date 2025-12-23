@@ -70,19 +70,31 @@ export function AdminDashboard() {
   const fetchStats = async () => {
     try {
       // Get user count
-      const { count: userCount } = await supabase
+      const { count: userCount, error: userError } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true });
 
+      if (userError) {
+        console.error('Failed to fetch user count:', userError);
+      }
+
       // Get image count
-      const { count: imageCount } = await supabase
+      const { count: imageCount, error: imageError } = await supabase
         .from('generated_images')
         .select('*', { count: 'exact', head: true });
 
+      if (imageError) {
+        console.error('Failed to fetch image count:', imageError);
+      }
+
       // Get total API cost
-      const { data: costData } = await supabase
+      const { data: costData, error: costError } = await supabase
         .from('api_usage_logs')
         .select('cost_usd');
+
+      if (costError) {
+        console.error('Failed to fetch cost data:', costError);
+      }
 
       const totalCost = costData?.reduce((sum, log) => sum + (log.cost_usd || 0), 0) || 0;
 
@@ -90,10 +102,14 @@ export function AdminDashboard() {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const { count: activeCount } = await supabase
+      const { count: activeCount, error: activeError } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
         .gte('updated_at', thirtyDaysAgo.toISOString());
+
+      if (activeError) {
+        console.error('Failed to fetch active users:', activeError);
+      }
 
       setStats({
         totalUsers: userCount || 0,
@@ -103,6 +119,7 @@ export function AdminDashboard() {
       });
     } catch (error) {
       console.error('Failed to fetch stats:', error);
+      toast.error('統計情報の取得に失敗しました');
     } finally {
       setIsLoading(false);
     }
@@ -116,10 +133,18 @@ export function AdminDashboard() {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Failed to fetch users:', error);
+        toast.error('ユーザー情報の取得に失敗しました');
+        setUsers([]);
+        return;
+      }
+      
       setUsers(data || []);
     } catch (error) {
       console.error('Failed to fetch users:', error);
+      toast.error('ユーザー情報の取得に失敗しました');
+      setUsers([]);
     }
   };
 

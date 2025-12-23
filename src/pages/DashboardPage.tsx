@@ -101,31 +101,50 @@ export function DashboardPage() {
       checkBrands();
     } else if (currentBrand) {
       fetchRecentImages();
+    } else if (!user) {
+      // ユーザーがいない場合はローディングを解除
+      setIsLoading(false);
     }
   }, [currentBrand, user]);
 
   const checkBrands = async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const { data: brands } = await supabase
+      const { data: brands, error } = await supabase
         .from('brands')
         .select('*')
-        .eq('owner_id', user!.id)
+        .eq('owner_id', user.id)
         .limit(1);
+
+      if (error) {
+        console.error('Failed to check brands:', error);
+        setIsLoading(false);
+        return;
+      }
 
       if (!brands || brands.length === 0) {
         setShowBrandModal(true);
+        setIsLoading(false);
       } else {
         setCurrentBrand(brands[0]);
+        // ブランド設定後に画像を取得するので、ここではローディングを解除しない
       }
     } catch (error) {
       console.error('Failed to check brands:', error);
-    } finally {
+      toast.error('ブランド情報の取得に失敗しました');
       setIsLoading(false);
     }
   };
 
   const fetchRecentImages = async () => {
-    if (!currentBrand) return;
+    if (!currentBrand) {
+      setIsLoading(false);
+      return;
+    }
     
     try {
       const { data, error } = await supabase
@@ -135,10 +154,17 @@ export function DashboardPage() {
         .order('created_at', { ascending: false })
         .limit(6);
 
-      if (error) throw error;
-      setRecentImages(data || []);
+      if (error) {
+        console.error('Failed to fetch images:', error);
+        toast.error('画像の取得に失敗しました');
+        setRecentImages([]);
+      } else {
+        setRecentImages(data || []);
+      }
     } catch (error) {
       console.error('Failed to fetch images:', error);
+      toast.error('画像の取得に失敗しました');
+      setRecentImages([]);
     } finally {
       setIsLoading(false);
     }
@@ -216,8 +242,17 @@ export function DashboardPage() {
   };
 
   const getImageUrl = (path: string) => {
-    const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
-    return data.publicUrl;
+    if (!path) {
+      console.warn('Image path is empty');
+      return '';
+    }
+    try {
+      const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
+      return data.publicUrl || '';
+    } catch (error) {
+      console.error('Failed to get image URL:', error);
+      return '';
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -475,12 +510,22 @@ export function DashboardPage() {
                   className="group aspect-square rounded-xl sm:rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 cursor-pointer relative shadow-sm hover:shadow-lg transition-all duration-300"
                   onClick={() => navigate(`/gallery?image=${image.id}`)}
                 >
-                  <img
-                    src={getImageUrl(image.storage_path)}
-                    alt=""
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    loading="lazy"
-                  />
+                  {getImageUrl(image.storage_path) ? (
+                    <img
+                      src={getImageUrl(image.storage_path)}
+                      alt=""
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error('Failed to load image:', image.storage_path);
+                        e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3E画像なし%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700">
+                      <span className="text-neutral-400 text-sm">読込失敗</span>
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3">
                       <p className="text-white text-[10px] sm:text-xs font-medium truncate opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
