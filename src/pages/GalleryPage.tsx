@@ -313,7 +313,11 @@ export function GalleryPage() {
     if (newIndex < 0) newIndex = filteredImages.length - 1;
     if (newIndex >= filteredImages.length) newIndex = 0;
     
-    setSelectedImage(filteredImages[newIndex]);
+    const newImage = filteredImages[newIndex];
+    setSelectedImage(newImage);
+    
+    // Update URL
+    setSearchParams({ image: newImage.id });
   };
 
   const toggleSelectImage = (id: string) => {
@@ -679,47 +683,62 @@ export function GalleryPage() {
                 setSelectedImage(null);
                 setSearchParams({});
               }}
-              className="absolute top-4 right-4 p-2 text-white/70 hover:text-white transition-colors z-10 bg-black/20 hover:bg-black/40 rounded-full"
+              className="absolute top-4 right-4 p-3 text-white/70 hover:text-white transition-all z-20 bg-black/30 hover:bg-black/50 rounded-full backdrop-blur-sm hover:scale-110"
             >
               <X className="w-6 h-6" />
             </button>
 
-            {/* Navigation */}
-            <button
-              onClick={() => navigateImage('prev')}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full z-10"
-            >
-              <ChevronLeft className="w-8 h-8" />
-            </button>
-            <button
-              onClick={() => navigateImage('next')}
-              className="absolute right-96 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full z-10"
-            >
-              <ChevronRight className="w-8 h-8" />
-            </button>
-
             {/* Main Content - 2カラムレイアウト */}
             <div className="flex flex-1 h-full">
-              {/* Left: Image Display */}
-              <div className="flex-1 flex items-start justify-center p-8 md:p-16 pt-16 md:pt-20">
-                {getImageUrl(selectedImage) ? (
-                  <motion.img
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    src={getImageUrl(selectedImage)}
-                    alt=""
-                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                    onError={() => {
-                      console.error('Failed to load image in modal:', selectedImage.storage_path, 'image_url:', selectedImage.image_url);
-                      toast.error('画像の読み込みに失敗しました');
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-white">
-                    <div className="text-6xl mb-4">⚠️</div>
-                    <p className="text-xl">画像を読み込めませんでした</p>
-                  </div>
-                )}
+              {/* Left: Image Display with Navigation */}
+              <div className="flex-1 flex items-center justify-center p-8 md:p-16 pt-16 md:pt-20 relative">
+                {/* Previous Button - 画像エリア内の左側 */}
+                <button
+                  onClick={() => navigateImage('prev')}
+                  className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 p-4 text-white/90 hover:text-white transition-all bg-black/40 hover:bg-black/60 rounded-full z-10 backdrop-blur-md hover:scale-110 shadow-2xl group"
+                  title="前の画像 (←)"
+                >
+                  <ChevronLeft className="w-8 h-8 md:w-10 md:h-10 group-hover:-translate-x-1 transition-transform" />
+                </button>
+
+                {/* Image */}
+                <div className="relative max-w-full max-h-full flex items-center justify-center">
+                  {getImageUrl(selectedImage) ? (
+                    <motion.img
+                      key={selectedImage.id}
+                      initial={{ scale: 0.95, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.95, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                      src={getImageUrl(selectedImage)}
+                      alt=""
+                      className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                      onError={() => {
+                        console.error('Failed to load image in modal:', selectedImage.storage_path, 'image_url:', selectedImage.image_url);
+                        toast.error('画像の読み込みに失敗しました');
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-white">
+                      <div className="text-6xl mb-4">⚠️</div>
+                      <p className="text-xl">画像を読み込めませんでした</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Next Button - 画像エリア内の右側 */}
+                <button
+                  onClick={() => navigateImage('next')}
+                  className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 p-4 text-white/90 hover:text-white transition-all bg-black/40 hover:bg-black/60 rounded-full z-10 backdrop-blur-md hover:scale-110 shadow-2xl group"
+                  title="次の画像 (→)"
+                >
+                  <ChevronRight className="w-8 h-8 md:w-10 md:h-10 group-hover:translate-x-1 transition-transform" />
+                </button>
+
+                {/* 画像カウンター */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/50 backdrop-blur-md rounded-full text-white/90 text-sm font-medium z-10">
+                  {filteredImages.findIndex(img => img.id === selectedImage.id) + 1} / {filteredImages.length}
+                </div>
               </div>
 
               {/* Right: Side Panel with Details */}
