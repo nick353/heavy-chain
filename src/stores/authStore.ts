@@ -43,49 +43,86 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        // Fetch user profile
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        
-        // Fetch user's brands
-        const { data: brands } = await supabase
-          .from('brands')
-          .select('*')
-          .eq('owner_id', session.user.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        
-        set({
-          user: session.user,
-          profile: profile || null,
-          currentBrand: brands?.[0] || null,
-        });
-      }
-      
-      // Set up auth state listener
-      supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const { data: profile } = await supabase
+        try {
+          // Fetch user profile
+          const { data: profile, error: profileError } = await supabase
             .from('users')
             .select('*')
             .eq('id', session.user.id)
             .single();
           
-          const { data: brands } = await supabase
-            .from('brands')
-            .select('*')
-            .eq('owner_id', session.user.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
+          if (profileError && profileError.code !== 'PGRST116') {
+            console.error('Failed to fetch profile:', profileError);
+          }
+          
+          // Fetch user's brands with retry logic
+          let brands = null;
+          let retries = 3;
+          while (retries > 0 && !brands) {
+            const { data: brandsData, error: brandsError } = await supabase
+              .from('brands')
+              .select('*')
+              .eq('owner_id', session.user.id)
+              .order('created_at', { ascending: false })
+              .limit(1);
+            
+            if (brandsError) {
+              console.error('Failed to fetch brands (retry:', 4 - retries, '):', brandsError);
+              retries--;
+              if (retries > 0) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+            } else {
+              brands = brandsData;
+              break;
+            }
+          }
           
           set({
             user: session.user,
             profile: profile || null,
             currentBrand: brands?.[0] || null,
           });
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          set({
+            user: session.user,
+            profile: null,
+            currentBrand: null,
+          });
+        }
+      }
+      
+      // Set up auth state listener
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            const { data: brands } = await supabase
+              .from('brands')
+              .select('*')
+              .eq('owner_id', session.user.id)
+              .order('created_at', { ascending: false })
+              .limit(1);
+            
+            set({
+              user: session.user,
+              profile: profile || null,
+              currentBrand: brands?.[0] || null,
+            });
+          } catch (error) {
+            console.error('Error in auth state change:', error);
+            set({
+              user: session.user,
+              profile: null,
+              currentBrand: null,
+            });
+          }
         } else if (event === 'SIGNED_OUT') {
           set({ user: null, profile: null, currentBrand: null });
         }

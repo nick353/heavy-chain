@@ -97,14 +97,27 @@ export function DashboardPage() {
   const recentProjects = getRecentProjects(6);
 
   useEffect(() => {
-    if (!currentBrand && user) {
-      checkBrands();
-    } else if (currentBrand) {
-      fetchRecentImages();
-    } else if (!user) {
-      // ユーザーがいない場合はローディングを解除
-      setIsLoading(false);
-    }
+    let mounted = true;
+
+    const loadData = async () => {
+      if (!user) {
+        // ユーザーがいない場合はローディングを解除
+        if (mounted) setIsLoading(false);
+        return;
+      }
+
+      if (!currentBrand) {
+        await checkBrands();
+      } else {
+        await fetchRecentImages();
+      }
+    };
+
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
   }, [currentBrand, user]);
 
   const checkBrands = async () => {
@@ -114,6 +127,7 @@ export function DashboardPage() {
     }
 
     try {
+      setIsLoading(true);
       const { data: brands, error } = await supabase
         .from('brands')
         .select('*')
@@ -122,6 +136,7 @@ export function DashboardPage() {
 
       if (error) {
         console.error('Failed to check brands:', error);
+        toast.error('ブランド情報の取得に失敗しました');
         setIsLoading(false);
         return;
       }
@@ -131,7 +146,7 @@ export function DashboardPage() {
         setIsLoading(false);
       } else {
         setCurrentBrand(brands[0]);
-        // ブランド設定後に画像を取得するので、ここではローディングを解除しない
+        // ブランド設定後にuseEffectが再実行されて画像を取得する
       }
     } catch (error) {
       console.error('Failed to check brands:', error);
@@ -146,6 +161,7 @@ export function DashboardPage() {
       return;
     }
     
+    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('generated_images')

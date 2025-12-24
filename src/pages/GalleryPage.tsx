@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { 
   Image, 
   Heart, 
@@ -9,12 +9,8 @@ import {
   LayoutGrid,
   ChevronLeft,
   ChevronRight,
-  Edit3,
-  RefreshCw,
   Info,
   Clock,
-  Palette,
-  Wand2,
   CheckSquare,
   Square,
   DownloadCloud,
@@ -35,7 +31,6 @@ type SortType = 'newest' | 'oldest' | 'name';
 
 export function GalleryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { currentBrand } = useAuthStore();
   
   const [images, setImages] = useState<GeneratedImage[]>([]);
@@ -57,12 +52,23 @@ export function GalleryPage() {
   });
 
   useEffect(() => {
-    if (currentBrand) {
-      fetchImages();
-    } else {
-      // ブランドがない場合はローディングを解除
-      setIsLoading(false);
-    }
+    let mounted = true;
+
+    const loadData = async () => {
+      if (!currentBrand) {
+        // ブランドがない場合はローディングを解除
+        if (mounted) setIsLoading(false);
+        return;
+      }
+      
+      await fetchImages();
+    };
+
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
   }, [currentBrand, filter, sortBy]);
 
   useEffect(() => {
@@ -116,7 +122,7 @@ export function GalleryPage() {
           });
           
           // 画像URLを確認
-          const sampleUrl = getImageUrl(data[0].storage_path);
+          const sampleUrl = getImageUrl(data[0]);
           console.log('🔗 生成されたURL:', sampleUrl);
           
           // URLにアクセス可能か確認
@@ -148,7 +154,23 @@ export function GalleryPage() {
     }
   };
 
-  const getImageUrl = (image: GeneratedImage) => {
+  const getImageUrl = (image: GeneratedImage | string) => {
+    // 文字列の場合（レガシーコードサポート）
+    if (typeof image === 'string') {
+      const path = image;
+      if (!path) return '';
+      if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+        return path;
+      }
+      try {
+        const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
+        return data.publicUrl || '';
+      } catch (error) {
+        console.error('Failed to get image URL:', error);
+        return '';
+      }
+    }
+
     // まずimage_urlを確認（直接URL）
     if (image.image_url) {
       return image.image_url;
@@ -292,20 +314,6 @@ export function GalleryPage() {
     if (newIndex >= filteredImages.length) newIndex = 0;
     
     setSelectedImage(filteredImages[newIndex]);
-  };
-
-  const handleEditInCanvas = (image: GeneratedImage) => {
-    // Store the image URL in sessionStorage for the canvas to pick up
-    sessionStorage.setItem('canvas_load_image', getImageUrl(image));
-    navigate('/canvas');
-  };
-
-  const handleEditWithFeature = (featureId: string, image: GeneratedImage) => {
-    sessionStorage.setItem('generate_load_image', JSON.stringify({
-      url: getImageUrl(image),
-      id: image.id,
-    }));
-    navigate(`/generate?feature=${featureId}`);
   };
 
   const toggleSelectImage = (id: string) => {
@@ -693,7 +701,7 @@ export function GalleryPage() {
             {/* Main Content - 2カラムレイアウト */}
             <div className="flex flex-1 h-full">
               {/* Left: Image Display */}
-              <div className="flex-1 flex items-center justify-center p-8 md:p-16">
+              <div className="flex-1 flex items-start justify-center p-8 md:p-16 pt-16 md:pt-20">
                 {getImageUrl(selectedImage) ? (
                   <motion.img
                     initial={{ scale: 0.9, opacity: 0 }}
@@ -773,39 +781,6 @@ export function GalleryPage() {
                     </div>
                   )}
 
-                  {/* Quick Actions */}
-                  <div className="space-y-3 mb-8">
-                    <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">クイックアクション</h4>
-                    <button
-                      onClick={() => handleEditInCanvas(selectedImage)}
-                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                      キャンバスで編集
-                    </button>
-                    <button
-                      onClick={() => handleEditWithFeature('variations', selectedImage)}
-                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      バリエーションを生成
-                    </button>
-                    <button
-                      onClick={() => handleEditWithFeature('colorize', selectedImage)}
-                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
-                    >
-                      <Palette className="w-4 h-4" />
-                      カラバリを生成
-                    </button>
-                    <button
-                      onClick={() => handleEditWithFeature('remove-bg', selectedImage)}
-                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
-                    >
-                      <Wand2 className="w-4 h-4" />
-                      背景を変更
-                    </button>
-                  </div>
-
                   {/* Download Options */}
                   <div className="space-y-3 mb-8">
                     <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">ダウンロード</h4>
@@ -832,7 +807,7 @@ export function GalleryPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="space-y-3 pt-6 border-t border-white/10">
+                  <div className="space-y-3">
                     <button
                       onClick={() => handleToggleFavorite(selectedImage)}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${

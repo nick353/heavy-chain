@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import { Layout } from './components/layout';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import {
   LandingPage,
   LoginPage,
@@ -30,14 +31,19 @@ const queryClient = new QueryClient({
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isInitialized } = useAuthStore();
 
+  // 初期化が完了していない、またはローディング中の場合
   if (!isInitialized || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="spinner" />
+      <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
+        <div className="text-center">
+          <div className="spinner mb-4" />
+          <p className="text-neutral-500 dark:text-neutral-400">読み込み中...</p>
+        </div>
       </div>
     );
   }
 
+  // 認証されていない場合
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -49,14 +55,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isInitialized } = useAuthStore();
 
+  // 初期化が完了していない、またはローディング中の場合
   if (!isInitialized || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="spinner" />
+      <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
+        <div className="text-center">
+          <div className="spinner mb-4" />
+          <p className="text-neutral-500 dark:text-neutral-400">読み込み中...</p>
+        </div>
       </div>
     );
   }
 
+  // すでにログイン済みの場合
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -65,11 +76,27 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { initialize } = useAuthStore();
+  const { initialize, isInitialized } = useAuthStore();
 
   useEffect(() => {
-    initialize();
-  }, [initialize]);
+    let mounted = true;
+    
+    const initAuth = async () => {
+      if (!isInitialized && mounted) {
+        try {
+          await initialize();
+        } catch (error) {
+          console.error('Failed to initialize authentication:', error);
+        }
+      }
+    };
+
+    initAuth();
+
+    return () => {
+      mounted = false;
+    };
+  }, [initialize, isInitialized]);
 
   return (
     <Routes>
@@ -107,7 +134,9 @@ function AppRoutes() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <ErrorBoundary>
+                <DashboardPage />
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -115,7 +144,9 @@ function AppRoutes() {
           path="/generate"
           element={
             <ProtectedRoute>
-              <GeneratePage />
+              <ErrorBoundary>
+                <GeneratePage />
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -123,7 +154,9 @@ function AppRoutes() {
           path="/gallery"
           element={
             <ProtectedRoute>
-              <GalleryPage />
+              <ErrorBoundary>
+                <GalleryPage />
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -131,7 +164,9 @@ function AppRoutes() {
           path="/brand/settings"
           element={
             <ProtectedRoute>
-              <BrandSettingsPage />
+              <ErrorBoundary>
+                <BrandSettingsPage />
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -165,10 +200,12 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
