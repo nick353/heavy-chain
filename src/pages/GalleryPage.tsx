@@ -408,7 +408,7 @@ export function GalleryPage() {
   }
 
   return (
-    <AnimatePresence>
+    <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <motion.div 
@@ -679,181 +679,185 @@ export function GalleryPage() {
             {/* Navigation */}
             <button
               onClick={() => navigateImage('prev')}
-              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full"
+              className="absolute left-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full z-10"
             >
               <ChevronLeft className="w-8 h-8" />
             </button>
             <button
               onClick={() => navigateImage('next')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full"
+              className="absolute right-96 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white transition-colors bg-black/20 hover:bg-black/40 rounded-full z-10"
             >
               <ChevronRight className="w-8 h-8" />
             </button>
 
-            {/* Main Content */}
-            <div className="flex-1 flex items-center justify-center p-16" onClick={() => setSelectedImage(null)}>
-                  {getImageUrl(selectedImage) ? (
-                <motion.img
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  src={getImageUrl(selectedImage)}
-                  alt=""
-                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-                  onClick={(e) => e.stopPropagation()}
-                  onError={() => {
-                    console.error('Failed to load image in modal:', selectedImage.storage_path, 'image_url:', selectedImage.image_url);
-                    toast.error('画像の読み込みに失敗しました');
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-white">
-                  <div className="text-6xl mb-4">⚠️</div>
-                  <p className="text-xl">画像を読み込めませんでした</p>
-                </div>
-              )}
-            </div>
-
-            {/* Side Panel */}
-            <motion.div 
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              className="w-80 bg-white/10 backdrop-blur-md border-l border-white/10 p-6 overflow-y-auto"
-            >
-              <h3 className="text-white font-semibold mb-6 text-lg border-b border-white/10 pb-4">画像の詳細</h3>
-              
-              {/* Metadata */}
-              <div className="space-y-4 mb-8">
-                <div className="flex items-center gap-3 text-sm text-white/80">
-                  <Clock className="w-4 h-4" />
-                  <span>{new Date(selectedImage.created_at).toLocaleString('ja-JP')}</span>
-                </div>
-                
-                {selectedImage.feature_type && (
-                  <div className="flex items-center gap-3 text-sm text-white/80">
-                    <Sparkles className="w-4 h-4" />
-                    <span>{selectedImage.feature_type}</span>
+            {/* Main Content - 2カラムレイアウト */}
+            <div className="flex flex-1 h-full">
+              {/* Left: Image Display */}
+              <div className="flex-1 flex items-center justify-center p-8 md:p-16">
+                {getImageUrl(selectedImage) ? (
+                  <motion.img
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    src={getImageUrl(selectedImage)}
+                    alt=""
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                    onError={() => {
+                      console.error('Failed to load image in modal:', selectedImage.storage_path, 'image_url:', selectedImage.image_url);
+                      toast.error('画像の読み込みに失敗しました');
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-white">
+                    <div className="text-6xl mb-4">⚠️</div>
+                    <p className="text-xl">画像を読み込めませんでした</p>
                   </div>
                 )}
-                
-                {selectedImage.style_preset && (
-                  <div className="flex items-center gap-3 text-sm text-white/80">
-                    <Tag className="w-4 h-4" />
-                    <span>{selectedImage.style_preset}</span>
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-3 text-sm text-white/80">
-                  <Info className="w-4 h-4" />
-                  <span className="font-mono">ID: {selectedImage.id.slice(0, 8)}</span>
-                </div>
               </div>
 
-              {/* Prompt Display */}
-              {selectedImage.prompt && (
-                <div className="mb-8">
-                  <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
-                    <FileText className="w-3 h-3" />
-                    プロンプト
-                  </h4>
-                  <div className="relative group">
-                    <p className="text-sm text-white/80 bg-white/5 rounded-xl p-4 leading-relaxed">
-                      {selectedImage.prompt}
-                    </p>
+              {/* Right: Side Panel with Details */}
+              <motion.div 
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                className="w-80 md:w-96 bg-white/10 backdrop-blur-md border-l border-white/10 overflow-y-auto"
+              >
+                <div className="p-6">
+                  <h3 className="text-white font-semibold mb-6 text-lg border-b border-white/10 pb-4">画像の詳細</h3>
+                  
+                  {/* Metadata */}
+                  <div className="space-y-4 mb-8">
+                    <div className="flex items-center gap-3 text-sm text-white/80">
+                      <Clock className="w-4 h-4 flex-shrink-0" />
+                      <span>{new Date(selectedImage.created_at).toLocaleString('ja-JP')}</span>
+                    </div>
+                    
+                    {selectedImage.feature_type && (
+                      <div className="flex items-center gap-3 text-sm text-white/80">
+                        <Sparkles className="w-4 h-4 flex-shrink-0" />
+                        <span>{selectedImage.feature_type}</span>
+                      </div>
+                    )}
+                    
+                    {selectedImage.style_preset && (
+                      <div className="flex items-center gap-3 text-sm text-white/80">
+                        <Tag className="w-4 h-4 flex-shrink-0" />
+                        <span>{selectedImage.style_preset}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-3 text-sm text-white/80">
+                      <Info className="w-4 h-4 flex-shrink-0" />
+                      <span className="font-mono text-xs">ID: {selectedImage.id.slice(0, 8)}</span>
+                    </div>
+                  </div>
+
+                  {/* Prompt Display */}
+                  {selectedImage.prompt && (
+                    <div className="mb-8">
+                      <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <FileText className="w-3 h-3" />
+                        プロンプト
+                      </h4>
+                      <div className="relative group">
+                        <p className="text-sm text-white/80 bg-white/5 rounded-xl p-4 leading-relaxed max-h-48 overflow-y-auto">
+                          {selectedImage.prompt}
+                        </p>
+                        <button
+                          onClick={() => copyPrompt(selectedImage.prompt!)}
+                          className="absolute top-2 right-2 p-2 rounded-lg bg-white/10 hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-all"
+                          title="プロンプトをコピー"
+                        >
+                          <Copy className="w-4 h-4 text-white/70" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick Actions */}
+                  <div className="space-y-3 mb-8">
+                    <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">クイックアクション</h4>
                     <button
-                      onClick={() => copyPrompt(selectedImage.prompt!)}
-                      className="absolute top-2 right-2 p-2 rounded-lg bg-white/10 hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-all"
-                      title="プロンプトをコピー"
+                      onClick={() => handleEditInCanvas(selectedImage)}
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
                     >
-                      <Copy className="w-4 h-4 text-white/70" />
+                      <Edit3 className="w-4 h-4" />
+                      キャンバスで編集
+                    </button>
+                    <button
+                      onClick={() => handleEditWithFeature('variations', selectedImage)}
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      バリエーションを生成
+                    </button>
+                    <button
+                      onClick={() => handleEditWithFeature('colorize', selectedImage)}
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
+                    >
+                      <Palette className="w-4 h-4" />
+                      カラバリを生成
+                    </button>
+                    <button
+                      onClick={() => handleEditWithFeature('remove-bg', selectedImage)}
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
+                    >
+                      <Wand2 className="w-4 h-4" />
+                      背景を変更
+                    </button>
+                  </div>
+
+                  {/* Download Options */}
+                  <div className="space-y-3 mb-8">
+                    <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">ダウンロード</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => handleDownload(selectedImage, 'png')}
+                        className="px-3 py-2 bg-primary-500 text-white rounded-lg text-xs font-medium hover:bg-primary-600 transition-colors"
+                      >
+                        PNG
+                      </button>
+                      <button
+                        onClick={() => handleDownload(selectedImage, 'jpeg')}
+                        className="px-3 py-2 bg-white/10 text-white rounded-lg text-xs font-medium hover:bg-white/20 transition-colors"
+                      >
+                        JPEG
+                      </button>
+                      <button
+                        onClick={() => handleDownload(selectedImage, 'webp')}
+                        className="px-3 py-2 bg-white/10 text-white rounded-lg text-xs font-medium hover:bg-white/20 transition-colors"
+                      >
+                        WebP
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="space-y-3 pt-6 border-t border-white/10">
+                    <button
+                      onClick={() => handleToggleFavorite(selectedImage)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${
+                        selectedImage.is_favorite
+                          ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                          : 'bg-white/10 hover:bg-white/20 text-white'
+                      }`}
+                    >
+                      <Heart className={`w-4 h-4 ${selectedImage.is_favorite ? 'fill-current' : ''}`} />
+                      {selectedImage.is_favorite ? 'お気に入りから削除' : 'お気に入りに追加'}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(selectedImage)}
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-white/5 hover:bg-red-900/30 text-white/70 hover:text-red-400 rounded-xl text-sm transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      削除
                     </button>
                   </div>
                 </div>
-              )}
-
-              {/* Quick Actions */}
-              <div className="space-y-3 mb-8">
-                <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">クイックアクション</h4>
-                <button
-                  onClick={() => handleEditInCanvas(selectedImage)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  キャンバスで編集
-                </button>
-                <button
-                  onClick={() => handleEditWithFeature('variations', selectedImage)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  バリエーションを生成
-                </button>
-                <button
-                  onClick={() => handleEditWithFeature('colorize', selectedImage)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
-                >
-                  <Palette className="w-4 h-4" />
-                  カラバリを生成
-                </button>
-                <button
-                  onClick={() => handleEditWithFeature('remove-bg', selectedImage)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm transition-all"
-                >
-                  <Wand2 className="w-4 h-4" />
-                  背景を変更
-                </button>
-              </div>
-
-              {/* Download Options */}
-              <div className="space-y-3 mb-8">
-                <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">ダウンロード</h4>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => handleDownload(selectedImage, 'png')}
-                    className="px-3 py-2 bg-primary-500 text-white rounded-lg text-xs font-medium hover:bg-primary-600 transition-colors"
-                  >
-                    PNG
-                  </button>
-                  <button
-                    onClick={() => handleDownload(selectedImage, 'jpeg')}
-                    className="px-3 py-2 bg-white/10 text-white rounded-lg text-xs font-medium hover:bg-white/20 transition-colors"
-                  >
-                    JPEG
-                  </button>
-                  <button
-                    onClick={() => handleDownload(selectedImage, 'webp')}
-                    className="px-3 py-2 bg-white/10 text-white rounded-lg text-xs font-medium hover:bg-white/20 transition-colors"
-                  >
-                    WebP
-                  </button>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="space-y-3 pt-6 border-t border-white/10">
-                <button
-                  onClick={() => handleToggleFavorite(selectedImage)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${
-                    selectedImage.is_favorite
-                      ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                      : 'bg-white/10 hover:bg-white/20 text-white'
-                  }`}
-                >
-                  <Heart className={`w-4 h-4 ${selectedImage.is_favorite ? 'fill-current' : ''}`} />
-                  {selectedImage.is_favorite ? 'お気に入りから削除' : 'お気に入りに追加'}
-                </button>
-                <button
-                  onClick={() => handleDelete(selectedImage)}
-                  className="w-full flex items-center gap-3 px-4 py-3 bg-white/5 hover:bg-red-900/30 text-white/70 hover:text-red-400 rounded-xl text-sm transition-all"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  削除
-                </button>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </AnimatePresence>
+    </>
   );
 }
