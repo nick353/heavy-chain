@@ -106,6 +106,37 @@ export function GalleryPage() {
         toast.error('画像の読み込みに失敗しました');
         setImages([]);
       } else {
+        console.log('📊 取得した画像数:', data?.length || 0);
+        if (data && data.length > 0) {
+          console.log('📷 サンプル画像データ:', {
+            id: data[0].id,
+            storage_path: data[0].storage_path,
+            created_at: data[0].created_at,
+            brand_id: data[0].brand_id
+          });
+          
+          // 画像URLを確認
+          const sampleUrl = getImageUrl(data[0].storage_path);
+          console.log('🔗 生成されたURL:', sampleUrl);
+          
+          // URLにアクセス可能か確認
+          if (sampleUrl) {
+            fetch(sampleUrl, { method: 'HEAD' })
+              .then(response => {
+                if (response.ok) {
+                  console.log('✅ 画像ファイルにアクセス可能です');
+                } else {
+                  console.error('❌ 画像ファイルにアクセスできません:', response.status, response.statusText);
+                  console.log('💡 ヒント: storage-setup.sql を実行してストレージポリシーを設定してください');
+                }
+              })
+              .catch(err => {
+                console.error('❌ ネットワークエラー:', err);
+              });
+          }
+        } else {
+          console.log('ℹ️ 画像データがありません');
+        }
         setImages(data || []);
       }
     } catch (error) {
