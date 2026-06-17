@@ -24,6 +24,10 @@ Frontend-only environment:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
+Production frontend builds prefer those environment variables from the deploy
+environment. If Zeabur does not provide them, the app falls back to the
+frontend-public values mirrored from `.env.production.local`.
+
 Deployment-only:
 
 - `SUPABASE_PROJECT_REF`
