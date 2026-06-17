@@ -3,8 +3,9 @@
 Status: **blocked**.
 
 This file records parent-only Browser Use QA for the Heavy Chain release. It is
-not release approval. Browser proof is under
-`output/release-prep/final-browser-use-20260618-parent/`.
+not release approval. Current Browser Use smoke proof for release doctor is
+under `output/release-prep/browser-use-20260618-current/`; detailed operation
+proof is under `output/release-prep/final-browser-use-20260618-parent/`.
 
 ## Verified Browser Flows
 
@@ -117,8 +118,10 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 - Signup is blocked by Supabase Auth HTTP 429 in this test lane.
 - Cleanup/delete was not run.
 - Local DB reset/recreate was not approved.
-- Existing DB scene rows predate the feature-type fix and still have
-  `feature_type=null`.
-- Current Browser Use smoke metadata must be updated after the final commit.
-- `release:doctor` must be rerun against final `HEAD`.
-- Cleanup/no residual process state still needs confirmation.
+
+Current Browser Use smoke metadata verification and `release:doctor` passed for
+the final parent `HEAD`, and cleanup/no residual process state was confirmed
+after the parent run.
+
+Historical note: existing DB scene rows predate the feature-type fix and still
+have `feature_type=null`.

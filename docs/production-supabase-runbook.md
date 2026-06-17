@@ -14,10 +14,10 @@ applied remotely, and updated Edge Functions have been deployed. The
 `scene-coordinate` and `variations`. Do not rerun remote mutation steps from
 release verification without explicit human-owner approval.
 
-Remaining blockers are signup HTTP 429, cleanup/delete not run, local DB
-reset/recreate not approved, current Browser Use smoke metadata needing an
-update after the final commit, final-`HEAD` `release:doctor` rerun, and
-cleanup/no residual process confirmation.
+Remaining blockers are signup HTTP 429, cleanup/delete not run, and local DB
+reset/recreate not approved. Current Browser Use smoke metadata verification
+and `release:doctor` passed for the final parent `HEAD`, and cleanup/no
+residual process state was confirmed after the parent run.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`; focused authenticated Browser Use proof now passes for
 `scene-coordinate` and `variations` under

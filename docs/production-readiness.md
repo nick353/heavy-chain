@@ -41,10 +41,11 @@ Heavy Chain can only be released after all of these are true:
 Current 2026-06-18 parent observation: the environment gate now passes with
 `.env.production.local` sourced, current readback metadata verification has
 passed, and focused authenticated `scene-coordinate` / `variations` proof has
-passed. Release remains blocked by the human-approval and final-current-proof
-gaps below.
+passed. Current Browser Use smoke metadata and `release:doctor` also pass for
+the final parent `HEAD`. Release remains blocked by the human-approval gaps
+below.
 
-## Known Blockers
+## Passed Evidence
 
 - The older environment-name blocker is resolved in the current parent shell
   but remains useful historical context.
@@ -67,19 +68,23 @@ gaps below.
   `GeneratePage` passes `featureType` explicitly for both flows. The
   `generate-variations` Edge Function has been deployed remotely.
 - Focused authenticated proof now passes for `scene-coordinate` and
-  `generate-variations` under
+  `variations` under
   `output/release-prep/focused-generation-20260618-parent/postfix-auth/`.
   Readback reports `images=4`, `scene_coordinate=3`, `variations=1`,
   `runs=2`, storage download ok, and `verdict=pass`; focused visual QA also
   reports `verdict=pass`. Existing DB scene rows from before the fix still have
   `feature_type=null` and remain historical only.
+- Current Browser Use smoke metadata verification passed for the final parent
+  `HEAD`.
+- `release:doctor` passed against the final parent `HEAD`.
+- Cleanup/no residual process state was confirmed after the parent run.
+
+## Known Blockers
+
 - Signup is blocked in this test lane by Supabase Auth HTTP 429.
 - Cleanup/delete was not approved and was not run.
 - Local Supabase DB verification still requires an approved local DB
   reset/recreate lane or another approved DB verification lane.
-- Current Browser Use smoke metadata must be updated after the final commit.
-- `release:doctor` must be rerun against final `HEAD`.
-- Cleanup/no residual process state still needs confirmation.
 
 ## Required Environment Names
 

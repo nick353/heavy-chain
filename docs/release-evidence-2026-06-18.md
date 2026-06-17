@@ -71,7 +71,13 @@ No secret values are recorded here.
 
 ## Current Proof Summary
 
-Current parent-process Browser Use evidence is saved under:
+Current Browser Use smoke proof for release doctor is saved under:
+
+```text
+output/release-prep/browser-use-20260618-current/
+```
+
+Detailed parent-process Browser Use operation evidence is saved under:
 
 ```text
 output/release-prep/final-browser-use-20260618-parent/
@@ -201,32 +207,29 @@ Remaining release blockers from this pass:
 - Resolve or retry the signup lane after the Supabase Auth HTTP 429 blocker.
 - Approve and run local DB reset/recreate if that lane is still required.
 - Cleanup/delete was not run.
-- Update current Browser Use smoke metadata after the final commit.
-- Rerun `release:doctor` against final `HEAD`.
-- Confirm cleanup/no residual process state.
+
+Current Browser Use smoke metadata verification and `release:doctor` passed for
+the final parent `HEAD`, and cleanup/no residual process state was confirmed
+after the parent run.
 
 The historical Browser Use proof remains useful as supporting view-only shape
-evidence. Current release diagnosis must use the final parent evidence directory
-above for summary smoke, the full UI QA directory for detailed operation proof,
-and the DB readback directory for data proof.
+evidence. Current release diagnosis must use
+`output/release-prep/browser-use-20260618-current/` for summary smoke, the full
+UI QA directory for detailed operation proof, and the DB readback directory for
+data proof.
 
 ## Current Browser Use Smoke
 
-Current final Browser Use proof was captured against the parent-process release
-QA lane:
+Current Browser Use smoke proof for release doctor is:
+
+```text
+output/release-prep/browser-use-20260618-current/
+```
+
+Detailed parent-process Browser Use operation proof is saved under:
 
 ```text
 output/release-prep/final-browser-use-20260618-parent/
-```
-
-Saved final proof evidence includes:
-
-```text
-terms screenshot
-privacy
-legal
-generate
-gallery
 ```
 
 The capture saved Browser Use state and screenshots. Cleanup/delete was not run
@@ -258,10 +261,11 @@ after the smoke guard was widened to include
 
 ## Current Release Doctor
 
-The parent-process verification pass included the aggregate verify command:
+The parent-process verification pass included the aggregate release doctor
+command:
 
 ```bash
-npm run verify
+RELEASE_BROWSER_USE_PROOF_DIR=output/release-prep/browser-use-20260618-current npm run release:doctor --silent
 ```
 
 Result:
@@ -283,10 +287,10 @@ Cleanup/delete was not approved and was not run.
 ## Known Blockers
 
 Release remains blocked by the Supabase Auth HTTP 429 signup blocker,
-cleanup/delete not being run, local DB reset/recreate not being approved,
-current Browser Use smoke metadata needing an update after the final commit,
-`release:doctor` needing a final `HEAD` rerun, and cleanup/no residual process
-confirmation still pending.
+cleanup/delete not being run, and local DB reset/recreate not being approved.
+Current Browser Use smoke metadata verification and `release:doctor` passed for
+the final parent `HEAD`, and cleanup/no residual process state was confirmed
+after the parent run.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
 chooses rollback; normal release verification does not deploy, delete, auth,
