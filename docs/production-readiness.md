@@ -7,7 +7,7 @@ This document is the final release gate ledger for Heavy Chain. If a check says
 do not continue into production.
 
 Current evidence is recorded in
-[`docs/release-evidence-2026-06-17.md`](./release-evidence-2026-06-17.md).
+[`docs/release-evidence-2026-06-18.md`](./release-evidence-2026-06-18.md).
 
 Safe local validators now exist for proof files:
 
@@ -35,14 +35,17 @@ Heavy Chain can only be released after all of these are true:
 2. Staging DB readback proves usage, cleanup, and generated image storage state.
 3. Browser smoke proof is current and captured after env injection.
 
-As of 2026-06-17, item 1 is incomplete because `npm run verify` fails even when
-`.env.production.local` is sourced.
+In the 2026-06-18 pre-doc-edit clean worktree observation, item 1 was incomplete
+because `npm run release:doctor --silent` stopped at `env:check` before running
+the later gates.
 
 ## Known Blockers
 
-- `npm run verify` is blocked by missing environment variable names:
-  `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and
-  `PUBLIC_URL`.
+- In the 2026-06-18 pre-doc-edit clean worktree observation,
+  `npm run release:doctor --silent` stopped at `env:check` in the current shell
+  with these missing names: `VITE_SUPABASE_URL`,
+  `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY`, and `PUBLIC_URL`.
 - Staging readback is not complete.
 - Generated image `image_url` null/missing/empty readback is not complete.
 - Local Supabase DB verification is incomplete: `SUPABASE_VERIFY_MODE=db npm
@@ -70,13 +73,14 @@ OPENAI_API_KEY
 PUBLIC_URL
 ```
 
-On 2026-06-17, `.env.production.local` plus the current shell still missed:
-`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and
+Historical note: on 2026-06-17, `.env.production.local` plus the shell still
+missed `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and
 `PUBLIC_URL`.
 
-## Passed Gates
+## Historical Passed Gates
 
-These checks are recorded as passed for 2026-06-17:
+These checks are recorded as passed for 2026-06-17. They are historical proof,
+not 2026-06-18 release approval:
 
 ```bash
 npm run build
@@ -94,7 +98,9 @@ npm run e2e
 `npm run build` and `npm run e2e` were also re-run with
 `.env.production.local` sourced so Vite received the required `VITE_*` values.
 
-`git status` was clean at the start of the release-doc update.
+2026-06-18 start state: before editing this document and adding
+`docs/release-evidence-2026-06-18.md`, `git status` was clean and
+`npm run release:doctor --silent` reported `OK git clean`.
 
 `npm run supabase:verify:static` checks project files, RLS/grants, usage quota
 guards, public service RPC wrappers, authenticated usage summary boundaries,
@@ -107,8 +113,10 @@ database access by default.
 npm run verify
 ```
 
-Result: failed because required env names were missing, even after sourcing
-`.env.production.local`.
+Result: historically failed because required env names were missing, even after
+sourcing `.env.production.local`. In the 2026-06-18 pre-doc-edit clean worktree
+observation, doctor stopped earlier in the current shell with the six missing
+names listed above.
 
 ## Human Stop Rule
 
@@ -139,7 +147,7 @@ For current release evidence, run the readback validator with explicit metadata
 expectations:
 
 ```bash
-npm run verify:readback -- --expect-release-date 2026-06-17 --expect-environment staging --expect-git-commit <commit>
+npm run verify:readback -- --expect-release-date 2026-06-18 --expect-environment staging --expect-git-commit <commit>
 ```
 
 With those flags, every proof JSON must include matching `release_date`,
