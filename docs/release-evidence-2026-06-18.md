@@ -7,16 +7,17 @@ evidence ledger, not approval to release.
 
 ## Start State
 
-Current git commit:
+Release verification targets the current clean `HEAD`. The latest checked
+commit before this evidence update was:
 
 ```text
-6d998c8ab45d634487112d34fd257eb142214fdb
+8052a8c853ff6075e60e0901e2c94ffe4e095618
 ```
 
-`git status --short --branch` reported a clean worktree:
+`git status --short --branch` reported a clean worktree at that point:
 
 ```text
-## main...origin/main [ahead 9]
+## main...origin/main [ahead 10]
 ```
 
 `npm run release:doctor --silent` in the clean worktree stopped at
@@ -69,11 +70,6 @@ No secret values are recorded here.
 
 - Current staging readback is incomplete.
 - Generated image `image_url` null/missing/empty readback is incomplete.
-- Current Browser Use proof is incomplete until
-  `RELEASE_BROWSER_USE_PROOF_DIR` points at a recaptured env-injected proof
-  directory whose `home-env-eval.json` and `login-eval.json` include matching
-  `metadata.release_date`, `metadata.environment`, `metadata.git_commit`, and a
-  valid `metadata.captured_at`.
 - Current readback metadata proof for 2026-06-18 is incomplete. Without
   `RELEASE_BROWSER_USE_PROOF_DIR`, doctor stops at `proof target`; after that
   directory is set, the current environment still stops at `env:check`, so
@@ -83,15 +79,14 @@ After the release doctor was hardened to require a current Browser Use proof
 directory, running it in a clean worktree without
 `RELEASE_BROWSER_USE_PROOF_DIR` stops at `proof target` before `env:check`.
 The historical Browser Use proof remains useful as supporting view-only shape
-evidence, but it fails current metadata expectations and must not be treated as
-2026-06-18 current proof.
+evidence, but current release diagnosis must use the proof directory below.
 
 ## Current Browser Use Smoke
 
 Current view-only Browser Use proof was captured against local preview:
 
 ```text
-output/release-prep/browser-use-20260618-6d998c8
+output/release-prep/browser-use-20260618-current
 ```
 
 Saved files:
@@ -112,7 +107,7 @@ submit forms, publish, delete, deploy, or mutate the database.
 Validator command:
 
 ```bash
-npm run verify:browser-use --silent -- --dir output/release-prep/browser-use-20260618-6d998c8 --expect-release-date 2026-06-18 --expect-environment staging --expect-git-commit 6d998c8ab45d634487112d34fd257eb142214fdb
+npm run verify:browser-use --silent -- --dir output/release-prep/browser-use-20260618-current --expect-release-date 2026-06-18 --expect-environment staging --expect-git-commit <current-git-commit>
 ```
 
 Result:
@@ -153,15 +148,23 @@ No secret values are recorded here. `security:audit`, `smoke:edge`, and
 `typecheck` passed individually, so the remaining `verify` blocker is the env
 gate.
 
-`npm run supabase:verify:db --silent` is blocked because local Postgres is not
-running on `127.0.0.1:54322`.
+`npm run supabase:verify:db --silent` is blocked by local Supabase DB startup.
+After starting Colima, `supabase start` first failed because the local
+`supabase_config_heavy-chain` volume missed `/etc/postgresql-custom/conf.d`.
+An empty `conf.d` directory was added to that local Docker volume. Restarting
+then failed because the existing local DB volume was initialized by PostgreSQL
+15, while `supabase/config.toml` requires `major_version = 17`.
+
+No local DB volume was deleted or reset. `supabase stop` and `colima stop` were
+run after this check.
 
 ## Current Release Doctor
 
-With current Browser Use proof supplied and `.env.production.local` sourced:
+Before this evidence update, with current Browser Use proof supplied and
+`.env.production.local` sourced:
 
 ```bash
-RELEASE_BROWSER_USE_PROOF_DIR=output/release-prep/browser-use-20260618-6d998c8 npm run release:doctor --silent
+RELEASE_BROWSER_USE_PROOF_DIR=output/release-prep/browser-use-20260618-current npm run release:doctor --silent
 ```
 
 Result:
@@ -184,9 +187,9 @@ Historical saved readback proof still validates with:
 npm run verify:readback --silent
 ```
 
-The same files fail current metadata expectations for 2026-06-18 and commit
-`6d998c8ab45d634487112d34fd257eb142214fdb`, so current staging/prod readback is
-not complete. Current read-only DB readback still needs new proof for:
+The same files fail current metadata expectations for 2026-06-18 and the current
+clean `HEAD`, so current staging/prod readback is not complete. Current
+read-only DB readback still needs new proof for:
 
 - generated image `storage_path` present and canonical `image_url` null/missing/empty
 - usage and edge function run rows tied by request id
@@ -199,8 +202,8 @@ prep turn.
 
 Release remains blocked by missing service/env values, missing current
 staging/prod DB readback, missing current RLS/quota/cleanup DB readback proof,
-and `supabase:verify:db` needing a running local Supabase database or an
-approved DB verification lane.
+and `supabase:verify:db` needing either an approved local DB reset/recreate path
+or another approved DB verification lane.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
 chooses rollback; normal release verification does not deploy, delete, auth,
