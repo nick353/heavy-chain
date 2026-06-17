@@ -306,6 +306,8 @@ export function GeneratePage() {
   const [showPromptHistory, setShowPromptHistory] = useState(false);
   const [showSuccessCard, setShowSuccessCard] = useState(false);
   const [negativePrompt, setNegativePrompt] = useState('');
+  const [optimizedPromptResult, setOptimizedPromptResult] = useState('');
+  const [generationError, setGenerationError] = useState('');
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [selectedRatio, setSelectedRatio] = useState('1:1');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -369,6 +371,8 @@ export function GeneratePage() {
   const resetSharedInputs = () => {
     setPrompt('');
     setNegativePrompt('');
+    setOptimizedPromptResult('');
+    setGenerationError('');
     setSelectedStyle(null);
   };
 
@@ -378,6 +382,8 @@ export function GeneratePage() {
     }
     setSelectedFeature(feature);
     setGeneratedImages([]);
+    setOptimizedPromptResult('');
+    setGenerationError('');
     setReferenceImage(null);
     setBackgroundReferenceImage(null);
     setPatternReferenceImage(null);
@@ -393,6 +399,8 @@ export function GeneratePage() {
     }
     setSelectedFeature(null);
     setGeneratedImages([]);
+    setOptimizedPromptResult('');
+    setGenerationError('');
     setReferenceImage(null);
     setBackgroundReferenceImage(null);
     setPatternReferenceImage(null);
@@ -457,6 +465,7 @@ export function GeneratePage() {
       return;
     }
 
+    setGenerationError('');
     setIsGenerating(true);
     debugLog('Generation started', { selectedFeature: selectedFeature?.id });
     
@@ -779,6 +788,7 @@ export function GeneratePage() {
           if (data?.optimized_prompt) {
             toast.success('プロンプトを最適化しました');
             setPrompt(data.optimized_prompt);
+            setOptimizedPromptResult(data.optimized_prompt);
             if (data.negative_prompt) {
               setNegativePrompt(data.negative_prompt);
             }
@@ -892,7 +902,14 @@ export function GeneratePage() {
       if (error.context?.body) {
         try {
           const body = JSON.parse(error.context.body);
-          errorMessage = body.error || body.details || errorMessage;
+          const bodyError = body.error;
+          if (typeof bodyError === 'string') {
+            errorMessage = bodyError;
+          } else if (bodyError && typeof bodyError === 'object') {
+            errorMessage = bodyError.message || bodyError.details || body.details || errorMessage;
+          } else {
+            errorMessage = body.details || body.message || errorMessage;
+          }
         } catch {}
       }
       
@@ -901,7 +918,9 @@ export function GeneratePage() {
         errorMessage = 'サーバーへの接続に失敗しました。しばらく待ってから再試行してください。';
       }
       
-      toast.error(getErrorMessage({ ...error, message: errorMessage }));
+      const friendlyMessage = getErrorMessage({ ...error, message: errorMessage });
+      setGenerationError(friendlyMessage);
+      toast.error(friendlyMessage);
     } finally {
       debugLog('Generation finished');
       setIsGenerating(false);
@@ -2214,7 +2233,61 @@ export function GeneratePage() {
             </div>
           )}
 
-          {!isGenerating && generatedImages.length === 0 && (
+          {!isGenerating && generationError && (
+            <div className="glass-panel rounded-2xl p-6 shadow-soft min-h-[220px] border border-red-200/70 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/20">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-red-600 dark:text-red-300 font-semibold">!</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-red-800 dark:text-red-200">
+                    生成に失敗しました
+                  </h3>
+                  <p className="mt-2 text-sm leading-7 text-red-700 dark:text-red-300">
+                    {generationError}
+                  </p>
+                  <p className="mt-4 text-sm text-red-700/80 dark:text-red-300/80">
+                    入力内容を確認し、少し待ってからもう一度試してください。
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!isGenerating && selectedFeature.id === 'optimize-prompt' && optimizedPromptResult && (
+            <div className="glass-panel rounded-2xl p-6 shadow-soft min-h-[400px]">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-neutral-800 dark:text-white">
+                    プロンプトを最適化しました
+                  </h3>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    左の入力欄にも反映済みです。
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/60 dark:bg-neutral-900/50 p-4">
+                <p className="text-sm leading-7 text-neutral-700 dark:text-neutral-200 whitespace-pre-wrap">
+                  {optimizedPromptResult}
+                </p>
+              </div>
+              {negativePrompt && (
+                <div className="mt-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50/70 dark:bg-neutral-900/40 p-4">
+                  <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">
+                    避ける要素
+                  </p>
+                  <p className="text-sm leading-6 text-neutral-600 dark:text-neutral-300 whitespace-pre-wrap">
+                    {negativePrompt}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!isGenerating && !generationError && generatedImages.length === 0 && !(selectedFeature.id === 'optimize-prompt' && optimizedPromptResult) && (
             <div className="glass-panel rounded-2xl p-12 text-center border-2 border-dashed border-neutral-200/50 dark:border-neutral-700/50 min-h-[400px] flex flex-col items-center justify-center">
               <div className="w-20 h-20 bg-neutral-50 dark:bg-neutral-800/50 rounded-full flex items-center justify-center mb-6">
                 <ImageIcon className="w-10 h-10 text-neutral-300 dark:text-neutral-600" />

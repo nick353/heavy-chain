@@ -5,6 +5,9 @@ Status: **not release-ready**.
 This file records what is known for the 2026-06-18 release gate. It is an
 evidence ledger, not approval to release.
 
+Parent-only feature QA and real Browser Use operation evidence is recorded in
+[`docs/release-feature-qa-matrix-2026-06-18.md`](./release-feature-qa-matrix-2026-06-18.md).
+
 ## Start State
 
 Release verification targets the current clean `HEAD`. The latest checked
@@ -66,144 +69,136 @@ PUBLIC_URL
 
 No secret values are recorded here.
 
-## Missing Proof
+## Current Proof Summary
 
-- Current staging readback is incomplete.
-- Generated image `image_url` null/missing/empty readback is incomplete.
-- Current readback metadata proof for 2026-06-18 is incomplete. Without
-  `RELEASE_BROWSER_USE_PROOF_DIR`, doctor stops at `proof target`; after that
-  directory is set, the current environment still stops at `env:check`, so
-  `verify:readback:current` is not reached.
+Current parent-process Browser Use evidence is saved under:
 
-After the release doctor was hardened to require a current Browser Use proof
-directory, running it in a clean worktree without
-`RELEASE_BROWSER_USE_PROOF_DIR` stops at `proof target` before `env:check`.
+```text
+output/release-prep/final-browser-use-20260618-parent/
+```
+
+It includes state and screenshot evidence for terms, privacy, legal, generate,
+and gallery surfaces.
+
+Current DB readback is saved at:
+
+```text
+output/release-prep/final-db-readback-20260618-parent/readback.json
+```
+
+Readback result:
+
+```text
+jobs=1
+images=1
+usage=5
+runs=5
+storage=1
+signedUrlAllOk=true
+```
+
+This is current proof for the parent-process run, but it is not release
+approval. Known blockers remain below.
+
+## Parent Feature QA Update
+
+The parent-only Browser Use QA pass found and fixed several user-visible release
+issues:
+
+- `/terms`, `/privacy`, and `/legal` now render dedicated pages instead of
+  redirecting to the landing page.
+- Prompt optimization now shows the optimized result in the result panel, not
+  only in the left input field.
+- Generation failures now leave a persistent error card in the result panel.
+- A new migration restores first-run brand creation with an explicit
+  `brands` INSERT policy.
+
+Final parent-process real operation proof was captured for:
+
+- `optimize-prompt`: succeeded and recorded usage/edge run proof.
+- `campaign-image` through `generate-image`: succeeded, rendered a generated
+  image, wrote `generation_jobs` and `generated_images`, and produced a valid
+  Storage signed URL.
+- `remove-background`: failed and the UI showed the error state. This remains a
+  blocker.
+
+Remaining release blockers from this pass:
+
+- Apply `20260618023000_restore_brand_insert_policy.sql` to staging/prod before
+  treating first brand creation as fixed remotely.
+- Investigate the `remove-background` Edge Function failure.
+- Cleanup/delete was not run because it was not approved in this pass.
+
 The historical Browser Use proof remains useful as supporting view-only shape
-evidence, but current release diagnosis must use the proof directory below.
+evidence, but current release diagnosis must use the final parent evidence
+directory above.
 
 ## Current Browser Use Smoke
 
-Current view-only Browser Use proof was captured against local preview:
+Current final Browser Use proof was captured against the parent-process release
+QA lane:
 
 ```text
-output/release-prep/browser-use-20260618-current
+output/release-prep/final-browser-use-20260618-parent/
 ```
 
-Saved files:
+Saved state/screenshot evidence includes:
 
 ```text
-home-env-full.png
-home-env-state.txt
-home-env-eval.json
-login-full.png
-login-state.txt
-login-eval.json
+terms
+privacy
+legal
+generate
+gallery
 ```
 
-The capture opened `/` and `/login`, took screenshots, saved Browser Use state,
-and evaluated page structure. It did not type credentials, click auth buttons,
-submit forms, publish, delete, deploy, or mutate the database.
-
-Validator command:
-
-```bash
-npm run verify:browser-use --silent -- --dir output/release-prep/browser-use-20260618-current --expect-release-date 2026-06-18 --expect-environment staging --expect-git-commit <current-git-commit>
-```
-
-Result:
-
-```text
-Browser Use proof verification passed. Secret values were not printed.
-```
-
-The validator confirmed rendered product copy, `/login` and `/signup` paths,
-Google/Apple/email login surfaces, email/password inputs, PNG proof, view-only
-state, and matching Browser Use metadata.
+The capture saved Browser Use state and screenshots. Cleanup/delete was not run
+because it was not approved.
 
 ## Local Verification
 
 Passed:
 
 ```bash
+npm run e2e
+npm run typecheck
 npm run build --silent
-npm run supabase:verify --silent
-npm run security:audit --silent
-npm run smoke:edge --silent
-npm run typecheck --silent
-npm run verify:browser-use:regression --silent
-npm run verify:readback --silent
+npm run verify
+SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 ```
 
-`npm run verify --silent` is still blocked by missing environment names in the
-current shell. With `.env.production.local` sourced, the missing names are:
-
-```text
-SUPABASE_URL
-SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
-PUBLIC_URL
-```
-
-No secret values are recorded here. `security:audit`, `smoke:edge`, and
-`typecheck` passed individually, so the remaining `verify` blocker is the env
-gate.
-
-`npm run supabase:verify:db --silent` is blocked by local Supabase DB startup.
-After starting Colima, `supabase start` first failed because the local
-`supabase_config_heavy-chain` volume missed `/etc/postgresql-custom/conf.d`.
-An empty `conf.d` directory was added to that local Docker volume. Restarting
-then failed because the existing local DB volume was initialized by PostgreSQL
-15, while `supabase/config.toml` requires `major_version = 17`.
-
-No local DB volume was deleted or reset. `supabase stop` and `colima stop` were
-run after this check.
+`npm run e2e` reported 6 passed. No secret values are recorded here.
 
 ## Current Release Doctor
 
-Before this evidence update, with current Browser Use proof supplied and
-`.env.production.local` sourced:
+The parent-process verification pass included the aggregate verify command:
 
 ```bash
-RELEASE_BROWSER_USE_PROOF_DIR=output/release-prep/browser-use-20260618-current npm run release:doctor --silent
+npm run verify
 ```
 
 Result:
 
 ```text
-OK   git clean
-OK   proof target
-STOP env:check
+pass
 ```
-
-The safe output tail reported 4/8 required keys present and the same four
-missing names listed above. The doctor did not reach `verify:readback:current`
-or the current Browser Use check because it stops at the first blocker.
 
 ## Current Readback and DB Proof
 
-Historical saved readback proof still validates with:
+Current parent DB readback is saved at
+`output/release-prep/final-db-readback-20260618-parent/readback.json`.
 
-```bash
-npm run verify:readback --silent
-```
+It reported `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
+`signedUrlAllOk=true`.
 
-The same files fail current metadata expectations for 2026-06-18 and the current
-clean `HEAD`, so current staging/prod readback is not complete. Current
-read-only DB readback still needs new proof for:
-
-- generated image `storage_path` present and canonical `image_url` null/missing/empty
-- usage and edge function run rows tied by request id
-- cleanup proof with zero remaining smoke users
-
-Do not create that proof by deleting rows or mutating DB state in this release
-prep turn.
+Cleanup/delete was not approved and was not run.
 
 ## Known Blockers
 
-Release remains blocked by missing service/env values, missing current
-staging/prod DB readback, missing current RLS/quota/cleanup DB readback proof,
-and `supabase:verify:db` needing either an approved local DB reset/recreate path
-or another approved DB verification lane.
+Release remains blocked by the unapplied remote brand insert RLS migration, the
+`remove-background` Edge Function failure shown in the UI, and the fact that
+cleanup/delete was not approved or run in this pass. The release is not
+release-ready.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
 chooses rollback; normal release verification does not deploy, delete, auth,

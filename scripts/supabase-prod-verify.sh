@@ -47,8 +47,40 @@ require_no_match() {
   fi
 }
 
+require_no_repo_file_match() {
+  local description="$1"
+  local pattern="$2"
+  shift 2
+  local found=0
+  local grep_error=0
+  local file
+
+  while IFS= read -r -d '' file; do
+    if grep -I -H -n -E -- "$pattern" "$file" >&2; then
+      found=1
+    else
+      local status=$?
+      if [[ "$status" != "1" ]]; then
+        grep_error=1
+      fi
+    fi
+  done < <(git ls-files -z -c -o --exclude-standard -- "$@")
+
+  if [[ "$found" == "1" ]]; then
+    echo "Static guard failed: $description" >&2
+    return 1
+  fi
+
+  if [[ "$grep_error" == "1" ]]; then
+    echo "Static guard grep error: $description" >&2
+    return 1
+  fi
+
+  return 0
+}
+
 echo "Checking static safety guards"
-require_no_match "service role key value assignment outside docs" "^[[:space:]]*SUPABASE_SERVICE_ROLE_KEY=[^\"'[:space:]]" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist --exclude='*.md' --exclude='.env*.example'
+require_no_repo_file_match "service role key value assignment in repository files" "SUPABASE_SERVICE_ROLE_KEY[[:space:]]*=[[:space:]]*['\"]?(eyJ[A-Za-z0-9_-]{20,}|sb_secret_[A-Za-z0-9_-]{20,}|[A-Za-z0-9_-]{40,})" . ':(exclude)*.md'
 require_no_match "OpenAI-style secret literal" "sk-[A-Za-z0-9_-]\\{20,\\}" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist
 require_no_match "storage/data URL image_url fallback" "image_url:[[:space:]]*storageUrl[[:space:]]*||[[:space:]]*imageDataUrl" supabase/functions
 require_no_match "data URL image_url persistence" "image_url:[[:space:]]*imageDataUrl" supabase/functions
@@ -67,6 +99,8 @@ grep -q "Brand usage quota exceeded" supabase/migrations/20260617080031_harden_u
 grep -q "RAISE EXCEPTION 'User usage rate limit exceeded'" supabase/migrations/20260617080031_harden_usage_quota_guards.sql
 
 echo "Checking RLS and table grants"
+grep -q "CREATE POLICY \"Users can create brands\"" supabase/migrations/20260618023000_restore_brand_insert_policy.sql
+grep -q "WITH CHECK (owner_id = auth.uid())" supabase/migrations/20260618023000_restore_brand_insert_policy.sql
 grep -q "ALTER TABLE public.usage_events ENABLE ROW LEVEL SECURITY" supabase/migrations/20260617044009_billing_usage_limits.sql
 grep -q "ALTER TABLE public.edge_function_runs ENABLE ROW LEVEL SECURITY" supabase/migrations/20260617044009_billing_usage_limits.sql
 grep -q "ALTER TABLE public.generated_images ENABLE ROW LEVEL SECURITY" supabase/migrations/001_initial_schema.sql
