@@ -32,6 +32,61 @@ function hasUnsafePersistedImageUrl(text) {
   );
 }
 
+function hasUpscaleInlineReferenceGeneration(text) {
+  const generateBlock = text.match(
+    /const generateResponse = await fetch\([\s\S]*?\n\s*const generateData = await generateResponse\.json\(\);/
+  )?.[0] || '';
+
+  return (
+    generateBlock.includes('inlineData') &&
+    generateBlock.includes('mimeType') &&
+    generateBlock.includes('originalBase64') &&
+    /inlineData\s*:\s*\{[^}]*mimeType[^}]*data\s*:\s*originalBase64[^}]*\}/s.test(generateBlock)
+  );
+}
+
+function validateMultilingualBanner(text) {
+  const issues = [];
+  const imagePromptAssignments = text.match(/const prompt = `[\s\S]*?`;/g) || [];
+  const unsafeImagePrompt = imagePromptAssignments.some((assignment) =>
+    /with text|textContent|professional typography|high contrast text|readable typography/i.test(assignment)
+  );
+
+  if (unsafeImagePrompt) {
+    issues.push('multilingual-banner: image prompt appears to ask AI to draw copy text');
+  }
+  for (const needle of ['text-free', 'no letters', 'no typography']) {
+    if (!text.includes(needle)) {
+      issues.push(`multilingual-banner: missing background prompt guard "${needle}"`);
+    }
+  }
+  if (!/contentType:\s*['"]image\/svg\+xml['"]/.test(text)) {
+    issues.push('multilingual-banner: generated asset must be saved as image/svg+xml');
+  }
+  if (!/\.svg`/.test(text) && !/\.svg['"]/.test(text)) {
+    issues.push('multilingual-banner: storage path must use .svg');
+  }
+  for (const needle of ['buildBannerSvg', 'escapeXml', 'wrapText', 'fitWrappedText', 'textWidth', 'dedupeSubheadline']) {
+    if (!text.includes(needle)) {
+      issues.push(`multilingual-banner: missing deterministic SVG text helper ${needle}`);
+    }
+  }
+  if (!/maxWidth\s*\/\s*fontSize/.test(text)) {
+    issues.push('multilingual-banner: SVG text wrapping must derive maxWeight from rendered maxWidth and fontSize');
+  }
+  if (/textLength=|lengthAdjust=|transform="scale/.test(text)) {
+    issues.push('multilingual-banner: SVG text fitting must prefer wrapping over textLength/lengthAdjust/scale');
+  }
+  if (!/data:image\/svg\+xml;base64/.test(text)) {
+    issues.push('multilingual-banner: result fallback must point to composed SVG data URL');
+  }
+  if (!/image_url:\s*null/.test(text)) {
+    issues.push('multilingual-banner: generated_images.image_url must not persist signed/data URLs');
+  }
+
+  return issues;
+}
+
 for (const name of guarded) {
   const file = `supabase/functions/${name}/index.ts`;
   const text = readFileSync(file, 'utf8');
@@ -43,6 +98,12 @@ for (const name of guarded) {
   if (!text.includes('recordEdgeFunctionRun')) failures.push(`${name}: missing edge run observability`);
   if (hasUnsafePersistedImageUrl(text)) {
     failures.push(`${name}: persists signed/data URL as image_url`);
+  }
+  if (name === 'upscale' && !hasUpscaleInlineReferenceGeneration(text)) {
+    failures.push('upscale: generated image request must include inlineData with originalBase64');
+  }
+  if (name === 'multilingual-banner') {
+    failures.push(...validateMultilingualBanner(text));
   }
 }
 

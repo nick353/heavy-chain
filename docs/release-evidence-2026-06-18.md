@@ -1,6 +1,6 @@
 # Release Evidence 2026-06-18
 
-Status: **not release-ready**.
+Status: **blocked**.
 
 This file records what is known for the 2026-06-18 release gate. It is an
 evidence ledger, not approval to release.
@@ -94,7 +94,7 @@ images=1
 usage=5
 runs=5
 storage=1
-signedUrlAllOk=true
+storageReadbackOk=true
 ```
 
 This is current proof for the parent-process run, but it is not release
@@ -111,31 +111,43 @@ issues:
   only in the left input field.
 - Generation failures now leave a persistent error card in the result panel.
 - A new migration restores first-run brand creation with an explicit
-  `brands` INSERT policy.
+  `brands` INSERT policy. The brand insert migration has been applied remotely.
+- Updated Edge Functions have been deployed.
 
 Final parent-process real operation proof was captured for:
 
 - `optimize-prompt`: succeeded and recorded usage/edge run proof.
 - `campaign-image` through `generate-image`: succeeded, rendered a generated
   image, wrote `generation_jobs` and `generated_images`, and produced a valid
-  Storage signed URL.
-- `remove-background`: failed and the UI showed the error state. Detailed
-  Browser Use state/screenshot evidence is under
-  `output/release-prep/full-ui-qa-20260618-parent/102-remove-bg-fixed-after-*`.
-  Code now avoids the deprecated Gemini 2.0 image model path, but the updated
-  Edge Functions were not deployed or retested remotely in this pass.
+  storage readback.
+- `remove-background`, `colorize`, `upscale-fixed`, `design-gacha`,
+  `product-shots`, `model-matrix`, and `multilingual-banner-fixed2`: PASS in
+  image visual QA.
+- `multilingual-banner`: initial PNG failed with garbled/duplicated text; the
+  first SVG fix failed due to clipped text. Browser Use regenerated the fixed2
+  SVGs and visual QA passed for
+  `qlthumbs2/multilingual-banner-fixed2-ja.svg.png` and
+  `qlthumbs2/multilingual-banner-fixed2-en.svg.png`.
+- `scene-coordinate`: UI shows 3 images, but `generated_images` distinct
+  readback is weak.
+- `variations`: the earlier evidence hit `colorize`; focused distinct
+  `generate-variations` proof is not complete.
+
+Image QA summary evidence:
+
+```text
+image-visual-qa-summary.json
+latest-feature-image-summary.json
+```
 
 Remaining release blockers from this pass:
 
-- Apply `20260618023000_restore_brand_insert_policy.sql` to staging/prod before
-  treating first brand creation as fixed remotely.
-- Deploy the updated Edge Functions and rerun focused real Browser Use
-  generation proof for `remove-background` and the remaining Gemini
-  image-editing features.
 - Resolve or retry the signup lane after the Supabase Auth HTTP 429 blocker.
-- Capture focused real-generation proof for remaining image/text features beyond
-  `optimize-prompt`, `campaign-image`, and `remove-background`.
-- Cleanup/delete was not run because it was not approved in this pass.
+- Approve and run local DB reset/recreate if that lane is still required.
+- Refresh `release:doctor` against current readback metadata.
+- Capture focused proof for `scene-coordinate` distinct DB readback and
+  `generate-variations`.
+- Cleanup/delete was not run.
 
 The historical Browser Use proof remains useful as supporting view-only shape
 evidence. Current release diagnosis must use the final parent evidence directory
@@ -205,18 +217,16 @@ Current parent DB readback is saved at
 `output/release-prep/final-db-readback-20260618-parent/readback.json`.
 
 It reported `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
-`signedUrlAllOk=true`.
+storage readback passed.
 
 Cleanup/delete was not approved and was not run.
 
 ## Known Blockers
 
-Release remains blocked by the unapplied remote brand insert RLS migration, the
-need to deploy and retest updated Edge Functions for `remove-background` and the
-remaining Gemini image-editing paths, the Supabase Auth HTTP 429 signup blocker,
-the lack of focused real-generation proof for the remaining image/text features,
-and the fact that cleanup/delete was not approved or run in this pass. The
-release is not release-ready.
+Release remains blocked by the Supabase Auth HTTP 429 signup blocker,
+cleanup/delete not being run, local DB reset/recreate not being approved,
+`release:doctor` current readback metadata, and focused proof gaps for
+`scene-coordinate` and `generate-variations`.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
 chooses rollback; normal release verification does not deploy, delete, auth,

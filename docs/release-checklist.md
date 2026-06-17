@@ -1,6 +1,6 @@
 # Release Checklist
 
-Status: **not release-ready**.
+Status: **blocked**.
 
 Use this checklist from top to bottom. If any line says `STOP`, stop there and
 write down the blocker. Do not skip ahead.
@@ -178,8 +178,9 @@ Run read-only DB readback after staging is deployed. Save the output and confirm
 Current 2026-06-18 parent DB readback exists at
 `output/release-prep/final-db-readback-20260618-parent/readback.json` and
 reports `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
-`signedUrlAllOk=true`. This proves the parent Browser Use generation pass, but
-it does not finish the machine-enforced current metadata gate.
+valid generated image storage readback. This proves the parent Browser Use
+generation pass, but it does not finish the machine-enforced current metadata
+gate.
 
 For existing JSON proof, run:
 
@@ -222,21 +223,22 @@ During release verification, do not run these without explicit human ownership:
 
 ```bash
 npm run verify:full
-npm run supabase:deploy:functions
-supabase functions deploy ...
 ```
 
-Also stop before any staging or production mutation, including migration apply,
-real generation smoke, auth-provider login, or cleanup deletion.
+Also stop before any staging or production mutation, including real generation
+smoke, auth-provider login, or cleanup deletion.
 
 ## 7. Release Decision
 
 Current decision: **do not release**.
 
-Resume only after the current readback metadata gate is fixed, the brand insert
-migration is applied to staging/prod by a human owner, updated Edge Functions are
-deployed and Browser Use retested, focused real-generation proof is captured for
-the remaining image/text features, signup HTTP 429 is resolved or explicitly
-accepted as a blocker, cleanup/delete is approved if required, local DB
-reset/recreate is approved if local DB proof is required, and the safe validators
-still pass.
+Current applied/proven state: the brand insert migration has been applied
+remotely, updated Edge Functions have been deployed, and image visual QA is PASS
+for `remove-background`, `colorize`, `upscale-fixed`, `design-gacha`,
+`product-shots`, `model-matrix`, and `multilingual-banner-fixed2`.
+
+Resume only after the current readback metadata gate is fixed, signup HTTP 429
+is resolved or explicitly accepted as a blocker, cleanup/delete is approved if
+required, local DB reset/recreate is approved if local DB proof is required,
+scene-coordinate distinct DB readback is captured, `generate-variations`
+focused proof is captured, and the safe validators still pass.

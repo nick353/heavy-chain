@@ -1,6 +1,6 @@
 # Production Readiness
 
-Status: **not release-ready**.
+Status: **blocked**.
 
 This document is the final release gate ledger for Heavy Chain. If a check says
 `BLOCKED` or `DO NOT RUN`, stop. Do not guess, do not fill secrets into docs, and
@@ -50,19 +50,20 @@ Current 2026-06-18 parent observation: the environment gate now passes with
 - Current parent DB readback exists at
   `output/release-prep/final-db-readback-20260618-parent/readback.json` and
   reports `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
-  `signedUrlAllOk=true`.
+  valid generated image storage readback.
 - The machine-enforced current readback metadata gate is still incomplete
   because the legacy `output/playwright/rate-limit-db-proof-2.json` and
   `output/playwright/rate-limit-cleanup-2.json` files do not match the current
   release date/environment/git commit metadata.
 - The brand insert migration
-  `supabase/migrations/20260618023000_restore_brand_insert_policy.sql` has not
-  been applied to staging/prod, so first brand creation remains blocked remotely.
-- Updated Edge Functions have not been deployed or Browser Use retested
-  remotely, so the `remove-background` and remaining Gemini image-editing paths
-  are code-fixed but not remote-proven.
-- Focused real-generation proof is still needed for remaining image/text
-  features beyond `optimize-prompt`, `campaign-image`, and `remove-background`.
+  `supabase/migrations/20260618023000_restore_brand_insert_policy.sql` has been
+  applied remotely.
+- Updated Edge Functions have been deployed.
+- Image visual QA is PASS for `remove-background`, `colorize`,
+  `upscale-fixed`, `design-gacha`, `product-shots`, `model-matrix`, and
+  `multilingual-banner-fixed2`.
+- Focused proof is still needed for scene-coordinate distinct DB readback and
+  `generate-variations`.
 - Signup is blocked in this test lane by Supabase Auth HTTP 429.
 - Cleanup/delete was not approved and was not run.
 - Local Supabase DB verification still requires an approved local DB

@@ -117,7 +117,14 @@ serve(async (req) => {
 
     // Generate high-resolution version
     console.log('🎨 Generating high-resolution image...');
-    const prompt = `${description}. Ultra high resolution, extremely detailed, 4K quality, sharp focus, professional photography, pristine quality`;
+    const prompt = [
+      'Upscale and restore the exact same product shown in the reference image.',
+      'Use the reference image as the source of truth and preserve the same product identity.',
+      'Do not change the color, shape, collar, pockets, trim, logo, composition, camera angle, background placement, or visible construction details.',
+      'Only improve resolution, sharpness, texture clarity, edge definition, and compression artifacts.',
+      `Reference description: ${description}`,
+      'Ultra high resolution, detailed restoration, sharp focus, pristine product image.'
+    ].join(' ');
 
     const generateResponse = await fetch(
       geminiGenerateContentUrl(imageModel, GEMINI_API_KEY),
@@ -125,10 +132,15 @@ serve(async (req) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType, data: originalBase64 } }
+            ]
+          }],
           generationConfig: { 
             responseModalities: ["IMAGE", "TEXT"],
-            temperature: 0.3  // Low temperature for accuracy
+            temperature: 0.1
           }
         }),
       }

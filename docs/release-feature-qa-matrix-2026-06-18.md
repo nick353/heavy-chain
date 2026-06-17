@@ -1,6 +1,6 @@
 # Release Feature QA Matrix 2026-06-18
 
-Status: **not release-ready**.
+Status: **blocked**.
 
 This file records parent-only Browser Use QA for the Heavy Chain release. It is
 not release approval. Browser proof is under
@@ -16,7 +16,7 @@ not release approval. Browser proof is under
 | Signup validation | PASS: password mismatch is visible. | `11-signup-password-mismatch-state.txt` |
 | Signup submit | BLOCKED: Supabase Auth returned HTTP 429; no auth user was created. | `22-signup-fetch-after-submit.json` |
 | Login | PASS: service-created QA user logged in through the UI. | `31-login-after-state.txt` |
-| First brand creation | FIXED IN MIGRATION, BLOCKED ON REMOTE: current remote DB rejects brand insert with RLS 403 until the new migration is applied. | `35-brand-keyboard-after.json` |
+| First brand creation | PASS: brand insert migration has been applied remotely. | `35-brand-keyboard-after.json` |
 | Generate / gallery | PASS: authenticated generate and gallery states/screenshots saved in the final Browser Use evidence set. | `generate-*`, `gallery-*` |
 | Brand settings | PASS: brand information and owner member render. | `auth-brand-settings-eval.json` |
 | Canvas `/canvas/new` | PASS: editor shell, toolbar, disabled object actions, onboarding render. | `auth-canvas-new-eval.json` |
@@ -43,14 +43,23 @@ supporting evidence only until a focused variations run is captured.
 | Feature | Result | Proof |
 | --- | --- | --- |
 | optimize-prompt | PASS: Edge Function succeeded and usage was recorded. | final Browser Use evidence plus DB readback |
-| campaign-image / generate-image | PASS: generated 1 image, rendered it, saved DB job/image rows, and storage signed URL readback passed. | final Browser Use evidence plus `output/release-prep/final-db-readback-20260618-parent/readback.json` |
+| campaign-image / generate-image | PASS: generated 1 image, rendered it, saved DB job/image rows, and storage readback passed. | final Browser Use evidence plus `output/release-prep/final-db-readback-20260618-parent/readback.json` |
 | gallery readback | PASS: generated image appears in gallery state/screenshot and DB readback confirms 1 generated image. | `gallery-*`, readback JSON |
-| remove-background | CODE FIXED, REMOTE RETEST BLOCKED: upload/function path reached a failed result and the UI showed the error state. Code now uses current configurable Gemini model IDs instead of the removed 2.0 image model, but the fix still needs Edge Function deploy and real Browser Use retest. | `output/release-prep/full-ui-qa-20260618-parent/102-remove-bg-fixed-after-*`, DB readback, and code guard in `npm run smoke:edge` |
+| remove-background | PASS: deployed Edge Function path passed image visual QA. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
+| colorize | PASS: deployed Edge Function path passed image visual QA. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
+| upscale-fixed | PASS: deployed Edge Function path passed image visual QA. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
+| design-gacha | PASS: deployed Edge Function path passed image visual QA. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
+| product-shots | PASS: deployed Edge Function path passed image visual QA. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
+| model-matrix | PASS: deployed Edge Function path passed image visual QA. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
+| multilingual-banner | FAIL: initial PNG had garbled/duplicated text; first SVG fix clipped text. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
+| multilingual-banner-fixed2 | PASS: Browser Use regenerated fixed2 SVGs; visual QA passed for `qlthumbs2/multilingual-banner-fixed2-ja.svg.png` and `qlthumbs2/multilingual-banner-fixed2-en.svg.png`. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
+| scene-coordinate | BLOCKED: UI shows 3 images, but `generated_images` distinct readback is weak. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
+| variations | BLOCKED: previous evidence hit `colorize`; focused distinct `generate-variations` proof is not complete. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
 
 DB readback for this pass is saved at
 `output/release-prep/final-db-readback-20260618-parent/readback.json` and
-reported `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
-`signedUrlAllOk=true`.
+reported `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and storage
+readback passed.
 
 ## Parent Verification Commands
 
@@ -71,6 +80,8 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 - Added static routes for `/terms`, `/privacy`, and `/legal`.
 - Added `supabase/migrations/20260618023000_restore_brand_insert_policy.sql`
   so new users can create their first brand with `owner_id = auth.uid()`.
+- Applied the brand insert migration remotely.
+- Deployed updated Edge Functions.
 - Added a static verification guard for the brand insert policy.
 - Updated the secret static guard so local `.env*` files are not treated as
   committed leakage.
@@ -86,12 +97,9 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 
 ## Remaining Blockers
 
-- Apply the new brand insert policy migration to staging/prod; current remote DB
-  still returns RLS 403 for first brand creation.
-- Deploy updated Edge Functions to staging, then rerun focused Browser Use
-  generation proof for `remove-background` and the other Gemini image-editing
-  features. Deployment was not run in this pass.
 - Signup is blocked by Supabase Auth HTTP 429 in this test lane.
-- Focused real-generation runs are still needed for the remaining image/text
-  features beyond optimize-prompt, campaign-image, and remove-background.
-- Cleanup/delete was not run because it was not approved in this pass.
+- Cleanup/delete was not run.
+- Local DB reset/recreate was not approved.
+- `release:doctor` still needs current readback metadata.
+- Focused proof is still needed for `scene-coordinate` distinct DB readback and
+  `generate-variations`.
