@@ -24,6 +24,16 @@ interface BrandSubscriptionRow {
   plan_id: string | null;
   quota_override: number | null;
   status: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+}
+
+interface UsageSummaryRow {
+  plan_code: string | null;
+  monthly_quota: number | null;
+  used_units: number | null;
+  reserved_units: number | null;
+  remaining_units: number | null;
 }
 
 interface QuotaSummary {
@@ -48,6 +58,18 @@ const getPlanLabel = (plan: PlanRow | null) => {
   return plan.name || plan.code || 'Free';
 };
 
+const getPlanCodeLabel = (planCode: string | null | undefined) => {
+  switch (planCode) {
+    case 'pro':
+      return 'Pro';
+    case 'business':
+      return 'Business';
+    case 'free':
+    default:
+      return 'Free';
+  }
+};
+
 export function UsageStats({ className }: UsageStatsProps) {
   const { currentBrand } = useAuthStore();
   const [summary, setSummary] = useState<QuotaSummary>({
@@ -67,20 +89,40 @@ export function UsageStats({ className }: UsageStatsProps) {
 
     setIsLoading(true);
 
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+    const fallbackPeriodStart = new Date();
+    fallbackPeriodStart.setDate(1);
+    fallbackPeriodStart.setHours(0, 0, 0, 0);
 
-    const startOfNextMonth = new Date(startOfMonth);
-    startOfNextMonth.setMonth(startOfNextMonth.getMonth() + 1);
+    const fallbackPeriodEnd = new Date(fallbackPeriodStart);
+    fallbackPeriodEnd.setMonth(fallbackPeriodEnd.getMonth() + 1);
 
     const billingClient = supabase as any;
 
     try {
-      const [subscriptionResult, freePlanResult, usageResult] = await Promise.all([
+      const rpcResult = await billingClient
+        .rpc('get_brand_usage_summary', { p_brand_id: currentBrand.id })
+        .maybeSingle();
+
+      if (!rpcResult.error && rpcResult.data) {
+        const rpcSummary = rpcResult.data as UsageSummaryRow;
+        setSummary({
+          monthlyQuota: toNumber(rpcSummary.monthly_quota, FREE_PLAN_QUOTA),
+          usedUnits: toNumber(rpcSummary.used_units),
+          reservedUnits: toNumber(rpcSummary.reserved_units),
+          remainingUnits: toNumber(rpcSummary.remaining_units, FREE_PLAN_QUOTA),
+          planName: getPlanCodeLabel(rpcSummary.plan_code),
+        });
+        return;
+      }
+
+      if (rpcResult.error) {
+        console.warn('Falling back to table usage summary:', rpcResult.error);
+      }
+
+      const [subscriptionResult, freePlanResult] = await Promise.all([
         billingClient
           .from('brand_subscriptions')
-          .select('plan_id, quota_override, status')
+          .select('plan_id, quota_override, status, current_period_start, current_period_end')
           .eq('brand_id', currentBrand.id)
           .eq('status', 'active')
           .maybeSingle(),
@@ -89,12 +131,6 @@ export function UsageStats({ className }: UsageStatsProps) {
           .select('id, code, name, monthly_quota')
           .eq('code', 'free')
           .maybeSingle(),
-        billingClient
-          .from('usage_events')
-          .select('units, status')
-          .eq('brand_id', currentBrand.id)
-          .gte('created_at', startOfMonth.toISOString())
-          .lt('created_at', startOfNextMonth.toISOString()),
       ]);
 
       if (subscriptionResult.error) {
@@ -103,13 +139,11 @@ export function UsageStats({ className }: UsageStatsProps) {
       if (freePlanResult.error) {
         console.warn('Failed to fetch free plan:', freePlanResult.error);
       }
-      if (usageResult.error) {
-        console.warn('Failed to fetch usage events:', usageResult.error);
-      }
-
       const subscription = (subscriptionResult.data ?? null) as BrandSubscriptionRow | null;
       const freePlan = (freePlanResult.data ?? null) as PlanRow | null;
       let activePlan = freePlan;
+      const periodStart = subscription?.current_period_start ?? fallbackPeriodStart.toISOString();
+      const periodEnd = subscription?.current_period_end ?? fallbackPeriodEnd.toISOString();
 
       if (subscription?.plan_id) {
         const planResult = await billingClient
@@ -123,6 +157,17 @@ export function UsageStats({ className }: UsageStatsProps) {
         } else {
           activePlan = (planResult.data ?? freePlan) as PlanRow | null;
         }
+      }
+
+      const usageResult = await billingClient
+        .from('usage_events')
+        .select('units, status')
+        .eq('brand_id', currentBrand.id)
+        .gte('created_at', periodStart)
+        .lt('created_at', periodEnd);
+
+      if (usageResult.error) {
+        console.warn('Failed to fetch usage events:', usageResult.error);
       }
 
       const usageRows = ((usageResult.data ?? []) as UsageEventRow[]).filter(Boolean);
@@ -198,7 +243,7 @@ export function UsageStats({ className }: UsageStatsProps) {
   if (isLoading) {
     return (
       <div className={className}>
-        <div className="animate-pulse grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        <div className="animate-pulse grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3 sm:gap-4 lg:gap-6">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-24 bg-neutral-100 dark:bg-neutral-800 rounded-xl sm:rounded-2xl" />
           ))}
@@ -209,7 +254,7 @@ export function UsageStats({ className }: UsageStatsProps) {
 
   return (
     <div className={className}>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3 sm:gap-4 lg:gap-6">
         {statItems.map((item, index) => (
           <motion.div
             key={item.label}

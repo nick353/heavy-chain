@@ -19,6 +19,8 @@ const guarded = [
 const observedOnly = ['share-link'];
 const failures = [];
 const quotaGuardMigration = 'supabase/migrations/20260617080031_harden_usage_quota_guards.sql';
+const authenticatedUsageSummaryMigration =
+  'supabase/migrations/20260617184720_authenticated_usage_summary_rpc.sql';
 
 function hasUnsafePersistedImageUrl(text) {
   const imageUrlAssignments = text.match(/image_url\s*:\s*[^,\n}]+/g) || [];
@@ -45,6 +47,7 @@ for (const name of observedOnly) {
 }
 
 const quotaGuardSql = readFileSync(quotaGuardMigration, 'utf8');
+const authenticatedUsageSummarySql = readFileSync(authenticatedUsageSummaryMigration, 'utf8');
 const quotaGuardChecks = [
   ['stale reservation release', "reservation_stale"],
   ['stale reservation status release', "status = 'released'"],
@@ -60,6 +63,23 @@ const quotaGuardChecks = [
 for (const [label, needle] of quotaGuardChecks) {
   if (!quotaGuardSql.includes(needle)) {
     failures.push(`${quotaGuardMigration}: missing ${label}`);
+  }
+}
+
+const authenticatedUsageSummaryChecks = [
+  ['authenticated summary function', 'public.get_brand_usage_summary'],
+  ['role check', "private.has_brand_role(p_brand_id, 'viewer')"],
+  ['admin check', 'private.is_current_user_admin()'],
+  ['no event detail return', 'RETURNS TABLE'],
+  ['fallback free plan', "WHERE p.code = 'free'"],
+  ['period start filter', 'ue.created_at >= s.current_period_start'],
+  ['period end filter', 'ue.created_at < s.current_period_end'],
+  ['authenticated grant', 'GRANT EXECUTE ON FUNCTION public.get_brand_usage_summary(UUID) TO authenticated'],
+];
+
+for (const [label, needle] of authenticatedUsageSummaryChecks) {
+  if (!authenticatedUsageSummarySql.includes(needle)) {
+    failures.push(`${authenticatedUsageSummaryMigration}: missing ${label}`);
   }
 }
 
