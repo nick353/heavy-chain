@@ -18,6 +18,7 @@ const guarded = [
 
 const observedOnly = ['share-link'];
 const failures = [];
+const quotaGuardMigration = 'supabase/migrations/20260617080031_harden_usage_quota_guards.sql';
 
 function hasUnsafePersistedImageUrl(text) {
   const imageUrlAssignments = text.match(/image_url\s*:\s*[^,\n}]+/g) || [];
@@ -41,6 +42,25 @@ for (const name of guarded) {
 for (const name of observedOnly) {
   const text = readFileSync(`supabase/functions/${name}/index.ts`, 'utf8');
   if (!text.includes('recordEdgeFunctionRun')) failures.push(`${name}: missing edge run observability`);
+}
+
+const quotaGuardSql = readFileSync(quotaGuardMigration, 'utf8');
+const quotaGuardChecks = [
+  ['stale reservation release', "reservation_stale"],
+  ['stale reservation status release', "status = 'released'"],
+  ['15 minute stale threshold', "INTERVAL '15 minutes'"],
+  ['brand one-minute rate window', "brand_id = p_brand_id"],
+  ['brand rate cap', 'v_brand_recent_units + p_units > 5'],
+  ['user one-minute rate window', 'user_id = p_user_id'],
+  ['user rate cap', 'v_user_recent_units + p_units > 3'],
+  ['idempotency preservation', 'idempotency_key = p_idempotency_key'],
+  ['monthly quota preservation', 'Brand usage quota exceeded'],
+];
+
+for (const [label, needle] of quotaGuardChecks) {
+  if (!quotaGuardSql.includes(needle)) {
+    failures.push(`${quotaGuardMigration}: missing ${label}`);
+  }
 }
 
 if (failures.length > 0) {
