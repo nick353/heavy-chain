@@ -23,6 +23,8 @@ import { Button, Textarea, Input } from '../components/ui';
 import { FeatureSelector, type Feature } from '../components/FeatureSelector';
 import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
 import { ImageSelector, type SelectedImage, type ReferenceType } from '../components/ImageSelector';
+import { UsageStats } from '../components/UsageStats';
+import { getErrorMessage } from '../lib/errorMessages';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -899,7 +901,7 @@ export function GeneratePage() {
         errorMessage = 'サーバーへの接続に失敗しました。しばらく待ってから再試行してください。';
       }
       
-      toast.error(errorMessage);
+      toast.error(getErrorMessage({ ...error, message: errorMessage }));
     } finally {
       debugLog('Generation finished');
       setIsGenerating(false);
@@ -2066,6 +2068,8 @@ export function GeneratePage() {
           </p>
         </div>
 
+        <UsageStats className="mb-4 sm:mb-6 lg:mb-8" />
+
         <FeatureSelector 
           onSelectFeature={handleFeatureSelect}
           selectedFeatureId={null}
@@ -2115,6 +2119,8 @@ export function GeneratePage() {
               </div>
             </div>
           </div>
+
+          <UsageStats />
 
           <div className="glass-panel p-6 rounded-2xl dark:bg-neutral-800/50 dark:border-neutral-700/50">
             {/* Prompt History Button */}

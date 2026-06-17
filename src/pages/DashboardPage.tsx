@@ -7,7 +7,6 @@ import {
   IconImage,
   IconArrowRight,
   IconClock,
-  IconTrending,
   IconLayout,
   IconHelp,
   IconPlus,
@@ -20,6 +19,7 @@ import { supabase } from '../lib/supabase';
 import { withSignedImageUrls } from '../lib/storage';
 import { Button, Modal, Input, Textarea } from '../components/ui';
 import { Onboarding, useOnboarding } from '../components/Onboarding';
+import { UsageStats } from '../components/UsageStats';
 import type { GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -80,7 +80,7 @@ const itemVariants = {
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user, profile, currentBrand, setCurrentBrand } = useAuthStore();
-  const { projects, createProject, deleteProject, loadProject, clearCanvas, getRecentProjects } = useCanvasStore();
+  const { createProject, deleteProject, loadProject, clearCanvas, getRecentProjects } = useCanvasStore();
   const { showOnboarding, completeOnboarding, resetOnboarding } = useOnboarding();
   const [recentImages, setRecentImages] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -593,49 +593,9 @@ export function DashboardPage() {
           )}
         </motion.div>
 
-        {/* Stats Grid */}
-        <motion.div variants={itemVariants} className="grid grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <div className="bg-white dark:bg-surface-900 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
-              <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <IconTrending className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" size={20} />
-              </div>
-              <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-neutral-500 dark:text-neutral-400 hidden sm:block">今月の生成数</span>
-            </div>
-            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 dark:text-white font-display">
-              {recentImages.length}
-              <span className="text-xs sm:text-sm lg:text-base font-normal text-neutral-400 ml-1 sm:ml-2">枚</span>
-            </p>
-            <span className="text-[10px] text-neutral-400 sm:hidden">生成数</span>
-          </div>
-          
-          <div className="bg-white dark:bg-surface-900 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
-              <div className="p-1.5 sm:p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                <IconFolder className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" size={20} />
-              </div>
-              <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-neutral-500 dark:text-neutral-400 hidden sm:block">プロジェクト数</span>
-            </div>
-            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 dark:text-white font-display">
-              {projects.length}
-              <span className="text-xs sm:text-sm lg:text-base font-normal text-neutral-400 ml-1 sm:ml-2">個</span>
-            </p>
-            <span className="text-[10px] text-neutral-400 sm:hidden">プロジェクト</span>
-          </div>
-
-          <div className="bg-white dark:bg-surface-900 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-6 border border-neutral-100 dark:border-white/5 shadow-sm">
-            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
-              <div className="p-1.5 sm:p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <IconSparkles className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" size={20} />
-              </div>
-              <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-neutral-500 dark:text-neutral-400 hidden sm:block">お気に入り</span>
-            </div>
-            <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-neutral-900 dark:text-white font-display">
-              {recentImages.filter(img => img.is_favorite).length}
-              <span className="text-xs sm:text-sm lg:text-base font-normal text-neutral-400 ml-1 sm:ml-2">枚</span>
-            </p>
-            <span className="text-[10px] text-neutral-400 sm:hidden">お気に入り</span>
-          </div>
+        {/* Usage quota */}
+        <motion.div variants={itemVariants}>
+          <UsageStats />
         </motion.div>
       </motion.div>
 

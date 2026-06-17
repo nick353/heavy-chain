@@ -10,6 +10,9 @@ export const ERROR_MESSAGES: Record<string, string> = {
   RATE_LIMIT: 'リクエストが多すぎます。しばらくお待ちください。',
   RATE_LIMIT_MINUTE: 'リクエスト制限に達しました。1分後に再度お試しください。',
   RATE_LIMIT_HOUR: '時間あたりのリクエスト制限に達しました。しばらくお待ちください。',
+  USER_USAGE_RATE_LIMIT: '短時間に生成リクエストが集中しています。1分ほど待ってから再試行してください。',
+  BRAND_USAGE_RATE_LIMIT: 'このブランドで短時間に生成リクエストが集中しています。少し待ってから再試行してください。',
+  BRAND_USAGE_QUOTA_EXCEEDED: '今月の生成枠を使い切りました。プラン変更または翌月のリセット後に再試行してください。',
   
   // Image generation errors
   IMAGE_TOO_LARGE: '画像サイズが大きすぎます。10MB以下の画像をアップロードしてください。',
@@ -30,6 +33,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   
   // Brand/Project errors
   BRAND_NOT_FOUND: 'ブランドが見つかりません。',
+  BRAND_ACCESS_DENIED: 'このブランドで操作する権限がありません。ブランドを選び直してください。',
+  BRAND_SUBSCRIPTION_UNAVAILABLE: 'このブランドのプラン状態を確認できません。時間をおいて再試行してください。',
   PROJECT_NOT_FOUND: 'プロジェクトが見つかりません。',
   BRAND_LIMIT_REACHED: '作成できるブランド数の上限に達しました。',
   
@@ -47,12 +52,30 @@ export const ERROR_MESSAGES: Record<string, string> = {
   UNKNOWN_ERROR: '予期しないエラーが発生しました。再度お試しください。',
 };
 
+const KNOWN_MESSAGE_MAP: Array<[RegExp, string]> = [
+  [/brand usage quota exceeded/i, ERROR_MESSAGES.BRAND_USAGE_QUOTA_EXCEEDED],
+  [/user usage rate limit exceeded/i, ERROR_MESSAGES.USER_USAGE_RATE_LIMIT],
+  [/brand usage rate limit exceeded/i, ERROR_MESSAGES.BRAND_USAGE_RATE_LIMIT],
+  [/no active subscription for brand/i, ERROR_MESSAGES.BRAND_SUBSCRIPTION_UNAVAILABLE],
+  [/brand not found or access denied/i, ERROR_MESSAGES.BRAND_ACCESS_DENIED],
+  [/missing authorization|unauthorized/i, ERROR_MESSAGES.SESSION_EXPIRED],
+];
+
+const getMappedKnownMessage = (message: string) => {
+  const matched = KNOWN_MESSAGE_MAP.find(([pattern]) => pattern.test(message));
+  return matched?.[1] ?? null;
+};
+
 // Map API error codes to user-friendly messages
 export function getErrorMessage(error: any): string {
   // If it's a string, return as-is if it looks user-friendly
   if (typeof error === 'string') {
     if (ERROR_MESSAGES[error]) {
       return ERROR_MESSAGES[error];
+    }
+    const mappedMessage = getMappedKnownMessage(error);
+    if (mappedMessage) {
+      return mappedMessage;
     }
     // Check if it's already a Japanese message
     if (/[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(error)) {
@@ -117,6 +140,10 @@ export function getErrorMessage(error: any): string {
   // Try to get message from error object
   if (error?.message) {
     // Map known error messages
+    const mappedMessage = getMappedKnownMessage(error.message);
+    if (mappedMessage) {
+      return mappedMessage;
+    }
     const message = error.message.toLowerCase();
     if (message.includes('network') || message.includes('fetch')) {
       return ERROR_MESSAGES.NETWORK_ERROR;
@@ -159,4 +186,3 @@ export async function withErrorHandling<T>(
     return { data: null, error: errorMessage };
   }
 }
-

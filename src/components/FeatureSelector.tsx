@@ -225,12 +225,14 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
     <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       {/* Quick start section */}
       {activeCategory === 'all' && (
-        <motion.div 
+        <motion.button
+          type="button"
+          onClick={() => onSelectFeature(FEATURES.find(f => f.id === 'design-gacha')!)}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-600 dark:to-primary-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white"
+          className="relative w-full overflow-hidden bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-600 dark:to-primary-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-left text-white transition-transform active:scale-[0.99]"
         >
-          <div className="absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
+          <div className="pointer-events-none absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
           <div className="relative z-10 flex flex-col sm:flex-row items-start gap-3 sm:gap-5">
             <div className="w-10 h-10 sm:w-14 sm:h-14 bg-white/20 backdrop-blur-sm rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0">
               <IconSparkles className="w-5 h-5 sm:w-7 sm:h-7" size={28} />
@@ -242,16 +244,15 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
               <p className="text-white/80 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">
                 「デザインガチャ」で4つのスタイルを一気に生成
               </p>
-              <button
-                onClick={() => onSelectFeature(FEATURES.find(f => f.id === 'design-gacha')!)}
-                className="inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-white text-primary-700 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl hover:bg-white/90 transition-colors shadow-lg"
+              <span
+                className="relative z-20 inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-white text-primary-700 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl shadow-lg"
               >
                 試してみる
                 <IconArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" size={16} />
-              </button>
+              </span>
             </div>
           </div>
-        </motion.div>
+        </motion.button>
       )}
 
       {/* Category tabs */}
