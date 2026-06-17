@@ -13,6 +13,9 @@ evidence ledger, not approval to release.
 
 ```bash
 npm run build
+npm run verify:readback
+npm run verify:browser-use
+npm run supabase:verify:static
 npm run supabase:verify
 npm run security:audit
 npm run smoke:edge
@@ -25,9 +28,22 @@ npm run e2e
 sourced. `npm run e2e` passed 1 Chromium test.
 
 `npm run supabase:verify` passed in its default static-file mode only. It
-skipped the local migration list because `SUPABASE_VERIFY_DB` was not set, so
-this pass does not prove that migrations apply cleanly to the local Supabase
-database.
+skipped the local migration list because `SUPABASE_VERIFY_MODE=db` and
+`SUPABASE_VERIFY_DB=1` were not set, so this pass does not prove that
+migrations apply cleanly to the local Supabase database.
+
+`npm run verify:readback` passed against the saved JSON readback, cleanup, and
+rate-limit proof files. This proves the saved files are machine-readable and
+internally consistent; it does not make them current staging proof.
+
+`npm run verify:browser-use` passed against the env-injected Browser Use proof.
+It checked non-empty root rendering, login/signup route visibility, Google and
+Apple login paths, email/password inputs, and view-only state.
+
+`npm run supabase:verify:static` passed without database access. It checked
+project files, RLS/grant text, usage quota guards, service RPC wrappers,
+authenticated usage summary boundaries, and static secret guards. Release
+evidence JSON is validated separately by `npm run verify:readback`.
 
 ## Blocked Gate
 
@@ -63,7 +79,7 @@ No secret values are recorded here.
 ### Local Supabase DB Verification
 
 ```bash
-SUPABASE_VERIFY_DB=1 npm run supabase:verify
+SUPABASE_VERIFY_MODE=db npm run supabase:verify
 ```
 
 Result: blocked. The script reached `supabase migration list --local`, which
@@ -79,8 +95,10 @@ Treat this as missing local DB apply/list proof. Resume by starting the local
 Supabase stack and rerunning:
 
 ```bash
-SUPABASE_VERIFY_DB=1 npm run supabase:verify
+SUPABASE_VERIFY_MODE=db npm run supabase:verify
 ```
+
+`SUPABASE_VERIFY_DB=1` remains accepted as a legacy equivalent.
 
 ## Current Browser Use Smoke Proof
 
@@ -97,6 +115,12 @@ output/release-prep/browser-use-20260617/login-eval.json
 
 This was a view-only smoke. No credentials were entered, no auth provider was
 clicked, and no authenticated action was attempted.
+
+Machine check:
+
+```bash
+npm run verify:browser-use
+```
 
 The first dev server run without env injection showed a blank root and a Vite
 error. That first capture is not release proof.
@@ -115,10 +139,29 @@ output/playwright/rate-limit-db-proof-2.json
 output/playwright/rate-limit-cleanup-2.json
 ```
 
+Machine check:
+
+```bash
+npm run verify:readback
+```
+
+The check passed for the files above. Keep treating them as supporting evidence
+until current staging readback is captured.
+
+When new staging proof is captured, use explicit metadata expectations:
+
+```bash
+npm run verify:readback -- --expect-release-date 2026-06-17 --expect-environment staging --expect-git-commit <commit>
+```
+
+With those flags, every proof JSON must include matching `release_date`,
+`environment`, `git_commit`, and a valid `captured_at`. Generated image rows
+must keep canonical `image_url` null, missing, or empty.
+
 ## Missing Proof
 
 - Staging readback is incomplete.
-- Generated image `image_url` non-persistence readback is incomplete.
+- Generated image `image_url` null/missing/empty readback is incomplete.
 
 ## Stop Boundary
 

@@ -14,6 +14,19 @@ deleting, authentication, payment, or personal information entry.
 If a step needs one of those actions, write down the exact blocker and hand the
 step to a human owner.
 
+Before changing anything, run the safe proof validators:
+
+```bash
+npm run verify:readback
+npm run verify:browser-use
+npm run supabase:verify:static
+```
+
+If one fails, preserve the failed output and hand it to the human rollback
+owner. Validator failure is evidence to carry into rollback triage, not an
+automatic rollback blocker. These commands only inspect local files and static
+project state.
+
 ## App Rollback Path
 
 1. Pause or route traffic away from the bad app version.
@@ -23,6 +36,16 @@ step to a human owner.
 
 Do not call the app healthy until the readback shows expected usage and edge
 function records.
+
+After read-only smoke, run:
+
+```bash
+npm run verify:browser-use
+npm run verify:readback
+```
+
+If either validator fails during rollback, save the terminal output with the
+rollback evidence and continue only under the human owner's decision.
 
 ## Edge Function Rollback Path
 
@@ -69,8 +92,7 @@ limit 50;
 ```
 
 The generated image readback must prove that durable state is stored in
-`storage_path`, and that signed URLs or data URLs are not persisted as canonical
-`image_url`.
+`storage_path`, and that canonical `image_url` is null, missing, or empty.
 
 ## Cleanup Boundary
 
@@ -96,3 +118,8 @@ output/playwright/edge-deny-cleanup.json
 output/playwright/rate-limit-db-proof-2.json
 output/playwright/rate-limit-cleanup-2.json
 ```
+
+Use `npm run verify:readback` to check these files before relying on them. A
+pass means the saved JSON is well formed; it does not approve deletion or
+release. A failure should be saved and passed to the human owner rather than
+treated as the reason rollback cannot proceed.
