@@ -1,7 +1,7 @@
 # Rollback
 
 Status: use this only after a human owner has decided to stop or reverse a
-release. Heavy Chain is **not release-ready** as of 2026-06-17.
+release. Heavy Chain is **not release-ready** as of 2026-06-18.
 
 Rollback must preserve evidence. Do not delete usage, audit, edge run, cleanup,
 or generated image rows unless a legal retention policy explicitly requires it.
@@ -22,6 +22,9 @@ npm run verify:browser-use
 npm run supabase:verify:static
 ```
 
+The default `npm run verify:browser-use` validates historical supporting proof
+only. It does not validate a newly captured rollback smoke directory.
+
 If one fails, preserve the failed output and hand it to the human rollback
 owner. Validator failure is evidence to carry into rollback triage, not an
 automatic rollback blocker. These commands only inspect local files and static
@@ -40,7 +43,7 @@ function records.
 After read-only smoke, run:
 
 ```bash
-npm run verify:browser-use
+npm run verify:browser-use -- --dir <rollback-browser-use-proof-dir>
 npm run verify:readback
 ```
 
@@ -108,7 +111,7 @@ Not allowed without human approval:
 - deleting ignored proof files before they have been reviewed
 - changing auth, billing, payment, or personal data state
 
-Useful but not final proof for 2026-06-17:
+Historical supporting proof; not final current release or rollback proof:
 
 ```text
 output/playwright/prod-db-readback.json
