@@ -72,6 +72,9 @@ if (currentGitCommit.value) {
 }
 
 const currentBrowserUseArgs = ['run', 'verify:browser-use', '--silent', '--', '--dir', releaseBrowserUseProofDir];
+if (releaseDate.value) currentBrowserUseArgs.push('--expect-release-date', releaseDate.value);
+if (releaseEnvironment.value) currentBrowserUseArgs.push('--expect-environment', releaseEnvironment.value);
+if (currentGitCommit.value) currentBrowserUseArgs.push('--expect-git-commit', currentGitCommit.value);
 
 const checks = [
   {

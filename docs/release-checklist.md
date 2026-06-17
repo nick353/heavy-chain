@@ -20,8 +20,9 @@ matching, current `verify:browser-use`, `supabase:verify:static`,
 `supabase:verify:db` or `verify:full`, and it shows the first `STOP` with a next
 action.
 Doctor requires `RELEASE_BROWSER_USE_PROOF_DIR` and passes it to
-`verify:browser-use -- --dir`. This closes the historical default proof path for
-current release diagnosis.
+`verify:browser-use -- --dir` with current release date, environment, and git
+commit expectations. This closes the historical default proof path for current
+release diagnosis.
 
 - Confirm `git status --short` is empty.
 - Confirm the release evidence file for the day exists.
@@ -96,7 +97,8 @@ secret patterns. If any one fails, read the file path in the failure line, fix
 that proof, and stop before release. Do not paste secrets into the proof file to
 make it pass.
 For current Browser Use proof outside doctor, use the Section 4 `--dir` command
-instead of the default historical proof path.
+instead of the default historical proof path, and include explicit metadata
+expectations when validating current proof.
 `npm run supabase:verify:static` is only the Supabase project static guard;
 `npm run verify:readback` is the separate release evidence validator.
 
@@ -133,8 +135,11 @@ The first dev server without env injection showed a blank root and a Vite error.
 Do not use that first capture as release proof.
 
 For the current release, Browser Use smoke must be captured after environment
-injection and recorded as current release evidence. The historical proof listed
-above only shows the expected view-only shape.
+injection and recorded as current release evidence. Both `home-env-eval.json`
+and `login-eval.json` must include `metadata.release_date`,
+`metadata.environment`, `metadata.git_commit`, and a valid
+`metadata.captured_at`. The historical proof listed above only shows the
+expected view-only shape and fails current metadata expectations.
 
 For the historical supporting proof above, run:
 
@@ -149,12 +154,13 @@ After current Browser Use proof is recaptured, validate that directory
 explicitly:
 
 ```bash
-npm run verify:browser-use -- --dir <current-browser-use-proof-dir>
+npm run verify:browser-use -- --dir <current-browser-use-proof-dir> --expect-release-date 2026-06-18 --expect-environment staging --expect-git-commit <commit>
 ```
 
 The check confirms that the env-injected home page is not blank, the login route
 exists, Google/Apple/email login paths are visible, email and password inputs
-are present, and the proof stayed view-only.
+are present, the proof stayed view-only, and both Browser Use eval JSON files
+match the current release metadata.
 
 ## 5. Staging Readback
 

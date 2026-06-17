@@ -24,10 +24,11 @@ status, proof target, `env:check`, `verify:readback`, current readback metadata
 matching, current `verify:browser-use`, `supabase:verify:static`,
 `security:audit`, `smoke:edge`, `typecheck`, and `lint`. It requires
 `RELEASE_BROWSER_USE_PROOF_DIR` so historical Browser Use proof is never
-silently treated as current proof. It does not run `supabase:verify:db`,
-`verify:full`, deploys, auth flows, payment, deletion, personal information
-entry, or DB mutation. The displayed failure tail redacts known secret patterns.
-A pass here is still not release approval.
+silently treated as current proof, and it passes current release date,
+environment, and git commit expectations to `verify:browser-use`. It does not
+run `supabase:verify:db`, `verify:full`, deploys, auth flows, payment,
+deletion, personal information entry, or DB mutation. The displayed failure tail
+redacts known secret patterns. A pass here is still not release approval.
 
 ## Final Gate
 
@@ -87,7 +88,8 @@ RELEASE_BROWSER_USE_PROOF_DIR
 
 Set it to the current env-injected Browser Use proof directory for this release.
 The standalone `npm run verify:browser-use` command still defaults to historical
-supporting proof.
+supporting proof. That historical proof is expected to fail if current metadata
+expectations are supplied.
 
 Historical note: on 2026-06-17, `.env.production.local` plus the shell still
 missed `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and
@@ -176,6 +178,18 @@ current git commit. It also applies the Browser Use directory from
 human-owned target.
 The automatic git commit target is `HEAD`; it is only a release-candidate-current
 target after `git clean` passes.
+
+For current Browser Use evidence, run the Browser Use validator with the same
+metadata expectations:
+
+```bash
+npm run verify:browser-use -- --dir <current-browser-use-proof-dir> --expect-release-date 2026-06-18 --expect-environment staging --expect-git-commit <commit>
+```
+
+With those flags, both `home-env-eval.json` and `login-eval.json` must include
+`metadata.release_date`, `metadata.environment`, `metadata.git_commit`, and a
+valid `metadata.captured_at`. Without those flags, `npm run verify:browser-use`
+remains compatible with the historical supporting Browser Use proof.
 
 ## DB Readback SQL
 

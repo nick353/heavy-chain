@@ -13,6 +13,7 @@
     "verify:full": "npm run verify && npm run build && npm run e2e && npm run supabase:verify",
     "verify:readback": "node scripts/verify-release-readback.mjs",
     "verify:browser-use": "node scripts/verify-browser-use-proof.mjs",
+    "verify:browser-use:regression": "node scripts/verify-browser-use-proof.regression.mjs",
     "release:doctor": "node scripts/release-doctor.mjs",
     "env:check": "node scripts/check-env.mjs",
     "security:audit": "node scripts/security-audit.mjs",

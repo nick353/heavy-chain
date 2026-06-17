@@ -59,15 +59,20 @@ No secret values are recorded here.
 - Generated image `image_url` null/missing/empty readback is incomplete.
 - Current Browser Use proof is incomplete until
   `RELEASE_BROWSER_USE_PROOF_DIR` points at a recaptured env-injected proof
-  directory.
+  directory whose `home-env-eval.json` and `login-eval.json` include matching
+  `metadata.release_date`, `metadata.environment`, `metadata.git_commit`, and a
+  valid `metadata.captured_at`.
 - Current readback metadata proof for 2026-06-18 is incomplete. Without
   `RELEASE_BROWSER_USE_PROOF_DIR`, doctor stops at `proof target`; after that
   directory is set, the current environment still stops at `env:check`, so
   `verify:readback:current` is not reached.
 
 After the release doctor was hardened to require a current Browser Use proof
-directory, running it without `RELEASE_BROWSER_USE_PROOF_DIR` stops at
-`proof target` before `env:check`.
+directory, running it in a clean worktree without
+`RELEASE_BROWSER_USE_PROOF_DIR` stops at `proof target` before `env:check`.
+The historical Browser Use proof remains useful as supporting view-only shape
+evidence, but it fails current metadata expectations and must not be treated as
+2026-06-18 current proof.
 
 ## Stop Boundary
 
