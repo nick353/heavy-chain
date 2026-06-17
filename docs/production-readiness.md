@@ -38,29 +38,35 @@ Heavy Chain can only be released after all of these are true:
 2. Staging DB readback proves usage, cleanup, and generated image storage state.
 3. Browser smoke proof is current and captured after env injection.
 
-In the 2026-06-18 pre-doc-edit clean worktree observation, item 1 was incomplete
-because `npm run release:doctor --silent` stopped at `env:check` before running
-the later gates.
+Current 2026-06-18 parent observation: the environment gate now passes with
+`.env.production.local` sourced. `npm run release:doctor --silent` proceeds past
+`env:check` and stops at `verify:readback:current`.
 
 ## Known Blockers
 
-- In the 2026-06-18 pre-doc-edit clean worktree observation,
-  `npm run release:doctor --silent` stopped at `env:check` in the current shell
-  with these missing names: `VITE_SUPABASE_URL`,
-  `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
-  `SUPABASE_SERVICE_ROLE_KEY`, and `PUBLIC_URL`.
-- Staging readback is not complete.
-- Generated image `image_url` null/missing/empty readback is not complete.
-- Local Supabase DB verification is incomplete: `SUPABASE_VERIFY_MODE=db npm
-  run supabase:verify` cannot reach the local database at `127.0.0.1:54322`,
-  so `supabase migration list --local` has no current proof. The legacy
-  `SUPABASE_VERIFY_DB=1` switch is still accepted.
-- Some ignored proof files are useful, but were not re-captured after the latest
-  commit. Treat them as supporting notes, not final release proof.
-- `npm run verify:readback` can validate saved JSON proof, but it does not make
-  old ignored proof current.
-- `RELEASE_BROWSER_USE_PROOF_DIR` is not set to a current Browser Use proof
-  directory yet, so doctor cannot validate current browser smoke proof.
+- `npm run release:doctor --silent` currently stops at
+  `verify:readback:current`; the older environment-name blocker is resolved in
+  the current parent shell but remains useful historical context.
+- Current parent DB readback exists at
+  `output/release-prep/final-db-readback-20260618-parent/readback.json` and
+  reports `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
+  `signedUrlAllOk=true`.
+- The machine-enforced current readback metadata gate is still incomplete
+  because the legacy `output/playwright/rate-limit-db-proof-2.json` and
+  `output/playwright/rate-limit-cleanup-2.json` files do not match the current
+  release date/environment/git commit metadata.
+- The brand insert migration
+  `supabase/migrations/20260618023000_restore_brand_insert_policy.sql` has not
+  been applied to staging/prod, so first brand creation remains blocked remotely.
+- Updated Edge Functions have not been deployed or Browser Use retested
+  remotely, so the `remove-background` and remaining Gemini image-editing paths
+  are code-fixed but not remote-proven.
+- Focused real-generation proof is still needed for remaining image/text
+  features beyond `optimize-prompt`, `campaign-image`, and `remove-background`.
+- Signup is blocked in this test lane by Supabase Auth HTTP 429.
+- Cleanup/delete was not approved and was not run.
+- Local Supabase DB verification still requires an approved local DB
+  reset/recreate lane or another approved DB verification lane.
 
 ## Required Environment Names
 
@@ -131,10 +137,9 @@ database access by default.
 npm run verify
 ```
 
-Result: historically failed because required env names were missing, even after
-sourcing `.env.production.local`. In the 2026-06-18 pre-doc-edit clean worktree
-observation, doctor stopped earlier in the current shell with the six missing
-names listed above.
+Result: current parent verification passes after `.env.production.local` is
+sourced. Historical failures from missing environment names are no longer the
+active release blocker.
 
 ## Human Stop Rule
 

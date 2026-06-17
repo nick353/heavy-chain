@@ -117,6 +117,10 @@ npm run verify
 Do not mark the release ready until `npm run verify` passes with the required
 environment loaded.
 
+Current 2026-06-18 parent result: `npm run verify` passes with
+`.env.production.local` sourced. The active release blocker has moved to
+`npm run release:doctor` stopping at `verify:readback:current`.
+
 ## 4. Browser Smoke
 
 Historical env-injected Browser Use proof from 2026-06-17; supporting only, not
@@ -171,8 +175,11 @@ Run read-only DB readback after staging is deployed. Save the output and confirm
 - generated image rows use durable storage state and keep canonical `image_url`
   null, missing, or empty
 
-Current 2026-06-18 result: `STOP`. Staging readback and `image_url`
-null/missing/empty readback are not complete.
+Current 2026-06-18 parent DB readback exists at
+`output/release-prep/final-db-readback-20260618-parent/readback.json` and
+reports `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
+`signedUrlAllOk=true`. This proves the parent Browser Use generation pass, but
+it does not finish the machine-enforced current metadata gate.
 
 For existing JSON proof, run:
 
@@ -193,10 +200,10 @@ npm run verify:readback -- --expect-release-date 2026-06-18 --expect-environment
 
 With those flags, each proof JSON must include matching `release_date`,
 `environment`, `git_commit`, and a valid `captured_at`.
-Current readback metadata proof for 2026-06-18 is incomplete. Without
-`RELEASE_BROWSER_USE_PROOF_DIR`, `npm run release:doctor` stops at
-`proof target`; after that directory is set, the current environment still stops
-at `env:check`, so this current metadata gate is not reached.
+Current readback metadata proof for 2026-06-18 is incomplete. With
+`RELEASE_BROWSER_USE_PROOF_DIR` set and the environment loaded,
+`npm run release:doctor` now passes `env:check` and stops at
+`verify:readback:current`.
 `npm run release:doctor` now runs this current-readback check automatically
 using the latest `docs/release-evidence-YYYY-MM-DD.md`, `staging` by default,
 and the current git commit. Use `RELEASE_DATE`, `RELEASE_ENVIRONMENT`, or
@@ -226,5 +233,10 @@ real generation smoke, auth-provider login, or cleanup deletion.
 
 Current decision: **do not release**.
 
-Resume only after the missing env names are available, `npm run verify` passes,
-staging DB readback has current proof, and the safe validators still pass.
+Resume only after the current readback metadata gate is fixed, the brand insert
+migration is applied to staging/prod by a human owner, updated Edge Functions are
+deployed and Browser Use retested, focused real-generation proof is captured for
+the remaining image/text features, signup HTTP 429 is resolved or explicitly
+accepted as a blocker, cleanup/delete is approved if required, local DB
+reset/recreate is approved if local DB proof is required, and the safe validators
+still pass.
