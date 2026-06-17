@@ -24,6 +24,11 @@ npm run e2e
 `npm run build` and `npm run e2e` were re-run with `.env.production.local`
 sourced. `npm run e2e` passed 1 Chromium test.
 
+`npm run supabase:verify` passed in its default static-file mode only. It
+skipped the local migration list because `SUPABASE_VERIFY_DB` was not set, so
+this pass does not prove that migrations apply cleanly to the local Supabase
+database.
+
 ## Blocked Gate
 
 ```bash
@@ -54,6 +59,28 @@ PUBLIC_URL
 ```
 
 No secret values are recorded here.
+
+### Local Supabase DB Verification
+
+```bash
+SUPABASE_VERIFY_DB=1 npm run supabase:verify
+```
+
+Result: blocked. The script reached `supabase migration list --local`, which
+targets the local Supabase database at `127.0.0.1:54322` from
+`supabase/config.toml`, but the local database was not reachable.
+
+This is not evidence of a schema mismatch. The static migration checks still
+pass, and the release readback SQL targets columns defined by the current
+migrations: `usage_events.status/request_id/reserved_at/completed_at`,
+`edge_function_runs.status`, and `generated_images.storage_path/image_url`.
+
+Treat this as missing local DB apply/list proof. Resume by starting the local
+Supabase stack and rerunning:
+
+```bash
+SUPABASE_VERIFY_DB=1 npm run supabase:verify
+```
 
 ## Current Browser Use Smoke Proof
 

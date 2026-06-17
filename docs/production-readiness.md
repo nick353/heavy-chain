@@ -27,6 +27,9 @@ As of 2026-06-17, item 1 is incomplete because `npm run verify` fails even when
   `PUBLIC_URL`.
 - Staging readback is not complete.
 - Generated image `image_url` non-persistence readback is not complete.
+- Local Supabase DB verification is incomplete: `SUPABASE_VERIFY_DB=1 npm run
+  supabase:verify` cannot reach the local database at `127.0.0.1:54322`, so
+  `supabase migration list --local` has no current proof.
 - Some ignored proof files are useful, but were not re-captured after the latest
   commit. Treat them as supporting notes, not final release proof.
 

@@ -53,6 +53,11 @@ npm run e2e
 sourced. This matters because a dev server without env injection produced a
 blank root, while the env-injected Browser Use smoke rendered normally.
 
+`npm run supabase:verify` passed only with its default static checks. For final
+local database proof, rerun it with `SUPABASE_VERIFY_DB=1`; the 2026-06-17
+result is `STOP` because the local database at `127.0.0.1:54322` was not
+reachable.
+
 Blocked on 2026-06-17:
 
 ```bash
