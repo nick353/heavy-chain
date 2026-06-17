@@ -224,8 +224,16 @@ serve(async (req) => {
       count = 4,
       scenes // シーン別コーディネート用
     } = body;
+    const hasScenes = Array.isArray(scenes) && scenes.length > 0;
+    const requestedFeatureType = body.featureType;
+    const featureType =
+      requestedFeatureType === 'scene-coordinate' || requestedFeatureType === 'variations'
+        ? requestedFeatureType
+        : hasScenes
+          ? 'scene-coordinate'
+          : 'variations';
 
-    console.log('📥 Request:', { imageUrl: !!imageUrl, brandId, count, hasScenes: !!scenes });
+    console.log('📥 Request:', { imageUrl: !!imageUrl, brandId, count, hasScenes, featureType });
 
     if (!imageUrl) {
       throw new Error('画像をアップロードしてください');
@@ -278,7 +286,7 @@ serve(async (req) => {
     const results = [];
 
     // シーン別コーディネートの場合
-    if (scenes && Array.isArray(scenes) && scenes.length > 0) {
+    if (hasScenes) {
       for (let i = 0; i < scenes.length; i++) {
         const scenePrompt = scenes[i];
         console.log(`🎬 Generating scene ${i + 1}: ${scenePrompt}...`);
@@ -316,7 +324,8 @@ serve(async (req) => {
               image_url: null,
               prompt: scenePrompt,
               model_used: imageModel,
-              generation_params: { scene: scenePrompt, originalDescription: description },
+              feature_type: featureType,
+              generation_params: { featureType, scene: scenePrompt, originalDescription: description },
             });
             if (imageInsertError) throw imageInsertError;
           } catch (storageError) {
@@ -381,7 +390,8 @@ serve(async (req) => {
               image_url: null,
               prompt: variationPrompt,
               model_used: imageModel,
-              generation_params: { variation: i + 1, originalDescription: description },
+              feature_type: featureType,
+              generation_params: { featureType, variation: i + 1, originalDescription: description },
             });
             if (imageInsertError) throw imageInsertError;
           } catch (storageError) {

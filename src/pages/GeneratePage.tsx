@@ -575,7 +575,8 @@ export function GeneratePage() {
               imageUrl: processedImageUrl, 
               count: generateCount,
               strength: variationStrength / 100,
-              prompt: prompt || undefined
+              prompt: prompt || undefined,
+              featureType: 'variations',
             }
           }));
           if (data?.variations) {
@@ -601,6 +602,7 @@ export function GeneratePage() {
               imageUrl: processedImageUrl,
               scenes: selectedScenes.map(s => sceneOptions.find(sc => sc.id === s)?.prompt),
               count: selectedScenes.length,
+              featureType: 'scene-coordinate',
             }
           }));
           if (data?.variations) {

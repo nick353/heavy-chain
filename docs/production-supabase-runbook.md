@@ -8,24 +8,32 @@ supabase migration new <migration_name>
 
 Current 2026-06-18 status: blocked. The brand insert policy migration
 `supabase/migrations/20260618023000_restore_brand_insert_policy.sql` has been
-applied remotely, and updated Edge Functions have been deployed. Do not rerun
-remote mutation steps from release verification without explicit human-owner
-approval.
+applied remotely, and updated Edge Functions have been deployed. The
+`generate-variations` Edge Function was also redeployed after fixing
+`generated_images.feature_type` and `generation_params.featureType` writes for
+`scene-coordinate` and `variations`. Do not rerun remote mutation steps from
+release verification without explicit human-owner approval.
 
 Remaining blockers are signup HTTP 429, cleanup/delete not run, local DB
-reset/recreate not approved, `release:doctor` current readback metadata,
-scene-coordinate distinct DB readback, and focused `generate-variations` proof.
-Image visual QA is PASS for `remove-background`, `colorize`, `upscale-fixed`,
-`design-gacha`, `product-shots`, `model-matrix`, and
-`multilingual-banner-fixed2`.
+reset/recreate not approved, current Browser Use smoke metadata needing an
+update after the final commit, final-`HEAD` `release:doctor` rerun, and
+cleanup/no residual process confirmation.
+Existing DB scene rows were generated before the fix and still have
+`feature_type=null`; focused authenticated Browser Use proof now passes for
+`scene-coordinate` and `variations` under
+`output/release-prep/focused-generation-20260618-parent/postfix-auth/`.
+Readback reports `images=4`, `scene_coordinate=3`, `variations=1`, `runs=2`,
+storage download ok, and `verdict=pass`; focused visual QA also reports
+`verdict=pass`. Image visual QA is PASS for `remove-background`,
+`colorize`, `upscale-fixed`, `design-gacha`, `product-shots`, `model-matrix`,
+and `multilingual-banner-fixed2`.
 
 Human-owned verification order:
 
 1. Confirm remote migration state against the target project.
 2. Confirm deployed Edge Function versions against the target project.
 3. Confirm `plans`, `brand_subscriptions`, `usage_events`, `edge_function_runs`, and `admin_audit_logs` exist with RLS enabled.
-4. Run `release:doctor` with the current Browser Use proof directory and
-   resolve current readback metadata mismatches.
+4. Run `release:doctor` with the current Browser Use proof directory.
 5. Run `npm run smoke:edge`.
 6. Rerun focused Browser Use proof and current DB readback metadata checks.
 

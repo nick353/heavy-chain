@@ -114,12 +114,14 @@ Historical blocker from 2026-06-17:
 npm run verify
 ```
 
-Do not mark the release ready until `npm run verify` passes with the required
+Do not approve the release until `npm run verify` passes with the required
 environment loaded.
 
 Current 2026-06-18 parent result: `npm run verify` passes with
-`.env.production.local` sourced. The active release blocker has moved to
-`npm run release:doctor` stopping at `verify:readback:current`.
+`.env.production.local` sourced. Current readback metadata verification also
+passes, and focused authenticated `scene-coordinate` / `variations` proof now
+passes; the active release blockers are the human-approval and
+final-current-proof gaps recorded below.
 
 ## 4. Browser Smoke
 
@@ -179,8 +181,14 @@ Current 2026-06-18 parent DB readback exists at
 `output/release-prep/final-db-readback-20260618-parent/readback.json` and
 reports `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
 valid generated image storage readback. This proves the parent Browser Use
-generation pass, but it does not finish the machine-enforced current metadata
-gate.
+generation pass.
+
+Focused authenticated feature-type readback exists at
+`output/release-prep/focused-generation-20260618-parent/postfix-auth/focused-feature-type-readback.json`
+and reports `images=4`, `scene_coordinate=3`, `variations=1`, `runs=2`,
+storage download ok, and `verdict=pass`. Focused visual QA exists at
+`output/release-prep/focused-generation-20260618-parent/postfix-auth/focused-visual-qa-summary.json`
+and reports `verdict=pass`.
 
 For existing JSON proof, run:
 
@@ -201,10 +209,8 @@ npm run verify:readback -- --expect-release-date 2026-06-18 --expect-environment
 
 With those flags, each proof JSON must include matching `release_date`,
 `environment`, `git_commit`, and a valid `captured_at`.
-Current readback metadata proof for 2026-06-18 is incomplete. With
-`RELEASE_BROWSER_USE_PROOF_DIR` set and the environment loaded,
-`npm run release:doctor` now passes `env:check` and stops at
-`verify:readback:current`.
+Current readback metadata proof for 2026-06-18 passes with explicit metadata
+expectations.
 `npm run release:doctor` now runs this current-readback check automatically
 using the latest `docs/release-evidence-YYYY-MM-DD.md`, `staging` by default,
 and the current git commit. Use `RELEASE_DATE`, `RELEASE_ENVIRONMENT`, or
@@ -235,10 +241,19 @@ Current decision: **do not release**.
 Current applied/proven state: the brand insert migration has been applied
 remotely, updated Edge Functions have been deployed, and image visual QA is PASS
 for `remove-background`, `colorize`, `upscale-fixed`, `design-gacha`,
-`product-shots`, `model-matrix`, and `multilingual-banner-fixed2`.
+`product-shots`, `model-matrix`, and `multilingual-banner-fixed2`. The weak
+`scene-coordinate` and `variations` proof root cause has also been fixed:
+`generate-variations` now saves `generated_images.feature_type` and
+`generation_params.featureType` for scene and variation rows, `GeneratePage`
+passes `featureType` for both flows, and the fixed Edge Function has been
+deployed remotely. Focused authenticated Browser Use generation now proves
+`scene-coordinate` and `variations` with DB/storage readback and visual QA
+passing.
 
-Resume only after the current readback metadata gate is fixed, signup HTTP 429
-is resolved or explicitly accepted as a blocker, cleanup/delete is approved if
-required, local DB reset/recreate is approved if local DB proof is required,
-scene-coordinate distinct DB readback is captured, `generate-variations`
-focused proof is captured, and the safe validators still pass.
+Resume only after signup HTTP 429 is resolved or explicitly accepted as a
+blocker, cleanup/delete is approved if required, local DB reset/recreate is
+approved if local DB proof is required, current Browser Use smoke metadata is
+updated after the final commit, `release:doctor` is rerun against final `HEAD`,
+cleanup/no residual process state is confirmed, and the safe validators still
+pass. Existing DB scene rows were generated before the fix and still have
+`feature_type=null`.

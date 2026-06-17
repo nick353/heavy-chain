@@ -36,7 +36,8 @@ screens rendered for:
 
 Known observation: the automated label extraction for `variations` collided with
 the colorize text in one summary pass, so keep `feature2-variations-*` as
-supporting evidence only until a focused variations run is captured.
+supporting navigation evidence only. Focused variations proof is now recorded
+under `output/release-prep/focused-generation-20260618-parent/postfix-auth/`.
 
 ## Real Generation Proof
 
@@ -53,13 +54,20 @@ supporting evidence only until a focused variations run is captured.
 | model-matrix | PASS: deployed Edge Function path passed image visual QA. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
 | multilingual-banner | FAIL: initial PNG had garbled/duplicated text; first SVG fix clipped text. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
 | multilingual-banner-fixed2 | PASS: Browser Use regenerated fixed2 SVGs; visual QA passed for `qlthumbs2/multilingual-banner-fixed2-ja.svg.png` and `qlthumbs2/multilingual-banner-fixed2-en.svg.png`. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
-| scene-coordinate | BLOCKED: UI shows 3 images, but `generated_images` distinct readback is weak. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
-| variations | BLOCKED: previous evidence hit `colorize`; focused distinct `generate-variations` proof is not complete. | `image-visual-qa-summary.json`, `latest-feature-image-summary.json` |
+| scene-coordinate | PASS: after user-approved Browser Use login with the existing QA user, `/generate` produced 3 scene-coordinate images for cafe, street, and office scenes; DB/storage readback reports `scene_coordinate=3`, `images=4`, `runs=2`, storage download ok, and `verdict=pass`. | `output/release-prep/focused-generation-20260618-parent/postfix-auth/12-scene-after.png`, `12-scene-after-state.txt`, `focused-feature-type-readback.json`, `focused-visual-qa-summary.json` |
+| variations | PASS: after the same authenticated Browser Use run, `/generate` produced 1 variation; DB/storage readback reports `variations=1`, `images=4`, `runs=2`, storage download ok, and `verdict=pass`. | `output/release-prep/focused-generation-20260618-parent/postfix-auth/23-variations-after.png`, `23-variations-after-state.txt`, `focused-feature-type-readback.json`, `focused-visual-qa-summary.json` |
 
 DB readback for this pass is saved at
 `output/release-prep/final-db-readback-20260618-parent/readback.json` and
 reported `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and storage
 readback passed.
+
+Focused authenticated feature-type readback is saved at
+`output/release-prep/focused-generation-20260618-parent/postfix-auth/focused-feature-type-readback.json`
+and reported `images=4`, `scene_coordinate=3`, `variations=1`, `runs=2`,
+storage download ok, and `verdict=pass`. Focused visual QA is saved at
+`output/release-prep/focused-generation-20260618-parent/postfix-auth/focused-visual-qa-summary.json`
+and reported `verdict=pass`.
 
 ## Parent Verification Commands
 
@@ -94,12 +102,23 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 - Added static guards so `npm run smoke:edge` and
   `SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh` fail if
   the removed Gemini 2.0 model IDs reappear.
+- Fixed `generate-variations` metadata writes: the Edge Function now prefers
+  `body.featureType` for `scene-coordinate` and `variations`, falls back from
+  `scenes` when omitted, and saves both `generated_images.feature_type` and
+  `generation_params.featureType` for scene and variation inserts.
+- Updated `GeneratePage` to pass `featureType` explicitly for `variations` and
+  `scene-coordinate`.
+- Deployed the fixed `generate-variations` Edge Function remotely.
+- Captured focused authenticated Browser Use proof for `scene-coordinate` and
+  `variations` after user-approved login with the existing QA user.
 
 ## Remaining Blockers
 
 - Signup is blocked by Supabase Auth HTTP 429 in this test lane.
 - Cleanup/delete was not run.
 - Local DB reset/recreate was not approved.
-- `release:doctor` still needs current readback metadata.
-- Focused proof is still needed for `scene-coordinate` distinct DB readback and
-  `generate-variations`.
+- Existing DB scene rows predate the feature-type fix and still have
+  `feature_type=null`.
+- Current Browser Use smoke metadata must be updated after the final commit.
+- `release:doctor` must be rerun against final `HEAD`.
+- Cleanup/no residual process state still needs confirmation.

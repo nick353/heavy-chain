@@ -128,10 +128,66 @@ Final parent-process real operation proof was captured for:
   SVGs and visual QA passed for
   `qlthumbs2/multilingual-banner-fixed2-ja.svg.png` and
   `qlthumbs2/multilingual-banner-fixed2-en.svg.png`.
-- `scene-coordinate`: UI shows 3 images, but `generated_images` distinct
-  readback is weak.
-- `variations`: the earlier evidence hit `colorize`; focused distinct
-  `generate-variations` proof is not complete.
+- `scene-coordinate`: PASS in focused authenticated Browser Use proof. The UI
+  shows 3 generated images for cafe, street, and office scenes, and DB/storage
+  readback distinguishes the rows as `scene_coordinate`.
+- `variations`: PASS in focused authenticated Browser Use proof. The UI shows
+  1 generated variation, and DB/storage readback distinguishes it as
+  `variations`.
+
+Focused diagnosis for the weak `scene-coordinate` and `variations` proof is
+saved at:
+
+```text
+output/release-prep/focused-generation-20260618-parent/generate-variations-feature-type-diagnosis.json
+```
+
+Root cause: `supabase/functions/generate-variations/index.ts` was not saving
+`generated_images.feature_type`, so DB readback could not distinguish
+`scene-coordinate` rows from `variations` rows. The Edge Function has been fixed
+to prefer `body.featureType` when it is `scene-coordinate` or `variations`,
+fallback from the presence of `scenes` when omitted, and save both
+`generated_images.feature_type` and `generation_params.featureType` for scene
+and variation inserts. `GeneratePage` now sends `featureType` explicitly for
+both `variations` and `scene-coordinate`. The `generate-variations` Edge
+Function has been deployed remotely.
+
+Existing DB `scene-coordinate` rows were generated before the fix and still
+have `feature_type=null`. After user approval, the existing QA user was logged
+in through Browser Use after a password reset. The focused generation rerun is
+saved under:
+
+```text
+output/release-prep/focused-generation-20260618-parent/postfix-auth/
+```
+
+Focused operation evidence:
+
+```text
+12-scene-after.png
+12-scene-after-state.txt
+23-variations-after.png
+23-variations-after-state.txt
+focused-feature-type-readback.json
+focused-visual-qa-summary.json
+```
+
+Readback result:
+
+```text
+images=4
+scene_coordinate=3
+variations=1
+runs=2
+storage download ok
+verdict=pass
+```
+
+Focused visual QA result:
+
+```text
+verdict=pass
+```
 
 Image QA summary evidence:
 
@@ -144,10 +200,10 @@ Remaining release blockers from this pass:
 
 - Resolve or retry the signup lane after the Supabase Auth HTTP 429 blocker.
 - Approve and run local DB reset/recreate if that lane is still required.
-- Refresh `release:doctor` against current readback metadata.
-- Capture focused proof for `scene-coordinate` distinct DB readback and
-  `generate-variations`.
 - Cleanup/delete was not run.
+- Update current Browser Use smoke metadata after the final commit.
+- Rerun `release:doctor` against final `HEAD`.
+- Confirm cleanup/no residual process state.
 
 The historical Browser Use proof remains useful as supporting view-only shape
 evidence. Current release diagnosis must use the final parent evidence directory
@@ -181,13 +237,16 @@ because it was not approved.
 Passed:
 
 ```bash
+git diff --check
 npm run e2e
 npm run lint --silent
 npm run typecheck
 npm run build --silent
 npm run verify
 npm run smoke:edge --silent
+npm run verify:readback
 SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
+deno check supabase/functions/generate-variations/index.ts
 deno check supabase/functions/{colorize,design-gacha,generate-image,generate-variations,model-matrix,multilingual-banner,product-shots,remove-background,upscale}/index.ts
 ```
 
@@ -225,8 +284,9 @@ Cleanup/delete was not approved and was not run.
 
 Release remains blocked by the Supabase Auth HTTP 429 signup blocker,
 cleanup/delete not being run, local DB reset/recreate not being approved,
-`release:doctor` current readback metadata, and focused proof gaps for
-`scene-coordinate` and `generate-variations`.
+current Browser Use smoke metadata needing an update after the final commit,
+`release:doctor` needing a final `HEAD` rerun, and cleanup/no residual process
+confirmation still pending.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
 chooses rollback; normal release verification does not deploy, delete, auth,

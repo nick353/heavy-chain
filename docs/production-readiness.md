@@ -39,22 +39,21 @@ Heavy Chain can only be released after all of these are true:
 3. Browser smoke proof is current and captured after env injection.
 
 Current 2026-06-18 parent observation: the environment gate now passes with
-`.env.production.local` sourced. `npm run release:doctor --silent` proceeds past
-`env:check` and stops at `verify:readback:current`.
+`.env.production.local` sourced, current readback metadata verification has
+passed, and focused authenticated `scene-coordinate` / `variations` proof has
+passed. Release remains blocked by the human-approval and final-current-proof
+gaps below.
 
 ## Known Blockers
 
-- `npm run release:doctor --silent` currently stops at
-  `verify:readback:current`; the older environment-name blocker is resolved in
-  the current parent shell but remains useful historical context.
+- The older environment-name blocker is resolved in the current parent shell
+  but remains useful historical context.
 - Current parent DB readback exists at
   `output/release-prep/final-db-readback-20260618-parent/readback.json` and
   reports `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
   valid generated image storage readback.
-- The machine-enforced current readback metadata gate is still incomplete
-  because the legacy `output/playwright/rate-limit-db-proof-2.json` and
-  `output/playwright/rate-limit-cleanup-2.json` files do not match the current
-  release date/environment/git commit metadata.
+- Current readback metadata verification has passed for the current release
+  target.
 - The brand insert migration
   `supabase/migrations/20260618023000_restore_brand_insert_policy.sql` has been
   applied remotely.
@@ -62,12 +61,25 @@ Current 2026-06-18 parent observation: the environment gate now passes with
 - Image visual QA is PASS for `remove-background`, `colorize`,
   `upscale-fixed`, `design-gacha`, `product-shots`, `model-matrix`, and
   `multilingual-banner-fixed2`.
-- Focused proof is still needed for scene-coordinate distinct DB readback and
-  `generate-variations`.
+- The weak `scene-coordinate` and `variations` proof root cause is fixed in
+  `generate-variations`: scene and variation inserts now save
+  `generated_images.feature_type` and `generation_params.featureType`, and
+  `GeneratePage` passes `featureType` explicitly for both flows. The
+  `generate-variations` Edge Function has been deployed remotely.
+- Focused authenticated proof now passes for `scene-coordinate` and
+  `generate-variations` under
+  `output/release-prep/focused-generation-20260618-parent/postfix-auth/`.
+  Readback reports `images=4`, `scene_coordinate=3`, `variations=1`,
+  `runs=2`, storage download ok, and `verdict=pass`; focused visual QA also
+  reports `verdict=pass`. Existing DB scene rows from before the fix still have
+  `feature_type=null` and remain historical only.
 - Signup is blocked in this test lane by Supabase Auth HTTP 429.
 - Cleanup/delete was not approved and was not run.
 - Local Supabase DB verification still requires an approved local DB
   reset/recreate lane or another approved DB verification lane.
+- Current Browser Use smoke metadata must be updated after the final commit.
+- `release:doctor` must be rerun against final `HEAD`.
+- Cleanup/no residual process state still needs confirmation.
 
 ## Required Environment Names
 
