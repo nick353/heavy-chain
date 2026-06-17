@@ -1,5 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { clientError, createServiceClient, createUserClient, requireBrandRole, requireUser } from '../_shared/auth.ts'
+import { createOpenAiChatCompletion, hasOpenAiChatApiKey } from '../_shared/openaiChat.ts'
+import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
+import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,50 +18,22 @@ interface GenerateRequest {
 }
 
 serve(async (req) => {
+  let usageReservation: UsageReservation | null = null;
+  let observedBrandId: string | null = null;
+  let observedUserId: string | null = null;
+  let telemetryClient: any = null;
+  const functionName = 'generate-image';
+  const requestId = requestIdFrom(req);
+  const startedAt = Date.now();
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Get auth header
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('Missing authorization header')
-    }
-
-    // Initialize Supabase client for auth check
-    const supabaseAuth = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: { headers: { Authorization: authHeader } }
-      }
-    )
-
-    // Get user
-    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser()
-    if (userError || !user) {
-      console.error('Auth error:', userError)
-      throw new Error(`Unauthorized: ${userError?.message || 'No user found'}`)
-    }
+    const supabaseAuth = createUserClient(req)
+    const user = await requireUser(supabaseAuth)
     console.log('User authenticated:', user.id)
-    
-    // Initialize Supabase client with service role for database operations
-    const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-    if (!serviceRoleKey) {
-      throw new Error('Service role key not configured')
-    }
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      serviceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
 
     // Parse request body
     const { prompt, negativePrompt, width = 1024, height = 1024, brandId }: GenerateRequest = await req.json()
@@ -71,20 +46,38 @@ serve(async (req) => {
       throw new Error('Brand ID is required')
     }
 
+    await requireBrandRole(supabaseAuth, brandId, user.id, 'editor')
+
+    const supabaseClient = createServiceClient()
+    telemetryClient = supabaseClient
+
+    observedBrandId = brandId;
+    observedUserId = user.id;
+    usageReservation = await reserveBrandUsage(telemetryClient, {
+      brandId,
+      userId: user.id,
+      functionName,
+      units: 1,
+      requestId,
+      idempotencyKey: req.headers.get('idempotency-key'),
+    });
+    await recordEdgeFunctionRun(telemetryClient, {
+      reservation: usageReservation,
+      brandId,
+      userId: user.id,
+      functionName,
+      status: 'started',
+      requestId,
+    });
+
     // Optimize prompt using OpenAI
     let optimizedPrompt = prompt
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+    const openaiImageApiKey = Deno.env.get('OPENAI_API_KEY')
     
-    if (openaiApiKey) {
+    if (hasOpenAiChatApiKey()) {
       try {
-        const optimizeResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
+        const optimizeResponse = await createOpenAiChatCompletion(
+          {
             messages: [
               {
                 role: 'system',
@@ -96,15 +89,16 @@ serve(async (req) => {
               }
             ],
             max_tokens: 300,
-          }),
-        })
+          },
+          'gpt-4o-mini',
+        )
 
         const optimizeData = await optimizeResponse.json()
         if (optimizeData.choices?.[0]?.message?.content) {
           optimizedPrompt = optimizeData.choices[0].message.content
         }
       } catch (e) {
-        console.error('Prompt optimization failed:', e)
+        console.error('Prompt optimization failed:', sanitizeError(e))
       }
     }
 
@@ -124,7 +118,7 @@ serve(async (req) => {
 
     if (jobError) {
       console.error('Job creation error:', jobError)
-      throw new Error(`Failed to create job: ${jobError.message} (code: ${jobError.code}, details: ${jobError.details})`)
+      throw new Error('Failed to create generation job')
     }
     console.log('Job created:', job.id)
 
@@ -241,7 +235,7 @@ serve(async (req) => {
     }
 
     // Fallback to DALL-E 3 if Gemini failed
-    if (!imageBase64 && openaiApiKey) {
+    if (!imageBase64 && openaiImageApiKey) {
       console.log('Falling back to DALL-E 3...')
       
       let dalleSize: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024'
@@ -254,7 +248,7 @@ serve(async (req) => {
       const dalleResponse = await fetchWithTimeout('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
+          'Authorization': `Bearer ${openaiImageApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -296,50 +290,46 @@ serve(async (req) => {
     // Convert base64 to Uint8Array for storage
     const imageBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0))
 
-    // Upload to Supabase Storage (non-blocking)
-    const fileName = `${brandId}/${user.id}/${job.id}.png`
-    let storageUrl = ''
-    
-    try {
-      const { error: uploadError } = await supabaseClient
-        .storage
-        .from('generated-images')
-        .upload(fileName, imageBuffer, {
-          contentType: 'image/png',
-          upsert: false
-        })
+    const fileName = `${user.id}/${brandId}/${job.id}.png`
+    const { error: uploadError } = await supabaseClient
+      .storage
+      .from('generated-images')
+      .upload(fileName, imageBuffer, {
+        contentType: 'image/png',
+        upsert: false
+      })
 
-      if (!uploadError) {
-        // Get public URL
-        const { data: urlData } = supabaseClient.storage.from('generated-images').getPublicUrl(fileName)
-        storageUrl = urlData.publicUrl || ''
-        console.log('✅ Image uploaded to storage:', storageUrl)
-      } else {
-        console.log('⚠️ Storage upload error:', uploadError.message)
-      }
-    } catch (storageError) {
-      console.log('⚠️ Storage warning (non-critical):', storageError.message)
+    if (uploadError) {
+      await supabaseClient
+        .from('generation_jobs')
+        .update({ status: 'failed', error_message: 'Storage upload failed' })
+        .eq('id', job.id)
+      throw new Error('Storage upload failed')
     }
 
     // Calculate expiry (30 days)
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + 30)
 
-    // Save generated image record (always save, with image_url as fallback)
     try {
-      await supabaseClient
+      const { error: imageInsertError } = await supabaseClient
         .from('generated_images')
         .insert({
           job_id: job.id,
           brand_id: brandId,
           user_id: user.id,
           storage_path: fileName,
-          image_url: storageUrl || imageDataUrl, // Fallback to data URL if storage failed
+          image_url: null,
           prompt: optimizedPrompt,
+          negative_prompt: negativePrompt || null,
           feature_type: 'text-to-image',
           model_used: usedModel,
+          generation_params: { width, height },
           expires_at: expiresAt.toISOString()
         })
+      if (imageInsertError) {
+        throw imageInsertError
+      }
       console.log('✅ Image record saved to database')
 
       // Update job status to completed
@@ -348,10 +338,29 @@ serve(async (req) => {
         .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', job.id)
     } catch (dbError) {
-      console.log('⚠️ Database warning:', dbError.message)
+      console.error('Database save failed:', dbError)
+      await supabaseClient
+        .from('generation_jobs')
+        .update({ status: 'failed', error_message: 'Failed to save generated image' })
+        .eq('id', job.id)
+      throw new Error('Failed to save generated image')
     }
 
     // Base64 Data URLを返す（確実に表示可能）
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'succeeded');
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'succeeded',
+        requestId,
+        durationMs: durationSince(startedAt),
+      });
+    }
+
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -368,12 +377,24 @@ serve(async (req) => {
     )
 
   } catch (error) {
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'failed', { error: sanitizeError(error) });
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'failed',
+        requestId,
+        durationMs: durationSince(startedAt),
+        errorMessage: sanitizeError(error),
+      });
+    }
+
     console.error('Error:', error)
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        details: error.toString(),
-        stack: error.stack 
+        error: clientError(error)
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

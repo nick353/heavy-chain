@@ -183,6 +183,7 @@ export async function editImageWithPrompt(
  */
 export async function optimizePrompt(
   prompt: string,
+  brandId: string,
   style?: string,
   targetPlatform?: string
 ): Promise<{
@@ -195,7 +196,7 @@ export async function optimizePrompt(
 }> {
   try {
     const { data, error } = await supabase.functions.invoke('optimize-prompt', {
-      body: { prompt, style, targetPlatform },
+      body: { prompt, brandId, style, targetPlatform },
     });
 
     if (error) throw error;

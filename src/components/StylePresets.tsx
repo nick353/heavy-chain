@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
@@ -75,13 +75,7 @@ export function StylePresets({ onSelect, selectedPresetId }: StylePresetsProps) 
     }
   ];
 
-  useEffect(() => {
-    if (currentBrand) {
-      fetchPresets();
-    }
-  }, [currentBrand]);
-
-  const fetchPresets = async () => {
+  const fetchPresets = useCallback(async () => {
     if (!currentBrand) return;
     
     try {
@@ -96,7 +90,13 @@ export function StylePresets({ onSelect, selectedPresetId }: StylePresetsProps) 
     } catch (error) {
       console.error('Failed to fetch presets:', error);
     }
-  };
+  }, [currentBrand]);
+
+  useEffect(() => {
+    if (currentBrand) {
+      fetchPresets();
+    }
+  }, [currentBrand, fetchPresets]);
 
   const handleCreate = async () => {
     if (!currentBrand || !formData.name.trim()) return;
@@ -123,7 +123,7 @@ export function StylePresets({ onSelect, selectedPresetId }: StylePresetsProps) 
       setShowCreateModal(false);
       resetForm();
       toast.success('プリセットを作成しました');
-    } catch (error) {
+    } catch {
       toast.error('プリセットの作成に失敗しました');
     }
   };
@@ -155,7 +155,7 @@ export function StylePresets({ onSelect, selectedPresetId }: StylePresetsProps) 
       setEditingPreset(null);
       resetForm();
       toast.success('プリセットを更新しました');
-    } catch (error) {
+    } catch {
       toast.error('プリセットの更新に失敗しました');
     }
   };
@@ -173,7 +173,7 @@ export function StylePresets({ onSelect, selectedPresetId }: StylePresetsProps) 
 
       setPresets(presets.filter(p => p.id !== id));
       toast.success('プリセットを削除しました');
-    } catch (error) {
+    } catch {
       toast.error('プリセットの削除に失敗しました');
     }
   };
@@ -324,4 +324,3 @@ export function StylePresets({ onSelect, selectedPresetId }: StylePresetsProps) 
     </div>
   );
 }
-

@@ -8,10 +8,10 @@ import {
   Bell,
   Search,
   Filter,
-  Ban,
   CheckCircle,
-  XCircle,
-  Eye
+  Eye,
+  Activity,
+  Clock
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Button, Input, Modal } from '../components/ui';
@@ -23,15 +23,17 @@ interface DashboardStats {
   activeUsers: number;
   totalImages: number;
   totalCost: number;
+  totalUsageUnits: number;
+  edgeRunCount: number;
+  averageDurationMs: number;
 }
 
 interface User {
   id: string;
   email: string;
-  name: string;
+  name: string | null;
   created_at: string;
   is_admin: boolean;
-  status: 'active' | 'suspended';
 }
 
 interface ModerationItem {
@@ -49,6 +51,9 @@ export function AdminDashboard() {
     activeUsers: 0,
     totalImages: 0,
     totalCost: 0,
+    totalUsageUnits: 0,
+    edgeRunCount: 0,
+    averageDurationMs: 0,
   });
   const [users, setUsers] = useState<User[]>([]);
   const [_moderationQueue, _setModerationQueue] = useState<ModerationItem[]>([]);
@@ -98,6 +103,35 @@ export function AdminDashboard() {
 
       const totalCost = costData?.reduce((sum, log) => sum + (log.cost_usd || 0), 0) || 0;
 
+      const { data: usageData, error: usageError } = await supabase
+        .from('usage_events')
+        .select('units,status');
+
+      if (usageError) {
+        console.error('Failed to fetch usage events:', usageError);
+      }
+
+      const totalUsageUnits = usageData?.reduce((sum, event) => (
+        event.status === 'reserved' || event.status === 'succeeded'
+          ? sum + (event.units || 0)
+          : sum
+      ), 0) || 0;
+
+      const { data: edgeRunData, error: edgeRunError } = await supabase
+        .from('edge_function_runs')
+        .select('duration_ms,status');
+
+      if (edgeRunError) {
+        console.error('Failed to fetch edge run data:', edgeRunError);
+      }
+
+      const completedDurations = edgeRunData
+        ?.map((run) => run.duration_ms)
+        .filter((duration): duration is number => typeof duration === 'number') || [];
+      const averageDurationMs = completedDurations.length > 0
+        ? Math.round(completedDurations.reduce((sum, duration) => sum + duration, 0) / completedDurations.length)
+        : 0;
+
       // Get active users (last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -116,6 +150,9 @@ export function AdminDashboard() {
         activeUsers: activeCount || 0,
         totalImages: imageCount || 0,
         totalCost,
+        totalUsageUnits,
+        edgeRunCount: edgeRunData?.length || 0,
+        averageDurationMs,
       });
     } catch (error) {
       console.error('Failed to fetch stats:', error);
@@ -148,17 +185,6 @@ export function AdminDashboard() {
     }
   };
 
-  const handleSuspendUser = async (_userId: string) => {
-    if (!confirm('このユーザーを停止しますか？')) return;
-
-    try {
-      // In a real app, you'd update the user's status
-      toast.success('ユーザーを停止しました');
-    } catch {
-      toast.error('操作に失敗しました');
-    }
-  };
-
   const handlePublishAnnouncement = async () => {
     if (!announcementForm.title.trim() || !announcementForm.content.trim()) {
       toast.error('タイトルと内容を入力してください');
@@ -170,7 +196,6 @@ export function AdminDashboard() {
         title: announcementForm.title,
         content: announcementForm.content,
         type: announcementForm.type,
-        published_at: new Date().toISOString(),
       });
 
       if (error) throw error;
@@ -178,7 +203,7 @@ export function AdminDashboard() {
       toast.success('お知らせを公開しました');
       setShowAnnouncementModal(false);
       setAnnouncementForm({ title: '', content: '', type: 'info' });
-    } catch (error) {
+    } catch {
       toast.error('公開に失敗しました');
     }
   };
@@ -271,7 +296,7 @@ export function AdminDashboard() {
             className="space-y-8"
           >
             {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <StatCard
                 icon={Users}
                 label="総ユーザー数"
@@ -299,13 +324,27 @@ export function AdminDashboard() {
                 value={stats.totalCost}
                 color="bg-orange-500"
               />
+              <StatCard
+                icon={Activity}
+                label="利用ユニット"
+                value={stats.totalUsageUnits}
+                color="bg-cyan-500"
+              />
+              <StatCard
+                icon={Clock}
+                label="Edge実行数"
+                value={stats.edgeRunCount}
+                color="bg-rose-500"
+              />
             </div>
 
             {/* Usage chart placeholder */}
             <div className="glass-panel rounded-2xl p-8 shadow-soft">
               <h2 className="text-lg font-semibold text-neutral-800 dark:text-white mb-4">利用状況</h2>
               <div className="h-64 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800/50 rounded-xl border border-neutral-100 dark:border-neutral-700/50">
-                <p className="text-neutral-500 dark:text-neutral-400">グラフ表示エリア</p>
+                <p className="text-neutral-500 dark:text-neutral-400">
+                  平均 Edge 実行時間: {stats.averageDurationMs.toLocaleString()}ms
+                </p>
               </div>
             </div>
           </motion.div>
@@ -342,7 +381,7 @@ export function AdminDashboard() {
                   <tr>
                     <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">ユーザー</th>
                     <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">登録日</th>
-                    <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">ステータス</th>
+                    <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">権限</th>
                     <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">アクション</th>
                   </tr>
                 </thead>
@@ -366,29 +405,19 @@ export function AdminDashboard() {
                       <td className="px-6 py-4">
                         <span className={`
                           inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
-                          ${user.status === 'suspended'
-                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          ${user.is_admin
+                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
                             : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                           }
                         `}>
-                          {user.status === 'suspended' ? (
-                            <XCircle className="w-3.5 h-3.5" />
-                          ) : (
-                            <CheckCircle className="w-3.5 h-3.5" />
-                          )}
-                          {user.status === 'suspended' ? '停止中' : 'アクティブ'}
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          {user.is_admin ? '管理者' : '一般ユーザー'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <button className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition-colors text-neutral-500 dark:text-neutral-400">
                             <Eye className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleSuspendUser(user.id)}
-                            className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors text-red-500 hover:text-red-600"
-                          >
-                            <Ban className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

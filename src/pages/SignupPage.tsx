@@ -148,6 +148,7 @@ export function SignupPage() {
               type="text"
               label="名前"
               placeholder="山田 太郎"
+              autoComplete="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               error={errors.name}
@@ -158,6 +159,7 @@ export function SignupPage() {
               type="email"
               label="メールアドレス"
               placeholder="your@email.com"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={errors.email}
@@ -169,6 +171,7 @@ export function SignupPage() {
                 type="password"
                 label="パスワード"
                 placeholder="8文字以上"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 error={errors.password}
@@ -181,6 +184,7 @@ export function SignupPage() {
               type="password"
               label="パスワード（確認）"
               placeholder="もう一度入力"
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               error={errors.confirmPassword}
@@ -201,9 +205,9 @@ export function SignupPage() {
           {/* Terms */}
           <p className="mt-6 text-xs text-center text-neutral-500 dark:text-neutral-400 leading-relaxed">
             アカウントを作成することで、
-            <a href="#" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline mx-1">利用規約</a>
+            <a href="/terms" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline mx-1">利用規約</a>
             および
-            <a href="#" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline mx-1">プライバシーポリシー</a>
+            <a href="/privacy" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline mx-1">プライバシーポリシー</a>
             に同意したものとみなされます。
           </p>
         </div>
@@ -219,5 +223,3 @@ export function SignupPage() {
     </div>
   );
 }
-
-

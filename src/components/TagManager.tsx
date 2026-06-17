@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Tag, Plus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
@@ -29,13 +29,7 @@ export function TagManager({ imageId, selectedTags, onTagsChange, compact = fals
   const [showInput, setShowInput] = useState(false);
   const [newTagName, setNewTagName] = useState('');
 
-  useEffect(() => {
-    if (currentBrand) {
-      fetchTags();
-    }
-  }, [currentBrand]);
-
-  const fetchTags = async () => {
+  const fetchTags = useCallback(async () => {
     if (!currentBrand) return;
 
     try {
@@ -50,7 +44,13 @@ export function TagManager({ imageId, selectedTags, onTagsChange, compact = fals
     } catch (error) {
       console.error('Failed to fetch tags:', error);
     }
-  };
+  }, [currentBrand]);
+
+  useEffect(() => {
+    if (currentBrand) {
+      fetchTags();
+    }
+  }, [currentBrand, fetchTags]);
 
   const handleCreateTag = async () => {
     if (!currentBrand || !newTagName.trim()) return;
@@ -82,7 +82,7 @@ export function TagManager({ imageId, selectedTags, onTagsChange, compact = fals
       // Auto-select the new tag
       onTagsChange([...selectedTags, data.id]);
       toast.success('タグを作成しました');
-    } catch (error) {
+    } catch {
       toast.error('タグの作成に失敗しました');
     }
   };
@@ -136,7 +136,7 @@ export function TagManager({ imageId, selectedTags, onTagsChange, compact = fals
       setTags(tags.filter(t => t.id !== tagId));
       onTagsChange(selectedTags.filter(id => id !== tagId));
       toast.success('タグを削除しました');
-    } catch (error) {
+    } catch {
       toast.error('タグの削除に失敗しました');
     }
   };
@@ -290,4 +290,3 @@ export function TagManager({ imageId, selectedTags, onTagsChange, compact = fals
     </div>
   );
 }
-

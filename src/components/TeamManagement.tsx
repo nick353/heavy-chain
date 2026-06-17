@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Users, 
   UserPlus, 
@@ -59,14 +59,7 @@ export function TeamManagement() {
   const currentUserRole = members.find(m => m.user_id === user?.id)?.role;
   const canManageMembers = currentUserRole === 'owner' || currentUserRole === 'admin';
 
-  useEffect(() => {
-    if (currentBrand) {
-      fetchMembers();
-      fetchInvitations();
-    }
-  }, [currentBrand]);
-
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     if (!currentBrand) return;
 
     try {
@@ -87,9 +80,9 @@ export function TeamManagement() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentBrand]);
 
-  const fetchInvitations = async () => {
+  const fetchInvitations = useCallback(async () => {
     if (!currentBrand) return;
 
     try {
@@ -105,7 +98,14 @@ export function TeamManagement() {
     } catch (error) {
       console.error('Failed to fetch invitations:', error);
     }
-  };
+  }, [currentBrand]);
+
+  useEffect(() => {
+    if (currentBrand) {
+      fetchMembers();
+      fetchInvitations();
+    }
+  }, [currentBrand, fetchMembers, fetchInvitations]);
 
   const handleInvite = async () => {
     if (!currentBrand) return;
@@ -139,7 +139,7 @@ export function TeamManagement() {
       const inviteLink = `${window.location.origin}/invite?code=${code}`;
       await navigator.clipboard.writeText(inviteLink);
       toast.success('招待リンクをコピーしました');
-    } catch (error) {
+    } catch {
       toast.error('招待の作成に失敗しました');
     } finally {
       setIsInviting(false);
@@ -165,7 +165,7 @@ export function TeamManagement() {
 
       setInvitations(invitations.filter(i => i.id !== id));
       toast.success('招待を取り消しました');
-    } catch (error) {
+    } catch {
       toast.error('招待の取り消しに失敗しました');
     }
   };
@@ -184,7 +184,7 @@ export function TeamManagement() {
 
       setMembers(members.filter(m => m.user_id !== userId));
       toast.success('メンバーを削除しました');
-    } catch (error) {
+    } catch {
       toast.error('メンバーの削除に失敗しました');
     }
   };
@@ -203,7 +203,7 @@ export function TeamManagement() {
         m.user_id === userId ? { ...m, role: newRole as any } : m
       ));
       toast.success('権限を変更しました');
-    } catch (error) {
+    } catch {
       toast.error('権限の変更に失敗しました');
     }
   };
@@ -364,6 +364,7 @@ export function TeamManagement() {
             label="メールアドレス（任意）"
             type="email"
             placeholder="example@company.com"
+            autoComplete="email"
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
             helperText="空欄の場合、招待コードで招待できます"
@@ -414,8 +415,6 @@ export function TeamManagement() {
     </div>
   );
 }
-
-
 
 
 

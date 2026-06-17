@@ -131,6 +131,7 @@ export function LoginPage() {
               type="email"
               label="メールアドレス"
               placeholder="your@email.com"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={errors.email}
@@ -142,6 +143,7 @@ export function LoginPage() {
                 type="password"
                 label="パスワード"
                 placeholder="••••••••"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 error={errors.password}
@@ -180,4 +182,3 @@ export function LoginPage() {
     </div>
   );
 }
-

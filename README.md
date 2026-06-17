@@ -148,13 +148,9 @@ VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 
 1. [Supabase Dashboard](https://app.supabase.com/) にアクセス
 2. プロジェクトを選択
-3. SQL Editorで `supabase/migrations/001_initial_schema.sql` を実行
+3. `supabase/migrations/` の migration を `001_initial_schema.sql` から最新まで順番に適用
 
-##### ストレージバケットの作成
-
-Supabase Dashboard → Storage → New bucket:
-- Bucket name: `generated-images`
-- Public: `true`
+最新 migration には、`generated-images` / `brand-assets` / `exports` の private bucket、storage policy、private schema の権限判定関数が含まれます。手動で Public bucket を作成しないでください。
 
 ##### Edge Functionsのデプロイ
 
@@ -394,13 +390,9 @@ VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 
 1. Go to [Supabase Dashboard](https://app.supabase.com/)
 2. Select your project
-3. Run `supabase/migrations/001_initial_schema.sql` in SQL Editor
+3. Apply every migration in `supabase/migrations/`, from `001_initial_schema.sql` through the latest file, in order
 
-##### Create storage bucket
-
-Supabase Dashboard → Storage → New bucket:
-- Bucket name: `generated-images`
-- Public: `true`
+The latest migrations create the private `generated-images` / `brand-assets` / `exports` buckets, storage policies, and private-schema authorization helpers. Do not create public storage buckets manually.
 
 ##### Deploy Edge Functions
 

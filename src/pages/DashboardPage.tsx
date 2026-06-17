@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MoreVertical, Trash2, Edit3 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
@@ -17,6 +17,7 @@ import {
 } from '../components/icons';
 import { useCanvasStore, type CanvasProject } from '../stores/canvasStore';
 import { supabase } from '../lib/supabase';
+import { withSignedImageUrls } from '../lib/storage';
 import { Button, Modal, Input, Textarea } from '../components/ui';
 import { Onboarding, useOnboarding } from '../components/Onboarding';
 import type { GeneratedImage } from '../types/database';
@@ -96,6 +97,72 @@ export function DashboardPage() {
 
   const recentProjects = getRecentProjects(6);
 
+  const checkBrands = useCallback(async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const { data: brands, error } = await supabase
+        .from('brands')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Failed to check brands:', error);
+        toast.error('ブランド情報の取得に失敗しました');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!brands || brands.length === 0) {
+        setShowBrandModal(true);
+        setIsLoading(false);
+      } else {
+        setCurrentBrand(brands[0]);
+        // ブランド設定後にuseEffectが再実行されて画像を取得する
+      }
+    } catch (error) {
+      console.error('Failed to check brands:', error);
+      toast.error('ブランド情報の取得に失敗しました');
+      setIsLoading(false);
+    }
+  }, [setCurrentBrand, user]);
+
+  const fetchRecentImages = useCallback(async () => {
+    if (!currentBrand) {
+      setIsLoading(false);
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('generated_images')
+        .select('*')
+        .eq('brand_id', currentBrand.id)
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      if (error) {
+        console.error('Failed to fetch images:', error);
+        toast.error('画像の取得に失敗しました');
+        setRecentImages([]);
+      } else {
+        setRecentImages(await withSignedImageUrls(data || []));
+      }
+    } catch (error) {
+      console.error('Failed to fetch images:', error);
+      toast.error('画像の取得に失敗しました');
+      setRecentImages([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentBrand]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -118,73 +185,7 @@ export function DashboardPage() {
     return () => {
       mounted = false;
     };
-  }, [currentBrand, user]);
-
-  const checkBrands = async () => {
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const { data: brands, error } = await supabase
-        .from('brands')
-        .select('*')
-        .eq('owner_id', user.id)
-        .limit(1);
-
-      if (error) {
-        console.error('Failed to check brands:', error);
-        toast.error('ブランド情報の取得に失敗しました');
-        setIsLoading(false);
-        return;
-      }
-
-      if (!brands || brands.length === 0) {
-        setShowBrandModal(true);
-        setIsLoading(false);
-      } else {
-        setCurrentBrand(brands[0]);
-        // ブランド設定後にuseEffectが再実行されて画像を取得する
-      }
-    } catch (error) {
-      console.error('Failed to check brands:', error);
-      toast.error('ブランド情報の取得に失敗しました');
-      setIsLoading(false);
-    }
-  };
-
-  const fetchRecentImages = async () => {
-    if (!currentBrand) {
-      setIsLoading(false);
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('generated_images')
-        .select('*')
-        .eq('brand_id', currentBrand.id)
-        .order('created_at', { ascending: false })
-        .limit(6);
-
-      if (error) {
-        console.error('Failed to fetch images:', error);
-        toast.error('画像の取得に失敗しました');
-        setRecentImages([]);
-      } else {
-        setRecentImages(data || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch images:', error);
-      toast.error('画像の取得に失敗しました');
-      setRecentImages([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [currentBrand, user, checkBrands, fetchRecentImages]);
 
   const handleCreateBrand = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -274,8 +275,7 @@ export function DashboardPage() {
       if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
         return path;
       }
-      const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
-      return data.publicUrl || '';
+      return '';
     } catch (error) {
       console.error('Failed to get image URL:', error, 'path:', path);
       return '';

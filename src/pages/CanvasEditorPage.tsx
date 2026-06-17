@@ -1328,6 +1328,7 @@ export function CanvasEditorPage() {
             label="メールアドレス"
             type="email"
             placeholder="collaborator@example.com"
+            autoComplete="email"
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
           />

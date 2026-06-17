@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronDown, Plus, Check, Building2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
@@ -11,11 +11,33 @@ export function BrandSwitcher() {
   const [isLoading, setIsLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const fetchBrands = useCallback(async () => {
+    try {
+      const { data: brandsData, error } = await supabase
+        .from('brands')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setBrands(brandsData || []);
+
+      // Set first brand as current if none selected
+      if (!currentBrand && brandsData && brandsData.length > 0) {
+        setCurrentBrand(brandsData[0]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch brands:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentBrand, setCurrentBrand]);
+
   useEffect(() => {
     if (user) {
       fetchBrands();
     }
-  }, [user]);
+  }, [user, fetchBrands]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -28,35 +50,6 @@ export function BrandSwitcher() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const fetchBrands = async () => {
-    try {
-      // Get brands where user is a member
-      const { data: memberData } = await supabase
-        .from('brand_members')
-        .select('brand_id')
-        .eq('user_id', user!.id);
-
-      if (memberData && memberData.length > 0) {
-        const brandIds = memberData.map(m => m.brand_id);
-        const { data: brandsData } = await supabase
-          .from('brands')
-          .select('*')
-          .in('id', brandIds);
-
-        setBrands(brandsData || []);
-
-        // Set first brand as current if none selected
-        if (!currentBrand && brandsData && brandsData.length > 0) {
-          setCurrentBrand(brandsData[0]);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch brands:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleSelectBrand = (brand: Brand) => {
     setCurrentBrand(brand);
@@ -160,8 +153,6 @@ export function BrandSwitcher() {
     </div>
   );
 }
-
-
 
 
 

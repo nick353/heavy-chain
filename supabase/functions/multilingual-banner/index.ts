@@ -1,5 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
+import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
+import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,13 +16,29 @@ const LANGUAGES = [
   { code: 'ko', name: '한국어' },
 ];
 
+type MultilingualBannerRequest = {
+  headline?: string;
+  subheadline?: string;
+  brandId?: string;
+  languages?: string[];
+  style?: string;
+  aspectRatio?: string;
+};
+
 serve(async (req) => {
+  let usageReservation: UsageReservation | null = null;
+  let observedBrandId: string | null = null;
+  let observedUserId: string | null = null;
+  let telemetryClient: any = null;
+  const functionName = 'multilingual-banner';
+  const requestId = requestIdFrom(req);
+  const startedAt = Date.now();
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
+    const supabaseClient = createClient<Database>(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -28,6 +47,8 @@ serve(async (req) => {
         },
       }
     );
+    const supabaseService = createServiceClient();
+    telemetryClient = supabaseService;
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
@@ -41,11 +62,32 @@ serve(async (req) => {
       languages = ['ja', 'en', 'zh', 'ko'],
       style = 'modern',
       aspectRatio = '1:1'
-    } = await req.json();
+    }: MultilingualBannerRequest = await req.json();
 
     if (!headline || !brandId) {
       throw new Error('Missing required parameters');
     }
+
+    await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
+    observedBrandId = brandId;
+    observedUserId = user.id;
+    usageReservation = await reserveBrandUsage(telemetryClient, {
+      brandId,
+      userId: user.id,
+      functionName,
+      units: 1,
+      requestId,
+      idempotencyKey: req.headers.get('idempotency-key'),
+    });
+    await recordEdgeFunctionRun(telemetryClient, {
+      reservation: usageReservation,
+      brandId,
+      userId: user.id,
+      functionName,
+      status: 'started',
+      requestId,
+    });
+
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
@@ -86,7 +128,7 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
       const responseText = translateData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
       const parsed = JSON.parse(responseText);
       translations = parsed.translations || {};
-    } catch (e) {
+    } catch {
       console.log('⚠️ Translation parse error, using original text');
       languages.forEach(lang => {
         translations[lang] = { headline, subheadline };
@@ -140,19 +182,19 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
 
           try {
             const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
-            const { error: uploadError } = await supabaseClient.storage
+              const { error: uploadError } = await supabaseService.storage
               .from('generated-images')
               .upload(fileName, imgBuffer, { contentType: 'image/png' });
 
             if (!uploadError) {
-              const { data: urlData } = supabaseClient.storage.from('generated-images').getPublicUrl(fileName);
-              storageUrl = urlData.publicUrl || '';
+              const { data: urlData } = await supabaseService.storage.from('generated-images').createSignedUrl(fileName, 60 * 60 * 24);
+              storageUrl = urlData?.signedUrl || '';
               console.log('✅ Image uploaded to storage:', storageUrl);
             } else {
               console.log('⚠️ Storage upload error:', uploadError.message);
             }
           } catch (storageError) {
-            console.log('⚠️ Storage warning:', storageError.message);
+            console.log('⚠️ Storage warning:', clientError(storageError));
           }
 
           // Always save record with image_url as fallback
@@ -161,7 +203,7 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
               brand_id: brandId,
               user_id: user.id,
               storage_path: fileName,
-              image_url: storageUrl || imageDataUrl,
+              image_url: null,
               prompt,
               feature_type: 'multilingual-banner',
               model_used: 'gemini-2.0-flash-exp-image-generation',
@@ -175,7 +217,7 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
             });
             console.log('✅ Image record saved to database');
           } catch (dbError) {
-            console.log('⚠️ Database warning:', dbError.message);
+            console.log('⚠️ Database warning:', clientError(dbError));
           }
 
           results.push({
@@ -197,7 +239,7 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
     }
 
     try {
-      await supabaseClient.from('api_usage_logs').insert({
+      await supabaseService.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
         provider: 'gemini',
@@ -205,8 +247,22 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
         cost_usd: 0,
       });
     } catch (e) {
-      console.log('⚠️ Usage log warning:', e.message);
+      console.log('⚠️ Usage log warning:', clientError(e));
     }
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'succeeded');
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'succeeded',
+        requestId,
+        durationMs: durationSince(startedAt),
+      });
+    }
+
+
 
     return new Response(
       JSON.stringify({
@@ -219,9 +275,23 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
     );
 
   } catch (error) {
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'failed', { error: sanitizeError(error) });
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'failed',
+        requestId,
+        durationMs: durationSince(startedAt),
+        errorMessage: sanitizeError(error),
+      });
+    }
+
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: clientError(error) }),
       { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

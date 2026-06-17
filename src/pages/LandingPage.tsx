@@ -211,24 +211,14 @@ function MouseParallax() {
 }
 
 export function LandingPage() {
-  const targetRef = useRef(null);
-  const { scrollYProgress: _scrollYProgress } = useScroll({
-    target: targetRef,
-    offset: ["start start", "end start"],
-  });
-
-  // Reserved for future parallax effects
-  // const y = useTransform(_scrollYProgress, [0, 1], ["0%", "50%"]);
-  // const opacity = useTransform(_scrollYProgress, [0, 0.5], [1, 0]);
-
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950 overflow-hidden selection:bg-primary-200 selection:text-primary-900">
       {/* Hero */}
-      <section ref={targetRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         <MouseParallax />
         
         {/* Noise Texture */}
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat" />
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(circle_at_center,currentColor_1px,transparent_1px)] [background-size:6px_6px] text-neutral-950 dark:text-white" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32 z-10">
           <div className="text-center max-w-5xl mx-auto">
@@ -532,7 +522,7 @@ export function LandingPage() {
 
       {/* Testimonials */}
       <section className="py-40 bg-neutral-900 text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat" />
+        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,currentColor_1px,transparent_1px)] [background-size:6px_6px] text-white" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-900/30 rounded-full blur-[100px]" />
            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-900/30 rounded-full blur-[100px]" />
@@ -646,10 +636,10 @@ export function LandingPage() {
               <HeavyChainLogo height={48} showText={true} />
             </div>
             <div className="flex flex-wrap justify-center gap-10 text-sm text-neutral-500 dark:text-neutral-400 font-medium">
-              <a href="#" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">利用規約</a>
-              <a href="#" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">プライバシーポリシー</a>
-              <a href="#" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">お問い合わせ</a>
-              <a href="#" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">特商法表記</a>
+              <a href="/terms" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">利用規約</a>
+              <a href="/privacy" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">プライバシーポリシー</a>
+              <a href="mailto:contact@heavy-chain.app" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">お問い合わせ</a>
+              <a href="/legal" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">特商法表記</a>
             </div>
             <p className="text-xs text-neutral-400">
               © 2024 Heavy Chain. All rights reserved.

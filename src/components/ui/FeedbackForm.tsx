@@ -52,7 +52,7 @@ export function FeedbackForm({ isOpen, onClose }: FeedbackFormProps) {
         setType('general');
         onClose();
       }, 2000);
-    } catch (error) {
+    } catch {
       toast.error('送信に失敗しました。再度お試しください。');
     } finally {
       setIsSubmitting(false);
@@ -194,6 +194,7 @@ export function FeedbackForm({ isOpen, onClose }: FeedbackFormProps) {
                     type="email"
                     label="メールアドレス（任意）"
                     placeholder="返信をご希望の場合はメールアドレスを入力"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -247,4 +248,3 @@ export function FeedbackButton() {
     </>
   );
 }
-

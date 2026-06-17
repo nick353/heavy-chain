@@ -31,6 +31,29 @@ export function ChatEditor({
   const [isLoading, setIsLoading] = useState(false);
   const [currentImage, setCurrentImage] = useState(initialImage || selectedImageUrl);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const hasInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasInitializedRef.current) return;
+
+    hasInitializedRef.current = true;
+    if (currentImage) {
+      setMessages([{
+        id: '1',
+        role: 'assistant',
+        content: '画像を読み込みました。編集したい内容を教えてください。\n\n例:\n• 「背景を青空に変えて」\n• 「もっと明るくして」\n• 「ズームアウトして」\n• 「色を赤に変えて」',
+        imageUrl: currentImage,
+        timestamp: new Date(),
+      }]);
+    } else {
+      setMessages([{
+        id: '1',
+        role: 'assistant',
+        content: 'こんにちは！画像生成・編集アシスタントです。\n\n📷 生成: 生成したい画像を説明してください\n✏️ 編集: キャンバスで画像を選択するか、画像URLを送信してください\n\n例: 「白いTシャツの商品写真、シンプルな白背景」',
+        timestamp: new Date(),
+      }]);
+    }
+  }, [currentImage]);
 
   // Update current image when selectedImageUrl changes
   useEffect(() => {
@@ -47,28 +70,7 @@ export function ChatEditor({
         }
       ]);
     }
-  }, [selectedImageUrl]);
-
-  useEffect(() => {
-    if (messages.length === 0) {
-      if (currentImage) {
-        setMessages([{
-          id: '1',
-          role: 'assistant',
-          content: '画像を読み込みました。編集したい内容を教えてください。\n\n例:\n• 「背景を青空に変えて」\n• 「もっと明るくして」\n• 「ズームアウトして」\n• 「色を赤に変えて」',
-          imageUrl: currentImage,
-          timestamp: new Date(),
-        }]);
-      } else {
-        setMessages([{
-          id: '1',
-          role: 'assistant',
-          content: 'こんにちは！画像生成・編集アシスタントです。\n\n📷 生成: 生成したい画像を説明してください\n✏️ 編集: キャンバスで画像を選択するか、画像URLを送信してください\n\n例: 「白いTシャツの商品写真、シンプルな白背景」',
-          timestamp: new Date(),
-        }]);
-      }
-    }
-  }, []);
+  }, [selectedImageUrl, currentImage]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

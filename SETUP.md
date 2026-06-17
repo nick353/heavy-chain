@@ -20,34 +20,23 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
 4. **Project URL** を `VITE_SUPABASE_URL` にコピー
 5. **Project API keys** の **anon public** キーを `VITE_SUPABASE_ANON_KEY` にコピー
 
-### 2. データベースのセットアップ
+### 2. Supabase のセットアップ
 
-#### 2.1 基本スキーマの作成
+通常手順は migration を正本にします。Supabase CLI を使える環境では、`supabase/migrations/` の全 migration を順に適用してください。SQL Editor で手動適用する場合も、`001_initial_schema.sql` だけではなく最新 migration まで順番に実行します。
 
-Supabase Dashboard で：
-1. **SQL Editor** を開く
-2. `setup.sql` の内容をコピー&ペースト
-3. **Run** をクリック
-
-#### 2.2 ストレージのセットアップ
-
-Supabase Dashboard で：
-1. **SQL Editor** を開く
-2. `supabase/storage-setup.sql` の内容をコピー&ペースト
-3. **Run** をクリック
-
-これにより以下が設定されます：
-- `generated-images` バケット（生成画像用）
-- `brand-assets` バケット（ブランドロゴ等）
-- 適切なアクセスポリシー
+最新 migration には以下が含まれます：
+- `generated-images` / `brand-assets` / `exports` の private bucket 作成
+- `storage.objects` の RLS policy
+- private schema 上の権限判定関数
 
 ### 3. ストレージバケットの確認
 
 Supabase Dashboard で：
 1. **Storage** を開く
 2. 以下のバケットが作成されていることを確認：
-   - `generated-images` (public)
-   - `brand-assets` (public)
+   - `generated-images` (private)
+   - `brand-assets` (private)
+   - `exports` (private)
 
 ### 4. 依存関係のインストール
 
@@ -69,14 +58,15 @@ npm run dev
 
 1. **ストレージバケットが作成されているか確認**
    - Supabase Dashboard → Storage
-   - `generated-images` と `brand-assets` が存在するか
+   - `generated-images`、`brand-assets`、`exports` が存在するか
 
-2. **バケットが公開設定になっているか確認**
+2. **private bucket になっているか確認**
    - 各バケットをクリック
-   - 右上の設定で "Public bucket" がオンになっているか
+   - "Public bucket" がオフになっているか
 
 3. **ストレージポリシーが設定されているか確認**
-   - `supabase/storage-setup.sql` を実行したか確認
+   - 通常は最新 migration まで適用済みか確認
+   - 緊急再適用のみ `supabase/storage-setup.sql` を実行
 
 4. **コンソールでエラーを確認**
    - ブラウザの開発者ツールを開く（F12）
@@ -92,7 +82,7 @@ Image URL generated: { path: "...", url: "..." }
 ```
 
 これらの情報から：
-- `storage_path` が正しい形式か確認（例：`brand-id/user-id/job-id.png`）
+- `storage_path` が正しい形式か確認（例：`user-id/brand-id/job-id.png`）
 - `url` が正しいSupabaseのURLか確認
 
 ### よくある問題
@@ -100,15 +90,15 @@ Image URL generated: { path: "...", url: "..." }
 **問題**: "Failed to load image" エラーが多数表示される
 
 **解決策**:
-1. ストレージポリシーを再設定：`supabase/storage-setup.sql` を実行
-2. バケットを削除して再作成
+1. 最新 migration が適用されているか確認
+2. 緊急時のみ `supabase/storage-setup.sql` で private bucket policy を再適用
 3. RLS（Row Level Security）が正しく設定されているか確認
 
 **問題**: データベースのテーブルが見つからない
 
 **解決策**:
-1. `setup.sql` を実行してスキーマを作成
-2. マイグレーションファイル（`supabase/migrations/001_initial_schema.sql`）も実行
+1. `supabase link --project-ref your-project-ref` を実行
+2. `supabase db push` で最新 migration まで適用
 
 ## 📝 環境変数の詳細
 
@@ -139,4 +129,3 @@ Supabase Dashboard で設定：
 - [デプロイガイド](DEPLOYMENT_CHECKLIST.md)
 - [要件定義](HeavyChain_Requirements%20(3).md)
 - [次のステップ](NEXT_STEPS.md)
-

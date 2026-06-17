@@ -1,5 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
+import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
+import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +36,7 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
     const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
     return { base64, mimeType: contentType };
   } catch (e) {
-    console.log('⚠️ Failed to fetch image:', e.message);
+    console.log('⚠️ Failed to fetch image:', clientError(e));
     return null;
   }
 }
@@ -172,12 +175,19 @@ async function generateFromText(
 }
 
 serve(async (req) => {
+  let usageReservation: UsageReservation | null = null;
+  let observedBrandId: string | null = null;
+  let observedUserId: string | null = null;
+  let telemetryClient: any = null;
+  const functionName = 'design-gacha';
+  const requestId = requestIdFrom(req);
+  const startedAt = Date.now();
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
+    const supabaseClient = createClient<Database>(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -186,6 +196,8 @@ serve(async (req) => {
         },
       }
     );
+    const supabaseService = createServiceClient();
+    telemetryClient = supabaseService;
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
@@ -214,6 +226,27 @@ serve(async (req) => {
     if (!brandId) {
       throw new Error('Brand ID is required');
     }
+
+    await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
+    observedBrandId = brandId;
+    observedUserId = user.id;
+    usageReservation = await reserveBrandUsage(telemetryClient, {
+      brandId,
+      userId: user.id,
+      functionName,
+      units: 1,
+      requestId,
+      idempotencyKey: req.headers.get('idempotency-key'),
+    });
+    await recordEdgeFunctionRun(telemetryClient, {
+      reservation: usageReservation,
+      brandId,
+      userId: user.id,
+      functionName,
+      status: 'started',
+      requestId,
+    });
+
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
@@ -278,19 +311,19 @@ serve(async (req) => {
 
         try {
           const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
-          const { error: uploadError } = await supabaseClient.storage
+            const { error: uploadError } = await supabaseService.storage
             .from('generated-images')
             .upload(fileName, imgBuffer, { contentType: 'image/png' });
 
           if (!uploadError) {
-            const { data: urlData } = supabaseClient.storage.from('generated-images').getPublicUrl(fileName);
-            storageUrl = urlData.publicUrl || '';
+            const { data: urlData } = await supabaseService.storage.from('generated-images').createSignedUrl(fileName, 60 * 60 * 24);
+            storageUrl = urlData?.signedUrl || '';
             console.log('✅ Image uploaded to storage:', storageUrl);
           } else {
             console.log('⚠️ Storage upload error:', uploadError.message);
           }
         } catch (storageError) {
-          console.log('⚠️ Storage warning:', storageError.message);
+          console.log('⚠️ Storage warning:', clientError(storageError));
         }
 
         // Always save record with image_url as fallback
@@ -299,7 +332,7 @@ serve(async (req) => {
             brand_id: brandId,
             user_id: user.id,
             storage_path: fileName,
-            image_url: storageUrl || imageDataUrl,
+            image_url: null,
             prompt: productDescription,
             feature_type: 'design-gacha',
             model_used: 'gemini-2.0-flash-exp-image-generation',
@@ -307,7 +340,7 @@ serve(async (req) => {
           });
           console.log('✅ Image record saved to database');
         } catch (dbError) {
-          console.log('⚠️ Database warning:', dbError.message);
+          console.log('⚠️ Database warning:', clientError(dbError));
         }
 
         results.push({
@@ -327,6 +360,20 @@ serve(async (req) => {
     }
 
     console.log(`🎉 Successfully generated ${results.length} variations`);
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'succeeded');
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'succeeded',
+        requestId,
+        durationMs: durationSince(startedAt),
+      });
+    }
+
+
 
     return new Response(
       JSON.stringify({
@@ -338,9 +385,23 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'failed', { error: sanitizeError(error) });
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'failed',
+        requestId,
+        durationMs: durationSince(startedAt),
+        errorMessage: sanitizeError(error),
+      });
+    }
+
     console.error('❌ Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: clientError(error) }),
       { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -348,5 +409,3 @@ serve(async (req) => {
     );
   }
 });
-
-

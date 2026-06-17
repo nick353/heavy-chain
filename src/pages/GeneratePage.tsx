@@ -184,6 +184,22 @@ interface GeneratedResult {
   label?: string;
 }
 
+const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
+
+const debugLog = (message: string, details?: Record<string, unknown>) => {
+  if (!debugGeneration) return;
+  if (details) {
+    console.debug(message, details);
+  } else {
+    console.debug(message);
+  }
+};
+
+const getGeneratedImageKey = (image: GeneratedResult, index: number) => {
+  const stablePart = image.id || image.imageUrl || image.label || image.prompt || 'generated-image';
+  return `${stablePart}-${index}`;
+};
+
 // Image Modal Component
 function ImageModal({ 
   image, 
@@ -348,7 +364,16 @@ export function GeneratePage() {
 
   const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
 
+  const resetSharedInputs = () => {
+    setPrompt('');
+    setNegativePrompt('');
+    setSelectedStyle(null);
+  };
+
   const handleFeatureSelect = (feature: Feature) => {
+    if (selectedFeature?.id === 'optimize-prompt' && feature.id !== 'optimize-prompt') {
+      resetSharedInputs();
+    }
     setSelectedFeature(feature);
     setGeneratedImages([]);
     setReferenceImage(null);
@@ -361,6 +386,9 @@ export function GeneratePage() {
   };
 
   const handleBack = () => {
+    if (selectedFeature?.id === 'optimize-prompt') {
+      resetSharedInputs();
+    }
     setSelectedFeature(null);
     setGeneratedImages([]);
     setReferenceImage(null);
@@ -391,7 +419,10 @@ export function GeneratePage() {
         
         // JPEG形式で圧縮（品質0.8）
         const compressed = canvas.toDataURL('image/jpeg', 0.8);
-        console.log(`🗜️ Image compressed: ${(dataUrl.length / 1024).toFixed(0)}KB → ${(compressed.length / 1024).toFixed(0)}KB`);
+        debugLog('Image compressed', {
+          beforeKb: Math.round(dataUrl.length / 1024),
+          afterKb: Math.round(compressed.length / 1024),
+        });
         resolve(compressed);
       };
       img.onerror = () => resolve(dataUrl); // エラー時は元の画像を返す
@@ -400,13 +431,11 @@ export function GeneratePage() {
   };
 
   const handleGenerate = async () => {
-    console.log('🚀 handleGenerate called at', new Date().toISOString());
-    console.log('📊 Current state:', {
+    debugLog('Generation requested', {
       isGenerating,
       selectedFeature: selectedFeature?.id,
-      currentBrand: currentBrand?.id,
+      hasBrand: !!currentBrand,
       hasReferenceImage: !!referenceImage,
-      referenceImageSize: referenceImage?.url?.length ? `${(referenceImage.url.length / 1024).toFixed(0)}KB` : 'N/A',
       selectedBackground,
     });
     
@@ -427,13 +456,13 @@ export function GeneratePage() {
     }
 
     setIsGenerating(true);
-    console.log('⏳ Generation started, isGenerating set to true');
+    debugLog('Generation started', { selectedFeature: selectedFeature?.id });
     
     try {
       // 画像が大きすぎる場合は圧縮
       let processedImageUrl = referenceImage?.url;
       if (processedImageUrl && processedImageUrl.startsWith('data:') && processedImageUrl.length > 500000) {
-        console.log('🗜️ Image too large, compressing...');
+        debugLog('Reference image will be compressed');
         toast.loading('画像を圧縮中...', { id: 'compress' });
         processedImageUrl = await compressImage(processedImageUrl);
         toast.dismiss('compress');
@@ -457,7 +486,11 @@ export function GeneratePage() {
         textOverlay,
       };
       
-      console.log('📤 Base body prepared, referenceImage size:', processedImageUrl?.length ? `${(processedImageUrl.length / 1024).toFixed(0)}KB` : 'none');
+      debugLog('Base generation body prepared', {
+        hasReferenceImage: !!processedImageUrl,
+        hasTextOverlay: !!textOverlay,
+        referenceType: referenceImage?.referenceType,
+      });
 
       switch (selectedFeature?.id) {
         case 'remove-bg':
@@ -550,7 +583,7 @@ export function GeneratePage() {
             setIsGenerating(false);
             return;
           }
-          console.log('🌆 Invoking scene-coordinate with imageUrl:', !!processedImageUrl);
+          debugLog('Invoking scene-coordinate', { hasImage: !!processedImageUrl });
           ({ data, error } = await supabase.functions.invoke('generate-variations', {
             body: { 
               ...baseBody,
@@ -575,7 +608,11 @@ export function GeneratePage() {
             setIsGenerating(false);
             return;
           }
-          console.log('🎲 Invoking design-gacha with imageUrl:', !!processedImageUrl, 'fixedElements:', fixedElements);
+          debugLog('Invoking design-gacha', {
+            hasImage: !!processedImageUrl,
+            fixedElementCount: fixedElements.length,
+            randomizedElementCount: randomizedElements.length,
+          });
           ({ data, error } = await supabase.functions.invoke('design-gacha', {
             body: { 
               ...baseBody,
@@ -597,24 +634,24 @@ export function GeneratePage() {
           break;
 
         case 'product-shots':
-          console.log('🔍 product-shots validation check:', {
-            productDescription: productDescription,
+          debugLog('Product-shots validation check', {
             hasProductDescription: !!productDescription.trim(),
-            referenceImage: referenceImage,
             hasReferenceImage: !!referenceImage
           });
           if (!productDescription.trim() && !referenceImage) {
-            console.log('❌ Validation failed: no description and no image');
+            debugLog('Product-shots validation failed');
             toast.error('商品説明または商品画像を入力してください');
             setIsGenerating(false);
             return;
           }
-          console.log('✅ Validation passed, starting generation...');
+          debugLog('Product-shots validation passed');
           // 選択されたショットをすべて生成（制限なし）
           const shotsToGenerate = selectedShots.length ? selectedShots : ['front', 'side', 'back', 'detail'];
-          console.log('🎬 Generating shots:', shotsToGenerate);
-          console.log('🎨 Background setting:', selectedBackground);
-          console.log('🖼️ Reference image URL:', referenceImage?.url);
+          debugLog('Product-shots request prepared', {
+            shotCount: shotsToGenerate.length,
+            background: selectedBackground,
+            hasReferenceImage: !!referenceImage,
+          });
           const requestBody = { 
             ...baseBody,
             productDescription,
@@ -622,15 +659,8 @@ export function GeneratePage() {
             shots: shotsToGenerate,
             background: selectedBackground,
           };
-          // imageUrlが長すぎる場合（Base64 Data URL）はログに表示しない
-          const logBody = { 
-            ...requestBody, 
-            imageUrl: requestBody.imageUrl?.substring(0, 100) + ((requestBody.imageUrl?.length ?? 0) > 100 ? '...' : '')
-          };
-          console.log('📤 Request body (truncated):', logBody);
-          console.log('📤 imageUrl length:', requestBody.imageUrl?.length || 0);
           
-          console.log('🚀 Invoking product-shots function...', new Date().toISOString());
+          debugLog('Invoking product-shots function');
           try {
             // タイムアウト処理付きのAPI呼び出し
             const timeoutPromise = new Promise((_, reject) => 
@@ -644,16 +674,20 @@ export function GeneratePage() {
             const result = await Promise.race([invokePromise, timeoutPromise]) as any;
             data = result.data;
             error = result.error;
-            console.log('✅ Function invoke completed', new Date().toISOString());
+            debugLog('Product-shots invoke completed', {
+              hasData: !!data,
+              hasError: !!error,
+              shotCount: data?.shots?.length || 0,
+            });
           } catch (invokeError: any) {
-            console.error('🚨 Invoke error:', invokeError);
-            console.error('🚨 Invoke error type:', invokeError?.constructor?.name);
+            debugLog('Product-shots invoke failed', {
+              errorType: invokeError?.constructor?.name,
+              hasMessage: !!invokeError?.message,
+            });
             throw new Error(`API呼び出しエラー: ${invokeError.message}`);
           }
-          console.log('📥 Product-shots response:', data);
-          console.log('❌ Product-shots error:', error);
           if (error) {
-            console.error('🚨 Function invocation error:', error);
+            debugLog('Product-shots returned an error');
             throw error;
           }
           if (data?.shots && data.shots.length > 0) {
@@ -663,10 +697,10 @@ export function GeneratePage() {
               prompt: productDescription || data.productDescription,
               label: s.shotName
             }));
-            console.log('🖼️ Setting images:', images);
+            debugLog('Product-shots images received', { imageCount: images.length });
             setGeneratedImages(images);
           } else {
-            console.warn('⚠️ No shots returned in data:', data);
+            debugLog('Product-shots returned no shots');
             if (data?.error) {
               throw new Error(data.error);
             }
@@ -679,7 +713,7 @@ export function GeneratePage() {
             setIsGenerating(false);
             return;
           }
-          console.log('🎭 Invoking model-matrix with imageUrl:', !!processedImageUrl);
+          debugLog('Invoking model-matrix', { hasImage: !!processedImageUrl });
           ({ data, error } = await supabase.functions.invoke('model-matrix', {
             body: { 
               ...baseBody,
@@ -735,6 +769,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('optimize-prompt', {
             body: { 
               prompt, 
+              brandId: currentBrand.id,
               style: selectedStyle,
               referenceImageUrl: referenceImage?.url,
             }
@@ -832,9 +867,11 @@ export function GeneratePage() {
         toast.success('生成が完了しました');
       }
     } catch (error: any) {
-      console.error('❌ Generation error:', error);
-      console.error('❌ Error stack:', error?.stack);
-      console.error('❌ Error name:', error?.name);
+      debugLog('Generation failed', {
+        selectedFeature: selectedFeature?.id,
+        errorName: error?.name,
+        hasContextBody: !!error?.context?.body,
+      });
       
       // Try to get detailed error from response
       let errorMessage = error.message || '生成に失敗しました';
@@ -854,7 +891,6 @@ export function GeneratePage() {
         try {
           const body = JSON.parse(error.context.body);
           errorMessage = body.error || body.details || errorMessage;
-          console.error('Error details from context:', body);
         } catch {}
       }
       
@@ -865,7 +901,7 @@ export function GeneratePage() {
       
       toast.error(errorMessage);
     } finally {
-      console.log('🏁 Generation finished, setting isGenerating to false');
+      debugLog('Generation finished');
       setIsGenerating(false);
     }
   };
@@ -905,7 +941,7 @@ export function GeneratePage() {
       window.open(data.downloadUrl, '_blank');
       toast.success(`${imageIds.length}件をまとめてダウンロードします`);
     } catch (e: any) {
-      console.error('Bulk download error', e);
+      debugLog('Bulk download failed', { hasMessage: !!e?.message });
       toast.error(e.message || '一括ダウンロードに失敗しました');
     }
   };
@@ -2251,7 +2287,7 @@ export function GeneratePage() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.1 }}
-                    key={image.id || index}
+                    key={getGeneratedImageKey(image, index)}
                     className="group relative glass-card overflow-hidden hover:shadow-elegant transition-all duration-500 hover:-translate-y-1"
                   >
                     {image.label && (

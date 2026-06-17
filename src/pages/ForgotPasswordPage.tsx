@@ -146,6 +146,7 @@ export function ForgotPasswordPage() {
               type="email"
               label="メールアドレス"
               placeholder="your@email.com"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={error}
@@ -178,4 +179,3 @@ export function ForgotPasswordPage() {
     </div>
   );
 }
-

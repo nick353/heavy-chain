@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { 
   Image, 
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
+import { withSignedImageUrls } from '../lib/storage';
 import { Button, SearchInput } from '../components/ui';
 import type { GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
@@ -51,38 +52,43 @@ export function GalleryPage() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  useEffect(() => {
-    let mounted = true;
-
-    const loadData = async () => {
-      if (!currentBrand) {
-        // ブランドがない場合はローディングを解除
-        if (mounted) setIsLoading(false);
-        return;
+  const getImageUrl = useCallback((image: GeneratedImage | string) => {
+    // 文字列の場合（レガシーコードサポート）
+    if (typeof image === 'string') {
+      const path = image;
+      if (!path) return '';
+      if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+        return path;
       }
-      
-      await fetchImages();
-    };
-
-    loadData();
-
-    return () => {
-      mounted = false;
-    };
-  }, [currentBrand, filter, sortBy]);
-
-  useEffect(() => {
-    // Check for image ID in URL
-    const imageId = searchParams.get('image');
-    if (imageId && images.length > 0) {
-      const image = images.find(img => img.id === imageId);
-      if (image) {
-        setSelectedImage(image);
+      try {
+        return '';
+      } catch {
+        return '';
       }
     }
-  }, [searchParams, images]);
 
-  const fetchImages = async () => {
+    // まずimage_urlを確認（直接URL）
+    if (image.image_url) {
+      return image.image_url;
+    }
+
+    // storage_pathを使用
+    const path = image.storage_path;
+    if (!path) {
+      return '';
+    }
+    try {
+      // storage_pathがすでに完全なURLの場合はそのまま返す
+      if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+        return path;
+      }
+      return '';
+    } catch {
+      return '';
+    }
+  }, []);
+
+  const fetchImages = useCallback(async () => {
     if (!currentBrand) {
       setIsLoading(false);
       return;
@@ -108,92 +114,50 @@ export function GalleryPage() {
       const { data, error } = await query;
 
       if (error) {
-        console.error('Failed to fetch images:', error);
         toast.error('画像の読み込みに失敗しました');
         setImages([]);
       } else {
-        console.log('📊 取得した画像数:', data?.length || 0);
-        if (data && data.length > 0) {
-          console.log('📷 サンプル画像データ:', {
-            id: data[0].id,
-            storage_path: data[0].storage_path,
-            created_at: data[0].created_at,
-            brand_id: data[0].brand_id
-          });
-          
-          // 画像URLを確認
-          const sampleUrl = getImageUrl(data[0]);
-          console.log('🔗 生成されたURL:', sampleUrl);
-          
-          // URLにアクセス可能か確認
-          if (sampleUrl) {
-            fetch(sampleUrl, { method: 'HEAD' })
-              .then(response => {
-                if (response.ok) {
-                  console.log('✅ 画像ファイルにアクセス可能です');
-                } else {
-                  console.error('❌ 画像ファイルにアクセスできません:', response.status, response.statusText);
-                  console.log('💡 ヒント: storage-setup.sql を実行してストレージポリシーを設定してください');
-                }
-              })
-              .catch(err => {
-                console.error('❌ ネットワークエラー:', err);
-              });
-          }
-        } else {
-          console.log('ℹ️ 画像データがありません');
-        }
-        setImages(data || []);
+        const imagesWithUrls = await withSignedImageUrls(data || []);
+        setImages(imagesWithUrls);
       }
-    } catch (error) {
-      console.error('Failed to fetch images:', error);
+    } catch {
       toast.error('画像の読み込みに失敗しました');
       setImages([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentBrand, filter, sortBy]);
 
-  const getImageUrl = (image: GeneratedImage | string) => {
-    // 文字列の場合（レガシーコードサポート）
-    if (typeof image === 'string') {
-      const path = image;
-      if (!path) return '';
-      if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
-        return path;
-      }
-      try {
-        const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
-        return data.publicUrl || '';
-      } catch (error) {
-        console.error('Failed to get image URL:', error);
-        return '';
-      }
-    }
+  useEffect(() => {
+    let mounted = true;
 
-    // まずimage_urlを確認（直接URL）
-    if (image.image_url) {
-      return image.image_url;
-    }
-    
-    // storage_pathを使用
-    const path = image.storage_path;
-    if (!path) {
-      console.warn('Image path is empty for image:', image.id);
-      return '';
-    }
-    try {
-      // storage_pathがすでに完全なURLの場合はそのまま返す
-      if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
-        return path;
+    const loadData = async () => {
+      if (!currentBrand) {
+        // ブランドがない場合はローディングを解除
+        if (mounted) setIsLoading(false);
+        return;
       }
-      const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
-      return data.publicUrl || '';
-    } catch (error) {
-      console.error('Failed to get image URL:', error, 'path:', path);
-      return '';
+
+      await fetchImages();
+    };
+
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [currentBrand, fetchImages]);
+
+  useEffect(() => {
+    // Check for image ID in URL
+    const imageId = searchParams.get('image');
+    if (imageId && images.length > 0) {
+      const image = images.find(img => img.id === imageId);
+      if (image) {
+        setSelectedImage(image);
+      }
     }
-  };
+  }, [searchParams, images]);
 
   const handleDownload = async (image: GeneratedImage, format: 'png' | 'jpeg' | 'webp' = 'png') => {
     try {
@@ -211,16 +175,16 @@ export function GalleryPage() {
       window.URL.revokeObjectURL(url);
       
       toast.success('ダウンロードしました');
-    } catch (error) {
+    } catch {
       toast.error('ダウンロードに失敗しました');
     }
   };
 
   const handleBulkDownload = async () => {
     if (selectedIds.size === 0) return;
-    
+
     toast.loading(`${selectedIds.size}枚の画像を準備中...`);
-    
+
     // In a real implementation, this would call the bulk-download Edge Function
     // For now, download each image individually
     for (const id of selectedIds) {
@@ -229,12 +193,12 @@ export function GalleryPage() {
         await handleDownload(image, 'png');
       }
     }
-    
+
     toast.dismiss();
     toast.success('ダウンロード完了');
   };
 
-  const handleToggleFavorite = async (image: GeneratedImage) => {
+  const handleToggleFavorite = useCallback(async (image: GeneratedImage) => {
     try {
       const newValue = !image.is_favorite;
       await supabase
@@ -253,10 +217,10 @@ export function GalleryPage() {
       }
 
       toast.success(newValue ? 'お気に入りに追加しました' : 'お気に入りから削除しました');
-    } catch (error) {
+    } catch {
       toast.error('操作に失敗しました');
     }
-  };
+  }, [selectedImage]);
 
   const handleDelete = async (image: GeneratedImage) => {
     if (!confirm('この画像を削除しますか？')) return;
@@ -274,7 +238,7 @@ export function GalleryPage() {
       setImages(prev => prev.filter(img => img.id !== image.id));
       setSelectedImage(null);
       toast.success('画像を削除しました');
-    } catch (error) {
+    } catch {
       toast.error('削除に失敗しました');
     }
   };
@@ -299,25 +263,9 @@ export function GalleryPage() {
       setSelectedIds(new Set());
       setSelectMode(false);
       toast.success('削除しました');
-    } catch (error) {
+    } catch {
       toast.error('削除に失敗しました');
     }
-  };
-
-  const navigateImage = (direction: 'prev' | 'next') => {
-    if (!selectedImage) return;
-    
-    const currentIndex = filteredImages.findIndex(img => img.id === selectedImage.id);
-    let newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
-    
-    if (newIndex < 0) newIndex = filteredImages.length - 1;
-    if (newIndex >= filteredImages.length) newIndex = 0;
-    
-    const newImage = filteredImages[newIndex];
-    setSelectedImage(newImage);
-    
-    // Update URL
-    setSearchParams({ image: newImage.id });
   };
 
   const toggleSelectImage = (id: string) => {
@@ -370,7 +318,7 @@ export function GalleryPage() {
 
   const filteredImages = useMemo(() => {
     if (!searchQuery) return images;
-    
+
     const searchLower = searchQuery.toLowerCase();
     return images.filter(image => {
       // Search in prompt
@@ -386,6 +334,22 @@ export function GalleryPage() {
       return false;
     });
   }, [images, searchQuery]);
+
+  const navigateImage = useCallback((direction: 'prev' | 'next') => {
+    if (!selectedImage) return;
+
+    const currentIndex = filteredImages.findIndex(img => img.id === selectedImage.id);
+    let newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+
+    if (newIndex < 0) newIndex = filteredImages.length - 1;
+    if (newIndex >= filteredImages.length) newIndex = 0;
+
+    const newImage = filteredImages[newIndex];
+    setSelectedImage(newImage);
+
+    // Update URL
+    setSearchParams({ image: newImage.id });
+  }, [filteredImages, selectedImage, setSearchParams]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -409,7 +373,7 @@ export function GalleryPage() {
     
     document.addEventListener('keydown', handleKeydown);
     return () => document.removeEventListener('keydown', handleKeydown);
-  }, [selectedImage, filteredImages]);
+  }, [selectedImage, navigateImage, setSearchParams, handleToggleFavorite]);
 
   if (isLoading) {
     return (
@@ -600,7 +564,6 @@ export function GalleryPage() {
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
                       onError={(e) => {
-                        console.error('Failed to load image:', image.storage_path, 'image_url:', image.image_url);
                         e.currentTarget.style.display = 'none';
                         const parent = e.currentTarget.parentElement;
                         if (parent) {
@@ -714,7 +677,6 @@ export function GalleryPage() {
                       alt=""
                       className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                       onError={() => {
-                        console.error('Failed to load image in modal:', selectedImage.storage_path, 'image_url:', selectedImage.image_url);
                         toast.error('画像の読み込みに失敗しました');
                       }}
                     />

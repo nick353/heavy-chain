@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -60,20 +60,7 @@ export function BrandSettingsPage() {
     secondaryColor: '#c4a57c',
   });
 
-  useEffect(() => {
-    if (currentBrand) {
-      setForm({
-        name: currentBrand.name || '',
-        toneDescription: currentBrand.tone_description || '',
-        targetAudience: currentBrand.target_audience || '',
-        primaryColor: (currentBrand.brand_colors as any)?.primary || '#806a54',
-        secondaryColor: (currentBrand.brand_colors as any)?.secondary || '#c4a57c',
-      });
-      fetchMembers();
-    }
-  }, [currentBrand]);
-
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     if (!currentBrand) return;
     
     setIsLoading(true);
@@ -104,7 +91,20 @@ export function BrandSettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentBrand]);
+
+  useEffect(() => {
+    if (currentBrand) {
+      setForm({
+        name: currentBrand.name || '',
+        toneDescription: currentBrand.tone_description || '',
+        targetAudience: currentBrand.target_audience || '',
+        primaryColor: (currentBrand.brand_colors as any)?.primary || '#806a54',
+        secondaryColor: (currentBrand.brand_colors as any)?.secondary || '#c4a57c',
+      });
+      fetchMembers();
+    }
+  }, [currentBrand, fetchMembers]);
 
   const handleSave = async () => {
     if (!currentBrand) return;
@@ -139,11 +139,11 @@ export function BrandSettingsPage() {
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !currentBrand) return;
+    if (!file || !currentBrand || !user) return;
 
     try {
       const ext = file.name.split('.').pop();
-      const path = `${currentBrand.id}/logo.${ext}`;
+      const path = `${user.id}/${currentBrand.id}/logo.${ext}`;
       
       const { error: uploadError } = await supabase.storage
         .from('brand-assets')
@@ -151,18 +151,20 @@ export function BrandSettingsPage() {
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
+      const { data: urlData, error: signedUrlError } = await supabase.storage
         .from('brand-assets')
-        .getPublicUrl(path);
+        .createSignedUrl(path, 60 * 60 * 24 * 7);
+
+      if (signedUrlError || !urlData?.signedUrl) throw signedUrlError || new Error('Failed to create signed logo URL');
 
       const { error: updateError } = await supabase
         .from('brands')
-        .update({ logo_url: urlData.publicUrl })
+        .update({ logo_url: urlData.signedUrl })
         .eq('id', currentBrand.id);
 
       if (updateError) throw updateError;
 
-      setCurrentBrand({ ...currentBrand, logo_url: urlData.publicUrl });
+      setCurrentBrand({ ...currentBrand, logo_url: urlData.signedUrl });
       toast.success('ロゴをアップロードしました');
     } catch (error: any) {
       toast.error(error.message || 'アップロードに失敗しました');
@@ -547,6 +549,7 @@ export function BrandSettingsPage() {
                 label="メールアドレス"
                 type="email"
                 placeholder="member@example.com"
+                autoComplete="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
               />
@@ -590,5 +593,3 @@ export function BrandSettingsPage() {
     </div>
   );
 }
-
-

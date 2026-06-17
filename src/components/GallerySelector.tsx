@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, Check, Image as ImageIcon, Heart, Clock } from 'lucide-react';
 import { Modal } from './ui';
 import { supabase } from '../lib/supabase';
+import { withSignedImageUrls } from '../lib/storage';
 import { useAuthStore } from '../stores/authStore';
 import type { GeneratedImage } from '../types/database';
 
@@ -31,20 +32,7 @@ export function GallerySelector({
   const [filter, setFilter] = useState<FilterType>('recent');
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (isOpen && currentBrand) {
-      fetchImages();
-    }
-  }, [isOpen, currentBrand, filter]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setSelectedImages(new Set());
-      setSearchQuery('');
-    }
-  }, [isOpen]);
-
-  const fetchImages = async () => {
+  const fetchImages = useCallback(async () => {
     if (!currentBrand) return;
 
     setIsLoading(true);
@@ -68,17 +56,32 @@ export function GallerySelector({
       const { data, error } = await query;
 
       if (error) throw error;
-      setImages(data || []);
+      setImages(await withSignedImageUrls(data || []));
     } catch (error) {
       console.error('Failed to fetch images:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentBrand, filter]);
 
-  const getImageUrl = (path: string) => {
-    const { data } = supabase.storage.from('generated-images').getPublicUrl(path);
-    return data.publicUrl;
+  useEffect(() => {
+    if (isOpen && currentBrand) {
+      fetchImages();
+    }
+  }, [isOpen, currentBrand, filter, fetchImages]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedImages(new Set());
+      setSearchQuery('');
+    }
+  }, [isOpen]);
+
+  const getImageUrl = (image: GeneratedImage) => {
+    if (image.image_url) return image.image_url;
+    const path = image.storage_path;
+    if (/^(https?:|data:)/.test(path)) return path;
+    return '';
   };
 
   const handleImageClick = (image: GeneratedImage) => {
@@ -93,7 +96,7 @@ export function GallerySelector({
       
       setSelectedImages(newSelected);
     } else {
-      const imageUrl = getImageUrl(image.storage_path);
+      const imageUrl = getImageUrl(image);
       onSelect(imageUrl, image.id);
     }
   };
@@ -103,7 +106,7 @@ export function GallerySelector({
       const selected = images
         .filter(img => selectedImages.has(img.id))
         .map(img => ({
-          url: getImageUrl(img.storage_path),
+          url: getImageUrl(img),
           id: img.id,
         }));
       onMultipleSelect(selected);
@@ -211,7 +214,7 @@ export function GallerySelector({
                     }`}
                   >
                     <img
-                      src={getImageUrl(image.storage_path)}
+                      src={getImageUrl(image)}
                       alt=""
                       className="w-full h-full object-cover"
                       loading="lazy"
@@ -263,8 +266,5 @@ export function GallerySelector({
     </Modal>
   );
 }
-
-
-
 
 

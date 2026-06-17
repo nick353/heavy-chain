@@ -16,6 +16,7 @@ export interface Database {
           name: string | null
           avatar_url: string | null
           language: string
+          is_admin: boolean
           created_at: string
           updated_at: string
         }
@@ -25,6 +26,7 @@ export interface Database {
           name?: string | null
           avatar_url?: string | null
           language?: string
+          is_admin?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -34,6 +36,7 @@ export interface Database {
           name?: string | null
           avatar_url?: string | null
           language?: string
+          is_admin?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -274,6 +277,113 @@ export interface Database {
           folder_id?: string
         }
       }
+      style_presets: {
+        Row: {
+          id: string
+          brand_id: string
+          name: string
+          prompt_template: string | null
+          settings: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          brand_id: string
+          name: string
+          prompt_template?: string | null
+          settings?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          brand_id?: string
+          name?: string
+          prompt_template?: string | null
+          settings?: Json | null
+          created_at?: string
+        }
+      }
+      api_usage_logs: {
+        Row: {
+          id: string
+          user_id: string
+          brand_id: string | null
+          provider: 'openai' | 'gemini'
+          tokens_used: number | null
+          cost_usd: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          brand_id?: string | null
+          provider: 'openai' | 'gemini'
+          tokens_used?: number | null
+          cost_usd?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          brand_id?: string | null
+          provider?: 'openai' | 'gemini'
+          tokens_used?: number | null
+          cost_usd?: number | null
+          created_at?: string
+        }
+      }
+      share_links: {
+        Row: {
+          id: string
+          image_id: string
+          token: string
+          created_by: string
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          image_id: string
+          token: string
+          created_by: string
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          image_id?: string
+          token?: string
+          created_by?: string
+          expires_at?: string
+          created_at?: string
+        }
+      }
+      admin_announcements: {
+        Row: {
+          id: string
+          title: string
+          content: string
+          type: string | null
+          is_active: boolean | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          content: string
+          type?: string | null
+          is_active?: boolean | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          content?: string
+          type?: string | null
+          is_active?: boolean | null
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -295,6 +405,10 @@ export type GenerationJob = Database['public']['Tables']['generation_jobs']['Row
 export type GeneratedImage = Database['public']['Tables']['generated_images']['Row']
 export type Folder = Database['public']['Tables']['folders']['Row']
 export type Tag = Database['public']['Tables']['tags']['Row']
+export type StylePreset = Database['public']['Tables']['style_presets']['Row']
+export type ApiUsageLog = Database['public']['Tables']['api_usage_logs']['Row']
+export type ShareLink = Database['public']['Tables']['share_links']['Row']
+export type AdminAnnouncement = Database['public']['Tables']['admin_announcements']['Row']
 
 // Extended types with metadata
 export interface ImageMetadata {
@@ -316,8 +430,6 @@ export interface GeneratedImageWithMeta extends GeneratedImage {
   folders?: Folder[]
   parsedMetadata?: ImageMetadata
 }
-
-
 
 
 

@@ -3,15 +3,12 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// ⚠️ セキュリティ警告: 
-// このファイルは開発用です。本番環境では環境変数を使用してください。
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// TODO: SupabaseのProject URLをここに入力してください
-// ダッシュボードの Settings > API > Project URL からコピーできます
-const SUPABASE_URL = 'YOUR_SUPABASE_URL_HERE'; // 例: https://xxxxx.supabase.co
-
-// 提供されたanon key
-const SUPABASE_ANON_KEY = 'sbp_257c591725f8def68c6316c5859a76c31845979c';
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error('Missing Supabase environment variables for connection test.');
+}
 
 // Supabaseクライアントを作成
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -20,7 +17,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 export async function testSupabaseConnection() {
   console.log('🔍 Supabase接続をテスト中...');
   console.log('URL:', SUPABASE_URL);
-  console.log('Key:', SUPABASE_ANON_KEY.substring(0, 20) + '...');
 
   try {
     // 1. 認証状態を確認
@@ -39,7 +35,7 @@ export async function testSupabaseConnection() {
       const generatedImagesExists = buckets?.find(b => b.name === 'generated-images');
       if (generatedImagesExists) {
         console.log('✅ generated-imagesバケットが存在します');
-        console.log('   Public:', generatedImagesExists.public ? 'はい' : 'いいえ');
+        console.log('   Private:', generatedImagesExists.public ? 'いいえ' : 'はい');
       } else {
         console.warn('⚠️ generated-imagesバケットが見つかりません');
       }
@@ -52,7 +48,7 @@ export async function testSupabaseConnection() {
     
     if (tablesError) {
       console.error('❌ generated_imagesテーブルへのアクセスに失敗:', tablesError);
-      console.log('   → setup.sqlを実行してテーブルを作成してください');
+      console.log('   → supabase db pushで最新マイグレーションを適用してください');
     } else {
       console.log('✅ generated_imagesテーブルにアクセス可能');
     }
@@ -67,20 +63,20 @@ export async function testSupabaseConnection() {
       console.log('✅ サンプル画像データ:', images[0]);
       
       // 画像URLを生成
-      const { data: urlData } = supabase.storage
+      const { data: urlData } = await supabase.storage
         .from('generated-images')
-        .getPublicUrl(images[0].storage_path);
+        .createSignedUrl(images[0].storage_path, 300);
       
-      console.log('📷 画像URL:', urlData.publicUrl);
+      console.log('📷 画像URL:', urlData?.signedUrl);
       
       // URLが実際にアクセス可能か確認
       try {
-        const response = await fetch(urlData.publicUrl, { method: 'HEAD' });
+        const response = await fetch(urlData?.signedUrl || '', { method: 'HEAD' });
         if (response.ok) {
           console.log('✅ 画像ファイルにアクセス可能です');
         } else {
           console.error('❌ 画像ファイルにアクセスできません (ステータス:', response.status, ')');
-          console.log('   → storage-setup.sqlを実行してポリシーを設定してください');
+          console.log('   → supabase db pushで最新マイグレーションを適用してください');
         }
       } catch (fetchError) {
         console.error('❌ 画像ファイルの確認に失敗:', fetchError);
@@ -101,4 +97,3 @@ if (typeof window !== 'undefined') {
   (window as any).testSupabaseConnection = testSupabaseConnection;
   console.log('💡 ブラウザのコンソールで testSupabaseConnection() を実行してテストできます');
 }
-

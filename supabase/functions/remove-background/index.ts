@@ -1,5 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
+import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
+import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,12 +20,19 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
 }
 
 serve(async (req) => {
+  let usageReservation: UsageReservation | null = null;
+  let observedBrandId: string | null = null;
+  let observedUserId: string | null = null;
+  let telemetryClient: any = null;
+  const functionName = 'remove-background';
+  const requestId = requestIdFrom(req);
+  const startedAt = Date.now();
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
+    const supabaseClient = createClient<Database>(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -31,6 +41,8 @@ serve(async (req) => {
         },
       }
     );
+    const supabaseService = createServiceClient();
+    telemetryClient = supabaseService;
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
@@ -42,6 +54,27 @@ serve(async (req) => {
     if (!imageUrl || !brandId) {
       throw new Error('Missing required parameters: imageUrl, brandId');
     }
+
+    await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
+    observedBrandId = brandId;
+    observedUserId = user.id;
+    usageReservation = await reserveBrandUsage(telemetryClient, {
+      brandId,
+      userId: user.id,
+      functionName,
+      units: 1,
+      requestId,
+      idempotencyKey: req.headers.get('idempotency-key'),
+    });
+    await recordEdgeFunctionRun(telemetryClient, {
+      reservation: usageReservation,
+      brandId,
+      userId: user.id,
+      functionName,
+      status: 'started',
+      requestId,
+    });
+
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
@@ -118,18 +151,39 @@ serve(async (req) => {
 
     const imageDataUrl = `data:image/png;base64,${imageBase64}`;
     const fileName = `${user.id}/${brandId}/${Date.now()}_nobg.png`;
+    let storageUrl = '';
 
     try {
       const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
-      await supabaseClient.storage
+      const { error: uploadError } = await supabaseService.storage
         .from('generated-images')
         .upload(fileName, imgBuffer, { contentType: 'image/png' });
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = await supabaseService.storage
+        .from('generated-images')
+        .createSignedUrl(fileName, 60 * 60 * 24);
+      storageUrl = urlData?.signedUrl || '';
+
+      const { error: imageInsertError } = await supabaseClient.from('generated_images').insert({
+        brand_id: brandId,
+        user_id: user.id,
+        storage_path: fileName,
+        image_url: null,
+        prompt,
+        feature_type: 'remove-background',
+        model_used: 'gemini-2.0-flash-exp-image-generation',
+        generation_params: { newBackground },
+      });
+      if (imageInsertError) throw imageInsertError;
     } catch (storageError) {
-      console.log('⚠️ Storage warning:', storageError.message);
+      await supabaseService.storage.from('generated-images').remove([fileName]);
+      console.log('⚠️ Storage persistence error:', clientError(storageError));
+      throw new Error('Generated image could not be saved');
     }
 
     try {
-      await supabaseClient.from('api_usage_logs').insert({
+      await supabaseService.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
         provider: 'gemini',
@@ -137,25 +191,53 @@ serve(async (req) => {
         cost_usd: 0,
       });
     } catch (e) {
-      console.log('⚠️ Usage log warning:', e.message);
+      console.log('⚠️ Usage log warning:', clientError(e));
     }
 
     console.log('✅ Background removed/changed successfully');
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'succeeded');
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'succeeded',
+        requestId,
+        durationMs: durationSince(startedAt),
+      });
+    }
+
+
 
     return new Response(
       JSON.stringify({
         success: true,
-        resultUrl: imageDataUrl,
-        imageUrl: imageDataUrl,
+        resultUrl: storageUrl || imageDataUrl,
+        imageUrl: storageUrl || imageDataUrl,
         storagePath: fileName,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'failed', { error: sanitizeError(error) });
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'failed',
+        requestId,
+        durationMs: durationSince(startedAt),
+        errorMessage: sanitizeError(error),
+      });
+    }
+
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: clientError(error) }),
       { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

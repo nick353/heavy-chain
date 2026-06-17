@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Image, Heart } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -35,13 +35,7 @@ export function UsageStats({ className }: UsageStatsProps) {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (currentBrand) {
-      fetchStats();
-    }
-  }, [currentBrand]);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!currentBrand) return;
 
     try {
@@ -80,7 +74,13 @@ export function UsageStats({ className }: UsageStatsProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentBrand]);
+
+  useEffect(() => {
+    if (currentBrand) {
+      fetchStats();
+    }
+  }, [currentBrand, fetchStats]);
 
   const statItems = [
     {

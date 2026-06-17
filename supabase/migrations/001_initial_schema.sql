@@ -3,7 +3,8 @@
 -- Date: 2024
 
 -- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
 
 -- ============================================
 -- USERS TABLE
@@ -37,7 +38,7 @@ CREATE POLICY "Users can insert own profile"
 -- BRANDS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.brands (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     owner_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     logo_url TEXT,
@@ -71,7 +72,7 @@ CREATE POLICY "Users can delete own brands"
 -- BRAND MEMBERS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.brand_members (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     brand_id UUID NOT NULL REFERENCES public.brands(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'editor', 'viewer')),
@@ -96,7 +97,7 @@ CREATE POLICY "Brand owners can manage members"
 -- GENERATION JOBS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.generation_jobs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     brand_id UUID NOT NULL REFERENCES public.brands(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     feature_type TEXT NOT NULL,
@@ -127,7 +128,7 @@ CREATE POLICY "Users can update own jobs"
 -- GENERATED IMAGES TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.generated_images (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     job_id UUID NOT NULL REFERENCES public.generation_jobs(id) ON DELETE CASCADE,
     brand_id UUID NOT NULL REFERENCES public.brands(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
@@ -163,7 +164,7 @@ CREATE POLICY "Users can delete own images"
 -- FOLDERS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.folders (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     brand_id UUID NOT NULL REFERENCES public.brands(id) ON DELETE CASCADE,
     parent_folder_id UUID REFERENCES public.folders(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -181,7 +182,7 @@ CREATE POLICY "Users can manage folders in own brands"
 -- TAGS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.tags (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     brand_id UUID NOT NULL REFERENCES public.brands(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -231,7 +232,7 @@ CREATE POLICY "Users can manage image folders"
 -- STYLE PRESETS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.style_presets (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     brand_id UUID NOT NULL REFERENCES public.brands(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     prompt_template TEXT,
@@ -250,7 +251,7 @@ CREATE POLICY "Users can manage style presets in own brands"
 -- API USAGE LOGS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS public.api_usage_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     brand_id UUID REFERENCES public.brands(id) ON DELETE SET NULL,
     provider TEXT NOT NULL CHECK (provider IN ('openai', 'gemini')),
@@ -317,7 +318,6 @@ CREATE TRIGGER update_brands_updated_at
 -- Note: Run this in Supabase Dashboard or via API
 -- INSERT INTO storage.buckets (id, name, public) 
 -- VALUES ('generated-images', 'generated-images', true);
-
 
 
 

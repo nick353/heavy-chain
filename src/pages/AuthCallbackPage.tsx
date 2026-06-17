@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Layers } from 'lucide-react';
+import { ensureUserProfile } from '../stores/authStore';
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -14,22 +15,10 @@ export function AuthCallbackPage() {
         if (error) throw error;
         
         if (session) {
-          // Check if user profile exists
-          const { data: profile } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (!profile) {
-            // Create user profile for OAuth users
-            await supabase.from('users').insert({
-              id: session.user.id,
-              email: session.user.email!,
-              name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || null,
-              avatar_url: session.user.user_metadata?.avatar_url || null,
-            });
-          }
+          await ensureUserProfile(
+            session.user,
+            session.user.user_metadata?.full_name || session.user.user_metadata?.name || null
+          );
           
           navigate('/dashboard');
         } else {
@@ -56,7 +45,6 @@ export function AuthCallbackPage() {
     </div>
   );
 }
-
 
 
 

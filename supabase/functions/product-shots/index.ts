@@ -1,5 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
+import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
+import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -237,12 +240,19 @@ STYLE: High-resolution commercial product photography, sharp focus, professional
 }
 
 serve(async (req) => {
+  let usageReservation: UsageReservation | null = null;
+  let observedBrandId: string | null = null;
+  let observedUserId: string | null = null;
+  let telemetryClient: any = null;
+  const functionName = 'product-shots';
+  const requestId = requestIdFrom(req);
+  const startedAt = Date.now();
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
+    const supabaseClient = createClient<Database>(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
@@ -251,6 +261,8 @@ serve(async (req) => {
         },
       }
     );
+    const supabaseService = createServiceClient();
+    telemetryClient = supabaseService;
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
@@ -265,6 +277,27 @@ serve(async (req) => {
     if (!brandId) {
       throw new Error('ブランドIDが指定されていません');
     }
+
+    await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
+    observedBrandId = brandId;
+    observedUserId = user.id;
+    usageReservation = await reserveBrandUsage(telemetryClient, {
+      brandId,
+      userId: user.id,
+      functionName,
+      units: 1,
+      requestId,
+      idempotencyKey: req.headers.get('idempotency-key'),
+    });
+    await recordEdgeFunctionRun(telemetryClient, {
+      reservation: usageReservation,
+      brandId,
+      userId: user.id,
+      functionName,
+      status: 'started',
+      requestId,
+    });
+
 
     // 背景プロンプトを取得
     const backgroundPrompt = BACKGROUND_OPTIONS[background] || BACKGROUND_OPTIONS['white'];
@@ -299,7 +332,7 @@ serve(async (req) => {
         finalDescription = await analyzeImageWithGemini(originalImageBase64, originalMimeType, GEMINI_API_KEY);
       } catch (e) {
         console.error('❌ Image analysis failed:', e);
-        throw new Error(`画像分析エラー: ${e.message}. 商品説明を手動で入力してください。`);
+        throw new Error(`画像分析エラー: ${clientError(e)}. 商品説明を手動で入力してください。`);
       }
     }
     
@@ -341,19 +374,19 @@ serve(async (req) => {
         let storageUrl = '';
         
         try {
-          const { error: uploadError } = await supabaseClient.storage
+          const { error: uploadError } = await supabaseService.storage
             .from('generated-images')
             .upload(fileName, imgBuffer, { contentType: 'image/png' });
 
           if (!uploadError) {
-            const { data: urlData } = supabaseClient.storage.from('generated-images').getPublicUrl(fileName);
-            storageUrl = urlData.publicUrl || '';
+            const { data: urlData } = await supabaseService.storage.from('generated-images').createSignedUrl(fileName, 60 * 60 * 24);
+            storageUrl = urlData?.signedUrl || '';
             console.log('✅ Image uploaded to storage:', storageUrl);
           } else {
             console.log('⚠️ Storage upload error:', uploadError.message);
           }
         } catch (storageError) {
-          console.log('⚠️ Storage warning:', storageError.message);
+          console.log('⚠️ Storage warning:', clientError(storageError));
         }
 
         // Always save record with image_url as fallback
@@ -362,7 +395,7 @@ serve(async (req) => {
             brand_id: brandId,
             user_id: user.id,
             storage_path: fileName,
-            image_url: storageUrl || imageDataUrl,
+            image_url: null,
             prompt: finalDescription,
             feature_type: 'product-shots',
             model_used: 'gemini-2.0-flash-exp-image-generation',
@@ -370,7 +403,7 @@ serve(async (req) => {
           });
           console.log('✅ Image record saved to database');
         } catch (dbError) {
-          console.log('⚠️ Database warning:', dbError.message);
+          console.log('⚠️ Database warning:', clientError(dbError));
         }
 
         results.push({
@@ -391,7 +424,7 @@ serve(async (req) => {
     }
 
     try {
-      await supabaseClient.from('api_usage_logs').insert({
+      await supabaseService.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
         provider: 'gemini',
@@ -399,10 +432,24 @@ serve(async (req) => {
         cost_usd: 0,
       });
     } catch (e) {
-      console.log('⚠️ Usage log warning:', e.message);
+      console.log('⚠️ Usage log warning:', clientError(e));
     }
 
     console.log(`🎉 Generated ${results.length}/${selectedShots.length} shots`);
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'succeeded');
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'succeeded',
+        requestId,
+        durationMs: durationSince(startedAt),
+      });
+    }
+
+
 
     return new Response(
       JSON.stringify({
@@ -416,9 +463,23 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'failed', { error: sanitizeError(error) });
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'failed',
+        requestId,
+        durationMs: durationSince(startedAt),
+        errorMessage: sanitizeError(error),
+      });
+    }
+
     console.error('❌ Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: clientError(error) }),
       { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -426,4 +487,3 @@ serve(async (req) => {
     );
   }
 });
-

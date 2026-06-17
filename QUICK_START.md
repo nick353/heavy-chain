@@ -1,29 +1,27 @@
 # 🚀 Heavy Chain - セットアップ完了ガイド
 
-## ✅ Supabase設定完了
+## ✅ Supabase設定
 
-Supabaseの接続情報が設定されました！
-
-- **Project URL**: `https://ulfbddqwumeoqidxatyq.supabase.co`
-- **Anon Key**: 設定済み ✅
+Supabaseの接続情報は `.env` で設定してください。
 
 ## 📋 次のステップ
 
-### ステップ1: ストレージバケットのセットアップ（必須）
+### ステップ1: Supabase migration の適用（必須）
 
-画像を表示するには、Supabaseでストレージバケットを設定する必要があります。
+画像を表示するには、SupabaseでDBスキーマ、private bucket、storage policyを適用する必要があります。
 
-1. [Supabase Dashboard](https://app.supabase.com) を開く
-2. プロジェクト `ulfbddqwumeoqidxatyq` を選択
-3. 左メニューから **SQL Editor** をクリック
-4. 以下のファイルの内容をコピー&ペースト：
-   - **`storage-setup.sql`**（プロジェクトルートにあります）
-5. **Run** ボタンをクリック
+```bash
+supabase link --project-ref your-project-ref
+supabase db push
+```
+
+SQL Editorで手動実行する場合は、`supabase/migrations/` を `001_initial_schema.sql` から最新まで順番に実行してください。
 
 これで以下が作成されます：
 - ✅ `generated-images` バケット（画像保存用）
 - ✅ `brand-assets` バケット（ロゴ等）
-- ✅ 適切なアクセスポリシー
+- ✅ `exports` バケット（一時ダウンロード用）
+- ✅ private bucket と RLS ベースのアクセスポリシー
 
 ### ステップ2: アプリを起動
 
@@ -42,35 +40,36 @@ npm run dev
 
 ### 画像が「読込失敗」と表示される場合
 
-**原因**: ストレージバケットが設定されていない
+**原因**: migration または storage policy が適用されていない
 
 **解決方法**:
-1. `storage-setup.sql` を実行したか確認
+1. `supabase db push` で最新 migration を適用したか確認
 2. Supabase Dashboard → **Storage** で以下を確認：
    - `generated-images` バケットが存在する
-   - バケットが **Public** になっている
+   - 一括ダウンロードを使う場合は `exports` バケットも存在する
+   - バケットが **Private** になっている
 
 ### ストレージバケットの状態を確認
 
 Supabase Dashboard で：
 1. **Storage** メニューを開く
 2. バケット一覧に以下が表示されるはず：
-   - `generated-images` (Public)
-   - `brand-assets` (Public)
+   - `generated-images` (Private)
+   - `brand-assets` (Private)
+   - `exports` (Private)
 
 ### データベーステーブルが見つからない場合
 
 **解決方法**:
-1. Supabase Dashboard → **SQL Editor**
-2. `setup.sql` の内容をコピー&ペースト
-3. **Run** をクリック
+1. `supabase link --project-ref your-project-ref`
+2. `supabase db push`
 
 ## 📊 確認項目チェックリスト
 
-- [ ] Supabase設定完了（コードに組み込み済み ✅）
-- [ ] `storage-setup.sql` を実行した
+- [ ] Supabase `.env` 設定完了
+- [ ] `supabase db push` を実行した
 - [ ] ストレージバケットが作成されている
-- [ ] `setup.sql` を実行した（データベーススキーマ）
+- [ ] 最新 migration まで適用した
 - [ ] アプリが起動する
 - [ ] ログイン/サインアップができる
 - [ ] ダッシュボードが表示される
@@ -92,17 +91,14 @@ Supabase Dashboard で：
 
 ### セキュリティ
 
-現在、Supabaseの認証情報がコード（`src/lib/supabase.ts`）に直接記載されています。
-
-**本番環境では必ず `.env` ファイルを使用してください：**
+Supabaseの認証情報はコードへ直書きせず、必ず `.env` ファイルを使用してください：
 
 1. プロジェクトルートに `.env` ファイルを作成
 2. 以下を記載：
    ```env
-   VITE_SUPABASE_URL=https://ulfbddqwumeoqidxatyq.supabase.co
-   VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsZmJkZHF3dW1lb3FpZHhhdHlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY0MTcxMjcsImV4cCI6MjA4MTk5MzEyN30.1B8yRfF2QzN-HX7d3LtJkHyQ452k-Po0319ER35pzfQ
+   VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
    ```
-3. `src/lib/supabase.ts` からハードコードされた値を削除
 
 **注意**: `.env` ファイルは `.gitignore` に含まれているため、Gitにコミットされません。
 
@@ -117,4 +113,3 @@ Supabase Dashboard で：
 すべてのステップを完了したら、Heavy Chainを使い始められます！
 
 問題が発生した場合は、ブラウザの開発者ツール（F12）でコンソールのエラーメッセージを確認してください。
-

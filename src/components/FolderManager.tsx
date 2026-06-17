@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   Folder, 
   FolderPlus, 
@@ -36,13 +36,7 @@ export function FolderManager({ onSelectFolder, selectedFolderId }: FolderManage
   const [editingFolder, setEditingFolder] = useState<FolderItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (currentBrand) {
-      fetchFolders();
-    }
-  }, [currentBrand]);
-
-  const fetchFolders = async () => {
+  const fetchFolders = useCallback(async () => {
     if (!currentBrand) return;
 
     try {
@@ -81,7 +75,13 @@ export function FolderManager({ onSelectFolder, selectedFolderId }: FolderManage
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentBrand]);
+
+  useEffect(() => {
+    if (currentBrand) {
+      fetchFolders();
+    }
+  }, [currentBrand, fetchFolders]);
 
   const handleCreateFolder = async () => {
     if (!currentBrand || !newFolderName.trim()) return;
@@ -104,7 +104,7 @@ export function FolderManager({ onSelectFolder, selectedFolderId }: FolderManage
       setNewFolderName('');
       setParentFolderId(null);
       toast.success('フォルダを作成しました');
-    } catch (error) {
+    } catch {
       toast.error('フォルダの作成に失敗しました');
     }
   };
@@ -125,7 +125,7 @@ export function FolderManager({ onSelectFolder, selectedFolderId }: FolderManage
         onSelectFolder(null);
       }
       toast.success('フォルダを削除しました');
-    } catch (error) {
+    } catch {
       toast.error('フォルダの削除に失敗しました');
     }
   };
@@ -145,7 +145,7 @@ export function FolderManager({ onSelectFolder, selectedFolderId }: FolderManage
       setEditingFolder(null);
       setNewFolderName('');
       toast.success('フォルダ名を変更しました');
-    } catch (error) {
+    } catch {
       toast.error('フォルダ名の変更に失敗しました');
     }
   };
@@ -327,4 +327,3 @@ export function FolderManager({ onSelectFolder, selectedFolderId }: FolderManage
     </div>
   );
 }
-
