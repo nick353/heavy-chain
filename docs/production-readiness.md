@@ -1,19 +1,115 @@
 # Production Readiness
 
-Heavy Chain production readiness is gated by `npm run verify:full`.
+Status: **not release-ready**.
 
-Current production hardening points:
+This document is the final release gate ledger for Heavy Chain. If a check says
+`BLOCKED` or `DO NOT RUN`, stop. Do not guess, do not fill secrets into docs, and
+do not continue into production.
 
-- Billing and usage are enforced through `private.reserve_brand_usage` before external API calls.
-- Generated image database records use `storage_path` as the durable source of truth. Temporary signed URLs or data URLs can be returned to clients but must not be persisted as `image_url`.
-- Edge Function telemetry is recorded through `private.record_edge_function_run`; public `SECURITY DEFINER` helpers are removed.
+Current evidence is recorded in
+[`docs/release-evidence-2026-06-17.md`](./release-evidence-2026-06-17.md).
 
-Before release, run:
+## Final Gate
+
+Heavy Chain can only be released after all of these are true:
+
+1. All automated gates pass with production-like environment variables loaded.
+2. Staging DB readback proves usage, cleanup, and generated image storage state.
+3. Browser smoke proof is current and captured after env injection.
+
+As of 2026-06-17, item 1 is incomplete because `npm run verify` fails even when
+`.env.production.local` is sourced.
+
+## Known Blockers
+
+- `npm run verify` is blocked by missing environment variable names:
+  `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and
+  `PUBLIC_URL`.
+- Staging readback is not complete.
+- Generated image `image_url` non-persistence readback is not complete.
+- Some ignored proof files are useful, but were not re-captured after the latest
+  commit. Treat them as supporting notes, not final release proof.
+
+## Required Environment Names
+
+`npm run verify` runs `scripts/check-env.mjs`, which requires all names below.
+Do not write secret values in docs, logs, screenshots, or commits.
+
+```bash
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+GEMINI_API_KEY
+OPENAI_API_KEY
+PUBLIC_URL
+```
+
+On 2026-06-17, `.env.production.local` plus the current shell still missed:
+`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and
+`PUBLIC_URL`.
+
+## Passed Gates
+
+These checks are recorded as passed for 2026-06-17:
+
+```bash
+npm run build
+npm run supabase:verify
+npm run security:audit
+npm run smoke:edge
+npm run typecheck
+npm run lint
+npm run e2e
+```
+
+`npm run build` and `npm run e2e` were also re-run with
+`.env.production.local` sourced so Vite received the required `VITE_*` values.
+
+`git status` was clean at the start of the release-doc update.
+
+## Blocked Gate
 
 ```bash
 npm run verify
-npm run build
-npm run supabase:verify
 ```
 
-Run `npm run verify:full` when Playwright dependencies and Supabase CLI are available.
+Result: failed because required env names were missing, even after sourcing
+`.env.production.local`.
+
+## Human Stop Rule
+
+Stop immediately before any action that asks for or performs:
+
+- sending, submitting, publishing, deleting, authentication, payment, or personal
+  information entry
+- production traffic changes without current staging proof
+- database deletion of usage, audit, edge run, cleanup, or generated image proof
+
+If one of those appears, record the blocker and ask a human owner to continue.
+
+## DB Readback SQL
+
+Use read-only SQL for staging proof. Save the output as release evidence.
+
+```sql
+select id, function_name, status, units, request_id, reserved_at, completed_at, created_at
+from public.usage_events
+order by created_at desc
+limit 50;
+
+select id, function_name, status, created_at
+from public.edge_function_runs
+order by created_at desc
+limit 50;
+
+select id, storage_path, image_url, created_at
+from public.generated_images
+order by created_at desc
+limit 50;
+```
+
+For generated images, release proof must show that durable state is
+`storage_path`, and that signed URLs or data URLs are not persisted as canonical
+`image_url`.
