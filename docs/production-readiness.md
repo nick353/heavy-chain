@@ -12,15 +12,20 @@ Current evidence is recorded in
 Safe local validators now exist for proof files:
 
 ```bash
+npm run release:doctor
 npm run verify:readback
 npm run verify:browser-use
 npm run supabase:verify:static
 ```
 
-They do not ask for credentials, do not call external services, and do not print
-secret values. `npm run supabase:verify:static` is a Supabase project static
-guard only; release evidence JSON is validated separately by
-`npm run verify:readback`. A pass here is still not release approval.
+`npm run release:doctor` is the recommended first command for a safe readiness
+diagnosis. It prints `OK` or `STOP` for git clean status, `env:check`,
+`verify:readback`, `verify:browser-use`, `supabase:verify:static`,
+`security:audit`, `smoke:edge`, `typecheck`, and `lint`, then names the first
+`STOP` and next action. It does not run `supabase:verify:db`, `verify:full`,
+deploys, auth flows, payment, deletion, personal information entry, or DB
+mutation. These validators do not print secret values. A pass here is still not
+release approval.
 
 ## Final Gate
 

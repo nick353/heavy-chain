@@ -7,6 +7,18 @@ write down the blocker. Do not skip ahead.
 
 ## 1. Start Clean
 
+For the safe one-command readiness diagnosis, run:
+
+```bash
+npm run release:doctor
+```
+
+It only runs read-only/local checks: git clean status, `env:check`,
+`verify:readback`, `verify:browser-use`, `supabase:verify:static`,
+`security:audit`, `smoke:edge`, `typecheck`, and `lint`. It never runs
+`supabase:verify:db` or `verify:full`, and it shows the first `STOP` with a
+next action.
+
 - Confirm `git status --short` is empty.
 - Confirm the release evidence file for the day exists.
 - Do not include secret values in the evidence.
