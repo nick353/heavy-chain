@@ -19,6 +19,11 @@ Optional chat/completions override:
 
 `OPENAI_CHAT_API_KEY` is never used for image generation. DALL-E fallback requires `OPENAI_API_KEY`.
 
+Optional Gemini model overrides:
+
+- `GEMINI_IMAGE_MODEL`: image generation/editing model. Defaults to `gemini-2.5-flash-image`.
+- `GEMINI_ANALYSIS_MODEL`: image analysis and text planning model. Defaults to `gemini-2.5-flash`.
+
 Frontend-only environment:
 
 - `VITE_SUPABASE_URL`

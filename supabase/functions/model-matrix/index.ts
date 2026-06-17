@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
+import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,11 +45,11 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
 }
 
 // 画像を分析して商品説明を取得
-async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string): Promise<string> {
+async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string, analysisModel: string): Promise<string> {
   console.log('🔍 Analyzing image with Gemini...');
   
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(analysisModel, apiKey),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -94,7 +95,8 @@ async function generateWithReference(
   bodyType: typeof BODY_TYPES[0],
   ageGroup: typeof AGE_GROUPS[0],
   gender: string,
-  apiKey: string
+  apiKey: string,
+  imageModel: string
 ): Promise<string | null> {
   console.log(`🎨 Generating ${bodyType.name} x ${ageGroup.name} with reference...`);
 
@@ -112,7 +114,7 @@ CRITICAL REQUIREMENTS:
 STYLE: Professional fashion photography, full body shot, studio lighting, neutral background`;
 
   const generateResponse = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(imageModel, apiKey),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -152,12 +154,13 @@ async function generateFromText(
   bodyType: typeof BODY_TYPES[0],
   ageGroup: typeof AGE_GROUPS[0],
   gender: string,
-  apiKey: string
+  apiKey: string,
+  imageModel: string
 ): Promise<string | null> {
   const prompt = `${gender} model wearing ${description}, ${bodyType.prompt}, ${ageGroup.prompt}, fashion photography, full body shot, professional studio lighting, neutral background, high quality`;
 
   const generateResponse = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(imageModel, apiKey),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -259,6 +262,8 @@ serve(async (req) => {
     if (!GEMINI_API_KEY) {
       throw new Error('Gemini API key not configured');
     }
+    const analysisModel = geminiAnalysisModel();
+    const imageModel = geminiImageModel();
 
     // 画像がある場合は分析
     let originalImageBase64: string | null = null;
@@ -273,7 +278,7 @@ serve(async (req) => {
         
         // 商品説明がない場合は画像から生成
         if (!finalDescription) {
-          finalDescription = await analyzeImageWithGemini(originalImageBase64, originalMimeType, GEMINI_API_KEY);
+          finalDescription = await analyzeImageWithGemini(originalImageBase64, originalMimeType, GEMINI_API_KEY, analysisModel);
         }
       }
     }
@@ -300,7 +305,8 @@ serve(async (req) => {
             bodyType,
             ageGroup,
             gender,
-            GEMINI_API_KEY
+            GEMINI_API_KEY,
+            imageModel
           );
         }
 
@@ -311,7 +317,8 @@ serve(async (req) => {
             bodyType,
             ageGroup,
             gender,
-            GEMINI_API_KEY
+            GEMINI_API_KEY,
+            imageModel
           );
         }
 
@@ -346,7 +353,7 @@ serve(async (req) => {
               image_url: null,
               prompt: finalDescription,
               feature_type: 'model-matrix',
-              model_used: 'gemini-2.0-flash-exp-image-generation',
+              model_used: imageModel,
               generation_params: { 
                 bodyType: bodyType.id, 
                 ageGroup: ageGroup.id,

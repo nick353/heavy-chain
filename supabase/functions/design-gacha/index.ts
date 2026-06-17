@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
+import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,11 +43,11 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
 }
 
 // 画像を分析して商品説明を取得
-async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string): Promise<string> {
+async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string, analysisModel: string): Promise<string> {
   console.log('🔍 Analyzing image with Gemini...');
   
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(analysisModel, apiKey),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -88,7 +89,8 @@ async function generateWithReference(
   originalMimeType: string,
   description: string,
   direction: typeof DESIGN_DIRECTIONS[0],
-  apiKey: string
+  apiKey: string,
+  imageModel: string
 ): Promise<string | null> {
   console.log(`🎨 Generating ${direction.name} with product reference...`);
 
@@ -105,7 +107,7 @@ CRITICAL - KEEP THE PRODUCT IDENTICAL:
 Style: ${direction.prompt}, professional fashion photography`;
 
   const generateResponse = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(imageModel, apiKey),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -142,12 +144,13 @@ Style: ${direction.prompt}, professional fashion photography`;
 async function generateFromText(
   brief: string,
   direction: typeof DESIGN_DIRECTIONS[0],
-  apiKey: string
+  apiKey: string,
+  imageModel: string
 ): Promise<string | null> {
   const fullPrompt = `${brief}, ${direction.prompt}, professional fashion photography, high quality, studio lighting`;
 
   const generateResponse = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(imageModel, apiKey),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -252,6 +255,8 @@ serve(async (req) => {
     if (!GEMINI_API_KEY) {
       throw new Error('Gemini API key not configured');
     }
+    const analysisModel = geminiAnalysisModel();
+    const imageModel = geminiImageModel();
 
     // 画像がある場合は分析
     let originalImageBase64: string | null = null;
@@ -266,7 +271,7 @@ serve(async (req) => {
         
         // briefがない場合は画像から生成
         if (!productDescription) {
-          productDescription = await analyzeImageWithGemini(originalImageBase64, originalMimeType, GEMINI_API_KEY);
+          productDescription = await analyzeImageWithGemini(originalImageBase64, originalMimeType, GEMINI_API_KEY, analysisModel);
         }
       }
     }
@@ -291,7 +296,8 @@ serve(async (req) => {
           originalMimeType,
           productDescription,
           direction,
-          GEMINI_API_KEY
+          GEMINI_API_KEY,
+          imageModel
         );
       }
 
@@ -300,7 +306,8 @@ serve(async (req) => {
         imageBase64 = await generateFromText(
           productDescription,
           direction,
-          GEMINI_API_KEY
+          GEMINI_API_KEY,
+          imageModel
         );
       }
 
@@ -335,7 +342,7 @@ serve(async (req) => {
             image_url: null,
             prompt: productDescription,
             feature_type: 'design-gacha',
-            model_used: 'gemini-2.0-flash-exp-image-generation',
+            model_used: imageModel,
             generation_params: { direction: direction.id, brief: productDescription, isProductFixed },
           });
           console.log('✅ Image record saved to database');

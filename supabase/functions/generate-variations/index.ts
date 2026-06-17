@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
+import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,11 +32,11 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
 }
 
 // 画像を分析して詳細な説明を取得
-async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string): Promise<string> {
+async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string, analysisModel: string): Promise<string> {
   console.log('🔍 Analyzing image with Gemini...');
   
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(analysisModel, apiKey),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -77,7 +78,8 @@ async function generateVariationWithReference(
   originalMimeType: string,
   description: string,
   variationPrompt: string,
-  apiKey: string
+  apiKey: string,
+  imageModel: string
 ): Promise<string | null> {
   console.log('🎨 Generating variation with reference...');
 
@@ -94,7 +96,7 @@ CRITICAL - KEEP THE PRODUCT IDENTICAL:
 Style: Professional fashion photography, high quality`;
 
   const generateResponse = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(imageModel, apiKey),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -132,7 +134,8 @@ async function generateSceneWithReference(
   originalMimeType: string,
   description: string,
   scenePrompt: string,
-  apiKey: string
+  apiKey: string,
+  imageModel: string
 ): Promise<string | null> {
   console.log('🎨 Generating scene variation with reference...');
 
@@ -151,7 +154,7 @@ CRITICAL - KEEP THE PRODUCT IDENTICAL:
 Style: Professional lifestyle fashion photography, natural lighting`;
 
   const generateResponse = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(imageModel, apiKey),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -257,6 +260,8 @@ serve(async (req) => {
     if (!GEMINI_API_KEY) {
       throw new Error('Gemini API key not configured');
     }
+    const analysisModel = geminiAnalysisModel();
+    const imageModel = geminiImageModel();
 
     // Fetch and analyze the image
     console.log('🖼️ Fetching original image...');
@@ -267,7 +272,7 @@ serve(async (req) => {
     const { base64: imageBase64, mimeType } = imageData;
 
     // Analyze the image with Gemini
-    const description = await analyzeImageWithGemini(imageBase64, mimeType, GEMINI_API_KEY);
+    const description = await analyzeImageWithGemini(imageBase64, mimeType, GEMINI_API_KEY, analysisModel);
     console.log('📝 Description:', description.substring(0, 100) + '...');
 
     const results = [];
@@ -283,7 +288,8 @@ serve(async (req) => {
           mimeType,
           description,
           scenePrompt,
-          GEMINI_API_KEY
+          GEMINI_API_KEY,
+          imageModel
         );
 
         if (genImageBase64) {
@@ -309,7 +315,7 @@ serve(async (req) => {
               storage_path: fileName,
               image_url: null,
               prompt: scenePrompt,
-              model_used: 'gemini-2.0-flash-exp-image-generation',
+              model_used: imageModel,
               generation_params: { scene: scenePrompt, originalDescription: description },
             });
             if (imageInsertError) throw imageInsertError;
@@ -347,7 +353,8 @@ serve(async (req) => {
           mimeType,
           description,
           variationPrompt,
-          GEMINI_API_KEY
+          GEMINI_API_KEY,
+          imageModel
         );
 
         if (genImageBase64) {
@@ -373,7 +380,7 @@ serve(async (req) => {
               storage_path: fileName,
               image_url: null,
               prompt: variationPrompt,
-              model_used: 'gemini-2.0-flash-exp-image-generation',
+              model_used: imageModel,
               generation_params: { variation: i + 1, originalDescription: description },
             });
             if (imageInsertError) throw imageInsertError;

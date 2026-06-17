@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
+import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -80,6 +81,8 @@ serve(async (req) => {
     if (!GEMINI_API_KEY) {
       throw new Error('Gemini API key not configured');
     }
+    const analysisModel = geminiAnalysisModel();
+    const imageModel = geminiImageModel();
 
     // Fetch and analyze the original image
     console.log('🖼️ Fetching original image...');
@@ -88,7 +91,7 @@ serve(async (req) => {
     // Analyze the image in extreme detail
     console.log('🔍 Analyzing image for high-resolution regeneration...');
     const analysisResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
+      geminiGenerateContentUrl(analysisModel, GEMINI_API_KEY),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,7 +120,7 @@ serve(async (req) => {
     const prompt = `${description}. Ultra high resolution, extremely detailed, 4K quality, sharp focus, professional photography, pristine quality`;
 
     const generateResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`,
+      geminiGenerateContentUrl(imageModel, GEMINI_API_KEY),
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -172,7 +175,7 @@ serve(async (req) => {
         image_url: null,
         prompt,
         feature_type: 'upscale',
-        model_used: 'gemini-2.0-flash-exp-image-generation',
+        model_used: imageModel,
         generation_params: { scale },
       });
       if (imageInsertError) throw imageInsertError;

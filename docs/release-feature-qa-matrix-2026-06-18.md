@@ -45,7 +45,7 @@ supporting evidence only until a focused variations run is captured.
 | optimize-prompt | PASS: Edge Function succeeded and usage was recorded. | final Browser Use evidence plus DB readback |
 | campaign-image / generate-image | PASS: generated 1 image, rendered it, saved DB job/image rows, and storage signed URL readback passed. | final Browser Use evidence plus `output/release-prep/final-db-readback-20260618-parent/readback.json` |
 | gallery readback | PASS: generated image appears in gallery state/screenshot and DB readback confirms 1 generated image. | `gallery-*`, readback JSON |
-| remove-background | BLOCKED: upload/function path reached a failed result and the UI showed the error state. | final Browser Use error state/screenshot plus DB readback |
+| remove-background | CODE FIXED, REMOTE RETEST BLOCKED: upload/function path reached a failed result and the UI showed the error state. Code now uses current configurable Gemini model IDs instead of the removed 2.0 image model, but the fix still needs Edge Function deploy and real Browser Use retest. | `output/release-prep/full-ui-qa-20260618-parent/102-remove-bg-fixed-after-*`, DB readback, and code guard in `npm run smoke:edge` |
 
 DB readback for this pass is saved at
 `output/release-prep/final-db-readback-20260618-parent/readback.json` and
@@ -76,13 +76,21 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
   committed leakage.
 - Added visible result-panel output for prompt optimization.
 - Added a persistent result-panel error state for generation failures.
+- Replaced deprecated Gemini 2.0 Edge Function model IDs with shared
+  configurable defaults: `GEMINI_IMAGE_MODEL` defaults to
+  `gemini-2.5-flash-image`, `GEMINI_ANALYSIS_MODEL` defaults to
+  `gemini-2.5-flash`, and `generate-image` fallback uses `gemini-3-pro-image`.
+- Added static guards so `npm run smoke:edge` and
+  `SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh` fail if
+  the removed Gemini 2.0 model IDs reappear.
 
 ## Remaining Blockers
 
 - Apply the new brand insert policy migration to staging/prod; current remote DB
   still returns RLS 403 for first brand creation.
-- Investigate `remove-background` Edge Function failure. It records failed
-  `usage_events` and `edge_function_runs` with a safe Japanese error message.
+- Deploy updated Edge Functions to staging, then rerun focused Browser Use
+  generation proof for `remove-background` and the other Gemini image-editing
+  features. Deployment was not run in this pass.
 - Signup is blocked by Supabase Auth HTTP 429 in this test lane.
 - Focused real-generation runs are still needed for the remaining image/text
   features beyond optimize-prompt, campaign-image, and remove-background.

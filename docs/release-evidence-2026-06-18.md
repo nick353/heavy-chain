@@ -77,8 +77,8 @@ Current parent-process Browser Use evidence is saved under:
 output/release-prep/final-browser-use-20260618-parent/
 ```
 
-It includes state and screenshot evidence for terms, privacy, legal, generate,
-and gallery surfaces.
+It includes screenshot evidence for terms and state/screenshot evidence for
+privacy, legal, generate, and gallery surfaces.
 
 Current DB readback is saved at:
 
@@ -119,19 +119,28 @@ Final parent-process real operation proof was captured for:
 - `campaign-image` through `generate-image`: succeeded, rendered a generated
   image, wrote `generation_jobs` and `generated_images`, and produced a valid
   Storage signed URL.
-- `remove-background`: failed and the UI showed the error state. This remains a
-  blocker.
+- `remove-background`: failed and the UI showed the error state. Detailed
+  Browser Use state/screenshot evidence is under
+  `output/release-prep/full-ui-qa-20260618-parent/102-remove-bg-fixed-after-*`.
+  Code now avoids the deprecated Gemini 2.0 image model path, but the updated
+  Edge Functions were not deployed or retested remotely in this pass.
 
 Remaining release blockers from this pass:
 
 - Apply `20260618023000_restore_brand_insert_policy.sql` to staging/prod before
   treating first brand creation as fixed remotely.
-- Investigate the `remove-background` Edge Function failure.
+- Deploy the updated Edge Functions and rerun focused real Browser Use
+  generation proof for `remove-background` and the remaining Gemini
+  image-editing features.
+- Resolve or retry the signup lane after the Supabase Auth HTTP 429 blocker.
+- Capture focused real-generation proof for remaining image/text features beyond
+  `optimize-prompt`, `campaign-image`, and `remove-background`.
 - Cleanup/delete was not run because it was not approved in this pass.
 
 The historical Browser Use proof remains useful as supporting view-only shape
-evidence, but current release diagnosis must use the final parent evidence
-directory above.
+evidence. Current release diagnosis must use the final parent evidence directory
+above for summary smoke, the full UI QA directory for detailed operation proof,
+and the DB readback directory for data proof.
 
 ## Current Browser Use Smoke
 
@@ -142,10 +151,10 @@ QA lane:
 output/release-prep/final-browser-use-20260618-parent/
 ```
 
-Saved state/screenshot evidence includes:
+Saved final proof evidence includes:
 
 ```text
-terms
+terms screenshot
 privacy
 legal
 generate
@@ -161,13 +170,20 @@ Passed:
 
 ```bash
 npm run e2e
+npm run lint --silent
 npm run typecheck
 npm run build --silent
 npm run verify
+npm run smoke:edge --silent
 SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
+deno check supabase/functions/{colorize,design-gacha,generate-image,generate-variations,model-matrix,multilingual-banner,product-shots,remove-background,upscale}/index.ts
 ```
 
 `npm run e2e` reported 6 passed. No secret values are recorded here.
+
+The Gemini model update also passed Codex read-only review with no findings
+after the smoke guard was widened to include
+`supabase/functions/_shared/geminiModels.ts`.
 
 ## Current Release Doctor
 
@@ -196,9 +212,11 @@ Cleanup/delete was not approved and was not run.
 ## Known Blockers
 
 Release remains blocked by the unapplied remote brand insert RLS migration, the
-`remove-background` Edge Function failure shown in the UI, and the fact that
-cleanup/delete was not approved or run in this pass. The release is not
-release-ready.
+need to deploy and retest updated Edge Functions for `remove-background` and the
+remaining Gemini image-editing paths, the Supabase Auth HTTP 429 signup blocker,
+the lack of focused real-generation proof for the remaining image/text features,
+and the fact that cleanup/delete was not approved or run in this pass. The
+release is not release-ready.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
 chooses rollback; normal release verification does not deploy, delete, auth,

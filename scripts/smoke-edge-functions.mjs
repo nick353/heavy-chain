@@ -17,10 +17,12 @@ const guarded = [
 ];
 
 const observedOnly = ['share-link'];
+const geminiModelGuardFiles = ['supabase/functions/_shared/geminiModels.ts'];
 const failures = [];
 const quotaGuardMigration = 'supabase/migrations/20260617080031_harden_usage_quota_guards.sql';
 const authenticatedUsageSummaryMigration =
   'supabase/migrations/20260617184720_authenticated_usage_summary_rpc.sql';
+const deprecatedGeminiModelPattern = /gemini-2\.0-flash-exp(?:-image-generation)?/;
 
 function hasUnsafePersistedImageUrl(text) {
   const imageUrlAssignments = text.match(/image_url\s*:\s*[^,\n}]+/g) || [];
@@ -33,6 +35,9 @@ function hasUnsafePersistedImageUrl(text) {
 for (const name of guarded) {
   const file = `supabase/functions/${name}/index.ts`;
   const text = readFileSync(file, 'utf8');
+  if (deprecatedGeminiModelPattern.test(text)) {
+    failures.push(`${name}: deprecated Gemini 2.0 model reference`);
+  }
   if (!text.includes('reserveBrandUsage')) failures.push(`${name}: missing quota reserve`);
   if (!text.includes('completeBrandUsage')) failures.push(`${name}: missing usage completion`);
   if (!text.includes('recordEdgeFunctionRun')) failures.push(`${name}: missing edge run observability`);
@@ -43,7 +48,17 @@ for (const name of guarded) {
 
 for (const name of observedOnly) {
   const text = readFileSync(`supabase/functions/${name}/index.ts`, 'utf8');
+  if (deprecatedGeminiModelPattern.test(text)) {
+    failures.push(`${name}: deprecated Gemini 2.0 model reference`);
+  }
   if (!text.includes('recordEdgeFunctionRun')) failures.push(`${name}: missing edge run observability`);
+}
+
+for (const file of geminiModelGuardFiles) {
+  const text = readFileSync(file, 'utf8');
+  if (deprecatedGeminiModelPattern.test(text)) {
+    failures.push(`${file}: deprecated Gemini 2.0 model reference`);
+  }
 }
 
 const quotaGuardSql = readFileSync(quotaGuardMigration, 'utf8');

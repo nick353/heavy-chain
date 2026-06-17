@@ -84,6 +84,7 @@ require_no_repo_file_match "service role key value assignment in repository file
 require_no_match "OpenAI-style secret literal" "sk-[A-Za-z0-9_-]\\{20,\\}" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist
 require_no_match "storage/data URL image_url fallback" "image_url:[[:space:]]*storageUrl[[:space:]]*||[[:space:]]*imageDataUrl" supabase/functions
 require_no_match "data URL image_url persistence" "image_url:[[:space:]]*imageDataUrl" supabase/functions
+require_no_match "deprecated Gemini 2.0 model reference in Supabase functions" "gemini-2\\.0-flash-exp(-image-generation)?" supabase/functions -E
 
 echo "Checking required private RPC definitions"
 grep -q "private.reserve_brand_usage" supabase/migrations/20260617044009_billing_usage_limits.sql

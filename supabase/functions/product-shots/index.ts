@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
+import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,24 +44,13 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
   return { base64, mimeType: contentType };
 }
 
-// Gemini 2.0で画像を分析
-async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string): Promise<string> {
-  console.log('🔍 Analyzing image with Gemini 2.0 Flash...');
+// 画像を分析
+async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string, analysisModel: string): Promise<string> {
+  console.log(`🔍 Analyzing image with Gemini model: ${analysisModel}`);
   
-  const models = [
-    'gemini-2.0-flash-exp',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-pro-latest'
-  ];
-  
-  let lastError = null;
-  
-  for (const model of models) {
-    console.log(`🔄 Trying model: ${model}`);
-    
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+  try {
+    const response = await fetch(
+      geminiGenerateContentUrl(analysisModel, apiKey),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -100,24 +90,20 @@ Output ONLY the detailed English description, nothing else.`
           }),
         }
       );
-      
-      const data = await response.json();
-      
-      if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        const description = data.candidates[0].content.parts[0].text;
-        console.log('✅ Image analysis successful with', model);
-        console.log('📝 Description:', description);
-        return description;
-      }
-      
-      lastError = data;
-      
-    } catch (e) {
-      lastError = e;
+
+    const data = await response.json();
+
+    if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      const description = data.candidates[0].content.parts[0].text;
+      console.log('✅ Image analysis successful with', analysisModel);
+      console.log('📝 Description:', description);
+      return description;
     }
+
+    throw new Error(JSON.stringify(data));
+  } catch (e) {
+    throw new Error(`画像分析に失敗しました: ${clientError(e)}`);
   }
-  
-  throw new Error(`画像分析に失敗しました: ${JSON.stringify(lastError)}`);
 }
 
 // 元画像を参照して異なるアングルを生成
@@ -127,7 +113,8 @@ async function generateAngleWithReference(
   shot: typeof SHOT_TYPES[0], 
   description: string,
   backgroundPrompt: string,
-  apiKey: string
+  apiKey: string,
+  imageModel: string
 ): Promise<string | null> {
   console.log(`🎨 Generating ${shot.name} with reference image...`);
   
@@ -152,7 +139,7 @@ STYLE: Professional e-commerce product photography, high resolution, sharp focus
 DO NOT change any aspect of the garment itself - only change the camera angle.`;
 
   const generateResponse = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(imageModel, apiKey),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -199,7 +186,8 @@ async function generateAngleFromText(
   shot: typeof SHOT_TYPES[0], 
   description: string,
   backgroundPrompt: string,
-  apiKey: string
+  apiKey: string,
+  imageModel: string
 ): Promise<string | null> {
   console.log(`🎨 Generating ${shot.name} from text (fallback)...`);
   
@@ -212,7 +200,7 @@ BACKGROUND: ${backgroundPrompt}
 STYLE: High-resolution commercial product photography, sharp focus, professional lighting.`;
 
   const generateResponse = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+    geminiGenerateContentUrl(imageModel, apiKey),
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -307,6 +295,8 @@ serve(async (req) => {
     if (!GEMINI_API_KEY) {
       throw new Error('Gemini API key not configured');
     }
+    const analysisModel = geminiAnalysisModel();
+    const imageModel = geminiImageModel();
 
     // 元画像のBase64を取得（参照画像として使用）
     let originalImageBase64: string | null = null;
@@ -329,7 +319,7 @@ serve(async (req) => {
     if (!finalDescription && originalImageBase64) {
       console.log('📝 Analyzing image to get description...');
       try {
-        finalDescription = await analyzeImageWithGemini(originalImageBase64, originalMimeType, GEMINI_API_KEY);
+        finalDescription = await analyzeImageWithGemini(originalImageBase64, originalMimeType, GEMINI_API_KEY, analysisModel);
       } catch (e) {
         console.error('❌ Image analysis failed:', e);
         throw new Error(`画像分析エラー: ${clientError(e)}. 商品説明を手動で入力してください。`);
@@ -358,13 +348,14 @@ serve(async (req) => {
           shot, 
           finalDescription,
           backgroundPrompt,
-          GEMINI_API_KEY
+          GEMINI_API_KEY,
+          imageModel
         );
       }
       
       // 参照生成が失敗した場合はテキストのみで生成
       if (!imageBase64) {
-        imageBase64 = await generateAngleFromText(shot, finalDescription, backgroundPrompt, GEMINI_API_KEY);
+        imageBase64 = await generateAngleFromText(shot, finalDescription, backgroundPrompt, GEMINI_API_KEY, imageModel);
       }
 
       if (imageBase64) {
@@ -398,7 +389,7 @@ serve(async (req) => {
             image_url: null,
             prompt: finalDescription,
             feature_type: 'product-shots',
-            model_used: 'gemini-2.0-flash-exp-image-generation',
+            model_used: imageModel,
             generation_params: { shotType: shot.id, productDescription: finalDescription, hasReferenceImage: !!originalImageBase64 },
           });
           console.log('✅ Image record saved to database');

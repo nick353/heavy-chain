@@ -3,6 +3,7 @@ import { clientError, createServiceClient, createUserClient, requireBrandRole, r
 import { createOpenAiChatCompletion, hasOpenAiChatApiKey } from '../_shared/openaiChat.ts'
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
+import { geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -122,8 +123,9 @@ serve(async (req) => {
     }
     console.log('Job created:', job.id)
 
-    // Generate image using Gemini 2.0 Flash (NanoBanana Pro)
+    // Generate image using the configured Gemini image model first.
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
+    const primaryGeminiImageModel = geminiImageModel()
     
     let imageBase64: string | null = null
     let usedModel = 'unknown'
@@ -144,12 +146,11 @@ serve(async (req) => {
 
     // Try Gemini Nano Banana first (faster than Pro)
     if (geminiApiKey) {
-      console.log('Generating image with Nano Banana (gemini-2.5-flash-image)...')
+      console.log(`Generating image with Gemini model: ${primaryGeminiImageModel}...`)
       
       try {
-        // Try Nano Banana first (gemini-2.5-flash-image) - much faster than Pro
         const geminiResponse = await fetchWithTimeout(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${geminiApiKey}`,
+          geminiGenerateContentUrl(primaryGeminiImageModel, geminiApiKey),
           {
             method: 'POST',
             headers: {
@@ -179,19 +180,20 @@ serve(async (req) => {
           for (const part of geminiData.candidates[0].content.parts) {
             if (part.inlineData?.data) {
               imageBase64 = part.inlineData.data
-              usedModel = 'nano-banana'
-              console.log('Image generated successfully with Nano Banana')
+              usedModel = primaryGeminiImageModel
+              console.log(`Image generated successfully with Gemini model: ${primaryGeminiImageModel}`)
               break
             }
           }
         }
         
         if (!imageBase64) {
-          console.log('Nano Banana did not return image, trying Nano Banana Pro (gemini-3-pro-image-preview)...')
+          console.log('Nano Banana did not return image, trying Nano Banana Pro (gemini-3-pro-image)...')
           
           // Try Nano Banana Pro as fallback (slower but higher quality)
+          const fallbackGeminiImageModel = 'gemini-3-pro-image'
           const nanoBananaResponse = await fetchWithTimeout(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${geminiApiKey}`,
+            geminiGenerateContentUrl(fallbackGeminiImageModel, geminiApiKey),
             {
               method: 'POST',
               headers: {
@@ -220,7 +222,7 @@ serve(async (req) => {
             for (const part of nanoBananaData.candidates[0].content.parts) {
               if (part.inlineData?.data) {
                 imageBase64 = part.inlineData.data
-                usedModel = 'nano-banana-pro'
+                usedModel = fallbackGeminiImageModel
                 console.log('Image generated successfully with Nano Banana Pro')
                 break
               }
