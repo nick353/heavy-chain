@@ -24,6 +24,8 @@ npm run supabase:verify:static
 
 The default `npm run verify:browser-use` validates historical supporting proof
 only. It does not validate a newly captured rollback smoke directory.
+`RELEASE_BROWSER_USE_PROOF_DIR` is for current release diagnosis, not rollback;
+rollback smoke must use its own explicit `--dir` path.
 
 If one fails, preserve the failed output and hand it to the human rollback
 owner. Validator failure is evidence to carry into rollback triage, not an

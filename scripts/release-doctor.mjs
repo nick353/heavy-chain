@@ -54,7 +54,11 @@ function proofTargetValue(envName, fallback, validate) {
 const releaseDate = proofTargetValue('RELEASE_DATE', latestReleaseEvidenceDate(), validReleaseDate);
 const releaseEnvironment = proofTargetValue('RELEASE_ENVIRONMENT', 'staging', validReleaseEnvironment);
 const currentGitCommit = proofTargetValue('RELEASE_GIT_COMMIT', gitCommit(), validGitCommit);
-const proofTargetValid = [releaseDate, releaseEnvironment, currentGitCommit].every((target) => target.valid);
+const releaseBrowserUseProofDir = process.env.RELEASE_BROWSER_USE_PROOF_DIR || '';
+const releaseBrowserUseProofDirValid = releaseBrowserUseProofDir.trim().length > 0;
+const proofTargetValid =
+  [releaseDate, releaseEnvironment, currentGitCommit].every((target) => target.valid) &&
+  releaseBrowserUseProofDirValid;
 
 const currentReadbackArgs = ['run', 'verify:readback', '--silent'];
 if (releaseDate.value) currentReadbackArgs.push('--', '--expect-release-date', releaseDate.value);
@@ -66,6 +70,8 @@ if (currentGitCommit.value) {
   if (!currentReadbackArgs.includes('--')) currentReadbackArgs.push('--');
   currentReadbackArgs.push('--expect-git-commit', currentGitCommit.value);
 }
+
+const currentBrowserUseArgs = ['run', 'verify:browser-use', '--silent', '--', '--dir', releaseBrowserUseProofDir];
 
 const checks = [
   {
@@ -81,7 +87,7 @@ const checks = [
     command: 'node',
     args: ['-e', 'process.exit(0)'],
     stop: 'release proof target の override 値が不正です。',
-    next: 'RELEASE_DATE は YYYY-MM-DD、RELEASE_ENVIRONMENT は staging/prod/production/preview/development/local、RELEASE_GIT_COMMIT は40桁 hex だけを使ってください。',
+    next: 'RELEASE_DATE は YYYY-MM-DD、RELEASE_ENVIRONMENT は staging/prod/production/preview/development/local、RELEASE_GIT_COMMIT は40桁 hex、RELEASE_BROWSER_USE_PROOF_DIR は今回の Browser Use 証跡ディレクトリを指定してください。',
     validate: () => proofTargetValid,
   },
   {
@@ -108,9 +114,9 @@ const checks = [
   {
     name: 'verify:browser-use',
     command: 'npm',
-    args: ['run', 'verify:browser-use', '--silent'],
+    args: currentBrowserUseArgs,
     stop: 'Browser Use の画面証跡が足りないか壊れています。',
-    next: 'env-injected の view-only 画面証跡を取り直し、保存先のファイルを確認してください。',
+    next: 'env-injected の view-only 画面証跡を取り直し、RELEASE_BROWSER_USE_PROOF_DIR に保存先ディレクトリを指定してください。',
   },
   {
     name: 'supabase:verify:static',
@@ -202,7 +208,7 @@ function runCheck(check) {
 console.log('Release doctor: read-only/local checks only.');
 console.log('禁止: send / submit / publish / delete / auth / payment / PII / DB mutation / deploy');
 console.log(
-  `Current proof target: release_date=${releaseDate.display} environment=${releaseEnvironment.display} git_commit=${currentGitCommit.display}`,
+  `Current proof target: release_date=${releaseDate.display} environment=${releaseEnvironment.display} git_commit=${currentGitCommit.display} browser_use_proof_dir=${releaseBrowserUseProofDir || 'missing'}`,
 );
 console.log('');
 

@@ -12,7 +12,7 @@ Current evidence is recorded in
 Safe local validators now exist for proof files:
 
 ```bash
-npm run release:doctor
+RELEASE_BROWSER_USE_PROOF_DIR=<current-browser-use-proof-dir> npm run release:doctor
 npm run verify:readback
 npm run verify:browser-use
 npm run supabase:verify:static
@@ -21,8 +21,10 @@ npm run supabase:verify:static
 `npm run release:doctor` is the recommended first command for a safe readiness
 diagnosis. It runs checks in order and stops at the first `STOP`: git clean
 status, proof target, `env:check`, `verify:readback`, current readback metadata
-matching, `verify:browser-use`, `supabase:verify:static`, `security:audit`,
-`smoke:edge`, `typecheck`, and `lint`. It does not run `supabase:verify:db`,
+matching, current `verify:browser-use`, `supabase:verify:static`,
+`security:audit`, `smoke:edge`, `typecheck`, and `lint`. It requires
+`RELEASE_BROWSER_USE_PROOF_DIR` so historical Browser Use proof is never
+silently treated as current proof. It does not run `supabase:verify:db`,
 `verify:full`, deploys, auth flows, payment, deletion, personal information
 entry, or DB mutation. The displayed failure tail redacts known secret patterns.
 A pass here is still not release approval.
@@ -56,6 +58,8 @@ the later gates.
   commit. Treat them as supporting notes, not final release proof.
 - `npm run verify:readback` can validate saved JSON proof, but it does not make
   old ignored proof current.
+- `RELEASE_BROWSER_USE_PROOF_DIR` is not set to a current Browser Use proof
+  directory yet, so doctor cannot validate current browser smoke proof.
 
 ## Required Environment Names
 
@@ -72,6 +76,18 @@ GEMINI_API_KEY
 OPENAI_API_KEY
 PUBLIC_URL
 ```
+
+## Release Target Environment Names
+
+`npm run release:doctor` also requires this non-secret target name:
+
+```bash
+RELEASE_BROWSER_USE_PROOF_DIR
+```
+
+Set it to the current env-injected Browser Use proof directory for this release.
+The standalone `npm run verify:browser-use` command still defaults to historical
+supporting proof.
 
 Historical note: on 2026-06-17, `.env.production.local` plus the shell still
 missed `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and
@@ -154,8 +170,10 @@ With those flags, every proof JSON must include matching `release_date`,
 `environment`, `git_commit`, and a valid `captured_at`.
 `npm run release:doctor` applies that current-proof check automatically using
 the latest `docs/release-evidence-YYYY-MM-DD.md`, `staging` by default, and the
-current git commit. Override with `RELEASE_DATE`, `RELEASE_ENVIRONMENT`, or
-`RELEASE_GIT_COMMIT` only for an intentional human-owned target.
+current git commit. It also applies the Browser Use directory from
+`RELEASE_BROWSER_USE_PROOF_DIR`. Override with `RELEASE_DATE`,
+`RELEASE_ENVIRONMENT`, or `RELEASE_GIT_COMMIT` only for an intentional
+human-owned target.
 The automatic git commit target is `HEAD`; it is only a release-candidate-current
 target after `git clean` passes.
 

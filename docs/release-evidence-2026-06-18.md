@@ -16,7 +16,9 @@ Before this file was added, the latest release evidence file was
 `docs/release-evidence-2026-06-17.md`, so the default doctor target remained
 `release_date=2026-06-17`.
 
-The 2026-06-18 target was checked with an explicit override:
+Before the release doctor was hardened to require
+`RELEASE_BROWSER_USE_PROOF_DIR`, the 2026-06-18 target was checked with an
+explicit override:
 
 ```bash
 RELEASE_DATE=2026-06-18 npm run release:doctor --silent
@@ -55,8 +57,17 @@ No secret values are recorded here.
 
 - Current staging readback is incomplete.
 - Generated image `image_url` null/missing/empty readback is incomplete.
-- Current readback metadata proof for 2026-06-18 is incomplete because doctor
-  stops at `env:check` before reaching `verify:readback:current`.
+- Current Browser Use proof is incomplete until
+  `RELEASE_BROWSER_USE_PROOF_DIR` points at a recaptured env-injected proof
+  directory.
+- Current readback metadata proof for 2026-06-18 is incomplete. Without
+  `RELEASE_BROWSER_USE_PROOF_DIR`, doctor stops at `proof target`; after that
+  directory is set, the current environment still stops at `env:check`, so
+  `verify:readback:current` is not reached.
+
+After the release doctor was hardened to require a current Browser Use proof
+directory, running it without `RELEASE_BROWSER_USE_PROOF_DIR` stops at
+`proof target` before `env:check`.
 
 ## Stop Boundary
 

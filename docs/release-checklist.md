@@ -10,24 +10,26 @@ write down the blocker. Do not skip ahead.
 For the safe one-command readiness diagnosis, run:
 
 ```bash
-npm run release:doctor
+RELEASE_BROWSER_USE_PROOF_DIR=<current-browser-use-proof-dir> npm run release:doctor
 ```
 
 It runs read-only/local checks in order and stops at the first `STOP`: git clean
 status, proof target, `env:check`, `verify:readback`, current readback metadata
-matching, `verify:browser-use`, `supabase:verify:static`, `security:audit`,
-`smoke:edge`, `typecheck`, and `lint`. It never runs `supabase:verify:db` or
-`verify:full`, and it shows the first `STOP` with a next action.
-The default `verify:browser-use` step validates historical supporting proof only;
-current Browser Use proof still needs the `--dir` check in Section 4.
+matching, current `verify:browser-use`, `supabase:verify:static`,
+`security:audit`, `smoke:edge`, `typecheck`, and `lint`. It never runs
+`supabase:verify:db` or `verify:full`, and it shows the first `STOP` with a next
+action.
+Doctor requires `RELEASE_BROWSER_USE_PROOF_DIR` and passes it to
+`verify:browser-use -- --dir`. This closes the historical default proof path for
+current release diagnosis.
 
 - Confirm `git status --short` is empty.
 - Confirm the release evidence file for the day exists.
 - Do not include secret values in the evidence.
 
 Historical note: the 2026-06-17 start state was clean. For the current release,
-`npm run release:doctor` is the source of truth, except current Browser Use
-proof must also be validated with the Section 4 `--dir` command after recapture.
+`npm run release:doctor` is the source of truth after
+`RELEASE_BROWSER_USE_PROOF_DIR` points at the recaptured current proof directory.
 
 ## 2. Load Environment
 
@@ -93,8 +95,8 @@ These commands do not connect to the database. If surfaced through
 secret patterns. If any one fails, read the file path in the failure line, fix
 that proof, and stop before release. Do not paste secrets into the proof file to
 make it pass.
-For current Browser Use proof, use the Section 4 `--dir` command instead of the
-default historical proof path.
+For current Browser Use proof outside doctor, use the Section 4 `--dir` command
+instead of the default historical proof path.
 `npm run supabase:verify:static` is only the Supabase project static guard;
 `npm run verify:readback` is the separate release evidence validator.
 
@@ -185,9 +187,10 @@ npm run verify:readback -- --expect-release-date 2026-06-18 --expect-environment
 
 With those flags, each proof JSON must include matching `release_date`,
 `environment`, `git_commit`, and a valid `captured_at`.
-Current readback metadata proof for 2026-06-18 is incomplete because
-`npm run release:doctor` stops at `env:check` before reaching this current
-metadata gate.
+Current readback metadata proof for 2026-06-18 is incomplete. Without
+`RELEASE_BROWSER_USE_PROOF_DIR`, `npm run release:doctor` stops at
+`proof target`; after that directory is set, the current environment still stops
+at `env:check`, so this current metadata gate is not reached.
 `npm run release:doctor` now runs this current-readback check automatically
 using the latest `docs/release-evidence-YYYY-MM-DD.md`, `staging` by default,
 and the current git commit. Use `RELEASE_DATE`, `RELEASE_ENVIRONMENT`, or
