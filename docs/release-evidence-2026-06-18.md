@@ -7,8 +7,20 @@ evidence ledger, not approval to release.
 
 ## Start State
 
-Before these doc edits, `npm run release:doctor --silent` reported `git clean`
-as OK.
+Current git commit:
+
+```text
+6d998c8ab45d634487112d34fd257eb142214fdb
+```
+
+`git status --short --branch` reported a clean worktree:
+
+```text
+## main...origin/main [ahead 9]
+```
+
+`npm run release:doctor --silent` in the clean worktree stopped at
+`proof target` until `RELEASE_BROWSER_USE_PROOF_DIR` was set.
 
 ## Doctor Target Check
 
@@ -73,6 +85,126 @@ directory, running it in a clean worktree without
 The historical Browser Use proof remains useful as supporting view-only shape
 evidence, but it fails current metadata expectations and must not be treated as
 2026-06-18 current proof.
+
+## Current Browser Use Smoke
+
+Current view-only Browser Use proof was captured against local preview:
+
+```text
+output/release-prep/browser-use-20260618-6d998c8
+```
+
+Saved files:
+
+```text
+home-env-full.png
+home-env-state.txt
+home-env-eval.json
+login-full.png
+login-state.txt
+login-eval.json
+```
+
+The capture opened `/` and `/login`, took screenshots, saved Browser Use state,
+and evaluated page structure. It did not type credentials, click auth buttons,
+submit forms, publish, delete, deploy, or mutate the database.
+
+Validator command:
+
+```bash
+npm run verify:browser-use --silent -- --dir output/release-prep/browser-use-20260618-6d998c8 --expect-release-date 2026-06-18 --expect-environment staging --expect-git-commit 6d998c8ab45d634487112d34fd257eb142214fdb
+```
+
+Result:
+
+```text
+Browser Use proof verification passed. Secret values were not printed.
+```
+
+The validator confirmed rendered product copy, `/login` and `/signup` paths,
+Google/Apple/email login surfaces, email/password inputs, PNG proof, view-only
+state, and matching Browser Use metadata.
+
+## Local Verification
+
+Passed:
+
+```bash
+npm run build --silent
+npm run supabase:verify --silent
+npm run security:audit --silent
+npm run smoke:edge --silent
+npm run typecheck --silent
+npm run verify:browser-use:regression --silent
+npm run verify:readback --silent
+```
+
+`npm run verify --silent` is still blocked by missing environment names in the
+current shell. With `.env.production.local` sourced, the missing names are:
+
+```text
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+PUBLIC_URL
+```
+
+No secret values are recorded here. `security:audit`, `smoke:edge`, and
+`typecheck` passed individually, so the remaining `verify` blocker is the env
+gate.
+
+`npm run supabase:verify:db --silent` is blocked because local Postgres is not
+running on `127.0.0.1:54322`.
+
+## Current Release Doctor
+
+With current Browser Use proof supplied and `.env.production.local` sourced:
+
+```bash
+RELEASE_BROWSER_USE_PROOF_DIR=output/release-prep/browser-use-20260618-6d998c8 npm run release:doctor --silent
+```
+
+Result:
+
+```text
+OK   git clean
+OK   proof target
+STOP env:check
+```
+
+The safe output tail reported 4/8 required keys present and the same four
+missing names listed above. The doctor did not reach `verify:readback:current`
+or the current Browser Use check because it stops at the first blocker.
+
+## Current Readback and DB Proof
+
+Historical saved readback proof still validates with:
+
+```bash
+npm run verify:readback --silent
+```
+
+The same files fail current metadata expectations for 2026-06-18 and commit
+`6d998c8ab45d634487112d34fd257eb142214fdb`, so current staging/prod readback is
+not complete. Current read-only DB readback still needs new proof for:
+
+- generated image `storage_path` present and canonical `image_url` null/missing/empty
+- usage and edge function run rows tied by request id
+- cleanup proof with zero remaining smoke users
+
+Do not create that proof by deleting rows or mutating DB state in this release
+prep turn.
+
+## Known Blockers
+
+Release remains blocked by missing service/env values, missing current
+staging/prod DB readback, missing current RLS/quota/cleanup DB readback proof,
+and `supabase:verify:db` needing a running local Supabase database or an
+approved DB verification lane.
+
+Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
+chooses rollback; normal release verification does not deploy, delete, auth,
+pay, or enter personal information.
 
 ## Stop Boundary
 
