@@ -1,6 +1,71 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
+
+function gitCommit() {
+  const result = spawnSync('git', ['rev-parse', 'HEAD'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+    shell: false,
+  });
+
+  if (result.status !== 0) return null;
+  return result.stdout.trim();
+}
+
+function latestReleaseEvidenceDate() {
+  try {
+    const dates = readdirSync('docs')
+      .map((file) => /^release-evidence-(\d{4}-\d{2}-\d{2})\.md$/.exec(file)?.[1])
+      .filter(Boolean)
+      .sort();
+
+    return dates.at(-1) || null;
+  } catch {
+    return null;
+  }
+}
+
+function validReleaseDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function validReleaseEnvironment(value) {
+  return /^(staging|prod|production|preview|development|local)$/.test(value);
+}
+
+function validGitCommit(value) {
+  return /^[0-9a-fA-F]{40}$/.test(value);
+}
+
+function proofTargetValue(envName, fallback, validate) {
+  const envValue = process.env[envName];
+  const candidate = envValue || fallback;
+
+  if (!candidate) return { value: null, display: 'unknown', valid: true };
+  if (!validate(candidate)) return { value: null, display: 'invalid', valid: false };
+  return { value: candidate, display: candidate, valid: true };
+}
+
+const releaseDate = proofTargetValue('RELEASE_DATE', latestReleaseEvidenceDate(), validReleaseDate);
+const releaseEnvironment = proofTargetValue('RELEASE_ENVIRONMENT', 'staging', validReleaseEnvironment);
+const currentGitCommit = proofTargetValue('RELEASE_GIT_COMMIT', gitCommit(), validGitCommit);
+const proofTargetValid = [releaseDate, releaseEnvironment, currentGitCommit].every((target) => target.valid);
+
+const currentReadbackArgs = ['run', 'verify:readback', '--silent'];
+if (releaseDate.value) currentReadbackArgs.push('--', '--expect-release-date', releaseDate.value);
+if (releaseEnvironment.value) {
+  if (!currentReadbackArgs.includes('--')) currentReadbackArgs.push('--');
+  currentReadbackArgs.push('--expect-environment', releaseEnvironment.value);
+}
+if (currentGitCommit.value) {
+  if (!currentReadbackArgs.includes('--')) currentReadbackArgs.push('--');
+  currentReadbackArgs.push('--expect-git-commit', currentGitCommit.value);
+}
 
 const checks = [
   {
@@ -10,6 +75,14 @@ const checks = [
     stop: '作業ツリーに未コミット変更があります。',
     next: '`git status --short` を見て、必要な変更だけをコミットまたは退避してください。',
     validate: ({ stdout }) => stdout.trim().length === 0,
+  },
+  {
+    name: 'proof target',
+    command: 'node',
+    args: ['-e', 'process.exit(0)'],
+    stop: 'release proof target の override 値が不正です。',
+    next: 'RELEASE_DATE は YYYY-MM-DD、RELEASE_ENVIRONMENT は staging/prod/production/preview/development/local、RELEASE_GIT_COMMIT は40桁 hex だけを使ってください。',
+    validate: () => proofTargetValid,
   },
   {
     name: 'env:check',
@@ -24,6 +97,13 @@ const checks = [
     args: ['run', 'verify:readback', '--silent'],
     stop: '保存済み readback 証跡が足りないか壊れています。',
     next: '失敗行の proof file を直すか、read-only readback 証跡を取り直してください。',
+  },
+  {
+    name: 'verify:readback:current',
+    command: 'npm',
+    args: currentReadbackArgs,
+    stop: 'readback 証跡が現在の release date / environment / git commit と一致していません。',
+    next: 'staging の read-only readback を取り直し、各 JSON に release_date / environment / git_commit / captured_at を入れてください。',
   },
   {
     name: 'verify:browser-use',
@@ -73,8 +153,15 @@ const secretReplacements = [
   [/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/g, '[redacted]'],
   [/sk-[A-Za-z0-9_-]{12,}/g, '[redacted]'],
   [/AIza[0-9A-Za-z_-]{12,}/g, '[redacted]'],
-  [/(service_role[_-]?(?:key)?[=:]\s*)\S+/gi, '$1[redacted]'],
-  [/((?:SUPABASE|OPENAI|GEMINI|PUBLIC|VITE)_[A-Z0-9_]*(?:KEY|TOKEN|SECRET|URL)?[=:]\s*)\S+/g, '$1[redacted]'],
+  [/(service_role[_-]?(?:key)?\s*[=:]\s*)\S+/gi, '$1[redacted]'],
+  [/((?:SUPABASE|OPENAI|GEMINI|PUBLIC|VITE)_[A-Z0-9_]*(?:KEY|TOKEN|SECRET|URL)?\s*[=:]\s*)\S+/gi, '$1[redacted]'],
+  [
+    /((?:"(?:PASSWORD|TOKEN|SECRET|KEY|API_KEY|ACCESS_TOKEN|AUTH_TOKEN|DATABASE_URL|DB_URL|JWT_SECRET|[A-Z0-9_]+_(?:PASSWORD|TOKEN|SECRET|KEY))"|'(?:PASSWORD|TOKEN|SECRET|KEY|API_KEY|ACCESS_TOKEN|AUTH_TOKEN|DATABASE_URL|DB_URL|JWT_SECRET|[A-Z0-9_]+_(?:PASSWORD|TOKEN|SECRET|KEY))'|\b(?:PASSWORD|TOKEN|SECRET|KEY|API_KEY|ACCESS_TOKEN|AUTH_TOKEN|DATABASE_URL|DB_URL|JWT_SECRET|[A-Z0-9_]+_(?:PASSWORD|TOKEN|SECRET|KEY))\b)\s*[=:]\s*)("[^"]*"|'[^']*'|[^\s,}\]]+)/gi,
+    (_, prefix, value) => {
+      const quote = value.startsWith('"') ? '"' : value.startsWith("'") ? "'" : '';
+      return `${prefix}${quote}[redacted]${quote}`;
+    },
+  ],
 ];
 
 function redact(text) {
@@ -114,12 +201,18 @@ function runCheck(check) {
 
 console.log('Release doctor: read-only/local checks only.');
 console.log('禁止: send / submit / publish / delete / auth / payment / PII / DB mutation / deploy');
+console.log(
+  `Current proof target: release_date=${releaseDate.display} environment=${releaseEnvironment.display} git_commit=${currentGitCommit.display}`,
+);
 console.log('');
 
-const results = checks.map(runCheck);
+const results = [];
 
-for (const result of results) {
+for (const check of checks) {
+  const result = runCheck(check);
+  results.push(result);
   console.log(`${result.passed ? 'OK  ' : 'STOP'} ${result.name}`);
+  if (!result.passed) break;
 }
 
 const firstStop = results.find((result) => !result.passed);
@@ -149,5 +242,5 @@ if (firstStop.error) {
 }
 
 console.log('');
-console.log('Secret values were not printed.');
+console.log('Known secret patterns were redacted from the displayed output.');
 process.exit(1);

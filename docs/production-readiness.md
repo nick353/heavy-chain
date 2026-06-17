@@ -19,13 +19,13 @@ npm run supabase:verify:static
 ```
 
 `npm run release:doctor` is the recommended first command for a safe readiness
-diagnosis. It prints `OK` or `STOP` for git clean status, `env:check`,
-`verify:readback`, `verify:browser-use`, `supabase:verify:static`,
-`security:audit`, `smoke:edge`, `typecheck`, and `lint`, then names the first
-`STOP` and next action. It does not run `supabase:verify:db`, `verify:full`,
-deploys, auth flows, payment, deletion, personal information entry, or DB
-mutation. These validators do not print secret values. A pass here is still not
-release approval.
+diagnosis. It runs checks in order and stops at the first `STOP`: git clean
+status, proof target, `env:check`, `verify:readback`, current readback metadata
+matching, `verify:browser-use`, `supabase:verify:static`, `security:audit`,
+`smoke:edge`, `typecheck`, and `lint`. It does not run `supabase:verify:db`,
+`verify:full`, deploys, auth flows, payment, deletion, personal information
+entry, or DB mutation. The displayed failure tail redacts known secret patterns.
+A pass here is still not release approval.
 
 ## Final Gate
 
@@ -130,9 +130,10 @@ npm run verify:readback
 npm run verify:browser-use
 ```
 
-If a validator fails, stop. The failure line names the file and missing proof
-without printing secret values. Fix the evidence source, recapture if needed,
-and rerun the validator.
+If a validator fails, stop. The failure line names the file and missing proof.
+When validator failures are surfaced through `npm run release:doctor`, the
+doctor's displayed tail uses known-pattern redaction. Fix the evidence source,
+recapture if needed, and rerun the validator.
 
 For current release evidence, run the readback validator with explicit metadata
 expectations:
@@ -143,6 +144,12 @@ npm run verify:readback -- --expect-release-date 2026-06-17 --expect-environment
 
 With those flags, every proof JSON must include matching `release_date`,
 `environment`, `git_commit`, and a valid `captured_at`.
+`npm run release:doctor` applies that current-proof check automatically using
+the latest `docs/release-evidence-YYYY-MM-DD.md`, `staging` by default, and the
+current git commit. Override with `RELEASE_DATE`, `RELEASE_ENVIRONMENT`, or
+`RELEASE_GIT_COMMIT` only for an intentional human-owned target.
+The automatic git commit target is `HEAD`; it is only a release-candidate-current
+target after `git clean` passes.
 
 ## DB Readback SQL
 

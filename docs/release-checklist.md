@@ -13,11 +13,11 @@ For the safe one-command readiness diagnosis, run:
 npm run release:doctor
 ```
 
-It only runs read-only/local checks: git clean status, `env:check`,
-`verify:readback`, `verify:browser-use`, `supabase:verify:static`,
-`security:audit`, `smoke:edge`, `typecheck`, and `lint`. It never runs
-`supabase:verify:db` or `verify:full`, and it shows the first `STOP` with a
-next action.
+It runs read-only/local checks in order and stops at the first `STOP`: git clean
+status, proof target, `env:check`, `verify:readback`, current readback metadata
+matching, `verify:browser-use`, `supabase:verify:static`, `security:audit`,
+`smoke:edge`, `typecheck`, and `lint`. It never runs `supabase:verify:db` or
+`verify:full`, and it shows the first `STOP` with a next action.
 
 - Confirm `git status --short` is empty.
 - Confirm the release evidence file for the day exists.
@@ -81,9 +81,11 @@ npm run verify:browser-use
 npm run supabase:verify:static
 ```
 
-These commands do not connect to the database and do not print secret values.
-If any one fails, read the file path in the failure line, fix that proof, and
-stop before release. Do not paste secrets into the proof file to make it pass.
+These commands do not connect to the database. If surfaced through
+`npm run release:doctor`, the doctor's displayed failure tail redacts known
+secret patterns. If any one fails, read the file path in the failure line, fix
+that proof, and stop before release. Do not paste secrets into the proof file to
+make it pass.
 `npm run supabase:verify:static` is only the Supabase project static guard;
 `npm run verify:readback` is the separate release evidence validator.
 
@@ -159,6 +161,13 @@ npm run verify:readback -- --expect-release-date 2026-06-17 --expect-environment
 
 With those flags, each proof JSON must include matching `release_date`,
 `environment`, `git_commit`, and a valid `captured_at`.
+`npm run release:doctor` now runs this current-readback check automatically
+using the latest `docs/release-evidence-YYYY-MM-DD.md`, `staging` by default,
+and the current git commit. Use `RELEASE_DATE`, `RELEASE_ENVIRONMENT`, or
+`RELEASE_GIT_COMMIT` only when a human owner intentionally verifies a different
+target.
+The automatic git commit target is `HEAD`; treat it as release-candidate-current
+only after `git clean` passes.
 
 ## 6. Gates Not To Run
 
