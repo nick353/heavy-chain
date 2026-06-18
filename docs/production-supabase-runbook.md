@@ -6,22 +6,23 @@ Create migrations only through Supabase CLI:
 supabase migration new <migration_name>
 ```
 
-Current 2026-06-18 status: accepted-risk; release doctor passed on current
-HEAD. The brand insert policy migration
-`supabase/migrations/20260618023000_restore_brand_insert_policy.sql` has been
-applied remotely, and updated Edge Functions have been deployed. The
+Current 2026-06-18 status: owned signup/user journey resolved; release doctor
+passed on current HEAD. The brand insert policy migration
+`supabase/migrations/20260618023000_restore_brand_insert_policy.sql` and the
+first-brand RPC migration
+`supabase/migrations/20260618090000_create_brand_rpc.sql` have been applied
+remotely, and updated Edge Functions have been deployed. The
 `generate-variations` Edge Function was also redeployed after fixing
 `generated_images.feature_type` and `generation_params.featureType` writes for
 `scene-coordinate` and `variations`. Do not rerun remote mutation steps from
 release verification without explicit human-owner approval.
 
-Accepted risk is signup proof blocked by owned Gmail confirmation. The owned
-Gmail retry created an Auth user, but `email_confirmed_at=null`; login failed
-with Supabase Auth `email_not_confirmed`, so the exact blocker is
-`signup_email_confirmation_required`. This is an accepted risk, not successful
-signup proof. Next open the Gmail confirmation link, then rerun login -> brand
--> generate -> gallery proof. `release:doctor` does not mechanically STOP on
-it, but human release review must keep it as residual risk. Cleanup/delete is
+Owned signup/user journey is resolved for the approved bypass path. After the
+user disabled email confirmation and approved admin-confirming the existing
+owned Auth user, API/UI login succeeded. A follow-on first-brand RLS 42501
+blocker was fixed by moving first-brand creation to the authenticated
+`public.create_brand` RPC and applying that migration remotely. Browser Use then
+completed login -> brand -> generate -> gallery proof. Cleanup/delete is
 resolved from historical proof only, not from the current parent-goal run; the
 historical proof covered artifact-listed QA
 storage objects, `generated_images` rows, brands, and Auth users. Local DB
@@ -33,8 +34,7 @@ a healthy local DB with valid excludes, passed `supabase migration list
 `exact_blocker=null`. Browser Use smoke proof passes on current `HEAD` under
 `output/release-prep/parent-goal-20260618-current-head/browser-use-current/`,
 and `release:doctor` passes with no `STOP`. `docs/release-blockers-2026-06-18.json`
-records signup as the remaining accepted risk and local DB reset/recreate as
-resolved.
+records owned signup/user journey and local DB reset/recreate as resolved.
 After this docs commit, save the final doctor transcript at
 `output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt`.
 Existing DB scene rows were generated before the fix and still have

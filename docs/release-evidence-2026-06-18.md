@@ -204,12 +204,12 @@ latest-feature-image-summary.json
 
 Release-risk update from the current-HEAD parent goal and owned Gmail retry:
 
-- Signup success proof is still missing. The owned Gmail retry created an Auth
-  user, but `email_confirmed_at=null`; the follow-up login failed with
-  `email_not_confirmed`, so the exact blocker is
-  `signup_email_confirmation_required`. This is an accepted risk, not
-  successful signup proof; `release:doctor` does not mechanically stop on it,
-  but human release review must keep it as residual risk.
+- Signup and first user journey proof is now resolved for the owned account.
+  The user disabled email confirmation and explicitly approved
+  admin-confirming the existing owned Auth user. API login succeeded, Browser
+  Use login reached the dashboard, the first-brand RLS blocker was repaired
+  with the `create_brand` RPC migration, and Browser Use completed
+  login -> brand -> generate -> gallery proof.
 - Local DB reset/recreate is resolved. The current-HEAD local DB proof reports
   `reset_recreate_ok=true`, `db_verify_ok=true`, and `exact_blocker=null`
   after initial reset/start failures and a successful retry with valid excludes.
@@ -218,8 +218,8 @@ Release-risk update from the current-HEAD parent goal and owned Gmail retry:
 
 Browser Use smoke metadata verification now passes for current `HEAD` under
 `output/release-prep/parent-goal-20260618-current-head/browser-use-current/`.
-`release:doctor` has no `STOP` on current `HEAD`; signup remains the accepted
-release risk in `docs/release-blockers-2026-06-18.json`.
+`release:doctor` has no `STOP` on current `HEAD`; the owned signup/user-journey
+blocker is resolved in `docs/release-blockers-2026-06-18.json`.
 
 ## Current Browser Use Smoke
 
@@ -308,20 +308,25 @@ output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json
 
 ## Known Blockers
 
-Release risk remains: signup proof is accepted by the user, not resolved by
-successful signup proof.
-Earlier signup attempts hit Supabase Auth HTTP 429, and the parent closeout
-retry used a redacted `example.com` address and returned HTTP 400 invalid email.
-The current owned Gmail retry moved the blocker forward: signup created an Auth
-user, but `email_confirmed_at=null`; login is blocked by Supabase Auth
-`email_not_confirmed`. The exact blocker is
-`signup_email_confirmation_required`. This is not successful signup proof.
-Next action is to open the Gmail confirmation link, then rerun login -> brand
--> generate -> gallery proof. Evidence is saved under:
+Signup proof is resolved for the owned account after the user-approved bypass
+path. Earlier signup attempts hit Supabase Auth HTTP 429, and the parent
+closeout retry used a redacted `example.com` address and returned HTTP 400
+invalid email. The owned Gmail retry first stopped at `email_not_confirmed`;
+after email confirmation was disabled and the existing Auth user was
+admin-confirmed, API login succeeded. The first-brand flow then exposed a
+separate `brands` RLS 42501 blocker, fixed by applying
+`supabase/migrations/20260618090000_create_brand_rpc.sql` remotely and updating
+`DashboardPage` to call `public.create_brand`. Browser Use then completed
+login -> brand -> generate -> gallery proof. Evidence is saved under:
 
 ```text
-output/release-prep/signup-owned-20260618-parent/signup-email-confirmation-summary.json
-output/release-prep/signup-owned-20260618-parent/login-email-not-confirmed.png
+output/release-prep/signup-owned-20260618-parent/admin-confirm-existing-user-summary.json
+output/release-prep/signup-owned-20260618-parent/api-login-after-admin-confirm-summary.json
+output/release-prep/signup-owned-20260618-parent/api-create-brand-rpc-after-migration-summary.json
+output/release-prep/signup-owned-20260618-parent/ui-login-dashboard-after-rpc-fix.png
+output/release-prep/signup-owned-20260618-parent/ui-generate-after-submit-rpc-fix.png
+output/release-prep/signup-owned-20260618-parent/ui-gallery-after-generate-rpc-fix.png
+output/release-prep/signup-owned-20260618-parent/owned-user-generate-gallery-readback-after-rpc-fix.json
 ```
 
 Local DB reset/recreate is resolved. After initial reset/start failures, the

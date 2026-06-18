@@ -97,13 +97,11 @@ successful signup proof.
 
 ## Accepted Risks
 
-- Signup proof is accepted as a release risk until the owned Gmail confirmation
-  link is opened and login -> brand -> generate -> gallery proof is rerun. The
-  owned Gmail retry created an Auth user, but `email_confirmed_at=null`; login
-  failed with Supabase Auth `email_not_confirmed`, so the exact blocker is
-  `signup_email_confirmation_required`. This is not successful signup proof.
-  `release:doctor` does not mechanically STOP on this accepted risk, but human
-  release review must keep it as residual risk.
+- The earlier owned signup blocker is resolved for the approved bypass path:
+  email confirmation was disabled, the existing owned Auth user was
+  admin-confirmed with user approval, API/UI login succeeded, first-brand
+  creation was repaired by the `create_brand` RPC migration, and Browser Use
+  completed login -> brand -> generate -> gallery proof.
 - Browser Use submit proof for the earlier Signup 429 UI was attempted, but the
   submit eval hung, so UI proof remains incomplete.
 

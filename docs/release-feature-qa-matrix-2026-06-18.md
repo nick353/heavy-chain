@@ -1,6 +1,6 @@
 # Release Feature QA Matrix 2026-06-18
 
-Status: **accepted-risk; release doctor passed on current HEAD**.
+Status: **owned signup/user journey resolved; release doctor passed on current HEAD**.
 
 This file records parent-only Browser Use QA for the Heavy Chain release. It is
 not release approval. Current `HEAD` Browser Use smoke proof is captured and
@@ -19,10 +19,10 @@ Detailed operation proof is under
 | Terms / privacy / legal links | PASS: dedicated terms, privacy, and legal pages render. | `terms-*`, `privacy-*`, `legal-*` |
 | Protected route redirect | PASS: dashboard/generate/gallery/brand/canvas/admin redirect to login when signed out. | `route-*.json` |
 | Signup validation | PASS: password mismatch is visible. | `11-signup-password-mismatch-state.txt` |
-| Signup submit | BLOCKED: owned Gmail signup created an Auth user, but `email_confirmed_at=null`; login is blocked by `email_not_confirmed`. Exact blocker: `signup_email_confirmation_required`. Open the Gmail confirmation link, then rerun login -> brand -> generate -> gallery proof. | `output/release-prep/signup-owned-20260618-parent/signup-email-confirmation-summary.json`, `output/release-prep/signup-owned-20260618-parent/login-email-not-confirmed.png` |
-| Login | PASS: service-created QA user logged in through the UI. | `31-login-after-state.txt` |
-| First brand creation | PASS: brand insert migration has been applied remotely. | `35-brand-keyboard-after.json` |
-| Generate / gallery | PASS: authenticated generate and gallery states/screenshots saved in the final Browser Use evidence set. | `generate-*`, `gallery-*` |
+| Signup submit | PASS: owned Gmail signup created the Auth user; after the user disabled email confirmation and approved admin-confirming that user, API login succeeded. | `admin-confirm-existing-user-summary.json`, `api-login-after-admin-confirm-summary.json` |
+| Login | PASS: owned user logged in through the UI and reached dashboard. | `ui-login-dashboard-after-rpc-fix.png` |
+| First brand creation | PASS: first-brand RLS blocker was fixed with the `create_brand` RPC migration applied remotely; API readback confirms brand and owner membership. | `api-create-brand-rpc-after-migration-summary.json` |
+| Generate / gallery | PASS: owned user generated one campaign image and gallery rendered the saved image. | `ui-generate-after-submit-rpc-fix.png`, `ui-gallery-after-generate-rpc-fix.png`, `owned-user-generate-gallery-readback-after-rpc-fix.json` |
 | Brand settings | PASS: brand information and owner member render. | `auth-brand-settings-eval.json` |
 | Canvas `/canvas/new` | PASS: editor shell, toolbar, disabled object actions, onboarding render. | `auth-canvas-new-eval.json` |
 | Gallery empty state | PASS before generation. | `auth-gallery-eval.json` |
@@ -119,14 +119,11 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 
 ## Remaining Blockers
 
-- Signup proof is accepted as missing. The owned Gmail retry created an Auth
-  user, but `email_confirmed_at=null`; login is blocked by
-  `email_not_confirmed`, with exact blocker
-  `signup_email_confirmation_required`. This is an accepted risk, not
-  successful signup proof; `release:doctor` does not mechanically STOP on it,
-  but human release review must keep it as residual risk. Next action: open the
-  Gmail confirmation link, then rerun login -> brand -> generate -> gallery
-  proof.
+- Owned signup/user-journey proof is resolved for the approved bypass path. The
+  historical `email_not_confirmed` blocker is closed by admin-confirming the
+  existing owned Auth user after the user disabled email confirmation. The
+  follow-on first-brand RLS blocker is closed by the remote `create_brand` RPC
+  migration and Browser Use login -> brand -> generate -> gallery proof.
 - Cleanup/delete is resolved from historical proof, not from the current
   parent-goal run. The current parent-goal run did not run cleanup/delete.
 - Local DB reset/recreate is resolved by the current-HEAD parent goal. The retry
@@ -137,10 +134,10 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 
 Browser Use smoke metadata verification now passes for current `HEAD` under
 `output/release-prep/parent-goal-20260618-current-head/browser-use-current/`.
-`release:doctor` passes on current `HEAD` with no `STOP`. Signup remains the
-accepted release risk until the owned Gmail confirmation link is opened and
-login -> brand -> generate -> gallery proof is rerun. The final doctor
-transcript should be saved after this docs commit at
+`release:doctor` passes on current `HEAD` with no `STOP`. The owned signup/user
+journey is resolved by the admin-confirmed owned user plus Browser Use
+login -> brand -> generate -> gallery proof. The final doctor transcript should
+be saved after this docs commit at
 `output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt`.
 
 Historical note: existing DB scene rows predate the feature-type fix and still

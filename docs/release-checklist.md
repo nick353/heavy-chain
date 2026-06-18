@@ -122,10 +122,11 @@ Current 2026-06-18 parent result: `npm run verify` passes with
 `.env.production.local` sourced. Current readback metadata verification also
 passes, focused authenticated `scene-coordinate` / `variations` proof now
 passes, and current-HEAD Browser Use smoke proof validates after Browser Use
-repair. Current-HEAD Browser Use proof and `release:doctor` now
-pass with no `STOP`; signup remains the accepted release risk in
-`docs/release-blockers-2026-06-18.json`. This accepted risk is not successful
-signup proof and remains a human release-review residual risk.
+repair. Current-HEAD Browser Use proof and `release:doctor` now pass with no
+`STOP`; owned signup/user journey is resolved in
+`docs/release-blockers-2026-06-18.json` after the approved admin-confirm path,
+remote `create_brand` RPC migration, and Browser Use login -> brand ->
+generate -> gallery proof.
 
 ## 4. Browser Smoke
 
@@ -255,15 +256,13 @@ deployed remotely. Focused authenticated Browser Use generation now proves
 `scene-coordinate` and `variations` with DB/storage readback and visual QA
 passing.
 
-Signup remains explicitly accepted by the user for this full-scope run, but the
-owned Gmail retry is now blocked at email confirmation, not mailbox discovery.
-The Auth user exists with `email_confirmed_at=null`, login fails with
-`email_not_confirmed`, and the exact blocker is
-`signup_email_confirmation_required`. This does not create successful signup
-proof; next open the Gmail confirmation link, then rerun login -> brand ->
-generate -> gallery proof. `release:doctor` does not mechanically STOP on it,
-but human release review must keep it as residual risk. Local DB reset/recreate
-is now resolved by current-HEAD proof after
+Signup/user journey is resolved for the approved bypass path. The user disabled
+email confirmation and approved admin-confirming the existing owned Auth user;
+API/UI login then succeeded. First-brand creation initially hit `brands` RLS
+42501, so `supabase/migrations/20260618090000_create_brand_rpc.sql` was added
+and applied remotely, and Browser Use completed login -> brand -> generate ->
+gallery proof. Local DB reset/recreate is now resolved by current-HEAD proof
+after
 initial reset/start failures, a valid-excludes retry, clean reset/recreate, and
 DB verification. Cleanup/delete is resolved from historical proof, not from the
 current parent-goal run; usage, audit, and edge run proof rows were not
@@ -275,8 +274,7 @@ Cleanup/no residual process state was confirmed after the parent run.
 After this docs commit, save the final doctor transcript at
 `output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt`.
 `docs/release-blockers-2026-06-18.json` records
-`signup_owned_test_email_required` as the remaining accepted risk with
-`exact_blocker=signup_email_confirmation_required`, and
+`signup_owned_test_email_required` as resolved with `exact_blocker=null`, and
 `local_db_reset_recreate_incomplete` as resolved.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`.

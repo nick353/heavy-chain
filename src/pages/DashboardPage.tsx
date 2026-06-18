@@ -20,7 +20,7 @@ import { withSignedImageUrls } from '../lib/storage';
 import { Button, Modal, Input, Textarea } from '../components/ui';
 import { Onboarding, useOnboarding } from '../components/Onboarding';
 import { UsageStats } from '../components/UsageStats';
-import type { GeneratedImage } from '../types/database';
+import type { Brand, GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -197,28 +197,23 @@ export function DashboardPage() {
 
     setIsCreatingBrand(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        toast.error('ログインが必要です');
+        return;
+      }
+
       const { data, error } = await supabase
-        .from('brands')
-        .insert({
-          owner_id: user!.id,
-          name: brandForm.name,
-          tone_description: brandForm.toneDescription || null,
-          target_audience: brandForm.targetAudience || null
-        })
-        .select()
-        .single();
+        .rpc('create_brand', {
+          p_name: brandForm.name,
+          p_tone_description: brandForm.toneDescription || null,
+          p_target_audience: brandForm.targetAudience || null
+        });
 
       if (error) throw error;
 
-      // Create brand member entry
-      await supabase.from('brand_members').insert({
-        brand_id: data.id,
-        user_id: user!.id,
-        role: 'owner',
-        joined_at: new Date().toISOString()
-      });
-
-      setCurrentBrand(data);
+      setCurrentBrand(data as Brand);
       setShowBrandModal(false);
       toast.success('ブランドを作成しました');
     } catch (error: any) {

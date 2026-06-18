@@ -5,14 +5,14 @@
   "blockers": [
     {
       "id": "signup_owned_test_email_required",
-      "status": "accepted",
-      "blocks_release": true,
-      "accepted_risk": true,
+      "status": "resolved",
+      "blocks_release": false,
+      "accepted_risk": false,
       "doctor_stop": false,
-      "doctor_stop_note": "The release doctor does not mechanically STOP on this user-accepted risk, but this remains a human release risk and is not successful signup proof.",
-      "exact_blocker": "signup_email_confirmation_required",
-      "auth_user_email_confirmed_at": null,
-      "login_error_code": "email_not_confirmed",
+      "doctor_stop_note": "Resolved after the user disabled email confirmation, approved admin-confirming the existing owned Auth user, and parent verification reran login -> brand -> generate -> gallery proof.",
+      "exact_blocker": null,
+      "auth_user_email_confirmed_at": "2026-06-18T14:36:59.10971Z",
+      "login_error_code": null,
       "evidence": [
         "output/release-prep/next-phase-20260618-parent/signup-api-readback.json",
         "output/release-prep/next-phase-20260618-parent2/signup-api-readback.json",
@@ -23,9 +23,16 @@
         "output/release-prep/parent-goal-20260618-current-head/signup/signup-owned-test-email-summary.json",
         "output/release-prep/parent-goal-20260618-current-head/signup/full-user-journey-summary.json",
         "output/release-prep/signup-owned-20260618-parent/signup-email-confirmation-summary.json",
-        "output/release-prep/signup-owned-20260618-parent/login-email-not-confirmed.png"
+        "output/release-prep/signup-owned-20260618-parent/login-email-not-confirmed.png",
+        "output/release-prep/signup-owned-20260618-parent/admin-confirm-existing-user-summary.json",
+        "output/release-prep/signup-owned-20260618-parent/api-login-after-admin-confirm-summary.json",
+        "output/release-prep/signup-owned-20260618-parent/api-create-brand-rpc-after-migration-summary.json",
+        "output/release-prep/signup-owned-20260618-parent/ui-login-dashboard-after-rpc-fix.png",
+        "output/release-prep/signup-owned-20260618-parent/ui-generate-after-submit-rpc-fix.png",
+        "output/release-prep/signup-owned-20260618-parent/ui-gallery-after-generate-rpc-fix.png",
+        "output/release-prep/signup-owned-20260618-parent/owned-user-generate-gallery-readback-after-rpc-fix.json"
       ],
-      "note": "Accepted by the user's explicit full-scope authorization on 2026-06-18. The owned Gmail signup attempt created an Auth user, but email_confirmed_at remained null. The follow-up login attempt failed with Supabase Auth error_code=email_not_confirmed, so exact_blocker=signup_email_confirmation_required. This is not successful signup proof. Next action: open the Gmail confirmation link for the owned account, then rerun login -> brand -> generate -> gallery proof. Secret values are not stored in this manifest."
+      "note": "Resolved on 2026-06-18 after the user disabled email confirmation and explicitly approved admin-confirming the existing owned Auth user. API login then succeeded, Browser Use login reached the dashboard with the owned brand, the create_brand RPC migration was applied remotely after the old first-brand flow hit brands RLS 42501, and Browser Use generated one campaign image that appeared in gallery. DB readback confirms the brand, owner membership, generated_images row, and storage_path-backed image. Secret values are not stored in this manifest."
     },
     {
       "id": "cleanup_delete_not_run",
