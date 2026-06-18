@@ -1,6 +1,6 @@
 # Production Readiness
 
-Status: **accepted-risk; final doctor pending**.
+Status: **accepted-risk; release doctor passed on current HEAD**.
 
 This document is the final release gate ledger for Heavy Chain. If a check says
 `BLOCKED` or `DO NOT RUN`, stop. Do not guess, do not fill secrets into docs, and
@@ -42,9 +42,11 @@ Heavy Chain can only be released after all of these are true:
 Current 2026-06-18 parent observation: the environment gate now passes with
 `.env.production.local` sourced, current readback metadata verification has
 passed, focused authenticated `scene-coordinate` / `variations` proof has
-passed, and final application-code Browser Use smoke proof validates after
-Browser Use was repaired with `profile-use`. Final release gate is still stopped
-by `docs/release-blockers-2026-06-18.json`.
+passed, current-HEAD Browser Use smoke proof validates, local DB
+reset/recreate is resolved after initial reset/start failures and a valid
+excludes retry, and `release:doctor` passes with no `STOP`. Signup remains the
+accepted release risk in `docs/release-blockers-2026-06-18.json`; this is not
+successful signup proof.
 
 ## Passed Evidence
 
@@ -75,36 +77,35 @@ by `docs/release-blockers-2026-06-18.json`.
   `runs=2`, storage download ok, and `verdict=pass`; focused visual QA also
   reports `verdict=pass`. Existing DB scene rows from before the fix still have
   `feature_type=null` and remain historical only.
-- Browser Use smoke metadata verification passed for the pre-closeout parent
-  `HEAD`. Final current `HEAD` smoke proof also passes under
-  `output/release-prep/final-closeout-20260618-parent/browser-use-current/`
-  after `browser-use profile update` and a passing `browser-use doctor`.
-- The previous `release:doctor` stop at release blockers has been converted to
-  accepted-risk entries after the user's explicit full-scope authorization.
-  Signup still has no successful owned-mailbox proof, and local DB has DB
-  verification proof but not a clean `supabase db reset` exit-0 proof.
-- Cleanup/delete was approved by the current user request and completed for
-  artifact-listed QA storage objects, `generated_images` rows, brands, and Auth
-  users. Usage, audit, and edge run proof rows were not deleted.
+- Current `HEAD` Browser Use smoke proof passes under
+  `output/release-prep/parent-goal-20260618-current-head/browser-use-current/`
+  with release date `2026-06-18`, environment `staging`, and git commit
+  `c80e209f1483dd42dafc43e15bab06346a0b46a0`.
+- `release:doctor` passes on current `HEAD` with no `STOP`.
+- Local DB reset/recreate is resolved under
+  `output/release-prep/parent-goal-20260618-current-head/local-db/local-db-reset-recreate-summary.json`;
+  after initial reset/start failures, the successful retry used valid excludes
+  and records `reset_recreate_ok=true`, `db_verify_ok=true`, and
+  `exact_blocker=null`.
+- The final `release:doctor` transcript should be saved after this docs commit
+  at
+  `output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt`.
+- Cleanup/delete is resolved by historical proof for artifact-listed QA storage
+  objects, `generated_images` rows, brands, and Auth users, not by the current
+  parent-goal run. Usage, audit, and edge run proof rows were not deleted.
 - Cleanup/no residual process state was confirmed after the parent run.
 
 ## Accepted Risks
 
-- Signup proof is accepted as a release risk until an owned test mailbox is available. Earlier
-  attempts hit Supabase Auth HTTP 429; the parent closeout retry used a redacted
-  `example.com` address and returned HTTP 400 invalid email instead, so the
-  latest blocker is not a fresh 429 reproduction. The final parent run found no
-  owned test mailbox key in the local env files and did not submit signup.
+- Signup proof is accepted as a release risk until an owned test mailbox is
+  available. Earlier attempts hit Supabase Auth HTTP 429; the parent closeout
+  retry used a redacted `example.com` address and returned HTTP 400 invalid
+  email instead, so the latest blocker is not a fresh 429 reproduction. The
+  current-HEAD parent run found no owned test mailbox key in the local env files
+  and did not submit signup. `release:doctor` does not mechanically STOP on
+  this accepted risk, but human release review must keep it as residual risk.
 - Browser Use submit proof for the earlier Signup 429 UI was attempted, but the
   submit eval hung, so UI proof remains incomplete.
-- Local Supabase DB reset/recreate was approved and attempted. Volume recreate
-  and stale Supabase temp storage migration cleanup removed the previous
-  `optimize-existing-functions-again` blocker.
-- The latest local DB retry started Colima, used the Colima Docker socket,
-  reached a healthy local database, and `SUPABASE_VERIFY_MODE=db bash
-  scripts/supabase-prod-verify.sh` passed. `supabase db reset --local
-  --no-seed` reached schema initialization but did not exit cleanly, so this is
-  accepted with DB verification proof rather than resolved by clean reset proof.
 
 ## Required Environment Names
 
@@ -222,13 +223,21 @@ human-owned target.
 The automatic git commit target is `HEAD`; it is only a release-candidate-current
 target after `git clean` passes.
 
-Final full-scope parent verification on 2026-06-18 passed release blockers,
-git clean, proof target, env check, saved readback, and current readback
-metadata on `HEAD`, then stopped at `verify:browser-use`. The saved Browser Use
-proof is still valid as application-code supporting evidence, but its metadata
-does not match the final closeout commit. A final-`HEAD` Browser Use recapture
-attempt failed at browser startup with a `BrowserStartEvent` timeout, so release
-readiness remains pending on fresh Browser Use home/login proof.
+Current-HEAD parent verification on 2026-06-18 passed release blockers, git
+clean, proof target, env check, saved readback, current readback metadata,
+current `verify:browser-use`, static Supabase verification, security audit,
+edge smoke, typecheck, and lint. `release:doctor` completed without a `STOP`
+using:
+
+```text
+output/release-prep/parent-goal-20260618-current-head/browser-use-current/
+```
+
+After this docs commit, save the final transcript at:
+
+```text
+output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt
+```
 
 For current Browser Use evidence, run the Browser Use validator with the same
 metadata expectations:

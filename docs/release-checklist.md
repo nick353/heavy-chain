@@ -1,6 +1,6 @@
 # Release Checklist
 
-Status: **accepted-risk; final doctor pending**.
+Status: **accepted-risk; release doctor passed on current HEAD**.
 
 Use this checklist from top to bottom. If any line says `STOP`, stop there and
 write down the blocker. Do not skip ahead.
@@ -121,9 +121,11 @@ environment loaded.
 Current 2026-06-18 parent result: `npm run verify` passes with
 `.env.production.local` sourced. Current readback metadata verification also
 passes, focused authenticated `scene-coordinate` / `variations` proof now
-passes, and final application-code Browser Use smoke proof validates after
-Browser Use repair. Final release gate is stopped by
-`docs/release-blockers-2026-06-18.json`.
+passes, and current-HEAD Browser Use smoke proof validates after Browser Use
+repair. Current-HEAD Browser Use proof and `release:doctor` now
+pass with no `STOP`; signup remains the accepted release risk in
+`docs/release-blockers-2026-06-18.json`. This accepted risk is not successful
+signup proof and remains a human release-review residual risk.
 
 ## 4. Browser Smoke
 
@@ -158,8 +160,9 @@ npm run verify:browser-use
 This validates `output/release-prep/browser-use-20260617` only. A pass here does
 not create or approve current 2026-06-18 Browser Use proof.
 
-After current Browser Use proof is recaptured, validate that directory
-explicitly:
+Current `HEAD` Browser Use proof is captured under
+`output/release-prep/parent-goal-20260618-current-head/browser-use-current/`.
+Validate that directory explicitly:
 
 ```bash
 npm run verify:browser-use -- --dir <current-browser-use-proof-dir> --expect-release-date 2026-06-18 --expect-environment staging --expect-git-commit <commit>
@@ -238,7 +241,7 @@ smoke, auth-provider login, or cleanup deletion.
 
 ## 7. Release Decision
 
-Current decision: **accepted-risk; do not call release-ready until final doctor passes**.
+Current decision: **accepted-risk; release doctor passed on current HEAD**.
 
 Current applied/proven state: the brand insert migration has been applied
 remotely, updated Edge Functions have been deployed, and image visual QA is PASS
@@ -252,23 +255,22 @@ deployed remotely. Focused authenticated Browser Use generation now proves
 `scene-coordinate` and `variations` with DB/storage readback and visual QA
 passing.
 
-The signup and local DB blockers were explicitly accepted by the user for this
-full-scope run. This does not create successful signup proof and does not prove
-a clean `supabase db reset` exit-0. The safe validators still need to pass.
-Cleanup/delete has been approved and
-completed for the artifact-listed QA targets only; usage, audit, and edge run
-proof rows were not deleted. Browser Use smoke metadata verification passed for
-the pre-closeout parent `HEAD`, and final application-code Browser Use smoke
-proof also validates under
-`output/release-prep/final-closeout-20260618-parent/browser-use-current/`.
-Final full-scope `release:doctor` on the closeout commit passed release
-blockers, git clean, proof target, env check, saved readback, and current
-readback metadata, then stopped at `verify:browser-use` because Browser Use
-proof metadata did not match the final commit. A recapture attempt for the
-final commit failed at browser startup with a `BrowserStartEvent` timeout.
+Signup remains explicitly accepted by the user for this full-scope run. This
+does not create successful signup proof; `release:doctor` does not
+mechanically STOP on it, but human release review must keep it as residual
+risk. Local DB reset/recreate is now resolved by current-HEAD proof after
+initial reset/start failures, a valid-excludes retry, clean reset/recreate, and
+DB verification. Cleanup/delete is resolved from historical proof, not from the
+current parent-goal run; usage, audit, and edge run proof rows were not
+deleted. Browser Use smoke metadata verification passed for
+current `HEAD` under
+`output/release-prep/parent-goal-20260618-current-head/browser-use-current/`.
 Cleanup/no residual process state was confirmed after the parent run.
+`release:doctor` passes on current `HEAD` with no `STOP`.
+After this docs commit, save the final doctor transcript at
+`output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt`.
 `docs/release-blockers-2026-06-18.json` records
-`signup_owned_test_email_required` and `local_db_reset_recreate_incomplete` as
-accepted risks.
+`signup_owned_test_email_required` as the remaining accepted risk and
+`local_db_reset_recreate_incomplete` as resolved.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`.

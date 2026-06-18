@@ -1,11 +1,11 @@
 # Release Feature QA Matrix 2026-06-18
 
-Status: **accepted-risk; final doctor pending**.
+Status: **accepted-risk; release doctor passed on current HEAD**.
 
 This file records parent-only Browser Use QA for the Heavy Chain release. It is
 not release approval. Current `HEAD` Browser Use smoke proof is captured and
 validated under
-`output/release-prep/final-closeout-20260618-parent/browser-use-current/`.
+`output/release-prep/parent-goal-20260618-current-head/browser-use-current/`.
 The earlier full-closeout recapture failure remains historical context under
 `output/release-prep/full-closeout-20260618-parent/browser-use-current/`.
 Detailed operation proof is under
@@ -119,25 +119,27 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 
 ## Remaining Blockers
 
-- Signup proof is accepted as missing until an owned test mailbox is available. Earlier
-  attempts hit Supabase Auth HTTP 429; the parent closeout retry returned HTTP
-  400 invalid email for a redacted `example.com` address. The final parent run
-  found no owned test mailbox key and did not submit signup.
-- Cleanup/delete was later approved by the current user request and completed
-  for artifact-listed QA targets only.
-- Local DB reset/recreate was approved and attempted. Volume recreate and stale
-  Supabase temp storage migration cleanup removed the previous
-  `optimize-existing-functions-again` blocker. The final retry started Colima,
-  used the Colima Docker socket, reached a healthy local DB, and DB verification
-  passed. `supabase db reset --local --no-seed` reached schema initialization
-  but did not exit cleanly, so this remains accepted-risk rather than clean
-  reset proof.
+- Signup proof is accepted as missing until an owned test mailbox is available.
+  Earlier attempts hit Supabase Auth HTTP 429; the parent closeout retry
+  returned HTTP 400 invalid email for a redacted `example.com` address. The
+  final parent run found no owned test mailbox key and did not submit signup.
+  This is an accepted risk, not successful signup proof; `release:doctor` does
+  not mechanically STOP on it, but human release review must keep it as
+  residual risk.
+- Cleanup/delete is resolved from historical proof, not from the current
+  parent-goal run. The current parent-goal run did not run cleanup/delete.
+- Local DB reset/recreate is resolved by the current-HEAD parent goal. The retry
+  followed initial reset/start failures, started Colima, used the Colima Docker
+  socket, reached a healthy local DB with valid excludes, passed migration list
+  and DB verification, completed
+  `supabase db reset --local --no-seed`, and recorded `exact_blocker=null`.
 
-Browser Use smoke metadata verification passed for the pre-closeout parent
-`HEAD`, and final application-code Browser Use smoke proof also validates after
-Browser Use repair. Cleanup/no residual process state was confirmed after the
-previous parent run and must be rechecked after final cleanup. `release:doctor`
-now stops at the release blocker manifest.
+Browser Use smoke metadata verification now passes for current `HEAD` under
+`output/release-prep/parent-goal-20260618-current-head/browser-use-current/`.
+`release:doctor` passes on current `HEAD` with no `STOP`. Signup remains the
+accepted release risk until an owned test mailbox is available. The final
+doctor transcript should be saved after this docs commit at
+`output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt`.
 
 Historical note: existing DB scene rows predate the feature-type fix and still
 have `feature_type=null`.

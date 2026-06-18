@@ -1,6 +1,6 @@
 # Release Evidence 2026-06-18
 
-Status: **accepted-risk; final doctor pending**.
+Status: **accepted-risk; release doctor passed on current HEAD**.
 
 This file records what is known for the 2026-06-18 release gate. It is an
 evidence ledger, not approval to release.
@@ -71,10 +71,10 @@ No secret values are recorded here.
 
 ## Current Proof Summary
 
-Pre-closeout Browser Use smoke proof for release doctor was saved under:
+Current `HEAD` Browser Use smoke proof for release doctor is saved under:
 
 ```text
-output/release-prep/browser-use-20260618-current/
+output/release-prep/parent-goal-20260618-current-head/browser-use-current/
 ```
 
 Detailed parent-process Browser Use operation evidence is saved under:
@@ -202,31 +202,31 @@ image-visual-qa-summary.json
 latest-feature-image-summary.json
 ```
 
-Accepted release risks from this pass:
+Release-risk update from the current-HEAD parent goal:
 
 - Signup success proof is accepted as missing because no owned test mailbox was
-  discoverable in local env files and the user explicitly authorized proceeding.
-- Local DB proof is accepted with `supabase migration list --local` and
-  `SUPABASE_VERIFY_MODE=db` passing, but without clean `supabase db reset`
-  exit-0 proof.
-- Cleanup/delete was later approved by the current user request and completed
-  for artifact-listed QA targets only.
+  discoverable in local env files and the user explicitly authorized
+  proceeding. The current-HEAD signup/full-journey proof did not submit. This
+  is an accepted risk, not successful signup proof; `release:doctor` does not
+  mechanically stop on it, but human release review must keep it as residual
+  risk.
+- Local DB reset/recreate is resolved. The current-HEAD local DB proof reports
+  `reset_recreate_ok=true`, `db_verify_ok=true`, and `exact_blocker=null`
+  after initial reset/start failures and a successful retry with valid excludes.
+- Cleanup/delete is resolved from historical proof, not from the current
+  parent-goal run. The current parent-goal run did not run cleanup/delete.
 
-Browser Use smoke metadata verification passed for the pre-closeout parent
-`HEAD`. The final parent run then repaired Browser Use by installing
-`profile-use`, confirmed `browser-use doctor` passes all checks, and captured
-current `HEAD` env-injected home/login proof. `verify-browser-use-proof` passes
-for release date `2026-06-18`, environment `staging`, and the current git
-commit. Cleanup/no residual process state still has to be rechecked after this
-final run. Final release gate remains stopped by the release blocker manifest:
-`docs/release-blockers-2026-06-18.json`.
+Browser Use smoke metadata verification now passes for current `HEAD` under
+`output/release-prep/parent-goal-20260618-current-head/browser-use-current/`.
+`release:doctor` has no `STOP` on current `HEAD`; signup remains the accepted
+release risk in `docs/release-blockers-2026-06-18.json`.
 
 ## Current Browser Use Smoke
 
 Current `HEAD` Browser Use smoke proof is:
 
 ```text
-output/release-prep/final-closeout-20260618-parent/browser-use-current/
+output/release-prep/parent-goal-20260618-current-head/browser-use-current/
 ```
 
 Detailed parent-process Browser Use operation proof is saved under:
@@ -235,11 +235,10 @@ Detailed parent-process Browser Use operation proof is saved under:
 output/release-prep/final-browser-use-20260618-parent/
 ```
 
-The earlier full-closeout recapture failed before proof capture and remains
-historical failure context under
+Earlier Browser Use recapture failures remain historical context under
 `output/release-prep/full-closeout-20260618-parent/browser-use-current/`.
-Cleanup/delete was later approved by the current user request and completed for
-artifact-listed QA targets only.
+Cleanup/delete remains resolved from historical proof for artifact-listed QA
+targets only. It was not run by the current parent-goal run.
 
 ## Local Verification
 
@@ -274,15 +273,19 @@ included the aggregate release doctor command:
 RELEASE_BROWSER_USE_PROOF_DIR=output/release-prep/browser-use-20260618-current npm run release:doctor --silent
 ```
 
-That earlier run completed before the blocker manifest was added. Current
-release state is different: `docs/release-blockers-2026-06-18.json` contains
-unresolved `blocks_release=true` blockers, so `release:doctor` stops at release
-blockers.
-
-Historical result before accepted-risk update:
+The current-HEAD parent goal then reran Browser Use proof under
+`output/release-prep/parent-goal-20260618-current-head/browser-use-current/`,
+resolved local DB reset/recreate after initial reset/start failures and a
+valid-excludes retry, and reran the aggregate release doctor.
 
 ```text
-STOP release blockers
+release:doctor passed on current HEAD with no STOP
+```
+
+After this docs commit, save the final doctor transcript at:
+
+```text
+output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt
 ```
 
 ## Current Readback and DB Proof
@@ -293,10 +296,11 @@ Current parent DB readback is saved at
 It reported `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
 storage readback passed.
 
-Cleanup/delete was approved by the current user request and was run only for
-artifact-listed QA targets. It removed the listed QA storage objects,
-`generated_images` rows, brands, and Auth users without deleting usage, audit,
-or edge run proof rows. Evidence:
+Cleanup/delete was run only in historical proof for artifact-listed QA targets.
+It removed the listed QA storage objects, `generated_images` rows, brands, and
+Auth users without deleting usage, audit, or edge run proof rows. The current
+parent-goal run did not run cleanup/delete; it only references the historical
+resolved proof. Evidence:
 
 ```text
 output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json
@@ -304,55 +308,42 @@ output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json
 
 ## Known Blockers
 
-Release risk remains: signup proof and clean local DB reset proof are accepted
-by the user, not fully resolved by success proof.
+Release risk remains: signup proof is accepted by the user, not resolved by
+successful signup proof.
 Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry
 used a redacted `example.com` address and returned HTTP 400 invalid email
 instead, so the current blocker is an owned test mailbox requirement rather than
-a newly reproduced 429. The final parent run found no owned test mailbox key in
-the local env files and did not submit signup. Browser Use submit proof for the
-earlier 429 remains incomplete because the submit eval hung. Do not use
-third-party real email addresses for release proof.
-
-Local DB reset/recreate was approved and attempted. Volume recreate and stale
-Supabase temp storage migration cleanup removed the previous
-`optimize-existing-functions-again` Storage migration blocker, then Supabase CLI
-was upgraded from 2.54.11 to 2.106.0. The final retry started Colima, used the
-Colima Docker socket, completed `supabase stop --no-backup`, then ran
-`supabase start`. It progressed through image pulls, including `realtime` and
-`logflare`, but stalled before local services became available. It did not
-reach `supabase db reset` or DB verification. Evidence is saved at:
+a newly reproduced 429. The current-HEAD parent run found no owned test mailbox
+or test credentials in the local env files after loading `.env.production.local`
+and did not submit signup or the full user journey. Evidence is saved under:
 
 ```text
-output/release-prep/final-closeout-20260618-parent/local-db/local-db-reset-recreate-summary.json
+output/release-prep/parent-goal-20260618-current-head/signup/
 ```
 
-Final full-scope parent verification reached `verify:browser-use` on the final
-`HEAD`. `release:doctor` passed release blockers, git clean, proof target,
-env check, saved readback, and current readback metadata. It then stopped at
-Browser Use proof because the saved env-injected home/login proof was captured
-for the earlier application-code commit, not the final documentation/E2E
-closeout commit.
-
-The parent attempted to recapture final-`HEAD` Browser Use proof against the
-env-injected preview on port 4178. `browser-use doctor` had passed earlier in
-the run, but the recapture failed at browser startup with a
-`BrowserStartEvent` timeout before state, screenshot, or eval proof could be
-captured. The partial failed recapture artifact is saved at:
+Local DB reset/recreate is resolved. After initial reset/start failures, the
+current-HEAD retry started Colima, used the Colima Docker socket, started the
+local DB with valid excludes, passed `supabase migration list --local`, completed
+`supabase db reset --local --no-seed`, passed `SUPABASE_VERIFY_MODE=db bash
+scripts/supabase-prod-verify.sh`, and recorded `exact_blocker=null`.
+Evidence is saved at:
 
 ```text
-output/release-prep/final-head-20260618-parent/browser-use-current/
+output/release-prep/parent-goal-20260618-current-head/local-db/local-db-reset-recreate-summary.json
 ```
 
-The last passing Browser Use smoke proof remains application-code supporting
-evidence, not final-`HEAD` release proof:
+Current `HEAD` Browser Use proof is now recaptured and validates:
 
 ```text
-output/release-prep/final-closeout-20260618-parent/browser-use-current/
+output/release-prep/parent-goal-20260618-current-head/browser-use-current/
 ```
 
-Do not call the release ready until Browser Use home/login proof is recaptured
-for the final release commit and `release:doctor` passes without a `STOP`.
+The proof includes nonblank home/login pages, visible auth controls, view-only
+metadata, release date `2026-06-18`, environment `staging`, and git commit
+`c80e209f1483dd42dafc43e15bab06346a0b46a0`. `verify:browser-use` passes, and
+`release:doctor` passes on current `HEAD` without a `STOP`. The after-docs
+transcript should be saved after this docs commit at
+`output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt`.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
 chooses rollback; normal release verification does not deploy, delete, auth,

@@ -6,7 +6,8 @@ Create migrations only through Supabase CLI:
 supabase migration new <migration_name>
 ```
 
-Current 2026-06-18 status: accepted-risk; final doctor pending. The brand insert policy migration
+Current 2026-06-18 status: accepted-risk; release doctor passed on current
+HEAD. The brand insert policy migration
 `supabase/migrations/20260618023000_restore_brand_insert_policy.sql` has been
 applied remotely, and updated Edge Functions have been deployed. The
 `generate-variations` Edge Function was also redeployed after fixing
@@ -14,24 +15,27 @@ applied remotely, and updated Edge Functions have been deployed. The
 `scene-coordinate` and `variations`. Do not rerun remote mutation steps from
 release verification without explicit human-owner approval.
 
-Accepted risks are signup proof without an owned test mailbox and incomplete
-clean local DB reset proof. Earlier signup attempts hit Supabase Auth HTTP 429, but
-the parent closeout retry used a redacted `example.com` address and returned
-HTTP 400 invalid email instead; the final parent run found no owned test email
-key and did not submit signup. Cleanup/delete was approved by the current user
-request and completed only for artifact-listed QA storage objects,
-`generated_images` rows, brands, and Auth users. Local DB reset/recreate was
-approved and attempted. Volume recreate and stale Supabase temp storage
-migration cleanup removed the previous `optimize-existing-functions-again`
-blocker. The latest retry started Colima, used the Colima Docker socket,
-reached a healthy local DB, `supabase migration list --local` passed, and
-`SUPABASE_VERIFY_MODE=db bash scripts/supabase-prod-verify.sh` passed.
-`supabase db reset --local --no-seed` reached schema initialization but did not
-exit cleanly. Browser Use smoke metadata verification passed for the
-pre-closeout parent `HEAD`; final application-code Browser Use smoke proof also
-passes after Browser Use repair. `docs/release-blockers-2026-06-18.json` now
-records the former release blockers as accepted risks after explicit user
-authorization.
+Accepted risk is signup proof without an owned test mailbox. Earlier signup
+attempts hit Supabase Auth HTTP 429, but the parent closeout retry used a
+redacted `example.com` address and returned HTTP 400 invalid email instead; the
+current-HEAD parent run found no owned test email key and did not submit
+signup. This is an accepted risk, not successful signup proof; `release:doctor`
+does not mechanically STOP on it, but human release review must keep it as
+residual risk. Cleanup/delete is resolved from historical proof only, not from
+the current parent-goal run; the historical proof covered artifact-listed QA
+storage objects, `generated_images` rows, brands, and Auth users. Local DB
+reset/recreate is resolved by the current-HEAD parent run: after initial
+reset/start failures, it started Colima, used the Colima Docker socket, reached
+a healthy local DB with valid excludes, passed `supabase migration list
+--local`, completed `supabase db reset --local --no-seed`, passed
+`SUPABASE_VERIFY_MODE=db bash scripts/supabase-prod-verify.sh`, and recorded
+`exact_blocker=null`. Browser Use smoke proof passes on current `HEAD` under
+`output/release-prep/parent-goal-20260618-current-head/browser-use-current/`,
+and `release:doctor` passes with no `STOP`. `docs/release-blockers-2026-06-18.json`
+records signup as the remaining accepted risk and local DB reset/recreate as
+resolved.
+After this docs commit, save the final doctor transcript at
+`output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt`.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`; focused authenticated Browser Use proof now passes for
 `scene-coordinate` and `variations` under
@@ -49,7 +53,8 @@ Human-owned verification order:
 3. Confirm `plans`, `brand_subscriptions`, `usage_events`, `edge_function_runs`, and `admin_audit_logs` exist with RLS enabled.
 4. Run `release:doctor` with the current Browser Use proof directory.
 5. Run `npm run smoke:edge`.
-6. Rerun focused Browser Use proof and current DB readback metadata checks.
+6. Rerun focused Browser Use proof and current DB readback metadata checks only
+   when the release candidate commit changes.
 
 Safe preflight commands that do not deploy or mutate staging/prod:
 

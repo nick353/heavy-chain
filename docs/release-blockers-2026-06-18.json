@@ -7,15 +7,20 @@
       "id": "signup_owned_test_email_required",
       "status": "accepted",
       "blocks_release": true,
+      "accepted_risk": true,
+      "doctor_stop": false,
+      "doctor_stop_note": "The release doctor does not mechanically STOP on this user-accepted risk, but this remains a human release risk and is not successful signup proof.",
       "evidence": [
         "output/release-prep/next-phase-20260618-parent/signup-api-readback.json",
         "output/release-prep/next-phase-20260618-parent2/signup-api-readback.json",
         "output/release-prep/next-phase-20260618-parent2/browser/signup-ui-429-summary.json",
         "output/release-prep/closeout-20260618-parent/signup-api-readback.json",
         "output/release-prep/final-closeout-20260618-parent/signup/signup-owned-test-email-summary.json",
-        "output/release-prep/full-scope-20260618-parent/summary/items-1-30-execution-summary.json"
+        "output/release-prep/full-scope-20260618-parent/summary/items-1-30-execution-summary.json",
+        "output/release-prep/parent-goal-20260618-current-head/signup/signup-owned-test-email-summary.json",
+        "output/release-prep/parent-goal-20260618-current-head/signup/full-user-journey-summary.json"
       ],
-      "note": "Accepted by the user's explicit full-scope authorization on 2026-06-18. Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry used a redacted example.com address and returned HTTP 400 invalid email instead. The full-scope parent run scanned local env files for TEST/QA/SIGNUP/EMAIL/MAIL/OWNED keys and found no owned test mailbox configuration. Signup success submit was not attempted to avoid third-party email or PII. This is an accepted release risk, not a successful signup proof."
+      "note": "Accepted by the user's explicit full-scope authorization on 2026-06-18. Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry used a redacted example.com address and returned HTTP 400 invalid email instead. The current-HEAD parent run scanned local env files after loading .env.production.local and found no owned test mailbox or test credentials. Signup/full-journey submit was not attempted to avoid third-party email, personal email, or an external Auth request. This is an accepted release risk, not a successful signup proof; humans must continue to treat signup as residual release risk even though release doctor does not mechanically STOP on it."
     },
     {
       "id": "cleanup_delete_not_run",
@@ -23,12 +28,13 @@
       "blocks_release": false,
       "evidence": [
         "output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json"
-      ]
+      ],
+      "note": "Resolved by historical proof from output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json, not by the current parent-goal run. The current parent-goal run did not run cleanup/delete; it only carries this historical resolved status forward."
     },
     {
       "id": "local_db_reset_recreate_incomplete",
-      "status": "accepted",
-      "blocks_release": true,
+      "status": "resolved",
+      "blocks_release": false,
       "evidence": [
         "output/release-prep/next-phase-20260618-parent2/local-db/reset-recreate-summary.json",
         "output/release-prep/closeout-20260618-parent/local-db/reset-recreate-summary.json",
@@ -36,9 +42,10 @@
         "output/release-prep/final-closeout-20260618-parent/local-db/local-db-reset-recreate-summary.json",
         "output/release-prep/full-scope-20260618-parent/local-db/supabase-migration-list-local.txt",
         "output/release-prep/full-scope-20260618-parent/local-db/supabase-verify-db-2.txt",
-        "output/release-prep/full-scope-20260618-parent/summary/items-1-30-execution-summary.json"
+        "output/release-prep/full-scope-20260618-parent/summary/items-1-30-execution-summary.json",
+        "output/release-prep/parent-goal-20260618-current-head/local-db/local-db-reset-recreate-summary.json"
       ],
-      "note": "Accepted by the user's explicit full-scope authorization on 2026-06-18. The full-scope parent run started Colima, used the Colima Docker socket, avoided the prior storage-api image pull path with valid --exclude names, reached a healthy local DB, and `supabase migration list --local` passed. `supabase db reset --local --no-seed` reached schema initialization but the CLI did not exit cleanly and was interrupted. A subsequent `SUPABASE_VERIFY_MODE=db bash scripts/supabase-prod-verify.sh` passed. This is accepted with DB verification proof, not a clean db reset exit-0 proof."
+      "note": "Resolved by the current-HEAD parent run on 2026-06-18 after initial reset/start attempts failed. The successful retry used the Colima Docker socket, restarted the local DB with valid --exclude names, passed `supabase migration list --local`, completed `supabase db reset --local --no-seed`, passed `SUPABASE_VERIFY_MODE=db bash scripts/supabase-prod-verify.sh`, stopped Supabase, attempted Colima cleanup, and recorded `reset_recreate_ok=true`, `db_verify_ok=true`, and `exact_blocker=null`."
     },
     {
       "id": "browser_use_daemon_timeout_on_current_head_smoke",
@@ -46,9 +53,10 @@
       "blocks_release": false,
       "evidence": [
         "output/release-prep/full-closeout-20260618-parent/browser-use-current/browser-use-current-summary.json",
-        "output/release-prep/final-closeout-20260618-parent/browser-use-current/"
+        "output/release-prep/final-closeout-20260618-parent/browser-use-current/",
+        "output/release-prep/parent-goal-20260618-current-head/browser-use-current/"
       ],
-      "note": "Resolved for the current application-code proof in the final parent run. browser-use profile update installed profile-use, browser-use doctor passed all checks, and env-injected home/login proof was captured under output/release-prep/final-closeout-20260618-parent/browser-use-current/. verify-browser-use-proof passed with release_date 2026-06-18, environment staging, and the app-code commit captured in the proof. After the docs-only blocker commit, release:doctor stops at unresolved blockers before evaluating Browser Use proof; recapture Browser Use against the final git commit if those blockers are later resolved, accepted, or waived."
+      "note": "Resolved for current HEAD by the parent-goal run. Browser Use proof was recaptured under output/release-prep/parent-goal-20260618-current-head/browser-use-current/ with release_date 2026-06-18, environment staging, git_commit c80e209f1483dd42dafc43e15bab06346a0b46a0, nonblank home/login pages, visible auth controls, and view-only metadata. `verify:browser-use` passes for that proof, and `release:doctor` has no STOP on current HEAD."
     }
   ]
 }
