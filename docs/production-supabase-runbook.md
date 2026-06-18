@@ -15,14 +15,15 @@ applied remotely, and updated Edge Functions have been deployed. The
 `scene-coordinate` and `variations`. Do not rerun remote mutation steps from
 release verification without explicit human-owner approval.
 
-Accepted risk is signup proof without an owned test mailbox. Earlier signup
-attempts hit Supabase Auth HTTP 429, but the parent closeout retry used a
-redacted `example.com` address and returned HTTP 400 invalid email instead; the
-current-HEAD parent run found no owned test email key and did not submit
-signup. This is an accepted risk, not successful signup proof; `release:doctor`
-does not mechanically STOP on it, but human release review must keep it as
-residual risk. Cleanup/delete is resolved from historical proof only, not from
-the current parent-goal run; the historical proof covered artifact-listed QA
+Accepted risk is signup proof blocked by owned Gmail confirmation. The owned
+Gmail retry created an Auth user, but `email_confirmed_at=null`; login failed
+with Supabase Auth `email_not_confirmed`, so the exact blocker is
+`signup_email_confirmation_required`. This is an accepted risk, not successful
+signup proof. Next open the Gmail confirmation link, then rerun login -> brand
+-> generate -> gallery proof. `release:doctor` does not mechanically STOP on
+it, but human release review must keep it as residual risk. Cleanup/delete is
+resolved from historical proof only, not from the current parent-goal run; the
+historical proof covered artifact-listed QA
 storage objects, `generated_images` rows, brands, and Auth users. Local DB
 reset/recreate is resolved by the current-HEAD parent run: after initial
 reset/start failures, it started Colima, used the Colima Docker socket, reached

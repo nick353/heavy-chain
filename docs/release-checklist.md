@@ -255,10 +255,15 @@ deployed remotely. Focused authenticated Browser Use generation now proves
 `scene-coordinate` and `variations` with DB/storage readback and visual QA
 passing.
 
-Signup remains explicitly accepted by the user for this full-scope run. This
-does not create successful signup proof; `release:doctor` does not
-mechanically STOP on it, but human release review must keep it as residual
-risk. Local DB reset/recreate is now resolved by current-HEAD proof after
+Signup remains explicitly accepted by the user for this full-scope run, but the
+owned Gmail retry is now blocked at email confirmation, not mailbox discovery.
+The Auth user exists with `email_confirmed_at=null`, login fails with
+`email_not_confirmed`, and the exact blocker is
+`signup_email_confirmation_required`. This does not create successful signup
+proof; next open the Gmail confirmation link, then rerun login -> brand ->
+generate -> gallery proof. `release:doctor` does not mechanically STOP on it,
+but human release review must keep it as residual risk. Local DB reset/recreate
+is now resolved by current-HEAD proof after
 initial reset/start failures, a valid-excludes retry, clean reset/recreate, and
 DB verification. Cleanup/delete is resolved from historical proof, not from the
 current parent-goal run; usage, audit, and edge run proof rows were not
@@ -270,7 +275,8 @@ Cleanup/no residual process state was confirmed after the parent run.
 After this docs commit, save the final doctor transcript at
 `output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt`.
 `docs/release-blockers-2026-06-18.json` records
-`signup_owned_test_email_required` as the remaining accepted risk and
+`signup_owned_test_email_required` as the remaining accepted risk with
+`exact_blocker=signup_email_confirmation_required`, and
 `local_db_reset_recreate_incomplete` as resolved.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`.

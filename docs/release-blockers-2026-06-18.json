@@ -10,6 +10,9 @@
       "accepted_risk": true,
       "doctor_stop": false,
       "doctor_stop_note": "The release doctor does not mechanically STOP on this user-accepted risk, but this remains a human release risk and is not successful signup proof.",
+      "exact_blocker": "signup_email_confirmation_required",
+      "auth_user_email_confirmed_at": null,
+      "login_error_code": "email_not_confirmed",
       "evidence": [
         "output/release-prep/next-phase-20260618-parent/signup-api-readback.json",
         "output/release-prep/next-phase-20260618-parent2/signup-api-readback.json",
@@ -18,9 +21,11 @@
         "output/release-prep/final-closeout-20260618-parent/signup/signup-owned-test-email-summary.json",
         "output/release-prep/full-scope-20260618-parent/summary/items-1-30-execution-summary.json",
         "output/release-prep/parent-goal-20260618-current-head/signup/signup-owned-test-email-summary.json",
-        "output/release-prep/parent-goal-20260618-current-head/signup/full-user-journey-summary.json"
+        "output/release-prep/parent-goal-20260618-current-head/signup/full-user-journey-summary.json",
+        "output/release-prep/signup-owned-20260618-parent/signup-email-confirmation-summary.json",
+        "output/release-prep/signup-owned-20260618-parent/login-email-not-confirmed.png"
       ],
-      "note": "Accepted by the user's explicit full-scope authorization on 2026-06-18. Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry used a redacted example.com address and returned HTTP 400 invalid email instead. The current-HEAD parent run scanned local env files after loading .env.production.local and found no owned test mailbox or test credentials. Signup/full-journey submit was not attempted to avoid third-party email, personal email, or an external Auth request. This is an accepted release risk, not a successful signup proof; humans must continue to treat signup as residual release risk even though release doctor does not mechanically STOP on it."
+      "note": "Accepted by the user's explicit full-scope authorization on 2026-06-18. The owned Gmail signup attempt created an Auth user, but email_confirmed_at remained null. The follow-up login attempt failed with Supabase Auth error_code=email_not_confirmed, so exact_blocker=signup_email_confirmation_required. This is not successful signup proof. Next action: open the Gmail confirmation link for the owned account, then rerun login -> brand -> generate -> gallery proof. Secret values are not stored in this manifest."
     },
     {
       "id": "cleanup_delete_not_run",

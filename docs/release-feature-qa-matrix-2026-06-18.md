@@ -19,7 +19,7 @@ Detailed operation proof is under
 | Terms / privacy / legal links | PASS: dedicated terms, privacy, and legal pages render. | `terms-*`, `privacy-*`, `legal-*` |
 | Protected route redirect | PASS: dashboard/generate/gallery/brand/canvas/admin redirect to login when signed out. | `route-*.json` |
 | Signup validation | PASS: password mismatch is visible. | `11-signup-password-mismatch-state.txt` |
-| Signup submit | BLOCKED: earlier Supabase Auth attempt returned HTTP 429; parent closeout retry returned HTTP 400 invalid email for a redacted `example.com` address. Resume with an owned test mailbox. | `22-signup-fetch-after-submit.json`, `output/release-prep/closeout-20260618-parent/signup-api-readback.json` |
+| Signup submit | BLOCKED: owned Gmail signup created an Auth user, but `email_confirmed_at=null`; login is blocked by `email_not_confirmed`. Exact blocker: `signup_email_confirmation_required`. Open the Gmail confirmation link, then rerun login -> brand -> generate -> gallery proof. | `output/release-prep/signup-owned-20260618-parent/signup-email-confirmation-summary.json`, `output/release-prep/signup-owned-20260618-parent/login-email-not-confirmed.png` |
 | Login | PASS: service-created QA user logged in through the UI. | `31-login-after-state.txt` |
 | First brand creation | PASS: brand insert migration has been applied remotely. | `35-brand-keyboard-after.json` |
 | Generate / gallery | PASS: authenticated generate and gallery states/screenshots saved in the final Browser Use evidence set. | `generate-*`, `gallery-*` |
@@ -119,13 +119,14 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 
 ## Remaining Blockers
 
-- Signup proof is accepted as missing until an owned test mailbox is available.
-  Earlier attempts hit Supabase Auth HTTP 429; the parent closeout retry
-  returned HTTP 400 invalid email for a redacted `example.com` address. The
-  final parent run found no owned test mailbox key and did not submit signup.
-  This is an accepted risk, not successful signup proof; `release:doctor` does
-  not mechanically STOP on it, but human release review must keep it as
-  residual risk.
+- Signup proof is accepted as missing. The owned Gmail retry created an Auth
+  user, but `email_confirmed_at=null`; login is blocked by
+  `email_not_confirmed`, with exact blocker
+  `signup_email_confirmation_required`. This is an accepted risk, not
+  successful signup proof; `release:doctor` does not mechanically STOP on it,
+  but human release review must keep it as residual risk. Next action: open the
+  Gmail confirmation link, then rerun login -> brand -> generate -> gallery
+  proof.
 - Cleanup/delete is resolved from historical proof, not from the current
   parent-goal run. The current parent-goal run did not run cleanup/delete.
 - Local DB reset/recreate is resolved by the current-HEAD parent goal. The retry
@@ -137,8 +138,9 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 Browser Use smoke metadata verification now passes for current `HEAD` under
 `output/release-prep/parent-goal-20260618-current-head/browser-use-current/`.
 `release:doctor` passes on current `HEAD` with no `STOP`. Signup remains the
-accepted release risk until an owned test mailbox is available. The final
-doctor transcript should be saved after this docs commit at
+accepted release risk until the owned Gmail confirmation link is opened and
+login -> brand -> generate -> gallery proof is rerun. The final doctor
+transcript should be saved after this docs commit at
 `output/release-prep/parent-goal-20260618-current-head/release-doctor-after-docs-commit.txt`.
 
 Historical note: existing DB scene rows predate the feature-type fix and still

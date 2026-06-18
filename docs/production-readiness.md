@@ -97,13 +97,13 @@ successful signup proof.
 
 ## Accepted Risks
 
-- Signup proof is accepted as a release risk until an owned test mailbox is
-  available. Earlier attempts hit Supabase Auth HTTP 429; the parent closeout
-  retry used a redacted `example.com` address and returned HTTP 400 invalid
-  email instead, so the latest blocker is not a fresh 429 reproduction. The
-  current-HEAD parent run found no owned test mailbox key in the local env files
-  and did not submit signup. `release:doctor` does not mechanically STOP on
-  this accepted risk, but human release review must keep it as residual risk.
+- Signup proof is accepted as a release risk until the owned Gmail confirmation
+  link is opened and login -> brand -> generate -> gallery proof is rerun. The
+  owned Gmail retry created an Auth user, but `email_confirmed_at=null`; login
+  failed with Supabase Auth `email_not_confirmed`, so the exact blocker is
+  `signup_email_confirmation_required`. This is not successful signup proof.
+  `release:doctor` does not mechanically STOP on this accepted risk, but human
+  release review must keep it as residual risk.
 - Browser Use submit proof for the earlier Signup 429 UI was attempted, but the
   submit eval hung, so UI proof remains incomplete.
 

@@ -202,14 +202,14 @@ image-visual-qa-summary.json
 latest-feature-image-summary.json
 ```
 
-Release-risk update from the current-HEAD parent goal:
+Release-risk update from the current-HEAD parent goal and owned Gmail retry:
 
-- Signup success proof is accepted as missing because no owned test mailbox was
-  discoverable in local env files and the user explicitly authorized
-  proceeding. The current-HEAD signup/full-journey proof did not submit. This
-  is an accepted risk, not successful signup proof; `release:doctor` does not
-  mechanically stop on it, but human release review must keep it as residual
-  risk.
+- Signup success proof is still missing. The owned Gmail retry created an Auth
+  user, but `email_confirmed_at=null`; the follow-up login failed with
+  `email_not_confirmed`, so the exact blocker is
+  `signup_email_confirmation_required`. This is an accepted risk, not
+  successful signup proof; `release:doctor` does not mechanically stop on it,
+  but human release review must keep it as residual risk.
 - Local DB reset/recreate is resolved. The current-HEAD local DB proof reports
   `reset_recreate_ok=true`, `db_verify_ok=true`, and `exact_blocker=null`
   after initial reset/start failures and a successful retry with valid excludes.
@@ -310,15 +310,18 @@ output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json
 
 Release risk remains: signup proof is accepted by the user, not resolved by
 successful signup proof.
-Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry
-used a redacted `example.com` address and returned HTTP 400 invalid email
-instead, so the current blocker is an owned test mailbox requirement rather than
-a newly reproduced 429. The current-HEAD parent run found no owned test mailbox
-or test credentials in the local env files after loading `.env.production.local`
-and did not submit signup or the full user journey. Evidence is saved under:
+Earlier signup attempts hit Supabase Auth HTTP 429, and the parent closeout
+retry used a redacted `example.com` address and returned HTTP 400 invalid email.
+The current owned Gmail retry moved the blocker forward: signup created an Auth
+user, but `email_confirmed_at=null`; login is blocked by Supabase Auth
+`email_not_confirmed`. The exact blocker is
+`signup_email_confirmation_required`. This is not successful signup proof.
+Next action is to open the Gmail confirmation link, then rerun login -> brand
+-> generate -> gallery proof. Evidence is saved under:
 
 ```text
-output/release-prep/parent-goal-20260618-current-head/signup/
+output/release-prep/signup-owned-20260618-parent/signup-email-confirmation-summary.json
+output/release-prep/signup-owned-20260618-parent/login-email-not-confirmed.png
 ```
 
 Local DB reset/recreate is resolved. After initial reset/start failures, the
