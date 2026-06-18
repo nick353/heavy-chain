@@ -4,14 +4,16 @@
   "secret_policy": "Do not store secret values in this manifest.",
   "blockers": [
     {
-      "id": "signup_http_429",
+      "id": "signup_owned_test_email_required",
       "status": "unresolved",
       "blocks_release": true,
       "evidence": [
         "output/release-prep/next-phase-20260618-parent/signup-api-readback.json",
         "output/release-prep/next-phase-20260618-parent2/signup-api-readback.json",
-        "output/release-prep/next-phase-20260618-parent2/browser/signup-ui-429-summary.json"
-      ]
+        "output/release-prep/next-phase-20260618-parent2/browser/signup-ui-429-summary.json",
+        "output/release-prep/closeout-20260618-parent/signup-api-readback.json"
+      ],
+      "note": "Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry used a redacted example.com address and returned HTTP 400 invalid email instead. Do not use third-party real email addresses for release proof; resume with an owned test mailbox or explicitly accept this as a blocker."
     },
     {
       "id": "cleanup_delete_not_run",
@@ -22,13 +24,14 @@
       ]
     },
     {
-      "id": "local_db_reset_recreate_failed",
+      "id": "local_db_reset_recreate_incomplete",
       "status": "unresolved",
       "blocks_release": true,
       "evidence": [
-        "output/release-prep/next-phase-20260618-parent2/local-db/reset-recreate-summary.json"
+        "output/release-prep/next-phase-20260618-parent2/local-db/reset-recreate-summary.json",
+        "output/release-prep/closeout-20260618-parent/local-db/reset-recreate-summary.json"
       ],
-      "note": "Approved by the current user request and attempted, but Supabase local db reset failed with StorageBackendError: Migration optimize-existing-functions-again not found."
+      "note": "Approved by the current user request and attempted. Volume recreate and stale Supabase temp storage migration cleanup removed the previous optimize-existing-functions-again blocker, then Supabase CLI was upgraded from 2.54.11 to 2.106.0. The final reset/recreate retry did not reach db reset or db verification because the image pull/extract process exited 143 before completion."
     }
   ]
 }

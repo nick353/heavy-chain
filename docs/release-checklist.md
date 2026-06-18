@@ -121,9 +121,10 @@ environment loaded.
 Current 2026-06-18 parent result: `npm run verify` passes with
 `.env.production.local` sourced. Current readback metadata verification also
 passes, and focused authenticated `scene-coordinate` / `variations` proof now
-passes. Current Browser Use smoke metadata verification passes for the final
-parent `HEAD`; final release gate is stopped by
-`docs/release-blockers-2026-06-18.json`.
+passes. Browser Use smoke metadata verification passed for the pre-closeout
+parent `HEAD`; after this docs-only closeout update, `release:doctor` stops at
+release blockers before Browser Use proof is evaluated. Final release gate is
+stopped by `docs/release-blockers-2026-06-18.json`.
 
 ## 4. Browser Smoke
 
@@ -252,16 +253,20 @@ deployed remotely. Focused authenticated Browser Use generation now proves
 `scene-coordinate` and `variations` with DB/storage readback and visual QA
 passing.
 
-Resume only after signup HTTP 429 is resolved or explicitly accepted as a
-blocker, local DB reset/recreate failure is fixed or explicitly accepted, and
+Resume only after signup proof is captured with an owned test mailbox or
+explicitly accepted as a blocker, local DB reset/recreate is completed after the
+Docker/Supabase image pull stabilizes or explicitly accepted as a blocker, and
 the safe validators still pass. Cleanup/delete has been approved and completed
 for the artifact-listed QA targets only; usage, audit, and edge run proof rows
 were not deleted.
-Current Browser Use smoke metadata verification passed for the final parent
-`HEAD`, and cleanup/no residual process state was confirmed after the parent
-run. `release:doctor` now stops at release blockers because
+Browser Use smoke metadata verification passed for the pre-closeout parent
+`HEAD`. After this docs-only closeout update, `release:doctor` stops at release
+blockers before Browser Use proof is evaluated. Cleanup/no residual process
+state was confirmed after the parent run. `release:doctor` now stops at release
+blockers because
 `docs/release-blockers-2026-06-18.json` records unresolved
-`signup_http_429` and `local_db_reset_recreate_failed` blockers with
+`signup_owned_test_email_required` and
+`local_db_reset_recreate_incomplete` blockers with
 `blocks_release=true`.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`.

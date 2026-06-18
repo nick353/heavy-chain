@@ -15,7 +15,7 @@ proof is under `output/release-prep/final-browser-use-20260618-parent/`.
 | Terms / privacy / legal links | PASS: dedicated terms, privacy, and legal pages render. | `terms-*`, `privacy-*`, `legal-*` |
 | Protected route redirect | PASS: dashboard/generate/gallery/brand/canvas/admin redirect to login when signed out. | `route-*.json` |
 | Signup validation | PASS: password mismatch is visible. | `11-signup-password-mismatch-state.txt` |
-| Signup submit | BLOCKED: Supabase Auth returned HTTP 429; no auth user was created. | `22-signup-fetch-after-submit.json` |
+| Signup submit | BLOCKED: earlier Supabase Auth attempt returned HTTP 429; parent closeout retry returned HTTP 400 invalid email for a redacted `example.com` address. Resume with an owned test mailbox. | `22-signup-fetch-after-submit.json`, `output/release-prep/closeout-20260618-parent/signup-api-readback.json` |
 | Login | PASS: service-created QA user logged in through the UI. | `31-login-after-state.txt` |
 | First brand creation | PASS: brand insert migration has been applied remotely. | `35-brand-keyboard-after.json` |
 | Generate / gallery | PASS: authenticated generate and gallery states/screenshots saved in the final Browser Use evidence set. | `generate-*`, `gallery-*` |
@@ -115,16 +115,22 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 
 ## Remaining Blockers
 
-- Signup is blocked by Supabase Auth HTTP 429 in this test lane.
+- Signup proof is blocked until an owned test mailbox is available. Earlier
+  attempts hit Supabase Auth HTTP 429; the parent closeout retry returned HTTP
+  400 invalid email for a redacted `example.com` address.
 - Cleanup/delete was later approved by the current user request and completed
   for artifact-listed QA targets only.
-- Local DB reset/recreate was approved and attempted, but `supabase db reset`
-  failed with `StorageBackendError: Migration optimize-existing-functions-again
-  not found`.
+- Local DB reset/recreate was approved and attempted. Volume recreate and stale
+  Supabase temp storage migration cleanup removed the previous
+  `optimize-existing-functions-again` blocker, then Supabase CLI was upgraded
+  from 2.54.11 to 2.106.0. The final retry did not reach `supabase db reset` or
+  DB verification because image pull/extract exited 143 before completion.
 
-Current Browser Use smoke metadata verification passed for the final parent
-`HEAD`, and cleanup/no residual process state was confirmed after the parent
-run. `release:doctor` now stops at the release blocker manifest.
+Browser Use smoke metadata verification passed for the pre-closeout parent
+`HEAD`. After this docs-only closeout update, `release:doctor` stops at release
+blockers before Browser Use proof is evaluated. Cleanup/no residual process
+state was confirmed after the parent run. `release:doctor` now stops at the
+release blocker manifest.
 
 Historical note: existing DB scene rows predate the feature-type fix and still
 have `feature_type=null`.

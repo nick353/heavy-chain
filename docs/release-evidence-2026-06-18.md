@@ -204,15 +204,18 @@ latest-feature-image-summary.json
 
 Remaining release blockers from this pass:
 
-- Resolve or retry the signup lane after the Supabase Auth HTTP 429 blocker.
-- Approve and run local DB reset/recreate if that lane is still required.
+- Resume the signup lane only with an owned test mailbox, or explicitly accept
+  the missing owned-mailbox proof as a release blocker.
+- Resume local DB reset/recreate after Docker/Supabase image pull is stable, or
+  explicitly accept the incomplete local reset proof as a release blocker.
 - Cleanup/delete was later approved by the current user request and completed
   for artifact-listed QA targets only.
 
-Current Browser Use smoke metadata verification passed for the final parent
-`HEAD`, and cleanup/no residual process state was confirmed after the parent
-run. Final release gate is stopped by the release blocker manifest:
-`docs/release-blockers-2026-06-18.json`.
+Browser Use smoke metadata verification passed for the pre-closeout parent
+`HEAD`. After this docs-only closeout update, `release:doctor` stops at release
+blockers before Browser Use proof is evaluated. Cleanup/no residual process
+state was confirmed after the parent run. Final release gate is stopped by the
+release blocker manifest: `docs/release-blockers-2026-06-18.json`.
 
 The historical Browser Use proof remains useful as supporting view-only shape
 evidence. Current release diagnosis must use
@@ -271,9 +274,10 @@ included the aggregate release doctor command:
 RELEASE_BROWSER_USE_PROOF_DIR=output/release-prep/browser-use-20260618-current npm run release:doctor --silent
 ```
 
-That earlier run passed the then-current automated checks. Current release
-state is different: `docs/release-blockers-2026-06-18.json` contains unresolved
-`blocks_release=true` blockers, so `release:doctor` stops at release blockers.
+That earlier run completed before the blocker manifest was added. Current
+release state is different: `docs/release-blockers-2026-06-18.json` contains
+unresolved `blocks_release=true` blockers, so `release:doctor` stops at release
+blockers.
 
 Current result:
 
@@ -300,15 +304,29 @@ output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json
 
 ## Known Blockers
 
-Release remains blocked by the Supabase Auth HTTP 429 signup blocker and local
-DB reset/recreate failure. Signup was retried after the parent run and still
-returned HTTP 429; Browser Use submit proof was attempted but the submit eval
-hung, so UI proof remains incomplete. Local DB reset/recreate was approved and
-attempted, but `supabase db reset` failed with
-`StorageBackendError: Migration optimize-existing-functions-again not found`.
-Current Browser Use smoke metadata verification passed for the final parent
-`HEAD`, and cleanup/no residual process state was confirmed after the parent
-run. The final release gate is stopped by
+Release remains blocked by signup proof and local DB reset/recreate proof.
+Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry
+used a redacted `example.com` address and returned HTTP 400 invalid email
+instead, so the current blocker is an owned test mailbox requirement rather than
+a newly reproduced 429. Browser Use submit proof for the earlier 429 remains
+incomplete because the submit eval hung. Do not use third-party real email
+addresses for release proof.
+
+Local DB reset/recreate was approved and attempted. Volume recreate and stale
+Supabase temp storage migration cleanup removed the previous
+`optimize-existing-functions-again` Storage migration blocker, then Supabase CLI
+was upgraded from 2.54.11 to 2.106.0. The final reset/recreate retry did not
+reach `supabase db reset` or DB verification because the image pull/extract
+process exited 143 before completion. Evidence is saved at:
+
+```text
+output/release-prep/closeout-20260618-parent/local-db/reset-recreate-summary.json
+```
+
+Browser Use smoke metadata verification passed for the pre-closeout parent
+`HEAD`. After this docs-only closeout update, `release:doctor` stops at release
+blockers before Browser Use proof is evaluated. Cleanup/no residual process
+state was confirmed after the parent run. The final release gate is stopped by
 `docs/release-blockers-2026-06-18.json`.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
