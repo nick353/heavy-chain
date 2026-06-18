@@ -261,6 +261,11 @@ proof rows were not deleted. Browser Use smoke metadata verification passed for
 the pre-closeout parent `HEAD`, and final application-code Browser Use smoke
 proof also validates under
 `output/release-prep/final-closeout-20260618-parent/browser-use-current/`.
+Final full-scope `release:doctor` on the closeout commit passed release
+blockers, git clean, proof target, env check, saved readback, and current
+readback metadata, then stopped at `verify:browser-use` because Browser Use
+proof metadata did not match the final commit. A recapture attempt for the
+final commit failed at browser startup with a `BrowserStartEvent` timeout.
 Cleanup/no residual process state was confirmed after the parent run.
 `docs/release-blockers-2026-06-18.json` records
 `signup_owned_test_email_required` and `local_db_reset_recreate_incomplete` as

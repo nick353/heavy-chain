@@ -222,6 +222,14 @@ human-owned target.
 The automatic git commit target is `HEAD`; it is only a release-candidate-current
 target after `git clean` passes.
 
+Final full-scope parent verification on 2026-06-18 passed release blockers,
+git clean, proof target, env check, saved readback, and current readback
+metadata on `HEAD`, then stopped at `verify:browser-use`. The saved Browser Use
+proof is still valid as application-code supporting evidence, but its metadata
+does not match the final closeout commit. A final-`HEAD` Browser Use recapture
+attempt failed at browser startup with a `BrowserStartEvent` timeout, so release
+readiness remains pending on fresh Browser Use home/login proof.
+
 For current Browser Use evidence, run the Browser Use validator with the same
 metadata expectations:
 

@@ -327,19 +327,32 @@ reach `supabase db reset` or DB verification. Evidence is saved at:
 output/release-prep/final-closeout-20260618-parent/local-db/local-db-reset-recreate-summary.json
 ```
 
-Current `HEAD` Browser Use smoke proof was captured against the env-injected
-preview on port 4178 after `browser-use profile update` and a passing
-`browser-use doctor`. `verify-browser-use-proof` passes for release date
-`2026-06-18`, environment `staging`, and the current git commit. Evidence is
-saved at:
+Final full-scope parent verification reached `verify:browser-use` on the final
+`HEAD`. `release:doctor` passed release blockers, git clean, proof target,
+env check, saved readback, and current readback metadata. It then stopped at
+Browser Use proof because the saved env-injected home/login proof was captured
+for the earlier application-code commit, not the final documentation/E2E
+closeout commit.
+
+The parent attempted to recapture final-`HEAD` Browser Use proof against the
+env-injected preview on port 4178. `browser-use doctor` had passed earlier in
+the run, but the recapture failed at browser startup with a
+`BrowserStartEvent` timeout before state, screenshot, or eval proof could be
+captured. The partial failed recapture artifact is saved at:
+
+```text
+output/release-prep/final-head-20260618-parent/browser-use-current/
+```
+
+The last passing Browser Use smoke proof remains application-code supporting
+evidence, not final-`HEAD` release proof:
 
 ```text
 output/release-prep/final-closeout-20260618-parent/browser-use-current/
 ```
 
-After this blocker update, `release:doctor` should proceed past release
-blockers and expose the next gate, if any. Cleanup/no residual process state
-must be rechecked after final cleanup.
+Do not call the release ready until Browser Use home/login proof is recaptured
+for the final release commit and `release:doctor` passes without a `STOP`.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
 chooses rollback; normal release verification does not deploy, delete, auth,
