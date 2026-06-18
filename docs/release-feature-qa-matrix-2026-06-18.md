@@ -3,9 +3,11 @@
 Status: **blocked**.
 
 This file records parent-only Browser Use QA for the Heavy Chain release. It is
-not release approval. Current Browser Use smoke proof for release doctor is
-under `output/release-prep/browser-use-20260618-current/`; detailed operation
-proof is under `output/release-prep/final-browser-use-20260618-parent/`.
+not release approval. Current `HEAD` Browser Use smoke proof is not captured;
+the full-closeout recapture failed before proof capture and is summarized under
+`output/release-prep/full-closeout-20260618-parent/browser-use-current/`.
+Detailed historical operation proof is under
+`output/release-prep/final-browser-use-20260618-parent/`.
 
 ## Verified Browser Flows
 
@@ -117,20 +119,24 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 
 - Signup proof is blocked until an owned test mailbox is available. Earlier
   attempts hit Supabase Auth HTTP 429; the parent closeout retry returned HTTP
-  400 invalid email for a redacted `example.com` address.
+  400 invalid email for a redacted `example.com` address, and the full-closeout
+  local env name scan found no owned test email key.
 - Cleanup/delete was later approved by the current user request and completed
   for artifact-listed QA targets only.
 - Local DB reset/recreate was approved and attempted. Volume recreate and stale
   Supabase temp storage migration cleanup removed the previous
-  `optimize-existing-functions-again` blocker, then Supabase CLI was upgraded
-  from 2.54.11 to 2.106.0. The final retry did not reach `supabase db reset` or
-  DB verification because image pull/extract exited 143 before completion.
+  `optimize-existing-functions-again` blocker. The full-closeout retry with
+  Supabase CLI 2.106.0 and Colima/Docker 29.5.2 progressed to
+  `Starting database from backup...`, then stalled until interrupted. It did not
+  reach `supabase db reset` or DB verification.
+- Current `HEAD` Browser Use smoke recapture was attempted against the
+  env-injected preview, but Browser Use failed before proof capture with daemon
+  startup/socket timeout.
 
 Browser Use smoke metadata verification passed for the pre-closeout parent
-`HEAD`. After this docs-only closeout update, `release:doctor` stops at release
-blockers before Browser Use proof is evaluated. Cleanup/no residual process
-state was confirmed after the parent run. `release:doctor` now stops at the
-release blocker manifest.
+`HEAD`, but the full-closeout current `HEAD` smoke recapture did not produce
+proof. Cleanup/no residual process state was confirmed after the parent run.
+`release:doctor` now stops at the release blocker manifest.
 
 Historical note: existing DB scene rows predate the feature-type fix and still
 have `feature_type=null`.

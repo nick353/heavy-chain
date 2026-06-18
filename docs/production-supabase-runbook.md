@@ -14,22 +14,23 @@ applied remotely, and updated Edge Functions have been deployed. The
 `scene-coordinate` and `variations`. Do not rerun remote mutation steps from
 release verification without explicit human-owner approval.
 
-Remaining blockers are signup proof without an owned test mailbox and local DB
-reset/recreate proof. Earlier signup attempts hit Supabase Auth HTTP 429, but
-the parent closeout retry used a redacted `example.com` address and returned
-HTTP 400 invalid email instead. Cleanup/delete was approved by the current user
-request and completed only for artifact-listed QA storage objects,
-`generated_images` rows, brands, and Auth users. Local DB reset/recreate was
-approved and attempted. Volume recreate and stale Supabase temp storage
-migration cleanup removed the previous `optimize-existing-functions-again`
-blocker, then Supabase CLI was upgraded from 2.54.11 to 2.106.0. The final retry
-did not reach `supabase db reset` or DB verification because image pull/extract
-exited 143 before completion.
-Browser Use smoke metadata verification passed for the pre-closeout parent
-`HEAD`. After this docs-only closeout update, `release:doctor` stops at release
-blockers before Browser Use proof is evaluated. Cleanup/no residual process
-state was confirmed after the parent run. `release:doctor` now stops at release
-blockers because
+Remaining blockers are signup proof without an owned test mailbox, local DB
+reset/recreate proof, and current `HEAD` Browser Use smoke proof. Earlier
+signup attempts hit Supabase Auth HTTP 429, but the parent closeout retry used a
+redacted `example.com` address and returned HTTP 400 invalid email instead; the
+full-closeout local env name scan found no owned test email key. Cleanup/delete
+was approved by the current user request and completed only for artifact-listed
+QA storage objects, `generated_images` rows, brands, and Auth users. Local DB
+reset/recreate was approved and attempted. Volume recreate and stale Supabase
+temp storage migration cleanup removed the previous
+`optimize-existing-functions-again` blocker, and the latest retry with Supabase
+CLI 2.106.0 plus Colima/Docker 29.5.2 progressed to
+`Starting database from backup...` before stalling and being interrupted by the
+parent process. It did not reach `supabase db reset` or DB verification. Browser
+Use smoke metadata verification passed for the pre-closeout parent `HEAD`, but
+the full-closeout current `HEAD` Browser Use smoke recapture failed before proof
+capture with daemon startup/socket timeout. `release:doctor` now stops at
+release blockers because
 `docs/release-blockers-2026-06-18.json` records the remaining unresolved
 blockers with `blocks_release=true`.
 Existing DB scene rows were generated before the fix and still have

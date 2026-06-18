@@ -122,9 +122,9 @@ Current 2026-06-18 parent result: `npm run verify` passes with
 `.env.production.local` sourced. Current readback metadata verification also
 passes, and focused authenticated `scene-coordinate` / `variations` proof now
 passes. Browser Use smoke metadata verification passed for the pre-closeout
-parent `HEAD`; after this docs-only closeout update, `release:doctor` stops at
-release blockers before Browser Use proof is evaluated. Final release gate is
-stopped by `docs/release-blockers-2026-06-18.json`.
+parent `HEAD`, but the full-closeout current `HEAD` Browser Use smoke recapture
+failed before proof capture with daemon startup/socket timeout. Final release
+gate is stopped by `docs/release-blockers-2026-06-18.json`.
 
 ## 4. Browser Smoke
 
@@ -254,19 +254,20 @@ deployed remotely. Focused authenticated Browser Use generation now proves
 passing.
 
 Resume only after signup proof is captured with an owned test mailbox or
-explicitly accepted as a blocker, local DB reset/recreate is completed after the
-Docker/Supabase image pull stabilizes or explicitly accepted as a blocker, and
-the safe validators still pass. Cleanup/delete has been approved and completed
-for the artifact-listed QA targets only; usage, audit, and edge run proof rows
-were not deleted.
-Browser Use smoke metadata verification passed for the pre-closeout parent
-`HEAD`. After this docs-only closeout update, `release:doctor` stops at release
-blockers before Browser Use proof is evaluated. Cleanup/no residual process
-state was confirmed after the parent run. `release:doctor` now stops at release
-blockers because
+explicitly accepted as a blocker, local DB reset/recreate completes past
+database backup restore through `supabase db reset` and DB verification or is
+explicitly accepted as a blocker, current `HEAD` Browser Use smoke proof is
+captured or explicitly accepted as a blocker, and the safe validators still
+pass. Cleanup/delete has been approved and completed for the artifact-listed QA
+targets only; usage, audit, and edge run proof rows were not deleted. Browser
+Use smoke metadata verification passed for the pre-closeout parent `HEAD`, but
+the full-closeout current `HEAD` smoke recapture failed before proof capture.
+Cleanup/no residual process state was confirmed after the parent run.
+`release:doctor` now stops at release blockers because
 `docs/release-blockers-2026-06-18.json` records unresolved
 `signup_owned_test_email_required` and
-`local_db_reset_recreate_incomplete` blockers with
+`local_db_reset_recreate_incomplete` and
+`browser_use_daemon_timeout_on_current_head_smoke` blockers with
 `blocks_release=true`.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`.
