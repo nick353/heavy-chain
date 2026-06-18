@@ -120,9 +120,9 @@ environment loaded.
 Current 2026-06-18 parent result: `npm run verify` passes with
 `.env.production.local` sourced. Current readback metadata verification also
 passes, and focused authenticated `scene-coordinate` / `variations` proof now
-passes. Current Browser Use smoke metadata verification and `release:doctor`
-also pass for the final parent `HEAD`; the active release blockers are the
-human-approval gaps recorded below.
+passes. Current Browser Use smoke metadata verification passes for the final
+parent `HEAD`; final release gate is stopped by
+`docs/release-blockers-2026-06-18.json`.
 
 ## 4. Browser Smoke
 
@@ -254,7 +254,11 @@ passing.
 Resume only after signup HTTP 429 is resolved or explicitly accepted as a
 blocker, cleanup/delete is approved if required, local DB reset/recreate is
 approved if local DB proof is required, and the safe validators still pass.
-Current Browser Use smoke metadata verification and `release:doctor` passed for
-the final parent `HEAD`, and cleanup/no residual process state was confirmed
-after the parent run. Existing DB scene rows were generated before the fix and
-still have `feature_type=null`.
+Current Browser Use smoke metadata verification passed for the final parent
+`HEAD`, and cleanup/no residual process state was confirmed after the parent
+run. `release:doctor` now stops at release blockers because
+`docs/release-blockers-2026-06-18.json` records unresolved
+`signup_http_429`, `cleanup_delete_not_run`, and
+`local_db_reset_recreate_not_approved` blockers with `blocks_release=true`.
+Existing DB scene rows were generated before the fix and still have
+`feature_type=null`.

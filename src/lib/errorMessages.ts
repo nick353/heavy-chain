@@ -13,6 +13,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   USER_USAGE_RATE_LIMIT: '短時間に生成リクエストが集中しています。1分ほど待ってから再試行してください。',
   BRAND_USAGE_RATE_LIMIT: 'このブランドで短時間に生成リクエストが集中しています。少し待ってから再試行してください。',
   BRAND_USAGE_QUOTA_EXCEEDED: '今月の生成枠を使い切りました。プラン変更または翌月のリセット後に再試行してください。',
+  AUTH_EMAIL_RATE_LIMIT: 'サインアップ確認メールの送信制限に達しました。しばらく待ってから再度お試しください。',
   
   // Image generation errors
   IMAGE_TOO_LARGE: '画像サイズが大きすぎます。10MB以下の画像をアップロードしてください。',
@@ -53,6 +54,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
 };
 
 const KNOWN_MESSAGE_MAP: Array<[RegExp, string]> = [
+  [/email rate limit exceeded/i, ERROR_MESSAGES.AUTH_EMAIL_RATE_LIMIT],
   [/brand usage quota exceeded/i, ERROR_MESSAGES.BRAND_USAGE_QUOTA_EXCEEDED],
   [/user usage rate limit exceeded/i, ERROR_MESSAGES.USER_USAGE_RATE_LIMIT],
   [/brand usage rate limit exceeded/i, ERROR_MESSAGES.BRAND_USAGE_RATE_LIMIT],
@@ -65,6 +67,12 @@ const getMappedKnownMessage = (message: string) => {
   const matched = KNOWN_MESSAGE_MAP.find(([pattern]) => pattern.test(message));
   return matched?.[1] ?? null;
 };
+
+const isSupabaseAuthError = (error: any) => (
+  error?.name === 'AuthApiError' ||
+  error?.name === 'AuthError' ||
+  error?.__isAuthError === true
+);
 
 // Map API error codes to user-friendly messages
 export function getErrorMessage(error: any): string {
@@ -127,7 +135,10 @@ export function getErrorMessage(error: any): string {
       case 413:
         return ERROR_MESSAGES.IMAGE_TOO_LARGE;
       case 429:
-        return ERROR_MESSAGES.RATE_LIMIT;
+        if (isSupabaseAuthError(error)) {
+          return ERROR_MESSAGES.AUTH_EMAIL_RATE_LIMIT;
+        }
+        return getMappedKnownMessage(error.message || '') || ERROR_MESSAGES.RATE_LIMIT;
       case 500:
       case 502:
       case 503:

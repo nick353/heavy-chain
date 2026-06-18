@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+
+const releaseBlockersPath = 'docs/release-blockers-2026-06-18.json';
+const acceptedBlockerStatuses = new Set(['resolved', 'accepted', 'waived']);
 
 function gitCommit() {
   const result = spawnSync('git', ['rev-parse', 'HEAD'], {
@@ -51,6 +54,53 @@ function proofTargetValue(envName, fallback, validate) {
   return { value: candidate, display: candidate, valid: true };
 }
 
+function blockerId(blocker, index) {
+  return typeof blocker?.id === 'string' && blocker.id.trim() ? blocker.id.trim() : `blocker_${index + 1}`;
+}
+
+function blockerEvidence(blocker) {
+  if (typeof blocker?.evidence === 'string') return blocker.evidence;
+  if (Array.isArray(blocker?.evidence)) return blocker.evidence.filter((item) => typeof item === 'string').join(', ');
+  return 'no evidence path';
+}
+
+function releaseBlockerGate() {
+  try {
+    const manifest = JSON.parse(readFileSync(releaseBlockersPath, 'utf8'));
+    const blockers = Array.isArray(manifest) ? manifest : manifest.blockers;
+
+    if (!Array.isArray(blockers)) {
+      return {
+        passed: false,
+        status: 1,
+        output: `${releaseBlockersPath}: blockers must be an array.`,
+      };
+    }
+
+    const unresolved = blockers.filter((blocker) => {
+      const status = typeof blocker?.status === 'string' ? blocker.status.trim().toLowerCase() : '';
+      return blocker?.blocks_release === true && !acceptedBlockerStatuses.has(status);
+    });
+
+    return {
+      passed: unresolved.length === 0,
+      status: unresolved.length === 0 ? 0 : 1,
+      output: unresolved
+        .map((blocker, index) => {
+          const status = typeof blocker?.status === 'string' ? blocker.status : 'unknown';
+          return `${blockerId(blocker, index)} status=${status} evidence=${blockerEvidence(blocker)}`;
+        })
+        .join('\n'),
+    };
+  } catch (error) {
+    return {
+      passed: false,
+      status: 1,
+      output: `${releaseBlockersPath}: ${error.message}`,
+    };
+  }
+}
+
 const releaseDate = proofTargetValue('RELEASE_DATE', latestReleaseEvidenceDate(), validReleaseDate);
 const releaseEnvironment = proofTargetValue('RELEASE_ENVIRONMENT', 'staging', validReleaseEnvironment);
 const currentGitCommit = proofTargetValue('RELEASE_GIT_COMMIT', gitCommit(), validGitCommit);
@@ -77,6 +127,12 @@ if (releaseEnvironment.value) currentBrowserUseArgs.push('--expect-environment',
 if (currentGitCommit.value) currentBrowserUseArgs.push('--expect-git-commit', currentGitCommit.value);
 
 const checks = [
+  {
+    name: 'release blockers',
+    run: releaseBlockerGate,
+    stop: '未解決の release blocker があります。',
+    next: `${releaseBlockersPath} の blocks_release=true blocker を resolved / accepted / waived にできる状態になるまで release を止めてください。`,
+  },
   {
     name: 'git clean',
     command: 'git',
@@ -186,6 +242,17 @@ function relevantLines(text) {
 }
 
 function runCheck(check) {
+  if (check.run) {
+    const result = check.run();
+    return {
+      ...check,
+      passed: result.passed === true,
+      status: result.status ?? (result.passed ? 0 : 1),
+      error: result.error,
+      output: result.output || '',
+    };
+  }
+
   const result = spawnSync(check.command, check.args, {
     cwd: process.cwd(),
     encoding: 'utf8',

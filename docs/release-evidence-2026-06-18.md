@@ -208,9 +208,10 @@ Remaining release blockers from this pass:
 - Approve and run local DB reset/recreate if that lane is still required.
 - Cleanup/delete was not run.
 
-Current Browser Use smoke metadata verification and `release:doctor` passed for
-the final parent `HEAD`, and cleanup/no residual process state was confirmed
-after the parent run.
+Current Browser Use smoke metadata verification passed for the final parent
+`HEAD`, and cleanup/no residual process state was confirmed after the parent
+run. Final release gate is stopped by the release blocker manifest:
+`docs/release-blockers-2026-06-18.json`.
 
 The historical Browser Use proof remains useful as supporting view-only shape
 evidence. Current release diagnosis must use
@@ -261,17 +262,21 @@ after the smoke guard was widened to include
 
 ## Current Release Doctor
 
-The parent-process verification pass included the aggregate release doctor
-command:
+Before the release blocker manifest was added, parent-process verification
+included the aggregate release doctor command:
 
 ```bash
 RELEASE_BROWSER_USE_PROOF_DIR=output/release-prep/browser-use-20260618-current npm run release:doctor --silent
 ```
 
-Result:
+That earlier run passed the then-current automated checks. Current release
+state is different: `docs/release-blockers-2026-06-18.json` contains unresolved
+`blocks_release=true` blockers, so `release:doctor` stops at release blockers.
+
+Current result:
 
 ```text
-pass
+STOP release blockers
 ```
 
 ## Current Readback and DB Proof
@@ -288,9 +293,10 @@ Cleanup/delete was not approved and was not run.
 
 Release remains blocked by the Supabase Auth HTTP 429 signup blocker,
 cleanup/delete not being run, and local DB reset/recreate not being approved.
-Current Browser Use smoke metadata verification and `release:doctor` passed for
-the final parent `HEAD`, and cleanup/no residual process state was confirmed
-after the parent run.
+Current Browser Use smoke metadata verification passed for the final parent
+`HEAD`, and cleanup/no residual process state was confirmed after the parent
+run. The final release gate is stopped by
+`docs/release-blockers-2026-06-18.json`.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
 chooses rollback; normal release verification does not deploy, delete, auth,

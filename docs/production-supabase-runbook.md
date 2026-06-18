@@ -16,8 +16,10 @@ release verification without explicit human-owner approval.
 
 Remaining blockers are signup HTTP 429, cleanup/delete not run, and local DB
 reset/recreate not approved. Current Browser Use smoke metadata verification
-and `release:doctor` passed for the final parent `HEAD`, and cleanup/no
-residual process state was confirmed after the parent run.
+passed for the final parent `HEAD`, and cleanup/no residual process state was
+confirmed after the parent run. `release:doctor` now stops at release blockers
+because `docs/release-blockers-2026-06-18.json` records those unresolved
+blockers with `blocks_release=true`.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`; focused authenticated Browser Use proof now passes for
 `scene-coordinate` and `variations` under

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "release_date": "2026-06-18",
+  "secret_policy": "Do not store secret values in this manifest.",
+  "blockers": [
+    {
+      "id": "signup_http_429",
+      "status": "unresolved",
+      "blocks_release": true,
+      "evidence": [
+        "output/release-prep/next-phase-20260618-parent/signup-api-readback.json"
+      ]
+    },
+    {
+      "id": "cleanup_delete_not_run",
+      "status": "unresolved",
+      "blocks_release": true
+    },
+    {
+      "id": "local_db_reset_recreate_not_approved",
+      "status": "unresolved",
+      "blocks_release": true
+    }
+  ]
+}

@@ -41,9 +41,8 @@ Heavy Chain can only be released after all of these are true:
 Current 2026-06-18 parent observation: the environment gate now passes with
 `.env.production.local` sourced, current readback metadata verification has
 passed, and focused authenticated `scene-coordinate` / `variations` proof has
-passed. Current Browser Use smoke metadata and `release:doctor` also pass for
-the final parent `HEAD`. Release remains blocked by the human-approval gaps
-below.
+passed. Current Browser Use smoke metadata passes for the final parent `HEAD`.
+Final release gate is stopped by `docs/release-blockers-2026-06-18.json`.
 
 ## Passed Evidence
 
@@ -76,7 +75,10 @@ below.
   `feature_type=null` and remain historical only.
 - Current Browser Use smoke metadata verification passed for the final parent
   `HEAD`.
-- `release:doctor` passed against the final parent `HEAD`.
+- `release:doctor` stops at release blockers because
+  `docs/release-blockers-2026-06-18.json` records unresolved
+  `signup_http_429`, `cleanup_delete_not_run`, and
+  `local_db_reset_recreate_not_approved` blockers with `blocks_release=true`.
 - Cleanup/no residual process state was confirmed after the parent run.
 
 ## Known Blockers

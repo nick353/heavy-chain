@@ -226,14 +226,16 @@ export function GalleryPage() {
     if (!confirm('この画像を削除しますか？')) return;
 
     try {
-      await supabase.storage
+      const { error: storageError } = await supabase.storage
         .from('generated-images')
         .remove([image.storage_path]);
+      if (storageError) throw storageError;
 
-      await supabase
+      const { error: deleteError } = await supabase
         .from('generated_images')
         .delete()
         .eq('id', image.id);
+      if (deleteError) throw deleteError;
 
       setImages(prev => prev.filter(img => img.id !== image.id));
       setSelectedImage(null);
@@ -250,14 +252,16 @@ export function GalleryPage() {
     try {
       const imagesToDelete = images.filter(img => selectedIds.has(img.id));
       
-      await supabase.storage
+      const { error: storageError } = await supabase.storage
         .from('generated-images')
         .remove(imagesToDelete.map(img => img.storage_path));
+      if (storageError) throw storageError;
 
-      await supabase
+      const { error: deleteError } = await supabase
         .from('generated_images')
         .delete()
         .in('id', Array.from(selectedIds));
+      if (deleteError) throw deleteError;
 
       setImages(prev => prev.filter(img => !selectedIds.has(img.id)));
       setSelectedIds(new Set());
