@@ -206,37 +206,27 @@ Remaining release blockers from this pass:
 
 - Resume the signup lane only with an owned test mailbox, or explicitly accept
   the missing owned-mailbox proof as a release blocker.
-- Resume local DB reset/recreate after the local Supabase database backup
-  restore no longer stalls, or explicitly accept the incomplete local reset
-  proof as a release blocker.
-- Recapture current `HEAD` Browser Use smoke proof after Browser Use daemon
-  startup is stable, or explicitly accept the missing current smoke proof as a
+- Resume local DB reset/recreate after the local Supabase image pull/start path
+  no longer stalls, or explicitly accept the incomplete local reset proof as a
   release blocker.
 - Cleanup/delete was later approved by the current user request and completed
   for artifact-listed QA targets only.
 
 Browser Use smoke metadata verification passed for the pre-closeout parent
-`HEAD`. The full-closeout current `HEAD` Browser Use smoke recapture was
-attempted against the env-injected preview, but Browser Use failed before proof
-capture with `Failed to start daemon` and then socket receive timeout. After
-this blocker update, `release:doctor` stops at release blockers before Browser
-Use proof is evaluated. Cleanup/no residual process state was confirmed after
-the parent run. Final release gate is stopped by the release blocker manifest:
+`HEAD`. The final parent run then repaired Browser Use by installing
+`profile-use`, confirmed `browser-use doctor` passes all checks, and captured
+current `HEAD` env-injected home/login proof. `verify-browser-use-proof` passes
+for release date `2026-06-18`, environment `staging`, and the current git
+commit. Cleanup/no residual process state still has to be rechecked after this
+final run. Final release gate remains stopped by the release blocker manifest:
 `docs/release-blockers-2026-06-18.json`.
-
-The historical Browser Use proof remains useful as supporting view-only shape
-evidence. Current `HEAD` Browser Use smoke proof is not captured; the
-full-closeout recapture failed before proof capture. Current release diagnosis
-must treat `output/release-prep/full-closeout-20260618-parent/browser-use-current/`
-as the failed recapture summary, the full UI QA directory as detailed historical
-operation proof, and the DB readback directory as data proof.
 
 ## Current Browser Use Smoke
 
-Current `HEAD` Browser Use smoke recapture summary is:
+Current `HEAD` Browser Use smoke proof is:
 
 ```text
-output/release-prep/full-closeout-20260618-parent/browser-use-current/browser-use-current-summary.json
+output/release-prep/final-closeout-20260618-parent/browser-use-current/
 ```
 
 Detailed parent-process Browser Use operation proof is saved under:
@@ -245,10 +235,11 @@ Detailed parent-process Browser Use operation proof is saved under:
 output/release-prep/final-browser-use-20260618-parent/
 ```
 
-The current `HEAD` recapture did not save Browser Use state or screenshots
-because Browser Use failed before proof capture. Cleanup/delete was later
-approved by the current user request and completed for artifact-listed QA
-targets only.
+The earlier full-closeout recapture failed before proof capture and remains
+historical failure context under
+`output/release-prep/full-closeout-20260618-parent/browser-use-current/`.
+Cleanup/delete was later approved by the current user request and completed for
+artifact-listed QA targets only.
 
 ## Local Verification
 
@@ -313,41 +304,41 @@ output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json
 
 ## Known Blockers
 
-Release remains blocked by signup proof, local DB reset/recreate proof, and
-current `HEAD` Browser Use smoke proof.
+Release remains blocked by signup proof and local DB reset/recreate proof.
 Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry
 used a redacted `example.com` address and returned HTTP 400 invalid email
 instead, so the current blocker is an owned test mailbox requirement rather than
-a newly reproduced 429. A full-closeout local env name scan found no owned test
-email key. Browser Use submit proof for the earlier 429 remains incomplete
-because the submit eval hung. Do not use third-party real email addresses for
-release proof.
+a newly reproduced 429. The final parent run found no owned test mailbox key in
+the local env files and did not submit signup. Browser Use submit proof for the
+earlier 429 remains incomplete because the submit eval hung. Do not use
+third-party real email addresses for release proof.
 
 Local DB reset/recreate was approved and attempted. Volume recreate and stale
 Supabase temp storage migration cleanup removed the previous
 `optimize-existing-functions-again` Storage migration blocker, then Supabase CLI
-was upgraded from 2.54.11 to 2.106.0. The full-closeout retry used Colima/Docker
-29.5.2, progressed through service image pulls to
-`Starting database from backup...`, then stalled until the parent process
-interrupted it. It did not reach `supabase db reset` or DB verification.
-Evidence is saved at:
+was upgraded from 2.54.11 to 2.106.0. The final retry started Colima, used the
+Colima Docker socket, completed `supabase stop --no-backup`, then ran
+`supabase start`. It progressed through image pulls, including `realtime` and
+`logflare`, but stalled before local services became available. It did not
+reach `supabase db reset` or DB verification. Evidence is saved at:
 
 ```text
-output/release-prep/full-closeout-20260618-parent/local-db/reset-recreate-summary.json
+output/release-prep/final-closeout-20260618-parent/local-db/local-db-reset-recreate-summary.json
 ```
 
-Current `HEAD` Browser Use smoke recapture was attempted against the env-injected
-preview on port 4178. Browser Use doctor reported 4/5 checks passed with a
-browser profile available, but capture failed twice: first with `Failed to start
-daemon`, then with socket receive timeout. Evidence is saved at:
+Current `HEAD` Browser Use smoke proof was captured against the env-injected
+preview on port 4178 after `browser-use profile update` and a passing
+`browser-use doctor`. `verify-browser-use-proof` passes for release date
+`2026-06-18`, environment `staging`, and the current git commit. Evidence is
+saved at:
 
 ```text
-output/release-prep/full-closeout-20260618-parent/browser-use-current/browser-use-current-summary.json
+output/release-prep/final-closeout-20260618-parent/browser-use-current/
 ```
 
-After this blocker update, `release:doctor` stops at release blockers before
-Browser Use proof is evaluated. Cleanup/no residual process state was confirmed
-after the parent run. The final release gate is stopped by
+After this blocker update, `release:doctor` stops at release blockers for the
+remaining signup and local DB blockers. Cleanup/no residual process state must
+be rechecked after final cleanup. The final release gate is stopped by
 `docs/release-blockers-2026-06-18.json`.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner

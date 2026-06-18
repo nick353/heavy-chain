@@ -41,10 +41,9 @@ Heavy Chain can only be released after all of these are true:
 
 Current 2026-06-18 parent observation: the environment gate now passes with
 `.env.production.local` sourced, current readback metadata verification has
-passed, and focused authenticated `scene-coordinate` / `variations` proof has
-passed. Browser Use smoke metadata passed for the pre-closeout parent `HEAD`,
-but the full-closeout current `HEAD` Browser Use smoke recapture failed before
-proof capture with daemon startup/socket timeout. Final release gate is stopped
+passed, focused authenticated `scene-coordinate` / `variations` proof has
+passed, and final application-code Browser Use smoke proof validates after
+Browser Use was repaired with `profile-use`. Final release gate is still stopped
 by `docs/release-blockers-2026-06-18.json`.
 
 ## Passed Evidence
@@ -77,14 +76,13 @@ by `docs/release-blockers-2026-06-18.json`.
   reports `verdict=pass`. Existing DB scene rows from before the fix still have
   `feature_type=null` and remain historical only.
 - Browser Use smoke metadata verification passed for the pre-closeout parent
-  `HEAD`, but full-closeout current `HEAD` smoke recapture failed before proof
-  capture with `browser_use_daemon_timeout_on_current_head_smoke`.
+  `HEAD`. Final current `HEAD` smoke proof also passes under
+  `output/release-prep/final-closeout-20260618-parent/browser-use-current/`
+  after `browser-use profile update` and a passing `browser-use doctor`.
 - `release:doctor` stops at release blockers because
   `docs/release-blockers-2026-06-18.json` records unresolved
   `signup_owned_test_email_required` and
-  `local_db_reset_recreate_incomplete` and
-  `browser_use_daemon_timeout_on_current_head_smoke` blockers with
-  `blocks_release=true`.
+  `local_db_reset_recreate_incomplete` blockers with `blocks_release=true`.
 - Cleanup/delete was approved by the current user request and completed for
   artifact-listed QA storage objects, `generated_images` rows, brands, and Auth
   users. Usage, audit, and edge run proof rows were not deleted.
@@ -95,20 +93,18 @@ by `docs/release-blockers-2026-06-18.json`.
 - Signup proof remains blocked until an owned test mailbox is available. Earlier
   attempts hit Supabase Auth HTTP 429; the parent closeout retry used a redacted
   `example.com` address and returned HTTP 400 invalid email instead, so the
-  latest blocker is not a fresh 429 reproduction. A full-closeout local env name
-  scan found no owned test email key.
+  latest blocker is not a fresh 429 reproduction. The final parent run found no
+  owned test mailbox key in the local env files and did not submit signup.
 - Browser Use submit proof for the earlier Signup 429 UI was attempted, but the
   submit eval hung, so UI proof remains incomplete.
 - Local Supabase DB reset/recreate was approved and attempted. Volume recreate
   and stale Supabase temp storage migration cleanup removed the previous
   `optimize-existing-functions-again` blocker.
-- The latest local DB retry used Supabase CLI 2.106.0 and Colima/Docker 29.5.2,
-  progressed to `Starting database from backup...`, then stalled until the
-  parent process interrupted it. It did not reach `supabase db reset` or DB
-  verification.
-- Current `HEAD` Browser Use smoke recapture was attempted against the
-  env-injected preview, but Browser Use failed before proof capture with
-  daemon startup/socket timeout.
+- The latest local DB retry started Colima, used the Colima Docker socket,
+  completed `supabase stop --no-backup`, then ran `supabase start`. It
+  progressed through image pulls, including `realtime` and `logflare`, but
+  stalled before local services became available. It did not reach
+  `supabase db reset` or DB verification.
 
 ## Required Environment Names
 

@@ -3,10 +3,12 @@
 Status: **blocked**.
 
 This file records parent-only Browser Use QA for the Heavy Chain release. It is
-not release approval. Current `HEAD` Browser Use smoke proof is not captured;
-the full-closeout recapture failed before proof capture and is summarized under
+not release approval. Current `HEAD` Browser Use smoke proof is captured and
+validated under
+`output/release-prep/final-closeout-20260618-parent/browser-use-current/`.
+The earlier full-closeout recapture failure remains historical context under
 `output/release-prep/full-closeout-20260618-parent/browser-use-current/`.
-Detailed historical operation proof is under
+Detailed operation proof is under
 `output/release-prep/final-browser-use-20260618-parent/`.
 
 ## Verified Browser Flows
@@ -119,24 +121,23 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 
 - Signup proof is blocked until an owned test mailbox is available. Earlier
   attempts hit Supabase Auth HTTP 429; the parent closeout retry returned HTTP
-  400 invalid email for a redacted `example.com` address, and the full-closeout
-  local env name scan found no owned test email key.
+  400 invalid email for a redacted `example.com` address. The final parent run
+  found no owned test mailbox key and did not submit signup.
 - Cleanup/delete was later approved by the current user request and completed
   for artifact-listed QA targets only.
 - Local DB reset/recreate was approved and attempted. Volume recreate and stale
   Supabase temp storage migration cleanup removed the previous
-  `optimize-existing-functions-again` blocker. The full-closeout retry with
-  Supabase CLI 2.106.0 and Colima/Docker 29.5.2 progressed to
-  `Starting database from backup...`, then stalled until interrupted. It did not
-  reach `supabase db reset` or DB verification.
-- Current `HEAD` Browser Use smoke recapture was attempted against the
-  env-injected preview, but Browser Use failed before proof capture with daemon
-  startup/socket timeout.
+  `optimize-existing-functions-again` blocker. The final retry started Colima,
+  used the Colima Docker socket, completed `supabase stop --no-backup`, then
+  ran `supabase start`. It progressed through image pulls, including
+  `realtime` and `logflare`, but stalled before local services became
+  available. It did not reach `supabase db reset` or DB verification.
 
 Browser Use smoke metadata verification passed for the pre-closeout parent
-`HEAD`, but the full-closeout current `HEAD` smoke recapture did not produce
-proof. Cleanup/no residual process state was confirmed after the parent run.
-`release:doctor` now stops at the release blocker manifest.
+`HEAD`, and final application-code Browser Use smoke proof also validates after
+Browser Use repair. Cleanup/no residual process state was confirmed after the
+previous parent run and must be rechecked after final cleanup. `release:doctor`
+now stops at the release blocker manifest.
 
 Historical note: existing DB scene rows predate the feature-type fix and still
 have `feature_type=null`.

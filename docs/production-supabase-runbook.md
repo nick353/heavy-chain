@@ -14,23 +14,23 @@ applied remotely, and updated Edge Functions have been deployed. The
 `scene-coordinate` and `variations`. Do not rerun remote mutation steps from
 release verification without explicit human-owner approval.
 
-Remaining blockers are signup proof without an owned test mailbox, local DB
-reset/recreate proof, and current `HEAD` Browser Use smoke proof. Earlier
-signup attempts hit Supabase Auth HTTP 429, but the parent closeout retry used a
-redacted `example.com` address and returned HTTP 400 invalid email instead; the
-full-closeout local env name scan found no owned test email key. Cleanup/delete
-was approved by the current user request and completed only for artifact-listed
-QA storage objects, `generated_images` rows, brands, and Auth users. Local DB
-reset/recreate was approved and attempted. Volume recreate and stale Supabase
-temp storage migration cleanup removed the previous
-`optimize-existing-functions-again` blocker, and the latest retry with Supabase
-CLI 2.106.0 plus Colima/Docker 29.5.2 progressed to
-`Starting database from backup...` before stalling and being interrupted by the
-parent process. It did not reach `supabase db reset` or DB verification. Browser
-Use smoke metadata verification passed for the pre-closeout parent `HEAD`, but
-the full-closeout current `HEAD` Browser Use smoke recapture failed before proof
-capture with daemon startup/socket timeout. `release:doctor` now stops at
-release blockers because
+Remaining blockers are signup proof without an owned test mailbox and local DB
+reset/recreate proof. Earlier signup attempts hit Supabase Auth HTTP 429, but
+the parent closeout retry used a redacted `example.com` address and returned
+HTTP 400 invalid email instead; the final parent run found no owned test email
+key and did not submit signup. Cleanup/delete was approved by the current user
+request and completed only for artifact-listed QA storage objects,
+`generated_images` rows, brands, and Auth users. Local DB reset/recreate was
+approved and attempted. Volume recreate and stale Supabase temp storage
+migration cleanup removed the previous `optimize-existing-functions-again`
+blocker. The latest retry started Colima, used the Colima Docker socket,
+completed `supabase stop --no-backup`, then ran `supabase start`. It progressed
+through image pulls, including `realtime` and `logflare`, but stalled before
+local services became available. It did not reach `supabase db reset` or DB
+verification. Browser Use smoke metadata verification passed for the
+pre-closeout parent `HEAD`; final application-code Browser Use smoke proof also
+passes after Browser Use repair. `release:doctor` now stops at release blockers
+because
 `docs/release-blockers-2026-06-18.json` records the remaining unresolved
 blockers with `blocks_release=true`.
 Existing DB scene rows were generated before the fix and still have

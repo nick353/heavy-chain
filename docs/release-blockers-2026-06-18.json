@@ -11,9 +11,10 @@
         "output/release-prep/next-phase-20260618-parent/signup-api-readback.json",
         "output/release-prep/next-phase-20260618-parent2/signup-api-readback.json",
         "output/release-prep/next-phase-20260618-parent2/browser/signup-ui-429-summary.json",
-        "output/release-prep/closeout-20260618-parent/signup-api-readback.json"
+        "output/release-prep/closeout-20260618-parent/signup-api-readback.json",
+        "output/release-prep/final-closeout-20260618-parent/signup/signup-owned-test-email-summary.json"
       ],
-      "note": "Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry used a redacted example.com address and returned HTTP 400 invalid email instead. A full-closeout local env name scan found no owned test email key. Do not use third-party real email addresses for release proof; resume with an owned test mailbox or explicitly accept this as a blocker."
+      "note": "Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry used a redacted example.com address and returned HTTP 400 invalid email instead. The final parent run scanned local env files for TEST/QA/SIGNUP/EMAIL/MAIL keys and found no owned test mailbox configuration. Signup submit was not attempted to avoid third-party email or PII. Resume with an owned test mailbox or explicitly accept this as a blocker."
     },
     {
       "id": "cleanup_delete_not_run",
@@ -30,18 +31,20 @@
       "evidence": [
         "output/release-prep/next-phase-20260618-parent2/local-db/reset-recreate-summary.json",
         "output/release-prep/closeout-20260618-parent/local-db/reset-recreate-summary.json",
-        "output/release-prep/full-closeout-20260618-parent/local-db/reset-recreate-summary.json"
+        "output/release-prep/full-closeout-20260618-parent/local-db/reset-recreate-summary.json",
+        "output/release-prep/final-closeout-20260618-parent/local-db/local-db-reset-recreate-summary.json"
       ],
-      "note": "Approved by the current user request and attempted. The latest full-closeout run used Supabase CLI 2.106.0 with Colima/Docker 29.5.2, progressed through image pulls to Starting database from backup..., then stalled until the parent process interrupted it. db reset and DB verification were not reached. Exact blocker: local_db_reset_recreate_incomplete_database_backup_restore_stalled."
+      "note": "Approved by the current user request and attempted again. The final parent run started Colima, used the Colima Docker socket, completed supabase stop --no-backup, then ran supabase start. It progressed through image pulls, including realtime and logflare, but stalled before local services became available. db reset and DB verification were not reached. Exact blocker: local_db_reset_recreate_incomplete_image_pull_stalled."
     },
     {
       "id": "browser_use_daemon_timeout_on_current_head_smoke",
-      "status": "unresolved",
-      "blocks_release": true,
+      "status": "resolved",
+      "blocks_release": false,
       "evidence": [
-        "output/release-prep/full-closeout-20260618-parent/browser-use-current/browser-use-current-summary.json"
+        "output/release-prep/full-closeout-20260618-parent/browser-use-current/browser-use-current-summary.json",
+        "output/release-prep/final-closeout-20260618-parent/browser-use-current/"
       ],
-      "note": "Current HEAD Browser Use smoke capture was attempted against the env-injected preview. Browser Use doctor reported 4/5 checks passed with a browser profile available, but the capture failed twice: first with Failed to start daemon, then with socket recv TimeoutError. No current HEAD Browser Use smoke proof was captured."
+      "note": "Resolved for the current application-code proof in the final parent run. browser-use profile update installed profile-use, browser-use doctor passed all checks, and env-injected home/login proof was captured under output/release-prep/final-closeout-20260618-parent/browser-use-current/. verify-browser-use-proof passed with release_date 2026-06-18, environment staging, and the app-code commit captured in the proof. After the docs-only blocker commit, release:doctor stops at unresolved blockers before evaluating Browser Use proof; recapture Browser Use against the final git commit if those blockers are later resolved, accepted, or waived."
     }
   ]
 }
