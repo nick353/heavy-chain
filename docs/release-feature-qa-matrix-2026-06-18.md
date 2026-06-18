@@ -1,6 +1,6 @@
 # Release Feature QA Matrix 2026-06-18
 
-Status: **blocked**.
+Status: **accepted-risk; final doctor pending**.
 
 This file records parent-only Browser Use QA for the Heavy Chain release. It is
 not release approval. Current `HEAD` Browser Use smoke proof is captured and
@@ -119,7 +119,7 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 
 ## Remaining Blockers
 
-- Signup proof is blocked until an owned test mailbox is available. Earlier
+- Signup proof is accepted as missing until an owned test mailbox is available. Earlier
   attempts hit Supabase Auth HTTP 429; the parent closeout retry returned HTTP
   400 invalid email for a redacted `example.com` address. The final parent run
   found no owned test mailbox key and did not submit signup.
@@ -128,10 +128,10 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 - Local DB reset/recreate was approved and attempted. Volume recreate and stale
   Supabase temp storage migration cleanup removed the previous
   `optimize-existing-functions-again` blocker. The final retry started Colima,
-  used the Colima Docker socket, completed `supabase stop --no-backup`, then
-  ran `supabase start`. It progressed through image pulls, including
-  `realtime` and `logflare`, but stalled before local services became
-  available. It did not reach `supabase db reset` or DB verification.
+  used the Colima Docker socket, reached a healthy local DB, and DB verification
+  passed. `supabase db reset --local --no-seed` reached schema initialization
+  but did not exit cleanly, so this remains accepted-risk rather than clean
+  reset proof.
 
 Browser Use smoke metadata verification passed for the pre-closeout parent
 `HEAD`, and final application-code Browser Use smoke proof also validates after

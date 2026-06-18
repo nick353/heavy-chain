@@ -1,6 +1,6 @@
 # Release Evidence 2026-06-18
 
-Status: **blocked**.
+Status: **accepted-risk; final doctor pending**.
 
 This file records what is known for the 2026-06-18 release gate. It is an
 evidence ledger, not approval to release.
@@ -202,13 +202,13 @@ image-visual-qa-summary.json
 latest-feature-image-summary.json
 ```
 
-Remaining release blockers from this pass:
+Accepted release risks from this pass:
 
-- Resume the signup lane only with an owned test mailbox, or explicitly accept
-  the missing owned-mailbox proof as a release blocker.
-- Resume local DB reset/recreate after the local Supabase image pull/start path
-  no longer stalls, or explicitly accept the incomplete local reset proof as a
-  release blocker.
+- Signup success proof is accepted as missing because no owned test mailbox was
+  discoverable in local env files and the user explicitly authorized proceeding.
+- Local DB proof is accepted with `supabase migration list --local` and
+  `SUPABASE_VERIFY_MODE=db` passing, but without clean `supabase db reset`
+  exit-0 proof.
 - Cleanup/delete was later approved by the current user request and completed
   for artifact-listed QA targets only.
 
@@ -279,7 +279,7 @@ release state is different: `docs/release-blockers-2026-06-18.json` contains
 unresolved `blocks_release=true` blockers, so `release:doctor` stops at release
 blockers.
 
-Current result:
+Historical result before accepted-risk update:
 
 ```text
 STOP release blockers
@@ -304,7 +304,8 @@ output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json
 
 ## Known Blockers
 
-Release remains blocked by signup proof and local DB reset/recreate proof.
+Release risk remains: signup proof and clean local DB reset proof are accepted
+by the user, not fully resolved by success proof.
 Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry
 used a redacted `example.com` address and returned HTTP 400 invalid email
 instead, so the current blocker is an owned test mailbox requirement rather than
@@ -336,10 +337,9 @@ saved at:
 output/release-prep/final-closeout-20260618-parent/browser-use-current/
 ```
 
-After this blocker update, `release:doctor` stops at release blockers for the
-remaining signup and local DB blockers. Cleanup/no residual process state must
-be rechecked after final cleanup. The final release gate is stopped by
-`docs/release-blockers-2026-06-18.json`.
+After this blocker update, `release:doctor` should proceed past release
+blockers and expose the next gate, if any. Cleanup/no residual process state
+must be rechecked after final cleanup.
 
 Rollback path is recorded in `docs/rollback.md`. Use it only after a human owner
 chooses rollback; normal release verification does not deploy, delete, auth,

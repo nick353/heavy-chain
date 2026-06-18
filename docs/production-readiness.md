@@ -1,6 +1,6 @@
 # Production Readiness
 
-Status: **blocked**.
+Status: **accepted-risk; final doctor pending**.
 
 This document is the final release gate ledger for Heavy Chain. If a check says
 `BLOCKED` or `DO NOT RUN`, stop. Do not guess, do not fill secrets into docs, and
@@ -79,18 +79,18 @@ by `docs/release-blockers-2026-06-18.json`.
   `HEAD`. Final current `HEAD` smoke proof also passes under
   `output/release-prep/final-closeout-20260618-parent/browser-use-current/`
   after `browser-use profile update` and a passing `browser-use doctor`.
-- `release:doctor` stops at release blockers because
-  `docs/release-blockers-2026-06-18.json` records unresolved
-  `signup_owned_test_email_required` and
-  `local_db_reset_recreate_incomplete` blockers with `blocks_release=true`.
+- The previous `release:doctor` stop at release blockers has been converted to
+  accepted-risk entries after the user's explicit full-scope authorization.
+  Signup still has no successful owned-mailbox proof, and local DB has DB
+  verification proof but not a clean `supabase db reset` exit-0 proof.
 - Cleanup/delete was approved by the current user request and completed for
   artifact-listed QA storage objects, `generated_images` rows, brands, and Auth
   users. Usage, audit, and edge run proof rows were not deleted.
 - Cleanup/no residual process state was confirmed after the parent run.
 
-## Known Blockers
+## Accepted Risks
 
-- Signup proof remains blocked until an owned test mailbox is available. Earlier
+- Signup proof is accepted as a release risk until an owned test mailbox is available. Earlier
   attempts hit Supabase Auth HTTP 429; the parent closeout retry used a redacted
   `example.com` address and returned HTTP 400 invalid email instead, so the
   latest blocker is not a fresh 429 reproduction. The final parent run found no
@@ -101,10 +101,10 @@ by `docs/release-blockers-2026-06-18.json`.
   and stale Supabase temp storage migration cleanup removed the previous
   `optimize-existing-functions-again` blocker.
 - The latest local DB retry started Colima, used the Colima Docker socket,
-  completed `supabase stop --no-backup`, then ran `supabase start`. It
-  progressed through image pulls, including `realtime` and `logflare`, but
-  stalled before local services became available. It did not reach
-  `supabase db reset` or DB verification.
+  reached a healthy local database, and `SUPABASE_VERIFY_MODE=db bash
+  scripts/supabase-prod-verify.sh` passed. `supabase db reset --local
+  --no-seed` reached schema initialization but did not exit cleanly, so this is
+  accepted with DB verification proof rather than resolved by clean reset proof.
 
 ## Required Environment Names
 

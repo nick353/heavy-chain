@@ -5,16 +5,17 @@
   "blockers": [
     {
       "id": "signup_owned_test_email_required",
-      "status": "unresolved",
+      "status": "accepted",
       "blocks_release": true,
       "evidence": [
         "output/release-prep/next-phase-20260618-parent/signup-api-readback.json",
         "output/release-prep/next-phase-20260618-parent2/signup-api-readback.json",
         "output/release-prep/next-phase-20260618-parent2/browser/signup-ui-429-summary.json",
         "output/release-prep/closeout-20260618-parent/signup-api-readback.json",
-        "output/release-prep/final-closeout-20260618-parent/signup/signup-owned-test-email-summary.json"
+        "output/release-prep/final-closeout-20260618-parent/signup/signup-owned-test-email-summary.json",
+        "output/release-prep/full-scope-20260618-parent/summary/items-1-30-execution-summary.json"
       ],
-      "note": "Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry used a redacted example.com address and returned HTTP 400 invalid email instead. The final parent run scanned local env files for TEST/QA/SIGNUP/EMAIL/MAIL keys and found no owned test mailbox configuration. Signup submit was not attempted to avoid third-party email or PII. Resume with an owned test mailbox or explicitly accept this as a blocker."
+      "note": "Accepted by the user's explicit full-scope authorization on 2026-06-18. Earlier signup attempts hit Supabase Auth HTTP 429. The parent closeout retry used a redacted example.com address and returned HTTP 400 invalid email instead. The full-scope parent run scanned local env files for TEST/QA/SIGNUP/EMAIL/MAIL/OWNED keys and found no owned test mailbox configuration. Signup success submit was not attempted to avoid third-party email or PII. This is an accepted release risk, not a successful signup proof."
     },
     {
       "id": "cleanup_delete_not_run",
@@ -26,15 +27,18 @@
     },
     {
       "id": "local_db_reset_recreate_incomplete",
-      "status": "unresolved",
+      "status": "accepted",
       "blocks_release": true,
       "evidence": [
         "output/release-prep/next-phase-20260618-parent2/local-db/reset-recreate-summary.json",
         "output/release-prep/closeout-20260618-parent/local-db/reset-recreate-summary.json",
         "output/release-prep/full-closeout-20260618-parent/local-db/reset-recreate-summary.json",
-        "output/release-prep/final-closeout-20260618-parent/local-db/local-db-reset-recreate-summary.json"
+        "output/release-prep/final-closeout-20260618-parent/local-db/local-db-reset-recreate-summary.json",
+        "output/release-prep/full-scope-20260618-parent/local-db/supabase-migration-list-local.txt",
+        "output/release-prep/full-scope-20260618-parent/local-db/supabase-verify-db-2.txt",
+        "output/release-prep/full-scope-20260618-parent/summary/items-1-30-execution-summary.json"
       ],
-      "note": "Approved by the current user request and attempted again. The final parent run started Colima, used the Colima Docker socket, completed supabase stop --no-backup, then ran supabase start. It progressed through image pulls, including realtime and logflare, but stalled before local services became available. db reset and DB verification were not reached. Exact blocker: local_db_reset_recreate_incomplete_image_pull_stalled."
+      "note": "Accepted by the user's explicit full-scope authorization on 2026-06-18. The full-scope parent run started Colima, used the Colima Docker socket, avoided the prior storage-api image pull path with valid --exclude names, reached a healthy local DB, and `supabase migration list --local` passed. `supabase db reset --local --no-seed` reached schema initialization but the CLI did not exit cleanly and was interrupted. A subsequent `SUPABASE_VERIFY_MODE=db bash scripts/supabase-prod-verify.sh` passed. This is accepted with DB verification proof, not a clean db reset exit-0 proof."
     },
     {
       "id": "browser_use_daemon_timeout_on_current_head_smoke",

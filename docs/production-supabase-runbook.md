@@ -6,7 +6,7 @@ Create migrations only through Supabase CLI:
 supabase migration new <migration_name>
 ```
 
-Current 2026-06-18 status: blocked. The brand insert policy migration
+Current 2026-06-18 status: accepted-risk; final doctor pending. The brand insert policy migration
 `supabase/migrations/20260618023000_restore_brand_insert_policy.sql` has been
 applied remotely, and updated Edge Functions have been deployed. The
 `generate-variations` Edge Function was also redeployed after fixing
@@ -14,8 +14,8 @@ applied remotely, and updated Edge Functions have been deployed. The
 `scene-coordinate` and `variations`. Do not rerun remote mutation steps from
 release verification without explicit human-owner approval.
 
-Remaining blockers are signup proof without an owned test mailbox and local DB
-reset/recreate proof. Earlier signup attempts hit Supabase Auth HTTP 429, but
+Accepted risks are signup proof without an owned test mailbox and incomplete
+clean local DB reset proof. Earlier signup attempts hit Supabase Auth HTTP 429, but
 the parent closeout retry used a redacted `example.com` address and returned
 HTTP 400 invalid email instead; the final parent run found no owned test email
 key and did not submit signup. Cleanup/delete was approved by the current user
@@ -24,15 +24,14 @@ request and completed only for artifact-listed QA storage objects,
 approved and attempted. Volume recreate and stale Supabase temp storage
 migration cleanup removed the previous `optimize-existing-functions-again`
 blocker. The latest retry started Colima, used the Colima Docker socket,
-completed `supabase stop --no-backup`, then ran `supabase start`. It progressed
-through image pulls, including `realtime` and `logflare`, but stalled before
-local services became available. It did not reach `supabase db reset` or DB
-verification. Browser Use smoke metadata verification passed for the
+reached a healthy local DB, `supabase migration list --local` passed, and
+`SUPABASE_VERIFY_MODE=db bash scripts/supabase-prod-verify.sh` passed.
+`supabase db reset --local --no-seed` reached schema initialization but did not
+exit cleanly. Browser Use smoke metadata verification passed for the
 pre-closeout parent `HEAD`; final application-code Browser Use smoke proof also
-passes after Browser Use repair. `release:doctor` now stops at release blockers
-because
-`docs/release-blockers-2026-06-18.json` records the remaining unresolved
-blockers with `blocks_release=true`.
+passes after Browser Use repair. `docs/release-blockers-2026-06-18.json` now
+records the former release blockers as accepted risks after explicit user
+authorization.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`; focused authenticated Browser Use proof now passes for
 `scene-coordinate` and `variations` under

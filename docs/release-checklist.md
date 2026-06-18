@@ -1,6 +1,6 @@
 # Release Checklist
 
-Status: **blocked**.
+Status: **accepted-risk; final doctor pending**.
 
 Use this checklist from top to bottom. If any line says `STOP`, stop there and
 write down the blocker. Do not skip ahead.
@@ -238,7 +238,7 @@ smoke, auth-provider login, or cleanup deletion.
 
 ## 7. Release Decision
 
-Current decision: **do not release**.
+Current decision: **accepted-risk; do not call release-ready until final doctor passes**.
 
 Current applied/proven state: the brand insert migration has been applied
 remotely, updated Edge Functions have been deployed, and image visual QA is PASS
@@ -252,19 +252,18 @@ deployed remotely. Focused authenticated Browser Use generation now proves
 `scene-coordinate` and `variations` with DB/storage readback and visual QA
 passing.
 
-Resume only after signup proof is captured with an owned test mailbox or
-explicitly accepted as a blocker, local DB reset/recreate completes through
-`supabase db reset` and DB verification or is explicitly accepted as a blocker,
-and the safe validators still pass. Cleanup/delete has been approved and
+The signup and local DB blockers were explicitly accepted by the user for this
+full-scope run. This does not create successful signup proof and does not prove
+a clean `supabase db reset` exit-0. The safe validators still need to pass.
+Cleanup/delete has been approved and
 completed for the artifact-listed QA targets only; usage, audit, and edge run
 proof rows were not deleted. Browser Use smoke metadata verification passed for
 the pre-closeout parent `HEAD`, and final application-code Browser Use smoke
 proof also validates under
 `output/release-prep/final-closeout-20260618-parent/browser-use-current/`.
 Cleanup/no residual process state was confirmed after the parent run.
-`release:doctor` now stops at release blockers because
-`docs/release-blockers-2026-06-18.json` records unresolved
-`signup_owned_test_email_required` and
-`local_db_reset_recreate_incomplete` blockers with `blocks_release=true`.
+`docs/release-blockers-2026-06-18.json` records
+`signup_owned_test_email_required` and `local_db_reset_recreate_incomplete` as
+accepted risks.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`.
