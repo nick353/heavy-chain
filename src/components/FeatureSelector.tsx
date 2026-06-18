@@ -285,6 +285,8 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
           return (
             <motion.button
               key={feature.id}
+              type="button"
+              data-testid={`feature-card-${feature.id}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}

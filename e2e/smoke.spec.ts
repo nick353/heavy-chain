@@ -105,6 +105,12 @@ async function mockSupabase(page: Page, options: {
   });
 }
 
+async function selectFeature(page: Page, featureId: string) {
+  const featureCard = page.getByTestId(`feature-card-${featureId}`);
+  await featureCard.scrollIntoViewIfNeeded();
+  await featureCard.click();
+}
+
 test('landing shell renders with mocked Supabase requests', async ({ page }) => {
   await mockSupabase(page);
 
@@ -149,7 +155,7 @@ test('optimize-prompt success renders the result panel', async ({ page }) => {
   await mockSupabase(page, { optimizePromptSucceeds: true });
 
   await page.goto('/generate');
-  await page.getByRole('button', { name: /プロンプト最適化/ }).click();
+  await selectFeature(page, 'optimize-prompt');
   await page.getByPlaceholder('例: 白いTシャツを着たモデル、スタジオ撮影').fill('白いTシャツを着たモデル、スタジオ撮影');
   await page.getByRole('button', { name: '最適化' }).click();
 
@@ -168,7 +174,7 @@ test('generation failure renders the error card', async ({ page }) => {
   await mockSupabase(page, { generationFails: true });
 
   await page.goto('/generate');
-  await page.getByRole('button', { name: /キャンペーン画像/ }).click();
+  await selectFeature(page, 'campaign-image');
   await page.getByPlaceholder('例: 夏のサマーセール告知、爽やかな海辺の雰囲気').fill('夏のサマーセール告知');
   await page.getByRole('button', { name: '生成' }).click();
 
