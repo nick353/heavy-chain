@@ -14,11 +14,16 @@ applied remotely, and updated Edge Functions have been deployed. The
 `scene-coordinate` and `variations`. Do not rerun remote mutation steps from
 release verification without explicit human-owner approval.
 
-Remaining blockers are signup HTTP 429, cleanup/delete not run, and local DB
-reset/recreate not approved. Current Browser Use smoke metadata verification
-passed for the final parent `HEAD`, and cleanup/no residual process state was
-confirmed after the parent run. `release:doctor` now stops at release blockers
-because `docs/release-blockers-2026-06-18.json` records those unresolved
+Remaining blockers are signup HTTP 429 and local DB reset/recreate failure.
+Signup was retried and still returned HTTP 429. Cleanup/delete was approved by
+the current user request and completed only for artifact-listed QA storage
+objects, `generated_images` rows, brands, and Auth users. Local DB
+reset/recreate was approved and attempted, but `supabase db reset` failed with
+`StorageBackendError: Migration optimize-existing-functions-again not found`.
+Current Browser Use smoke metadata verification passed for the final parent
+`HEAD`, and cleanup/no residual process state was confirmed after the parent
+run. `release:doctor` now stops at release blockers because
+`docs/release-blockers-2026-06-18.json` records the remaining unresolved
 blockers with `blocks_release=true`.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`; focused authenticated Browser Use proof now passes for

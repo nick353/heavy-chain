@@ -116,12 +116,15 @@ SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh
 ## Remaining Blockers
 
 - Signup is blocked by Supabase Auth HTTP 429 in this test lane.
-- Cleanup/delete was not run.
-- Local DB reset/recreate was not approved.
+- Cleanup/delete was later approved by the current user request and completed
+  for artifact-listed QA targets only.
+- Local DB reset/recreate was approved and attempted, but `supabase db reset`
+  failed with `StorageBackendError: Migration optimize-existing-functions-again
+  not found`.
 
-Current Browser Use smoke metadata verification and `release:doctor` passed for
-the final parent `HEAD`, and cleanup/no residual process state was confirmed
-after the parent run.
+Current Browser Use smoke metadata verification passed for the final parent
+`HEAD`, and cleanup/no residual process state was confirmed after the parent
+run. `release:doctor` now stops at the release blocker manifest.
 
 Historical note: existing DB scene rows predate the feature-type fix and still
 have `feature_type=null`.

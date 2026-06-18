@@ -8,18 +8,27 @@
       "status": "unresolved",
       "blocks_release": true,
       "evidence": [
-        "output/release-prep/next-phase-20260618-parent/signup-api-readback.json"
+        "output/release-prep/next-phase-20260618-parent/signup-api-readback.json",
+        "output/release-prep/next-phase-20260618-parent2/signup-api-readback.json",
+        "output/release-prep/next-phase-20260618-parent2/browser/signup-ui-429-summary.json"
       ]
     },
     {
       "id": "cleanup_delete_not_run",
-      "status": "unresolved",
-      "blocks_release": true
+      "status": "resolved",
+      "blocks_release": false,
+      "evidence": [
+        "output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json"
+      ]
     },
     {
-      "id": "local_db_reset_recreate_not_approved",
+      "id": "local_db_reset_recreate_failed",
       "status": "unresolved",
-      "blocks_release": true
+      "blocks_release": true,
+      "evidence": [
+        "output/release-prep/next-phase-20260618-parent2/local-db/reset-recreate-summary.json"
+      ],
+      "note": "Approved by the current user request and attempted, but Supabase local db reset failed with StorageBackendError: Migration optimize-existing-functions-again not found."
     }
   ]
 }

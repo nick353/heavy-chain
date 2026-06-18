@@ -19,10 +19,11 @@ npm run supabase:verify:static
 ```
 
 `npm run release:doctor` is the recommended first command for a safe readiness
-diagnosis. It runs checks in order and stops at the first `STOP`: git clean
-status, proof target, `env:check`, `verify:readback`, current readback metadata
-matching, current `verify:browser-use`, `supabase:verify:static`,
-`security:audit`, `smoke:edge`, `typecheck`, and `lint`. It requires
+diagnosis. It first checks the release blocker manifest, then runs the
+read-only/local checks and stops at the first `STOP`: git clean status, proof
+target, `env:check`, `verify:readback`, current readback metadata matching,
+current `verify:browser-use`, `supabase:verify:static`, `security:audit`,
+`smoke:edge`, `typecheck`, and `lint`. It requires
 `RELEASE_BROWSER_USE_PROOF_DIR` so historical Browser Use proof is never
 silently treated as current proof, and it passes current release date,
 environment, and git commit expectations to `verify:browser-use`. It does not
@@ -77,16 +78,23 @@ Final release gate is stopped by `docs/release-blockers-2026-06-18.json`.
   `HEAD`.
 - `release:doctor` stops at release blockers because
   `docs/release-blockers-2026-06-18.json` records unresolved
-  `signup_http_429`, `cleanup_delete_not_run`, and
-  `local_db_reset_recreate_not_approved` blockers with `blocks_release=true`.
+  `signup_http_429` and `local_db_reset_recreate_failed` blockers with
+  `blocks_release=true`.
+- Cleanup/delete was approved by the current user request and completed for
+  artifact-listed QA storage objects, `generated_images` rows, brands, and Auth
+  users. Usage, audit, and edge run proof rows were not deleted.
 - Cleanup/no residual process state was confirmed after the parent run.
 
 ## Known Blockers
 
 - Signup is blocked in this test lane by Supabase Auth HTTP 429.
-- Cleanup/delete was not approved and was not run.
-- Local Supabase DB verification still requires an approved local DB
-  reset/recreate lane or another approved DB verification lane.
+- Browser Use submit proof for the Signup 429 UI was attempted, but the submit
+  eval hung, so UI proof remains incomplete.
+- Local Supabase DB reset/recreate was approved and attempted, but
+  `supabase db reset` failed with
+  `StorageBackendError: Migration optimize-existing-functions-again not found`.
+  Static DB verification passed afterward, but the reset/recreate lane remains
+  blocked.
 
 ## Required Environment Names
 

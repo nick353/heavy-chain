@@ -13,10 +13,11 @@ For the safe one-command readiness diagnosis, run:
 RELEASE_BROWSER_USE_PROOF_DIR=<current-browser-use-proof-dir> npm run release:doctor
 ```
 
-It runs read-only/local checks in order and stops at the first `STOP`: git clean
-status, proof target, `env:check`, `verify:readback`, current readback metadata
-matching, current `verify:browser-use`, `supabase:verify:static`,
-`security:audit`, `smoke:edge`, `typecheck`, and `lint`. It never runs
+It first checks the release blocker manifest, then runs read-only/local checks
+in order and stops at the first `STOP`: git clean status, proof target,
+`env:check`, `verify:readback`, current readback metadata matching, current
+`verify:browser-use`, `supabase:verify:static`, `security:audit`,
+`smoke:edge`, `typecheck`, and `lint`. It never runs
 `supabase:verify:db` or `verify:full`, and it shows the first `STOP` with a next
 action.
 Doctor requires `RELEASE_BROWSER_USE_PROOF_DIR` and passes it to
@@ -252,13 +253,15 @@ deployed remotely. Focused authenticated Browser Use generation now proves
 passing.
 
 Resume only after signup HTTP 429 is resolved or explicitly accepted as a
-blocker, cleanup/delete is approved if required, local DB reset/recreate is
-approved if local DB proof is required, and the safe validators still pass.
+blocker, local DB reset/recreate failure is fixed or explicitly accepted, and
+the safe validators still pass. Cleanup/delete has been approved and completed
+for the artifact-listed QA targets only; usage, audit, and edge run proof rows
+were not deleted.
 Current Browser Use smoke metadata verification passed for the final parent
 `HEAD`, and cleanup/no residual process state was confirmed after the parent
 run. `release:doctor` now stops at release blockers because
 `docs/release-blockers-2026-06-18.json` records unresolved
-`signup_http_429`, `cleanup_delete_not_run`, and
-`local_db_reset_recreate_not_approved` blockers with `blocks_release=true`.
+`signup_http_429` and `local_db_reset_recreate_failed` blockers with
+`blocks_release=true`.
 Existing DB scene rows were generated before the fix and still have
 `feature_type=null`.

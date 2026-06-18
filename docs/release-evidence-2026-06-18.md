@@ -206,7 +206,8 @@ Remaining release blockers from this pass:
 
 - Resolve or retry the signup lane after the Supabase Auth HTTP 429 blocker.
 - Approve and run local DB reset/recreate if that lane is still required.
-- Cleanup/delete was not run.
+- Cleanup/delete was later approved by the current user request and completed
+  for artifact-listed QA targets only.
 
 Current Browser Use smoke metadata verification passed for the final parent
 `HEAD`, and cleanup/no residual process state was confirmed after the parent
@@ -233,8 +234,9 @@ Detailed parent-process Browser Use operation proof is saved under:
 output/release-prep/final-browser-use-20260618-parent/
 ```
 
-The capture saved Browser Use state and screenshots. Cleanup/delete was not run
-because it was not approved.
+The capture saved Browser Use state and screenshots. Cleanup/delete was later
+approved by the current user request and completed for artifact-listed QA
+targets only.
 
 ## Local Verification
 
@@ -287,12 +289,23 @@ Current parent DB readback is saved at
 It reported `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
 storage readback passed.
 
-Cleanup/delete was not approved and was not run.
+Cleanup/delete was approved by the current user request and was run only for
+artifact-listed QA targets. It removed the listed QA storage objects,
+`generated_images` rows, brands, and Auth users without deleting usage, audit,
+or edge run proof rows. Evidence:
+
+```text
+output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json
+```
 
 ## Known Blockers
 
-Release remains blocked by the Supabase Auth HTTP 429 signup blocker,
-cleanup/delete not being run, and local DB reset/recreate not being approved.
+Release remains blocked by the Supabase Auth HTTP 429 signup blocker and local
+DB reset/recreate failure. Signup was retried after the parent run and still
+returned HTTP 429; Browser Use submit proof was attempted but the submit eval
+hung, so UI proof remains incomplete. Local DB reset/recreate was approved and
+attempted, but `supabase db reset` failed with
+`StorageBackendError: Migration optimize-existing-functions-again not found`.
 Current Browser Use smoke metadata verification passed for the final parent
 `HEAD`, and cleanup/no residual process state was confirmed after the parent
 run. The final release gate is stopped by
