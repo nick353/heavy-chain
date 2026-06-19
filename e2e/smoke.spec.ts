@@ -31,13 +31,20 @@ const authToken = {
   user: mockUser,
 };
 
+const configuredProjectRef = process.env.VITE_SUPABASE_URL?.match(/^https:\/\/([^.]+)\.supabase\.co/)?.[1];
+const authStorageKeys = Array.from(new Set([
+  'ghwjymozrwmcrpjqvbmo',
+  'jprhgmxszvtomrqnolxn',
+  configuredProjectRef,
+].filter(Boolean).map((projectRef) => `sb-${projectRef}-auth-token`)));
+
 async function mockSupabase(page: Page, options: {
   optimizePromptSucceeds?: boolean;
   generationFails?: boolean;
 } = {}) {
-  await page.addInitScript((token) => {
-    localStorage.setItem('sb-ghwjymozrwmcrpjqvbmo-auth-token', JSON.stringify(token));
-  }, authToken);
+  await page.addInitScript(({ keys, token }) => {
+    keys.forEach((key) => localStorage.setItem(key, JSON.stringify(token)));
+  }, { keys: authStorageKeys, token: authToken });
 
   await page.route('**/auth/v1/**', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: mockUser }) });

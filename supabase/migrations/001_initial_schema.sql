@@ -24,14 +24,18 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own profile"
     ON public.users FOR SELECT
+    TO authenticated
     USING (auth.uid() = id);
 
 CREATE POLICY "Users can update own profile"
     ON public.users FOR UPDATE
-    USING (auth.uid() = id);
+    TO authenticated
+    USING (auth.uid() = id)
+    WITH CHECK (auth.uid() = id);
 
 CREATE POLICY "Users can insert own profile"
     ON public.users FOR INSERT
+    TO authenticated
     WITH CHECK (auth.uid() = id);
 
 -- ============================================
@@ -54,18 +58,23 @@ ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own brands"
     ON public.brands FOR SELECT
+    TO authenticated
     USING (owner_id = auth.uid());
 
 CREATE POLICY "Users can create brands"
     ON public.brands FOR INSERT
+    TO authenticated
     WITH CHECK (owner_id = auth.uid());
 
 CREATE POLICY "Users can update own brands"
     ON public.brands FOR UPDATE
-    USING (owner_id = auth.uid());
+    TO authenticated
+    USING (owner_id = auth.uid())
+    WITH CHECK (owner_id = auth.uid());
 
 CREATE POLICY "Users can delete own brands"
     ON public.brands FOR DELETE
+    TO authenticated
     USING (owner_id = auth.uid());
 
 -- ============================================
@@ -86,12 +95,15 @@ ALTER TABLE public.brand_members ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Brand members can view their memberships"
     ON public.brand_members FOR SELECT
+    TO authenticated
     USING (user_id = auth.uid() OR 
            brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid()));
 
 CREATE POLICY "Brand owners can manage members"
     ON public.brand_members FOR ALL
-    USING (brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid()));
+    TO authenticated
+    USING (brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid()))
+    WITH CHECK (brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid()));
 
 -- ============================================
 -- GENERATION JOBS TABLE
@@ -114,15 +126,41 @@ ALTER TABLE public.generation_jobs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own jobs"
     ON public.generation_jobs FOR SELECT
+    TO authenticated
     USING (user_id = auth.uid());
 
 CREATE POLICY "Users can create jobs"
     ON public.generation_jobs FOR INSERT
-    WITH CHECK (user_id = auth.uid());
+    TO authenticated
+    WITH CHECK (
+        user_id = auth.uid()
+        AND (
+            brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid())
+            OR brand_id IN (
+                SELECT brand_id
+                FROM public.brand_members
+                WHERE user_id = auth.uid()
+                  AND role IN ('owner', 'admin', 'editor')
+            )
+        )
+    );
 
 CREATE POLICY "Users can update own jobs"
     ON public.generation_jobs FOR UPDATE
-    USING (user_id = auth.uid());
+    TO authenticated
+    USING (user_id = auth.uid())
+    WITH CHECK (
+        user_id = auth.uid()
+        AND (
+            brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid())
+            OR brand_id IN (
+                SELECT brand_id
+                FROM public.brand_members
+                WHERE user_id = auth.uid()
+                  AND role IN ('owner', 'admin', 'editor')
+            )
+        )
+    );
 
 -- ============================================
 -- GENERATED IMAGES TABLE
@@ -146,18 +184,45 @@ ALTER TABLE public.generated_images ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own images"
     ON public.generated_images FOR SELECT
+    TO authenticated
     USING (user_id = auth.uid());
 
 CREATE POLICY "Users can insert images"
     ON public.generated_images FOR INSERT
-    WITH CHECK (user_id = auth.uid());
+    TO authenticated
+    WITH CHECK (
+        user_id = auth.uid()
+        AND (
+            brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid())
+            OR brand_id IN (
+                SELECT brand_id
+                FROM public.brand_members
+                WHERE user_id = auth.uid()
+                  AND role IN ('owner', 'admin', 'editor')
+            )
+        )
+    );
 
 CREATE POLICY "Users can update own images"
     ON public.generated_images FOR UPDATE
-    USING (user_id = auth.uid());
+    TO authenticated
+    USING (user_id = auth.uid())
+    WITH CHECK (
+        user_id = auth.uid()
+        AND (
+            brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid())
+            OR brand_id IN (
+                SELECT brand_id
+                FROM public.brand_members
+                WHERE user_id = auth.uid()
+                  AND role IN ('owner', 'admin', 'editor')
+            )
+        )
+    );
 
 CREATE POLICY "Users can delete own images"
     ON public.generated_images FOR DELETE
+    TO authenticated
     USING (user_id = auth.uid());
 
 -- ============================================
@@ -176,7 +241,25 @@ ALTER TABLE public.folders ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage folders in own brands"
     ON public.folders FOR ALL
-    USING (brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid()));
+    TO authenticated
+    USING (
+        brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid())
+        OR brand_id IN (
+            SELECT brand_id
+            FROM public.brand_members
+            WHERE user_id = auth.uid()
+              AND role IN ('owner', 'admin', 'editor')
+        )
+    )
+    WITH CHECK (
+        brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid())
+        OR brand_id IN (
+            SELECT brand_id
+            FROM public.brand_members
+            WHERE user_id = auth.uid()
+              AND role IN ('owner', 'admin', 'editor')
+        )
+    );
 
 -- ============================================
 -- TAGS TABLE
@@ -194,7 +277,25 @@ ALTER TABLE public.tags ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage tags in own brands"
     ON public.tags FOR ALL
-    USING (brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid()));
+    TO authenticated
+    USING (
+        brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid())
+        OR brand_id IN (
+            SELECT brand_id
+            FROM public.brand_members
+            WHERE user_id = auth.uid()
+              AND role IN ('owner', 'admin', 'editor')
+        )
+    )
+    WITH CHECK (
+        brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid())
+        OR brand_id IN (
+            SELECT brand_id
+            FROM public.brand_members
+            WHERE user_id = auth.uid()
+              AND role IN ('owner', 'admin', 'editor')
+        )
+    );
 
 -- ============================================
 -- IMAGE TAGS TABLE (Junction)
@@ -210,7 +311,27 @@ ALTER TABLE public.image_tags ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage image tags"
     ON public.image_tags FOR ALL
-    USING (image_id IN (SELECT id FROM public.generated_images WHERE user_id = auth.uid()));
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1
+            FROM public.generated_images gi
+            JOIN public.tags t ON t.id = image_tags.tag_id
+            WHERE gi.id = image_tags.image_id
+              AND gi.brand_id = t.brand_id
+              AND gi.user_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1
+            FROM public.generated_images gi
+            JOIN public.tags t ON t.id = image_tags.tag_id
+            WHERE gi.id = image_tags.image_id
+              AND gi.brand_id = t.brand_id
+              AND gi.user_id = auth.uid()
+        )
+    );
 
 -- ============================================
 -- IMAGE FOLDERS TABLE (Junction)
@@ -226,7 +347,27 @@ ALTER TABLE public.image_folders ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage image folders"
     ON public.image_folders FOR ALL
-    USING (image_id IN (SELECT id FROM public.generated_images WHERE user_id = auth.uid()));
+    TO authenticated
+    USING (
+        EXISTS (
+            SELECT 1
+            FROM public.generated_images gi
+            JOIN public.folders f ON f.id = image_folders.folder_id
+            WHERE gi.id = image_folders.image_id
+              AND gi.brand_id = f.brand_id
+              AND gi.user_id = auth.uid()
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1
+            FROM public.generated_images gi
+            JOIN public.folders f ON f.id = image_folders.folder_id
+            WHERE gi.id = image_folders.image_id
+              AND gi.brand_id = f.brand_id
+              AND gi.user_id = auth.uid()
+        )
+    );
 
 -- ============================================
 -- STYLE PRESETS TABLE
@@ -245,7 +386,25 @@ ALTER TABLE public.style_presets ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can manage style presets in own brands"
     ON public.style_presets FOR ALL
-    USING (brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid()));
+    TO authenticated
+    USING (
+        brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid())
+        OR brand_id IN (
+            SELECT brand_id
+            FROM public.brand_members
+            WHERE user_id = auth.uid()
+              AND role IN ('owner', 'admin', 'editor')
+        )
+    )
+    WITH CHECK (
+        brand_id IN (SELECT id FROM public.brands WHERE owner_id = auth.uid())
+        OR brand_id IN (
+            SELECT brand_id
+            FROM public.brand_members
+            WHERE user_id = auth.uid()
+              AND role IN ('owner', 'admin', 'editor')
+        )
+    );
 
 -- ============================================
 -- API USAGE LOGS TABLE
@@ -265,11 +424,13 @@ ALTER TABLE public.api_usage_logs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view own usage"
     ON public.api_usage_logs FOR SELECT
+    TO authenticated
     USING (user_id = auth.uid());
 
 CREATE POLICY "System can insert usage logs"
     ON public.api_usage_logs FOR INSERT
-    WITH CHECK (true);
+    TO authenticated
+    WITH CHECK (user_id = auth.uid());
 
 -- ============================================
 -- INDEXES
@@ -318,7 +479,6 @@ CREATE TRIGGER update_brands_updated_at
 -- Note: Run this in Supabase Dashboard or via API
 -- INSERT INTO storage.buckets (id, name, public) 
 -- VALUES ('generated-images', 'generated-images', true);
-
 
 
 
