@@ -255,7 +255,7 @@ The rate-limit proof confirmed stale reservation release and five successful
 brand attempts followed by an explicit `Brand usage rate limit exceeded`
 denial on the sixth attempt.
 
-## Stopped Checks / Remaining Notes
+## Environment Readiness
 
 `npm run env:check` with the plain available local env still stops at:
 
@@ -279,8 +279,16 @@ Missing required keys:
 SUPABASE_SERVICE_ROLE_KEY
 ```
 
-Supabase secret values cannot be read back from the CLI, so local
-`SUPABASE_SERVICE_ROLE_KEY` placement remains the only env-name blocker.
+After retrieving production API keys through the authenticated Supabase CLI and
+passing them only as process environment variables, `env:check` passed:
+
+```text
+Environment check: 8/8 required keys present.
+Optional deployment keys present: 0/5.
+Environment check passed. Secret values were not printed.
+```
+
+No key values were printed or recorded.
 
 Supabase CLI production access was sufficient for DB migration apply, policy
 readback query, secret-name readback, and Edge Function deployment. The
@@ -294,11 +302,9 @@ and cleanup proof are recorded above.
 
 ## Remaining External Actions
 
-These are the remaining external actions before a fully clean local release
+These are the remaining optional actions before a fully clean local release
 verification shell:
 
-- Place the production `SUPABASE_SERVICE_ROLE_KEY` in the local verification
-  environment, then rerun `npm run env:check` without recording the value.
 - Optionally copy or regenerate the current readback proof files to the default
   `output/playwright/` paths if the bare `npm run verify:readback` command must
   pass without explicit artifact arguments.
