@@ -1,7 +1,7 @@
 # Release Evidence 2026-06-20
 
 Status: **production Supabase DB and Edge Functions reflected; production URL
-binding remains blocked by missing `PUBLIC_URL`**.
+binding secret has been set**.
 
 This file records the 2026-06-20 launch-readiness closeout for the current
 `main` commit. It is an evidence ledger, not approval to release.
@@ -118,6 +118,7 @@ OPENAI_API_KEY
 OPENAI_CHAT_API_KEY
 OPENAI_CHAT_BASE_URL
 OPENAI_CHAT_MODEL
+PUBLIC_URL
 SUPABASE_ANON_KEY
 SUPABASE_DB_URL
 SUPABASE_JWKS
@@ -127,9 +128,9 @@ SUPABASE_SERVICE_ROLE_KEY
 SUPABASE_URL
 ```
 
-`PUBLIC_URL` is still not present. `share-link` currently falls back to
-`https://your-app.com` until the real production URL is added as a Supabase
-secret.
+`PUBLIC_URL` is present as a production Edge Function secret name. Its value is
+intentionally not recorded here. `share-link` production behavior still needs
+fresh production URL QA/readback before release approval.
 
 ## Local Verification
 
@@ -185,8 +186,8 @@ Supabase runtime state.
 
 These are the required resume actions before release approval:
 
-- Provide the real production app URL and set Supabase Edge Function secret
-  `PUBLIC_URL` without printing secret values.
+- Verify `share-link` against the production URL after `PUBLIC_URL` secret
+  propagation.
 - Load local production-equivalent env names, then rerun `npm run env:check`.
 - Capture fresh production DB/readback and cleanup proof files, then rerun
   `npm run verify:readback`.
