@@ -1,7 +1,7 @@
 # Release Evidence 2026-06-20
 
 Status: **production Supabase DB and Edge Functions reflected; production URL
-binding secret has been set**.
+binding secret has been set; unauthenticated production URL QA passed**.
 
 This file records the 2026-06-20 launch-readiness closeout for the current
 `main` commit. It is an evidence ledger, not approval to release.
@@ -130,7 +130,7 @@ SUPABASE_URL
 
 `PUBLIC_URL` is present as a production Edge Function secret name. Its value is
 intentionally not recorded here. `share-link` production behavior still needs
-fresh production URL QA/readback before release approval.
+authenticated production QA/readback before release approval.
 
 ## Local Verification
 
@@ -150,6 +150,48 @@ npm run smoke:edge                PASS, no external API calls
 
 `npm run lint` still prints the existing `baseline-browser-mapping` freshness
 warning. It does not fail the command.
+
+## Production URL QA
+
+Playwright production URL QA captured evidence under:
+
+```text
+output/playwright/prod-url-qa-20260620/
+```
+
+Closeout artifact:
+
+```text
+output/playwright/prod-url-qa-20260620/qa-closeout.json
+verdict=pass_with_auth_limited_scope
+```
+
+Confirmed unauthenticated production outcomes:
+
+```text
+production app URL returned HTTP 200 and rendered non-empty desktop/mobile pages
+public pages loaded without console errors, failed requests, or framework overlays
+login empty-submit validation appeared
+signup React validation appeared for short password and mismatched confirmation
+protected routes /dashboard, /generate, /gallery, /canvas redirected to /login
+```
+
+Public pages covered:
+
+```text
+/
+/login
+/signup
+/forgot-password
+/terms
+/privacy
+```
+
+The first signup invalid-email check was intercepted by browser-native HTML5
+email validation before React validation rendered. A follow-up check using a
+syntactically valid email and invalid passwords confirmed the React Japanese
+validation path. This is recorded as a UX note, not a release blocker for the
+unauthenticated QA scope.
 
 ## Stopped Checks / Remaining Blockers
 
@@ -186,13 +228,12 @@ Supabase runtime state.
 
 These are the required resume actions before release approval:
 
-- Verify `share-link` against the production URL after `PUBLIC_URL` secret
-  propagation.
 - Load local production-equivalent env names, then rerun `npm run env:check`.
 - Capture fresh production DB/readback and cleanup proof files, then rerun
   `npm run verify:readback`.
-- Run production URL browser QA for login/signup, brand creation, generation,
-  gallery, canvas, legal pages, and failure states.
+- Run authenticated production QA with an approved test account or credentials:
+  real login/signup, brand creation, generation, gallery, canvas, and
+  `share-link` creation/readback.
 
 Applying migrations and deploying Edge Functions are external writes. Do not
 perform them without explicit production-target confirmation in the active
