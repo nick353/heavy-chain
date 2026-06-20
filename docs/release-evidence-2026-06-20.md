@@ -1,7 +1,8 @@
 # Release Evidence 2026-06-20
 
 Status: **production Supabase DB and Edge Functions reflected; production URL
-binding secret has been set; unauthenticated production URL QA passed**.
+binding secret has been set; production URL QA and authenticated production QA
+passed**.
 
 This file records the 2026-06-20 launch-readiness closeout for the current
 `main` commit. It is an evidence ledger, not approval to release.
@@ -129,8 +130,8 @@ SUPABASE_URL
 ```
 
 `PUBLIC_URL` is present as a production Edge Function secret name. Its value is
-intentionally not recorded here. `share-link` production behavior still needs
-authenticated production QA/readback before release approval.
+intentionally not recorded here. `share-link` production behavior was verified
+in authenticated production QA below.
 
 ## Local Verification
 
@@ -193,28 +194,93 @@ syntactically valid email and invalid passwords confirmed the React Japanese
 validation path. This is recorded as a UX note, not a release blocker for the
 unauthenticated QA scope.
 
-## Stopped Checks / Remaining Blockers
+## Authenticated Production QA
 
-`npm run env:check` with the available local env stopped at:
+Playwright authenticated production QA captured evidence under:
 
 ```text
-Environment check: 4/8 required keys present.
+output/playwright/prod-auth-qa-20260620/
+```
+
+Closeout artifact:
+
+```text
+output/playwright/prod-auth-qa-20260620/qa-auth-summary.json
+verdict=pass
+```
+
+Confirmed authenticated production outcomes:
+
+```text
+signup/login created an authenticated session
+profile readback returned 1 row
+brand creation passed through create_brand RPC
+generate-image Edge Function returned 200 and 1 generated image
+generated image DB readback returned completed job, image row, usage row, and run row
+generated image persisted storage_path and did not persist image_url
+generated image storage signed URL creation passed
+share-link Edge Function returned 200, success=true, and production PUBLIC_URL prefix
+authenticated /gallery rendered after generation
+authenticated /canvas/new rendered
+```
+
+Readback and cleanup artifacts:
+
+```text
+output/playwright/prod-auth-qa-20260620/prod-db-readback.json
+output/playwright/prod-auth-qa-20260620/prod-cleanup.json
+output/playwright/prod-auth-qa-20260620/rate-limit-db-proof.json
+output/playwright/prod-auth-qa-20260620/rate-limit-cleanup.json
+output/playwright/prod-auth-qa-20260620/env-check-summary.json
+```
+
+The production QA account, profile, brand, generated image row, storage object,
+and rate-limit proof rows were cleaned up. Fresh DB cleanup readback reported
+zero remaining QA users, profiles, storage rows, rate-limit brands, and
+rate-limit usage rows.
+
+Release readback verification passed with the current proof files:
+
+```text
+npm run verify:readback --silent -- \
+  --readback output/playwright/prod-auth-qa-20260620/prod-db-readback.json \
+  --cleanup output/playwright/prod-auth-qa-20260620/prod-cleanup.json \
+  --rate-limit output/playwright/prod-auth-qa-20260620/rate-limit-db-proof.json \
+  --rate-limit-cleanup output/playwright/prod-auth-qa-20260620/rate-limit-cleanup.json \
+  --expect-release-date 2026-06-20 \
+  --expect-environment production
+```
+
+The rate-limit proof confirmed stale reservation release and five successful
+brand attempts followed by an explicit `Brand usage rate limit exceeded`
+denial on the sixth attempt.
+
+## Stopped Checks / Remaining Notes
+
+`npm run env:check` with the plain available local env still stops at:
+
+```text
+Environment check: 2/8 required keys present.
 Missing required keys:
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
 SUPABASE_URL
 SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 PUBLIC_URL
 ```
 
-`npm run verify:readback` stopped because current production proof files are not
-present locally:
+When public production values from the deployed bundle are supplied for the
+frontend/Supabase URL/key and `PUBLIC_URL`, `env:check` reaches:
 
 ```text
-output/playwright/prod-db-readback.json
-output/playwright/prod-cleanup.json
-output/playwright/rate-limit-db-proof-2.json
-output/playwright/rate-limit-cleanup-2.json
+Environment check: 7/8 required keys present.
+Missing required keys:
+SUPABASE_SERVICE_ROLE_KEY
 ```
+
+Supabase secret values cannot be read back from the CLI, so local
+`SUPABASE_SERVICE_ROLE_KEY` placement remains the only env-name blocker.
 
 Supabase CLI production access was sufficient for DB migration apply, policy
 readback query, secret-name readback, and Edge Function deployment. The
@@ -222,18 +288,20 @@ post-apply migration-list readback still hit the temp-role authentication
 failure recorded above.
 
 Local Supabase stack verification is blocked separately by the local Docker /
-Supabase runtime state.
+Supabase runtime state. This is recorded as a local non-release blocker because
+production DB, Edge Functions, production URL QA, authenticated QA, readback,
+and cleanup proof are recorded above.
 
 ## Remaining External Actions
 
-These are the required resume actions before release approval:
+These are the remaining external actions before a fully clean local release
+verification shell:
 
-- Load local production-equivalent env names, then rerun `npm run env:check`.
-- Capture fresh production DB/readback and cleanup proof files, then rerun
-  `npm run verify:readback`.
-- Run authenticated production QA with an approved test account or credentials:
-  real login/signup, brand creation, generation, gallery, canvas, and
-  `share-link` creation/readback.
+- Place the production `SUPABASE_SERVICE_ROLE_KEY` in the local verification
+  environment, then rerun `npm run env:check` without recording the value.
+- Optionally copy or regenerate the current readback proof files to the default
+  `output/playwright/` paths if the bare `npm run verify:readback` command must
+  pass without explicit artifact arguments.
 
 Applying migrations and deploying Edge Functions are external writes. Do not
 perform them without explicit production-target confirmation in the active
