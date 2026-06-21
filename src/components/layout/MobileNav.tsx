@@ -1,21 +1,21 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
-import { isWorkspacePathActive, workspaceNavItems } from './navigation';
+import { isWorkspacePathActive, mobileNavItems } from './navigation';
 
 export function MobileNav() {
   const location = useLocation();
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-surface-900/90 backdrop-blur-xl border-t border-neutral-200/50 dark:border-white/10 safe-area-pb">
-      <div className="flex h-16 items-center gap-1 overflow-x-auto px-2 scrollbar-hide">
-        {workspaceNavItems.map((item) => {
+      <div className="grid h-16 grid-cols-5 items-center gap-1 px-2">
+        {mobileNavItems.map((item) => {
           const active = isWorkspacePathActive(location.pathname, item.path);
           return (
             <Link
               key={item.path}
               to={item.path}
-              className="relative flex h-full min-w-[72px] flex-1 flex-col items-center justify-center group"
+              className="relative flex h-full min-w-0 flex-col items-center justify-center group"
             >
               {active && (
                 <motion.div

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Bell, Moon, Sun } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { HeavyChainLogo } from '../icons';
+import { getWorkspacePageTitle } from './navigation';
 
 interface MobileHeaderProps {
   onMenuToggle: () => void;
@@ -30,16 +31,6 @@ export function MobileHeader({ onMenuToggle, isMenuOpen }: MobileHeaderProps) {
     } else {
       document.documentElement.classList.remove('dark');
     }
-  };
-
-  const getPageTitle = () => {
-    const path = location.pathname;
-    if (path === '/dashboard') return 'ダッシュボード';
-    if (path === '/generate') return '画像生成';
-    if (path.startsWith('/canvas')) return 'キャンバス';
-    if (path === '/gallery') return 'ギャラリー';
-    if (path === '/brand/settings') return 'ブランド設定';
-    return 'Heavy Chain';
   };
 
   return (
@@ -81,7 +72,7 @@ export function MobileHeader({ onMenuToggle, isMenuOpen }: MobileHeaderProps) {
           <Link to="/dashboard" className="flex items-center">
             <HeavyChainLogo height={28} showText={false} />
             <span className="ml-2 font-display font-semibold text-neutral-900 dark:text-white">
-              {getPageTitle()}
+              {getWorkspacePageTitle(location.pathname)}
             </span>
           </Link>
         </div>
