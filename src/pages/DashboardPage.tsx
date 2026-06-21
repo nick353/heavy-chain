@@ -87,6 +87,7 @@ export function DashboardPage() {
   const [recentImages, setRecentImages] = useState<GeneratedImage[]>([]);
   const [workspaceActivity, setWorkspaceActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
   const [isActivityLoading, setIsActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
@@ -170,15 +171,17 @@ export function DashboardPage() {
   const fetchActivity = useCallback(async () => {
     if (!currentBrand) {
       setWorkspaceActivity(emptyWorkspaceActivity);
+      setActivityError(null);
       return;
     }
 
     setIsActivityLoading(true);
+    setActivityError(null);
     try {
       setWorkspaceActivity(await fetchWorkspaceActivity(currentBrand.id));
     } catch (error) {
       console.warn('Failed to load workspace activity:', error);
-      setWorkspaceActivity(emptyWorkspaceActivity);
+      setActivityError('workspace activity');
     } finally {
       setIsActivityLoading(false);
     }
@@ -371,6 +374,21 @@ export function DashboardPage() {
               {[1, 2, 3, 4].map((item) => (
                 <div key={item} className="h-52 animate-pulse rounded-2xl bg-neutral-100 dark:bg-surface-900" />
               ))}
+            </div>
+          ) : activityError ? (
+            <div className="rounded-2xl border border-red-200 bg-red-50/70 p-5 dark:border-red-900/60 dark:bg-red-950/25">
+              <h3 className="text-base font-semibold text-red-800 dark:text-red-200">読み込み失敗</h3>
+              <p className="mt-2 text-sm text-red-700 dark:text-red-300">
+                作業状況を取得できませんでした。接続状態を確認して再読み込みしてください。
+              </p>
+              <button
+                type="button"
+                onClick={() => void fetchActivity()}
+                className="mt-4 rounded-lg bg-red-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-800 disabled:opacity-60"
+                disabled={isActivityLoading}
+              >
+                再読み込み
+              </button>
             </div>
           ) : (
             <div className="grid gap-4 lg:grid-cols-4">

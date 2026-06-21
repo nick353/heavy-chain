@@ -9,19 +9,22 @@ export function CreditsPage() {
   const { currentBrand } = useAuthStore();
   const [activity, setActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
   const [isLoading, setIsLoading] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
 
   const loadActivity = useCallback(async () => {
     if (!currentBrand) {
       setActivity(emptyWorkspaceActivity);
+      setActivityError(null);
       return;
     }
 
     setIsLoading(true);
+    setActivityError(null);
     try {
       setActivity(await fetchWorkspaceActivity(currentBrand.id));
     } catch (error) {
       console.warn('Failed to load credits:', error);
-      setActivity(emptyWorkspaceActivity);
+      setActivityError('credits');
     } finally {
       setIsLoading(false);
     }
@@ -56,6 +59,21 @@ export function CreditsPage() {
           </div>
         ) : isLoading ? (
           <div className="mt-6 h-52 animate-pulse rounded-2xl bg-neutral-100 dark:bg-surface-900" />
+        ) : activityError ? (
+          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50/70 p-6 text-center dark:border-red-900/60 dark:bg-red-950/25">
+            <h2 className="text-base font-semibold text-red-800 dark:text-red-200">読み込み失敗</h2>
+            <p className="mt-2 text-sm text-red-700 dark:text-red-300">
+              クレジット状況を取得できませんでした。
+            </p>
+            <button
+              type="button"
+              onClick={() => void loadActivity()}
+              className="mt-4 inline-flex items-center rounded-lg bg-red-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-800 disabled:opacity-60"
+              disabled={isLoading}
+            >
+              再読み込み
+            </button>
+          </div>
         ) : (
           <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
             <CreditSummaryPanel summary={summary} />

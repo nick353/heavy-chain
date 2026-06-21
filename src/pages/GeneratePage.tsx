@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Wand2, 
   Image as ImageIcon, 
@@ -20,7 +20,7 @@ import {
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import { Button, Textarea, Input } from '../components/ui';
-import { FeatureSelector, type Feature } from '../components/FeatureSelector';
+import { FeatureSelector, FEATURES, type Feature } from '../components/FeatureSelector';
 import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
 import { ImageSelector, type SelectedImage, type ReferenceType } from '../components/ImageSelector';
 import { UsageStats } from '../components/UsageStats';
@@ -197,6 +197,18 @@ const debugLog = (message: string, details?: Record<string, unknown>) => {
   }
 };
 
+const featureQueryAliases: Record<string, string> = {
+  'generate-image': 'campaign-image',
+  'generate-variations': 'variations',
+  'remove-background': 'remove-bg',
+};
+
+const findFeatureFromQuery = (featureParam: string) => {
+  const normalizedFeatureId = featureQueryAliases[featureParam] ?? featureParam;
+  return FEATURES.find((item) => item.id === normalizedFeatureId)
+    ?? FEATURES.find((item) => item.apiEndpoint === featureParam);
+};
+
 const getGeneratedImageKey = (image: GeneratedResult, index: number) => {
   const stablePart = image.id || image.imageUrl || image.label || image.prompt || 'generated-image';
   return `${stablePart}-${index}`;
@@ -298,6 +310,7 @@ function ImageModal({
 
 export function GeneratePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentBrand } = useAuthStore();
   const { addToHistory } = usePromptHistory();
   
@@ -367,6 +380,39 @@ export function GeneratePage() {
   const [hairStyle, setHairStyle] = useState<'short' | 'medium' | 'long'>('medium');
 
   const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
+
+  useEffect(() => {
+    const featureParam = searchParams.get('feature');
+    const promptParam = searchParams.get('prompt');
+
+    if (!featureParam && promptParam === null) return;
+
+    const feature = featureParam ? findFeatureFromQuery(featureParam) : null;
+
+    if (feature) {
+      setSelectedFeature(feature);
+      setGeneratedImages([]);
+      setOptimizedPromptResult('');
+      setGenerationError('');
+      setReferenceImage(null);
+      setBackgroundReferenceImage(null);
+      setPatternReferenceImage(null);
+      setShowSuccessCard(false);
+      setGenerateCount(feature.id === 'design-gacha' ? 4 : 1);
+      setOverlayEnabled(false);
+      setSelectedShots(['front', 'side', 'back', 'detail']);
+    }
+
+    if (promptParam !== null) {
+      setPrompt(promptParam);
+
+      if (feature?.id === 'product-shots' || feature?.id === 'model-matrix') {
+        setProductDescription(promptParam);
+      } else if (feature?.id === 'multilingual-banner') {
+        setHeadline(promptParam);
+      }
+    }
+  }, [searchParams]);
 
   const resetSharedInputs = () => {
     setPrompt('');

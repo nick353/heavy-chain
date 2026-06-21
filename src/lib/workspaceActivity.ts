@@ -130,7 +130,9 @@ const getJobPrompt = (job: GenerationJob) => {
 
 const buildResumeHref = (job: GenerationJob) => {
   const params = new URLSearchParams({ resumeJob: job.id });
+  const prompt = getJobPrompt(job);
   if (job.feature_type) params.set('feature', job.feature_type);
+  if (prompt) params.set('prompt', prompt);
   return `/generate?${params.toString()}`;
 };
 
@@ -203,8 +205,11 @@ const fetchCreditSummary = async (brandId: string): Promise<CreditSummary> => {
       .rpc('get_brand_usage_summary', { p_brand_id: brandId })
       .maybeSingle();
 
-    if (result.error || !result.data) {
-      if (result.error) console.warn('Failed to fetch workspace credit summary:', result.error);
+    if (result.error) {
+      throw result.error;
+    }
+
+    if (!result.data) {
       return emptyWorkspaceActivity.creditSummary;
     }
 
@@ -218,7 +223,7 @@ const fetchCreditSummary = async (brandId: string): Promise<CreditSummary> => {
     };
   } catch (error) {
     console.warn('Failed to fetch workspace credit summary:', error);
-    return emptyWorkspaceActivity.creditSummary;
+    throw error;
   }
 };
 
@@ -232,14 +237,13 @@ const fetchJobs = async (brandId: string): Promise<GenerationJob[]> => {
       .limit(50);
 
     if (error) {
-      console.warn('Failed to fetch workspace jobs:', error);
-      return [];
+      throw error;
     }
 
     return data ?? [];
   } catch (error) {
     console.warn('Failed to fetch workspace jobs:', error);
-    return [];
+    throw error;
   }
 };
 
@@ -253,14 +257,13 @@ const fetchOutputs = async (brandId: string): Promise<GeneratedImage[]> => {
       .limit(50);
 
     if (error) {
-      console.warn('Failed to fetch workspace outputs:', error);
-      return [];
+      throw error;
     }
 
     return data ?? [];
   } catch (error) {
     console.warn('Failed to fetch workspace outputs:', error);
-    return [];
+    throw error;
   }
 };
 

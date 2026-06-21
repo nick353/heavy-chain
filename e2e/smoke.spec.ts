@@ -115,9 +115,15 @@ async function mockSupabase(page: Page, options: {
 
   await page.route('**/rest/v1/**', async (route) => {
     const { pathname } = new URL(route.request().url());
+    const method = route.request().method();
     let body: unknown = [];
 
     if (pathname.endsWith('/rest/v1/rpc/get_brand_usage_summary')) {
+      if (method !== 'POST') {
+        await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method Not Allowed' }) });
+        return;
+      }
+
       body = {
         plan_code: 'free',
         monthly_quota: 25,
@@ -126,13 +132,36 @@ async function mockSupabase(page: Page, options: {
         remaining_units: 25,
       };
     } else if (pathname.endsWith('/rest/v1/users')) {
+      if (method !== 'GET') {
+        await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method Not Allowed' }) });
+        return;
+      }
+
       body = { ...mockUser, name: 'Test User', avatar_url: null, language: 'ja', is_admin: false };
     } else if (pathname.endsWith('/rest/v1/brands')) {
+      if (method !== 'GET') {
+        await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method Not Allowed' }) });
+        return;
+      }
+
       body = [mockBrand];
     } else if (pathname.endsWith('/rest/v1/generation_jobs')) {
+      if (method !== 'GET') {
+        await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method Not Allowed' }) });
+        return;
+      }
+
       body = mockJobs;
     } else if (pathname.endsWith('/rest/v1/generated_images')) {
+      if (method !== 'GET') {
+        await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method Not Allowed' }) });
+        return;
+      }
+
       body = mockGeneratedImages;
+    } else {
+      await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'Not Found' }) });
+      return;
     }
 
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
