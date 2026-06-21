@@ -23,6 +23,8 @@ import { UsageStats } from '../components/UsageStats';
 import type { Brand, GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { fetchWorkspaceActivity, emptyWorkspaceActivity, type WorkspaceActivity } from '../lib/workspaceActivity';
+import { CreditSummaryPanel, FailureRetryCard, JobQueuePanel, WorkspaceGuidePanel } from '../components/workspace';
 
 const quickActions = [
   {
@@ -83,6 +85,8 @@ export function DashboardPage() {
   const { createProject, deleteProject, loadProject, clearCanvas, getRecentProjects } = useCanvasStore();
   const { showOnboarding, completeOnboarding, resetOnboarding } = useOnboarding(user?.id);
   const [recentImages, setRecentImages] = useState<GeneratedImage[]>([]);
+  const [workspaceActivity, setWorkspaceActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
+  const [isActivityLoading, setIsActivityLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
@@ -163,6 +167,23 @@ export function DashboardPage() {
     }
   }, [currentBrand]);
 
+  const fetchActivity = useCallback(async () => {
+    if (!currentBrand) {
+      setWorkspaceActivity(emptyWorkspaceActivity);
+      return;
+    }
+
+    setIsActivityLoading(true);
+    try {
+      setWorkspaceActivity(await fetchWorkspaceActivity(currentBrand.id));
+    } catch (error) {
+      console.warn('Failed to load workspace activity:', error);
+      setWorkspaceActivity(emptyWorkspaceActivity);
+    } finally {
+      setIsActivityLoading(false);
+    }
+  }, [currentBrand]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -176,7 +197,7 @@ export function DashboardPage() {
       if (!currentBrand) {
         await checkBrands();
       } else {
-        await fetchRecentImages();
+        await Promise.all([fetchRecentImages(), fetchActivity()]);
       }
     };
 
@@ -185,7 +206,7 @@ export function DashboardPage() {
     return () => {
       mounted = false;
     };
-  }, [currentBrand, user, checkBrands, fetchRecentImages]);
+  }, [currentBrand, user, checkBrands, fetchRecentImages, fetchActivity]);
 
   const handleCreateBrand = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -335,6 +356,31 @@ export function DashboardPage() {
             <span className="sm:hidden">ヘルプ</span>
           </button>
         </motion.div>
+
+        {/* Workspace Activity */}
+        <motion.section variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
+          <div className="mb-4 sm:mb-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-300">Today</p>
+            <h2 className="mt-1 text-lg sm:text-xl lg:text-2xl font-semibold text-neutral-900 dark:text-white font-display">今日の作業状況</h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+              進行中の生成、失敗したジョブ、クレジット残量をまとめて確認できます。
+            </p>
+          </div>
+          {isActivityLoading ? (
+            <div className="grid gap-4 lg:grid-cols-4">
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="h-52 animate-pulse rounded-2xl bg-neutral-100 dark:bg-surface-900" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-4">
+              <JobQueuePanel activeJobs={workspaceActivity.activeJobs} completedJobs={workspaceActivity.completedJobs} className="lg:col-span-2" />
+              <FailureRetryCard failedJobs={workspaceActivity.failedJobs} />
+              <CreditSummaryPanel summary={workspaceActivity.creditSummary} />
+              <WorkspaceGuidePanel className="lg:col-span-4" />
+            </div>
+          )}
+        </motion.section>
 
         {/* Quick Actions */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-8 sm:mb-12 lg:mb-16">

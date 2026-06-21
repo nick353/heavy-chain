@@ -31,6 +31,69 @@ const authToken = {
   user: mockUser,
 };
 
+const mockJobs = [
+  {
+    id: '00000000-0000-4000-8000-000000000101',
+    brand_id: mockBrand.id,
+    user_id: mockUser.id,
+    feature_type: 'campaign-image',
+    input_params: { prompt: '夏のサマーセール告知' },
+    optimized_prompt: 'Premium summer sale apparel campaign image',
+    status: 'processing',
+    error_message: null,
+    created_at: '2026-06-18T02:00:00.000Z',
+    completed_at: null,
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000102',
+    brand_id: mockBrand.id,
+    user_id: mockUser.id,
+    feature_type: 'product-shots',
+    input_params: { prompt: '白背景の商品撮影' },
+    optimized_prompt: null,
+    status: 'failed',
+    error_message: 'テスト用の生成失敗',
+    created_at: '2026-06-18T01:00:00.000Z',
+    completed_at: null,
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000103',
+    brand_id: mockBrand.id,
+    user_id: mockUser.id,
+    feature_type: 'generate-image',
+    input_params: { prompt: 'ECモデル着用画像' },
+    optimized_prompt: null,
+    status: 'completed',
+    error_message: null,
+    created_at: '2026-06-18T00:00:00.000Z',
+    completed_at: '2026-06-18T00:02:00.000Z',
+  },
+];
+
+const mockGeneratedImages = [
+  {
+    id: '00000000-0000-4000-8000-000000000201',
+    job_id: '00000000-0000-4000-8000-000000000103',
+    brand_id: mockBrand.id,
+    user_id: mockUser.id,
+    storage_path: 'mock/generated-image.png',
+    image_url: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3C/svg%3E',
+    thumbnail_path: null,
+    version: 1,
+    parent_image_id: null,
+    is_favorite: false,
+    created_at: '2026-06-18T00:03:00.000Z',
+    expires_at: null,
+    prompt: 'ECモデル着用画像',
+    negative_prompt: null,
+    feature_type: 'generate-image',
+    style_preset: null,
+    model_used: null,
+    generation_params: null,
+    metadata: null,
+  },
+];
+
 const configuredProjectRef = process.env.VITE_SUPABASE_URL?.match(/^https:\/\/([^.]+)\.supabase\.co/)?.[1];
 const authStorageKeys = Array.from(new Set([
   'ghwjymozrwmcrpjqvbmo',
@@ -66,6 +129,10 @@ async function mockSupabase(page: Page, options: {
       body = { ...mockUser, name: 'Test User', avatar_url: null, language: 'ja', is_admin: false };
     } else if (pathname.endsWith('/rest/v1/brands')) {
       body = [mockBrand];
+    } else if (pathname.endsWith('/rest/v1/generation_jobs')) {
+      body = mockJobs;
+    } else if (pathname.endsWith('/rest/v1/generated_images')) {
+      body = mockGeneratedImages;
     }
 
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
@@ -119,11 +186,48 @@ async function selectFeature(page: Page, featureId: string) {
 }
 
 test('landing shell renders with mocked Supabase requests', async ({ page }) => {
-  await mockSupabase(page);
-
   await page.goto('/');
-  await expect(page.locator('body')).toBeVisible();
-  await expect(page.locator('#root')).not.toBeEmpty();
+  await expect(page.locator('#root')).toContainText('アパレル専用AI画像生成プラットフォーム');
+});
+
+test.describe('workspace activity pages', () => {
+  test('dashboard renders activity panels', async ({ page }) => {
+    await mockSupabase(page);
+
+    await page.goto('/dashboard');
+
+    await expect(page.getByRole('heading', { name: '今日の作業状況' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '進行中のジョブ' })).toBeVisible();
+    await expect(page.getByText('失敗から再開')).toBeVisible();
+  });
+
+  test('jobs page renders queue readback', async ({ page }) => {
+    await mockSupabase(page);
+
+    await page.goto('/jobs');
+
+    await expect(page.getByRole('heading', { name: 'ジョブ' })).toBeVisible();
+    await expect(page.getByText('Premium summer sale apparel campaign image')).toBeVisible();
+    await expect(page.getByText('テスト用の生成失敗')).toBeVisible();
+  });
+
+  test('history page renders timeline readback', async ({ page }) => {
+    await mockSupabase(page);
+
+    await page.goto('/history');
+
+    await expect(page.getByRole('heading', { name: '生成履歴' })).toBeVisible();
+    await expect(page.getByText('Premium summer sale apparel campaign image')).toBeVisible();
+  });
+
+  test('credits page renders credit summary', async ({ page }) => {
+    await mockSupabase(page);
+
+    await page.goto('/credits');
+
+    await expect(page.getByRole('heading', { name: 'クレジット', level: 1 })).toBeVisible();
+    await expect(page.getByText('残り / Free')).toBeVisible();
+  });
 });
 
 test.describe('static legal pages', () => {

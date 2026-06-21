@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { BriefcaseBusiness, CreditCard } from 'lucide-react';
 import {
   IconClock,
   IconHome,
@@ -25,6 +26,8 @@ export const workspaceNavItems: WorkspaceNavItem[] = [
   { icon: IconUsers, label: 'AIフィッティング', mobileLabel: 'フィット', path: '/fitting', group: 'main', showInMobileNav: true },
   { icon: IconShoppingBag, label: 'マーケティング', mobileLabel: '販促', path: '/marketing', group: 'main', showInMobileNav: true },
   { icon: IconClock, label: '履歴', mobileLabel: '履歴', path: '/history', group: 'main', showInMobileNav: true },
+  { icon: BriefcaseBusiness, label: 'ジョブ', mobileLabel: 'ジョブ', path: '/jobs', group: 'main' },
+  { icon: CreditCard, label: 'クレジット', mobileLabel: 'クレジット', path: '/credits', group: 'main' },
   { icon: IconPen, label: 'キャンバス', mobileLabel: 'キャンバス', path: '/canvas', group: 'main' },
   { icon: IconImage, label: 'ギャラリー', mobileLabel: 'ギャラリー', path: '/gallery', group: 'main' },
   { icon: IconSettings, label: 'ブランド設定', mobileLabel: '設定', path: '/brand/settings', group: 'settings' },

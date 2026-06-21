@@ -7,6 +7,8 @@ export { GeneratePage } from './GeneratePage';
 export { FittingPage } from './FittingPage';
 export { MarketingWorkspacePage } from './MarketingWorkspacePage';
 export { HistoryPage } from './HistoryPage';
+export { JobsPage } from './JobsPage';
+export { CreditsPage } from './CreditsPage';
 export { GalleryPage } from './GalleryPage';
 export { CanvasEditorPage } from './CanvasEditorPage';
 export { AdminDashboard } from './AdminDashboard';
