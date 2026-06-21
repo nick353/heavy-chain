@@ -4,16 +4,12 @@ import { motion } from 'framer-motion';
 import { useAuthStore } from '../../stores/authStore';
 import clsx from 'clsx';
 import {
-  IconHome,
-  IconSparkles,
-  IconImage,
-  IconSettings,
   IconLogout,
   IconMoon,
   IconSun,
-  IconPen,
   HeavyChainLogo
 } from '../icons';
+import { isWorkspacePathActive, workspaceNavItems } from './navigation';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -50,22 +46,8 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
     }
   };
 
-  const isActive = (path: string) => {
-    if (path === '/dashboard' && location.pathname === '/dashboard') return true;
-    if (path !== '/dashboard' && location.pathname.startsWith(path)) return true;
-    return false;
-  };
-
-  const menuItems = [
-    { icon: IconHome, label: 'ダッシュボード', path: '/dashboard' },
-    { icon: IconSparkles, label: '画像生成', path: '/generate' },
-    { icon: IconPen, label: 'キャンバス', path: '/canvas' },
-    { icon: IconImage, label: 'ギャラリー', path: '/gallery' },
-  ];
-
-  const bottomItems = [
-    { icon: IconSettings, label: 'ブランド設定', path: '/brand/settings' },
-  ];
+  const menuItems = workspaceNavItems.filter((item) => item.group === 'main');
+  const bottomItems = workspaceNavItems.filter((item) => item.group === 'settings');
 
   return (
     <motion.aside
@@ -89,7 +71,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       {/* Main Navigation */}
       <nav className="flex-1 py-8 px-4 space-y-2 overflow-y-auto scrollbar-hide">
         {menuItems.map((item) => {
-          const active = isActive(item.path);
+          const active = isWorkspacePathActive(location.pathname, item.path);
           const hovered = hoveredPath === item.path;
           
           return (
@@ -160,7 +142,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
         </div>
 
         {bottomItems.map((item) => {
-          const active = isActive(item.path);
+          const active = isWorkspacePathActive(location.pathname, item.path);
           return (
           <Link
             key={item.path}

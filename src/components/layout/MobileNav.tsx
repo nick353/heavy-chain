@@ -1,39 +1,21 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
-import {
-  IconHome,
-  IconSparkles,
-  IconImage,
-  IconPen,
-} from '../icons';
-
-const navItems = [
-  { icon: IconHome, label: 'ホーム', path: '/dashboard' },
-  { icon: IconSparkles, label: '生成', path: '/generate' },
-  { icon: IconPen, label: 'キャンバス', path: '/canvas' },
-  { icon: IconImage, label: 'ギャラリー', path: '/gallery' },
-];
+import { isWorkspacePathActive, workspaceNavItems } from './navigation';
 
 export function MobileNav() {
   const location = useLocation();
 
-  const isActive = (path: string) => {
-    if (path === '/dashboard' && location.pathname === '/dashboard') return true;
-    if (path !== '/dashboard' && location.pathname.startsWith(path)) return true;
-    return false;
-  };
-
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-surface-900/90 backdrop-blur-xl border-t border-neutral-200/50 dark:border-white/10 safe-area-pb">
-      <div className="flex items-center justify-around h-16 px-2">
-        {navItems.map((item) => {
-          const active = isActive(item.path);
+      <div className="flex h-16 items-center gap-1 overflow-x-auto px-2 scrollbar-hide">
+        {workspaceNavItems.map((item) => {
+          const active = isWorkspacePathActive(location.pathname, item.path);
           return (
             <Link
               key={item.path}
               to={item.path}
-              className="relative flex flex-col items-center justify-center flex-1 h-full group"
+              className="relative flex h-full min-w-[72px] flex-1 flex-col items-center justify-center group"
             >
               {active && (
                 <motion.div
@@ -60,7 +42,7 @@ export function MobileNav() {
                       : 'text-neutral-500 dark:text-neutral-400'
                   )}
                 >
-                  {item.label}
+                  {item.mobileLabel}
                 </span>
               </div>
             </Link>
@@ -70,4 +52,3 @@ export function MobileNav() {
     </nav>
   );
 }
-
