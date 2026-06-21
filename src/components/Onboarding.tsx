@@ -12,6 +12,47 @@ import {
 } from 'lucide-react';
 import { Button } from './ui';
 
+const ONBOARDING_COMPLETED_KEY = 'heavy_chain_onboarding_completed';
+const LEGACY_ONBOARDING_COMPLETED_KEY = 'onboarding_completed';
+
+const getOnboardingStorageKey = (userId?: string | null) => (
+  userId ? `${ONBOARDING_COMPLETED_KEY}:${userId}` : ONBOARDING_COMPLETED_KEY
+);
+
+const hasCompletedOnboarding = (userId?: string | null) => {
+  try {
+    return localStorage.getItem(getOnboardingStorageKey(userId)) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+const hasLegacyCompletedOnboarding = () => {
+  try {
+    return localStorage.getItem(LEGACY_ONBOARDING_COMPLETED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+const setCompletedOnboarding = (userId?: string | null) => {
+  try {
+    localStorage.setItem(getOnboardingStorageKey(userId), 'true');
+    localStorage.removeItem(LEGACY_ONBOARDING_COMPLETED_KEY);
+  } catch {
+    // If storage is unavailable, keep the current session dismissed.
+  }
+};
+
+const clearCompletedOnboarding = (userId?: string | null) => {
+  try {
+    localStorage.removeItem(getOnboardingStorageKey(userId));
+    localStorage.removeItem(LEGACY_ONBOARDING_COMPLETED_KEY);
+  } catch {
+    // Ignore storage failures; the caller still controls visible state.
+  }
+};
+
 interface OnboardingStep {
   id: string;
   title: string;
@@ -83,9 +124,10 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 
 interface OnboardingProps {
   onComplete: () => void;
+  userId?: string | null;
 }
 
-export function Onboarding({ onComplete }: OnboardingProps) {
+export function Onboarding({ onComplete, userId }: OnboardingProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -109,7 +151,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
   const handleComplete = () => {
     setIsVisible(false);
-    localStorage.setItem('onboarding_completed', 'true');
+    setCompletedOnboarding(userId);
     setTimeout(onComplete, 300);
   };
 
@@ -222,22 +264,30 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 }
 
 // Hook to check if onboarding should be shown
-export function useOnboarding() {
+export function useOnboarding(userId?: string | null) {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    const completed = localStorage.getItem('onboarding_completed');
-    if (!completed) {
-      setShowOnboarding(true);
+    if (!userId) {
+      setShowOnboarding(false);
+      return;
     }
-  }, []);
+
+    if (!hasCompletedOnboarding(userId) && hasLegacyCompletedOnboarding()) {
+      setCompletedOnboarding(userId);
+      setShowOnboarding(false);
+      return;
+    }
+
+    setShowOnboarding(!hasCompletedOnboarding(userId));
+  }, [userId]);
 
   const completeOnboarding = () => {
     setShowOnboarding(false);
   };
 
   const resetOnboarding = () => {
-    localStorage.removeItem('onboarding_completed');
+    clearCompletedOnboarding(userId);
     setShowOnboarding(true);
   };
 

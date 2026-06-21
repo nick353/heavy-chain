@@ -1,6 +1,8 @@
 # Supabase Configuration for Heavy Chain
 # https://supabase.com/docs/guides/cli/config
 
+project_id = "heavy-chain"
+
 [api]
 enabled = true
 port = 54321

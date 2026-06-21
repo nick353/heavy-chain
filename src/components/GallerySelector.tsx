@@ -17,6 +17,27 @@ interface GallerySelectorProps {
 
 type FilterType = 'all' | 'recent' | 'favorites';
 
+const normalizeSearchText = (value: unknown): string => {
+  if (value == null) return '';
+  if (typeof value === 'string') return value.toLowerCase();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value).toLowerCase();
+
+  try {
+    return JSON.stringify(value).toLowerCase();
+  } catch {
+    return '';
+  }
+};
+
+const getImageSearchText = (image: GeneratedImage) => [
+  image.prompt,
+  image.negative_prompt,
+  image.feature_type,
+  image.storage_path,
+  image.generation_params,
+  image.metadata,
+].map(normalizeSearchText).join(' ');
+
 export function GallerySelector({
   isOpen,
   onClose,
@@ -114,10 +135,10 @@ export function GallerySelector({
     onClose();
   };
 
-  const filteredImages = images.filter(() => {
-    if (!searchQuery) return true;
-    // Search in prompt if available
-    return true; // TODO: Add proper search when prompt is stored
+  const filteredImages = images.filter((image) => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) return true;
+    return getImageSearchText(image).includes(normalizedQuery);
   });
 
   return (
@@ -266,5 +287,4 @@ export function GallerySelector({
     </Modal>
   );
 }
-
 

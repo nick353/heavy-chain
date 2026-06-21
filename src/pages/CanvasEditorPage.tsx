@@ -56,7 +56,7 @@ export function CanvasEditorPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const projectNameInputRef = useRef<HTMLInputElement>(null);
   const { currentBrand, user, profile } = useAuthStore();
-  const { showGuide, completeGuide } = useCanvasGuide();
+  const { showGuide, completeGuide } = useCanvasGuide(user?.id);
   
   const [viewMode, setViewMode] = useState<ViewMode>('canvas');
   // Start with no side panel on mobile, properties on desktop
@@ -1377,7 +1377,7 @@ export function CanvasEditorPage() {
       )}
 
       {/* Canvas Guide for first-time users */}
-      {showGuide && <CanvasGuide onComplete={completeGuide} />}
+      {showGuide && <CanvasGuide onComplete={completeGuide} userId={user?.id} />}
     </div>
   );
 }

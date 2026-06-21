@@ -1,22 +1,21 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import { Layout } from './components/layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import {
-  LandingPage,
-  LoginPage,
-  SignupPage,
-  AuthCallbackPage,
-  DashboardPage,
-  GeneratePage,
-  GalleryPage,
-  CanvasEditorPage,
-  AdminDashboard,
-  ForgotPasswordPage,
-  BrandSettingsPage
-} from './pages';
+
+const LandingPage = lazy(() => import('./pages/LandingPage').then((module) => ({ default: module.LandingPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })));
+const SignupPage = lazy(() => import('./pages/SignupPage').then((module) => ({ default: module.SignupPage })));
+const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then((module) => ({ default: module.AuthCallbackPage })));
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
+const GeneratePage = lazy(() => import('./pages/GeneratePage').then((module) => ({ default: module.GeneratePage })));
+const GalleryPage = lazy(() => import('./pages/GalleryPage').then((module) => ({ default: module.GalleryPage })));
+const CanvasEditorPage = lazy(() => import('./pages/CanvasEditorPage').then((module) => ({ default: module.CanvasEditorPage })));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })));
+const BrandSettingsPage = lazy(() => import('./pages/BrandSettingsPage').then((module) => ({ default: module.BrandSettingsPage })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,6 +25,21 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function PageLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
+      <div className="text-center">
+        <div className="spinner mb-4" />
+        <p className="text-neutral-500 dark:text-neutral-400">読み込み中...</p>
+      </div>
+    </div>
+  );
+}
+
+function lazyPage(page: React.ReactNode) {
+  return <Suspense fallback={<PageLoading />}>{page}</Suspense>;
+}
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -169,12 +183,12 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={lazyPage(<LandingPage />)} />
       <Route
         path="/login"
         element={
           <PublicRoute>
-            <LoginPage />
+            {lazyPage(<LoginPage />)}
           </PublicRoute>
         }
       />
@@ -182,7 +196,7 @@ function AppRoutes() {
         path="/signup"
         element={
           <PublicRoute>
-            <SignupPage />
+            {lazyPage(<SignupPage />)}
           </PublicRoute>
         }
       />
@@ -190,11 +204,11 @@ function AppRoutes() {
         path="/forgot-password"
         element={
           <PublicRoute>
-            <ForgotPasswordPage />
+            {lazyPage(<ForgotPasswordPage />)}
           </PublicRoute>
         }
       />
-      <Route path="/auth/callback" element={<AuthCallbackPage />} />
+      <Route path="/auth/callback" element={lazyPage(<AuthCallbackPage />)} />
       <Route
         path="/terms"
         element={
@@ -272,7 +286,7 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                <DashboardPage />
+                {lazyPage(<DashboardPage />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -282,7 +296,7 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                <GeneratePage />
+                {lazyPage(<GeneratePage />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -292,7 +306,7 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                <GalleryPage />
+                {lazyPage(<GalleryPage />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -302,7 +316,7 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                <BrandSettingsPage />
+                {lazyPage(<BrandSettingsPage />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -314,7 +328,7 @@ function AppRoutes() {
         path="/canvas/:projectId?"
         element={
           <ProtectedRoute>
-            <CanvasEditorPage />
+            {lazyPage(<CanvasEditorPage />)}
           </ProtectedRoute>
         }
       />
@@ -324,7 +338,7 @@ function AppRoutes() {
         path="/admin"
         element={
           <AdminRoute>
-            <AdminDashboard />
+            {lazyPage(<AdminDashboard />)}
           </AdminRoute>
         }
       />

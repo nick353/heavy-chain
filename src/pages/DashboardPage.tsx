@@ -81,7 +81,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { user, profile, currentBrand, setCurrentBrand } = useAuthStore();
   const { createProject, deleteProject, loadProject, clearCanvas, getRecentProjects } = useCanvasStore();
-  const { showOnboarding, completeOnboarding, resetOnboarding } = useOnboarding();
+  const { showOnboarding, completeOnboarding, resetOnboarding } = useOnboarding(user?.id);
   const [recentImages, setRecentImages] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showBrandModal, setShowBrandModal] = useState(false);
@@ -310,7 +310,7 @@ export function DashboardPage() {
   return (
     <>
       {/* Onboarding */}
-      {showOnboarding && <Onboarding onComplete={completeOnboarding} />}
+      {showOnboarding && <Onboarding onComplete={completeOnboarding} userId={user?.id} />}
 
       <motion.div 
         variants={containerVariants}

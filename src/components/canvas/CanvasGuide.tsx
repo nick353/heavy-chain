@@ -12,6 +12,47 @@ import {
 } from 'lucide-react';
 import { Button } from '../ui';
 
+const CANVAS_GUIDE_COMPLETED_KEY = 'heavy_chain_canvas_guide_completed';
+const LEGACY_CANVAS_GUIDE_COMPLETED_KEY = 'canvas_guide_completed';
+
+const getCanvasGuideStorageKey = (userId?: string | null) => (
+  userId ? `${CANVAS_GUIDE_COMPLETED_KEY}:${userId}` : CANVAS_GUIDE_COMPLETED_KEY
+);
+
+const hasCompletedCanvasGuide = (userId?: string | null) => {
+  try {
+    return localStorage.getItem(getCanvasGuideStorageKey(userId)) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+const hasLegacyCompletedCanvasGuide = () => {
+  try {
+    return localStorage.getItem(LEGACY_CANVAS_GUIDE_COMPLETED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+};
+
+const setCompletedCanvasGuide = (userId?: string | null) => {
+  try {
+    localStorage.setItem(getCanvasGuideStorageKey(userId), 'true');
+    localStorage.removeItem(LEGACY_CANVAS_GUIDE_COMPLETED_KEY);
+  } catch {
+    // If storage is unavailable, keep the current session dismissed.
+  }
+};
+
+const clearCompletedCanvasGuide = (userId?: string | null) => {
+  try {
+    localStorage.removeItem(getCanvasGuideStorageKey(userId));
+    localStorage.removeItem(LEGACY_CANVAS_GUIDE_COMPLETED_KEY);
+  } catch {
+    // Ignore storage failures; the caller still controls visible state.
+  }
+};
+
 interface GuideStep {
   id: string;
   title: string;
@@ -65,9 +106,10 @@ const GUIDE_STEPS: GuideStep[] = [
 
 interface CanvasGuideProps {
   onComplete: () => void;
+  userId?: string | null;
 }
 
-export function CanvasGuide({ onComplete }: CanvasGuideProps) {
+export function CanvasGuide({ onComplete, userId }: CanvasGuideProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -91,7 +133,7 @@ export function CanvasGuide({ onComplete }: CanvasGuideProps) {
 
   const handleComplete = () => {
     setIsVisible(false);
-    localStorage.setItem('canvas_guide_completed', 'true');
+    setCompletedCanvasGuide(userId);
     onComplete();
   };
 
@@ -197,33 +239,43 @@ export function CanvasGuide({ onComplete }: CanvasGuideProps) {
 }
 
 // Hook to check if canvas guide should be shown
-export function useCanvasGuide() {
+export function useCanvasGuide(userId?: string | null) {
   const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
-    const completed = localStorage.getItem('canvas_guide_completed');
-    if (!completed) {
-      // Show guide after a short delay
-      const timer = setTimeout(() => {
-        setShowGuide(true);
-      }, 500);
-      return () => clearTimeout(timer);
+    if (!userId) {
+      setShowGuide(false);
+      return;
     }
-  }, []);
+
+    if (!hasCompletedCanvasGuide(userId) && hasLegacyCompletedCanvasGuide()) {
+      setCompletedCanvasGuide(userId);
+      setShowGuide(false);
+      return;
+    }
+
+    if (hasCompletedCanvasGuide(userId)) {
+      setShowGuide(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowGuide(true);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [userId]);
 
   const completeGuide = () => {
     setShowGuide(false);
   };
 
   const resetGuide = () => {
-    localStorage.removeItem('canvas_guide_completed');
+    clearCompletedCanvasGuide(userId);
     setShowGuide(true);
   };
 
   return { showGuide, completeGuide, resetGuide };
 }
-
-
 
 
 
