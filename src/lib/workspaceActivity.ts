@@ -101,6 +101,7 @@ const getPlanCodeLabel = (planCode: string | null | undefined) => {
 
 const featureLabels: Record<string, string> = {
   'campaign-image': 'キャンペーン画像',
+  'text-to-image': 'キャンペーン画像',
   'product-shots': '商品撮影',
   'generate-image': '画像生成',
   'generate-variations': 'バリエーション生成',
