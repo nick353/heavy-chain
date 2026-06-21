@@ -199,6 +199,7 @@ const debugLog = (message: string, details?: Record<string, unknown>) => {
 
 const featureQueryAliases: Record<string, string> = {
   'generate-image': 'campaign-image',
+  'text-to-image': 'campaign-image',
   'generate-variations': 'variations',
   'remove-background': 'remove-bg',
 };
