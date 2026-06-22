@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { BriefcaseBusiness, CreditCard } from 'lucide-react';
+import { BriefcaseBusiness, CreditCard, FlaskConical, Palette, Shirt, UserRound, Video } from 'lucide-react';
 import {
   IconClock,
   IconHome,
@@ -25,6 +25,11 @@ export const workspaceNavItems: WorkspaceNavItem[] = [
   { icon: IconSparkles, label: '画像生成', mobileLabel: '生成', path: '/generate', group: 'main', showInMobileNav: true },
   { icon: IconUsers, label: 'AIフィッティング', mobileLabel: 'フィット', path: '/fitting', group: 'main', showInMobileNav: true },
   { icon: IconShoppingBag, label: 'マーケティング', mobileLabel: '販促', path: '/marketing', group: 'main', showInMobileNav: true },
+  { icon: Shirt, label: 'スタジオ', mobileLabel: 'スタジオ', path: '/studio', group: 'main' },
+  { icon: UserRound, label: 'モデルライブラリ', mobileLabel: 'モデル', path: '/models', group: 'main' },
+  { icon: Palette, label: '柄・グラフィック', mobileLabel: '柄', path: '/patterns', group: 'main' },
+  { icon: Video, label: '動画', mobileLabel: '動画', path: '/video', group: 'main' },
+  { icon: FlaskConical, label: 'ラボ', mobileLabel: 'ラボ', path: '/lab', group: 'main' },
   { icon: IconClock, label: '履歴', mobileLabel: '履歴', path: '/history', group: 'main', showInMobileNav: true },
   { icon: BriefcaseBusiness, label: 'ジョブ', mobileLabel: 'ジョブ', path: '/jobs', group: 'main' },
   { icon: CreditCard, label: 'クレジット', mobileLabel: 'クレジット', path: '/credits', group: 'main' },

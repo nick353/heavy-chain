@@ -1,4 +1,7 @@
 import { supabase } from './supabase';
+import { listWorkspaceGeneratedImages } from './localWorkspaceArtifacts';
+import { buildSourceContextSummaryRows, type SourceContextSummaryRow } from './sourceContextSummary';
+import type { GenerationIntent } from './workspaceHandoff';
 import type { Database, GeneratedImage, Json } from '../types/database';
 
 type GenerationJob = Database['public']['Tables']['generation_jobs']['Row'];
@@ -24,6 +27,10 @@ export interface WorkspaceJob {
   completedAt: string | null;
   outputCount: number;
   resumeHref: string;
+  generationHref?: string;
+  sourceLabel?: string;
+  sourceResumePath?: string;
+  sourceSummaryRows: SourceContextSummaryRow[];
 }
 
 export interface RecentOutput {
@@ -34,6 +41,10 @@ export interface RecentOutput {
   prompt: string | null;
   featureType: string | null;
   createdAt: string;
+  generationHref?: string;
+  sourceLabel?: string;
+  sourceResumePath?: string;
+  sourceSummaryRows: SourceContextSummaryRow[];
 }
 
 export interface TimelineItem {
@@ -43,6 +54,10 @@ export interface TimelineItem {
   prompt: string | null;
   status: WorkspaceJobStatus | 'output';
   href: string;
+  generationHref?: string;
+  sourceLabel?: string;
+  sourceResumePath?: string;
+  sourceSummaryRows?: SourceContextSummaryRow[];
   createdAt: string;
   completedAt: string | null;
   outputCount: number;
@@ -110,6 +125,12 @@ const featureLabels: Record<string, string> = {
   upscale: 'アップスケール',
   'optimize-prompt': 'プロンプト最適化',
   'model-matrix': 'モデルマトリクス',
+  'marketing-workflow': 'マーケティングワークフロー',
+  'fashion-studio': 'Fashion Studio',
+  'model-library-workspace': 'モデルライブラリ',
+  'video-workstation': 'Video Workstation',
+  'lab-workflow': 'Lab ワークフロー',
+  'graphic-pattern-workspace': '柄・グラフィック',
   'multilingual-banner': '多言語バナー',
   'design-gacha': 'デザインガチャ',
 };
@@ -148,7 +169,29 @@ const mapJob = (job: GenerationJob, outputCount: number): WorkspaceJob => ({
   completedAt: job.completed_at,
   outputCount,
   resumeHref: buildResumeHref(job),
+  generationHref: getGenerationHref(job.input_params),
+  sourceLabel: getMetadataString(job.input_params, 'sourceLabel'),
+  sourceResumePath: getMetadataString(job.input_params, 'sourceResumePath'),
+  sourceSummaryRows: buildSourceContextSummaryRows(job.input_params),
 });
+
+const isGenerationIntent = (value: unknown): value is GenerationIntent => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const intent = value as Partial<GenerationIntent>;
+  return Boolean(intent.href && typeof intent.href === 'string');
+};
+
+const getGenerationHref = (metadata: Json | null | undefined) => {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return undefined;
+  const generationIntent = metadata.generationIntent;
+  return isGenerationIntent(generationIntent) ? generationIntent.href : undefined;
+};
+
+const getMetadataString = (metadata: Json | null | undefined, key: string) => {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return undefined;
+  const value = metadata[key];
+  return typeof value === 'string' && value.trim() ? value : undefined;
+};
 
 const mapOutput = (image: GeneratedImage): RecentOutput => ({
   id: image.id,
@@ -158,6 +201,10 @@ const mapOutput = (image: GeneratedImage): RecentOutput => ({
   prompt: image.prompt,
   featureType: image.feature_type,
   createdAt: image.created_at,
+  generationHref: getGenerationHref(image.metadata),
+  sourceLabel: getMetadataString(image.metadata, 'sourceLabel'),
+  sourceResumePath: getMetadataString(image.metadata, 'sourceResumePath'),
+  sourceSummaryRows: buildSourceContextSummaryRows(image.metadata),
 });
 
 const buildOutputCounts = (images: GeneratedImage[]) => {
@@ -179,17 +226,25 @@ const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[]): Time
     createdAt: job.createdAt,
     completedAt: job.completedAt,
     outputCount: job.outputCount,
+    generationHref: job.generationHref,
+    sourceLabel: job.sourceLabel,
+    sourceResumePath: job.sourceResumePath,
+    sourceSummaryRows: job.sourceSummaryRows,
   }));
 
   const outputItems: TimelineItem[] = outputs
-    .filter((output) => !output.jobId)
+    .filter((output) => !output.jobId || output.storagePath.startsWith('local/'))
     .map((output) => ({
       id: `output-${output.id}`,
       title: getFeatureLabel(output.featureType),
-      description: 'ギャラリーに保存済み',
+      description: output.storagePath.startsWith('local/') ? 'ローカル成果物を保存済み' : 'ギャラリーに保存済み',
       prompt: output.prompt,
       status: 'output',
       href: `/gallery?image=${output.id}`,
+      generationHref: output.generationHref,
+      sourceLabel: output.sourceLabel,
+      sourceResumePath: output.sourceResumePath,
+      sourceSummaryRows: output.sourceSummaryRows,
       createdAt: output.createdAt,
       completedAt: output.createdAt,
       outputCount: 1,
@@ -271,12 +326,18 @@ const fetchOutputs = async (brandId: string): Promise<GeneratedImage[]> => {
 export async function fetchWorkspaceActivity(brandId: string): Promise<WorkspaceActivity> {
   if (!brandId) return emptyWorkspaceActivity;
 
-  const [creditSummary, jobs, outputs] = await Promise.all([
+  const [creditResult, jobsResult, outputsResult] = await Promise.allSettled([
     fetchCreditSummary(brandId),
     fetchJobs(brandId),
     fetchOutputs(brandId),
   ]);
 
+  const creditSummary = creditResult.status === 'fulfilled' ? creditResult.value : emptyWorkspaceActivity.creditSummary;
+  const jobs = jobsResult.status === 'fulfilled' ? jobsResult.value : [];
+  const remoteOutputs = outputsResult.status === 'fulfilled' ? outputsResult.value : [];
+  const localOutputs = listWorkspaceGeneratedImages(brandId);
+  const outputs = [...remoteOutputs, ...localOutputs]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const outputCounts = buildOutputCounts(outputs);
   const mappedJobs = jobs.map((job) => mapJob(job, outputCounts[job.id] ?? 0));
   const activeJobs = mappedJobs.filter((job) => job.status === 'pending' || job.status === 'processing').slice(0, 8);

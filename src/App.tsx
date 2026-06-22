@@ -11,8 +11,14 @@ const SignupPage = lazy(() => import('./pages/SignupPage').then((module) => ({ d
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then((module) => ({ default: module.AuthCallbackPage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const GeneratePage = lazy(() => import('./pages/GeneratePage').then((module) => ({ default: module.GeneratePage })));
+const WorkflowBoardPage = lazy(() => import('./pages/WorkflowBoardPage').then((module) => ({ default: module.WorkflowBoardPage })));
 const FittingPage = lazy(() => import('./pages/FittingPage').then((module) => ({ default: module.FittingPage })));
 const MarketingWorkspacePage = lazy(() => import('./pages/MarketingWorkspacePage').then((module) => ({ default: module.MarketingWorkspacePage })));
+const FashionStudioPage = lazy(() => import('./pages/FashionStudioPage').then((module) => ({ default: module.FashionStudioPage })));
+const ModelLibraryPage = lazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
+const PatternWorkspacePage = lazy(() => import('./pages/PatternWorkspacePage').then((module) => ({ default: module.PatternWorkspacePage })));
+const VideoWorkstationPage = lazy(() => import('./pages/VideoWorkstationPage').then((module) => ({ default: module.VideoWorkstationPage })));
+const LabPage = lazy(() => import('./pages/LabPage').then((module) => ({ default: module.LabPage })));
 const HistoryPage = lazy(() => import('./pages/HistoryPage').then((module) => ({ default: module.HistoryPage })));
 const JobsPage = lazy(() => import('./pages/JobsPage').then((module) => ({ default: module.JobsPage })));
 const CreditsPage = lazy(() => import('./pages/CreditsPage').then((module) => ({ default: module.CreditsPage })));
@@ -307,6 +313,16 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/workflows/:workflowId"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<WorkflowBoardPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/fitting"
           element={
             <ProtectedRoute>
@@ -322,6 +338,56 @@ function AppRoutes() {
             <ProtectedRoute>
               <ErrorBoundary>
                 {lazyPage(<MarketingWorkspacePage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/studio"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<FashionStudioPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/models"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<ModelLibraryPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/patterns"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<PatternWorkspacePage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/video"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<VideoWorkstationPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lab"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<LabPage />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }

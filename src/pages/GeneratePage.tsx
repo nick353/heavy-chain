@@ -25,6 +25,14 @@ import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
 import { ImageSelector, type SelectedImage, type ReferenceType } from '../components/ImageSelector';
 import { UsageStats } from '../components/UsageStats';
 import { getErrorMessage } from '../lib/errorMessages';
+import { saveWorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
+import {
+  hydrateGenerationIntentSource,
+  hydratePatternGenerationContext,
+  type GenerationIntent,
+  type PatternGenerationContext,
+} from '../lib/workspaceHandoff';
+import { getWorkflowMetadata, type WorkflowMetadata } from '../lib/workflowMetadata';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -40,6 +48,7 @@ const stylePresets = [
 const aspectRatios = [
   { id: '1:1', name: '正方形', width: 1024, height: 1024, usage: 'Instagram投稿・汎用' },
   { id: '4:3', name: '横長', width: 1024, height: 768, usage: 'Webバナー・LP' },
+  { id: '4:5', name: 'ポートレート', width: 819, height: 1024, usage: 'Instagram縦投稿・EC特集' },
   { id: '3:4', name: '縦長', width: 768, height: 1024, usage: 'Pinterest/フライヤー' },
   { id: '16:9', name: 'ワイド', width: 1024, height: 576, usage: 'YouTubeサムネ/ヒーロー' },
   { id: '9:16', name: 'ストーリー', width: 576, height: 1024, usage: 'IG/LINEストーリー・縦動画' }
@@ -210,9 +219,68 @@ const findFeatureFromQuery = (featureParam: string) => {
     ?? FEATURES.find((item) => item.apiEndpoint === featureParam);
 };
 
+const modelMatrixBodyTypes = ['slim', 'regular', 'plus'] as const;
+const modelMatrixAgeGroups = ['20s', '30s', '40s', '50s'] as const;
+const modelMatrixSkinTones = ['light', 'medium', 'dark'] as const;
+const modelMatrixHairStyles = ['short', 'medium', 'long'] as const;
+const modelCandidateLabels = ['Clean EC 20s', 'Street LOOK 30s', 'Premium AD 40s'] as const;
+
+const parseAllowedListParam = <T extends string>(value: string | null, allowed: readonly T[]) => {
+  if (!value) return [];
+  const allowedSet = new Set<string>(allowed);
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item): item is T => allowedSet.has(item));
+};
+
+const parseAllowedParam = <T extends string>(value: string | null, allowed: readonly T[]) => {
+  return value && (allowed as readonly string[]).includes(value) ? value as T : null;
+};
+
 const getGeneratedImageKey = (image: GeneratedResult, index: number) => {
   const stablePart = image.id || image.imageUrl || image.label || image.prompt || 'generated-image';
   return `${stablePart}-${index}`;
+};
+
+const buildGenerationIntentHref = (
+  feature: string,
+  prompt: string,
+  ratio: string,
+  sourceReadback: NonNullable<ReturnType<typeof hydrateGenerationIntentSource>>,
+  modelMatrixParams?: Pick<GenerationIntent, 'bodyTypes' | 'ageGroups' | 'skinTone' | 'hairStyle' | 'modelCandidateLabel'>,
+  patternContext?: PatternGenerationContext | null
+) => {
+  const params = new URLSearchParams({
+    feature,
+    prompt,
+    ratio,
+    sourceWorkspace: sourceReadback.sourceWorkspace,
+    workflowVersion: sourceReadback.workflowVersion,
+    sourceLabel: sourceReadback.sourceLabel,
+    sourceResumePath: sourceReadback.sourceResumePath,
+    sourceMode: sourceReadback.sourceMode,
+  });
+  if (modelMatrixParams?.bodyTypes?.length) params.set('bodyTypes', modelMatrixParams.bodyTypes.join(','));
+  if (modelMatrixParams?.ageGroups?.length) params.set('ageGroups', modelMatrixParams.ageGroups.join(','));
+  if (modelMatrixParams?.skinTone) params.set('skinTone', modelMatrixParams.skinTone);
+  if (modelMatrixParams?.hairStyle) params.set('hairStyle', modelMatrixParams.hairStyle);
+  if (modelMatrixParams?.modelCandidateLabel) params.set('modelCandidateLabel', modelMatrixParams.modelCandidateLabel);
+  if (patternContext) {
+    params.set('patternPreviewId', patternContext.selectedPatternPreview.id);
+    params.set('patternPreviewLabel', patternContext.selectedPatternPreview.label);
+    params.set('patternPreviewMode', patternContext.selectedPatternPreview.mode);
+    params.set('repeatSignature', patternContext.selectedPatternPreview.repeatSignature);
+    params.set('vectorSignature', patternContext.selectedPatternPreview.vectorSignature);
+    params.set('paletteSignature', patternContext.selectedPatternPreview.paletteSignature);
+    params.set('motifPrompt', patternContext.motifPrompt);
+    params.set('repeatStyle', patternContext.repeatStyle);
+    params.set('garmentTarget', patternContext.garmentTarget);
+    params.set('paletteNotes', patternContext.paletteNotes);
+    params.set('vectorIntent', patternContext.vectorIntent);
+    params.set('referenceAssets', patternContext.referenceAssets);
+  }
+  return `/generate?${params.toString()}`;
 };
 
 // Image Modal Component
@@ -316,6 +384,7 @@ export function GeneratePage() {
   const { addToHistory } = usePromptHistory();
   
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
+  const [activeWorkflow, setActiveWorkflow] = useState<WorkflowMetadata | null>(null);
   const [prompt, setPrompt] = useState('');
   const [showPromptHistory, setShowPromptHistory] = useState(false);
   const [showSuccessCard, setShowSuccessCard] = useState(false);
@@ -379,18 +448,31 @@ export function GeneratePage() {
   // Model options
   const [skinTone, setSkinTone] = useState<'light' | 'medium' | 'dark'>('medium');
   const [hairStyle, setHairStyle] = useState<'short' | 'medium' | 'long'>('medium');
+  const [modelCandidateLabel, setModelCandidateLabel] = useState<string>('');
 
   const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
+  const sourceReadback = hydrateGenerationIntentSource(searchParams);
+  const patternContext = sourceReadback?.sourceWorkspace === 'patterns'
+    ? hydratePatternGenerationContext(searchParams)
+    : null;
 
   useEffect(() => {
+    const workflow = getWorkflowMetadata(searchParams.get('workflow'));
     const featureParam = searchParams.get('feature');
     const promptParam = searchParams.get('prompt');
+    const ratioParam = searchParams.get('ratio');
 
-    if (!featureParam && promptParam === null) return;
+    if (!workflow && !featureParam && promptParam === null && !ratioParam) {
+      setActiveWorkflow(null);
+      return;
+    }
 
-    const feature = featureParam ? findFeatureFromQuery(featureParam) : null;
+    const feature = workflow
+      ? findFeatureFromQuery(workflow.primaryFeature)
+      : featureParam ? findFeatureFromQuery(featureParam) : null;
 
     if (feature) {
+      setActiveWorkflow(workflow);
       setSelectedFeature(feature);
       setGeneratedImages([]);
       setOptimizedPromptResult('');
@@ -399,9 +481,30 @@ export function GeneratePage() {
       setBackgroundReferenceImage(null);
       setPatternReferenceImage(null);
       setShowSuccessCard(false);
-      setGenerateCount(feature.id === 'design-gacha' ? 4 : 1);
+      setGenerateCount(workflow?.generateCount ?? (feature.id === 'design-gacha' ? 4 : 1));
       setOverlayEnabled(false);
-      setSelectedShots(['front', 'side', 'back', 'detail']);
+      setSelectedShots(workflow?.shots.length ? workflow.shots : ['front', 'side', 'back', 'detail']);
+
+      if (workflow) {
+        setPrompt(workflow.prefill.prompt ?? '');
+        setProductDescription(workflow.prefill.productDescription ?? '');
+        setCampaignTitle(workflow.prefill.campaignTitle ?? '');
+        setCampaignSubheadline(workflow.prefill.campaignSubheadline ?? '');
+        setCampaignCTA(workflow.prefill.campaignCTA ?? '');
+        setHeadline(workflow.prefill.headline ?? '');
+        setSubheadline(workflow.prefill.subheadline ?? '');
+        if (aspectRatios.some((ratio) => ratio.id === workflow.ratio)) {
+          setSelectedRatio(workflow.ratio);
+        }
+        if (workflow.languages.length) {
+          setSelectedLanguages(workflow.languages);
+        }
+        if (workflow.scenes.length) {
+          setSelectedScenes(workflow.scenes);
+        }
+      }
+    } else {
+      setActiveWorkflow(null);
     }
 
     if (promptParam !== null) {
@@ -412,6 +515,26 @@ export function GeneratePage() {
       } else if (feature?.id === 'multilingual-banner') {
         setHeadline(promptParam);
       }
+    }
+
+    if (feature?.id === 'model-matrix') {
+      const bodyTypes = parseAllowedListParam(searchParams.get('bodyTypes'), modelMatrixBodyTypes);
+      const ageGroups = parseAllowedListParam(searchParams.get('ageGroups'), modelMatrixAgeGroups);
+      const sourceSkinTone = parseAllowedParam(searchParams.get('skinTone'), modelMatrixSkinTones);
+      const sourceHairStyle = parseAllowedParam(searchParams.get('hairStyle'), modelMatrixHairStyles);
+      const sourceModelCandidateLabel = parseAllowedParam(searchParams.get('modelCandidateLabel'), modelCandidateLabels);
+
+      if (bodyTypes.length) setSelectedBodyTypes(bodyTypes);
+      if (ageGroups.length) setSelectedAgeGroups(ageGroups);
+      if (sourceSkinTone) setSkinTone(sourceSkinTone);
+      if (sourceHairStyle) setHairStyle(sourceHairStyle);
+      setModelCandidateLabel(sourceModelCandidateLabel ?? '');
+    } else {
+      setModelCandidateLabel('');
+    }
+
+    if (ratioParam && aspectRatios.some((ratio) => ratio.id === ratioParam)) {
+      setSelectedRatio(ratioParam);
     }
   }, [searchParams]);
 
@@ -427,6 +550,7 @@ export function GeneratePage() {
     if (selectedFeature?.id === 'optimize-prompt' && feature.id !== 'optimize-prompt') {
       resetSharedInputs();
     }
+    setActiveWorkflow(null);
     setSelectedFeature(feature);
     setGeneratedImages([]);
     setOptimizedPromptResult('');
@@ -444,6 +568,7 @@ export function GeneratePage() {
     if (selectedFeature?.id === 'optimize-prompt') {
       resetSharedInputs();
     }
+    setActiveWorkflow(null);
     setSelectedFeature(null);
     setGeneratedImages([]);
     setOptimizedPromptResult('');
@@ -527,6 +652,15 @@ export function GeneratePage() {
       }
       let data: any;
       let error: any;
+      let newGeneratedImages: GeneratedResult[] = [];
+      const replaceGeneratedImages = (images: GeneratedResult[]) => {
+        newGeneratedImages = images;
+        setGeneratedImages(images);
+      };
+      const prependGeneratedImages = (images: GeneratedResult[]) => {
+        newGeneratedImages = images;
+        setGeneratedImages(prev => [...images, ...prev]);
+      };
       const textOverlay = overlayEnabled && overlayText.trim() ? {
         text: overlayText.trim(),
         language: overlayLanguage,
@@ -565,7 +699,7 @@ export function GeneratePage() {
             }
           }));
           if (data?.resultUrl) {
-            setGeneratedImages([{
+            replaceGeneratedImages([{
               id: Date.now().toString(),
               imageUrl: data.resultUrl,
               prompt: `背景: ${backgroundOptions.find(b => b.id === selectedBackground)?.name || customBackground}`,
@@ -586,7 +720,7 @@ export function GeneratePage() {
             }
           }));
           if (data?.variations) {
-            setGeneratedImages(data.variations.map((v: any) => ({
+            replaceGeneratedImages(data.variations.map((v: any) => ({
               id: v.storagePath || Date.now().toString(),
               imageUrl: v.imageUrl,
               prompt: v.colorName,
@@ -606,7 +740,7 @@ export function GeneratePage() {
             }
           }));
           if (data?.resultUrl) {
-            setGeneratedImages([{
+            replaceGeneratedImages([{
               id: Date.now().toString(),
               imageUrl: data.resultUrl,
               prompt: `${upscaleScale}倍アップスケール`,
@@ -627,7 +761,7 @@ export function GeneratePage() {
             }
           }));
           if (data?.variations) {
-            setGeneratedImages(data.variations.map((v: any, i: number) => ({
+            replaceGeneratedImages(data.variations.map((v: any, i: number) => ({
               id: v.storagePath || Date.now().toString() + i,
               imageUrl: v.imageUrl,
               prompt: prompt || 'バリエーション',
@@ -653,7 +787,7 @@ export function GeneratePage() {
             }
           }));
           if (data?.variations) {
-            setGeneratedImages(data.variations.map((v: any, i: number) => ({
+            replaceGeneratedImages(data.variations.map((v: any, i: number) => ({
               id: v.storagePath || Date.now().toString() + i,
               imageUrl: v.imageUrl,
               prompt: selectedScenes[i],
@@ -681,10 +815,12 @@ export function GeneratePage() {
               directions: generateCount,
               fixedElements,
               randomizedElements,
+              sourceReadback: sourceReadback ?? undefined,
+              patternContext: patternContext ?? undefined,
             }
           }));
           if (data?.variations) {
-            setGeneratedImages(data.variations.map((v: any) => ({
+            replaceGeneratedImages(data.variations.map((v: any) => ({
               id: v.storagePath,
               imageUrl: v.imageUrl,
               prompt: v.prompt,
@@ -758,7 +894,7 @@ export function GeneratePage() {
               label: s.shotName
             }));
             debugLog('Product-shots images received', { imageCount: images.length });
-            setGeneratedImages(images);
+            replaceGeneratedImages(images);
           } else {
             debugLog('Product-shots returned no shots');
             if (data?.error) {
@@ -783,10 +919,12 @@ export function GeneratePage() {
               ageGroups: selectedAgeGroups,
               skinTone,
               hairStyle,
+              sourceReadback: sourceReadback ?? undefined,
+              modelCandidateLabel: modelCandidateLabel || undefined,
             }
           }));
           if (data?.matrix) {
-            setGeneratedImages(data.matrix.map((m: any) => ({
+            replaceGeneratedImages(data.matrix.map((m: any) => ({
               id: m.storagePath,
               imageUrl: m.imageUrl,
               prompt: productDescription,
@@ -811,7 +949,7 @@ export function GeneratePage() {
             }
           }));
           if (data?.banners) {
-            setGeneratedImages(data.banners.map((b: any) => ({
+            replaceGeneratedImages(data.banners.map((b: any) => ({
               id: b.storagePath,
               imageUrl: b.imageUrl,
               prompt: b.headline,
@@ -883,7 +1021,7 @@ export function GeneratePage() {
             }
           }));
           if (data?.images) {
-            setGeneratedImages(prev => [...data.images, ...prev]);
+            prependGeneratedImages(data.images);
           }
           break;
         }
@@ -913,7 +1051,7 @@ export function GeneratePage() {
             }
           }));
           if (data?.images) {
-            setGeneratedImages(prev => [...data.images, ...prev]);
+            prependGeneratedImages(data.images);
           }
       }
 
@@ -921,6 +1059,62 @@ export function GeneratePage() {
       
       if (selectedFeature?.id !== 'optimize-prompt') {
         const promptToSave = prompt || productDescription || headline || campaignTitle;
+        if (sourceReadback && selectedFeature && newGeneratedImages.length > 0) {
+          const modelMatrixParams = selectedFeature.id === 'model-matrix'
+            ? {
+                bodyTypes: selectedBodyTypes,
+                ageGroups: selectedAgeGroups,
+                skinTone,
+                hairStyle,
+                modelCandidateLabel: modelCandidateLabel || undefined,
+              }
+            : undefined;
+          const generatedPatternContext = selectedFeature.id === 'design-gacha'
+            ? patternContext
+            : null;
+          newGeneratedImages.forEach((image, index) => {
+            const intentPrompt = image.prompt || promptToSave || '';
+            const generationIntent: GenerationIntent = {
+              feature: selectedFeature.id,
+              prompt: intentPrompt,
+              href: buildGenerationIntentHref(
+                selectedFeature.id,
+                intentPrompt,
+                selectedRatio,
+                sourceReadback,
+                modelMatrixParams,
+                generatedPatternContext
+              ),
+              label: `${selectedFeature.name}で生成`,
+              aspectRatio: selectedRatio,
+              ...sourceReadback,
+              ...modelMatrixParams,
+              ...(generatedPatternContext ?? {}),
+            };
+
+            saveWorkspaceArtifact({
+              id: image.id ? `local-generated-${image.id}` : undefined,
+              brandId: currentBrand.id,
+              featureType: selectedFeature.id,
+              title: image.label || selectedFeature.name,
+              imageUrl: image.imageUrl,
+              prompt: intentPrompt,
+              metadata: {
+                sourceWorkspace: sourceReadback.sourceWorkspace,
+                workflowVersion: sourceReadback.workflowVersion,
+                sourceLabel: sourceReadback.sourceLabel,
+                sourceResumePath: sourceReadback.sourceResumePath,
+                sourceMode: sourceReadback.sourceMode,
+                ...(modelMatrixParams?.modelCandidateLabel ? { modelCandidateLabel: modelMatrixParams.modelCandidateLabel } : {}),
+                generationIntent,
+                ...(generatedPatternContext ?? {}),
+                generatedResultId: image.id,
+                generatedResultLabel: image.label,
+                generationIndex: index,
+              },
+            });
+          });
+        }
         if (promptToSave) {
           addToHistory(promptToSave, selectedFeature?.name);
         }
@@ -1050,6 +1244,8 @@ export function GeneratePage() {
         {aspectRatios.map((ratio) => (
           <button
             key={ratio.id}
+            type="button"
+            aria-pressed={selectedRatio === ratio.id}
             onClick={() => setSelectedRatio(ratio.id)}
             className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
               selectedRatio === ratio.id
@@ -1722,6 +1918,8 @@ export function GeneratePage() {
                 ].map(shot => (
                   <button
                     key={shot.id}
+                    type="button"
+                    aria-pressed={selectedShots.includes(shot.id)}
                     onClick={() => {
                       setSelectedShots(prev => {
                         const next = prev.includes(shot.id)
@@ -1935,6 +2133,8 @@ export function GeneratePage() {
                 ].map((lang) => (
                   <button
                     key={lang.code}
+                    type="button"
+                    aria-pressed={selectedLanguages.includes(lang.code)}
                     onClick={() => setSelectedLanguages(prev =>
                       prev.includes(lang.code) ? prev.filter(l => l !== lang.code) : [...prev, lang.code]
                     )}
@@ -2187,6 +2387,51 @@ export function GeneratePage() {
               </div>
             </div>
           </div>
+
+          {activeWorkflow && (
+            <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/70 dark:bg-neutral-800/50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                業務ワークフロー
+              </p>
+              <h2 className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
+                {activeWorkflow.title}
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+                {activeWorkflow.description}
+              </p>
+              <ol className="mt-3 space-y-2">
+                {activeWorkflow.steps.map((step, index) => (
+                  <li key={step} className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[11px] font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
+                      {index + 1}
+                    </span>
+                    <span>{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {sourceReadback && (
+            <div className="rounded-xl border border-primary-200 bg-primary-50/80 p-4 dark:border-primary-800 dark:bg-primary-950/30">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300">
+                ワークスペース再開
+              </p>
+              <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
+                {sourceReadback.sourceLabel} から受け取った内容で生成します
+              </p>
+              <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
+                {sourceReadback.workflowVersion} / {sourceReadback.sourceMode}
+              </p>
+              <Link
+                to={sourceReadback.sourceResumePath}
+                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary-700 hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                {sourceReadback.sourceLabel}へ戻る
+              </Link>
+            </div>
+          )}
 
           <UsageStats />
 

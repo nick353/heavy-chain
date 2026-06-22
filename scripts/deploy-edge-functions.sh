@@ -12,6 +12,7 @@ functions=(
   model-matrix
   multilingual-banner
   optimize-prompt
+  marketing-workspace-artifact
   bulk-download
   share-link
 )

@@ -19,6 +19,7 @@ import { supabase } from '../lib/supabase';
 import { withSignedImageUrls } from '../lib/storage';
 import { Button, Modal, Input, Textarea } from '../components/ui';
 import { Onboarding, useOnboarding } from '../components/Onboarding';
+import { QuickWorkflows } from '../components/QuickWorkflows';
 import { UsageStats } from '../components/UsageStats';
 import type { Brand, GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
@@ -428,6 +429,10 @@ export function DashboardPage() {
             </Link>
           ))}
         </motion.div>
+
+        <motion.section variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
+          <QuickWorkflows />
+        </motion.section>
 
         {/* Canvas Projects */}
         <motion.div variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">

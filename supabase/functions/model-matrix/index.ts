@@ -23,6 +23,176 @@ const AGE_GROUPS = [
   { id: '50s', name: '50代', prompt: 'elegant adult in their 50s' },
 ];
 
+const SKIN_TONES = ['light', 'medium', 'dark'] as const;
+const HAIR_STYLES = ['short', 'medium', 'long'] as const;
+const MODEL_CANDIDATE_LABELS = ['Clean EC 20s', 'Street LOOK 30s', 'Premium AD 40s'] as const;
+
+const SOURCE_CONFIG = {
+  studio: { label: 'Fashion Studio', resumePath: '/studio', versions: ['studio-selection-local-v1'] },
+  models: { label: 'モデルライブラリ', resumePath: '/models', versions: ['model-library-local-v1'] },
+  patterns: { label: '柄・グラフィック', resumePath: '/patterns', versions: ['pattern-preview-local-v1'] },
+  video: { label: 'Video Workstation', resumePath: '/video', versions: ['video-storyboard-local-v1'] },
+  lab: { label: 'Lab', resumePath: '/lab', versions: ['lab-evaluation-local-v1'] },
+} as const;
+
+type SourceWorkspace = keyof typeof SOURCE_CONFIG;
+type SourceMetadata = {
+  sourceWorkspace: SourceWorkspace;
+  workflowVersion: string;
+  sourceLabel: string;
+  sourceResumePath: string;
+  sourceMode: 'local-workflow-intake';
+  bodyTypes: string[];
+  ageGroups: string[];
+  skinTone?: string;
+  hairStyle?: string;
+  modelCandidateLabel?: string;
+  generationIntent: {
+    feature: 'model-matrix';
+    prompt: string;
+    href: string;
+    label: string;
+    sourceWorkspace: SourceWorkspace;
+    workflowVersion: string;
+    sourceLabel: string;
+    sourceResumePath: string;
+    sourceMode: 'local-workflow-intake';
+    bodyTypes: string[];
+    ageGroups: string[];
+    skinTone?: string;
+    hairStyle?: string;
+    modelCandidateLabel?: string;
+  };
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+};
+
+const readString = (record: Record<string, unknown>, key: string) => {
+  const value = record[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+};
+
+const pickAllowedString = <T extends string>(value: unknown, allowed: readonly T[]) => {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value) ? value as T : undefined;
+};
+
+const pickAllowedList = (value: unknown, allowed: readonly string[], fallback: string[]) => {
+  if (!Array.isArray(value)) return fallback;
+  const allowedSet = new Set(allowed);
+  const items = value.filter((item): item is string => typeof item === 'string' && allowedSet.has(item));
+  return items.length ? items : fallback;
+};
+
+const sanitizeSourceReadback = (value: unknown) => {
+  if (!isRecord(value)) return null;
+
+  const sourceWorkspace = readString(value, 'sourceWorkspace');
+  if (!sourceWorkspace || !(sourceWorkspace in SOURCE_CONFIG)) return null;
+
+  const config = SOURCE_CONFIG[sourceWorkspace as SourceWorkspace];
+  const workflowVersion = readString(value, 'workflowVersion');
+  const sourceLabel = readString(value, 'sourceLabel');
+  const sourceResumePath = readString(value, 'sourceResumePath');
+  const sourceMode = readString(value, 'sourceMode');
+
+  if (!workflowVersion || !(config.versions as readonly string[]).includes(workflowVersion)) return null;
+  if (sourceLabel !== config.label) return null;
+  if (sourceResumePath !== config.resumePath) return null;
+  if (sourceMode !== 'local-workflow-intake') return null;
+
+  return {
+    sourceWorkspace: sourceWorkspace as SourceWorkspace,
+    workflowVersion,
+    sourceLabel,
+    sourceResumePath,
+    sourceMode: 'local-workflow-intake' as const,
+  };
+};
+
+const buildGenerationIntentHref = ({
+  prompt,
+  sourceWorkspace,
+  workflowVersion,
+  sourceLabel,
+  sourceResumePath,
+  sourceMode,
+  bodyTypes,
+  ageGroups,
+  skinTone,
+  hairStyle,
+  modelCandidateLabel,
+}: Omit<SourceMetadata['generationIntent'], 'feature' | 'href' | 'label'>) => {
+  const params = new URLSearchParams({
+    feature: 'model-matrix',
+    prompt,
+    sourceWorkspace,
+    workflowVersion,
+    sourceLabel,
+    sourceResumePath,
+    sourceMode,
+  });
+  if (bodyTypes.length) params.set('bodyTypes', bodyTypes.join(','));
+  if (ageGroups.length) params.set('ageGroups', ageGroups.join(','));
+  if (skinTone) params.set('skinTone', skinTone);
+  if (hairStyle) params.set('hairStyle', hairStyle);
+  if (modelCandidateLabel) params.set('modelCandidateLabel', modelCandidateLabel);
+  return `/generate?${params.toString()}`;
+};
+
+const buildSourceMetadata = ({
+  sourceReadback,
+  productDescription,
+  bodyTypes,
+  ageGroups,
+  skinTone,
+  hairStyle,
+  modelCandidateLabel,
+}: {
+  sourceReadback: unknown;
+  productDescription: string;
+  bodyTypes: string[];
+  ageGroups: string[];
+  skinTone?: string;
+  hairStyle?: string;
+  modelCandidateLabel?: string;
+}): SourceMetadata | null => {
+  const source = sanitizeSourceReadback(sourceReadback);
+  if (!source) return null;
+
+  const generationIntent = {
+    feature: 'model-matrix' as const,
+    prompt: productDescription,
+    href: buildGenerationIntentHref({
+      prompt: productDescription,
+      ...source,
+      bodyTypes,
+      ageGroups,
+      skinTone,
+      hairStyle,
+      modelCandidateLabel,
+    }),
+    label: 'モデルマトリクスで生成',
+    ...source,
+    bodyTypes,
+    ageGroups,
+    ...(skinTone ? { skinTone } : {}),
+    ...(hairStyle ? { hairStyle } : {}),
+    ...(modelCandidateLabel ? { modelCandidateLabel } : {}),
+  };
+
+  return {
+    ...source,
+    bodyTypes,
+    ageGroups,
+    ...(skinTone ? { skinTone } : {}),
+    ...(hairStyle ? { hairStyle } : {}),
+    ...(modelCandidateLabel ? { modelCandidateLabel } : {}),
+    generationIntent,
+  };
+};
+
 // 画像をBase64に変換
 async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; mimeType: string } | null> {
   try {
@@ -192,6 +362,12 @@ serve(async (req) => {
   let observedBrandId: string | null = null;
   let observedUserId: string | null = null;
   let telemetryClient: any = null;
+  let persistenceStatus: 'not_started' | 'processing' | 'completed' | 'failed' = 'not_started';
+  let failedStage: string | null = null;
+  let cleanupStatus: 'none' | 'attempted' | 'failed' = 'none';
+  let jobId: string | null = null;
+  const uploadedStoragePaths: string[] = [];
+  const insertedImageIds: string[] = [];
   const functionName = 'model-matrix';
   const requestId = requestIdFrom(req);
   const startedAt = Date.now();
@@ -224,8 +400,27 @@ serve(async (req) => {
       brandId, 
       bodyTypes = ['slim', 'regular', 'plus'],
       ageGroups = ['20s', '30s', '40s'],
-      gender = 'female'
+      gender = 'female',
+      skinTone,
+      hairStyle,
+      sourceReadback,
+      modelCandidateLabel,
     } = body;
+    bodyTypes = pickAllowedList(bodyTypes, BODY_TYPES.map((bodyType) => bodyType.id), ['slim', 'regular', 'plus']);
+    ageGroups = pickAllowedList(ageGroups, AGE_GROUPS.map((ageGroup) => ageGroup.id), ['20s', '30s', '40s']);
+    gender = typeof gender === 'string' && gender.trim() ? gender.trim() : 'female';
+    skinTone = pickAllowedString(skinTone, SKIN_TONES);
+    hairStyle = pickAllowedString(hairStyle, HAIR_STYLES);
+    modelCandidateLabel = pickAllowedString(modelCandidateLabel, MODEL_CANDIDATE_LABELS);
+    const requestSourceMetadata = buildSourceMetadata({
+      sourceReadback,
+      productDescription: typeof productDescription === 'string' ? productDescription : '',
+      bodyTypes,
+      ageGroups,
+      skinTone,
+      hairStyle,
+      modelCandidateLabel,
+    });
 
     console.log('📥 Request:', { productDescription: !!productDescription, imageUrl: !!imageUrl, brandId });
 
@@ -257,9 +452,39 @@ serve(async (req) => {
       requestId,
     });
 
+    failedStage = 'job';
+    const { data: job, error: jobError } = await supabaseService
+      .from('generation_jobs')
+      .insert({
+        brand_id: brandId,
+        user_id: user.id,
+        feature_type: 'model-matrix',
+        input_params: {
+          productDescription: productDescription ?? null,
+          imageUrl: imageUrl ? '[provided]' : null,
+          bodyTypes,
+          ageGroups,
+          gender,
+          ...(skinTone ? { skinTone } : {}),
+          ...(hairStyle ? { hairStyle } : {}),
+          ...(requestSourceMetadata ?? {}),
+        },
+        optimized_prompt: productDescription ?? null,
+        status: 'processing',
+        error_message: null,
+      })
+      .select('id')
+      .single();
+
+    if (jobError || !job?.id) {
+      throw jobError ?? new Error('Failed to create generation job');
+    }
+    jobId = job.id;
+    persistenceStatus = 'processing';
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
+      failedStage = 'configuration';
       throw new Error('Gemini API key not configured');
     }
     const analysisModel = geminiAnalysisModel();
@@ -284,8 +509,18 @@ serve(async (req) => {
     }
 
     if (!finalDescription) {
+      failedStage = 'analysis';
       throw new Error('商品説明を取得できませんでした');
     }
+    const finalSourceMetadata = buildSourceMetadata({
+      sourceReadback,
+      productDescription: finalDescription,
+      bodyTypes,
+      ageGroups,
+      skinTone,
+      hairStyle,
+      modelCandidateLabel,
+    });
 
     const selectedBodyTypes = BODY_TYPES.filter(b => bodyTypes.includes(b.id));
     const selectedAgeGroups = AGE_GROUPS.filter(a => ageGroups.includes(a.id));
@@ -324,29 +559,25 @@ serve(async (req) => {
 
         if (imageBase64) {
           const imageDataUrl = `data:image/png;base64,${imageBase64}`;
-          const fileName = `${user.id}/${brandId}/${Date.now()}_matrix_${bodyType.id}_${ageGroup.id}.png`;
-          let storageUrl = '';
+          const fileName = `${user.id}/${brandId}/${jobId}_matrix_${bodyType.id}_${ageGroup.id}_${Date.now()}.png`;
+          const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
 
-          try {
-            const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
-              const { error: uploadError } = await supabaseService.storage
-              .from('generated-images')
-              .upload(fileName, imgBuffer, { contentType: 'image/png' });
+          failedStage = 'storage';
+          const { error: uploadError } = await supabaseService.storage
+            .from('generated-images')
+            .upload(fileName, imgBuffer, { contentType: 'image/png', upsert: false });
 
-            if (!uploadError) {
-              const { data: urlData } = await supabaseService.storage.from('generated-images').createSignedUrl(fileName, 60 * 60 * 24);
-              storageUrl = urlData?.signedUrl || '';
-              console.log('✅ Image uploaded to storage:', storageUrl);
-            } else {
-              console.log('⚠️ Storage upload error:', uploadError.message);
-            }
-          } catch (storageError) {
-            console.log('⚠️ Storage warning:', clientError(storageError));
+          if (uploadError) {
+            throw uploadError;
           }
+          uploadedStoragePaths.push(fileName);
+          console.log('✅ Image uploaded to storage:', fileName);
 
-          // Always save record with image_url as fallback
-          try {
-            await supabaseClient.from('generated_images').insert({
+          failedStage = 'image';
+          const { data: image, error: imageInsertError } = await supabaseService
+            .from('generated_images')
+            .insert({
+              job_id: jobId,
               brand_id: brandId,
               user_id: user.id,
               storage_path: fileName,
@@ -360,11 +591,20 @@ serve(async (req) => {
                 gender,
                 productDescription: finalDescription 
               },
-            });
-            console.log('✅ Image record saved to database');
-          } catch (dbError) {
-            console.log('⚠️ Database warning:', clientError(dbError));
+              metadata: {
+                remoteSaveStatus: 'succeeded',
+                source: 'model-matrix',
+                ...(finalSourceMetadata ?? {}),
+              },
+            })
+            .select('id')
+            .single();
+
+          if (imageInsertError || !image?.id) {
+            throw imageInsertError ?? new Error('Generated image insert did not return an id');
           }
+          insertedImageIds.push(image.id);
+          console.log('✅ Image record saved to database');
 
           results.push({
             bodyType: bodyType.id,
@@ -373,6 +613,8 @@ serve(async (req) => {
             ageGroupName: ageGroup.name,
             imageUrl: imageDataUrl,
             storagePath: fileName,
+            imageId: image.id,
+            persistenceStatus: 'completed',
           });
           
           console.log(`✅ ${bodyType.name} x ${ageGroup.name} generated`);
@@ -381,8 +623,26 @@ serve(async (req) => {
     }
 
     if (results.length === 0) {
+      failedStage = 'generation';
       throw new Error('画像の生成に失敗しました。しばらく待ってからもう一度お試しください。');
     }
+
+    failedStage = 'job_complete';
+    const { error: completeJobError } = await supabaseService
+      .from('generation_jobs')
+      .update({
+        status: 'completed',
+        error_message: null,
+        optimized_prompt: finalDescription,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
+
+    if (completeJobError) {
+      throw completeJobError;
+    }
+    persistenceStatus = 'completed';
+    failedStage = null;
 
     console.log(`🎉 Successfully generated ${results.length} images`);
     if (telemetryClient) {
@@ -403,8 +663,12 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        jobId,
         productDescription: finalDescription,
         matrix: results,
+        persistenceStatus,
+        failedStage: null,
+        cleanupStatus,
         dimensions: {
           bodyTypes: selectedBodyTypes.map(b => ({ id: b.id, name: b.name })),
           ageGroups: selectedAgeGroups.map(a => ({ id: a.id, name: a.name })),
@@ -414,6 +678,53 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    const cleanupErrors: string[] = [];
+    persistenceStatus = jobId ? 'failed' : persistenceStatus;
+    if (!failedStage) failedStage = 'unknown';
+
+    if (telemetryClient && jobId) {
+      cleanupStatus = 'attempted';
+      if (insertedImageIds.length > 0) {
+        try {
+          const { error: deleteImagesError } = await telemetryClient
+            .from('generated_images')
+            .delete()
+            .in('id', insertedImageIds);
+          if (deleteImagesError) throw deleteImagesError;
+        } catch (cleanupError) {
+          cleanupErrors.push(clientError(cleanupError));
+        }
+      }
+
+      if (uploadedStoragePaths.length > 0) {
+        try {
+          const { error: removeStorageError } = await telemetryClient
+            .storage
+            .from('generated-images')
+            .remove(uploadedStoragePaths);
+          if (removeStorageError) throw removeStorageError;
+        } catch (cleanupError) {
+          cleanupErrors.push(clientError(cleanupError));
+        }
+      }
+
+      try {
+        const { error: failJobError } = await telemetryClient
+          .from('generation_jobs')
+          .update({
+            status: 'failed',
+            error_message: sanitizeError(error),
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', jobId);
+        if (failJobError) throw failJobError;
+      } catch (cleanupError) {
+        cleanupErrors.push(clientError(cleanupError));
+      }
+
+      cleanupStatus = cleanupErrors.length ? 'failed' : 'attempted';
+    }
+
     if (telemetryClient) {
       await completeBrandUsage(telemetryClient, usageReservation, 'failed', { error: sanitizeError(error) });
       await recordEdgeFunctionRun(telemetryClient, {
@@ -430,7 +741,16 @@ serve(async (req) => {
 
     console.error('❌ Error:', error);
     return new Response(
-      JSON.stringify({ error: clientError(error) }),
+      JSON.stringify({
+        success: false,
+        error: clientError(error),
+        jobId,
+        matrix: [],
+        persistenceStatus,
+        failedStage,
+        cleanupStatus,
+        cleanupErrors,
+      }),
       { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

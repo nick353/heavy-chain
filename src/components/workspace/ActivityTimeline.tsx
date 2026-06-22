@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, ChevronDown, Clipboard, Clock3, ExternalLink, Image, Loader2, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Clipboard, Clock3, ExternalLink, Image, Loader2, Sparkles, XCircle } from 'lucide-react';
 import type { TimelineItem } from '../../lib/workspaceActivity';
 
 interface ActivityTimelineProps {
@@ -104,6 +104,19 @@ export function ActivityTimeline({ items, emptyMessage = 'まだ表示できる�
                     <p className="mt-2 text-sm leading-6 text-neutral-700 dark:text-neutral-200">
                       {item.prompt || 'プロンプト情報は保存されていません。'}
                     </p>
+                    {item.sourceSummaryRows && item.sourceSummaryRows.length > 0 && (
+                      <div className="mt-4 rounded-xl bg-white/70 p-4 dark:bg-surface-900/70">
+                        <p className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">生成条件</p>
+                        <dl className="mt-3 space-y-2">
+                          {item.sourceSummaryRows.map((row) => (
+                            <div key={`${item.id}-${row.label}-${row.value}`} className="grid gap-1 text-sm sm:grid-cols-[112px_1fr] sm:gap-3">
+                              <dt className="text-neutral-500 dark:text-neutral-400">{row.label}:</dt>
+                              <dd className="min-w-0 break-words text-neutral-800 dark:text-neutral-100">{row.value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
+                    )}
                     <div className="mt-4 flex flex-wrap gap-2">
                       {item.prompt && (
                         <button
@@ -119,6 +132,18 @@ export function ActivityTimeline({ items, emptyMessage = 'まだ表示できる�
                         開く
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Link>
+                      {item.generationHref && (
+                        <Link to={item.generationHref} className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-700">
+                          生成へ進む
+                          <Sparkles className="h-3.5 w-3.5" />
+                        </Link>
+                      )}
+                      {item.sourceLabel && item.sourceResumePath && (
+                        <Link to={item.sourceResumePath} className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:text-primary-700 dark:bg-surface-900 dark:text-neutral-200">
+                          元ワークスペースへ戻る: {item.sourceLabel}
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
+                      )}
                     </div>
                   </div>
                 )}

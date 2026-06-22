@@ -286,16 +286,24 @@ export async function generateModelMatrix(
     bodyTypes?: string[];
     ageGroups?: string[];
     gender?: 'male' | 'female';
+    imageUrl?: string;
     textOverlay?: TextOverlayPayload;
   }
 ): Promise<{
   success: boolean;
+  jobId?: string | null;
+  persistenceStatus?: 'not_started' | 'processing' | 'completed' | 'failed';
+  failedStage?: string | null;
+  cleanupStatus?: 'none' | 'attempted' | 'failed';
   matrix?: Array<{
     bodyType: string;
     bodyTypeName: string;
     ageGroup: string;
     ageGroupName: string;
     imageUrl: string;
+    storagePath?: string;
+    imageId?: string;
+    persistenceStatus?: 'completed' | 'failed';
   }>;
   error?: string;
 }> {
@@ -307,7 +315,6 @@ export async function generateModelMatrix(
     if (error) throw error;
     return data;
   } catch (error: any) {
-    console.error('Model matrix error:', error);
     return { success: false, error: error.message };
   }
 }

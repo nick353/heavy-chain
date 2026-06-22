@@ -17,6 +17,7 @@ const guarded = [
 ];
 
 const observedOnly = ['share-link'];
+const serviceRoleWriteFunctions = ['marketing-workspace-artifact'];
 const geminiModelGuardFiles = ['supabase/functions/_shared/geminiModels.ts'];
 const failures = [];
 const quotaGuardMigration = 'supabase/migrations/20260617080031_harden_usage_quota_guards.sql';
@@ -113,6 +114,21 @@ for (const name of observedOnly) {
     failures.push(`${name}: deprecated Gemini 2.0 model reference`);
   }
   if (!text.includes('recordEdgeFunctionRun')) failures.push(`${name}: missing edge run observability`);
+}
+
+for (const name of serviceRoleWriteFunctions) {
+  const text = readFileSync(`supabase/functions/${name}/index.ts`, 'utf8');
+  if (deprecatedGeminiModelPattern.test(text)) {
+    failures.push(`${name}: deprecated Gemini 2.0 model reference`);
+  }
+  if (hasUnsafePersistedImageUrl(text)) {
+    failures.push(`${name}: persists signed/data URL as image_url`);
+  }
+  if (!text.includes('createServiceClient')) failures.push(`${name}: missing service-role client`);
+  if (!text.includes('requireBrandRole')) failures.push(`${name}: missing brand role guard`);
+  if (!/image_url:\s*null/.test(text)) {
+    failures.push(`${name}: generated_images.image_url must not persist signed/data URLs`);
+  }
 }
 
 for (const file of geminiModelGuardFiles) {

@@ -17,18 +17,45 @@ import {
   Copy,
   Sparkles,
   Tag,
-  FileText
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import { withSignedImageUrls } from '../lib/storage';
+import {
+  deleteWorkspaceArtifact,
+  isLocalWorkspaceImage,
+  listWorkspaceGeneratedImages,
+} from '../lib/localWorkspaceArtifacts';
+import { buildSourceContextSummaryRows } from '../lib/sourceContextSummary';
 import { Button, SearchInput } from '../components/ui';
 import type { GeneratedImage } from '../types/database';
+import type { GenerationIntent } from '../lib/workspaceHandoff';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type FilterType = 'all' | 'favorites' | 'recent';
 type SortType = 'newest' | 'oldest' | 'name';
+
+const isGenerationIntent = (value: unknown): value is GenerationIntent => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const intent = value as Partial<GenerationIntent>;
+  return Boolean(intent.href && typeof intent.href === 'string');
+};
+
+const getGenerationIntent = (image: GeneratedImage | null) => {
+  const metadata = image?.metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
+  return isGenerationIntent(metadata.generationIntent) ? metadata.generationIntent : null;
+};
+
+const getMetadataString = (image: GeneratedImage | null, key: string) => {
+  const metadata = image?.metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
+  const value = metadata[key];
+  return typeof value === 'string' && value.trim() ? value : null;
+};
 
 export function GalleryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,6 +68,10 @@ export function GalleryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [gridSize, setGridSize] = useState<'small' | 'large'>('large');
+  const selectedGenerationIntent = getGenerationIntent(selectedImage);
+  const selectedSourceLabel = getMetadataString(selectedImage, 'sourceLabel');
+  const selectedSourceResumePath = getMetadataString(selectedImage, 'sourceResumePath');
+  const selectedSourceSummaryRows = buildSourceContextSummaryRows(selectedImage?.metadata);
   
   // Multi-select mode
   const [selectMode, setSelectMode] = useState(false);
@@ -48,8 +79,13 @@ export function GalleryPage() {
   
   // Recent searches
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    const saved = localStorage.getItem('gallery_recent_searches');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('gallery_recent_searches');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+    } catch {
+      return [];
+    }
   });
 
   const getImageUrl = useCallback((image: GeneratedImage | string) => {
@@ -96,6 +132,7 @@ export function GalleryPage() {
     
     setIsLoading(true);
     try {
+      const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(currentBrand.id);
       let query = supabase
         .from('generated_images')
         .select('*')
@@ -113,16 +150,29 @@ export function GalleryPage() {
 
       const { data, error } = await query;
 
+      let remoteImages: GeneratedImage[] = [];
       if (error) {
-        toast.error('画像の読み込みに失敗しました');
-        setImages([]);
+        if (localImages.length === 0) {
+          toast.error('画像の読み込みに失敗しました');
+        }
       } else {
-        const imagesWithUrls = await withSignedImageUrls(data || []);
-        setImages(imagesWithUrls);
+        remoteImages = await withSignedImageUrls(data || []);
       }
+
+      const mergedImages = [...remoteImages, ...localImages]
+        .sort((a, b) => {
+          if (sortBy === 'oldest') {
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          }
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+      setImages(mergedImages);
     } catch {
-      toast.error('画像の読み込みに失敗しました');
-      setImages([]);
+      const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(currentBrand.id);
+      if (localImages.length === 0) {
+        toast.error('画像の読み込みに失敗しました');
+      }
+      setImages(localImages);
     } finally {
       setIsLoading(false);
     }
@@ -164,7 +214,7 @@ export function GalleryPage() {
       const imageUrl = getImageUrl(image);
       const response = await fetch(imageUrl);
       const blob = await response.blob();
-      
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -199,6 +249,11 @@ export function GalleryPage() {
   };
 
   const handleToggleFavorite = useCallback(async (image: GeneratedImage) => {
+    if (isLocalWorkspaceImage(image)) {
+      toast('ローカル成果物のお気に入りは次のスライスで対応します');
+      return;
+    }
+
     try {
       const newValue = !image.is_favorite;
       await supabase
@@ -224,6 +279,14 @@ export function GalleryPage() {
 
   const handleDelete = async (image: GeneratedImage) => {
     if (!confirm('この画像を削除しますか？')) return;
+
+    if (isLocalWorkspaceImage(image)) {
+      deleteWorkspaceArtifact(image.brand_id, image.id);
+      setImages(prev => prev.filter(img => img.id !== image.id));
+      setSelectedImage(null);
+      toast.success('ローカル成果物を削除しました');
+      return;
+    }
 
     try {
       const { error: storageError } = await supabase.storage
@@ -251,17 +314,23 @@ export function GalleryPage() {
 
     try {
       const imagesToDelete = images.filter(img => selectedIds.has(img.id));
-      
-      const { error: storageError } = await supabase.storage
-        .from('generated-images')
-        .remove(imagesToDelete.map(img => img.storage_path));
-      if (storageError) throw storageError;
+      const remoteImagesToDelete = imagesToDelete.filter((image) => !isLocalWorkspaceImage(image));
+      const localImagesToDelete = imagesToDelete.filter(isLocalWorkspaceImage);
 
-      const { error: deleteError } = await supabase
-        .from('generated_images')
-        .delete()
-        .in('id', Array.from(selectedIds));
-      if (deleteError) throw deleteError;
+      localImagesToDelete.forEach((image) => deleteWorkspaceArtifact(image.brand_id, image.id));
+
+      if (remoteImagesToDelete.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from('generated-images')
+          .remove(remoteImagesToDelete.map(img => img.storage_path));
+        if (storageError) throw storageError;
+
+        const { error: deleteError } = await supabase
+          .from('generated_images')
+          .delete()
+          .in('id', remoteImagesToDelete.map((image) => image.id));
+        if (deleteError) throw deleteError;
+      }
 
       setImages(prev => prev.filter(img => !selectedIds.has(img.id)));
       setSelectedIds(new Set());
@@ -296,13 +365,21 @@ export function GalleryPage() {
     if (query.trim() && !recentSearches.includes(query.trim())) {
       const newRecent = [query.trim(), ...recentSearches.slice(0, 9)];
       setRecentSearches(newRecent);
-      localStorage.setItem('gallery_recent_searches', JSON.stringify(newRecent));
+      try {
+        localStorage.setItem('gallery_recent_searches', JSON.stringify(newRecent));
+      } catch (error) {
+        console.warn('Failed to persist gallery recent searches:', error);
+      }
     }
   };
 
   const clearRecentSearches = () => {
     setRecentSearches([]);
-    localStorage.removeItem('gallery_recent_searches');
+    try {
+      localStorage.removeItem('gallery_recent_searches');
+    } catch (error) {
+      console.warn('Failed to clear gallery recent searches:', error);
+    }
   };
 
   // Copy prompt to clipboard
@@ -331,6 +408,7 @@ export function GalleryPage() {
       if (image.feature_type?.toLowerCase().includes(searchLower)) return true;
       // Search in style preset
       if (image.style_preset?.toLowerCase().includes(searchLower)) return true;
+      if (JSON.stringify(image.metadata ?? {}).toLowerCase().includes(searchLower)) return true;
       // Search in ID
       if (image.id.toLowerCase().includes(searchLower)) return true;
       // Search in storage path (fallback)
@@ -766,6 +844,23 @@ export function GalleryPage() {
                     </div>
                   )}
 
+                  {selectedSourceSummaryRows.length > 0 && (
+                    <div className="mb-8">
+                      <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <Sparkles className="w-3 h-3" />
+                        生成条件
+                      </h4>
+                      <dl className="space-y-2 rounded-xl bg-white/5 p-4">
+                        {selectedSourceSummaryRows.map((row) => (
+                          <div key={`${row.label}-${row.value}`} className="grid grid-cols-[88px_1fr] gap-3 text-sm">
+                            <dt className="text-white/45">{row.label}:</dt>
+                            <dd className="min-w-0 break-words text-white/85">{row.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
+
                   {/* Download Options */}
                   <div className="space-y-3 mb-8">
                     <h4 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">ダウンロード</h4>
@@ -793,6 +888,24 @@ export function GalleryPage() {
 
                   {/* Actions */}
                   <div className="space-y-3">
+                    {selectedSourceLabel && selectedSourceResumePath && (
+                      <Link
+                        to={selectedSourceResumePath}
+                        className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-semibold transition-all"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        元ワークスペースへ戻る: {selectedSourceLabel}
+                      </Link>
+                    )}
+                    {selectedGenerationIntent?.href && (
+                      <Link
+                        to={selectedGenerationIntent.href}
+                        className="w-full flex items-center gap-3 px-4 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-sm font-semibold transition-all"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        この内容で生成
+                      </Link>
+                    )}
                     <button
                       onClick={() => handleToggleFavorite(selectedImage)}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${
