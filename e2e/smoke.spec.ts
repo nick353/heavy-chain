@@ -37,7 +37,14 @@ const mockJobs = [
     brand_id: mockBrand.id,
     user_id: mockUser.id,
     feature_type: 'text-to-image',
-    input_params: { prompt: '夏のサマーセール告知' },
+    input_params: {
+      prompt: '夏のサマーセール告知',
+      lightchainCompat: {
+        lightchainFeatureId: 'case-sns-video',
+        lightchainFeatureTitle: '商品画像からSNS動画構成へ',
+        lightchainTaskCodes: ['FashionStudio', 'Video Workstation'],
+      },
+    },
     optimized_prompt: 'Premium summer sale apparel campaign image',
     status: 'processing',
     error_message: null,
@@ -49,7 +56,14 @@ const mockJobs = [
     brand_id: mockBrand.id,
     user_id: mockUser.id,
     feature_type: 'product-shots',
-    input_params: { prompt: '白背景の商品撮影' },
+    input_params: {
+      prompt: '白背景の商品撮影',
+      lightchainCompat: {
+        lightchainFeatureId: 'remove-background',
+        lightchainFeatureTitle: '背景削除・切り抜き',
+        lightchainTaskCodes: ['CutOut', 'RemoveBackground'],
+      },
+    },
     optimized_prompt: null,
     status: 'failed',
     error_message: 'テスト用の生成失敗',
@@ -61,7 +75,14 @@ const mockJobs = [
     brand_id: mockBrand.id,
     user_id: mockUser.id,
     feature_type: 'text-to-image',
-    input_params: { prompt: 'ECモデル着用画像' },
+    input_params: {
+      prompt: 'ECモデル着用画像',
+      lightchainCompat: {
+        lightchainFeatureId: 'virtual-fitting',
+        lightchainFeatureTitle: 'AIフィッティング',
+        lightchainTaskCodes: ['VirtualFittingV2', 'ChangeModel'],
+      },
+    },
     optimized_prompt: null,
     status: 'completed',
     error_message: null,
@@ -94,6 +115,93 @@ const mockGeneratedImages = [
   },
 ];
 
+const mockLightchainTaskSteps = [
+  {
+    id: '00000000-0000-4000-8000-000000000401',
+    job_id: '00000000-0000-4000-8000-000000000101',
+    image_id: null,
+    brand_id: mockBrand.id,
+    user_id: mockUser.id,
+    lightchain_feature_id: 'case-sns-video',
+    lightchain_feature_title: '商品画像からSNS動画構成へ',
+    task_code: 'FashionStudio',
+    step_index: 0,
+    status: 'processing',
+    source_workspace: 'video',
+    workflow_version: 'video-storyboard-local-v1',
+    request_id: 'mock-request-processing',
+    artifact_uri: null,
+    error_message: null,
+    metadata: {},
+    created_at: '2026-06-18T02:00:00.000Z',
+    updated_at: '2026-06-18T02:00:00.000Z',
+    completed_at: null,
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000402',
+    job_id: '00000000-0000-4000-8000-000000000101',
+    image_id: null,
+    brand_id: mockBrand.id,
+    user_id: mockUser.id,
+    lightchain_feature_id: 'case-sns-video',
+    lightchain_feature_title: '商品画像からSNS動画構成へ',
+    task_code: 'Video Workstation',
+    step_index: 1,
+    status: 'processing',
+    source_workspace: 'video',
+    workflow_version: 'video-storyboard-local-v1',
+    request_id: 'mock-request-processing',
+    artifact_uri: null,
+    error_message: null,
+    metadata: {},
+    created_at: '2026-06-18T02:00:00.000Z',
+    updated_at: '2026-06-18T02:00:00.000Z',
+    completed_at: null,
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000403',
+    job_id: '00000000-0000-4000-8000-000000000102',
+    image_id: null,
+    brand_id: mockBrand.id,
+    user_id: mockUser.id,
+    lightchain_feature_id: 'remove-background',
+    lightchain_feature_title: '背景削除・切り抜き',
+    task_code: 'CutOut',
+    step_index: 0,
+    status: 'retryable',
+    source_workspace: 'studio',
+    workflow_version: 'studio-selection-local-v1',
+    request_id: 'mock-request-failed',
+    artifact_uri: null,
+    error_message: 'テスト用の生成失敗',
+    metadata: {},
+    created_at: '2026-06-18T01:00:00.000Z',
+    updated_at: '2026-06-18T01:00:00.000Z',
+    completed_at: '2026-06-18T01:01:00.000Z',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000000404',
+    job_id: '00000000-0000-4000-8000-000000000102',
+    image_id: null,
+    brand_id: mockBrand.id,
+    user_id: mockUser.id,
+    lightchain_feature_id: 'remove-background',
+    lightchain_feature_title: '背景削除・切り抜き',
+    task_code: 'RemoveBackground',
+    step_index: 1,
+    status: 'retryable',
+    source_workspace: 'studio',
+    workflow_version: 'studio-selection-local-v1',
+    request_id: 'mock-request-failed',
+    artifact_uri: null,
+    error_message: 'テスト用の生成失敗',
+    metadata: {},
+    created_at: '2026-06-18T01:00:00.000Z',
+    updated_at: '2026-06-18T01:00:00.000Z',
+    completed_at: '2026-06-18T01:01:00.000Z',
+  },
+];
+
 const configuredProjectRef = process.env.VITE_SUPABASE_URL?.match(/^https:\/\/([^.]+)\.supabase\.co/)?.[1];
 const authStorageKeys = Array.from(new Set([
   'ghwjymozrwmcrpjqvbmo',
@@ -119,6 +227,12 @@ async function mockSupabase(page: Page, options: {
   modelMatrixRequests?: unknown[];
   generateImageRequests?: unknown[];
   designGachaRequests?: unknown[];
+  removeBackgroundRequests?: unknown[];
+  colorizeRequests?: unknown[];
+  upscaleRequests?: unknown[];
+  generateVariationsRequests?: unknown[];
+  shareLinkRequests?: unknown[];
+  sharedImageRequests?: string[];
   storageUploadFails?: boolean;
   storageRequests?: string[];
   storageRemoveRequests?: string[];
@@ -250,6 +364,12 @@ async function mockSupabase(page: Page, options: {
       } else {
         body = dynamicGeneratedImages;
       }
+    } else if (pathname.endsWith('/rest/v1/lightchain_task_steps')) {
+      if (method !== 'GET') {
+        await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method Not Allowed' }) });
+        return;
+      }
+      body = mockLightchainTaskSteps;
     } else {
       await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'Not Found' }) });
       return;
@@ -301,7 +421,7 @@ async function mockSupabase(page: Page, options: {
   });
 
   await page.route('**/functions/v1/**', async (route) => {
-    const { pathname } = new URL(route.request().url());
+    const { pathname, searchParams } = new URL(route.request().url());
     options.functionRequests?.push(pathname);
 
     if (pathname === '/functions/v1/model-matrix') {
@@ -598,6 +718,118 @@ async function mockSupabase(page: Page, options: {
       return;
     }
 
+    if (pathname === '/functions/v1/remove-background') {
+      const requestBody = route.request().postDataJSON();
+      options.removeBackgroundRequests?.push(requestBody);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          resultUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="320" height="400"%3E%3Crect fill="%23f8fafc" width="320" height="400"/%3E%3Ctext x="36" y="210" font-size="24"%3ERemoved BG%3C/text%3E%3C/svg%3E',
+          imageUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="320" height="400"%3E%3Crect fill="%23f8fafc" width="320" height="400"/%3E%3Ctext x="36" y="210" font-size="24"%3ERemoved BG%3C/text%3E%3C/svg%3E',
+          storagePath: 'mock-remove-bg.png',
+        }),
+      });
+      return;
+    }
+
+    if (pathname === '/functions/v1/colorize') {
+      const requestBody = route.request().postDataJSON();
+      options.colorizeRequests?.push(requestBody);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          variations: [{ color: 'red', colorName: 'red', imageUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="320" height="400"%3E%3Crect fill="%23fee2e2" width="320" height="400"/%3E%3C/svg%3E', storagePath: 'mock-colorize.png' }],
+        }),
+      });
+      return;
+    }
+
+    if (pathname === '/functions/v1/upscale') {
+      const requestBody = route.request().postDataJSON();
+      options.upscaleRequests?.push(requestBody);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          resultUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="640" height="800"%3E%3Crect fill="%23ecfeff" width="640" height="800"/%3E%3C/svg%3E',
+          imageUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="640" height="800"%3E%3Crect fill="%23ecfeff" width="640" height="800"/%3E%3C/svg%3E',
+          storagePath: 'mock-upscale.png',
+        }),
+      });
+      return;
+    }
+
+    if (pathname === '/functions/v1/generate-variations') {
+      const requestBody = route.request().postDataJSON();
+      options.generateVariationsRequests?.push(requestBody);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          variations: [{ index: 1, imageUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="320" height="400"%3E%3Crect fill="%23eef2ff" width="320" height="400"/%3E%3C/svg%3E', storagePath: 'mock-variation.png' }],
+        }),
+      });
+      return;
+    }
+
+    if (pathname === '/functions/v1/share-link') {
+      if (route.request().method() === 'GET') {
+        const token = searchParams.get('token') ?? '';
+        options.sharedImageRequests?.push(token);
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            image: {
+              id: '00000000-0000-4000-8000-000000000201',
+              imageUrl: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="420" height="560"%3E%3Crect fill="%23111617" width="420" height="560"/%3E%3Crect x="70" y="72" width="280" height="416" rx="18" fill="%232dd4bf"/%3E%3Ctext x="210" y="292" font-size="28" text-anchor="middle" fill="%230f172a"%3EShared%3C/text%3E%3C/svg%3E',
+              prompt: 'Shared ECモデル着用画像',
+              negativePrompt: null,
+              featureType: 'text-to-image',
+              stylePreset: null,
+              modelUsed: null,
+              generationParams: null,
+              metadata: {
+                lightchainCompat: {
+                  lightchainFeatureTitle: 'AIフィッティング',
+                  lightchainTaskCodes: ['VirtualFittingV2', 'ChangeModel'],
+                },
+              },
+              createdAt: '2026-06-18T00:03:00.000Z',
+            },
+            share: {
+              token,
+              expiresAt: '2026-06-25T00:00:00.000Z',
+              createdAt: '2026-06-18T00:04:00.000Z',
+            },
+          }),
+        });
+        return;
+      }
+
+      const requestBody = route.request().postDataJSON();
+      options.shareLinkRequests?.push(requestBody);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          shareUrl: `https://heavy-chain.example/share/mock-${requestBody.imageId}`,
+          token: `mock-${requestBody.imageId}`,
+          expiresAt: '2026-06-25T00:00:00.000Z',
+          expiresInDays: requestBody.expiresInDays ?? 7,
+        }),
+      });
+      return;
+    }
+
     if (pathname === '/functions/v1/optimize-prompt') {
       if (options.optimizePromptSucceeds) {
         await route.fulfill({
@@ -852,6 +1084,207 @@ test.describe('workflow boards', () => {
 });
 
 test.describe('workspace activity pages', () => {
+  test('dashboard Lightchain parity hub maps tabs and feature links without remote writes', async ({ page }) => {
+    const functionRequests: string[] = [];
+    const storageRequests: string[] = [];
+    const storageRemoveRequests: string[] = [];
+    const restWriteRequests: RestWriteRequest[] = [];
+    const restDeleteRequests: RestDeleteRequest[] = [];
+    const restMutationRequests: RestMutationRequest[] = [];
+    await mockSupabase(page, {
+      functionRequests,
+      storageRequests,
+      storageRemoveRequests,
+      restWriteRequests,
+      restDeleteRequests,
+      restMutationRequests,
+    });
+    await completeOnboardingForMockUser(page);
+
+    await page.goto('/dashboard');
+
+    await expect(page.getByRole('heading', { name: '今日の作業状況' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: /Lightchainで慣れた入口/ })).toBeVisible();
+    await expect(page.getByText('Lightchain互換ホーム')).toBeVisible();
+    await expect(page.getByRole('link', { name: /マーケティングワークスペース/ })).toHaveAttribute('href', '/marketing');
+    await expect(page.getByRole('link', { name: /AIフィッティング/ }).first()).toHaveAttribute('href', '/fitting');
+
+    await page.getByRole('button', { name: /グラフィックツール/ }).click();
+    await expect(page.getByRole('link', { name: /AIグラフィックデザイン/ })).toHaveAttribute('href', '/patterns');
+    await expect(page.getByRole('link', { name: /デザインアレンジ/ })).toHaveAttribute('href', /\/generate\?feature=generate-variations&lcFeature=design-arrange/);
+
+    await page.getByPlaceholder('機能名で検索').fill('ベクター');
+    await expect(page.getByRole('link', { name: /パターンをベクター画像に変換/ })).toBeVisible();
+    await page.getByPlaceholder('機能名で検索').fill('');
+
+    await page.getByRole('button', { name: /画像編集/ }).click();
+    await expect(page.getByRole('link', { name: /背景削除・切り抜き/ })).toHaveAttribute('href', /\/generate\?feature=remove-bg&lcFeature=remove-background/);
+    await expect(page.getByRole('link', { name: /部分修正・対話編集/ })).toHaveAttribute('href', /\/generate\?feature=chat-edit&lcFeature=partial-fix/);
+    await expect(page.getByRole('link', { name: /Canvasで編集・管理/ })).toHaveAttribute('href', '/canvas/new');
+
+    await page.getByRole('link', { name: /背景削除・切り抜き/ }).click();
+    await expect(page).toHaveURL(/\/generate\?feature=remove-bg&lcFeature=remove-background/);
+    await expect(page.getByText('Lightchain互換')).toBeVisible();
+    await expect(page.getByText('CutOut / RemoveBackground').first()).toBeVisible();
+
+    await page.goto('/dashboard');
+    await page.getByRole('button', { name: /グラフィックツール/ }).click();
+
+    await page.getByRole('link', { name: /パターンをベクター画像に変換/ }).click();
+    await expect(page).toHaveURL(/\/patterns$/);
+
+    expect(functionRequests).toEqual([]);
+    expect(storageRequests).toEqual([]);
+    expect(storageRemoveRequests).toEqual([]);
+    expect(restWriteRequests).toEqual([]);
+    expect(restDeleteRequests).toEqual([]);
+    expect(restMutationRequests).toEqual([]);
+  });
+
+  test('generate page sends Lightchain compatibility metadata to generation function', async ({ page }) => {
+    const generateImageRequests: unknown[] = [];
+    await mockSupabase(page, { generateImageRequests });
+    await completeOnboardingForMockUser(page);
+
+    const params = new URLSearchParams({
+      feature: 'campaign-image',
+      prompt: '新作ジャケットのSNS告知',
+      lcFeature: 'case-sns-video',
+      lcTitle: '商品画像からSNS動画構成へ',
+      lcTaskCodes: 'FashionStudio,Video Workstation',
+    });
+    await page.goto(`/generate?${params.toString()}`);
+
+    await expect(page.getByRole('heading', { name: 'キャンペーン画像' })).toBeVisible();
+    await expect(page.getByText('Lightchain互換')).toBeVisible();
+    await expect(page.getByText('FashionStudio / Video Workstation')).toBeVisible();
+
+    await page.getByRole('button', { name: '生成' }).click();
+    await expect.poll(() => generateImageRequests.length).toBe(1);
+    expect(generateImageRequests[0]).toMatchObject({
+      lightchainCompat: {
+        lightchainFeatureId: 'case-sns-video',
+        lightchainFeatureTitle: '商品画像からSNS動画構成へ',
+        lightchainTaskCodes: ['FashionStudio', 'Video Workstation'],
+        lightchainTaskSteps: [
+          { taskCode: 'FashionStudio', status: 'processing' },
+          { taskCode: 'Video Workstation', status: 'processing' },
+        ],
+      },
+    });
+  });
+
+  test('image editing functions receive Lightchain compatibility metadata', async ({ page }) => {
+    const removeBackgroundRequests: unknown[] = [];
+    await mockSupabase(page, { removeBackgroundRequests });
+    await completeOnboardingForMockUser(page);
+
+    const params = new URLSearchParams({
+      feature: 'remove-bg',
+      lcFeature: 'remove-background',
+      lcTitle: '背景削除・切り抜き',
+      lcTaskCodes: 'CutOut,RemoveBackground',
+    });
+    await page.goto(`/generate?${params.toString()}`);
+
+    await expect(page.getByText('Lightchain互換')).toBeVisible();
+    await expect(page.getByText('CutOut / RemoveBackground')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '背景削除' })).toBeVisible();
+
+    const fileInput = page.locator('input[type="file"]').first();
+    await fileInput.setInputFiles({
+      name: 'lightchain-edit.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=', 'base64'),
+    });
+    await page.getByRole('button', { name: '生成' }).click();
+
+    await expect.poll(() => removeBackgroundRequests.length).toBe(1);
+    expect(removeBackgroundRequests[0]).toMatchObject({
+      lightchainCompat: {
+        lightchainFeatureId: 'remove-background',
+        lightchainFeatureTitle: '背景削除・切り抜き',
+        lightchainTaskCodes: ['CutOut', 'RemoveBackground'],
+        lightchainTaskSteps: [
+          { taskCode: 'CutOut', status: 'processing' },
+          { taskCode: 'RemoveBackground', status: 'processing' },
+        ],
+      },
+    });
+  });
+
+  test('canvas image edits preserve Lightchain stage history locally', async ({ page }) => {
+    const removeBackgroundRequests: unknown[] = [];
+    await mockSupabase(page, { removeBackgroundRequests });
+    await completeOnboardingForMockUser(page);
+
+    await page.goto('/canvas/new');
+    await page.evaluate(async () => {
+      const { useCanvasStore } = await import('/src/stores/canvasStore.ts');
+      const store = useCanvasStore;
+      const projectId = store.getState().createProject('Lightchain Canvas Stage Proof', '00000000-0000-4000-8000-000000000002');
+      const imageId = store.getState().addObject({
+        type: 'image',
+        x: 100,
+        y: 100,
+        width: 240,
+        height: 240,
+        rotation: 0,
+        scaleX: 1,
+        scaleY: 1,
+        opacity: 1,
+        locked: false,
+        visible: true,
+        src: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="320" height="320"%3E%3Crect fill="%23f8fafc" width="320" height="320"/%3E%3Ctext x="32" y="170" font-size="24"%3ELC Source%3C/text%3E%3C/svg%3E',
+        label: 'Lightchain source',
+        metadata: {
+          feature: 'remove-background',
+          generation: 0,
+          lightchainCompat: {
+            lightchainFeatureId: 'remove-background',
+            lightchainFeatureTitle: '背景削除・切り抜き',
+            lightchainTaskCodes: ['CutOut', 'RemoveBackground'],
+            lightchainTaskSteps: [
+              { taskCode: 'CutOut', status: 'processing' },
+              { taskCode: 'RemoveBackground', status: 'processing' },
+            ],
+          },
+        },
+      });
+      store.getState().selectObject(imageId);
+      store.getState().saveCurrentProject();
+      window.history.replaceState(null, '', `/canvas/${projectId}`);
+    });
+
+    await page.getByRole('button', { name: '背景削除' }).click();
+    await expect.poll(() => removeBackgroundRequests.length).toBe(1);
+    await expect(page.getByText('Lightchain編集履歴')).toBeVisible();
+    await expect(page.getByText('背景削除・切り抜き')).toBeVisible();
+
+    const canvasObjects = await page.evaluate(async () => {
+      const { useCanvasStore } = await import('/src/stores/canvasStore.ts');
+      const store = useCanvasStore;
+      return store.getState().objects;
+    });
+    const derived = canvasObjects.find((object: any) => object.derivedFrom);
+    expect(derived?.metadata).toMatchObject({
+      feature: 'remove-background',
+      generation: 1,
+      lightchainCompat: {
+        lightchainFeatureId: 'remove-background',
+        lightchainTaskCodes: ['CutOut', 'RemoveBackground'],
+      },
+      lightchainEditStages: [
+        {
+          action: 'remove-background',
+          label: '背景削除・切り抜き',
+          status: 'completed',
+          stepIndex: 0,
+        },
+      ],
+    });
+  });
+
   test('dashboard renders activity panels', async ({ page }) => {
     await mockSupabase(page);
 
@@ -860,6 +1293,8 @@ test.describe('workspace activity pages', () => {
     await expect(page.getByRole('heading', { name: '今日の作業状況' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '進行中のジョブ' })).toBeVisible();
     await expect(page.getByText('失敗から再開')).toBeVisible();
+    await expect(page.getByText('Lightchain task: FashionStudio / Video Workstation')).toBeVisible();
+    await expect(page.getByText('Lightchain steps: FashionStudio=処理中 / Video Workstation=処理中')).toBeVisible();
   });
 
   test('dashboard quick workflow opens SNS campaign board and advances to generator without remote writes', async ({ page }) => {
@@ -908,6 +1343,10 @@ test.describe('workspace activity pages', () => {
     await expect(page.getByRole('heading', { name: 'ジョブ' })).toBeVisible();
     await expect(page.getByText('Premium summer sale apparel campaign image')).toBeVisible();
     await expect(page.getByText('テスト用の生成失敗')).toBeVisible();
+    await expect(page.getByText('Lightchain task:', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('CutOut / RemoveBackground')).toBeVisible();
+    await expect(page.getByText('Lightchain状態:', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('失敗・再試行可', { exact: true }).first()).toBeVisible();
   });
 
   test('marketing page runs local job states and hands off to canvas', async ({ page }) => {
@@ -1069,6 +1508,45 @@ test.describe('workspace activity pages', () => {
 
     await expect(page.getByRole('heading', { name: '生成履歴' })).toBeVisible();
     await expect(page.getByText('Premium summer sale apparel campaign image')).toBeVisible();
+  });
+
+  test('gallery detail creates share links for saved images', async ({ page }) => {
+    const shareLinkRequests: unknown[] = [];
+    await mockSupabase(page, { shareLinkRequests });
+    await completeOnboardingForMockUser(page);
+
+    await page.goto('/gallery?image=00000000-0000-4000-8000-000000000201');
+    await expect(page.getByRole('heading', { name: 'ギャラリー' })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('div.cursor-pointer').first()).toBeVisible();
+
+    const detailModal = page.locator('.fixed.inset-0');
+    await expect(detailModal.getByText('画像の詳細')).toBeVisible({ timeout: 15_000 });
+    await detailModal.getByRole('button', { name: '共有リンクを作成' }).click();
+
+    await expect.poll(() => shareLinkRequests.length).toBe(1);
+    expect(shareLinkRequests[0]).toMatchObject({
+      imageId: '00000000-0000-4000-8000-000000000201',
+      expiresInDays: 7,
+    });
+    await expect(detailModal.getByText('共有リンク', { exact: true })).toBeVisible();
+    await expect(detailModal.getByText('https://heavy-chain.example/share/mock-00000000-0000-4000-8000-000000000201')).toBeVisible();
+    await expect(detailModal.getByText(/有効期限:/)).toBeVisible();
+  });
+
+  test('public share page renders a shared image without onboarding', async ({ page }) => {
+    const sharedImageRequests: string[] = [];
+    await mockSupabase(page, { sharedImageRequests });
+
+    await page.goto('/share/mock-public-token');
+
+    await expect.poll(() => sharedImageRequests.length).toBe(1);
+    expect(sharedImageRequests[0]).toBe('mock-public-token');
+    await expect(page.getByRole('heading', { name: 'Shared ECモデル着用画像' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Shared ECモデル着用画像' })).toBeVisible();
+    await expect(page.getByText('AIフィッティング')).toBeVisible();
+    await expect(page.getByText('VirtualFittingV2 / ChangeModel')).toBeVisible();
+    await expect(page.getByText('リンク有効期限')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Heavy Chainで生成する' })).toBeVisible();
   });
 
   test('credits page renders credit summary', async ({ page }) => {
@@ -2021,10 +2499,14 @@ test.describe('workspace activity pages', () => {
         sourceLabel: scenario.sourceLabel,
         sourceResumePath: scenario.sourceResumePath,
         sourceMode: 'local-workflow-intake',
+        lcFeature: 'case-sns-video',
+        lcTitle: '商品画像からSNS動画構成へ',
+        lcTaskCodes: 'FashionStudio,Video Workstation',
       });
 
       await page.goto(`/generate?${params.toString()}`);
       await expect(page.getByText('ワークスペース再開')).toBeVisible();
+      await expect(page.getByText('Lightchain互換')).toBeVisible();
       await expect(page.getByRole('link', { name: `${scenario.sourceLabel}へ戻る` })).toHaveAttribute('href', scenario.sourceResumePath);
       await page.getByRole('button', { name: '生成', exact: true }).click();
       await expect(page.getByText('Generated').first()).toBeVisible();
@@ -2045,6 +2527,15 @@ test.describe('workspace activity pages', () => {
           sourceResumePath: scenario.sourceResumePath,
           href: expect.stringContaining(`sourceWorkspace=${scenario.sourceWorkspace}`),
         }),
+        lightchainCompat: {
+          lightchainFeatureId: 'case-sns-video',
+          lightchainFeatureTitle: '商品画像からSNS動画構成へ',
+          lightchainTaskCodes: ['FashionStudio', 'Video Workstation'],
+          lightchainTaskSteps: [
+            { taskCode: 'FashionStudio', status: 'processing' },
+            { taskCode: 'Video Workstation', status: 'processing' },
+          ],
+        },
       });
       await expect.poll(async () => {
         const metadata = await readLatestLocalArtifactMetadata(page);
@@ -2060,6 +2551,15 @@ test.describe('workspace activity pages', () => {
         sourceMode: 'local-workflow-intake',
         generatedResultId: 'mock-generated-image',
         generatedResultLabel: 'Generated',
+        lightchainCompat: {
+          lightchainFeatureId: 'case-sns-video',
+          lightchainFeatureTitle: '商品画像からSNS動画構成へ',
+          lightchainTaskCodes: ['FashionStudio', 'Video Workstation'],
+          lightchainTaskSteps: [
+            { taskCode: 'FashionStudio', status: 'processing' },
+            { taskCode: 'Video Workstation', status: 'processing' },
+          ],
+        },
         generationIntent: expect.objectContaining({
           feature: 'campaign-image',
           prompt: expect.stringContaining(prompt),
@@ -2072,6 +2572,16 @@ test.describe('workspace activity pages', () => {
         }),
       });
     }
+
+    await page.goto('/gallery');
+    await page.getByPlaceholder('プロンプトで検索...').fill('Generated provenance smoke lab');
+    await expect(page.locator('div.cursor-pointer')).toHaveCount(1);
+    await page.locator('div.cursor-pointer').first().click();
+    const detailModal = page.locator('.fixed.inset-0');
+    await expect(detailModal.getByText('Lightchain機能:')).toBeVisible();
+    await expect(detailModal.getByText('商品画像からSNS動画構成へ')).toBeVisible();
+    await expect(detailModal.getByText('Lightchain task:')).toBeVisible();
+    await expect(detailModal.getByText('FashionStudio / Video Workstation')).toBeVisible();
 
     expect(functionRequests).toEqual(sourceScenarios.map(() => '/functions/v1/generate-image'));
     expect(storageRequests).toEqual([]);

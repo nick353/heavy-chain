@@ -19,6 +19,7 @@ interface PropertiesPanelProps {
 export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
   const { updateObject, deleteObject, saveToHistory } = useCanvasStore();
   const [localValues, setLocalValues] = useState<Partial<CanvasObject>>({});
+  const lightchainEditStages = selectedObject?.metadata?.lightchainEditStages ?? [];
 
   useEffect(() => {
     if (selectedObject) {
@@ -261,6 +262,28 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
         </div>
       )}
 
+      {selectedObject.type === 'image' && lightchainEditStages.length > 0 && (
+        <div className="pt-4 border-t border-neutral-100">
+          <h4 className="text-xs font-semibold text-neutral-500 mb-2">Lightchain編集履歴</h4>
+          <div className="space-y-2">
+            {lightchainEditStages.map((stage) => (
+              <div
+                key={stage.stageId}
+                className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-neutral-800">{stage.label}</span>
+                  <span className="text-[11px] text-emerald-700">完了</span>
+                </div>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Step {stage.stepIndex + 1}: {stage.action}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Delete button */}
       <div className="pt-4 border-t border-neutral-100">
         <button
@@ -274,4 +297,3 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
     </div>
   );
 }
-

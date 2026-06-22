@@ -36,6 +36,18 @@ export interface CanvasObject {
     parentId?: string;      // 親画像のID
     generation: number;     // 世代数 (0=最初の生成, 1=1回派生...)
     parameters?: any;       // 使用したパラメータ
+    lightchainCompat?: any;  // Lightchain互換の機能/タスク状態
+    lightchainEditStages?: Array<{
+      stageId: string;
+      action: string;
+      label: string;
+      status: 'completed' | 'retryable';
+      sourceObjectId?: string;
+      stepIndex: number;
+      prompt?: string;
+      parameters?: any;
+      createdAt: string;
+    }>;
     timestamp?: string;     // 生成日時
   };
 }

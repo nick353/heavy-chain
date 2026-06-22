@@ -53,6 +53,7 @@ const jobs = await selectRows('generation_jobs', 'created_at');
 const images = await selectRows('generated_images', 'created_at');
 const usage = await selectRows('usage_events', 'created_at');
 const runs = await selectRows('edge_function_runs', 'created_at');
+const lightchainTaskStepRows = await selectRows('lightchain_task_steps', 'created_at');
 
 const filteredJobs = filterWorkspaceRows(jobs);
 const filteredImages = filterWorkspaceRows(images).filter((image) => {
@@ -67,6 +68,7 @@ const requestIds = new Set([
 ]);
 const filteredUsage = filterTelemetryRows(usage, requestIds, sourceEvents);
 const filteredRuns = filterTelemetryRows(runs, requestIds, sourceEvents);
+const filteredLightchainTaskSteps = filterLightchainTaskStepRows(lightchainTaskStepRows, filteredJobs, filteredImages, requestIds);
 const storage = await collectStorageReadback(filteredImages);
 
 const readback = redactSecrets({
@@ -76,12 +78,14 @@ const readback = redactSecrets({
     images: filteredImages.length,
     usage: filteredUsage.length,
     runs: filteredRuns.length,
+    lightchainTaskSteps: filteredLightchainTaskSteps.length,
     storage: storage.length,
   },
   jobs: filteredJobs.map(projectJob),
   images: filteredImages.map(projectImage),
   usage: filteredUsage.map((row) => projectUsage(row, inferTelemetrySource(row, sourceEvents))),
   runs: filteredRuns.map((row) => projectRun(row, inferTelemetrySource(row, sourceEvents))),
+  lightchainTaskSteps: filteredLightchainTaskSteps.map(projectLightchainTaskStep),
   storage,
 });
 
@@ -170,6 +174,19 @@ function filterTelemetryRows(rows, requestIds, events) {
   });
 }
 
+function filterLightchainTaskStepRows(rows, jobRows, imageRows, requestIds) {
+  const jobIds = new Set(jobRows.map((row) => row.id).filter(isNonEmptyString));
+  const imageIds = new Set(imageRows.map((row) => row.id).filter(isNonEmptyString));
+  return rows.filter((row) => {
+    const source = sourceInfo(row);
+    if (source.sourceWorkspace && workspaces.includes(source.sourceWorkspace)) return true;
+    if (row.job_id && jobIds.has(row.job_id)) return true;
+    if (row.image_id && imageIds.has(row.image_id)) return true;
+    if (isNonEmptyString(row.request_id) && requestIds.has(row.request_id)) return true;
+    return false;
+  });
+}
+
 function buildSourceEvents(jobRows, imageRows) {
   const events = [];
   for (const row of [...jobRows, ...imageRows]) {
@@ -232,6 +249,7 @@ async function collectStorageReadback(images) {
     const { data, error } = await supabase.storage.from(GENERATED_IMAGES_BUCKET).createSignedUrl(storagePath, 60);
     const image = images.find((row) => row.storage_path === storagePath);
     const source = sourceInfo(image ?? {});
+    const lightchainCompat = lightchainInfo(image ?? {}, 'completed');
     rows.push({
       storage_path: storagePath,
       bucket: GENERATED_IMAGES_BUCKET,
@@ -239,6 +257,7 @@ async function collectStorageReadback(images) {
       job_id: image?.job_id ?? null,
       sourceWorkspace: source.sourceWorkspace ?? null,
       workflowVersion: source.workflowVersion ?? null,
+      lightchainCompat,
       signedUrlOk: Boolean(data?.signedUrl && !error),
       signedUrlExpiresIn: 60,
       signedUrlError: error?.message ?? null,
@@ -250,6 +269,7 @@ async function collectStorageReadback(images) {
 
 function projectJob(row) {
   const source = sourceInfo(row);
+  const lightchainCompat = lightchainInfo(row, stepStatusForRowStatus(row.status));
   return {
     id: row.id,
     brand_id: row.brand_id,
@@ -261,6 +281,7 @@ function projectJob(row) {
     completed_at: row.completed_at ?? null,
     sourceWorkspace: source.sourceWorkspace ?? null,
     workflowVersion: source.workflowVersion ?? null,
+    lightchainCompat,
     request_id: requestIdFor(row),
     input_params: row.input_params ?? {},
   };
@@ -268,6 +289,7 @@ function projectJob(row) {
 
 function projectImage(row) {
   const source = sourceInfo(row);
+  const lightchainCompat = lightchainInfo(row, 'completed');
   return {
     id: row.id,
     job_id: row.job_id ?? null,
@@ -280,6 +302,7 @@ function projectImage(row) {
     created_at: row.created_at ?? null,
     sourceWorkspace: source.sourceWorkspace ?? null,
     workflowVersion: source.workflowVersion ?? null,
+    lightchainCompat,
     request_id: requestIdFor(row),
     generation_params: row.generation_params ?? {},
     metadata: row.metadata ?? {},
@@ -325,6 +348,30 @@ function projectRun(row, sourceOverride = null) {
   };
 }
 
+function projectLightchainTaskStep(row) {
+  const source = sourceInfo(row);
+  return {
+    id: row.id,
+    job_id: row.job_id ?? null,
+    image_id: row.image_id ?? null,
+    brand_id: row.brand_id ?? null,
+    user_id: row.user_id ?? null,
+    lightchain_feature_id: row.lightchain_feature_id ?? null,
+    lightchain_feature_title: row.lightchain_feature_title ?? null,
+    task_code: row.task_code ?? null,
+    step_index: row.step_index ?? null,
+    status: row.status ?? null,
+    sourceWorkspace: source.sourceWorkspace ?? null,
+    workflowVersion: source.workflowVersion ?? null,
+    request_id: row.request_id ?? null,
+    artifact_uri: row.artifact_uri ?? null,
+    error_message: row.error_message ?? null,
+    created_at: row.created_at ?? null,
+    completed_at: row.completed_at ?? null,
+    metadata: row.metadata ?? {},
+  };
+}
+
 function sourceInfo(row) {
   const candidates = [
     row.sourceReadback,
@@ -342,11 +389,64 @@ function sourceInfo(row) {
 
   for (const candidate of candidates) {
     if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-    const sourceWorkspace = readString(candidate, 'sourceWorkspace');
-    const workflowVersion = readString(candidate, 'workflowVersion');
+    const sourceWorkspace = readString(candidate, 'sourceWorkspace') ?? readString(candidate, 'source_workspace');
+    const workflowVersion = readString(candidate, 'workflowVersion') ?? readString(candidate, 'workflow_version');
     if (sourceWorkspace || workflowVersion) return { sourceWorkspace, workflowVersion };
   }
   return {};
+}
+
+function lightchainInfo(row, fallbackStepStatus = 'completed') {
+  const candidates = [
+    row.lightchainCompat,
+    row.input_params?.lightchainCompat,
+    row.input_params?.generationIntent?.lightchainCompat,
+    row.metadata?.lightchainCompat,
+    row.metadata?.generationIntent?.lightchainCompat,
+    row.generation_params?.lightchainCompat,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
+    const lightchainFeatureId = readString(candidate, 'lightchainFeatureId');
+    const lightchainFeatureTitle = readString(candidate, 'lightchainFeatureTitle');
+    const rawTaskCodes = candidate.lightchainTaskCodes;
+    const lightchainTaskCodes = Array.isArray(rawTaskCodes)
+      ? rawTaskCodes.filter((item) => isNonEmptyString(item))
+      : [];
+    if (lightchainFeatureId && lightchainFeatureTitle && lightchainTaskCodes.length) {
+      const rawSteps = candidate.lightchainTaskSteps;
+      const persistedSteps = Array.isArray(rawSteps)
+        ? rawSteps
+          .filter((step) => step && typeof step === 'object' && !Array.isArray(step))
+          .map((step) => ({
+            taskCode: readString(step, 'taskCode'),
+            status: readString(step, 'status'),
+          }))
+          .filter((step) => step.taskCode && step.status)
+        : [];
+      const lightchainTaskSteps = persistedSteps.length
+        ? persistedSteps
+        : lightchainTaskCodes.map((taskCode) => ({
+          taskCode,
+          status: fallbackStepStatus,
+        }));
+      return {
+        lightchainFeatureId,
+        lightchainFeatureTitle,
+        lightchainTaskCodes,
+        lightchainTaskSteps,
+      };
+    }
+  }
+  return null;
+}
+
+function stepStatusForRowStatus(status) {
+  if (status === 'pending') return 'queued';
+  if (status === 'processing') return 'processing';
+  if (status === 'failed') return 'retryable';
+  return 'completed';
 }
 
 function readString(value, key) {

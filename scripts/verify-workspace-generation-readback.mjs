@@ -21,6 +21,7 @@ if (!args.cleanup) {
 }
 
 const workspaces = parseList(args.workspaces, DEFAULT_WORKSPACES);
+const expectedLightchainTaskCodes = parseList(args.expectLightchainTaskCodes, []);
 const failures = [];
 const readback = readJson(args.readback);
 const cleanup = readJson(args.cleanup);
@@ -49,6 +50,7 @@ function parseArgs(argv) {
     if (arg === '--expect-environment' && next) parsed.expectEnvironment = next;
     if (arg === '--expect-git-commit' && next) parsed.expectGitCommit = next;
     if (arg === '--workspaces' && next) parsed.workspaces = next;
+    if (arg === '--expect-lightchain-task-codes' && next) parsed.expectLightchainTaskCodes = next;
     if (arg.startsWith('--') && next) index += 1;
   }
   return parsed;
@@ -111,12 +113,18 @@ function validateReadback(file, json) {
       addFailure(file, `${key} readback is empty`);
     }
   }
+  if (expectedLightchainTaskCodes.length && (!Array.isArray(json.lightchainTaskSteps) || json.lightchainTaskSteps.length === 0)) {
+    addFailure(file, 'lightchainTaskSteps readback is empty');
+  }
 
   const jobs = json.jobs ?? [];
   const images = json.images ?? [];
   const usage = json.usage ?? [];
   const runs = json.runs ?? [];
   const storage = json.storage ?? [];
+  const lightchainTaskSteps = json.lightchainTaskSteps ?? [];
+  const lightchainHitsByTaskCode = new Map(expectedLightchainTaskCodes.map((taskCode) => [taskCode, new Set()]));
+  const durableStepHitsByTaskCode = new Map(expectedLightchainTaskCodes.map((taskCode) => [taskCode, new Set()]));
 
   const jobIdsByWorkspace = new Map();
   const imageStorageByWorkspace = new Map();
@@ -133,6 +141,7 @@ function validateReadback(file, json) {
   for (const [index, job] of jobs.entries()) {
     const source = sourceInfo(job);
     validateWorkspaceAndVersion(file, `jobs[${index}]`, source);
+    validateLightchainCompat(file, `jobs[${index}]`, job, lightchainHitsByTaskCode);
     if (job.status !== 'completed') addFailure(file, `jobs[${index}] is not completed`);
     if (!isNonEmptyString(job.completed_at)) addFailure(file, `jobs[${index}] has no completed_at`);
     if (source.sourceWorkspace && job.id) jobIdsByWorkspace.get(source.sourceWorkspace)?.add(job.id);
@@ -141,6 +150,7 @@ function validateReadback(file, json) {
   for (const [index, image] of images.entries()) {
     const source = sourceInfo(image);
     validateWorkspaceAndVersion(file, `images[${index}]`, source);
+    validateLightchainCompat(file, `images[${index}]`, image, lightchainHitsByTaskCode);
     if (!isNonEmptyString(image.storage_path)) addFailure(file, `images[${index}] has no storage_path`);
     if (hasPersistedImageUrl(image.image_url)) {
       addFailure(file, `images[${index}] persists image_url; expected null, missing, or empty string`);
@@ -188,6 +198,25 @@ function validateReadback(file, json) {
     }
   }
 
+  for (const [index, row] of lightchainTaskSteps.entries()) {
+    const source = sourceInfo(row);
+    validateWorkspaceAndVersion(file, `lightchainTaskSteps[${index}]`, source);
+    if (!isNonEmptyString(row.job_id)) addFailure(file, `lightchainTaskSteps[${index}] has no job_id`);
+    if (!isNonEmptyString(row.task_code)) addFailure(file, `lightchainTaskSteps[${index}] has no task_code`);
+    if (!Number.isFinite(row.step_index)) addFailure(file, `lightchainTaskSteps[${index}] has invalid step_index`);
+    if (!['queued', 'processing', 'completed', 'failed', 'retryable'].includes(row.status)) {
+      addFailure(file, `lightchainTaskSteps[${index}] has invalid status`);
+    }
+    if (!isNonEmptyString(row.lightchain_feature_id)) addFailure(file, `lightchainTaskSteps[${index}] has no lightchain_feature_id`);
+    if (!isNonEmptyString(row.lightchain_feature_title)) addFailure(file, `lightchainTaskSteps[${index}] has no lightchain_feature_title`);
+    if (source.sourceWorkspace && row.job_id && !jobIdsByWorkspace.get(source.sourceWorkspace)?.has(row.job_id)) {
+      addFailure(file, `lightchainTaskSteps[${index}] job_id does not match ${source.sourceWorkspace} jobs`);
+    }
+    if (durableStepHitsByTaskCode.has(row.task_code)) {
+      durableStepHitsByTaskCode.get(row.task_code)?.add(`lightchainTaskSteps[${index}]`);
+    }
+  }
+
   for (const workspace of workspaces) {
     if (!jobIdsByWorkspace.get(workspace)?.size) addFailure(file, `${workspace}: missing completed job readback`);
     if (!imageStorageByWorkspace.get(workspace)?.size) addFailure(file, `${workspace}: missing generated image readback`);
@@ -199,6 +228,17 @@ function validateReadback(file, json) {
     const hasMatchedRequestId = [...runIds].some((requestId) => usageIds.has(requestId));
     if (usageIds.size && runIds.size && !hasMatchedRequestId) {
       addFailure(file, `${workspace}: usage/runs request_id values do not correspond`);
+    }
+  }
+
+  for (const taskCode of expectedLightchainTaskCodes) {
+    const hitRows = lightchainHitsByTaskCode.get(taskCode);
+    if (!hitRows?.size) {
+      addFailure(file, `missing Lightchain task code readback: ${taskCode}`);
+    }
+    const durableStepRows = durableStepHitsByTaskCode.get(taskCode);
+    if (!durableStepRows?.size) {
+      addFailure(file, `missing durable Lightchain task step row: ${taskCode}`);
     }
   }
 }
@@ -287,11 +327,68 @@ function sourceInfo(row) {
 
   for (const candidate of candidates) {
     if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
-    const sourceWorkspace = readString(candidate, 'sourceWorkspace');
-    const workflowVersion = readString(candidate, 'workflowVersion');
+    const sourceWorkspace = readString(candidate, 'sourceWorkspace') ?? readString(candidate, 'source_workspace');
+    const workflowVersion = readString(candidate, 'workflowVersion') ?? readString(candidate, 'workflow_version');
     if (sourceWorkspace || workflowVersion) return { sourceWorkspace, workflowVersion };
   }
   return {};
+}
+
+function validateLightchainCompat(file, label, row, hitsByTaskCode) {
+  if (!hitsByTaskCode.size) return;
+  const compat = lightchainInfo(row);
+  if (!compat) {
+    addFailure(file, `${label} is missing lightchainCompat`);
+    return;
+  }
+
+  if (!isNonEmptyString(compat.lightchainFeatureId)) addFailure(file, `${label} lightchainFeatureId is missing`);
+  if (!isNonEmptyString(compat.lightchainFeatureTitle)) addFailure(file, `${label} lightchainFeatureTitle is missing`);
+  if (!Array.isArray(compat.lightchainTaskCodes) || compat.lightchainTaskCodes.length === 0) {
+    addFailure(file, `${label} lightchainTaskCodes is empty`);
+    return;
+  }
+  if (!Array.isArray(compat.lightchainTaskSteps) || compat.lightchainTaskSteps.length === 0) {
+    addFailure(file, `${label} lightchainTaskSteps is empty`);
+    return;
+  }
+
+  const stepTaskCodes = new Set();
+  for (const [stepIndex, step] of compat.lightchainTaskSteps.entries()) {
+    if (!step || typeof step !== 'object' || Array.isArray(step)) {
+      addFailure(file, `${label} lightchainTaskSteps[${stepIndex}] is invalid`);
+      continue;
+    }
+    if (!isNonEmptyString(step.taskCode)) addFailure(file, `${label} lightchainTaskSteps[${stepIndex}].taskCode is missing`);
+    if (!isNonEmptyString(step.status)) addFailure(file, `${label} lightchainTaskSteps[${stepIndex}].status is missing`);
+    if (isNonEmptyString(step.taskCode)) stepTaskCodes.add(step.taskCode);
+  }
+
+  for (const taskCode of compat.lightchainTaskCodes) {
+    if (!stepTaskCodes.has(taskCode)) {
+      addFailure(file, `${label} lightchainTaskSteps is missing task ${taskCode}`);
+    }
+    if (hitsByTaskCode.has(taskCode)) {
+      hitsByTaskCode.get(taskCode)?.add(label);
+    }
+  }
+}
+
+function lightchainInfo(row) {
+  const candidates = [
+    row.lightchainCompat,
+    row.input_params?.lightchainCompat,
+    row.input_params?.generationIntent?.lightchainCompat,
+    row.metadata?.lightchainCompat,
+    row.metadata?.generationIntent?.lightchainCompat,
+    row.generation_params?.lightchainCompat,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
+    return candidate;
+  }
+  return null;
 }
 
 function readString(value, key) {

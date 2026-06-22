@@ -4,6 +4,7 @@ import { clientError, createServiceClient, requireBrandRole, type Database } fro
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
+import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,6 +25,8 @@ serve(async (req) => {
   let usageReservation: UsageReservation | null = null;
   let observedBrandId: string | null = null;
   let observedUserId: string | null = null;
+  let observedJobId: string | null = null;
+  let observedLightchainMetadata: LightchainCompatMetadata | null = null;
   let telemetryClient: any = null;
   const functionName = 'upscale';
   const requestId = requestIdFrom(req);
@@ -50,7 +53,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { imageUrl, brandId, scale = 2 } = await req.json();
+    const { imageUrl, brandId, scale = 2, lightchainCompat } = await req.json();
 
     if (!imageUrl || !brandId) {
       throw new Error('Missing required parameters');
@@ -76,6 +79,39 @@ serve(async (req) => {
       requestId,
     });
 
+    const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);
+    const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
+    observedLightchainMetadata = lightchainMetadata;
+    const { data: job, error: jobError } = await supabaseClient
+      .from('generation_jobs')
+      .insert({
+        brand_id: brandId,
+        user_id: user.id,
+        feature_type: 'upscale',
+        input_params: {
+          imageUrl: '[provided]',
+          scale,
+          requestId,
+          ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
+        } as any,
+        status: 'processing',
+        error_message: null,
+      })
+      .select('id')
+      .single();
+    if (jobError || !job?.id) {
+      throw jobError ?? new Error('Failed to create generation job');
+    }
+    observedJobId = job.id;
+    await persistLightchainTaskSteps({
+      supabaseClient,
+      lightchainMetadata,
+      jobId: observedJobId,
+      brandId,
+      userId: user.id,
+      status: 'processing',
+      requestId,
+    });
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
@@ -180,7 +216,8 @@ serve(async (req) => {
         .createSignedUrl(fileName, 60 * 60 * 24);
       storageUrl = urlData?.signedUrl || '';
 
-      const { error: imageInsertError } = await supabaseClient.from('generated_images').insert({
+      const { data: image, error: imageInsertError } = await supabaseClient.from('generated_images').insert({
+        job_id: observedJobId,
         brand_id: brandId,
         user_id: user.id,
         storage_path: fileName,
@@ -189,8 +226,30 @@ serve(async (req) => {
         feature_type: 'upscale',
         model_used: imageModel,
         generation_params: { scale },
+        metadata: {
+          remoteSaveStatus: 'succeeded',
+          source: 'upscale',
+          requestId,
+          ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
+        } as any,
+      }).select('id').single();
+      if (imageInsertError || !image?.id) throw imageInsertError ?? new Error('Generated image insert did not return an id');
+      await persistLightchainTaskSteps({
+        supabaseClient,
+        lightchainMetadata: completedLightchainMetadata,
+        jobId: observedJobId,
+        imageId: image.id,
+        brandId,
+        userId: user.id,
+        status: 'completed',
+        requestId,
+        artifactUri: fileName,
       });
-      if (imageInsertError) throw imageInsertError;
+      const { error: completeJobError } = await supabaseClient
+        .from('generation_jobs')
+        .update({ status: 'completed', error_message: null, completed_at: new Date().toISOString() })
+        .eq('id', observedJobId);
+      if (completeJobError) throw completeJobError;
     } catch (storageError) {
       await supabaseService.storage.from('generated-images').remove([fileName]);
       console.log('⚠️ Storage persistence error:', clientError(storageError));
@@ -238,6 +297,26 @@ serve(async (req) => {
 
   } catch (error) {
     if (telemetryClient) {
+      if (observedJobId) {
+        try {
+          await telemetryClient
+            .from('generation_jobs')
+            .update({ status: 'failed', error_message: sanitizeError(error), completed_at: new Date().toISOString() })
+            .eq('id', observedJobId);
+          await persistLightchainTaskSteps({
+            supabaseClient: telemetryClient,
+            lightchainMetadata: observedLightchainMetadata,
+            jobId: observedJobId,
+            brandId: observedBrandId ?? '',
+            userId: observedUserId ?? '',
+            status: 'retryable',
+            requestId,
+            errorMessage: sanitizeError(error),
+          });
+        } catch (cleanupError) {
+          console.log('⚠️ Job failure persistence warning:', clientError(cleanupError));
+        }
+      }
       await completeBrandUsage(telemetryClient, usageReservation, 'failed', { error: sanitizeError(error) });
       await recordEdgeFunctionRun(telemetryClient, {
         reservation: usageReservation,

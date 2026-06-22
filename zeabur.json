@@ -1,4 +1,3 @@
-# Zeabur Deployment Configuration
 {
   "$schema": "https://schema.zeabur.app/template.json",
   "name": "Heavy Chain",

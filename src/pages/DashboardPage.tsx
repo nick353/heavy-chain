@@ -26,6 +26,7 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchWorkspaceActivity, emptyWorkspaceActivity, type WorkspaceActivity } from '../lib/workspaceActivity';
 import { CreditSummaryPanel, FailureRetryCard, JobQueuePanel, WorkspaceGuidePanel } from '../components/workspace';
+import { LightchainParityHub } from '../components/LightchainParityHub';
 
 const quickActions = [
   {
@@ -360,6 +361,10 @@ export function DashboardPage() {
             <span className="sm:hidden">ヘルプ</span>
           </button>
         </motion.div>
+
+        <motion.section variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
+          <LightchainParityHub />
+        </motion.section>
 
         {/* Workspace Activity */}
         <motion.section variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">

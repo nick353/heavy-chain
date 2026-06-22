@@ -33,6 +33,7 @@ import {
   type PatternGenerationContext,
 } from '../lib/workspaceHandoff';
 import { getWorkflowMetadata, type WorkflowMetadata } from '../lib/workflowMetadata';
+import { getLightchainFeature, getLightchainTaskCodes } from '../lib/lightchainParityCatalog';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -222,6 +223,14 @@ const findFeatureFromQuery = (featureParam: string) => {
     ?? FEATURES.find((item) => item.apiEndpoint === featureParam);
 };
 
+const getInitialFeatureFromLocation = () => {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const workflow = getWorkflowMetadata(params.get('workflow'));
+  const featureParam = workflow?.primaryFeature ?? params.get('feature');
+  return featureParam ? findFeatureFromQuery(featureParam) ?? null : null;
+};
+
 const modelMatrixBodyTypes = ['slim', 'regular', 'plus'] as const;
 const modelMatrixAgeGroups = ['20s', '30s', '40s', '50s'] as const;
 const modelMatrixSkinTones = ['light', 'medium', 'dark'] as const;
@@ -239,6 +248,27 @@ const parseAllowedListParam = <T extends string>(value: string | null, allowed: 
 
 const parseAllowedParam = <T extends string>(value: string | null, allowed: readonly T[]) => {
   return value && (allowed as readonly string[]).includes(value) ? value as T : null;
+};
+
+const hydrateLightchainCompatContext = (params: URLSearchParams) => {
+  const catalogFeature = getLightchainFeature(params.get('lcFeature'));
+  if (!catalogFeature) return null;
+  const title = params.get('lcTitle');
+  const codes = params.get('lcTaskCodes')
+    ?.split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (title !== catalogFeature.title) return null;
+  const taskCodes = codes?.length ? codes : getLightchainTaskCodes(catalogFeature);
+  return {
+    lightchainFeatureId: catalogFeature.id,
+    lightchainFeatureTitle: catalogFeature.title,
+    lightchainTaskCodes: taskCodes,
+    lightchainTaskSteps: taskCodes.map((taskCode) => ({
+      taskCode,
+      status: 'processing' as const,
+    })),
+  };
 };
 
 const getGeneratedImageKey = (image: GeneratedResult, index: number) => {
@@ -386,7 +416,7 @@ export function GeneratePage() {
   const { currentBrand } = useAuthStore();
   const { addToHistory } = usePromptHistory();
   
-  const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
+  const [selectedFeature, setSelectedFeature] = useState<Feature | null>(() => getInitialFeatureFromLocation());
   const [activeWorkflow, setActiveWorkflow] = useState<WorkflowMetadata | null>(null);
   const [prompt, setPrompt] = useState('');
   const [showPromptHistory, setShowPromptHistory] = useState(false);
@@ -455,6 +485,7 @@ export function GeneratePage() {
 
   const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
   const sourceReadback = hydrateGenerationIntentSource(searchParams);
+  const lightchainCompat = hydrateLightchainCompatContext(searchParams);
   const patternContext = sourceReadback?.sourceWorkspace === 'patterns'
     ? hydratePatternGenerationContext(searchParams)
     : null;
@@ -679,10 +710,14 @@ export function GeneratePage() {
         referenceImage: processedImageUrl,
         referenceType: referenceImage?.referenceType,
         textOverlay,
+        lightchainCompat: lightchainCompat ?? undefined,
       };
       const buildRemoteGenerationContext = (feature: Feature | null, intentPrompt: string, ratio: string) => {
         if (!feature) return {};
-        const baseContext = { featureType: feature.id };
+        const baseContext = {
+          featureType: feature.id,
+          ...(lightchainCompat ? { lightchainCompat } : {}),
+        };
         if (!sourceReadback) return baseContext;
         const generationIntent: GenerationIntent = {
           feature: feature.id,
@@ -696,6 +731,7 @@ export function GeneratePage() {
           ...baseContext,
           sourceReadback,
           generationIntent,
+          ...(lightchainCompat ? { lightchainCompat } : {}),
         };
       };
       
@@ -1152,6 +1188,7 @@ export function GeneratePage() {
                 ...(image.imageId ? { imageId: image.imageId } : {}),
                 ...(image.storagePath ? { storagePath: image.storagePath } : {}),
                 generationIndex: index,
+                ...(lightchainCompat ? { lightchainCompat } : {}),
               },
             });
           });
@@ -2471,6 +2508,20 @@ export function GeneratePage() {
                 <ArrowLeft className="h-4 w-4" />
                 {sourceReadback.sourceLabel}へ戻る
               </Link>
+            </div>
+          )}
+
+          {lightchainCompat && (
+            <div className="rounded-xl border border-teal-200 bg-teal-50/80 p-4 dark:border-teal-800 dark:bg-teal-950/30">
+              <p className="text-xs font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">
+                Lightchain互換
+              </p>
+              <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
+                {lightchainCompat.lightchainFeatureTitle} として生成します
+              </p>
+              <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
+                {lightchainCompat.lightchainTaskCodes.join(' / ')}
+              </p>
             </div>
           )}
 

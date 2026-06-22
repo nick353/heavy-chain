@@ -5,6 +5,7 @@ import type { GenerationIntent } from './workspaceHandoff';
 import type { Database, GeneratedImage, Json } from '../types/database';
 
 type GenerationJob = Database['public']['Tables']['generation_jobs']['Row'];
+type LightchainTaskStep = Database['public']['Tables']['lightchain_task_steps']['Row'];
 
 export type WorkspaceJobStatus = GenerationJob['status'];
 
@@ -160,7 +161,7 @@ const buildResumeHref = (job: GenerationJob) => {
   return `/generate?${params.toString()}`;
 };
 
-const mapJob = (job: GenerationJob, outputCount: number): WorkspaceJob => ({
+const mapJob = (job: GenerationJob, outputCount: number, lightchainTaskSteps: LightchainTaskStep[] = []): WorkspaceJob => ({
   id: job.id,
   title: getFeatureLabel(job.feature_type),
   featureType: job.feature_type,
@@ -174,7 +175,7 @@ const mapJob = (job: GenerationJob, outputCount: number): WorkspaceJob => ({
   generationHref: getGenerationHref(job.input_params),
   sourceLabel: getMetadataString(job.input_params, 'sourceLabel'),
   sourceResumePath: getMetadataString(job.input_params, 'sourceResumePath'),
-  sourceSummaryRows: buildSourceContextSummaryRows(job.input_params),
+  sourceSummaryRows: buildSourceSummaryRows(job.input_params, job.status, lightchainTaskSteps),
 });
 
 const isGenerationIntent = (value: unknown): value is GenerationIntent => {
@@ -206,7 +207,84 @@ const getMetadataString = (metadata: Json | null | undefined, key: string) => {
   return undefined;
 };
 
-const mapOutput = (image: GeneratedImage): RecentOutput => ({
+const hasLightchainCompat = (metadata: Json | null | undefined) => {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return false;
+  const lightchainCompat = metadata.lightchainCompat;
+  if (lightchainCompat && typeof lightchainCompat === 'object' && !Array.isArray(lightchainCompat)) return true;
+  const generationIntent = metadata.generationIntent;
+  if (generationIntent && typeof generationIntent === 'object' && !Array.isArray(generationIntent)) {
+    const intentCompat = generationIntent.lightchainCompat;
+    if (intentCompat && typeof intentCompat === 'object' && !Array.isArray(intentCompat)) return true;
+  }
+  return false;
+};
+
+const lightchainCompatFromMetadata = (metadata: Json | null | undefined) => {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
+  const lightchainCompat = metadata.lightchainCompat;
+  if (lightchainCompat && typeof lightchainCompat === 'object' && !Array.isArray(lightchainCompat)) return lightchainCompat as Record<string, unknown>;
+  const generationIntent = metadata.generationIntent;
+  if (generationIntent && typeof generationIntent === 'object' && !Array.isArray(generationIntent)) {
+    const intentCompat = generationIntent.lightchainCompat;
+    if (intentCompat && typeof intentCompat === 'object' && !Array.isArray(intentCompat)) return intentCompat as Record<string, unknown>;
+  }
+  return null;
+};
+
+const getLightchainTaskCodes = (metadata: Json | null | undefined) => {
+  const compat = lightchainCompatFromMetadata(metadata);
+  const rawTaskCodes = compat?.lightchainTaskCodes;
+  if (!Array.isArray(rawTaskCodes)) return [];
+  return rawTaskCodes.filter((taskCode): taskCode is string => typeof taskCode === 'string' && taskCode.trim().length > 0);
+};
+
+const lightchainStatusLabel: Record<WorkspaceJobStatus | 'output', string> = {
+  pending: '待機中',
+  processing: '処理中',
+  completed: '完了',
+  failed: '失敗・再試行可',
+  output: '保存済み',
+};
+
+const durableLightchainStatusLabel: Record<LightchainTaskStep['status'], string> = {
+  queued: '待機中',
+  processing: '処理中',
+  completed: '完了',
+  failed: '失敗',
+  retryable: '失敗・再試行可',
+};
+
+const buildDurableLightchainStepValue = (steps: LightchainTaskStep[]) => {
+  if (!steps.length) return null;
+  return [...steps]
+    .sort((a, b) => a.step_index - b.step_index)
+    .map((step) => `${step.task_code}=${durableLightchainStatusLabel[step.status]}`)
+    .join(' / ');
+};
+
+const buildSourceSummaryRows = (
+  metadata: Json | null | undefined,
+  status?: WorkspaceJobStatus | 'output',
+  durableLightchainTaskSteps: LightchainTaskStep[] = [],
+) => {
+  const rows = buildSourceContextSummaryRows(metadata);
+  if (!status || !hasLightchainCompat(metadata)) return rows;
+  const hasStepRow = rows.some((row) => row.label === 'Lightchain steps');
+  const taskCodes = getLightchainTaskCodes(metadata);
+  const durableStepValue = buildDurableLightchainStepValue(durableLightchainTaskSteps);
+  const baseRows = durableStepValue ? rows.filter((row) => row.label !== 'Lightchain steps') : rows;
+  return [
+    ...baseRows,
+    ...(durableStepValue
+      ? [{ label: 'Lightchain steps', value: durableStepValue }]
+      : !hasStepRow && taskCodes.length
+        ? [{ label: 'Lightchain steps', value: taskCodes.map((taskCode) => `${taskCode}=${lightchainStatusLabel[status]}`).join(' / ') }]
+        : []),
+    { label: 'Lightchain状態', value: lightchainStatusLabel[status] },
+  ];
+};
+
+const mapOutput = (image: GeneratedImage, lightchainTaskSteps: LightchainTaskStep[] = []): RecentOutput => ({
   id: image.id,
   jobId: image.job_id,
   imageUrl: image.image_url,
@@ -217,7 +295,7 @@ const mapOutput = (image: GeneratedImage): RecentOutput => ({
   generationHref: getGenerationHref(image.metadata),
   sourceLabel: getMetadataString(image.metadata, 'sourceLabel'),
   sourceResumePath: getMetadataString(image.metadata, 'sourceResumePath'),
-  sourceSummaryRows: buildSourceContextSummaryRows(image.metadata),
+  sourceSummaryRows: buildSourceSummaryRows(image.metadata, 'output', lightchainTaskSteps),
 });
 
 const buildOutputCounts = (images: GeneratedImage[]) => {
@@ -336,27 +414,66 @@ const fetchOutputs = async (brandId: string): Promise<GeneratedImage[]> => {
   }
 };
 
+const fetchLightchainTaskSteps = async (brandId: string): Promise<LightchainTaskStep[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('lightchain_task_steps')
+      .select('*')
+      .eq('brand_id', brandId)
+      .order('step_index', { ascending: true })
+      .limit(500);
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? [];
+  } catch (error) {
+    console.warn('Failed to fetch Lightchain task steps:', error);
+    return [];
+  }
+};
+
+const groupLightchainStepsByJob = (steps: LightchainTaskStep[]) => {
+  return steps.reduce<Record<string, LightchainTaskStep[]>>((groups, step) => {
+    groups[step.job_id] = [...(groups[step.job_id] ?? []), step];
+    return groups;
+  }, {});
+};
+
+const groupLightchainStepsByImage = (steps: LightchainTaskStep[]) => {
+  return steps.reduce<Record<string, LightchainTaskStep[]>>((groups, step) => {
+    if (!step.image_id) return groups;
+    groups[step.image_id] = [...(groups[step.image_id] ?? []), step];
+    return groups;
+  }, {});
+};
+
 export async function fetchWorkspaceActivity(brandId: string): Promise<WorkspaceActivity> {
   if (!brandId) return emptyWorkspaceActivity;
 
-  const [creditResult, jobsResult, outputsResult] = await Promise.allSettled([
+  const [creditResult, jobsResult, outputsResult, lightchainStepsResult] = await Promise.allSettled([
     fetchCreditSummary(brandId),
     fetchJobs(brandId),
     fetchOutputs(brandId),
+    fetchLightchainTaskSteps(brandId),
   ]);
 
   const creditSummary = creditResult.status === 'fulfilled' ? creditResult.value : emptyWorkspaceActivity.creditSummary;
   const jobs = jobsResult.status === 'fulfilled' ? jobsResult.value : [];
   const remoteOutputs = outputsResult.status === 'fulfilled' ? outputsResult.value : [];
+  const lightchainTaskSteps = lightchainStepsResult.status === 'fulfilled' ? lightchainStepsResult.value : [];
+  const lightchainStepsByJob = groupLightchainStepsByJob(lightchainTaskSteps);
+  const lightchainStepsByImage = groupLightchainStepsByImage(lightchainTaskSteps);
   const localOutputs = listWorkspaceGeneratedImages(brandId);
   const outputs = [...remoteOutputs, ...localOutputs]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const outputCounts = buildOutputCounts(outputs);
-  const mappedJobs = jobs.map((job) => mapJob(job, outputCounts[job.id] ?? 0));
+  const mappedJobs = jobs.map((job) => mapJob(job, outputCounts[job.id] ?? 0, lightchainStepsByJob[job.id] ?? []));
   const activeJobs = mappedJobs.filter((job) => job.status === 'pending' || job.status === 'processing').slice(0, 8);
   const failedJobs = mappedJobs.filter((job) => job.status === 'failed').slice(0, 8);
   const completedJobs = mappedJobs.filter((job) => job.status === 'completed').slice(0, 8);
-  const recentOutputs = outputs.map(mapOutput).slice(0, 12);
+  const recentOutputs = outputs.map((output) => mapOutput(output, lightchainStepsByImage[output.id] ?? [])).slice(0, 12);
 
   return {
     creditSummary,

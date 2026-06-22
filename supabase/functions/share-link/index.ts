@@ -8,6 +8,45 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const generatedImagesBucket = 'generated-images';
+
+const readToken = (req: Request) => {
+  const url = new URL(req.url);
+  const queryToken = url.searchParams.get('token');
+  if (queryToken) return queryToken.trim();
+
+  const pathToken = url.pathname.split('/').filter(Boolean).pop();
+  return pathToken && pathToken !== 'share-link' ? pathToken.trim() : '';
+};
+
+const resolvePublicImageUrl = async (
+  supabaseService: ReturnType<typeof createServiceClient>,
+  image: { storage_path: string | null; image_url: string | null },
+) => {
+  if (image.image_url && /^(https?:|data:)/i.test(image.image_url)) {
+    return image.image_url;
+  }
+
+  if (image.storage_path && /^(https?:|data:)/i.test(image.storage_path)) {
+    return image.storage_path;
+  }
+
+  if (!image.storage_path) {
+    throw new Error('Shared image has no storage path');
+  }
+
+  const { data, error } = await supabaseService
+    .storage
+    .from(generatedImagesBucket)
+    .createSignedUrl(image.storage_path, 60 * 60);
+
+  if (error || !data?.signedUrl) {
+    throw error ?? new Error('Failed to create signed image URL');
+  }
+
+  return data.signedUrl;
+};
+
 serve(async (req) => {
   let telemetryClient: any = null;
   let observedBrandId: string | null = null;
@@ -21,6 +60,105 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseService = createServiceClient();
+    telemetryClient = supabaseService;
+
+    if (req.method === 'GET') {
+      const token = readToken(req);
+      if (!token) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Missing share token' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const { data: shareLink, error: shareError } = await supabaseService
+        .from('share_links')
+        .select('image_id, token, expires_at, created_at')
+        .eq('token', token)
+        .single();
+
+      if (shareError || !shareLink) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Share link not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      if (new Date(shareLink.expires_at).getTime() <= Date.now()) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Share link expired' }),
+          { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const { data: image, error: imageError } = await supabaseService
+        .from('generated_images')
+        .select('id, brand_id, storage_path, image_url, prompt, negative_prompt, feature_type, style_preset, model_used, generation_params, metadata, created_at')
+        .eq('id', shareLink.image_id)
+        .single();
+
+      if (imageError || !image) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Shared image not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      observedBrandId = image.brand_id;
+      await recordEdgeFunctionRun(supabaseService, {
+        brandId: image.brand_id,
+        userId: null,
+        functionName,
+        status: 'started',
+        requestId,
+        metadata: { token, imageId: image.id, publicRead: true },
+      });
+
+      const imageUrl = await resolvePublicImageUrl(supabaseService, image);
+
+      await recordEdgeFunctionRun(supabaseService, {
+        brandId: image.brand_id,
+        userId: null,
+        functionName,
+        status: 'succeeded',
+        requestId,
+        durationMs: durationSince(startedAt),
+        metadata: { token, imageId: image.id, publicRead: true },
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          image: {
+            id: image.id,
+            imageUrl,
+            prompt: image.prompt,
+            negativePrompt: image.negative_prompt,
+            featureType: image.feature_type,
+            stylePreset: image.style_preset,
+            modelUsed: image.model_used,
+            generationParams: image.generation_params,
+            metadata: image.metadata,
+            createdAt: image.created_at,
+          },
+          share: {
+            token: shareLink.token,
+            expiresAt: shareLink.expires_at,
+            createdAt: shareLink.created_at,
+          },
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (req.method !== 'POST') {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Method not allowed' }),
+        { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     const supabaseClient = createClient<Database>(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -30,8 +168,6 @@ serve(async (req) => {
         },
       }
     );
-    const supabaseService = createServiceClient();
-    telemetryClient = supabaseService;
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
@@ -125,7 +261,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Also handle GET for retrieving shared image (public access)
-
-

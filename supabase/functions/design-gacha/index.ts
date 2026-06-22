@@ -4,6 +4,7 @@ import { clientError, createServiceClient, requireBrandRole, type Database } fro
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
+import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -340,6 +341,8 @@ serve(async (req) => {
   let usageReservation: UsageReservation | null = null;
   let observedBrandId: string | null = null;
   let observedUserId: string | null = null;
+  let observedLightchainMetadata: LightchainCompatMetadata | null = null;
+  let observedSourceMetadata: Record<string, unknown> | null = null;
   let telemetryClient: any = null;
   let persistenceStatus: 'not_started' | 'processing' | 'completed' | 'failed' = 'not_started';
   let failedStage: string | null = null;
@@ -383,6 +386,7 @@ serve(async (req) => {
       randomizedElements = [],
       sourceReadback,
       patternContext,
+      lightchainCompat,
     } = body;
 
     console.log('📥 Request:', { brief: !!brief, imageUrl: !!imageUrl, referenceImage: !!referenceImage, brandId, fixedElements });
@@ -420,6 +424,10 @@ serve(async (req) => {
     });
 
     const requestSourceMetadata = buildSourceMetadata(sourceReadback, patternContext, productDescription);
+    const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);
+    const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
+    observedSourceMetadata = requestSourceMetadata;
+    observedLightchainMetadata = lightchainMetadata;
     failedStage = 'job';
     const { data: job, error: jobError } = await supabaseService
       .from('generation_jobs')
@@ -435,7 +443,8 @@ serve(async (req) => {
             randomizedElements,
             requestId,
             ...(requestSourceMetadata ?? {}),
-          },
+            ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
+          } as any,
         optimized_prompt: productDescription || brief || null,
         status: 'processing',
         error_message: null,
@@ -448,6 +457,16 @@ serve(async (req) => {
     }
     jobId = job.id;
     persistenceStatus = 'processing';
+    await persistLightchainTaskSteps({
+      supabaseClient: supabaseService,
+      lightchainMetadata,
+      jobId,
+      brandId,
+      userId: user.id,
+      status: 'processing',
+      sourceMetadata: requestSourceMetadata,
+      requestId,
+    });
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
@@ -544,7 +563,8 @@ serve(async (req) => {
               source: 'design-gacha',
               requestId,
               ...(finalSourceMetadata ?? {}),
-            },
+              ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
+            } as any,
           })
           .select('id')
           .single();
@@ -552,6 +572,18 @@ serve(async (req) => {
         if (imageInsertError || !image?.id) {
           throw imageInsertError ?? new Error('Generated image insert did not return an id');
         }
+        await persistLightchainTaskSteps({
+          supabaseClient: supabaseService,
+          lightchainMetadata: completedLightchainMetadata,
+          jobId,
+          imageId: image.id,
+          brandId,
+          userId: user.id,
+          status: 'completed',
+          sourceMetadata: finalSourceMetadata,
+          requestId,
+          artifactUri: fileName,
+        });
         insertedImageIds.push(image.id);
         console.log('✅ Image record saved to database');
 
@@ -662,6 +694,17 @@ serve(async (req) => {
           })
           .eq('id', jobId);
         if (failJobError) throw failJobError;
+        await persistLightchainTaskSteps({
+          supabaseClient: telemetryClient,
+          lightchainMetadata: observedLightchainMetadata,
+          jobId,
+          brandId: observedBrandId ?? '',
+          userId: observedUserId ?? '',
+          status: 'retryable',
+          sourceMetadata: observedSourceMetadata,
+          requestId,
+          errorMessage: sanitizeError(error),
+        });
       } catch (cleanupError) {
         cleanupErrors.push(clientError(cleanupError));
       }

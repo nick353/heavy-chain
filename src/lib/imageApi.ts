@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { Json } from '../types/database';
 
 export interface TextOverlayPayload {
   text: string;
@@ -8,6 +9,16 @@ export interface TextOverlayPayload {
   color?: string;
   strokeColor?: string;
   strokeWidth?: number;
+}
+
+export interface LightchainCompatPayload {
+  lightchainFeatureId: string;
+  lightchainFeatureTitle: string;
+  lightchainTaskCodes: string[];
+  lightchainTaskSteps?: Array<{
+    taskCode: string;
+    status: 'queued' | 'processing' | 'completed' | 'failed' | 'retryable';
+  }>;
 }
 
 export interface ImageEditResult {
@@ -38,16 +49,39 @@ export interface VariationsResult {
   error?: string;
 }
 
+export interface SharedImagePayload {
+  success: boolean;
+  image?: {
+    id: string;
+    imageUrl: string;
+    prompt: string | null;
+    negativePrompt: string | null;
+    featureType: string | null;
+    stylePreset: string | null;
+    modelUsed: string | null;
+    generationParams: Json | null;
+    metadata: Json | null;
+    createdAt: string;
+  };
+  share?: {
+    token: string;
+    expiresAt: string;
+    createdAt: string;
+  };
+  error?: string;
+}
+
 /**
  * Remove background from an image
  */
 export async function removeBackground(
   imageUrl: string,
-  brandId: string
+  brandId: string,
+  lightchainCompat?: LightchainCompatPayload,
 ): Promise<ImageEditResult> {
   try {
     const { data, error } = await supabase.functions.invoke('remove-background', {
-      body: { imageUrl, brandId },
+      body: { imageUrl, brandId, lightchainCompat },
     });
 
     if (error) throw error;
@@ -65,11 +99,12 @@ export async function generateColorVariations(
   imageUrl: string,
   brandId: string,
   colors?: string[],
-  count?: number
+  count?: number,
+  lightchainCompat?: LightchainCompatPayload,
 ): Promise<ColorVariationResult> {
   try {
     const { data, error } = await supabase.functions.invoke('colorize', {
-      body: { imageUrl, brandId, colors, count },
+      body: { imageUrl, brandId, colors, count, lightchainCompat },
     });
 
     if (error) throw error;
@@ -86,11 +121,12 @@ export async function generateColorVariations(
 export async function upscaleImage(
   imageUrl: string,
   brandId: string,
-  scale: 2 | 4 = 2
+  scale: 2 | 4 = 2,
+  lightchainCompat?: LightchainCompatPayload,
 ): Promise<ImageEditResult> {
   try {
     const { data, error } = await supabase.functions.invoke('upscale', {
-      body: { imageUrl, brandId, scale },
+      body: { imageUrl, brandId, scale, lightchainCompat },
     });
 
     if (error) throw error;
@@ -112,6 +148,7 @@ export async function generateVariations(
   options?: {
     strength?: number;
     textOverlay?: TextOverlayPayload;
+    lightchainCompat?: LightchainCompatPayload;
   }
 ): Promise<VariationsResult> {
   try {
@@ -405,6 +442,41 @@ export async function createShareLink(
     return data;
   } catch (error: any) {
     console.error('Create share link error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Read a public shared image by token.
+ */
+export async function getSharedImage(token: string): Promise<SharedImagePayload> {
+  try {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Missing Supabase environment variables');
+    }
+
+    const response = await fetch(
+      `${supabaseUrl}/functions/v1/share-link?token=${encodeURIComponent(token)}`,
+      {
+        method: 'GET',
+        headers: {
+          apikey: supabaseAnonKey,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data?.error ?? 'Shared image not found');
+    }
+
+    return data as SharedImagePayload;
+  } catch (error: any) {
+    console.error('Get shared image error:', error);
     return { success: false, error: error.message };
   }
 }

@@ -14,6 +14,14 @@ const formatTime = (dateString: string) => {
   return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
 };
 
+const getLightchainTaskRow = (job: WorkspaceJob) => {
+  return job.sourceSummaryRows.find((row) => row.label === 'Lightchain task');
+};
+
+const getLightchainStepsRow = (job: WorkspaceJob) => {
+  return job.sourceSummaryRows.find((row) => row.label === 'Lightchain steps');
+};
+
 export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }: JobQueuePanelProps) {
   const previewCompleted = completedJobs.slice(0, Math.max(0, 4 - activeJobs.length));
 
@@ -39,6 +47,8 @@ export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }
         {activeJobs.map((job) => {
           const processing = job.status === 'processing';
           const Icon = processing ? Loader2 : Clock3;
+          const lightchainTask = getLightchainTaskRow(job);
+          const lightchainSteps = getLightchainStepsRow(job);
           return (
             <Link key={job.id} to="/jobs" className="flex items-center gap-3 rounded-xl bg-white/55 p-3 transition hover:bg-white dark:bg-surface-900/40 dark:hover:bg-surface-900/70">
               <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${processing ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/25 dark:text-blue-200' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/25 dark:text-amber-200'}`}>
@@ -47,24 +57,48 @@ export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold text-neutral-950 dark:text-white">{job.title}</span>
                 <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">{job.prompt || job.featureType}</span>
+                {lightchainTask && (
+                  <span className="mt-1 block truncate text-[11px] font-medium text-teal-700 dark:text-teal-300">
+                    Lightchain task: {lightchainTask.value}
+                  </span>
+                )}
+                {lightchainSteps && (
+                  <span className="mt-0.5 block truncate text-[11px] font-medium text-teal-700 dark:text-teal-300">
+                    Lightchain steps: {lightchainSteps.value}
+                  </span>
+                )}
               </span>
               <span className="text-xs font-medium text-neutral-400">{formatTime(job.createdAt)}</span>
             </Link>
           );
         })}
 
-        {previewCompleted.map((job) => (
-          <Link key={job.id} to="/gallery" className="flex items-center gap-3 rounded-xl bg-white/45 p-3 transition hover:bg-white dark:bg-surface-900/30 dark:hover:bg-surface-900/60">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/25 dark:text-emerald-200">
-              <CheckCircle2 className="h-5 w-5" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold text-neutral-950 dark:text-white">{job.title}</span>
-              <span className="block text-xs text-neutral-500 dark:text-neutral-400">{job.outputCount} outputs</span>
-            </span>
-            <span className="text-xs font-medium text-neutral-400">{formatTime(job.completedAt || job.createdAt)}</span>
-          </Link>
-        ))}
+        {previewCompleted.map((job) => {
+          const lightchainTask = getLightchainTaskRow(job);
+          const lightchainSteps = getLightchainStepsRow(job);
+          return (
+            <Link key={job.id} to="/gallery" className="flex items-center gap-3 rounded-xl bg-white/45 p-3 transition hover:bg-white dark:bg-surface-900/30 dark:hover:bg-surface-900/60">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/25 dark:text-emerald-200">
+                <CheckCircle2 className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-neutral-950 dark:text-white">{job.title}</span>
+                <span className="block text-xs text-neutral-500 dark:text-neutral-400">{job.outputCount} outputs</span>
+                {lightchainTask && (
+                  <span className="mt-1 block truncate text-[11px] font-medium text-teal-700 dark:text-teal-300">
+                    Lightchain task: {lightchainTask.value}
+                  </span>
+                )}
+                {lightchainSteps && (
+                  <span className="mt-0.5 block truncate text-[11px] font-medium text-teal-700 dark:text-teal-300">
+                    Lightchain steps: {lightchainSteps.value}
+                  </span>
+                )}
+              </span>
+              <span className="text-xs font-medium text-neutral-400">{formatTime(job.completedAt || job.createdAt)}</span>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

@@ -4,6 +4,7 @@ import { createOpenAiChatCompletion, hasOpenAiChatApiKey } from '../_shared/open
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 import { geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
+import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,6 +20,7 @@ interface GenerateRequest {
   featureType?: string
   sourceReadback?: unknown
   generationIntent?: unknown
+  lightchainCompat?: unknown
   campaignMeta?: unknown
   textOverlay?: unknown
 }
@@ -106,6 +108,8 @@ serve(async (req) => {
   let usageReservation: UsageReservation | null = null;
   let observedBrandId: string | null = null;
   let observedUserId: string | null = null;
+  let observedLightchainMetadata: LightchainCompatMetadata | null = null;
+  let observedSourceMetadata: Record<string, unknown> | null = null;
   let telemetryClient: any = null;
   let persistenceStatus: 'not_started' | 'processing' | 'completed' | 'failed' = 'not_started';
   let failedStage: string | null = null;
@@ -137,6 +141,7 @@ serve(async (req) => {
       featureType,
       sourceReadback,
       generationIntent,
+      lightchainCompat,
       campaignMeta,
       textOverlay,
     }: GenerateRequest = await req.json()
@@ -157,6 +162,10 @@ serve(async (req) => {
       ? featureType.trim()
       : 'text-to-image'
     const sourceMetadata = buildSourceMetadata(sourceReadback, generationIntent)
+    const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat)
+    const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed')
+    observedSourceMetadata = sourceMetadata
+    observedLightchainMetadata = lightchainMetadata
     const inputParams = {
       prompt,
       negativePrompt,
@@ -167,6 +176,7 @@ serve(async (req) => {
       ...(isRecord(campaignMeta) ? { campaignMeta } : {}),
       ...(isRecord(textOverlay) ? { textOverlay } : {}),
       ...(sourceMetadata ?? {}),
+      ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
     }
 
     observedBrandId = brandId;
@@ -241,6 +251,16 @@ serve(async (req) => {
     }
     jobId = job.id
     persistenceStatus = 'processing'
+    await persistLightchainTaskSteps({
+      supabaseClient,
+      lightchainMetadata,
+      jobId,
+      brandId,
+      userId: user.id,
+      status: 'processing',
+      sourceMetadata,
+      requestId,
+    })
     console.log('Job created:', job.id)
 
     // Generate image using the configured Gemini image model first.
@@ -450,7 +470,8 @@ serve(async (req) => {
             source: 'generate-image',
             requestId,
             ...(sourceMetadata ?? {}),
-          },
+            ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
+          } as any,
           expires_at: expiresAt.toISOString()
         })
         .select('id')
@@ -461,6 +482,18 @@ serve(async (req) => {
       imageId = image?.id ?? null
       if (imageId) {
         insertedImageIds.push(imageId)
+        await persistLightchainTaskSteps({
+          supabaseClient,
+          lightchainMetadata: completedLightchainMetadata,
+          jobId,
+          imageId,
+          brandId,
+          userId: user.id,
+          status: 'completed',
+          sourceMetadata,
+          requestId,
+          artifactUri: fileName,
+        })
       }
       console.log('✅ Image record saved to database')
 
@@ -560,6 +593,17 @@ serve(async (req) => {
           })
           .eq('id', jobId);
         if (failJobError) throw failJobError;
+        await persistLightchainTaskSteps({
+          supabaseClient: telemetryClient,
+          lightchainMetadata: observedLightchainMetadata,
+          jobId,
+          brandId: observedBrandId ?? '',
+          userId: observedUserId ?? '',
+          status: 'retryable',
+          sourceMetadata: observedSourceMetadata,
+          requestId,
+          errorMessage: sanitizeError(error),
+        });
       } catch (cleanupError) {
         cleanupErrors.push(clientError(cleanupError));
       }

@@ -41,6 +41,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
 type GenerateMode = 'basic' | 'gacha' | 'product-shots' | 'model-matrix' | 'multilingual';
+type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'generate-variations' | 'prompt-edit';
+
+const LIGHTCHAIN_EDIT_ACTION_LABELS: Record<LightchainEditAction, string> = {
+  'remove-background': '背景削除・切り抜き',
+  colorize: '色変更',
+  upscale: '高解像度化',
+  'generate-variations': 'デザインアレンジ',
+  'prompt-edit': 'プロンプト編集',
+};
 
 const GENERATE_MODES = [
   { id: 'basic', name: '基本生成', icon: Image, description: 'テキストから画像を生成' },
@@ -88,6 +97,7 @@ export function CanvasEditorPage() {
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingImage, setEditingImage] = useState<string | null>(null);
+  const [editingObjectId, setEditingObjectId] = useState<string | null>(null);
   
   // Invite modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -131,6 +141,46 @@ export function CanvasEditorPage() {
   const selectedObject = selectedIds.length === 1
     ? objects.find((obj) => obj.id === selectedIds[0]) || null
     : null;
+
+  const getLightchainCompatForObject = (objectId: string | null) => {
+    if (!objectId) return undefined;
+    const object = objects.find((item) => item.id === objectId);
+    return object?.metadata?.lightchainCompat;
+  };
+
+  const buildLightchainEditMetadata = (objectId: string | null) => {
+    const lightchainCompat = getLightchainCompatForObject(objectId);
+    return lightchainCompat ? { lightchainCompat } : {};
+  };
+
+  const buildDerivedLightchainMetadata = (
+    sourceObject: typeof selectedObject,
+    action: LightchainEditAction,
+    options: { prompt?: string; parameters?: any } = {},
+  ) => {
+    const previousStages = Array.isArray(sourceObject?.metadata?.lightchainEditStages)
+      ? sourceObject.metadata.lightchainEditStages
+      : [];
+    const lightchainCompat = sourceObject?.metadata?.lightchainCompat;
+    if (!lightchainCompat && previousStages.length === 0) return {};
+
+    const nextStage = {
+      stageId: `${action}-${previousStages.length + 1}`,
+      action,
+      label: LIGHTCHAIN_EDIT_ACTION_LABELS[action],
+      status: 'completed' as const,
+      sourceObjectId: sourceObject?.id,
+      stepIndex: previousStages.length,
+      ...(options.prompt ? { prompt: options.prompt } : {}),
+      ...(options.parameters ? { parameters: options.parameters } : {}),
+      createdAt: new Date().toISOString(),
+    };
+
+    return {
+      ...(lightchainCompat ? { lightchainCompat } : {}),
+      lightchainEditStages: [...previousStages, nextStage],
+    };
+  };
 
   // コンテナリサイズを確実に検知（サイドパネル開閉時も）
   useLayoutEffect(() => {
@@ -636,6 +686,7 @@ export function CanvasEditorPage() {
     }
 
     const imageSrc = obj.src;
+    const lightchainEditMetadata = buildLightchainEditMetadata(objectId);
 
     switch (action) {
       case 'removeBackground':
@@ -643,7 +694,7 @@ export function CanvasEditorPage() {
         toast.loading('背景削除を実行中...', { id: 'remove-bg' });
         try {
           const { data, error } = await supabase.functions.invoke('remove-background', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id }
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id, ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.resultUrl) {
@@ -651,6 +702,7 @@ export function CanvasEditorPage() {
               feature: 'remove-background',
               parentId: objectId,
               generation: (obj.metadata?.generation || 0) + 1,
+              ...buildDerivedLightchainMetadata(obj, 'remove-background'),
             }, objectId);
             toast.success('背景を削除しました', { id: 'remove-bg' });
           }
@@ -664,16 +716,18 @@ export function CanvasEditorPage() {
         toast.loading('カラバリを生成中...', { id: 'colorize' });
         try {
           const { data, error } = await supabase.functions.invoke('colorize', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id, colors: ['red', 'blue', 'green', 'yellow'] }
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id, colors: ['red', 'blue', 'green', 'yellow'], ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.variations) {
             data.variations.forEach((v: any) => {
+              const parameters = { color: v.colorName };
               addImageToCanvas(v.imageUrl, v.colorName, {
                 feature: 'colorize',
                 parentId: objectId,
                 generation: (obj.metadata?.generation || 0) + 1,
-                parameters: { color: v.colorName },
+                parameters,
+                ...buildDerivedLightchainMetadata(obj, 'colorize', { parameters }),
               }, objectId);
             });
             toast.success('カラバリを生成しました', { id: 'colorize' });
@@ -687,11 +741,16 @@ export function CanvasEditorPage() {
         toast.loading('アップスケール中...', { id: 'upscale' });
         try {
           const { data, error } = await supabase.functions.invoke('upscale', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id, scale: 2 }
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id, scale: 2, ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.resultUrl) {
-            addImageToCanvas(data.resultUrl, '高解像度');
+            addImageToCanvas(data.resultUrl, '高解像度', {
+              feature: 'upscale',
+              parentId: objectId,
+              generation: (obj.metadata?.generation || 0) + 1,
+              ...buildDerivedLightchainMetadata(obj, 'upscale', { parameters: { scale: 2 } }),
+            }, objectId);
             toast.success('アップスケールしました', { id: 'upscale' });
           }
         } catch (err: any) {
@@ -703,12 +762,17 @@ export function CanvasEditorPage() {
         toast.loading('バリエーションを生成中...', { id: 'variations' });
         try {
           const { data, error } = await supabase.functions.invoke('generate-variations', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id, count: 4 }
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id, count: 4, ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.variations) {
             data.variations.forEach((v: any, i: number) => {
-              addImageToCanvas(v.imageUrl, `バリエーション ${i + 1}`);
+              addImageToCanvas(v.imageUrl, `バリエーション ${i + 1}`, {
+                feature: 'generate-variations',
+                parentId: objectId,
+                generation: (obj.metadata?.generation || 0) + 1,
+                ...buildDerivedLightchainMetadata(obj, 'generate-variations', { parameters: { index: i + 1 } }),
+              }, objectId);
             });
             toast.success('バリエーションを生成しました', { id: 'variations' });
           }
@@ -719,6 +783,7 @@ export function CanvasEditorPage() {
 
       case 'edit':
         setEditingImage(imageSrc);
+        setEditingObjectId(objectId);
         setShowEditModal(true);
         break;
 
@@ -782,11 +847,95 @@ export function CanvasEditorPage() {
     setSidePanel('properties');
   };
 
-  // Handle image edit modal result
-  const handleEditModalResult = (imageUrl: string) => {
-    addImageToCanvas(imageUrl, '編集結果');
-    setShowEditModal(false);
-    setEditingImage(null);
+  const handleEditModalAction = async (action: string, params: { prompt?: string }) => {
+    if (!editingImage || !currentBrand?.id) return;
+    const sourceObject = editingObjectId
+      ? objects.find((item) => item.id === editingObjectId) ?? null
+      : null;
+    const lightchainEditMetadata = buildLightchainEditMetadata(editingObjectId);
+    const baseMetadata = {
+      parentId: editingObjectId ?? undefined,
+      generation: (sourceObject?.metadata?.generation || 0) + 1,
+    };
+
+    if (action === 'prompt') {
+      addImageToCanvas(editingImage, '編集結果', {
+        ...baseMetadata,
+        feature: 'prompt-edit',
+        prompt: params.prompt,
+        ...buildDerivedLightchainMetadata(sourceObject, 'prompt-edit', { prompt: params.prompt }),
+      }, editingObjectId ?? undefined);
+      setShowEditModal(false);
+      setEditingImage(null);
+      setEditingObjectId(null);
+      return;
+    }
+
+    if (action === 'remove-bg') {
+      const { data, error } = await supabase.functions.invoke('remove-background', {
+        body: { imageUrl: editingImage, brandId: currentBrand.id, ...lightchainEditMetadata },
+      });
+      if (error) throw error;
+      if (data?.resultUrl) {
+        addImageToCanvas(data.resultUrl, '背景削除', {
+          ...baseMetadata,
+          feature: 'remove-background',
+          ...buildDerivedLightchainMetadata(sourceObject, 'remove-background'),
+        }, editingObjectId ?? undefined);
+      }
+      return;
+    }
+
+    if (action === 'colorize') {
+      const colors = params.prompt?.split(/[、,\\s]+/).map((item) => item.trim()).filter(Boolean);
+      const { data, error } = await supabase.functions.invoke('colorize', {
+        body: { imageUrl: editingImage, brandId: currentBrand.id, colors: colors?.length ? colors : undefined, ...lightchainEditMetadata },
+      });
+      if (error) throw error;
+      data?.variations?.forEach((variation: any) => {
+        const parameters = { color: variation.colorName || variation.color };
+        addImageToCanvas(variation.imageUrl, variation.colorName || variation.color || 'カラバリ', {
+          ...baseMetadata,
+          feature: 'colorize',
+          parameters,
+          ...buildDerivedLightchainMetadata(sourceObject, 'colorize', { parameters }),
+        }, editingObjectId ?? undefined);
+      });
+      return;
+    }
+
+    if (action === 'upscale') {
+      const { data, error } = await supabase.functions.invoke('upscale', {
+        body: { imageUrl: editingImage, brandId: currentBrand.id, scale: 2, ...lightchainEditMetadata },
+      });
+      if (error) throw error;
+      if (data?.resultUrl) {
+        addImageToCanvas(data.resultUrl, '高解像度', {
+          ...baseMetadata,
+          feature: 'upscale',
+          ...buildDerivedLightchainMetadata(sourceObject, 'upscale', { parameters: { scale: 2 } }),
+        }, editingObjectId ?? undefined);
+      }
+      return;
+    }
+
+    if (action === 'variations') {
+      const { data, error } = await supabase.functions.invoke('generate-variations', {
+        body: { imageUrl: editingImage, brandId: currentBrand.id, prompt: params.prompt || undefined, count: 4, ...lightchainEditMetadata },
+      });
+      if (error) throw error;
+      data?.variations?.forEach((variation: any, index: number) => {
+        addImageToCanvas(variation.imageUrl, `バリエーション ${index + 1}`, {
+          ...baseMetadata,
+          feature: 'generate-variations',
+          prompt: params.prompt,
+          ...buildDerivedLightchainMetadata(sourceObject, 'generate-variations', {
+            prompt: params.prompt,
+            parameters: { index: index + 1 },
+          }),
+        }, editingObjectId ?? undefined);
+      });
+    }
   };
 
   const renderGenerateForm = () => {
@@ -1364,15 +1513,10 @@ export function CanvasEditorPage() {
           onClose={() => {
             setShowEditModal(false);
             setEditingImage(null);
+            setEditingObjectId(null);
           }}
           imageUrl={editingImage}
-          onEdit={async (action, _params) => {
-            // Handle the edit result
-            if (action === 'prompt') {
-              // The modal handles showing result, we just need to add to canvas
-              handleEditModalResult(editingImage);
-            }
-          }}
+          onEdit={handleEditModalAction}
         />
       )}
 

@@ -21,6 +21,7 @@ const statusIcon = {
 function JobRow({ job }: { job: WorkspaceJob }) {
   const StatusIcon = statusIcon[job.status];
   const href = job.status === 'failed' ? job.resumeHref : '/gallery';
+  const lightchainRows = job.sourceSummaryRows.filter((row) => row.label.startsWith('Lightchain'));
 
   return (
     <article className="rounded-2xl border border-white/60 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/45">
@@ -39,6 +40,16 @@ function JobRow({ job }: { job: WorkspaceJob }) {
           <p className="mt-1 line-clamp-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
             {job.status === 'failed' ? job.errorMessage || job.prompt || job.featureType : job.prompt || job.featureType}
           </p>
+          {lightchainRows.length > 0 && (
+            <dl className="mt-3 space-y-1 rounded-xl bg-teal-50/70 p-3 dark:bg-teal-950/25">
+              {lightchainRows.map((row) => (
+                <div key={`${job.id}-${row.label}-${row.value}`} className="grid gap-1 text-xs sm:grid-cols-[108px_1fr] sm:gap-2">
+                  <dt className="text-teal-700 dark:text-teal-300">{row.label}:</dt>
+                  <dd className="min-w-0 break-words font-medium text-neutral-800 dark:text-neutral-100">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="text-xs text-neutral-500 dark:text-neutral-400">{job.outputCount} outputs</span>
             <Link to={href} className="inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-700 dark:bg-white dark:text-neutral-950">

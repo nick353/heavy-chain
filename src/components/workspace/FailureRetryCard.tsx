@@ -9,6 +9,7 @@ interface FailureRetryCardProps {
 
 export function FailureRetryCard({ failedJobs, className = '' }: FailureRetryCardProps) {
   const topFailure = failedJobs[0];
+  const lightchainRows = topFailure?.sourceSummaryRows.filter((row) => row.label.startsWith('Lightchain')) ?? [];
 
   return (
     <section className={`glass-panel rounded-2xl p-5 ${className}`}>
@@ -29,6 +30,16 @@ export function FailureRetryCard({ failedJobs, className = '' }: FailureRetryCar
         <div className="mt-5 rounded-xl bg-white/55 p-4 dark:bg-surface-900/45">
           <p className="truncate text-sm font-semibold text-neutral-950 dark:text-white">{topFailure.title}</p>
           <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{topFailure.prompt || topFailure.featureType}</p>
+          {lightchainRows.length > 0 && (
+            <dl className="mt-3 space-y-1 rounded-lg bg-teal-50/70 p-3 dark:bg-teal-950/25">
+              {lightchainRows.map((row) => (
+                <div key={`${row.label}-${row.value}`} className="grid grid-cols-[96px_1fr] gap-2 text-xs">
+                  <dt className="text-teal-700 dark:text-teal-300">{row.label}:</dt>
+                  <dd className="min-w-0 break-words font-medium text-neutral-800 dark:text-neutral-100">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
           <Link to={topFailure.resumeHref} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-700 dark:bg-white dark:text-neutral-950">
             入力を開いて再開
             <ArrowRight className="h-3.5 w-3.5" />

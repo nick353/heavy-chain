@@ -28,6 +28,14 @@ const readStringList = (record: JsonRecord | null | undefined, key: string) => {
   return items.length ? items : undefined;
 };
 
+const lightchainStepStatusLabels: Record<string, string> = {
+  queued: '待機中',
+  processing: '処理中',
+  completed: '完了',
+  failed: '失敗',
+  retryable: '失敗・再試行可',
+};
+
 const getIntent = (metadata: Json | null | undefined) => {
   if (!isRecord(metadata)) return null;
   return isRecord(metadata.generationIntent) ? metadata.generationIntent : null;
@@ -142,16 +150,46 @@ const buildLabRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
   return rows;
 };
 
+const buildLightchainRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
+  const rows: SourceContextSummaryRow[] = [];
+  const lightchainCompat = readRecordFromMetadataOrIntent(metadata, intent, 'lightchainCompat');
+  const taskCodes = readStringList(lightchainCompat, 'lightchainTaskCodes');
+  const rawTaskSteps = lightchainCompat?.lightchainTaskSteps;
+  const taskSteps = Array.isArray(rawTaskSteps)
+    ? rawTaskSteps
+      .filter(isRecord)
+      .map((step) => {
+        const taskCode = readNonEmptyString(step, 'taskCode');
+        const status = readNonEmptyString(step, 'status');
+        if (!taskCode || !status) return null;
+        return `${taskCode}=${lightchainStepStatusLabels[status] ?? status}`;
+      })
+      .filter((step): step is string => Boolean(step))
+    : [];
+
+  pushIfValue(rows, 'Lightchain機能', readNonEmptyString(lightchainCompat, 'lightchainFeatureTitle'));
+  if (taskCodes) rows.push({ label: 'Lightchain task', value: taskCodes.join(' / ') });
+  if (taskSteps.length) rows.push({ label: 'Lightchain steps', value: taskSteps.join(' / ') });
+
+  return rows;
+};
+
 export const buildSourceContextSummaryRows = (metadata: Json | null | undefined): SourceContextSummaryRow[] => {
   if (!isRecord(metadata)) return [];
   const intent = getIntent(metadata);
   const sourceWorkspace = readNonEmptyString(metadata, 'sourceWorkspace') ?? readNonEmptyString(intent, 'sourceWorkspace');
+  const lightchainRows = buildLightchainRows(metadata, intent);
 
-  if (sourceWorkspace === 'patterns') return buildPatternRows(metadata, intent);
-  if (sourceWorkspace === 'models') return buildModelRows(metadata, intent);
-  if (sourceWorkspace === 'studio') return buildStudioRows(metadata, intent);
-  if (sourceWorkspace === 'video') return buildVideoRows(metadata, intent);
-  if (sourceWorkspace === 'lab') return buildLabRows(metadata, intent);
+  const withLightchainRows = (rows: SourceContextSummaryRow[]) => [
+    ...lightchainRows,
+    ...rows,
+  ];
 
-  return [];
+  if (sourceWorkspace === 'patterns') return withLightchainRows(buildPatternRows(metadata, intent));
+  if (sourceWorkspace === 'models') return withLightchainRows(buildModelRows(metadata, intent));
+  if (sourceWorkspace === 'studio') return withLightchainRows(buildStudioRows(metadata, intent));
+  if (sourceWorkspace === 'video') return withLightchainRows(buildVideoRows(metadata, intent));
+  if (sourceWorkspace === 'lab') return withLightchainRows(buildLabRows(metadata, intent));
+
+  return lightchainRows;
 };

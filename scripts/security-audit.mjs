@@ -4,7 +4,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.cwd();
-const ignored = new Set(['.git', 'node_modules', 'dist', 'build', 'coverage']);
+const ignored = new Set(['.git', 'node_modules', 'dist', 'build', 'coverage', 'output']);
 const findings = [];
 
 function walk(dir) {

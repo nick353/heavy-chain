@@ -8,6 +8,7 @@ test -f supabase/migrations/20260617044009_billing_usage_limits.sql
 test -f supabase/migrations/20260617054556_public_service_rpc_wrappers.sql
 test -f supabase/migrations/20260617080031_harden_usage_quota_guards.sql
 test -f supabase/migrations/20260617184720_authenticated_usage_summary_rpc.sql
+test -f supabase/migrations/20260622123000_create_lightchain_task_steps.sql
 grep -q 'schemas = \["public", "storage"\]' supabase/config.toml
 
 verify_mode="${SUPABASE_VERIFY_MODE:-static}"
@@ -81,7 +82,7 @@ require_no_repo_file_match() {
 
 echo "Checking static safety guards"
 require_no_repo_file_match "service role key value assignment in repository files" "SUPABASE_SERVICE_ROLE_KEY[[:space:]]*=[[:space:]]*['\"]?(eyJ[A-Za-z0-9_-]{20,}|sb_secret_[A-Za-z0-9_-]{20,}|[A-Za-z0-9_-]{40,})" . ':(exclude)*.md'
-require_no_match "OpenAI-style secret literal" "sk-[A-Za-z0-9_-]\\{20,\\}" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist
+require_no_match "OpenAI-style secret literal" "sk-[A-Za-z0-9_-]\\{20,\\}" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=output
 require_no_match "storage/data URL image_url fallback" "image_url:[[:space:]]*storageUrl[[:space:]]*||[[:space:]]*imageDataUrl" supabase/functions
 require_no_match "data URL image_url persistence" "image_url:[[:space:]]*imageDataUrl" supabase/functions
 require_no_match "deprecated Gemini 2.0 model reference in Supabase functions" "gemini-2\\.0-flash-exp(-image-generation)?" supabase/functions -E
@@ -111,6 +112,17 @@ grep -q "GRANT SELECT ON TABLE public.usage_events TO authenticated" supabase/mi
 grep -q "GRANT SELECT ON TABLE public.edge_function_runs TO authenticated" supabase/migrations/20260617044009_billing_usage_limits.sql
 grep -q "GRANT ALL ON TABLE public.usage_events TO service_role" supabase/migrations/20260617044009_billing_usage_limits.sql
 grep -q "GRANT ALL ON TABLE public.edge_function_runs TO service_role" supabase/migrations/20260617044009_billing_usage_limits.sql
+grep -q "CREATE TABLE IF NOT EXISTS public.lightchain_task_steps" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "ALTER TABLE public.lightchain_task_steps ENABLE ROW LEVEL SECURITY" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "REVOKE ALL ON TABLE public.lightchain_task_steps FROM PUBLIC, anon, authenticated" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "GRANT SELECT, INSERT, UPDATE ON TABLE public.lightchain_task_steps TO authenticated" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "GRANT ALL ON TABLE public.lightchain_task_steps TO service_role" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "Brand viewers can view Lightchain task steps" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "Brand editors can create Lightchain task steps" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "Brand editors can update Lightchain task steps" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "idx_lightchain_task_steps_job" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "idx_lightchain_task_steps_task_code" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "idx_lightchain_task_steps_status" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
 
 echo "Checking required public service RPC wrappers"
 grep -q "public.service_reserve_brand_usage" supabase/migrations/20260617054556_public_service_rpc_wrappers.sql

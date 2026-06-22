@@ -9,6 +9,7 @@ const LandingPage = lazy(() => import('./pages/LandingPage').then((module) => ({
 const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })));
 const SignupPage = lazy(() => import('./pages/SignupPage').then((module) => ({ default: module.SignupPage })));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then((module) => ({ default: module.AuthCallbackPage })));
+const SharedImagePage = lazy(() => import('./pages/SharedImagePage').then((module) => ({ default: module.SharedImagePage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const GeneratePage = lazy(() => import('./pages/GeneratePage').then((module) => ({ default: module.GeneratePage })));
 const WorkflowBoardPage = lazy(() => import('./pages/WorkflowBoardPage').then((module) => ({ default: module.WorkflowBoardPage })));
@@ -220,6 +221,7 @@ function AppRoutes() {
         }
       />
       <Route path="/auth/callback" element={lazyPage(<AuthCallbackPage />)} />
+      <Route path="/share/:token" element={lazyPage(<SharedImagePage />)} />
       <Route
         path="/terms"
         element={

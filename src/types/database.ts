@@ -206,6 +206,71 @@ export interface Database {
           metadata?: Json | null
         }
       }
+      lightchain_task_steps: {
+        Row: {
+          id: string
+          job_id: string
+          image_id: string | null
+          brand_id: string
+          user_id: string
+          lightchain_feature_id: string
+          lightchain_feature_title: string
+          task_code: string
+          step_index: number
+          status: 'queued' | 'processing' | 'completed' | 'failed' | 'retryable'
+          source_workspace: string | null
+          workflow_version: string | null
+          request_id: string | null
+          artifact_uri: string | null
+          error_message: string | null
+          metadata: Json
+          created_at: string
+          updated_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          job_id: string
+          image_id?: string | null
+          brand_id: string
+          user_id: string
+          lightchain_feature_id: string
+          lightchain_feature_title: string
+          task_code: string
+          step_index?: number
+          status?: 'queued' | 'processing' | 'completed' | 'failed' | 'retryable'
+          source_workspace?: string | null
+          workflow_version?: string | null
+          request_id?: string | null
+          artifact_uri?: string | null
+          error_message?: string | null
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          job_id?: string
+          image_id?: string | null
+          brand_id?: string
+          user_id?: string
+          lightchain_feature_id?: string
+          lightchain_feature_title?: string
+          task_code?: string
+          step_index?: number
+          status?: 'queued' | 'processing' | 'completed' | 'failed' | 'retryable'
+          source_workspace?: string | null
+          workflow_version?: string | null
+          request_id?: string | null
+          artifact_uri?: string | null
+          error_message?: string | null
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+          completed_at?: string | null
+        }
+      }
       folders: {
         Row: {
           id: string
@@ -403,6 +468,7 @@ export type Brand = Database['public']['Tables']['brands']['Row']
 export type BrandMember = Database['public']['Tables']['brand_members']['Row']
 export type GenerationJob = Database['public']['Tables']['generation_jobs']['Row']
 export type GeneratedImage = Database['public']['Tables']['generated_images']['Row']
+export type LightchainTaskStep = Database['public']['Tables']['lightchain_task_steps']['Row']
 export type Folder = Database['public']['Tables']['folders']['Row']
 export type Tag = Database['public']['Tables']['tags']['Row']
 export type StylePreset = Database['public']['Tables']['style_presets']['Row']
@@ -430,7 +496,6 @@ export interface GeneratedImageWithMeta extends GeneratedImage {
   folders?: Folder[]
   parsedMetadata?: ImageMetadata
 }
-
 
 
 
