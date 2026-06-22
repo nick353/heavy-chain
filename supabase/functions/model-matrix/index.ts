@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
+import { generateRunwayImage, runwayImageArtifact, runwayReferenceImage, type RunwayImageResult } from '../_shared/runway.ts';
+import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 
 const corsHeaders = {
@@ -215,49 +216,6 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
   }
 }
 
-// 画像を分析して商品説明を取得
-async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string, analysisModel: string): Promise<string> {
-  console.log('🔍 Analyzing image with Gemini...');
-  
-  const response = await fetch(
-    geminiGenerateContentUrl(analysisModel, apiKey),
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            {
-              text: `Describe this clothing item in detail for fashion model photography. Include:
-1. Type of garment (e.g., jacket, dress, shirt)
-2. Color and color distribution
-3. Material/fabric texture
-4. Design features (pockets, zippers, collars, patterns, logos)
-5. Style category (casual, formal, streetwear, etc.)
-
-Output ONLY a concise English description suitable for image generation. Be specific about visual details.`
-            },
-            {
-              inlineData: { mimeType, data: base64 }
-            }
-          ]
-        }],
-        generationConfig: { temperature: 0.2 }
-      }),
-    }
-  );
-
-  const data = await response.json();
-  const description = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  
-  if (description) {
-    console.log('✅ Image analyzed:', description.substring(0, 100) + '...');
-    return description;
-  }
-  
-  throw new Error('画像の分析に失敗しました');
-}
-
 // 参照画像を使って生成
 async function generateWithReference(
   originalBase64: string,
@@ -266,9 +224,9 @@ async function generateWithReference(
   bodyType: typeof BODY_TYPES[0],
   ageGroup: typeof AGE_GROUPS[0],
   gender: string,
-  apiKey: string,
-  imageModel: string
-): Promise<string | null> {
+  _apiKey?: string,
+  _imageModel?: string
+): Promise<RunwayImageResult | null> {
   console.log(`🎨 Generating ${bodyType.name} x ${ageGroup.name} with reference...`);
 
   const prompt = `Generate a professional fashion model photo.
@@ -284,39 +242,10 @@ CRITICAL REQUIREMENTS:
 
 STYLE: Professional fashion photography, full body shot, studio lighting, neutral background`;
 
-  const generateResponse = await fetch(
-    geminiGenerateContentUrl(imageModel, apiKey),
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType: originalMimeType, data: originalBase64 } }
-          ]
-        }],
-        generationConfig: {
-          responseModalities: ["IMAGE", "TEXT"],
-          temperature: 0.7
-        }
-      }),
-    }
-  );
-
-  const generateData = await generateResponse.json();
-
-  if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
-    for (const part of generateData.candidates[0].content.parts) {
-      if (part.inlineData?.data) {
-        console.log(`✅ ${bodyType.name} x ${ageGroup.name} generated with reference`);
-        return part.inlineData.data;
-      }
-    }
-  }
-
-  console.log(`⚠️ Reference generation failed, trying text-only...`);
-  return null;
+  return await generateRunwayImage({
+    prompt,
+    referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
+  });
 }
 
 // テキストのみで生成
@@ -325,37 +254,11 @@ async function generateFromText(
   bodyType: typeof BODY_TYPES[0],
   ageGroup: typeof AGE_GROUPS[0],
   gender: string,
-  apiKey: string,
-  imageModel: string
-): Promise<string | null> {
+  _apiKey?: string,
+  _imageModel?: string
+): Promise<RunwayImageResult | null> {
   const prompt = `${gender} model wearing ${description}, ${bodyType.prompt}, ${ageGroup.prompt}, fashion photography, full body shot, professional studio lighting, neutral background, high quality`;
-
-  const generateResponse = await fetch(
-    geminiGenerateContentUrl(imageModel, apiKey),
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { 
-          responseModalities: ["IMAGE", "TEXT"],
-          temperature: 0.8
-        }
-      }),
-    }
-  );
-
-  const generateData = await generateResponse.json();
-
-  if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
-    for (const part of generateData.candidates[0].content.parts) {
-      if (part.inlineData?.data) {
-        return part.inlineData.data;
-      }
-    }
-  }
-
-  return null;
+  return await generateRunwayImage({ prompt });
 }
 
 serve(async (req) => {
@@ -441,6 +344,7 @@ serve(async (req) => {
     }
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
+    await requireRunwayMcpConnectionApproval(supabaseService, brandId);
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {
@@ -502,13 +406,7 @@ serve(async (req) => {
       requestId,
     });
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) {
-      failedStage = 'configuration';
-      throw new Error('Gemini API key not configured');
-    }
-    const analysisModel = geminiAnalysisModel();
-    const imageModel = geminiImageModel();
+    const imageModel = 'runway';
 
     // 画像がある場合は分析
     let originalImageBase64: string | null = null;
@@ -521,16 +419,11 @@ serve(async (req) => {
         originalImageBase64 = imageData.base64;
         originalMimeType = imageData.mimeType;
         
-        // 商品説明がない場合は画像から生成
-        if (!finalDescription) {
-          finalDescription = await analyzeImageWithGemini(originalImageBase64, originalMimeType, GEMINI_API_KEY, analysisModel);
-        }
       }
     }
 
     if (!finalDescription) {
-      failedStage = 'analysis';
-      throw new Error('商品説明を取得できませんでした');
+      finalDescription = 'Fashion product';
     }
     const finalSourceMetadata = buildSourceMetadata({
       sourceReadback,
@@ -549,43 +442,43 @@ serve(async (req) => {
     // Generate matrix
     for (const bodyType of selectedBodyTypes) {
       for (const ageGroup of selectedAgeGroups) {
-        let imageBase64: string | null = null;
+        let generatedImage: RunwayImageResult | null = null;
 
         // 元画像がある場合は参照生成
         if (originalImageBase64) {
-          imageBase64 = await generateWithReference(
+          generatedImage = await generateWithReference(
             originalImageBase64,
             originalMimeType,
             finalDescription,
             bodyType,
             ageGroup,
             gender,
-            GEMINI_API_KEY,
             imageModel
           );
         }
 
         // 参照生成が失敗した場合はテキストのみで生成
-        if (!imageBase64) {
-          imageBase64 = await generateFromText(
+        if (!generatedImage) {
+          generatedImage = await generateFromText(
             finalDescription,
             bodyType,
             ageGroup,
             gender,
-            GEMINI_API_KEY,
             imageModel
           );
         }
 
-        if (imageBase64) {
-          const imageDataUrl = `data:image/png;base64,${imageBase64}`;
-          const fileName = `${user.id}/${brandId}/${jobId}_matrix_${bodyType.id}_${ageGroup.id}_${Date.now()}.png`;
+        if (generatedImage) {
+          const imageAsset = runwayImageArtifact(generatedImage);
+          const imageBase64 = imageAsset.base64;
+          const imageDataUrl = imageAsset.dataUrl;
+          const fileName = `${user.id}/${brandId}/${jobId}_matrix_${bodyType.id}_${ageGroup.id}_${Date.now()}.${imageAsset.extension}`;
           const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
 
           failedStage = 'storage';
           const { error: uploadError } = await supabaseService.storage
             .from('generated-images')
-            .upload(fileName, imgBuffer, { contentType: 'image/png', upsert: false });
+            .upload(fileName, imgBuffer, { contentType: imageAsset.contentType, upsert: false });
 
           if (uploadError) {
             throw uploadError;

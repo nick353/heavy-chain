@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
+import { generateRunwayImage, runwayImageArtifact, runwayProviderName } from '../_shared/runway.ts';
+import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -286,6 +287,7 @@ serve(async (req) => {
     }
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
+    await requireRunwayMcpConnectionApproval(supabaseService, brandId);
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {
@@ -306,53 +308,12 @@ serve(async (req) => {
     });
 
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured');
-    }
-    const analysisModel = geminiAnalysisModel();
-    const imageModel = geminiImageModel();
+    const imageModel = 'runway';
 
-    // Translate using Gemini
-    console.log('🌐 Translating text...');
-    const translateResponse = await fetch(
-      geminiGenerateContentUrl(analysisModel, GEMINI_API_KEY),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `You are a professional translator for fashion/retail marketing. Translate this for EC banners:
-Headline: ${headline}
-Subheadline: ${subheadline || ''}
-
-Languages needed: ${languages.join(', ')}
-
-Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": "", "subheadline": "" }, "en": {...}, "zh": {...}, "ko": {...} } }`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.3,
-            responseMimeType: "application/json"
-          }
-        }),
-      }
-    );
-
-    const translateData = await translateResponse.json();
-    let translations: any = {};
-    
-    try {
-      const responseText = translateData.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      const parsed = JSON.parse(responseText);
-      translations = parsed.translations || {};
-    } catch {
-      console.log('⚠️ Translation parse error, using original text');
-      languages.forEach(lang => {
-        translations[lang] = { headline, subheadline };
-      });
-    }
+    const translations: Record<string, { headline: string; subheadline?: string }> = {};
+    languages.forEach(lang => {
+      translations[lang] = { headline, subheadline };
+    });
 
     const selectedLanguages = LANGUAGES.filter(l => languages.includes(l.code));
     const results = [];
@@ -365,35 +326,11 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
 
       console.log(`🎨 Generating ${lang.name} banner...`);
 
-      const generateResponse = await fetch(
-        geminiGenerateContentUrl(imageModel, GEMINI_API_KEY),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { 
-              responseModalities: ["IMAGE", "TEXT"],
-              temperature: 0.8
-            }
-          }),
-        }
-      );
-
-      const generateData = await generateResponse.json();
-
-      if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
-        let imageBase64 = null;
-        let imageMimeType = 'image/png';
-        for (const part of generateData.candidates[0].content.parts) {
-          if (part.inlineData?.data) {
-            imageBase64 = part.inlineData.data;
-            imageMimeType = part.inlineData.mimeType || imageMimeType;
-            break;
-          }
-        }
-
-        if (imageBase64) {
+      const runwayResult = await generateRunwayImage({ prompt });
+      const imageAsset = runwayImageArtifact(runwayResult);
+      const imageBase64 = imageAsset.base64;
+      const imageMimeType = imageAsset.contentType;
+      if (imageBase64) {
           const composedSvg = buildBannerSvg({
             backgroundBase64: imageBase64,
             backgroundMimeType: imageMimeType,
@@ -467,7 +404,6 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
           });
           
           console.log(`✅ ${lang.name} banner generated`);
-        }
       }
     }
 
@@ -479,8 +415,8 @@ Return ONLY valid JSON (no markdown): { "translations": { "ja": { "headline": ""
       await supabaseService.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
-        provider: 'gemini',
-        tokens_used: 500 + results.length * 500,
+        provider: runwayProviderName() as any,
+        tokens_used: results.length * 500,
         cost_usd: 0,
       });
     } catch (e) {

@@ -368,12 +368,59 @@ export interface Database {
           created_at?: string
         }
       }
+      runway_mcp_connection_approvals: {
+        Row: {
+          id: string
+          brand_id: string
+          status: 'pending' | 'approved' | 'rejected' | 'revoked'
+          requested_by: string
+          approved_by: string | null
+          rejected_by: string | null
+          revoked_by: string | null
+          requested_at: string
+          approved_at: string | null
+          rejected_at: string | null
+          revoked_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          brand_id: string
+          status?: 'pending' | 'approved' | 'rejected' | 'revoked'
+          requested_by: string
+          approved_by?: string | null
+          rejected_by?: string | null
+          revoked_by?: string | null
+          requested_at?: string
+          approved_at?: string | null
+          rejected_at?: string | null
+          revoked_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          brand_id?: string
+          status?: 'pending' | 'approved' | 'rejected' | 'revoked'
+          requested_by?: string
+          approved_by?: string | null
+          rejected_by?: string | null
+          revoked_by?: string | null
+          requested_at?: string
+          approved_at?: string | null
+          rejected_at?: string | null
+          revoked_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       api_usage_logs: {
         Row: {
           id: string
           user_id: string
           brand_id: string | null
-          provider: 'openai' | 'gemini'
+          provider: 'openai' | 'gemini' | 'runway'
           tokens_used: number | null
           cost_usd: number | null
           created_at: string
@@ -382,7 +429,7 @@ export interface Database {
           id?: string
           user_id: string
           brand_id?: string | null
-          provider: 'openai' | 'gemini'
+          provider: 'openai' | 'gemini' | 'runway'
           tokens_used?: number | null
           cost_usd?: number | null
           created_at?: string
@@ -391,7 +438,7 @@ export interface Database {
           id?: string
           user_id?: string
           brand_id?: string | null
-          provider?: 'openai' | 'gemini'
+          provider?: 'openai' | 'gemini' | 'runway'
           tokens_used?: number | null
           cost_usd?: number | null
           created_at?: string
@@ -454,10 +501,22 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      request_runway_mcp_connection: {
+        Args: {
+          p_brand_id: string
+        }
+        Returns: Database['public']['Tables']['runway_mcp_connection_approvals']['Row']
+      }
+      admin_update_runway_mcp_connection: {
+        Args: {
+          p_brand_id: string
+          p_status: Database['public']['Enums']['runway_mcp_connection_status']
+        }
+        Returns: Database['public']['Tables']['runway_mcp_connection_approvals']['Row']
+      }
     }
     Enums: {
-      [_ in never]: never
+      runway_mcp_connection_status: 'pending' | 'approved' | 'rejected' | 'revoked'
     }
   }
 }
@@ -475,6 +534,7 @@ export type StylePreset = Database['public']['Tables']['style_presets']['Row']
 export type ApiUsageLog = Database['public']['Tables']['api_usage_logs']['Row']
 export type ShareLink = Database['public']['Tables']['share_links']['Row']
 export type AdminAnnouncement = Database['public']['Tables']['admin_announcements']['Row']
+export type RunwayMcpConnectionApproval = Database['public']['Tables']['runway_mcp_connection_approvals']['Row']
 
 // Extended types with metadata
 export interface ImageMetadata {
@@ -496,6 +556,3 @@ export interface GeneratedImageWithMeta extends GeneratedImage {
   folders?: Folder[]
   parsedMetadata?: ImageMetadata
 }
-
-
-

@@ -7,22 +7,22 @@ Required runtime secrets:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `GEMINI_API_KEY`
-- `OPENAI_API_KEY`
+- `RUNWAY_MCP_BRIDGE_URL`
+- `RUNWAY_MCP_BRIDGE_TOKEN`
 - `PUBLIC_URL`
 
-Optional chat/completions override:
+Optional Runway model override:
 
-- `OPENAI_CHAT_API_KEY`: used before `OPENAI_API_KEY` for chat/completions only.
-- `OPENAI_CHAT_BASE_URL`: OpenAI-compatible `/v1` base URL. Defaults to `https://api.openai.com/v1`.
-- `OPENAI_CHAT_MODEL`: overrides the chat model. Defaults are set by each Edge Function.
+- `RUNWAY_IMAGE_MODEL`: image generation model. Defaults to `gen4_image`.
 
-`OPENAI_CHAT_API_KEY` is never used for image generation. DALL-E fallback requires `OPENAI_API_KEY`.
+Image generation Edge Functions must call the Runway MCP bridge and must not call `https://api.dev.runwayml.com/v1` directly. `RUNWAYML_API_SECRET` is not an accepted Heavy Chain runtime secret; the bridge service is responsible for connecting to Runway MCP (`https://mcp.runwayml.com/mcp`) through the approved Runway account/session. Missing bridge URL/token fails closed as `runway_mcp_bridge_not_configured`, bridge 401/403 fails as `runway_mcp_auth_required`, and bridge 402 fails as `runway_mcp_subscription_inactive`.
 
-Optional Gemini model overrides:
+Runway MCP access has two gates:
 
-- `GEMINI_IMAGE_MODEL`: image generation/editing model. Defaults to `gemini-2.5-flash-image`.
-- `GEMINI_ANALYSIS_MODEL`: image analysis and text planning model. Defaults to `gemini-2.5-flash`.
+1. Supabase Edge Function secrets must point to the bridge service with `RUNWAY_MCP_BRIDGE_URL` and `RUNWAY_MCP_BRIDGE_TOKEN`.
+2. Each brand must have `public.runway_mcp_connection_approvals.status = 'approved'` before any Runway-backed generation can reserve usage.
+
+Do not store Runway MCP URLs, OAuth tokens, API keys, bridge tokens, or generated secret values in `runway_mcp_connection_approvals`. The table stores approval state only. A brand approval is durable on the Heavy Chain side, but generation can still fail closed if the bridge loses Runway authorization, Runway credits/subscription expire, or the Heavy Chain subscription/plan gate fails.
 
 Frontend-only environment:
 

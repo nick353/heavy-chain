@@ -9,7 +9,8 @@ import {
   Trash2,
   Plus,
   Copy,
-  Check
+  Check,
+  KeyRound
 } from 'lucide-react';
 import { Button, Input, Textarea, Modal } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
@@ -30,11 +31,40 @@ interface BrandMember {
   };
 }
 
+type RunwayMcpConnectionStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
+
+interface RunwayMcpConnectionApproval {
+  id: string;
+  brand_id: string;
+  status: RunwayMcpConnectionStatus;
+  requested_at: string;
+  approved_at: string | null;
+  rejected_at: string | null;
+  revoked_at: string | null;
+  updated_at: string;
+}
+
 const ROLE_LABELS: Record<string, string> = {
   owner: 'オーナー',
   admin: '管理者',
   editor: '編集者',
   viewer: '閲覧者',
+};
+
+const RUNWAY_APPROVAL_LABELS: Record<RunwayMcpConnectionStatus | 'not_requested', string> = {
+  not_requested: '未申請',
+  pending: '承認待ち',
+  approved: '承認済み',
+  rejected: '却下',
+  revoked: '取消済み',
+};
+
+const RUNWAY_APPROVAL_STYLES: Record<RunwayMcpConnectionStatus | 'not_requested', string> = {
+  not_requested: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
+  pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  revoked: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
 };
 
 export function BrandSettingsPage() {
@@ -51,6 +81,8 @@ export function BrandSettingsPage() {
   const [inviteCode, setInviteCode] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [runwayApproval, setRunwayApproval] = useState<RunwayMcpConnectionApproval | null>(null);
+  const [isRequestingRunwayApproval, setIsRequestingRunwayApproval] = useState(false);
   
   const [form, setForm] = useState({
     name: '',
@@ -93,6 +125,29 @@ export function BrandSettingsPage() {
     }
   }, [currentBrand]);
 
+  const fetchRunwayApproval = useCallback(async () => {
+    if (!currentBrand) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('runway_mcp_connection_approvals')
+        .select('id, brand_id, status, requested_at, approved_at, rejected_at, revoked_at, updated_at')
+        .eq('brand_id', currentBrand.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to fetch Runway MCP approval:', error);
+        setRunwayApproval(null);
+        return;
+      }
+
+      setRunwayApproval((data || null) as RunwayMcpConnectionApproval | null);
+    } catch (error) {
+      console.error('Failed to fetch Runway MCP approval:', error);
+      setRunwayApproval(null);
+    }
+  }, [currentBrand]);
+
   useEffect(() => {
     if (currentBrand) {
       setForm({
@@ -103,8 +158,29 @@ export function BrandSettingsPage() {
         secondaryColor: (currentBrand.brand_colors as any)?.secondary || '#c4a57c',
       });
       fetchMembers();
+      fetchRunwayApproval();
     }
-  }, [currentBrand, fetchMembers]);
+  }, [currentBrand, fetchMembers, fetchRunwayApproval]);
+
+  const handleRequestRunwayApproval = async () => {
+    if (!currentBrand) return;
+
+    setIsRequestingRunwayApproval(true);
+    try {
+      const { data, error } = await supabase.rpc('request_runway_mcp_connection', {
+        p_brand_id: currentBrand.id,
+      });
+
+      if (error) throw error;
+
+      setRunwayApproval(data as RunwayMcpConnectionApproval);
+      toast.success('Runway MCP接続を申請しました');
+    } catch (error: any) {
+      toast.error(error.message || 'Runway MCP接続の申請に失敗しました');
+    } finally {
+      setIsRequestingRunwayApproval(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!currentBrand) return;
@@ -394,6 +470,52 @@ export function BrandSettingsPage() {
             <Button onClick={handleSave} isLoading={isSaving} className="shadow-glow hover:shadow-glow-lg transition-all">
               <Save className="w-4 h-4 mr-2" />
               保存
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* Runway MCP Connection */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.05 }}
+          className="glass-panel rounded-2xl p-8"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
+                <KeyRound className="w-5 h-5 inline-block mr-2" />
+                Runway MCP接続
+              </h2>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                生成に使うMCPブリッジの実値はサーバー側で管理され、ここには保存されません。
+              </p>
+            </div>
+            <span className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-sm font-medium ${RUNWAY_APPROVAL_STYLES[runwayApproval?.status || 'not_requested']}`}>
+              {RUNWAY_APPROVAL_LABELS[runwayApproval?.status || 'not_requested']}
+            </span>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-neutral-200 bg-white/50 p-4 dark:border-neutral-700 dark:bg-neutral-800/50">
+            <p className="text-sm text-neutral-600 dark:text-neutral-300">
+              承認済みになるまで、Runway MCPを使う画像生成は使用量予約前に停止します。
+              サブスクが切れている場合も、承認状態に関係なく生成は停止します。
+            </p>
+            {runwayApproval?.updated_at && (
+              <p className="mt-3 text-xs text-neutral-400 dark:text-neutral-500">
+                最終更新: {new Date(runwayApproval.updated_at).toLocaleString('ja-JP')}
+              </p>
+            )}
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <Button
+              onClick={handleRequestRunwayApproval}
+              isLoading={isRequestingRunwayApproval}
+              disabled={runwayApproval?.status === 'approved'}
+              className="shadow-sm"
+            >
+              {runwayApproval?.status === 'approved' ? '承認済み' : '接続を申請'}
             </Button>
           </div>
         </motion.div>

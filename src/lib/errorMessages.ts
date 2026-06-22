@@ -36,6 +36,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   BRAND_NOT_FOUND: 'ブランドが見つかりません。',
   BRAND_ACCESS_DENIED: 'このブランドで操作する権限がありません。ブランドを選び直してください。',
   BRAND_SUBSCRIPTION_UNAVAILABLE: 'このブランドのプラン状態を確認できません。時間をおいて再試行してください。',
+  RUNWAY_MCP_CONNECTION_NOT_APPROVED: 'ブランド設定からRunway MCP接続を申請してください。承認後に生成できます。',
+  RUNWAY_MCP_CONNECTION_STATUS_UNAVAILABLE: 'Runway MCP接続状態を確認できません。時間をおいて再試行してください。',
   PROJECT_NOT_FOUND: 'プロジェクトが見つかりません。',
   BRAND_LIMIT_REACHED: '作成できるブランド数の上限に達しました。',
   
@@ -59,6 +61,8 @@ const KNOWN_MESSAGE_MAP: Array<[RegExp, string]> = [
   [/user usage rate limit exceeded/i, ERROR_MESSAGES.USER_USAGE_RATE_LIMIT],
   [/brand usage rate limit exceeded/i, ERROR_MESSAGES.BRAND_USAGE_RATE_LIMIT],
   [/no active subscription for brand/i, ERROR_MESSAGES.BRAND_SUBSCRIPTION_UNAVAILABLE],
+  [/runway_mcp_connection_not_approved/i, ERROR_MESSAGES.RUNWAY_MCP_CONNECTION_NOT_APPROVED],
+  [/runway_mcp_connection_status_unavailable/i, ERROR_MESSAGES.RUNWAY_MCP_CONNECTION_STATUS_UNAVAILABLE],
   [/brand not found or access denied/i, ERROR_MESSAGES.BRAND_ACCESS_DENIED],
   [/missing authorization|unauthorized/i, ERROR_MESSAGES.SESSION_EXPIRED],
 ];

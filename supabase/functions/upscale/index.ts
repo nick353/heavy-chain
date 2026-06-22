@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
+import { runwayImageArtifact, runwayProviderName, upscaleRunwayImage } from '../_shared/runway.ts';
+import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 
 const corsHeaders = {
@@ -60,6 +61,7 @@ serve(async (req) => {
     }
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
+    await requireRunwayMcpConnectionApproval(supabaseService, brandId);
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {
@@ -113,41 +115,12 @@ serve(async (req) => {
       requestId,
     });
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured');
-    }
-    const analysisModel = geminiAnalysisModel();
-    const imageModel = geminiImageModel();
+    const imageModel = 'runway';
 
     // Fetch and analyze the original image
     console.log('🖼️ Fetching original image...');
-    const { base64: originalBase64, mimeType } = await fetchImageAsBase64(imageUrl);
-
-    // Analyze the image in extreme detail
-    console.log('🔍 Analyzing image for high-resolution regeneration...');
-    const analysisResponse = await fetch(
-      geminiGenerateContentUrl(analysisModel, GEMINI_API_KEY),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: 'Describe this image in EXTREME detail for high-resolution regeneration. Include every visible element, colors, textures, lighting, shadows, background, composition. Be as detailed as possible. Output only English description.' },
-              { inlineData: { mimeType, data: originalBase64 } }
-            ]
-          }],
-          generationConfig: { 
-            temperature: 0.2,
-            maxOutputTokens: 1000
-          }
-        }),
-      }
-    );
-
-    const analysisData = await analysisResponse.json();
-    const description = analysisData.candidates?.[0]?.content?.parts?.[0]?.text || 'High quality image';
+    const sourceImage = await fetchImageAsBase64(imageUrl);
+    const description = 'High quality image';
 
     console.log('📝 Detailed description obtained');
 
@@ -162,53 +135,22 @@ serve(async (req) => {
       'Ultra high resolution, detailed restoration, sharp focus, pristine product image.'
     ].join(' ');
 
-    const generateResponse = await fetch(
-      geminiGenerateContentUrl(imageModel, GEMINI_API_KEY),
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType, data: originalBase64 } }
-            ]
-          }],
-          generationConfig: { 
-            responseModalities: ["IMAGE", "TEXT"],
-            temperature: 0.1
-          }
-        }),
-      }
-    );
+    const runwayResult = await upscaleRunwayImage({
+      base64: sourceImage.base64,
+      mimeType: sourceImage.mimeType,
+    });
+    const imageBase64 = runwayResult.base64;
+    const imageAsset = runwayImageArtifact(runwayResult);
 
-    const generateData = await generateResponse.json();
-
-    if (!generateResponse.ok || !generateData.candidates?.[0]?.content?.parts) {
-      throw new Error('高解像度化に失敗しました。しばらく待ってからもう一度お試しください。');
-    }
-
-    let imageBase64 = null;
-    for (const part of generateData.candidates[0].content.parts) {
-      if (part.inlineData?.data) {
-        imageBase64 = part.inlineData.data;
-        break;
-      }
-    }
-
-    if (!imageBase64) {
-      throw new Error('画像生成に失敗しました。');
-    }
-
-    const imageDataUrl = `data:image/png;base64,${imageBase64}`;
-    const fileName = `${user.id}/${brandId}/${Date.now()}_upscaled_${scale}x.png`;
+    const imageDataUrl = imageAsset.dataUrl;
+    const fileName = `${user.id}/${brandId}/${Date.now()}_upscaled_${scale}x.${imageAsset.extension}`;
     let storageUrl = '';
 
     try {
       const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
       const { error: uploadError } = await supabaseService.storage
         .from('generated-images')
-        .upload(fileName, imgBuffer, { contentType: 'image/png' });
+        .upload(fileName, imgBuffer, { contentType: imageAsset.contentType });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = await supabaseService.storage
@@ -260,7 +202,7 @@ serve(async (req) => {
       await supabaseService.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
-        provider: 'gemini',
+        provider: runwayProviderName() as any,
         tokens_used: 500,
         cost_usd: 0,
       });

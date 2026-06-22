@@ -11,7 +11,8 @@ import {
   CheckCircle,
   Eye,
   Activity,
-  Clock
+  Clock,
+  KeyRound
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Button, Input, Modal } from '../components/ui';
@@ -45,6 +46,37 @@ interface ModerationItem {
   status: 'pending' | 'approved' | 'rejected';
 }
 
+type RunwayMcpConnectionStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
+
+interface RunwayMcpApproval {
+  id: string;
+  brand_id: string;
+  status: RunwayMcpConnectionStatus;
+  requested_at: string;
+  approved_at: string | null;
+  rejected_at: string | null;
+  revoked_at: string | null;
+  updated_at: string;
+  brand?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
+const RUNWAY_STATUS_LABELS: Record<RunwayMcpConnectionStatus, string> = {
+  pending: '承認待ち',
+  approved: '承認済み',
+  rejected: '却下',
+  revoked: '取消済み',
+};
+
+const RUNWAY_STATUS_STYLES: Record<RunwayMcpConnectionStatus, string> = {
+  pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  revoked: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
+};
+
 export function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -56,9 +88,10 @@ export function AdminDashboard() {
     averageDurationMs: 0,
   });
   const [users, setUsers] = useState<User[]>([]);
+  const [runwayApprovals, setRunwayApprovals] = useState<RunwayMcpApproval[]>([]);
   const [_moderationQueue, _setModerationQueue] = useState<ModerationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'moderation' | 'announcements'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'runway' | 'moderation' | 'announcements'>('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({
@@ -70,6 +103,7 @@ export function AdminDashboard() {
   useEffect(() => {
     fetchStats();
     fetchUsers();
+    fetchRunwayApprovals();
   }, []);
 
   const fetchStats = async () => {
@@ -185,6 +219,45 @@ export function AdminDashboard() {
     }
   };
 
+  const fetchRunwayApprovals = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('runway_mcp_connection_approvals')
+        .select('id, brand_id, status, requested_at, approved_at, rejected_at, revoked_at, updated_at, brand:brands(id, name)')
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('Failed to fetch Runway MCP approvals:', error);
+        setRunwayApprovals([]);
+        return;
+      }
+
+      setRunwayApprovals((data || []) as unknown as RunwayMcpApproval[]);
+    } catch (error) {
+      console.error('Failed to fetch Runway MCP approvals:', error);
+      setRunwayApprovals([]);
+    }
+  };
+
+  const handleRunwayApprovalUpdate = async (
+    brandId: string,
+    status: RunwayMcpConnectionStatus,
+  ) => {
+    try {
+      const { error } = await supabase.rpc('admin_update_runway_mcp_connection', {
+        p_brand_id: brandId,
+        p_status: status,
+      });
+
+      if (error) throw error;
+
+      toast.success(`Runway MCP接続を${RUNWAY_STATUS_LABELS[status]}にしました`);
+      await fetchRunwayApprovals();
+    } catch (error: any) {
+      toast.error(error.message || 'Runway MCP接続状態の更新に失敗しました');
+    }
+  };
+
   const handlePublishAnnouncement = async () => {
     if (!announcementForm.title.trim() || !announcementForm.content.trim()) {
       toast.error('タイトルと内容を入力してください');
@@ -268,6 +341,7 @@ export function AdminDashboard() {
           {[
             { id: 'overview', label: '概要' },
             { id: 'users', label: 'ユーザー' },
+            { id: 'runway', label: 'Runway MCP' },
             { id: 'moderation', label: 'モデレーション' },
             { id: 'announcements', label: 'お知らせ' },
           ].map((tab) => (
@@ -426,6 +500,97 @@ export function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+          </motion.div>
+        )}
+
+        {/* Runway MCP approvals */}
+        {activeTab === 'runway' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-panel rounded-2xl overflow-hidden"
+          >
+            <div className="p-6 border-b border-neutral-100 dark:border-neutral-700">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
+                    <KeyRound className="w-5 h-5 inline-block mr-2" />
+                    Runway MCP承認
+                  </h2>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                    ここでは接続状態だけを管理します。MCPブリッジのURLやトークンは保存しません。
+                  </p>
+                </div>
+                <Button variant="secondary" size="sm" onClick={fetchRunwayApprovals}>
+                  更新
+                </Button>
+              </div>
+            </div>
+
+            {runwayApprovals.length === 0 ? (
+              <div className="p-12 text-center text-neutral-500 dark:text-neutral-400">
+                Runway MCP接続申請はまだありません
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-left">
+                    <tr>
+                      <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">ブランド</th>
+                      <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">状態</th>
+                      <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">更新日</th>
+                      <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">アクション</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                    {runwayApprovals.map((approval) => (
+                      <tr key={approval.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-medium text-neutral-800 dark:text-white">
+                            {approval.brand?.name || approval.brand_id}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${RUNWAY_STATUS_STYLES[approval.status]}`}>
+                            {RUNWAY_STATUS_LABELS[approval.status]}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">
+                          {new Date(approval.updated_at).toLocaleString('ja-JP')}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleRunwayApprovalUpdate(approval.brand_id, 'approved')}
+                              disabled={approval.status === 'approved'}
+                            >
+                              承認
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleRunwayApprovalUpdate(approval.brand_id, 'rejected')}
+                              disabled={approval.status === 'rejected'}
+                            >
+                              却下
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRunwayApprovalUpdate(approval.brand_id, 'revoked')}
+                              disabled={approval.status === 'revoked'}
+                            >
+                              取消
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </motion.div>
         )}
 

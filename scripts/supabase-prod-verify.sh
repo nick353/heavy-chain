@@ -9,6 +9,9 @@ test -f supabase/migrations/20260617054556_public_service_rpc_wrappers.sql
 test -f supabase/migrations/20260617080031_harden_usage_quota_guards.sql
 test -f supabase/migrations/20260617184720_authenticated_usage_summary_rpc.sql
 test -f supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+test -f supabase/migrations/20260622230000_allow_runway_api_usage_provider.sql
+test -f supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+test -f supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
 grep -q 'schemas = \["public", "storage"\]' supabase/config.toml
 
 verify_mode="${SUPABASE_VERIFY_MODE:-static}"
@@ -80,12 +83,88 @@ require_no_repo_file_match() {
   return 0
 }
 
+require_runway_approval_before_reserve() {
+  local function_name="$1"
+  local path="supabase/functions/${function_name}/index.ts"
+
+  node - "$path" "$function_name" <<'NODE'
+const fs = require('node:fs');
+const [path, functionName] = process.argv.slice(2);
+const text = fs.readFileSync(path, 'utf8');
+const serveStart = text.indexOf('serve(async');
+const runtimeText = serveStart >= 0 ? text.slice(serveStart) : text;
+const approvalIndex = runtimeText.indexOf('requireRunwayMcpConnectionApproval');
+const reserveIndex = runtimeText.indexOf('reserveBrandUsage');
+
+if (approvalIndex < 0) {
+  console.error(`Static guard failed: ${functionName} missing Runway MCP connection approval gate`);
+  process.exit(1);
+}
+if (reserveIndex < 0) {
+  console.error(`Static guard failed: ${functionName} missing quota reserve`);
+  process.exit(1);
+}
+if (approvalIndex > reserveIndex) {
+  console.error(`Static guard failed: ${functionName} approval gate must run before usage reservation`);
+  process.exit(1);
+}
+NODE
+}
+
 echo "Checking static safety guards"
 require_no_repo_file_match "service role key value assignment in repository files" "SUPABASE_SERVICE_ROLE_KEY[[:space:]]*=[[:space:]]*['\"]?(eyJ[A-Za-z0-9_-]{20,}|sb_secret_[A-Za-z0-9_-]{20,}|[A-Za-z0-9_-]{40,})" . ':(exclude)*.md'
 require_no_match "OpenAI-style secret literal" "sk-[A-Za-z0-9_-]\\{20,\\}" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=output
 require_no_match "storage/data URL image_url fallback" "image_url:[[:space:]]*storageUrl[[:space:]]*||[[:space:]]*imageDataUrl" supabase/functions
 require_no_match "data URL image_url persistence" "image_url:[[:space:]]*imageDataUrl" supabase/functions
 require_no_match "deprecated Gemini 2.0 model reference in Supabase functions" "gemini-2\\.0-flash-exp(-image-generation)?" supabase/functions -E
+require_no_repo_file_match "OpenAI/Gemini image env requirement in generation functions" "Deno\\.env\\.get\\(['\"](GEMINI_API_KEY|OPENAI_API_KEY|OPENAI_CHAT_[A-Z_]+)['\"]\\)" supabase/functions/generate-image supabase/functions/remove-background supabase/functions/upscale supabase/functions/colorize supabase/functions/generate-variations supabase/functions/design-gacha supabase/functions/product-shots supabase/functions/model-matrix supabase/functions/multilingual-banner
+grep -q "RUNWAY_MCP_BRIDGE_URL" scripts/check-env.mjs
+grep -q "RUNWAY_MCP_BRIDGE_TOKEN" scripts/check-env.mjs
+grep -q "RUNWAY_MCP_BRIDGE_URL" supabase/functions/_shared/runway.ts
+grep -q "RUNWAY_MCP_BRIDGE_TOKEN" supabase/functions/_shared/runway.ts
+grep -q "/text-to-image" supabase/functions/_shared/runway.ts
+grep -q "referenceImages" supabase/functions/_shared/runway.ts
+grep -q "/image-upscale" supabase/functions/_shared/runway.ts
+grep -q "magnific_precision_upscaler_v2" supabase/functions/_shared/runway.ts
+grep -q "runway_mcp_bridge_not_configured" supabase/functions/_shared/runway.ts
+grep -q "runway_mcp_auth_required" supabase/functions/_shared/runway.ts
+grep -q "runway_mcp_subscription_inactive" supabase/functions/_shared/runway.ts
+grep -q "runwayImageDataUri" supabase/functions/_shared/runway.ts
+grep -q "runwayReferenceImage" supabase/functions/_shared/runway.ts
+grep -q "runwayImageArtifact" supabase/functions/_shared/runway.ts
+grep -q "contentType" supabase/functions/_shared/runway.ts
+grep -q "extension" supabase/functions/_shared/runway.ts
+grep -q "dataUrl" supabase/functions/_shared/runway.ts
+grep -q "runway_mcp_connection_approvals" supabase/functions/_shared/runwayApproval.ts
+grep -q "approved_at" supabase/functions/_shared/runwayApproval.ts
+grep -q "runway_mcp_connection_status_unavailable" supabase/functions/_shared/runwayApproval.ts
+grep -q "runway_mcp_connection_not_approved" supabase/functions/_shared/runwayApproval.ts
+require_no_match "Runway direct API base URL in helper" "https://api\\.dev\\.runwayml\\.com/v1" supabase/functions/_shared/runway.ts -E
+require_no_match "Runway direct API secret in helper" "RUNWAYML_API_SECRET" supabase/functions/_shared/runway.ts
+require_no_match "Runway direct text_to_image endpoint in helper" "/text_to_image" supabase/functions/_shared/runway.ts
+require_no_match "Runway direct image_upscale endpoint in helper" "/image_upscale" supabase/functions/_shared/runway.ts
+require_no_match "Runway direct API version header in helper" "X-Runway-Version|2024-11-06" supabase/functions/_shared/runway.ts -E
+grep -q "provider IN ('openai', 'gemini', 'runway')" supabase/migrations/20260622230000_allow_runway_api_usage_provider.sql
+grep -q "api_usage_logs_provider_check" supabase/migrations/20260622230000_allow_runway_api_usage_provider.sql
+grep -q "pg_attribute" supabase/migrations/20260622230000_allow_runway_api_usage_provider.sql
+grep -q "a.attname = 'provider'" supabase/migrations/20260622230000_allow_runway_api_usage_provider.sql
+grep -Fq "c.conkey = ARRAY[a.attnum]" supabase/migrations/20260622230000_allow_runway_api_usage_provider.sql
+grep -q "upscaleRunwayImage" supabase/functions/upscale/index.ts
+if grep -q "generateRunwayImage" supabase/functions/upscale/index.ts; then
+  echo "Static guard failed: upscale must use image_upscale helper, not text_to_image" >&2
+  exit 1
+fi
+for function_name in remove-background colorize generate-variations design-gacha product-shots model-matrix; do
+  grep -q "runwayReferenceImage" "supabase/functions/${function_name}/index.ts"
+done
+for function_name in generate-image remove-background upscale colorize generate-variations design-gacha product-shots model-matrix multilingual-banner; do
+  grep -q "runwayImageArtifact" "supabase/functions/${function_name}/index.ts"
+  grep -q "requireRunwayMcpConnectionApproval" "supabase/functions/${function_name}/index.ts"
+  require_runway_approval_before_reserve "$function_name"
+  require_no_match "hard-coded PNG data URL in ${function_name}" "data:image/png;base64" "supabase/functions/${function_name}/index.ts"
+  require_no_match "hard-coded PNG contentType in ${function_name}" "contentType:[[:space:]]*['\"]image/png['\"]" "supabase/functions/${function_name}/index.ts" -E
+done
+require_no_match "Runway direct API/OpenAI/Gemini env in check-env" "RUNWAYML_API_SECRET|GEMINI_API_KEY|OPENAI_API_KEY|OPENAI_CHAT_API_KEY|OPENAI_CHAT_BASE_URL|OPENAI_CHAT_MODEL" scripts/check-env.mjs -E
 
 echo "Checking required private RPC definitions"
 grep -q "private.reserve_brand_usage" supabase/migrations/20260617044009_billing_usage_limits.sql
@@ -99,6 +178,32 @@ grep -q "v_user_recent_units + p_units > 3" supabase/migrations/20260617080031_h
 grep -q "idempotency_key = p_idempotency_key" supabase/migrations/20260617080031_harden_usage_quota_guards.sql
 grep -q "Brand usage quota exceeded" supabase/migrations/20260617080031_harden_usage_quota_guards.sql
 grep -q "RAISE EXCEPTION 'User usage rate limit exceeded'" supabase/migrations/20260617080031_harden_usage_quota_guards.sql
+grep -q "runway_mcp_generation" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "code = 'free'" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "code = 'pro'" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "v_runway_mcp_generation_functions" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "bs.current_period_start <= v_now" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "bs.current_period_end > v_now" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "p.is_active" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "bs.status IN ('trialing', 'active')" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "reservation_stale" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "idempotency_key = p_idempotency_key" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "v_brand_recent_units + p_units > 5" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "v_user_recent_units + p_units > 3" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "Brand usage quota exceeded" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "public.runway_mcp_connection_approvals" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
+grep -q "public.runway_mcp_connection_status" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
+grep -q "ENABLE ROW LEVEL SECURITY" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
+grep -q "GRANT SELECT ON TABLE public.runway_mcp_connection_approvals TO authenticated" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
+grep -q "GRANT ALL ON TABLE public.runway_mcp_connection_approvals TO service_role" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
+grep -q "Brand viewers can view Runway MCP connection approvals" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
+grep -q "public.request_runway_mcp_connection" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
+grep -q "public.admin_update_runway_mcp_connection" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
+grep -q "private.has_brand_role(p_brand_id, 'admin')" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
+grep -q "private.is_current_user_admin()" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
+grep -q "IF FOUND AND v_row.status = 'approved' THEN" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
+require_no_match "credential/URL/token/secret/metadata columns in Runway MCP approval migration" "\\b(oauth|api[_-]?key|apikey|connection[_-]?url|bridge[_-]?url|bridge[_-]?token|secret[_-]?url|secret[_-]?token|url|token|secret|credential|metadata)\\b[[:space:]]+(TEXT|VARCHAR|UUID|JSONB|JSON)" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql -E
+require_no_match "free-text notes in Runway MCP approval migration" "\\b(request_note|admin_note)\\b" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql -E
 
 echo "Checking RLS and table grants"
 grep -q "CREATE POLICY \"Users can create brands\"" supabase/migrations/20260618023000_restore_brand_insert_policy.sql

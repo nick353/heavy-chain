@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
+import { generateRunwayImage, runwayImageArtifact, runwayProviderName, runwayReferenceImage, type RunwayImageResult } from '../_shared/runway.ts';
+import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 
 const corsHeaders = {
@@ -32,56 +33,15 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
   }
 }
 
-// 画像を分析して詳細な説明を取得
-async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string, analysisModel: string): Promise<string> {
-  console.log('🔍 Analyzing image with Gemini...');
-  
-  const response = await fetch(
-    geminiGenerateContentUrl(analysisModel, apiKey),
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            {
-              text: `Describe this fashion product/clothing in EXTREME detail for exact recreation. Include:
-1. Exact garment type
-2. All colors and their exact distribution
-3. Material/fabric texture (e.g., fleece, cotton, denim)
-4. EVERY design feature (pockets, zippers, collars, logos, stitching patterns, paneling)
-5. Proportions and silhouette
-
-Output ONLY a detailed English description. Be very specific about visual details.`
-            },
-            { inlineData: { mimeType, data: base64 } }
-          ]
-        }],
-        generationConfig: { temperature: 0.2 }
-      }),
-    }
-  );
-
-  const data = await response.json();
-  const description = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  
-  if (description) {
-    console.log('✅ Image analyzed:', description.substring(0, 100) + '...');
-    return description;
-  }
-  
-  return 'Fashion product';
-}
-
 // 参照画像を使ってバリエーションを生成
 async function generateVariationWithReference(
   originalBase64: string,
   originalMimeType: string,
   description: string,
   variationPrompt: string,
-  apiKey: string,
-  imageModel: string
-): Promise<string | null> {
+  _apiKey?: string,
+  _imageModel?: string
+): Promise<RunwayImageResult | null> {
   console.log('🎨 Generating variation with reference...');
 
   const prompt = `Generate a fashion photo variation.
@@ -96,37 +56,10 @@ CRITICAL - KEEP THE PRODUCT IDENTICAL:
 
 Style: Professional fashion photography, high quality`;
 
-  const generateResponse = await fetch(
-    geminiGenerateContentUrl(imageModel, apiKey),
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType: originalMimeType, data: originalBase64 } }
-          ]
-        }],
-        generationConfig: {
-          responseModalities: ["IMAGE", "TEXT"],
-          temperature: 0.7
-        }
-      }),
-    }
-  );
-
-  const generateData = await generateResponse.json();
-
-  if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
-    for (const part of generateData.candidates[0].content.parts) {
-      if (part.inlineData?.data) {
-        return part.inlineData.data;
-      }
-    }
-  }
-
-  return null;
+  return await generateRunwayImage({
+    prompt,
+    referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
+  });
 }
 
 // シーン別生成
@@ -135,9 +68,9 @@ async function generateSceneWithReference(
   originalMimeType: string,
   description: string,
   scenePrompt: string,
-  apiKey: string,
-  imageModel: string
-): Promise<string | null> {
+  _apiKey?: string,
+  _imageModel?: string
+): Promise<RunwayImageResult | null> {
   console.log('🎨 Generating scene variation with reference...');
 
   const prompt = `Generate a fashion coordinate photo.
@@ -154,37 +87,10 @@ CRITICAL - KEEP THE PRODUCT IDENTICAL:
 
 Style: Professional lifestyle fashion photography, natural lighting`;
 
-  const generateResponse = await fetch(
-    geminiGenerateContentUrl(imageModel, apiKey),
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType: originalMimeType, data: originalBase64 } }
-          ]
-        }],
-        generationConfig: {
-          responseModalities: ["IMAGE", "TEXT"],
-          temperature: 0.7
-        }
-      }),
-    }
-  );
-
-  const generateData = await generateResponse.json();
-
-  if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
-    for (const part of generateData.candidates[0].content.parts) {
-      if (part.inlineData?.data) {
-        return part.inlineData.data;
-      }
-    }
-  }
-
-  return null;
+  return await generateRunwayImage({
+    prompt,
+    referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
+  });
 }
 
 serve(async (req) => {
@@ -248,6 +154,7 @@ serve(async (req) => {
     }
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
+    await requireRunwayMcpConnectionApproval(supabaseService, brandId);
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {
@@ -303,12 +210,7 @@ serve(async (req) => {
       requestId,
     });
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured');
-    }
-    const analysisModel = geminiAnalysisModel();
-    const imageModel = geminiImageModel();
+    const imageModel = 'runway';
 
     // Fetch and analyze the image
     console.log('🖼️ Fetching original image...');
@@ -317,9 +219,7 @@ serve(async (req) => {
       throw new Error('画像の取得に失敗しました');
     }
     const { base64: imageBase64, mimeType } = imageData;
-
-    // Analyze the image with Gemini
-    const description = await analyzeImageWithGemini(imageBase64, mimeType, GEMINI_API_KEY, analysisModel);
+    const description = 'Fashion product';
     console.log('📝 Description:', description.substring(0, 100) + '...');
 
     const results = [];
@@ -330,25 +230,26 @@ serve(async (req) => {
         const scenePrompt = scenes[i];
         console.log(`🎬 Generating scene ${i + 1}: ${scenePrompt}...`);
 
-        const genImageBase64 = await generateSceneWithReference(
+        const generatedImage = await generateSceneWithReference(
           imageBase64,
           mimeType,
           description,
           scenePrompt,
-          GEMINI_API_KEY,
           imageModel
         );
 
-        if (genImageBase64) {
-          const imageDataUrl = `data:image/png;base64,${genImageBase64}`;
-          const fileName = `${user.id}/${brandId}/${Date.now()}_scene${i + 1}.png`;
+        if (generatedImage) {
+          const imageAsset = runwayImageArtifact(generatedImage);
+          const genImageBase64 = imageAsset.base64;
+          const imageDataUrl = imageAsset.dataUrl;
+          const fileName = `${user.id}/${brandId}/${Date.now()}_scene${i + 1}.${imageAsset.extension}`;
           let storageUrl = '';
 
           try {
             const imgBuffer = Uint8Array.from(atob(genImageBase64), c => c.charCodeAt(0));
             const { error: uploadError } = await supabaseService.storage
               .from('generated-images')
-              .upload(fileName, imgBuffer, { contentType: 'image/png' });
+              .upload(fileName, imgBuffer, { contentType: imageAsset.contentType });
             if (uploadError) throw uploadError;
 
             const { data: urlData } = await supabaseService.storage
@@ -414,25 +315,26 @@ serve(async (req) => {
         const variationPrompt = `${variationPrompts[i]}${prompt ? `, ${prompt}` : ''}`;
         console.log(`🎨 Generating variation ${i + 1}...`);
 
-        const genImageBase64 = await generateVariationWithReference(
+        const generatedImage = await generateVariationWithReference(
           imageBase64,
           mimeType,
           description,
           variationPrompt,
-          GEMINI_API_KEY,
           imageModel
         );
 
-        if (genImageBase64) {
-          const imageDataUrl = `data:image/png;base64,${genImageBase64}`;
-          const fileName = `${user.id}/${brandId}/${Date.now()}_var${i + 1}.png`;
+        if (generatedImage) {
+          const imageAsset = runwayImageArtifact(generatedImage);
+          const genImageBase64 = imageAsset.base64;
+          const imageDataUrl = imageAsset.dataUrl;
+          const fileName = `${user.id}/${brandId}/${Date.now()}_var${i + 1}.${imageAsset.extension}`;
           let storageUrl = '';
 
           try {
             const imgBuffer = Uint8Array.from(atob(genImageBase64), c => c.charCodeAt(0));
             const { error: uploadError } = await supabaseService.storage
               .from('generated-images')
-              .upload(fileName, imgBuffer, { contentType: 'image/png' });
+              .upload(fileName, imgBuffer, { contentType: imageAsset.contentType });
             if (uploadError) throw uploadError;
 
             const { data: urlData } = await supabaseService.storage
@@ -501,7 +403,7 @@ serve(async (req) => {
       await supabaseService.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
-        provider: 'gemini',
+        provider: runwayProviderName() as any,
         tokens_used: results.length * 500,
         cost_usd: 0,
       });

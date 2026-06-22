@@ -6,17 +6,14 @@ const required = [
   'SUPABASE_URL',
   'SUPABASE_ANON_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
-  'GEMINI_API_KEY',
-  'OPENAI_API_KEY',
+  'RUNWAY_MCP_BRIDGE_URL',
+  'RUNWAY_MCP_BRIDGE_TOKEN',
   'PUBLIC_URL',
 ];
 
 const optional = [
   'SUPABASE_PROJECT_REF',
   'SUPABASE_ACCESS_TOKEN',
-  'OPENAI_CHAT_API_KEY',
-  'OPENAI_CHAT_BASE_URL',
-  'OPENAI_CHAT_MODEL',
 ];
 
 const missing = required.filter((key) => !process.env[key]);

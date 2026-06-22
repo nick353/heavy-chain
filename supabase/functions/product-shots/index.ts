@@ -3,7 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { geminiAnalysisModel, geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
+import { generateRunwayImage, runwayImageArtifact, runwayProviderName, runwayReferenceImage, type RunwayImageResult } from '../_shared/runway.ts';
+import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,78 +45,16 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
   return { base64, mimeType: contentType };
 }
 
-// 画像を分析
-async function analyzeImageWithGemini(base64: string, mimeType: string, apiKey: string, analysisModel: string): Promise<string> {
-  console.log(`🔍 Analyzing image with Gemini model: ${analysisModel}`);
-  
-  try {
-    const response = await fetch(
-      geminiGenerateContentUrl(analysisModel, apiKey),
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                {
-                  text: `Describe this garment/product in EXTREME detail for AI image regeneration. Be very specific about:
-
-1. ITEM TYPE: Exact type (jacket, shirt, pants, etc.)
-2. MATERIALS: Primary fabric (fleece, cotton, wool, sherpa, etc.) and any secondary materials
-3. COLORS: All colors with exact positions (e.g., "cream/beige body, white fleece sleeves")
-4. DESIGN FEATURES: 
-   - Collar/neckline style
-   - Closure type (zipper, buttons, snaps)
-   - Pockets (type, position, material)
-   - Cuffs and hem style
-   - Any panels or color blocking
-5. LOGOS/LABELS: Brand labels, their position and text if visible
-6. TEXTURE: Describe the texture of each material section
-7. STITCHING: Notable stitching patterns or details
-
-Output ONLY the detailed English description, nothing else.`
-                },
-                {
-                  inlineData: {
-                    mimeType: mimeType,
-                    data: base64
-                  }
-                }
-              ]
-            }],
-            generationConfig: {
-              temperature: 0.2,
-              maxOutputTokens: 800
-            }
-          }),
-        }
-      );
-
-    const data = await response.json();
-
-    if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      const description = data.candidates[0].content.parts[0].text;
-      console.log('✅ Image analysis successful with', analysisModel);
-      console.log('📝 Description:', description);
-      return description;
-    }
-
-    throw new Error(JSON.stringify(data));
-  } catch (e) {
-    throw new Error(`画像分析に失敗しました: ${clientError(e)}`);
-  }
-}
-
 // 元画像を参照して異なるアングルを生成
 async function generateAngleWithReference(
-  originalBase64: string, 
-  originalMimeType: string, 
+  originalBase64: string,
+  originalMimeType: string,
   shot: typeof SHOT_TYPES[0], 
   description: string,
   backgroundPrompt: string,
-  apiKey: string,
-  imageModel: string
-): Promise<string | null> {
+  _apiKey?: string,
+  _imageModel?: string
+): Promise<RunwayImageResult | null> {
   console.log(`🎨 Generating ${shot.name} with reference image...`);
   
   // 強化されたプロンプト: 質感の一貫性を重視
@@ -138,47 +77,10 @@ STYLE: Professional e-commerce product photography, high resolution, sharp focus
 
 DO NOT change any aspect of the garment itself - only change the camera angle.`;
 
-  const generateResponse = await fetch(
-    geminiGenerateContentUrl(imageModel, apiKey),
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            {
-              text: prompt
-            },
-            {
-              inlineData: {
-                mimeType: originalMimeType,
-                data: originalBase64
-              }
-            }
-          ]
-        }],
-        generationConfig: { 
-          responseModalities: ["IMAGE", "TEXT"],
-          temperature: 1.0
-        }
-      }),
-    }
-  );
-
-  const generateData = await generateResponse.json();
-  console.log(`📊 Generation response for ${shot.id}:`, generateResponse.status);
-
-  if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
-    for (const part of generateData.candidates[0].content.parts) {
-      if (part.inlineData?.data) {
-        console.log(`✅ ${shot.name} generated with reference`);
-        return part.inlineData.data;
-      }
-    }
-  }
-  
-  console.log(`⚠️ Reference-based generation failed for ${shot.id}:`, JSON.stringify(generateData).substring(0, 500));
-  return null;
+  return await generateRunwayImage({
+    prompt,
+    referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
+  });
 }
 
 // テキストのみで生成（フォールバック）
@@ -186,9 +88,9 @@ async function generateAngleFromText(
   shot: typeof SHOT_TYPES[0], 
   description: string,
   backgroundPrompt: string,
-  apiKey: string,
-  imageModel: string
-): Promise<string | null> {
+  _apiKey?: string,
+  _imageModel?: string
+): Promise<RunwayImageResult | null> {
   console.log(`🎨 Generating ${shot.name} from text (fallback)...`);
   
   const prompt = `Generate a professional e-commerce product photo.
@@ -199,32 +101,7 @@ BACKGROUND: ${backgroundPrompt}
 
 STYLE: High-resolution commercial product photography, sharp focus, professional lighting.`;
 
-  const generateResponse = await fetch(
-    geminiGenerateContentUrl(imageModel, apiKey),
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { 
-          responseModalities: ["IMAGE", "TEXT"],
-          temperature: 0.4  // Lower for consistency
-        }
-      }),
-    }
-  );
-
-  const generateData = await generateResponse.json();
-
-  if (generateResponse.ok && generateData.candidates?.[0]?.content?.parts) {
-    for (const part of generateData.candidates[0].content.parts) {
-      if (part.inlineData?.data) {
-        return part.inlineData.data;
-      }
-    }
-  }
-  
-  return null;
+  return await generateRunwayImage({ prompt });
 }
 
 serve(async (req) => {
@@ -267,6 +144,7 @@ serve(async (req) => {
     }
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
+    await requireRunwayMcpConnectionApproval(supabaseService, brandId);
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {
@@ -291,12 +169,7 @@ serve(async (req) => {
     const backgroundPrompt = BACKGROUND_OPTIONS[background] || BACKGROUND_OPTIONS['white'];
     console.log('🎨 Background:', background, '->', backgroundPrompt);
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured');
-    }
-    const analysisModel = geminiAnalysisModel();
-    const imageModel = geminiImageModel();
+    const imageModel = 'runway';
 
     // 元画像のBase64を取得（参照画像として使用）
     let originalImageBase64: string | null = null;
@@ -319,7 +192,7 @@ serve(async (req) => {
     if (!finalDescription && originalImageBase64) {
       console.log('📝 Analyzing image to get description...');
       try {
-        finalDescription = await analyzeImageWithGemini(originalImageBase64, originalMimeType, GEMINI_API_KEY, analysisModel);
+        finalDescription = 'Fashion product';
       } catch (e) {
         console.error('❌ Image analysis failed:', e);
         throw new Error(`画像分析エラー: ${clientError(e)}. 商品説明を手動で入力してください。`);
@@ -338,36 +211,37 @@ serve(async (req) => {
     const results = [];
 
     for (const shot of selectedShots) {
-      let imageBase64: string | null = null;
+      let generatedImage: RunwayImageResult | null = null;
       
       // 元画像がある場合は参照生成、ない場合はテキスト生成
       if (originalImageBase64) {
-        imageBase64 = await generateAngleWithReference(
+        generatedImage = await generateAngleWithReference(
           originalImageBase64, 
           originalMimeType, 
           shot, 
           finalDescription,
           backgroundPrompt,
-          GEMINI_API_KEY,
           imageModel
         );
       }
       
       // 参照生成が失敗した場合はテキストのみで生成
-      if (!imageBase64) {
-        imageBase64 = await generateAngleFromText(shot, finalDescription, backgroundPrompt, GEMINI_API_KEY, imageModel);
+      if (!generatedImage) {
+        generatedImage = await generateAngleFromText(shot, finalDescription, backgroundPrompt, imageModel);
       }
 
-      if (imageBase64) {
-        const imageDataUrl = `data:image/png;base64,${imageBase64}`;
+      if (generatedImage) {
+        const imageAsset = runwayImageArtifact(generatedImage);
+        const imageBase64 = imageAsset.base64;
+        const imageDataUrl = imageAsset.dataUrl;
         const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
-        const fileName = `${user.id}/${brandId}/${Date.now()}_product_${shot.id}.png`;
+        const fileName = `${user.id}/${brandId}/${Date.now()}_product_${shot.id}.${imageAsset.extension}`;
         let storageUrl = '';
         
         try {
           const { error: uploadError } = await supabaseService.storage
             .from('generated-images')
-            .upload(fileName, imgBuffer, { contentType: 'image/png' });
+            .upload(fileName, imgBuffer, { contentType: imageAsset.contentType });
 
           if (!uploadError) {
             const { data: urlData } = await supabaseService.storage.from('generated-images').createSignedUrl(fileName, 60 * 60 * 24);
@@ -418,7 +292,7 @@ serve(async (req) => {
       await supabaseService.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
-        provider: 'gemini',
+        provider: runwayProviderName() as any,
         tokens_used: results.length * 500,
         cost_usd: 0,
       });

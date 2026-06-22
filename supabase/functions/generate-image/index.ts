@@ -1,10 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { clientError, createServiceClient, createUserClient, requireBrandRole, requireUser } from '../_shared/auth.ts'
-import { createOpenAiChatCompletion, hasOpenAiChatApiKey } from '../_shared/openaiChat.ts'
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { geminiGenerateContentUrl, geminiImageModel } from '../_shared/geminiModels.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
+import { generateRunwayImage, runwayImageArtifact } from '../_shared/runway.ts';
+import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -158,6 +158,7 @@ serve(async (req) => {
 
     const supabaseClient = createServiceClient()
     telemetryClient = supabaseClient
+    await requireRunwayMcpConnectionApproval(supabaseClient, brandId);
     const persistedFeatureType = typeof featureType === 'string' && featureType.trim()
       ? featureType.trim()
       : 'text-to-image'
@@ -198,37 +199,7 @@ serve(async (req) => {
       requestId,
     });
 
-    // Optimize prompt using OpenAI
     let optimizedPrompt = prompt
-    const openaiImageApiKey = Deno.env.get('OPENAI_API_KEY')
-    
-    if (hasOpenAiChatApiKey()) {
-      try {
-        const optimizeResponse = await createOpenAiChatCompletion(
-          {
-            messages: [
-              {
-                role: 'system',
-                content: `You are an expert at writing image generation prompts. Convert the user's Japanese description into an optimized English prompt for fashion/apparel image generation. Focus on: lighting, composition, style, details. Keep it concise but detailed. Output only the English prompt, nothing else.`
-              },
-              {
-                role: 'user',
-                content: prompt
-              }
-            ],
-            max_tokens: 300,
-          },
-          'gpt-4o-mini',
-        )
-
-        const optimizeData = await optimizeResponse.json()
-        if (optimizeData.choices?.[0]?.message?.content) {
-          optimizedPrompt = optimizeData.choices[0].message.content
-        }
-      } catch (e) {
-        console.error('Prompt optimization failed:', sanitizeError(e))
-      }
-    }
 
     // Create generation job
     failedStage = 'job'
@@ -263,180 +234,32 @@ serve(async (req) => {
     })
     console.log('Job created:', job.id)
 
-    // Generate image using the configured Gemini image model first.
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-    const primaryGeminiImageModel = geminiImageModel()
-    
-    let imageBase64: string | null = null
-    let usedModel = 'unknown'
-
-    // Helper function for fetch with timeout
-    const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs: number = 50000) => {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-      try {
-        const response = await fetch(url, { ...options, signal: controller.signal })
-        clearTimeout(timeoutId)
-        return response
-      } catch (error) {
-        clearTimeout(timeoutId)
-        throw error
-      }
-    }
-
-    // Try Gemini Nano Banana first (faster than Pro)
-    if (geminiApiKey) {
-      console.log(`Generating image with Gemini model: ${primaryGeminiImageModel}...`)
-      
-      try {
-        const geminiResponse = await fetchWithTimeout(
-          geminiGenerateContentUrl(primaryGeminiImageModel, geminiApiKey),
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{
-                  text: `Generate a high-quality professional fashion/apparel image: ${optimizedPrompt}. 
-                  Style: Professional fashion photography, studio lighting, high resolution, commercial quality.
-                  ${negativePrompt ? `Avoid: ${negativePrompt}` : ''}`
-                }]
-              }],
-              generationConfig: {
-                responseModalities: ["IMAGE", "TEXT"]
-              }
-            }),
-          },
-          30000 // 30 second timeout for Nano Banana
-        )
-
-        const geminiData = await geminiResponse.json()
-        console.log('Nano Banana response status:', geminiResponse.status)
-        
-        if (geminiResponse.ok && geminiData.candidates?.[0]?.content?.parts) {
-          // Find the image part in the response
-          for (const part of geminiData.candidates[0].content.parts) {
-            if (part.inlineData?.data) {
-              imageBase64 = part.inlineData.data
-              usedModel = primaryGeminiImageModel
-              console.log(`Image generated successfully with Gemini model: ${primaryGeminiImageModel}`)
-              break
-            }
-          }
-        }
-        
-        if (!imageBase64) {
-          console.log('Nano Banana did not return image, trying Nano Banana Pro (gemini-3-pro-image)...')
-          
-          // Try Nano Banana Pro as fallback (slower but higher quality)
-          const fallbackGeminiImageModel = 'gemini-3-pro-image'
-          const nanoBananaResponse = await fetchWithTimeout(
-            geminiGenerateContentUrl(fallbackGeminiImageModel, geminiApiKey),
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                contents: [{
-                  parts: [{
-                    text: `Generate a high-quality professional fashion/apparel image: ${optimizedPrompt}. 
-                    Style: Professional fashion photography, studio lighting, high resolution, commercial quality.
-                    ${negativePrompt ? `Avoid: ${negativePrompt}` : ''}`
-                  }]
-                }],
-                generationConfig: {
-                  responseModalities: ["IMAGE", "TEXT"]
-                }
-              }),
-            },
-            20000 // 20 second timeout for Nano Banana
-          )
-          
-          const nanoBananaData = await nanoBananaResponse.json()
-          console.log('Nano Banana Pro response status:', nanoBananaResponse.status)
-          
-          if (nanoBananaResponse.ok && nanoBananaData.candidates?.[0]?.content?.parts) {
-            for (const part of nanoBananaData.candidates[0].content.parts) {
-              if (part.inlineData?.data) {
-                imageBase64 = part.inlineData.data
-                usedModel = fallbackGeminiImageModel
-                console.log('Image generated successfully with Nano Banana Pro')
-                break
-              }
-            }
-          } else {
-            console.log('Nano Banana Pro error:', JSON.stringify(nanoBananaData))
-          }
-        }
-      } catch (e) {
-        console.error('Gemini error:', e)
-      }
-    }
-
-    // Fallback to DALL-E 3 if Gemini failed
-    if (!imageBase64 && openaiImageApiKey) {
-      console.log('Falling back to DALL-E 3...')
-      
-      let dalleSize: '1024x1024' | '1792x1024' | '1024x1792' = '1024x1024'
-      if (width > height) {
-        dalleSize = '1792x1024'
-      } else if (height > width) {
-        dalleSize = '1024x1792'
-      }
-
-      const dalleResponse = await fetchWithTimeout('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiImageApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'dall-e-3',
-          prompt: `Professional fashion photography: ${optimizedPrompt}. High quality, commercial style, clean composition. ${negativePrompt ? `Avoid: ${negativePrompt}` : ''}`,
-          n: 1,
-          size: dalleSize,
-          quality: 'standard',
-          response_format: 'b64_json'
-        }),
-      }, 50000)
-
-      const dalleData = await dalleResponse.json()
-      
-      if (!dalleResponse.ok) {
-        console.error('DALL-E API error:', JSON.stringify(dalleData))
-
-        failedStage = 'generation'
-        throw new Error(`Image generation failed: ${dalleData.error?.message || 'API error'}`)
-      }
-
-      imageBase64 = dalleData.data?.[0]?.b64_json
-      usedModel = 'dall-e-3'
-      console.log('Image generated successfully with DALL-E 3')
-    }
-
-    if (!imageBase64) {
-      failedStage = 'generation'
-      throw new Error('No image generation API available or all APIs failed')
-    }
+    failedStage = 'generation'
+    const runwayResult = await generateRunwayImage({
+      prompt: `Generate a high-quality professional fashion/apparel image: ${optimizedPrompt}. Style: Professional fashion photography, studio lighting, high resolution, commercial quality.`,
+      negativePrompt,
+      width,
+      height,
+    })
+    const imageBase64 = runwayResult.base64
+    const usedModel = runwayResult.model
+    const imageAsset = runwayImageArtifact(runwayResult)
     console.log(`Image generated with model: ${usedModel}`)
 
     // Base64 Data URLを作成（ブラウザで直接表示可能）
-    const imageDataUrl = `data:image/png;base64,${imageBase64}`
+    const imageDataUrl = imageAsset.dataUrl
 
     // Convert base64 to Uint8Array for storage
     const imageBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0))
 
-    const fileName = `${user.id}/${brandId}/${job.id}.png`
+    const fileName = `${user.id}/${brandId}/${job.id}.${imageAsset.extension}`
     storagePath = fileName
     failedStage = 'storage'
     const { error: uploadError } = await supabaseClient
       .storage
-      .from('generated-images')
-      .upload(fileName, imageBuffer, {
-        contentType: 'image/png',
+        .from('generated-images')
+        .upload(fileName, imageBuffer, {
+        contentType: imageAsset.contentType,
         upsert: false
       })
 
