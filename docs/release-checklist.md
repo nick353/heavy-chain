@@ -1,6 +1,6 @@
 # Release Checklist
 
-Status: **local proof passed; generation-context production closeout pending explicit approval**.
+Status: **generation-context production closeout passed**.
 
 Use this checklist from top to bottom. If any line says `STOP`, stop there and
 write down the blocker. Do not skip ahead.
@@ -202,8 +202,14 @@ Then validate the saved file locally:
 npm run verify:workspace-readback -- --readback output/playwright/production-workspace-generation-YYYYMMDD/workspace-db-readback.json --cleanup output/playwright/production-workspace-generation-YYYYMMDD/workspace-cleanup-readback.json --expect-release-date <date> --expect-environment production --expect-git-commit <commit>
 ```
 
-Current state: only local proof exists for `/patterns`, `/studio`, `/video`,
-and `/lab`; production deploy/readback remains pending explicit approval.
+Current state: production proof exists for `/patterns`, `/studio`, `/video`,
+and `/lab` under
+`output/playwright/production-workspace-generation-20260622-rerun3/`.
+The Web bundle and Edge Functions were deployed for commit
+`ab09ea3a935bb86fede33c213c80ced4742203a0`, live generation was exercised from
+each workspace, DB/Storage readback reports `jobs=4`, `images=15`, `usage=4`,
+`runs=4`, and `storage=15`, and cleanup reports `remainingProdSmokeUsers=0`,
+`remainingStorageRows=0`, and `remainingStorage=[]`.
 
 Current 2026-06-18 parent DB readback exists at
 `output/release-prep/final-db-readback-20260618-parent/readback.json` and
@@ -264,8 +270,10 @@ smoke, auth-provider login, or cleanup deletion.
 
 ## 7. 2026-06-22 Generation Context Production Closeout
 
-Current boundary: `workspace-source-generation-local-20260622` is `passed_local`
-only. Do not treat earlier production parity proof as proof for this slice.
+Current boundary: `workspace-source-generation-local-20260622` has production
+closeout proof under
+`output/playwright/production-workspace-generation-20260622-rerun3/`. Do not
+treat earlier production parity proof as proof for this slice.
 
 Run only after explicit approval:
 
@@ -285,8 +293,8 @@ Run only after explicit approval:
 
 ## 8. Release Decision
 
-Current decision: **generation-context production closeout is not approved or
-complete yet**.
+Current decision: **generation-context production closeout is approved and
+complete for the 2026-06-22 run**.
 
 Current applied/proven state: the brand insert migration has been applied
 remotely, updated Edge Functions have been deployed, and image visual QA is PASS

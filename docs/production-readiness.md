@@ -1,21 +1,23 @@
 # Production Readiness
 
-Status: **local proof passed; production deploy pending explicit approval for `workspace-source-generation-local-20260622`**.
+Status: **production closeout passed for `workspace-source-generation-local-20260622`**.
 
 This document is the final release gate ledger for Heavy Chain. If a check says
 `BLOCKED` or `DO NOT RUN`, stop. Do not guess, do not fill secrets into docs, and
 do not continue into production.
 
-Current 2026-06-22 boundary: the earlier production parity closeout remains valid
-for its deployed commit, but the latest generation-context slice has not been
-production deployed. Local proof passed with `deno check`, typecheck, lint, edge
-smoke, env-backed build, static Supabase verification, targeted Playwright tests,
-workspace readback fixture validation, full e2e (`31 passed`), `git diff --check`, and cleanup/no residual process
-proof. Production DB/Storage readback is intentionally pending until the approved
-Web bundle and `generate-image` / `design-gacha` / `model-matrix` deploy are
-complete.
+Current 2026-06-22 boundary: the approved generation-context slice is production
+deployed and readback-passed at commit
+`ab09ea3a935bb86fede33c213c80ced4742203a0`. The Web bundle is live at
+`https://heavy-chain.zeabur.app` with asset `assets/index.Cu7MLD8E.js`, and
+Edge Functions `generate-image`, `design-gacha`, and `model-matrix` were
+deployed to Supabase project `ghwjymozrwmcrpjqvbmo`. Live Playwright proof
+exercised `/patterns`, `/studio`, `/video`, and `/lab` through production UI
+generation, then collected DB/Storage readback and cleanup proof.
 
-Current generation-context local evidence is recorded in
+Current generation-context production evidence is recorded in
+[`docs/release-evidence-2026-06-22-workspace-generation.md`](./release-evidence-2026-06-22-workspace-generation.md).
+Supporting local evidence is recorded in
 `output/playwright/workspace-source-generation-local-20260622/verification-summary.json`.
 Earlier production release evidence remains recorded in
 [`docs/release-evidence-2026-06-18.md`](./release-evidence-2026-06-18.md)
@@ -44,9 +46,9 @@ It uses `SUPABASE_URL` plus `SUPABASE_SERVICE_ROLE_KEY` or
 `output/playwright/production-workspace-generation-YYYYMMDD/workspace-db-readback.json`.
 The `--since` timestamp is required so collection is scoped to the approved live
 run instead of the latest arbitrary production rows.
-This is for approved production source-generation closeout only. Current
-`/patterns`, `/studio`, `/video`, and `/lab` proof remains local; production
-deploy and live DB/Storage readback are pending explicit approval.
+This is for approved production source-generation closeout only. The approved
+2026-06-22 closeout has passed under
+`output/playwright/production-workspace-generation-20260622-rerun3/`.
 
 `npm run release:doctor` is the recommended first command for a safe readiness
 diagnosis. It first checks the release blocker manifest, then runs the
@@ -68,11 +70,19 @@ Heavy Chain can only be released after all of these are true:
 1. All automated gates pass with production-like environment variables loaded.
 2. Staging DB readback proves usage, cleanup, and generated image storage state.
 3. Browser smoke proof is current and captured after env injection.
-4. For `workspace-source-generation-local-20260622`, explicit approval has been
+4. For `workspace-source-generation-local-20260622`, explicit approval was
    given, the production Web bundle plus `generate-image`, `design-gacha`, and
-   `model-matrix` have been deployed, and `/patterns`, `/studio`, `/video`, and `/lab` live
-   generation have fresh DB/Storage readback and cleanup proof validated with
-   `npm run verify:workspace-readback`.
+   `model-matrix` were deployed, and `/patterns`, `/studio`, `/video`, and
+   `/lab` live generation have fresh DB/Storage readback and cleanup proof
+   validated with `npm run verify:workspace-readback`.
+
+Current 2026-06-22 source-generation production result:
+`output/playwright/production-workspace-generation-20260622-rerun3/workspace-db-readback.json`
+reports `jobs=4`, `images=15`, `usage=4`, `runs=4`, and `storage=15`.
+`output/playwright/production-workspace-generation-20260622-rerun3/workspace-cleanup-readback.json`
+reports `deletedUsers=1`, `removedStoragePaths=15`,
+`remainingProdSmokeUsers=0`, `remainingStorageRows=0`, `remainingStorage=[]`,
+and `retainedEdgeFunctionRuns=4`.
 
 Current 2026-06-18 parent observation: the environment gate now passes with
 `.env.production.local` sourced, current readback metadata verification has
