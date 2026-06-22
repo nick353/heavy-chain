@@ -117,6 +117,7 @@ async function mockSupabase(page: Page, options: {
   modelMatrixFails?: boolean;
   modelMatrixDelayMs?: number;
   modelMatrixRequests?: unknown[];
+  generateImageRequests?: unknown[];
   designGachaRequests?: unknown[];
   storageUploadFails?: boolean;
   storageRequests?: string[];
@@ -547,6 +548,15 @@ async function mockSupabase(page: Page, options: {
 
     if (pathname === '/functions/v1/generate-image') {
       const requestBody = route.request().postDataJSON();
+      options.generateImageRequests?.push(requestBody);
+      if (options.generationFails) {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'テスト用の生成失敗' }),
+        });
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -605,15 +615,6 @@ async function mockSupabase(page: Page, options: {
         status: 500,
         contentType: 'application/json',
         body: JSON.stringify({ error: 'テスト用の最適化失敗' }),
-      });
-      return;
-    }
-
-    if (options.generationFails) {
-      await route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'テスト用の生成失敗' }),
       });
       return;
     }
@@ -789,6 +790,7 @@ test.describe('workflow query prefill', () => {
       await page.goto(`/generate?workflow=${scenario.id}`);
 
       await expect(page).toHaveURL(new RegExp(`workflow=${scenario.id}`));
+      await expect(page.getByText('読み込み中...')).toBeHidden({ timeout: 15000 });
       await expect(page.getByRole('heading', { name: scenario.featureHeading })).toBeVisible();
       await expect(page.getByRole('heading', { name: scenario.workflowTitle })).toBeVisible();
       await expect(page.getByText('業務ワークフロー')).toBeVisible();
@@ -867,8 +869,10 @@ test.describe('workspace activity pages', () => {
     const restWriteRequests: RestWriteRequest[] = [];
     const restDeleteRequests: RestDeleteRequest[] = [];
     const restMutationRequests: RestMutationRequest[] = [];
+    const generateImageRequests: unknown[] = [];
     await mockSupabase(page, {
       functionRequests,
+      generateImageRequests,
       storageRequests,
       storageRemoveRequests,
       restWriteRequests,
@@ -1865,11 +1869,13 @@ test.describe('workspace activity pages', () => {
     const storageRequests: string[] = [];
     const storageRemoveRequests: string[] = [];
     const functionRequests: string[] = [];
+    const generateImageRequests: unknown[] = [];
     const restWriteRequests: RestWriteRequest[] = [];
     const restDeleteRequests: RestDeleteRequest[] = [];
     const restMutationRequests: RestMutationRequest[] = [];
     await mockSupabase(page, {
       functionRequests,
+      generateImageRequests,
       storageRequests,
       storageRemoveRequests,
       restWriteRequests,
@@ -1956,11 +1962,13 @@ test.describe('workspace activity pages', () => {
     const storageRequests: string[] = [];
     const storageRemoveRequests: string[] = [];
     const functionRequests: string[] = [];
+    const generateImageRequests: unknown[] = [];
     const restWriteRequests: RestWriteRequest[] = [];
     const restDeleteRequests: RestDeleteRequest[] = [];
     const restMutationRequests: RestMutationRequest[] = [];
     await mockSupabase(page, {
       functionRequests,
+      generateImageRequests,
       storageRequests,
       storageRemoveRequests,
       restWriteRequests,
@@ -2021,6 +2029,23 @@ test.describe('workspace activity pages', () => {
       await page.getByRole('button', { name: '生成', exact: true }).click();
       await expect(page.getByText('Generated').first()).toBeVisible();
       await expect.poll(() => functionRequests.length).toBe(index + 1);
+      await expect.poll(() => generateImageRequests.length).toBe(index + 1);
+      expect(generateImageRequests[index]).toMatchObject({
+        featureType: 'campaign-image',
+        sourceReadback: {
+          sourceWorkspace: scenario.sourceWorkspace,
+          workflowVersion: scenario.workflowVersion,
+          sourceLabel: scenario.sourceLabel,
+          sourceResumePath: scenario.sourceResumePath,
+          sourceMode: 'local-workflow-intake',
+        },
+        generationIntent: expect.objectContaining({
+          feature: 'campaign-image',
+          sourceWorkspace: scenario.sourceWorkspace,
+          sourceResumePath: scenario.sourceResumePath,
+          href: expect.stringContaining(`sourceWorkspace=${scenario.sourceWorkspace}`),
+        }),
+      });
       await expect.poll(async () => {
         const metadata = await readLatestLocalArtifactMetadata(page);
         return metadata?.sourceWorkspace;
@@ -2216,6 +2241,102 @@ test.describe('workspace activity pages', () => {
     await remoteModelJob.getByRole('button').click();
     await expect(remoteModelJob.getByText('Street LOOK 30s')).toBeVisible();
     await expect(remoteModelJob.getByText('regular / 30s / medium / medium')).toBeVisible();
+
+    expect(functionRequests).toEqual(['/functions/v1/model-matrix']);
+    expect(storageRequests).toEqual([]);
+    expect(storageRemoveRequests).toEqual([]);
+    expect(restWriteRequests).toEqual([]);
+    expect(restDeleteRequests).toEqual([]);
+    expect(restMutationRequests).toEqual([]);
+  });
+
+  test('studio source context invokes model-matrix and saves generated provenance', async ({ page }) => {
+    const storageRequests: string[] = [];
+    const storageRemoveRequests: string[] = [];
+    const functionRequests: string[] = [];
+    const restWriteRequests: RestWriteRequest[] = [];
+    const restDeleteRequests: RestDeleteRequest[] = [];
+    const restMutationRequests: RestMutationRequest[] = [];
+    const modelMatrixRequests: unknown[] = [];
+    await mockSupabase(page, {
+      functionRequests,
+      modelMatrixRequests,
+      storageRequests,
+      storageRemoveRequests,
+      restWriteRequests,
+      restDeleteRequests,
+      restMutationRequests,
+    });
+    await completeOnboardingForMockUser(page);
+
+    await runLocalWorkspaceHandoff(
+      page,
+      '/studio',
+      'ライン企画',
+      'Fashion Studio',
+      async () => {
+        await page.getByLabel('商品ライン').fill('Smoke trench line');
+        await page.getByLabel('小物').fill('Smoke prop set');
+        await page.getByLabel('参照画像').fill('smoke-reference.png');
+      },
+      async () => {
+        await page.getByRole('button', { name: /Street 30s/ }).click();
+        await page.getByRole('button', { name: /3\/4 Walk/ }).click();
+        await page.getByRole('button', { name: /Concrete Gallery/ }).click();
+        await expect(page.getByRole('button', { name: /Street 30s/ })).toHaveAttribute('aria-pressed', 'true');
+      }
+    );
+
+    await expect(page).toHaveURL(/\/canvas\/(?!new)[a-z0-9]+/);
+    const handoffArtifact = await readLatestLocalArtifact(page);
+    const generationIntent = handoffArtifact.metadata.generationIntent as { href: string; prompt: string };
+    expect(generationIntent.href).toContain('feature=model-matrix');
+    expect(generationIntent.href).toContain('sourceWorkspace=studio');
+
+    await page.goto(generationIntent.href);
+    await expect(page.getByText('ワークスペース再開')).toBeVisible();
+    await expect(page.getByText('Fashion Studio から受け取った内容で生成します')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Fashion Studioへ戻る' })).toHaveAttribute('href', '/studio');
+    await expect(page.getByPlaceholder('例: ネイビーのスリムフィットジーンズ')).toHaveValue(generationIntent.prompt);
+
+    await page.getByRole('button', { name: '生成', exact: true }).click();
+    await expect(page.getByText('スリム × 20代')).toBeVisible();
+    await expect(page.getByText('標準 × 30代')).toBeVisible();
+    await expect.poll(() => modelMatrixRequests.length).toBe(1);
+    expect(modelMatrixRequests[0]).toMatchObject({
+      productDescription: generationIntent.prompt,
+      sourceReadback: {
+        sourceWorkspace: 'studio',
+        workflowVersion: 'studio-selection-local-v1',
+        sourceLabel: 'Fashion Studio',
+        sourceResumePath: '/studio',
+        sourceMode: 'local-workflow-intake',
+      },
+    });
+
+    await expect.poll(async () => {
+      const metadataList = await readLocalArtifactMetadataList(page);
+      return metadataList.filter((metadata: any) => metadata?.sourceWorkspace === 'studio').length;
+    }).toBe(2);
+
+    const generatedMetadata = (await readLocalArtifactMetadataList(page))
+      .filter((metadata: any) => metadata?.sourceWorkspace === 'studio');
+    expect(generatedMetadata).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        sourceWorkspace: 'studio',
+        workflowVersion: 'studio-selection-local-v1',
+        sourceLabel: 'Fashion Studio',
+        sourceResumePath: '/studio',
+        sourceMode: 'local-workflow-intake',
+        generationIntent: expect.objectContaining({
+          feature: 'model-matrix',
+          prompt: generationIntent.prompt,
+          sourceWorkspace: 'studio',
+          workflowVersion: 'studio-selection-local-v1',
+          href: expect.stringContaining('sourceWorkspace=studio'),
+        }),
+      }),
+    ]));
 
     expect(functionRequests).toEqual(['/functions/v1/model-matrix']);
     expect(storageRequests).toEqual([]);

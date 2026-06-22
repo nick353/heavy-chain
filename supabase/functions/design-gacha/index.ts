@@ -21,6 +21,165 @@ const DESIGN_DIRECTIONS = [
   { id: 'cyber', name: 'サイバー', prompt: 'cyberpunk, futuristic, neon lights, tech-inspired, digital glitch effects' },
 ];
 
+const SOURCE_CONFIG = {
+  studio: { label: 'Fashion Studio', resumePath: '/studio', versions: ['studio-selection-local-v1'] },
+  models: { label: 'モデルライブラリ', resumePath: '/models', versions: ['model-library-local-v1'] },
+  patterns: { label: '柄・グラフィック', resumePath: '/patterns', versions: ['pattern-preview-local-v1'] },
+  video: { label: 'Video Workstation', resumePath: '/video', versions: ['video-storyboard-local-v1'] },
+  lab: { label: 'Lab', resumePath: '/lab', versions: ['lab-evaluation-local-v1'] },
+} as const;
+
+type SourceWorkspace = keyof typeof SOURCE_CONFIG;
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+};
+
+const readString = (record: Record<string, unknown>, key: string) => {
+  const value = record[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+};
+
+const sanitizeSourceReadback = (value: unknown) => {
+  if (!isRecord(value)) return null;
+
+  const sourceWorkspace = readString(value, 'sourceWorkspace');
+  if (!sourceWorkspace || !(sourceWorkspace in SOURCE_CONFIG)) return null;
+
+  const config = SOURCE_CONFIG[sourceWorkspace as SourceWorkspace];
+  const workflowVersion = readString(value, 'workflowVersion');
+  const sourceLabel = readString(value, 'sourceLabel');
+  const sourceResumePath = readString(value, 'sourceResumePath');
+  const sourceMode = readString(value, 'sourceMode');
+
+  if (!workflowVersion || !(config.versions as readonly string[]).includes(workflowVersion)) return null;
+  if (sourceLabel !== config.label) return null;
+  if (sourceResumePath !== config.resumePath) return null;
+  if (sourceMode !== 'local-workflow-intake') return null;
+
+  return {
+    sourceWorkspace: sourceWorkspace as SourceWorkspace,
+    workflowVersion,
+    sourceLabel,
+    sourceResumePath,
+    sourceMode: 'local-workflow-intake' as const,
+  };
+};
+
+const sanitizePatternContext = (value: unknown) => {
+  if (!isRecord(value)) return null;
+  const selectedPatternPreview = isRecord(value.selectedPatternPreview) ? value.selectedPatternPreview : null;
+  if (!selectedPatternPreview) return null;
+
+  const preview = {
+    id: readString(selectedPatternPreview, 'id'),
+    label: readString(selectedPatternPreview, 'label'),
+    mode: readString(selectedPatternPreview, 'mode'),
+    repeatSignature: readString(selectedPatternPreview, 'repeatSignature'),
+    vectorSignature: readString(selectedPatternPreview, 'vectorSignature'),
+    paletteSignature: readString(selectedPatternPreview, 'paletteSignature'),
+  };
+  const motifPrompt = readString(value, 'motifPrompt');
+  const repeatStyle = readString(value, 'repeatStyle');
+  const garmentTarget = readString(value, 'garmentTarget');
+  const paletteNotes = readString(value, 'paletteNotes');
+  const vectorIntent = readString(value, 'vectorIntent');
+
+  if (
+    !preview.id ||
+    !preview.label ||
+    !preview.mode ||
+    !preview.repeatSignature ||
+    !preview.vectorSignature ||
+    !preview.paletteSignature ||
+    !motifPrompt ||
+    !repeatStyle ||
+    !garmentTarget ||
+    !paletteNotes ||
+    !vectorIntent
+  ) {
+    return null;
+  }
+
+  return {
+    selectedPatternPreview: preview as Record<string, string>,
+    motifPrompt,
+    repeatStyle,
+    garmentTarget,
+    paletteNotes,
+    vectorIntent,
+    referenceAssets: typeof value.referenceAssets === 'string' ? value.referenceAssets : '',
+  };
+};
+
+const buildGenerationIntentHref = ({
+  prompt,
+  sourceWorkspace,
+  workflowVersion,
+  sourceLabel,
+  sourceResumePath,
+  sourceMode,
+  patternContext,
+}: {
+  prompt: string;
+  sourceWorkspace: SourceWorkspace;
+  workflowVersion: string;
+  sourceLabel: string;
+  sourceResumePath: string;
+  sourceMode: 'local-workflow-intake';
+  patternContext: ReturnType<typeof sanitizePatternContext>;
+}) => {
+  const params = new URLSearchParams({
+    feature: 'design-gacha',
+    prompt,
+    sourceWorkspace,
+    workflowVersion,
+    sourceLabel,
+    sourceResumePath,
+    sourceMode,
+  });
+  if (patternContext) {
+    params.set('patternPreviewId', patternContext.selectedPatternPreview.id);
+    params.set('patternPreviewLabel', patternContext.selectedPatternPreview.label);
+    params.set('patternPreviewMode', patternContext.selectedPatternPreview.mode);
+    params.set('repeatSignature', patternContext.selectedPatternPreview.repeatSignature);
+    params.set('vectorSignature', patternContext.selectedPatternPreview.vectorSignature);
+    params.set('paletteSignature', patternContext.selectedPatternPreview.paletteSignature);
+    params.set('motifPrompt', patternContext.motifPrompt);
+    params.set('repeatStyle', patternContext.repeatStyle);
+    params.set('garmentTarget', patternContext.garmentTarget);
+    params.set('paletteNotes', patternContext.paletteNotes);
+    params.set('vectorIntent', patternContext.vectorIntent);
+    params.set('referenceAssets', patternContext.referenceAssets);
+  }
+  return `/generate?${params.toString()}`;
+};
+
+const buildSourceMetadata = (sourceReadback: unknown, patternContext: unknown, prompt: string) => {
+  const source = sanitizeSourceReadback(sourceReadback);
+  if (!source) return null;
+  const sanitizedPatternContext = source.sourceWorkspace === 'patterns'
+    ? sanitizePatternContext(patternContext)
+    : null;
+
+  return {
+    ...source,
+    ...(sanitizedPatternContext ?? {}),
+    generationIntent: {
+      feature: 'design-gacha',
+      prompt,
+      href: buildGenerationIntentHref({
+        prompt,
+        ...source,
+        patternContext: sanitizedPatternContext,
+      }),
+      label: 'デザインガチャで生成',
+      ...source,
+      ...(sanitizedPatternContext ?? {}),
+    },
+  };
+};
+
 // 画像をBase64に変換
 async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; mimeType: string } | null> {
   try {
@@ -182,6 +341,12 @@ serve(async (req) => {
   let observedBrandId: string | null = null;
   let observedUserId: string | null = null;
   let telemetryClient: any = null;
+  let persistenceStatus: 'not_started' | 'processing' | 'completed' | 'failed' = 'not_started';
+  let failedStage: string | null = null;
+  let cleanupStatus: 'none' | 'attempted' | 'failed' = 'none';
+  let jobId: string | null = null;
+  const uploadedStoragePaths: string[] = [];
+  const insertedImageIds: string[] = [];
   const functionName = 'design-gacha';
   const requestId = requestIdFrom(req);
   const startedAt = Date.now();
@@ -214,13 +379,17 @@ serve(async (req) => {
       referenceImage,
       brandId, 
       directions = 4,
-      fixedElements = []
+      fixedElements = [],
+      randomizedElements = [],
+      sourceReadback,
+      patternContext,
     } = body;
 
     console.log('📥 Request:', { brief: !!brief, imageUrl: !!imageUrl, referenceImage: !!referenceImage, brandId, fixedElements });
 
     // imageUrlまたはreferenceImageを使用
     const productImageUrl = imageUrl || referenceImage;
+    let productDescription = typeof brief === 'string' ? brief : '';
 
     if (!brief && !productImageUrl) {
       throw new Error('ブリーフまたは商品画像を入力してください');
@@ -250,9 +419,39 @@ serve(async (req) => {
       requestId,
     });
 
+    const requestSourceMetadata = buildSourceMetadata(sourceReadback, patternContext, productDescription);
+    failedStage = 'job';
+    const { data: job, error: jobError } = await supabaseService
+      .from('generation_jobs')
+      .insert({
+        brand_id: brandId,
+        user_id: user.id,
+        feature_type: 'design-gacha',
+          input_params: {
+            brief: brief ?? null,
+            imageUrl: productImageUrl ? '[provided]' : null,
+            directions,
+            fixedElements,
+            randomizedElements,
+            requestId,
+            ...(requestSourceMetadata ?? {}),
+          },
+        optimized_prompt: productDescription || brief || null,
+        status: 'processing',
+        error_message: null,
+      })
+      .select('id')
+      .single();
+
+    if (jobError || !job?.id) {
+      throw jobError ?? new Error('Failed to create generation job');
+    }
+    jobId = job.id;
+    persistenceStatus = 'processing';
 
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     if (!GEMINI_API_KEY) {
+      failedStage = 'configuration';
       throw new Error('Gemini API key not configured');
     }
     const analysisModel = geminiAnalysisModel();
@@ -261,7 +460,6 @@ serve(async (req) => {
     // 画像がある場合は分析
     let originalImageBase64: string | null = null;
     let originalMimeType = 'image/jpeg';
-    let productDescription = brief || '';
 
     if (productImageUrl) {
       const imageData = await fetchImageAsBase64(productImageUrl);
@@ -275,6 +473,7 @@ serve(async (req) => {
         }
       }
     }
+    const finalSourceMetadata = buildSourceMetadata(sourceReadback, patternContext, productDescription);
 
     // 商品固定かどうか（fixedElementsに'product'が含まれるか、画像がある場合）
     const isProductFixed = fixedElements.includes('product') && originalImageBase64;
@@ -313,29 +512,25 @@ serve(async (req) => {
 
       if (imageBase64) {
         const imageDataUrl = `data:image/png;base64,${imageBase64}`;
-        const fileName = `${user.id}/${brandId}/${Date.now()}_gacha_${direction.id}.png`;
-        let storageUrl = '';
+        const fileName = `${user.id}/${brandId}/${jobId}_gacha_${direction.id}_${Date.now()}.png`;
+        const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
 
-        try {
-          const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
-            const { error: uploadError } = await supabaseService.storage
-            .from('generated-images')
-            .upload(fileName, imgBuffer, { contentType: 'image/png' });
+        failedStage = 'storage';
+        const { error: uploadError } = await supabaseService.storage
+          .from('generated-images')
+          .upload(fileName, imgBuffer, { contentType: 'image/png', upsert: false });
 
-          if (!uploadError) {
-            const { data: urlData } = await supabaseService.storage.from('generated-images').createSignedUrl(fileName, 60 * 60 * 24);
-            storageUrl = urlData?.signedUrl || '';
-            console.log('✅ Image uploaded to storage:', storageUrl);
-          } else {
-            console.log('⚠️ Storage upload error:', uploadError.message);
-          }
-        } catch (storageError) {
-          console.log('⚠️ Storage warning:', clientError(storageError));
+        if (uploadError) {
+          throw uploadError;
         }
+        uploadedStoragePaths.push(fileName);
+        console.log('✅ Image uploaded to storage:', fileName);
 
-        // Always save record with image_url as fallback
-        try {
-          await supabaseClient.from('generated_images').insert({
+        failedStage = 'image';
+        const { data: image, error: imageInsertError } = await supabaseService
+          .from('generated_images')
+          .insert({
+            job_id: jobId,
             brand_id: brandId,
             user_id: user.id,
             storage_path: fileName,
@@ -344,18 +539,30 @@ serve(async (req) => {
             feature_type: 'design-gacha',
             model_used: imageModel,
             generation_params: { direction: direction.id, brief: productDescription, isProductFixed },
-          });
-          console.log('✅ Image record saved to database');
-        } catch (dbError) {
-          console.log('⚠️ Database warning:', clientError(dbError));
+            metadata: {
+              remoteSaveStatus: 'succeeded',
+              source: 'design-gacha',
+              requestId,
+              ...(finalSourceMetadata ?? {}),
+            },
+          })
+          .select('id')
+          .single();
+
+        if (imageInsertError || !image?.id) {
+          throw imageInsertError ?? new Error('Generated image insert did not return an id');
         }
+        insertedImageIds.push(image.id);
+        console.log('✅ Image record saved to database');
 
         results.push({
           direction: direction.id,
           directionName: direction.name,
           imageUrl: imageDataUrl,
           storagePath: fileName,
+          imageId: image.id,
           prompt: productDescription,
+          persistenceStatus: 'completed',
         });
         
         console.log(`✅ ${direction.name} generated`);
@@ -363,8 +570,26 @@ serve(async (req) => {
     }
 
     if (results.length === 0) {
+      failedStage = 'generation';
       throw new Error('画像の生成に失敗しました。しばらく待ってからもう一度お試しください。');
     }
+
+    failedStage = 'job_complete';
+    const { error: completeJobError } = await supabaseService
+      .from('generation_jobs')
+      .update({
+        status: 'completed',
+        error_message: null,
+        optimized_prompt: productDescription,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
+
+    if (completeJobError) {
+      throw completeJobError;
+    }
+    persistenceStatus = 'completed';
+    failedStage = null;
 
     console.log(`🎉 Successfully generated ${results.length} variations`);
     if (telemetryClient) {
@@ -385,13 +610,65 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        jobId,
         brief: productDescription,
         variations: results,
+        imageId: results[0]?.imageId ?? null,
+        storagePath: results[0]?.storagePath ?? null,
+        persistenceStatus,
+        cleanupStatus,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
+    const cleanupErrors: string[] = [];
+    persistenceStatus = jobId ? 'failed' : persistenceStatus;
+    if (!failedStage) failedStage = 'unknown';
+
+    if (telemetryClient && jobId) {
+      cleanupStatus = 'attempted';
+      if (insertedImageIds.length > 0) {
+        try {
+          const { error: deleteImagesError } = await telemetryClient
+            .from('generated_images')
+            .delete()
+            .in('id', insertedImageIds);
+          if (deleteImagesError) throw deleteImagesError;
+        } catch (cleanupError) {
+          cleanupErrors.push(clientError(cleanupError));
+        }
+      }
+
+      if (uploadedStoragePaths.length > 0) {
+        try {
+          const { error: removeStorageError } = await telemetryClient
+            .storage
+            .from('generated-images')
+            .remove(uploadedStoragePaths);
+          if (removeStorageError) throw removeStorageError;
+        } catch (cleanupError) {
+          cleanupErrors.push(clientError(cleanupError));
+        }
+      }
+
+      try {
+        const { error: failJobError } = await telemetryClient
+          .from('generation_jobs')
+          .update({
+            status: 'failed',
+            error_message: sanitizeError(error),
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', jobId);
+        if (failJobError) throw failJobError;
+      } catch (cleanupError) {
+        cleanupErrors.push(clientError(cleanupError));
+      }
+
+      cleanupStatus = cleanupErrors.length ? 'failed' : 'attempted';
+    }
+
     if (telemetryClient) {
       await completeBrandUsage(telemetryClient, usageReservation, 'failed', { error: sanitizeError(error) });
       await recordEdgeFunctionRun(telemetryClient, {
@@ -408,7 +685,18 @@ serve(async (req) => {
 
     console.error('❌ Error:', error);
     return new Response(
-      JSON.stringify({ error: clientError(error) }),
+      JSON.stringify({
+        success: false,
+        error: clientError(error),
+        jobId,
+        variations: [],
+        imageId: null,
+        storagePath: null,
+        persistenceStatus,
+        failedStage,
+        cleanupStatus,
+        cleanupErrors,
+      }),
       { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

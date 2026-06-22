@@ -97,6 +97,51 @@ const buildModelRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
   return rows;
 };
 
+const buildStudioRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
+  const rows: SourceContextSummaryRow[] = [];
+  const selectedStudioSetup = readRecordFromMetadataOrIntent(metadata, intent, 'selectedStudioSetup');
+  const model = readRecordFromMetadataOrIntent(selectedStudioSetup ?? {}, null, 'model');
+  const pose = readRecordFromMetadataOrIntent(selectedStudioSetup ?? {}, null, 'pose');
+  const background = readRecordFromMetadataOrIntent(selectedStudioSetup ?? {}, null, 'background');
+
+  pushIfValue(rows, 'モデル', readNonEmptyString(model, 'value') ?? readNonEmptyString(model, 'label'));
+  pushIfValue(rows, 'ポーズ', readNonEmptyString(pose, 'value') ?? readNonEmptyString(pose, 'label'));
+  pushIfValue(rows, '背景', readNonEmptyString(background, 'value') ?? readNonEmptyString(background, 'label'));
+  pushIfValue(rows, '商品ライン', readFromMetadataOrIntent(metadata, intent, 'productLine'));
+  pushIfValue(rows, '小物', readFromMetadataOrIntent(metadata, intent, 'props'));
+
+  return rows;
+};
+
+const buildVideoRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
+  const rows: SourceContextSummaryRow[] = [];
+  const selectedVideoStoryboard = readRecordFromMetadataOrIntent(metadata, intent, 'selectedVideoStoryboard');
+
+  pushIfValue(rows, 'ストーリーボード', readNonEmptyString(selectedVideoStoryboard, 'label'));
+  pushIfValue(rows, '尺', readNonEmptyString(selectedVideoStoryboard, 'duration'));
+  pushIfValue(rows, '比率', readNonEmptyString(selectedVideoStoryboard, 'format') ?? readFromMetadataOrIntent(metadata, intent, 'aspectRatio'));
+  pushIfValue(rows, 'ショット', readNonEmptyString(selectedVideoStoryboard, 'shotOrder'));
+  pushIfValue(rows, 'モーション', readNonEmptyString(selectedVideoStoryboard, 'motion'));
+  pushIfValue(rows, 'CTA', readNonEmptyString(selectedVideoStoryboard, 'cta'));
+
+  return rows;
+};
+
+const buildLabRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
+  const rows: SourceContextSummaryRow[] = [];
+  const selectedLabExperiment = readRecordFromMetadataOrIntent(metadata, intent, 'selectedLabExperiment');
+  const score = selectedLabExperiment?.deterministicScore;
+
+  pushIfValue(rows, '実験', readNonEmptyString(selectedLabExperiment, 'label'));
+  pushIfValue(rows, '仮説', readNonEmptyString(selectedLabExperiment, 'hypothesis'));
+  pushIfValue(rows, '評価軸', readNonEmptyString(selectedLabExperiment, 'evaluationAxis'));
+  pushIfValue(rows, '採用候補', readNonEmptyString(selectedLabExperiment, 'candidate'));
+  pushIfValue(rows, '判定', readNonEmptyString(selectedLabExperiment, 'decision'));
+  if (typeof score === 'number') rows.push({ label: 'スコア', value: String(score) });
+
+  return rows;
+};
+
 export const buildSourceContextSummaryRows = (metadata: Json | null | undefined): SourceContextSummaryRow[] => {
   if (!isRecord(metadata)) return [];
   const intent = getIntent(metadata);
@@ -104,6 +149,9 @@ export const buildSourceContextSummaryRows = (metadata: Json | null | undefined)
 
   if (sourceWorkspace === 'patterns') return buildPatternRows(metadata, intent);
   if (sourceWorkspace === 'models') return buildModelRows(metadata, intent);
+  if (sourceWorkspace === 'studio') return buildStudioRows(metadata, intent);
+  if (sourceWorkspace === 'video') return buildVideoRows(metadata, intent);
+  if (sourceWorkspace === 'lab') return buildLabRows(metadata, intent);
 
   return [];
 };

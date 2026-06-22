@@ -151,6 +151,8 @@ const getJobPrompt = (job: GenerationJob) => {
 };
 
 const buildResumeHref = (job: GenerationJob) => {
+  const generationHref = getGenerationHref(job.input_params);
+  if (generationHref) return generationHref;
   const params = new URLSearchParams({ resumeJob: job.id });
   const prompt = getJobPrompt(job);
   if (job.feature_type) params.set('feature', job.feature_type);
@@ -190,7 +192,18 @@ const getGenerationHref = (metadata: Json | null | undefined) => {
 const getMetadataString = (metadata: Json | null | undefined, key: string) => {
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return undefined;
   const value = metadata[key];
-  return typeof value === 'string' && value.trim() ? value : undefined;
+  if (typeof value === 'string' && value.trim()) return value;
+  const generationIntent = metadata.generationIntent;
+  if (generationIntent && typeof generationIntent === 'object' && !Array.isArray(generationIntent)) {
+    const intentValue = generationIntent[key];
+    if (typeof intentValue === 'string' && intentValue.trim()) return intentValue;
+  }
+  const sourceReadback = metadata.sourceReadback;
+  if (sourceReadback && typeof sourceReadback === 'object' && !Array.isArray(sourceReadback)) {
+    const sourceValue = sourceReadback[key];
+    if (typeof sourceValue === 'string' && sourceValue.trim()) return sourceValue;
+  }
+  return undefined;
 };
 
 const mapOutput = (image: GeneratedImage): RecentOutput => ({

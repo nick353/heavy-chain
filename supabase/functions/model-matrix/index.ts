@@ -465,6 +465,7 @@ serve(async (req) => {
           bodyTypes,
           ageGroups,
           gender,
+          requestId,
           ...(skinTone ? { skinTone } : {}),
           ...(hairStyle ? { hairStyle } : {}),
           ...(requestSourceMetadata ?? {}),
@@ -594,6 +595,7 @@ serve(async (req) => {
               metadata: {
                 remoteSaveStatus: 'succeeded',
                 source: 'model-matrix',
+                requestId,
                 ...(finalSourceMetadata ?? {}),
               },
             })

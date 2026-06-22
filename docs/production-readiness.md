@@ -1,22 +1,52 @@
 # Production Readiness
 
-Status: **accepted-risk; release doctor passed on current HEAD**.
+Status: **local proof passed; production deploy pending explicit approval for `workspace-source-generation-local-20260622`**.
 
 This document is the final release gate ledger for Heavy Chain. If a check says
 `BLOCKED` or `DO NOT RUN`, stop. Do not guess, do not fill secrets into docs, and
 do not continue into production.
 
-Current evidence is recorded in
-[`docs/release-evidence-2026-06-18.md`](./release-evidence-2026-06-18.md).
+Current 2026-06-22 boundary: the earlier production parity closeout remains valid
+for its deployed commit, but the latest generation-context slice has not been
+production deployed. Local proof passed with `deno check`, typecheck, lint, edge
+smoke, env-backed build, static Supabase verification, targeted Playwright tests,
+workspace readback fixture validation, full e2e (`31 passed`), `git diff --check`, and cleanup/no residual process
+proof. Production DB/Storage readback is intentionally pending until the approved
+Web bundle and `generate-image` / `design-gacha` / `model-matrix` deploy are
+complete.
+
+Current generation-context local evidence is recorded in
+`output/playwright/workspace-source-generation-local-20260622/verification-summary.json`.
+Earlier production release evidence remains recorded in
+[`docs/release-evidence-2026-06-18.md`](./release-evidence-2026-06-18.md)
+and related 2026-06-20/2026-06-22 production parity artifacts, but those do not
+prove the latest generation-context slice.
 
 Safe local validators now exist for proof files:
 
 ```bash
 RELEASE_BROWSER_USE_PROOF_DIR=<current-browser-use-proof-dir> npm run release:doctor
 npm run verify:readback
+npm run verify:workspace-readback -- --readback output/playwright/production-workspace-generation-YYYYMMDD/workspace-db-readback.json --cleanup output/playwright/production-workspace-generation-YYYYMMDD/workspace-cleanup-readback.json
 npm run verify:browser-use
 npm run supabase:verify:static
 ```
+
+The workspace generation closeout collector is intentionally post-approval only:
+
+```bash
+npm run workspace:collect-readback -- --since <iso-timestamp> --expect-release-date <date> --expect-environment production --expect-git-commit <commit>
+```
+
+It uses `SUPABASE_URL` plus `SUPABASE_SERVICE_ROLE_KEY` or
+`VITE_SUPABASE_URL` plus `SERVICE_ROLE_KEY`, performs only Supabase
+`select` and `generated-images` `createSignedUrl` readback, and writes
+`output/playwright/production-workspace-generation-YYYYMMDD/workspace-db-readback.json`.
+The `--since` timestamp is required so collection is scoped to the approved live
+run instead of the latest arbitrary production rows.
+This is for approved production source-generation closeout only. Current
+`/patterns`, `/studio`, `/video`, and `/lab` proof remains local; production
+deploy and live DB/Storage readback are pending explicit approval.
 
 `npm run release:doctor` is the recommended first command for a safe readiness
 diagnosis. It first checks the release blocker manifest, then runs the
@@ -38,6 +68,11 @@ Heavy Chain can only be released after all of these are true:
 1. All automated gates pass with production-like environment variables loaded.
 2. Staging DB readback proves usage, cleanup, and generated image storage state.
 3. Browser smoke proof is current and captured after env injection.
+4. For `workspace-source-generation-local-20260622`, explicit approval has been
+   given, the production Web bundle plus `generate-image`, `design-gacha`, and
+   `model-matrix` have been deployed, and `/patterns`, `/studio`, `/video`, and `/lab` live
+   generation have fresh DB/Storage readback and cleanup proof validated with
+   `npm run verify:workspace-readback`.
 
 Current 2026-06-18 parent observation: the environment gate now passes with
 `.env.production.local` sourced, current readback metadata verification has
@@ -185,6 +220,8 @@ Stop immediately before any action that asks for or performs:
 - sending, submitting, publishing, deleting, authentication, payment, or personal
   information entry
 - production traffic changes without current staging proof
+- new production deploy, Supabase Edge Function deploy, or production DB/Storage
+  mutation without explicit approval and fresh proof
 - database deletion of usage, audit, edge run, cleanup, or generated image proof
 
 If one of those appears, record the blocker and ask a human owner to continue.

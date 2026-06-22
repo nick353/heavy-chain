@@ -193,6 +193,9 @@ interface GeneratedResult {
   imageUrl: string;
   prompt: string;
   label?: string;
+  jobId?: string;
+  imageId?: string;
+  storagePath?: string;
 }
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
@@ -677,6 +680,24 @@ export function GeneratePage() {
         referenceType: referenceImage?.referenceType,
         textOverlay,
       };
+      const buildRemoteGenerationContext = (feature: Feature | null, intentPrompt: string, ratio: string) => {
+        if (!feature) return {};
+        const baseContext = { featureType: feature.id };
+        if (!sourceReadback) return baseContext;
+        const generationIntent: GenerationIntent = {
+          feature: feature.id,
+          prompt: intentPrompt,
+          href: buildGenerationIntentHref(feature.id, intentPrompt, ratio, sourceReadback),
+          label: `${feature.name}で生成`,
+          aspectRatio: ratio,
+          ...sourceReadback,
+        };
+        return {
+          ...baseContext,
+          sourceReadback,
+          generationIntent,
+        };
+      };
       
       debugLog('Base generation body prepared', {
         hasReferenceImage: !!processedImageUrl,
@@ -821,10 +842,13 @@ export function GeneratePage() {
           }));
           if (data?.variations) {
             replaceGeneratedImages(data.variations.map((v: any) => ({
-              id: v.storagePath,
+              id: v.imageId || v.storagePath,
               imageUrl: v.imageUrl,
               prompt: v.prompt,
-              label: v.directionName
+              label: v.directionName,
+              jobId: data.jobId,
+              imageId: v.imageId,
+              storagePath: v.storagePath,
             })));
           }
           break;
@@ -1004,6 +1028,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('generate-image', {
             body: {
               ...baseBody,
+              ...buildRemoteGenerationContext(selectedFeature, campaignPrompt, selectedRatio),
               prompt: campaignPrompt,
               negativePrompt,
               width: ratio.width,
@@ -1021,7 +1046,13 @@ export function GeneratePage() {
             }
           }));
           if (data?.images) {
-            prependGeneratedImages(data.images);
+            prependGeneratedImages(data.images.map((image: any) => ({
+              ...image,
+              id: image.imageId || image.id || image.storagePath,
+              jobId: image.jobId || data.jobId,
+              imageId: image.imageId || data.imageId,
+              storagePath: image.storagePath || data.storagePath,
+            })));
           }
           break;
         }
@@ -1043,6 +1074,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('generate-image', {
             body: {
               ...baseBody,
+              ...buildRemoteGenerationContext(selectedFeature, fullPrompt, selectedRatio),
               prompt: fullPrompt,
               negativePrompt,
               width: ratio.width,
@@ -1051,7 +1083,13 @@ export function GeneratePage() {
             }
           }));
           if (data?.images) {
-            prependGeneratedImages(data.images);
+            prependGeneratedImages(data.images.map((image: any) => ({
+              ...image,
+              id: image.imageId || image.id || image.storagePath,
+              jobId: image.jobId || data.jobId,
+              imageId: image.imageId || data.imageId,
+              storagePath: image.storagePath || data.storagePath,
+            })));
           }
       }
 
@@ -1110,6 +1148,9 @@ export function GeneratePage() {
                 ...(generatedPatternContext ?? {}),
                 generatedResultId: image.id,
                 generatedResultLabel: image.label,
+                ...(image.jobId ? { jobId: image.jobId } : {}),
+                ...(image.imageId ? { imageId: image.imageId } : {}),
+                ...(image.storagePath ? { storagePath: image.storagePath } : {}),
                 generationIndex: index,
               },
             });

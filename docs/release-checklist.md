@@ -1,6 +1,6 @@
 # Release Checklist
 
-Status: **accepted-risk; release doctor passed on current HEAD**.
+Status: **local proof passed; generation-context production closeout pending explicit approval**.
 
 Use this checklist from top to bottom. If any line says `STOP`, stop there and
 write down the blocker. Do not skip ahead.
@@ -88,6 +88,7 @@ New safe validators:
 
 ```bash
 npm run verify:readback
+npm run verify:workspace-readback -- --readback output/playwright/production-workspace-generation-YYYYMMDD/workspace-db-readback.json --cleanup output/playwright/production-workspace-generation-YYYYMMDD/workspace-cleanup-readback.json
 npm run verify:browser-use # historical supporting Browser Use proof by default
 npm run supabase:verify:static
 ```
@@ -102,6 +103,10 @@ instead of the default historical proof path, and include explicit metadata
 expectations when validating current proof.
 `npm run supabase:verify:static` is only the Supabase project static guard;
 `npm run verify:readback` is the separate release evidence validator.
+`npm run verify:workspace-readback` is the local validator for approved
+production source-generation closeout evidence. It does not connect to
+production; it validates saved JSON for `/patterns`, `/studio`, `/video`, and
+`/lab` jobs/images/usage/runs/storage plus required cleanup proof.
 
 Use this only when the local Supabase stack is intentionally running:
 
@@ -183,6 +188,23 @@ Run read-only DB readback after staging is deployed. Save the output and confirm
 - generated image rows use durable storage state and keep canonical `image_url`
   null, missing, or empty
 
+For the latest source-generation closeout, do not run the collector until the
+production Web/Edge deploy and live generation are explicitly approved. After
+approval, collect read-only evidence with:
+
+```bash
+npm run workspace:collect-readback -- --since <iso-timestamp> --expect-release-date <date> --expect-environment production --expect-git-commit <commit>
+```
+
+Then validate the saved file locally:
+
+```bash
+npm run verify:workspace-readback -- --readback output/playwright/production-workspace-generation-YYYYMMDD/workspace-db-readback.json --cleanup output/playwright/production-workspace-generation-YYYYMMDD/workspace-cleanup-readback.json --expect-release-date <date> --expect-environment production --expect-git-commit <commit>
+```
+
+Current state: only local proof exists for `/patterns`, `/studio`, `/video`,
+and `/lab`; production deploy/readback remains pending explicit approval.
+
 Current 2026-06-18 parent DB readback exists at
 `output/release-prep/final-db-readback-20260618-parent/readback.json` and
 reports `jobs=1`, `images=1`, `usage=5`, `runs=5`, `storage=1`, and
@@ -240,9 +262,31 @@ npm run verify:full
 Also stop before any staging or production mutation, including real generation
 smoke, auth-provider login, or cleanup deletion.
 
-## 7. Release Decision
+## 7. 2026-06-22 Generation Context Production Closeout
 
-Current decision: **accepted-risk; release doctor passed on current HEAD**.
+Current boundary: `workspace-source-generation-local-20260622` is `passed_local`
+only. Do not treat earlier production parity proof as proof for this slice.
+
+Run only after explicit approval:
+
+1. Build and deploy the production Web bundle for the approved release candidate
+   that includes `workspace-source-generation-local-20260622`.
+2. Deploy the changed Edge Functions: `generate-image`, `design-gacha`, and
+   `model-matrix`. Use
+   `npm run supabase:deploy:functions` only if the approval covers deploying
+   every function listed in `scripts/deploy-edge-functions.sh`; otherwise deploy
+   those three functions explicitly with Supabase CLI.
+3. From production, run authenticated live generation from `/patterns`,
+   `/studio`, `/video`, and `/lab`.
+4. Capture Supabase DB/Storage readback for jobs, images, usage, function runs,
+   storage paths, source metadata, and cleanup.
+5. Save cleanup proof and no-residual-process proof, then update `STATE.md`,
+   release evidence, and this checklist.
+
+## 8. Release Decision
+
+Current decision: **generation-context production closeout is not approved or
+complete yet**.
 
 Current applied/proven state: the brand insert migration has been applied
 remotely, updated Edge Functions have been deployed, and image visual QA is PASS

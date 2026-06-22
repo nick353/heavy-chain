@@ -12,6 +12,8 @@
     "verify": "npm run env:check && npm run security:audit && npm run smoke:edge && npm run typecheck",
     "verify:full": "npm run verify && npm run build && npm run e2e && npm run supabase:verify",
     "verify:readback": "node scripts/verify-release-readback.mjs",
+    "workspace:collect-readback": "node scripts/collect-workspace-live-readback.mjs",
+    "verify:workspace-readback": "node scripts/verify-workspace-generation-readback.mjs",
     "verify:browser-use": "node scripts/verify-browser-use-proof.mjs",
     "verify:browser-use:regression": "node scripts/verify-browser-use-proof.regression.mjs",
     "release:doctor": "node scripts/release-doctor.mjs",
