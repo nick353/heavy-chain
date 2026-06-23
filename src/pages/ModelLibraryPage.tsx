@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, ChevronRight, Save } from 'lucide-react';
+import { Check, ChevronRight, Save, Shirt, SlidersHorizontal, Sparkles, UserRound } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
@@ -34,6 +34,24 @@ const initialHistory: HistoryItem[] = [
   { id: 'model-library-history-1', label: 'EC標準モデル候補を整理' },
   { id: 'model-library-history-2', label: '着用目的と商品説明を保存' },
 ];
+
+const intentMeta: Record<Intent, { label: string; description: string; outputs: string[] }> = {
+  EC標準: {
+    label: 'EC標準',
+    description: '商品ページで使う正面・素材確認向け。服の形、透け感、サイズ感を安定して見せます。',
+    outputs: ['白背景', '正面確認', '商品ページ'],
+  },
+  LOOK確認: {
+    label: 'LOOK確認',
+    description: '着こなしや雰囲気を見せるLOOK向け。ポーズ、背景、動きを優先します。',
+    outputs: ['LOOK画像', 'SNS転用', 'ポーズ確認'],
+  },
+  広告検証: {
+    label: '広告検証',
+    description: 'LPや広告で使う信頼感重視のモデル向け。年齢感、表情、購買訴求を合わせます。',
+    outputs: ['広告素材', 'LP用', '信頼感'],
+  },
+};
 
 const modelCandidates: ModelCandidate[] = [
   {
@@ -207,6 +225,14 @@ export function ModelLibraryPage() {
     primaryInput,
     nextStep,
   }), [ageGroup, bodyType, face, nextStep, pose, primaryInput, productDescription, selectedCandidate, skinTone, usage]);
+  const activeIntentMeta = intentMeta[activeIntent];
+  const selectedProfileRows = [
+    { label: '顔', value: face },
+    { label: 'ポーズ', value: pose },
+    { label: '体型', value: bodyType },
+    { label: '肌色', value: skinTone },
+    { label: '年齢層', value: ageGroup },
+  ];
 
   const recordProgress = (intent: Intent) => {
     const historyItem = {
@@ -215,6 +241,7 @@ export function ModelLibraryPage() {
     };
 
     setActiveIntent(intent);
+    setUsage(intent);
     setProgress((current) => Math.min(current + 14, 96));
     setHistory((items) => [historyItem, ...items].slice(0, 4));
   };
@@ -375,7 +402,7 @@ export function ModelLibraryPage() {
               モデルライブラリ
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-              顔、ポーズ、体型、肌色、年齢層、利用目的を固定候補から選び、モデルマトリクス生成へ渡すローカルワークスペースです。
+              Lightchainでモデル条件を選んでいた感覚のまま、用途、モデル候補、出力先を選んでモデルマトリクスへ渡します。
             </p>
           </div>
           <button
@@ -385,11 +412,11 @@ export function ModelLibraryPage() {
             className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            保存してCanvasへ
+            Canvasへ保存
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="mt-6 grid gap-3 lg:grid-cols-3">
           {intents.map((intent) => (
             <button
               key={intent}
@@ -401,18 +428,41 @@ export function ModelLibraryPage() {
                   : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
               }`}
             >
-              {intent}
+              <span className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                {intentMeta[intent].label}
+              </span>
+              <span className="mt-2 block text-xs font-normal leading-5 opacity-75">
+                {intentMeta[intent].description}
+              </span>
+              <span className="mt-3 flex flex-wrap gap-1.5">
+                {intentMeta[intent].outputs.map((output) => (
+                  <span key={output} className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium text-neutral-600 dark:bg-surface-900/70 dark:text-neutral-200">
+                    {output}
+                  </span>
+                ))}
+              </span>
             </button>
           ))}
         </div>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-2">
-        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-5">
+          <div className="glass-panel rounded-2xl p-5">
             <div>
-              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">固定モデル候補</h2>
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">モデル候補を選ぶ</h2>
+                  <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                    用途に合う候補を選ぶだけで、顔・ポーズ・体型・肌色・年齢層がそろいます。
+                  </p>
+                </div>
+                <div className="hidden rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 dark:bg-primary-400/10 dark:text-primary-200 sm:block">
+                  {activeIntentMeta.label}
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 lg:grid-cols-3">
                 {modelCandidates.map((candidate) => {
                   const selected = candidate.id === selectedCandidate.id;
                   return (
@@ -431,81 +481,106 @@ export function ModelLibraryPage() {
                         {candidate.label}
                         {selected && <Check className="h-4 w-4" aria-hidden="true" />}
                       </span>
-                      <span className="mt-3 block text-xs leading-5 opacity-80">{candidate.face}</span>
-                      <span className="mt-2 block text-xs leading-5 opacity-80">{candidate.pose}</span>
-                      <span className="mt-2 block text-xs leading-5 opacity-80">{candidate.bodyType}</span>
-                      <span className="mt-3 inline-flex rounded-full bg-white/70 px-2 py-1 text-xs font-semibold text-neutral-700 dark:bg-surface-900/70 dark:text-neutral-200">
-                        {candidate.skinTone} / {candidate.ageGroup} / {candidate.usage}
+                      <span className="mt-3 flex flex-wrap gap-1.5">
+                        {[candidate.ageGroup, candidate.skinTone, candidate.usage].map((item) => (
+                          <span key={item} className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-neutral-700 dark:bg-surface-900/70 dark:text-neutral-200">
+                            {item}
+                          </span>
+                        ))}
                       </span>
+                      <span className="mt-3 block text-xs leading-5 opacity-80">{candidate.pose}</span>
+                      <span className="mt-2 block text-xs leading-5 opacity-80">{candidate.bodyType}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
-            <figure>
-              <img
-                src={previewImageUrl}
-                alt="Model library candidate preview"
-                className="aspect-[3/2] w-full rounded-xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
-              />
-              <figcaption className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
-                選択候補をモデルマトリクスへ渡すためのローカルプレビューです。
-              </figcaption>
-            </figure>
+          </div>
+
+          <div className="glass-panel rounded-2xl p-5">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="h-5 w-5 text-primary-500" />
+              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">細部を調整</h2>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+                顔
+                <textarea value={face} onChange={(event) => setFace(event.target.value)} rows={2} className={fieldClass} />
+              </label>
+              <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+                ポーズ
+                <textarea value={pose} onChange={(event) => setPose(event.target.value)} rows={2} className={fieldClass} />
+              </label>
+              <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+                体型
+                <textarea value={bodyType} onChange={(event) => setBodyType(event.target.value)} rows={2} className={fieldClass} />
+              </label>
+              <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+                商品説明
+                <textarea value={productDescription} onChange={(event) => setProductDescription(event.target.value)} rows={2} className={fieldClass} />
+              </label>
+            </div>
           </div>
         </div>
 
-        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">生成前インテーク</h2>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              顔
-              <textarea value={face} onChange={(event) => setFace(event.target.value)} rows={3} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              ポーズ
-              <textarea value={pose} onChange={(event) => setPose(event.target.value)} rows={3} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              体型
-              <textarea value={bodyType} onChange={(event) => setBodyType(event.target.value)} rows={3} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              肌色
-              <input value={skinTone} onChange={(event) => setSkinTone(event.target.value)} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              年齢層
-              <input value={ageGroup} onChange={(event) => setAgeGroup(event.target.value)} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              利用目的
-              <input value={usage} onChange={(event) => setUsage(event.target.value as Intent)} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white md:col-span-2">
-              商品説明
-              <textarea value={productDescription} onChange={(event) => setProductDescription(event.target.value)} rows={3} className={fieldClass} />
-            </label>
-          </div>
-        </div>
+        <aside className="space-y-5">
+          <figure className="glass-panel rounded-2xl p-5">
+            <img
+              src={previewImageUrl}
+              alt="Model library candidate preview"
+              className="aspect-[3/2] w-full rounded-xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
+            />
+            <figcaption className="mt-3 flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+              <UserRound className="h-4 w-4 text-primary-500" />
+              {selectedCandidate.label}
+            </figcaption>
+            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+              {usage}向けモデル候補をCanvasとモデルマトリクスへ渡します。
+            </p>
+          </figure>
 
-        <div className="glass-panel rounded-2xl p-5">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">ローカル進捗</h2>
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{activeIntent} / {progress}%</p>
-          <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
-            <div className="h-full rounded-full bg-primary-500" style={{ width: `${progress}%` }} />
+          <div className="glass-panel rounded-2xl p-5">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-neutral-950 dark:text-white">
+              <Shirt className="h-5 w-5 text-primary-500" />
+              条件プレビュー
+            </h2>
+            <div className="mt-4 space-y-3">
+              {selectedProfileRows.map((row) => (
+                <div key={row.label} className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
+                  <p className="text-xs font-semibold text-neutral-400">{row.label}</p>
+                  <p className="mt-1 text-sm leading-5 text-neutral-700 dark:text-neutral-200">{row.value}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {selectedCandidate.modelMatrixBodyTypes.map((item) => (
+                <span key={item} className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-400/10 dark:text-primary-200">
+                  {item}
+                </span>
+              ))}
+              {selectedCandidate.modelMatrixAgeGroups.map((item) => (
+                <span key={item} className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-400/10 dark:text-primary-200">
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="glass-panel rounded-2xl p-5">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">履歴</h2>
-          <div className="mt-4 space-y-3">
-            {history.map((item) => (
-              <div key={item.id} className="rounded-xl bg-white/60 p-3 text-sm text-neutral-700 dark:bg-surface-900/50 dark:text-neutral-300">
-                {item.label}
-              </div>
-            ))}
+
+          <div className="glass-panel rounded-2xl p-5">
+            <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">保存状態</h2>
+            <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{activeIntent} / {progress}%</p>
+            <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
+              <div className="h-full rounded-full bg-primary-500" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="mt-4 space-y-2">
+              {history.map((item) => (
+                <div key={item.id} className="rounded-xl bg-white/60 p-3 text-sm text-neutral-700 dark:bg-surface-900/50 dark:text-neutral-300">
+                  {item.label}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </aside>
       </section>
     </div>
   );
