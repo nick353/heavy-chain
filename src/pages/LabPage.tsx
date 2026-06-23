@@ -1,13 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, ChevronRight, Save } from 'lucide-react';
+import { BarChart3, Check, ChevronRight, FlaskConical, Lightbulb, Save, Target } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
 const choices = ['プロンプト実験', '品質評価', '採用候補'];
 const fieldClass = 'mt-2 w-full rounded-xl border border-neutral-200 bg-white/75 px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-900/70 dark:text-white dark:focus:border-primary-500';
-const optionCardClass = 'rounded-xl border px-4 py-3 text-left text-sm transition';
 type LabExperimentCandidate = {
   id: string;
   label: string;
@@ -72,6 +71,18 @@ const labExperimentCandidates: LabExperimentCandidate[] = [
     risk: '寄りすぎるとシルエット判断が弱くなる',
   },
 ];
+
+const experimentOutputLabels: Record<string, string[]> = {
+  'material-lighting': ['素材感比較', '光の採用判断', 'EC転用'],
+  'retail-readiness': ['店頭想定', '輪郭確認', '詳細生成へ'],
+  'campaign-transfer': ['SNS転用', 'CTA余白', '販促画像へ'],
+};
+
+const experimentIcons: Record<string, typeof FlaskConical> = {
+  'material-lighting': FlaskConical,
+  'retail-readiness': Target,
+  'campaign-transfer': BarChart3,
+};
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -168,6 +179,7 @@ export function LabPage() {
   const [candidate, setCandidate] = useState('候補A: 白背景スタジオ、候補B: グレー背景寄り');
   const nextHistoryId = useRef(3);
   const selectedExperiment = labExperimentCandidates.find((item) => item.id === selectedExperimentId) ?? labExperimentCandidates[0];
+  const axisItems = evaluationAxis.split('/').map((item) => item.trim()).filter(Boolean);
   const previewImageUrl = useMemo(() => buildLabExperimentPreviewSvg({
     activeChoice,
     selectedExperiment,
@@ -355,11 +367,71 @@ export function LabPage() {
             </button>
           ))}
         </div>
+
+        <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/40">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">実験レーンを選ぶ</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                Lightchainで候補を見比べる感覚に合わせて、仮説・評価軸・採用判断を先に選びます。
+              </p>
+            </div>
+            <span className="w-fit rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-950/50 dark:text-primary-200">
+              score {selectedExperiment.score}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {labExperimentCandidates.map((experiment) => {
+              const isSelected = selectedExperiment.id === experiment.id;
+              const Icon = experimentIcons[experiment.id] ?? Lightbulb;
+
+              return (
+                <button
+                  key={experiment.id}
+                  type="button"
+                  onClick={() => selectExperiment(experiment)}
+                  aria-pressed={isSelected}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    isSelected
+                      ? 'border-primary-400 bg-primary-50/70 ring-2 ring-primary-100 dark:border-primary-300 dark:bg-primary-400/10 dark:ring-primary-400/20'
+                      : 'border-neutral-200 bg-white/75 hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-950/50 dark:hover:border-primary-500/70'
+                  }`}
+                >
+                  <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                    isSelected
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-surface-100 text-neutral-600 dark:bg-surface-800 dark:text-neutral-300'
+                  }`}>
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="mt-3 flex items-center justify-between gap-3 text-sm font-semibold text-neutral-950 dark:text-white">
+                    {experiment.label}
+                    {isSelected && <Check className="h-4 w-4 text-primary-600 dark:text-primary-200" />}
+                  </span>
+                  <span className="mt-2 block text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                    {experiment.decision}
+                  </span>
+                  <span className="mt-3 flex flex-wrap gap-1.5">
+                    {(experimentOutputLabels[experiment.id] ?? []).map((output) => (
+                      <span key={output} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-neutral-500 ring-1 ring-neutral-200 dark:bg-surface-900 dark:text-neutral-300 dark:ring-white/10">
+                        {output}
+                      </span>
+                    ))}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">生成前インテーク</h2>
+          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">仮説と評価条件を整える</h2>
+          <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+            選んだ実験レーンをもとに、仮説・プロンプト案・評価軸・採用候補だけを調整します。
+          </p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               仮説
@@ -403,46 +475,45 @@ export function LabPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="glass-panel rounded-2xl p-5">
+        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <div className="flex flex-col gap-1">
-            <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">評価候補</h2>
+            <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">評価プレビュー</h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">{selectedExperiment.label} / score {selectedExperiment.score}</p>
           </div>
-          <div className="mt-4 grid gap-3">
-            {labExperimentCandidates.map((experiment) => {
-              const isSelected = selectedExperiment.id === experiment.id;
-              return (
-                <button
-                  key={experiment.id}
-                  type="button"
-                  onClick={() => selectExperiment(experiment)}
-                  aria-pressed={isSelected}
-                  className={`${optionCardClass} ${
-                    isSelected
-                      ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                      : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
-                  }`}
-                >
-                  <span className="flex items-center justify-between gap-3">
-                    <span className="font-semibold">{experiment.label}</span>
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold">
-                      {isSelected && <Check className="h-3.5 w-3.5" />}
-                      {experiment.score}
+          <div className="mt-4 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+            <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">決定的スコア</p>
+              <div className="mt-3 flex items-end gap-2">
+                <span className="text-5xl font-semibold text-neutral-950 dark:text-white">{selectedExperiment.score}</span>
+                <span className="pb-1 text-sm font-semibold text-neutral-400">/ 100</span>
+              </div>
+              <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
+                <div className="h-full rounded-full bg-primary-500" style={{ width: `${selectedExperiment.score}%` }} />
+              </div>
+              <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">{selectedExperiment.scoreSignature}</p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">採用判断</p>
+                <p className="mt-2 text-sm leading-6 text-neutral-800 dark:text-neutral-100">{selectedExperiment.decision}</p>
+              </div>
+              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">注意点</p>
+                <p className="mt-2 text-sm leading-6 text-neutral-800 dark:text-neutral-100">{selectedExperiment.risk}</p>
+              </div>
+              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40 md:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">評価軸</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {axisItems.map((axis) => (
+                    <span key={axis} className="rounded-full bg-surface-100 px-3 py-1 text-xs font-medium text-neutral-600 dark:bg-surface-800 dark:text-neutral-300">
+                      {axis}
                     </span>
-                  </span>
-                  <span className="mt-2 block text-xs leading-5 opacity-80">{experiment.decision}</span>
-                </button>
-              );
-            })}
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="glass-panel rounded-2xl p-5">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">SVG preview</h2>
-          <img
-            src={previewImageUrl}
-            alt={`${selectedExperiment.label} lab experiment preview`}
-            className="mt-4 aspect-[3/2] w-full rounded-xl border border-white/70 bg-white object-cover shadow-sm dark:border-white/10"
-          />
         </div>
       </section>
     </div>
