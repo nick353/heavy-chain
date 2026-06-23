@@ -90,7 +90,7 @@ export function DashboardPage() {
   const [workspaceActivity, setWorkspaceActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
   const [isActivityLoading, setIsActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -318,14 +318,6 @@ export function DashboardPage() {
     if (diffDays < 7) return `${diffDays}日前`;
     return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="spinner" />
-      </div>
-    );
-  }
 
   const getGreeting = () => {
     const hour = new Date().getHours();
