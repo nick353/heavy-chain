@@ -19,6 +19,7 @@
     "verify:lightchain-ui": "node scripts/verify-lightchain-production-ui.mjs",
     "verify:runway-readiness": "node scripts/verify-runway-production-readiness.mjs",
     "verify:runway-free-denial": "node scripts/verify-runway-free-plan-denial.mjs",
+    "verify:runway-unapproved-denial": "node scripts/verify-runway-unapproved-denial.mjs",
     "release:doctor": "node scripts/release-doctor.mjs",
     "env:check": "node scripts/check-env.mjs",
     "security:audit": "node scripts/security-audit.mjs",
