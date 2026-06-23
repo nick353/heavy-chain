@@ -409,7 +409,7 @@ export function ModelLibraryPage() {
             type="button"
             onClick={handoffToCanvas}
             disabled={!currentBrand}
-            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-secondary inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             Canvasへ保存
