@@ -130,6 +130,7 @@ export function DashboardPage() {
         setIsLoading(false);
       } else {
         setCurrentBrand(brands[0]);
+        setIsLoading(false);
         // ブランド設定後にuseEffectが再実行されて画像を取得する
       }
     } catch (error) {
