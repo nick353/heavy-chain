@@ -68,6 +68,11 @@ const pages = [
     expected: ['続きから再開', '失敗を確認', '保存済みを見る'],
   },
   {
+    name: 'jobs',
+    path: '/jobs',
+    expected: ['制作キュー', '再開できる作業', '止まった作業', '完了した成果物'],
+  },
+  {
     name: 'canvas',
     path: '/canvas/new',
     expected: ['画像を置く', '生成する', '素材を見る'],
