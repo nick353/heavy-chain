@@ -2,15 +2,20 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
-  BadgeCheck,
-  Bot,
   Boxes,
+  CheckCircle2,
   ChevronRight,
   ClipboardList,
   Images,
+  Layers3,
+  PackageOpen,
+  Palette,
+  PlayCircle,
   Scissors,
   Search,
+  Shirt,
   Sparkles,
+  UserRound,
   WandSparkles,
 } from 'lucide-react';
 import {
@@ -21,35 +26,91 @@ import {
   type LightchainFeature,
 } from '../lib/lightchainParityCatalog';
 
-const statusLabel: Record<LightchainFeature['status'], string> = {
-  production: '本番保存まで対応',
-  workspace: '生成前ワークスペース',
-  'local-proof': '検証済みワークスペース',
-};
-
-const statusClass: Record<LightchainFeature['status'], string> = {
-  production: 'border-emerald-300/60 bg-emerald-50 text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-200',
-  workspace: 'border-cyan-300/60 bg-cyan-50 text-cyan-700 dark:border-cyan-400/25 dark:bg-cyan-400/10 dark:text-cyan-200',
-  'local-proof': 'border-amber-300/60 bg-amber-50 text-amber-700 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-200',
-};
-
 const categoryIcon: Record<LightchainCategoryId, typeof Sparkles> = {
   recommended: Sparkles,
   planning: ClipboardList,
-  fitting: Bot,
-  graphics: Images,
+  fitting: UserRound,
+  graphics: Palette,
   editing: Scissors,
   cases: Boxes,
 };
 
+const statusTone: Record<LightchainFeature['status'], string> = {
+  production: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-200 dark:ring-emerald-400/20',
+  workspace: 'bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-400/10 dark:text-sky-200 dark:ring-sky-400/20',
+  'local-proof': 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20',
+};
+
+const statusLabel: Record<LightchainFeature['status'], string> = {
+  production: '保存まで対応',
+  workspace: 'ワークスペース',
+  'local-proof': '検証中',
+};
+
+const routeLabel: Record<string, string> = {
+  '/marketing': '販促を作る',
+  '/fitting': '着用画像を作る',
+  '/lab': '企画を試す',
+  '/video': '動画構成へ',
+  '/models': 'モデルを選ぶ',
+  '/studio': '撮影セットへ',
+  '/patterns': '柄を作る',
+  '/brand/settings': 'ブランド設定へ',
+  '/canvas/new': 'Canvasで編集',
+};
+
+const routeIcon: Record<string, typeof Sparkles> = {
+  '/marketing': PackageOpen,
+  '/fitting': Shirt,
+  '/lab': WandSparkles,
+  '/video': PlayCircle,
+  '/models': UserRound,
+  '/studio': Images,
+  '/patterns': Palette,
+  '/brand/settings': CheckCircle2,
+  '/canvas/new': Layers3,
+};
+
+const materialLabels: Record<LightchainCategoryId, string[]> = {
+  recommended: ['商品画像', '用途', 'ブランドトーン'],
+  planning: ['素材・テーマ', '方向性', '採用条件'],
+  fitting: ['衣服画像', 'モデル条件', '背景'],
+  graphics: ['柄・ロゴ', '対象アイテム', '配色'],
+  editing: ['編集したい画像', '修正内容', '保存先'],
+  cases: ['商品素材', '販売チャネル', '必要な成果物'],
+};
+
+const outputLabels: Record<LightchainCategoryId, string[]> = {
+  recommended: ['生成画像', '履歴', 'Canvas'],
+  planning: ['企画案', '生成条件', '比較候補'],
+  fitting: ['着用画像', 'モデル差分', 'EC素材'],
+  graphics: ['柄案', 'プリント配置', 'ベクター方針'],
+  editing: ['加工画像', '派生案', '再編集履歴'],
+  cases: ['一括セット', '作業ボード', '再開導線'],
+};
+
+const getRouteBase = (route: string) => route.split('?')[0];
+
+const getActionLabel = (feature: LightchainFeature) => {
+  const base = getRouteBase(feature.route);
+  return routeLabel[base] ?? '開く';
+};
+
+const getRouteIcon = (feature: LightchainFeature) => {
+  const base = getRouteBase(feature.route);
+  return routeIcon[base] ?? Sparkles;
+};
+
 export function LightchainParityHub() {
   const [activeCategory, setActiveCategory] = useState<LightchainCategoryId>('recommended');
+  const [selectedFeatureId, setSelectedFeatureId] = useState(lightchainFeatureCatalog[0]?.id ?? '');
   const [query, setQuery] = useState('');
-  const activeMeta = lightchainCategories.find((category) => category.id === activeCategory) ?? lightchainCategories[0];
+
+  const activeCategoryMeta = lightchainCategories.find((category) => category.id === activeCategory) ?? lightchainCategories[0];
 
   const visibleFeatures = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return lightchainFeatureCatalog.filter((feature) => {
+    const filtered = lightchainFeatureCatalog.filter((feature) => {
       const inCategory = feature.category === activeCategory;
       if (!normalizedQuery) return inCategory;
       const haystack = [
@@ -61,141 +122,192 @@ export function LightchainParityHub() {
       ].join(' ').toLowerCase();
       return inCategory && haystack.includes(normalizedQuery);
     });
+
+    return filtered.length ? filtered : lightchainFeatureCatalog.filter((feature) => feature.category === activeCategory);
   }, [activeCategory, query]);
 
-  const productionCount = lightchainFeatureCatalog.filter((feature) => feature.status === 'production').length;
+  const selectedFeature = visibleFeatures.find((feature) => feature.id === selectedFeatureId) ?? visibleFeatures[0] ?? lightchainFeatureCatalog[0];
+  const SelectedIcon = selectedFeature ? getRouteIcon(selectedFeature) : Sparkles;
+  const selectedHref = selectedFeature ? buildLightchainFeatureHref(selectedFeature) : '/generate';
+
+  const handleCategoryChange = (categoryId: LightchainCategoryId) => {
+    const firstFeature = lightchainFeatureCatalog.find((feature) => feature.category === categoryId);
+    setActiveCategory(categoryId);
+    setSelectedFeatureId(firstFeature?.id ?? '');
+    setQuery('');
+  };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-neutral-200/70 bg-neutral-950 text-white shadow-floating dark:border-white/10">
-      <div className="relative">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(20,184,166,0.22),rgba(197,136,81,0.14)_45%,rgba(15,23,42,0)_75%)]" />
-        <div className="relative grid gap-6 p-5 sm:p-6 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-teal-300/25 bg-white/8 px-3 py-1 text-xs font-semibold text-teal-100">
-              <BadgeCheck className="h-3.5 w-3.5" />
-              Lightchain互換ホーム
-            </div>
-            <h2 className="mt-4 text-2xl font-semibold tracking-normal sm:text-3xl">
-              Lightchainで慣れた入口を、Heavy Chainへ。
-            </h2>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-neutral-300">
-              実操作で確認した Lightchain のタブ、主要カード、事例、周辺機能を Heavy Chain の生成、保存、履歴、Canvas に対応付けています。課金導線を除き、ここから同じ業務を開始できます。
-            </p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-white/10 bg-white/8 p-3">
-                <p className="text-2xl font-semibold">{lightchainFeatureCatalog.length}</p>
-                <p className="mt-1 text-xs text-neutral-300">対応済み入口</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/8 p-3">
-                <p className="text-2xl font-semibold">{productionCount}</p>
-                <p className="mt-1 text-xs text-neutral-300">本番readback済み</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/8 p-3">
-                <p className="text-2xl font-semibold">0</p>
-                <p className="mt-1 text-xs text-neutral-300">課金操作</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-300 text-neutral-950">
-                <WandSparkles className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">指示から始める</p>
-                <p className="text-xs text-neutral-300">Lightchain の prompt 入力に近い入口</p>
-              </div>
-            </div>
-            <div className="mt-4 rounded-xl border border-white/10 bg-neutral-950/70 p-3">
-              <p className="text-sm text-neutral-200">モデルの着せ替え、総柄プリント、EC商品画像、SNS動画構成などを選ぶと、最短の Heavy Chain ワークスペースへ移動します。</p>
-            </div>
-            <Link
-              to="/generate"
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-teal-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-teal-200"
-            >
-              画像生成を開く
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+    <section className="space-y-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-300">Workflow</p>
+          <h2 className="mt-1 text-xl font-semibold text-neutral-900 dark:text-white sm:text-2xl">
+            制作ワークフロー
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+            商品素材から、販促、着用画像、柄、編集、動画までを目的別に選んで始めます。
+          </p>
         </div>
+
+        <label className="flex w-full items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 transition focus-within:border-primary-400 focus-within:ring-2 focus-within:ring-primary-200 dark:border-neutral-700 dark:bg-neutral-900 dark:focus-within:border-primary-400 lg:max-w-sm">
+          <Search className="h-4 w-4 shrink-0 text-neutral-400" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-white"
+            placeholder="例: 着用画像、総柄、背景削除"
+          />
+        </label>
       </div>
 
-      <div className="border-t border-white/10 bg-white/[0.03] p-4 sm:p-5 lg:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {lightchainCategories.map((category) => {
-              const Icon = categoryIcon[category.id];
-              const active = category.id === activeCategory;
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  onClick={() => setActiveCategory(category.id)}
-                  className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-sm transition ${
-                    active
-                      ? 'border-teal-300 bg-teal-300 text-neutral-950'
-                      : 'border-white/10 bg-white/5 text-neutral-200 hover:border-white/25 hover:bg-white/10'
-                  }`}
-                >
+      <div className="grid gap-5 lg:grid-cols-12">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-2 shadow-soft dark:border-neutral-800 dark:bg-neutral-900 lg:col-span-3">
+          {lightchainCategories.map((category) => {
+            const Icon = categoryIcon[category.id];
+            const active = category.id === activeCategory;
+            const count = lightchainFeatureCatalog.filter((feature) => feature.category === category.id).length;
+
+            return (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => handleCategoryChange(category.id)}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
+                  active
+                    ? 'bg-primary-50 text-primary-800 dark:bg-primary-400/10 dark:text-primary-100'
+                    : 'text-neutral-600 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800/70'
+                }`}
+              >
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                  active ? 'bg-primary-600 text-white' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300'
+                }`}>
                   <Icon className="h-4 w-4" />
-                  <span>{category.label}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${active ? 'bg-neutral-950/10' : 'bg-white/10 text-neutral-300'}`}>
-                    {category.eyebrow}
-                  </span>
-                </button>
-              );
-            })}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold">{category.label}</span>
+                  <span className="mt-0.5 block text-xs text-neutral-400">{count} tools</span>
+                </span>
+                <ChevronRight className={`h-4 w-4 ${active ? 'text-primary-500' : 'text-neutral-300'}`} />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="grid gap-5 lg:col-span-9 xl:grid-cols-12">
+          <div className="space-y-4 xl:col-span-8">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-neutral-900 dark:text-white">{activeCategoryMeta.label}</h3>
+                  <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">{activeCategoryMeta.description}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2 rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                  <span>{visibleFeatures.length}</span>
+                  <span>候補</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {visibleFeatures.map((feature) => {
+                const Icon = getRouteIcon(feature);
+                const selected = feature.id === selectedFeature?.id;
+
+                return (
+                  <button
+                    key={feature.id}
+                    type="button"
+                    onClick={() => setSelectedFeatureId(feature.id)}
+                    className={`group rounded-2xl border bg-white p-4 text-left shadow-soft transition dark:bg-neutral-900 ${
+                      selected
+                        ? 'border-primary-400 ring-2 ring-primary-100 dark:border-primary-300 dark:ring-primary-400/20'
+                        : 'border-neutral-200 hover:border-primary-300 dark:border-neutral-800 dark:hover:border-primary-500/70'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                        selected ? 'bg-primary-600 text-white' : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-200'
+                      }`}>
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-neutral-900 dark:text-white">{feature.title}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${statusTone[feature.status]}`}>
+                            {statusLabel[feature.status]}
+                          </span>
+                        </span>
+                        <span className="mt-2 line-clamp-2 block text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                          {feature.description}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {feature.tags.slice(0, 3).map((tag) => (
+                        <span key={tag} className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <label className="relative block w-full lg:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-neutral-950/70 py-2.5 pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-teal-300"
-              placeholder="機能名で検索"
-            />
-          </label>
-        </div>
-
-        <div className="mt-4 rounded-xl border border-white/10 bg-neutral-950/45 p-4">
-          <p className="text-sm font-semibold text-white">{activeMeta.label}</p>
-          <p className="mt-1 text-sm leading-6 text-neutral-300">{activeMeta.description}</p>
-        </div>
-
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {visibleFeatures.map((feature) => (
-            <Link
-              key={feature.id}
-              to={buildLightchainFeatureHref(feature)}
-              className="group rounded-xl border border-white/10 bg-white/[0.06] p-4 transition hover:border-teal-300/60 hover:bg-white/[0.09]"
-            >
-              <div className="flex items-start justify-between gap-4">
+          {selectedFeature && (
+            <aside className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-soft dark:border-neutral-800 dark:bg-neutral-900 xl:col-span-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-950">
+                  <SelectedIcon className="h-5 w-5" />
+                </div>
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold text-white">{feature.title}</h3>
-                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusClass[feature.status]}`}>
-                      {statusLabel[feature.status]}
-                    </span>
+                  <h3 className="text-base font-semibold text-neutral-900 dark:text-white">{selectedFeature.title}</h3>
+                  <p className="mt-1 text-xs text-neutral-400">{selectedFeature.lightchainName}</p>
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">必要なもの</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {materialLabels[selectedFeature.category].map((label) => (
+                      <span key={label} className="rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                        {label}
+                      </span>
+                    ))}
                   </div>
-                  <p className="mt-1 text-xs text-teal-100/80">{feature.lightchainName}</p>
-                  <p className="mt-2 text-sm leading-6 text-neutral-300">{feature.description}</p>
                 </div>
-                <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-neutral-500 transition group-hover:translate-x-1 group-hover:text-teal-200" />
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">作れるもの</p>
+                  <div className="mt-2 grid gap-2">
+                    {outputLabels[selectedFeature.category].map((label) => (
+                      <div key={label} className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        <span>{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-800/70">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">次に行く場所</p>
+                  <p className="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">{selectedFeature.capability}</p>
+                </div>
               </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <div className="rounded-lg bg-neutral-950/50 p-3">
-                  <p className="text-[11px] font-semibold uppercase text-neutral-500">Heavy Chainでできること</p>
-                  <p className="mt-1 text-xs leading-5 text-neutral-300">{feature.capability}</p>
-                </div>
-                <div className="rounded-lg bg-neutral-950/50 p-3">
-                  <p className="text-[11px] font-semibold uppercase text-neutral-500">確認済み証跡</p>
-                  <p className="mt-1 text-xs leading-5 text-neutral-300">{feature.evidence}</p>
-                </div>
-              </div>
-            </Link>
-          ))}
+
+              <Link
+                to={selectedHref}
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-300"
+              >
+                {getActionLabel(selectedFeature)}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </aside>
+          )}
         </div>
       </div>
     </section>
