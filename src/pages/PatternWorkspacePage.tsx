@@ -1,13 +1,12 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, ChevronRight, Save } from 'lucide-react';
+import { Check, ChevronRight, ImagePlus, Palette, Repeat2, Save, Shapes, Shirt, Upload, WandSparkles } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import type { PatternGenerationContext, PatternPreviewContext } from '../lib/workspaceHandoff';
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
 const modes = ['グラフィック', '総柄', 'ベクター化'] as const;
-const fieldClass = 'mt-2 w-full rounded-xl border border-neutral-200 bg-white/75 px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-900/70 dark:text-white dark:focus:border-primary-500';
 
 type Mode = (typeof modes)[number];
 type PatternPreviewCandidate = {
@@ -27,6 +26,87 @@ type HistoryItem = {
 const initialHistory: HistoryItem[] = [
   { id: 'pattern-history-1', label: 'ブランドモチーフ案を整理' },
   { id: 'pattern-history-2', label: '総柄リピート条件を保存' },
+];
+
+const motifPresets = [
+  {
+    label: '鎖モチーフ',
+    value: 'Heavy Chainの鎖モチーフ、細い線画、Tシャツ胸元向けの静かなグラフィック',
+  },
+  {
+    label: 'ロゴ中心',
+    value: 'Heavy Chainロゴを中心にした単色エンブレム、刺繍とシルクスクリーン向け',
+  },
+  {
+    label: '和柄ミックス',
+    value: '鎖、波、格子を組み合わせた和柄ミックス、アパレル総柄向け',
+  },
+];
+
+const repeatPresets = [
+  {
+    label: '余白あり',
+    value: 'ハーフドロップ、余白多め、遠目でうるさくならない密度',
+  },
+  {
+    label: '全面総柄',
+    value: 'シームレスリピート、全面配置、EC画像でも柄が読みやすい密度',
+  },
+  {
+    label: 'ワンポイント',
+    value: '単体ロックアップ、胸元と背面に展開しやすい中央配置',
+  },
+];
+
+const targetPresets = [
+  {
+    label: 'Tシャツ',
+    value: 'ブラックのヘビーウェイトTシャツ / 胸元ワンポイントと背面総柄',
+  },
+  {
+    label: 'パーカー',
+    value: 'オーバーサイズパーカー / 胸元刺繍と袖のリピート柄',
+  },
+  {
+    label: '小物',
+    value: 'キャップ、バッグ、ステッカーに展開できる小さなロゴ配置',
+  },
+];
+
+const palettePresets = [
+  {
+    label: '黒赤',
+    value: '墨黒、オフホワイト、くすんだシルバー、差し色に深い赤',
+  },
+  {
+    label: '藍白',
+    value: '濃藍、生成り、淡いグレー、細い線だけに銀色',
+  },
+  {
+    label: '単色',
+    value: 'ブラック1色、刺繍と箔押しに転用しやすい高コントラスト',
+  },
+];
+
+const vectorPresets = [
+  {
+    label: '2色版下',
+    value: '刺繍とシルクスクリーンに使える2色ベクターへ整理',
+  },
+  {
+    label: 'パス整理',
+    value: '角丸パス、線幅統一、カットラインを分けたベクターへ整理',
+  },
+  {
+    label: '総柄タイル',
+    value: 'リピート境界がつながるタイルと、単体モチーフを分けて整理',
+  },
+];
+
+const referenceSlots = [
+  { label: 'ロゴ', value: 'chain_mark_ref.svg' },
+  { label: '柄参考', value: 'vintage_bandana_grid.png' },
+  { label: '服モック', value: 'tee_mockup_front.jpg' },
 ];
 
 const encodeSvg = (svg: string) => {
@@ -196,6 +276,17 @@ export function PatternWorkspacePage() {
     setHistory((items) => [historyItem, ...items].slice(0, 4));
   };
 
+  const toggleReferenceAsset = (asset: string) => {
+    const currentAssets = referenceAssets
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const nextAssets = currentAssets.includes(asset)
+      ? currentAssets.filter((item) => item !== asset)
+      : [...currentAssets, asset];
+    setReferenceAssets(nextAssets.join(', '));
+  };
+
   const handoffToCanvas = () => {
     if (!currentBrand) {
       toast.error('ブランドを読み込んでからもう一度試してください');
@@ -362,32 +453,177 @@ export function PatternWorkspacePage() {
 
       <section className="grid gap-5 lg:grid-cols-2">
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">生成前インテーク</h2>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              モチーフ
-              <textarea value={motifPrompt} onChange={(event) => setMotifPrompt(event.target.value)} rows={3} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              リピート
-              <textarea value={repeatStyle} onChange={(event) => setRepeatStyle(event.target.value)} rows={3} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              対象アイテム
-              <textarea value={garmentTarget} onChange={(event) => setGarmentTarget(event.target.value)} rows={3} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              パレット
-              <textarea value={paletteNotes} onChange={(event) => setPaletteNotes(event.target.value)} rows={3} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              ベクター化
-              <textarea value={vectorIntent} onChange={(event) => setVectorIntent(event.target.value)} rows={3} className={fieldClass} />
-            </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
-              参照素材
-              <textarea value={referenceAssets} onChange={(event) => setReferenceAssets(event.target.value)} rows={3} className={fieldClass} />
-            </label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">制作ボード</h2>
+              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                Lightchainで選んでいた条件を、素材・柄・配置・色・版下の順に組み立てます。
+              </p>
+            </div>
+            <div className="rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-800 dark:bg-primary-950/40 dark:text-primary-100">
+              {activeMode} / {selectedPreview.label}
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-4 w-4 text-primary-600" />
+                  <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">素材スロット</h3>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {referenceSlots.map((slot) => {
+                    const active = referenceAssets.includes(slot.value);
+                    return (
+                      <button
+                        key={slot.value}
+                        type="button"
+                        onClick={() => toggleReferenceAsset(slot.value)}
+                        className={`rounded-xl border px-3 py-3 text-left transition ${
+                          active
+                            ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
+                            : 'border-neutral-200 bg-white text-neutral-600 hover:border-primary-200 dark:border-white/10 dark:bg-surface-950/40 dark:text-neutral-300'
+                        }`}
+                      >
+                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-primary-700 dark:bg-surface-800 dark:text-primary-200">
+                          <ImagePlus className="h-4 w-4" />
+                        </span>
+                        <span className="mt-2 block text-sm font-semibold">{slot.label}</span>
+                        <span className="mt-1 block text-xs text-neutral-400">{slot.value}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+                  <div className="flex items-center gap-2">
+                    <Shapes className="h-4 w-4 text-primary-600" />
+                    <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">モチーフ</h3>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {motifPresets.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setMotifPrompt(preset.value)}
+                        className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                          motifPrompt === preset.value
+                            ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-surface-800 dark:text-neutral-300'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+                  <div className="flex items-center gap-2">
+                    <Repeat2 className="h-4 w-4 text-primary-600" />
+                    <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">配置</h3>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {repeatPresets.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setRepeatStyle(preset.value)}
+                        className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                          repeatStyle === preset.value
+                            ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-surface-800 dark:text-neutral-300'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+                  <div className="flex items-center gap-2">
+                    <Shirt className="h-4 w-4 text-primary-600" />
+                    <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">対象アイテム</h3>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {targetPresets.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setGarmentTarget(preset.value)}
+                        className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                          garmentTarget === preset.value
+                            ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-surface-800 dark:text-neutral-300'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4 text-primary-600" />
+                    <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">配色</h3>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {palettePresets.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setPaletteNotes(preset.value)}
+                        className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                          paletteNotes === preset.value
+                            ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-surface-800 dark:text-neutral-300'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+              <div className="flex items-center gap-2">
+                <WandSparkles className="h-4 w-4 text-primary-600" />
+                <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">現在の制作Brief</h3>
+              </div>
+              <div className="mt-4 space-y-3">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                  版下
+                  <select
+                    value={vectorIntent}
+                    onChange={(event) => setVectorIntent(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
+                  >
+                    {vectorPresets.map((preset) => (
+                      <option key={preset.label} value={preset.value}>{preset.label}</option>
+                    ))}
+                  </select>
+                </label>
+                {[
+                  ['モチーフ', motifPrompt],
+                  ['配置', repeatStyle],
+                  ['対象', garmentTarget],
+                  ['配色', paletteNotes],
+                  ['素材', referenceAssets],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-xl bg-neutral-50 p-3 dark:bg-surface-950/50">
+                    <p className="text-xs font-semibold text-neutral-400">{label}</p>
+                    <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
