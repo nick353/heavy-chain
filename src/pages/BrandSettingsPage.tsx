@@ -69,7 +69,7 @@ const RUNWAY_APPROVAL_STYLES: Record<RunwayMcpConnectionStatus | 'not_requested'
 
 export function BrandSettingsPage() {
   const navigate = useNavigate();
-  const { currentBrand, setCurrentBrand, user } = useAuthStore();
+  const { currentBrand, setCurrentBrand, user, profile } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [isLoading, setIsLoading] = useState(false);
@@ -175,6 +175,9 @@ export function BrandSettingsPage() {
 
       setRunwayApproval(data as RunwayMcpConnectionApproval);
       toast.success('Runway MCP接続を申請しました');
+      if (profile?.is_admin) {
+        navigate('/admin?tab=runway');
+      }
     } catch (error: any) {
       toast.error(error.message || 'Runway MCP接続の申請に失敗しました');
     } finally {
@@ -354,6 +357,75 @@ export function BrandSettingsPage() {
       </motion.div>
 
       <div className="space-y-8">
+        {/* Runway MCP Connection */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.05 }}
+          className="glass-panel rounded-2xl p-8"
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl">
+              <h2 className="flex items-center gap-2 text-xl font-semibold text-neutral-800 dark:text-white">
+                <KeyRound className="w-5 h-5" />
+                Runway MCP接続
+              </h2>
+              <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                このブランドでRunway生成を使うための承認です。MCPブリッジのURLやトークンはここには保存しません。
+              </p>
+              <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
+                承認済みになるまで、Runway MCPを使う画像生成は使用量予約前に停止します。
+                サブスクが切れている場合も、承認状態に関係なく生成は停止します。
+              </p>
+              {runwayApproval?.updated_at && (
+                <p className="mt-3 text-xs text-neutral-400 dark:text-neutral-500">
+                  最終更新: {new Date(runwayApproval.updated_at).toLocaleString('ja-JP')}
+                </p>
+              )}
+            </div>
+
+            <div className="flex w-full flex-col gap-3 rounded-xl border border-neutral-200 bg-white/60 p-4 dark:border-neutral-700 dark:bg-neutral-800/60 lg:w-80">
+              <span className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-sm font-medium ${RUNWAY_APPROVAL_STYLES[runwayApproval?.status || 'not_requested']}`}>
+                {RUNWAY_APPROVAL_LABELS[runwayApproval?.status || 'not_requested']}
+              </span>
+              {runwayApproval?.status === 'pending' && (
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  申請済みです。管理者の承認後に生成できます。
+                </p>
+              )}
+              {runwayApproval?.status === 'approved' && (
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  このブランドはRunway MCP生成を利用できます。
+                </p>
+              )}
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={handleRequestRunwayApproval}
+                  isLoading={isRequestingRunwayApproval}
+                  disabled={runwayApproval?.status === 'approved' || runwayApproval?.status === 'pending'}
+                  className="w-full shadow-sm"
+                >
+                  {runwayApproval?.status === 'approved'
+                    ? '承認済み'
+                    : runwayApproval?.status === 'pending'
+                      ? '申請済み'
+                      : '接続を申請'}
+                </Button>
+                {profile?.is_admin && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => navigate('/admin?tab=runway')}
+                    className="w-full"
+                  >
+                    管理者承認画面を開く
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Brand Info */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -470,52 +542,6 @@ export function BrandSettingsPage() {
             <Button onClick={handleSave} isLoading={isSaving} className="shadow-glow hover:shadow-glow-lg transition-all">
               <Save className="w-4 h-4 mr-2" />
               保存
-            </Button>
-          </div>
-        </motion.div>
-
-        {/* Runway MCP Connection */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.05 }}
-          className="glass-panel rounded-2xl p-8"
-        >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
-                <KeyRound className="w-5 h-5 inline-block mr-2" />
-                Runway MCP接続
-              </h2>
-              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                生成に使うMCPブリッジの実値はサーバー側で管理され、ここには保存されません。
-              </p>
-            </div>
-            <span className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-sm font-medium ${RUNWAY_APPROVAL_STYLES[runwayApproval?.status || 'not_requested']}`}>
-              {RUNWAY_APPROVAL_LABELS[runwayApproval?.status || 'not_requested']}
-            </span>
-          </div>
-
-          <div className="mt-6 rounded-xl border border-neutral-200 bg-white/50 p-4 dark:border-neutral-700 dark:bg-neutral-800/50">
-            <p className="text-sm text-neutral-600 dark:text-neutral-300">
-              承認済みになるまで、Runway MCPを使う画像生成は使用量予約前に停止します。
-              サブスクが切れている場合も、承認状態に関係なく生成は停止します。
-            </p>
-            {runwayApproval?.updated_at && (
-              <p className="mt-3 text-xs text-neutral-400 dark:text-neutral-500">
-                最終更新: {new Date(runwayApproval.updated_at).toLocaleString('ja-JP')}
-              </p>
-            )}
-          </div>
-
-          <div className="mt-6 flex justify-end">
-            <Button
-              onClick={handleRequestRunwayApproval}
-              isLoading={isRequestingRunwayApproval}
-              disabled={runwayApproval?.status === 'approved'}
-              className="shadow-sm"
-            >
-              {runwayApproval?.status === 'approved' ? '承認済み' : '接続を申請'}
             </Button>
           </div>
         </motion.div>

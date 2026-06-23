@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Users, 
   Image, 
@@ -78,6 +79,14 @@ const RUNWAY_STATUS_STYLES: Record<RunwayMcpConnectionStatus, string> = {
 };
 
 export function AdminDashboard() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const initialTab = (
+    requestedTab === 'users' ||
+    requestedTab === 'runway' ||
+    requestedTab === 'moderation' ||
+    requestedTab === 'announcements'
+  ) ? requestedTab : 'overview';
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     activeUsers: 0,
@@ -91,7 +100,8 @@ export function AdminDashboard() {
   const [runwayApprovals, setRunwayApprovals] = useState<RunwayMcpApproval[]>([]);
   const [_moderationQueue, _setModerationQueue] = useState<ModerationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'runway' | 'moderation' | 'announcements'>('overview');
+  const [updatingRunwayBrandId, setUpdatingRunwayBrandId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'runway' | 'moderation' | 'announcements'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({
@@ -105,6 +115,18 @@ export function AdminDashboard() {
     fetchUsers();
     fetchRunwayApprovals();
   }, []);
+
+  useEffect(() => {
+    if (
+      requestedTab === 'overview' ||
+      requestedTab === 'users' ||
+      requestedTab === 'runway' ||
+      requestedTab === 'moderation' ||
+      requestedTab === 'announcements'
+    ) {
+      setActiveTab(requestedTab);
+    }
+  }, [requestedTab]);
 
   const fetchStats = async () => {
     try {
@@ -243,7 +265,10 @@ export function AdminDashboard() {
     brandId: string,
     status: RunwayMcpConnectionStatus,
   ) => {
+    if (updatingRunwayBrandId) return;
+
     try {
+      setUpdatingRunwayBrandId(brandId);
       const { error } = await supabase.rpc('admin_update_runway_mcp_connection', {
         p_brand_id: brandId,
         p_status: status,
@@ -255,6 +280,8 @@ export function AdminDashboard() {
       await fetchRunwayApprovals();
     } catch (error: any) {
       toast.error(error.message || 'Runway MCP接続状態の更新に失敗しました');
+    } finally {
+      setUpdatingRunwayBrandId(null);
     }
   };
 
@@ -347,7 +374,14 @@ export function AdminDashboard() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => {
+                setActiveTab(tab.id as typeof activeTab);
+                if (tab.id === 'overview') {
+                  setSearchParams({});
+                } else {
+                  setSearchParams({ tab: tab.id });
+                }
+              }}
               className={`
                 px-4 py-2 text-sm font-medium rounded-lg transition-all
                 ${activeTab === tab.id
@@ -543,8 +577,11 @@ export function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
-                    {runwayApprovals.map((approval) => (
-                      <tr key={approval.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 transition-colors">
+                    {runwayApprovals.map((approval) => {
+                      const isUpdatingRunwayApproval = updatingRunwayBrandId === approval.brand_id;
+
+                      return (
+                        <tr key={approval.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 transition-colors">
                         <td className="px-6 py-4">
                           <p className="text-sm font-medium text-neutral-800 dark:text-white">
                             {approval.brand?.name || approval.brand_id}
@@ -563,7 +600,8 @@ export function AdminDashboard() {
                             <Button
                               size="sm"
                               onClick={() => handleRunwayApprovalUpdate(approval.brand_id, 'approved')}
-                              disabled={approval.status === 'approved'}
+                              isLoading={isUpdatingRunwayApproval}
+                              disabled={approval.status === 'approved' || isUpdatingRunwayApproval}
                             >
                               承認
                             </Button>
@@ -571,7 +609,7 @@ export function AdminDashboard() {
                               size="sm"
                               variant="secondary"
                               onClick={() => handleRunwayApprovalUpdate(approval.brand_id, 'rejected')}
-                              disabled={approval.status === 'rejected'}
+                              disabled={approval.status === 'rejected' || isUpdatingRunwayApproval}
                             >
                               却下
                             </Button>
@@ -579,14 +617,15 @@ export function AdminDashboard() {
                               size="sm"
                               variant="ghost"
                               onClick={() => handleRunwayApprovalUpdate(approval.brand_id, 'revoked')}
-                              disabled={approval.status === 'revoked'}
+                              disabled={approval.status === 'revoked' || isUpdatingRunwayApproval}
                             >
                               取消
                             </Button>
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
