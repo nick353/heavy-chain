@@ -10,6 +10,9 @@ import {
   Plus,
   Copy,
   Check,
+  AlertCircle,
+  CheckCircle2,
+  CreditCard,
   KeyRound
 } from 'lucide-react';
 import { Button, Input, Textarea, Modal } from '../components/ui';
@@ -44,6 +47,18 @@ interface RunwayMcpConnectionApproval {
   updated_at: string;
 }
 
+interface BrandRunwaySubscription {
+  status: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  plan: {
+    code: string | null;
+    name: string | null;
+    is_active: boolean | null;
+    runway_mcp_generation: boolean;
+  } | null;
+}
+
 const ROLE_LABELS: Record<string, string> = {
   owner: 'オーナー',
   admin: '管理者',
@@ -67,6 +82,24 @@ const RUNWAY_APPROVAL_STYLES: Record<RunwayMcpConnectionStatus | 'not_requested'
   revoked: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
 };
 
+const getPlanLabel = (subscription: BrandRunwaySubscription | null) => {
+  return subscription?.plan?.name || subscription?.plan?.code || 'Free';
+};
+
+const isRunwaySubscriptionEligible = (subscription: BrandRunwaySubscription | null) => {
+  if (!subscription?.plan) return false;
+  const now = Date.now();
+  const periodStart = Date.parse(subscription.current_period_start || '');
+  const periodEnd = Date.parse(subscription.current_period_end || '');
+  return ['trialing', 'active'].includes(subscription.status || '')
+    && Number.isFinite(periodStart)
+    && Number.isFinite(periodEnd)
+    && periodStart <= now
+    && periodEnd > now
+    && subscription.plan.is_active === true
+    && subscription.plan.runway_mcp_generation === true;
+};
+
 export function BrandSettingsPage() {
   const navigate = useNavigate();
   const { currentBrand, setCurrentBrand, user, profile } = useAuthStore();
@@ -82,6 +115,7 @@ export function BrandSettingsPage() {
   const [isInviting, setIsInviting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [runwayApproval, setRunwayApproval] = useState<RunwayMcpConnectionApproval | null>(null);
+  const [runwaySubscription, setRunwaySubscription] = useState<BrandRunwaySubscription | null>(null);
   const [isRequestingRunwayApproval, setIsRequestingRunwayApproval] = useState(false);
   
   const [form, setForm] = useState({
@@ -148,6 +182,41 @@ export function BrandSettingsPage() {
     }
   }, [currentBrand]);
 
+  const fetchRunwaySubscription = useCallback(async () => {
+    if (!currentBrand) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('brand_subscriptions')
+        .select('status, current_period_start, current_period_end, plans(code, name, is_active, features)')
+        .eq('brand_id', currentBrand.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to fetch Runway MCP subscription:', error);
+        setRunwaySubscription(null);
+        return;
+      }
+
+      const row = data as any;
+      const plan = Array.isArray(row?.plans) ? row.plans[0] : row?.plans;
+      setRunwaySubscription(row ? {
+        status: row.status || null,
+        current_period_start: row.current_period_start || null,
+        current_period_end: row.current_period_end || null,
+        plan: plan ? {
+          code: plan.code || null,
+          name: plan.name || null,
+          is_active: plan.is_active ?? null,
+          runway_mcp_generation: plan.features?.runway_mcp_generation === true,
+        } : null,
+      } : null);
+    } catch (error) {
+      console.error('Failed to fetch Runway MCP subscription:', error);
+      setRunwaySubscription(null);
+    }
+  }, [currentBrand]);
+
   useEffect(() => {
     if (currentBrand) {
       setForm({
@@ -159,8 +228,9 @@ export function BrandSettingsPage() {
       });
       fetchMembers();
       fetchRunwayApproval();
+      fetchRunwaySubscription();
     }
-  }, [currentBrand, fetchMembers, fetchRunwayApproval]);
+  }, [currentBrand, fetchMembers, fetchRunwayApproval, fetchRunwaySubscription]);
 
   const handleRequestRunwayApproval = async () => {
     if (!currentBrand) return;
@@ -332,6 +402,20 @@ export function BrandSettingsPage() {
     );
   }
 
+  const runwayStatus = runwayApproval?.status || 'not_requested';
+  const runwayApproved = runwayStatus === 'approved';
+  const runwaySubscriptionEligible = isRunwaySubscriptionEligible(runwaySubscription);
+  const runwayReadyInApp = runwayApproved && runwaySubscriptionEligible;
+  const runwayPlanLabel = getPlanLabel(runwaySubscription);
+  const runwayPeriodEnd = runwaySubscription?.current_period_end
+    ? new Date(runwaySubscription.current_period_end).toLocaleDateString('ja-JP')
+    : null;
+  const runwayReadinessLabel = runwayReadyInApp
+    ? 'サイト側の条件は満たしています'
+    : runwayApproved
+      ? 'サブスク条件が未達です'
+      : '接続承認が必要です';
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -377,6 +461,60 @@ export function BrandSettingsPage() {
                 承認済みになるまで、Runway MCPを使う画像生成は使用量予約前に停止します。
                 サブスクが切れている場合も、承認状態に関係なく生成は停止します。
               </p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-neutral-200 bg-white/55 p-3 dark:border-neutral-700 dark:bg-neutral-800/55">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-white">
+                    {runwayApproved ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-amber-500" />
+                    )}
+                    接続承認
+                  </div>
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                    {RUNWAY_APPROVAL_LABELS[runwayStatus]}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-neutral-200 bg-white/55 p-3 dark:border-neutral-700 dark:bg-neutral-800/55">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-white">
+                    {runwaySubscriptionEligible ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <CreditCard className="h-4 w-4 text-amber-500" />
+                    )}
+                    プラン
+                  </div>
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                    {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
+                  </p>
+                </div>
+                <div className={`rounded-xl border p-3 ${
+                  runwayReadyInApp
+                    ? 'border-green-200 bg-green-50/80 dark:border-green-800 dark:bg-green-900/20'
+                    : 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-900/20'
+                }`}>
+                  <div className={`flex items-center gap-2 text-sm font-semibold ${
+                    runwayReadyInApp ? 'text-green-800 dark:text-green-200' : 'text-amber-800 dark:text-amber-200'
+                  }`}>
+                    {runwayReadyInApp ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    生成可否
+                  </div>
+                  <p className={`mt-1 text-xs ${
+                    runwayReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'
+                  }`}>
+                    {runwayReadinessLabel}
+                  </p>
+                </div>
+              </div>
+              {!runwaySubscriptionEligible && (
+                <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                  Runway生成には、Runway MCP承認に加えて、Heavy Chain側のRunway対応プランが有効期間内である必要があります。
+                </p>
+              )}
               {runwayApproval?.updated_at && (
                 <p className="mt-3 text-xs text-neutral-400 dark:text-neutral-500">
                   最終更新: {new Date(runwayApproval.updated_at).toLocaleString('ja-JP')}
@@ -394,8 +532,10 @@ export function BrandSettingsPage() {
                 </p>
               )}
               {runwayApproval?.status === 'approved' && (
-                <p className="text-sm text-green-700 dark:text-green-300">
-                  このブランドはRunway MCP生成を利用できます。
+                <p className={`text-sm ${runwaySubscriptionEligible ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                  {runwaySubscriptionEligible
+                    ? 'このブランドはRunway MCP生成のサイト条件を満たしています。'
+                    : '接続は承認済みですが、現在のプランではRunway生成は停止します。'}
                 </p>
               )}
               <div className="flex flex-col gap-2">
