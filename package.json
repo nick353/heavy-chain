@@ -16,6 +16,7 @@
     "verify:workspace-readback": "node scripts/verify-workspace-generation-readback.mjs",
     "verify:browser-use": "node scripts/verify-browser-use-proof.mjs",
     "verify:browser-use:regression": "node scripts/verify-browser-use-proof.regression.mjs",
+    "verify:error-messages": "node --experimental-strip-types scripts/verify-error-message-mapping.mjs",
     "verify:lightchain-ui": "node scripts/verify-lightchain-production-ui.mjs",
     "verify:runway-readiness": "node scripts/verify-runway-production-readiness.mjs",
     "verify:runway-free-denial": "node scripts/verify-runway-free-plan-denial.mjs",
