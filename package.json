@@ -16,6 +16,7 @@
     "verify:workspace-readback": "node scripts/verify-workspace-generation-readback.mjs",
     "verify:browser-use": "node scripts/verify-browser-use-proof.mjs",
     "verify:browser-use:regression": "node scripts/verify-browser-use-proof.regression.mjs",
+    "verify:lightchain-ui": "node scripts/verify-lightchain-production-ui.mjs",
     "release:doctor": "node scripts/release-doctor.mjs",
     "env:check": "node scripts/check-env.mjs",
     "security:audit": "node scripts/security-audit.mjs",
