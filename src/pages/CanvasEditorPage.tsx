@@ -1311,6 +1311,32 @@ export function CanvasEditorPage() {
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(200,200,200,0.1)_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-[radial-gradient(circle_at_center,rgba(50,50,50,0.3)_1px,transparent_1px)]" />
             </div>
 
+            <div className="absolute bottom-2 left-2 right-2 z-10 grid grid-cols-3 gap-2 sm:bottom-4 sm:left-4 sm:right-auto sm:w-[420px]">
+              <label
+                htmlFor="file-upload"
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/50 bg-white/85 px-3 py-2 text-xs font-semibold text-neutral-700 shadow-lg backdrop-blur transition hover:border-primary-300 hover:text-primary-700 dark:border-white/10 dark:bg-neutral-900/80 dark:text-neutral-200"
+              >
+                <Upload className="h-4 w-4" />
+                画像を置く
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowGenerateModal(true)}
+                className="flex items-center justify-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-3 py-2 text-xs font-semibold text-primary-700 shadow-lg backdrop-blur transition hover:bg-primary-100 dark:border-primary-400/20 dark:bg-primary-400/10 dark:text-primary-200"
+              >
+                <Wand2 className="h-4 w-4" />
+                生成する
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/gallery')}
+                className="flex items-center justify-center gap-2 rounded-xl border border-white/50 bg-white/85 px-3 py-2 text-xs font-semibold text-neutral-700 shadow-lg backdrop-blur transition hover:border-primary-300 hover:text-primary-700 dark:border-white/10 dark:bg-neutral-900/80 dark:text-neutral-200"
+              >
+                <Image className="h-4 w-4" />
+                素材を見る
+              </button>
+            </div>
+
             {viewMode === 'canvas' ? (
               <>
                 <InfiniteCanvas
