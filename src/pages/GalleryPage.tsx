@@ -458,6 +458,8 @@ export function GalleryPage() {
       return false;
     });
   }, [images, searchQuery]);
+  const favoriteCount = images.filter((image) => image.is_favorite).length;
+  const localWorkspaceCount = images.filter(isLocalWorkspaceImage).length;
 
   const navigateImage = useCallback((direction: 'prev' | 'next') => {
     if (!selectedImage) return;
@@ -570,6 +572,61 @@ export function GalleryPage() {
             </button>
           </div>
         </motion.div>
+
+        <section className="mb-6 grid gap-3 lg:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectMode(true);
+              setSelectedIds(new Set());
+            }}
+            className="rounded-2xl border border-neutral-200 bg-white/70 p-4 text-left shadow-sm transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-neutral-900/55 dark:hover:border-primary-500/70"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+              <CheckSquare className="h-4 w-4 text-primary-500" />
+              成果物を選ぶ
+            </span>
+            <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+              複数画像を選択して、一括ダウンロードや整理に進みます。
+            </p>
+            <span className="mt-3 inline-flex rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-400/10 dark:text-primary-200">
+              {selectedIds.size}枚選択中
+            </span>
+          </button>
+
+          <Link
+            to="/canvas/new"
+            className="rounded-2xl border border-neutral-200 bg-white/70 p-4 text-left shadow-sm transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-neutral-900/55 dark:hover:border-primary-500/70"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+              <Sparkles className="h-4 w-4 text-primary-500" />
+              Canvasで再編集
+            </span>
+            <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+              保存済み画像を開いて、背景削除、色変更、派生生成へつなげます。
+            </p>
+            <span className="mt-3 inline-flex rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+              ローカル成果物 {localWorkspaceCount}件
+            </span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setFilter('favorites')}
+            className="rounded-2xl border border-neutral-200 bg-white/70 p-4 text-left shadow-sm transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-neutral-900/55 dark:hover:border-primary-500/70"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+              <Heart className="h-4 w-4 text-primary-500" />
+              採用候補を見る
+            </span>
+            <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+              お気に入りにした画像だけを絞り込み、共有やダウンロードへ進みます。
+            </p>
+            <span className="mt-3 inline-flex rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-400/10 dark:text-primary-200">
+              お気に入り {favoriteCount}件
+            </span>
+          </button>
+        </section>
 
         {/* Select Mode Actions */}
         <AnimatePresence>
