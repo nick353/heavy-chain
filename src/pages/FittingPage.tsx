@@ -4,13 +4,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   Check,
+  Camera,
   Download,
   ImagePlus,
   Pencil,
   RefreshCw,
+  Ruler,
+  Shirt,
   Sparkles,
   Trash2,
   Upload,
+  Users,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { generateModelMatrix } from '../lib/imageApi';
@@ -67,6 +71,53 @@ const genderOptions: Array<{ id: Gender; label: string }> = [
   { id: 'male', label: '男性' },
 ];
 
+const fittingWorkflows = [
+  {
+    id: 'ec-standard',
+    title: 'EC標準フィット',
+    description: '白背景で正面・側面の購買判断に使う',
+    productDescription: 'EC商品ページ向け。自然光、白背景、服のシルエットと素材感が分かる落ち着いたモデル着用画像。',
+    bodyTypes: ['slim', 'regular'],
+    ageGroups: ['20s', '30s'],
+    gender: 'female' as Gender,
+    icon: Shirt,
+    outputs: ['正面着用', '側面確認', '商品ページ'],
+  },
+  {
+    id: 'size-comparison',
+    title: 'サイズ比較',
+    description: '体型差を並べて返品リスクを下げる',
+    productDescription: '同じ衣服を体型別に比較。ECのサイズ感説明に使える、同一背景・同一ポーズのモデル着用画像。',
+    bodyTypes: ['slim', 'regular', 'plus'],
+    ageGroups: ['20s', '30s'],
+    gender: 'female' as Gender,
+    icon: Ruler,
+    outputs: ['体型差比較', 'サイズ説明', '一覧画像'],
+  },
+  {
+    id: 'lookbook',
+    title: 'ルック確認',
+    description: 'SNS・LOOK向けに雰囲気まで確認する',
+    productDescription: 'ブランドLOOK向け。自然なポーズ、上品な背景、衣服の雰囲気とコーディネートが伝わるモデル着用画像。',
+    bodyTypes: ['regular'],
+    ageGroups: ['20s', '30s', '40s'],
+    gender: 'female' as Gender,
+    icon: Camera,
+    outputs: ['LOOK素材', 'SNS候補', '雰囲気確認'],
+  },
+  {
+    id: 'customer-range',
+    title: '顧客層確認',
+    description: '年代ごとの見え方をまとめて確認する',
+    productDescription: 'ターゲット顧客層の違いを確認。年代別に同じ衣服の印象差が分かる、ECと販促の両方に使える着用画像。',
+    bodyTypes: ['regular', 'plus'],
+    ageGroups: ['20s', '30s', '40s'],
+    gender: 'female' as Gender,
+    icon: Users,
+    outputs: ['年代比較', '販促判断', '顧客層確認'],
+  },
+];
+
 const seedHistory: HistoryItem[] = [
   { id: 'fit-1042', title: 'リネンシャツ / モデル着用', status: '完了', time: '12分前', count: 4 },
   { id: 'fit-1038', title: 'ワイドパンツ / EC白背景', status: '完了', time: '昨日', count: 3 },
@@ -99,6 +150,7 @@ export function FittingPage() {
   const [selectedBodyTypes, setSelectedBodyTypes] = useState<string[]>(['slim', 'regular']);
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>(['20s', '30s']);
   const [gender, setGender] = useState<Gender>('female');
+  const [activeWorkflowId, setActiveWorkflowId] = useState(fittingWorkflows[0].id);
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultMatrix, setResultMatrix] = useState<MatrixItem[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>(seedHistory);
@@ -108,6 +160,21 @@ export function FittingPage() {
   const canGenerate = useMemo(() => {
     return Boolean(currentBrand && !isGenerating && (productDescription.trim() || garmentImageUrl) && selectedBodyTypes.length && selectedAgeGroups.length);
   }, [currentBrand, garmentImageUrl, isGenerating, productDescription, selectedAgeGroups.length, selectedBodyTypes.length]);
+  const activeWorkflow = fittingWorkflows.find((workflow) => workflow.id === activeWorkflowId) ?? fittingWorkflows[0];
+  const selectedBodyTypeLabels = bodyTypeOptions
+    .filter((option) => selectedBodyTypes.includes(option.id))
+    .map((option) => option.label);
+  const selectedAgeGroupLabels = ageGroupOptions
+    .filter((option) => selectedAgeGroups.includes(option.id))
+    .map((option) => option.label);
+
+  const applyWorkflow = (workflow: typeof fittingWorkflows[number]) => {
+    setActiveWorkflowId(workflow.id);
+    setProductDescription(workflow.productDescription);
+    setSelectedBodyTypes(workflow.bodyTypes);
+    setSelectedAgeGroups(workflow.ageGroups);
+    setGender(workflow.gender);
+  };
 
   const toggleBodyType = (id: string) => {
     setSelectedBodyTypes((items) => (
@@ -210,8 +277,16 @@ export function FittingPage() {
   };
 
   const handleGenerate = () => {
+    const fittingBrief = [
+      productDescription.trim(),
+      `用途: ${activeWorkflow.title}`,
+      `出力: ${activeWorkflow.outputs.join(' / ')}`,
+      `体型: ${selectedBodyTypeLabels.join(' / ')}`,
+      `年代: ${selectedAgeGroupLabels.join(' / ')}`,
+    ].filter(Boolean).join('\n');
+
     void runGeneration({
-      productDescription: productDescription.trim(),
+      productDescription: fittingBrief,
       imageUrl: garmentImageUrl,
       bodyTypes: selectedBodyTypes,
       ageGroups: selectedAgeGroups,
@@ -282,6 +357,58 @@ export function FittingPage() {
             </Link>
           </div>
 
+          <section className="mt-6 rounded-2xl border border-neutral-200 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/40">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-neutral-950 dark:text-white">着用ワークフローを選ぶ</h2>
+                <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                  Lightchainで用途を選んでいた感覚のまま、モデル条件と出力目的を先に決めます。
+                </p>
+              </div>
+              <span className="w-fit whitespace-nowrap rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-950/50 dark:text-primary-200">
+                {selectedBodyTypes.length * selectedAgeGroups.length} パターン
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {fittingWorkflows.map((workflow) => {
+                const Icon = workflow.icon;
+                const selected = workflow.id === activeWorkflowId;
+
+                return (
+                  <button
+                    key={workflow.id}
+                    type="button"
+                    onClick={() => applyWorkflow(workflow)}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      selected
+                        ? 'border-primary-400 bg-primary-50/70 ring-2 ring-primary-100 dark:border-primary-300 dark:bg-primary-400/10 dark:ring-primary-400/20'
+                        : 'border-neutral-200 bg-white/75 hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-950/50 dark:hover:border-primary-500/70'
+                    }`}
+                    aria-pressed={selected}
+                  >
+                    <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                      selected
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-surface-100 text-neutral-600 dark:bg-surface-800 dark:text-neutral-300'
+                    }`}>
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="mt-3 block text-sm font-semibold text-neutral-950 dark:text-white">{workflow.title}</span>
+                    <span className="mt-1 block text-sm leading-6 text-neutral-500 dark:text-neutral-400">{workflow.description}</span>
+                    <span className="mt-3 flex flex-wrap gap-1.5">
+                      {workflow.outputs.map((output) => (
+                        <span key={output} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-neutral-500 ring-1 ring-neutral-200 dark:bg-surface-900 dark:text-neutral-300 dark:ring-white/10">
+                          {output}
+                        </span>
+                      ))}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
           <div className="mt-6 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
             <label className="group flex min-h-[360px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-primary-300/70 bg-white/55 p-6 text-center transition hover:border-primary-500 hover:bg-white/80 dark:border-primary-700/50 dark:bg-surface-900/50 dark:hover:bg-surface-900/80">
               <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
@@ -301,10 +428,28 @@ export function FittingPage() {
             </label>
 
             <div className="rounded-2xl border border-white/60 bg-white/50 p-4 dark:border-white/10 dark:bg-surface-900/40">
+              <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl bg-white/75 p-3 dark:bg-surface-950/60">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">体型</p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">{selectedBodyTypeLabels.join(' / ')}</p>
+                </div>
+                <div className="rounded-xl bg-white/75 p-3 dark:bg-surface-950/60">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">年代</p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">{selectedAgeGroupLabels.join(' / ')}</p>
+                </div>
+                <div className="rounded-xl bg-white/75 p-3 dark:bg-surface-950/60 sm:col-span-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">用途</p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">{activeWorkflow.title}</p>
+                </div>
+              </div>
+
               <div className="rounded-2xl bg-gradient-to-br from-surface-50 to-white p-4 dark:from-surface-950 dark:to-surface-900">
                 <label htmlFor="fitting-description" className="text-sm font-semibold text-neutral-900 dark:text-white">
-                  商品説明
+                  生成brief
                 </label>
+                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  ワークフローを選ぶと自動で整います。必要なときだけ細部を追記してください。
+                </p>
                 <textarea
                   id="fitting-description"
                   className="mt-3 min-h-32 w-full rounded-xl border border-neutral-200 bg-white/80 p-4 text-sm leading-6 text-neutral-800 outline-none transition focus:border-primary-400 dark:border-surface-700 dark:bg-surface-950/70 dark:text-neutral-100"
