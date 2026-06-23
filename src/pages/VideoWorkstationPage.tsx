@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, ChevronRight, Save } from 'lucide-react';
+import { Check, ChevronRight, Clapperboard, Film, Save, Smartphone } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
@@ -75,6 +75,18 @@ const storyboardCandidates: VideoStoryboardCandidate[] = [
     workflowMode: 'fit-conversion',
   },
 ];
+
+const storyboardOutputLabels: Record<string, string[]> = {
+  'launch-reel': ['縦型リール', '商品ヒーロー', 'CTAエンド'],
+  'texture-close-up': ['素材マクロ', '縫製ディテール', 'タグCTA'],
+  'fit-check-cta': ['着用ループ', 'サイズ確認', 'Swipe CTA'],
+};
+
+const storyboardIcons: Record<string, typeof Film> = {
+  'launch-reel': Smartphone,
+  'texture-close-up': Film,
+  'fit-check-cta': Clapperboard,
+};
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -178,6 +190,10 @@ export function VideoWorkstationPage() {
   const [materials, setMaterials] = useState(storyboardCandidates[0].materials);
   const nextHistoryId = useRef(3);
   const selectedStoryboard = storyboardCandidates.find((candidate) => candidate.id === selectedStoryboardId) ?? storyboardCandidates[0];
+  const shotSteps = shotPlan
+    .split('/')
+    .map((step) => step.trim())
+    .filter(Boolean);
   const previewImageUrl = useMemo(() => buildVideoStoryboardPreviewSvg({
     activeChoice,
     selectedStoryboard,
@@ -370,11 +386,71 @@ export function VideoWorkstationPage() {
             </button>
           ))}
         </div>
+
+        <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/40">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">動画レーンを選ぶ</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                Lightchainで動画用途を選んでいた流れに合わせて、尺・比率・ショット順・CTAをまとめて決めます。
+              </p>
+            </div>
+            <span className="w-fit rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-950/50 dark:text-primary-200">
+              {selectedStoryboard.duration} / {selectedStoryboard.aspectRatio}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {storyboardCandidates.map((candidate) => {
+              const selected = candidate.id === selectedStoryboard.id;
+              const Icon = storyboardIcons[candidate.id] ?? Film;
+
+              return (
+                <button
+                  key={candidate.id}
+                  type="button"
+                  onClick={() => selectStoryboard(candidate)}
+                  aria-pressed={selected}
+                  className={`rounded-2xl border p-4 text-left transition ${
+                    selected
+                      ? 'border-primary-400 bg-primary-50/70 ring-2 ring-primary-100 dark:border-primary-300 dark:bg-primary-400/10 dark:ring-primary-400/20'
+                      : 'border-neutral-200 bg-white/75 hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-950/50 dark:hover:border-primary-500/70'
+                  }`}
+                >
+                  <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                    selected
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-surface-100 text-neutral-600 dark:bg-surface-800 dark:text-neutral-300'
+                  }`}>
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="mt-3 flex items-center justify-between gap-3 text-sm font-semibold text-neutral-950 dark:text-white">
+                    {candidate.label}
+                    {selected && <Check className="h-4 w-4 text-primary-600 dark:text-primary-200" />}
+                  </span>
+                  <span className="mt-2 block text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                    {candidate.duration} / {candidate.aspectRatio} / {candidate.workflowMode}
+                  </span>
+                  <span className="mt-3 flex flex-wrap gap-1.5">
+                    {(storyboardOutputLabels[candidate.id] ?? []).map((output) => (
+                      <span key={output} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-neutral-500 ring-1 ring-neutral-200 dark:bg-surface-900 dark:text-neutral-300 dark:ring-white/10">
+                        {output}
+                      </span>
+                    ))}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">生成前インテーク</h2>
+          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">素材と尺を整える</h2>
+          <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+            選んだ動画レーンをもとに、素材ファイル、字幕CTA、ショット順だけを調整します。
+          </p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               尺
@@ -400,43 +476,50 @@ export function VideoWorkstationPage() {
         </div>
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">Storyboard候補</h2>
+            <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">Storyboardプレビュー</h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">{selectedStoryboard.label} / {selectedStoryboard.motionSignature}</p>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {storyboardCandidates.map((candidate) => {
-              const selected = candidate.id === selectedStoryboard.id;
-              return (
-                <button
-                  key={candidate.id}
-                  type="button"
-                  onClick={() => selectStoryboard(candidate)}
-                  aria-pressed={selected}
-                  className={`rounded-xl border p-3 text-left transition ${
-                    selected
-                      ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                      : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
-                  }`}
-                >
-                  <span className="flex items-center justify-between gap-3 text-sm font-semibold">
-                    {candidate.label}
-                    {selected && <Check className="h-4 w-4" />}
-                  </span>
-                  <span className="mt-2 block text-xs leading-5 text-neutral-500 dark:text-neutral-400">
-                    {candidate.duration} / {candidate.aspectRatio} / {candidate.workflowMode}
-                  </span>
-                  <span className="mt-3 block text-xs leading-5 text-neutral-600 dark:text-neutral-300">
-                    {candidate.motion}
-                  </span>
-                </button>
-              );
-            })}
+            <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Motion</p>
+              <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{selectedStoryboard.motion}</p>
+            </div>
+            <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Framing</p>
+              <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{selectedStoryboard.framing}</p>
+            </div>
+            <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Output</p>
+              <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{(storyboardOutputLabels[selectedStoryboard.id] ?? []).join(' / ')}</p>
+            </div>
           </div>
-          <img
-            src={previewImageUrl}
-            alt={`${selectedStoryboard.label} storyboard preview`}
-            className="mt-4 aspect-[3/2] w-full rounded-xl border border-black/5 object-cover dark:border-white/10"
-          />
+          <div className="mt-4 rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40">
+            <div className="grid gap-3 md:grid-cols-4">
+              {shotSteps.slice(0, 4).map((step, index) => (
+                <div key={`${step}-${index}`} className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-white/10 dark:bg-surface-900/70">
+                  <div className="flex aspect-[9/14] items-center justify-center rounded-lg bg-surface-100 text-primary-600 dark:bg-surface-800 dark:text-primary-300">
+                    <Film className="h-8 w-8" />
+                  </div>
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">Shot {index + 1}</p>
+                  <p className="mt-1 text-sm font-semibold leading-6 text-neutral-800 dark:text-neutral-100">{step}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-900/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">字幕CTA</p>
+                <p className="mt-1 text-sm text-neutral-700 dark:text-neutral-200">{subtitleCta}</p>
+              </div>
+              <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-900/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">素材</p>
+                <p className="mt-1 text-sm text-neutral-700 dark:text-neutral-200">{materials}</p>
+              </div>
+              <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-900/60">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">次に行く場所</p>
+                <p className="mt-1 text-sm text-neutral-700 dark:text-neutral-200">Canvas / 生成指示へ handoff</p>
+              </div>
+            </div>
+          </div>
         </div>
         <div className="glass-panel rounded-2xl p-5">
           <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">ローカル進捗</h2>
