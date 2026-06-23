@@ -102,6 +102,41 @@ const sceneOptions = [
   { id: 'studio', name: 'スタジオ', prompt: 'professional studio, clean background' },
 ];
 
+const generationLanes = [
+  {
+    id: 'ec',
+    title: 'EC商品素材',
+    description: '商品ページの標準カット、白背景、詳細画像をまとめて作る',
+    material: '商品写真 / 商品説明',
+    output: '正面・側面・背面・ディテール',
+    featureIds: ['product-shots', 'remove-bg', 'upscale'],
+  },
+  {
+    id: 'fitting',
+    title: '着用画像',
+    description: '衣服画像から体型・年齢別のモデル着用イメージを作る',
+    material: '衣服画像 / モデル条件',
+    output: '着用マトリクス / EC素材',
+    featureIds: ['model-matrix', 'scene-coordinate'],
+  },
+  {
+    id: 'graphics',
+    title: '柄・グラフィック',
+    description: '柄案、カラバリ、ベクター化前の比較案を作る',
+    material: '柄Brief / 参照素材',
+    output: '4案比較 / 色柄モック',
+    featureIds: ['design-gacha', 'colorize', 'variations'],
+  },
+  {
+    id: 'marketing',
+    title: '販促・多言語',
+    description: 'SNS、ECバナー、キャンペーン用の画像を作る',
+    material: '商品素材 / コピー',
+    output: 'SNS投稿 / 多言語バナー',
+    featureIds: ['campaign-image', 'multilingual-banner', 'optimize-prompt'],
+  },
+];
+
 // Feature configuration for reference images
 const FEATURE_CONFIG: Record<string, {
   requiresImage: boolean;
@@ -2399,6 +2434,12 @@ export function GeneratePage() {
 
   // Feature selection view
   if (!selectedFeature) {
+    const getLaneFeatures = (featureIds: string[]) => {
+      return featureIds
+        .map((featureId) => FEATURES.find((feature) => feature.id === featureId))
+        .filter((feature): feature is Feature => Boolean(feature));
+    };
+
     return (
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -2415,6 +2456,71 @@ export function GeneratePage() {
         </div>
 
         <UsageStats className="mb-4 sm:mb-6 lg:mb-8" />
+
+        <section className="mb-6 rounded-2xl border border-neutral-200 bg-white/80 p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900/80 sm:p-5 lg:mb-8">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-neutral-950 dark:text-white">
+                制作レーンから始める
+              </h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                Lightchainで選んでいた用途に近い入口です。素材と作りたい成果物から選ぶと、必要な生成機能へ直接進めます。
+              </p>
+            </div>
+            <Link
+              to="/dashboard"
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-primary-300 hover:text-primary-700 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
+            >
+              制作ワークフローへ戻る
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-4">
+            {generationLanes.map((lane) => {
+              const laneFeatures = getLaneFeatures(lane.featureIds);
+              return (
+                <div
+                  key={lane.id}
+                  className="rounded-2xl border border-neutral-200 bg-neutral-50/80 p-4 dark:border-neutral-800 dark:bg-neutral-950/40"
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-primary-700 shadow-sm dark:bg-neutral-900 dark:text-primary-200">
+                    {lane.id === 'ec' && <ImageIcon className="h-5 w-5" />}
+                    {lane.id === 'fitting' && <Sparkles className="h-5 w-5" />}
+                    {lane.id === 'graphics' && <Sliders className="h-5 w-5" />}
+                    {lane.id === 'marketing' && <Wand2 className="h-5 w-5" />}
+                  </div>
+                  <h3 className="mt-3 text-sm font-semibold text-neutral-950 dark:text-white">{lane.title}</h3>
+                  <p className="mt-1 min-h-[48px] text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                    {lane.description}
+                  </p>
+                  <div className="mt-3 grid gap-2 text-xs">
+                    <div className="rounded-xl bg-white p-2 dark:bg-neutral-900">
+                      <span className="font-semibold text-neutral-400">素材</span>
+                      <p className="mt-1 text-neutral-700 dark:text-neutral-200">{lane.material}</p>
+                    </div>
+                    <div className="rounded-xl bg-white p-2 dark:bg-neutral-900">
+                      <span className="font-semibold text-neutral-400">作れるもの</span>
+                      <p className="mt-1 text-neutral-700 dark:text-neutral-200">{lane.output}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {laneFeatures.map((feature) => (
+                      <button
+                        key={feature.id}
+                        type="button"
+                        onClick={() => handleFeatureSelect(feature)}
+                        className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow-sm transition hover:bg-primary-50 hover:text-primary-800 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-primary-950/40"
+                      >
+                        {feature.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
         <FeatureSelector 
           onSelectFeature={handleFeatureSelect}
