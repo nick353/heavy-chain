@@ -20,7 +20,7 @@ const pages = [
   {
     name: 'generate',
     path: '/generate',
-    expected: ['制作レーンから始める', '制作ワークフローへ戻る'],
+    expected: ['制作レーンから始める', '制作ワークフローへ戻る', 'Runway生成前チェック'],
   },
   {
     name: 'fitting',

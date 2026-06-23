@@ -15,7 +15,11 @@ import {
   ExternalLink,
   Plus,
   Minus,
-  Sliders
+  Sliders,
+  AlertCircle,
+  CheckCircle2,
+  CreditCard,
+  KeyRound
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
@@ -136,6 +140,51 @@ const generationLanes = [
     featureIds: ['campaign-image', 'multilingual-banner', 'optimize-prompt'],
   },
 ];
+
+type RunwayMcpConnectionStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
+
+interface RunwayMcpConnectionApproval {
+  status: RunwayMcpConnectionStatus;
+  updated_at: string;
+}
+
+interface BrandRunwaySubscription {
+  status: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  plan: {
+    code: string | null;
+    name: string | null;
+    is_active: boolean | null;
+    runway_mcp_generation: boolean;
+  } | null;
+}
+
+const RUNWAY_APPROVAL_LABELS: Record<RunwayMcpConnectionStatus | 'not_requested', string> = {
+  not_requested: '未申請',
+  pending: '承認待ち',
+  approved: '承認済み',
+  rejected: '却下',
+  revoked: '取消済み',
+};
+
+const getRunwayPlanLabel = (subscription: BrandRunwaySubscription | null) => {
+  return subscription?.plan?.name || subscription?.plan?.code || 'Free';
+};
+
+const isRunwaySubscriptionEligible = (subscription: BrandRunwaySubscription | null) => {
+  if (!subscription?.plan) return false;
+  const now = Date.now();
+  const periodStart = Date.parse(subscription.current_period_start || '');
+  const periodEnd = Date.parse(subscription.current_period_end || '');
+  return ['trialing', 'active'].includes(subscription.status || '')
+    && Number.isFinite(periodStart)
+    && Number.isFinite(periodEnd)
+    && periodStart <= now
+    && periodEnd > now
+    && subscription.plan.is_active === true
+    && subscription.plan.runway_mcp_generation === true;
+};
 
 // Feature configuration for reference images
 const FEATURE_CONFIG: Record<string, {
@@ -517,6 +566,8 @@ export function GeneratePage() {
   const [skinTone, setSkinTone] = useState<'light' | 'medium' | 'dark'>('medium');
   const [hairStyle, setHairStyle] = useState<'short' | 'medium' | 'long'>('medium');
   const [modelCandidateLabel, setModelCandidateLabel] = useState<string>('');
+  const [runwayApproval, setRunwayApproval] = useState<RunwayMcpConnectionApproval | null>(null);
+  const [runwaySubscription, setRunwaySubscription] = useState<BrandRunwaySubscription | null>(null);
 
   const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
   const sourceReadback = hydrateGenerationIntentSource(searchParams);
@@ -524,6 +575,65 @@ export function GeneratePage() {
   const patternContext = sourceReadback?.sourceWorkspace === 'patterns'
     ? hydratePatternGenerationContext(searchParams)
     : null;
+
+  useEffect(() => {
+    if (!currentBrand) {
+      setRunwayApproval(null);
+      setRunwaySubscription(null);
+      return;
+    }
+
+    let active = true;
+
+    const fetchRunwayReadiness = async () => {
+      const [approvalResult, subscriptionResult] = await Promise.all([
+        supabase
+          .from('runway_mcp_connection_approvals')
+          .select('status, updated_at')
+          .eq('brand_id', currentBrand.id)
+          .maybeSingle(),
+        supabase
+          .from('brand_subscriptions')
+          .select('status, current_period_start, current_period_end, plans(code, name, is_active, features)')
+          .eq('brand_id', currentBrand.id)
+          .maybeSingle(),
+      ]);
+
+      if (!active) return;
+
+      if (approvalResult.error) {
+        console.error('Failed to fetch Runway MCP approval:', approvalResult.error);
+        setRunwayApproval(null);
+      } else {
+        setRunwayApproval((approvalResult.data || null) as RunwayMcpConnectionApproval | null);
+      }
+
+      if (subscriptionResult.error) {
+        console.error('Failed to fetch Runway MCP subscription:', subscriptionResult.error);
+        setRunwaySubscription(null);
+      } else {
+        const row = subscriptionResult.data as any;
+        const plan = Array.isArray(row?.plans) ? row.plans[0] : row?.plans;
+        setRunwaySubscription(row ? {
+          status: row.status || null,
+          current_period_start: row.current_period_start || null,
+          current_period_end: row.current_period_end || null,
+          plan: plan ? {
+            code: plan.code || null,
+            name: plan.name || null,
+            is_active: plan.is_active ?? null,
+            runway_mcp_generation: plan.features?.runway_mcp_generation === true,
+          } : null,
+        } : null);
+      }
+    };
+
+    fetchRunwayReadiness();
+
+    return () => {
+      active = false;
+    };
+  }, [currentBrand]);
 
   useEffect(() => {
     const workflow = getWorkflowMetadata(searchParams.get('workflow'));
@@ -2431,6 +2541,19 @@ export function GeneratePage() {
         return false;
     }
   })();
+  const runwayStatus = runwayApproval?.status || 'not_requested';
+  const runwayApproved = runwayStatus === 'approved';
+  const runwaySubscriptionEligible = isRunwaySubscriptionEligible(runwaySubscription);
+  const runwayReadyInApp = runwayApproved && runwaySubscriptionEligible;
+  const runwayPlanLabel = getRunwayPlanLabel(runwaySubscription);
+  const runwayPeriodEnd = runwaySubscription?.current_period_end
+    ? new Date(runwaySubscription.current_period_end).toLocaleDateString('ja-JP')
+    : null;
+  const runwayReadinessText = runwayReadyInApp
+    ? 'サイト側の生成条件は満たしています'
+    : runwayApproved
+      ? 'サブスク条件が未達です'
+      : 'Runway MCP接続承認が必要です';
 
   // Feature selection view
   if (!selectedFeature) {
@@ -2456,6 +2579,60 @@ export function GeneratePage() {
         </div>
 
         <UsageStats className="mb-4 sm:mb-6 lg:mb-8" />
+
+        <section className={`mb-6 rounded-2xl border p-4 shadow-soft lg:mb-8 ${
+          runwayReadyInApp
+            ? 'border-green-200 bg-green-50/80 dark:border-green-800 dark:bg-green-950/20'
+            : 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
+        }`}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+                {runwayReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
+                Runway生成前チェック
+              </div>
+              <p className={`mt-1 text-sm ${runwayReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                {runwayReadinessText}
+              </p>
+            </div>
+            <Link
+              to="/brand/settings"
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/70 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-primary-300 hover:text-primary-700 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
+            >
+              ブランド設定を開く
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
+            <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+              <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
+                <KeyRound className="h-4 w-4" />
+                接続承認
+              </div>
+              <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+                {RUNWAY_APPROVAL_LABELS[runwayStatus]}
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+              <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
+                <CreditCard className="h-4 w-4" />
+                プラン
+              </div>
+              <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+                {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+              <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
+                {runwayReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
+                本番ブリッジ
+              </div>
+              <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+                管理者設定後に本番生成できます
+              </p>
+            </div>
+          </div>
+        </section>
 
         <section className="mb-6 rounded-2xl border border-neutral-200 bg-white/80 p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900/80 sm:p-5 lg:mb-8">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -2632,6 +2809,73 @@ export function GeneratePage() {
           )}
 
           <UsageStats />
+
+          <div className={`rounded-2xl border p-4 ${
+            runwayReadyInApp
+              ? 'border-green-200 bg-green-50/80 dark:border-green-800 dark:bg-green-950/20'
+              : 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                runwayReadyInApp
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
+              }`}>
+                {runwayReadyInApp ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                      Runway生成前チェック
+                    </p>
+                    <p className={`mt-1 text-sm ${
+                      runwayReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'
+                    }`}>
+                      {runwayReadinessText}
+                    </p>
+                  </div>
+                  <Link
+                    to="/brand/settings"
+                    className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/70 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-primary-300 hover:text-primary-700 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
+                  >
+                    ブランド設定を開く
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+
+                <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
+                  <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+                    <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
+                      <KeyRound className="h-4 w-4" />
+                      接続承認
+                    </div>
+                    <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+                      {RUNWAY_APPROVAL_LABELS[runwayStatus]}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+                    <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
+                      <CreditCard className="h-4 w-4" />
+                      プラン
+                    </div>
+                    <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+                      {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+                    <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
+                      {runwayReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
+                      本番ブリッジ
+                    </div>
+                    <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+                      管理者設定後に本番生成できます
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="glass-panel p-6 rounded-2xl dark:bg-neutral-800/50 dark:border-neutral-700/50">
             {/* Prompt History Button */}
