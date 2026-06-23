@@ -136,6 +136,7 @@ serve(async (req) => {
     ].join(' ');
 
     const runwayResult = await upscaleRunwayImage({
+      brandId,
       base64: sourceImage.base64,
       mimeType: sourceImage.mimeType,
     });

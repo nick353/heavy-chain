@@ -120,8 +120,19 @@ require_no_match "deprecated Gemini 2.0 model reference in Supabase functions" "
 require_no_repo_file_match "OpenAI/Gemini image env requirement in generation functions" "Deno\\.env\\.get\\(['\"](GEMINI_API_KEY|OPENAI_API_KEY|OPENAI_CHAT_[A-Z_]+)['\"]\\)" supabase/functions/generate-image supabase/functions/remove-background supabase/functions/upscale supabase/functions/colorize supabase/functions/generate-variations supabase/functions/design-gacha supabase/functions/product-shots supabase/functions/model-matrix supabase/functions/multilingual-banner
 grep -q "RUNWAY_MCP_BRIDGE_URL" scripts/check-env.mjs
 grep -q "RUNWAY_MCP_BRIDGE_TOKEN" scripts/check-env.mjs
+grep -q "RUNWAY_MCP_TOKEN_ENCRYPTION_KEY" scripts/check-env.mjs
 grep -q "RUNWAY_MCP_BRIDGE_URL" supabase/functions/_shared/runway.ts
 grep -q "RUNWAY_MCP_BRIDGE_TOKEN" supabase/functions/_shared/runway.ts
+grep -q "RUNWAY_MCP_TOKEN_ENCRYPTION_KEY" supabase/functions/_shared/runwayMcpConnection.ts
+grep -q "AES-GCM" supabase/functions/_shared/runwayMcpConnection.ts
+grep -q "registerRunwayOAuthClient" supabase/functions/_shared/runwayMcpConnection.ts
+grep -q "exchangeRunwayCode" supabase/functions/_shared/runwayMcpConnection.ts
+grep -q "runwayMcpListTools" supabase/functions/_shared/runwayMcpConnection.ts
+grep -q "runwayMcpCallTool" supabase/functions/_shared/runwayMcpConnection.ts
+test -f supabase/functions/runway-mcp-connect-start/index.ts
+test -f supabase/functions/runway-mcp-connect-callback/index.ts
+test -f supabase/functions/runway-mcp-connection-status/index.ts
+test -f supabase/functions/runway-mcp-bridge/index.ts
 grep -q "/text-to-image" supabase/functions/_shared/runway.ts
 grep -q "referenceImages" supabase/functions/_shared/runway.ts
 grep -q "/image-upscale" supabase/functions/_shared/runway.ts
@@ -204,6 +215,11 @@ grep -q "private.is_current_user_admin()" supabase/migrations/20260623090000_run
 grep -q "IF FOUND AND v_row.status = 'approved' THEN" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
 require_no_match "credential/URL/token/secret/metadata columns in Runway MCP approval migration" "\\b(oauth|api[_-]?key|apikey|connection[_-]?url|bridge[_-]?url|bridge[_-]?token|secret[_-]?url|secret[_-]?token|url|token|secret|credential|metadata)\\b[[:space:]]+(TEXT|VARCHAR|UUID|JSONB|JSON)" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql -E
 require_no_match "free-text notes in Runway MCP approval migration" "\\b(request_note|admin_note)\\b" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql -E
+grep -q "public.runway_mcp_oauth_states" supabase/migrations/20260623102000_runway_mcp_oauth_connections.sql
+grep -q "public.runway_mcp_oauth_connections" supabase/migrations/20260623102000_runway_mcp_oauth_connections.sql
+grep -q "encrypted_access_token" supabase/migrations/20260623102000_runway_mcp_oauth_connections.sql
+grep -q "encrypted_refresh_token" supabase/migrations/20260623102000_runway_mcp_oauth_connections.sql
+grep -q "GRANT ALL ON TABLE public.runway_mcp_oauth_connections TO service_role" supabase/migrations/20260623102000_runway_mcp_oauth_connections.sql
 
 echo "Checking RLS and table grants"
 grep -q "CREATE POLICY \"Users can create brands\"" supabase/migrations/20260618023000_restore_brand_insert_policy.sql

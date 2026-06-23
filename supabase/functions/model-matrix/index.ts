@@ -218,6 +218,7 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
 
 // 参照画像を使って生成
 async function generateWithReference(
+  brandId: string,
   originalBase64: string,
   originalMimeType: string,
   description: string,
@@ -243,6 +244,7 @@ CRITICAL REQUIREMENTS:
 STYLE: Professional fashion photography, full body shot, studio lighting, neutral background`;
 
   return await generateRunwayImage({
+    brandId,
     prompt,
     referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
   });
@@ -250,6 +252,7 @@ STYLE: Professional fashion photography, full body shot, studio lighting, neutra
 
 // テキストのみで生成
 async function generateFromText(
+  brandId: string,
   description: string,
   bodyType: typeof BODY_TYPES[0],
   ageGroup: typeof AGE_GROUPS[0],
@@ -258,7 +261,7 @@ async function generateFromText(
   _imageModel?: string
 ): Promise<RunwayImageResult | null> {
   const prompt = `${gender} model wearing ${description}, ${bodyType.prompt}, ${ageGroup.prompt}, fashion photography, full body shot, professional studio lighting, neutral background, high quality`;
-  return await generateRunwayImage({ prompt });
+  return await generateRunwayImage({ brandId, prompt });
 }
 
 serve(async (req) => {
@@ -447,6 +450,7 @@ serve(async (req) => {
         // 元画像がある場合は参照生成
         if (originalImageBase64) {
           generatedImage = await generateWithReference(
+            brandId,
             originalImageBase64,
             originalMimeType,
             finalDescription,
@@ -460,6 +464,7 @@ serve(async (req) => {
         // 参照生成が失敗した場合はテキストのみで生成
         if (!generatedImage) {
           generatedImage = await generateFromText(
+            brandId,
             finalDescription,
             bodyType,
             ageGroup,

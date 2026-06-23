@@ -47,6 +47,7 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
 
 // 元画像を参照して異なるアングルを生成
 async function generateAngleWithReference(
+  brandId: string,
   originalBase64: string,
   originalMimeType: string,
   shot: typeof SHOT_TYPES[0], 
@@ -78,6 +79,7 @@ STYLE: Professional e-commerce product photography, high resolution, sharp focus
 DO NOT change any aspect of the garment itself - only change the camera angle.`;
 
   return await generateRunwayImage({
+    brandId,
     prompt,
     referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
   });
@@ -85,6 +87,7 @@ DO NOT change any aspect of the garment itself - only change the camera angle.`;
 
 // テキストのみで生成（フォールバック）
 async function generateAngleFromText(
+  brandId: string,
   shot: typeof SHOT_TYPES[0], 
   description: string,
   backgroundPrompt: string,
@@ -101,7 +104,7 @@ BACKGROUND: ${backgroundPrompt}
 
 STYLE: High-resolution commercial product photography, sharp focus, professional lighting.`;
 
-  return await generateRunwayImage({ prompt });
+  return await generateRunwayImage({ brandId, prompt });
 }
 
 serve(async (req) => {
@@ -216,6 +219,7 @@ serve(async (req) => {
       // 元画像がある場合は参照生成、ない場合はテキスト生成
       if (originalImageBase64) {
         generatedImage = await generateAngleWithReference(
+          brandId,
           originalImageBase64, 
           originalMimeType, 
           shot, 
@@ -227,7 +231,7 @@ serve(async (req) => {
       
       // 参照生成が失敗した場合はテキストのみで生成
       if (!generatedImage) {
-        generatedImage = await generateAngleFromText(shot, finalDescription, backgroundPrompt, imageModel);
+        generatedImage = await generateAngleFromText(brandId, shot, finalDescription, backgroundPrompt, imageModel);
       }
 
       if (generatedImage) {

@@ -59,6 +59,18 @@ interface BrandRunwaySubscription {
   } | null;
 }
 
+interface RunwayMcpOAuthConnection {
+  connected: boolean;
+  connection: {
+    status: string;
+    expires_at: string | null;
+    last_verified_at: string | null;
+    last_error: string | null;
+    updated_at: string;
+  } | null;
+  verificationError?: string | null;
+}
+
 const ROLE_LABELS: Record<string, string> = {
   owner: 'オーナー',
   admin: '管理者',
@@ -116,7 +128,9 @@ export function BrandSettingsPage() {
   const [copied, setCopied] = useState(false);
   const [runwayApproval, setRunwayApproval] = useState<RunwayMcpConnectionApproval | null>(null);
   const [runwaySubscription, setRunwaySubscription] = useState<BrandRunwaySubscription | null>(null);
+  const [runwayOAuthConnection, setRunwayOAuthConnection] = useState<RunwayMcpOAuthConnection | null>(null);
   const [isRequestingRunwayApproval, setIsRequestingRunwayApproval] = useState(false);
+  const [isConnectingRunwayMcp, setIsConnectingRunwayMcp] = useState(false);
   
   const [form, setForm] = useState({
     name: '',
@@ -217,6 +231,23 @@ export function BrandSettingsPage() {
     }
   }, [currentBrand]);
 
+  const fetchRunwayOAuthConnection = useCallback(async () => {
+    if (!currentBrand) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('runway-mcp-connection-status', {
+        body: { brandId: currentBrand.id },
+      });
+      if (error) {
+        setRunwayOAuthConnection(null);
+        return;
+      }
+      setRunwayOAuthConnection((data || null) as RunwayMcpOAuthConnection | null);
+    } catch {
+      setRunwayOAuthConnection(null);
+    }
+  }, [currentBrand]);
+
   useEffect(() => {
     if (currentBrand) {
       setForm({
@@ -229,8 +260,22 @@ export function BrandSettingsPage() {
       fetchMembers();
       fetchRunwayApproval();
       fetchRunwaySubscription();
+      fetchRunwayOAuthConnection();
     }
-  }, [currentBrand, fetchMembers, fetchRunwayApproval, fetchRunwaySubscription]);
+  }, [currentBrand, fetchMembers, fetchRunwayApproval, fetchRunwaySubscription, fetchRunwayOAuthConnection]);
+
+  useEffect(() => {
+    const result = new URLSearchParams(window.location.search).get('runway_mcp');
+    if (result === 'connected') {
+      toast.success('Runway MCPに接続しました');
+      fetchRunwayApproval();
+      fetchRunwayOAuthConnection();
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (result === 'failed') {
+      toast.error('Runway MCP接続に失敗しました');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [fetchRunwayApproval, fetchRunwayOAuthConnection]);
 
   const handleRequestRunwayApproval = async () => {
     if (!currentBrand) return;
@@ -252,6 +297,27 @@ export function BrandSettingsPage() {
       toast.error(error.message || 'Runway MCP接続の申請に失敗しました');
     } finally {
       setIsRequestingRunwayApproval(false);
+    }
+  };
+
+  const handleConnectRunwayMcp = async () => {
+    if (!currentBrand) return;
+
+    setIsConnectingRunwayMcp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('runway-mcp-connect-start', {
+        body: {
+          brandId: currentBrand.id,
+          returnTo: '/brand/settings',
+        },
+      });
+      if (error) throw error;
+      const authorizationUrl = (data as { authorizationUrl?: string } | null)?.authorizationUrl;
+      if (!authorizationUrl) throw new Error('Runway認証URLを作成できませんでした');
+      window.location.assign(authorizationUrl);
+    } catch (error: any) {
+      toast.error(error.message || 'Runway MCP接続を開始できませんでした');
+      setIsConnectingRunwayMcp(false);
     }
   };
 
@@ -404,14 +470,17 @@ export function BrandSettingsPage() {
 
   const runwayStatus = runwayApproval?.status || 'not_requested';
   const runwayApproved = runwayStatus === 'approved';
+  const runwayOAuthConnected = runwayOAuthConnection?.connected === true;
   const runwaySubscriptionEligible = isRunwaySubscriptionEligible(runwaySubscription);
-  const runwayReadyInApp = runwayApproved && runwaySubscriptionEligible;
+  const runwayReadyInApp = runwayApproved && runwayOAuthConnected && runwaySubscriptionEligible;
   const runwayPlanLabel = getPlanLabel(runwaySubscription);
   const runwayPeriodEnd = runwaySubscription?.current_period_end
     ? new Date(runwaySubscription.current_period_end).toLocaleDateString('ja-JP')
     : null;
   const runwayReadinessLabel = runwayReadyInApp
     ? 'サイト側の条件は満たしています'
+    : !runwayOAuthConnected
+      ? 'Runwayログインが未接続です'
     : runwayApproved
       ? 'サブスク条件が未達です'
       : '接続承認が必要です';
@@ -455,10 +524,10 @@ export function BrandSettingsPage() {
                 Runway MCP接続
               </h2>
               <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                このブランドでRunway生成を使うための承認です。MCPブリッジのURLやトークンはここには保存しません。
+                このブランドでRunway生成を使うため、Runway公式MCPへログイン接続します。OAuthトークンはサーバー側で暗号化し、画面には保存しません。
               </p>
               <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
-                承認済みになるまで、Runway MCPを使う画像生成は使用量予約前に停止します。
+                Runwayログイン接続とサイト承認が完了するまで、Runway MCPを使う画像生成は使用量予約前に停止します。
                 サブスクが切れている場合も、承認状態に関係なく生成は停止します。
               </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -473,6 +542,19 @@ export function BrandSettingsPage() {
                   </div>
                   <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                     {RUNWAY_APPROVAL_LABELS[runwayStatus]}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-neutral-200 bg-white/55 p-3 dark:border-neutral-700 dark:bg-neutral-800/55">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-white">
+                    {runwayOAuthConnected ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <KeyRound className="h-4 w-4 text-amber-500" />
+                    )}
+                    Runwayログイン
+                  </div>
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                    {runwayOAuthConnected ? '接続済み' : '未接続'}
                   </p>
                 </div>
                 <div className="rounded-xl border border-neutral-200 bg-white/55 p-3 dark:border-neutral-700 dark:bg-neutral-800/55">
@@ -531,26 +613,40 @@ export function BrandSettingsPage() {
                   申請済みです。管理者の承認後に生成できます。
                 </p>
               )}
+              {runwayOAuthConnection?.verificationError && (
+                <p className="text-sm text-red-700 dark:text-red-300">
+                  Runway接続確認に失敗しました。
+                </p>
+              )}
               {runwayApproval?.status === 'approved' && (
                 <p className={`text-sm ${runwaySubscriptionEligible ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                  {runwaySubscriptionEligible
+                  {runwayReadyInApp
                     ? 'このブランドはRunway MCP生成のサイト条件を満たしています。'
-                    : '接続は承認済みですが、現在のプランではRunway生成は停止します。'}
+                    : !runwayOAuthConnected
+                      ? 'サイト承認は済んでいます。Runwayログイン接続を完了してください。'
+                      : '接続は承認済みですが、現在のプランではRunway生成は停止します。'}
                 </p>
               )}
               <div className="flex flex-col gap-2">
                 <Button
-                  onClick={handleRequestRunwayApproval}
-                  isLoading={isRequestingRunwayApproval}
-                  disabled={runwayApproval?.status === 'approved' || runwayApproval?.status === 'pending'}
+                  onClick={handleConnectRunwayMcp}
+                  isLoading={isConnectingRunwayMcp}
                   className="w-full shadow-sm"
                 >
-                  {runwayApproval?.status === 'approved'
-                    ? '承認済み'
-                    : runwayApproval?.status === 'pending'
-                      ? '申請済み'
-                      : '接続を申請'}
+                  {runwayOAuthConnected ? 'Runwayを再接続' : 'Runwayに接続'}
                 </Button>
+                {!runwayApproved && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleRequestRunwayApproval}
+                    isLoading={isRequestingRunwayApproval}
+                    disabled={runwayApproval?.status === 'pending'}
+                    className="w-full"
+                  >
+                    {runwayApproval?.status === 'pending' ? '承認申請済み' : '承認だけ申請'}
+                  </Button>
+                )}
                 {profile?.is_admin && (
                   <Button
                     type="button"

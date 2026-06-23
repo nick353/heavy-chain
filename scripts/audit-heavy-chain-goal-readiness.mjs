@@ -9,7 +9,7 @@ const paths = {
   ui: 'output/playwright/lightchain-production-ui-20260623/summary.json',
   navigation: 'output/playwright/lightchain-production-navigation-20260623/summary.json',
   approvedProof: 'output/playwright/runway-approved-generation-readback-20260623/proof.json',
-  readiness: 'output/playwright/runway-approved-generation-readback-20260623/readiness.json',
+  readiness: 'output/playwright/runway-production-readiness-20260623/readiness.json',
   freeDenial: 'output/playwright/runway-free-plan-denial-20260623/denial.json',
   unapprovedDenial: 'output/playwright/runway-unapproved-denial-20260623/denial.json',
   expiredDenial: 'output/playwright/runway-expired-subscription-denial-20260623/denial.json',
@@ -21,7 +21,7 @@ const files = Object.fromEntries(
 const stateText = readText(paths.state);
 const readinessBlockers = Array.isArray(files.readiness.json?.blockers) ? files.readiness.json.blockers : [];
 const approvedBlockers = Array.isArray(files.approvedProof.json?.blockers) ? files.approvedProof.json.blockers : [];
-const blockerCodes = new Set([...readinessBlockers, ...approvedBlockers].map((blocker) => blocker.code));
+const blockerCodes = new Set(readinessBlockers.map((blocker) => blocker.code));
 
 const requirements = [
   requirement({
@@ -85,6 +85,14 @@ const requirements = [
     evidence: [paths.readiness, paths.approvedProof],
     details: blockerDetails('production_runway_mcp_bridge_pending'),
     next_action: 'Set RUNWAY_MCP_BRIDGE_URL and RUNWAY_MCP_BRIDGE_TOKEN to a bridge connected to official Runway MCP, then rerun npm run verify:runway-readiness.',
+  }),
+  requirement({
+    id: 'runway_oauth_connection',
+    title: 'Target brand has a connected Runway MCP OAuth session',
+    status: blockerCodes.has('production_runway_mcp_oauth_connection_pending') ? 'blocked_external' : 'passed',
+    evidence: [paths.readiness],
+    details: blockerDetails('production_runway_mcp_oauth_connection_pending'),
+    next_action: 'Open /brand/settings, click Runwayに接続, complete Runway login, then rerun npm run verify:runway-readiness.',
   }),
   requirement({
     id: 'paid_subscription',
@@ -275,7 +283,8 @@ function cleanupDetails(proof) {
 }
 
 function blockerDetails(code) {
-  const blocker = [...readinessBlockers, ...approvedBlockers].find((candidate) => candidate.code === code);
+  const blocker = readinessBlockers.find((candidate) => candidate.code === code)
+    || approvedBlockers.find((candidate) => candidate.code === code);
   return blocker ?? {};
 }
 

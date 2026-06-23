@@ -236,6 +236,7 @@ serve(async (req) => {
 
     failedStage = 'generation'
     const runwayResult = await generateRunwayImage({
+      brandId,
       prompt: `Generate a high-quality professional fashion/apparel image: ${optimizedPrompt}. Style: Professional fashion photography, studio lighting, high resolution, commercial quality.`,
       negativePrompt,
       width,

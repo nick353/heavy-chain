@@ -35,6 +35,7 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
 
 // 参照画像を使ってバリエーションを生成
 async function generateVariationWithReference(
+  brandId: string,
   originalBase64: string,
   originalMimeType: string,
   description: string,
@@ -57,6 +58,7 @@ CRITICAL - KEEP THE PRODUCT IDENTICAL:
 Style: Professional fashion photography, high quality`;
 
   return await generateRunwayImage({
+    brandId,
     prompt,
     referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
   });
@@ -64,6 +66,7 @@ Style: Professional fashion photography, high quality`;
 
 // シーン別生成
 async function generateSceneWithReference(
+  brandId: string,
   originalBase64: string,
   originalMimeType: string,
   description: string,
@@ -88,6 +91,7 @@ CRITICAL - KEEP THE PRODUCT IDENTICAL:
 Style: Professional lifestyle fashion photography, natural lighting`;
 
   return await generateRunwayImage({
+    brandId,
     prompt,
     referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
   });
@@ -231,6 +235,7 @@ serve(async (req) => {
         console.log(`🎬 Generating scene ${i + 1}: ${scenePrompt}...`);
 
         const generatedImage = await generateSceneWithReference(
+          brandId,
           imageBase64,
           mimeType,
           description,
@@ -316,6 +321,7 @@ serve(async (req) => {
         console.log(`🎨 Generating variation ${i + 1}...`);
 
         const generatedImage = await generateVariationWithReference(
+          brandId,
           imageBase64,
           mimeType,
           description,

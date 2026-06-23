@@ -132,6 +132,7 @@ serve(async (req) => {
     const prompt = `${description}, isolated product, ${backgroundPrompt}, professional product photography, high quality, e-commerce ready`;
 
     const runwayResult = await generateRunwayImage({
+      brandId,
       prompt,
       referenceImages: [runwayReferenceImage(referenceImage.base64, referenceImage.mimeType, 'product')],
     });

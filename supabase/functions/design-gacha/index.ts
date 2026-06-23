@@ -205,6 +205,7 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
 
 // 参照画像を使って生成（商品固定）
 async function generateWithReference(
+  brandId: string,
   originalBase64: string,
   originalMimeType: string,
   description: string,
@@ -227,6 +228,7 @@ CRITICAL - KEEP THE PRODUCT IDENTICAL:
 Style: ${direction.prompt}, professional fashion photography`;
 
   return await generateRunwayImage({
+    brandId,
     prompt,
     referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
   });
@@ -234,13 +236,14 @@ Style: ${direction.prompt}, professional fashion photography`;
 
 // テキストのみで生成
 async function generateFromText(
+  brandId: string,
   brief: string,
   direction: typeof DESIGN_DIRECTIONS[0],
   _apiKey?: string,
   _imageModel?: string
 ): Promise<RunwayImageResult | null> {
   const fullPrompt = `${brief}, ${direction.prompt}, professional fashion photography, high quality, studio lighting`;
-  return await generateRunwayImage({ prompt: fullPrompt });
+  return await generateRunwayImage({ brandId, prompt: fullPrompt });
 }
 
 serve(async (req) => {
@@ -408,6 +411,7 @@ serve(async (req) => {
       // 商品固定の場合は参照画像を使って生成
       if (isProductFixed && originalImageBase64) {
         generatedImage = await generateWithReference(
+          brandId,
           originalImageBase64,
           originalMimeType,
           productDescription,
@@ -419,6 +423,7 @@ serve(async (req) => {
       // 参照生成が失敗した場合、または商品固定でない場合はテキストのみで生成
       if (!generatedImage) {
         generatedImage = await generateFromText(
+          brandId,
           productDescription,
           direction,
           imageModel

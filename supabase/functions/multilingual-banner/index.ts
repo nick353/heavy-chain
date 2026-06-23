@@ -326,7 +326,7 @@ serve(async (req) => {
 
       console.log(`🎨 Generating ${lang.name} banner...`);
 
-      const runwayResult = await generateRunwayImage({ prompt });
+      const runwayResult = await generateRunwayImage({ brandId, prompt });
       const imageAsset = runwayImageArtifact(runwayResult);
       const imageBase64 = imageAsset.base64;
       const imageMimeType = imageAsset.contentType;

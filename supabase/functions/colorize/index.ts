@@ -136,6 +136,7 @@ serve(async (req) => {
       const prompt = `${description}, but in ${color} color. Same style, composition, and quality. Professional product photography, clean background.`;
 
       const runwayResult = await generateRunwayImage({
+        brandId,
         prompt,
         referenceImages: [runwayReferenceImage(referenceImage.base64, referenceImage.mimeType, 'product')],
       });

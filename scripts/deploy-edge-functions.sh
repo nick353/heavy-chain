@@ -15,6 +15,10 @@ all_functions=(
   marketing-workspace-artifact
   bulk-download
   share-link
+  runway-mcp-connect-start
+  runway-mcp-connect-callback
+  runway-mcp-connection-status
+  runway-mcp-bridge
 )
 
 if [ "$#" -gt 0 ]; then

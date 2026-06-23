@@ -249,6 +249,7 @@ async function callBridge(path: '/text-to-image' | '/image-upscale', payload: Re
 }
 
 export async function generateRunwayImage(params: {
+  brandId: string;
   prompt: string;
   width?: number;
   height?: number;
@@ -267,6 +268,7 @@ export async function generateRunwayImage(params: {
       negativePrompt: params.negativePrompt ?? null,
       width: params.width,
       height: params.height,
+      brandId: params.brandId,
       ratio: ratioFromDimensions(params.width, params.height),
       referenceImages: params.referenceImages ?? [],
     }, runwayModel());
@@ -277,6 +279,7 @@ export async function generateRunwayImage(params: {
 }
 
 export async function upscaleRunwayImage(params: {
+  brandId: string;
   base64: string;
   mimeType?: string | null;
   pollTimeoutMs?: number;
@@ -284,6 +287,7 @@ export async function upscaleRunwayImage(params: {
   try {
     const result = await callBridge('/image-upscale', {
       model: RUNWAY_UPSCALE_MODEL,
+      brandId: params.brandId,
       image: {
         base64: params.base64,
         mimeType: normalizeMimeType(params.mimeType),

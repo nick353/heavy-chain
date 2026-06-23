@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const guarded = [
   'generate-image',
@@ -160,9 +160,11 @@ for (const name of serviceRoleWriteFunctions) {
 
 const runwayHelper = readFileSync('supabase/functions/_shared/runway.ts', 'utf8');
 const runwayApprovalHelper = readFileSync('supabase/functions/_shared/runwayApproval.ts', 'utf8');
+const runwayMcpConnectionHelper = readFileSync('supabase/functions/_shared/runwayMcpConnection.ts', 'utf8');
 for (const needle of [
   'RUNWAY_MCP_BRIDGE_URL',
   'RUNWAY_MCP_BRIDGE_TOKEN',
+  'brandId',
   '/text-to-image',
   'referenceImages',
   '/image-upscale',
@@ -181,6 +183,33 @@ for (const needle of [
 ]) {
   if (!runwayHelper.includes(needle)) {
     failures.push(`supabase/functions/_shared/runway.ts: missing ${needle}`);
+  }
+}
+
+for (const needle of [
+  'RUNWAY_MCP_TOKEN_ENCRYPTION_KEY',
+  'encryptSecret',
+  'decryptSecret',
+  'AES-GCM',
+  'registerRunwayOAuthClient',
+  'exchangeRunwayCode',
+  'runwayMcpListTools',
+  'runwayMcpCallTool',
+  'https://mcp.runwayml.com/mcp',
+]) {
+  if (!runwayMcpConnectionHelper.includes(needle)) {
+    failures.push(`supabase/functions/_shared/runwayMcpConnection.ts: missing ${needle}`);
+  }
+}
+
+for (const name of [
+  'runway-mcp-connect-start',
+  'runway-mcp-connect-callback',
+  'runway-mcp-connection-status',
+  'runway-mcp-bridge',
+]) {
+  if (!existsSync(`supabase/functions/${name}/index.ts`)) {
+    failures.push(`${name}: missing Edge Function`);
   }
 }
 

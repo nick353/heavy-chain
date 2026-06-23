@@ -96,6 +96,24 @@ if (approval.data?.status !== 'approved') {
   );
 }
 
+const oauthConnection = await selectSingle(
+  'runway_mcp_oauth_connections',
+  'brand_id, status, connected_by, expires_at, last_verified_at, last_error, updated_at',
+  (query) => query.eq('brand_id', brandId),
+);
+addCheck(
+  'Runway MCP OAuth connection',
+  oauthConnection.data?.status === 'connected',
+  oauthConnection.error ? { error: oauthConnection.error.message } : { connection: oauthConnection.data || null },
+);
+if (oauthConnection.data?.status !== 'connected') {
+  addBlocker(
+    'production_runway_mcp_oauth_connection_pending',
+    `Runway MCP OAuth connection status is ${oauthConnection.data?.status || 'missing'}, not connected.`,
+    'Open /brand/settings, click Runwayに接続, complete Runway login, then rerun npm run verify:runway-readiness.',
+  );
+}
+
 const subscription = await selectSingle(
   'brand_subscriptions',
   'brand_id, status, current_period_start, current_period_end, quota_override, plan_id, plans(id, code, name, monthly_quota, features, is_active)',
