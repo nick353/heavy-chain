@@ -64,6 +64,19 @@ interface RunwayMcpApproval {
   } | null;
 }
 
+interface RunwayBrandSubscription {
+  brand_id: string;
+  status: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  plan: {
+    code: string | null;
+    name: string | null;
+    is_active: boolean | null;
+    runway_mcp_generation: boolean;
+  } | null;
+}
+
 const RUNWAY_STATUS_LABELS: Record<RunwayMcpConnectionStatus, string> = {
   pending: '承認待ち',
   approved: '承認済み',
@@ -77,6 +90,24 @@ const RUNWAY_STATUS_STYLES: Record<RunwayMcpConnectionStatus, string> = {
   rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   revoked: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
 };
+
+const isRunwaySubscriptionEligible = (subscription: RunwayBrandSubscription | null | undefined) => {
+  if (!subscription?.plan) return false;
+  const now = Date.now();
+  const periodStart = Date.parse(subscription.current_period_start || '');
+  const periodEnd = Date.parse(subscription.current_period_end || '');
+  return ['trialing', 'active'].includes(subscription.status || '')
+    && Number.isFinite(periodStart)
+    && Number.isFinite(periodEnd)
+    && periodStart <= now
+    && periodEnd > now
+    && subscription.plan.is_active === true
+    && subscription.plan.runway_mcp_generation === true;
+};
+
+const getPlanLabel = (subscription: RunwayBrandSubscription | null | undefined) => (
+  subscription?.plan?.name || subscription?.plan?.code || 'Free'
+);
 
 export function AdminDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -98,6 +129,7 @@ export function AdminDashboard() {
   });
   const [users, setUsers] = useState<User[]>([]);
   const [runwayApprovals, setRunwayApprovals] = useState<RunwayMcpApproval[]>([]);
+  const [runwaySubscriptionsByBrand, setRunwaySubscriptionsByBrand] = useState<Record<string, RunwayBrandSubscription>>({});
   const [_moderationQueue, _setModerationQueue] = useState<ModerationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingRunwayBrandId, setUpdatingRunwayBrandId] = useState<string | null>(null);
@@ -254,10 +286,48 @@ export function AdminDashboard() {
         return;
       }
 
-      setRunwayApprovals((data || []) as unknown as RunwayMcpApproval[]);
+      const approvals = (data || []) as unknown as RunwayMcpApproval[];
+      setRunwayApprovals(approvals);
+
+      const brandIds = Array.from(new Set(approvals.map((approval) => approval.brand_id))).filter(Boolean);
+      if (brandIds.length === 0) {
+        setRunwaySubscriptionsByBrand({});
+        return;
+      }
+
+      const subscriptionResult = await supabase
+        .from('brand_subscriptions')
+        .select('brand_id, status, current_period_start, current_period_end, plans(code, name, is_active, features)')
+        .in('brand_id', brandIds);
+
+      if (subscriptionResult.error) {
+        console.error('Failed to fetch Runway MCP subscriptions:', subscriptionResult.error);
+        setRunwaySubscriptionsByBrand({});
+        return;
+      }
+
+      const subscriptionMap = Object.fromEntries(((subscriptionResult.data || []) as any[]).map((row) => {
+        const plan = Array.isArray(row?.plans) ? row.plans[0] : row?.plans;
+        const subscription: RunwayBrandSubscription = {
+          brand_id: row.brand_id,
+          status: row.status || null,
+          current_period_start: row.current_period_start || null,
+          current_period_end: row.current_period_end || null,
+          plan: plan ? {
+            code: plan.code || null,
+            name: plan.name || null,
+            is_active: plan.is_active ?? null,
+            runway_mcp_generation: plan.features?.runway_mcp_generation === true,
+          } : null,
+        };
+        return [row.brand_id, subscription];
+      }));
+
+      setRunwaySubscriptionsByBrand(subscriptionMap);
     } catch (error) {
       console.error('Failed to fetch Runway MCP approvals:', error);
       setRunwayApprovals([]);
+      setRunwaySubscriptionsByBrand({});
     }
   };
 
@@ -312,6 +382,14 @@ export function AdminDashboard() {
     user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const runwayApprovedCount = runwayApprovals.filter((approval) => approval.status === 'approved').length;
+  const runwayPendingCount = runwayApprovals.filter((approval) => approval.status === 'pending').length;
+  const runwayPlanReadyCount = runwayApprovals.filter((approval) => (
+    approval.status === 'approved' && isRunwaySubscriptionEligible(runwaySubscriptionsByBrand[approval.brand_id])
+  )).length;
+  const runwayPlanBlockedCount = runwayApprovals.filter((approval) => (
+    approval.status === 'approved' && !isRunwaySubscriptionEligible(runwaySubscriptionsByBrand[approval.brand_id])
+  )).length;
 
   const StatCard = ({ icon: Icon, label, value, trend, color }: any) => (
     <div className="glass-card p-6 hover:shadow-elegant transition-all duration-300">
@@ -539,12 +617,55 @@ export function AdminDashboard() {
 
         {/* Runway MCP approvals */}
         {activeTab === 'runway' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-panel rounded-2xl overflow-hidden"
-          >
-            <div className="p-6 border-b border-neutral-100 dark:border-neutral-700">
+          <div className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid gap-4 md:grid-cols-4"
+            >
+              <div className="glass-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">承認済み</p>
+                <p className="mt-2 text-2xl font-semibold text-neutral-900 dark:text-white">{runwayApprovedCount}</p>
+              </div>
+              <div className="glass-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">承認待ち</p>
+                <p className="mt-2 text-2xl font-semibold text-neutral-900 dark:text-white">{runwayPendingCount}</p>
+              </div>
+              <div className="glass-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">プラン条件OK</p>
+                <p className="mt-2 text-2xl font-semibold text-green-700 dark:text-green-300">{runwayPlanReadyCount}</p>
+              </div>
+              <div className="glass-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">プラン未達</p>
+                <p className="mt-2 text-2xl font-semibold text-amber-700 dark:text-amber-300">{runwayPlanBlockedCount}</p>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-amber-200 bg-amber-50/80 p-5 dark:border-amber-800 dark:bg-amber-950/20"
+            >
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-300" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                    本番生成 readiness
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-200">
+                    この画面では接続承認とHeavy Chainプラン条件を確認します。Runway MCPブリッジ本体はSupabase secretsで管理し、値はUIに保存しません。
+                    本番生成前は `npm run verify:runway-readiness` で `RUNWAY_MCP_BRIDGE_URL` / `RUNWAY_MCP_BRIDGE_TOKEN` と有料プラン状態を確認してください。
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-panel rounded-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-neutral-100 dark:border-neutral-700">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
@@ -572,6 +693,7 @@ export function AdminDashboard() {
                     <tr>
                       <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">ブランド</th>
                       <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">状態</th>
+                      <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">プラン</th>
                       <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">更新日</th>
                       <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">アクション</th>
                     </tr>
@@ -579,6 +701,8 @@ export function AdminDashboard() {
                   <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
                     {runwayApprovals.map((approval) => {
                       const isUpdatingRunwayApproval = updatingRunwayBrandId === approval.brand_id;
+                      const subscription = runwaySubscriptionsByBrand[approval.brand_id];
+                      const subscriptionEligible = isRunwaySubscriptionEligible(subscription);
 
                       return (
                         <tr key={approval.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 transition-colors">
@@ -591,6 +715,20 @@ export function AdminDashboard() {
                           <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${RUNWAY_STATUS_STYLES[approval.status]}`}>
                             {RUNWAY_STATUS_LABELS[approval.status]}
                           </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-medium ${
+                              subscriptionEligible
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+                            }`}>
+                              {subscriptionEligible ? 'Runway対応' : 'プラン未達'}
+                            </span>
+                            <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                              {getPlanLabel(subscription)}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">
                           {new Date(approval.updated_at).toLocaleString('ja-JP')}
@@ -630,7 +768,8 @@ export function AdminDashboard() {
                 </table>
               </div>
             )}
-          </motion.div>
+            </motion.div>
+          </div>
         )}
 
         {/* Moderation */}

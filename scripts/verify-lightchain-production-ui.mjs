@@ -80,7 +80,7 @@ const pages = [
   {
     name: 'admin-runway',
     path: '/admin?tab=runway',
-    expected: ['Runway MCP', '承認'],
+    expected: ['Runway MCP', '承認', '本番生成 readiness', 'プラン未達'],
   },
 ];
 
