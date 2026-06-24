@@ -30,6 +30,7 @@ import {
 } from '../components/canvas';
 import { useCanvasStore } from '../stores/canvasStore';
 import { ChatEditor } from '../components/ChatEditor';
+import { GallerySelector } from '../components/GallerySelector';
 import { TemplateSelector } from '../components/TemplateSelector';
 import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
@@ -81,6 +82,7 @@ export function CanvasEditorPage() {
   
   // Generate modal states
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [showGallerySelector, setShowGallerySelector] = useState(false);
   const [generateMode, setGenerateMode] = useState<GenerateMode>('basic');
   const [generatePrompt, setGeneratePrompt] = useState('');
   const [productDescription, setProductDescription] = useState('');
@@ -425,6 +427,17 @@ export function CanvasEditorPage() {
       return newId;
     };
     img.src = imageUrl;
+  };
+
+  const handleSelectGalleryImage = (imageUrl: string, imageId: string) => {
+    addImageToCanvas(imageUrl, 'Gallery素材', {
+      feature: 'gallery-import',
+      generation: 0,
+      source: 'gallery-selector',
+      imageId,
+    });
+    setShowGallerySelector(false);
+    toast.success('Gallery画像をCanvasへ配置しました');
   };
 
   const handleGenerate = async () => {
@@ -1311,7 +1324,7 @@ export function CanvasEditorPage() {
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(200,200,200,0.1)_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-[radial-gradient(circle_at_center,rgba(50,50,50,0.3)_1px,transparent_1px)]" />
             </div>
 
-            <div className="absolute bottom-2 left-2 right-2 z-10 grid grid-cols-3 gap-2 sm:bottom-4 sm:left-4 sm:right-auto sm:w-[420px]">
+            <div className="absolute bottom-2 left-2 right-2 z-10 grid grid-cols-2 gap-2 sm:bottom-4 sm:left-4 sm:right-auto sm:w-[560px] sm:grid-cols-4">
               <label
                 htmlFor="file-upload"
                 className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/50 bg-white/85 px-3 py-2 text-xs font-semibold text-neutral-700 shadow-lg backdrop-blur transition hover:border-primary-300 hover:text-primary-700 dark:border-white/10 dark:bg-neutral-900/80 dark:text-neutral-200"
@@ -1334,6 +1347,14 @@ export function CanvasEditorPage() {
               >
                 <Image className="h-4 w-4" />
                 素材を見る
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowGallerySelector(true)}
+                className="flex items-center justify-center gap-2 rounded-xl border border-white/50 bg-white/85 px-3 py-2 text-xs font-semibold text-neutral-700 shadow-lg backdrop-blur transition hover:border-primary-300 hover:text-primary-700 dark:border-white/10 dark:bg-neutral-900/80 dark:text-neutral-200"
+              >
+                <Image className="h-4 w-4" />
+                Galleryから追加
               </button>
             </div>
 
@@ -1545,6 +1566,12 @@ export function CanvasEditorPage() {
           onEdit={handleEditModalAction}
         />
       )}
+
+      <GallerySelector
+        isOpen={showGallerySelector}
+        onClose={() => setShowGallerySelector(false)}
+        onSelect={handleSelectGalleryImage}
+      />
 
       {/* Canvas Guide for first-time users */}
       {showGuide && <CanvasGuide onComplete={completeGuide} userId={user?.id} />}

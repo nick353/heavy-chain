@@ -232,9 +232,20 @@ const urlToDataUrl = async (url) => {
   return bufferToDataUrl(buffer, normalizeMimeType(response.headers.get('content-type') || 'image/png'));
 };
 
-const readRunwayMcpResultImages = async (resultPath, requestedCount) => {
+const assertRunwayMcpResultJobMatch = (result, expectedJobId, options = {}) => {
+  const resultJobId = maybeRunwayMcpResultJobId(result);
+  if (resultJobId && resultJobId !== expectedJobId) {
+    throw new Error(`runway_mcp_result_job_id_mismatch:${resultJobId}:${expectedJobId}`);
+  }
+  if (!resultJobId && !options.allowUnmatched) {
+    throw new Error(`runway_mcp_result_job_id_missing:${expectedJobId}`);
+  }
+};
+
+const readRunwayMcpResultImages = async (resultPath, requestedCount, expectedJobId, options = {}) => {
   const absolutePath = path.resolve(repoRoot, resultPath);
   const result = JSON.parse(await fs.readFile(absolutePath, 'utf8'));
+  assertRunwayMcpResultJobMatch(result, expectedJobId, options);
   if (result.auth_required || result.blocker === 'runway_mcp_auth_required') throw new Error('runway_mcp_auth_required');
   if (result.blocker) throw new Error(String(result.blocker));
   const summaryOutputPath = result.outputPath || result.final_art_path;
@@ -498,21 +509,18 @@ const callRunwayMcpDirect = async (job, inputParams, index, artifactDir) => {
     await initializeRunwayMcp(mcp);
     const prompt = String(inputParams.prompt || inputParams.promptText || job.optimized_prompt || '').trim();
     if (!prompt) throw new Error('local_runway_worker_prompt_missing');
+    const operation = job.feature_type === 'upscale' ? 'upscale_via_reference_image' : 'generate_image';
     const generateId = mcp.send('tools/call', {
-      name: job.feature_type === 'upscale' ? 'upscale_image' : 'generate_image',
-      arguments: job.feature_type === 'upscale'
-        ? {
-            rationale: `Heavy Chain local Runway worker upscale for job ${job.id}`,
-            image: inputParams.referenceImage,
-          }
-        : {
-            rationale: `Heavy Chain local Runway worker generation for job ${job.id}`,
-            model: String(inputParams.model || process.env.RUNWAY_MCP_IMAGE_MODEL || 'gpt-image-2'),
-            promptText: index > 0 ? `${prompt}\nVariant ${index + 1}` : prompt,
-            ratio: ratioFromDimensions(inputParams.width, inputParams.height),
-            count: 1,
-            referenceImages: inputParams.referenceImage ? [{ uri: inputParams.referenceImage }] : [],
-          },
+      name: 'generate_image',
+      arguments: {
+        rationale: `Heavy Chain local Runway worker ${operation} for job ${job.id}`,
+        operation,
+        model: String(inputParams.model || process.env.RUNWAY_MCP_IMAGE_MODEL || 'gpt-image-2'),
+        promptText: index > 0 ? `${prompt}\nVariant ${index + 1}` : prompt,
+        ratio: ratioFromDimensions(inputParams.width, inputParams.height),
+        count: 1,
+        referenceImages: inputParams.referenceImage ? [{ uri: inputParams.referenceImage }] : [],
+      },
     });
     const generated = await waitForMcpResponse(mcp, generateId, Number(process.env.RUNWAY_MCP_GENERATE_TIMEOUT_MS || 180000));
     await fs.writeFile(path.join(artifactDir, `mcp-generate-${index + 1}.json`), `${JSON.stringify(generated, null, 2)}\n`);
@@ -740,7 +748,9 @@ const processJob = async ({ supabase, job, args }) => {
     inputParams = validateJobInput(claimed, inputParams);
     const requestedCount = Math.max(1, Math.min(Number(inputParams.count || 1), 4));
     const workerResults = args['mcp-result']
-      ? await readRunwayMcpResultImages(String(args['mcp-result']), requestedCount)
+      ? await readRunwayMcpResultImages(String(args['mcp-result']), requestedCount, claimed.id, {
+        allowUnmatched: Boolean(args['allow-unmatched-mcp-result']),
+      })
       : null;
     const resultCount = workerResults?.length || requestedCount;
     const images = [];
