@@ -12,8 +12,12 @@ const approvedProofPath = args.approvedProof || latestProofPath({
   fileName: 'proof.json',
   checker: 'verify-runway-approved-generation-readback',
 }) || 'output/playwright/runway-approved-generation-readback-20260623/proof.json';
+const bridgeProofPath = args.bridgeProof || latestProofPath({
+  fileName: 'proof.json',
+  checker: 'verify-runway-mcp-remote-http-bridge',
+}) || null;
 const uiPath = args.ui || latestSummaryPath({
-  directoryPattern: /(?:^|\/)(?:ux-audit-\d{8}-production-ui|lightchain-production-ui-\d{8})(?:\/|$)/,
+  directoryPattern: /(?:^|\/)(?:ux-audit-\d{8}-production-ui|lightchain-production-ui-\d{8}|production-ui-after-frontend-deploy-full-\d{8}(?:-[^/]+)?)(?:\/|$)/,
   predicate: (summary) => Number.isInteger(summary?.resultCount) && Number.isInteger(summary?.failureCount),
 }) || 'output/playwright/lightchain-production-ui-20260623/summary.json';
 const localUiPath = args.localUi || latestSummaryPath({
@@ -39,6 +43,7 @@ const paths = {
   localUi: localUiPath,
   navigation: navigationPath,
   runwayUi: runwayUiPath,
+  bridgeProof: bridgeProofPath,
   approvedProof: approvedProofPath,
   readiness: readinessPath,
   freeDenial: 'output/playwright/runway-free-plan-denial-20260623/denial.json',
@@ -136,6 +141,14 @@ const requirements = [
     evidence: [paths.readiness, paths.approvedProof],
     details: blockerDetails('production_runway_mcp_bridge_pending') || checkDetails(files.readiness.json, 'remote Supabase bridge secret names'),
     next_action: 'Set RUNWAY_MCP_BRIDGE_URL and RUNWAY_MCP_BRIDGE_TOKEN to a bridge connected to official Runway MCP, then rerun npm run verify:runway-readiness.',
+  }),
+  requirement({
+    id: 'runway_bridge_tools',
+    title: 'Hosted Runway MCP bridge health and tools endpoint pass',
+    status: bridgeToolsPassed() ? 'passed' : 'blocked_external',
+    evidence: paths.bridgeProof ? [paths.bridgeProof] : [],
+    details: bridgeToolsDetails(),
+    next_action: 'Attach a public HTTPS domain and persistent /data volume to the Zeabur runway-mcp-bridge service, complete official Runway MCP authorization, then rerun npm run verify:runway-mcp-bridge.',
   }),
   requirement({
     id: 'runway_oauth_connection',
@@ -276,6 +289,9 @@ function parseArgs(rawArgs) {
     } else if (arg === '--ui' && next) {
       parsed.ui = next;
       index += 1;
+    } else if (arg === '--bridge-proof' && next) {
+      parsed.bridgeProof = next;
+      index += 1;
     } else if (arg === '--local-ui' && next) {
       parsed.localUi = next;
       index += 1;
@@ -398,6 +414,25 @@ function runwayUiDetails() {
     },
     consoleErrorCount: (files.runwayUi.json?.consoleErrors || []).length,
     screenshots: files.runwayUi.json?.screenshots ?? {},
+  };
+}
+
+function bridgeToolsPassed() {
+  if (!files.bridgeProof.exists) return false;
+  return files.bridgeProof.json?.ok === true
+    && (files.bridgeProof.json?.checks || []).some((check) => check.name === 'health' && check.ok === true)
+    && (files.bridgeProof.json?.checks || []).some((check) => check.name === 'tools' && check.ok === true && check.tool_count > 0);
+}
+
+function bridgeToolsDetails() {
+  if (!files.bridgeProof.exists) return { exists: false, error: files.bridgeProof.error };
+  const checks = files.bridgeProof.json?.checks || [];
+  return {
+    ok: files.bridgeProof.json?.ok === true,
+    bridge_url_host: files.bridgeProof.json?.bridge_url_host,
+    health: checks.find((check) => check.name === 'health') || null,
+    tools: checks.find((check) => check.name === 'tools') || null,
+    blockers: files.bridgeProof.json?.blockers || [],
   };
 }
 

@@ -97,6 +97,15 @@ const redact = (value) => String(value)
   .replaceAll(/access_token["=:]\s*["']?[^"',\s}]+/gi, 'access_token=[redacted]')
   .replaceAll(/refresh_token["=:]\s*["']?[^"',\s}]+/gi, 'refresh_token=[redacted]');
 
+function redactObject(value) {
+  if (typeof value === 'string') return redact(value);
+  if (Array.isArray(value)) return value.map(redactObject);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, redactObject(inner)]));
+  }
+  return value;
+}
+
 async function dismissBlockingOverlays(page) {
   const buttonTexts = [
     'スキップ',
@@ -134,20 +143,21 @@ async function verifyPage(page, viewport, pageSpec, errorsByPage) {
   await page.waitForTimeout(1000);
 
   const bodyText = await page.locator('body').innerText({ timeout: 15_000 }).catch(() => '');
-  const finalUrl = page.url();
+  const rawFinalUrl = page.url();
+  const finalUrl = redact(rawFinalUrl);
   const missingText = pageSpec.expected.filter((expectedText) => !bodyText.includes(expectedText));
-  const redirectedToLogin = /\/login(?:$|[?#])/.test(new URL(finalUrl).pathname);
+  const redirectedToLogin = /\/login(?:$|[?#])/.test(new URL(rawFinalUrl).pathname);
   const screenshotPath = path.join(outDir, `${viewport.name}-${pageSpec.name}.png`);
   const textPath = path.join(outDir, `${viewport.name}-${pageSpec.name}.txt`);
   const consolePath = path.join(outDir, `${viewport.name}-${pageSpec.name}.console.json`);
 
-  await page.screenshot({ path: screenshotPath, fullPage: true });
-  writeFileSync(textPath, redact(bodyText));
-  writeFileSync(consolePath, JSON.stringify({ consoleErrors, pageErrors }, null, 2));
   for (const entry of errorsByPage.get(pageSpec.name) || []) {
     if (entry.kind === 'console') consoleErrors.push(entry.payload);
     if (entry.kind === 'pageerror') pageErrors.push(entry.payload);
   }
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+  writeFileSync(textPath, redact(bodyText));
+  writeFileSync(consolePath, JSON.stringify({ consoleErrors, pageErrors }, null, 2));
 
   return {
     viewport: viewport.name,
@@ -167,10 +177,13 @@ async function verifyPage(page, viewport, pageSpec, errorsByPage) {
 }
 
 const startedAt = new Date().toISOString();
-const browser = await chromium.launch({ headless: true });
+let browser = null;
 const results = [];
+let fatalRunnerError = null;
 
 try {
+  browser = await chromium.launch({ headless: true });
+  outer:
   for (const viewport of viewports) {
     const context = await browser.newContext({
       storageState,
@@ -192,7 +205,7 @@ try {
           kind: 'console',
           payload: {
             text: redact(message.text()).slice(0, 1000),
-            location: message.location(),
+            location: redactObject(message.location()),
           },
         });
       }
@@ -209,14 +222,61 @@ try {
 
     for (const pageSpec of pages) {
       activePageName = pageSpec.name;
-      results.push(await verifyPage(page, viewport, pageSpec, errorsByPage));
+      try {
+        results.push(await verifyPage(page, viewport, pageSpec, errorsByPage));
+      } catch (error) {
+        const message = redact(error?.stack || error?.message || String(error || 'verification_failed'));
+        const requestedUrl = new URL(pageSpec.path, baseUrl).toString();
+        results.push({
+          viewport: viewport.name,
+          page: pageSpec.name,
+          requestedUrl,
+          finalUrl: page.isClosed() ? null : redact(page.url()),
+          screenshotPath: null,
+          textPath: null,
+          consolePath: null,
+          expected: pageSpec.expected,
+          missingText: pageSpec.expected,
+          redirectedToLogin: false,
+          consoleErrorCount: (errorsByPage.get(pageSpec.name) || []).filter((entry) => entry.kind === 'console').length,
+          pageErrorCount: (errorsByPage.get(pageSpec.name) || []).filter((entry) => entry.kind === 'pageerror').length,
+          runnerError: message,
+          passed: false,
+        });
+
+        if (/Target page, context or browser has been closed|Target page\/context\/browser has been closed/i.test(message)) {
+          fatalRunnerError = message;
+          break outer;
+        }
+      }
     }
 
-    await page.close();
-    await context.close();
+    await page.close().catch(() => {});
+    await context.close().catch(() => {});
   }
+} catch (error) {
+  fatalRunnerError = redact(error?.stack || error?.message || String(error || 'verification_failed'));
 } finally {
-  await browser.close();
+  await browser?.close().catch(() => {});
+}
+
+if (fatalRunnerError && results.length === 0) {
+  results.push({
+    viewport: null,
+    page: 'runner',
+    requestedUrl: null,
+    finalUrl: null,
+    screenshotPath: null,
+    textPath: null,
+    consolePath: null,
+    expected: [],
+    missingText: [],
+    redirectedToLogin: false,
+    consoleErrorCount: 0,
+    pageErrorCount: 0,
+    runnerError: fatalRunnerError,
+    passed: false,
+  });
 }
 
 const failures = results.filter((result) => !result.passed);
@@ -230,6 +290,7 @@ const summary = {
   viewports,
   resultCount: results.length,
   failureCount: failures.length,
+  fatalRunnerError,
   results,
 };
 

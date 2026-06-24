@@ -39,6 +39,12 @@ coverage/
 .playwright-cli/
 output/
 test-results/
+artifacts/
+
+# Heavy generated proof media
+*.mp4
+*.mov
+*.webm
 
 # TypeScript
 *.tsbuildinfo
@@ -46,7 +52,6 @@ test-results/
 # Supabase
 supabase/.branches
 supabase/.temp
-
 
 
 
