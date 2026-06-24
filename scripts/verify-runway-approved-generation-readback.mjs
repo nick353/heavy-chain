@@ -70,7 +70,9 @@ if (!readinessReady) {
     );
   }
   proof.next_actions.push('Generation was not attempted because production readiness is false.');
-  proof.next_actions.push('Set RUNWAY_MCP_BRIDGE_URL/RUNWAY_MCP_BRIDGE_TOKEN and complete the paid subscription decision, then rerun this script.');
+  for (const nextAction of uniqueBlockerNextActions(readinessResult.proof.blockers || [])) {
+    proof.next_actions.push(nextAction);
+  }
   finish(allowBlocked);
 }
 
@@ -233,6 +235,13 @@ function runReadiness() {
     stdout: redact(result.stdout).slice(0, 1000),
     stderr: redact(result.stderr).slice(0, 1000),
   };
+}
+
+function uniqueBlockerNextActions(blockers) {
+  const actions = blockers
+    .map((blocker) => blocker.next_action)
+    .filter((action) => typeof action === 'string' && action.trim().length > 0);
+  return [...new Set(actions)];
 }
 
 function loadEnvFile(filePath, initialKeys) {

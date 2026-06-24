@@ -58,6 +58,7 @@ const readinessBlockers = Array.isArray(files.readiness.json?.blockers) ? files.
 const approvedBlockers = Array.isArray(files.approvedProof.json?.blockers) ? files.approvedProof.json.blockers : [];
 const blockerCodes = new Set(readinessBlockers.map((blocker) => blocker.code));
 const remoteBridgeSecretsPassed = checkPassed(files.readiness.json, 'remote Supabase bridge secret names');
+const readinessVerificationBlocker = firstReadinessVerificationBlocker();
 
 const requirements = [
   requirement({
@@ -133,13 +134,17 @@ const requirements = [
   requirement({
     id: 'runway_bridge_secrets',
     title: 'Production Runway MCP bridge secrets are configured',
-    status: blockerCodes.has('production_runway_mcp_bridge_pending')
+    status: readinessVerificationBlocker
+      ? 'failed'
+      : blockerCodes.has('production_runway_mcp_bridge_pending')
       ? 'blocked_external'
       : remoteBridgeSecretsPassed
         ? 'passed'
         : 'failed',
     evidence: [paths.readiness, paths.approvedProof],
-    details: blockerDetails('production_runway_mcp_bridge_pending') || checkDetails(files.readiness.json, 'remote Supabase bridge secret names'),
+    details: readinessVerificationBlocker
+      || blockerDetails('production_runway_mcp_bridge_pending')
+      || checkDetails(files.readiness.json, 'remote Supabase bridge secret names'),
     next_action: 'Set RUNWAY_MCP_BRIDGE_URL and RUNWAY_MCP_BRIDGE_TOKEN to a bridge connected to official Runway MCP, then rerun npm run verify:runway-readiness.',
   }),
   requirement({
@@ -153,9 +158,13 @@ const requirements = [
   requirement({
     id: 'paid_subscription',
     title: 'Target brand has an active Runway-eligible paid Heavy Chain subscription',
-    status: blockerCodes.has('heavy_chain_paid_subscription_pending') ? 'blocked_external' : 'passed',
+    status: readinessVerificationBlocker
+      ? 'failed'
+      : blockerCodes.has('heavy_chain_paid_subscription_pending')
+        ? 'blocked_external'
+        : 'passed',
     evidence: [paths.readiness, paths.approvedProof],
-    details: blockerDetails('heavy_chain_paid_subscription_pending'),
+    details: readinessVerificationBlocker || blockerDetails('heavy_chain_paid_subscription_pending'),
     next_action: 'Complete the billing/subscription decision without bypassing payment rules, then rerun npm run verify:runway-readiness.',
   }),
   requirement({
@@ -322,6 +331,13 @@ function requirement(item) {
     details: item.details ?? {},
     next_action: item.next_action,
   };
+}
+
+function firstReadinessVerificationBlocker() {
+  return readinessBlockers.find((blocker) => [
+    'production_runway_mcp_secret_inspection_failed',
+    'production_runway_db_readback_failed',
+  ].includes(blocker.code)) || null;
 }
 
 function uiPassed() {
