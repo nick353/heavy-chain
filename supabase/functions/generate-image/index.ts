@@ -23,6 +23,7 @@ interface GenerateRequest {
   lightchainCompat?: unknown
   campaignMeta?: unknown
   textOverlay?: unknown
+  localRunwayWorker?: unknown
 }
 
 const SOURCE_CONFIG = {
@@ -42,6 +43,66 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 const readString = (record: Record<string, unknown>, key: string) => {
   const value = record[key]
   return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+const ALLOWED_LOCAL_WORKER_FEATURES = new Set([
+  'campaign-image',
+  'design-gacha',
+  'product-shots',
+  'model-matrix',
+  'multilingual-banner',
+  'scene-coordinate',
+  'remove-bg',
+  'remove-background',
+  'colorize',
+  'upscale',
+  'variations',
+  'generate-variations',
+])
+
+const sanitizePositiveInteger = (value: unknown, fallback: number, min: number, max: number) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  return Math.max(min, Math.min(max, Math.round(numeric)))
+}
+
+const sanitizeLocalRunwayWorkerRequest = (value: unknown, persistedFeatureType: string) => {
+  if (!isRecord(value) || value.enabled !== true) return null
+  if (!ALLOWED_LOCAL_WORKER_FEATURES.has(persistedFeatureType)) {
+    throw new Error('local_runway_worker_feature_not_allowed')
+  }
+
+  const provider = readString(value, 'provider') || 'runway_mcp_local_worker'
+  if (provider !== 'runway_mcp_local_worker') {
+    throw new Error('local_runway_worker_provider_invalid')
+  }
+
+  const workerContractVersion = readString(value, 'workerContractVersion') || 'heavy-chain.local-runway-worker.v1'
+  if (workerContractVersion !== 'heavy-chain.local-runway-worker.v1') {
+    throw new Error('local_runway_worker_contract_invalid')
+  }
+
+  const referenceImage = readString(value, 'referenceImage')
+  if (referenceImage) {
+    const isDataImage = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/i.test(referenceImage)
+    const isHttpsImage = /^https:\/\/[^\s]+$/i.test(referenceImage)
+    if (!isDataImage && !isHttpsImage) {
+      throw new Error('local_runway_worker_reference_image_invalid')
+    }
+    if (referenceImage.length > 1_500_000) {
+      throw new Error('local_runway_worker_reference_image_too_large')
+    }
+  }
+
+  const metadata = isRecord(value.metadata) ? value.metadata : {}
+  return {
+    provider,
+    workerContractVersion,
+    count: sanitizePositiveInteger(value.count, 1, 1, 4),
+    referenceImage: referenceImage ?? null,
+    referenceType: readString(value, 'referenceType'),
+    metadata,
+  }
 }
 
 const sanitizeSourceReadback = (value: unknown) => {
@@ -144,9 +205,10 @@ serve(async (req) => {
       lightchainCompat,
       campaignMeta,
       textOverlay,
+      localRunwayWorker,
     }: GenerateRequest = await req.json()
 
-    if (!prompt) {
+    if (!prompt || prompt.length > 8000) {
       throw new Error('Prompt is required')
     }
 
@@ -162,11 +224,23 @@ serve(async (req) => {
     const persistedFeatureType = typeof featureType === 'string' && featureType.trim()
       ? featureType.trim()
       : 'text-to-image'
+    const localWorkerRequest = sanitizeLocalRunwayWorkerRequest(localRunwayWorker, persistedFeatureType)
     const sourceMetadata = buildSourceMetadata(sourceReadback, generationIntent)
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat)
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed')
     observedSourceMetadata = sourceMetadata
     observedLightchainMetadata = lightchainMetadata
+    observedBrandId = brandId;
+    observedUserId = user.id;
+    usageReservation = await reserveBrandUsage(telemetryClient, {
+      brandId,
+      userId: user.id,
+      functionName,
+      units: 1,
+      requestId,
+      idempotencyKey: req.headers.get('idempotency-key'),
+      metadata: localWorkerRequest ? { provider: localWorkerRequest.provider, queued: true } : {},
+    });
     const inputParams = {
       prompt,
       negativePrompt,
@@ -178,18 +252,18 @@ serve(async (req) => {
       ...(isRecord(textOverlay) ? { textOverlay } : {}),
       ...(sourceMetadata ?? {}),
       ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
+      ...(localWorkerRequest ? {
+        provider: localWorkerRequest.provider,
+        workerContractVersion: localWorkerRequest.workerContractVersion,
+        count: localWorkerRequest.count,
+        referenceImage: localWorkerRequest.referenceImage,
+        referenceType: localWorkerRequest.referenceType,
+        usageEventId: usageReservation?.usageEventId ?? null,
+        requestedAt: new Date().toISOString(),
+        ...localWorkerRequest.metadata,
+      } : {}),
     }
 
-    observedBrandId = brandId;
-    observedUserId = user.id;
-    usageReservation = await reserveBrandUsage(telemetryClient, {
-      brandId,
-      userId: user.id,
-      functionName,
-      units: 1,
-      requestId,
-      idempotencyKey: req.headers.get('idempotency-key'),
-    });
     await recordEdgeFunctionRun(telemetryClient, {
       reservation: usageReservation,
       brandId,
@@ -233,6 +307,46 @@ serve(async (req) => {
       requestId,
     })
     console.log('Job created:', job.id)
+
+    if (localWorkerRequest) {
+      failedStage = 'queued'
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'succeeded',
+        requestId,
+        durationMs: durationSince(startedAt),
+      });
+      failedStage = null
+      persistenceStatus = 'processing'
+      const { data: queuedJob, error: queueError } = await supabaseClient
+        .from('generation_jobs')
+        .update({ status: 'pending', error_message: null })
+        .eq('id', job.id)
+        .select('*')
+        .single()
+      if (queueError || !queuedJob) {
+        throw queueError ?? new Error('local_runway_worker_queue_update_failed')
+      }
+      return new Response(
+        JSON.stringify({
+          success: true,
+          queued: true,
+          provider: localWorkerRequest.provider,
+          workerContractVersion: localWorkerRequest.workerContractVersion,
+          job: queuedJob,
+          jobId: job.id,
+          persistenceStatus: 'pending',
+          cleanupStatus: 'none',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 202,
+        },
+      )
+    }
 
     failedStage = 'generation'
     const runwayResult = await generateRunwayImage({
