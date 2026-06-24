@@ -18,7 +18,7 @@ export type RunwayImageArtifact = {
   extension: string;
 };
 
-const DEFAULT_RUNWAY_IMAGE_MODEL = 'gen4_image';
+const DEFAULT_RUNWAY_IMAGE_MODEL = 'gen-4';
 const RUNWAY_UPSCALE_MODEL = 'magnific_precision_upscaler_v2';
 
 type BridgeResult = {
@@ -74,9 +74,9 @@ function runwayModel() {
 function ratioFromDimensions(width?: number, height?: number) {
   const w = Number(width || 1024);
   const h = Number(height || 1024);
-  if (w > h) return '1920:1080';
-  if (h > w) return '1080:1920';
-  return '1024:1024';
+  if (w > h) return '16:9';
+  if (h > w) return '9:16';
+  return '1:1';
 }
 
 function normalizeMimeType(mimeType?: string | null) {
@@ -276,11 +276,7 @@ export async function generateRunwayImage(params: {
       : params.prompt;
     const result = await callBridge('/text-to-image', {
       model: runwayModel(),
-      prompt: params.prompt,
       promptText,
-      negativePrompt: params.negativePrompt ?? null,
-      width: params.width,
-      height: params.height,
       brandId: params.brandId,
       ratio: ratioFromDimensions(params.width, params.height),
       referenceImages: params.referenceImages ?? [],

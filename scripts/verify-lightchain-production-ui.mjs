@@ -80,12 +80,12 @@ const pages = [
   {
     name: 'brand-settings',
     path: '/brand/settings',
-    expected: ['Runway MCP接続', '承認済み', '生成可否', 'サブスク条件が未達です'],
+    expected: ['Runway MCP接続', '承認済み', '生成可否', 'Heavy Chain側の課金システムは現時点では生成条件に含めません'],
   },
   {
     name: 'admin-runway',
     path: '/admin?tab=runway',
-    expected: ['Runway MCP', '承認', '本番生成 readiness', 'プラン未達'],
+    expected: ['Runway MCP', '承認', '本番生成 readiness', '生成承認OK'],
   },
 ];
 

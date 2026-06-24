@@ -99,32 +99,15 @@ const getPlanLabel = (subscription: BrandRunwaySubscription | null) => {
   return subscription?.plan?.name || subscription?.plan?.code || 'Free';
 };
 
-const isRunwaySubscriptionEligible = (subscription: BrandRunwaySubscription | null) => {
-  if (!subscription?.plan) return false;
-  const now = Date.now();
-  const periodStart = Date.parse(subscription.current_period_start || '');
-  const periodEnd = Date.parse(subscription.current_period_end || '');
-  return ['trialing', 'active'].includes(subscription.status || '')
-    && Number.isFinite(periodStart)
-    && Number.isFinite(periodEnd)
-    && periodStart <= now
-    && periodEnd > now
-    && subscription.plan.is_active === true
-    && subscription.plan.runway_mcp_generation === true;
-};
-
 function getRunwayReadinessIssues({
   approved,
-  subscriptionEligible,
   bridgeConfigured,
 }: {
   approved: boolean;
-  subscriptionEligible: boolean;
   bridgeConfigured: boolean;
 }) {
   const issues: string[] = [];
   if (!approved) issues.push('接続承認が必要です');
-  if (!subscriptionEligible) issues.push('サブスク条件が未達です');
   if (!bridgeConfigured) issues.push('本番ブリッジが未設定です');
   return issues;
 }
@@ -489,11 +472,9 @@ export function BrandSettingsPage() {
   const runwayApproved = runwayStatus === 'approved';
   const runwayOAuthConnected = runwayOAuthConnection?.connected === true;
   const runwayBridgeConfigured = runwayOAuthConnection?.bridgeConfigured === true;
-  const runwaySubscriptionEligible = isRunwaySubscriptionEligible(runwaySubscription);
-  const runwayReadyInApp = runwayApproved && runwaySubscriptionEligible && runwayBridgeConfigured;
+  const runwayReadyInApp = runwayApproved && runwayBridgeConfigured;
   const runwayReadinessIssues = getRunwayReadinessIssues({
     approved: runwayApproved,
-    subscriptionEligible: runwaySubscriptionEligible,
     bridgeConfigured: runwayBridgeConfigured,
   });
   const runwayPlanLabel = getPlanLabel(runwaySubscription);
@@ -543,11 +524,11 @@ export function BrandSettingsPage() {
                 Runway MCP接続
               </h2>
               <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                このブランドでRunway生成を使うため、管理者承認、Hosted Runway MCPブリッジ、Runway対応プランの状態を確認します。
+                このブランドでRunway生成を使うため、管理者承認とHosted Runway MCPブリッジの状態を確認します。
               </p>
               <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
                 Hosted bridge とサイト承認が完了するまで、Runway MCPを使う画像生成は使用量予約前に停止します。
-                サブスクが切れている場合も、承認状態に関係なく生成は停止します。
+                Heavy Chain側の課金システムは現時点では生成条件に含めません。
               </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                 <div className="rounded-xl border border-neutral-200 bg-white/55 p-3 dark:border-neutral-700 dark:bg-neutral-800/55">
@@ -578,12 +559,8 @@ export function BrandSettingsPage() {
                 </div>
                 <div className="rounded-xl border border-neutral-200 bg-white/55 p-3 dark:border-neutral-700 dark:bg-neutral-800/55">
                   <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-white">
-                    {runwaySubscriptionEligible ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <CreditCard className="h-4 w-4 text-amber-500" />
-                    )}
-                    プラン
+                    <CreditCard className="h-4 w-4 text-neutral-500" />
+                    利用量管理
                   </div>
                   <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                     {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
@@ -611,11 +588,9 @@ export function BrandSettingsPage() {
                   </p>
                 </div>
               </div>
-              {!runwaySubscriptionEligible && (
-                <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-                  Runway生成には、Runway MCP承認に加えて、Heavy Chain側のRunway対応プランが有効期間内である必要があります。
-                </p>
-              )}
+              <p className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700 dark:border-neutral-700 dark:bg-neutral-900/40 dark:text-neutral-200">
+                Runway生成には、Runway MCP承認とHosted bridge接続が必要です。Heavy Chain側の利用量管理は表示のみで、現時点では生成可否を止めません。
+              </p>
               {runwayReadinessIssues.length > 0 && (
                 <ul className="mt-3 space-y-1 rounded-xl border border-amber-200 bg-white/70 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-neutral-950/50 dark:text-amber-200">
                   {runwayReadinessIssues.map((issue) => (

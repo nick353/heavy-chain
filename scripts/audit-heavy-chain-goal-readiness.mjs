@@ -97,7 +97,7 @@ const requirements = [
     status: runwayUiPassed() ? 'passed' : 'failed',
     evidence: paths.runwayUi ? [paths.runwayUi] : [],
     details: runwayUiDetails(),
-    next_action: 'Rerun the local Runway UI preview proof and verify Generate + Brand Settings blocker copy before deploy.',
+    next_action: 'Rerun the local Runway UI preview proof and verify Generate + Brand Settings approval/bridge readiness copy before deploy.',
   }),
   requirement({
     id: 'runway_site_approval',
@@ -108,28 +108,12 @@ const requirements = [
     next_action: 'Request connection from /brand/settings and approve the brand from /admin?tab=runway.',
   }),
   requirement({
-    id: 'free_plan_denial',
-    title: 'Approved Free-plan brand is denied before generation with no side effects',
-    status: denialPassed(files.freeDenial.json, { cleanupRequired: false, storageRequired: true }) ? 'passed' : 'failed',
-    evidence: [paths.freeDenial],
-    details: sideEffectDetails(files.freeDenial.json),
-    next_action: 'Rerun npm run verify:runway-free-denial and inspect side_effect_readback.',
-  }),
-  requirement({
     id: 'unapproved_denial',
     title: 'Unapproved temporary brand is denied and fully cleaned up',
     status: denialPassed(files.unapprovedDenial.json, { cleanupRequired: true }) ? 'passed' : 'failed',
     evidence: [paths.unapprovedDenial],
     details: cleanupDetails(files.unapprovedDenial.json),
     next_action: 'Rerun npm run verify:runway-unapproved-denial and inspect cleanup residuals.',
-  }),
-  requirement({
-    id: 'expired_subscription_denial',
-    title: 'Approved expired-subscription brand is denied and fully cleaned up',
-    status: denialPassed(files.expiredDenial.json, { cleanupRequired: true }) ? 'passed' : 'failed',
-    evidence: [paths.expiredDenial],
-    details: cleanupDetails(files.expiredDenial.json),
-    next_action: 'Rerun npm run verify:runway-expired-denial and inspect cleanup residuals.',
   }),
   requirement({
     id: 'runway_bridge_secrets',
@@ -156,18 +140,6 @@ const requirements = [
     next_action: 'Attach a public HTTPS domain and persistent /data volume to the Zeabur runway-mcp-bridge service, complete official Runway MCP authorization, then rerun npm run verify:runway-mcp-bridge.',
   }),
   requirement({
-    id: 'paid_subscription',
-    title: 'Target brand has an active Runway-eligible paid Heavy Chain subscription',
-    status: readinessVerificationBlocker
-      ? 'failed'
-      : blockerCodes.has('heavy_chain_paid_subscription_pending')
-        ? 'blocked_external'
-        : 'passed',
-    evidence: [paths.readiness, paths.approvedProof],
-    details: readinessVerificationBlocker || blockerDetails('heavy_chain_paid_subscription_pending'),
-    next_action: 'Complete the billing/subscription decision without bypassing payment rules, then rerun npm run verify:runway-readiness.',
-  }),
-  requirement({
     id: 'approved_live_generation_readback',
     title: 'Approved brand production generation has DB/Storage/UI readback',
     status: files.approvedProof.json?.generation_attempted === true && files.approvedProof.json?.passed === true
@@ -178,7 +150,7 @@ const requirements = [
       generation_attempted: files.approvedProof.json?.generation_attempted,
       blockers: approvedBlockers.map((blocker) => blocker.code),
     },
-    next_action: 'After readiness passes, run strict npm run verify:runway-approved-generation and logged-in UI readback.',
+    next_action: 'Run strict npm run verify:runway-approved-generation and logged-in UI readback.',
   }),
   requirement({
     id: 'workspace_readback_expected_task_codes',
@@ -205,7 +177,7 @@ const requirements = [
     status: 'pending_after_blocker',
     evidence: [paths.approvedProof],
     details: {
-      reason: 'Strict approved generation has not run because readiness is false.',
+      reason: 'Strict approved generation has not run after subscription gate removal.',
     },
     next_action: 'After strict approved generation and readback, perform marker-scoped cleanup and record zero residual rows/processes.',
   }),
@@ -240,7 +212,8 @@ const report = {
   requirements,
   blockers,
   pending_after_blocker: pending,
-  state_mentions_goal_blocker: stateText.includes('heavy_chain_paid_subscription_pending'),
+  state_ignores_billing_gate: stateNextAction.includes('verify:runway-approved-generation')
+    && !stateText.includes('heavy_chain_paid_subscription_pending'),
 };
 
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -387,10 +360,10 @@ function runwayUiPassed() {
   const brandSettings = files.runwayUi.json?.brandSettings ?? {};
   return generate.hasRunwayPrecheck === true
     && generate.generateButton?.disabled === true
-    && generate.hasSubscriptionIssue === true
+    && (generate.hasOAuthIssue === true || generate.hasBridgeIssue === true)
     && generate.hasOldStandaloneBridgeLabel === false
     && brandSettings.hasRunwayConnection === true
-    && brandSettings.hasSubscriptionIssue === true
+    && (brandSettings.hasOAuthIssue === true || brandSettings.hasBridgeIssue === true)
     && brandSettings.hasGenerationAvailability === true
     && brandSettings.hasPlanMisleadingStopCopy === false
     && (files.runwayUi.json?.consoleErrors || []).length === 0;
@@ -403,14 +376,12 @@ function runwayUiDetails() {
       hasRunwayPrecheck: files.runwayUi.json?.generate?.hasRunwayPrecheck,
       generateButtonDisabled: files.runwayUi.json?.generate?.generateButton?.disabled,
       hasOAuthIssue: files.runwayUi.json?.generate?.hasOAuthIssue,
-      hasSubscriptionIssue: files.runwayUi.json?.generate?.hasSubscriptionIssue,
       hasBridgeIssue: files.runwayUi.json?.generate?.hasBridgeIssue,
       hasOldStandaloneBridgeLabel: files.runwayUi.json?.generate?.hasOldStandaloneBridgeLabel,
     },
     brandSettings: {
       hasRunwayConnection: files.runwayUi.json?.brandSettings?.hasRunwayConnection,
       hasOAuthIssue: files.runwayUi.json?.brandSettings?.hasOAuthIssue,
-      hasSubscriptionIssue: files.runwayUi.json?.brandSettings?.hasSubscriptionIssue,
       hasBridgeIssue: files.runwayUi.json?.brandSettings?.hasBridgeIssue,
       hasGenerationAvailability: files.runwayUi.json?.brandSettings?.hasGenerationAvailability,
       hasPlanMisleadingStopCopy: files.runwayUi.json?.brandSettings?.hasPlanMisleadingStopCopy,

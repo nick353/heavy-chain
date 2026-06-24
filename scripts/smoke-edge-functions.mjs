@@ -36,7 +36,7 @@ const authenticatedUsageSummaryMigration =
 const runwayApiUsageProviderMigration =
   'supabase/migrations/20260622230000_allow_runway_api_usage_provider.sql';
 const runwayMcpPlanFeatureMigration =
-  'supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql';
+  'supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql';
 const runwayMcpConnectionApprovalMigration =
   'supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql';
 const deprecatedGeminiModelPattern = /gemini-2\.0-flash-exp(?:-image-generation)?/;
@@ -346,14 +346,11 @@ for (const [label, needle] of runwayApiUsageProviderChecks) {
 }
 
 const runwayMcpPlanFeatureChecks = [
-  ['runway MCP feature key', "runway_mcp_generation"],
-  ['free plan disabled', "code = 'free'"],
-  ['pro plan enabled', "code = 'pro'"],
+  ['free plan default reservation', "code = 'free'"],
   ['current period start guard', 'bs.current_period_start <= v_now'],
   ['current period end guard', 'bs.current_period_end > v_now'],
   ['active plan guard', 'p.is_active'],
   ['active or trialing subscription guard', "bs.status IN ('trialing', 'active')"],
-  ['Runway generation function guard', 'v_runway_mcp_generation_functions'],
   ['stale reservation release', "reservation_stale"],
   ['idempotency preservation', 'idempotency_key = p_idempotency_key'],
   ['brand rate cap preservation', 'v_brand_recent_units + p_units > 5'],

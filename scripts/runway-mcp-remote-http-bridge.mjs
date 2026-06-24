@@ -10,10 +10,10 @@ import { fileURLToPath } from 'node:url';
 const RUNWAY_MCP_URL = 'https://mcp.runwayml.com/mcp';
 const CODEX_NPX_PATH = '/Applications/Codex.app/Contents/Resources/cua_node/bin/npx';
 const DEFAULT_PORT = 58744;
-const DEFAULT_IMAGE_MODEL = 'gen4_image';
+const DEFAULT_IMAGE_MODEL = 'gen-4';
 const DEFAULT_UPSCALE_MODEL = 'magnific_precision_upscaler_v2';
 const DEFAULT_MAX_BODY_BYTES = 50 * 1024 * 1024;
-const DEFAULT_MCP_REMOTE_PACKAGE = 'mcp-remote@0.1.38';
+const DEFAULT_MCP_REMOTE_PACKAGE = 'mcp-remote@0.1.37';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = dirname(__dirname);
 
@@ -352,7 +352,7 @@ async function initialize(mcp) {
     capabilities: {},
     clientInfo: { name: 'heavy-chain-runway-mcp-remote-http-bridge', version: '0.1.0' },
   });
-  const response = await waitForResponse(mcp, initId, 30000);
+  const response = await waitForResponse(mcp, initId, 90000);
   if (response.error) throw new Error(`runway_mcp_initialize_failed:${JSON.stringify(response.error)}`);
   mcp.notify('notifications/initialized', {});
 }
@@ -394,11 +394,14 @@ async function callRunwayImageTool(action, payload) {
     });
     const initial = await waitForResponse(mcp, callId, 180000);
     if (initial.error) throw new Error(`runway_mcp_tool_call_failed:${JSON.stringify(initial.error)}`);
+    if (initial.result?.isError) {
+      throw new Error(`runway_mcp_tool_call_error:${summarizeMcpError(initial)}`);
+    }
 
     const finalResult = await pollPendingTask(mcp, initial);
     const image = extractImageResult(finalResult, payload.model || fallbackModel(action));
     if (!image.base64 && !image.outputUrl) {
-      throw new Error('runway_mcp_empty_image_response');
+      throw new Error(`runway_mcp_empty_image_response:${JSON.stringify(safeShape(finalResult)).slice(0, 900)}`);
     }
 
     return {
@@ -417,8 +420,10 @@ async function callRunwayImageTool(action, payload) {
 
 async function pollPendingTask(mcp, initial) {
   let current = initial;
-  const taskId = initial.result?.structuredContent?.taskId || '';
-  if (initial.result?.structuredContent?.kind !== 'task_pending' || !taskId) return current;
+  const taskId = initial.result?.structuredContent?.taskId || initial.result?.structuredContent?.id || '';
+  if (!taskId) return current;
+  const initialProbe = extractImageResult(current, '');
+  if (initialProbe.base64 || initialProbe.outputUrl) return current;
 
   const delaysMs = [35000, 45000, 60000, 60000, 60000];
   for (let attempt = 0; attempt < delaysMs.length; attempt += 1) {
@@ -432,6 +437,9 @@ async function pollPendingTask(mcp, initial) {
     });
     current = await waitForResponse(mcp, taskIdResponse, 120000);
     if (current.error) throw new Error(`runway_mcp_task_poll_failed:${JSON.stringify(current.error)}`);
+    if (current.result?.isError) {
+      throw new Error(`runway_mcp_task_poll_error:${summarizeMcpError(current)}`);
+    }
     const probe = extractImageResult(current, '');
     if (probe.base64 || probe.outputUrl) return current;
     const status = taskStatusFromResult(current);
@@ -440,6 +448,14 @@ async function pollPendingTask(mcp, initial) {
     }
   }
   return current;
+}
+
+function summarizeMcpError(response) {
+  const structured = asRecord(response?.result?.structuredContent);
+  const errors = Array.isArray(structured?.errors) ? structured.errors.filter((entry) => typeof entry === 'string') : [];
+  const text = collectStrings(response?.result?.content || []).join(' ');
+  const summary = errors.length ? errors.join('; ') : text;
+  return sanitizeSecretText(summary || JSON.stringify(safeShape(response))).slice(0, 1200);
 }
 
 function selectTool(tools, action) {
@@ -477,11 +493,7 @@ function buildToolArguments(payload, action) {
     rationale: stringField(payload, ['rationale']) || 'Generate a Heavy Chain image through Runway MCP.',
     model: stringField(payload, ['model']) || DEFAULT_IMAGE_MODEL,
     promptText: prompt,
-    prompt,
-    negativePrompt: payload.negativePrompt || null,
     ratio: stringField(payload, ['ratio']) || ratioFromDimensions(payload.width, payload.height),
-    width: payload.width,
-    height: payload.height,
     count: Number.isInteger(payload.count) ? payload.count : 1,
     referenceImages: Array.isArray(payload.referenceImages) ? payload.referenceImages : [],
   };
@@ -490,9 +502,9 @@ function buildToolArguments(payload, action) {
 function ratioFromDimensions(width, height) {
   const w = Number(width || 1024);
   const h = Number(height || 1024);
-  if (w > h) return '1920:1080';
-  if (h > w) return '1080:1920';
-  return '1024:1024';
+  if (w > h) return '16:9';
+  if (h > w) return '9:16';
+  return '1:1';
 }
 
 function fallbackModel(action) {
@@ -554,6 +566,24 @@ function collectStrings(value, output = []) {
   else if (Array.isArray(value)) value.forEach((item) => collectStrings(item, output));
   else if (value && typeof value === 'object') Object.values(value).forEach((item) => collectStrings(item, output));
   return output;
+}
+
+function safeShape(value, depth = 0) {
+  if (depth > 4) return typeof value;
+  if (typeof value === 'string') {
+    if (/^data:/i.test(value)) return `data-url(${value.length})`;
+    if (/^https?:/i.test(value)) return `url(${value.length})`;
+    return `string(${value.length})`;
+  }
+  if (Array.isArray(value)) {
+    return { arrayLength: value.length, first: safeShape(value[0], depth + 1) };
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entryValue]) => [key, safeShape(entryValue, depth + 1)]),
+    );
+  }
+  return value;
 }
 
 function projectTool(tool) {

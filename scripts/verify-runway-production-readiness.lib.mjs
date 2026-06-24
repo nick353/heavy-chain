@@ -29,20 +29,6 @@ export function projectSubscription(row) {
   };
 }
 
-export function isEligibleRunwaySubscription(subscription, capturedAt) {
-  if (!subscription?.plan) return false;
-  const nowMs = capturedAt.getTime();
-  const periodStart = Date.parse(subscription.current_period_start || '');
-  const periodEnd = Date.parse(subscription.current_period_end || '');
-  return ['trialing', 'active'].includes(subscription.status)
-    && Number.isFinite(periodStart)
-    && Number.isFinite(periodEnd)
-    && periodStart <= nowMs
-    && periodEnd > nowMs
-    && subscription.plan.is_active === true
-    && subscription.plan.runway_mcp_generation === true;
-}
-
 export function projectRemoteSecretInspection({ projectRef, status, stdout = '', stderr = '' }) {
   if (!projectRef) {
     return {

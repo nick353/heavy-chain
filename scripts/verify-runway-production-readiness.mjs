@@ -7,7 +7,6 @@ import { dirname } from 'node:path';
 import {
   dateStamp,
   dbReadbackBlocker,
-  isEligibleRunwaySubscription,
   projectBrand,
   projectRemoteSecretInspection,
   projectSubscription,
@@ -161,21 +160,19 @@ const subscription = await selectSingle(
   (query) => query.eq('brand_id', brandId),
 );
 const subscriptionProjection = projectSubscription(subscription.data);
-const subscriptionEligible = isEligibleRunwaySubscription(subscriptionProjection, now);
 addCheck(
-  'Heavy Chain eligible paid subscription',
-  !subscription.error && subscriptionEligible,
-  subscription.error ? { error: subscription.error.message } : { subscription: subscriptionProjection },
+  'Heavy Chain usage subscription readback',
+  !subscription.error,
+  subscription.error
+    ? { error: subscription.error.message }
+    : {
+      subscription: subscriptionProjection,
+      generation_gate: 'ignored_currently_no_billing_system',
+    },
 );
 const subscriptionReadbackBlocker = dbReadbackBlocker('brand_subscriptions', subscription.error);
 if (subscriptionReadbackBlocker) {
   addBlockerObject(subscriptionReadbackBlocker);
-} else if (!subscriptionEligible) {
-  addBlocker(
-    'heavy_chain_paid_subscription_pending',
-    'The target brand does not currently have an active/trialing paid plan with runway_mcp_generation enabled.',
-    'Complete the billing/subscription decision without bypassing payment rules, then rerun npm run verify:runway-readiness.',
-  );
 }
 
 const recentUsage = await selectRows(

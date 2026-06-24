@@ -14,7 +14,7 @@ Required runtime secrets:
 
 Optional Runway model override:
 
-- `RUNWAY_IMAGE_MODEL`: image generation model. Defaults to `gen4_image`.
+- `RUNWAY_IMAGE_MODEL`: image generation model. Defaults to `gen-4`.
 
 Image generation Edge Functions must call the Runway MCP bridge and must not call `https://api.dev.runwayml.com/v1` directly. `RUNWAYML_API_SECRET` is not an accepted Heavy Chain runtime secret; the bridge service is responsible for connecting to Runway MCP (`https://mcp.runwayml.com/mcp`) through its hosted `mcp-remote` auth cache. `RUNWAY_MCP_TOKEN_ENCRYPTION_KEY` is retained for the legacy first-party OAuth table, but production image generation does not require `runway_mcp_oauth_connections`. Missing bridge URL/token fails closed as `runway_mcp_bridge_not_configured`, bridge 401/403 fails as `runway_mcp_auth_required`, and bridge 402 fails as `runway_mcp_subscription_inactive`.
 

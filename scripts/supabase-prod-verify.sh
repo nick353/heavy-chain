@@ -232,19 +232,18 @@ grep -q "v_user_recent_units + p_units > 3" supabase/migrations/20260617080031_h
 grep -q "idempotency_key = p_idempotency_key" supabase/migrations/20260617080031_harden_usage_quota_guards.sql
 grep -q "Brand usage quota exceeded" supabase/migrations/20260617080031_harden_usage_quota_guards.sql
 grep -q "RAISE EXCEPTION 'User usage rate limit exceeded'" supabase/migrations/20260617080031_harden_usage_quota_guards.sql
-grep -q "runway_mcp_generation" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "code = 'free'" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "code = 'pro'" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "v_runway_mcp_generation_functions" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "bs.current_period_start <= v_now" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "bs.current_period_end > v_now" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "p.is_active" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "bs.status IN ('trialing', 'active')" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "reservation_stale" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "idempotency_key = p_idempotency_key" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "v_brand_recent_units + p_units > 5" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "v_user_recent_units + p_units > 3" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
-grep -q "Brand usage quota exceeded" supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
+grep -q "Allow Runway MCP generation while Heavy Chain billing is not active" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
+grep -q "code = 'free'" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
+grep -q "bs.current_period_start <= v_now" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
+grep -q "bs.current_period_end > v_now" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
+grep -q "p.is_active" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
+grep -q "bs.status IN ('trialing', 'active')" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
+grep -q "reservation_stale" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
+grep -q "idempotency_key = p_idempotency_key" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
+grep -q "v_brand_recent_units + p_units > 5" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
+grep -q "v_user_recent_units + p_units > 3" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
+grep -q "Brand usage quota exceeded" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
+require_no_match "Runway paid subscription gate" "Runway MCP generation requires an active eligible subscription" supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql
 grep -q "public.runway_mcp_connection_approvals" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
 grep -q "public.runway_mcp_connection_status" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
 grep -q "ENABLE ROW LEVEL SECURITY" supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql

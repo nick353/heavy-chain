@@ -2,15 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   dbReadbackBlocker,
-  isEligibleRunwaySubscription,
   projectRemoteSecretInspection,
   projectSubscription,
   redact,
   redactObject,
   requiredSecretPresence,
 } from './verify-runway-production-readiness.lib.mjs';
-
-const capturedAt = new Date('2026-06-23T12:00:00.000Z');
 
 function subscriptionRow(overrides = {}) {
   return {
@@ -31,15 +28,7 @@ function subscriptionRow(overrides = {}) {
   };
 }
 
-test('active and trialing runway-enabled plans are eligible', () => {
-  for (const status of ['active', 'trialing']) {
-    const subscription = projectSubscription(subscriptionRow({ status }));
-
-    assert.equal(isEligibleRunwaySubscription(subscription, capturedAt), true);
-  }
-});
-
-test('free or non-runway plans are rejected', () => {
+test('free and non-runway plans remain readable but are not readiness blockers', () => {
   const freeSubscription = projectSubscription(subscriptionRow({
     plans: {
       id: 'plan_free',
@@ -61,17 +50,10 @@ test('free or non-runway plans are rejected', () => {
     },
   }));
 
-  assert.equal(isEligibleRunwaySubscription(freeSubscription, capturedAt), false);
-  assert.equal(isEligibleRunwaySubscription(nonRunwaySubscription, capturedAt), false);
-});
-
-test('expired plans are rejected', () => {
-  const subscription = projectSubscription(subscriptionRow({
-    current_period_start: '2026-05-01T00:00:00.000Z',
-    current_period_end: '2026-06-01T00:00:00.000Z',
-  }));
-
-  assert.equal(isEligibleRunwaySubscription(subscription, capturedAt), false);
+  assert.equal(freeSubscription.plan.code, 'free');
+  assert.equal(freeSubscription.plan.runway_mcp_generation, false);
+  assert.equal(nonRunwaySubscription.plan.code, 'team');
+  assert.equal(nonRunwaySubscription.plan.runway_mcp_generation, false);
 });
 
 test('Supabase plan join is normalized from array or single object', () => {

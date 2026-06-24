@@ -91,20 +91,6 @@ const RUNWAY_STATUS_STYLES: Record<RunwayMcpConnectionStatus, string> = {
   revoked: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
 };
 
-const isRunwaySubscriptionEligible = (subscription: RunwayBrandSubscription | null | undefined) => {
-  if (!subscription?.plan) return false;
-  const now = Date.now();
-  const periodStart = Date.parse(subscription.current_period_start || '');
-  const periodEnd = Date.parse(subscription.current_period_end || '');
-  return ['trialing', 'active'].includes(subscription.status || '')
-    && Number.isFinite(periodStart)
-    && Number.isFinite(periodEnd)
-    && periodStart <= now
-    && periodEnd > now
-    && subscription.plan.is_active === true
-    && subscription.plan.runway_mcp_generation === true;
-};
-
 const getPlanLabel = (subscription: RunwayBrandSubscription | null | undefined) => (
   subscription?.plan?.name || subscription?.plan?.code || 'Free'
 );
@@ -384,12 +370,8 @@ export function AdminDashboard() {
   );
   const runwayApprovedCount = runwayApprovals.filter((approval) => approval.status === 'approved').length;
   const runwayPendingCount = runwayApprovals.filter((approval) => approval.status === 'pending').length;
-  const runwayPlanReadyCount = runwayApprovals.filter((approval) => (
-    approval.status === 'approved' && isRunwaySubscriptionEligible(runwaySubscriptionsByBrand[approval.brand_id])
-  )).length;
-  const runwayPlanBlockedCount = runwayApprovals.filter((approval) => (
-    approval.status === 'approved' && !isRunwaySubscriptionEligible(runwaySubscriptionsByBrand[approval.brand_id])
-  )).length;
+  const runwayReadyCount = runwayApprovals.filter((approval) => approval.status === 'approved').length;
+  const runwayBlockedCount = runwayApprovals.filter((approval) => approval.status !== 'approved').length;
 
   const StatCard = ({ icon: Icon, label, value, trend, color }: any) => (
     <div className="glass-card p-6 hover:shadow-elegant transition-all duration-300">
@@ -632,12 +614,12 @@ export function AdminDashboard() {
                 <p className="mt-2 text-2xl font-semibold text-neutral-900 dark:text-white">{runwayPendingCount}</p>
               </div>
               <div className="glass-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">プラン条件OK</p>
-                <p className="mt-2 text-2xl font-semibold text-green-700 dark:text-green-300">{runwayPlanReadyCount}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">生成承認OK</p>
+                <p className="mt-2 text-2xl font-semibold text-green-700 dark:text-green-300">{runwayReadyCount}</p>
               </div>
               <div className="glass-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">プラン未達</p>
-                <p className="mt-2 text-2xl font-semibold text-amber-700 dark:text-amber-300">{runwayPlanBlockedCount}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">承認待ち/停止</p>
+                <p className="mt-2 text-2xl font-semibold text-amber-700 dark:text-amber-300">{runwayBlockedCount}</p>
               </div>
             </motion.div>
 
@@ -653,8 +635,8 @@ export function AdminDashboard() {
                     本番生成 readiness
                   </p>
                   <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-200">
-                    この画面では接続承認とHeavy Chainプラン条件を確認します。Runway MCPブリッジ本体はSupabase secretsで管理し、値はUIに保存しません。
-                    本番生成前は `npm run verify:runway-readiness` で `RUNWAY_MCP_BRIDGE_URL` / `RUNWAY_MCP_BRIDGE_TOKEN` と有料プラン状態を確認してください。
+                    この画面では接続承認を確認します。Runway MCPブリッジ本体はSupabase secretsで管理し、値はUIに保存しません。
+                    本番生成前は `npm run verify:runway-readiness` で `RUNWAY_MCP_BRIDGE_URL` / `RUNWAY_MCP_BRIDGE_TOKEN` とbridge疎通を確認してください。
                   </p>
                 </div>
               </div>
@@ -702,7 +684,7 @@ export function AdminDashboard() {
                     {runwayApprovals.map((approval) => {
                       const isUpdatingRunwayApproval = updatingRunwayBrandId === approval.brand_id;
                       const subscription = runwaySubscriptionsByBrand[approval.brand_id];
-                      const subscriptionEligible = isRunwaySubscriptionEligible(subscription);
+                      const generationApproved = approval.status === 'approved';
 
                       return (
                         <tr key={approval.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 transition-colors">
@@ -719,11 +701,11 @@ export function AdminDashboard() {
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-1">
                             <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-medium ${
-                              subscriptionEligible
+                              generationApproved
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                                 : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
                             }`}>
-                              {subscriptionEligible ? 'Runway対応' : 'プラン未達'}
+                              {generationApproved ? '生成承認済み' : '承認未完了'}
                             </span>
                             <span className="text-xs text-neutral-500 dark:text-neutral-400">
                               {getPlanLabel(subscription)}

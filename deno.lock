@@ -42,7 +42,7 @@
         "npm:globals@^16.5.0",
         "npm:konva@^10.0.12",
         "npm:lucide-react@0.555",
-        "npm:mcp-remote@~0.1.38",
+        "npm:mcp-remote@0.1.37",
         "npm:postcss@^8.5.6",
         "npm:react-dom@^19.2.0",
         "npm:react-hot-toast@^2.6.0",

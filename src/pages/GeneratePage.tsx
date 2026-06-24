@@ -178,32 +178,15 @@ const getRunwayPlanLabel = (subscription: BrandRunwaySubscription | null) => {
   return subscription?.plan?.name || subscription?.plan?.code || 'Free';
 };
 
-const isRunwaySubscriptionEligible = (subscription: BrandRunwaySubscription | null) => {
-  if (!subscription?.plan) return false;
-  const now = Date.now();
-  const periodStart = Date.parse(subscription.current_period_start || '');
-  const periodEnd = Date.parse(subscription.current_period_end || '');
-  return ['trialing', 'active'].includes(subscription.status || '')
-    && Number.isFinite(periodStart)
-    && Number.isFinite(periodEnd)
-    && periodStart <= now
-    && periodEnd > now
-    && subscription.plan.is_active === true
-    && subscription.plan.runway_mcp_generation === true;
-};
-
 function getRunwayReadinessIssues({
   approved,
-  subscriptionEligible,
   bridgeConfigured,
 }: {
   approved: boolean;
-  subscriptionEligible: boolean;
   bridgeConfigured: boolean;
 }) {
   const issues: string[] = [];
   if (!approved) issues.push('Runway MCP接続承認が必要です');
-  if (!subscriptionEligible) issues.push('サブスク条件が未達です');
   if (!bridgeConfigured) issues.push('本番ブリッジが未設定です');
   return issues;
 }
@@ -2565,12 +2548,10 @@ export function GeneratePage() {
   const runwayStatus = runwayApproval?.status || 'not_requested';
   const runwayApproved = runwayStatus === 'approved';
   const runwayBridgeConfigured = runwayOAuthConnection?.bridgeConfigured === true;
-  const runwaySubscriptionEligible = isRunwaySubscriptionEligible(runwaySubscription);
   const selectedFeatureUsesRunwayMcp = Boolean(selectedFeature && selectedFeature.id !== 'optimize-prompt' && selectedFeature.id !== 'chat-edit');
-  const runwayReadyInApp = runwayApproved && runwaySubscriptionEligible && runwayBridgeConfigured;
+  const runwayReadyInApp = runwayApproved && runwayBridgeConfigured;
   const runwayReadinessIssues = getRunwayReadinessIssues({
     approved: runwayApproved,
-    subscriptionEligible: runwaySubscriptionEligible,
     bridgeConfigured: runwayBridgeConfigured,
   });
   const runwayPlanLabel = getRunwayPlanLabel(runwaySubscription);
@@ -2666,7 +2647,7 @@ export function GeneratePage() {
             <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
               <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
                 <CreditCard className="h-4 w-4" />
-                プラン
+                利用量管理
               </div>
               <p className="mt-1 text-neutral-500 dark:text-neutral-400">
                 {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
@@ -2905,7 +2886,7 @@ export function GeneratePage() {
                   <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
                     <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
                       <CreditCard className="h-4 w-4" />
-                      プラン
+                      利用量管理
                     </div>
                     <p className="mt-1 text-neutral-500 dark:text-neutral-400">
                       {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
