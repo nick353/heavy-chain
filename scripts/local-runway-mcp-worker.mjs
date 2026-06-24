@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { Buffer } from 'node:buffer';
+import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -7,6 +9,10 @@ import { createClient } from '@supabase/supabase-js';
 
 const PROVIDER = 'runway_mcp_local_worker';
 const CONTRACT_VERSION = 'heavy-chain.local-runway-worker.v1';
+const RUNWAY_MCP_URL = 'https://mcp.runwayml.com/mcp';
+const CODEX_NPX_PATH = '/Applications/Codex.app/Contents/Resources/cua_node/bin/npx';
+const MCP_REMOTE_PACKAGE = 'mcp-remote@0.1.37';
+const DEFAULT_MCP_REMOTE_CONFIG_DIR = '/Users/nichikatanaka/.mcp-auth';
 const DEFAULT_BRIDGE_URL = 'http://127.0.0.1:58744';
 const GENERATED_IMAGES_BUCKET = 'generated-images';
 const ALLOWED_FEATURES = new Set([
@@ -213,6 +219,254 @@ const readFixtureDataUrl = async (fixtureImagePath) => {
   };
 };
 
+const readFileDataUrl = async (filePath) => {
+  const absolutePath = path.resolve(repoRoot, filePath);
+  const buffer = await fs.readFile(absolutePath);
+  return bufferToDataUrl(buffer, mimeFromPath(absolutePath));
+};
+
+const urlToDataUrl = async (url) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`runway_mcp_image_download_failed:${response.status}`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return bufferToDataUrl(buffer, normalizeMimeType(response.headers.get('content-type') || 'image/png'));
+};
+
+const readRunwayMcpResultImages = async (resultPath, requestedCount) => {
+  const absolutePath = path.resolve(repoRoot, resultPath);
+  const result = JSON.parse(await fs.readFile(absolutePath, 'utf8'));
+  if (result.auth_required || result.blocker === 'runway_mcp_auth_required') throw new Error('runway_mcp_auth_required');
+  if (result.blocker) throw new Error(String(result.blocker));
+  const summaryOutputPath = result.outputPath || result.final_art_path;
+  const localPaths = [
+    ...(Array.isArray(result.candidate_paths) ? result.candidate_paths : []),
+    ...(summaryOutputPath ? [summaryOutputPath] : []),
+  ].filter(Boolean);
+  const urls = [
+    ...(Array.isArray(result.candidate_urls) ? result.candidate_urls : []),
+    ...(Array.isArray(result.image_urls) ? result.image_urls : []),
+    ...(Array.isArray(result.asset_urls) ? result.asset_urls : []),
+    ...(result.final_art_url ? [result.final_art_url] : []),
+    ...(result.selected_candidate_url ? [result.selected_candidate_url] : []),
+  ].filter((url) => String(url).startsWith('https://'));
+  const rawResults = [result.rawTask, result.rawGenerated, result].filter(Boolean);
+  const extractedUrls = rawResults
+    .map(extractImageFromMcpResult)
+    .map((item) => item.url)
+    .filter(Boolean);
+  const extractedDataUrls = rawResults
+    .map(extractImageFromMcpResult)
+    .map((item) => item.dataUrl)
+    .filter(Boolean);
+  const all = [];
+  for (const dataUrl of extractedDataUrls) all.push({ dataUrl, source: 'mcp_result_inline_image' });
+  for (const localPath of localPaths) all.push({ dataUrl: await readFileDataUrl(localPath), source: String(localPath) });
+  for (const url of [...urls, ...extractedUrls]) all.push({ dataUrl: await urlToDataUrl(url), source: url });
+  const unique = [];
+  const seen = new Set();
+  for (const item of all) {
+    const digest = sha256(Buffer.from(item.dataUrl));
+    if (seen.has(digest)) continue;
+    seen.add(digest);
+    unique.push(item);
+  }
+  if (unique.length === 0) throw new Error('runway_mcp_result_has_no_images');
+  return unique.slice(0, Math.max(1, requestedCount)).map((item, index) => ({
+    dataUrl: item.dataUrl,
+    model: result.model || 'runway-mcp',
+    taskId: result.taskId || result.rawGenerated?.result?.structuredContent?.taskId || `mcp-result-${index + 1}`,
+    tool: 'mcp_result_import',
+    source: item.source,
+  }));
+};
+
+const collectStrings = (value, output = []) => {
+  if (typeof value === 'string') output.push(value);
+  else if (Array.isArray(value)) value.forEach((item) => collectStrings(item, output));
+  else if (value && typeof value === 'object') Object.values(value).forEach((item) => collectStrings(item, output));
+  return output;
+};
+
+const responseById = (responses, id) => responses.find((response) => response.id === id);
+
+const startRunwayMcp = () => {
+  const mcpRemoteConfigDir = String(
+    process.env.MCP_REMOTE_CONFIG_DIR || process.env.RUNWAY_MCP_REMOTE_CONFIG_DIR || DEFAULT_MCP_REMOTE_CONFIG_DIR,
+  ).trim();
+  const child = spawn(CODEX_NPX_PATH, ['-y', MCP_REMOTE_PACKAGE, RUNWAY_MCP_URL], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      MCP_REMOTE_CONFIG_DIR: mcpRemoteConfigDir,
+      PATH: `/Applications/Codex.app/Contents/Resources/cua_node/bin:${path.join(repoRoot, 'node_modules/.bin')}:${process.env.PATH || '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'}`,
+    },
+  });
+  const responses = [];
+  let stdoutBuffer = '';
+  let stderr = '';
+  let nextId = 1;
+  child.stdout.on('data', (chunk) => {
+    stdoutBuffer += chunk.toString();
+    const lines = stdoutBuffer.split(/\r?\n/);
+    stdoutBuffer = lines.pop() || '';
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        responses.push(JSON.parse(trimmed));
+      } catch {
+        // mcp-remote may log non-JSON text while authenticating.
+      }
+    }
+  });
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk.toString();
+  });
+  const send = (method, params) => {
+    const id = nextId;
+    nextId += 1;
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+    return id;
+  };
+  const notify = (method, params) => {
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method, params })}\n`);
+  };
+  return { child, responses, send, notify, getStderr: () => stderr };
+};
+
+const waitForMcpResponse = async (mcp, id, timeoutMs) => {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt <= timeoutMs) {
+    const response = responseById(mcp.responses, id);
+    if (response) return response;
+    if (mcp.child.exitCode !== null) {
+      throw new Error(`runway_mcp_remote_exited:${sanitizeError(mcp.getStderr().slice(-1200))}`);
+    }
+    await sleep(250);
+  }
+  const stderrTail = sanitizeError(mcp.getStderr().slice(-1200).trim());
+  throw new Error(`runway_mcp_timeout:${id}${stderrTail ? `:${stderrTail}` : ''}`);
+};
+
+const initializeRunwayMcp = async (mcp) => {
+  await sleep(Number(process.env.RUNWAY_MCP_STARTUP_DELAY_MS || 4000));
+  const initId = mcp.send('initialize', {
+    protocolVersion: '2025-06-18',
+    capabilities: {},
+    clientInfo: { name: 'heavy-chain-local-runway-worker', version: '0.1.0' },
+  });
+  await waitForMcpResponse(mcp, initId, Number(process.env.RUNWAY_MCP_INIT_TIMEOUT_MS || 180000));
+  mcp.notify('notifications/initialized', {});
+};
+
+const extractImageFromMcpResult = (result) => {
+  const content = result?.result?.content || [];
+  const image = content.find((item) => item.type === 'image' && item.data);
+  if (image?.data) {
+    return {
+      dataUrl: `data:${normalizeMimeType(image.mimeType)};base64,${image.data}`,
+      mimeType: normalizeMimeType(image.mimeType),
+      url: '',
+    };
+  }
+  const structuredUrl = result?.result?.structuredContent?.url;
+  const urls = [
+    ...(structuredUrl ? [structuredUrl] : []),
+    ...collectStrings(result).flatMap((text) => Array.from(text.matchAll(/https?:\/\/[^\s)\]"'`]+/g)).map((match) => match[0])),
+  ];
+  return { dataUrl: '', mimeType: '', url: [...new Set(urls)][0] || '' };
+};
+
+const taskStatusFromMcpResult = (result) => {
+  const strings = collectStrings(result).join('\n');
+  const structuredKind = result?.result?.structuredContent?.kind || '';
+  const statusMatch = strings.match(/"status"\s*:\s*"([A-Z_]+)"/) || strings.match(/\b(PENDING|RUNNING|THROTTLED|SUCCEEDED|FAILED|CANCELLED)\b/);
+  return String(statusMatch?.[1] || structuredKind || '').toUpperCase();
+};
+
+const fetchImageDataUrl = async (url) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`runway_mcp_image_download_failed:${response.status}`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return bufferToDataUrl(buffer, normalizeMimeType(response.headers.get('content-type') || 'image/png'));
+};
+
+const imageFromMcpResult = async (result) => {
+  const extracted = extractImageFromMcpResult(result);
+  if (extracted.dataUrl) return extracted.dataUrl;
+  if (extracted.url) return fetchImageDataUrl(extracted.url);
+  return '';
+};
+
+const callRunwayMcpDirect = async (job, inputParams, index, artifactDir) => {
+  const mcp = startRunwayMcp();
+  try {
+    await initializeRunwayMcp(mcp);
+    const prompt = String(inputParams.prompt || inputParams.promptText || job.optimized_prompt || '').trim();
+    if (!prompt) throw new Error('local_runway_worker_prompt_missing');
+    const generateId = mcp.send('tools/call', {
+      name: job.feature_type === 'upscale' ? 'upscale_image' : 'generate_image',
+      arguments: job.feature_type === 'upscale'
+        ? {
+            rationale: `Heavy Chain local Runway worker upscale for job ${job.id}`,
+            image: inputParams.referenceImage,
+          }
+        : {
+            rationale: `Heavy Chain local Runway worker generation for job ${job.id}`,
+            model: String(inputParams.model || process.env.RUNWAY_MCP_IMAGE_MODEL || 'gpt-image-2'),
+            promptText: index > 0 ? `${prompt}\nVariant ${index + 1}` : prompt,
+            ratio: ratioFromDimensions(inputParams.width, inputParams.height),
+            count: 1,
+            referenceImages: inputParams.referenceImage ? [{ uri: inputParams.referenceImage }] : [],
+          },
+    });
+    const generated = await waitForMcpResponse(mcp, generateId, Number(process.env.RUNWAY_MCP_GENERATE_TIMEOUT_MS || 180000));
+    await fs.writeFile(path.join(artifactDir, `mcp-generate-${index + 1}.json`), `${JSON.stringify(generated, null, 2)}\n`);
+    if (generated.error) throw new Error(`runway_mcp_generate_error:${sanitizeError(JSON.stringify(generated.error))}`);
+
+    let taskResult = generated;
+    const structured = generated.result?.structuredContent || {};
+    const taskId = structured.taskId || structured.taskIds?.[0] || '';
+    const firstImage = await imageFromMcpResult(taskResult);
+    if (!firstImage && taskId) {
+      const delays = [35000, 45000, 60000, 60000, 60000];
+      for (let attempt = 0; attempt < delays.length; attempt += 1) {
+        await sleep(delays[attempt]);
+        const taskCheckId = mcp.send('tools/call', {
+          name: 'get_task',
+          arguments: {
+            rationale: 'Retrieve generated image bytes and asset URL for Heavy Chain local worker.',
+            id: taskId,
+          },
+        });
+        taskResult = await waitForMcpResponse(mcp, taskCheckId, Number(process.env.RUNWAY_MCP_TASK_TIMEOUT_MS || 120000));
+        await fs.writeFile(path.join(artifactDir, `mcp-task-${index + 1}-${attempt + 1}.json`), `${JSON.stringify(taskResult, null, 2)}\n`);
+        const maybeImage = await imageFromMcpResult(taskResult);
+        if (maybeImage) {
+          return {
+            dataUrl: maybeImage,
+            model: structured.model || inputParams.model || process.env.RUNWAY_MCP_IMAGE_MODEL || 'gpt-image-2',
+            taskId,
+            tool: 'generate_image',
+          };
+        }
+        const status = taskStatusFromMcpResult(taskResult);
+        if (['FAILED', 'CANCELLED'].includes(status)) throw new Error(`runway_mcp_task_${status.toLowerCase()}:${taskId}`);
+      }
+    }
+    const dataUrl = firstImage || await imageFromMcpResult(taskResult);
+    if (!dataUrl) throw new Error(`runway_mcp_task_pending_without_output:${taskId || 'unknown'}:${taskStatusFromMcpResult(taskResult) || 'UNKNOWN'}`);
+    return {
+      dataUrl,
+      model: structured.model || inputParams.model || process.env.RUNWAY_MCP_IMAGE_MODEL || 'gpt-image-2',
+      taskId: taskId || crypto.randomUUID(),
+      tool: 'generate_image',
+    };
+  } finally {
+    mcp.child.kill('SIGTERM');
+  }
+};
+
 const callRunwayBridge = async (job, inputParams, index) => {
   const bridgeUrl = String(process.env.RUNWAY_MCP_BRIDGE_URL || DEFAULT_BRIDGE_URL).replace(/\/+$/, '');
   const token = String(process.env.RUNWAY_MCP_BRIDGE_TOKEN || '').trim();
@@ -381,13 +635,20 @@ const processJob = async ({ supabase, job, args }) => {
   try {
     inputParams = validateJobInput(claimed, inputParams);
     const requestedCount = Math.max(1, Math.min(Number(inputParams.count || 1), 4));
+    const workerResults = args['mcp-result']
+      ? await readRunwayMcpResultImages(String(args['mcp-result']), requestedCount)
+      : null;
+    const resultCount = workerResults?.length || requestedCount;
     const images = [];
-    for (let index = 0; index < requestedCount; index += 1) {
-      const result = args['fixture-image']
+    for (let index = 0; index < resultCount; index += 1) {
+      const result = workerResults?.[index]
+        || (args['fixture-image']
         ? await readFixtureDataUrl(String(args['fixture-image']))
-        : args['live-runway']
+        : args['bridge-runway']
           ? await callRunwayBridge(claimed, inputParams, index)
-          : (() => { throw new Error('live_runway_requires_explicit_flag_or_fixture_image'); })();
+        : args['live-runway']
+          ? await callRunwayMcpDirect(claimed, inputParams, index, artifactDir)
+          : (() => { throw new Error('live_runway_requires_explicit_flag_fixture_image_or_mcp_result'); })());
       const image = await saveGeneratedImage({ supabase, job: claimed, inputParams, result, index, artifactDir });
       images.push(image);
       savedImages.push(image.id);
@@ -497,7 +758,7 @@ const main = async () => {
   const args = parseArgs(process.argv.slice(2));
   await loadEnvFile(path.resolve(repoRoot, '.env.production.local'));
   if (args.help || args.h) {
-    console.log('Usage: node scripts/local-runway-mcp-worker.mjs [--loop] [--once] [--job-id <id>] [--fixture-image <path>] [--live-runway] [--max-jobs 1] [--interval-ms 5000]');
+    console.log('Usage: node scripts/local-runway-mcp-worker.mjs [--loop] [--once] [--job-id <id>] [--fixture-image <path>] [--mcp-result <json>] [--live-runway] [--bridge-runway] [--max-jobs 1] [--interval-ms 5000]');
     return;
   }
   const supabase = getSupabaseClient();
@@ -515,6 +776,8 @@ const main = async () => {
       processed: results.length,
       results,
       liveRunway: Boolean(args['live-runway']),
+      bridgeRunway: Boolean(args['bridge-runway']),
+      mcpResult: args['mcp-result'] ? String(args['mcp-result']) : null,
       fixture: args['fixture-image'] ? String(args['fixture-image']) : null,
       loop,
       updatedAt: new Date().toISOString(),
