@@ -497,10 +497,7 @@ const statusTone: Record<ToolStatus, string> = {
 const totalToolCount = tools.length;
 
 const textArtifactPreview =
-  'data:image/svg+xml;utf8,' +
-  encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900"><rect width="1200" height="900" fill="#0f172a"/><rect x="96" y="96" width="1008" height="708" rx="40" fill="#111827" stroke="#22d3ee" stroke-width="4"/><text x="150" y="210" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="54" font-weight="700">Lightchain compatible brief</text><text x="150" y="300" fill="#67e8f9" font-family="Arial, sans-serif" font-size="34">Heavy Chain Canvas order sheet</text></svg>'
-  );
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjkwMCIgdmlld0JveD0iMCAwIDEyMDAgOTAwIj48cmVjdCB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI5MDAiIGZpbGw9IiMwZjE3MmEiLz48cmVjdCB4PSI5NiIgeT0iOTYiIHdpZHRoPSIxMDA4IiBoZWlnaHQ9IjcwOCIgcng9IjQwIiBmaWxsPSIjMTExODI3IiBzdHJva2U9IiMyMmQzZWUiIHN0cm9rZS13aWR0aD0iNCIvPjx0ZXh0IHg9IjE1MCIgeT0iMjEwIiBmaWxsPSIjZTVlN2ViIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNTQiIGZvbnQtd2VpZ2h0PSI3MDAiPkxpZ2h0Y2hhaW4gY29tcGF0aWJsZSBicmllZjwvdGV4dD48dGV4dCB4PSIxNTAiIHk9IjMwMCIgZmlsbD0iIzY3ZThmOSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjM0Ij5IZWF2eSBDaGFpbiBDYW52YXMgb3JkZXIgc2hlZXQ8L3RleHQ+PC9zdmc+';
 
 export function LightchainWorkbenchPage() {
   const navigate = useNavigate();

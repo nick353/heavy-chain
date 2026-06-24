@@ -50,14 +50,20 @@ const generateRemotePathId = () => {
 };
 
 const dataUrlToBytes = (dataUrl: string) => {
-  const matches = dataUrl.match(/^data:([^;,]+)?(;base64)?,(.*)$/);
-  if (!matches) {
+  if (!dataUrl.startsWith('data:')) {
     throw new Error('Only data URL workspace artifacts can be uploaded remotely.');
   }
 
-  const contentType = matches[1] || 'application/octet-stream';
-  const isBase64 = Boolean(matches[2]);
-  const payload = matches[3] || '';
+  const commaIndex = dataUrl.indexOf(',');
+  if (commaIndex === -1) {
+    throw new Error('Only data URL workspace artifacts can be uploaded remotely.');
+  }
+
+  const metadata = dataUrl.slice('data:'.length, commaIndex);
+  const payload = dataUrl.slice(commaIndex + 1);
+  const metadataParts = metadata.split(';').filter(Boolean);
+  const contentType = metadataParts.find((part) => part !== 'base64' && !part.includes('=')) || 'application/octet-stream';
+  const isBase64 = metadataParts.includes('base64');
   const binary = isBase64 ? atob(payload) : decodeURIComponent(payload);
   return {
     contentType,
