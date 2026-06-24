@@ -17,7 +17,7 @@ const bridgeProofPath = args.bridgeProof || latestProofPath({
   checker: 'verify-runway-mcp-remote-http-bridge',
 }) || null;
 const uiPath = args.ui || latestSummaryPath({
-  directoryPattern: /(?:^|\/)(?:ux-audit-\d{8}-production-ui|lightchain-production-ui-\d{8}|production-ui-after-frontend-deploy-full-\d{8}(?:-[^/]+)?)(?:\/|$)/,
+  directoryPattern: /(?:^|\/)(?:ux-audit-\d{8}-production-ui|lightchain-production-ui-\d{8}|production-ui-after-frontend-deploy-full-\d{8}(?:-[^/]+)?|production-ui-after-bridge-first-deploy-\d{8}(?:-[^/]+)?)(?:\/|$)/,
   predicate: (summary) => Number.isInteger(summary?.resultCount) && Number.isInteger(summary?.failureCount),
 }) || 'output/playwright/lightchain-production-ui-20260623/summary.json';
 const localUiPath = args.localUi || latestSummaryPath({

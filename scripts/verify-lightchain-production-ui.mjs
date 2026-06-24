@@ -131,7 +131,7 @@ async function waitForExpectedText(page, expected) {
   ]).catch(() => {});
 }
 
-async function verifyPage(page, viewport, pageSpec, errorsByPage) {
+async function verifyPage(page, viewport, pageSpec, errorsByPage, observedAssets) {
   const consoleErrors = [];
   const pageErrors = [];
 
@@ -147,6 +147,18 @@ async function verifyPage(page, viewport, pageSpec, errorsByPage) {
   const finalUrl = redact(rawFinalUrl);
   const missingText = pageSpec.expected.filter((expectedText) => !bodyText.includes(expectedText));
   const redirectedToLogin = /\/login(?:$|[?#])/.test(new URL(rawFinalUrl).pathname);
+  const scripts = await page.locator('script[src]').evaluateAll((nodes) => nodes
+    .map((node) => node.getAttribute('src'))
+    .filter(Boolean))
+    .catch(() => []);
+  const stylesheetLinks = await page.locator('link[rel="stylesheet"][href]').evaluateAll((nodes) => nodes
+    .map((node) => node.getAttribute('href'))
+    .filter(Boolean))
+    .catch(() => []);
+  for (const asset of [...scripts, ...stylesheetLinks]) {
+    const assetUrl = new URL(asset, rawFinalUrl);
+    observedAssets.add(assetUrl.pathname.replace(/^\//, ''));
+  }
   const screenshotPath = path.join(outDir, `${viewport.name}-${pageSpec.name}.png`);
   const textPath = path.join(outDir, `${viewport.name}-${pageSpec.name}.txt`);
   const consolePath = path.join(outDir, `${viewport.name}-${pageSpec.name}.console.json`);
@@ -172,6 +184,8 @@ async function verifyPage(page, viewport, pageSpec, errorsByPage) {
     redirectedToLogin,
     consoleErrorCount: consoleErrors.length,
     pageErrorCount: pageErrors.length,
+    scripts: scripts.map((script) => redact(new URL(script, rawFinalUrl).pathname.replace(/^\//, ''))),
+    stylesheets: stylesheetLinks.map((stylesheet) => redact(new URL(stylesheet, rawFinalUrl).pathname.replace(/^\//, ''))),
     passed: !redirectedToLogin && missingText.length === 0 && consoleErrors.length === 0 && pageErrors.length === 0,
   };
 }
@@ -179,6 +193,7 @@ async function verifyPage(page, viewport, pageSpec, errorsByPage) {
 const startedAt = new Date().toISOString();
 let browser = null;
 const results = [];
+const observedAssets = new Set();
 let fatalRunnerError = null;
 
 try {
@@ -223,7 +238,7 @@ try {
     for (const pageSpec of pages) {
       activePageName = pageSpec.name;
       try {
-        results.push(await verifyPage(page, viewport, pageSpec, errorsByPage));
+        results.push(await verifyPage(page, viewport, pageSpec, errorsByPage, observedAssets));
       } catch (error) {
         const message = redact(error?.stack || error?.message || String(error || 'verification_failed'));
         const requestedUrl = new URL(pageSpec.path, baseUrl).toString();
@@ -288,6 +303,7 @@ const summary = {
   outDir,
   pages: pages.map(({ name, path, expected }) => ({ name, path, expected })),
   viewports,
+  observedAssets: [...observedAssets].sort(),
   resultCount: results.length,
   failureCount: failures.length,
   fatalRunnerError,
