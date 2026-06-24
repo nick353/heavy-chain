@@ -14,6 +14,8 @@ interface InfiniteCanvasProps {
 export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction }: InfiniteCanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
+  const loadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const loadingImageIdsRef = useRef<Set<string>>(new Set());
   const [loadedImages, setLoadedImages] = useState<Map<string, HTMLImageElement>>(new Map());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; objectId: string | null; objectType: 'image' | 'text' | 'shape' | 'frame' | null } | null>(null);
   
@@ -34,19 +36,84 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction 
     saveToHistory,
   } = useCanvasStore();
 
+  useEffect(() => {
+    loadedImagesRef.current = loadedImages;
+  }, [loadedImages]);
+
   // Load images
   useEffect(() => {
-    objects.forEach((obj) => {
-      if (obj.type === 'image' && obj.src && !loadedImages.has(obj.id)) {
+    let cancelled = false;
+    const loadingImageIds = loadingImageIdsRef.current;
+    const cleanupLoaders: Array<() => void> = [];
+    const startedLoadingIds: string[] = [];
+    const loadImage = (source: string, useCors: boolean) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new window.Image();
-        img.crossOrigin = 'anonymous';
-        img.src = obj.src;
-        img.onload = () => {
-          setLoadedImages((prev) => new Map(prev).set(obj.id, img));
+        let settled = false;
+        const timeoutId = window.setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          img.onload = null;
+          img.onerror = null;
+          img.src = '';
+          reject(new Error('Canvas image load timed out'));
+        }, 8000);
+        const cleanup = () => {
+          window.clearTimeout(timeoutId);
+          img.onload = null;
+          img.onerror = null;
         };
+        const finish = (callback: () => void) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          callback();
+        };
+        cleanupLoaders.push(() => {
+          if (!settled) {
+            settled = true;
+            cleanup();
+            img.src = '';
+          }
+        });
+        if (useCors && !source.startsWith('data:')) {
+          img.crossOrigin = 'anonymous';
+        }
+        img.onload = () => finish(() => resolve(img));
+        img.onerror = () => finish(() => reject(new Error('Canvas image failed to load')));
+        img.src = source;
+      });
+
+    objects.forEach((obj) => {
+      if (
+        obj.type === 'image' &&
+        obj.src &&
+        !loadedImagesRef.current.has(obj.id) &&
+        !loadingImageIds.has(obj.id)
+      ) {
+        loadingImageIds.add(obj.id);
+        startedLoadingIds.push(obj.id);
+        loadImage(obj.src, true)
+          .catch(() => loadImage(obj.src || '', false))
+          .then((img) => {
+            loadingImageIds.delete(obj.id);
+            if (!cancelled) {
+              setLoadedImages((prev) => new Map(prev).set(obj.id, img));
+            }
+          })
+          .catch((error) => {
+            loadingImageIds.delete(obj.id);
+            console.error('Failed to load canvas image:', error);
+          });
       }
     });
-  }, [objects, loadedImages]);
+
+    return () => {
+      cancelled = true;
+      cleanupLoaders.forEach((cleanup) => cleanup());
+      startedLoadingIds.forEach((id) => loadingImageIds.delete(id));
+    };
+  }, [objects]);
 
   // Update transformer
   useEffect(() => {
@@ -468,4 +535,3 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction 
     </>
   );
 }
-

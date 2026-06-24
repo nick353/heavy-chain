@@ -65,6 +65,7 @@ export function CanvasEditorPage() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const projectNameInputRef = useRef<HTMLInputElement>(null);
+  const isMountedRef = useRef(true);
   const { currentBrand, user, profile } = useAuthStore();
   const { showGuide, completeGuide } = useCanvasGuide(user?.id);
   
@@ -123,6 +124,12 @@ export function CanvasEditorPage() {
     renameProject,
     clearCanvas,
   } = useCanvasStore();
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Load project when projectId changes
   useEffect(() => {
@@ -409,11 +416,26 @@ export function CanvasEditorPage() {
     const createLoader = (useCors: boolean) =>
       new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new window.Image();
+        let settled = false;
+        const timeoutId = window.setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          img.onload = null;
+          img.onerror = null;
+          img.src = '';
+          reject(new Error('画像の読み込みがタイムアウトしました'));
+        }, 8000);
+        const finish = (callback: () => void) => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timeoutId);
+          callback();
+        };
         if (useCors && !source.startsWith('data:')) {
           img.crossOrigin = 'anonymous';
         }
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error('画像を読み込めませんでした'));
+        img.onload = () => finish(() => resolve(img));
+        img.onerror = () => finish(() => reject(new Error('画像を読み込めませんでした')));
         img.src = source;
       });
 
@@ -422,6 +444,9 @@ export function CanvasEditorPage() {
 
   const addImageToCanvas = async (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
     const img = await loadCanvasImage(imageUrl);
+    if (!isMountedRef.current) {
+      throw new Error('Canvas画面が閉じられたため配置を中止しました');
+    }
     const newId = addObject({
       type: 'image',
       x: 100 + Math.random() * 300,
