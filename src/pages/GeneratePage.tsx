@@ -32,6 +32,10 @@ import { getErrorMessage } from '../lib/errorMessages';
 import { saveWorkspaceArtifact, saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
 import { parseLocalRunwayMcpImportBundle } from '../lib/localRunwayMcpImport';
 import {
+  enqueueLocalRunwayWorkerGeneration,
+  pollLocalRunwayWorkerGeneration,
+} from '../lib/localRunwayWorkerQueue';
+import {
   hydrateGenerationIntentSource,
   hydratePatternGenerationContext,
   type GenerationIntent,
@@ -292,6 +296,7 @@ interface GeneratedResult {
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
 const noImageGenerationMode = true;
+const localRunwayWorkerMode = true;
 
 const debugLog = (message: string, details?: Record<string, unknown>) => {
   if (!debugGeneration) return;
@@ -884,6 +889,49 @@ export function GeneratePage() {
     });
   };
 
+  const generatedImageRowToResult = async (image: any, index: number): Promise<GeneratedResult> => {
+    let imageUrl = image.image_url || '';
+    if (!imageUrl && image.storage_path) {
+      const { data, error } = await supabase.storage
+        .from('generated-images')
+        .createSignedUrl(image.storage_path, 60 * 60);
+      if (error || !data?.signedUrl) {
+        const details = [image.id, image.storage_path].filter(Boolean).join(':');
+        throw error ?? new Error(`local_runway_worker_signed_url_failed:${details}`);
+      }
+      imageUrl = data?.signedUrl || '';
+    }
+    if (!imageUrl) {
+      const details = [image.id, image.storage_path].filter(Boolean).join(':');
+      throw new Error(`local_runway_worker_image_url_missing:${details}`);
+    }
+    return {
+      id: image.id || `${image.job_id || 'local-runway'}-${index}`,
+      imageUrl,
+      prompt: image.prompt || image.metadata?.prompt || image.generation_params?.prompt || '',
+      label: image.metadata?.title || `Runway worker result ${index + 1}`,
+      jobId: image.job_id || undefined,
+      imageId: image.id || undefined,
+      storagePath: image.storage_path || undefined,
+      artifactKind: 'image',
+    };
+  };
+
+  const waitForLocalRunwayWorkerResults = async (jobId: string): Promise<GeneratedResult[]> => {
+    const maxAttempts = 180;
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const result = await pollLocalRunwayWorkerGeneration(jobId);
+      if (result.job.status === 'failed') {
+        throw new Error(result.job.error_message || 'local_runway_worker_generation_failed');
+      }
+      if (result.job.status === 'completed' && result.images.length > 0) {
+        return Promise.all(result.images.map(generatedImageRowToResult));
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
+    throw new Error('local_runway_worker_timeout');
+  };
+
   const handleGenerate = async () => {
     debugLog('Generation requested', {
       isGenerating,
@@ -1036,6 +1084,61 @@ export function GeneratePage() {
           const count = Math.max(1, Math.min(generateCount, 6));
           return Array.from({ length: count }, (_, index) => `${planningFeature.name} 企画 ${index + 1}`);
         })();
+        if (localRunwayWorkerMode) {
+          const ratio = aspectRatios.find(r => r.id === selectedRatio) || aspectRatios[0];
+          const workerPrompt = [
+            primaryBrief || fallbackBrief,
+            selectedStyleLabel ? `Style: ${selectedStyleLabel}` : '',
+            featureLines.join(' / '),
+            textOverlay ? `Text overlay: ${JSON.stringify(textOverlay)}` : '',
+          ].filter(Boolean).join('\n');
+          const { job } = await enqueueLocalRunwayWorkerGeneration({
+            brandId: currentBrand.id,
+            featureType: planningFeature.id,
+            prompt: workerPrompt,
+            negativePrompt,
+            width: ratio.width,
+            height: ratio.height,
+            count: Math.max(1, Math.min(resultLabels.length || generateCount, 4)),
+            referenceImage: processedImageUrl ?? null,
+            referenceType: referenceImage?.referenceType ?? null,
+            metadata: {
+              source: 'generate_page',
+              artifactKind: 'runway_local_worker_request',
+              aspectRatio: selectedRatio,
+              selectedStyle: selectedStyleLabel ?? null,
+              resultLabels,
+              referenceImagePresent: Boolean(referenceImage),
+              referenceType: referenceImage?.referenceType ?? null,
+              selectedShots,
+              selectedBodyTypes,
+              selectedAgeGroups,
+              selectedScenes,
+              selectedLanguages,
+              campaignTitle,
+              campaignSubheadline,
+              campaignCTA,
+              ...(lightchainCompat ? { lightchainCompat } : {}),
+              ...(sourceReadback ? {
+                sourceWorkspace: sourceReadback.sourceWorkspace,
+                workflowVersion: sourceReadback.workflowVersion,
+                sourceLabel: sourceReadback.sourceLabel,
+                sourceResumePath: sourceReadback.sourceResumePath,
+                sourceMode: sourceReadback.sourceMode,
+              } : {}),
+              ...(patternContext ?? {}),
+            },
+          });
+          toast.success('ローカルRunway workerに生成依頼を送信しました');
+          const workerResults = await waitForLocalRunwayWorkerResults(job.id);
+          replaceGeneratedImages(workerResults);
+          if (primaryBrief) {
+            addToHistory(primaryBrief, `${planningFeature.name} 生成`);
+          }
+          setShowSuccessCard(true);
+          toast.success('ローカルRunway workerの生成が完了しました');
+          return;
+        }
         const planIdBase = Date.now().toString();
         const planningResults: GeneratedResult[] = resultLabels.map((label, index) => {
           const title = label;
@@ -2822,7 +2925,9 @@ export function GeneratePage() {
     : null;
   const generationReadyInApp = noImageGenerationMode || runwayReadyInApp;
   const runwayReadinessText = noImageGenerationMode
-    ? '画像生成はオフです。Runway接続なしで企画書を保存できます'
+    ? localRunwayWorkerMode
+      ? 'Mac側ローカルRunway workerで実生成します。Hosted bridgeは使いません'
+      : '画像生成はオフです。Runway接続なしで企画書を保存できます'
     : runwayReadyInApp
     ? 'サイト側の生成条件は満たしています'
     : runwayReadinessIssues.join(' / ');
@@ -3088,7 +3193,7 @@ export function GeneratePage() {
               </p>
               <ol className="mt-3 space-y-2">
                 {activeWorkflow.steps.map((step, index) => (
-                  <li key={step} className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+                  <li key={`${step}-${index}`} className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[11px] font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
                       {index + 1}
                     </span>
@@ -3227,7 +3332,7 @@ export function GeneratePage() {
                 size="lg"
                 leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
               >
-                {isGenerating ? '保存中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : '企画書を保存'}
+                {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : localRunwayWorkerMode ? 'Runway workerで生成' : '企画書を保存'}
               </Button>
             )}
           </div>
