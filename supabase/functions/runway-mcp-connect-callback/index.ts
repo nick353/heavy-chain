@@ -12,6 +12,8 @@ serve(async (req) => {
   const failUrl = `${appBaseUrl}/brand/settings?runway_mcp=failed`;
 
   try {
+    if (req.method !== 'GET') return redirectResponse(`${failUrl}&reason=method_not_allowed`);
+
     const url = new URL(req.url);
     const code = url.searchParams.get('code') || '';
     const state = url.searchParams.get('state') || '';

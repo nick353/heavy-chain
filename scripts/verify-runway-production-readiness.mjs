@@ -4,6 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import {
+  dateStamp,
+  dbReadbackBlocker,
+  isEligibleRunwaySubscription,
+  projectBrand,
+  projectRemoteSecretInspection,
+  projectSubscription,
+  redactObject,
+  requiredSecretPresence,
+} from './verify-runway-production-readiness.lib.mjs';
 
 const args = parseArgs(process.argv.slice(2));
 const initialEnvKeys = new Set(Object.keys(process.env));
@@ -53,17 +63,27 @@ const localEnvPresence = {
 };
 addCheck('local bridge env names', Object.values(localEnvPresence).every(Boolean), localEnvPresence);
 
-const remoteSecretNames = await listRemoteSecretNames();
-const remoteSecretPresence = {
-  RUNWAY_MCP_BRIDGE_URL: remoteSecretNames.includes('RUNWAY_MCP_BRIDGE_URL'),
-  RUNWAY_MCP_BRIDGE_TOKEN: remoteSecretNames.includes('RUNWAY_MCP_BRIDGE_TOKEN'),
-};
-addCheck('remote Supabase bridge secret names', Object.values(remoteSecretPresence).every(Boolean), {
-  inspected: remoteSecretNames.length > 0 || Boolean(projectRef),
-  present: remoteSecretPresence,
-});
+const remoteSecretInspection = listRemoteSecretNames();
+addCheck('remote Supabase secret name inspection', remoteSecretInspection.ok, remoteSecretInspection.check);
+if (remoteSecretInspection.blocker) {
+  addBlockerObject(remoteSecretInspection.blocker);
+}
 
-if (!remoteSecretPresence.RUNWAY_MCP_BRIDGE_URL || !remoteSecretPresence.RUNWAY_MCP_BRIDGE_TOKEN) {
+const remoteSecretPresence = requiredSecretPresence(remoteSecretInspection.names, [
+  'RUNWAY_MCP_BRIDGE_URL',
+  'RUNWAY_MCP_BRIDGE_TOKEN',
+]);
+if (remoteSecretInspection.ok) {
+  addCheck('remote Supabase bridge secret names', Object.values(remoteSecretPresence).every(Boolean), {
+    inspected: true,
+    present: remoteSecretPresence,
+  });
+}
+
+if (
+  remoteSecretInspection.ok
+  && (!remoteSecretPresence.RUNWAY_MCP_BRIDGE_URL || !remoteSecretPresence.RUNWAY_MCP_BRIDGE_TOKEN)
+) {
   addBlocker(
     'production_runway_mcp_bridge_pending',
     'Supabase production secrets do not contain both RUNWAY_MCP_BRIDGE_URL and RUNWAY_MCP_BRIDGE_TOKEN.',
@@ -72,8 +92,11 @@ if (!remoteSecretPresence.RUNWAY_MCP_BRIDGE_URL || !remoteSecretPresence.RUNWAY_
 }
 
 const brand = await selectSingle('brands', 'id, name, owner_id, created_at, updated_at', (query) => query.eq('id', brandId));
-addCheck('target brand exists', Boolean(brand.data), brand.error ? { error: brand.error.message } : { brand: projectBrand(brand.data) });
-if (!brand.data) {
+addCheck('target brand exists', !brand.error && Boolean(brand.data), brand.error ? { error: brand.error.message } : { brand: projectBrand(brand.data) });
+const brandReadbackBlocker = dbReadbackBlocker('brands', brand.error);
+if (brandReadbackBlocker) {
+  addBlockerObject(brandReadbackBlocker);
+} else if (!brand.data) {
   addBlocker('target_brand_missing', `Brand ${brandId} was not found.`, 'Use --brand-id with the target production brand.');
   finish();
 }
@@ -85,10 +108,13 @@ const approval = await selectSingle(
 );
 addCheck(
   'Runway MCP site approval',
-  approval.data?.status === 'approved',
+  !approval.error && approval.data?.status === 'approved',
   approval.error ? { error: approval.error.message } : { approval: approval.data || null },
 );
-if (approval.data?.status !== 'approved') {
+const approvalReadbackBlocker = dbReadbackBlocker('runway_mcp_connection_approvals', approval.error);
+if (approvalReadbackBlocker) {
+  addBlockerObject(approvalReadbackBlocker);
+} else if (approval.data?.status !== 'approved') {
   addBlocker(
     'production_runway_mcp_site_approval_pending',
     `Runway MCP approval status is ${approval.data?.status || 'missing'}, not approved.`,
@@ -103,10 +129,13 @@ const oauthConnection = await selectSingle(
 );
 addCheck(
   'Runway MCP OAuth connection',
-  oauthConnection.data?.status === 'connected',
+  !oauthConnection.error && oauthConnection.data?.status === 'connected',
   oauthConnection.error ? { error: oauthConnection.error.message } : { connection: oauthConnection.data || null },
 );
-if (oauthConnection.data?.status !== 'connected') {
+const oauthReadbackBlocker = dbReadbackBlocker('runway_mcp_oauth_connections', oauthConnection.error);
+if (oauthReadbackBlocker) {
+  addBlockerObject(oauthReadbackBlocker);
+} else if (oauthConnection.data?.status !== 'connected') {
   addBlocker(
     'production_runway_mcp_oauth_connection_pending',
     `Runway MCP OAuth connection status is ${oauthConnection.data?.status || 'missing'}, not connected.`,
@@ -123,10 +152,13 @@ const subscriptionProjection = projectSubscription(subscription.data);
 const subscriptionEligible = isEligibleRunwaySubscription(subscriptionProjection, now);
 addCheck(
   'Heavy Chain eligible paid subscription',
-  subscriptionEligible,
+  !subscription.error && subscriptionEligible,
   subscription.error ? { error: subscription.error.message } : { subscription: subscriptionProjection },
 );
-if (!subscriptionEligible) {
+const subscriptionReadbackBlocker = dbReadbackBlocker('brand_subscriptions', subscription.error);
+if (subscriptionReadbackBlocker) {
+  addBlockerObject(subscriptionReadbackBlocker);
+} else if (!subscriptionEligible) {
   addBlocker(
     'heavy_chain_paid_subscription_pending',
     'The target brand does not currently have an active/trialing paid plan with runway_mcp_generation enabled.',
@@ -151,6 +183,10 @@ addCheck('recent usage readable', !recentUsage.error, recentUsage.error ? { erro
     created_at: row.created_at,
   })),
 });
+const usageReadbackBlocker = dbReadbackBlocker('usage_events', recentUsage.error);
+if (usageReadbackBlocker) {
+  addBlockerObject(usageReadbackBlocker);
+}
 
 if (proof.blockers.length === 0) {
   proof.next_actions.push('Readiness passed. Run the approved-brand production generation proof, then DB/Storage/UI readback and cleanup.');
@@ -218,41 +254,21 @@ function isPlaceholder(value) {
   return !value || /\b(PROJECT_REF|YOUR_|REPLACE_ME|example\.com)\b/i.test(String(value));
 }
 
-async function listRemoteSecretNames() {
-  if (!projectRef) {
-    addCheck('remote Supabase secret name inspection', false, { error: 'missing project ref' });
-    return [];
-  }
+function listRemoteSecretNames() {
+  const result = projectRef
+    ? spawnSync('supabase', ['secrets', 'list', '--project-ref', projectRef, '--output-format', 'json'], {
+      encoding: 'utf8',
+      shell: false,
+      env: cliEnv(),
+    })
+    : { status: null, stdout: '', stderr: '' };
 
-  const result = spawnSync('supabase', ['secrets', 'list', '--project-ref', projectRef], {
-    encoding: 'utf8',
-    shell: false,
-    env: cliEnv(),
+  return projectRemoteSecretInspection({
+    projectRef,
+    status: result.status,
+    stdout: result.stdout,
+    stderr: result.stderr,
   });
-
-  if (result.status !== 0) {
-    addCheck('remote Supabase secret name inspection', false, {
-      status: result.status,
-      stderr: redact(result.stderr).slice(0, 1000),
-      stdout: redact(result.stdout).slice(0, 1000),
-    });
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(result.stdout);
-    const names = Array.isArray(parsed?.secrets)
-      ? parsed.secrets.map((secret) => secret?.name).filter((name) => typeof name === 'string')
-      : [];
-    addCheck('remote Supabase secret name inspection', true, { count: names.length });
-    return names;
-  } catch (error) {
-    addCheck('remote Supabase secret name inspection', false, {
-      error: error.message,
-      stdout: redact(result.stdout).slice(0, 1000),
-    });
-    return [];
-  }
 }
 
 function cliEnv() {
@@ -277,51 +293,6 @@ async function selectRows(table, columns, apply) {
   return { data: Array.isArray(data) ? data : [], error };
 }
 
-function projectBrand(row) {
-  if (!row) return null;
-  return {
-    id: row.id,
-    name: row.name,
-    owner_id: row.owner_id,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  };
-}
-
-function projectSubscription(row) {
-  if (!row) return null;
-  const plan = Array.isArray(row.plans) ? row.plans[0] : row.plans;
-  return {
-    brand_id: row.brand_id,
-    status: row.status,
-    current_period_start: row.current_period_start,
-    current_period_end: row.current_period_end,
-    quota_override: row.quota_override,
-    plan: plan ? {
-      id: plan.id,
-      code: plan.code,
-      name: plan.name,
-      monthly_quota: plan.monthly_quota,
-      is_active: plan.is_active,
-      runway_mcp_generation: plan.features?.runway_mcp_generation === true,
-    } : null,
-  };
-}
-
-function isEligibleRunwaySubscription(subscription, capturedAt) {
-  if (!subscription?.plan) return false;
-  const nowMs = capturedAt.getTime();
-  const periodStart = Date.parse(subscription.current_period_start || '');
-  const periodEnd = Date.parse(subscription.current_period_end || '');
-  return ['trialing', 'active'].includes(subscription.status)
-    && Number.isFinite(periodStart)
-    && Number.isFinite(periodEnd)
-    && periodStart <= nowMs
-    && periodEnd > nowMs
-    && subscription.plan.is_active === true
-    && subscription.plan.runway_mcp_generation === true;
-}
-
 function addCheck(name, passed, details = {}) {
   proof.checks.push({
     name,
@@ -332,6 +303,10 @@ function addCheck(name, passed, details = {}) {
 
 function addBlocker(code, message, nextAction) {
   proof.blockers.push({ code, message, next_action: nextAction });
+}
+
+function addBlockerObject(blocker) {
+  proof.blockers.push(blocker);
 }
 
 function finish() {
@@ -349,32 +324,4 @@ function finish() {
   }
 
   console.log(`Runway production readiness passed. Proof: ${outPath}`);
-}
-
-function dateStamp(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
-}
-
-function redactObject(value) {
-  if (typeof value === 'string') return redact(value);
-  if (Array.isArray(value)) return value.map(redactObject);
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, entryValue]) => [key, redactObject(entryValue)]),
-    );
-  }
-  return value;
-}
-
-function redact(value) {
-  return String(value)
-    .replaceAll(/eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g, '[redacted-jwt]')
-    .replaceAll(/Bearer\s+[a-zA-Z0-9._-]+/gi, 'Bearer [redacted]')
-    .replaceAll(/access_token["=:]\s*["']?[^"',\s}]+/gi, 'access_token=[redacted]')
-    .replaceAll(/refresh_token["=:]\s*["']?[^"',\s}]+/gi, 'refresh_token=[redacted]')
-    .replaceAll(/RUNWAY_MCP_BRIDGE_TOKEN["=:]\s*["']?[^"',\s}]+/gi, 'RUNWAY_MCP_BRIDGE_TOKEN=[redacted]')
-    .replaceAll(/RUNWAY_MCP_BRIDGE_URL["=:]\s*["']?[^"',\s}]+/gi, 'RUNWAY_MCP_BRIDGE_URL=[redacted]');
 }

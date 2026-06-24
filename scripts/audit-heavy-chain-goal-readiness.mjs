@@ -2,14 +2,45 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const args = parseArgs(process.argv.slice(2));
-const outPath = args.out || 'output/playwright/heavy-chain-goal-readiness-20260623/audit.json';
+const statePath = 'STATE.md';
+const stateText = readText(statePath);
+const readinessPath = args.readiness || latestProofPath({
+  fileName: 'readiness.json',
+  checker: 'verify-runway-production-readiness',
+}) || 'output/playwright/runway-production-readiness-20260623/readiness.json';
+const approvedProofPath = args.approvedProof || latestProofPath({
+  fileName: 'proof.json',
+  checker: 'verify-runway-approved-generation-readback',
+}) || 'output/playwright/runway-approved-generation-readback-20260623/proof.json';
+const uiPath = args.ui || latestSummaryPath({
+  directoryPattern: /(?:^|\/)(?:ux-audit-\d{8}-production-ui|lightchain-production-ui-\d{8})(?:\/|$)/,
+  predicate: (summary) => Number.isInteger(summary?.resultCount) && Number.isInteger(summary?.failureCount),
+}) || 'output/playwright/lightchain-production-ui-20260623/summary.json';
+const localUiPath = args.localUi || latestSummaryPath({
+  directoryPattern: /(?:^|\/)local-preview-full-ui-\d{8}(?:-[^/]+)?(?:\/|$)/,
+  predicate: (summary) => isLoopbackUrl(summary?.baseUrl)
+    && Number.isInteger(summary?.resultCount)
+    && Number.isInteger(summary?.failureCount),
+}) || null;
+const navigationPath = args.navigation || latestSummaryPath({
+  directoryPattern: /(?:^|\/)lightchain-production-navigation-\d{8}(?:\/|$)/,
+  predicate: (summary) => Number.isInteger(summary?.resultCount) && Number.isInteger(summary?.failureCount),
+}) || 'output/playwright/lightchain-production-navigation-20260623/summary.json';
+const runwayUiPath = args.runwayUi || latestSummaryPath({
+  directoryPattern: /(?:^|\/)local-preview-runway-ui-\d{8}(?:-[^/]+)?(?:\/|$)/,
+  predicate: (summary) => Boolean(summary?.generate && summary?.brandSettings),
+}) || null;
+const outPath = args.out || 'output/playwright/heavy-chain-goal-readiness-current/audit.json';
+const stateNextAction = stateField(stateText, 'next_action');
 
 const paths = {
-  state: 'STATE.md',
-  ui: 'output/playwright/lightchain-production-ui-20260623/summary.json',
-  navigation: 'output/playwright/lightchain-production-navigation-20260623/summary.json',
-  approvedProof: 'output/playwright/runway-approved-generation-readback-20260623/proof.json',
-  readiness: 'output/playwright/runway-production-readiness-20260623/readiness.json',
+  state: statePath,
+  ui: uiPath,
+  localUi: localUiPath,
+  navigation: navigationPath,
+  runwayUi: runwayUiPath,
+  approvedProof: approvedProofPath,
+  readiness: readinessPath,
   freeDenial: 'output/playwright/runway-free-plan-denial-20260623/denial.json',
   unapprovedDenial: 'output/playwright/runway-unapproved-denial-20260623/denial.json',
   expiredDenial: 'output/playwright/runway-expired-subscription-denial-20260623/denial.json',
@@ -18,10 +49,10 @@ const paths = {
 const files = Object.fromEntries(
   Object.entries(paths).map(([key, filePath]) => [key, readJson(filePath)])
 );
-const stateText = readText(paths.state);
 const readinessBlockers = Array.isArray(files.readiness.json?.blockers) ? files.readiness.json.blockers : [];
 const approvedBlockers = Array.isArray(files.approvedProof.json?.blockers) ? files.approvedProof.json.blockers : [];
 const blockerCodes = new Set(readinessBlockers.map((blocker) => blocker.code));
+const remoteBridgeSecretsPassed = checkPassed(files.readiness.json, 'remote Supabase bridge secret names');
 
 const requirements = [
   requirement({
@@ -36,6 +67,14 @@ const requirements = [
     next_action: 'Rerun npm run verify:lightchain-ui with a fresh logged-in production auth state.',
   }),
   requirement({
+    id: 'local_production_build_full_ui',
+    title: 'Local production build full UI passes desktop/mobile proof',
+    status: localUiPassed() ? 'passed' : 'failed',
+    evidence: paths.localUi ? [paths.localUi] : [],
+    details: fullUiDetails(files.localUi),
+    next_action: 'Build locally, run vite preview on loopback with local auth state, then rerun verify:lightchain-ui against that base URL.',
+  }),
+  requirement({
     id: 'logged_in_navigation',
     title: 'Desktop/mobile production click navigation is nonblank and error-free',
     status: navigationPassed() ? 'passed' : 'failed',
@@ -45,6 +84,14 @@ const requirements = [
       failureCount: files.navigation.json?.failureCount,
     },
     next_action: 'Rerun npm run verify:lightchain-navigation and fix the failing route proof.',
+  }),
+  requirement({
+    id: 'runway_local_ui_fail_closed',
+    title: 'Local Runway UI shows all blockers and stops generation before side effects',
+    status: runwayUiPassed() ? 'passed' : 'failed',
+    evidence: paths.runwayUi ? [paths.runwayUi] : [],
+    details: runwayUiDetails(),
+    next_action: 'Rerun the local Runway UI preview proof and verify Generate + Brand Settings blocker copy before deploy.',
   }),
   requirement({
     id: 'runway_site_approval',
@@ -81,9 +128,13 @@ const requirements = [
   requirement({
     id: 'runway_bridge_secrets',
     title: 'Production Runway MCP bridge secrets are configured',
-    status: blockerCodes.has('production_runway_mcp_bridge_pending') ? 'blocked_external' : 'passed',
+    status: blockerCodes.has('production_runway_mcp_bridge_pending')
+      ? 'blocked_external'
+      : remoteBridgeSecretsPassed
+        ? 'passed'
+        : 'failed',
     evidence: [paths.readiness, paths.approvedProof],
-    details: blockerDetails('production_runway_mcp_bridge_pending'),
+    details: blockerDetails('production_runway_mcp_bridge_pending') || checkDetails(files.readiness.json, 'remote Supabase bridge secret names'),
     next_action: 'Set RUNWAY_MCP_BRIDGE_URL and RUNWAY_MCP_BRIDGE_TOKEN to a bridge connected to official Runway MCP, then rerun npm run verify:runway-readiness.',
   }),
   requirement({
@@ -92,7 +143,7 @@ const requirements = [
     status: blockerCodes.has('production_runway_mcp_oauth_connection_pending') ? 'blocked_external' : 'passed',
     evidence: [paths.readiness],
     details: blockerDetails('production_runway_mcp_oauth_connection_pending'),
-    next_action: 'Open /brand/settings, click Runwayに接続, complete Runway login, then rerun npm run verify:runway-readiness.',
+    next_action: stateNextAction || 'Open /brand/settings, click Runwayに接続, complete Runway login, then rerun npm run verify:runway-readiness.',
   }),
   requirement({
     id: 'paid_subscription',
@@ -175,7 +226,7 @@ const report = {
   requirements,
   blockers,
   pending_after_blocker: pending,
-  state_mentions_goal_blocker: stateText.includes('production_runway_mcp_bridge_pending')
+  state_mentions_goal_blocker: stateText.includes('production_runway_mcp_oauth_connection_pending')
     && stateText.includes('heavy_chain_paid_subscription_pending'),
 };
 
@@ -199,13 +250,40 @@ if (!report.complete) {
 }
 
 function parseArgs(rawArgs) {
-  const parsed = { allowIncomplete: false, out: null };
+  const parsed = {
+    allowIncomplete: false,
+    out: null,
+    readiness: null,
+    approvedProof: null,
+    ui: null,
+    localUi: null,
+    navigation: null,
+    runwayUi: null,
+  };
   for (let index = 0; index < rawArgs.length; index += 1) {
     const arg = rawArgs[index];
     const next = rawArgs[index + 1];
     if (arg === '--allow-incomplete') parsed.allowIncomplete = true;
     if (arg === '--out' && next) {
       parsed.out = next;
+      index += 1;
+    } else if (arg === '--readiness' && next) {
+      parsed.readiness = next;
+      index += 1;
+    } else if (arg === '--approved-proof' && next) {
+      parsed.approvedProof = next;
+      index += 1;
+    } else if (arg === '--ui' && next) {
+      parsed.ui = next;
+      index += 1;
+    } else if (arg === '--local-ui' && next) {
+      parsed.localUi = next;
+      index += 1;
+    } else if (arg === '--navigation' && next) {
+      parsed.navigation = next;
+      index += 1;
+    } else if (arg === '--runway-ui' && next) {
+      parsed.runwayUi = next;
       index += 1;
     }
   }
@@ -243,6 +321,34 @@ function uiPassed() {
   return files.ui.exists && files.ui.json?.resultCount >= 30 && files.ui.json?.failureCount === 0;
 }
 
+function localUiPassed() {
+  return fullUiPassed(files.localUi, { requireLoopback: true });
+}
+
+function fullUiPassed(proof, { requireLoopback = false } = {}) {
+  if (!proof?.exists) return false;
+  if (requireLoopback && !isLoopbackUrl(proof.json?.baseUrl)) return false;
+  return proof.json?.resultCount >= 30
+    && proof.json?.failureCount === 0
+    && (proof.json?.results || []).every((result) => result.passed === true
+      && result.redirectedToLogin === false
+      && result.consoleErrorCount === 0
+      && result.pageErrorCount === 0);
+}
+
+function fullUiDetails(proof) {
+  if (!proof?.exists) return { exists: false, error: proof?.error };
+  return {
+    baseUrl: proof.json?.baseUrl,
+    storageState: proof.json?.storageState,
+    resultCount: proof.json?.resultCount,
+    failureCount: proof.json?.failureCount,
+    redirectCount: (proof.json?.results || []).filter((result) => result.redirectedToLogin === true).length,
+    consoleErrorCount: (proof.json?.results || []).reduce((total, result) => total + (result.consoleErrorCount || 0), 0),
+    pageErrorCount: (proof.json?.results || []).reduce((total, result) => total + (result.pageErrorCount || 0), 0),
+  };
+}
+
 function navigationPassed() {
   return files.navigation.exists
     && files.navigation.json?.resultCount >= 12
@@ -250,6 +356,49 @@ function navigationPassed() {
     && (files.navigation.json?.results || []).every((result) => result.passed === true
       && result.consoleErrorCount === 0
       && result.pageErrorCount === 0);
+}
+
+function runwayUiPassed() {
+  if (!files.runwayUi.exists) return false;
+  const generate = files.runwayUi.json?.generate ?? {};
+  const brandSettings = files.runwayUi.json?.brandSettings ?? {};
+  return generate.hasRunwayPrecheck === true
+    && generate.generateButton?.disabled === true
+    && generate.hasOAuthIssue === true
+    && generate.hasSubscriptionIssue === true
+    && generate.hasBridgeIssue === true
+    && generate.hasOldStandaloneBridgeLabel === false
+    && brandSettings.hasRunwayConnection === true
+    && brandSettings.hasOAuthIssue === true
+    && brandSettings.hasSubscriptionIssue === true
+    && brandSettings.hasBridgeIssue === true
+    && brandSettings.hasGenerationAvailability === true
+    && brandSettings.hasPlanMisleadingStopCopy === false
+    && (files.runwayUi.json?.consoleErrors || []).length === 0;
+}
+
+function runwayUiDetails() {
+  if (!files.runwayUi.exists) return { exists: false, error: files.runwayUi.error };
+  return {
+    generate: {
+      hasRunwayPrecheck: files.runwayUi.json?.generate?.hasRunwayPrecheck,
+      generateButtonDisabled: files.runwayUi.json?.generate?.generateButton?.disabled,
+      hasOAuthIssue: files.runwayUi.json?.generate?.hasOAuthIssue,
+      hasSubscriptionIssue: files.runwayUi.json?.generate?.hasSubscriptionIssue,
+      hasBridgeIssue: files.runwayUi.json?.generate?.hasBridgeIssue,
+      hasOldStandaloneBridgeLabel: files.runwayUi.json?.generate?.hasOldStandaloneBridgeLabel,
+    },
+    brandSettings: {
+      hasRunwayConnection: files.runwayUi.json?.brandSettings?.hasRunwayConnection,
+      hasOAuthIssue: files.runwayUi.json?.brandSettings?.hasOAuthIssue,
+      hasSubscriptionIssue: files.runwayUi.json?.brandSettings?.hasSubscriptionIssue,
+      hasBridgeIssue: files.runwayUi.json?.brandSettings?.hasBridgeIssue,
+      hasGenerationAvailability: files.runwayUi.json?.brandSettings?.hasGenerationAvailability,
+      hasPlanMisleadingStopCopy: files.runwayUi.json?.brandSettings?.hasPlanMisleadingStopCopy,
+    },
+    consoleErrorCount: (files.runwayUi.json?.consoleErrors || []).length,
+    screenshots: files.runwayUi.json?.screenshots ?? {},
+  };
 }
 
 function checkPassed(proof, checkName) {
@@ -285,7 +434,7 @@ function cleanupDetails(proof) {
 function blockerDetails(code) {
   const blocker = readinessBlockers.find((candidate) => candidate.code === code)
     || approvedBlockers.find((candidate) => candidate.code === code);
-  return blocker ?? {};
+  return blocker ?? null;
 }
 
 function countStatuses(items) {
@@ -298,4 +447,100 @@ function countStatuses(items) {
     blocked_external: 0,
     pending_after_blocker: 0,
   });
+}
+
+function latestProofPath({ fileName, checker }) {
+  const candidates = findFiles('output/playwright', fileName)
+    .map((filePath) => {
+      const proof = readJson(filePath).json;
+      if (proof?.checker !== checker) return null;
+      const capturedAt = Date.parse(proof.captured_at || '');
+      return {
+        filePath,
+        capturedAt: Number.isFinite(capturedAt) ? capturedAt : 0,
+        mtimeMs: fileMtimeMs(filePath),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => (b.capturedAt - a.capturedAt) || (b.mtimeMs - a.mtimeMs));
+  return candidates[0]?.filePath || null;
+}
+
+function latestSummaryPath({ directoryPattern, predicate }) {
+  const candidates = findFiles('output/playwright', 'summary.json')
+    .filter((filePath) => directoryPattern.test(filePath))
+    .map((filePath) => {
+      const summary = readJson(filePath).json;
+      if (!predicate(summary)) return null;
+      const capturedAt = summaryTimestamp(summary);
+      return {
+        filePath,
+        capturedAt,
+        mtimeMs: fileMtimeMs(filePath),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => (b.capturedAt - a.capturedAt) || (b.mtimeMs - a.mtimeMs));
+  return candidates[0]?.filePath || null;
+}
+
+function summaryTimestamp(summary) {
+  const candidates = [
+    summary?.finishedAt,
+    summary?.generatedAt,
+    summary?.startedAt,
+    summary?.captured_at,
+  ];
+  for (const value of candidates) {
+    const parsed = Date.parse(value || '');
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
+}
+
+function isLoopbackUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    return ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function findFiles(root, fileName) {
+  if (!fs.existsSync(root)) return [];
+  const results = [];
+  const stack = [root];
+  while (stack.length) {
+    const current = stack.pop();
+    let entries = [];
+    try {
+      entries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const entryPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+      } else if (entry.isFile() && entry.name === fileName) {
+        results.push(entryPath);
+      }
+    }
+  }
+  return results;
+}
+
+function fileMtimeMs(filePath) {
+  try {
+    return fs.statSync(filePath).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+function stateField(text, fieldName) {
+  const prefix = `${fieldName}:`;
+  const line = text.split(/\r?\n/).find((candidate) => candidate.startsWith(prefix));
+  return line ? line.slice(prefix.length).trim() : '';
 }

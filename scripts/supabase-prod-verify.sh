@@ -133,6 +133,49 @@ test -f supabase/functions/runway-mcp-connect-start/index.ts
 test -f supabase/functions/runway-mcp-connect-callback/index.ts
 test -f supabase/functions/runway-mcp-connection-status/index.ts
 test -f supabase/functions/runway-mcp-bridge/index.ts
+node <<'NODE'
+const fs = require('node:fs');
+const configText = fs.readFileSync('supabase/config.toml', 'utf8');
+const deployText = fs.readFileSync('scripts/deploy-edge-functions.sh', 'utf8');
+const disabled = [];
+let currentFunction = null;
+for (const rawLine of configText.split(/\r?\n/)) {
+  const line = rawLine.replace(/#.*/, '').trim();
+  const section = line.match(/^\[functions\.([^\]]+)\]$/);
+  if (section) {
+    currentFunction = section[1];
+    continue;
+  }
+  if (/^\[/.test(line)) {
+    currentFunction = null;
+    continue;
+  }
+  if (currentFunction && /^verify_jwt\s*=\s*false\b/.test(line)) {
+    disabled.push(currentFunction);
+  }
+}
+const allowed = new Set(['runway-mcp-connect-callback']);
+if (!disabled.includes('runway-mcp-connect-callback')) {
+  console.error('Static guard failed: runway-mcp-connect-callback must set verify_jwt = false');
+  process.exit(1);
+}
+const unexpected = disabled.filter((name) => !allowed.has(name));
+if (unexpected.length > 0) {
+  console.error(`Static guard failed: unexpected verify_jwt=false functions: ${unexpected.join(', ')}`);
+  process.exit(1);
+}
+const deployMatch = deployText.match(/jwt_disabled_functions=\(\s*([\s\S]*?)\n\)/);
+const deployDisabled = deployMatch
+  ? deployMatch[1].split(/\s+/).map((value) => value.trim()).filter(Boolean)
+  : [];
+const sortedConfig = [...disabled].sort();
+const sortedDeploy = [...deployDisabled].sort();
+if (JSON.stringify(sortedConfig) !== JSON.stringify(sortedDeploy)) {
+  console.error(`Static guard failed: config verify_jwt=false functions must match deploy --no-verify-jwt functions. config=${sortedConfig.join(',') || 'none'} deploy=${sortedDeploy.join(',') || 'none'}`);
+  process.exit(1);
+}
+NODE
+grep -q -- "--no-verify-jwt" scripts/deploy-edge-functions.sh
 grep -q "/text-to-image" supabase/functions/_shared/runway.ts
 grep -q "referenceImages" supabase/functions/_shared/runway.ts
 grep -q "/image-upscale" supabase/functions/_shared/runway.ts

@@ -160,6 +160,12 @@ interface BrandRunwaySubscription {
   } | null;
 }
 
+interface RunwayMcpOAuthConnection {
+  connected: boolean;
+  bridgeConfigured?: boolean;
+  verificationError?: string | null;
+}
+
 const RUNWAY_APPROVAL_LABELS: Record<RunwayMcpConnectionStatus | 'not_requested', string> = {
   not_requested: '未申請',
   pending: '承認待ち',
@@ -185,6 +191,25 @@ const isRunwaySubscriptionEligible = (subscription: BrandRunwaySubscription | nu
     && subscription.plan.is_active === true
     && subscription.plan.runway_mcp_generation === true;
 };
+
+function getRunwayReadinessIssues({
+  approved,
+  oauthConnected,
+  subscriptionEligible,
+  bridgeConfigured,
+}: {
+  approved: boolean;
+  oauthConnected: boolean;
+  subscriptionEligible: boolean;
+  bridgeConfigured: boolean;
+}) {
+  const issues: string[] = [];
+  if (!approved) issues.push('Runway MCP接続承認が必要です');
+  if (!oauthConnected) issues.push('Runwayログインが未接続です');
+  if (!subscriptionEligible) issues.push('サブスク条件が未達です');
+  if (!bridgeConfigured) issues.push('本番ブリッジが未設定です');
+  return issues;
+}
 
 // Feature configuration for reference images
 const FEATURE_CONFIG: Record<string, {
@@ -568,6 +593,7 @@ export function GeneratePage() {
   const [modelCandidateLabel, setModelCandidateLabel] = useState<string>('');
   const [runwayApproval, setRunwayApproval] = useState<RunwayMcpConnectionApproval | null>(null);
   const [runwaySubscription, setRunwaySubscription] = useState<BrandRunwaySubscription | null>(null);
+  const [runwayOAuthConnection, setRunwayOAuthConnection] = useState<RunwayMcpOAuthConnection | null>(null);
 
   const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
   const sourceReadback = hydrateGenerationIntentSource(searchParams);
@@ -580,13 +606,14 @@ export function GeneratePage() {
     if (!currentBrand) {
       setRunwayApproval(null);
       setRunwaySubscription(null);
+      setRunwayOAuthConnection(null);
       return;
     }
 
     let active = true;
 
     const fetchRunwayReadiness = async () => {
-      const [approvalResult, subscriptionResult] = await Promise.all([
+      const [approvalResult, subscriptionResult, oauthResult] = await Promise.all([
         supabase
           .from('runway_mcp_connection_approvals')
           .select('status, updated_at')
@@ -597,6 +624,9 @@ export function GeneratePage() {
           .select('status, current_period_start, current_period_end, plans(code, name, is_active, features)')
           .eq('brand_id', currentBrand.id)
           .maybeSingle(),
+        supabase.functions.invoke('runway-mcp-connection-status', {
+          body: { brandId: currentBrand.id },
+        }),
       ]);
 
       if (!active) return;
@@ -626,6 +656,14 @@ export function GeneratePage() {
           } : null,
         } : null);
       }
+
+      if (oauthResult.error) {
+        console.error('Failed to fetch Runway MCP OAuth connection:', oauthResult.error);
+        setRunwayOAuthConnection(null);
+      } else {
+        setRunwayOAuthConnection((oauthResult.data || null) as RunwayMcpOAuthConnection | null);
+      }
+
     };
 
     fetchRunwayReadiness();
@@ -813,6 +851,15 @@ export function GeneratePage() {
     // Validate required image
     if (featureConfig?.requiresImage && !referenceImage) {
       toast.error('画像をアップロードしてください');
+      return;
+    }
+
+    if (selectedFeatureUsesRunwayMcp && !runwayReadyInApp) {
+      const message = runwayReadinessIssues.length
+        ? runwayReadinessIssues.join(' / ')
+        : 'Runway MCP生成条件を確認できません。ブランド設定を確認してください';
+      setGenerationError(message);
+      toast.error(message);
       return;
     }
 
@@ -2518,9 +2565,30 @@ export function GeneratePage() {
     }
   };
 
+  const runwayStatus = runwayApproval?.status || 'not_requested';
+  const runwayApproved = runwayStatus === 'approved';
+  const runwayOAuthConnected = runwayOAuthConnection?.connected === true;
+  const runwayBridgeConfigured = runwayOAuthConnection?.bridgeConfigured === true;
+  const runwaySubscriptionEligible = isRunwaySubscriptionEligible(runwaySubscription);
+  const selectedFeatureUsesRunwayMcp = Boolean(selectedFeature && selectedFeature.id !== 'optimize-prompt' && selectedFeature.id !== 'chat-edit');
+  const runwayReadyInApp = runwayApproved && runwayOAuthConnected && runwaySubscriptionEligible && runwayBridgeConfigured;
+  const runwayReadinessIssues = getRunwayReadinessIssues({
+    approved: runwayApproved,
+    oauthConnected: runwayOAuthConnected,
+    subscriptionEligible: runwaySubscriptionEligible,
+    bridgeConfigured: runwayBridgeConfigured,
+  });
+  const runwayPlanLabel = getRunwayPlanLabel(runwaySubscription);
+  const runwayPeriodEnd = runwaySubscription?.current_period_end
+    ? new Date(runwaySubscription.current_period_end).toLocaleDateString('ja-JP')
+    : null;
+  const runwayReadinessText = runwayReadyInApp
+    ? 'サイト側の生成条件は満たしています'
+    : runwayReadinessIssues.join(' / ');
   const isGenerateDisabled = (() => {
     if (!selectedFeature) return true;
     if (isGenerating) return true;
+    if (selectedFeatureUsesRunwayMcp && !runwayReadyInApp) return true;
     if (featureConfig?.requiresImage && !referenceImage) return true;
     switch (selectedFeature.id) {
       case 'design-gacha':
@@ -2541,19 +2609,6 @@ export function GeneratePage() {
         return false;
     }
   })();
-  const runwayStatus = runwayApproval?.status || 'not_requested';
-  const runwayApproved = runwayStatus === 'approved';
-  const runwaySubscriptionEligible = isRunwaySubscriptionEligible(runwaySubscription);
-  const runwayReadyInApp = runwayApproved && runwaySubscriptionEligible;
-  const runwayPlanLabel = getRunwayPlanLabel(runwaySubscription);
-  const runwayPeriodEnd = runwaySubscription?.current_period_end
-    ? new Date(runwaySubscription.current_period_end).toLocaleDateString('ja-JP')
-    : null;
-  const runwayReadinessText = runwayReadyInApp
-    ? 'サイト側の生成条件は満たしています'
-    : runwayApproved
-      ? 'サブスク条件が未達です'
-      : 'Runway MCP接続承認が必要です';
 
   // Feature selection view
   if (!selectedFeature) {
@@ -2625,10 +2680,10 @@ export function GeneratePage() {
             <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
               <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
                 {runwayReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
-                本番ブリッジ
+                最終接続
               </div>
               <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                管理者設定後に本番生成できます
+                Runwayログイン/ブリッジ
               </p>
             </div>
           </div>
@@ -2829,9 +2884,7 @@ export function GeneratePage() {
                     <p className="text-sm font-semibold text-neutral-900 dark:text-white">
                       Runway生成前チェック
                     </p>
-                    <p className={`mt-1 text-sm ${
-                      runwayReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'
-                    }`}>
+                    <p className={`mt-1 text-sm ${runwayReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
                       {runwayReadinessText}
                     </p>
                   </div>
@@ -2866,10 +2919,10 @@ export function GeneratePage() {
                   <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
                     <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
                       {runwayReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
-                      本番ブリッジ
+                      最終接続
                     </div>
                     <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                      管理者設定後に本番生成できます
+                      Runwayログイン/ブリッジ
                     </p>
                   </div>
                 </div>

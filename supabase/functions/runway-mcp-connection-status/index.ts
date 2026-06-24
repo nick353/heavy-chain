@@ -15,7 +15,11 @@ serve(async (req) => {
     const verifyTools = body.verifyTools === true;
     if (!brandId) return jsonResponse({ error: 'brand_id_required' }, 400);
 
-    await requireBrandRole(userClient, brandId, user.id, 'admin');
+    const membership = await requireBrandRole(userClient, brandId, user.id, 'editor');
+    const canViewConnectionDetails = ['admin', 'owner'].includes(membership.role);
+    if (verifyTools && !canViewConnectionDetails) {
+      return jsonResponse({ error: 'insufficient_brand_permissions' }, 403);
+    }
 
     const { data: connection, error } = await serviceClient
       .from('runway_mcp_oauth_connections')
@@ -45,9 +49,20 @@ serve(async (req) => {
 
     return jsonResponse({
       connected: connection?.status === 'connected' && !verificationError,
-      connection: connection || null,
+      connection: canViewConnectionDetails
+        ? connection || null
+        : connection
+          ? {
+              status: connection.status,
+              updated_at: connection.updated_at,
+            }
+          : null,
+      bridgeConfigured: Boolean(
+        Deno.env.get('RUNWAY_MCP_BRIDGE_URL')?.trim()
+        && Deno.env.get('RUNWAY_MCP_BRIDGE_TOKEN')?.trim()
+      ),
       tools: tools.map(projectTool),
-      verificationError,
+      verificationError: canViewConnectionDetails ? verificationError : null,
     });
   } catch (error) {
     return jsonResponse({ error: sanitizeError(error) }, 400);

@@ -42,15 +42,27 @@ function bridgeConfig() {
 
 function sanitizeRunwayError(error: unknown): string {
   const token = Deno.env.get('RUNWAY_MCP_BRIDGE_TOKEN')?.trim();
+  const bridgeUrl = Deno.env.get('RUNWAY_MCP_BRIDGE_URL')?.trim();
   let message = error instanceof Error ? error.message : String(error ?? 'runway_mcp_request_failed');
 
   if (token) {
     message = message.split(token).join('[redacted]');
   }
+  if (bridgeUrl) {
+    message = message.split(bridgeUrl).join('[redacted]');
+  }
 
   return message
+    .replace(/eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g, '[redacted-jwt]')
     .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/g, 'Bearer [redacted]')
-    .replace(/RUNWAY_MCP_BRIDGE_TOKEN\s*[:=]\s*\S+/gi, 'RUNWAY_MCP_BRIDGE_TOKEN=[redacted]')
+    .replace(/access_token["=:]\s*["']?[^"',\s}]+/gi, 'access_token=[redacted]')
+    .replace(/refresh_token["=:]\s*["']?[^"',\s}]+/gi, 'refresh_token=[redacted]')
+    .replace(/id_token["=:]\s*["']?[^"',\s}]+/gi, 'id_token=[redacted]')
+    .replace(/client_secret["=:]\s*["']?[^"',\s}]+/gi, 'client_secret=[redacted]')
+    .replace(/code_(verifier|challenge)["=:]\s*["']?[^"',\s}]+/gi, 'code_$1=[redacted]')
+    .replace(/authorization_code["=:]\s*["']?[^"',\s}]+/gi, 'authorization_code=[redacted]')
+    .replace(/RUNWAY_MCP_BRIDGE_URL\s*[:=]\s*["']?[^"',\s}]+/gi, 'RUNWAY_MCP_BRIDGE_URL=[redacted]')
+    .replace(/RUNWAY_MCP_BRIDGE_TOKEN\s*[:=]\s*["']?[^"',\s}]+/gi, 'RUNWAY_MCP_BRIDGE_TOKEN=[redacted]')
     .replace(/token\s*[:=]\s*["']?[A-Za-z0-9._~+/=-]{16,}["']?/gi, 'token=[redacted]')
     .slice(0, 600);
 }
@@ -123,6 +135,7 @@ async function parseBridgeJson(response: Response) {
 function mapBridgeStatus(status: number) {
   if (status === 401 || status === 403) return 'runway_mcp_auth_required';
   if (status === 402) return 'runway_mcp_subscription_inactive';
+  if (status === 413) return 'runway_mcp_payload_too_large';
   return `runway_mcp_request_failed:${status}`;
 }
 

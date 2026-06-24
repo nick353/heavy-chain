@@ -161,6 +161,8 @@ for (const name of serviceRoleWriteFunctions) {
 const runwayHelper = readFileSync('supabase/functions/_shared/runway.ts', 'utf8');
 const runwayApprovalHelper = readFileSync('supabase/functions/_shared/runwayApproval.ts', 'utf8');
 const runwayMcpConnectionHelper = readFileSync('supabase/functions/_shared/runwayMcpConnection.ts', 'utf8');
+const supabaseConfig = readFileSync('supabase/config.toml', 'utf8');
+const deployEdgeFunctionsScript = readFileSync('scripts/deploy-edge-functions.sh', 'utf8');
 for (const needle of [
   'RUNWAY_MCP_BRIDGE_URL',
   'RUNWAY_MCP_BRIDGE_TOKEN',
@@ -211,6 +213,19 @@ for (const name of [
   if (!existsSync(`supabase/functions/${name}/index.ts`)) {
     failures.push(`${name}: missing Edge Function`);
   }
+}
+const jwtDisabledFunctions = functionsWithDisabledJwt(supabaseConfig);
+const deployJwtDisabledFunctions = deployFunctionsWithDisabledJwt(deployEdgeFunctionsScript);
+const expectedJwtDisabledFunctions = ['runway-mcp-connect-callback'];
+if (!jwtDisabledFunctions.includes(expectedJwtDisabledFunctions[0])) {
+  failures.push('runway-mcp-connect-callback: Supabase config must disable JWT verification for external OAuth redirects');
+}
+const unexpectedJwtDisabledFunctions = jwtDisabledFunctions.filter((name) => !expectedJwtDisabledFunctions.includes(name));
+if (unexpectedJwtDisabledFunctions.length > 0) {
+  failures.push(`Unexpected Supabase functions with verify_jwt=false: ${unexpectedJwtDisabledFunctions.join(', ')}`);
+}
+if (!sameItems(jwtDisabledFunctions, deployJwtDisabledFunctions)) {
+  failures.push(`Supabase config verify_jwt=false functions must match deploy --no-verify-jwt functions: config=${jwtDisabledFunctions.join(',') || 'none'} deploy=${deployJwtDisabledFunctions.join(',') || 'none'}`);
 }
 
 for (const needle of [
@@ -386,3 +401,37 @@ if (failures.length > 0) {
 }
 
 console.log('Edge smoke passed without external API calls.');
+
+function functionsWithDisabledJwt(configText) {
+  const disabled = [];
+  let currentFunction = null;
+  for (const rawLine of configText.split(/\r?\n/)) {
+    const line = rawLine.replace(/#.*/, '').trim();
+    const section = line.match(/^\[functions\.([^\]]+)\]$/);
+    if (section) {
+      currentFunction = section[1];
+      continue;
+    }
+    if (/^\[/.test(line)) {
+      currentFunction = null;
+      continue;
+    }
+    if (currentFunction && /^verify_jwt\s*=\s*false\b/.test(line)) {
+      disabled.push(currentFunction);
+    }
+  }
+  return disabled;
+}
+
+function deployFunctionsWithDisabledJwt(scriptText) {
+  const match = scriptText.match(/jwt_disabled_functions=\(\s*([\s\S]*?)\n\)/);
+  if (!match) return [];
+  return match[1]
+    .split(/\s+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function sameItems(left, right) {
+  return JSON.stringify([...left].sort()) === JSON.stringify([...right].sort());
+}

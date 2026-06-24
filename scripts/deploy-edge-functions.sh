@@ -21,6 +21,10 @@ all_functions=(
   runway-mcp-bridge
 )
 
+jwt_disabled_functions=(
+  runway-mcp-connect-callback
+)
+
 if [ "$#" -gt 0 ]; then
   functions=("$@")
 else
@@ -38,7 +42,11 @@ for fn in "${functions[@]}"; do
     exit 1
   fi
   echo "Deploying edge function: ${fn}"
-  supabase functions deploy "${fn}"
+  if [[ " ${jwt_disabled_functions[*]} " =~ " ${fn} " ]]; then
+    supabase functions deploy "${fn}" --no-verify-jwt
+  else
+    supabase functions deploy "${fn}"
+  fi
 done
 
 echo "Edge function deploy commands completed. Secret values were not printed."
