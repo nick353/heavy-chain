@@ -36,7 +36,7 @@ After deployment:
 4. Use unauthenticated `GET /healthz` only for platform health checks. Heavy Chain verification uses authenticated `GET /health`.
 5. Run `npm run verify:runway-mcp-bridge` against the hosted URL with `--live-generate` omitted.
 6. Run `npm run verify:runway-readiness`.
-7. Only after bridge, OAuth/session, and paid plan readiness pass, run the strict approved-generation readback.
+7. Only after hosted bridge `/tools` and paid plan readiness pass, run the strict approved-generation readback.
 
 ## First Authorization
 

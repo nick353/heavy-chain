@@ -151,14 +151,6 @@ const requirements = [
     next_action: 'Attach a public HTTPS domain and persistent /data volume to the Zeabur runway-mcp-bridge service, complete official Runway MCP authorization, then rerun npm run verify:runway-mcp-bridge.',
   }),
   requirement({
-    id: 'runway_oauth_connection',
-    title: 'Target brand has a connected Runway MCP OAuth session',
-    status: blockerCodes.has('production_runway_mcp_oauth_connection_pending') ? 'blocked_external' : 'passed',
-    evidence: [paths.readiness],
-    details: blockerDetails('production_runway_mcp_oauth_connection_pending'),
-    next_action: stateNextAction || 'Open /brand/settings, click Runwayに接続, complete Runway login, then rerun npm run verify:runway-readiness.',
-  }),
-  requirement({
     id: 'paid_subscription',
     title: 'Target brand has an active Runway-eligible paid Heavy Chain subscription',
     status: blockerCodes.has('heavy_chain_paid_subscription_pending') ? 'blocked_external' : 'passed',
@@ -239,8 +231,7 @@ const report = {
   requirements,
   blockers,
   pending_after_blocker: pending,
-  state_mentions_goal_blocker: stateText.includes('production_runway_mcp_oauth_connection_pending')
-    && stateText.includes('heavy_chain_paid_subscription_pending'),
+  state_mentions_goal_blocker: stateText.includes('heavy_chain_paid_subscription_pending'),
 };
 
 fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -380,14 +371,10 @@ function runwayUiPassed() {
   const brandSettings = files.runwayUi.json?.brandSettings ?? {};
   return generate.hasRunwayPrecheck === true
     && generate.generateButton?.disabled === true
-    && generate.hasOAuthIssue === true
     && generate.hasSubscriptionIssue === true
-    && generate.hasBridgeIssue === true
     && generate.hasOldStandaloneBridgeLabel === false
     && brandSettings.hasRunwayConnection === true
-    && brandSettings.hasOAuthIssue === true
     && brandSettings.hasSubscriptionIssue === true
-    && brandSettings.hasBridgeIssue === true
     && brandSettings.hasGenerationAvailability === true
     && brandSettings.hasPlanMisleadingStopCopy === false
     && (files.runwayUi.json?.consoleErrors || []).length === 0;

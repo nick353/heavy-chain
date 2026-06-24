@@ -194,18 +194,15 @@ const isRunwaySubscriptionEligible = (subscription: BrandRunwaySubscription | nu
 
 function getRunwayReadinessIssues({
   approved,
-  oauthConnected,
   subscriptionEligible,
   bridgeConfigured,
 }: {
   approved: boolean;
-  oauthConnected: boolean;
   subscriptionEligible: boolean;
   bridgeConfigured: boolean;
 }) {
   const issues: string[] = [];
   if (!approved) issues.push('Runway MCP接続承認が必要です');
-  if (!oauthConnected) issues.push('Runwayログインが未接続です');
   if (!subscriptionEligible) issues.push('サブスク条件が未達です');
   if (!bridgeConfigured) issues.push('本番ブリッジが未設定です');
   return issues;
@@ -2567,14 +2564,12 @@ export function GeneratePage() {
 
   const runwayStatus = runwayApproval?.status || 'not_requested';
   const runwayApproved = runwayStatus === 'approved';
-  const runwayOAuthConnected = runwayOAuthConnection?.connected === true;
   const runwayBridgeConfigured = runwayOAuthConnection?.bridgeConfigured === true;
   const runwaySubscriptionEligible = isRunwaySubscriptionEligible(runwaySubscription);
   const selectedFeatureUsesRunwayMcp = Boolean(selectedFeature && selectedFeature.id !== 'optimize-prompt' && selectedFeature.id !== 'chat-edit');
-  const runwayReadyInApp = runwayApproved && runwayOAuthConnected && runwaySubscriptionEligible && runwayBridgeConfigured;
+  const runwayReadyInApp = runwayApproved && runwaySubscriptionEligible && runwayBridgeConfigured;
   const runwayReadinessIssues = getRunwayReadinessIssues({
     approved: runwayApproved,
-    oauthConnected: runwayOAuthConnected,
     subscriptionEligible: runwaySubscriptionEligible,
     bridgeConfigured: runwayBridgeConfigured,
   });
@@ -2683,7 +2678,7 @@ export function GeneratePage() {
                 最終接続
               </div>
               <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                Runwayログイン/ブリッジ
+                Hosted bridge
               </p>
             </div>
           </div>
@@ -2922,7 +2917,7 @@ export function GeneratePage() {
                       最終接続
                     </div>
                     <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                      Runwayログイン/ブリッジ
+                      Hosted bridge
                     </p>
                   </div>
                 </div>

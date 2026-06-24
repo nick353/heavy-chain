@@ -115,18 +115,15 @@ const isRunwaySubscriptionEligible = (subscription: BrandRunwaySubscription | nu
 
 function getRunwayReadinessIssues({
   approved,
-  oauthConnected,
   subscriptionEligible,
   bridgeConfigured,
 }: {
   approved: boolean;
-  oauthConnected: boolean;
   subscriptionEligible: boolean;
   bridgeConfigured: boolean;
 }) {
   const issues: string[] = [];
   if (!approved) issues.push('接続承認が必要です');
-  if (!oauthConnected) issues.push('Runwayログインが未接続です');
   if (!subscriptionEligible) issues.push('サブスク条件が未達です');
   if (!bridgeConfigured) issues.push('本番ブリッジが未設定です');
   return issues;
@@ -493,10 +490,9 @@ export function BrandSettingsPage() {
   const runwayOAuthConnected = runwayOAuthConnection?.connected === true;
   const runwayBridgeConfigured = runwayOAuthConnection?.bridgeConfigured === true;
   const runwaySubscriptionEligible = isRunwaySubscriptionEligible(runwaySubscription);
-  const runwayReadyInApp = runwayApproved && runwayOAuthConnected && runwaySubscriptionEligible && runwayBridgeConfigured;
+  const runwayReadyInApp = runwayApproved && runwaySubscriptionEligible && runwayBridgeConfigured;
   const runwayReadinessIssues = getRunwayReadinessIssues({
     approved: runwayApproved,
-    oauthConnected: runwayOAuthConnected,
     subscriptionEligible: runwaySubscriptionEligible,
     bridgeConfigured: runwayBridgeConfigured,
   });
@@ -547,10 +543,10 @@ export function BrandSettingsPage() {
                 Runway MCP接続
               </h2>
               <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                このブランドでRunway生成を使うため、Runway公式MCPへログイン接続します。OAuthトークンはサーバー側で暗号化し、画面には保存しません。
+                このブランドでRunway生成を使うため、管理者承認、Hosted Runway MCPブリッジ、Runway対応プランの状態を確認します。
               </p>
               <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
-                Runwayログイン接続とサイト承認が完了するまで、Runway MCPを使う画像生成は使用量予約前に停止します。
+                Hosted bridge とサイト承認が完了するまで、Runway MCPを使う画像生成は使用量予約前に停止します。
                 サブスクが切れている場合も、承認状態に関係なく生成は停止します。
               </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
@@ -569,15 +565,15 @@ export function BrandSettingsPage() {
                 </div>
                 <div className="rounded-xl border border-neutral-200 bg-white/55 p-3 dark:border-neutral-700 dark:bg-neutral-800/55">
                   <div className="flex items-center gap-2 text-sm font-semibold text-neutral-800 dark:text-white">
-                    {runwayOAuthConnected ? (
+                    {runwayBridgeConfigured ? (
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
                     ) : (
                       <KeyRound className="h-4 w-4 text-amber-500" />
                     )}
-                    Runwayログイン
+                    Hosted bridge
                   </div>
                   <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                    {runwayOAuthConnected ? '接続済み' : '未接続'}
+                    {runwayBridgeConfigured ? '設定済み' : '未設定'}
                   </p>
                 </div>
                 <div className="rounded-xl border border-neutral-200 bg-white/55 p-3 dark:border-neutral-700 dark:bg-neutral-800/55">

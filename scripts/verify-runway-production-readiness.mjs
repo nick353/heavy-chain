@@ -2,7 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import {
   dateStamp,
@@ -22,6 +22,7 @@ loadEnvFile('.env.production.local', initialEnvKeys);
 const now = new Date();
 const brandId = args.brandId || process.env.RUNWAY_READINESS_BRAND_ID || 'e5571b0b-7af7-4265-9d47-7d90ae4767d3';
 const outPath = args.out || `output/playwright/runway-production-readiness-${dateStamp(now)}/readiness.json`;
+const bridgeProofPath = args.bridgeProof || latestBridgeProofPath();
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
 const projectRef = firstRealValue(
@@ -91,6 +92,23 @@ if (
   );
 }
 
+const bridgeProof = readJsonIfExists(bridgeProofPath);
+const bridgeToolsReady = bridgeProof?.ok === true
+  && (bridgeProof.checks || []).some((check) => check.name === 'health' && check.ok === true)
+  && (bridgeProof.checks || []).some((check) => check.name === 'tools' && check.ok === true && check.tool_count > 0);
+addCheck('hosted Runway MCP bridge tools proof', bridgeToolsReady, {
+  proof_path: bridgeProofPath || null,
+  bridge_url_host: bridgeProof?.bridge_url_host || null,
+  tools: (bridgeProof?.checks || []).find((check) => check.name === 'tools') || null,
+});
+if (!bridgeToolsReady) {
+  addBlocker(
+    'production_runway_mcp_bridge_tools_pending',
+    'Hosted Runway MCP bridge /tools proof is missing or not passing.',
+    'Run npm run verify:runway-mcp-bridge against the hosted HTTPS bridge, then rerun npm run verify:runway-readiness.',
+  );
+}
+
 const brand = await selectSingle('brands', 'id, name, owner_id, created_at, updated_at', (query) => query.eq('id', brandId));
 addCheck('target brand exists', !brand.error && Boolean(brand.data), brand.error ? { error: brand.error.message } : { brand: projectBrand(brand.data) });
 const brandReadbackBlocker = dbReadbackBlocker('brands', brand.error);
@@ -128,19 +146,13 @@ const oauthConnection = await selectSingle(
   (query) => query.eq('brand_id', brandId),
 );
 addCheck(
-  'Runway MCP OAuth connection',
-  !oauthConnection.error && oauthConnection.data?.status === 'connected',
+  'Runway MCP OAuth connection legacy status',
+  !oauthConnection.error,
   oauthConnection.error ? { error: oauthConnection.error.message } : { connection: oauthConnection.data || null },
 );
 const oauthReadbackBlocker = dbReadbackBlocker('runway_mcp_oauth_connections', oauthConnection.error);
 if (oauthReadbackBlocker) {
   addBlockerObject(oauthReadbackBlocker);
-} else if (oauthConnection.data?.status !== 'connected') {
-  addBlocker(
-    'production_runway_mcp_oauth_connection_pending',
-    `Runway MCP OAuth connection status is ${oauthConnection.data?.status || 'missing'}, not connected.`,
-    'Open /brand/settings, click Runwayに接続, complete Runway login, then rerun npm run verify:runway-readiness.',
-  );
 }
 
 const subscription = await selectSingle(
@@ -207,9 +219,49 @@ function parseArgs(argv) {
     } else if (arg === '--out' && next) {
       parsed.out = next;
       index += 1;
+    } else if (arg === '--bridge-proof' && next) {
+      parsed.bridgeProof = next;
+      index += 1;
     }
   }
   return parsed;
+}
+
+function latestBridgeProofPath() {
+  const root = 'output/playwright';
+  if (!existsSync(root)) return '';
+  const candidates = [];
+  for (const filePath of walkFiles(root)) {
+    if (!filePath.endsWith('/proof.json')) continue;
+    if (!/runway-mcp-(?:remote-http-bridge|bridge-zeabur)/.test(filePath)) continue;
+    const proof = readJsonIfExists(filePath);
+    if (proof?.checker !== 'verify-runway-mcp-remote-http-bridge') continue;
+    candidates.push({
+      filePath,
+      capturedAt: Date.parse(proof.captured_at || '') || statSync(filePath).mtimeMs,
+    });
+  }
+  candidates.sort((a, b) => b.capturedAt - a.capturedAt);
+  return candidates[0]?.filePath || '';
+}
+
+function walkFiles(root) {
+  const output = [];
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const fullPath = `${root}/${entry.name}`;
+    if (entry.isDirectory()) output.push(...walkFiles(fullPath));
+    else if (entry.isFile()) output.push(fullPath);
+  }
+  return output;
+}
+
+function readJsonIfExists(filePath) {
+  if (!filePath || !existsSync(filePath)) return null;
+  try {
+    return JSON.parse(readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
 }
 
 function loadEnvFile(filePath, initialKeys) {
