@@ -3023,7 +3023,7 @@ export function GeneratePage() {
             <div>
               <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
                 {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
-                画像生成オフラインモード
+                Runway生成前チェック
               </div>
               <p className={`mt-1 text-sm ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
                 {runwayReadinessText}
@@ -3262,7 +3262,7 @@ export function GeneratePage() {
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-neutral-900 dark:text-white">
-                      画像生成オフラインモード
+                      Runway生成前チェック
                     </p>
                     <p className={`mt-1 text-sm ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
                       {runwayReadinessText}

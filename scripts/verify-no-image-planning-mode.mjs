@@ -48,7 +48,7 @@ try {
 
   const bodyText = await page.locator('body').innerText({ timeout: 15000 });
   proof.bodyTextEvidence.initial = pickEvidence(bodyText, [
-    '画像生成オフラインモード',
+    'Runway生成前チェック',
     '企画書を保存',
     '保存した企画',
     'ログイン',
@@ -107,7 +107,7 @@ try {
   await page.screenshot({ path: path.join(outDir, '02-planning-saved.png'), fullPage: true });
   proof.screenshots.saved = path.join(outDir, '02-planning-saved.png');
   proof.bodyTextEvidence.saved = pickEvidence(await page.locator('body').innerText(), [
-    '画像生成オフラインモード',
+    'Runway生成前チェック',
     '企画書を保存しました',
     '保存した企画',
     'NO IMAGE MODE',
