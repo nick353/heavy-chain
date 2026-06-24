@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Wand2, 
@@ -29,7 +29,8 @@ import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
 import { ImageSelector, type SelectedImage, type ReferenceType } from '../components/ImageSelector';
 import { UsageStats } from '../components/UsageStats';
 import { getErrorMessage } from '../lib/errorMessages';
-import { saveWorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
+import { saveWorkspaceArtifact, saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
+import { parseLocalRunwayMcpImportBundle } from '../lib/localRunwayMcpImport';
 import {
   hydrateGenerationIntentSource,
   hydratePatternGenerationContext,
@@ -367,6 +368,16 @@ const getGeneratedImageKey = (image: GeneratedResult, index: number) => {
   return `${stablePart}-${index}`;
 };
 
+const getDataUrlExtension = (imageUrl: string, fallback: string) => {
+  const mime = imageUrl.match(/^data:([^;,]+)/)?.[1] || '';
+  if (mime === 'image/jpeg') return 'jpg';
+  if (mime === 'image/png') return 'png';
+  if (mime === 'image/webp') return 'webp';
+  if (mime === 'image/gif') return 'gif';
+  if (mime === 'image/svg+xml') return 'svg';
+  return fallback;
+};
+
 const escapeXml = (value: string) => value
   .replace(/&/g, '&amp;')
   .replace(/</g, '&lt;')
@@ -548,7 +559,7 @@ function ImageModal({
           </p>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onDownload(image.imageUrl, `${image.label || 'planning-brief'}.${image.artifactKind === 'planning_brief' ? 'svg' : 'png'}`)}
+              onClick={() => onDownload(image.imageUrl, `${image.label || 'planning-brief'}.${getDataUrlExtension(image.imageUrl, image.artifactKind === 'planning_brief' ? 'svg' : 'png')}`)}
               className="flex items-center gap-2 px-4 py-2 bg-white text-neutral-900 rounded-lg hover:bg-neutral-100 transition-colors font-medium"
             >
               <Download className="w-4 h-4" />
@@ -578,7 +589,9 @@ export function GeneratePage() {
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [selectedRatio, setSelectedRatio] = useState('1:1');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isImportingLocalRunway, setIsImportingLocalRunway] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedResult[]>([]);
+  const localRunwayImportInputRef = useRef<HTMLInputElement | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [generateCount, setGenerateCount] = useState(1);
   const [overlayEnabled, setOverlayEnabled] = useState(false);
@@ -1596,6 +1609,70 @@ export function GeneratePage() {
     }
   };
 
+  const handleLocalRunwayImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!currentBrand) {
+      toast.error('ブランドを選択してください');
+      return;
+    }
+
+    setIsImportingLocalRunway(true);
+    setGenerationError('');
+    try {
+      const bundle = parseLocalRunwayMcpImportBundle(JSON.parse(await file.text()));
+      const importedAt = new Date().toISOString();
+      const featureType = selectedFeature?.id ?? bundle.featureType ?? 'campaign-image';
+      const importedResults: GeneratedResult[] = [];
+
+      for (const [index, image] of bundle.images.entries()) {
+        const artifactId = image.id ? `runway-local-${image.id}` : `runway-local-${Date.now()}-${index + 1}`;
+        const title = image.title || `Runway MCP local image ${index + 1}`;
+        const promptText = image.prompt ?? prompt.trim() ?? '';
+        await saveWorkspaceArtifactBestEffort({
+          id: artifactId,
+          brandId: currentBrand.id,
+          featureType: image.featureType ?? featureType,
+          title,
+          imageUrl: image.imageUrl,
+          prompt: promptText,
+          createdAt: importedAt,
+          metadata: {
+            ...bundle.source,
+            ...image.metadata,
+            artifactKind: 'runway_local_image',
+            localRunwayMcpWorker: true,
+            noHostedBridge: true,
+            importedFromBundleSchema: bundle.schema,
+            importedBundleCreatedAt: bundle.createdAt ?? null,
+            importedBundleBrandId: bundle.brandId ?? null,
+            importedFileName: file.name,
+            importIndex: index,
+            selectedFeatureId: selectedFeature?.id ?? null,
+          },
+        });
+        importedResults.push({
+          id: artifactId,
+          imageUrl: image.imageUrl,
+          prompt: promptText,
+          label: title,
+          artifactKind: 'image',
+        });
+      }
+
+      setGeneratedImages((prev) => [...importedResults, ...prev]);
+      setShowSuccessCard(true);
+      toast.success(`${importedResults.length}件のローカルRunway成果物を取り込みました`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'ローカルRunway成果物の取り込みに失敗しました';
+      setGenerationError(message);
+      toast.error(message);
+    } finally {
+      setIsImportingLocalRunway(false);
+    }
+  };
+
   const handleDownload = async (imageUrl: string, filename: string = 'generated-image.png') => {
     try {
       const response = await fetch(imageUrl);
@@ -1618,9 +1695,11 @@ export function GeneratePage() {
     if (!currentBrand || generatedImages.length === 0) return;
     if (noImageGenerationMode || generatedImages.every((image) => image.artifactKind === 'planning_brief' || image.imageUrl.startsWith('data:'))) {
       generatedImages.forEach((image, index) => {
-        void handleDownload(image.imageUrl, `${image.label || `planning-brief-${index + 1}`}.svg`);
+        const fallbackExtension = image.artifactKind === 'planning_brief' ? 'svg' : 'png';
+        const extension = getDataUrlExtension(image.imageUrl, fallbackExtension);
+        void handleDownload(image.imageUrl, `${image.label || `workspace-artifact-${index + 1}`}.${extension}`);
       });
-      toast.success(`${generatedImages.length}件の企画書カードを保存します`);
+      toast.success(`${generatedImages.length}件の保存済み成果物をダウンロードします`);
       return;
     }
     const imageIds = generatedImages.map(img => img.id).filter(Boolean);
@@ -2772,6 +2851,35 @@ export function GeneratePage() {
     }
   })();
 
+  const renderLocalRunwayImportControl = () => (
+    <div className="mt-4 flex flex-col gap-2 rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70 sm:flex-row sm:items-center sm:justify-between">
+      <input
+        ref={localRunwayImportInputRef}
+        type="file"
+        accept="application/json"
+        className="hidden"
+        onChange={handleLocalRunwayImportFile}
+      />
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-neutral-800 dark:text-white">
+          ローカルRunway MCP成果物
+        </p>
+        <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+          Etsy/NisenPrints方式のimport bundleをWorkspaceへ保存します。
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => localRunwayImportInputRef.current?.click()}
+        disabled={!currentBrand || isImportingLocalRunway}
+        className="inline-flex w-fit items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-primary-300 hover:text-primary-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
+      >
+        {isImportingLocalRunway ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderOpen className="h-3.5 w-3.5" />}
+        JSONを読み込む
+      </button>
+    </div>
+  );
+
   // Feature selection view
   if (!selectedFeature) {
     const getLaneFeatures = (featureIds: string[]) => {
@@ -2849,6 +2957,7 @@ export function GeneratePage() {
               </p>
             </div>
           </div>
+          {renderLocalRunwayImportControl()}
         </section>
 
         <section className="mb-6 rounded-2xl border border-neutral-200 bg-white/80 p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900/80 sm:p-5 lg:mb-8">
@@ -3088,6 +3197,7 @@ export function GeneratePage() {
                     </p>
                   </div>
                 </div>
+                {renderLocalRunwayImportControl()}
               </div>
             </div>
           </div>
@@ -3338,7 +3448,7 @@ export function GeneratePage() {
                         </p>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleDownload(image.imageUrl, `${image.label || 'planning-brief'}.${image.artifactKind === 'planning_brief' ? 'svg' : 'png'}`)}
+                            onClick={() => handleDownload(image.imageUrl, `${image.label || 'planning-brief'}.${getDataUrlExtension(image.imageUrl, image.artifactKind === 'planning_brief' ? 'svg' : 'png')}`)}
                             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white rounded-lg text-sm font-medium text-neutral-900 hover:bg-neutral-100 transition-colors"
                           >
                             <Download className="w-4 h-4" />
