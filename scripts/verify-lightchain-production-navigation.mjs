@@ -66,6 +66,8 @@ const redact = (value) => String(value)
 
 async function dismissBlockingOverlays(page) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
+    await page.keyboard.press('Escape').catch(() => {});
+    await page.waitForTimeout(250);
     for (const text of ['スキップ', '閉じる', 'あとで', '完了']) {
       const button = page.getByRole('button', { name: text }).first();
       if (await button.isVisible({ timeout: 750 }).catch(() => false)) {
