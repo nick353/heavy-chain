@@ -20,6 +20,7 @@ const ModelLibraryPage = lazy(() => import('./pages/ModelLibraryPage').then((mod
 const PatternWorkspacePage = lazy(() => import('./pages/PatternWorkspacePage').then((module) => ({ default: module.PatternWorkspacePage })));
 const VideoWorkstationPage = lazy(() => import('./pages/VideoWorkstationPage').then((module) => ({ default: module.VideoWorkstationPage })));
 const LabPage = lazy(() => import('./pages/LabPage').then((module) => ({ default: module.LabPage })));
+const LightchainWorkbenchPage = lazy(() => import('./pages/LightchainWorkbenchPage').then((module) => ({ default: module.LightchainWorkbenchPage })));
 const HistoryPage = lazy(() => import('./pages/HistoryPage').then((module) => ({ default: module.HistoryPage })));
 const JobsPage = lazy(() => import('./pages/JobsPage').then((module) => ({ default: module.JobsPage })));
 const CreditsPage = lazy(() => import('./pages/CreditsPage').then((module) => ({ default: module.CreditsPage })));
@@ -390,6 +391,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <ErrorBoundary>
                 {lazyPage(<LabPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lightchain"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<LightchainWorkbenchPage />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }

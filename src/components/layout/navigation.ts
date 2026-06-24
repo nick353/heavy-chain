@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { BriefcaseBusiness, CreditCard, FlaskConical, Palette, Shirt, UserRound, Video } from 'lucide-react';
+import { BriefcaseBusiness, CreditCard, FlaskConical, LayoutGrid, Palette, Shirt, UserRound, Video } from 'lucide-react';
 import {
   IconClock,
   IconHome,
@@ -30,6 +30,7 @@ export const workspaceNavItems: WorkspaceNavItem[] = [
   { icon: Palette, label: '柄・グラフィック', mobileLabel: '柄', path: '/patterns', group: 'main' },
   { icon: Video, label: '動画', mobileLabel: '動画', path: '/video', group: 'main' },
   { icon: FlaskConical, label: 'ラボ', mobileLabel: 'ラボ', path: '/lab', group: 'main' },
+  { icon: LayoutGrid, label: 'Lightchain互換', mobileLabel: '互換', path: '/lightchain', group: 'main' },
   { icon: IconClock, label: '履歴', mobileLabel: '履歴', path: '/history', group: 'main', showInMobileNav: true },
   { icon: BriefcaseBusiness, label: 'ジョブ', mobileLabel: 'ジョブ', path: '/jobs', group: 'main' },
   { icon: CreditCard, label: 'クレジット', mobileLabel: 'クレジット', path: '/credits', group: 'main' },
