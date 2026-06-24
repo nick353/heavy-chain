@@ -280,6 +280,100 @@ const readRunwayMcpResultImages = async (resultPath, requestedCount) => {
   }));
 };
 
+const readJsonFile = async (filePath) => JSON.parse(await fs.readFile(filePath, 'utf8'));
+
+const maybeRunwayMcpResultJobId = (result) => {
+  const candidates = [
+    result.heavyChainJobId,
+    result.heavy_chain_job_id,
+    result.generationJobId,
+    result.generation_job_id,
+    result.jobId,
+    result.job_id,
+    result.metadata?.heavyChainJobId,
+    result.metadata?.generationJobId,
+    result.source?.heavyChainJobId,
+    result.source?.generationJobId,
+  ].filter(Boolean);
+  return typeof candidates[0] === 'string' ? candidates[0] : '';
+};
+
+const scanRunwayMcpResultFiles = async (watchDir) => {
+  const absoluteWatchDir = path.resolve(repoRoot, watchDir);
+  let entries = [];
+  try {
+    entries = await fs.readdir(absoluteWatchDir, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      await fs.mkdir(absoluteWatchDir, { recursive: true });
+      return { resultFiles: [], rejectedFiles: [] };
+    }
+    throw error;
+  }
+  const resultFiles = [];
+  const rejectedFiles = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+    if (entry.name.startsWith('.')) continue;
+    const filePath = path.join(absoluteWatchDir, entry.name);
+    let stats = null;
+    try {
+      stats = await fs.stat(filePath);
+      const result = await readJsonFile(filePath);
+      resultFiles.push({
+        filePath,
+        fileName: entry.name,
+        jobId: maybeRunwayMcpResultJobId(result),
+        mtimeMs: stats.mtimeMs,
+      });
+    } catch (error) {
+      rejectedFiles.push({
+        filePath,
+        fileName: entry.name,
+        reason: 'json_parse_failed_or_unreadable',
+        ageMs: stats ? Date.now() - stats.mtimeMs : null,
+        error: sanitizeError(error),
+      });
+    }
+  }
+  return {
+    resultFiles: resultFiles.sort((left, right) => left.mtimeMs - right.mtimeMs),
+    rejectedFiles,
+  };
+};
+
+const moveFileToDir = async (filePath, targetDir) => {
+  const absoluteTargetDir = path.resolve(repoRoot, targetDir);
+  await fs.mkdir(absoluteTargetDir, { recursive: true });
+  const targetPath = path.join(absoluteTargetDir, `${new Date().toISOString().replace(/[:.]/g, '-')}-${path.basename(filePath)}`);
+  try {
+    await fs.rename(filePath, targetPath);
+  } catch (error) {
+    if (error?.code !== 'EXDEV') throw error;
+    await fs.copyFile(filePath, targetPath);
+    await fs.unlink(filePath);
+  }
+  return targetPath;
+};
+
+const resolveMcpResultForJob = async (job, args, watchFiles, claimedFilePaths) => {
+  if (args['mcp-result']) return String(args['mcp-result']);
+  if (!args['watch-mcp-results']) return '';
+  const explicit = watchFiles.find((file) => file.jobId === job.id && !claimedFilePaths.has(file.filePath));
+  if (explicit) {
+    claimedFilePaths.add(explicit.filePath);
+    return explicit.filePath;
+  }
+  if (args['allow-unmatched-mcp-result']) {
+    const unmatched = watchFiles.find((file) => !file.jobId && !claimedFilePaths.has(file.filePath));
+    if (unmatched) {
+      claimedFilePaths.add(unmatched.filePath);
+      return unmatched.filePath;
+    }
+  }
+  return '';
+};
+
 const collectStrings = (value, output = []) => {
   if (typeof value === 'string') output.push(value);
   else if (Array.isArray(value)) value.forEach((item) => collectStrings(item, output));
@@ -538,6 +632,16 @@ const fetchPendingJobs = async (supabase, args) => {
   return data || [];
 };
 
+const fetchJobById = async (supabase, jobId) => {
+  const { data, error } = await supabase
+    .from('generation_jobs')
+    .select('id,status,error_message,input_params,completed_at')
+    .eq('id', jobId)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+};
+
 const claimJob = async (supabase, job) => {
   const inputParams = {
     ...asRecord(job.input_params),
@@ -758,17 +862,46 @@ const main = async () => {
   const args = parseArgs(process.argv.slice(2));
   await loadEnvFile(path.resolve(repoRoot, '.env.production.local'));
   if (args.help || args.h) {
-    console.log('Usage: node scripts/local-runway-mcp-worker.mjs [--loop] [--once] [--job-id <id>] [--fixture-image <path>] [--mcp-result <json>] [--live-runway] [--bridge-runway] [--max-jobs 1] [--interval-ms 5000]');
+    console.log('Usage: node scripts/local-runway-mcp-worker.mjs [--loop] [--once] [--job-id <id>] [--fixture-image <path>] [--mcp-result <json>] [--watch-mcp-results <dir>] [--live-runway] [--bridge-runway] [--max-jobs 1] [--interval-ms 5000]');
     return;
   }
   const supabase = getSupabaseClient();
   const intervalMs = Math.max(1000, Number(args['interval-ms'] || 5000));
-  const loop = Boolean(args.loop) && !args['job-id'];
+  const loop = Boolean(args.loop);
   do {
     const jobs = await fetchPendingJobs(supabase, args);
+    const watchScan = args['watch-mcp-results']
+      ? await scanRunwayMcpResultFiles(String(args['watch-mcp-results']))
+      : { resultFiles: [], rejectedFiles: [] };
+    const watchFiles = watchScan.resultFiles;
+    const terminalJob = args['job-id'] && jobs.length === 0
+      ? await fetchJobById(supabase, String(args['job-id']))
+      : null;
+    const claimedFilePaths = new Set();
     const results = [];
+    if (args['job-id'] && jobs.length === 0 && (!terminalJob || terminalJob.status !== 'pending')) {
+      results.push({
+        status: terminalJob ? `job_${terminalJob.status}` : 'job_not_found',
+        jobId: String(args['job-id']),
+        terminal: true,
+        errorMessage: terminalJob?.error_message || null,
+      });
+    }
     for (const job of jobs) {
-      results.push(await processJob({ supabase, job, args }));
+      const mcpResultPath = await resolveMcpResultForJob(job, args, watchFiles, claimedFilePaths);
+      if (args['watch-mcp-results'] && !mcpResultPath && !args['fixture-image'] && !args['live-runway'] && !args['bridge-runway']) {
+        results.push({ status: 'waiting_for_mcp_result', jobId: job.id });
+        continue;
+      }
+      const jobArgs = mcpResultPath ? { ...args, 'mcp-result': mcpResultPath } : args;
+      const result = await processJob({ supabase, job, args: jobArgs });
+      if (mcpResultPath && args['watch-mcp-results'] && !args['mcp-result']) {
+        const targetDir = result.ok
+          ? String(args['processed-dir'] || path.join(String(args['watch-mcp-results']), 'processed'))
+          : String(args['failed-dir'] || path.join(String(args['watch-mcp-results']), 'failed'));
+        result.mcpResultArchivePath = await moveFileToDir(mcpResultPath, targetDir);
+      }
+      results.push(result);
     }
     const summary = {
       ok: true,
@@ -778,12 +911,16 @@ const main = async () => {
       liveRunway: Boolean(args['live-runway']),
       bridgeRunway: Boolean(args['bridge-runway']),
       mcpResult: args['mcp-result'] ? String(args['mcp-result']) : null,
+      watchMcpResults: args['watch-mcp-results'] ? String(args['watch-mcp-results']) : null,
+      watchMcpResultFiles: watchFiles.length,
+      watchMcpRejectedFiles: watchScan.rejectedFiles,
       fixture: args['fixture-image'] ? String(args['fixture-image']) : null,
       loop,
       updatedAt: new Date().toISOString(),
     };
     console.log(JSON.stringify(summary, null, 2));
     if (!loop) break;
+    if (args['job-id'] && results.some((result) => result.ok || result.terminal || result.status === 'failed' || result.status === 'skipped')) break;
     await sleep(intervalMs);
   } while (true);
 };
