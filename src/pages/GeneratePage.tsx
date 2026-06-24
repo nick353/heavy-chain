@@ -232,7 +232,7 @@ const FEATURE_CONFIG: Record<string, {
     allowedReferenceTypes: ['base', 'style'],
     defaultReferenceType: 'base',
     referenceLabel: '実物商品画像（任意）',
-    referenceHint: 'アップロードすると、この画像を元に4方向のカットを生成します',
+    referenceHint: 'アップロードすると、この画像を元に4方向のカット設計を保存します',
   },
   'model-matrix': {
     requiresImage: false,
@@ -267,7 +267,7 @@ const FEATURE_CONFIG: Record<string, {
     allowedReferenceTypes: ['base'],
     defaultReferenceType: 'base',
     referenceLabel: '元画像',
-    referenceHint: 'この画像のバリエーションを生成します',
+    referenceHint: 'この画像のバリエーション設計を保存します',
   },
   'optimize-prompt': {
     requiresImage: false,
@@ -286,9 +286,11 @@ interface GeneratedResult {
   jobId?: string;
   imageId?: string;
   storagePath?: string;
+  artifactKind?: 'image' | 'planning_brief';
 }
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
+const noImageGenerationMode = true;
 
 const debugLog = (message: string, details?: Record<string, unknown>) => {
   if (!debugGeneration) return;
@@ -363,6 +365,66 @@ const hydrateLightchainCompatContext = (params: URLSearchParams) => {
 const getGeneratedImageKey = (image: GeneratedResult, index: number) => {
   const stablePart = image.id || image.imageUrl || image.label || image.prompt || 'generated-image';
   return `${stablePart}-${index}`;
+};
+
+const escapeXml = (value: string) => value
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&apos;');
+
+const compactText = (value: string, maxLength: number) => {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}…` : normalized;
+};
+
+const getPlanningCardSize = (ratioId: string) => {
+  switch (ratioId) {
+    case '4:5':
+      return { width: 960, height: 1200 };
+    case '3:4':
+      return { width: 900, height: 1200 };
+    case '16:9':
+      return { width: 1280, height: 720 };
+    case '9:16':
+      return { width: 720, height: 1280 };
+    case '4:3':
+      return { width: 1200, height: 900 };
+    default:
+      return { width: 1080, height: 1080 };
+  }
+};
+
+const createPlanningCardDataUrl = ({
+  title,
+  subtitle,
+  ratio,
+  lines,
+}: {
+  title: string;
+  subtitle: string;
+  ratio: string;
+  lines: string[];
+}) => {
+  const { width, height } = getPlanningCardSize(ratio);
+  const lineHeight = Math.max(44, Math.round(height * 0.045));
+  const startY = Math.round(height * 0.36);
+  const safeLines = lines.slice(0, 6).map((line) => compactText(line, 48));
+  const textNodes = safeLines.map((line, index) => (
+    `<text x="8%" y="${startY + index * lineHeight}" font-size="${Math.round(height * 0.031)}" font-family="Inter, Arial, sans-serif" fill="#1f2937">${escapeXml(line)}</text>`
+  )).join('');
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <rect width="100%" height="100%" fill="#f8fafc"/>
+  <rect x="4%" y="4%" width="92%" height="92%" rx="28" fill="#ffffff" stroke="#d4d4d8" stroke-width="2"/>
+  <rect x="8%" y="10%" width="84%" height="10" rx="5" fill="#111827"/>
+  <text x="8%" y="22%" font-size="${Math.round(height * 0.06)}" font-weight="700" font-family="Inter, Arial, sans-serif" fill="#111827">${escapeXml(compactText(title, 28))}</text>
+  <text x="8%" y="29%" font-size="${Math.round(height * 0.029)}" font-family="Inter, Arial, sans-serif" fill="#6b7280">${escapeXml(compactText(subtitle, 52))}</text>
+  ${textNodes}
+  <text x="8%" y="90%" font-size="${Math.round(height * 0.026)}" font-family="Inter, Arial, sans-serif" fill="#71717a">No-image planning mode / ${escapeXml(ratio)}</text>
+</svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.trim())}`;
 };
 
 const buildGenerationIntentHref = (
@@ -486,7 +548,7 @@ function ImageModal({
           </p>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onDownload(image.imageUrl, `${image.label || 'image'}.png`)}
+              onClick={() => onDownload(image.imageUrl, `${image.label || 'planning-brief'}.${image.artifactKind === 'planning_brief' ? 'svg' : 'png'}`)}
               className="flex items-center gap-2 px-4 py-2 bg-white text-neutral-900 rounded-lg hover:bg-neutral-100 transition-colors font-medium"
             >
               <Download className="w-4 h-4" />
@@ -834,7 +896,7 @@ export function GeneratePage() {
       return;
     }
 
-    if (selectedFeatureUsesRunwayMcp && !runwayReadyInApp) {
+    if (!noImageGenerationMode && selectedFeatureUsesRunwayMcp && !runwayReadyInApp) {
       const message = runwayReadinessIssues.length
         ? runwayReadinessIssues.join(' / ')
         : 'Runway MCP生成条件を確認できません。ブランド設定を確認してください';
@@ -912,6 +974,120 @@ export function GeneratePage() {
         hasTextOverlay: !!textOverlay,
         referenceType: referenceImage?.referenceType,
       });
+
+      const planningFeature = selectedFeature;
+      if (noImageGenerationMode && planningFeature && planningFeature.id !== 'optimize-prompt') {
+        const shotLabels: Record<string, string> = {
+          front: '正面',
+          side: '側面',
+          back: '背面',
+          detail: 'ディテール',
+        };
+        const selectedStyleLabel = selectedStyle
+          ? stylePresets.find((style) => style.id === selectedStyle)?.name
+          : null;
+        const primaryBrief = [
+          prompt.trim(),
+          productDescription.trim(),
+          headline.trim(),
+          campaignTitle.trim(),
+          campaignSubheadline.trim(),
+        ].filter(Boolean).join(' / ');
+        const fallbackBrief = planningFeature.name;
+        const featureLines = [
+          `Feature: ${planningFeature.name}`,
+          productDescription.trim() ? `Product: ${productDescription.trim()}` : '',
+          prompt.trim() ? `Concept: ${prompt.trim()}` : '',
+          headline.trim() ? `Headline: ${headline.trim()}` : '',
+          subheadline.trim() ? `Subheadline: ${subheadline.trim()}` : '',
+          campaignTitle.trim() ? `Campaign: ${campaignTitle.trim()}` : '',
+          campaignCTA.trim() ? `CTA: ${campaignCTA.trim()}` : '',
+          selectedStyleLabel ? `Style: ${selectedStyleLabel}` : '',
+          `Ratio: ${selectedRatio}`,
+          referenceImage ? `Reference: ${referenceImage.referenceType || 'attached'}` : '',
+        ].filter(Boolean);
+        const resultLabels = (() => {
+          if (planningFeature.id === 'product-shots') {
+            const shots = selectedShots.length ? selectedShots : ['front', 'side', 'back', 'detail'];
+            return shots.map((shot) => `${shotLabels[shot] || shot}カット設計`);
+          }
+          if (planningFeature.id === 'model-matrix') {
+            return selectedBodyTypes.flatMap((bodyType) => selectedAgeGroups.map((ageGroup) => `${bodyType} ${ageGroup} 着用設計`)).slice(0, 6);
+          }
+          if (planningFeature.id === 'multilingual-banner') {
+            return selectedLanguages.map((language) => `${language.toUpperCase()} バナー設計`);
+          }
+          if (planningFeature.id === 'scene-coordinate') {
+            return selectedScenes.map((scene) => `${sceneOptions.find((item) => item.id === scene)?.name || scene} シーン設計`);
+          }
+          const count = Math.max(1, Math.min(generateCount, 6));
+          return Array.from({ length: count }, (_, index) => `${planningFeature.name} 企画 ${index + 1}`);
+        })();
+        const planIdBase = Date.now().toString();
+        const planningResults: GeneratedResult[] = resultLabels.map((label, index) => {
+          const title = label;
+          const imageUrl = createPlanningCardDataUrl({
+            title,
+            subtitle: primaryBrief || fallbackBrief,
+            ratio: selectedRatio,
+            lines: featureLines,
+          });
+          return {
+            id: `plan-${planIdBase}-${index + 1}`,
+            imageUrl,
+            prompt: primaryBrief || fallbackBrief,
+            label: title,
+            artifactKind: 'planning_brief',
+          };
+        });
+
+        replaceGeneratedImages(planningResults);
+        planningResults.forEach((image, index) => {
+          saveWorkspaceArtifact({
+            id: `no-image-${image.id}`,
+            brandId: currentBrand.id,
+            featureType: planningFeature.id,
+            title: image.label || planningFeature.name,
+            imageUrl: image.imageUrl,
+            prompt: image.prompt,
+            metadata: {
+              artifactKind: 'planning_brief',
+              generationDisabled: true,
+              noImageGenerationMode: true,
+              generatedResultId: image.id,
+              generatedResultLabel: image.label,
+              generationIndex: index,
+              aspectRatio: selectedRatio,
+              selectedStyle: selectedStyleLabel,
+              referenceImagePresent: Boolean(referenceImage),
+              referenceType: referenceImage?.referenceType,
+              selectedShots,
+              selectedBodyTypes,
+              selectedAgeGroups,
+              selectedScenes,
+              selectedLanguages,
+              campaignTitle,
+              campaignSubheadline,
+              campaignCTA,
+              ...(lightchainCompat ? { lightchainCompat } : {}),
+              ...(sourceReadback ? {
+                sourceWorkspace: sourceReadback.sourceWorkspace,
+                workflowVersion: sourceReadback.workflowVersion,
+                sourceLabel: sourceReadback.sourceLabel,
+                sourceResumePath: sourceReadback.sourceResumePath,
+                sourceMode: sourceReadback.sourceMode,
+              } : {}),
+              ...(patternContext ?? {}),
+            },
+          });
+        });
+        if (primaryBrief) {
+          addToHistory(primaryBrief, `${planningFeature.name} 企画`);
+        }
+        setShowSuccessCard(true);
+        toast.success('画像生成なしで企画書を保存しました');
+        return;
+      }
 
       switch (selectedFeature?.id) {
         case 'remove-bg':
@@ -1440,6 +1616,13 @@ export function GeneratePage() {
 
   const handleBulkDownload = async () => {
     if (!currentBrand || generatedImages.length === 0) return;
+    if (noImageGenerationMode || generatedImages.every((image) => image.artifactKind === 'planning_brief' || image.imageUrl.startsWith('data:'))) {
+      generatedImages.forEach((image, index) => {
+        void handleDownload(image.imageUrl, `${image.label || `planning-brief-${index + 1}`}.svg`);
+      });
+      toast.success(`${generatedImages.length}件の企画書カードを保存します`);
+      return;
+    }
     const imageIds = generatedImages.map(img => img.id).filter(Boolean);
     if (imageIds.length === 0) {
       toast.error('ダウンロード可能な画像IDがありません');
@@ -1482,7 +1665,7 @@ export function GeneratePage() {
         >
           <Plus className="w-4 h-4" />
         </button>
-        <span className="text-sm text-neutral-500">枚</span>
+        <span className="text-sm text-neutral-500">{noImageGenerationMode ? '件' : '枚'}</span>
       </div>
     </div>
   );
@@ -1963,7 +2146,7 @@ export function GeneratePage() {
                 ))}
               </div>
               <p className="text-xs text-neutral-500 mt-2">
-                {selectedScenes.length}シーンを生成します
+                {selectedScenes.length}シーンの設計を保存します
               </p>
             </div>
           </div>
@@ -2129,7 +2312,7 @@ export function GeneratePage() {
 
             <div className="bg-primary-50 dark:bg-primary-900/20 rounded-xl p-4">
               <p className="text-sm text-primary-800 dark:text-primary-200">
-                💡 {generateCount}つのスタイル方向（ミニマル、ラグジュアリー、ストリート等）から生成します
+                {generateCount}つのスタイル方向（ミニマル、ラグジュアリー、ストリート等）を企画書にします
               </p>
             </div>
           </div>
@@ -2192,7 +2375,7 @@ export function GeneratePage() {
               <p className="text-xs text-neutral-500 mt-1">{selectedShots.length}カット選択中</p>
             </div>
 
-            {renderCountSelector('生成枚数上限', 1, 4)}
+            {renderCountSelector(noImageGenerationMode ? '保存件数上限' : '生成枚数上限', 1, 4)}
 
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
@@ -2217,7 +2400,7 @@ export function GeneratePage() {
 
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                📸 正面・側面・背面・ディテールの{generateCount}カットを生成します
+                正面・側面・背面・ディテールの{generateCount}カット設計を保存します
               </p>
             </div>
           </div>
@@ -2340,7 +2523,7 @@ export function GeneratePage() {
 
             <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4">
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                ⚠️ {selectedBodyTypes.length * selectedAgeGroups.length}パターンを生成します
+                {selectedBodyTypes.length * selectedAgeGroups.length}パターンの着用設計を保存します
                 {selectedBodyTypes.length * selectedAgeGroups.length > 6 && '（生成に時間がかかる場合があります）'}
               </p>
             </div>
@@ -2482,7 +2665,7 @@ export function GeneratePage() {
           <div className="space-y-4">
             <Textarea
               label="プロンプト"
-              placeholder="生成したい画像を日本語で説明してください"
+              placeholder="作りたい企画や画像指示を日本語で説明してください"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={4}
@@ -2558,13 +2741,16 @@ export function GeneratePage() {
   const runwayPeriodEnd = runwaySubscription?.current_period_end
     ? new Date(runwaySubscription.current_period_end).toLocaleDateString('ja-JP')
     : null;
-  const runwayReadinessText = runwayReadyInApp
+  const generationReadyInApp = noImageGenerationMode || runwayReadyInApp;
+  const runwayReadinessText = noImageGenerationMode
+    ? '画像生成はオフです。Runway接続なしで企画書を保存できます'
+    : runwayReadyInApp
     ? 'サイト側の生成条件は満たしています'
     : runwayReadinessIssues.join(' / ');
   const isGenerateDisabled = (() => {
     if (!selectedFeature) return true;
     if (isGenerating) return true;
-    if (selectedFeatureUsesRunwayMcp && !runwayReadyInApp) return true;
+    if (!noImageGenerationMode && selectedFeatureUsesRunwayMcp && !runwayReadyInApp) return true;
     if (featureConfig?.requiresImage && !referenceImage) return true;
     switch (selectedFeature.id) {
       case 'design-gacha':
@@ -2602,27 +2788,27 @@ export function GeneratePage() {
       >
         <div className="mb-4 sm:mb-6 lg:mb-8">
           <h1 className="text-lg sm:text-xl lg:text-2xl font-display font-semibold text-neutral-900 dark:text-white mb-1 sm:mb-2">
-            画像生成
+            企画書作成
           </h1>
           <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400">
-            生成したい機能を選択してください
+            保存したい企画の種類を選択してください
           </p>
         </div>
 
         <UsageStats className="mb-4 sm:mb-6 lg:mb-8" />
 
         <section className={`mb-6 rounded-2xl border p-4 shadow-soft lg:mb-8 ${
-          runwayReadyInApp
-            ? 'border-green-200 bg-green-50/80 dark:border-green-800 dark:bg-green-950/20'
+          generationReadyInApp
+              ? 'border-green-200 bg-green-50/80 dark:border-green-800 dark:bg-green-950/20'
             : 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
         }`}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
-                {runwayReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
-                Runway生成前チェック
+                {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
+                画像生成オフラインモード
               </div>
-              <p className={`mt-1 text-sm ${runwayReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+              <p className={`mt-1 text-sm ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
                 {runwayReadinessText}
               </p>
             </div>
@@ -2655,11 +2841,11 @@ export function GeneratePage() {
             </div>
             <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
               <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
-                {runwayReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
+                {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
                 最終接続
               </div>
               <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                Hosted bridge
+                {noImageGenerationMode ? '不要' : 'Hosted bridge'}
               </p>
             </div>
           </div>
@@ -2810,7 +2996,7 @@ export function GeneratePage() {
                 ワークスペース再開
               </p>
               <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
-                {sourceReadback.sourceLabel} から受け取った内容で生成します
+                {sourceReadback.sourceLabel} から受け取った内容で企画書を保存します
               </p>
               <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
                 {sourceReadback.workflowVersion} / {sourceReadback.sourceMode}
@@ -2831,7 +3017,7 @@ export function GeneratePage() {
                 Lightchain互換
               </p>
               <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
-                {lightchainCompat.lightchainFeatureTitle} として生成します
+                {lightchainCompat.lightchainFeatureTitle} として企画書を保存します
               </p>
               <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
                 {lightchainCompat.lightchainTaskCodes.join(' / ')}
@@ -2842,25 +3028,25 @@ export function GeneratePage() {
           <UsageStats />
 
           <div className={`rounded-2xl border p-4 ${
-            runwayReadyInApp
+            generationReadyInApp
               ? 'border-green-200 bg-green-50/80 dark:border-green-800 dark:bg-green-950/20'
               : 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
           }`}>
             <div className="flex items-start gap-3">
               <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                runwayReadyInApp
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
+                generationReadyInApp
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
                   : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
               }`}>
-                {runwayReadyInApp ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
+                {generationReadyInApp ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-semibold text-neutral-900 dark:text-white">
-                      Runway生成前チェック
+                      画像生成オフラインモード
                     </p>
-                    <p className={`mt-1 text-sm ${runwayReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                    <p className={`mt-1 text-sm ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
                       {runwayReadinessText}
                     </p>
                   </div>
@@ -2894,11 +3080,11 @@ export function GeneratePage() {
                   </div>
                   <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
                     <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
-                      {runwayReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
+                      {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
                       最終接続
                     </div>
                     <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                      Hosted bridge
+                      {noImageGenerationMode ? '不要' : 'Hosted bridge'}
                     </p>
                   </div>
                 </div>
@@ -2931,7 +3117,7 @@ export function GeneratePage() {
                 size="lg"
                 leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
               >
-                {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : '生成'}
+                {isGenerating ? '保存中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : '企画書を保存'}
               </Button>
             )}
           </div>
@@ -2945,10 +3131,10 @@ export function GeneratePage() {
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-neutral-800 dark:text-white flex items-center gap-2">
-              生成結果
+              保存した企画
               {generatedImages.length > 0 && (
                 <span className="text-xs font-normal text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
-                  {generatedImages.length}枚
+                  {generatedImages.length}件
                 </span>
               )}
             </h2>
@@ -2985,7 +3171,7 @@ export function GeneratePage() {
                 生成しています...
               </h3>
               <p className="text-neutral-500 dark:text-neutral-400 max-w-xs mx-auto mb-8">
-                {selectedFeature.id === 'model-matrix' ? '複数画像の生成には時間がかかります' : 'AIが画像を生成中です。通常20〜30秒ほどかかります。'}
+                入力内容からWorkspaceで使える企画書カードを保存しています。
               </p>
               <div className="w-64 h-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                 <motion.div 
@@ -3058,7 +3244,7 @@ export function GeneratePage() {
                 <ImageIcon className="w-10 h-10 text-neutral-300 dark:text-neutral-600" />
               </div>
               <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-200 mb-2">
-                生成結果がここに表示されます
+                保存した企画書がここに表示されます
               </h3>
               <p className="text-neutral-500 dark:text-neutral-400">
                 {featureConfig?.requiresImage 
@@ -3085,10 +3271,10 @@ export function GeneratePage() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-medium text-green-800 dark:text-green-200 mb-1">
-                        生成が完了しました！
+                        企画書を保存しました
                       </h3>
                       <p className="text-sm text-green-700 dark:text-green-300 mb-3">
-                        {generatedImages.length}枚の画像がギャラリーに保存されました。
+                        {generatedImages.length}件の企画書カードをWorkspaceに保存しました。
                       </p>
                       <div className="flex items-center gap-3">
                         <Button 
@@ -3152,7 +3338,7 @@ export function GeneratePage() {
                         </p>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleDownload(image.imageUrl, `${image.label || 'image'}.png`)}
+                            onClick={() => handleDownload(image.imageUrl, `${image.label || 'planning-brief'}.${image.artifactKind === 'planning_brief' ? 'svg' : 'png'}`)}
                             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white rounded-lg text-sm font-medium text-neutral-900 hover:bg-neutral-100 transition-colors"
                           >
                             <Download className="w-4 h-4" />
@@ -3164,7 +3350,7 @@ export function GeneratePage() {
                             disabled={isGenerating}
                           >
                             <RefreshCw className="w-4 h-4" />
-                            再生成
+                            {noImageGenerationMode ? '再保存' : '再生成'}
                           </button>
                           <button
                             onClick={() => {
