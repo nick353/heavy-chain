@@ -918,7 +918,8 @@ export function GeneratePage() {
   };
 
   const waitForLocalRunwayWorkerResults = async (jobId: string): Promise<GeneratedResult[]> => {
-    const maxAttempts = 180;
+    const maxAttempts = 120;
+    const maxPendingAttempts = 12;
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       const result = await pollLocalRunwayWorkerGeneration(jobId);
       if (result.job.status === 'failed') {
@@ -926,6 +927,9 @@ export function GeneratePage() {
       }
       if (result.job.status === 'completed' && result.images.length > 0) {
         return Promise.all(result.images.map(generatedImageRowToResult));
+      }
+      if (result.job.status === 'pending' && attempt >= maxPendingAttempts) {
+        throw new Error('local_runway_worker_not_running');
       }
       await new Promise((resolve) => setTimeout(resolve, 5000));
     }
