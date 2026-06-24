@@ -292,6 +292,29 @@ function AppRoutes() {
           />
         }
       />
+      <Route
+        path="/contact"
+        element={
+          <StaticInfoPage
+            title="お問い合わせ"
+            description="Heavy Chainの導入相談、不具合報告、権利確認、運用相談はこちらを確認してください。"
+            sections={[
+              {
+                heading: '連絡先',
+                body: '現在の問い合わせ先は contact@heavy-chain.app です。サービス名、ブランド名、対象URL、発生日時、画面や生成物の状況を添えて連絡してください。',
+              },
+              {
+                heading: '不具合報告',
+                body: '生成、Gallery、Canvas、ログイン、モバイル表示の問題は、再現手順、期待動作、実際の動作、スクリーンショットまたはURLを添えると確認が早くなります。',
+              },
+              {
+                heading: '対応しない自動操作',
+                body: '支払い、購入、外部公開、本人確認、秘密情報入力などの不可逆操作は、利用者の明示確認なしに自動実行しません。',
+              },
+            ]}
+          />
+        }
+      />
 
       {/* Protected routes with layout */}
       <Route element={<Layout />}>

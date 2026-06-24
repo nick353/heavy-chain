@@ -638,7 +638,7 @@ export function LandingPage() {
             <div className="flex flex-wrap justify-center gap-10 text-sm text-neutral-500 dark:text-neutral-400 font-medium">
               <a href="/terms" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">利用規約</a>
               <a href="/privacy" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">プライバシーポリシー</a>
-              <a href="mailto:contact@heavy-chain.app" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">お問い合わせ</a>
+              <a href="/contact" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">お問い合わせ</a>
               <a href="/legal" className="hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-300">特商法表記</a>
             </div>
             <p className="text-xs text-neutral-400">
