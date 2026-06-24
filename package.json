@@ -27,6 +27,7 @@
     "build:local-runway-import": "node scripts/build-local-runway-mcp-import-bundle.mjs",
     "worker:local-runway": "node scripts/local-runway-mcp-worker.mjs",
     "worker:local-runway:loop": "node scripts/local-runway-mcp-worker.mjs --loop",
+    "worker:local-runway:watch": "node scripts/local-runway-mcp-worker.mjs --loop --watch-mcp-results output/runway-mcp-results/inbox",
     "verify:runway-approved-generation:blocked-ok": "node scripts/verify-runway-approved-generation-readback.mjs --allow-blocked",
     "verify:runway-free-denial": "node -e \"console.error('verify:runway-free-denial is deprecated: Heavy Chain billing is not a Runway generation gate. Use verify:runway-unapproved-denial and verify:runway-approved-generation.'); process.exit(1)\"",
     "verify:runway-expired-denial": "node -e \"console.error('verify:runway-expired-denial is deprecated: Heavy Chain billing is not a Runway generation gate. Use verify:runway-unapproved-denial and verify:runway-approved-generation.'); process.exit(1)\"",
