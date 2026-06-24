@@ -43,6 +43,9 @@ export const ERROR_MESSAGES: Record<string, string> = {
   RUNWAY_MCP_AUTH_REQUIRED: 'Runway MCPブリッジのRunwayログインが切れています。管理者がRunway MCPへ再接続してください。',
   RUNWAY_MCP_SUBSCRIPTION_INACTIVE: 'Runway側のサブスクまたはクレジットが有効ではありません。Runwayアカウントのプランと残量を確認してください。',
   RUNWAY_MCP_REQUEST_FAILED: 'Runway MCPとの通信に失敗しました。少し待ってから再試行し、続く場合は管理者に接続状態を確認してください。',
+  LOCAL_RUNWAY_WORKER_NOT_RUNNING: 'Mac側のRunway workerが起動していません。workerを起動してから再度生成してください。',
+  LOCAL_RUNWAY_WORKER_TIMEOUT: 'Runway workerの生成完了を確認できませんでした。workerログとRunway接続状態を確認してください。',
+  LOCAL_RUNWAY_OAUTH_FAILED: 'Runway公式OAuthが失敗しています。Runwayの同意画面で「Consent session missing or expired」が出ているため、Runway MCPを再接続してください。',
   PROJECT_NOT_FOUND: 'プロジェクトが見つかりません。',
   BRAND_LIMIT_REACHED: '作成できるブランド数の上限に達しました。',
   
@@ -70,10 +73,13 @@ const KNOWN_MESSAGE_MAP: Array<[RegExp, string]> = [
   [/runway_mcp_connection_not_approved/i, ERROR_MESSAGES.RUNWAY_MCP_CONNECTION_NOT_APPROVED],
   [/runway_mcp_connection_status_unavailable/i, ERROR_MESSAGES.RUNWAY_MCP_CONNECTION_STATUS_UNAVAILABLE],
   [/runway_mcp_bridge_not_configured/i, ERROR_MESSAGES.RUNWAY_MCP_BRIDGE_NOT_CONFIGURED],
+  [/Consent session missing or expired|runway_mcp_local_bridge_failed:401|runway_mcp_remote_exited/i, ERROR_MESSAGES.LOCAL_RUNWAY_OAUTH_FAILED],
   [/runway_mcp_auth_required/i, ERROR_MESSAGES.RUNWAY_MCP_AUTH_REQUIRED],
   [/runway_mcp_subscription_inactive/i, ERROR_MESSAGES.RUNWAY_MCP_SUBSCRIPTION_INACTIVE],
   [/runway_mcp_request_failed/i, ERROR_MESSAGES.RUNWAY_MCP_REQUEST_FAILED],
   [/runway_mcp_output_fetch_failed|runway_mcp_empty_image_response/i, ERROR_MESSAGES.RUNWAY_MCP_REQUEST_FAILED],
+  [/local_runway_worker_not_running/i, ERROR_MESSAGES.LOCAL_RUNWAY_WORKER_NOT_RUNNING],
+  [/local_runway_worker_timeout/i, ERROR_MESSAGES.LOCAL_RUNWAY_WORKER_TIMEOUT],
   [/brand not found or access denied/i, ERROR_MESSAGES.BRAND_ACCESS_DENIED],
   [/missing authorization|unauthorized/i, ERROR_MESSAGES.SESSION_EXPIRED],
 ];

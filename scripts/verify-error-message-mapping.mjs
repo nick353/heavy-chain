@@ -29,6 +29,21 @@ const cases = [
     expected: 'Runwayログインが切れています',
   },
   {
+    name: 'Local Runway worker not running',
+    input: 'local_runway_worker_not_running',
+    expected: 'Mac側のRunway workerが起動していません',
+  },
+  {
+    name: 'Local Runway worker timeout',
+    input: 'local_runway_worker_timeout',
+    expected: 'Runway workerの生成完了を確認できませんでした',
+  },
+  {
+    name: 'Local Runway OAuth failed',
+    input: 'runway_mcp_local_bridge_failed:401:runway_mcp_auth_required',
+    expected: 'Runway公式OAuthが失敗しています',
+  },
+  {
     name: 'Runway subscription inactive',
     input: 'runway_mcp_subscription_inactive',
     expected: 'Runway側のサブスク',
