@@ -399,45 +399,74 @@ export function CanvasEditorPage() {
     });
   };
 
-  const addImageToCanvas = (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
-    const img = new window.Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const newId = addObject({
-        type: 'image',
-        x: 100 + Math.random() * 300,
-        y: 100 + Math.random() * 200,
-        width: Math.min(img.width, 300),
-        height: Math.min(img.height, 300),
-        rotation: 0,
-        scaleX: 1,
-        scaleY: 1,
-        opacity: 1,
-        locked: false,
-        visible: true,
-        src: imageUrl,
-        label,
-        derivedFrom: parentId || null,
-        metadata: metadata ? {
-          ...metadata,
-          timestamp: new Date().toISOString(),
-          parentId: parentId || undefined,
-        } : undefined,
+  const loadCanvasImage = (imageUrl: string) => {
+    const source = imageUrl.trim();
+
+    if (!source) {
+      return Promise.reject(new Error('画像URLが空です'));
+    }
+
+    const createLoader = (useCors: boolean) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new window.Image();
+        if (useCors && !source.startsWith('data:')) {
+          img.crossOrigin = 'anonymous';
+        }
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('画像を読み込めませんでした'));
+        img.src = source;
       });
-      return newId;
-    };
-    img.src = imageUrl;
+
+    return createLoader(true).catch(() => createLoader(false));
   };
 
-  const handleSelectGalleryImage = (imageUrl: string, imageId: string) => {
-    addImageToCanvas(imageUrl, 'Gallery素材', {
-      feature: 'gallery-import',
-      generation: 0,
-      source: 'gallery-selector',
-      imageId,
+  const addImageToCanvas = async (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
+    const img = await loadCanvasImage(imageUrl);
+    const newId = addObject({
+      type: 'image',
+      x: 100 + Math.random() * 300,
+      y: 100 + Math.random() * 200,
+      width: Math.min(img.width, 300),
+      height: Math.min(img.height, 300),
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      locked: false,
+      visible: true,
+      src: imageUrl,
+      label,
+      derivedFrom: parentId || null,
+      metadata: metadata ? {
+        ...metadata,
+        timestamp: new Date().toISOString(),
+        parentId: parentId || undefined,
+      } : undefined,
     });
-    setShowGallerySelector(false);
-    toast.success('Gallery画像をCanvasへ配置しました');
+    return newId;
+  };
+
+  const addImageToCanvasSafely = (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
+    void addImageToCanvas(imageUrl, label, metadata, parentId).catch((error: any) => {
+      console.error('Canvas image load error:', error);
+      toast.error(error?.message || '画像をCanvasへ配置できませんでした');
+    });
+  };
+
+  const handleSelectGalleryImage = async (imageUrl: string, imageId: string) => {
+    try {
+      await addImageToCanvas(imageUrl, 'Gallery素材', {
+        feature: 'gallery-import',
+        generation: 0,
+        source: 'gallery-selector',
+        imageId,
+      });
+      setShowGallerySelector(false);
+      toast.success('Gallery画像をCanvasへ配置しました');
+    } catch (error: any) {
+      console.error('Canvas gallery image load error:', error);
+      toast.error(error?.message || 'Gallery画像をCanvasへ配置できませんでした');
+    }
   };
 
   const handleGenerate = async () => {
@@ -475,7 +504,7 @@ export function CanvasEditorPage() {
           }));
           if (data?.variations) {
             data.variations.forEach((v: any) => {
-              addImageToCanvas(v.imageUrl, v.directionName, {
+              addImageToCanvasSafely(v.imageUrl, v.directionName, {
                 feature: 'design-gacha',
                 prompt: generatePrompt,
                 generation: 0,
@@ -501,7 +530,7 @@ export function CanvasEditorPage() {
           }));
           if (data?.shots) {
             data.shots.forEach((s: any) => {
-              addImageToCanvas(s.imageUrl, s.shotName, {
+              addImageToCanvasSafely(s.imageUrl, s.shotName, {
                 feature: 'product-shots',
                 prompt: productDescription,
                 generation: 0,
@@ -529,7 +558,7 @@ export function CanvasEditorPage() {
           }));
           if (data?.matrix) {
             data.matrix.forEach((m: any) => {
-              addImageToCanvas(m.imageUrl, `${m.bodyTypeName} × ${m.ageGroupName}`, {
+              addImageToCanvasSafely(m.imageUrl, `${m.bodyTypeName} × ${m.ageGroupName}`, {
                 feature: 'model-matrix',
                 prompt: productDescription,
                 generation: 0,
@@ -558,7 +587,7 @@ export function CanvasEditorPage() {
           }));
           if (data?.banners) {
             data.banners.forEach((b: any) => {
-              addImageToCanvas(b.imageUrl, b.languageName, {
+              addImageToCanvasSafely(b.imageUrl, b.languageName, {
                 feature: 'multilingual-banner',
                 prompt: headline,
                 generation: 0,
@@ -585,7 +614,7 @@ export function CanvasEditorPage() {
           }));
           if (data?.images && data.images.length > 0) {
             data.images.forEach((img: any) => {
-              addImageToCanvas(img.imageUrl, undefined, {
+              addImageToCanvasSafely(img.imageUrl, undefined, {
                 feature: 'generate-image',
                 prompt: generatePrompt,
                 generation: 0,
@@ -711,7 +740,7 @@ export function CanvasEditorPage() {
           });
           if (error) throw error;
           if (data?.resultUrl) {
-            addImageToCanvas(data.resultUrl, '背景削除', {
+            addImageToCanvasSafely(data.resultUrl, '背景削除', {
               feature: 'remove-background',
               parentId: objectId,
               generation: (obj.metadata?.generation || 0) + 1,
@@ -735,7 +764,7 @@ export function CanvasEditorPage() {
           if (data?.variations) {
             data.variations.forEach((v: any) => {
               const parameters = { color: v.colorName };
-              addImageToCanvas(v.imageUrl, v.colorName, {
+              addImageToCanvasSafely(v.imageUrl, v.colorName, {
                 feature: 'colorize',
                 parentId: objectId,
                 generation: (obj.metadata?.generation || 0) + 1,
@@ -758,7 +787,7 @@ export function CanvasEditorPage() {
           });
           if (error) throw error;
           if (data?.resultUrl) {
-            addImageToCanvas(data.resultUrl, '高解像度', {
+            addImageToCanvasSafely(data.resultUrl, '高解像度', {
               feature: 'upscale',
               parentId: objectId,
               generation: (obj.metadata?.generation || 0) + 1,
@@ -780,7 +809,7 @@ export function CanvasEditorPage() {
           if (error) throw error;
           if (data?.variations) {
             data.variations.forEach((v: any, i: number) => {
-              addImageToCanvas(v.imageUrl, `バリエーション ${i + 1}`, {
+              addImageToCanvasSafely(v.imageUrl, `バリエーション ${i + 1}`, {
                 feature: 'generate-variations',
                 parentId: objectId,
                 generation: (obj.metadata?.generation || 0) + 1,
@@ -834,7 +863,7 @@ export function CanvasEditorPage() {
 
   // Handle chat edit result
   const handleChatEditResult = (imageUrl: string) => {
-    addImageToCanvas(imageUrl, '編集結果');
+    addImageToCanvasSafely(imageUrl, '編集結果');
   };
 
   // Handle template select
@@ -872,7 +901,7 @@ export function CanvasEditorPage() {
     };
 
     if (action === 'prompt') {
-      addImageToCanvas(editingImage, '編集結果', {
+      addImageToCanvasSafely(editingImage, '編集結果', {
         ...baseMetadata,
         feature: 'prompt-edit',
         prompt: params.prompt,
@@ -890,7 +919,7 @@ export function CanvasEditorPage() {
       });
       if (error) throw error;
       if (data?.resultUrl) {
-        addImageToCanvas(data.resultUrl, '背景削除', {
+        addImageToCanvasSafely(data.resultUrl, '背景削除', {
           ...baseMetadata,
           feature: 'remove-background',
           ...buildDerivedLightchainMetadata(sourceObject, 'remove-background'),
@@ -907,7 +936,7 @@ export function CanvasEditorPage() {
       if (error) throw error;
       data?.variations?.forEach((variation: any) => {
         const parameters = { color: variation.colorName || variation.color };
-        addImageToCanvas(variation.imageUrl, variation.colorName || variation.color || 'カラバリ', {
+        addImageToCanvasSafely(variation.imageUrl, variation.colorName || variation.color || 'カラバリ', {
           ...baseMetadata,
           feature: 'colorize',
           parameters,
@@ -923,7 +952,7 @@ export function CanvasEditorPage() {
       });
       if (error) throw error;
       if (data?.resultUrl) {
-        addImageToCanvas(data.resultUrl, '高解像度', {
+        addImageToCanvasSafely(data.resultUrl, '高解像度', {
           ...baseMetadata,
           feature: 'upscale',
           ...buildDerivedLightchainMetadata(sourceObject, 'upscale', { parameters: { scale: 2 } }),
@@ -938,7 +967,7 @@ export function CanvasEditorPage() {
       });
       if (error) throw error;
       data?.variations?.forEach((variation: any, index: number) => {
-        addImageToCanvas(variation.imageUrl, `バリエーション ${index + 1}`, {
+        addImageToCanvasSafely(variation.imageUrl, `バリエーション ${index + 1}`, {
           ...baseMetadata,
           feature: 'generate-variations',
           prompt: params.prompt,
