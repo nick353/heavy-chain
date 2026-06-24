@@ -41,6 +41,7 @@ import {
   type GenerationIntent,
   type PatternGenerationContext,
 } from '../lib/workspaceHandoff';
+import { buildProductionImagePrompt, mergeProductionNegativePrompt } from '../lib/productPromptQuality';
 import { getWorkflowMetadata, type WorkflowMetadata } from '../lib/workflowMetadata';
 import { getLightchainFeature, getLightchainTaskCodes } from '../lib/lightchainParityCatalog';
 import toast from 'react-hot-toast';
@@ -1090,17 +1091,21 @@ export function GeneratePage() {
         })();
         if (localRunwayWorkerMode) {
           const ratio = aspectRatios.find(r => r.id === selectedRatio) || aspectRatios[0];
-          const workerPrompt = [
-            primaryBrief || fallbackBrief,
-            selectedStyleLabel ? `Style: ${selectedStyleLabel}` : '',
-            featureLines.join(' / '),
-            textOverlay ? `Text overlay: ${JSON.stringify(textOverlay)}` : '',
-          ].filter(Boolean).join('\n');
+          const workerPrompt = buildProductionImagePrompt({
+            feature: planningFeature,
+            userBrief: primaryBrief || fallbackBrief,
+            styleLabel: selectedStyleLabel,
+            aspectRatio: selectedRatio,
+            textOverlay,
+            referenceImagePresent: Boolean(referenceImage),
+            extraLines: featureLines,
+          });
+          const productionNegativePrompt = mergeProductionNegativePrompt(negativePrompt);
           const { job } = await enqueueLocalRunwayWorkerGeneration({
             brandId: currentBrand.id,
             featureType: planningFeature.id,
             prompt: workerPrompt,
-            negativePrompt,
+            negativePrompt: productionNegativePrompt,
             width: ratio.width,
             height: ratio.height,
             count: Math.max(1, Math.min(resultLabels.length || generateCount, 4)),
@@ -1111,6 +1116,9 @@ export function GeneratePage() {
               artifactKind: 'runway_local_worker_request',
               aspectRatio: selectedRatio,
               selectedStyle: selectedStyleLabel ?? null,
+              promptQualityPreset: 'heavy-chain-production-apparel-v1',
+              originalUserBrief: primaryBrief || fallbackBrief,
+              negativePrompt: productionNegativePrompt,
               resultLabels,
               referenceImagePresent: Boolean(referenceImage),
               referenceType: referenceImage?.referenceType ?? null,

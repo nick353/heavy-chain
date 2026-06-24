@@ -9,9 +9,10 @@ interface InfiniteCanvasProps {
   height: number;
   onObjectSelect?: (id: string | null) => void;
   onContextAction?: (action: string, objectId: string | null) => void;
+  onStageReady?: (stage: Konva.Stage | null) => void;
 }
 
-export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction }: InfiniteCanvasProps) {
+export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction, onStageReady }: InfiniteCanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const loadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
@@ -35,6 +36,11 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction 
     updateObject,
     saveToHistory,
   } = useCanvasStore();
+
+  useEffect(() => {
+    onStageReady?.(stageRef.current);
+    return () => onStageReady?.(null);
+  }, [onStageReady]);
 
   useEffect(() => {
     loadedImagesRef.current = loadedImages;

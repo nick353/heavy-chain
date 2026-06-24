@@ -38,6 +38,7 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import type Konva from 'konva';
 
 type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
@@ -66,6 +67,7 @@ export function CanvasEditorPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const projectNameInputRef = useRef<HTMLInputElement>(null);
   const isMountedRef = useRef(true);
+  const canvasStageRef = useRef<Konva.Stage | null>(null);
   const { currentBrand, user, profile } = useAuthStore();
   const { showGuide, completeGuide } = useCanvasGuide(user?.id);
   
@@ -886,6 +888,41 @@ export function CanvasEditorPage() {
     }
   };
 
+  const handleExportCanvas = () => {
+    const stage = canvasStageRef.current;
+    if (!stage) {
+      toast.error('キャンバスの準備が完了していません');
+      return;
+    }
+    const previousScale = stage.scale();
+    const previousPosition = stage.position();
+    try {
+      stage.scale({ x: 1, y: 1 });
+      stage.position({ x: 0, y: 0 });
+      stage.batchDraw();
+
+      const dataUrl = stage.toDataURL({
+        pixelRatio: 2,
+        mimeType: 'image/png',
+      });
+
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${(currentProjectName || 'heavy-chain-canvas').replace(/[\\/:*?"<>|]+/g, '-')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success('CanvasをPNGで書き出しました');
+    } catch (error) {
+      console.error('Canvas export failed:', error);
+      toast.error('PNG書き出しに失敗しました。外部画像を含む場合は個別画像のダウンロードを使ってください');
+    } finally {
+      stage.scale(previousScale);
+      stage.position(previousPosition);
+      stage.batchDraw();
+    }
+  };
+
   // Handle chat edit result
   const handleChatEditResult = (imageUrl: string) => {
     addImageToCanvasSafely(imageUrl, '編集結果');
@@ -1368,6 +1405,7 @@ export function CanvasEditorPage() {
                 onAddText={handleAddText}
                 onAddShape={handleAddShape}
                 onAddFrame={handleAddFrame}
+                onExport={handleExportCanvas}
               />
             </div>
           </div>
@@ -1419,6 +1457,9 @@ export function CanvasEditorPage() {
                   height={canvasSize.height}
                   onObjectSelect={handleObjectSelect}
                   onContextAction={handleContextAction}
+                  onStageReady={(stage) => {
+                    canvasStageRef.current = stage;
+                  }}
                 />
                 
                 {selectedObject && (
