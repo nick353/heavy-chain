@@ -118,6 +118,49 @@ const sceneOptions = [
   { id: 'studio', name: 'スタジオ', prompt: 'professional studio, clean background' },
 ];
 
+const defaultCampaignAssistantPlan = [
+  {
+    title: '商品ヒーロー',
+    description: '商品全体と柄が分かる正方形のEC/SNS向けビジュアル。',
+  },
+  {
+    title: '着用・利用シーン',
+    description: 'ブランドの雰囲気、サイズ感、世界観が伝わる縦構図。',
+  },
+  {
+    title: 'ディテール',
+    description: '素材、プリント、質感に寄ったクローズアップ案。',
+  },
+];
+
+const buildCampaignAssistantPlan = (request: string) => {
+  const trimmed = request.trim();
+  const subject = trimmed
+    .replace(/[。.!?！？].*$/, '')
+    .replace(/を.*/, '')
+    .slice(0, 36) || '商品';
+  const hasSns = /sns|instagram|x（旧twitter）|twitter|投稿|ストーリー/i.test(trimmed);
+  const hasEc = /ec|商品ページ|販売|ショップ|store/i.test(trimmed);
+  const hasLogoTextOff = /(文字|ロゴ).*(なし|無し|入れない|入れず|不要)|なし|無し|無地|no text|no logo/i.test(trimmed);
+  const channel = hasEc && hasSns ? 'ECとSNS' : hasSns ? 'SNS' : hasEc ? 'EC' : '販促';
+  const copyRule = hasLogoTextOff ? '文字・ロゴなしで' : 'コピー余白を残して';
+
+  return [
+    {
+      title: `${subject}の主役カット`,
+      description: `${channel}で最初に見せる1:1構図。${copyRule}、商品全体と柄を明確に見せます。`,
+    },
+    {
+      title: `${subject}の世界観カット`,
+      description: '着用感または利用シーンが伝わる縦構図。ブランドの雰囲気と用途を補強します。',
+    },
+    {
+      title: `${subject}の質感ディテール`,
+      description: '素材、プリント、縫製、柄の見え方を寄りで見せ、購入前の不安を減らします。',
+    },
+  ];
+};
+
 type RunwayMcpConnectionStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
 
 interface RunwayMcpConnectionApproval {
@@ -718,6 +761,9 @@ export function GeneratePage() {
   const [campaignCTA, setCampaignCTA] = useState('');
   const [campaignBrandColor, setCampaignBrandColor] = useState('#ff6b6b');
   const [campaignTextPosition, setCampaignTextPosition] = useState<'top' | 'center' | 'bottom'>('center');
+  const [assistantPrompt, setAssistantPrompt] = useState('');
+  const [assistantPlanConfirmed, setAssistantPlanConfirmed] = useState(false);
+  const [assistantPlanItems, setAssistantPlanItems] = useState(defaultCampaignAssistantPlan);
   
   // Background & Color options
   const [selectedBackground, setSelectedBackground] = useState('white');
@@ -897,6 +943,8 @@ export function GeneratePage() {
 
     if (promptParam !== null) {
       setPrompt(promptParam);
+      setAssistantPrompt(promptParam);
+      setAssistantPlanConfirmed(false);
 
       if (feature?.id === 'product-shots' || feature?.id === 'model-matrix') {
         setProductDescription(promptParam);
@@ -932,6 +980,29 @@ export function GeneratePage() {
     setOptimizedPromptResult('');
     setGenerationError('');
     setSelectedStyle(null);
+  };
+
+  const applyCampaignAssistantPrompt = () => {
+    const value = assistantPrompt.trim();
+    if (!value) {
+      toast.error('作りたいキャンペーン画像の内容を入力してください');
+      return;
+    }
+
+    setAssistantPlanItems(buildCampaignAssistantPlan(value));
+    setAssistantPlanConfirmed(true);
+  };
+
+  const applyCampaignAssistantPlanToForm = () => {
+    const value = assistantPrompt.trim();
+    if (!value) {
+      toast.error('先に生成リクエストを入力してください');
+      return;
+    }
+
+    setPrompt(value);
+    setSelectedRatio((current) => current || '1:1');
+    setGenerateCount((current) => Math.max(current, 3));
   };
 
   const handleBack = () => {
@@ -3427,6 +3498,82 @@ export function GeneratePage() {
 
             {selectedGenerateWorkbench && (
               <div className="mb-5">
+                {selectedFeature.id === 'campaign-image' && (
+                  <div className="mb-5 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-white dark:bg-white dark:text-neutral-950">
+                        <Sparkles className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                          AIアシスタント
+                        </p>
+                        <h3 className="mt-1 text-base font-semibold text-neutral-900 dark:text-white">
+                          作りたい画像を一文で入力
+                        </h3>
+                        <p className="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+                          Lightchain と同じように、まず制作意図を伝えると、3点の生成計画を確認しながら下の詳細設定に進めます。
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
+                      <Textarea
+                        label="生成リクエスト"
+                        placeholder="商品画像をアップロードして、デザインのリクエストを教えてください"
+                        value={assistantPrompt}
+                        onChange={(event) => {
+                          setAssistantPrompt(event.target.value);
+                          setAssistantPlanConfirmed(false);
+                        }}
+                        rows={3}
+                      />
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          onClick={applyCampaignAssistantPrompt}
+                          className="w-full lg:w-auto"
+                          leftIcon={<Sparkles className="h-4 w-4" />}
+                        >
+                          生成計画を作る
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-950">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-neutral-900 dark:text-white">生成計画</p>
+                        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                          assistantPlanConfirmed
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200'
+                        }`}>
+                          {assistantPlanConfirmed ? '確認済み' : '未確認'}
+                        </span>
+                      </div>
+                      <div className="mt-3 grid gap-2 text-sm text-neutral-700 dark:text-neutral-300 md:grid-cols-3">
+                        {assistantPlanItems.map((item, index) => (
+                          <div key={`${item.title}-${index}`} className="rounded-lg bg-white p-3 dark:bg-neutral-900">
+                            <p className="font-semibold text-neutral-900 dark:text-white">
+                              {index + 1}. {item.title}
+                            </p>
+                            <p className="mt-1 text-xs leading-5">{item.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={applyCampaignAssistantPlanToForm}
+                          disabled={!assistantPlanConfirmed}
+                        >
+                          フォームへ反映
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <MaterialWorkbench
                   title={selectedGenerateWorkbench.title}
                   description={selectedGenerateWorkbench.description}
