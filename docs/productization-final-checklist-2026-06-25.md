@@ -2,6 +2,8 @@
 
 Status: app functionality is verified; remaining launch work is product polish, operating discipline, and real customer asset acceptance.
 
+Latest launch-ops proof: use `npm run verify:launch-ops` for a read-only production rehearsal. The command verifies Zeabur asset freshness, authenticated Generate/Gallery/Canvas routes, contact/OGP, mobile Generate/Gallery/Canvas, the saved auth state, and the final Runway hoodie proof without clicking generation submit.
+
 ## Release-Critical
 
 - Generation prompt quality: all user-facing generation requests must pass through `heavy-chain-production-apparel-v1` prompt shaping. The prompt must not include QA labels, verification wording, random logos, or watermark requests unless the user explicitly asks for visible text.
@@ -35,3 +37,7 @@ Status: app functionality is verified; remaining launch work is product polish, 
 - 編集: remove background, colorize, upscale, variations with a real uploaded garment image.
 
 Pass only when the output image is visually product-usable, not merely technically generated.
+
+## Day-One Runbook
+
+The canonical operating handoff is `docs/launch-operations-runbook-2026-06-25.md`.
