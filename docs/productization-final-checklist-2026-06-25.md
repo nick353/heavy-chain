@@ -2,7 +2,7 @@
 
 Status: app functionality is verified; remaining launch work is product polish, operating discipline, and real customer asset acceptance.
 
-Latest launch-ops proof: use `npm run verify:launch-ops` for a read-only production rehearsal. The command verifies Zeabur asset freshness, authenticated Generate/Gallery/Canvas routes, contact/OGP, mobile Generate/Gallery/Canvas, the saved auth state, and the final Runway hoodie proof without clicking generation submit.
+Latest launch-ops proof: use `npm run verify:launch-ops` for a read-only production rehearsal. The command verifies Zeabur asset freshness, authenticated Generate/Gallery/Canvas routes, contact/OGP, mobile Generate/Gallery/Canvas, the saved auth state, relevant app/Supabase HTTP responses, and the previous final Runway hoodie proof bundle without clicking generation submit.
 
 ## Release-Critical
 

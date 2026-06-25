@@ -8,13 +8,24 @@ const args = parseArgs(process.argv.slice(2));
 const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain.zeabur.app');
 const authState = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || 'output/playwright/prod-auth-refresh-20260625/auth-state.json';
 const outDir = args.out || `output/playwright/launch-operations-readiness-${dateStamp()}`;
-const expectedAsset = args.expectedAsset || process.env.HEAVY_CHAIN_EXPECTED_ASSET || 'assets/index.CTWP3Xmm.js';
+const expectedAsset = args.expectedAsset
+  || process.env.HEAVY_CHAIN_EXPECTED_ASSET
+  || readCurrentBuildAsset()
+  || null;
+const expectedAssetSource = args.expectedAsset
+  ? 'arg'
+  : process.env.HEAVY_CHAIN_EXPECTED_ASSET
+    ? 'env'
+    : expectedAsset
+      ? 'dist/index.html'
+      : 'missing';
 
 const evidence = {
   workflow: 'launch-operations-readiness',
   capturedAt: new Date().toISOString(),
   baseUrl,
   expectedAsset,
+  expectedAssetSource,
   authState,
   outDir,
   irreversibleActions: {
@@ -34,6 +45,10 @@ const evidence = {
     state: 'STATE.md',
   },
 };
+const trackedHostnames = new Set([
+  new URL(baseUrl).hostname,
+  'ghwjymozrwmcrpjqvbmo.supabase.co',
+]);
 
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -84,10 +99,12 @@ process.exit(evidence.ok ? 0 : 1);
 async function checkProductionAsset() {
   const response = await context.request.get(`${baseUrl}/`);
   const body = await response.text();
-  pushCheck('Zeabur serves expected current asset', response.ok() && body.includes(expectedAsset), {
+  const currentAsset = extractIndexAsset(body);
+  pushCheck('Zeabur serves expected current asset', response.ok() && Boolean(expectedAsset) && currentAsset === expectedAsset, {
     status: response.status(),
     expectedAsset,
-    found: body.includes(expectedAsset),
+    currentAsset,
+    found: currentAsset === expectedAsset,
   });
 }
 
@@ -222,9 +239,7 @@ async function checkMobileRoutes() {
   try {
     for (const item of mobileChecks) {
       const page = await mobile.newPage();
-      page.on('console', (message) => recordConsole(message));
-      page.on('pageerror', (error) => evidence.pageErrors.push(error.message));
-      page.on('requestfailed', (request) => recordRequestFailure(request));
+      attachPageObservers(page);
       await page.goto(`${baseUrl}${item.path}`, { waitUntil: 'domcontentloaded' });
       await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => undefined);
       await page.waitForTimeout(1000);
@@ -266,7 +281,6 @@ async function checkDocsAndProofFiles() {
   const docsStateExpectedText = [
     'verify:launch-ops',
     expectedAsset,
-    outDir,
     'read-only',
     'without submit',
     'not_clicked',
@@ -274,13 +288,14 @@ async function checkDocsAndProofFiles() {
   ];
   const docsStateCombined = `${stateText}\n${checklistText}\n${runbookText}\n${JSON.stringify(evidence.irreversibleActions)}`;
   const missingDocsStateText = docsStateExpectedText.filter((text) => !docsStateCombined.includes(text));
-  pushCheck('Launch proof bundle is present and internally passing', missing.length === 0 && finalSummary?.ok === true && targetedSummary?.ok === true && authSummary?.ok === true && runwayImage.width === 1536 && runwayImage.height === 1920 && missingDocsStateText.length === 0, {
+  pushCheck('Previous launch proof bundle is present and internally passing', missing.length === 0 && finalSummary?.ok === true && targetedSummary?.ok === true && authSummary?.ok === true && runwayImage.width === 1536 && runwayImage.height === 1920 && missingDocsStateText.length === 0, {
     missing,
     missingDocsStateText,
     finalSummaryOk: finalSummary?.ok,
     targetedSummaryOk: targetedSummary?.ok,
     authSummaryOk: authSummary?.ok,
     runwayImage,
+    scope: 'historical_proof_bundle_only_current_run_checks_routes_asset_and_http',
   });
 }
 
@@ -294,6 +309,7 @@ function attachPageObservers(page) {
   page.on('console', (message) => recordConsole(message));
   page.on('pageerror', (error) => evidence.pageErrors.push(error.message));
   page.on('requestfailed', (request) => recordRequestFailure(request));
+  page.on('response', (response) => recordHttpFailure(response));
 }
 
 function recordConsole(message) {
@@ -305,12 +321,33 @@ function recordConsole(message) {
 
 function recordRequestFailure(request) {
   const url = request.url();
-  if (!/heavy-chain\.zeabur\.app|supabase\.co/.test(url)) return;
+  if (!shouldTrackNetworkUrl(url)) return;
   evidence.networkFailures.push({
     url: sanitizeImageSrc(url),
     method: request.method(),
     failure: request.failure()?.errorText || 'unknown',
   });
+}
+
+function recordHttpFailure(response) {
+  const url = response.url();
+  const status = response.status();
+  if (status < 400) return;
+  if (!shouldTrackNetworkUrl(url)) return;
+  if (status === 404 && /\/favicon\.ico(?:$|\?)/i.test(url)) return;
+  evidence.networkFailures.push({
+    url: sanitizeImageSrc(url),
+    method: response.request().method(),
+    status,
+  });
+}
+
+function shouldTrackNetworkUrl(rawUrl) {
+  try {
+    return trackedHostnames.has(new URL(rawUrl).hostname);
+  } catch {
+    return false;
+  }
 }
 
 function sanitizeImageSrc(src) {
@@ -333,6 +370,16 @@ function readText(filePath) {
   } catch {
     return '';
   }
+}
+
+function readCurrentBuildAsset() {
+  const htmlPath = 'dist/index.html';
+  if (!fs.existsSync(htmlPath)) return null;
+  return extractIndexAsset(fs.readFileSync(htmlPath, 'utf8'));
+}
+
+function extractIndexAsset(html) {
+  return String(html || '').match(/assets\/index\.[A-Za-z0-9_-]+\.js/)?.[0] || null;
 }
 
 function pushCheck(name, passed, details) {

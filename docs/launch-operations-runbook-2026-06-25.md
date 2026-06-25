@@ -60,19 +60,22 @@ npm run worker:local-runway -- --job-id <generation_jobs.id> --mcp-result output
 Run this before a public demo, sales call, or release handoff:
 
 ```bash
+npm run build
 npm run verify:launch-ops
 ```
 
-The command uses the saved production auth state at `output/playwright/prod-auth-refresh-20260625/auth-state.json`, opens `https://heavy-chain.zeabur.app`, verifies the current Zeabur asset, checks Dashboard, Generate, Gallery, Canvas, contact/OGP, mobile Generate/Gallery/Canvas, and confirms the final Runway image proof bundle exists. It fills the Generate prompt but does not submit generation.
+The commands refresh the local build manifest used as the expected asset, use the saved production auth state at `output/playwright/prod-auth-refresh-20260625/auth-state.json`, open `https://heavy-chain.zeabur.app`, verify the current Zeabur asset, check Dashboard, Generate, Gallery, Canvas, contact/OGP, mobile Generate/Gallery/Canvas, confirm the previous launch proof bundle exists, and fail on relevant app/Supabase HTTP 4xx/5xx responses. The verifier fills the Generate prompt but does not submit generation.
 
 Override paths when needed:
 
 ```bash
+npm run build
 HEAVY_CHAIN_BASE_URL=https://heavy-chain.zeabur.app \
 HEAVY_CHAIN_AUTH_STATE=output/playwright/prod-auth-refresh-20260625/auth-state.json \
-HEAVY_CHAIN_EXPECTED_ASSET=assets/index.CTWP3Xmm.js \
 npm run verify:launch-ops
 ```
+
+`HEAVY_CHAIN_EXPECTED_ASSET=assets/index.<hash>.js` should be set explicitly when verifying a known deployed hash. If it is not set, the verifier reads the current build asset from `dist/index.html`, which is intended for a just-built tree that matches the deployed Zeabur revision.
 
 ## Quantity UAT
 
