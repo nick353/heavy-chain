@@ -19,6 +19,7 @@
     "verify:error-messages": "node --experimental-strip-types scripts/verify-error-message-mapping.mjs",
     "verify:lightchain-ui": "node scripts/verify-lightchain-production-ui.mjs",
     "verify:lightchain-navigation": "node scripts/verify-lightchain-production-navigation.mjs",
+    "verify:mass-market-qa": "node scripts/verify-mass-market-qa.mjs",
     "verify:goal-readiness": "node scripts/audit-heavy-chain-goal-readiness.mjs",
     "verify:goal-readiness:incomplete-ok": "node scripts/audit-heavy-chain-goal-readiness.mjs --allow-incomplete",
     "test:runway-readiness": "node --test scripts/verify-runway-production-readiness.test.mjs",
