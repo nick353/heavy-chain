@@ -181,7 +181,9 @@ function AppRoutes() {
         try {
           await initialize();
         } catch (error) {
-          console.error('Failed to initialize authentication:', error);
+          if (import.meta.env.DEV) {
+            console.error('Failed to initialize authentication:', error);
+          }
         }
       }
     };

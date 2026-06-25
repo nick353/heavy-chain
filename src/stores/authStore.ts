@@ -32,6 +32,21 @@ const fetchFirstAccessibleBrand = async (): Promise<Brand | null> => {
   return brands?.[0] || null;
 };
 
+const isRecoverableNetworkError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return /Failed to fetch|NetworkError|Load failed|ERR_ABORTED/i.test(message);
+};
+
+const logAuthError = (message: string, error: unknown) => {
+  if (!import.meta.env.DEV) return;
+
+  if (isRecoverableNetworkError(error)) {
+    console.warn(message, error);
+    return;
+  }
+  console.error(message, error);
+};
+
 export const ensureUserProfile = async (user: User, name?: string | null): Promise<DbUser | null> => {
   const { data: profile, error } = await supabase
     .from('users')
@@ -82,7 +97,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               currentBrand = await fetchFirstAccessibleBrand();
               break;
             } catch (brandsError) {
-              console.error('Failed to fetch brands (retry:', 4 - retries, '):', brandsError);
+              logAuthError(`Failed to fetch brands (retry: ${4 - retries}):`, brandsError);
               retries--;
               if (retries > 0) {
                 await new Promise(resolve => setTimeout(resolve, 500));
@@ -96,7 +111,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             currentBrand,
           });
         } catch (error) {
-          console.error('Error fetching user data:', error);
+          logAuthError('Error fetching user data:', error);
           set({
             user: session.user,
             profile: null,
@@ -119,7 +134,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               currentBrand,
             });
           } catch (error) {
-            console.error('Error in auth state change:', error);
+            logAuthError('Error in auth state change:', error);
             set({
               user: session.user,
               profile: null,
@@ -131,7 +146,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       });
     } catch (error) {
-      console.error('Failed to initialize auth:', error);
+      logAuthError('Failed to initialize auth:', error);
     } finally {
       set({ isLoading: false, isInitialized: true });
     }
