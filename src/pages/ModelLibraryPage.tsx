@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, Save, Shirt, SlidersHorizontal, Sparkles, UserRound } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import {
+  buildMaterialReferenceMetadata,
+  type MaterialReferenceState,
+} from '../lib/workspaceMaterialReferences';
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
 const intents = ['EC標準', 'LOOK確認', '広告検証'] as const;
@@ -103,6 +108,17 @@ const modelCandidates: ModelCandidate[] = [
     modelMatrixHairStyle: 'long',
   },
 ];
+
+const initialModelMaterial: MaterialReferenceState = {
+  imageUrl: '',
+  fileName: '',
+  materialKind: 'モデル参照',
+  maskMode: 'keep',
+  activeLayer: '顔',
+  placement: '正面',
+  scale: 58,
+  note: '顔、ポーズ、商品写真を置いてモデル条件に反映する',
+};
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -209,6 +225,7 @@ export function ModelLibraryPage() {
   const [ageGroup, setAgeGroup] = useState(modelCandidates[0].ageGroup);
   const [usage, setUsage] = useState<Intent>(modelCandidates[0].usage);
   const [productDescription, setProductDescription] = useState(modelCandidates[0].productDescription);
+  const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialModelMaterial);
   const nextHistoryId = useRef(3);
   const selectedCandidate = modelCandidates.find((candidate) => candidate.id === selectedCandidateId) ?? modelCandidates[0];
   const primaryInput = `${face} / ${pose} / ${bodyType} / ${skinTone} / ${ageGroup} / ${usage} / ${productDescription}`;
@@ -287,6 +304,10 @@ export function ModelLibraryPage() {
       modelMatrixSkinTone: selectedCandidate.modelMatrixSkinTone,
       modelMatrixHairStyle: selectedCandidate.modelMatrixHairStyle,
     };
+    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
+    const materialReferenceSummary = materialReferenceMetadata.hasImage
+      ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
+      : '素材画像なし';
     const generationPrompt = [
       `Face: ${face}`,
       `Pose: ${pose}`,
@@ -295,6 +316,7 @@ export function ModelLibraryPage() {
       `Age group: ${ageGroup}`,
       `Usage: ${usage}`,
       `Product description: ${productDescription}`,
+      `Material reference: ${materialReferenceSummary}`,
     ].join('\n');
     const prompt = [
       `Primary input: ${primaryInput}`,
@@ -305,6 +327,7 @@ export function ModelLibraryPage() {
       `Age group: ${ageGroup}`,
       `Usage: ${usage}`,
       `Product description: ${productDescription}`,
+      `Material reference: ${materialReferenceSummary}`,
       `Next step: ${nextStep}`,
     ].join('\n');
     const { projectId } = handoffWorkspaceToCanvas({
@@ -313,7 +336,7 @@ export function ModelLibraryPage() {
       projectName: `モデルライブラリ: ${usage}`,
       title: `モデルライブラリ: ${usage}`,
       prompt,
-      imageUrl: previewImageUrl,
+      imageUrl: materialReference.imageUrl || previewImageUrl,
       summary: `${usage}の進捗 ${progress}%`,
       note,
       activeChoice: usage,
@@ -334,10 +357,12 @@ export function ModelLibraryPage() {
           modelMatrixSkinTone: selectedCandidate.modelMatrixSkinTone,
           modelMatrixHairStyle: selectedCandidate.modelMatrixHairStyle,
           selectedModelCandidate: selectedModelCandidateMetadata,
+          materialReference: materialReferenceMetadata,
         },
         plan: {
           modelLibrary: 'model-library-workspace',
           selectedModelCandidate: selectedModelCandidateMetadata,
+          materialReference: materialReferenceMetadata,
           preview: {
             previewKind: 'deterministic-svg',
             marker: 'selected-model-candidate',
@@ -370,6 +395,19 @@ export function ModelLibraryPage() {
           skinTone: selectedCandidate.modelMatrixSkinTone,
           hairStyle: selectedCandidate.modelMatrixHairStyle,
           modelCandidateLabel: selectedCandidate.label,
+          materialReferences: [materialReferenceMetadata],
+          layerPlan: {
+            activeLayer: materialReference.activeLayer,
+            placement: materialReference.placement,
+            scale: materialReference.scale,
+          },
+          maskPlan: {
+            maskMode: materialReference.maskMode,
+          },
+          compositionPreview: {
+            selectedModelCandidate: selectedCandidate.id,
+            hasUploadedMaterial: Boolean(materialReference.imageUrl),
+          },
           ...generationSource,
         },
       },
@@ -378,14 +416,30 @@ export function ModelLibraryPage() {
         previewKind: 'deterministic-svg',
         marker: 'selected-model-candidate',
         imageUrl: previewImageUrl,
+        materialReference: materialReferenceMetadata,
       },
       selectedModelCandidate: selectedModelCandidateMetadata,
+      materialReferences: [materialReferenceMetadata],
+      layerPlan: {
+        activeLayer: materialReference.activeLayer,
+        placement: materialReference.placement,
+        scale: materialReference.scale,
+      },
+      maskPlan: {
+        maskMode: materialReference.maskMode,
+      },
+      compositionPreview: {
+        selectedModelCandidate: selectedCandidate.id,
+        previewKind: materialReference.imageUrl ? 'uploaded-material-reference' : 'deterministic-svg',
+        imageUrl: materialReference.imageUrl || previewImageUrl,
+      },
       metadata: {
         workspace: 'models',
         searchTokens: ['model-library-workspace', 'model-matrix', usage],
         sourceLabel: generationSource.sourceLabel,
         sourceResumePath: generationSource.sourceResumePath,
         selectedModelCandidate: selectedModelCandidateMetadata,
+        materialReference: materialReferenceMetadata,
       },
     });
 
@@ -497,12 +551,25 @@ export function ModelLibraryPage() {
             </div>
           </div>
 
-          <div className="glass-panel rounded-2xl p-5">
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="h-5 w-5 text-primary-500" />
-              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">細部を調整</h2>
-            </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
+	          <div className="glass-panel rounded-2xl p-5">
+	            <div className="flex items-center gap-2">
+	              <SlidersHorizontal className="h-5 w-5 text-primary-500" />
+	              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">細部を調整</h2>
+	            </div>
+	            <div className="mt-4">
+	              <MaterialWorkbench
+	                title="モデル参照素材"
+	                description="顔、ポーズ、商品写真をアップロードし、どのレイヤーへ効かせるかを先に決めます。"
+	                uploadLabel="顔・ポーズ・商品参照をアップロード"
+	                emptyLabel="参照画像を置くとCanvasにモデル条件の実素材として残ります"
+	                state={materialReference}
+	                onChange={setMaterialReference}
+	                materialKinds={['モデル参照', '顔参照', 'ポーズ参照', '商品写真', '背景参照']}
+	                layerOptions={['顔', 'ポーズ', '体型', '衣服', '背景']}
+	                placementOptions={['正面', '斜め45度', '全身', '上半身', '商品横']}
+	              />
+	            </div>
+	            <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className="text-sm font-semibold text-neutral-900 dark:text-white">
                 顔
                 <textarea value={face} onChange={(event) => setFace(event.target.value)} rows={2} className={fieldClass} />

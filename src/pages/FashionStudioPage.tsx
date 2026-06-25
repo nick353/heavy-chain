@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, Save } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import {
+  buildMaterialReferenceMetadata,
+  type MaterialReferenceState,
+} from '../lib/workspaceMaterialReferences';
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
 const choices = ['ライン企画', '素材確認', 'EC準備'];
@@ -92,6 +97,17 @@ const backgroundOptions: StudioOption[] = [
     supportingText: '店頭展開の仮説確認',
   },
 ];
+
+const initialStudioMaterial: MaterialReferenceState = {
+  imageUrl: '',
+  fileName: '',
+  materialKind: '衣服',
+  maskMode: 'auto',
+  activeLayer: '衣服',
+  placement: 'モデル前面',
+  scale: 62,
+  note: '実商品、背景、小物の参照を置いて撮影セットを組む',
+};
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -199,6 +215,7 @@ export function FashionStudioPage() {
   const [props, setProps] = useState('シルバーアクセサリー、ミニバッグ');
   const [productLine, setProductLine] = useState('Heavy Chain 2026 SS シアージャケット');
   const [referenceImage, setReferenceImage] = useState('参照画像: lookbook_ref_01.jpg / fabric_ref_02.png');
+  const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialStudioMaterial);
   const nextHistoryId = useRef(3);
   const selectedStudioSetup = useMemo<StudioSetup>(() => ({
     model: modelOptions.find((option) => option.id === selectedModelId) ?? modelOptions[0],
@@ -274,6 +291,10 @@ export function FashionStudioPage() {
         value: background,
       },
     };
+    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
+    const materialReferenceSummary = materialReferenceMetadata.hasImage
+      ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
+      : '素材画像なし';
     const generationPrompt = [
       productLine,
       modelProfile,
@@ -281,6 +302,7 @@ export function FashionStudioPage() {
       background,
       props,
       referenceImage,
+      materialReferenceSummary,
     ].join('\n');
     const prompt = [
       `Primary input: ${primaryInput}`,
@@ -290,6 +312,7 @@ export function FashionStudioPage() {
       `Props: ${props}`,
       `Product line: ${productLine}`,
       `Reference: ${referenceImage}`,
+      `Material reference: ${materialReferenceSummary}`,
       `Next step: ${nextStep}`,
     ].join('\n');
     const { projectId } = handoffWorkspaceToCanvas({
@@ -298,7 +321,7 @@ export function FashionStudioPage() {
       projectName: `Fashion Studio: ${activeChoice}`,
       title: `Fashion Studio: ${activeChoice}`,
       prompt,
-      imageUrl: previewImageUrl,
+      imageUrl: materialReference.imageUrl || previewImageUrl,
       summary: `${activeChoice}の進捗 ${progress}%`,
       note,
       activeChoice,
@@ -314,11 +337,13 @@ export function FashionStudioPage() {
           productLine,
           referenceImage,
           selectedStudioSetup: selectedStudioSetupMetadata,
+          materialReference: materialReferenceMetadata,
         },
         plan: {
           modelLibrary: 'studio-model-library',
           scene: background,
           selectedStudioSetup: selectedStudioSetupMetadata,
+          materialReference: materialReferenceMetadata,
           preview: {
             previewKind: 'deterministic-svg',
             marker: 'selected-studio-setup',
@@ -341,6 +366,19 @@ export function FashionStudioPage() {
             ...generationSource,
           }),
           label: 'モデルマトリクスで生成',
+          materialReferences: [materialReferenceMetadata],
+          layerPlan: {
+            activeLayer: materialReference.activeLayer,
+            placement: materialReference.placement,
+            scale: materialReference.scale,
+          },
+          maskPlan: {
+            maskMode: materialReference.maskMode,
+          },
+          compositionPreview: {
+            selectedStudioSetup: `${selectedModelId}/${selectedPoseId}/${selectedBackgroundId}`,
+            hasUploadedMaterial: Boolean(materialReference.imageUrl),
+          },
           ...generationSource,
         },
       },
@@ -349,12 +387,28 @@ export function FashionStudioPage() {
         previewKind: 'deterministic-svg',
         marker: 'selected-studio-setup',
         imageUrl: previewImageUrl,
+        materialReference: materialReferenceMetadata,
       },
       selectedStudioSetup: selectedStudioSetupMetadata,
+      materialReferences: [materialReferenceMetadata],
+      layerPlan: {
+        activeLayer: materialReference.activeLayer,
+        placement: materialReference.placement,
+        scale: materialReference.scale,
+      },
+      maskPlan: {
+        maskMode: materialReference.maskMode,
+      },
+      compositionPreview: {
+        selectedStudioSetup: `${selectedModelId}/${selectedPoseId}/${selectedBackgroundId}`,
+        previewKind: materialReference.imageUrl ? 'uploaded-material-reference' : 'deterministic-svg',
+        imageUrl: materialReference.imageUrl || previewImageUrl,
+      },
       metadata: {
         workspace: 'studio',
         searchTokens: ['studio-model-library', 'fashion-studio', activeChoice],
         selectedStudioSetup: selectedStudioSetupMetadata,
+        materialReference: materialReferenceMetadata,
       },
     });
 
@@ -405,11 +459,23 @@ export function FashionStudioPage() {
 
       <section className="grid gap-5 lg:grid-cols-2">
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-            <div>
-              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">生成前スタジオ設定</h2>
-              <div className="mt-4 space-y-5">
-                <div>
+	          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+	            <div>
+	              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">生成前スタジオ設定</h2>
+	              <div className="mt-4 space-y-5">
+	                <MaterialWorkbench
+	                  title="スタジオ素材"
+	                  description="衣服、背景、小物の参照画像を置き、撮影セットのレイヤーとして組み立てます。"
+	                  uploadLabel="衣服・背景・小物をアップロード"
+	                  emptyLabel="実素材を置くと、Canvasに撮影セットの参照画像として残ります"
+	                  state={materialReference}
+	                  onChange={setMaterialReference}
+	                  materialKinds={['衣服', '背景', '小物', 'モデル参照', 'LOOK参考']}
+	                  layerOptions={['衣服', 'モデル', '背景', '小物', '影']}
+	                  placementOptions={['モデル前面', '背景全面', '左手小物', '足元', '横並び比較']}
+	                />
+
+	                <div>
                   <p className="text-sm font-semibold text-neutral-900 dark:text-white">モデル候補</p>
                   <div className="mt-2 grid gap-3 md:grid-cols-3">
                     {modelOptions.map((option) => (

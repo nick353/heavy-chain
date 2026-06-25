@@ -1,4 +1,4 @@
-import { type ChangeEvent, useMemo, useState } from 'react';
+import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -498,6 +498,71 @@ const statusTone: Record<ToolStatus, string> = {
 
 const totalToolCount = tools.length;
 
+const categoryWorkbenchLabels: Record<ToolCategory, {
+  uploadLabel: string;
+  emptyLabel: string;
+  materialKinds: string[];
+  layers: Array<[string, string]>;
+  placements: string[];
+}> = {
+  home: {
+    uploadLabel: '制作素材をアップロード',
+    emptyLabel: '商品、モデル、背景、柄など制作の起点になる素材を置きます',
+    materialKinds: ['商品画像', '衣服', 'モデル参照'],
+    layers: [['base', '素材ベース'], ['mask', 'マスク'], ['design', 'デザイン'], ['output', '出力']],
+    placements: ['中央', '横並び比較', '全面', '商品横'],
+  },
+  marketing: {
+    uploadLabel: '商品・販促素材をアップロード',
+    emptyLabel: '商品写真を置き、背景やコピーのレイヤーを重ねます',
+    materialKinds: ['商品画像', '背景', 'ロゴ', '販促参考'],
+    layers: [['product', '商品'], ['background', '背景'], ['copy', 'コピー'], ['cta', 'CTA']],
+    placements: ['中央大きめ', '左商品右コピー', 'EC正方形', 'SNS縦長'],
+  },
+  fitting: {
+    uploadLabel: '衣服画像をアップロード',
+    emptyLabel: '平置き、トルソー、着用写真から衣服参照を作ります',
+    materialKinds: ['Tシャツ', 'フーディー', 'ジャケット', 'パンツ', '背景'],
+    layers: [['garment', '衣服ベース'], ['mask', 'カットマスク'], ['print', 'プリント'], ['fit', '着用展開']],
+    placements: ['胸中央', '背面大判', '袖ワンポイント', '全面総柄'],
+  },
+  planning: {
+    uploadLabel: '変更対象の服画像をアップロード',
+    emptyLabel: '変更したい箇所をマスクし、ディテールの候補を重ねます',
+    materialKinds: ['対象服', '襟', '袖', 'ポケット', '素材参考'],
+    layers: [['base', '元画像'], ['mask', '変更範囲'], ['detail', 'ディテール'], ['compare', '比較']],
+    placements: ['襟元', '袖', '裾', 'ポケット', '全面'],
+  },
+  graphics: {
+    uploadLabel: '柄・ロゴ・服モックをアップロード',
+    emptyLabel: '柄やロゴを置き、服の上へ配置して確認します',
+    materialKinds: ['柄画像', 'ロゴ', '服モック', '生地テクスチャ'],
+    layers: [['pattern', '柄'], ['mask', 'マスク'], ['garment', '服'], ['plate', '版下']],
+    placements: ['胸中央', '背面大判', '袖', '全面総柄', '小物'],
+  },
+  model: {
+    uploadLabel: 'モデル・ポーズ参照をアップロード',
+    emptyLabel: '顔、ポーズ、体型、背景の参照画像を置きます',
+    materialKinds: ['モデル参照', '顔参照', 'ポーズ参照', '背景参照'],
+    layers: [['face', '顔'], ['pose', 'ポーズ'], ['body', '体型'], ['background', '背景']],
+    placements: ['正面', '斜め45度', '全身', '上半身'],
+  },
+  video: {
+    uploadLabel: '開始画像・商品画像をアップロード',
+    emptyLabel: '動画の開始フレーム、商品、終了フレームを素材として置きます',
+    materialKinds: ['開始画像', '終了画像', '商品画像', '背景'],
+    layers: [['start', '開始'], ['motion', '動き'], ['product', '商品'], ['end', '終了']],
+    placements: ['1ショット目', '中央商品', 'クローズアップ', 'CTA前'],
+  },
+  lab: {
+    uploadLabel: '実験素材をアップロード',
+    emptyLabel: '変換したい素材を置き、処理範囲と品質確認レイヤーを作ります',
+    materialKinds: ['素材画像', '物撮り', '背景', '比較対象'],
+    layers: [['source', '元画像'], ['mask', '処理範囲'], ['quality', '品質確認'], ['result', '結果']],
+    placements: ['中央', '左比較', '右結果', '全面'],
+  },
+};
+
 const textArtifactPreview =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjkwMCIgdmlld0JveD0iMCAwIDEyMDAgOTAwIj48cmVjdCB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI5MDAiIGZpbGw9IiMwZjE3MmEiLz48cmVjdCB4PSI5NiIgeT0iOTYiIHdpZHRoPSIxMDA4IiBoZWlnaHQ9IjcwOCIgcng9IjQwIiBmaWxsPSIjMTExODI3IiBzdHJva2U9IiMyMmQzZWUiIHN0cm9rZS13aWR0aD0iNCIvPjx0ZXh0IHg9IjE1MCIgeT0iMjEwIiBmaWxsPSIjZTVlN2ViIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNTQiIGZvbnQtd2VpZ2h0PSI3MDAiPkxpZ2h0Y2hhaW4gY29tcGF0aWJsZSBicmllZjwvdGV4dD48dGV4dCB4PSIxNTAiIHk9IjMwMCIgZmlsbD0iIzY3ZThmOSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjM0Ij5IZWF2eSBDaGFpbiBDYW52YXMgb3JkZXIgc2hlZXQ8L3RleHQ+PC9zdmc+';
 
@@ -530,7 +595,7 @@ export function LightchainWorkbenchPage() {
   const [garmentFileName, setGarmentFileName] = useState('');
   const [garmentCategory, setGarmentCategory] = useState('フーディー');
   const [cutMode, setCutMode] = useState<'auto' | 'manual' | 'keep'>('auto');
-  const [activeLayer, setActiveLayer] = useState<'garment' | 'mask' | 'print' | 'fit'>('print');
+  const [activeLayer, setActiveLayer] = useState('print');
   const [printPlacement, setPrintPlacement] = useState('胸中央');
   const [printScale, setPrintScale] = useState(46);
   const [analysisStatus, setAnalysisStatus] = useState<'empty' | 'ready'>('empty');
@@ -553,6 +618,15 @@ export function LightchainWorkbenchPage() {
 
   const selectedTool = tools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? tools[0];
   const selectedCategory = categories.find((category) => category.id === activeCategory) ?? categories[0];
+  const workbenchLabels = categoryWorkbenchLabels[selectedTool.category] ?? categoryWorkbenchLabels.home;
+  const workbenchEnabled = selectedTool.status !== 'coming-soon';
+
+  useEffect(() => {
+    const defaults = categoryWorkbenchLabels[selectedTool.category] ?? categoryWorkbenchLabels.home;
+    setGarmentCategory(defaults.materialKinds[0] ?? '素材');
+    setActiveLayer(defaults.layers[0]?.[0] ?? 'base');
+    setPrintPlacement(defaults.placements[0] ?? '中央');
+  }, [selectedTool.category, selectedTool.id]);
 
   const handleCategoryChange = (categoryId: ToolCategory) => {
     setActiveCategory(categoryId);
@@ -574,7 +648,7 @@ export function LightchainWorkbenchPage() {
       setGarmentImageUrl(await readFileAsDataUrl(file));
       setGarmentFileName(file.name);
       setAnalysisStatus('ready');
-      toast.success('衣服画像を読み込み、編集レイヤーを準備しました');
+      toast.success('素材画像を読み込み、編集レイヤーを準備しました');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '画像を読み込めませんでした');
     }
@@ -589,23 +663,25 @@ export function LightchainWorkbenchPage() {
     setIsSaving(true);
     try {
       const projectId = createProject(`Lightchain互換: ${selectedTool.title}`, currentBrand.id);
-      const isGarmentReferenceTool = selectedTool.id === 'fitting-clothing-reference';
-      const shouldSaveGarmentReference = isGarmentReferenceTool && Boolean(garmentImageUrl);
-      const garmentReferenceState = isGarmentReferenceTool ? {
+      const shouldSaveWorkbenchAsset = workbenchEnabled && Boolean(garmentImageUrl);
+      const lightchainWorkbenchState = workbenchEnabled ? {
+        toolId: selectedTool.id,
+        toolCategory: selectedTool.category,
         garmentFileName: garmentFileName || null,
-        garmentCategory,
+        materialKind: garmentCategory,
         cutMode,
         activeLayer,
         printPlacement,
         printScale,
-        hasGarmentImage: Boolean(garmentImageUrl),
+        referenceNote,
+        hasImage: Boolean(garmentImageUrl),
       } : null;
       const artifact = await saveWorkspaceArtifactBestEffort({
         brandId: currentBrand.id,
         featureType: `lightchain-${selectedTool.id}`,
         title: selectedTool.title,
-        imageUrl: shouldSaveGarmentReference ? garmentImageUrl : textArtifactPreview,
-        prompt: `${selectedTool.promptTemplate}\n\n依頼: ${brief}\n参考: ${referenceNote}${garmentReferenceState ? `\n衣服素材: ${garmentCategory} / ${cutMode} / ${printPlacement} / ${printScale}%` : ''}`,
+        imageUrl: shouldSaveWorkbenchAsset ? garmentImageUrl : textArtifactPreview,
+        prompt: `${selectedTool.promptTemplate}\n\n依頼: ${brief}\n参考: ${referenceNote}${lightchainWorkbenchState ? `\n素材: ${garmentCategory} / ${cutMode} / ${printPlacement} / ${printScale}%` : ''}`,
         canvasProjectId: projectId,
         metadata: {
           sourceWorkspace: 'lightchain-workbench',
@@ -613,11 +689,12 @@ export function LightchainWorkbenchPage() {
           inputs: selectedTool.inputs,
           outputs: selectedTool.outputs,
           heavyChainHref: selectedTool.heavyChainHref,
-          garmentReferenceState,
+          lightchainWorkbenchState,
+          garmentReferenceState: selectedTool.id === 'fitting-clothing-reference' ? lightchainWorkbenchState : null,
         },
       });
 
-      if (shouldSaveGarmentReference) {
+      if (shouldSaveWorkbenchAsset) {
         addObject({
           type: 'image',
           x: 120,
@@ -631,15 +708,15 @@ export function LightchainWorkbenchPage() {
           locked: false,
           visible: true,
           src: garmentImageUrl,
-          label: garmentFileName || '衣服参照画像',
+          label: garmentFileName || `${selectedTool.title} 素材画像`,
           metadata: {
-            feature: 'lightchain-garment-reference',
+            feature: `lightchain-${selectedTool.id}-material-reference`,
             prompt: selectedTool.promptTemplate,
             generation: 0,
             parameters: {
               toolId: selectedTool.id,
               artifactId: artifact.artifact.id,
-              garmentReferenceState,
+              lightchainWorkbenchState,
             },
           },
         });
@@ -660,10 +737,10 @@ export function LightchainWorkbenchPage() {
           fontSize: Math.max(24, Math.round(printScale * 0.9)),
           fontFamily: 'Inter',
           fill: '#0f172a',
-          label: `プリントレイヤー: ${printPlacement}`,
+          label: `レイヤー: ${activeLayer} / ${printPlacement}`,
           metadata: {
-            feature: 'lightchain-print-layer',
-            prompt: `${printPlacement}にHeavy Chainデザインを配置`,
+            feature: `lightchain-${selectedTool.id}-overlay-layer`,
+            prompt: `${printPlacement}に${activeLayer}レイヤーを配置`,
             generation: 0,
             parameters: {
               toolId: selectedTool.id,
@@ -677,7 +754,7 @@ export function LightchainWorkbenchPage() {
 
       addObject({
         type: 'text',
-        x: shouldSaveGarmentReference ? 520 : 120,
+      x: shouldSaveWorkbenchAsset ? 520 : 120,
         y: 120,
         width: 520,
         height: 220,
@@ -702,7 +779,8 @@ export function LightchainWorkbenchPage() {
             heavyChainHref: selectedTool.heavyChainHref,
             inputs: selectedTool.inputs,
             outputs: selectedTool.outputs,
-            garmentReferenceState,
+            lightchainWorkbenchState,
+            garmentReferenceState: selectedTool.id === 'fitting-clothing-reference' ? lightchainWorkbenchState : null,
           },
         },
       });
@@ -848,20 +926,20 @@ export function LightchainWorkbenchPage() {
                   {selectedTool.description}
                 </p>
 
-                {selectedTool.id === 'fitting-clothing-reference' && (
+                {workbenchEnabled && (
                   <section className="mt-5 space-y-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
                     <div className="grid gap-3">
                       <label className="flex min-h-[132px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-neutral-300 bg-white p-4 text-center transition hover:border-primary-300 dark:border-neutral-700 dark:bg-neutral-900">
                         <input type="file" accept="image/*" className="hidden" onChange={handleGarmentUpload} />
-                        {garmentImageUrl ? (
-                          <img src={garmentImageUrl} alt="アップロードした衣服" className="max-h-28 rounded-lg object-contain" />
-                        ) : (
-                          <>
-                            <Upload className="h-7 w-7 text-primary-500" />
-                            <span className="mt-2 text-sm font-semibold text-neutral-900 dark:text-white">衣服画像をアップロード</span>
-                            <span className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
-                              平置き、トルソー、着用写真から衣服参照を作ります
-                            </span>
+	                        {garmentImageUrl ? (
+	                          <img src={garmentImageUrl} alt="アップロードした素材" className="max-h-28 rounded-lg object-contain" />
+	                        ) : (
+	                          <>
+	                            <Upload className="h-7 w-7 text-primary-500" />
+	                            <span className="mt-2 text-sm font-semibold text-neutral-900 dark:text-white">{workbenchLabels.uploadLabel}</span>
+	                            <span className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+	                              {workbenchLabels.emptyLabel}
+	                            </span>
                           </>
                         )}
                       </label>
@@ -871,7 +949,7 @@ export function LightchainWorkbenchPage() {
                           <div>
                             <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">素材読み込み</p>
                             <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
-                              {analysisStatus === 'ready' ? `${garmentCategory} / 前身頃 / 袖あり` : '画像待ち'}
+	                              {analysisStatus === 'ready' ? `${garmentCategory} / ${activeLayer} / ${printPlacement}` : '画像待ち'}
                             </p>
                           </div>
                           <span className={`rounded-full px-2 py-1 text-xs font-semibold ${analysisStatus === 'ready' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300'}`}>
@@ -879,7 +957,7 @@ export function LightchainWorkbenchPage() {
                           </span>
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2">
-                          {['Tシャツ', 'フーディー', 'ジャケット'].map((category) => (
+	                          {workbenchLabels.materialKinds.map((category) => (
                             <button
                               key={category}
                               type="button"
@@ -924,15 +1002,12 @@ export function LightchainWorkbenchPage() {
                         <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">デザインレイヤー</p>
                         <div className="mt-2 grid grid-cols-2 gap-2">
                           {[
-                            ['garment', '衣服ベース'],
-                            ['mask', 'カットマスク'],
-                            ['print', 'プリント'],
-                            ['fit', '着用展開'],
-                          ].map(([layer, label]) => (
+	                            ...workbenchLabels.layers,
+	                          ].map(([layer, label]) => (
                             <button
                               key={layer}
                               type="button"
-                              onClick={() => setActiveLayer(layer as typeof activeLayer)}
+	                              onClick={() => setActiveLayer(layer)}
                               className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${
                                 activeLayer === layer
                                   ? 'bg-cyan-600 text-white'
@@ -950,10 +1025,9 @@ export function LightchainWorkbenchPage() {
                             onChange={(event) => setPrintPlacement(event.target.value)}
                             className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-2 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-950 dark:text-white"
                           >
-                            <option>胸中央</option>
-                            <option>背面大判</option>
-                            <option>袖ワンポイント</option>
-                            <option>全面総柄</option>
+	                            {workbenchLabels.placements.map((placement) => (
+	                              <option key={placement}>{placement}</option>
+	                            ))}
                           </select>
                         </label>
                         <label className="mt-3 block">

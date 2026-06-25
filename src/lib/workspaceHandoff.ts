@@ -1,6 +1,7 @@
 import { saveWorkspaceArtifact } from './localWorkspaceArtifacts';
 import { useCanvasStore } from '../stores/canvasStore';
 import type { Json } from '../types/database';
+import type { MaterialReferenceMetadata } from './workspaceMaterialReferences';
 
 export type WorkspaceHandoffFeatureType =
   | 'fashion-studio'
@@ -34,6 +35,10 @@ export interface GenerationIntent extends Record<string, Json | undefined> {
   paletteNotes?: string;
   vectorIntent?: string;
   referenceAssets?: string;
+  materialReferences?: MaterialReferenceMetadata[];
+  layerPlan?: Record<string, Json | undefined>;
+  maskPlan?: Record<string, Json | undefined>;
+  compositionPreview?: Record<string, Json | undefined>;
 }
 
 export type WorkspaceSource = GenerationIntent['sourceWorkspace'];
@@ -95,6 +100,10 @@ export interface WorkspaceHandoffInput {
   selectedModelCandidate?: Record<string, Json | undefined>;
   selectedVideoStoryboard?: Record<string, Json | undefined>;
   selectedLabExperiment?: Record<string, Json | undefined>;
+  materialReferences?: MaterialReferenceMetadata[];
+  layerPlan?: Record<string, Json | undefined>;
+  maskPlan?: Record<string, Json | undefined>;
+  compositionPreview?: Record<string, Json | undefined>;
   metadata?: Record<string, Json | undefined>;
 }
 
@@ -345,6 +354,10 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
       selectedModelCandidate: input.selectedModelCandidate,
       selectedVideoStoryboard: input.selectedVideoStoryboard,
       selectedLabExperiment: input.selectedLabExperiment,
+      materialReferences: input.materialReferences,
+      layerPlan: input.layerPlan,
+      maskPlan: input.maskPlan,
+      compositionPreview: input.compositionPreview,
       ...input.metadata,
     },
   });
@@ -381,6 +394,10 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
         selectedModelCandidate: input.selectedModelCandidate,
         selectedVideoStoryboard: input.selectedVideoStoryboard,
         selectedLabExperiment: input.selectedLabExperiment,
+        materialReferences: input.materialReferences,
+        layerPlan: input.layerPlan,
+        maskPlan: input.maskPlan,
+        compositionPreview: input.compositionPreview,
       },
     },
   });
@@ -413,6 +430,10 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
         nextStep: input.workflow.nextStep,
         status: input.workflow.status,
         generationIntent: input.workflow.generationIntent,
+        materialReferences: input.materialReferences,
+        layerPlan: input.layerPlan,
+        maskPlan: input.maskPlan,
+        compositionPreview: input.compositionPreview,
       },
     },
   });

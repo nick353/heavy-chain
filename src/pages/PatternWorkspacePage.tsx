@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, ImagePlus, Palette, Repeat2, Save, Shapes, Shirt, Upload, WandSparkles } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import {
+  buildMaterialReferenceMetadata,
+  type MaterialReferenceState,
+} from '../lib/workspaceMaterialReferences';
 import type { PatternGenerationContext, PatternPreviewContext } from '../lib/workspaceHandoff';
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
@@ -108,6 +113,17 @@ const referenceSlots = [
   { label: '柄参考', value: 'vintage_bandana_grid.png' },
   { label: '服モック', value: 'tee_mockup_front.jpg' },
 ];
+
+const initialMaterialReference: MaterialReferenceState = {
+  imageUrl: '',
+  fileName: '',
+  materialKind: '柄画像',
+  maskMode: 'auto',
+  activeLayer: 'プリント',
+  placement: '胸中央',
+  scale: 54,
+  note: '柄、ロゴ、服モックを見ながら配置を決める',
+};
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -218,6 +234,7 @@ export function PatternWorkspacePage() {
   const [paletteNotes, setPaletteNotes] = useState('墨黒、オフホワイト、くすんだシルバー、差し色に深い赤');
   const [vectorIntent, setVectorIntent] = useState('刺繍とシルクスクリーンに使える2色ベクターへ整理');
   const [referenceAssets, setReferenceAssets] = useState('chain_mark_ref.svg, vintage_bandana_grid.png, tee_mockup_front.jpg');
+  const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
   const nextHistoryId = useRef(3);
   const previewCandidates = useMemo<PatternPreviewCandidate[]>(() => {
     const candidates = [
@@ -320,6 +337,10 @@ export function PatternWorkspacePage() {
       vectorIntent,
       referenceAssets,
     };
+    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
+    const materialReferenceSummary = materialReferenceMetadata.hasImage
+      ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
+      : '素材画像なし';
     const generationPrompt = [
       motifPrompt,
       `Repeat style: ${repeatStyle}`,
@@ -327,6 +348,7 @@ export function PatternWorkspacePage() {
       `Palette: ${paletteNotes}`,
       `Vector intent: ${vectorIntent}`,
       `Reference assets: ${referenceAssets}`,
+      `Material reference: ${materialReferenceSummary}`,
     ].join('\n');
     const prompt = [
       `Primary input: ${primaryInput}`,
@@ -336,15 +358,16 @@ export function PatternWorkspacePage() {
       `Palette notes: ${paletteNotes}`,
       `Vector intent: ${vectorIntent}`,
       `Reference assets: ${referenceAssets}`,
+      `Material reference: ${materialReferenceSummary}`,
       `Next step: ${nextStep}`,
     ].join('\n');
     const { projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
       featureType: 'graphic-pattern-workspace',
       projectName: `柄・グラフィック: ${activeMode}`,
-      title: `柄・グラフィック: ${activeMode}`,
-      prompt,
-      imageUrl: selectedPreview.imageUrl,
+	      title: `柄・グラフィック: ${activeMode}`,
+	      prompt,
+	      imageUrl: materialReference.imageUrl || selectedPreview.imageUrl,
       summary: `${activeMode}の進捗 ${progress}%`,
       note,
       activeChoice: activeMode,
@@ -357,22 +380,24 @@ export function PatternWorkspacePage() {
           repeatStyle,
           garmentTarget,
           paletteNotes,
-          vectorIntent,
-          referenceAssets,
-        },
+	          vectorIntent,
+	          referenceAssets,
+	          materialReference: materialReferenceMetadata,
+	        },
         plan: {
           patternBrief: 'pattern-design-brief',
           repeatStyle,
           vectorIntent,
-          selectedPatternPreview: {
+	          selectedPatternPreview: {
             id: selectedPreview.id,
             label: selectedPreview.label,
             mode: selectedPreview.mode,
             repeatSignature: selectedPreview.repeatSignature,
             vectorSignature: selectedPreview.vectorSignature,
             paletteSignature: selectedPreview.paletteSignature,
-          },
-          nextStep,
+	          },
+	          materialReference: materialReferenceMetadata,
+	          nextStep,
           searchTokens: ['pattern-design-brief', activeMode, garmentTarget],
         },
         status: 'planned',
@@ -389,22 +414,51 @@ export function PatternWorkspacePage() {
             patternContext,
             ...generationSource,
           }),
-          label: 'デザインガチャで生成',
-          ...patternContext,
-          ...generationSource,
-        },
-      },
-      previewMetadata: {
-        selectedPatternPreview,
-        previewKind: 'deterministic-svg',
-        imageUrl: selectedPreview.imageUrl,
-      },
-      metadata: {
-        workspace: 'patterns',
-        searchTokens: ['pattern-design-brief', 'graphic-pattern-workspace', activeMode],
-        selectedPatternPreview,
-      },
-    });
+	          label: 'デザインガチャで生成',
+	          ...patternContext,
+	          materialReferences: [materialReferenceMetadata],
+	          layerPlan: {
+	            activeLayer: materialReference.activeLayer,
+	            placement: materialReference.placement,
+	            scale: materialReference.scale,
+	          },
+	          maskPlan: {
+	            maskMode: materialReference.maskMode,
+	          },
+	          compositionPreview: {
+	            selectedPreviewId: selectedPreview.id,
+	            hasUploadedMaterial: Boolean(materialReference.imageUrl),
+	          },
+	          ...generationSource,
+	        },
+	      },
+	      previewMetadata: {
+	        selectedPatternPreview,
+	        previewKind: 'deterministic-svg',
+	        imageUrl: selectedPreview.imageUrl,
+	        materialReference: materialReferenceMetadata,
+	      },
+	      materialReferences: [materialReferenceMetadata],
+	      layerPlan: {
+	        activeLayer: materialReference.activeLayer,
+	        placement: materialReference.placement,
+	        scale: materialReference.scale,
+	      },
+	      maskPlan: {
+	        maskMode: materialReference.maskMode,
+	      },
+	      compositionPreview: {
+	        selectedPreviewId: selectedPreview.id,
+	        previewKind: materialReference.imageUrl ? 'uploaded-material-reference' : 'deterministic-svg',
+	        imageUrl: materialReference.imageUrl || selectedPreview.imageUrl,
+	      },
+	      metadata: {
+	        workspace: 'patterns',
+	        searchTokens: ['pattern-design-brief', 'graphic-pattern-workspace', activeMode],
+	        selectedPatternPreview,
+	        materialReference: materialReferenceMetadata,
+	      },
+	    });
 
     toast.success('柄・グラフィックをGallery/Historyに保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
@@ -466,8 +520,20 @@ export function PatternWorkspacePage() {
           </div>
 
           <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+	              <div className="space-y-4">
+	              <MaterialWorkbench
+	                title="素材作業台"
+	                description="柄画像、ロゴ、服モックをアップロードし、カット、レイヤー、配置を先に決めます。"
+	                uploadLabel="柄・ロゴ・服モックをアップロード"
+	                emptyLabel="素材を置くと、保存時にCanvasへ実画像レイヤーとして渡せます"
+	                state={materialReference}
+	                onChange={setMaterialReference}
+	                materialKinds={['柄画像', 'ロゴ', '服モック', '刺繍版下', '生地テクスチャ']}
+	                layerOptions={['プリント', 'マスク', '服', 'ロゴ', '版下']}
+	                placementOptions={['胸中央', '背面大判', '袖', '全面総柄', '小物ワンポイント']}
+	              />
+
+	              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
                 <div className="flex items-center gap-2">
                   <Upload className="h-4 w-4 text-primary-600" />
                   <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">素材スロット</h3>
