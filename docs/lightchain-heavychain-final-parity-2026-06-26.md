@@ -6,7 +6,7 @@ Date: 2026-06-26
 
 Lightchain and Heavy Chain were not identical before this pass. Lightchain's generation flow is chat-first: a single request creates a generation plan, the user confirms it, then three outputs are generated into a board-like workspace. Heavy Chain production was panel-first: readiness, material workbench, detailed form fields, and generation settings appeared before the user had a Lightchain-style plan.
 
-This pass added a campaign-image AI assistant entry to Heavy Chain local preview. It now accepts one request, builds a request-aware three-item plan, and only writes into the actual generation form after the user explicitly clicks `フォームへ反映`.
+This pass added a campaign-image AI assistant entry to Heavy Chain production. It now accepts one request, builds a request-aware three-item plan, and only writes into the actual generation form after the user explicitly clicks `フォームへ反映`.
 
 ## Lightchain Evidence
 
@@ -43,6 +43,9 @@ Observed behavior:
 - Local preview final proof: `27-heavychain-local-separated-plan-summary.json`
 - Screenshot: `27-heavychain-local-separated-plan.png`
 - Recording: `heavychain-local-separated-plan-recording/page@79dd5878360cbd65bb807030c57b1f96.webm`
+- Production final proof: `29-heavychain-prod-separated-plan-summary.json`
+- Production screenshot: `29-heavychain-prod-separated-plan.png`
+- Production recording: `heavychain-prod-separated-plan-recording/page@b52bb938501de902cfe75f18d8f9b916.webm`
 
 Final assertions:
 - `afterPlanOnly.baseConceptFilled=false`: creating the plan no longer mutates the actual generation form.
@@ -51,6 +54,7 @@ Final assertions:
 - `afterReflect.generateCountThree=true`: the Lightchain-style three-output plan is reflected in generation count.
 - `afterReflect.defaultCopyInjected=false`: no hidden English placeholder copy is injected.
 - `relevantEvents=[]`: no page errors were captured.
+- Production asset: `https://heavy-chain.zeabur.app/assets/index.D4pPnPgW.js`
 
 ## Remaining Gap
 
@@ -58,7 +62,7 @@ The local implementation is closer, but not yet fully identical to Lightchain:
 
 - Lightchain generates and confirms inside a dark, board-like chat workspace; Heavy Chain still keeps the richer material workbench and side navigation.
 - Heavy Chain's assistant plan is deterministic local planning, not a real LLM conversational response.
-- Production Zeabur still needs redeploy/readback for this exact new UI.
+- It is still not pixel-identical to Lightchain because Heavy Chain intentionally keeps the richer material workbench, Runway readiness, Jobs, Gallery, and Canvas surfaces.
 
 ## Verification
 
@@ -66,4 +70,5 @@ The local implementation is closer, but not yet fully identical to Lightchain:
 - `npm run lint -- --max-warnings=0`: pass
 - `npm run build`: pass
 - Local Playwright recording and DOM proof: pass
+- Production Zeabur Playwright recording and DOM proof: pass
 - Final Codex review attempt: blocked by usage limit, after two earlier reviews found and helped close the main issues.
