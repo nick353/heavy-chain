@@ -6,6 +6,7 @@ import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } fr
 import { generateRunwayImage, runwayImageArtifact, runwayReferenceImage, type RunwayImageResult } from '../_shared/runway.ts';
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
+import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -331,6 +332,7 @@ serve(async (req) => {
       hairStyle,
       modelCandidateLabel,
     });
+    const materialMetadata = sanitizeMaterialGenerationMetadata(body);
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
     observedSourceMetadata = requestSourceMetadata;
@@ -384,6 +386,7 @@ serve(async (req) => {
           ...(skinTone ? { skinTone } : {}),
           ...(hairStyle ? { hairStyle } : {}),
           ...(requestSourceMetadata ?? {}),
+          ...(materialMetadata ?? {}),
           ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
         } as any,
         optimized_prompt: productDescription ?? null,
@@ -514,6 +517,7 @@ serve(async (req) => {
                 source: 'model-matrix',
                 requestId,
                 ...(finalSourceMetadata ?? {}),
+                ...(materialMetadata ?? {}),
                 ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
               } as any,
             })

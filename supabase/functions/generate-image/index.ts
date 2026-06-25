@@ -3,6 +3,7 @@ import { clientError, createServiceClient, createUserClient, requireBrandRole, r
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
+import { sanitizeMaterialGenerationMetadata, sanitizeMetadataWithoutImageUrls } from '../_shared/materialMetadata.ts';
 import { generateRunwayImage, runwayImageArtifact } from '../_shared/runway.ts';
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 
@@ -21,6 +22,10 @@ interface GenerateRequest {
   sourceReadback?: unknown
   generationIntent?: unknown
   lightchainCompat?: unknown
+  materialReferences?: unknown
+  layerPlan?: unknown
+  maskPlan?: unknown
+  compositionPreview?: unknown
   campaignMeta?: unknown
   textOverlay?: unknown
   localRunwayWorker?: unknown
@@ -94,7 +99,7 @@ const sanitizeLocalRunwayWorkerRequest = (value: unknown, persistedFeatureType: 
     }
   }
 
-  const metadata = isRecord(value.metadata) ? value.metadata : {}
+  const metadata = sanitizeMetadataWithoutImageUrls(value.metadata)
   return {
     provider,
     workerContractVersion,
@@ -203,6 +208,10 @@ serve(async (req) => {
       sourceReadback,
       generationIntent,
       lightchainCompat,
+      materialReferences,
+      layerPlan,
+      maskPlan,
+      compositionPreview,
       campaignMeta,
       textOverlay,
       localRunwayWorker,
@@ -226,6 +235,12 @@ serve(async (req) => {
       : 'text-to-image'
     const localWorkerRequest = sanitizeLocalRunwayWorkerRequest(localRunwayWorker, persistedFeatureType)
     const sourceMetadata = buildSourceMetadata(sourceReadback, generationIntent)
+    const materialMetadata = sanitizeMaterialGenerationMetadata({
+      materialReferences,
+      layerPlan,
+      maskPlan,
+      compositionPreview,
+    })
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat)
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed')
     observedSourceMetadata = sourceMetadata
@@ -251,6 +266,7 @@ serve(async (req) => {
       ...(isRecord(campaignMeta) ? { campaignMeta } : {}),
       ...(isRecord(textOverlay) ? { textOverlay } : {}),
       ...(sourceMetadata ?? {}),
+      ...(materialMetadata ?? {}),
       ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
       ...(localWorkerRequest ? {
         provider: localWorkerRequest.provider,
@@ -408,6 +424,7 @@ serve(async (req) => {
             source: 'generate-image',
             requestId,
             ...(sourceMetadata ?? {}),
+            ...(materialMetadata ?? {}),
             ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
           } as any,
           expires_at: expiresAt.toISOString()

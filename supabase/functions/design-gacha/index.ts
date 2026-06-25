@@ -6,6 +6,7 @@ import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } fr
 import { generateRunwayImage, runwayImageArtifact, runwayReferenceImage, type RunwayImageResult } from '../_shared/runway.ts';
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
+import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -334,6 +335,7 @@ serve(async (req) => {
     });
 
     const requestSourceMetadata = buildSourceMetadata(sourceReadback, patternContext, productDescription);
+    const materialMetadata = sanitizeMaterialGenerationMetadata(body);
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
     observedSourceMetadata = requestSourceMetadata;
@@ -353,6 +355,7 @@ serve(async (req) => {
             randomizedElements,
             requestId,
             ...(requestSourceMetadata ?? {}),
+            ...(materialMetadata ?? {}),
             ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
           } as any,
         optimized_prompt: productDescription || brief || null,
@@ -466,6 +469,7 @@ serve(async (req) => {
               source: 'design-gacha',
               requestId,
               ...(finalSourceMetadata ?? {}),
+              ...(materialMetadata ?? {}),
               ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
             } as any,
           })

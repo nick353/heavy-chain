@@ -6,6 +6,7 @@ import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } fr
 import { generateRunwayImage, runwayImageArtifact, runwayProviderName, runwayReferenceImage } from '../_shared/runway.ts';
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
+import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,7 +55,8 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { imageUrl, brandId, colors, count = 3, lightchainCompat } = await req.json();
+    const body = await req.json();
+    const { imageUrl, brandId, colors, count = 3, lightchainCompat } = body;
 
     if (!imageUrl || !brandId) {
       throw new Error('Missing required parameters');
@@ -82,6 +84,7 @@ serve(async (req) => {
     });
 
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);
+    const materialMetadata = sanitizeMaterialGenerationMetadata(body);
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
     observedLightchainMetadata = lightchainMetadata;
     const { data: job, error: jobError } = await supabaseClient
@@ -95,6 +98,7 @@ serve(async (req) => {
           colors: Array.isArray(colors) ? colors : null,
           count,
           requestId,
+          ...(materialMetadata ?? {}),
           ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
         } as any,
         status: 'processing',
@@ -180,6 +184,7 @@ serve(async (req) => {
                 remoteSaveStatus: 'succeeded',
                 source: 'colorize',
                 requestId,
+                ...(materialMetadata ?? {}),
                 ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
               } as any,
             }).select('id').single();

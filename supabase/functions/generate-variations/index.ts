@@ -6,6 +6,7 @@ import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } fr
 import { generateRunwayImage, runwayImageArtifact, runwayProviderName, runwayReferenceImage, type RunwayImageResult } from '../_shared/runway.ts';
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
+import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -179,6 +180,7 @@ serve(async (req) => {
     });
 
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);
+    const materialMetadata = sanitizeMaterialGenerationMetadata(body);
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
     observedLightchainMetadata = lightchainMetadata;
     const { data: job, error: jobError } = await supabaseClient
@@ -193,6 +195,7 @@ serve(async (req) => {
           count,
           scenes: hasScenes ? scenes : null,
           requestId,
+          ...(materialMetadata ?? {}),
           ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
         } as any,
         status: 'processing',
@@ -276,6 +279,7 @@ serve(async (req) => {
                 remoteSaveStatus: 'succeeded',
                 source: 'generate-variations',
                 requestId,
+                ...(materialMetadata ?? {}),
                 ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
               } as any,
             }).select('id').single();
@@ -362,6 +366,7 @@ serve(async (req) => {
                 remoteSaveStatus: 'succeeded',
                 source: 'generate-variations',
                 requestId,
+                ...(materialMetadata ?? {}),
                 ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
               } as any,
             }).select('id').single();

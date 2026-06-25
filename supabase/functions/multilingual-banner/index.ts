@@ -5,6 +5,7 @@ import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '..
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 import { generateRunwayImage, runwayImageArtifact, runwayProviderName } from '../_shared/runway.ts';
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
+import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,6 +26,10 @@ type MultilingualBannerRequest = {
   languages?: string[];
   style?: string;
   aspectRatio?: string;
+  materialReferences?: unknown;
+  layerPlan?: unknown;
+  maskPlan?: unknown;
+  compositionPreview?: unknown;
 };
 
 type BannerDimensions = {
@@ -273,6 +278,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
+    const body: MultilingualBannerRequest = await req.json();
     const { 
       headline,
       subheadline,
@@ -280,7 +286,8 @@ serve(async (req) => {
       languages = ['ja', 'en', 'zh', 'ko'],
       style = 'modern',
       aspectRatio = '1:1'
-    }: MultilingualBannerRequest = await req.json();
+    } = body;
+    const materialMetadata = sanitizeMaterialGenerationMetadata(body);
 
     if (!headline || !brandId) {
       throw new Error('Missing required parameters');
@@ -384,6 +391,12 @@ serve(async (req) => {
                 aspectRatio,
                 backgroundMimeType: imageMimeType,
               },
+              metadata: {
+                remoteSaveStatus: 'succeeded',
+                source: 'multilingual-banner',
+                requestId,
+                ...(materialMetadata ?? {}),
+              } as any,
             });
             if (imageInsertError) {
               throw imageInsertError;

@@ -5,6 +5,7 @@ import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '..
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 import { generateRunwayImage, runwayImageArtifact, runwayProviderName, runwayReferenceImage, type RunwayImageResult } from '../_shared/runway.ts';
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
+import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,7 +32,11 @@ const BACKGROUND_OPTIONS: Record<string, string> = {
 
 // 画像をBase64にエンコード
 async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; mimeType: string }> {
-  console.log('📷 Fetching image from URL:', imageUrl);
+  console.log('📷 Fetching image for product-shots:', {
+    hasImageUrl: Boolean(imageUrl),
+    imageUrlLength: imageUrl.length,
+    isDataUrl: imageUrl.startsWith('data:'),
+  });
   const response = await fetch(imageUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch image: ${response.status}`);
@@ -138,9 +143,18 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    console.log('📥 Received request body:', JSON.stringify(body, null, 2));
+    const materialMetadata = sanitizeMaterialGenerationMetadata(body);
     
     let { productDescription, brandId, imageUrl, shots = ['front', 'side', 'back', 'detail'], background = 'white' } = body;
+    console.log('📥 Received product-shots request:', {
+      brandId,
+      hasProductDescription: typeof productDescription === 'string' && productDescription.trim().length > 0,
+      hasImageUrl: typeof imageUrl === 'string' && imageUrl.length > 0,
+      imageUrlLength: typeof imageUrl === 'string' ? imageUrl.length : 0,
+      shots: Array.isArray(shots) ? shots : [],
+      background,
+      hasMaterialReferences: Array.isArray(body.materialReferences) && body.materialReferences.length > 0,
+    });
 
     if (!brandId) {
       throw new Error('ブランドIDが指定されていません');
@@ -206,7 +220,7 @@ serve(async (req) => {
       throw new Error('商品説明を入力するか、商品画像をアップロードしてください。');
     }
     
-    console.log('✅ Description:', finalDescription);
+    console.log('✅ Description ready:', { descriptionLength: finalDescription.length });
     console.log('🎨 Generating', shots.length, 'product shots...');
     console.log('📌 Reference image available:', !!originalImageBase64);
 
@@ -250,7 +264,7 @@ serve(async (req) => {
           if (!uploadError) {
             const { data: urlData } = await supabaseService.storage.from('generated-images').createSignedUrl(fileName, 60 * 60 * 24);
             storageUrl = urlData?.signedUrl || '';
-            console.log('✅ Image uploaded to storage:', storageUrl);
+            console.log('✅ Image uploaded to storage:', { storagePath: fileName, hasStorageUrl: Boolean(storageUrl) });
           } else {
             console.log('⚠️ Storage upload error:', uploadError.message);
           }
@@ -269,6 +283,12 @@ serve(async (req) => {
             feature_type: 'product-shots',
             model_used: imageModel,
             generation_params: { shotType: shot.id, productDescription: finalDescription, hasReferenceImage: !!originalImageBase64 },
+            metadata: {
+              remoteSaveStatus: 'succeeded',
+              source: 'product-shots',
+              requestId,
+              ...(materialMetadata ?? {}),
+            } as any,
           });
           console.log('✅ Image record saved to database');
         } catch (dbError) {

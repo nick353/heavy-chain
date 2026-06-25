@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import { ImagePlus, Layers3, SlidersHorizontal, Upload } from 'lucide-react';
+import { CheckCircle2, ImagePlus, Layers3, ScanLine, Scissors, SlidersHorizontal, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   type MaterialReferenceState,
@@ -24,6 +24,26 @@ const maskModes: Array<{ id: MaterialReferenceState['maskMode']; label: string }
   { id: 'manual', label: '手動マスク' },
   { id: 'keep', label: '背景維持' },
 ];
+
+const maskModeLabel: Record<MaterialReferenceState['maskMode'], string> = {
+  auto: '自動カット',
+  manual: '手動マスク',
+  keep: '背景維持',
+};
+
+const getOverlayPositionClass = (placement: string) => {
+  const y = placement.includes('袖') || placement.includes('上') || placement.includes('顔')
+    ? 'top-[28%]'
+    : placement.includes('背面') || placement.includes('足元') || placement.includes('下')
+      ? 'top-[64%]'
+      : 'top-1/2';
+  const x = placement.includes('左')
+    ? 'left-[34%]'
+    : placement.includes('右')
+      ? 'left-[66%]'
+      : 'left-1/2';
+  return `${x} ${y}`;
+};
 
 export function MaterialWorkbench({
   title,
@@ -63,7 +83,7 @@ export function MaterialWorkbench({
   };
 
   return (
-    <section className="rounded-2xl border border-neutral-200 bg-white/75 p-4 dark:border-white/10 dark:bg-surface-900/55">
+    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-surface-900/60">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-950 dark:text-white">
@@ -77,28 +97,75 @@ export function MaterialWorkbench({
         </span>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(220px,0.9fr)_minmax(0,1.1fr)]">
-        <label className="flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-neutral-300 bg-white p-4 text-center transition hover:border-primary-300 dark:border-white/10 dark:bg-surface-950/50">
-          <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-          {state.imageUrl ? (
-            <img src={state.imageUrl} alt={uploadLabel} className="max-h-44 rounded-lg object-contain" />
-          ) : (
-            <>
-              <Upload className="h-7 w-7 text-primary-500" />
-              <span className="mt-2 text-sm font-semibold text-neutral-900 dark:text-white">{uploadLabel}</span>
-              <span className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{emptyLabel}</span>
-            </>
-          )}
-        </label>
+      <div className="mt-4 grid min-w-0 gap-4 2xl:grid-cols-[minmax(280px,1fr)_minmax(300px,0.86fr)]">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-white/10 dark:bg-surface-950/50">
+          <label className="relative flex min-h-[300px] cursor-pointer flex-col items-center justify-center overflow-hidden bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f4f5_75%),linear-gradient(-45deg,transparent_75%,#f4f4f5_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0] p-4 text-center transition hover:ring-2 hover:ring-primary-200 dark:bg-neutral-950">
+            <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+            {state.imageUrl ? (
+              <>
+                <img
+                  src={state.imageUrl}
+                  alt={uploadLabel}
+                  className={`max-h-64 max-w-[82%] rounded-xl object-contain transition ${state.maskMode === 'auto' ? 'drop-shadow-[0_18px_28px_rgba(15,23,42,0.28)]' : ''}`}
+                />
+                <div
+                  className={`absolute ${getOverlayPositionClass(state.placement)} flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-cyan-200 bg-neutral-950/90 px-4 py-2 text-[11px] font-black tracking-[0.18em] text-cyan-100 shadow-xl`}
+                  style={{ minWidth: `${Math.max(56, state.scale * 1.6)}px` }}
+                >
+                  {state.activeLayer.slice(0, 4)}
+                </div>
+                <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-neutral-700 shadow-sm dark:bg-neutral-900/90 dark:text-neutral-100">
+                  {state.fileName || 'uploaded material'}
+                </div>
+              </>
+            ) : (
+              <>
+                <Upload className="h-8 w-8 text-primary-500" />
+                <span className="mt-2 text-sm font-semibold text-neutral-900 dark:text-white">{uploadLabel}</span>
+                <span className="mt-1 max-w-xs text-xs leading-5 text-neutral-500 dark:text-neutral-400">{emptyLabel}</span>
+              </>
+            )}
+          </label>
+          <div className="grid grid-cols-3 border-t border-neutral-200 text-xs dark:border-white/10">
+            <div className="p-3">
+              <p className="font-semibold text-neutral-400">認識</p>
+              <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{state.imageUrl ? state.materialKind : '画像待ち'}</p>
+            </div>
+            <div className="border-x border-neutral-200 p-3 dark:border-white/10">
+              <p className="font-semibold text-neutral-400">処理</p>
+              <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{maskModeLabel[state.maskMode]}</p>
+            </div>
+            <div className="p-3">
+              <p className="font-semibold text-neutral-400">レイヤー</p>
+              <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{state.activeLayer}</p>
+            </div>
+          </div>
+        </div>
 
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
+          <div className="grid gap-2 sm:grid-cols-3">
+            {[
+              { icon: ScanLine, label: state.imageUrl ? '素材認識済み' : '素材待ち' },
+              { icon: Scissors, label: maskModeLabel[state.maskMode] },
+              { icon: CheckCircle2, label: `${state.scale}%で配置` },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 dark:border-white/10 dark:bg-surface-950/50">
+                  <Icon className="h-4 w-4 text-primary-500" />
+                  <p className="mt-1 text-xs font-semibold text-neutral-700 dark:text-neutral-200">{item.label}</p>
+                </div>
+              );
+            })}
+          </div>
+
           <div className="grid gap-2 sm:grid-cols-2">
             <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
               素材タイプ
               <select
                 value={state.materialKind}
                 onChange={(event) => updateState({ materialKind: event.target.value })}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
+                className="mt-1 w-full min-w-0 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
               >
                 {materialKinds.map((kind) => (
                   <option key={kind} value={kind}>{kind}</option>
@@ -110,7 +177,7 @@ export function MaterialWorkbench({
               <select
                 value={state.placement}
                 onChange={(event) => updateState({ placement: event.target.value })}
-                className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
+                className="mt-1 w-full min-w-0 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
               >
                 {placementOptions.map((placement) => (
                   <option key={placement} value={placement}>{placement}</option>
@@ -179,7 +246,7 @@ export function MaterialWorkbench({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">
+      <div className="mt-4 grid min-w-0 gap-4 2xl:grid-cols-[minmax(0,1fr)_260px]">
         <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
           素材メモ
           <textarea
@@ -190,12 +257,12 @@ export function MaterialWorkbench({
           />
         </label>
         <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-white/10 dark:bg-surface-950/50">
-          <p className="text-xs font-semibold text-neutral-400">プレビュー状態</p>
+          <p className="text-xs font-semibold text-neutral-400">Canvas保存時の構造</p>
           <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
             {state.imageUrl ? `${state.materialKind} / ${state.activeLayer}` : '画像待ち'}
           </p>
           <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
-            {state.placement} / {state.maskMode} / {state.scale}%
+            {state.placement} / {maskModeLabel[state.maskMode]} / {state.scale}%
           </p>
         </div>
       </div>

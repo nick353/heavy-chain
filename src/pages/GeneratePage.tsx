@@ -29,9 +29,14 @@ import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
 import { ImageSelector, type SelectedImage, type ReferenceType } from '../components/ImageSelector';
 import { UsageStats } from '../components/UsageStats';
 import { GenerateLightchainEntry } from '../components/GenerateLightchainEntry';
+import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { getErrorMessage } from '../lib/errorMessages';
 import { saveWorkspaceArtifact, saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
 import { parseLocalRunwayMcpImportBundle } from '../lib/localRunwayMcpImport';
+import {
+  buildMaterialReferenceMetadata,
+  type MaterialReferenceState,
+} from '../lib/workspaceMaterialReferences';
 import {
   enqueueLocalRunwayWorkerGeneration,
   pollLocalRunwayWorkerGeneration,
@@ -148,6 +153,118 @@ const RUNWAY_APPROVAL_LABELS: Record<RunwayMcpConnectionStatus | 'not_requested'
 
 const getRunwayPlanLabel = (subscription: BrandRunwaySubscription | null) => {
   return subscription?.plan?.name || subscription?.plan?.code || 'Free';
+};
+
+const initialGenerateMaterialReference: MaterialReferenceState = {
+  imageUrl: '',
+  fileName: '',
+  materialKind: '商品画像',
+  maskMode: 'auto',
+  activeLayer: '商品',
+  placement: '中央大きめ',
+  scale: 58,
+  note: '生成前に素材、切り抜き、レイヤー配置を決める',
+};
+
+const generateWorkbenchByFeature: Record<string, {
+  title: string;
+  description: string;
+  uploadLabel: string;
+  emptyLabel: string;
+  materialKinds: string[];
+  layerOptions: string[];
+  placementOptions: string[];
+}> = {
+  'campaign-image': {
+    title: '販促素材ワークベンチ',
+    description: '商品、ロゴ、背景を置いてから、広告レイヤーとコピー位置を決めます。',
+    uploadLabel: '商品・ロゴ・背景をアップロード',
+    emptyLabel: '素材を置くとキャンペーン画像の主役として反映できます',
+    materialKinds: ['商品画像', 'ロゴ', '背景', '販促参考'],
+    layerOptions: ['商品', '背景', 'コピー', 'CTA'],
+    placementOptions: ['中央大きめ', '左商品右コピー', 'EC正方形', 'SNS縦長'],
+  },
+  'design-gacha': {
+    title: 'デザイン参照ワークベンチ',
+    description: '固定する素材とランダム化する要素を、画像レイヤーで見ながら組みます。',
+    uploadLabel: '商品・ロゴ・雰囲気参考をアップロード',
+    emptyLabel: '参照素材を置くと、固定/ランダム化の判断がしやすくなります',
+    materialKinds: ['商品画像', 'ロゴ', '雰囲気参考', '素材参考'],
+    layerOptions: ['固定素材', '配色', '構図', '質感'],
+    placementOptions: ['横並び比較', '中央', '全面', '商品横'],
+  },
+  'product-shots': {
+    title: '商品撮影ワークベンチ',
+    description: '実物画像を置き、正面・背面・詳細カットへ展開する前に切り抜きと背景を決めます。',
+    uploadLabel: '実物商品画像をアップロード',
+    emptyLabel: '素材を置くと商品カットのベース画像として使えます',
+    materialKinds: ['商品画像', '平置き', 'トルソー', 'ディテール'],
+    layerOptions: ['商品', '影', '背景', 'ディテール'],
+    placementOptions: ['正面', '背面', '側面', 'ディテール寄り'],
+  },
+  'model-matrix': {
+    title: 'モデル参照ワークベンチ',
+    description: '商品、顔、ポーズ、体型の参照を置いて、どの条件へ効かせるかを先に決めます。',
+    uploadLabel: '商品・モデル・ポーズ参照をアップロード',
+    emptyLabel: '参照素材を置くとモデル条件の実素材として保存されます',
+    materialKinds: ['商品画像', 'モデル参照', '顔参照', 'ポーズ参照'],
+    layerOptions: ['衣服', '顔', 'ポーズ', '体型', '背景'],
+    placementOptions: ['正面', '斜め45度', '全身', '上半身'],
+  },
+  'scene-coordinate': {
+    title: '背景・シーンワークベンチ',
+    description: '商品と背景参照を置き、シーン合成時の前景/背景レイヤーを決めます。',
+    uploadLabel: '商品・背景参照をアップロード',
+    emptyLabel: '素材を置くとシーン配置の前景レイヤーとして扱えます',
+    materialKinds: ['商品画像', '背景参照', '小物', '照明参考'],
+    layerOptions: ['前景商品', '背景', '影', '小物'],
+    placementOptions: ['中央', '左寄せ', '右寄せ', '奥行きあり'],
+  },
+  colorize: {
+    title: 'カラー編集ワークベンチ',
+    description: '対象範囲を見ながら、残す色・変える色・柄の重ね方を決めます。',
+    uploadLabel: '色変更する衣服・素材をアップロード',
+    emptyLabel: '対象画像を置くと色変更範囲とレイヤーを先に整理できます',
+    materialKinds: ['衣服', '生地', '柄', '小物'],
+    layerOptions: ['元色', '変更範囲', '新色', '柄レイヤー'],
+    placementOptions: ['中央', '上半身', '袖', '全面'],
+  },
+  'remove-bg': {
+    title: '切り抜きワークベンチ',
+    description: '背景削除前に、残す商品・影・透明背景の扱いを画面上で決めます。',
+    uploadLabel: '背景を消す画像をアップロード',
+    emptyLabel: '商品画像を置くと自動カットと透明背景レイヤーを確認できます',
+    materialKinds: ['商品画像', '人物', '背景付き素材', '小物'],
+    layerOptions: ['商品', 'カットマスク', '透明背景', '影'],
+    placementOptions: ['中央', '余白あり', 'EC正方形', '全面'],
+  },
+  upscale: {
+    title: '高解像度化ワークベンチ',
+    description: '拡大する画像を置き、残す質感・強調するディテールを決めます。',
+    uploadLabel: '高解像度化する画像をアップロード',
+    emptyLabel: '画像を置くとディテール保持と出力用途を指定できます',
+    materialKinds: ['商品画像', 'LOOK画像', '柄', 'ロゴ'],
+    layerOptions: ['元画像', 'ディテール', '質感', '出力'],
+    placementOptions: ['中央', '全面', 'ディテール寄り', 'EC正方形'],
+  },
+  variations: {
+    title: '派生案ワークベンチ',
+    description: '元画像を置き、固定する商品と変える背景・配色・構図を分けます。',
+    uploadLabel: '派生元画像をアップロード',
+    emptyLabel: '元画像を置くと固定素材と変更レイヤーを分けて保存できます',
+    materialKinds: ['元画像', '商品画像', 'スタイル参照', '構図参照'],
+    layerOptions: ['固定素材', '背景差分', '配色差分', '構図差分'],
+    placementOptions: ['中央', '横並び比較', '左固定', '全面'],
+  },
+  'multilingual-banner': {
+    title: '多言語バナーワークベンチ',
+    description: 'ベース画像と文字エリアを置いて、言語別に崩れない余白を決めます。',
+    uploadLabel: 'バナーのベース画像をアップロード',
+    emptyLabel: 'ベース画像を置くとテキスト配置と多言語展開の前提にできます',
+    materialKinds: ['ベース画像', '商品画像', '背景', 'ロゴ'],
+    layerOptions: ['商品', '背景', 'コピー領域', 'ロゴ'],
+    placementOptions: ['左商品右コピー', '中央', '上コピー', '下コピー'],
+  },
 };
 
 function getRunwayReadinessIssues({
@@ -579,6 +696,7 @@ export function GeneratePage() {
   const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
   const [backgroundReferenceImage, setBackgroundReferenceImage] = useState<SelectedImage | null>(null);
   const [patternReferenceImage, setPatternReferenceImage] = useState<SelectedImage | null>(null);
+  const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialGenerateMaterialReference);
   
   // Feature-specific state
   const [productDescription, setProductDescription] = useState('');
@@ -623,11 +741,34 @@ export function GeneratePage() {
   const [runwayOAuthConnection, setRunwayOAuthConnection] = useState<RunwayMcpOAuthConnection | null>(null);
 
   const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
+  const selectedGenerateWorkbench = selectedFeature
+    ? generateWorkbenchByFeature[selectedFeature.id] ?? null
+    : null;
   const sourceReadback = hydrateGenerationIntentSource(searchParams);
   const lightchainCompat = hydrateLightchainCompatContext(searchParams);
   const patternContext = sourceReadback?.sourceWorkspace === 'patterns'
     ? hydratePatternGenerationContext(searchParams)
     : null;
+
+  useEffect(() => {
+    if (!selectedGenerateWorkbench) return;
+    if (!referenceImage?.url) {
+      if (materialReference.imageUrl) {
+        setMaterialReference((current) => ({
+          ...current,
+          imageUrl: '',
+          fileName: '',
+        }));
+      }
+      return;
+    }
+    if (materialReference.imageUrl === referenceImage.url) return;
+    setMaterialReference((current) => ({
+      ...current,
+      imageUrl: referenceImage.url,
+      fileName: current.fileName || 'reference image',
+    }));
+  }, [materialReference.imageUrl, referenceImage?.url, selectedGenerateWorkbench]);
 
   useEffect(() => {
     if (!currentBrand) {
@@ -685,7 +826,9 @@ export function GeneratePage() {
       }
 
       if (oauthResult.error) {
-        console.error('Failed to fetch Runway MCP OAuth connection:', oauthResult.error);
+        debugLog('Runway MCP OAuth connection status unavailable', {
+          message: oauthResult.error.message,
+        });
         setRunwayOAuthConnection(null);
       } else {
         setRunwayOAuthConnection((oauthResult.data || null) as RunwayMcpOAuthConnection | null);
@@ -724,6 +867,7 @@ export function GeneratePage() {
       setReferenceImage(null);
       setBackgroundReferenceImage(null);
       setPatternReferenceImage(null);
+      setMaterialReference(initialGenerateMaterialReference);
       setShowSuccessCard(false);
       setGenerateCount(workflow?.generateCount ?? (feature.id === 'design-gacha' ? 4 : 1));
       setOverlayEnabled(false);
@@ -960,11 +1104,48 @@ export function GeneratePage() {
         textOverlay,
         lightchainCompat: lightchainCompat ?? undefined,
       };
+      const materialReferenceMetadata = buildMaterialReferenceMetadata({
+        ...materialReference,
+        imageUrl: processedImageUrl ?? materialReference.imageUrl,
+      });
+      const hasGenerateMaterialReference = Boolean(materialReferenceMetadata.hasImage);
+      const generateLayerPlan = hasGenerateMaterialReference ? {
+        activeLayer: materialReference.activeLayer,
+        placement: materialReference.placement,
+        scale: materialReference.scale,
+        source: 'generate_page_material_workbench',
+      } : undefined;
+      const generateMaskPlan = hasGenerateMaterialReference ? {
+        mode: materialReference.maskMode,
+        materialKind: materialReference.materialKind,
+        source: 'generate_page_material_workbench',
+      } : undefined;
+      const generateCompositionPreview = hasGenerateMaterialReference ? {
+        referenceType: referenceImage?.referenceType ?? featureConfig?.defaultReferenceType ?? 'base',
+        fileName: materialReference.fileName,
+        note: materialReference.note,
+        source: 'generate_page_material_workbench',
+      } : undefined;
+      const generateMaterialMetadata = hasGenerateMaterialReference ? {
+        materialReferences: [materialReferenceMetadata],
+        layerPlan: generateLayerPlan,
+        maskPlan: generateMaskPlan,
+        compositionPreview: generateCompositionPreview,
+      } : {};
+      const materialPromptLines = hasGenerateMaterialReference ? [
+        `Material: ${materialReference.materialKind}`,
+        `Mask: ${materialReference.maskMode}`,
+        `Layer: ${materialReference.activeLayer}`,
+        `Placement: ${materialReference.placement}`,
+        `Scale: ${materialReference.scale}%`,
+        materialReference.note.trim() ? `Material note: ${materialReference.note.trim()}` : '',
+      ].filter(Boolean) : [];
       const buildRemoteGenerationContext = (feature: Feature | null, intentPrompt: string, ratio: string) => {
         if (!feature) return {};
         const baseContext = {
           featureType: feature.id,
           ...(lightchainCompat ? { lightchainCompat } : {}),
+          ...generateMaterialMetadata,
         };
         if (!sourceReadback) return baseContext;
         const generationIntent: GenerationIntent = {
@@ -974,6 +1155,7 @@ export function GeneratePage() {
           label: `${feature.name}で生成`,
           aspectRatio: ratio,
           ...sourceReadback,
+          ...generateMaterialMetadata,
         };
         return {
           ...baseContext,
@@ -1019,6 +1201,7 @@ export function GeneratePage() {
           selectedStyleLabel ? `Style: ${selectedStyleLabel}` : '',
           `Ratio: ${selectedRatio}`,
           referenceImage ? `Reference: ${referenceImage.referenceType || 'attached'}` : '',
+          ...materialPromptLines,
         ].filter(Boolean);
         const resultLabels = (() => {
           if (planningFeature.id === 'product-shots') {
@@ -1070,6 +1253,7 @@ export function GeneratePage() {
               resultLabels,
               referenceImagePresent: Boolean(referenceImage),
               referenceType: referenceImage?.referenceType ?? null,
+              ...generateMaterialMetadata,
               selectedShots,
               selectedBodyTypes,
               selectedAgeGroups,
@@ -1137,6 +1321,7 @@ export function GeneratePage() {
               selectedStyle: selectedStyleLabel,
               referenceImagePresent: Boolean(referenceImage),
               referenceType: referenceImage?.referenceType,
+              ...generateMaterialMetadata,
               selectedShots,
               selectedBodyTypes,
               selectedAgeGroups,
@@ -1174,6 +1359,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('remove-background', {
             body: { 
               ...baseBody,
+              ...generateMaterialMetadata,
               imageUrl: processedImageUrl, 
               newBackground: bgPrompt,
               backgroundReferenceImage: backgroundReferenceImage?.url,
@@ -1193,6 +1379,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('colorize', {
             body: { 
               ...baseBody,
+              ...generateMaterialMetadata,
               imageUrl: processedImageUrl, 
               colors: selectedColors.includes('custom') ? [...selectedColors.filter(c => c !== 'custom'), customColor] : selectedColors,
               pattern: selectedPattern,
@@ -1214,6 +1401,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('upscale', {
             body: { 
               ...baseBody,
+              ...generateMaterialMetadata,
               imageUrl: processedImageUrl, 
               scale: upscaleScale,
               denoiseLevel,
@@ -1234,6 +1422,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('generate-variations', {
             body: { 
               ...baseBody,
+              ...generateMaterialMetadata,
               imageUrl: processedImageUrl, 
               count: generateCount,
               strength: variationStrength / 100,
@@ -1261,6 +1450,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('generate-variations', {
             body: { 
               ...baseBody,
+              ...generateMaterialMetadata,
               imageUrl: processedImageUrl,
               scenes: selectedScenes.map(s => sceneOptions.find(sc => sc.id === s)?.prompt),
               count: selectedScenes.length,
@@ -1291,6 +1481,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('design-gacha', {
             body: { 
               ...baseBody,
+              ...generateMaterialMetadata,
               brief: prompt,
               imageUrl: processedImageUrl, // 画像参照用
               directions: generateCount,
@@ -1334,6 +1525,7 @@ export function GeneratePage() {
           });
           const requestBody = { 
             ...baseBody,
+            ...generateMaterialMetadata,
             productDescription,
             imageUrl: processedImageUrl,
             shots: shotsToGenerate,
@@ -1397,6 +1589,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('model-matrix', {
             body: { 
               ...baseBody,
+              ...generateMaterialMetadata,
               productDescription,
               imageUrl: processedImageUrl, // 画像参照用
               bodyTypes: selectedBodyTypes,
@@ -1426,6 +1619,7 @@ export function GeneratePage() {
           ({ data, error } = await supabase.functions.invoke('multilingual-banner', {
             body: { 
               ...baseBody,
+              ...generateMaterialMetadata,
               headline, 
               subheadline,
               languages: selectedLanguages,
@@ -1484,12 +1678,16 @@ export function GeneratePage() {
           ].filter(Boolean).join(', ');
 
           const campaignPrompt = `${prompt || 'campaign visual'}, ${campaignParts}, readable typography, high contrast, balanced layout`;
+          const campaignPromptWithMaterial = [
+            campaignPrompt,
+            ...materialPromptLines,
+          ].filter(Boolean).join(', ');
 
           ({ data, error } = await supabase.functions.invoke('generate-image', {
             body: {
               ...baseBody,
-              ...buildRemoteGenerationContext(selectedFeature, campaignPrompt, selectedRatio),
-              prompt: campaignPrompt,
+              ...buildRemoteGenerationContext(selectedFeature, campaignPromptWithMaterial, selectedRatio),
+              prompt: campaignPromptWithMaterial,
               negativePrompt,
               width: ratio.width,
               height: ratio.height,
@@ -1530,6 +1728,10 @@ export function GeneratePage() {
               fullPrompt = `${prompt}, ${style.prompt}`;
             }
           }
+          fullPrompt = [
+            fullPrompt,
+            ...materialPromptLines,
+          ].filter(Boolean).join(', ');
           const ratio = aspectRatios.find(r => r.id === selectedRatio) || aspectRatios[0];
           ({ data, error } = await supabase.functions.invoke('generate-image', {
             body: {
@@ -1587,6 +1789,7 @@ export function GeneratePage() {
               aspectRatio: selectedRatio,
               ...sourceReadback,
               ...modelMatrixParams,
+              ...generateMaterialMetadata,
               ...(generatedPatternContext ?? {}),
             };
 
@@ -1605,6 +1808,7 @@ export function GeneratePage() {
                 sourceMode: sourceReadback.sourceMode,
                 ...(modelMatrixParams?.modelCandidateLabel ? { modelCandidateLabel: modelMatrixParams.modelCandidateLabel } : {}),
                 generationIntent,
+                ...generateMaterialMetadata,
                 ...(generatedPatternContext ?? {}),
                 generatedResultId: image.id,
                 generatedResultLabel: image.label,
@@ -2945,6 +3149,16 @@ export function GeneratePage() {
     </div>
   );
 
+  const handleGenerateMaterialChange = (nextState: MaterialReferenceState) => {
+    setMaterialReference(nextState);
+    if (nextState.imageUrl && nextState.imageUrl !== materialReference.imageUrl) {
+      setReferenceImage({
+        url: nextState.imageUrl,
+        referenceType: featureConfig?.defaultReferenceType ?? 'base',
+      });
+    }
+  };
+
   // Feature selection view
   if (!selectedFeature) {
     return (
@@ -3204,6 +3418,22 @@ export function GeneratePage() {
                   <History className="w-4 h-4" />
                   履歴から選ぶ
                 </button>
+              </div>
+            )}
+
+            {selectedGenerateWorkbench && (
+              <div className="mb-5">
+                <MaterialWorkbench
+                  title={selectedGenerateWorkbench.title}
+                  description={selectedGenerateWorkbench.description}
+                  uploadLabel={selectedGenerateWorkbench.uploadLabel}
+                  emptyLabel={selectedGenerateWorkbench.emptyLabel}
+                  state={materialReference}
+                  onChange={handleGenerateMaterialChange}
+                  materialKinds={selectedGenerateWorkbench.materialKinds}
+                  layerOptions={selectedGenerateWorkbench.layerOptions}
+                  placementOptions={selectedGenerateWorkbench.placementOptions}
+                />
               </div>
             )}
 

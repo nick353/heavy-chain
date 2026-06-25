@@ -13,6 +13,7 @@ export type MaterialReferenceState = {
 
 export type MaterialReferenceMetadata = Record<string, Json | undefined> & {
   hasImage: boolean;
+  imageUrl: string | null;
   fileName: string | null;
   materialKind: string;
   maskMode: MaterialReferenceState['maskMode'];
@@ -41,6 +42,7 @@ export const buildMaterialReferenceMetadata = (
   state: MaterialReferenceState,
 ): MaterialReferenceMetadata => ({
   hasImage: Boolean(state.imageUrl),
+  imageUrl: state.imageUrl || null,
   fileName: state.fileName || null,
   materialKind: state.materialKind,
   maskMode: state.maskMode,

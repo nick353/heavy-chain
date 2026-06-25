@@ -123,6 +123,30 @@ const completeUsageEvent = async (supabase, inputParams, status, metadata = {}) 
   if (error) throw error;
 };
 
+const redactWorkerInputParamsForMetadata = (inputParams) => {
+  const redacted = { ...asRecord(inputParams) };
+  if (typeof redacted.referenceImage === 'string' && redacted.referenceImage) {
+    redacted.hasReferenceImage = true;
+    redacted.referenceImageLength = redacted.referenceImage.length;
+    delete redacted.referenceImage;
+  }
+  if (Array.isArray(redacted.materialReferences)) {
+    redacted.materialReferences = redacted.materialReferences.map((reference) => {
+      const record = asRecord(reference);
+      if (typeof record.imageUrl === 'string' && record.imageUrl) {
+        const rest = { ...record };
+        delete rest.imageUrl;
+        return {
+          ...rest,
+          hasImage: true,
+        };
+      }
+      return record;
+    });
+  }
+  return redacted;
+};
+
 const cleanupSavedImages = async (supabase, imageIds, storagePaths) => {
   const cleanupErrors = [];
   if (imageIds.length > 0) {
@@ -656,11 +680,16 @@ const claimJob = async (supabase, job) => {
     workerClaimedAt: new Date().toISOString(),
     workerContractVersion: CONTRACT_VERSION,
   };
+  const persistedInputParams = {
+    ...redactWorkerInputParamsForMetadata(inputParams),
+    workerClaimedAt: inputParams.workerClaimedAt,
+    workerContractVersion: CONTRACT_VERSION,
+  };
   const { data, error } = await supabase
     .from('generation_jobs')
     .update({
       status: 'processing',
-      input_params: inputParams,
+      input_params: persistedInputParams,
       error_message: null,
     })
     .eq('id', job.id)
@@ -668,7 +697,10 @@ const claimJob = async (supabase, job) => {
     .select('*')
     .single();
   if (error || !data) return null;
-  return data;
+  return {
+    ...data,
+    input_params: inputParams,
+  };
 };
 
 const saveGeneratedImage = async ({ supabase, job, inputParams, result, index, artifactDir }) => {
@@ -686,7 +718,7 @@ const saveGeneratedImage = async ({ supabase, job, inputParams, result, index, a
 
   const title = `${job.feature_type} Runway worker ${index + 1}`;
   const metadata = {
-    ...inputParams,
+    ...redactWorkerInputParamsForMetadata(inputParams),
     title,
     artifactKind: 'runway_local_worker_image',
     localRunwayMcpWorker: true,
@@ -740,7 +772,13 @@ const processJob = async ({ supabase, job, args }) => {
   let inputParams = asRecord(claimed.input_params);
   const artifactDir = path.resolve(repoRoot, 'output/runway-local-worker', claimed.id);
   await fs.mkdir(artifactDir, { recursive: true });
-  await fs.writeFile(path.join(artifactDir, 'job.json'), `${JSON.stringify(claimed, null, 2)}\n`);
+  await fs.writeFile(
+    path.join(artifactDir, 'job.json'),
+    `${JSON.stringify({
+      ...claimed,
+      input_params: redactWorkerInputParamsForMetadata(claimed.input_params),
+    }, null, 2)}\n`,
+  );
   const savedImages = [];
   const uploadedPaths = [];
 
@@ -780,17 +818,17 @@ const processJob = async ({ supabase, job, args }) => {
       artifactDir,
     };
     await fs.writeFile(path.join(artifactDir, 'worker-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-    const { error: completeJobError } = await supabase
-      .from('generation_jobs')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        input_params: {
-          ...inputParams,
-          workerCompletedAt: new Date().toISOString(),
-          workerArtifactDir: artifactDir,
-          workerImageIds: images.map((image) => image.id),
-        },
+	    const { error: completeJobError } = await supabase
+	      .from('generation_jobs')
+	      .update({
+	        status: 'completed',
+	        completed_at: new Date().toISOString(),
+	        input_params: {
+	          ...redactWorkerInputParamsForMetadata(inputParams),
+	          workerCompletedAt: new Date().toISOString(),
+	          workerArtifactDir: artifactDir,
+	          workerImageIds: images.map((image) => image.id),
+	        },
       })
       .eq('id', claimed.id);
     if (completeJobError) {
@@ -808,14 +846,14 @@ const processJob = async ({ supabase, job, args }) => {
       manifest.usageCompletionError = usageCompletionError;
       await fs.writeFile(path.join(artifactDir, 'worker-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
       await supabase
-        .from('generation_jobs')
-        .update({
-          input_params: {
-            ...inputParams,
-            workerCompletedAt: new Date().toISOString(),
-            workerArtifactDir: artifactDir,
-            workerImageIds: images.map((image) => image.id),
-            usageCompletionError,
+	        .from('generation_jobs')
+	        .update({
+	          input_params: {
+	            ...redactWorkerInputParamsForMetadata(inputParams),
+	            workerCompletedAt: new Date().toISOString(),
+	            workerArtifactDir: artifactDir,
+	            workerImageIds: images.map((image) => image.id),
+	            usageCompletionError,
           },
         })
         .eq('id', claimed.id);
@@ -848,14 +886,14 @@ const processJob = async ({ supabase, job, args }) => {
     const { error: failJobError } = await supabase
       .from('generation_jobs')
       .update({
-        status: 'failed',
-        error_message: blocker,
-        completed_at: new Date().toISOString(),
-        input_params: {
-          ...inputParams,
-          workerFailedAt: new Date().toISOString(),
-          workerArtifactDir: artifactDir,
-          workerBlocker: blocker,
+	        status: 'failed',
+	        error_message: blocker,
+	        completed_at: new Date().toISOString(),
+	        input_params: {
+	          ...redactWorkerInputParamsForMetadata(inputParams),
+	          workerFailedAt: new Date().toISOString(),
+	          workerArtifactDir: artifactDir,
+	          workerBlocker: blocker,
           workerCleanupErrors: cleanupErrors,
         },
       })
