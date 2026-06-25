@@ -4,7 +4,7 @@ Status: launch operations are verified through read-only production UI rehearsal
 
 ## Stop Rules
 
-Stop before billing, purchase, payment, checkout, external publishing, identity verification, secret entry, production DB deletion, storage deletion, or proof artifact deletion. Capture the blocker and resume only after explicit human approval.
+Stop before billing, purchase, payment, checkout, identity verification, security prompts, or secret entry. Non-billing production UAT is allowed to click generation submit, create marker-scoped jobs/images/usage rows, verify DB/Storage/UI readback, and clean up only those marker-scoped test artifacts. External publishing still needs a task-specific proof contract before use.
 
 ## Daily Operator Flow
 
