@@ -19,6 +19,41 @@ npm run worker:local-runway:watch
 4. Save the MCP result JSON into `output/runway-mcp-results/inbox` with `heavyChainJobId` or `generationJobId`.
 5. Confirm the worker moves the JSON to `processed/`, the job is completed, Storage readback is HTTP 200, Gallery shows the image, Canvas can reuse it, and Canvas export or project reload works.
 
+## One-Page Production Flow
+
+Use this exact path for customer-facing work:
+
+1. Upload or select the product/material image in Heavy Chain before clicking `Runway workerで生成`.
+2. Confirm the queued job has `provider=runway_mcp_local_worker`. If a material image was used, DB readback must show `hasReferenceImage=true` and a `referenceImageHandoff`.
+3. Generate the matching output in the approved Codex/Runway MCP client. The prompt should describe one finished image only; do not ask for a grid unless the customer wants a grid.
+4. Save the MCP result JSON with the Heavy Chain job ID:
+
+```json
+{
+  "heavyChainJobId": "<generation_jobs.id>",
+  "generationJobId": "<generation_jobs.id>",
+  "taskId": "<runway task id>",
+  "asset_urls": ["https://..."],
+  "candidate_paths": ["/absolute/path/to/generated.png"]
+}
+```
+
+5. Prefer watch mode for normal work. Use a single-job import only for deliberate recovery:
+
+```bash
+npm run worker:local-runway -- --job-id <generation_jobs.id> --mcp-result output/runway-mcp-results/inbox/<generation_jobs.id>.json
+```
+
+6. Accept the run only after all of these are true: `generation_jobs.status=completed`, `usage_events.status=succeeded`, `generated_images.storage_path` downloads, Gallery image natural width is non-zero, Canvas `Galleryから追加` can see the image, and the output passes visual review.
+
+## Failure Triage
+
+- `waiting_for_mcp_result` or a pending job older than 10 minutes: confirm the MCP JSON file contains `heavyChainJobId` or `generationJobId`, then drop it into `output/runway-mcp-results/inbox`.
+- JSON moved to `failed/`: open the worker manifest/error, fix the JSON path, task URL, or job ID mismatch, then retry with single-job import.
+- Reference image/handoff failure: verify the original UI submit produced `hasReferenceImage=true` and `referenceImageHandoff`; if not, resubmit from the material workbench rather than manually pasting raw image data.
+- Runway consent page shows `localhost:15554` or `Consent session missing or expired`: stop using that path. Use the approved Codex Runway MCP tools only.
+- Use `--allow-unmatched-mcp-result` only for one-off recovery after manually verifying the generated image belongs to that exact Heavy Chain job. Do not use it in watch mode.
+
 ## Launch Verification Command
 
 Run this before a public demo, sales call, or release handoff:

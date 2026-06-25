@@ -31,6 +31,9 @@ export interface WorkspaceJob {
   generationHref?: string;
   sourceLabel?: string;
   sourceResumePath?: string;
+  productLane: string;
+  hasMaterialReference: boolean;
+  recoveryAction: string;
   sourceSummaryRows: SourceContextSummaryRow[];
 }
 
@@ -147,6 +150,31 @@ const getFeatureLabel = (featureType: string | null | undefined) => {
   return featureLabels[featureType] ?? featureType.replaceAll('-', ' ');
 };
 
+const getProductLane = (featureType: string | null | undefined) => {
+  switch (featureType) {
+    case 'product-shots':
+    case 'remove-bg':
+    case 'remove-background':
+    case 'upscale':
+      return 'EC商品素材';
+    case 'model-matrix':
+    case 'scene-coordinate':
+      return '着用画像';
+    case 'design-gacha':
+    case 'colorize':
+    case 'variations':
+    case 'generate-variations':
+    case 'graphic-pattern-workspace':
+      return 'デザイン探索';
+    case 'campaign-image':
+    case 'text-to-image':
+    case 'multilingual-banner':
+      return '販促';
+    default:
+      return '制作';
+  }
+};
+
 const inputValueToString = (inputParams: Json | null, key: string) => {
   if (!inputParams || typeof inputParams !== 'object' || Array.isArray(inputParams)) return null;
   const value = inputParams[key];
@@ -155,6 +183,33 @@ const inputValueToString = (inputParams: Json | null, key: string) => {
 
 const getJobPrompt = (job: GenerationJob) => {
   return job.optimized_prompt || inputValueToString(job.input_params, 'prompt') || inputValueToString(job.input_params, 'description');
+};
+
+const hasMaterialReference = (inputParams: Json | null | undefined) => {
+  if (!inputParams || typeof inputParams !== 'object' || Array.isArray(inputParams)) return false;
+  if (inputParams.hasReferenceImage === true || inputParams.referenceImageHandoff) return true;
+  if (Array.isArray(inputParams.materialReferences) && inputParams.materialReferences.length > 0) return true;
+  const promptLike = [
+    inputValueToString(inputParams, 'prompt'),
+    inputValueToString(inputParams, 'description'),
+    inputValueToString(inputParams, 'optimizedPrompt'),
+  ].filter(Boolean).join(' ');
+  return /衣服素材|素材:|Material:|reference image|garment/i.test(promptLike);
+};
+
+const getRecoveryAction = (job: GenerationJob) => {
+  if (job.status !== 'failed') return job.status === 'completed' ? 'Galleryで開く' : '進行状況を見る';
+  const message = `${job.error_message ?? ''} ${getJobPrompt(job) ?? ''}`.toLowerCase();
+  if (message.includes('timeout') || message.includes('waiting_for_runway') || message.includes('worker')) {
+    return 'workerとRunway結果JSONを確認';
+  }
+  if (message.includes('subscription') || message.includes('approval') || message.includes('runway_mcp')) {
+    return 'Runway承認状態を確認';
+  }
+  if (message.includes('storage') || message.includes('handoff') || message.includes('reference')) {
+    return '素材画像とStorage読込を確認';
+  }
+  return '入力を直して再開';
 };
 
 const buildResumeHref = (job: GenerationJob) => {
@@ -181,6 +236,9 @@ const mapJob = (job: GenerationJob, outputCount: number, lightchainTaskSteps: Li
   generationHref: getGenerationHref(job.input_params),
   sourceLabel: getMetadataString(job.input_params, 'sourceLabel'),
   sourceResumePath: getMetadataString(job.input_params, 'sourceResumePath'),
+  productLane: getProductLane(job.feature_type),
+  hasMaterialReference: hasMaterialReference(job.input_params),
+  recoveryAction: getRecoveryAction(job),
   sourceSummaryRows: buildSourceSummaryRows(job.input_params, job.status, lightchainTaskSteps),
 });
 

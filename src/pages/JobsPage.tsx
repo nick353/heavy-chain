@@ -28,8 +28,12 @@ function JobRow({ job }: { job: WorkspaceJob }) {
       ? '成果物を開く'
       : '進行状況を見る';
 
+  const statusTone = job.status === 'failed'
+    ? 'border-amber-200 bg-amber-50/70 dark:border-amber-900/50 dark:bg-amber-950/20'
+    : 'border-white/60 bg-white/65 dark:border-white/10 dark:bg-surface-900/55';
+
   return (
-    <article className="rounded-2xl border border-white/60 bg-white/65 p-4 shadow-soft transition hover:border-primary-300 dark:border-white/10 dark:bg-surface-900/55 dark:hover:border-primary-500/70">
+    <article className={`rounded-2xl border p-4 shadow-soft transition hover:border-primary-300 dark:hover:border-primary-500/70 ${statusTone}`}>
       <div className="flex items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600 dark:bg-surface-800 dark:text-neutral-200">
           <StatusIcon className={`h-5 w-5 ${job.status === 'processing' ? 'animate-spin' : ''}`} />
@@ -42,6 +46,13 @@ function JobRow({ job }: { job: WorkspaceJob }) {
             <span className="text-xs text-neutral-400">{new Date(job.createdAt).toLocaleString('ja-JP')}</span>
           </div>
           <h2 className="mt-2 truncate text-base font-semibold text-neutral-950 dark:text-white">{job.title}</h2>
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold">
+            <span className="rounded-full bg-primary-50 px-2 py-1 text-primary-700 dark:bg-primary-400/10 dark:text-primary-200">{job.productLane}</span>
+            <span className={`rounded-full px-2 py-1 ${job.hasMaterialReference ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200' : 'bg-neutral-100 text-neutral-500 dark:bg-surface-800 dark:text-neutral-300'}`}>
+              {job.hasMaterialReference ? '素材あり' : '素材なし'}
+            </span>
+            <span className="rounded-full bg-white px-2 py-1 text-neutral-500 dark:bg-white/10 dark:text-neutral-300">{job.recoveryAction}</span>
+          </div>
           <p className="mt-1 line-clamp-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
             {job.status === 'failed' ? job.errorMessage || job.prompt || job.featureType : job.prompt || job.featureType}
           </p>
@@ -73,6 +84,7 @@ export function JobsPage() {
   const [activity, setActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
   const [isLoading, setIsLoading] = useState(false);
   const [activityError, setActivityError] = useState<string | null>(null);
+  const [showFailedJobs, setShowFailedJobs] = useState(false);
 
   const loadActivity = useCallback(async () => {
     if (!currentBrand) {
@@ -97,7 +109,8 @@ export function JobsPage() {
     void loadActivity();
   }, [loadActivity]);
 
-  const jobs = [...activity.activeJobs, ...activity.failedJobs, ...activity.completedJobs];
+  const primaryJobs = [...activity.activeJobs, ...activity.completedJobs];
+  const visibleJobs = showFailedJobs ? [...primaryJobs, ...activity.failedJobs] : primaryJobs;
   const queueCards = [
     {
       label: '再開できる作業',
@@ -181,10 +194,20 @@ export function JobsPage() {
             <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
               <aside className="rounded-2xl bg-white/50 p-4 dark:bg-surface-900/45">
                 <p className="text-xs font-semibold uppercase text-primary-600 dark:text-primary-300">Queue summary</p>
-                <p className="mt-2 text-2xl font-semibold text-neutral-950 dark:text-white">{jobs.length}</p>
+                <p className="mt-2 text-2xl font-semibold text-neutral-950 dark:text-white">{visibleJobs.length}</p>
                 <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-                  Lightchainで見慣れた作業一覧に近い形で、状態ごとの次アクションを先に出しています。
+                  完了成果物と進行中の作業を先に出し、古い失敗は必要な時だけ確認します。
                 </p>
+                {activity.failedJobs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowFailedJobs((current) => !current)}
+                    className="mt-4 inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200"
+                  >
+                    {showFailedJobs ? '失敗を隠す' : `要確認 ${activity.failedJobs.length}件を表示`}
+                    <ArrowRight className={`h-3.5 w-3.5 transition ${showFailedJobs ? 'rotate-90' : ''}`} />
+                  </button>
+                )}
               </aside>
 
               {isLoading ? (
@@ -208,9 +231,9 @@ export function JobsPage() {
                     再読み込み
                   </button>
                 </div>
-              ) : jobs.length > 0 ? (
+              ) : visibleJobs.length > 0 ? (
                 <div className="grid gap-3 lg:grid-cols-2">
-                  {jobs.map((job) => <JobRow key={job.id} job={job} />)}
+                  {visibleJobs.map((job) => <JobRow key={job.id} job={job} />)}
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-neutral-200 bg-white/45 p-6 text-center dark:border-white/10 dark:bg-surface-900/35">

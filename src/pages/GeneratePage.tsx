@@ -1068,8 +1068,11 @@ export function GeneratePage() {
     debugLog('Generation started', { selectedFeature: selectedFeature?.id });
     
     try {
+      const effectiveReferenceImageUrl = referenceImage?.url || materialReference.imageUrl || null;
+      const effectiveReferenceType = referenceImage?.referenceType ?? featureConfig?.defaultReferenceType ?? 'base';
+
       // 画像が大きすぎる場合は圧縮
-      let processedImageUrl = referenceImage?.url;
+      let processedImageUrl = effectiveReferenceImageUrl;
       if (processedImageUrl && processedImageUrl.startsWith('data:') && processedImageUrl.length > 500000) {
         debugLog('Reference image will be compressed');
         toast.loading('画像を圧縮中...', { id: 'compress' });
@@ -1100,7 +1103,7 @@ export function GeneratePage() {
       const baseBody = {
         brandId: currentBrand.id,
         referenceImage: processedImageUrl,
-        referenceType: referenceImage?.referenceType,
+        referenceType: effectiveReferenceType,
         textOverlay,
         lightchainCompat: lightchainCompat ?? undefined,
       };
@@ -1121,7 +1124,7 @@ export function GeneratePage() {
         source: 'generate_page_material_workbench',
       } : undefined;
       const generateCompositionPreview = hasGenerateMaterialReference ? {
-        referenceType: referenceImage?.referenceType ?? featureConfig?.defaultReferenceType ?? 'base',
+        referenceType: effectiveReferenceType,
         fileName: materialReference.fileName,
         note: materialReference.note,
         source: 'generate_page_material_workbench',
@@ -1201,6 +1204,7 @@ export function GeneratePage() {
           selectedStyleLabel ? `Style: ${selectedStyleLabel}` : '',
           `Ratio: ${selectedRatio}`,
           referenceImage ? `Reference: ${referenceImage.referenceType || 'attached'}` : '',
+          !referenceImage && materialReference.imageUrl ? `Reference: ${effectiveReferenceType}` : '',
           ...materialPromptLines,
         ].filter(Boolean);
         const resultLabels = (() => {
@@ -1228,7 +1232,7 @@ export function GeneratePage() {
             styleLabel: selectedStyleLabel,
             aspectRatio: selectedRatio,
             textOverlay,
-            referenceImagePresent: Boolean(referenceImage),
+            referenceImagePresent: Boolean(processedImageUrl),
             extraLines: featureLines,
           });
           const productionNegativePrompt = mergeProductionNegativePrompt(negativePrompt);
@@ -1241,7 +1245,7 @@ export function GeneratePage() {
             height: ratio.height,
             count: Math.max(1, Math.min(resultLabels.length || generateCount, 4)),
             referenceImage: processedImageUrl ?? null,
-            referenceType: referenceImage?.referenceType ?? null,
+            referenceType: effectiveReferenceType,
             metadata: {
               source: 'generate_page',
               artifactKind: 'runway_local_worker_request',
@@ -1251,8 +1255,8 @@ export function GeneratePage() {
               originalUserBrief: primaryBrief || fallbackBrief,
               negativePrompt: productionNegativePrompt,
               resultLabels,
-              referenceImagePresent: Boolean(referenceImage),
-              referenceType: referenceImage?.referenceType ?? null,
+              referenceImagePresent: Boolean(processedImageUrl),
+              referenceType: effectiveReferenceType,
               ...generateMaterialMetadata,
               selectedShots,
               selectedBodyTypes,
