@@ -44,6 +44,7 @@ type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
 type GenerateMode = 'basic' | 'gacha' | 'product-shots' | 'model-matrix' | 'multilingual';
 type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'generate-variations' | 'prompt-edit';
+const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
 
 const LIGHTCHAIN_EDIT_ACTION_LABELS: Record<LightchainEditAction, string> = {
   'remove-background': '背景削除・切り抜き',
@@ -112,6 +113,7 @@ export function CanvasEditorPage() {
     objects,
     selectedIds,
     addObject,
+    selectObject,
     undo,
     redo,
     setZoom,
@@ -408,7 +410,7 @@ export function CanvasEditorPage() {
     });
   };
 
-  const loadCanvasImage = (imageUrl: string) => {
+  const loadCanvasImage = useCallback((imageUrl: string) => {
     const source = imageUrl.trim();
 
     if (!source) {
@@ -442,9 +444,9 @@ export function CanvasEditorPage() {
       });
 
     return createLoader(true).catch(() => createLoader(false));
-  };
+  }, []);
 
-  const addImageToCanvas = async (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
+  const addImageToCanvas = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
     const img = await loadCanvasImage(imageUrl);
     if (!isMountedRef.current) {
       throw new Error('Canvas画面が閉じられたため配置を中止しました');
@@ -470,15 +472,16 @@ export function CanvasEditorPage() {
         parentId: parentId || undefined,
       } : undefined,
     });
+    selectObject(newId);
     return newId;
-  };
+  }, [addObject, loadCanvasImage, selectObject]);
 
-  const addImageToCanvasSafely = (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
+  const addImageToCanvasSafely = useCallback((imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
     void addImageToCanvas(imageUrl, label, metadata, parentId).catch((error: any) => {
       console.error('Canvas image load error:', error);
       toast.error(error?.message || '画像をCanvasへ配置できませんでした');
     });
-  };
+  }, [addImageToCanvas]);
 
   const handleSelectGalleryImage = async (imageUrl: string, imageId: string) => {
     try {
@@ -495,6 +498,45 @@ export function CanvasEditorPage() {
       toast.error(error?.message || 'Gallery画像をCanvasへ配置できませんでした');
     }
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const raw = window.sessionStorage.getItem(GENERATED_CANVAS_HANDOFF_KEY);
+    if (!raw) return;
+    window.sessionStorage.removeItem(GENERATED_CANVAS_HANDOFF_KEY);
+
+    try {
+      const payload = JSON.parse(raw);
+      const images = Array.isArray(payload?.images) ? payload.images : [];
+      images.forEach((image: any, index: number) => {
+        if (typeof image?.imageUrl !== 'string' || !image.imageUrl) return;
+        addImageToCanvasSafely(image.imageUrl, image.label || `生成結果 ${index + 1}`, {
+          feature: image.feature || 'generate-image',
+          prompt: image.prompt || '',
+          generation: 0,
+          parameters: {
+            source: payload?.source || 'generate-results',
+            resultId: image.resultId || null,
+            jobId: image.jobId || null,
+            imageId: image.imageId || null,
+            storagePath: image.storagePath || null,
+            artifactKind: image.artifactKind || null,
+            handoffCreatedAt: payload?.createdAt || null,
+            materialReferences: image.materialReferences || null,
+            layerPlan: image.layerPlan || null,
+            maskPlan: image.maskPlan || null,
+            compositionPreview: image.compositionPreview || null,
+          },
+        });
+      });
+      if (images.length) {
+        toast.success(`${images.length}件の生成結果をCanvasへ配置しました`);
+      }
+    } catch (error) {
+      console.error('Generated canvas handoff failed:', error);
+      toast.error('生成結果をCanvasへ配置できませんでした');
+    }
+  }, [addImageToCanvasSafely]);
 
   const handleGenerate = async () => {
     if (!currentBrand) {

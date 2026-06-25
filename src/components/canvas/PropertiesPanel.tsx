@@ -8,7 +8,10 @@ import {
   Unlock,
   Eye,
   EyeOff,
-  Trash2
+  Trash2,
+  Layers3,
+  Scissors,
+  ScanLine
 } from 'lucide-react';
 import { useCanvasStore, type CanvasObject } from '../../stores/canvasStore';
 
@@ -20,6 +23,14 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
   const { updateObject, deleteObject, saveToHistory } = useCanvasStore();
   const [localValues, setLocalValues] = useState<Partial<CanvasObject>>({});
   const lightchainEditStages = selectedObject?.metadata?.lightchainEditStages ?? [];
+  const parameters = selectedObject?.metadata?.parameters ?? {};
+  const materialReference = Array.isArray(parameters.materialReferences)
+    ? parameters.materialReferences.find((item: any) => item?.hasImage || item?.materialKind)
+    : parameters.materialReference ?? parameters.materialReferences ?? null;
+  const layerPlan = parameters.layerPlan ?? null;
+  const maskPlan = parameters.maskPlan ?? null;
+  const compositionPreview = parameters.compositionPreview ?? null;
+  const sourceLabel = parameters.source ?? selectedObject?.metadata?.feature ?? null;
 
   useEffect(() => {
     if (selectedObject) {
@@ -258,6 +269,65 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
               onBlur={() => handleBlur('fill')}
               className="flex-1 px-2 py-1.5 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary-500"
             />
+          </div>
+        </div>
+      )}
+
+      {selectedObject.type === 'image' && (sourceLabel || materialReference || layerPlan || maskPlan || compositionPreview) && (
+        <div className="pt-4 border-t border-neutral-100">
+          <h4 className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 mb-3">
+            <Layers3 className="w-3.5 h-3.5" />
+            素材・レイヤー情報
+          </h4>
+          <div className="space-y-2">
+            {sourceLabel && (
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2">
+                <p className="text-[11px] font-semibold text-neutral-400">生成元</p>
+                <p className="mt-1 truncate text-sm font-semibold text-neutral-800">{String(sourceLabel)}</p>
+              </div>
+            )}
+            {materialReference && (
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-400">
+                  <ScanLine className="w-3 h-3" />
+                  認識素材
+                </p>
+                <div className="mt-1 grid grid-cols-2 gap-2 text-xs text-neutral-600">
+                  <span className="truncate">種類: {String(materialReference.materialKind ?? '未設定')}</span>
+                  <span className="truncate">配置: {String(materialReference.placement ?? layerPlan?.placement ?? '未設定')}</span>
+                  <span className="truncate">層: {String(materialReference.activeLayer ?? layerPlan?.activeLayer ?? '未設定')}</span>
+                  <span className="truncate">サイズ: {String(materialReference.scale ?? layerPlan?.scale ?? '未設定')}%</span>
+                </div>
+                {materialReference.note && (
+                  <p className="mt-2 line-clamp-2 text-xs text-neutral-500">{String(materialReference.note)}</p>
+                )}
+              </div>
+            )}
+            {(layerPlan || maskPlan || compositionPreview) && (
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-400">
+                  <Scissors className="w-3 h-3" />
+                  編集設計
+                </p>
+                <div className="mt-1 space-y-1 text-xs text-neutral-600">
+                  {layerPlan && (
+                    <p className="truncate">
+                      レイヤー: {String(layerPlan.activeLayer ?? layerPlan.layer ?? '未設定')} / {String(layerPlan.placement ?? '配置未設定')}
+                    </p>
+                  )}
+                  {maskPlan && (
+                    <p className="truncate">
+                      カット: {String(maskPlan.maskMode ?? maskPlan.mode ?? '未設定')}
+                    </p>
+                  )}
+                  {compositionPreview && (
+                    <p className="truncate">
+                      プレビュー: {String(compositionPreview.summary ?? compositionPreview.label ?? compositionPreview.status ?? '保存済み')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

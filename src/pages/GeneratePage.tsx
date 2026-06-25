@@ -1,4 +1,4 @@
-import { type ChangeEvent, useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Wand2, 
@@ -118,22 +118,171 @@ const sceneOptions = [
   { id: 'studio', name: 'スタジオ', prompt: 'professional studio, clean background' },
 ];
 
-const defaultCampaignAssistantPlan = [
-  {
-    title: '商品ヒーロー',
-    description: '商品全体と柄が分かる正方形のEC/SNS向けビジュアル。',
-  },
-  {
-    title: '着用・利用シーン',
-    description: 'ブランドの雰囲気、サイズ感、世界観が伝わる縦構図。',
-  },
-  {
-    title: 'ディテール',
-    description: '素材、プリント、質感に寄ったクローズアップ案。',
-  },
-];
+type AssistantPlanItem = {
+  title: string;
+  description: string;
+};
 
-const buildCampaignAssistantPlan = (request: string) => {
+type AssistantPlanningFeatureId =
+  | 'campaign-image'
+  | 'product-shots'
+  | 'model-matrix'
+  | 'design-gacha'
+  | 'scene-coordinate'
+  | 'multilingual-banner'
+  | 'remove-bg'
+  | 'colorize'
+  | 'upscale'
+  | 'variations';
+
+const defaultAssistantPlans = {
+  'campaign-image': [
+    {
+      title: '商品ヒーロー',
+      description: '商品全体と柄が分かる正方形のEC/SNS向けビジュアル。',
+    },
+    {
+      title: '着用・利用シーン',
+      description: 'ブランドの雰囲気、サイズ感、世界観が伝わる縦構図。',
+    },
+    {
+      title: 'ディテール',
+      description: '素材、プリント、質感に寄ったクローズアップ案。',
+    },
+  ],
+  'product-shots': [
+    {
+      title: '商品全体',
+      description: '正面・背面・側面の基本カットでECに必要な情報を揃えます。',
+    },
+    {
+      title: '素材と仕様',
+      description: '生地、縫製、柄、パーツの質感を寄りで見せます。',
+    },
+    {
+      title: '販売導線',
+      description: '商品ページ、SNS、カタログで使える構図へ展開します。',
+    },
+  ],
+  'model-matrix': [
+    {
+      title: '着用モデル軸',
+      description: '年齢層、体型、肌色、雰囲気を分けて比較できる着用案にします。',
+    },
+    {
+      title: 'シルエット確認',
+      description: '正面・斜め・全身でサイズ感と落ち感を確認できる構図にします。',
+    },
+    {
+      title: 'ブランド世界観',
+      description: '背景やポージングでブランドのムードを補強します。',
+    },
+  ],
+  'design-gacha': [
+    {
+      title: '固定要素',
+      description: 'ブランド、商品形状、守るべき構図を先に固定します。',
+    },
+    {
+      title: '変化要素',
+      description: '配色、柄、質感、背景など試す要素を分けます。',
+    },
+    {
+      title: '比較候補',
+      description: '複数案を同じ基準で比較できるデザインセットにします。',
+    },
+  ],
+  'scene-coordinate': [
+    {
+      title: '商品切り抜き',
+      description: '商品を主役として扱い、背景合成前の前景条件を整えます。',
+    },
+    {
+      title: '利用シーン',
+      description: 'カフェ、街、オフィスなど使う場所ごとの見え方を確認します。',
+    },
+    {
+      title: '販促展開',
+      description: 'EC、SNS、LPで使いやすい比率と余白を残します。',
+    },
+  ],
+  'multilingual-banner': [
+    {
+      title: 'テキスト余白',
+      description: '言語ごとに文字量が変わっても崩れにくい余白を確保します。',
+    },
+    {
+      title: '商品とコピー',
+      description: '商品、見出し、CTAの優先順位を明確にします。',
+    },
+    {
+      title: '言語バリエーション',
+      description: '日本語、英語、韓国語、中国語などへ展開しやすい構造にします。',
+    },
+  ],
+  'remove-bg': [
+    {
+      title: '対象認識',
+      description: '背景から切り抜く商品・人物・素材の境界を確認します。',
+    },
+    {
+      title: 'エッジ確認',
+      description: '髪、袖、影、透明部分など破綻しやすい箇所を重点確認します。',
+    },
+    {
+      title: '再利用',
+      description: 'Canvas、EC、SNSで使える透過素材として整理します。',
+    },
+  ],
+  colorize: [
+    {
+      title: '変更対象',
+      description: '色や柄を変える領域と残す領域を分けます。',
+    },
+    {
+      title: 'バリエーション',
+      description: '販売しやすい色展開やトーン差を複数案にします。',
+    },
+    {
+      title: '質感維持',
+      description: '生地感、影、立体感を壊さず色替えします。',
+    },
+  ],
+  upscale: [
+    {
+      title: '解像度改善',
+      description: '商品ディテールと輪郭を保ちながら高解像度化します。',
+    },
+    {
+      title: 'ノイズ調整',
+      description: '生地や柄がつぶれない範囲でノイズとシャープネスを調整します。',
+    },
+    {
+      title: '出力確認',
+      description: 'EC拡大表示や印刷用に耐える見え方を確認します。',
+    },
+  ],
+  variations: [
+    {
+      title: '元画像の保持',
+      description: '構図や主役は維持しながら変化させる範囲を決めます。',
+    },
+    {
+      title: '差分設計',
+      description: '背景、色、質感、ムードなど比較しやすい差分を作ります。',
+    },
+    {
+      title: '採用候補',
+      description: 'EC/SNSで使う候補を選びやすいバリエーションにします。',
+    },
+  ],
+} satisfies Record<AssistantPlanningFeatureId, AssistantPlanItem[]>;
+
+const getDefaultAssistantPlan = (featureId: string | undefined): AssistantPlanItem[] => (
+  supportsAssistantPlanning(featureId) ? defaultAssistantPlans[featureId] : defaultAssistantPlans['campaign-image']
+);
+
+const buildAssistantPlan = (featureId: string | undefined, request: string) => {
   const trimmed = request.trim();
   const subject = trimmed
     .replace(/[。.!?！？].*$/, '')
@@ -145,21 +294,34 @@ const buildCampaignAssistantPlan = (request: string) => {
   const channel = hasEc && hasSns ? 'ECとSNS' : hasSns ? 'SNS' : hasEc ? 'EC' : '販促';
   const copyRule = hasLogoTextOff ? '文字・ロゴなしで' : 'コピー余白を残して';
 
-  return [
-    {
-      title: `${subject}の主役カット`,
-      description: `${channel}で最初に見せる1:1構図。${copyRule}、商品全体と柄を明確に見せます。`,
-    },
-    {
-      title: `${subject}の世界観カット`,
-      description: '着用感または利用シーンが伝わる縦構図。ブランドの雰囲気と用途を補強します。',
-    },
-    {
-      title: `${subject}の質感ディテール`,
-      description: '素材、プリント、縫製、柄の見え方を寄りで見せ、購入前の不安を減らします。',
-    },
-  ];
+  if (featureId === 'campaign-image') {
+    return [
+      {
+        title: `${subject}の主役カット`,
+        description: `${channel}で最初に見せる1:1構図。${copyRule}、商品全体と柄を明確に見せます。`,
+      },
+      {
+        title: `${subject}の世界観カット`,
+        description: '着用感または利用シーンが伝わる縦構図。ブランドの雰囲気と用途を補強します。',
+      },
+      {
+        title: `${subject}の質感ディテール`,
+        description: '素材、プリント、縫製、柄の見え方を寄りで見せ、購入前の不安を減らします。',
+      },
+    ];
+  }
+
+  const defaults = getDefaultAssistantPlan(featureId);
+
+  return defaults.map((item, index) => ({
+    ...item,
+    title: index === 0 ? `${subject} / ${item.title}` : item.title,
+  }));
 };
+
+const supportsAssistantPlanning = (featureId: string | undefined): featureId is AssistantPlanningFeatureId => (
+  Boolean(featureId && featureId in defaultAssistantPlans)
+);
 
 type RunwayMcpConnectionStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
 
@@ -419,11 +581,15 @@ interface GeneratedResult {
   imageId?: string;
   storagePath?: string;
   artifactKind?: 'image' | 'planning_brief';
+  materialReferences?: unknown;
+  layerPlan?: unknown;
+  maskPlan?: unknown;
+  compositionPreview?: unknown;
 }
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
 const noImageGenerationMode = true;
-const localRunwayWorkerMode = true;
+const localRunwayWorkerMode = import.meta.env.VITE_LOCAL_RUNWAY_WORKER_MODE !== 'false';
 
 const debugLog = (message: string, details?: Record<string, unknown>) => {
   if (!debugGeneration) return;
@@ -509,6 +675,8 @@ const getDataUrlExtension = (imageUrl: string, fallback: string) => {
   if (mime === 'image/svg+xml') return 'svg';
   return fallback;
 };
+
+const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
 
 const escapeXml = (value: string) => value
   .replace(/&/g, '&amp;')
@@ -709,8 +877,9 @@ export function GeneratePage() {
   const [searchParams] = useSearchParams();
   const { currentBrand } = useAuthStore();
   const { addToHistory } = usePromptHistory();
+  const initialFeatureRef = useRef<Feature | null>(getInitialFeatureFromLocation());
   
-  const [selectedFeature, setSelectedFeature] = useState<Feature | null>(() => getInitialFeatureFromLocation());
+  const [selectedFeature, setSelectedFeature] = useState<Feature | null>(() => initialFeatureRef.current);
   const [activeWorkflow, setActiveWorkflow] = useState<WorkflowMetadata | null>(null);
   const [prompt, setPrompt] = useState('');
   const [showPromptHistory, setShowPromptHistory] = useState(false);
@@ -763,7 +932,9 @@ export function GeneratePage() {
   const [campaignTextPosition, setCampaignTextPosition] = useState<'top' | 'center' | 'bottom'>('center');
   const [assistantPrompt, setAssistantPrompt] = useState('');
   const [assistantPlanConfirmed, setAssistantPlanConfirmed] = useState(false);
-  const [assistantPlanItems, setAssistantPlanItems] = useState(defaultCampaignAssistantPlan);
+  const [assistantPlanItems, setAssistantPlanItems] = useState<AssistantPlanItem[]>(
+    () => getDefaultAssistantPlan(initialFeatureRef.current?.id)
+  );
   
   // Background & Color options
   const [selectedBackground, setSelectedBackground] = useState('white');
@@ -910,6 +1081,9 @@ export function GeneratePage() {
       setGeneratedImages([]);
       setOptimizedPromptResult('');
       setGenerationError('');
+      setAssistantPrompt('');
+      setAssistantPlanConfirmed(false);
+      setAssistantPlanItems(getDefaultAssistantPlan(feature.id));
       setReferenceImage(null);
       setBackgroundReferenceImage(null);
       setPatternReferenceImage(null);
@@ -945,6 +1119,7 @@ export function GeneratePage() {
       setPrompt(promptParam);
       setAssistantPrompt(promptParam);
       setAssistantPlanConfirmed(false);
+      setAssistantPlanItems(feature ? buildAssistantPlan(feature.id, promptParam) : getDefaultAssistantPlan('campaign-image'));
 
       if (feature?.id === 'product-shots' || feature?.id === 'model-matrix') {
         setProductDescription(promptParam);
@@ -982,27 +1157,83 @@ export function GeneratePage() {
     setSelectedStyle(null);
   };
 
-  const applyCampaignAssistantPrompt = () => {
+  const applyAssistantPrompt = () => {
     const value = assistantPrompt.trim();
     if (!value) {
-      toast.error('作りたいキャンペーン画像の内容を入力してください');
+      toast.error('作りたい内容を入力してください');
       return;
     }
 
-    setAssistantPlanItems(buildCampaignAssistantPlan(value));
+    setAssistantPlanItems(buildAssistantPlan(selectedFeature?.id, value));
     setAssistantPlanConfirmed(true);
   };
 
-  const applyCampaignAssistantPlanToForm = () => {
+  const applyAssistantPlanToForm = () => {
     const value = assistantPrompt.trim();
     if (!value) {
       toast.error('先に生成リクエストを入力してください');
       return;
     }
 
-    setPrompt(value);
-    setSelectedRatio((current) => current || '1:1');
-    setGenerateCount((current) => Math.max(current, 3));
+    const planLines = assistantPlanItems.map((item, index) => (
+      `${index + 1}. ${item.title}: ${item.description}`
+    ));
+    const planSummary = planLines.join('\n');
+    const plannedPrompt = `${value}\n\n生成計画:\n${planSummary}`;
+
+    switch (selectedFeature?.id) {
+      case 'product-shots':
+      case 'model-matrix':
+        setProductDescription(plannedPrompt);
+        break;
+      case 'multilingual-banner':
+        setHeadline(value);
+        setSubheadline(planSummary);
+        break;
+      case 'scene-coordinate':
+        setPrompt(plannedPrompt);
+        if (!selectedScenes.length) setSelectedScenes(['cafe', 'street', 'office']);
+        break;
+      case 'remove-bg':
+      case 'colorize':
+      case 'upscale':
+      case 'variations':
+      case 'design-gacha':
+      case 'campaign-image':
+      default:
+        setPrompt(plannedPrompt);
+        break;
+    }
+
+    if (selectedFeature?.id === 'campaign-image') {
+      setSelectedRatio((current) => current || '1:1');
+      setGenerateCount((current) => Math.max(current, 3));
+      setCampaignTitle((current) => current || assistantPlanItems[0]?.title || value);
+      setCampaignSubheadline((current) => current || assistantPlanItems[1]?.description || '');
+    }
+    if (selectedFeature?.id === 'design-gacha') {
+      setGenerateCount((current) => Math.max(current, 4));
+      setFixedElements(['product', 'text']);
+      setRandomizedElements(['color', 'layout', 'texture']);
+    }
+    if (selectedFeature?.id === 'variations') {
+      setGenerateCount((current) => Math.max(current, 3));
+    }
+    if (selectedFeature?.id === 'product-shots') {
+      setSelectedShots((current) => current.length ? current : ['front', 'side', 'back', 'detail']);
+    }
+    if (selectedFeature?.id === 'model-matrix') {
+      setSelectedBodyTypes((current) => current.length ? current : ['slim', 'regular', 'plus']);
+      setSelectedAgeGroups((current) => current.length ? current : ['20s', '30s', '40s']);
+    }
+    if (selectedFeature?.id === 'multilingual-banner') {
+      setSelectedLanguages((current) => current.length ? current : ['ja', 'en', 'ko']);
+    }
+    setMaterialReference((current) => ({
+      ...current,
+      note: `${value}\n${planSummary}`,
+    }));
+    toast.success('生成計画を詳細設定へ反映しました');
   };
 
   const handleBack = () => {
@@ -1100,6 +1331,50 @@ export function GeneratePage() {
     throw new Error('local_runway_worker_timeout');
   };
 
+  const buildGenerateMaterialContext = useCallback((imageUrlOverride?: string | null, referenceTypeOverride?: string) => {
+    const materialReferenceMetadata = buildMaterialReferenceMetadata({
+      ...materialReference,
+      imageUrl: imageUrlOverride ?? materialReference.imageUrl,
+    });
+    const hasGenerateMaterialReference = Boolean(materialReferenceMetadata.hasImage);
+    const generateLayerPlan = hasGenerateMaterialReference ? {
+      activeLayer: materialReference.activeLayer,
+      placement: materialReference.placement,
+      scale: materialReference.scale,
+      source: 'generate_page_material_workbench',
+    } : undefined;
+    const generateMaskPlan = hasGenerateMaterialReference ? {
+      mode: materialReference.maskMode,
+      materialKind: materialReference.materialKind,
+      source: 'generate_page_material_workbench',
+    } : undefined;
+    const generateCompositionPreview = hasGenerateMaterialReference ? {
+      referenceType: referenceTypeOverride,
+      fileName: materialReference.fileName,
+      note: materialReference.note,
+      source: 'generate_page_material_workbench',
+    } : undefined;
+    const generateMaterialMetadata = hasGenerateMaterialReference ? {
+      materialReferences: [materialReferenceMetadata],
+      layerPlan: generateLayerPlan,
+      maskPlan: generateMaskPlan,
+      compositionPreview: generateCompositionPreview,
+    } : {};
+    const materialPromptLines = hasGenerateMaterialReference ? [
+      `Material: ${materialReference.materialKind}`,
+      `Mask: ${materialReference.maskMode}`,
+      `Layer: ${materialReference.activeLayer}`,
+      `Placement: ${materialReference.placement}`,
+      `Scale: ${materialReference.scale}%`,
+      materialReference.note.trim() ? `Material note: ${materialReference.note.trim()}` : '',
+    ].filter(Boolean) : [];
+    return {
+      hasGenerateMaterialReference,
+      generateMaterialMetadata,
+      materialPromptLines,
+    };
+  }, [materialReference]);
+
   const handleGenerate = async () => {
     debugLog('Generation requested', {
       isGenerating,
@@ -1178,42 +1453,10 @@ export function GeneratePage() {
         textOverlay,
         lightchainCompat: lightchainCompat ?? undefined,
       };
-      const materialReferenceMetadata = buildMaterialReferenceMetadata({
-        ...materialReference,
-        imageUrl: processedImageUrl ?? materialReference.imageUrl,
-      });
-      const hasGenerateMaterialReference = Boolean(materialReferenceMetadata.hasImage);
-      const generateLayerPlan = hasGenerateMaterialReference ? {
-        activeLayer: materialReference.activeLayer,
-        placement: materialReference.placement,
-        scale: materialReference.scale,
-        source: 'generate_page_material_workbench',
-      } : undefined;
-      const generateMaskPlan = hasGenerateMaterialReference ? {
-        mode: materialReference.maskMode,
-        materialKind: materialReference.materialKind,
-        source: 'generate_page_material_workbench',
-      } : undefined;
-      const generateCompositionPreview = hasGenerateMaterialReference ? {
-        referenceType: effectiveReferenceType,
-        fileName: materialReference.fileName,
-        note: materialReference.note,
-        source: 'generate_page_material_workbench',
-      } : undefined;
-      const generateMaterialMetadata = hasGenerateMaterialReference ? {
-        materialReferences: [materialReferenceMetadata],
-        layerPlan: generateLayerPlan,
-        maskPlan: generateMaskPlan,
-        compositionPreview: generateCompositionPreview,
-      } : {};
-      const materialPromptLines = hasGenerateMaterialReference ? [
-        `Material: ${materialReference.materialKind}`,
-        `Mask: ${materialReference.maskMode}`,
-        `Layer: ${materialReference.activeLayer}`,
-        `Placement: ${materialReference.placement}`,
-        `Scale: ${materialReference.scale}%`,
-        materialReference.note.trim() ? `Material note: ${materialReference.note.trim()}` : '',
-      ].filter(Boolean) : [];
+      const { generateMaterialMetadata, materialPromptLines } = buildGenerateMaterialContext(
+        processedImageUrl,
+        effectiveReferenceType,
+      );
       const buildRemoteGenerationContext = (feature: Feature | null, intentPrompt: string, ratio: string) => {
         if (!feature) return {};
         const baseContext = {
@@ -1272,6 +1515,8 @@ export function GeneratePage() {
           subheadline.trim() ? `Subheadline: ${subheadline.trim()}` : '',
           campaignTitle.trim() ? `Campaign: ${campaignTitle.trim()}` : '',
           campaignCTA.trim() ? `CTA: ${campaignCTA.trim()}` : '',
+          planningFeature.id === 'design-gacha' && fixedElements.length ? `Fixed elements: ${fixedElements.join(', ')}` : '',
+          planningFeature.id === 'design-gacha' && randomizedElements.length ? `Randomized elements: ${randomizedElements.join(', ')}` : '',
           selectedStyleLabel ? `Style: ${selectedStyleLabel}` : '',
           `Ratio: ${selectedRatio}`,
           referenceImage ? `Reference: ${referenceImage.referenceType || 'attached'}` : '',
@@ -1334,6 +1579,8 @@ export function GeneratePage() {
               selectedAgeGroups,
               selectedScenes,
               selectedLanguages,
+              fixedElements,
+              randomizedElements,
               campaignTitle,
               campaignSubheadline,
               campaignCTA,
@@ -1373,6 +1620,7 @@ export function GeneratePage() {
             prompt: primaryBrief || fallbackBrief,
             label: title,
             artifactKind: 'planning_brief',
+            ...generateMaterialMetadata,
           };
         });
 
@@ -2062,6 +2310,40 @@ export function GeneratePage() {
       debugLog('Bulk download failed', { hasMessage: !!e?.message });
       toast.error(e.message || '一括ダウンロードに失敗しました');
     }
+  };
+
+  const handleSendGeneratedImageToCanvas = (image: GeneratedResult, index: number) => {
+    const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
+    const effectiveReferenceType = referenceImage?.referenceType ?? featureConfig?.defaultReferenceType ?? 'base';
+    const { generateMaterialMetadata } = buildGenerateMaterialContext(
+      materialReference.imageUrl,
+      effectiveReferenceType,
+    );
+    const materialHandoffMetadata = {
+      ...generateMaterialMetadata,
+      ...(image.materialReferences ? { materialReferences: image.materialReferences } : {}),
+      ...(image.layerPlan ? { layerPlan: image.layerPlan } : {}),
+      ...(image.maskPlan ? { maskPlan: image.maskPlan } : {}),
+      ...(image.compositionPreview ? { compositionPreview: image.compositionPreview } : {}),
+    };
+    const payload = {
+      source: 'generate-results',
+      createdAt: new Date().toISOString(),
+      images: [{
+        imageUrl: image.imageUrl,
+        label: image.label || `生成結果 ${index + 1}`,
+        prompt: image.prompt,
+        feature: selectedFeature?.id || 'generate-image',
+        resultId: image.id,
+        jobId: image.jobId,
+        imageId: image.imageId,
+        storagePath: image.storagePath,
+        artifactKind: image.artifactKind,
+        ...materialHandoffMetadata,
+      }],
+    };
+    sessionStorage.setItem(GENERATED_CANVAS_HANDOFF_KEY, JSON.stringify(payload));
+    navigate('/canvas/new?handoff=generated');
   };
 
   // Render generation count selector
@@ -3498,7 +3780,7 @@ export function GeneratePage() {
 
             {selectedGenerateWorkbench && (
               <div className="mb-5">
-                {selectedFeature.id === 'campaign-image' && (
+                {supportsAssistantPlanning(selectedFeature.id) && (
                   <div className="mb-5 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-white dark:bg-white dark:text-neutral-950">
@@ -3512,7 +3794,7 @@ export function GeneratePage() {
                           作りたい画像を一文で入力
                         </h3>
                         <p className="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-                          Lightchain と同じように、まず制作意図を伝えると、3点の生成計画を確認しながら下の詳細設定に進めます。
+                          Lightchain と同じように、まず制作意図を伝えると、この機能に合わせた生成計画を確認しながら下の詳細設定に進めます。
                         </p>
                       </div>
                     </div>
@@ -3531,7 +3813,7 @@ export function GeneratePage() {
                       <div className="flex items-end">
                         <Button
                           type="button"
-                          onClick={applyCampaignAssistantPrompt}
+                          onClick={applyAssistantPrompt}
                           className="w-full lg:w-auto"
                           leftIcon={<Sparkles className="h-4 w-4" />}
                         >
@@ -3565,7 +3847,7 @@ export function GeneratePage() {
                         <Button
                           type="button"
                           variant="secondary"
-                          onClick={applyCampaignAssistantPlanToForm}
+                          onClick={applyAssistantPlanToForm}
                           disabled={!assistantPlanConfirmed}
                         >
                           フォームへ反映
@@ -3833,6 +4115,13 @@ export function GeneratePage() {
                           >
                             <RefreshCw className="w-4 h-4" />
                             {noImageGenerationMode ? '再保存' : '再生成'}
+                          </button>
+                          <button
+                            onClick={() => handleSendGeneratedImageToCanvas(image, index)}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-primary-600 rounded-lg text-sm font-medium text-white hover:bg-primary-700 transition-colors border border-primary-500"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                            Canvasへ
                           </button>
                           <button
                             onClick={() => {
