@@ -71,6 +71,28 @@ const usage = () => {
 
 const asRecord = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 
+const sha256 = (buffer) => crypto.createHash('sha256').update(buffer).digest('hex');
+
+const normalizeMimeType = (mimeType) => {
+  const clean = String(mimeType || '').split(';')[0].trim().toLowerCase();
+  return clean.startsWith('image/') ? clean : 'image/png';
+};
+
+const extensionFromMimeType = (mimeType) => {
+  switch (normalizeMimeType(mimeType)) {
+    case 'image/jpeg':
+    case 'image/jpg':
+      return 'jpg';
+    case 'image/webp':
+      return 'webp';
+    case 'image/gif':
+      return 'gif';
+    case 'image/png':
+    default:
+      return 'png';
+  }
+};
+
 const boundedNumber = (value, fallback, min, max) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
@@ -101,6 +123,13 @@ const assertValidReferenceImage = (value) => {
   const isHttpsImage = /^https:\/\/[^\s]+$/i.test(text);
   if (!isDataImage && !isHttpsImage) throw new Error('local_runway_worker_reference_image_invalid');
   if (text.length > 1_500_000) throw new Error('local_runway_worker_reference_image_too_large');
+};
+
+const getReferenceImageHandoff = (inputParams) => {
+  const handoff = asRecord(inputParams.referenceImageHandoff);
+  return typeof handoff.storagePath === 'string' && handoff.storagePath
+    ? handoff
+    : null;
 };
 
 const getSupabaseClient = () => {
@@ -153,7 +182,7 @@ const validateJob = (job) => {
 
 const promptForApprovedClient = (handoff) => {
   const resultFileName = `${handoff.heavyChainJobId}.json`;
-  return [
+  const lines = [
     'Use the approved Runway MCP client to generate images for this Heavy Chain job.',
     '',
     `Job ID: ${handoff.heavyChainJobId}`,
@@ -161,6 +190,20 @@ const promptForApprovedClient = (handoff) => {
     `Prompt: ${handoff.promptText}`,
     `Ratio: ${handoff.ratio}`,
     `Count: ${handoff.count}`,
+  ];
+  if (handoff.referenceImage) {
+    lines.push(
+      '',
+      'Reference image handling:',
+      `- Local reference file: ${handoff.referenceImage.localPath}`,
+      `- MIME type: ${handoff.referenceImage.mimeType}`,
+      `- SHA-256: ${handoff.referenceImage.sha256}`,
+      '- Upload this file to Runway first with the approved MCP upload flow.',
+      '- Use the returned Runway-hosted asset URL as referenceImages[0].url.',
+      '- Do not pass Supabase signed URLs, data URLs, local filesystem paths, or Heavy Chain Storage paths directly to Runway referenceImages.',
+    );
+  }
+  lines.push(
     '',
     'After generation succeeds, save a JSON file for the Heavy Chain worker with these required fields:',
     `- heavyChainJobId: "${handoff.heavyChainJobId}"`,
@@ -170,14 +213,16 @@ const promptForApprovedClient = (handoff) => {
     '',
     `Write the result JSON to: ${path.join(handoff.resultDrop.inboxDir, resultFileName)}`,
     'Do not use mcp-remote localhost OAuth, direct Runway API, billing, purchase, checkout, or external publish actions.',
-  ].join('\n');
+  );
+  return lines.join('\n');
 };
 
-const buildHandoff = (job, args) => {
+const buildHandoff = async (supabase, job, args, outDir) => {
   const inputParams = validateJob(job);
   const tool = 'generate_image';
   const ratio = ratioFromDimensions(inputParams.width, inputParams.height);
   const inboxDir = String(args['inbox-dir'] || DEFAULT_INBOX_DIR);
+  const referenceImage = await writeReferenceImageFile(supabase, job, inputParams, outDir);
   const handoff = {
     schema: SCHEMA,
     createdAt: new Date().toISOString(),
@@ -194,13 +239,21 @@ const buildHandoff = (job, args) => {
     height: inputParams.height,
     ratio,
     count: inputParams.count,
-    referenceImages: inputParams.referenceImage
-      ? [{ uri: inputParams.referenceImage, tag: String(inputParams.referenceType || 'reference') }]
+    referenceImage,
+    referenceImages: referenceImage
+      ? [{
+        source: 'runway_hosted_asset_required',
+        tag: String(inputParams.referenceType || 'reference'),
+        localPath: referenceImage.localPath,
+        mimeType: referenceImage.mimeType,
+        sha256: referenceImage.sha256,
+      }]
       : [],
     runway: {
       tool,
       operation: job.feature_type === 'upscale' ? 'upscale_via_reference_image' : 'generate_image',
       rationale: `Heavy Chain approved MCP client generation for job ${job.id}`,
+      referenceImagePolicy: referenceImage ? 'upload_reference_to_runway_first' : 'none',
     },
     resultDrop: {
       inboxDir,
@@ -213,11 +266,80 @@ const buildHandoff = (job, args) => {
       noDirectRunwayApi: true,
       noMcpRemoteLocalhostOauth: true,
       noBillingPurchaseCheckoutOrPublish: true,
+      noSupabaseSignedUrlInRunwayReferenceImages: true,
+      noDataUrlInRunwayReferenceImages: true,
     },
   };
   return {
     ...handoff,
     approvedClientPrompt: promptForApprovedClient(handoff),
+  };
+};
+
+const dataUrlToBuffer = (dataUrl) => {
+  const match = String(dataUrl || '').match(/^data:([^;,]+)?(;base64)?,(.*)$/);
+  if (!match) throw new Error('local_runway_handoff_reference_data_url_invalid');
+  const mimeType = normalizeMimeType(match[1]);
+  const payload = match[3] || '';
+  const buffer = match[2] ? Buffer.from(payload, 'base64') : Buffer.from(decodeURIComponent(payload));
+  return { buffer, mimeType };
+};
+
+const fetchHttpsImage = async (url) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`local_runway_handoff_reference_fetch_failed:${response.status}`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return { buffer, mimeType: normalizeMimeType(response.headers.get('content-type')) };
+};
+
+const readReferenceImageBytes = async (supabase, inputParams) => {
+  const handoff = getReferenceImageHandoff(inputParams);
+  if (handoff) {
+    const bucket = String(handoff.bucket || 'generated-images');
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .download(String(handoff.storagePath));
+    if (error || !data) throw error || new Error('local_runway_handoff_reference_handoff_download_failed');
+    return {
+      buffer: Buffer.from(await data.arrayBuffer()),
+      mimeType: normalizeMimeType(handoff.mimeType),
+      source: 'supabase_reference_handoff',
+      storagePath: String(handoff.storagePath),
+      bucket,
+    };
+  }
+  if (inputParams.referenceImage) {
+    const text = String(inputParams.referenceImage);
+    const image = text.startsWith('data:')
+      ? dataUrlToBuffer(text)
+      : await fetchHttpsImage(text);
+    return {
+      ...image,
+      source: text.startsWith('data:') ? 'input_data_url' : 'input_https_url',
+    };
+  }
+  return null;
+};
+
+const writeReferenceImageFile = async (supabase, job, inputParams, outDir) => {
+  const reference = await readReferenceImageBytes(supabase, inputParams);
+  if (!reference) return null;
+  const digest = sha256(reference.buffer);
+  const mimeType = normalizeMimeType(reference.mimeType);
+  const extension = extensionFromMimeType(mimeType);
+  const referencesDir = path.resolve(repoRoot, outDir, 'references');
+  await fs.mkdir(referencesDir, { recursive: true });
+  const filePath = path.join(referencesDir, `${job.id}-${digest.slice(0, 12)}.${extension}`);
+  await fs.writeFile(filePath, reference.buffer);
+  return {
+    source: reference.source,
+    localPath: filePath,
+    mimeType,
+    bytes: reference.buffer.byteLength,
+    sha256: digest,
+    runwayAssetRequired: true,
+    ...(reference.bucket ? { bucket: reference.bucket } : {}),
+    ...(reference.storagePath ? { storagePath: reference.storagePath } : {}),
   };
 };
 
@@ -243,7 +365,7 @@ const main = async () => {
   const jobs = await fetchPendingJobs(supabase, args);
   const outputs = [];
   for (const job of jobs) {
-    const handoff = buildHandoff(job, args);
+    const handoff = await buildHandoff(supabase, job, args, outDir);
     outputs.push({
       jobId: job.id,
       ...(await writeHandoff(handoff, outDir)),
