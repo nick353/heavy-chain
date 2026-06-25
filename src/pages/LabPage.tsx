@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { BarChart3, Check, ChevronRight, FlaskConical, Lightbulb, Save, Target } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import {
+  buildMaterialReferenceMetadata,
+  type MaterialReferenceState,
+} from '../lib/workspaceMaterialReferences';
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
 const choices = ['プロンプト実験', '品質評価', '採用候補'];
@@ -82,6 +87,17 @@ const experimentIcons: Record<string, typeof FlaskConical> = {
   'material-lighting': FlaskConical,
   'retail-readiness': Target,
   'campaign-transfer': BarChart3,
+};
+
+const initialMaterialReference: MaterialReferenceState = {
+  imageUrl: '',
+  fileName: '',
+  materialKind: '実験素材',
+  maskMode: 'auto',
+  activeLayer: '比較A',
+  placement: '評価左',
+  scale: 58,
+  note: '比較したい素材や生成候補を置いて、採用判断の対象を明確にします。',
 };
 
 const encodeSvg = (svg: string) => {
@@ -177,6 +193,7 @@ export function LabPage() {
   const [promptDraft, setPromptDraft] = useState('Japanese fashion ecommerce editorial, sheer jacket, crisp studio lighting');
   const [evaluationAxis, setEvaluationAxis] = useState('素材感 / 顔の自然さ / 商品識別性 / EC転用しやすさ');
   const [candidate, setCandidate] = useState('候補A: 白背景スタジオ、候補B: グレー背景寄り');
+  const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
   const nextHistoryId = useRef(3);
   const selectedExperiment = labExperimentCandidates.find((item) => item.id === selectedExperimentId) ?? labExperimentCandidates[0];
   const axisItems = evaluationAxis.split('/').map((item) => item.trim()).filter(Boolean);
@@ -237,6 +254,10 @@ export function LabPage() {
       decision: selectedExperiment.decision,
       risk: selectedExperiment.risk,
     };
+    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
+    const materialReferenceSummary = materialReferenceMetadata.hasImage
+      ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
+      : '実験素材画像なし';
     const generationPrompt = [
       promptDraft,
       `Hypothesis: ${hypothesis}`,
@@ -245,6 +266,7 @@ export function LabPage() {
       `Experiment: ${selectedExperiment.label}`,
       `Deterministic score: ${selectedExperiment.score}`,
       `Decision: ${selectedExperiment.decision}`,
+      `Material reference: ${materialReferenceSummary}`,
     ].join('\n');
     const prompt = [
       `Primary input: ${primaryInput}`,
@@ -257,6 +279,7 @@ export function LabPage() {
       `Score signature: ${selectedExperiment.scoreSignature}`,
       `Decision: ${selectedExperiment.decision}`,
       `Risk: ${selectedExperiment.risk}`,
+      `Material reference: ${materialReferenceSummary}`,
       `Next step: ${nextStep}`,
     ].join('\n');
     const { projectId } = handoffWorkspaceToCanvas({
@@ -265,7 +288,7 @@ export function LabPage() {
       projectName: `Lab: ${activeChoice}`,
       title: `Lab: ${activeChoice}`,
       prompt,
-      imageUrl: previewImageUrl,
+      imageUrl: materialReference.imageUrl || previewImageUrl,
       summary: `${activeChoice}の進捗 ${progress}%`,
       note,
       activeChoice,
@@ -279,12 +302,14 @@ export function LabPage() {
           evaluationAxis,
           candidate,
           selectedLabExperiment: selectedLabExperimentMetadata,
+          materialReference: materialReferenceMetadata,
         },
         plan: {
           labEvaluation: 'lab-evaluation',
           scoringAxis: evaluationAxis,
           selectedLabExperiment: selectedLabExperimentMetadata,
           deterministicScore: selectedExperiment.score,
+          materialReference: materialReferenceMetadata,
           preview: {
             previewKind: 'deterministic-svg',
             marker: 'selected-lab-experiment',
@@ -308,6 +333,20 @@ export function LabPage() {
           }),
           label: 'キャンペーン画像で生成',
           ...generationSource,
+          materialReferences: [materialReferenceMetadata],
+          layerPlan: {
+            activeLayer: materialReference.activeLayer,
+            placement: materialReference.placement,
+            scale: materialReference.scale,
+          },
+          maskPlan: {
+            maskMode: materialReference.maskMode,
+          },
+          compositionPreview: {
+            selectedExperimentId: selectedExperiment.id,
+            hasUploadedMaterial: Boolean(materialReference.imageUrl),
+            placement: materialReference.placement,
+          },
         },
       },
       previewMetadata: {
@@ -315,12 +354,28 @@ export function LabPage() {
         previewKind: 'deterministic-svg',
         marker: 'selected-lab-experiment',
         imageUrl: previewImageUrl,
+        materialReference: materialReferenceMetadata,
       },
       selectedLabExperiment: selectedLabExperimentMetadata,
+      materialReferences: [materialReferenceMetadata],
+      layerPlan: {
+        activeLayer: materialReference.activeLayer,
+        placement: materialReference.placement,
+        scale: materialReference.scale,
+      },
+      maskPlan: {
+        maskMode: materialReference.maskMode,
+      },
+      compositionPreview: {
+        selectedExperimentId: selectedExperiment.id,
+        hasUploadedMaterial: Boolean(materialReference.imageUrl),
+        placement: materialReference.placement,
+      },
       metadata: {
         workspace: 'lab',
         searchTokens: ['lab-evaluation', 'lab-workflow', 'lab-evaluation-local-v1', activeChoice, selectedExperiment.id],
         selectedLabExperiment: selectedLabExperimentMetadata,
+        materialReferences: [materialReferenceMetadata],
       },
     });
 
@@ -427,6 +482,19 @@ export function LabPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
+        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
+          <MaterialWorkbench
+            title="実験素材作業台"
+            description="生成候補、物撮り素材、参考LOOKを置き、評価対象と比較レイヤーを視覚的に決めます。"
+            uploadLabel="実験素材・生成候補をアップロード"
+            emptyLabel="素材を置くと、Canvasへ評価対象の実画像レイヤーとして渡せます"
+            state={materialReference}
+            onChange={setMaterialReference}
+            materialKinds={['実験素材', '生成候補', '物撮り', '参考LOOK', '失敗例']}
+            layerOptions={['比較A', '比較B', '採用候補', '除外候補', '評価メモ']}
+            placementOptions={['評価左', '評価右', '中央比較', '採用枠', '再実験枠']}
+          />
+        </div>
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">仮説と評価条件を整える</h2>
           <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">

@@ -3,6 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, Clapperboard, Film, Save, Smartphone } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import {
+  buildMaterialReferenceMetadata,
+  type MaterialReferenceState,
+} from '../lib/workspaceMaterialReferences';
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
 const choices = ['構成', '編集', '書き出し'];
@@ -86,6 +91,17 @@ const storyboardIcons: Record<string, typeof Film> = {
   'launch-reel': Smartphone,
   'texture-close-up': Film,
   'fit-check-cta': Clapperboard,
+};
+
+const initialMaterialReference: MaterialReferenceState = {
+  imageUrl: '',
+  fileName: '',
+  materialKind: '商品カット',
+  maskMode: 'auto',
+  activeLayer: '商品',
+  placement: '1カット目',
+  scale: 64,
+  note: '動画のどのショットに使う素材かを先に決めます。',
 };
 
 const encodeSvg = (svg: string) => {
@@ -188,6 +204,7 @@ export function VideoWorkstationPage() {
   const [shotPlan, setShotPlan] = useState(storyboardCandidates[0].shotOrder);
   const [subtitleCta, setSubtitleCta] = useState(storyboardCandidates[0].cta);
   const [materials, setMaterials] = useState(storyboardCandidates[0].materials);
+  const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
   const nextHistoryId = useRef(3);
   const selectedStoryboard = storyboardCandidates.find((candidate) => candidate.id === selectedStoryboardId) ?? storyboardCandidates[0];
   const shotSteps = shotPlan
@@ -254,6 +271,10 @@ export function VideoWorkstationPage() {
       framingSignature: selectedStoryboard.framingSignature,
       workflowMode: selectedStoryboard.workflowMode,
     };
+    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
+    const materialReferenceSummary = materialReferenceMetadata.hasImage
+      ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
+      : '動画素材画像なし';
     const generationPrompt = [
       `Storyboard: ${selectedStoryboard.label}`,
       `Shot order: ${shotPlan}`,
@@ -261,6 +282,7 @@ export function VideoWorkstationPage() {
       `Framing: ${selectedStoryboard.framing}`,
       `CTA: ${subtitleCta}`,
       `Materials: ${materials}`,
+      `Material reference: ${materialReferenceSummary}`,
       `Format: ${aspectRatio}`,
     ].join('\n');
     const prompt = [
@@ -273,6 +295,7 @@ export function VideoWorkstationPage() {
       `Framing: ${selectedStoryboard.framing}`,
       `Subtitle CTA: ${subtitleCta}`,
       `Materials: ${materials}`,
+      `Material reference: ${materialReferenceSummary}`,
       `Format: ${aspectRatio}`,
       `Next step: ${nextStep}`,
     ].join('\n');
@@ -282,7 +305,7 @@ export function VideoWorkstationPage() {
       projectName: `Video Workstation: ${activeChoice}`,
       title: `Video Workstation: ${activeChoice}`,
       prompt,
-      imageUrl: previewImageUrl,
+      imageUrl: materialReference.imageUrl || previewImageUrl,
       summary: `${activeChoice}の進捗 ${progress}%`,
       note,
       activeChoice,
@@ -297,11 +320,13 @@ export function VideoWorkstationPage() {
           subtitleCta,
           materials,
           selectedVideoStoryboard: selectedVideoStoryboardMetadata,
+          materialReference: materialReferenceMetadata,
         },
         plan: {
           videoShotPlan: 'video-shot-plan',
           renderTarget: aspectRatio,
           selectedVideoStoryboard: selectedVideoStoryboardMetadata,
+          materialReference: materialReferenceMetadata,
           preview: {
             previewKind: 'deterministic-svg',
             marker: 'selected-video-storyboard',
@@ -327,6 +352,20 @@ export function VideoWorkstationPage() {
           label: 'キャンペーン画像で生成',
           ...generationSource,
           aspectRatio,
+          materialReferences: [materialReferenceMetadata],
+          layerPlan: {
+            activeLayer: materialReference.activeLayer,
+            placement: materialReference.placement,
+            scale: materialReference.scale,
+          },
+          maskPlan: {
+            maskMode: materialReference.maskMode,
+          },
+          compositionPreview: {
+            selectedStoryboardId: selectedStoryboard.id,
+            hasUploadedMaterial: Boolean(materialReference.imageUrl),
+            placement: materialReference.placement,
+          },
         },
       },
       previewMetadata: {
@@ -334,12 +373,28 @@ export function VideoWorkstationPage() {
         previewKind: 'deterministic-svg',
         marker: 'selected-video-storyboard',
         imageUrl: previewImageUrl,
+        materialReference: materialReferenceMetadata,
       },
       selectedVideoStoryboard: selectedVideoStoryboardMetadata,
+      materialReferences: [materialReferenceMetadata],
+      layerPlan: {
+        activeLayer: materialReference.activeLayer,
+        placement: materialReference.placement,
+        scale: materialReference.scale,
+      },
+      maskPlan: {
+        maskMode: materialReference.maskMode,
+      },
+      compositionPreview: {
+        selectedStoryboardId: selectedStoryboard.id,
+        hasUploadedMaterial: Boolean(materialReference.imageUrl),
+        placement: materialReference.placement,
+      },
       metadata: {
         workspace: 'video',
         searchTokens: ['video-shot-plan', 'video-workstation', 'video-storyboard-local-v1', activeChoice, selectedStoryboard.id],
         selectedVideoStoryboard: selectedVideoStoryboardMetadata,
+        materialReferences: [materialReferenceMetadata],
       },
     });
 
@@ -446,6 +501,19 @@ export function VideoWorkstationPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
+        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
+          <MaterialWorkbench
+            title="動画素材作業台"
+            description="商品カット、モデル動画の静止画、ロゴ、字幕カードを置き、どのショットレイヤーへ使うかを先に決めます。"
+            uploadLabel="商品・モデル・ロゴ素材をアップロード"
+            emptyLabel="素材を置くと、Canvasへ動画ショット用の実画像レイヤーとして渡せます"
+            state={materialReference}
+            onChange={setMaterialReference}
+            materialKinds={['商品カット', 'モデル参照', 'ロゴ', '字幕カード', '背景']}
+            layerOptions={['商品', 'モデル', '背景', '字幕', 'CTA']}
+            placementOptions={['1カット目', '2カット目', '3カット目', 'エンドカード', '全ショット共通']}
+          />
+        </div>
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">素材と尺を整える</h2>
           <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
