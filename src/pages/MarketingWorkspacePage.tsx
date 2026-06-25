@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -9,7 +8,6 @@ import {
   Brush,
   CheckCircle2,
   ChevronRight,
-  ImagePlus,
   Layers,
   Megaphone,
   MonitorUp,
@@ -17,11 +15,15 @@ import {
   Settings2,
   ShoppingBag,
   Store,
-  Upload,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
 import { saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
+import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import {
+  buildMaterialReferenceMetadata,
+  type MaterialReferenceState,
+} from '../lib/workspaceMaterialReferences';
 
 const channels = [
   { id: 'ec', label: 'EC', icon: ShoppingBag },
@@ -65,35 +67,31 @@ const initialJob: MarketingJob = {
   errorMessage: null,
 };
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-        return;
-      }
-      reject(new Error('画像を読み込めませんでした。'));
-    };
-    reader.onerror = () => reject(new Error('画像を読み込めませんでした。'));
-    reader.readAsDataURL(file);
-  });
-}
+const initialMaterialReference: MaterialReferenceState = {
+  imageUrl: '',
+  fileName: '',
+  materialKind: '商品画像',
+  maskMode: 'auto',
+  activeLayer: '商品',
+  placement: 'メインビジュアル',
+  scale: 68,
+  note: '販促素材の主役にする商品画像と配置を先に決めます。',
+};
 
 export function MarketingWorkspacePage() {
   const navigate = useNavigate();
   const { currentBrand } = useAuthStore();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeChannel, setActiveChannel] = useState<ChannelId>('ec');
   const [selectedTemplate, setSelectedTemplate] = useState<string>(templatesByChannel.ec[0]);
   const [campaignCopy, setCampaignCopy] = useState('軽やかなリネンセットで、静かな夏をはじめる。');
-  const [productImageUrl, setProductImageUrl] = useState('');
-  const [productFileName, setProductFileName] = useState('');
+  const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
   const [uploadError, setUploadError] = useState('');
   const [job, setJob] = useState<MarketingJob>(initialJob);
   const [isHandingOff, setIsHandingOff] = useState(false);
 
   const { createProject, addObject, saveCurrentProject } = useCanvasStore();
+  const productImageUrl = materialReference.imageUrl;
+  const productFileName = materialReference.fileName;
 
   const activeLabel = useMemo(
     () => channels.find((channel) => channel.id === activeChannel)?.label ?? 'EC',
@@ -141,21 +139,12 @@ export function MarketingWorkspacePage() {
     };
   }, [job.status, job.id]);
 
+  useEffect(() => {
+    if (productImageUrl && uploadError) setUploadError('');
+  }, [productImageUrl, uploadError]);
+
   const handleChannelChange = (channelId: ChannelId) => {
     setActiveChannel(channelId);
-  };
-
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setUploadError('');
-    try {
-      setProductImageUrl(await readFileAsDataUrl(file));
-      setProductFileName(file.name);
-    } catch (error) {
-      setUploadError(error instanceof Error ? error.message : '画像を読み込めませんでした。');
-    }
   };
 
   const startJob = () => {
@@ -210,6 +199,10 @@ export function MarketingWorkspacePage() {
 
     setIsHandingOff(true);
     const projectId = createProject(`Marketing: ${activeLabel} / ${selectedTemplate}`, currentBrand.id);
+    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
+    const materialReferenceSummary = materialReferenceMetadata.hasImage
+      ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
+      : '販促素材画像なし';
     try {
       const result = await saveWorkspaceArtifactBestEffort({
         brandId: currentBrand.id,
@@ -227,6 +220,23 @@ export function MarketingWorkspacePage() {
           campaignCopy: campaignCopy.trim(),
           productFileName,
           jobStatus: job.status,
+          materialReference: materialReferenceMetadata,
+          materialReferences: [materialReferenceMetadata],
+          layerPlan: {
+            activeLayer: materialReference.activeLayer,
+            placement: materialReference.placement,
+            scale: materialReference.scale,
+          },
+          maskPlan: {
+            maskMode: materialReference.maskMode,
+          },
+          compositionPreview: {
+            channel: activeChannel,
+            template: selectedTemplate,
+            previewKind: 'uploaded-marketing-material',
+            hasUploadedMaterial: Boolean(productImageUrl),
+            placement: materialReference.placement,
+          },
         },
       });
       if (result.remote) {
@@ -260,6 +270,23 @@ export function MarketingWorkspacePage() {
           channelLabel: activeLabel,
           template: selectedTemplate,
           jobStatus: job.status,
+          materialReference: materialReferenceMetadata,
+          materialReferenceSummary,
+          layerPlan: {
+            activeLayer: materialReference.activeLayer,
+            placement: materialReference.placement,
+            scale: materialReference.scale,
+          },
+          maskPlan: {
+            maskMode: materialReference.maskMode,
+          },
+          compositionPreview: {
+            channel: activeChannel,
+            template: selectedTemplate,
+            previewKind: 'uploaded-marketing-material',
+            hasUploadedMaterial: Boolean(productImageUrl),
+            placement: materialReference.placement,
+          },
         },
       },
     });
@@ -288,6 +315,8 @@ export function MarketingWorkspacePage() {
           channel: activeChannel,
           template: selectedTemplate,
           sourceJobId: job.id,
+          materialReference: materialReferenceMetadata,
+          materialReferenceSummary,
         },
       },
     });
@@ -445,38 +474,19 @@ export function MarketingWorkspacePage() {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-              <div className="space-y-4">
-                <p className="text-sm font-semibold text-neutral-900 dark:text-white">商品画像</p>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex min-h-48 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-primary-200 bg-primary-50/40 p-4 text-center transition hover:bg-primary-50 dark:border-primary-800 dark:bg-primary-950/20"
-                >
-                  {productImageUrl ? (
-                    <img src={productImageUrl} alt="アップロードした商品プレビュー" className="max-h-44 rounded-xl object-contain" />
-                  ) : (
-                    <>
-                      <ImagePlus className="h-8 w-8 text-primary-600 dark:text-primary-300" />
-                      <span className="mt-3 text-sm font-semibold text-neutral-900 dark:text-white">画像をアップロード</span>
-                      <span className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">ローカル data URL でプレビューします</span>
-                    </>
-                  )}
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  aria-label="商品画像アップロード"
-                  onChange={handleFileChange}
+            <div className="mt-5 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+              <div className="space-y-3">
+                <MaterialWorkbench
+                  title="販促素材作業台"
+                  description="商品画像、ロゴ、背景、小物を置き、販促物のどのレイヤーへ使うかを先に決めます。"
+                  uploadLabel="商品・ロゴ・背景素材をアップロード"
+                  emptyLabel="素材を置くと、Canvasへ販促レイヤーとして渡せます"
+                  state={materialReference}
+                  onChange={setMaterialReference}
+                  materialKinds={['商品画像', 'ロゴ', '背景', '小物', 'テキスト下地']}
+                  layerOptions={['商品', 'ロゴ', '背景', 'コピー', 'CTA']}
+                  placementOptions={['メインビジュアル', '左寄せ', '右寄せ', '背景全面', 'CTA周辺']}
                 />
-                {productFileName && (
-                  <p className="flex items-center gap-2 text-xs font-semibold text-neutral-600 dark:text-neutral-300">
-                    <Upload className="h-4 w-4 text-primary-600" />
-                    {productFileName}
-                  </p>
-                )}
                 {uploadError && <p className="text-xs font-semibold text-red-600 dark:text-red-300">{uploadError}</p>}
               </div>
 

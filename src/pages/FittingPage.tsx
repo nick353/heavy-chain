@@ -1,19 +1,16 @@
 import { useMemo, useState } from 'react';
-import type { ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   Check,
   Camera,
   Download,
-  ImagePlus,
   Pencil,
   RefreshCw,
   Ruler,
   Shirt,
   Sparkles,
   Trash2,
-  Upload,
   Users,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -21,6 +18,13 @@ import { generateModelMatrix } from '../lib/imageApi';
 import { saveWorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
+import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import {
+  buildMaterialReferenceMetadata,
+  type MaterialReferenceMetadata,
+  type MaterialReferenceState,
+} from '../lib/workspaceMaterialReferences';
+import type { Json } from '../types/database';
 
 type Gender = 'female' | 'male';
 type MatrixItem = {
@@ -36,9 +40,15 @@ type MatrixItem = {
 type LastRequest = {
   productDescription: string;
   imageUrl?: string;
+  sourceMaterialImageUrl?: string;
   bodyTypes: string[];
   ageGroups: string[];
   gender: Gender;
+  materialReference?: MaterialReferenceMetadata;
+  materialReferences?: MaterialReferenceMetadata[];
+  layerPlan?: Record<string, Json | undefined>;
+  maskPlan?: Record<string, Json | undefined>;
+  compositionPreview?: Record<string, Json | undefined>;
 };
 type HistoryItem = {
   id: string;
@@ -52,6 +62,12 @@ type HistoryItem = {
   remoteJobId?: string | null;
   remoteImageIds?: Array<string | null>;
   remoteStoragePaths?: Array<string | null>;
+  sourceMaterialImageUrl?: string;
+  materialReference?: MaterialReferenceMetadata;
+  materialReferences?: MaterialReferenceMetadata[];
+  layerPlan?: Record<string, Json | undefined>;
+  maskPlan?: Record<string, Json | undefined>;
+  compositionPreview?: Record<string, Json | undefined>;
 };
 
 const bodyTypeOptions = [
@@ -123,20 +139,16 @@ const seedHistory: HistoryItem[] = [
   { id: 'fit-1038', title: 'ワイドパンツ / EC白背景', status: '完了', time: '昨日', count: 3 },
 ];
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-        return;
-      }
-      reject(new Error('画像を読み込めませんでした。'));
-    };
-    reader.onerror = () => reject(new Error('画像を読み込めませんでした。'));
-    reader.readAsDataURL(file);
-  });
-}
+const initialMaterialReference: MaterialReferenceState = {
+  imageUrl: '',
+  fileName: '',
+  materialKind: '衣服画像',
+  maskMode: 'auto',
+  activeLayer: '衣服',
+  placement: 'モデル前面',
+  scale: 72,
+  note: '着用生成に使う衣服素材と、モデル上で効かせるレイヤーを先に決めます。',
+};
 
 export function FittingPage() {
   const navigate = useNavigate();
@@ -145,8 +157,7 @@ export function FittingPage() {
   const [productDescription, setProductDescription] = useState(
     '春夏向けのリネン混シャツ。自然光、EC商品ページのメイン画像として使える落ち着いた構図。'
   );
-  const [garmentImageUrl, setGarmentImageUrl] = useState<string | undefined>();
-  const [garmentFileName, setGarmentFileName] = useState('');
+  const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
   const [selectedBodyTypes, setSelectedBodyTypes] = useState<string[]>(['slim', 'regular']);
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>(['20s', '30s']);
   const [gender, setGender] = useState<Gender>('female');
@@ -156,6 +167,8 @@ export function FittingPage() {
   const [history, setHistory] = useState<HistoryItem[]>(seedHistory);
   const [errorMessage, setErrorMessage] = useState('');
   const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
+  const garmentImageUrl = materialReference.imageUrl || undefined;
+  const garmentFileName = materialReference.fileName;
 
   const canGenerate = useMemo(() => {
     return Boolean(currentBrand && !isGenerating && (productDescription.trim() || garmentImageUrl) && selectedBodyTypes.length && selectedAgeGroups.length);
@@ -186,19 +199,6 @@ export function FittingPage() {
     setSelectedAgeGroups((items) => (
       items.includes(id) ? items.filter((item) => item !== id) : [...items, id]
     ));
-  };
-
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setErrorMessage('');
-    try {
-      setGarmentImageUrl(await readFileAsDataUrl(file));
-      setGarmentFileName(file.name);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : '画像を読み込めませんでした。');
-    }
   };
 
   const runGeneration = async (request: LastRequest) => {
@@ -252,6 +252,11 @@ export function FittingPage() {
           remotePersistenceStatus: item.persistenceStatus ?? response.persistenceStatus ?? null,
           sourceArtifactId: artifactId,
           sourceStoragePath: item.storagePath ?? null,
+          materialReference: request.materialReference,
+          materialReferences: request.materialReferences,
+          layerPlan: request.layerPlan,
+          maskPlan: request.maskPlan,
+          compositionPreview: request.compositionPreview,
         },
         sourceJobId: response.jobId ?? undefined,
       }).id;
@@ -271,26 +276,58 @@ export function FittingPage() {
         remoteJobId: response.jobId ?? null,
         remoteImageIds: matrix.map((item) => item.imageId ?? null),
         remoteStoragePaths: matrix.map((item) => item.storagePath ?? null),
+        sourceMaterialImageUrl: request.sourceMaterialImageUrl ?? request.imageUrl,
+        materialReference: request.materialReference,
+        materialReferences: request.materialReferences,
+        layerPlan: request.layerPlan,
+        maskPlan: request.maskPlan,
+        compositionPreview: request.compositionPreview,
       },
       ...items,
     ]);
   };
 
   const handleGenerate = () => {
+    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
+    const materialReferenceSummary = materialReferenceMetadata.hasImage
+      ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
+      : '衣服素材画像なし';
+    const layerPlan = {
+      activeLayer: materialReference.activeLayer,
+      placement: materialReference.placement,
+      scale: materialReference.scale,
+    };
+    const maskPlan = {
+      maskMode: materialReference.maskMode,
+    };
+    const compositionPreview = {
+      workflowId: activeWorkflow.id,
+      workflowTitle: activeWorkflow.title,
+      previewKind: 'uploaded-fitting-material',
+      hasUploadedMaterial: Boolean(garmentImageUrl),
+      placement: materialReference.placement,
+    };
     const fittingBrief = [
       productDescription.trim(),
       `用途: ${activeWorkflow.title}`,
       `出力: ${activeWorkflow.outputs.join(' / ')}`,
       `体型: ${selectedBodyTypeLabels.join(' / ')}`,
       `年代: ${selectedAgeGroupLabels.join(' / ')}`,
+      `素材: ${materialReferenceSummary}`,
     ].filter(Boolean).join('\n');
 
     void runGeneration({
       productDescription: fittingBrief,
       imageUrl: garmentImageUrl,
+      sourceMaterialImageUrl: garmentImageUrl,
       bodyTypes: selectedBodyTypes,
       ageGroups: selectedAgeGroups,
       gender,
+      materialReference: materialReferenceMetadata,
+      materialReferences: [materialReferenceMetadata],
+      layerPlan,
+      maskPlan,
+      compositionPreview,
     });
   };
 
@@ -304,10 +341,41 @@ export function FittingPage() {
 
     const projectId = createProject(`Fitting: ${item.title}`, currentBrand.id);
     const imageUrls = item.imageUrls?.length ? item.imageUrls : [item.previewUrl];
+    const sourceMaterialImageUrl = item.sourceMaterialImageUrl ?? lastRequest?.sourceMaterialImageUrl ?? lastRequest?.imageUrl;
+    if (sourceMaterialImageUrl) {
+      addObject({
+        type: 'image',
+        x: 40,
+        y: 64,
+        width: 220,
+        height: 280,
+        rotation: 0,
+        scaleX: 1,
+        scaleY: 1,
+        opacity: 0.82,
+        locked: false,
+        visible: true,
+        src: sourceMaterialImageUrl,
+        label: `${item.materialReference?.fileName ?? lastRequest?.materialReference?.fileName ?? '衣服素材'} / 参照レイヤー`,
+        metadata: {
+          feature: 'model-matrix-source-material',
+          prompt: lastRequest?.productDescription,
+          generation: 0,
+          parameters: {
+            source: 'fitting-material-reference',
+            materialReference: item.materialReference ?? lastRequest?.materialReference,
+            materialReferences: item.materialReferences ?? lastRequest?.materialReferences,
+            layerPlan: item.layerPlan ?? lastRequest?.layerPlan,
+            maskPlan: item.maskPlan ?? lastRequest?.maskPlan,
+            compositionPreview: item.compositionPreview ?? lastRequest?.compositionPreview,
+          },
+        },
+      });
+    }
     imageUrls.forEach((imageUrl, index) => {
       addObject({
         type: 'image',
-        x: 96 + (index % 2) * 390,
+        x: 300 + (index % 2) * 390,
         y: 96 + Math.floor(index / 2) * 480,
         width: 360,
         height: 450,
@@ -330,6 +398,11 @@ export function FittingPage() {
             remoteJobId: item.remoteJobId ?? null,
             remoteImageId: item.remoteImageIds?.[index] ?? null,
             remoteStoragePath: item.remoteStoragePaths?.[index] ?? null,
+            materialReference: item.materialReference ?? lastRequest?.materialReference,
+            materialReferences: item.materialReferences ?? lastRequest?.materialReferences,
+            layerPlan: item.layerPlan ?? lastRequest?.layerPlan,
+            maskPlan: item.maskPlan ?? lastRequest?.maskPlan,
+            compositionPreview: item.compositionPreview ?? lastRequest?.compositionPreview,
           },
         },
       });
@@ -410,22 +483,17 @@ export function FittingPage() {
           </section>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
-            <label className="group flex min-h-[360px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-primary-300/70 bg-white/55 p-6 text-center transition hover:border-primary-500 hover:bg-white/80 dark:border-primary-700/50 dark:bg-surface-900/50 dark:hover:bg-surface-900/80">
-              <input type="file" accept="image/*" className="sr-only" onChange={handleFileChange} />
-              {garmentImageUrl ? (
-                <img src={garmentImageUrl} alt="アップロードした衣服画像" className="h-44 w-full max-w-xs rounded-xl object-cover shadow-sm" />
-              ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-50 text-primary-600 shadow-inner dark:bg-primary-900/30 dark:text-primary-300">
-                  <Upload className="h-7 w-7" />
-                </div>
-              )}
-              <p className="mt-4 text-base font-semibold text-neutral-900 dark:text-white">
-                衣服画像をアップロード
-              </p>
-              <p className="mt-2 max-w-xs text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-                {garmentFileName || '平置き、トルソー、実物写真を data URL として生成リクエストに渡します。'}
-              </p>
-            </label>
+            <MaterialWorkbench
+              title="フィッティング素材作業台"
+              description="衣服画像、モデル参照、ポーズ、背景を置き、着用生成へ渡すレイヤーを先に決めます。"
+              uploadLabel="衣服・モデル・背景素材をアップロード"
+              emptyLabel="素材を置くと、生成リクエストとCanvas履歴へ参照画像として残せます"
+              state={materialReference}
+              onChange={setMaterialReference}
+              materialKinds={['衣服画像', 'モデル参照', 'ポーズ参照', '背景参照', 'サイズ比較']}
+              layerOptions={['衣服', 'モデル', 'ポーズ', '背景', 'サイズ表']}
+              placementOptions={['モデル前面', '平置き参照', '横並び比較', '背景全面', 'サイズ表横']}
+            />
 
             <div className="rounded-2xl border border-white/60 bg-white/50 p-4 dark:border-white/10 dark:bg-surface-900/40">
               <div className="mb-4 grid gap-3 sm:grid-cols-2">
@@ -440,6 +508,12 @@ export function FittingPage() {
                 <div className="rounded-xl bg-white/75 p-3 dark:bg-surface-950/60 sm:col-span-2">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">用途</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">{activeWorkflow.title}</p>
+                </div>
+                <div className="rounded-xl bg-white/75 p-3 dark:bg-surface-950/60 sm:col-span-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">素材</p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+                    {garmentFileName || '素材未読込'} / {materialReference.activeLayer} / {materialReference.placement}
+                  </p>
                 </div>
               </div>
 
@@ -608,7 +682,7 @@ export function FittingPage() {
                       {item.previewUrl ? (
                         <img src={item.previewUrl} alt="" className="h-full w-full object-cover" />
                       ) : (
-                        <ImagePlus className="h-5 w-5" />
+                        <Shirt className="h-5 w-5" />
                       )}
                     </div>
                     <div className="min-w-0">
