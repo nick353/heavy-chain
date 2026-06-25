@@ -259,6 +259,13 @@ export function useCanvasGuide(userId?: string | null) {
       return;
     }
 
+    const shouldOpenGuide = typeof window !== 'undefined'
+      && new URLSearchParams(window.location.search).get('guide') === '1';
+    if (!shouldOpenGuide) {
+      setShowGuide(false);
+      return;
+    }
+
     const timer = setTimeout(() => {
       setShowGuide(true);
     }, 500);
@@ -276,7 +283,6 @@ export function useCanvasGuide(userId?: string | null) {
 
   return { showGuide, completeGuide, resetGuide };
 }
-
 
 
 

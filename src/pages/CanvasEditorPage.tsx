@@ -15,7 +15,8 @@ import {
   Image,
   Layout,
   Globe,
-  Grid3x3
+  Grid3x3,
+  CircleHelp
 } from 'lucide-react';
 import {
   InfiniteCanvas,
@@ -70,7 +71,7 @@ export function CanvasEditorPage() {
   const isMountedRef = useRef(true);
   const canvasStageRef = useRef<Konva.Stage | null>(null);
   const { currentBrand, user, profile } = useAuthStore();
-  const { showGuide, completeGuide } = useCanvasGuide(user?.id);
+  const { showGuide, completeGuide, resetGuide } = useCanvasGuide(user?.id);
   
   const [viewMode, setViewMode] = useState<ViewMode>('canvas');
   // Start with no side panel on mobile, properties on desktop
@@ -1333,6 +1334,17 @@ export function CanvasEditorPage() {
           </div>
 
           <div className="hidden sm:block w-px h-6 bg-neutral-200 dark:bg-neutral-700 mx-1 sm:mx-2" />
+
+          <Button
+            variant="secondary"
+            size="sm"
+            className="shadow-sm text-xs sm:text-sm px-2 sm:px-3"
+            onClick={resetGuide}
+            title="キャンバスガイドを開く"
+          >
+            <CircleHelp className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1.5" />
+            <span className="hidden lg:inline">ガイド</span>
+          </Button>
 
           {/* Active user avatar - shows current logged in user */}
           <div className="hidden md:flex -space-x-2 items-center">

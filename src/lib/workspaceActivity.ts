@@ -545,9 +545,9 @@ export async function fetchWorkspaceActivity(brandId: string): Promise<Workspace
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const outputCounts = buildOutputCounts(outputs);
   const mappedJobs = jobs.map((job) => mapJob(job, outputCounts[job.id] ?? 0, lightchainStepsByJob[job.id] ?? []));
-  const activeJobs = mappedJobs.filter((job) => job.status === 'pending' || job.status === 'processing').slice(0, 8);
-  const failedJobs = mappedJobs.filter((job) => job.status === 'failed').slice(0, 8);
-  const completedJobs = mappedJobs.filter((job) => job.status === 'completed').slice(0, 8);
+  const activeJobs = mappedJobs.filter((job) => job.status === 'pending' || job.status === 'processing').slice(0, 20);
+  const failedJobs = mappedJobs.filter((job) => job.status === 'failed').slice(0, 20);
+  const completedJobs = mappedJobs.filter((job) => job.status === 'completed').slice(0, 20);
   const recentOutputs = outputs.map((output) => mapOutput(output, lightchainStepsByImage[output.id] ?? [])).slice(0, 12);
 
   return {
