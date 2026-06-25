@@ -81,6 +81,12 @@ const itemVariants = {
   }
 };
 
+const logDashboardFetchError = (message: string, error: unknown) => {
+  if (import.meta.env.DEV) {
+    console.error(message, error);
+  }
+};
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user, profile, currentBrand, setCurrentBrand } = useAuthStore();
@@ -119,7 +125,7 @@ export function DashboardPage() {
         .limit(1);
 
       if (error) {
-        console.error('Failed to check brands:', error);
+        logDashboardFetchError('Failed to check brands:', error);
         toast.error('ブランド情報の取得に失敗しました');
         setIsLoading(false);
         return;
@@ -134,7 +140,7 @@ export function DashboardPage() {
         // ブランド設定後にuseEffectが再実行されて画像を取得する
       }
     } catch (error) {
-      console.error('Failed to check brands:', error);
+      logDashboardFetchError('Failed to check brands:', error);
       toast.error('ブランド情報の取得に失敗しました');
       setIsLoading(false);
     }
@@ -156,14 +162,14 @@ export function DashboardPage() {
         .limit(6);
 
       if (error) {
-        console.error('Failed to fetch images:', error);
+        logDashboardFetchError('Failed to fetch images:', error);
         toast.error('画像の取得に失敗しました');
         setRecentImages([]);
       } else {
         setRecentImages(await withSignedImageUrls(data || []));
       }
     } catch (error) {
-      console.error('Failed to fetch images:', error);
+      logDashboardFetchError('Failed to fetch images:', error);
       toast.error('画像の取得に失敗しました');
       setRecentImages([]);
     } finally {
@@ -183,7 +189,7 @@ export function DashboardPage() {
     try {
       setWorkspaceActivity(await fetchWorkspaceActivity(currentBrand.id));
     } catch (error) {
-      console.warn('Failed to load workspace activity:', error);
+      logDashboardFetchError('Failed to load workspace activity:', error);
       setActivityError('workspace activity');
     } finally {
       setIsActivityLoading(false);
@@ -289,7 +295,7 @@ export function DashboardPage() {
     // storage_pathを使用
     const path = image.storage_path;
     if (!path) {
-      console.warn('Image path is empty for image:', image.id);
+      logDashboardFetchError('Image path is empty for image:', image.id);
       return '';
     }
     try {
@@ -299,7 +305,7 @@ export function DashboardPage() {
       }
       return '';
     } catch (error) {
-      console.error('Failed to get image URL:', error, 'path:', path);
+      logDashboardFetchError(`Failed to get image URL for path: ${path}`, error);
       return '';
     }
   };
@@ -606,7 +612,7 @@ export function DashboardPage() {
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       loading="lazy"
                       onError={(e) => {
-                        console.error('Failed to load image:', image.storage_path, 'image_url:', image.image_url);
+                        logDashboardFetchError(`Failed to load image: ${image.storage_path || image.image_url || 'unknown'}`, image);
                         e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3E画像なし%3C/text%3E%3C/svg%3E';
                       }}
                     />

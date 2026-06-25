@@ -83,6 +83,12 @@ interface UsageSummaryRow {
 
 const FREE_PLAN_QUOTA = 25;
 
+const logWorkspaceActivityFetchError = (message: string, error: unknown) => {
+  if (import.meta.env.DEV) {
+    console.warn(message, error);
+  }
+};
+
 export const emptyWorkspaceActivity: WorkspaceActivity = {
   creditSummary: {
     planName: 'Free',
@@ -369,7 +375,7 @@ const fetchCreditSummary = async (brandId: string): Promise<CreditSummary> => {
       remainingUnits: toNumber(summary.remaining_units, FREE_PLAN_QUOTA),
     };
   } catch (error) {
-    console.warn('Failed to fetch workspace credit summary:', error);
+    logWorkspaceActivityFetchError('Failed to fetch workspace credit summary:', error);
     throw error;
   }
 };
@@ -389,7 +395,7 @@ const fetchJobs = async (brandId: string): Promise<GenerationJob[]> => {
 
     return data ?? [];
   } catch (error) {
-    console.warn('Failed to fetch workspace jobs:', error);
+    logWorkspaceActivityFetchError('Failed to fetch workspace jobs:', error);
     throw error;
   }
 };
@@ -409,7 +415,7 @@ const fetchOutputs = async (brandId: string): Promise<GeneratedImage[]> => {
 
     return data ?? [];
   } catch (error) {
-    console.warn('Failed to fetch workspace outputs:', error);
+    logWorkspaceActivityFetchError('Failed to fetch workspace outputs:', error);
     throw error;
   }
 };
@@ -429,7 +435,7 @@ const fetchLightchainTaskSteps = async (brandId: string): Promise<LightchainTask
 
     return data ?? [];
   } catch (error) {
-    console.warn('Failed to fetch Lightchain task steps:', error);
+    logWorkspaceActivityFetchError('Failed to fetch Lightchain task steps:', error);
     return [];
   }
 };
@@ -449,6 +455,11 @@ const groupLightchainStepsByImage = (steps: LightchainTaskStep[]) => {
   }, {});
 };
 
+const throwWorkspaceActivityFetchError = (failedSources: string[]) => {
+  if (!failedSources.length) return;
+  throw new Error(`Failed to fetch workspace activity: ${failedSources.join(', ')}`);
+};
+
 export async function fetchWorkspaceActivity(brandId: string): Promise<WorkspaceActivity> {
   if (!brandId) return emptyWorkspaceActivity;
 
@@ -458,6 +469,12 @@ export async function fetchWorkspaceActivity(brandId: string): Promise<Workspace
     fetchOutputs(brandId),
     fetchLightchainTaskSteps(brandId),
   ]);
+
+  throwWorkspaceActivityFetchError([
+    creditResult.status === 'rejected' ? 'credit summary' : '',
+    jobsResult.status === 'rejected' ? 'jobs' : '',
+    outputsResult.status === 'rejected' ? 'outputs' : '',
+  ].filter(Boolean));
 
   const creditSummary = creditResult.status === 'fulfilled' ? creditResult.value : emptyWorkspaceActivity.creditSummary;
   const jobs = jobsResult.status === 'fulfilled' ? jobsResult.value : [];
