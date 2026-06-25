@@ -71,6 +71,101 @@ const sanitizePositiveInteger = (value: unknown, fallback: number, min: number, 
   return Math.max(min, Math.min(max, Math.round(numeric)))
 }
 
+const normalizeImageMimeType = (mimeType: string | null | undefined) => {
+  const clean = String(mimeType || '').split(';')[0].trim().toLowerCase()
+  return clean.startsWith('image/') ? clean : 'image/png'
+}
+
+const extensionFromMimeType = (mimeType: string) => {
+  switch (normalizeImageMimeType(mimeType)) {
+    case 'image/jpeg':
+    case 'image/jpg':
+      return 'jpg'
+    case 'image/webp':
+      return 'webp'
+    case 'image/png':
+    default:
+      return 'png'
+  }
+}
+
+const bytesToHex = (bytes: Uint8Array) => Array.from(bytes)
+  .map((byte) => byte.toString(16).padStart(2, '0'))
+  .join('')
+
+const sha256Hex = async (bytes: Uint8Array) => {
+  const buffer = new Uint8Array(bytes).buffer
+  const digest = await crypto.subtle.digest('SHA-256', buffer)
+  return bytesToHex(new Uint8Array(digest))
+}
+
+const parseDataImage = (value: string) => {
+  const match = value.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,([A-Za-z0-9+/=]+)$/i)
+  if (!match) return null
+  const [, mimeType, payload] = match
+  const binary = atob(payload)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index)
+  }
+  return { bytes, mimeType: normalizeImageMimeType(mimeType) }
+}
+
+const fetchReferenceImageBytes = async (referenceImage: string) => {
+  const dataImage = parseDataImage(referenceImage)
+  if (dataImage) return dataImage
+
+  const response = await fetch(referenceImage)
+  if (!response.ok) {
+    throw new Error(`local_runway_worker_reference_image_fetch_failed:${response.status}`)
+  }
+  const mimeType = normalizeImageMimeType(response.headers.get('content-type'))
+  if (!mimeType.startsWith('image/')) {
+    throw new Error('local_runway_worker_reference_image_fetch_not_image')
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  if (bytes.byteLength > 1_500_000) {
+    throw new Error('local_runway_worker_reference_image_too_large')
+  }
+  return { bytes, mimeType }
+}
+
+const createLocalWorkerReferenceImageHandoff = async ({
+  supabaseClient,
+  referenceImage,
+  userId,
+  brandId,
+  requestId,
+}: {
+  supabaseClient: ReturnType<typeof createServiceClient>
+  referenceImage: string | null
+  userId: string
+  brandId: string
+  requestId: string
+}) => {
+  if (!referenceImage) return null
+  const { bytes, mimeType } = await fetchReferenceImageBytes(referenceImage)
+  const sha256 = await sha256Hex(bytes)
+  const extension = extensionFromMimeType(mimeType)
+  const storagePath = `${userId}/${brandId}/local-runway-reference-handoffs/${requestId}-${crypto.randomUUID()}.${extension}`
+  const { error } = await supabaseClient.storage
+    .from('generated-images')
+    .upload(storagePath, bytes, {
+      contentType: mimeType,
+      upsert: false,
+      cacheControl: '60',
+    })
+  if (error) throw error
+  return {
+    bucket: 'generated-images',
+    storagePath,
+    mimeType,
+    bytes: bytes.byteLength,
+    sha256,
+    createdAt: new Date().toISOString(),
+  }
+}
+
 const sanitizeLocalRunwayWorkerRequest = (value: unknown, persistedFeatureType: string) => {
   if (!isRecord(value) || value.enabled !== true) return null
   if (!ALLOWED_LOCAL_WORKER_FEATURES.has(persistedFeatureType)) {
@@ -256,6 +351,18 @@ serve(async (req) => {
       idempotencyKey: req.headers.get('idempotency-key'),
       metadata: localWorkerRequest ? { provider: localWorkerRequest.provider, queued: true } : {},
     });
+    const referenceImageHandoff = localWorkerRequest
+      ? await createLocalWorkerReferenceImageHandoff({
+        supabaseClient,
+        referenceImage: localWorkerRequest.referenceImage,
+        userId: user.id,
+        brandId,
+        requestId,
+      })
+      : null
+    if (referenceImageHandoff?.storagePath) {
+      uploadedStoragePaths.push(referenceImageHandoff.storagePath)
+    }
     const inputParams = {
       prompt,
       negativePrompt,
@@ -269,14 +376,15 @@ serve(async (req) => {
       ...(materialMetadata ?? {}),
       ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
       ...(localWorkerRequest ? {
+        ...localWorkerRequest.metadata,
         provider: localWorkerRequest.provider,
         workerContractVersion: localWorkerRequest.workerContractVersion,
         count: localWorkerRequest.count,
-        referenceImage: localWorkerRequest.referenceImage,
+        hasReferenceImage: Boolean(localWorkerRequest.referenceImage),
+        ...(referenceImageHandoff ? { referenceImageHandoff } : {}),
         referenceType: localWorkerRequest.referenceType,
         usageEventId: usageReservation?.usageEventId ?? null,
         requestedAt: new Date().toISOString(),
-        ...localWorkerRequest.metadata,
       } : {}),
     }
 
@@ -512,6 +620,19 @@ serve(async (req) => {
     persistenceStatus = jobId ? 'failed' : persistenceStatus;
     if (!failedStage) failedStage = 'unknown';
 
+    if (telemetryClient && uploadedStoragePaths.length > 0) {
+      cleanupStatus = 'attempted';
+      try {
+        const { error: removeStorageError } = await telemetryClient
+          .storage
+          .from('generated-images')
+          .remove(uploadedStoragePaths);
+        if (removeStorageError) throw removeStorageError;
+      } catch (cleanupError) {
+        cleanupErrors.push(clientError(cleanupError));
+      }
+    }
+
     if (telemetryClient && jobId) {
       cleanupStatus = 'attempted';
       if (insertedImageIds.length > 0) {
@@ -521,18 +642,6 @@ serve(async (req) => {
             .delete()
             .in('id', insertedImageIds);
           if (deleteImagesError) throw deleteImagesError;
-        } catch (cleanupError) {
-          cleanupErrors.push(clientError(cleanupError));
-        }
-      }
-
-      if (uploadedStoragePaths.length > 0) {
-        try {
-          const { error: removeStorageError } = await telemetryClient
-            .storage
-            .from('generated-images')
-            .remove(uploadedStoragePaths);
-          if (removeStorageError) throw removeStorageError;
         } catch (cleanupError) {
           cleanupErrors.push(clientError(cleanupError));
         }

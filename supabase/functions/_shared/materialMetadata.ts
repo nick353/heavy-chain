@@ -7,7 +7,7 @@ const isRecord = (value: unknown): value is JsonRecord => {
 const sanitizeString = (value: string, key: string) => {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  if (key === 'imageUrl') return null;
+  if (key === 'imageUrl' || key === 'referenceImage') return null;
   const maxLength = 4000;
   return trimmed.length <= maxLength ? trimmed : trimmed.slice(0, maxLength);
 };
@@ -28,7 +28,7 @@ const sanitizeJsonValue = (value: unknown, key = '', depth = 0): unknown => {
     if (depth > 4) return {};
     const sanitizedRecord = Object.fromEntries(
       Object.entries(value)
-        .filter(([entryKey]) => entryKey !== 'imageUrl')
+        .filter(([entryKey]) => !['imageUrl', 'referenceImage', 'referenceImageHandoff'].includes(entryKey))
         .slice(0, 40)
         .map(([entryKey, entryValue]) => [entryKey, sanitizeJsonValue(entryValue, entryKey, depth + 1)])
         .filter(([, entryValue]) => entryValue !== null && entryValue !== undefined),

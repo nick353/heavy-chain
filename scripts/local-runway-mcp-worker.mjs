@@ -130,6 +130,9 @@ const redactWorkerInputParamsForMetadata = (inputParams) => {
     redacted.referenceImageLength = redacted.referenceImage.length;
     delete redacted.referenceImage;
   }
+  if (asRecord(redacted.referenceImageHandoff).storagePath) {
+    redacted.hasReferenceImage = true;
+  }
   if (Array.isArray(redacted.materialReferences)) {
     redacted.materialReferences = redacted.materialReferences.map((reference) => {
       const record = asRecord(reference);
@@ -193,6 +196,38 @@ const dataUrlToBuffer = (dataUrl) => {
 
 const bufferToDataUrl = (buffer, mimeType) => {
   return `data:${normalizeMimeType(mimeType)};base64,${buffer.toString('base64')}`;
+};
+
+const getReferenceImageHandoffStoragePath = (inputParams) => {
+  const handoff = asRecord(inputParams.referenceImageHandoff);
+  return typeof handoff.storagePath === 'string' && handoff.storagePath ? handoff.storagePath : null;
+};
+
+const hydrateReferenceImageHandoff = async (supabase, inputParams) => {
+  const storagePath = getReferenceImageHandoffStoragePath(inputParams);
+  if (!storagePath || inputParams.referenceImage) return inputParams;
+  const handoff = asRecord(inputParams.referenceImageHandoff);
+  const { data, error } = await supabase.storage
+    .from(String(handoff.bucket || GENERATED_IMAGES_BUCKET))
+    .download(storagePath);
+  if (error || !data) {
+    throw error || new Error('local_runway_worker_reference_handoff_download_failed');
+  }
+  const buffer = Buffer.from(await data.arrayBuffer());
+  return {
+    ...inputParams,
+    referenceImage: bufferToDataUrl(buffer, normalizeMimeType(handoff.mimeType)),
+  };
+};
+
+const cleanupReferenceImageHandoff = async (supabase, inputParams) => {
+  const storagePath = getReferenceImageHandoffStoragePath(inputParams);
+  if (!storagePath) return [];
+  const handoff = asRecord(inputParams.referenceImageHandoff);
+  const { error } = await supabase.storage
+    .from(String(handoff.bucket || GENERATED_IMAGES_BUCKET))
+    .remove([storagePath]);
+  return error ? [sanitizeError(error)] : [];
 };
 
 const mimeFromPath = (filePath) => {
@@ -783,6 +818,7 @@ const processJob = async ({ supabase, job, args }) => {
   const uploadedPaths = [];
 
   try {
+    inputParams = await hydrateReferenceImageHandoff(supabase, inputParams);
     inputParams = validateJobInput(claimed, inputParams);
     const requestedCount = Math.max(1, Math.min(Number(inputParams.count || 1), 4));
     const workerResults = args['mcp-result']
@@ -832,7 +868,10 @@ const processJob = async ({ supabase, job, args }) => {
       })
       .eq('id', claimed.id);
     if (completeJobError) {
-      const cleanupErrors = await cleanupSavedImages(supabase, savedImages, uploadedPaths);
+      const cleanupErrors = [
+        ...await cleanupSavedImages(supabase, savedImages, uploadedPaths),
+        ...await cleanupReferenceImageHandoff(supabase, inputParams),
+      ];
       throw new Error(`job_completed_update_failed:${sanitizeError(completeJobError)}:${cleanupErrors.join('|')}`);
     }
     try {
@@ -858,10 +897,18 @@ const processJob = async ({ supabase, job, args }) => {
         })
         .eq('id', claimed.id);
     }
+    const referenceHandoffCleanupErrors = await cleanupReferenceImageHandoff(supabase, inputParams);
+    if (referenceHandoffCleanupErrors.length > 0) {
+      manifest.referenceHandoffCleanupErrors = referenceHandoffCleanupErrors;
+      await fs.writeFile(path.join(artifactDir, 'worker-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+    }
     return manifest;
   } catch (error) {
     const blocker = sanitizeError(error);
-    const cleanupErrors = await cleanupSavedImages(supabase, savedImages, uploadedPaths);
+    const cleanupErrors = [
+      ...await cleanupSavedImages(supabase, savedImages, uploadedPaths),
+      ...await cleanupReferenceImageHandoff(supabase, inputParams),
+    ];
     try {
       await completeUsageEvent(supabase, inputParams, 'failed', {
         provider: PROVIDER,
