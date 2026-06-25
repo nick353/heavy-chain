@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type ChangeEvent, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Film,
   Layers3,
+  ImagePlus,
   MessageSquareText,
   Palette,
   Search,
@@ -14,6 +15,7 @@ import {
   Sparkles,
   UserRound,
   WandSparkles,
+  Upload,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../stores/authStore';
@@ -499,6 +501,21 @@ const totalToolCount = tools.length;
 const textArtifactPreview =
   'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjkwMCIgdmlld0JveD0iMCAwIDEyMDAgOTAwIj48cmVjdCB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI5MDAiIGZpbGw9IiMwZjE3MmEiLz48cmVjdCB4PSI5NiIgeT0iOTYiIHdpZHRoPSIxMDA4IiBoZWlnaHQ9IjcwOCIgcng9IjQwIiBmaWxsPSIjMTExODI3IiBzdHJva2U9IiMyMmQzZWUiIHN0cm9rZS13aWR0aD0iNCIvPjx0ZXh0IHg9IjE1MCIgeT0iMjEwIiBmaWxsPSIjZTVlN2ViIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNTQiIGZvbnQtd2VpZ2h0PSI3MDAiPkxpZ2h0Y2hhaW4gY29tcGF0aWJsZSBicmllZjwvdGV4dD48dGV4dCB4PSIxNTAiIHk9IjMwMCIgZmlsbD0iIzY3ZThmOSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjM0Ij5IZWF2eSBDaGFpbiBDYW52YXMgb3JkZXIgc2hlZXQ8L3RleHQ+PC9zdmc+';
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error('画像を読み込めませんでした。'));
+    };
+    reader.onerror = () => reject(new Error('画像を読み込めませんでした。'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function LightchainWorkbenchPage() {
   const navigate = useNavigate();
   const { currentBrand } = useAuthStore();
@@ -509,6 +526,14 @@ export function LightchainWorkbenchPage() {
   const [brief, setBrief] = useState('黒のチェーン柄フーディーを、ECとSNSで使える高級ストリート系ビジュアルに展開したい。');
   const [referenceNote, setReferenceNote] = useState('モデルは20代、無地背景、チェーン柄は服の主役として残す。');
   const [isSaving, setIsSaving] = useState(false);
+  const [garmentImageUrl, setGarmentImageUrl] = useState('');
+  const [garmentFileName, setGarmentFileName] = useState('');
+  const [garmentCategory, setGarmentCategory] = useState('フーディー');
+  const [cutMode, setCutMode] = useState<'auto' | 'manual' | 'keep'>('auto');
+  const [activeLayer, setActiveLayer] = useState<'garment' | 'mask' | 'print' | 'fit'>('print');
+  const [printPlacement, setPrintPlacement] = useState('胸中央');
+  const [printScale, setPrintScale] = useState(46);
+  const [analysisStatus, setAnalysisStatus] = useState<'empty' | 'ready'>('empty');
 
   const filteredTools = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -535,6 +560,26 @@ export function LightchainWorkbenchPage() {
     setSelectedToolId(tools.find((tool) => tool.category === categoryId)?.id ?? tools[0].id);
   };
 
+  const handleGarmentUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('衣服画像は5MB以下にしてください');
+      event.target.value = '';
+      return;
+    }
+
+    try {
+      setGarmentImageUrl(await readFileAsDataUrl(file));
+      setGarmentFileName(file.name);
+      setAnalysisStatus('ready');
+      toast.success('衣服画像を読み込み、編集レイヤーを準備しました');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '画像を読み込めませんでした');
+    }
+  };
+
   const handleSaveToCanvas = async () => {
     if (!currentBrand || isSaving) {
       if (!currentBrand) toast.error('ブランドを選択してください');
@@ -544,12 +589,23 @@ export function LightchainWorkbenchPage() {
     setIsSaving(true);
     try {
       const projectId = createProject(`Lightchain互換: ${selectedTool.title}`, currentBrand.id);
+      const isGarmentReferenceTool = selectedTool.id === 'fitting-clothing-reference';
+      const shouldSaveGarmentReference = isGarmentReferenceTool && Boolean(garmentImageUrl);
+      const garmentReferenceState = isGarmentReferenceTool ? {
+        garmentFileName: garmentFileName || null,
+        garmentCategory,
+        cutMode,
+        activeLayer,
+        printPlacement,
+        printScale,
+        hasGarmentImage: Boolean(garmentImageUrl),
+      } : null;
       const artifact = await saveWorkspaceArtifactBestEffort({
         brandId: currentBrand.id,
         featureType: `lightchain-${selectedTool.id}`,
         title: selectedTool.title,
-        imageUrl: textArtifactPreview,
-        prompt: `${selectedTool.promptTemplate}\n\n依頼: ${brief}\n参考: ${referenceNote}`,
+        imageUrl: shouldSaveGarmentReference ? garmentImageUrl : textArtifactPreview,
+        prompt: `${selectedTool.promptTemplate}\n\n依頼: ${brief}\n参考: ${referenceNote}${garmentReferenceState ? `\n衣服素材: ${garmentCategory} / ${cutMode} / ${printPlacement} / ${printScale}%` : ''}`,
         canvasProjectId: projectId,
         metadata: {
           sourceWorkspace: 'lightchain-workbench',
@@ -557,12 +613,71 @@ export function LightchainWorkbenchPage() {
           inputs: selectedTool.inputs,
           outputs: selectedTool.outputs,
           heavyChainHref: selectedTool.heavyChainHref,
+          garmentReferenceState,
         },
       });
 
+      if (shouldSaveGarmentReference) {
+        addObject({
+          type: 'image',
+          x: 120,
+          y: 100,
+          width: 360,
+          height: 360,
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          opacity: 1,
+          locked: false,
+          visible: true,
+          src: garmentImageUrl,
+          label: garmentFileName || '衣服参照画像',
+          metadata: {
+            feature: 'lightchain-garment-reference',
+            prompt: selectedTool.promptTemplate,
+            generation: 0,
+            parameters: {
+              toolId: selectedTool.id,
+              artifactId: artifact.artifact.id,
+              garmentReferenceState,
+            },
+          },
+        });
+
+        addObject({
+          type: 'text',
+          x: 225,
+          y: 250,
+          width: 150,
+          height: 58,
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          opacity: 1,
+          locked: false,
+          visible: true,
+          text: 'HC',
+          fontSize: Math.max(24, Math.round(printScale * 0.9)),
+          fontFamily: 'Inter',
+          fill: '#0f172a',
+          label: `プリントレイヤー: ${printPlacement}`,
+          metadata: {
+            feature: 'lightchain-print-layer',
+            prompt: `${printPlacement}にHeavy Chainデザインを配置`,
+            generation: 0,
+            parameters: {
+              toolId: selectedTool.id,
+              printPlacement,
+              printScale,
+              activeLayer,
+            },
+          },
+        });
+      }
+
       addObject({
         type: 'text',
-        x: 120,
+        x: shouldSaveGarmentReference ? 520 : 120,
         y: 120,
         width: 520,
         height: 220,
@@ -587,6 +702,7 @@ export function LightchainWorkbenchPage() {
             heavyChainHref: selectedTool.heavyChainHref,
             inputs: selectedTool.inputs,
             outputs: selectedTool.outputs,
+            garmentReferenceState,
           },
         },
       });
@@ -731,6 +847,171 @@ export function LightchainWorkbenchPage() {
                 <p className="mt-3 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
                   {selectedTool.description}
                 </p>
+
+                {selectedTool.id === 'fitting-clothing-reference' && (
+                  <section className="mt-5 space-y-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
+                    <div className="grid gap-3">
+                      <label className="flex min-h-[132px] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-neutral-300 bg-white p-4 text-center transition hover:border-primary-300 dark:border-neutral-700 dark:bg-neutral-900">
+                        <input type="file" accept="image/*" className="hidden" onChange={handleGarmentUpload} />
+                        {garmentImageUrl ? (
+                          <img src={garmentImageUrl} alt="アップロードした衣服" className="max-h-28 rounded-lg object-contain" />
+                        ) : (
+                          <>
+                            <Upload className="h-7 w-7 text-primary-500" />
+                            <span className="mt-2 text-sm font-semibold text-neutral-900 dark:text-white">衣服画像をアップロード</span>
+                            <span className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+                              平置き、トルソー、着用写真から衣服参照を作ります
+                            </span>
+                          </>
+                        )}
+                      </label>
+
+                      <div className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">素材読み込み</p>
+                            <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
+                              {analysisStatus === 'ready' ? `${garmentCategory} / 前身頃 / 袖あり` : '画像待ち'}
+                            </p>
+                          </div>
+                          <span className={`rounded-full px-2 py-1 text-xs font-semibold ${analysisStatus === 'ready' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300'}`}>
+                            {analysisStatus === 'ready' ? '読み込み済み' : '未読込'}
+                          </span>
+                        </div>
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                          {['Tシャツ', 'フーディー', 'ジャケット'].map((category) => (
+                            <button
+                              key={category}
+                              type="button"
+                              onClick={() => setGarmentCategory(category)}
+                              className={`rounded-lg px-2 py-1.5 text-xs font-semibold transition ${
+                                garmentCategory === category
+                                  ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300'
+                              }`}
+                            >
+                              {category}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+                        <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">切り抜き / マスク</p>
+                        <div className="mt-2 grid grid-cols-3 gap-2">
+                          {[
+                            ['auto', '自動カット'],
+                            ['manual', '手動マスク'],
+                            ['keep', '背景維持'],
+                          ].map(([mode, label]) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() => setCutMode(mode as typeof cutMode)}
+                              className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${
+                                cutMode === mode
+                                  ? 'bg-primary-600 text-white'
+                                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+                        <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">デザインレイヤー</p>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          {[
+                            ['garment', '衣服ベース'],
+                            ['mask', 'カットマスク'],
+                            ['print', 'プリント'],
+                            ['fit', '着用展開'],
+                          ].map(([layer, label]) => (
+                            <button
+                              key={layer}
+                              type="button"
+                              onClick={() => setActiveLayer(layer as typeof activeLayer)}
+                              className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${
+                                activeLayer === layer
+                                  ? 'bg-cyan-600 text-white'
+                                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                        <label className="mt-3 block">
+                          <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">配置</span>
+                          <select
+                            value={printPlacement}
+                            onChange={(event) => setPrintPlacement(event.target.value)}
+                            className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-2 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-950 dark:text-white"
+                          >
+                            <option>胸中央</option>
+                            <option>背面大判</option>
+                            <option>袖ワンポイント</option>
+                            <option>全面総柄</option>
+                          </select>
+                        </label>
+                        <label className="mt-3 block">
+                          <span className="flex items-center justify-between text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                            サイズ
+                            <span>{printScale}%</span>
+                          </span>
+                          <input
+                            type="range"
+                            min="20"
+                            max="90"
+                            value={printScale}
+                            onChange={(event) => setPrintScale(Number(event.target.value))}
+                            className="mt-2 w-full accent-cyan-600"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+                        <div className="relative flex min-h-[260px] items-center justify-center bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f4f5_75%),linear-gradient(-45deg,transparent_75%,#f4f4f5_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0] dark:bg-neutral-950">
+                          {garmentImageUrl ? (
+                            <img src={garmentImageUrl} alt="衣服レイヤープレビュー" className={`max-h-56 max-w-[78%] object-contain ${cutMode === 'auto' ? 'drop-shadow-[0_12px_24px_rgba(0,0,0,0.24)]' : ''}`} />
+                          ) : (
+                            <div className="text-center">
+                              <ImagePlus className="mx-auto h-10 w-10 text-neutral-300 dark:text-neutral-700" />
+                              <p className="mt-2 text-sm font-semibold text-neutral-500 dark:text-neutral-400">衣服画像を置くとここで合成確認できます</p>
+                            </div>
+                          )}
+                          {garmentImageUrl && (
+                            <div
+                              className="absolute left-1/2 top-1/2 flex -translate-x-1/2 items-center justify-center rounded-full border-2 border-cyan-200 bg-neutral-950/88 px-5 py-3 text-xs font-black tracking-[0.18em] text-cyan-100 shadow-xl"
+                              style={{
+                                width: `${printScale * 2.2}px`,
+                                transform: `translate(-50%, ${printPlacement.includes('背面') ? '-16%' : printPlacement.includes('袖') ? '-72%' : '-50%'})`,
+                              }}
+                            >
+                              HC
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 border-t border-neutral-200 text-xs dark:border-neutral-800">
+                          <div className="p-2">
+                            <p className="font-semibold text-neutral-500">素材</p>
+                            <p className="mt-1 truncate text-neutral-900 dark:text-white">{garmentFileName || '未選択'}</p>
+                          </div>
+                          <div className="border-x border-neutral-200 p-2 dark:border-neutral-800">
+                            <p className="font-semibold text-neutral-500">処理</p>
+                            <p className="mt-1 text-neutral-900 dark:text-white">{cutMode === 'auto' ? '自動カット' : cutMode === 'manual' ? '手動マスク' : '背景維持'}</p>
+                          </div>
+                          <div className="p-2">
+                            <p className="font-semibold text-neutral-500">レイヤー</p>
+                            <p className="mt-1 text-neutral-900 dark:text-white">{activeLayer}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                )}
 
                 <div className="mt-5 grid gap-4">
                   <div>
