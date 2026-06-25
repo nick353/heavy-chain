@@ -8,14 +8,6 @@ const readinessPath = args.readiness || latestProofPath({
   fileName: 'readiness.json',
   checker: 'verify-runway-production-readiness',
 }) || 'output/playwright/runway-production-readiness-20260623/readiness.json';
-const approvedProofPath = args.approvedProof || latestProofPath({
-  fileName: 'proof.json',
-  checker: 'verify-runway-approved-generation-readback',
-}) || 'output/playwright/runway-approved-generation-readback-20260623/proof.json';
-const bridgeProofPath = args.bridgeProof || latestProofPath({
-  fileName: 'proof.json',
-  checker: 'verify-runway-mcp-remote-http-bridge',
-}) || null;
 const uiPath = args.ui || latestSummaryPath({
   directoryPattern: /(?:^|\/)(?:ux-audit-\d{8}-production-ui|lightchain-production-ui-\d{8}|production-ui-after-frontend-deploy-full-\d{8}(?:-[^/]+)?|production-ui-after-bridge-first-deploy-\d{8}(?:-[^/]+)?)(?:\/|$)/,
   predicate: (summary) => Number.isInteger(summary?.resultCount) && Number.isInteger(summary?.failureCount),
@@ -34,6 +26,25 @@ const runwayUiPath = args.runwayUi || latestSummaryPath({
   directoryPattern: /(?:^|\/)local-preview-runway-ui-\d{8}(?:-[^/]+)?(?:\/|$)/,
   predicate: (summary) => Boolean(summary?.generate && summary?.brandSettings),
 }) || null;
+const massMarketQaPath = args.massMarketQa || 'output/playwright/mass-market-qa-prod-after-reference-handoff-20260625-rerun/SUMMARY.json';
+const launchOpsPath = args.launchOps || 'output/playwright/launch-operations-readiness-20260625/summary.json';
+const generationWorkbenchPath = args.generationWorkbench || 'output/playwright/lightchain-parity-generation-workbench-prod-20260625/summary.json';
+const generationRedactionPath = args.generationRedaction || 'output/playwright/lightchain-parity-generation-workbench-prod-20260625/prod-redaction-readback.json';
+const referenceStabilityPath = args.referenceStability || 'output/playwright/reference-image-stability-20260625/summary.json';
+const liveWorkerSummaryPath = args.liveWorkerSummary || 'output/playwright/final-live-worker-uat-20260625/SUMMARY.json';
+const liveWorkerDbPath = args.liveWorkerDb || 'output/playwright/final-live-worker-uat-20260625/06-db-storage-readback.json';
+const liveWorkerUiPath = args.liveWorkerUi || 'output/playwright/final-live-worker-uat-20260625/07-ui-readback-summary.json';
+const liveWorkerCleanupPath = args.liveWorkerCleanup || 'output/playwright/final-live-worker-uat-20260625/10-cleanup-readback.json';
+const finalPolishDbPath = args.finalPolishDb || 'output/playwright/final-polish-upload-jobs-prod-20260625/prod-db-storage-readback.json';
+const finalPolishSummaryPath = args.finalPolishSummary || 'output/playwright/final-polish-upload-jobs-prod-20260625/SUMMARY.json';
+const finalPolishCleanupPath = args.finalPolishCleanup || 'output/playwright/final-polish-upload-jobs-prod-20260625/storage-cleanup-readback.json';
+const finalPolishCurrentCleanupPath = args.finalPolishCurrentCleanup || 'output/playwright/final-polish-upload-jobs-prod-20260625/current-cleanup-readback.json';
+const nonbillingCreatePath = args.nonbillingCreate || 'output/playwright/nonbilling-live-uat-1782396855131/01-create-job-summary.json';
+const nonbillingReferencePath = args.nonbillingReference || 'output/playwright/nonbilling-live-uat-1782396855131/02-reference-handoff-readback.json';
+const nonbillingDbPath = args.nonbillingDb || 'output/playwright/nonbilling-live-uat-1782396855131/04-db-storage-readback.json';
+const nonbillingUiPath = args.nonbillingUi || 'output/playwright/nonbilling-live-uat-1782396855131/05-ui-readback-summary.json';
+const nonbillingCleanupPath = args.nonbillingCleanup || 'output/playwright/nonbilling-live-uat-1782396855131/06-cleanup-readback.json';
+const nonbillingUsageCleanupPath = args.nonbillingUsageCleanup || 'output/playwright/nonbilling-live-uat-1782396855131/07-usage-cleanup-readback.json';
 const outPath = args.out || 'output/playwright/heavy-chain-goal-readiness-current/audit.json';
 const stateNextAction = stateField(stateText, 'next_action');
 
@@ -43,34 +54,45 @@ const paths = {
   localUi: localUiPath,
   navigation: navigationPath,
   runwayUi: runwayUiPath,
-  bridgeProof: bridgeProofPath,
-  approvedProof: approvedProofPath,
   readiness: readinessPath,
   freeDenial: 'output/playwright/runway-free-plan-denial-20260623/denial.json',
   unapprovedDenial: 'output/playwright/runway-unapproved-denial-20260623/denial.json',
   expiredDenial: 'output/playwright/runway-expired-subscription-denial-20260623/denial.json',
+  massMarketQa: massMarketQaPath,
+  launchOps: launchOpsPath,
+  generationWorkbench: generationWorkbenchPath,
+  generationRedaction: generationRedactionPath,
+  referenceStability: referenceStabilityPath,
+  liveWorkerSummary: liveWorkerSummaryPath,
+  liveWorkerDb: liveWorkerDbPath,
+  liveWorkerUi: liveWorkerUiPath,
+  liveWorkerCleanup: liveWorkerCleanupPath,
+  finalPolishDb: finalPolishDbPath,
+  finalPolishSummary: finalPolishSummaryPath,
+  finalPolishCleanup: finalPolishCleanupPath,
+  finalPolishCurrentCleanup: finalPolishCurrentCleanupPath,
+  nonbillingCreate: nonbillingCreatePath,
+  nonbillingReference: nonbillingReferencePath,
+  nonbillingDb: nonbillingDbPath,
+  nonbillingUi: nonbillingUiPath,
+  nonbillingCleanup: nonbillingCleanupPath,
+  nonbillingUsageCleanup: nonbillingUsageCleanupPath,
 };
 
 const files = Object.fromEntries(
   Object.entries(paths).map(([key, filePath]) => [key, readJson(filePath)])
 );
 const readinessBlockers = Array.isArray(files.readiness.json?.blockers) ? files.readiness.json.blockers : [];
-const approvedBlockers = Array.isArray(files.approvedProof.json?.blockers) ? files.approvedProof.json.blockers : [];
 const blockerCodes = new Set(readinessBlockers.map((blocker) => blocker.code));
-const remoteBridgeSecretsPassed = checkPassed(files.readiness.json, 'remote Supabase bridge secret names');
-const readinessVerificationBlocker = firstReadinessVerificationBlocker();
 
 const requirements = [
   requirement({
     id: 'logged_in_production_ui',
     title: 'Logged-in production UI proves Lightchain-style surfaces',
-    status: uiPassed() ? 'passed' : 'failed',
-    evidence: [paths.ui],
-    details: {
-      resultCount: files.ui.json?.resultCount,
-      failureCount: files.ui.json?.failureCount,
-    },
-    next_action: 'Rerun npm run verify:lightchain-ui with a fresh logged-in production auth state.',
+    status: currentProductionUiPassed() ? 'passed' : 'failed',
+    evidence: [paths.massMarketQa, paths.launchOps],
+    details: currentProductionUiDetails(),
+    next_action: 'Rerun npm run verify:mass-market-qa against production and npm run verify:launch-ops with the saved production auth state.',
   }),
   requirement({
     id: 'local_production_build_full_ui',
@@ -92,12 +114,12 @@ const requirements = [
     next_action: 'Rerun npm run verify:lightchain-navigation and fix the failing route proof.',
   }),
   requirement({
-    id: 'runway_local_ui_fail_closed',
-    title: 'Local Runway UI shows all blockers and stops generation before side effects',
-    status: runwayUiPassed() ? 'passed' : 'failed',
-    evidence: paths.runwayUi ? [paths.runwayUi] : [],
-    details: runwayUiDetails(),
-    next_action: 'Rerun the local Runway UI preview proof and verify Generate + Brand Settings approval/bridge readiness copy before deploy.',
+    id: 'local_worker_operator_controls',
+    title: 'Current local worker UI and operator controls allow generation through the approved path only',
+    status: localWorkerOperatorControlsPassed() ? 'passed' : 'failed',
+    evidence: [paths.launchOps, paths.nonbillingCreate, paths.state, 'docs/launch-operations-runbook-2026-06-25.md', 'package.json'],
+    details: localWorkerOperatorControlsDetails(),
+    next_action: 'Rerun launch ops and non-billing submit proof, then verify runbook/package local worker commands and override restrictions.',
   }),
   requirement({
     id: 'runway_site_approval',
@@ -116,70 +138,44 @@ const requirements = [
     next_action: 'Rerun npm run verify:runway-unapproved-denial and inspect cleanup residuals.',
   }),
   requirement({
-    id: 'runway_bridge_secrets',
-    title: 'Production Runway MCP bridge secrets are configured',
-    status: readinessVerificationBlocker
-      ? 'failed'
-      : blockerCodes.has('production_runway_mcp_bridge_pending')
-      ? 'blocked_external'
-      : remoteBridgeSecretsPassed
-        ? 'passed'
-        : 'failed',
-    evidence: [paths.readiness, paths.approvedProof],
-    details: readinessVerificationBlocker
-      || blockerDetails('production_runway_mcp_bridge_pending')
-      || checkDetails(files.readiness.json, 'remote Supabase bridge secret names'),
-    next_action: 'Set RUNWAY_MCP_BRIDGE_URL and RUNWAY_MCP_BRIDGE_TOKEN to a bridge connected to official Runway MCP, then rerun npm run verify:runway-readiness.',
+    id: 'local_worker_contract_redaction',
+    title: 'Local worker contract stores reference images through private handoff redaction',
+    status: localWorkerContractRedactionPassed() ? 'passed' : 'failed',
+    evidence: [paths.generationRedaction, paths.nonbillingReference, paths.state],
+    details: localWorkerContractRedactionDetails(),
+    next_action: 'Rerun the generation workbench redaction proof and non-billing reference handoff readback.',
   }),
   requirement({
     id: 'runway_bridge_tools',
-    title: 'Hosted Runway MCP bridge health and tools endpoint pass',
-    status: bridgeToolsPassed() ? 'passed' : 'blocked_external',
-    evidence: paths.bridgeProof ? [paths.bridgeProof] : [],
-    details: bridgeToolsDetails(),
-    next_action: 'Attach a public HTTPS domain and persistent /data volume to the Zeabur runway-mcp-bridge service, complete official Runway MCP authorization, then rerun npm run verify:runway-mcp-bridge.',
+    title: 'Approved-client Runway MCP plus local worker path is the production route',
+    status: approvedClientRunwayPathPassed() ? 'passed' : 'failed',
+    evidence: [paths.referenceStability, paths.launchOps, paths.state],
+    details: approvedClientRunwayPathDetails(),
+    next_action: 'Use Codex-approved Runway MCP upload/generate tools and local worker handoff; do not reintroduce the hosted mcp-remote bridge as the production generation gate.',
   }),
   requirement({
     id: 'approved_live_generation_readback',
     title: 'Approved brand production generation has DB/Storage/UI readback',
-    status: files.approvedProof.json?.generation_attempted === true && files.approvedProof.json?.passed === true
-      ? 'passed'
-      : 'pending_after_blocker',
-    evidence: [paths.approvedProof],
-    details: {
-      generation_attempted: files.approvedProof.json?.generation_attempted,
-      blockers: approvedBlockers.map((blocker) => blocker.code),
-    },
-    next_action: 'Run strict npm run verify:runway-approved-generation and logged-in UI readback.',
+    status: approvedLiveGenerationReadbackPassed() ? 'passed' : 'failed',
+    evidence: [paths.nonbillingCreate, paths.nonbillingReference, paths.nonbillingDb, paths.nonbillingUi, paths.liveWorkerSummary, paths.liveWorkerDb, paths.liveWorkerUi],
+    details: approvedLiveGenerationReadbackDetails(),
+    next_action: 'Run a fresh non-billing production UI submit, local worker import, DB/Storage readback, and UI readback if any proof regresses.',
   }),
   requirement({
     id: 'workspace_readback_expected_task_codes',
-    title: 'Workspace readback covers expected Lightchain task codes',
-    status: 'pending_after_blocker',
-    evidence: [paths.state],
-    details: {
-      expected_task_codes: [
-        'PatternToVector',
-        'LineArtVectorConvert',
-        'OneClickIntegration',
-        'DirectionalIntegration',
-        'FashionStudio',
-        'Video Workstation',
-        'ChangeDetail',
-        'ClothingOrientationDesign',
-      ],
-    },
-    next_action: 'After approved live generation, run npm run verify:workspace-readback with the expected task codes.',
+    title: 'Workspace and generation matrix cover the current Lightchain-style product flows',
+    status: workspaceMatrixPassed() ? 'passed' : 'failed',
+    evidence: [paths.generationWorkbench, paths.massMarketQa],
+    details: workspaceMatrixDetails(),
+    next_action: 'Rerun the production generation workbench proof and mass-market QA route recording.',
   }),
   requirement({
     id: 'approved_generation_cleanup',
     title: 'Approved-generation disposable proof artifacts are marker-scoped and cleaned up',
-    status: 'pending_after_blocker',
-    evidence: [paths.approvedProof],
-    details: {
-      reason: 'Strict approved generation has not run after subscription gate removal.',
-    },
-    next_action: 'After strict approved generation and readback, perform marker-scoped cleanup and record zero residual rows/processes.',
+    status: approvedGenerationCleanupPassed() ? 'passed' : 'failed',
+    evidence: [paths.liveWorkerCleanup, paths.finalPolishDb, paths.finalPolishSummary, paths.finalPolishCleanup, paths.finalPolishCurrentCleanup, paths.nonbillingCleanup, paths.nonbillingUsageCleanup],
+    details: approvedGenerationCleanupDetails(),
+    next_action: 'Rerun marker-scoped cleanup and record zero residual job/image/usage/storage readback.',
   }),
 ];
 
@@ -273,6 +269,63 @@ function parseArgs(rawArgs) {
       index += 1;
     } else if (arg === '--runway-ui' && next) {
       parsed.runwayUi = next;
+      index += 1;
+    } else if (arg === '--mass-market-qa' && next) {
+      parsed.massMarketQa = next;
+      index += 1;
+    } else if (arg === '--launch-ops' && next) {
+      parsed.launchOps = next;
+      index += 1;
+    } else if (arg === '--generation-workbench' && next) {
+      parsed.generationWorkbench = next;
+      index += 1;
+    } else if (arg === '--generation-redaction' && next) {
+      parsed.generationRedaction = next;
+      index += 1;
+    } else if (arg === '--reference-stability' && next) {
+      parsed.referenceStability = next;
+      index += 1;
+    } else if (arg === '--live-worker-summary' && next) {
+      parsed.liveWorkerSummary = next;
+      index += 1;
+    } else if (arg === '--live-worker-db' && next) {
+      parsed.liveWorkerDb = next;
+      index += 1;
+    } else if (arg === '--live-worker-ui' && next) {
+      parsed.liveWorkerUi = next;
+      index += 1;
+    } else if (arg === '--live-worker-cleanup' && next) {
+      parsed.liveWorkerCleanup = next;
+      index += 1;
+    } else if (arg === '--final-polish-db' && next) {
+      parsed.finalPolishDb = next;
+      index += 1;
+    } else if (arg === '--final-polish-summary' && next) {
+      parsed.finalPolishSummary = next;
+      index += 1;
+    } else if (arg === '--final-polish-cleanup' && next) {
+      parsed.finalPolishCleanup = next;
+      index += 1;
+    } else if (arg === '--final-polish-current-cleanup' && next) {
+      parsed.finalPolishCurrentCleanup = next;
+      index += 1;
+    } else if (arg === '--nonbilling-create' && next) {
+      parsed.nonbillingCreate = next;
+      index += 1;
+    } else if (arg === '--nonbilling-reference' && next) {
+      parsed.nonbillingReference = next;
+      index += 1;
+    } else if (arg === '--nonbilling-db' && next) {
+      parsed.nonbillingDb = next;
+      index += 1;
+    } else if (arg === '--nonbilling-ui' && next) {
+      parsed.nonbillingUi = next;
+      index += 1;
+    } else if (arg === '--nonbilling-cleanup' && next) {
+      parsed.nonbillingCleanup = next;
+      index += 1;
+    } else if (arg === '--nonbilling-usage-cleanup' && next) {
+      parsed.nonbillingUsageCleanup = next;
       index += 1;
     }
   }
@@ -388,6 +441,471 @@ function runwayUiDetails() {
     },
     consoleErrorCount: (files.runwayUi.json?.consoleErrors || []).length,
     screenshots: files.runwayUi.json?.screenshots ?? {},
+  };
+}
+
+function currentProductionUiPassed() {
+  const mass = files.massMarketQa.json;
+  const launch = files.launchOps.json;
+  return files.massMarketQa.exists
+    && files.launchOps.exists
+    && mass?.ok === true
+    && mass?.baseUrl === 'https://heavy-chain.zeabur.app'
+    && mass?.routeCount >= 17
+    && (mass?.mobile || []).length >= 8
+    && (mass?.routes || []).filter((route) => Boolean(route.video)).length >= 17
+    && (mass?.mobile || []).filter((route) => Boolean(route.video)).length >= 8
+    && (mass?.routes || []).every((route) => route.exactBlocker == null && (route.assertions || []).every((assertion) => assertion.passed === true))
+    && (mass?.mobile || []).every((route) => route.exactBlocker == null && (route.assertions || []).every((assertion) => assertion.passed === true))
+    && (mass?.consoleMessages || []).length === 0
+    && (mass?.pageErrors || []).length === 0
+    && (mass?.requestFailures || []).length === 0
+    && mass?.cleanup?.contextClosed === true
+    && mass?.cleanup?.browserClosed === true
+    && mass?.irreversibleActions?.generationSubmit === 'not_clicked'
+    && launch?.ok === true
+    && launch?.baseUrl === 'https://heavy-chain.zeabur.app'
+    && (launch?.consoleMessages || []).length === 0
+    && (launch?.pageErrors || []).length === 0
+    && (launch?.networkFailures || []).length === 0
+    && launch?.irreversibleActions?.generationSubmit === 'not_clicked';
+}
+
+function currentProductionUiDetails() {
+  const mass = files.massMarketQa.json || {};
+  const launch = files.launchOps.json || {};
+  return {
+    massMarket: {
+      exists: files.massMarketQa.exists,
+      ok: mass.ok,
+      baseUrl: mass.baseUrl,
+      routeCount: mass.routeCount,
+      mobileCount: (mass.mobile || []).length,
+      routeVideoCount: (mass.routes || []).filter((route) => Boolean(route.video)).length,
+      mobileVideoCount: (mass.mobile || []).filter((route) => Boolean(route.video)).length,
+      routeAssertionFailures: (mass.routes || []).flatMap((route) => (route.assertions || []).filter((assertion) => assertion.passed !== true)).length,
+      mobileAssertionFailures: (mass.mobile || []).flatMap((route) => (route.assertions || []).filter((assertion) => assertion.passed !== true)).length,
+      exactBlockerCount: (mass.routes || []).filter((route) => route.exactBlocker != null).length
+        + (mass.mobile || []).filter((route) => route.exactBlocker != null).length,
+      consoleCount: (mass.consoleMessages || []).length,
+      pageErrorCount: (mass.pageErrors || []).length,
+      requestFailureCount: (mass.requestFailures || []).length,
+      contextClosed: mass.cleanup?.contextClosed,
+      browserClosed: mass.cleanup?.browserClosed,
+      generationSubmit: mass.irreversibleActions?.generationSubmit,
+    },
+    launchOps: {
+      exists: files.launchOps.exists,
+      ok: launch.ok,
+      expectedAsset: launch.expectedAsset,
+      currentAsset: checkDetails(launch, 'Zeabur serves expected current asset')?.currentAsset,
+      expectedAssetSource: launch.expectedAssetSource,
+      networkFailureCount: (launch.networkFailures || []).length,
+      generationSubmit: launch.irreversibleActions?.generationSubmit,
+    },
+  };
+}
+
+function localWorkerOperatorControlsPassed() {
+  const launch = files.launchOps.json;
+  const created = files.nonbillingCreate.json;
+  const runbookText = readText('docs/launch-operations-runbook-2026-06-25.md');
+  const packageText = readText('package.json');
+  const afterSubmit = (created?.steps || []).find((step) => step.stage === 'after_submit');
+  return files.launchOps.exists
+    && files.nonbillingCreate.exists
+    && launch?.ok === true
+    && checkDetails(launch, 'Generate form is editable without submitting')?.buttonVisible === true
+    && launch?.irreversibleActions?.generationSubmit === 'not_clicked'
+    && created?.baseUrl === 'https://heavy-chain.zeabur.app'
+    && (created?.steps || []).some((step) => step.stage === 'before_submit' && step.visible === true && step.enabled === true)
+    && afterSubmit?.generateResponse?.status === 202
+    && String(afterSubmit?.generateResponse?.body || '').includes('"provider":"runway_mcp_local_worker"')
+    && /use Codex-approved `mcp__runway\.\*` tools/i.test(stateText)
+    && stateText.includes('`--live-runway` remains diagnostic only')
+    && stateText.includes('only use `--allow-unmatched-mcp-result` for a deliberate one-off recovery')
+    && runbookText.includes('Do not use it in watch mode')
+    && runbookText.includes('output/runway-mcp-results/inbox')
+    && packageText.includes('"worker:local-runway:watch"')
+    && packageText.includes('--watch-mcp-results output/runway-mcp-results/inbox');
+}
+
+function localWorkerOperatorControlsDetails() {
+  const launch = files.launchOps.json || {};
+  const created = files.nonbillingCreate.json || {};
+  const runbookText = readText('docs/launch-operations-runbook-2026-06-25.md');
+  const packageText = readText('package.json');
+  const afterSubmit = (created.steps || []).find((step) => step.stage === 'after_submit');
+  return {
+    launchOpsOk: launch.ok,
+    generateEditableWithoutSubmit: checkDetails(launch, 'Generate form is editable without submitting'),
+    beforeSubmit: (created.steps || []).find((step) => step.stage === 'before_submit') || null,
+    afterSubmitStatus: afterSubmit?.generateResponse?.status,
+    afterSubmitUsesLocalWorker: String(afterSubmit?.generateResponse?.body || '').includes('"provider":"runway_mcp_local_worker"'),
+    stateApprovedRunwayTools: /use Codex-approved `mcp__runway\.\*` tools/i.test(stateText),
+    stateLiveRunwayDiagnosticOnly: stateText.includes('`--live-runway` remains diagnostic only'),
+    stateAllowUnmatchedRestricted: stateText.includes('only use `--allow-unmatched-mcp-result` for a deliberate one-off recovery'),
+    runbookAllowUnmatchedNotWatch: runbookText.includes('Do not use it in watch mode'),
+    runbookInbox: runbookText.includes('output/runway-mcp-results/inbox'),
+    packageWatchScript: packageText.includes('"worker:local-runway:watch"')
+      && packageText.includes('--watch-mcp-results output/runway-mcp-results/inbox'),
+  };
+}
+
+function localWorkerContractRedactionPassed() {
+  const redaction = files.generationRedaction.json;
+  const reference = files.nonbillingReference.json;
+  return files.generationRedaction.exists
+    && files.nonbillingReference.exists
+    && stateText.includes('referenceImageHandoff')
+    && redaction?.ok === true
+    && redaction?.response?.provider === 'runway_mcp_local_worker'
+    && redaction?.checks?.hasReferenceHandoff === true
+    && redaction?.checks?.handoffObjectReadable === true
+    && redaction?.checks?.materialImageUrlRemoved === true
+    && redaction?.checks?.noRawReferenceImage === true
+    && redaction?.persistedInputParams?.hasReferenceImage === true
+    && redaction?.persistedInputParams?.provider === 'runway_mcp_local_worker'
+    && redaction?.persistedInputParams?.referenceImageHandoff?.hasStoragePath === true
+    && redaction?.cleanup?.job === 'deleted'
+    && redaction?.cleanup?.usageEvent === 'deleted'
+    && redaction?.cleanup?.storage === 'removed'
+    && reference?.downloadOk === true
+    && reference?.signedUrlOk === true
+    && reference?.bytes > 0;
+}
+
+function localWorkerContractRedactionDetails() {
+  const redaction = files.generationRedaction.json || {};
+  const reference = files.nonbillingReference.json || {};
+  return {
+    stateMentionsReferenceImageHandoff: stateText.includes('referenceImageHandoff'),
+    redactionOk: redaction.ok,
+    responseProvider: redaction.response?.provider,
+    redactionChecks: redaction.checks,
+    persistedInputParams: redaction.persistedInputParams,
+    cleanup: redaction.cleanup,
+    nonbillingReference: {
+      status: reference.status,
+      downloadOk: reference.downloadOk,
+      signedUrlOk: reference.signedUrlOk,
+      bytes: reference.bytes,
+    },
+  };
+}
+
+function approvedClientRunwayPathPassed() {
+  const reference = files.referenceStability.json;
+  const launch = files.launchOps.json;
+  return files.referenceStability.exists
+    && files.launchOps.exists
+    && stateText.includes('local Runway MCP worker queue')
+    && stateText.includes('The old autonomous `mcp-remote` localhost path remains disallowed')
+    && reference?.uploadHttpCode === 200
+    && Boolean(reference?.runwayHostedReferenceAsset)
+    && Boolean(reference?.successfulRunwayHostedReferenceTask)
+    && String(reference?.conclusion || '').includes('Use Runway-hosted upload asset URLs')
+    && launch?.ok === true;
+}
+
+function approvedClientRunwayPathDetails() {
+  const reference = files.referenceStability.json || {};
+  return {
+    stateUsesLocalWorker: stateText.includes('local Runway MCP worker queue'),
+    oldMcpRemoteDisallowed: stateText.includes('The old autonomous `mcp-remote` localhost path remains disallowed'),
+    uploadHttpCode: reference.uploadHttpCode,
+    runwayHostedReferenceAsset: Boolean(reference.runwayHostedReferenceAsset),
+    successfulRunwayHostedReferenceTask: reference.successfulRunwayHostedReferenceTask,
+    conclusion: reference.conclusion,
+    launchOpsOk: files.launchOps.json?.ok,
+  };
+}
+
+function approvedLiveGenerationReadbackPassed() {
+  return nonbillingGenerationPassed();
+}
+
+function approvedLiveGenerationReadbackDetails() {
+  return {
+    liveWorker: {
+      summaryChecks: files.liveWorkerSummary.json?.checks,
+      jobStatus: files.liveWorkerDb.json?.job?.status,
+      storageDownloadOk: files.liveWorkerDb.json?.storage?.downloadOk,
+      uiOk: files.liveWorkerUi.json?.checks,
+      jobsHasJob: files.liveWorkerUi.json?.checks?.jobsHasJob,
+      consoleCount: (files.liveWorkerUi.json?.consoleMessages || []).length,
+      pageErrorCount: (files.liveWorkerUi.json?.pageErrors || []).length,
+    },
+    nonbilling: {
+      createdJobId: files.nonbillingCreate.json?.job?.id,
+      referenceJobId: files.nonbillingReference.json?.jobId,
+      dbJobId: files.nonbillingDb.json?.job?.id,
+      uiJobId: files.nonbillingUi.json?.jobId,
+      imageId: files.nonbillingUi.json?.imageId,
+      referenceReadback: files.nonbillingDb.json?.image?.metadata?.referenceImageHandoff,
+      materialReferences: files.nonbillingDb.json?.image?.metadata?.materialReferences,
+      jobStatus: files.nonbillingDb.json?.job?.status,
+      inputHasRawData: files.nonbillingDb.json?.job?.inputHasRawData,
+      storageDownloadOk: files.nonbillingDb.json?.storage?.downloadOk,
+      ui: nonbillingUiRouteDetails(files.nonbillingUi.json, {
+        jobId: files.nonbillingCreate.json?.job?.id,
+        marker: nonbillingMarker(files.nonbillingDb.json),
+      }),
+      consoleCount: (files.nonbillingUi.json?.consoleErrors || []).length,
+      pageErrorCount: (files.nonbillingUi.json?.pageErrors || []).length,
+      requestFailureCount: (files.nonbillingUi.json?.failedRequests || []).length,
+    },
+  };
+}
+
+function liveWorkerSmokePassed() {
+  const summary = files.liveWorkerSummary.json;
+  const db = files.liveWorkerDb.json;
+  const ui = files.liveWorkerUi.json;
+  return files.liveWorkerSummary.exists
+    && files.liveWorkerDb.exists
+    && files.liveWorkerUi.exists
+    && summary?.checks?.allCriticalPassed === true
+    && db?.checks?.jobCompleted === true
+    && db?.checks?.storageDownloadOk === true
+    && db?.checks?.usageSucceeded === true
+    && db?.job?.status === 'completed'
+    && ui?.checks?.galleryLoads === true
+    && ui?.checks?.historyLoads === true
+    && ui?.checks?.canvasLoads === true
+    && ui?.checks?.jobsLoads === true
+    && ui?.checks?.mobileGalleryLoads === true
+    && ui?.checks?.mobileCanvasLoads === true
+    && ui?.checks?.mobileGenerateLoads === true
+    && ui?.checks?.noPageErrors === true
+    && (ui?.consoleMessages || []).length === 0
+    && (ui?.pageErrors || []).length === 0;
+}
+
+function nonbillingGenerationPassed() {
+  const created = files.nonbillingCreate.json;
+  const reference = files.nonbillingReference.json;
+  const db = files.nonbillingDb.json;
+  const ui = files.nonbillingUi.json;
+  const jobId = created?.job?.id;
+  const metadata = db?.image?.metadata || {};
+  const handoff = metadata.referenceImageHandoff || {};
+  const marker = nonbillingMarker(db);
+  const routes = nonbillingUiRouteDetails(ui, { jobId, marker });
+  return files.nonbillingCreate.exists
+    && files.nonbillingReference.exists
+    && files.nonbillingDb.exists
+    && files.nonbillingUi.exists
+    && Boolean(jobId)
+    && Boolean(marker)
+    && reference?.jobId === jobId
+    && db?.job?.id === jobId
+    && ui?.jobId === jobId
+    && ui?.imageId === db?.image?.id
+    && created?.baseUrl === 'https://heavy-chain.zeabur.app'
+    && created?.job?.hasReferenceImage === true
+    && created?.job?.hasReferenceImageHandoff === true
+    && created?.job?.hasRawDataImageInInputParams === false
+    && (created?.steps || []).some((step) => step.stage === 'after_submit'
+      && step.generateResponse?.status === 202
+      && String(step.generateResponse?.body || '').includes('"provider":"runway_mcp_local_worker"')
+      && String(step.bodyExcerpt || '').includes('素材認識済み'))
+    && reference?.downloadOk === true
+    && reference?.signedUrlOk === true
+    && reference?.bytes > 0
+    && handoff.storagePath === reference?.storagePath
+    && handoff.bytes === reference?.bytes
+    && handoff.bytes > 0
+    && metadata.hasReferenceImage === true
+    && metadata.referenceImagePresent === true
+    && metadata.localRunwayMcpWorker === true
+    && metadata.provider === 'runway_mcp_local_worker'
+    && metadata.noHostedBridge === true
+    && metadata.sourceJobId === jobId
+    && Array.isArray(metadata.materialReferences)
+    && metadata.materialReferences.some((item) => item.hasImage === true && item.materialKind === '商品画像')
+    && db?.job?.status === 'completed'
+    && db?.job?.inputHasRawData === false
+    && db?.image?.image_url_present === false
+    && db?.storage?.downloadOk === true
+    && db?.storage?.bytes > 0
+    && ui?.ok === true
+    && routes.jobs === true
+    && routes.gallery === true
+    && routes.history === true
+    && routes.canvas === true
+    && routes.mobileGenerate === true
+    && routes.mobileJobs === true
+    && routes.mobileGallery === true
+    && routes.mobileCanvas === true
+    && (ui?.consoleErrors || []).length === 0
+    && (ui?.pageErrors || []).length === 0
+    && (ui?.failedRequests || []).length === 0;
+}
+
+function nonbillingMarker(db) {
+  const values = [
+    db?.image?.metadata?.originalUserBrief,
+    db?.image?.metadata?.prompt,
+    db?.image?.metadata?.campaignTitle,
+  ];
+  const match = values.join('\n').match(/nonbilling-live-uat-\d+/i);
+  return match ? match[0] : null;
+}
+
+function nonbillingUiRouteDetails(ui, expected = {}) {
+  const routes = ui?.routes || [];
+  const mobile = ui?.mobile || [];
+  const hasExpectedProof = (text) => {
+    const body = String(text || '');
+    return Boolean((expected.jobId && body.includes(expected.jobId))
+      || (expected.marker && body.includes(expected.marker)));
+  };
+  const routeCheck = (key, checkName, options = {}) => routes.some((route) => route.key === key
+    && route.checks?.notLogin === true
+    && route.checks?.noLoading === true
+    && route.checks?.hasJobOrImage === true
+    && (options.requireExpectedProof === false || hasExpectedProof(route.bodyExcerpt))
+    && (checkName ? route.checks?.[checkName] === true : true));
+  const mobileCheck = (key) => mobile.some((route) => route.key === key
+    && route.checks?.notLogin === true
+    && route.checks?.meaningful === true
+    && hasExpectedProof(route.bodyExcerpt));
+  return {
+    jobs: routeCheck('05-jobs', 'jobsShowsCompleted'),
+    gallery: routeCheck('06-gallery', 'detailButton'),
+    history: routeCheck('07-history'),
+    canvas: routeCheck('08-canvas', 'galleryPickerOpen', { requireExpectedProof: false }),
+    mobileGenerate: mobile.some((route) => route.key === '09-mobile-generate'
+      && route.checks?.notLogin === true
+      && route.checks?.meaningful === true
+      && String(route.bodyExcerpt || '').includes('Runway workerで生成')),
+    mobileJobs: mobileCheck('10-mobile-jobs'),
+    mobileGallery: mobile.some((route) => route.key === '11-mobile-gallery'
+      && route.checks?.notLogin === true
+      && route.checks?.meaningful === true),
+    mobileCanvas: mobile.some((route) => route.key === '12-mobile-canvas'
+      && route.checks?.notLogin === true
+      && route.checks?.meaningful === true),
+  };
+}
+
+function workspaceMatrixPassed() {
+  const workbench = files.generationWorkbench.json;
+  const mass = files.massMarketQa.json;
+  const expectedFeatures = [
+    'campaign-image',
+    'design-gacha',
+    'product-shots',
+    'model-matrix',
+    'scene-coordinate',
+    'colorize',
+    'remove-bg',
+    'upscale',
+    'variations',
+    'multilingual-banner',
+  ];
+  const features = (workbench?.generation || []).map((item) => item.featureId);
+  return files.generationWorkbench.exists
+    && files.massMarketQa.exists
+    && workbench?.baseUrl === 'https://heavy-chain.zeabur.app'
+    && expectedFeatures.every((feature) => features.includes(feature))
+    && (workbench?.consoleMessages || []).length === 0
+    && localWorkerContractRedactionPassed()
+    && mass?.ok === true
+    && (mass?.routes || []).some((route) => route.key === 'lightchain')
+    && (mass?.routes || []).some((route) => route.key === 'canvas')
+    && (mass?.routes || []).some((route) => route.key === 'jobs');
+}
+
+function workspaceMatrixDetails() {
+  const workbench = files.generationWorkbench.json || {};
+  const mass = files.massMarketQa.json || {};
+  return {
+    generationFeatureIds: (workbench.generation || []).map((item) => item.featureId),
+    generationConsoleCount: (workbench.consoleMessages || []).length,
+    redaction: localWorkerContractRedactionDetails(),
+    massMarketRouteKeys: (mass.routes || []).map((route) => route.key),
+    massMarketMobileCount: (mass.mobile || []).length,
+  };
+}
+
+function approvedGenerationCleanupPassed() {
+  const live = files.liveWorkerCleanup.json;
+  const finalPolishSummary = files.finalPolishSummary.json;
+  const finalPolishDb = files.finalPolishDb.json?.dbReadback;
+  const finalPolish = files.finalPolishCleanup.json;
+  const finalPolishCurrent = files.finalPolishCurrentCleanup.json;
+  const nonbilling = files.nonbillingCleanup.json;
+  const usage = files.nonbillingUsageCleanup.json;
+  const finalPolishStoragePath = files.finalPolishDb.json?.job?.input_params?.referenceImageHandoff?.storagePath;
+  return files.liveWorkerCleanup.exists
+    && files.finalPolishDb.exists
+    && files.finalPolishSummary.exists
+    && files.finalPolishCleanup.exists
+    && files.finalPolishCurrentCleanup.exists
+    && files.nonbillingCleanup.exists
+    && files.nonbillingUsageCleanup.exists
+    && live?.checks?.allActionsOk === true
+    && live?.checks?.jobDeleted === true
+    && live?.checks?.imageDeleted === true
+    && live?.checks?.usageDeleted === true
+    && live?.checks?.storageDeleted === true
+    && Boolean(finalPolishStoragePath)
+    && finalPolish?.storagePath === finalPolishStoragePath
+    && finalPolishSummary?.jobId === files.finalPolishDb.json?.job?.id
+    && finalPolishDb?.jobId === files.finalPolishDb.json?.job?.id
+    && finalPolishSummary?.cleanup?.attempted === true
+    && finalPolishSummary?.cleanup?.jobDeleted === true
+    && finalPolishSummary?.cleanup?.usageDeleted === true
+    && finalPolishSummary?.cleanup?.storageRemoved === true
+    && finalPolishSummary?.cleanup?.finalStorageDeleted === true
+    && finalPolishSummary?.cleanup?.storageVerifiedByListAndDownload?.storagePath === finalPolishStoragePath
+    && finalPolishSummary?.cleanup?.storageVerifiedByListAndDownload?.existsAfter === false
+    && finalPolishSummary?.cleanup?.storageVerifiedByListAndDownload?.downloadAfterDelete?.exists === false
+    && finalPolish?.existsBefore === false
+    && finalPolish?.existsAfter === false
+    && finalPolish?.downloadAfterDelete?.exists === false
+    && finalPolish?.remove2Error === null
+    && finalPolishCurrent?.jobId === files.finalPolishDb.json?.job?.id
+    && finalPolishCurrent?.summaryJobId === files.finalPolishDb.json?.job?.id
+    && finalPolishCurrent?.dbReadbackJobId === files.finalPolishDb.json?.job?.id
+    && finalPolishCurrent?.storagePath === finalPolishStoragePath
+    && finalPolishCurrent?.checks?.sameJob === true
+    && finalPolishCurrent?.checks?.jobAbsent === true
+    && finalPolishCurrent?.checks?.imageAbsent === true
+    && finalPolishCurrent?.checks?.usageAbsent === true
+    && finalPolishCurrent?.checks?.storageDownloadAbsent === true
+    && finalPolishCurrent?.checks?.storageListAbsent === true
+    && nonbilling?.attempted === true
+    && nonbilling?.postJob?.data === null
+    && nonbilling?.postImage?.data === null
+    && nonbilling?.generatedDownload?.exists === false
+    && nonbilling?.handoffDownload?.exists === false
+    && usage?.after?.exists === false;
+}
+
+function approvedGenerationCleanupDetails() {
+  return {
+    liveWorkerCleanup: files.liveWorkerCleanup.json?.checks,
+    finalPolishSummaryCleanup: files.finalPolishSummary.json?.cleanup,
+    finalPolishDbStoragePath: files.finalPolishDb.json?.job?.input_params?.referenceImageHandoff?.storagePath,
+    finalPolishCleanup: {
+      storagePath: files.finalPolishCleanup.json?.storagePath,
+      existsBefore: files.finalPolishCleanup.json?.existsBefore,
+      existsAfter: files.finalPolishCleanup.json?.existsAfter,
+      downloadAfterDelete: files.finalPolishCleanup.json?.downloadAfterDelete,
+      remove2Error: files.finalPolishCleanup.json?.remove2Error,
+    },
+    finalPolishCurrentCleanup: files.finalPolishCurrentCleanup.json?.checks,
+    nonbillingCleanup: {
+      attempted: files.nonbillingCleanup.json?.attempted,
+      generatedDownload: files.nonbillingCleanup.json?.generatedDownload,
+      handoffDownload: files.nonbillingCleanup.json?.handoffDownload,
+      postJob: files.nonbillingCleanup.json?.postJob,
+      postImage: files.nonbillingCleanup.json?.postImage,
+    },
+    usageCleanup: files.nonbillingUsageCleanup.json,
   };
 }
 
