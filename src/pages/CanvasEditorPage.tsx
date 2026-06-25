@@ -1301,7 +1301,7 @@ export function CanvasEditorPage() {
               </h1>
             )}
             <p className="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">
-              {currentProjectId ? '自動保存' : '未保存'}
+              キャンバス · {currentProjectId ? '自動保存' : '未保存'}
             </p>
           </div>
         </div>

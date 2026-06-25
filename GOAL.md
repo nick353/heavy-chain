@@ -73,15 +73,15 @@ No fake image-quality claims. No claiming generated images are correct without i
 | G102 | accepted | parent | codex-verifiable | G101 | Child: G102 Ten Feature Image Quality QA | All 10 Generate features produced real Runway images, were imported by the worker, and were visually scored. | `output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`; `runway-images/`; `readback-after-worker.json`. | goals/G102.md |
 | G103 | accepted | parent | codex-verifiable | G102 | Child: G103 Continuation And Recovery QA | Generated artifacts were verified through Gallery, Jobs, Canvas route load, DB/Storage readback, and worker processed-file archive. | `ui-prod/summary.json`; `readback-after-worker.json`; `output/runway-mcp-results/inbox/processed/*`; local post-fix proof. | goals/G103.md |
 | G104 | accepted | parent | codex-verifiable | G102 | Child: G104 Lightchain Feel And UX Polish | Fixed the two UX gaps found by the real run: Jobs no longer truncates an all-feature batch to 8, and Canvas guide no longer blocks production flow by default. | `src/lib/workspaceActivity.ts`; `src/components/canvas/CanvasGuide.tsx`; `local-after-fix/summary.json`. | goals/G104.md |
-| G105 | in_review | parent | codex-verifiable | G101 | Child: G105 Scale And Launch Ops Readiness | Static/build gates passed and runtime proof exists; final deploy/readback/cleanup remain before complete. | `npm run typecheck`; `npm run lint -- --max-warnings=0`; `npm run build`; `git diff --check`. | goals/G105.md |
-| G106 | queued | parent | codex-verifiable | G102,G103,G104,G105 | Child: G106 Final Integration And Release Proof | Final docs/state/goal reflect current truth and production proof; changes are reviewed, committed, pushed, and read back from Zeabur. | `STATE.md`, QA docs, final checks, Codex review, commits, push, Zeabur asset/readback. | goals/G106.md |
+| G105 | accepted | parent | codex-verifiable | G101 | Child: G105 Scale And Launch Ops Readiness | Launch checks passed for the final deployed asset; the broad launch-ops verifier also drove the mobile Canvas label fix and current STATE asset update. | `npm run typecheck`; `npm run lint -- --max-warnings=0`; `npm run build`; `git diff --check`; `launch-ops-final/summary.json`. | goals/G105.md |
+| G106 | accepted | parent | codex-verifiable | G102,G103,G104,G105 | Child: G106 Final Integration And Release Proof | Final docs/state/goal reflect current truth; commits were pushed, Zeabur served the final asset, production Jobs/Canvas readback passed, and marker-scoped cleanup removed QA rows/images. | `STATE.md`; commits `5599fc5`, `aa88c1c`; final docs commit; Zeabur asset `assets/index.nS7-jc2b.js`; `prod-after-final-deploy/summary.json`; `cleanup-after-final-proof.json`. | goals/G106.md |
 
 ## Active Child Window
 
 | ID | Window status | Reason for active window | Workspace / worktree | Notes |
 |---|---|---|---|---|
-| G105 | in-review | Final launch checks and cleanup remain | current checkout | Static/build passed; deploy/readback pending |
-| G106 | auto-ready | Final integration, review, push, deploy readback | current checkout | Run after Codex review |
+| G105 | accepted | Launch checks and cleanup proof accepted | current checkout | Complete |
+| G106 | accepted | Final integration, push, deploy readback accepted | current checkout | Complete |
 
 ## Human-Needed Queue / Checkpoints
 
@@ -117,8 +117,8 @@ Parent gates:
 
 ## Achievement Review
 
-Active child window status: G105 in-review; G106 auto-ready
-Goal map status: G101-G104 accepted; G105 in_review; G106 queued
-Parent goal status: active
+Active child window status: none
+Goal map status: G101-G106 accepted
+Parent goal status: complete
 Human-needed checkpoint status: none
-Gap review / refreshed Gap-Closing Goal Map needed: not needed unless final deploy/readback finds a new blocker
+Gap review / refreshed Gap-Closing Goal Map needed: not needed for this loop; remaining product polish is tracked as follow-up, not a blocker
