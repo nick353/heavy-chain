@@ -70,6 +70,7 @@ const evidence = {
   cleanup: {
     localStorageMutationsOnly: true,
     serverRowsCreated: false,
+    contextClosed: false,
     browserClosed: false,
   },
 };
@@ -110,10 +111,23 @@ try {
   }
 } finally {
   if (context) {
-    await context.close();
-    evidence.cleanup.browserClosed = true;
+    await withTimeout(context.close(), 10000, 'context_close_timeout')
+      .then(() => {
+        evidence.cleanup.contextClosed = true;
+      })
+      .catch((error) => {
+        evidence.cleanup.contextClosed = false;
+        evidence.cleanup.closeBlocker = error.message;
+      });
   }
-  await browser.close();
+  await withTimeout(browser.close(), 10000, 'browser_close_timeout')
+    .then(() => {
+      evidence.cleanup.browserClosed = true;
+    })
+    .catch((error) => {
+      evidence.cleanup.browserClosed = false;
+      evidence.cleanup.browserCloseBlocker = error.message;
+    });
 }
 
 evidence.ok = computeOk(evidence);
@@ -323,9 +337,23 @@ async function screenshot(page, fileName) {
 
 async function closePageAndGetVideo(page) {
   const video = page.video();
-  await page.close();
+  await withTimeout(page.close(), 8000, 'page_close_timeout').catch(() => undefined);
   if (!video) return null;
-  return video.path().catch(() => null);
+  return withTimeout(video.path(), 8000, 'video_path_timeout').catch(() => null);
+}
+
+async function withTimeout(promise, timeoutMs, message) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function addAssertion(routeEvidence, name, passed, details = {}) {
@@ -349,20 +377,32 @@ function recordRequestFailure(request, route) {
 }
 
 function computeOk(result) {
+  const allRoutes = [...result.routes, ...result.mobile];
   return result.routes.every((route) => route.assertions.every((assertion) => assertion.passed))
     && result.mobile.every((route) => route.assertions.every((assertion) => assertion.passed))
+    && allRoutes.every((route) => Boolean(route.video))
+    && result.cleanup.contextClosed === true
+    && result.cleanup.browserClosed === true
+    && !result.cleanup.closeBlocker
+    && !result.cleanup.browserCloseBlocker
     && result.consoleMessages.length === 0
     && result.pageErrors.length === 0
     && result.requestFailures.length === 0;
 }
 
 function collectFailures(result) {
-  const routeFailures = [...result.routes, ...result.mobile]
+  const allRoutes = [...result.routes, ...result.mobile];
+  const routeFailures = allRoutes
     .flatMap((route) => route.assertions
       .filter((assertion) => !assertion.passed)
       .map((assertion) => `${route.key}:${assertion.name}`));
   return [
     ...routeFailures,
+    ...allRoutes.filter((route) => !route.video).map((route) => `${route.key}:video_missing`),
+    ...(result.cleanup.contextClosed ? [] : ['cleanup:context_close_failed']),
+    ...(result.cleanup.browserClosed ? [] : ['cleanup:browser_close_failed']),
+    ...(result.cleanup.closeBlocker ? [`cleanup:${result.cleanup.closeBlocker}`] : []),
+    ...(result.cleanup.browserCloseBlocker ? [`cleanup:${result.cleanup.browserCloseBlocker}`] : []),
     ...result.consoleMessages.map((message) => `${message.route}:console:${message.text}`),
     ...result.pageErrors.map((error) => `${error.route}:pageerror:${error.message}`),
     ...result.requestFailures.map((failure) => `${failure.route}:requestfailed:${failure.url}`),
