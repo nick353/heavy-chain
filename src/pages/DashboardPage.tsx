@@ -371,7 +371,7 @@ export function DashboardPage() {
             <p className="text-xs font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-300">Today</p>
             <h2 className="mt-1 text-lg sm:text-xl lg:text-2xl font-semibold text-neutral-900 dark:text-white font-display">今日の作業状況</h2>
             <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-              進行中の生成、失敗したジョブ、クレジット残量をまとめて確認できます。
+              進行中の生成、失敗したジョブ、利用状況をまとめて確認できます。
             </p>
           </div>
           {isActivityLoading ? (

@@ -36,7 +36,7 @@ const authenticatedUsageSummaryMigration =
 const runwayApiUsageProviderMigration =
   'supabase/migrations/20260622230000_allow_runway_api_usage_provider.sql';
 const runwayMcpPlanFeatureMigration =
-  'supabase/migrations/20260624062500_allow_runway_without_paid_subscription.sql';
+  'supabase/migrations/20260625092000_disable_generation_quota_while_billing_inactive.sql';
 const runwayMcpConnectionApprovalMigration =
   'supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql';
 const deprecatedGeminiModelPattern = /gemini-2\.0-flash-exp(?:-image-generation)?/;
@@ -355,13 +355,17 @@ const runwayMcpPlanFeatureChecks = [
   ['idempotency preservation', 'idempotency_key = p_idempotency_key'],
   ['brand rate cap preservation', 'v_brand_recent_units + p_units > 5'],
   ['user rate cap preservation', 'v_user_recent_units + p_units > 3'],
-  ['monthly quota preservation', 'Brand usage quota exceeded'],
+  ['billing inactive quota bypass marker', 'billing_inactive_quota_bypass'],
+  ['quota enforcement metadata', "'generation_quota_enforced',\n      false"],
 ];
 
 for (const [label, needle] of runwayMcpPlanFeatureChecks) {
   if (!runwayMcpPlanFeatureSql.includes(needle)) {
     failures.push(`${runwayMcpPlanFeatureMigration}: missing ${label}`);
   }
+}
+if (runwayMcpPlanFeatureSql.includes('Brand usage quota exceeded')) {
+  failures.push(`${runwayMcpPlanFeatureMigration}: must not stop generation on monthly quota while billing is inactive`);
 }
 
 const runwayMcpConnectionApprovalChecks = [

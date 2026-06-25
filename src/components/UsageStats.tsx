@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, CreditCard, Gauge, Loader2 } from 'lucide-react';
+import { CheckCircle2, Gauge, Infinity as InfinityIcon, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 
@@ -207,17 +207,17 @@ export function UsageStats({ className }: UsageStatsProps) {
 
   const statItems = [
     {
-      label: '残り回数',
-      value: summary.remainingUnits.toLocaleString(),
-      suffix: '回',
-      icon: Gauge,
+      label: '生成利用',
+      value: '有効',
+      suffix: '',
+      icon: InfinityIcon,
       color: 'text-emerald-500',
       bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
     },
     {
       label: '今月使用',
       value: summary.usedUnits.toLocaleString(),
-      suffix: `/${summary.monthlyQuota.toLocaleString()}`,
+      suffix: '回',
       icon: CheckCircle2,
       color: 'text-blue-500',
       bgColor: 'bg-blue-50 dark:bg-blue-900/20',
@@ -231,10 +231,10 @@ export function UsageStats({ className }: UsageStatsProps) {
       bgColor: 'bg-amber-50 dark:bg-amber-900/20',
     },
     {
-      label: 'プラン',
-      value: summary.planName,
+      label: '上限',
+      value: '停止なし',
       suffix: '',
-      icon: CreditCard,
+      icon: Gauge,
       color: 'text-purple-500',
       bgColor: 'bg-purple-50 dark:bg-purple-900/20',
     },

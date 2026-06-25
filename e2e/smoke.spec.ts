@@ -1554,8 +1554,8 @@ test.describe('workspace activity pages', () => {
 
     await page.goto('/credits');
 
-    await expect(page.getByRole('heading', { name: 'クレジット', level: 1 })).toBeVisible();
-    await expect(page.getByText('残り / Free')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '利用状況', level: 1 })).toBeVisible();
+    await expect(page.getByText('生成利用 / 課金ゲートなし')).toBeVisible();
   });
 
   test('studio, models, patterns, video, and lab save local artifacts and hand off to canvas without Supabase writes', async ({ page }) => {
