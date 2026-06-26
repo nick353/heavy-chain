@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MoreVertical, Trash2, Edit3 } from 'lucide-react';
+import { MoreVertical, Trash2, Edit3, Search, X } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import {
   IconSparkles,
@@ -87,10 +87,17 @@ const logDashboardFetchError = (message: string, error: unknown) => {
   }
 };
 
+const canvasObjectTypeLabels: Record<CanvasProject['objects'][number]['type'], string> = {
+  image: '画像 image',
+  text: 'テキスト text',
+  shape: '図形 shape',
+  frame: 'フレーム frame',
+};
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user, profile, currentBrand, setCurrentBrand } = useAuthStore();
-  const { createProject, deleteProject, loadProject, clearCanvas, getRecentProjects } = useCanvasStore();
+  const { createProject, deleteProject, loadProject, clearCanvas, getRecentProjects, projects } = useCanvasStore();
   const { showOnboarding, completeOnboarding, resetOnboarding } = useOnboarding(user?.id);
   const [recentImages, setRecentImages] = useState<GeneratedImage[]>([]);
   const [workspaceActivity, setWorkspaceActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
@@ -100,6 +107,7 @@ export function DashboardPage() {
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [projectMenuOpen, setProjectMenuOpen] = useState<string | null>(null);
   const [brandForm, setBrandForm] = useState({
     name: '',
@@ -107,8 +115,6 @@ export function DashboardPage() {
     targetAudience: ''
   });
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
-
-  const recentProjects = getRecentProjects(6);
 
   const checkBrands = useCallback(async () => {
     if (!user) {
@@ -325,6 +331,33 @@ export function DashboardPage() {
     return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
   };
 
+  const normalizedProjectSearch = projectSearchQuery.trim().toLowerCase();
+  const visibleProjects = useMemo(() => {
+    if (!normalizedProjectSearch) {
+      return getRecentProjects(6);
+    }
+
+    return [...projects]
+      .filter((project) => {
+        const updatedDate = new Date(project.updatedAt);
+        const objectTypes = project.objects
+          .map((object) => canvasObjectTypeLabels[object.type] || object.type)
+          .join(' ');
+        const searchable = [
+          project.name,
+          project.brandId || '',
+          objectTypes,
+          updatedDate.toLocaleDateString('ja-JP'),
+          updatedDate.toLocaleDateString('en-US'),
+        ].join(' ').toLowerCase();
+        return searchable.includes(normalizedProjectSearch);
+      })
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 24);
+  }, [getRecentProjects, normalizedProjectSearch, projects]);
+
+  const isSearchingProjects = normalizedProjectSearch.length > 0;
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'おはようございます';
@@ -457,8 +490,38 @@ export function DashboardPage() {
             </button>
           </div>
 
-          {recentProjects.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
+          {projects.length > 0 ? (
+            <>
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <label className="relative block sm:max-w-sm flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                  <input
+                    value={projectSearchQuery}
+                    onChange={(event) => setProjectSearchQuery(event.target.value)}
+                    placeholder="プロジェクト名・素材種別で検索"
+                    className="w-full rounded-xl border border-neutral-200 bg-white/80 py-2.5 pl-10 pr-10 text-sm text-neutral-900 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-neutral-700 dark:bg-neutral-900/70 dark:text-white dark:focus:border-primary-500 dark:focus:ring-primary-900/40"
+                    aria-label="プロジェクトを検索"
+                  />
+                  {projectSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setProjectSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                      aria-label="プロジェクト検索をクリア"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </label>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {isSearchingProjects
+                    ? `${visibleProjects.length}件 / 全${projects.length}件`
+                    : `最近の${visibleProjects.length}件 / 全${projects.length}件`}
+                </p>
+              </div>
+
+              {visibleProjects.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
               {/* New Canvas Card */}
               <button
                 onClick={handleNewCanvas}
@@ -471,7 +534,7 @@ export function DashboardPage() {
               </button>
 
               {/* Project Cards */}
-              {recentProjects.map((project, i) => (
+              {visibleProjects.map((project, i) => (
                 <motion.div
                   key={project.id}
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -513,6 +576,7 @@ export function DashboardPage() {
                       }}
                       className="p-1 sm:p-1.5 rounded-lg bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 sm:transition-opacity hover:bg-white dark:hover:bg-neutral-700"
                       style={{ opacity: projectMenuOpen === project.id ? 1 : undefined }}
+                      aria-label={`${project.name}のメニューを開く`}
                     >
                       <MoreVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-neutral-600 dark:text-neutral-300" />
                     </button>
@@ -532,6 +596,7 @@ export function DashboardPage() {
                               handleOpenProject(project);
                             }}
                             className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center gap-2"
+                            aria-label={`${project.name}を開く`}
                           >
                             <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             開く
@@ -539,6 +604,7 @@ export function DashboardPage() {
                           <button
                             onClick={(e) => handleDeleteProject(project.id, e)}
                             className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                            aria-label={`${project.name}を削除`}
                           >
                             <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             削除
@@ -549,7 +615,23 @@ export function DashboardPage() {
                   </div>
                 </motion.div>
               ))}
-            </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-neutral-200 bg-white/70 p-6 text-center dark:border-neutral-800 dark:bg-white/5">
+                  <h3 className="text-base font-semibold text-neutral-900 dark:text-white">一致するプロジェクトがありません</h3>
+                  <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                    別の名前、日付、画像・テキストなどの素材種別で検索してください。
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setProjectSearchQuery('')}
+                    className="mt-4 rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-700 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
+                  >
+                    検索をクリア
+                  </button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-3xl p-12 border border-neutral-200/50 dark:border-white/5 text-center">
               <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100/50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float">
