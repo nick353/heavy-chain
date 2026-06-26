@@ -58,13 +58,13 @@ Human approval required: credentials, secret entry, billing, purchase, checkout,
 | G401 | accepted | parent | codex-verifiable | none | Parent inline: G401 Lightchain IA clone | `/generate` と各詳細画面の骨格を Lightchain 4カテゴリ構成へ作り替えた。 | `output/playwright/lightchain-workbench-parity-apparel-local-20260626-r11-image-variations-detail/SUMMARY.json` confirms 4 categories, no old duplicate sidebars, compact detail workbench, desktop/mobile screenshots and videos. | goals/G401.md |
 | G402 | accepted | parent | codex-verifiable | G401 | Parent inline: G402 Feature-flow parity | 全主要機能を4カテゴリへ統合し、機能選択から入力/生成/結果/Canvasまで同じ流れに揃えた。 | `scripts/verify-lightchain-clone-layout.mjs` and `e2e/smoke.spec.ts` assert `design-arrange` and `image-variations` under graphics; r11 recorded proof confirms upload, prompt, detail tabs, operation details, and mobile. | goals/G402.md |
 | G403 | accepted-with-caveat | parent | codex-verifiable | G402 | Parent inline: G403 Output and generation QA | 非課金範囲で全10主要生成機能の成果物を readback/目視確認した。 | `output/playwright/hc-all-features-real-generation-after-lightchain-clone-20260626/readback-after-worker.json` and `visual-scorecard.json`; 10/10 completed and visually passed, but only 2 fresh in this run and 8 recent same-prompt Runway assets reused due `workspace_limit`. | goals/G403.md |
-| G404 | in-progress | parent | codex-verifiable | G401-G403 | Parent inline: G404 Production closeout | static gates, Codex review, Zeabur deploy/readback, STATE/plan closeout, pushまで完了する。 | Static gates pass locally after r11; production deploy/readback and push still pending in this loop. | goals/G404.md |
+| G404 | accepted | parent | codex-verifiable | G401-G403 | Parent inline: G404 Production closeout | static gates, Codex review, Zeabur deploy/readback, STATE/plan closeout, pushまで完了した。 | Commit `ffa6c77` pushed to `main`; Zeabur served `assets/index.CPdUKnP3.js`; production verifier passed at `output/playwright/lightchain-workbench-parity-apparel-prod-20260626-r1/SUMMARY.json`. | goals/G404.md |
 
 ## Active Child Window
 
 | ID | Window status | Reason for active window | Workspace / worktree | Notes |
 |---|---|---|---|---|
-| G404 | active | Final closeout after accepted G401-G403. | current checkout | Requires build, final Codex review, docs closeout, commit/push, and production readback if deployed in this loop. |
+| none | closed | G401-G404 accepted. | current checkout | No active child window remains. |
 
 ## Human-Needed Queue / Checkpoints
 
@@ -93,11 +93,12 @@ Thread automation:
 | G401 | accepted | r11 recorded Lightchain clone verifier passed with `ok=true`, `failed=[]`. | Accept local UI skeleton parity. | Integrated in `Layout`, `LandingPage`, `LoginPage`, `GenerateLightchainEntry`, `GeneratePage`, catalog. | accepted | Lightchain brand assets were not copied; Heavy Chain branding retained. |
 | G402 | accepted | Static gates and r11 verifier cover category/card/detail/mobile. | Accept flow parity for primary generate entry. | `image-variations` and `design-arrange` both graphics; verifier/e2e now assert both. | accepted | Old categories are not primary IA. |
 | G403 | accepted-with-caveat | Readback 10/10, visual scorecard 10/10, cleanup done. | Accept output path with explicit Runway workspace-limit caveat. | Proof artifacts kept locally; marker rows/inbox cleaned. | accepted-with-caveat | 2 fresh outputs in this run, 8 reused recent same-prompt Runway assets. |
+| G404 | accepted | Static gates, Codex review, commit/push, Zeabur asset flip, and production recorded verifier passed. | Accept production closeout for this loop. | Commit `ffa6c77`, asset `assets/index.CPdUKnP3.js`, proof `output/playwright/lightchain-workbench-parity-apparel-prod-20260626-r1/SUMMARY.json`. | accepted | No billing/purchase/external publish actions were performed. |
 
 ## Achievement Review
 
-Active child window status: G404 active
-Goal map status: G401-G402 accepted, G403 accepted-with-caveat, G404 in-progress
-Parent goal status: active
+Active child window status: none
+Goal map status: G401-G402 accepted, G403 accepted-with-caveat, G404 accepted
+Parent goal status: complete
 Human-needed checkpoint status: none
-Gap review: local Lightchain-vs-Heavychain comparison and all-feature generation QA complete; production deploy/readback remains before final complete.
+Gap review: local and production Lightchain-vs-Heavychain comparison complete for the cloned generate shell; all-feature generation QA complete with explicit workspace-limit caveat.
