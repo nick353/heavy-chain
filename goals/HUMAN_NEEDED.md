@@ -8,5 +8,5 @@ Human approval is required for billing, purchase, payment, checkout, identity ve
 
 | Item | Blocks | Summary | Status |
 |---|---|---|---|
-| H601 | G609 dependent implementation | 商用利用、著作権、ブランド模倣、ユーザー素材保存、規約/Privacy の最終判断は operator decision として残す。 | open |
+| H601 | legal/policy implementation before public launch | G609 packet `docs/legal-safety-decision-packet-2026-06-26.md` is ready. Final Terms/Privacy wording, retention period, brand-reference policy, identifiable-person policy, and copyright/marketing claims remain operator decisions. | open |
 | H602 | billing/external publish | 課金、支払い、checkout、外部公開は今回のGoal Loopでは実行しない。 | open |
