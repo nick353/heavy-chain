@@ -1,6 +1,6 @@
 # Heavy Chain 10M Product Readiness Plan
 
-Updated: 2026-06-26
+Updated: 2026-06-27
 
 ## Goal
 
@@ -45,21 +45,27 @@ Heavy Chain を、Lightchain の上位互換として違和感なく使えるだ
 13. [done] 画像品質基準、NG例、prompt preset、機能別rubricを docs と verifier に落とす。
 14. [done] 運用ドキュメント、障害復旧、worker起動、handoff、rollback、monitor対応を最新化する。
 15. [done] 最後にrelease gate範囲のreadback回帰、ドキュメント更新、Codex reviewを通す。
+16. [done] 2026-06-27 continuation auditで、G603/G605/G610の深い操作をZeabur本番で再実行する。
+17. [queued] 全10主要機能を「既存proof再監査」ではなく、過去資産流用なしの同一run fresh generationとして再実行する。ただしRunway workspace limitやcredit/外部課金判断が必要なら exact blocker にする。
+18. [queued] 10M級と呼ぶための実負荷/同時実行/DB/Storage/SLO/alerting baselineを追加する。
+19. [queued] 実βユーザーまたは外部協力者による本番利用証跡を、個人情報と公開操作を避けて収集する。
+20. [queued] security auditをread-only/staticから、権限悪用ケース、監査ログ、事故対応runbook、運用監視の証跡へ拡張する。
+21. [human-needed] H601/H602の法務、素材保持、ブランド/人物ポリシー、課金/外部公開判断をユーザー/operatorが決める。
 
 ## Completion Criteria
 
-- 全10主要機能の fresh generation が、過去資産流用なしで完了または exact blocker 付きで分割再開可能になっている。
+- 全10主要機能の fresh generation は既存proof再監査ではなく、同一runの過去資産流用なし proof で完了、または exact blocker 付きで分割再開可能になっている。
 - 生成画像の scorecard が全機能で `pass`、または `needs-polish` の具体的修正が反映済み。
 - Lightchain を10年使った人が自然に使える導線として、主要生成画面、ホーム、カテゴリ、履歴、Canvas、mobile が証跡付きで確認されている。
 - 衣服/素材の upload -> 認識 -> cut/mask -> layer -> design placement -> Canvas/export の流れが直感操作として成立している。
 - 失敗時UXが、技術者向けではなくユーザー向けの再試行/原因/次アクションを返す。
-- production monitor / launch-ops / mass-market QA / security audit / performance checks / build/lint/typecheck が通る。
+- production monitor / launch-ops / mass-market QA / security audit / performance checks / build/lint/typecheck が通る。10M級の最終呼称には、実負荷/同時実行/DB/Storage/SLO/alertingの追加証跡も必要。
 - 法務・課金・外部公開など人間判断が必要なものは `goals/HUMAN_NEEDED.md` に分離され、実装完了と混同されない。
 - `GOAL.md`、`STATE.md`、`plan.md` が最新証跡を指し、push済みと作業ツリーcleanはrelease gate summaryではなくgit status/remote readbackで別途確認する。
 
 ## Current Result
 
-- Active window G601/G602/G603/G604/G605/G606/G607/G608/G609/G610/G611/G612/G613/G614/G615 is accepted in `GOAL.md`.
+- Active window G601/G602/G603/G604/G605/G606/G607/G608/G609/G610/G611/G612/G613/G614/G615 is accepted in `GOAL.md`; G616 production deep rerun is accepted in this continuation.
 - Key proof: `output/playwright/10m-product-readiness-g601/proof-reaudit.json`; `output/playwright/lightchain-workbench-parity-apparel-prod-20260626-r5-g602-final/SUMMARY.json`; `output/playwright/10m-product-readiness-g606/summary.json`; `output/playwright/10m-product-readiness-g608-security-audit/audit-readiness.json`; `docs/generation-quality-rubric-2026-06-26.md`.
 - G603 proof: `output/playwright/g603-garment-layer-canvas-20260626T130426Z/SUMMARY.json` (`ok=true`, `failed=[]`) with screenshots, video, storage/body readback, masked PNG Canvas object, back-placement overlay coordinates, properties panel metadata, and exported PNG.
 - G605 proof: `output/playwright/g605-onboarding-templates-20260626T133449Z/SUMMARY.json` (`ok=true`, `failed=[]`) with first-run Dashboard onboarding, Dashboard CTA href readback, Canvas empty-state proof, EC category -> design mode switching, EC size template persistence, product-card design template layer expansion, desktop/mobile videos, screenshots, storage readback, stale-preview guard, and process-exit/port-free cleanup proof.
@@ -70,5 +76,6 @@ Heavy Chain を、Lightchain の上位互換として違和感なく使えるだ
 - G612 packet: `docs/g612-competitor-positioning-2026-06-26.md` compares Lightchain, Canva, Kittl, Photoroom, Adobe Firefly/Express, Runway, and Shopify Magic from current official pages, and recommends positioning Heavy Chain as an apparel-first AI production workspace rather than a generic image generator.
 - G614 proof: `docs/g614-operations-runbook-2026-06-26.md` and `docs/rollback.md` now bind the approved-client Runway handoff path, daily monitor, release gate, failure triage, and human-approved rollback. `npm run verify:g614-ops` passed with required script/doc boundary checks, and Codex review found no remaining high/medium issues after fixes.
 - G615 proof: `output/playwright/10m-product-readiness-g615/release-gate-summary.json` has `ok=true`, `failed=[]`, `allowDirty=false`, blockers `[]`, warnings `[]`, latest matching G611/G610 readbacks, production monitor, launch-ops, G603/G605/G606/G608 readbacks, and all command gates passing.
+- G616 production deep proof: `output/playwright/g616-prod-deep-g603-garment-canvas-20260627/SUMMARY.json`, `output/playwright/g616-prod-deep-g605-onboarding-templates-20260627/SUMMARY.json`, and `output/playwright/g616-prod-deep-g610-retention-search-20260627/SUMMARY.json` all have `ok=true`, `failed=[]`, screenshots/videos, cleanup closed, and `baseUrl=https://heavy-chain.zeabur.app`.
 - Verification passed in this window: `npm run verify:error-messages`, `npm run verify:g603-garment-canvas`, `npm run verify:g605-onboarding-templates`, `npm run verify:g606-performance`, default and explicit `npm run verify:generation-scorecard` runs, remote false-pass negative scorecard, `npm run verify:g614-ops`, `npm run verify:release-gate -- --out output/playwright/10m-product-readiness-g615/release-gate-summary.json`, `npm run security:audit`, `SECURITY_AUDIT_INCLUDE_LOCAL_ENV=1 npm run security:audit` negative detection, `bash scripts/supabase-prod-verify.sh`, `npm run typecheck`, `npm run lint -- --max-warnings=0`, `npm run build`, `node --check scripts/verify-g603-garment-layer-canvas.mjs`, `node --check scripts/verify-g605-onboarding-templates.mjs`, `node --check scripts/verify-g614-operations-docs.mjs`, `git diff --check`, and Codex read-only reviews with no remaining high/medium findings after fixes. G607/G615 release-gate checks verified that `--allow-dirty` and `--skip-commands` fail as non-acceptance blockers and that broken latest SUMMARY candidates fail instead of being ignored.
-- Remaining queued work before calling the whole app complete: none inside this Goal Loop. H601/H602 remain human/operator decisions for legal policy and billing/external publish.
+- Current honest status: non-billing/non-public product-readiness QA gate is passing. Do not call the whole 10M public-launch objective complete until queued fresh-generation, real scale, beta-user, security-ops evidence, and H601/H602 human decisions are closed.
