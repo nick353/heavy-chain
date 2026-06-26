@@ -2,8 +2,8 @@
 
 ## Loop Metadata
 
-Loop ID: HC-LIGHTCHAIN-SUPERSET-CLONE-20260626
-Parent thread name: Goal: Heavy Chain Lightchain Superset Clone
+Loop ID: HC-10M-PRODUCT-READINESS-20260626
+Parent thread name: Goal: Heavy Chain 10M Product Readiness
 Parent thread ID: 019ef728-e38a-7d01-988d-451c95668bf5
 
 ## Parent Goal
@@ -20,7 +20,7 @@ Heavy Chain を Lightchain の上位互換として作り直す。UI/UX、情報
 
 ## Current Milestone
 
-Lightchain clone foundation and full-flow parity. まず `/generate` と各生成レーンの構成を Lightchain と同じ骨格に作り替え、全機能要素と成果物フローを録画つきで検証する。
+10M product readiness hardening. Lightchain clone 済みの production を、監視・launch-ops・生成ボタンreadiness・アクセシビリティ・成果物証跡の観点で再検証し、検証層が旧UI前提のまま残っている箇所を潰す。
 
 ## Root Completion Criteria
 
@@ -59,12 +59,13 @@ Human approval required: credentials, secret entry, billing, purchase, checkout,
 | G402 | accepted | parent | codex-verifiable | G401 | Parent inline: G402 Feature-flow parity | 全主要機能を4カテゴリへ統合し、機能選択から入力/生成/結果/Canvasまで同じ流れに揃えた。 | `scripts/verify-lightchain-clone-layout.mjs` and `e2e/smoke.spec.ts` assert `design-arrange` and `image-variations` under graphics; r11 recorded proof confirms upload, prompt, detail tabs, operation details, and mobile. | goals/G402.md |
 | G403 | accepted-with-caveat | parent | codex-verifiable | G402 | Parent inline: G403 Output and generation QA | 非課金範囲で全10主要生成機能の成果物を readback/目視確認した。 | `output/playwright/hc-all-features-real-generation-after-lightchain-clone-20260626/readback-after-worker.json` and `visual-scorecard.json`; 10/10 completed and visually passed, but only 2 fresh in this run and 8 recent same-prompt Runway assets reused due `workspace_limit`. | goals/G403.md |
 | G404 | accepted | parent | codex-verifiable | G401-G403 | Parent inline: G404 Production closeout | static gates, Codex review, Zeabur deploy/readback, STATE/plan closeout, pushまで完了した。 | Commit `ffa6c77` pushed to `main`; Zeabur served `assets/index.CPdUKnP3.js`; production verifier passed at `output/playwright/lightchain-workbench-parity-apparel-prod-20260626-r1/SUMMARY.json`. | goals/G404.md |
+| G501 | in-progress | parent | codex-verifiable | G401-G404 | Parent inline: G501 Launch-ops/monitor hardening | Lightchain式UIへ変更後も監視とlaunch-opsが正しい入力欄・生成ボタンreadinessを見られるようにする。 | Pre-fix production clone proof passed at `output/playwright/goal-loop-10m-20260626/lightchain-clone-prod/SUMMARY.json`; production monitor failed through launch-ops UI probe; launch-ops rerun exposed stale mobile Generate expectation. Local fix passed `node --check`, `typecheck`, `lint`, `build`, and `git diff --check`; Codex review findings addressed. Production rerun pending Zeabur asset flip. | parent-inline |
 
 ## Active Child Window
 
 | ID | Window status | Reason for active window | Workspace / worktree | Notes |
 |---|---|---|---|---|
-| none | closed | G401-G404 accepted. | current checkout | No active child window remains. |
+| G501 | active | production launch-ops/monitor regression found and fixed locally; deploy/readback still pending. | current checkout | Current local build asset `assets/index.BxbR6FIC.js`. |
 
 ## Human-Needed Queue / Checkpoints
 
@@ -84,7 +85,7 @@ Thread automation:
 - Run `npm run typecheck`, `npm run lint -- --max-warnings=0`, `npm run build`, `git diff --check`, relevant Playwright recorded UI proof, and Codex read-only review before final push.
 - For UI/UX claims, use screenshots/recordings plus DOM/URL/console evidence; do not rely on static build only.
 - For generated-output claims, open the generated image and record prompt adherence, apparel fidelity, unwanted text/watermark/UI artifacts, composition, and commercial usefulness.
-- Push only after parent accepts G401-G404 and updates `STATE.md` / `plan.md`.
+- Push only after parent accepts G401-G404, closes or explicitly carries G501, and updates `STATE.md` / `plan.md`.
 
 ## Integration Ledger
 
@@ -97,8 +98,8 @@ Thread automation:
 
 ## Achievement Review
 
-Active child window status: none
-Goal map status: G401-G402 accepted, G403 accepted-with-caveat, G404 accepted
-Parent goal status: complete
+Active child window status: G501 active until deploy and production readback complete
+Goal map status: G401-G402 accepted, G403 accepted-with-caveat, G404 accepted, G501 in-progress
+Parent goal status: active
 Human-needed checkpoint status: none
-Gap review: local and production Lightchain-vs-Heavychain comparison complete for the cloned generate shell; all-feature generation QA complete with explicit workspace-limit caveat.
+Gap review: local and production Lightchain-vs-Heavychain comparison complete for the cloned generate shell; all-feature generation QA complete; 10M readiness rerun found and locally fixed launch-ops/monitor drift. Production rerun remains after deployment.

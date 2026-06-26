@@ -131,21 +131,24 @@ async function checkGenerateForm() {
   await page.goto(`${baseUrl}/generate?feature=campaign-image`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => undefined);
   const prompt = 'Heavy Chain black hoodie premium campaign visual, concrete studio, silver chain detail';
-  const textarea = page.locator('textarea[placeholder*="夏のサマーセール"], textarea').first();
+  const textarea = page.getByLabel('ベースコンセプト').first();
+  await textarea.waitFor({ state: 'visible', timeout: 15000 });
   await textarea.fill(prompt, { timeout: 15000 });
   const textareaValue = await textarea.inputValue();
-  const button = page.getByRole('button', { name: /生成|Runway|作成/ }).first();
+  const button = page.getByRole('button', { name: 'Runway workerで生成' }).first();
   const buttonVisible = await button.isVisible().catch(() => false);
+  const buttonEnabled = await button.isEnabled().catch(() => false);
   const body = await page.locator('body').innerText();
   const screenshot = `${outDir}/generate-form-filled-no-submit.png`;
   await page.screenshot({ path: screenshot, fullPage: false });
   evidence.screenshots.generateForm = screenshot;
-  pushCheck('Generate form is editable without submitting', buttonVisible && textareaValue === prompt, {
+  pushCheck('Generate form is editable without submitting', buttonVisible && buttonEnabled && textareaValue === prompt, {
     url: page.url(),
     prompt,
     textareaValue,
     generationSubmit: 'not_clicked',
     buttonVisible,
+    buttonEnabled,
     excerpt: body.slice(0, 800),
     screenshot,
   });
@@ -231,7 +234,7 @@ async function checkMobileRoutes() {
     isMobile: true,
   });
   const mobileChecks = [
-    { key: 'mobile-generate', path: '/generate?feature=campaign-image', expected: ['画像生成'] },
+    { key: 'mobile-generate', path: '/generate?feature=campaign-image', expected: ['HEAVYCHAIN', 'キャンペーン画像', 'Runway workerで生成'] },
     { key: 'mobile-gallery', path: '/gallery', expected: ['ギャラリー'] },
     { key: 'mobile-canvas', path: '/canvas/new', expected: ['キャンバス'] },
   ];
