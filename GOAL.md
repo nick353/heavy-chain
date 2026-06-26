@@ -59,13 +59,13 @@ Human approval required: credentials, secret entry, billing, purchase, checkout,
 | G402 | accepted | parent | codex-verifiable | G401 | Parent inline: G402 Feature-flow parity | 全主要機能を4カテゴリへ統合し、機能選択から入力/生成/結果/Canvasまで同じ流れに揃えた。 | `scripts/verify-lightchain-clone-layout.mjs` and `e2e/smoke.spec.ts` assert `design-arrange` and `image-variations` under graphics; r11 recorded proof confirms upload, prompt, detail tabs, operation details, and mobile. | goals/G402.md |
 | G403 | accepted-with-caveat | parent | codex-verifiable | G402 | Parent inline: G403 Output and generation QA | 非課金範囲で全10主要生成機能の成果物を readback/目視確認した。 | `output/playwright/hc-all-features-real-generation-after-lightchain-clone-20260626/readback-after-worker.json` and `visual-scorecard.json`; 10/10 completed and visually passed, but only 2 fresh in this run and 8 recent same-prompt Runway assets reused due `workspace_limit`. | goals/G403.md |
 | G404 | accepted | parent | codex-verifiable | G401-G403 | Parent inline: G404 Production closeout | static gates, Codex review, Zeabur deploy/readback, STATE/plan closeout, pushまで完了した。 | Commit `ffa6c77` pushed to `main`; Zeabur served `assets/index.CPdUKnP3.js`; production verifier passed at `output/playwright/lightchain-workbench-parity-apparel-prod-20260626-r1/SUMMARY.json`. | goals/G404.md |
-| G501 | in-progress | parent | codex-verifiable | G401-G404 | Parent inline: G501 Launch-ops/monitor hardening | Lightchain式UIへ変更後も監視とlaunch-opsが正しい入力欄・生成ボタンreadinessを見られるようにする。 | Pre-fix production clone proof passed at `output/playwright/goal-loop-10m-20260626/lightchain-clone-prod/SUMMARY.json`; production monitor failed through launch-ops UI probe; launch-ops rerun exposed stale mobile Generate expectation. Local fix passed `node --check`, `typecheck`, `lint`, `build`, and `git diff --check`; Codex review findings addressed. Production rerun pending Zeabur asset flip. | parent-inline |
+| G501 | accepted | parent | codex-verifiable | G401-G404 | Parent inline: G501 Launch-ops/monitor hardening | Lightchain式UIへ変更後も監視とlaunch-opsが正しい入力欄・生成ボタンreadinessを見られるようにした。 | Pre-fix production clone proof passed at `output/playwright/goal-loop-10m-20260626/lightchain-clone-prod/SUMMARY.json`; production monitor failed through launch-ops UI probe; launch-ops rerun exposed stale mobile Generate expectation. Fix passed `node --check`, `typecheck`, `lint`, `build`, `git diff --check`, and Codex review. Commit `eae2d60` pushed; Zeabur served `assets/index.BxbR6FIC.js`; post-deploy proofs passed at `launch-ops-after-deploy/summary.json`, `production-monitor-after-deploy/summary.json`, and `lightchain-clone-prod-after-deploy/SUMMARY.json`. | parent-inline |
 
 ## Active Child Window
 
 | ID | Window status | Reason for active window | Workspace / worktree | Notes |
 |---|---|---|---|---|
-| G501 | active | production launch-ops/monitor regression found and fixed locally; deploy/readback still pending. | current checkout | Current local build asset `assets/index.BxbR6FIC.js`. |
+| none | closed | G501 accepted after Zeabur deploy/readback. | current checkout | G501 verified Zeabur asset `assets/index.BxbR6FIC.js`; no active child window remains. |
 
 ## Human-Needed Queue / Checkpoints
 
@@ -95,11 +95,12 @@ Thread automation:
 | G402 | accepted | Static gates and r11 verifier cover category/card/detail/mobile. | Accept flow parity for primary generate entry. | `image-variations` and `design-arrange` both graphics; verifier/e2e now assert both. | accepted | Old categories are not primary IA. |
 | G403 | accepted-with-caveat | Readback 10/10, visual scorecard 10/10, cleanup done. | Accept output path with explicit Runway workspace-limit caveat. | Proof artifacts kept locally; marker rows/inbox cleaned. | accepted-with-caveat | 2 fresh outputs in this run, 8 reused recent same-prompt Runway assets. |
 | G404 | accepted | Static gates, Codex review, commit/push, Zeabur asset flip, and production recorded verifier passed. | Accept production closeout for this loop. | Commit `ffa6c77`, asset `assets/index.CPdUKnP3.js`, proof `output/playwright/lightchain-workbench-parity-apparel-prod-20260626-r1/SUMMARY.json`. | accepted | No billing/purchase/external publish actions were performed. |
+| G501 | accepted | Static gates, Codex review, commit/push, Zeabur asset flip, production launch-ops, production monitor, and Lightchain clone production verifier passed. | Accept launch-ops/monitor hardening for the Lightchain-style Generate UI. | Commit `eae2d60`, asset `assets/index.BxbR6FIC.js`, proofs `output/playwright/goal-loop-10m-20260626/launch-ops-after-deploy/summary.json`, `output/playwright/goal-loop-10m-20260626/production-monitor-after-deploy/summary.json`, and `output/playwright/goal-loop-10m-20260626/lightchain-clone-prod-after-deploy/SUMMARY.json`. | accepted | Monitor warnings 2 are non-blocking historical/audit warnings; blockers 0. |
 
 ## Achievement Review
 
-Active child window status: G501 active until deploy and production readback complete
-Goal map status: G401-G402 accepted, G403 accepted-with-caveat, G404 accepted, G501 in-progress
-Parent goal status: active
+Active child window status: none
+Goal map status: G401-G402 accepted, G403 accepted-with-caveat, G404 accepted, G501 accepted
+Parent goal status: complete
 Human-needed checkpoint status: none
-Gap review: local and production Lightchain-vs-Heavychain comparison complete for the cloned generate shell; all-feature generation QA complete; 10M readiness rerun found and locally fixed launch-ops/monitor drift. Production rerun remains after deployment.
+Gap review: local and production Lightchain-vs-Heavychain comparison complete for the cloned generate shell; all-feature generation QA complete; 10M readiness rerun found and fixed launch-ops/monitor drift, then passed Zeabur production readback after deployment. No active blocker remains within the approved non-billing scope.
