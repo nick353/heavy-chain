@@ -24,6 +24,7 @@
     "verify:g603-garment-canvas": "npm run build && node scripts/verify-g603-garment-layer-canvas.mjs",
     "verify:g605-onboarding-templates": "npm run build && node scripts/verify-g605-onboarding-templates.mjs",
     "verify:g606-performance": "npm run build && node scripts/measure-g606-performance.mjs",
+    "verify:release-gate": "node scripts/verify-release-gate-unified.mjs",
     "verify:generation-scorecard": "node scripts/verify-generation-quality-scorecard.mjs",
     "verify:goal-readiness": "node scripts/audit-heavy-chain-goal-readiness.mjs",
     "verify:goal-readiness:incomplete-ok": "node scripts/audit-heavy-chain-goal-readiness.mjs --allow-incomplete",

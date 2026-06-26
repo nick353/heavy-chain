@@ -36,7 +36,7 @@ Heavy Chain を、Lightchain の上位互換として違和感なく使えるだ
 4. [done] 生成失敗時UX、worker待ち、Runway制限、参照画像失敗のユーザー向け表示を検証・改善する。
 5. [done] 初回オンボーディングとテンプレート体験を、10分以内に価値体験できる形へ磨く。
 6. [done] パフォーマンス、画像一覧負荷、Canvas負荷、bundleを測定し、明確な改善を入れる。
-7. [queued] production monitor、launch-ops、mass-market QA、完全回帰を統合した release gate を作る。
+7. [done] production monitor、launch-ops、mass-market QA、完全回帰を統合した release gate を作る。
 8. [done] セキュリティ/権限/RLS/storage/signed URL/service role の read-only audit を実行する。
 9. [queued] 法務/安全/商用利用/素材保持/ブランド模倣ガードの decision packet を作る。
 10. [queued] リテンション機能、ブランドキット、履歴検索、テンプレ再利用、チーム共有の現状差分を整理し、実装できる低リスク項目を入れる。
@@ -59,9 +59,10 @@ Heavy Chain を、Lightchain の上位互換として違和感なく使えるだ
 
 ## Current Result
 
-- Active window G601/G602/G603/G604/G605/G606/G608/G613 is accepted in `GOAL.md`.
+- Active window G601/G602/G603/G604/G605/G606/G607/G608/G613 is accepted in `GOAL.md`.
 - Key proof: `output/playwright/10m-product-readiness-g601/proof-reaudit.json`; `output/playwright/lightchain-workbench-parity-apparel-prod-20260626-r5-g602-final/SUMMARY.json`; `output/playwright/10m-product-readiness-g606/summary.json`; `output/playwright/10m-product-readiness-g608-security-audit/audit-readiness.json`; `docs/generation-quality-rubric-2026-06-26.md`.
 - G603 proof: `output/playwright/g603-garment-layer-canvas-20260626T130426Z/SUMMARY.json` (`ok=true`, `failed=[]`) with screenshots, video, storage/body readback, masked PNG Canvas object, back-placement overlay coordinates, properties panel metadata, and exported PNG.
 - G605 proof: `output/playwright/g605-onboarding-templates-20260626T133449Z/SUMMARY.json` (`ok=true`, `failed=[]`) with first-run Dashboard onboarding, Dashboard CTA href readback, Canvas empty-state proof, EC category -> design mode switching, EC size template persistence, product-card design template layer expansion, desktop/mobile videos, screenshots, storage readback, stale-preview guard, and process-exit/port-free cleanup proof.
-- Verification passed in this window: `npm run verify:error-messages`, `npm run verify:g603-garment-canvas`, `npm run verify:g605-onboarding-templates`, `npm run verify:g606-performance`, default and explicit `npm run verify:generation-scorecard` runs, remote false-pass negative scorecard, `npm run security:audit`, `SECURITY_AUDIT_INCLUDE_LOCAL_ENV=1 npm run security:audit` negative detection, `bash scripts/supabase-prod-verify.sh`, `npm run typecheck`, `npm run lint -- --max-warnings=0`, `npm run build`, `node --check scripts/verify-g603-garment-layer-canvas.mjs`, `node --check scripts/verify-g605-onboarding-templates.mjs`, `git diff --check`, and Codex read-only reviews with no remaining high-risk findings after review.
-- Remaining queued work before calling the whole app complete: G607 unified release gate, G609 legal/safety decision packet, G610 retention workspace features, G611 beta scenario QA, G612 competitor positioning, G614 operations docs, and G615 final production regression/closeout.
+- G607 proof: `output/playwright/10m-product-readiness-g607/release-gate-summary.json` has `ok=true`, `failed=[]`, `allowDirty=false`, blockers `[]`, all readbacks fresh/passing, and passing security audit, generation scorecard, syntax checks, typecheck, production build, lint, and `git diff --check`. `--allow-dirty` and `--skip-commands` were also verified as non-acceptance blockers.
+- Verification passed in this window: `npm run verify:error-messages`, `npm run verify:g603-garment-canvas`, `npm run verify:g605-onboarding-templates`, `npm run verify:g606-performance`, default and explicit `npm run verify:generation-scorecard` runs, remote false-pass negative scorecard, `npm run security:audit`, `SECURITY_AUDIT_INCLUDE_LOCAL_ENV=1 npm run security:audit` negative detection, `bash scripts/supabase-prod-verify.sh`, `npm run typecheck`, `npm run lint -- --max-warnings=0`, `npm run build`, `node --check scripts/verify-g603-garment-layer-canvas.mjs`, `node --check scripts/verify-g605-onboarding-templates.mjs`, `git diff --check`, and Codex read-only reviews with no remaining high-risk findings after review. G607 release-gate development checks also verified that `--allow-dirty` and `--skip-commands` fail as non-acceptance blockers.
+- Remaining queued work before calling the whole app complete: G609 legal/safety decision packet, G610 retention workspace features, G611 beta scenario QA, G612 competitor positioning, G614 operations docs, and G615 final production regression/closeout.
