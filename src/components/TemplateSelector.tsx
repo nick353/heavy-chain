@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Image, 
   Square, 
@@ -133,6 +133,10 @@ export function TemplateSelector({
 }: TemplateSelectorProps) {
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
+  useEffect(() => {
+    setActiveCategory('all');
+  }, [mode]);
+
   const sizeCategories = [
     { id: 'all', label: 'すべて' },
     { id: 'social', label: 'SNS' },
@@ -196,6 +200,8 @@ export function TemplateSelector({
               <button
                 key={template.id}
                 onClick={() => onSelectSize?.(template)}
+                aria-label={`サイズテンプレート ${template.name}`}
+                data-template-id={template.id}
                 className={`
                   relative p-4 rounded-xl border-2 text-left transition-all
                   ${isSelected
@@ -241,6 +247,8 @@ export function TemplateSelector({
               <button
                 key={template.id}
                 onClick={() => onSelectDesign?.(template)}
+                aria-label={`デザインテンプレート ${template.name}`}
+                data-template-id={template.id}
                 className={`
                   relative rounded-xl border-2 overflow-hidden text-left transition-all
                   ${isSelected
@@ -281,4 +289,3 @@ export function TemplateSelector({
 
 // Export templates for use elsewhere
 export { sizeTemplates, designTemplates };
-

@@ -28,7 +28,7 @@ import { CanvasGuide, useCanvasGuide } from '../components/canvas/CanvasGuide';
 import { useCanvasStore } from '../stores/canvasStore';
 import { ChatEditor } from '../components/ChatEditor';
 import { GallerySelector } from '../components/GallerySelector';
-import { TemplateSelector } from '../components/TemplateSelector';
+import { TemplateSelector, type DesignTemplate, type SizeTemplate } from '../components/TemplateSelector';
 import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { supabase } from '../lib/supabase';
@@ -41,6 +41,7 @@ type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
 type GenerateMode = 'basic' | 'gacha' | 'product-shots' | 'model-matrix' | 'multilingual';
 type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'generate-variations' | 'prompt-edit';
+type CanvasTemplateMode = 'size' | 'design';
 const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
 const DerivationTree = lazy(() =>
   import('../components/canvas/DerivationTree').then((module) => ({ default: module.DerivationTree }))
@@ -80,6 +81,9 @@ export function CanvasEditorPage() {
     }
     return 'properties';
   });
+  const [templateMode, setTemplateMode] = useState<CanvasTemplateMode>('size');
+  const [selectedSizeTemplateId, setSelectedSizeTemplateId] = useState<string | undefined>();
+  const [selectedDesignTemplateId, setSelectedDesignTemplateId] = useState<string | undefined>();
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [selectedPosition, setSelectedPosition] = useState({ x: 0, y: 0 });
   const [isEditingName, setIsEditingName] = useState(false);
@@ -971,9 +975,9 @@ export function CanvasEditorPage() {
   };
 
   // Handle template select
-  const handleTemplateSelect = (template: any) => {
+  const handleTemplateSelect = (template: SizeTemplate) => {
     // Add template as frame with preset size
-    addObject({
+    const templateId = addObject({
       type: 'frame',
       x: canvasSize.width / 2 - template.width / 4,
       y: canvasSize.height / 2 - template.height / 4,
@@ -988,8 +992,190 @@ export function CanvasEditorPage() {
       stroke: '#806a54',
       strokeWidth: 2,
       label: template.name,
+      metadata: {
+        feature: 'canvas-size-template',
+        generation: 0,
+        parameters: {
+          templateId: template.id,
+          templateName: template.name,
+          originalSize: { width: template.width, height: template.height },
+        },
+        timestamp: new Date().toISOString(),
+      },
     });
+    setSelectedSizeTemplateId(template.id);
+    selectObject(templateId);
     toast.success(`${template.name}を追加しました`);
+    setSidePanel('properties');
+  };
+
+  const getTemplateNumber = (value: unknown, fallback: number, maxValue: number) => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      if (value === '100%') return maxValue;
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    return fallback;
+  };
+
+  const getTemplatePlacement = (
+    element: Record<string, unknown>,
+    width: number,
+    height: number,
+    scale: number,
+    baseX: number,
+    baseY: number,
+  ) => {
+    const rawX = element.x;
+    const rawY = element.y;
+    const x = rawX === 'center'
+      ? canvasSize.width / 2 - (width * scale) / 2
+      : baseX + getTemplateNumber(rawX, 0, 1080) * scale;
+    const y = rawY === 'center'
+      ? canvasSize.height / 2 - (height * scale) / 2
+      : baseY + getTemplateNumber(rawY, 0, 1080) * scale;
+    return { x, y };
+  };
+
+  const handleDesignTemplateSelect = (template: DesignTemplate) => {
+    const baseWidth = 720;
+    const baseHeight = 520;
+    const baseX = canvasSize.width / 2 - baseWidth / 2;
+    const baseY = canvasSize.height / 2 - baseHeight / 2;
+    const scale = 0.48;
+    const timestamp = new Date().toISOString();
+    const createdIds: string[] = [];
+
+    const frameId = addObject({
+      type: 'frame',
+      x: baseX,
+      y: baseY,
+      width: baseWidth,
+      height: baseHeight,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      locked: false,
+      visible: true,
+      fill: '#fffaf4',
+      stroke: '#c47b45',
+      strokeWidth: 2,
+      label: `${template.name} キャンバス`,
+      metadata: {
+        feature: 'canvas-design-template',
+        generation: 0,
+        parameters: {
+          templateId: template.id,
+          templateName: template.name,
+          templateCategory: template.category,
+          role: 'template-root-frame',
+        },
+        timestamp,
+      },
+    });
+    createdIds.push(frameId);
+
+    template.elements.forEach((element, index) => {
+      const type = String(element.type || '');
+      const width = Math.max(24, getTemplateNumber(element.width, type === 'text' ? 360 : 360, 1080) * scale);
+      const height = Math.max(24, getTemplateNumber(element.height, type === 'text' ? 72 : 300, 1080) * scale);
+      const placement = getTemplatePlacement(element, width / scale, height / scale, scale, baseX + 72, baseY + 52);
+      const metadata = {
+        feature: 'canvas-design-template',
+        parentId: frameId,
+        generation: 1,
+        parameters: {
+          templateId: template.id,
+          templateName: template.name,
+          templateCategory: template.category,
+          elementIndex: index,
+          elementType: type,
+        },
+        timestamp,
+      };
+
+      if (type === 'text') {
+        const textId = addObject({
+          type: 'text',
+          x: placement.x,
+          y: placement.y,
+          width,
+          height,
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          opacity: 1,
+          locked: false,
+          visible: true,
+          text: String(element.content || template.name),
+          fontSize: Math.max(12, getTemplateNumber(element.fontSize, 24, 96) * 0.62),
+          fontFamily: 'Inter, Noto Sans JP, sans-serif',
+          fill: '#171717',
+          parentId: frameId,
+          derivedFrom: frameId,
+          label: `${template.name} テキスト`,
+          metadata,
+        });
+        createdIds.push(textId);
+        return;
+      }
+
+      if (type === 'shape') {
+        const shapeWidth = Math.max(120, width);
+        const shapeHeight = Math.max(32, height);
+        const shapeId = addObject({
+          type: 'shape',
+          x: placement.x,
+          y: placement.y,
+          width: shapeWidth,
+          height: shapeHeight,
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          opacity: 0.95,
+          locked: false,
+          visible: true,
+          shapeType: 'rect',
+          fill: '#22c9bd',
+          stroke: '#16877f',
+          strokeWidth: 1,
+          parentId: frameId,
+          derivedFrom: frameId,
+          label: `${template.name} 装飾`,
+          metadata,
+        });
+        createdIds.push(shapeId);
+        return;
+      }
+
+      const placeholderId = addObject({
+        type: 'frame',
+        x: placement.x,
+        y: placement.y,
+        width,
+        height,
+        rotation: 0,
+        scaleX: 1,
+        scaleY: 1,
+        opacity: 1,
+        locked: false,
+        visible: true,
+        fill: '#f6f0e8',
+        stroke: '#a8a29e',
+        strokeWidth: 2,
+        parentId: frameId,
+        derivedFrom: frameId,
+        label: `${template.name} 画像枠`,
+        metadata,
+      });
+      createdIds.push(placeholderId);
+    });
+
+    setSelectedDesignTemplateId(template.id);
+    selectObject(createdIds[createdIds.length - 1] || frameId);
+    toast.success(`${template.name}をCanvasに展開しました`);
     setSidePanel('properties');
   };
 
@@ -1591,11 +1777,35 @@ export function CanvasEditorPage() {
                     />
                   )}
                   {sidePanel === 'templates' && (
-                  <TemplateSelector 
-                    mode="size" 
-                    onSelectSize={handleTemplateSelect} 
-                  />
-                )}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-1 rounded-xl border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900">
+                        {[
+                          { id: 'size' as const, label: 'サイズ' },
+                          { id: 'design' as const, label: 'デザイン' },
+                        ].map((mode) => (
+                          <button
+                            key={mode.id}
+                            type="button"
+                            onClick={() => setTemplateMode(mode.id)}
+                            className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                              templateMode === mode.id
+                                ? 'bg-white text-neutral-900 shadow-sm dark:bg-neutral-800 dark:text-white'
+                                : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white'
+                            }`}
+                          >
+                            {mode.label}
+                          </button>
+                        ))}
+                      </div>
+                      <TemplateSelector
+                        mode={templateMode}
+                        onSelectSize={handleTemplateSelect}
+                        onSelectDesign={handleDesignTemplateSelect}
+                        selectedSizeId={selectedSizeTemplateId}
+                        selectedDesignId={selectedDesignTemplateId}
+                      />
+                    </div>
+                  )}
               </div>
             </motion.aside>
             </>
