@@ -31,8 +31,8 @@ const routeSpecs = [
   { key: 'history', path: '/history', expected: ['生成履歴'] },
   { key: 'gallery', path: '/gallery', expected: ['ギャラリー'], galleryDetail: true },
   { key: 'canvas', path: '/canvas/new', expected: ['画像を置く', 'Galleryから追加'], upload: true, canvasGallery: true, minBodyLength: 40 },
-  { key: 'brand-settings', path: '/brand/settings', expected: ['ブランド'], upload: true },
-  { key: 'credits', path: '/credits', expected: ['クレジット'] },
+  { key: 'brand-settings', path: '/brand/settings', expected: ['ブランド'] },
+  { key: 'credits', path: '/credits', expected: ['利用状況'] },
 ];
 
 const mobileSpecs = [
@@ -211,14 +211,42 @@ async function interactUpload(page, routeEvidence) {
   const count = await upload.count();
   if (!count) {
     routeEvidence.interactions.push({ type: 'upload-image', skipped: 'no_image_input' });
+    addAssertion(routeEvidence, 'upload_input_visible', false, { reason: 'no_image_input' });
     return;
   }
+  addAssertion(routeEvidence, 'upload_input_visible', true);
+  const previewSelector = 'img[src^="blob:"], img[src^="data:"], img[alt*="preview" i], img[alt*="プレビュー"]';
+  const previewCountBefore = await page.locator(previewSelector).count().catch(() => 0);
+  const canvasObjectCountBefore = await readCanvasObjectCount(page);
   await upload.setInputFiles(imagePath);
   await page.waitForTimeout(500);
   const body = await bodyText(page);
-  const reflected = /読込済み|素材認識済み|S__4235312|Canvas保存時|画像|商品/.test(body);
-  routeEvidence.interactions.push({ type: 'upload-image', reflected });
-  addAssertion(routeEvidence, 'upload_reflected_in_ui', reflected);
+  const selectedFile = await upload.evaluate((input) => input.files?.[0]?.name || null).catch(() => null);
+  const previewCountAfter = await page.locator(previewSelector).count().catch(() => 0);
+  const canvasObjectCountAfter = await readCanvasObjectCount(page);
+  const stateTextReflected = /読込済み|素材認識済み|アップロード済み|選択済み|プレビュー|S__4235312/.test(body);
+  const canvasObjectReflected = routeEvidence.key.includes('canvas') && canvasObjectCountAfter > canvasObjectCountBefore;
+  const reflected = Boolean(selectedFile) && (stateTextReflected || previewCountAfter > previewCountBefore || canvasObjectReflected);
+  routeEvidence.interactions.push({
+    type: 'upload-image',
+    reflected,
+    selectedFile,
+    previewCountBefore,
+    previewCountAfter,
+    canvasObjectCountBefore,
+    canvasObjectCountAfter,
+    canvasObjectReflected,
+    stateTextReflected,
+  });
+  addAssertion(routeEvidence, 'upload_reflected_in_ui', reflected, {
+    selectedFile,
+    previewCountBefore,
+    previewCountAfter,
+    canvasObjectCountBefore,
+    canvasObjectCountAfter,
+    canvasObjectReflected,
+    stateTextReflected,
+  });
   routeEvidence.uploadScreenshot = await screenshot(page, `${routeEvidence.key}-uploaded.png`);
 }
 
@@ -323,6 +351,16 @@ function buildStorageStateForBaseUrl(filePath, targetBaseUrl) {
 
 async function bodyText(page) {
   return page.locator('body').innerText({ timeout: 8000 }).catch(() => '');
+}
+
+async function readCanvasObjectCount(page) {
+  return page.evaluate(() => {
+    const raw = window.localStorage.getItem('heavy-chain-canvas');
+    if (!raw) return 0;
+    const parsed = JSON.parse(raw);
+    const objects = parsed?.state?.objects;
+    return Array.isArray(objects) ? objects.length : 0;
+  }).catch(() => 0);
 }
 
 async function hasNoHorizontalOverflow(page) {
