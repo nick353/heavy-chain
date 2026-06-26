@@ -34,6 +34,7 @@ const FEATURE_QUALITY_GUIDANCE: Record<string, string[]> = {
   'scene-coordinate': [
     'realistic lifestyle product scene',
     'product remains recognizable',
+    'chain motif and garment front remain visible',
     'natural environment lighting',
     'commercial fashion styling',
   ],
@@ -45,7 +46,8 @@ const FEATURE_QUALITY_GUIDANCE: Record<string, string[]> = {
   'remove-bg': [
     'clean product cutout',
     'preserve garment edges',
-    'catalog-ready transparent or white background',
+    'catalog-ready transparent-background-ready isolation',
+    'natural apparel silhouette without display forms',
   ],
   upscale: [
     'high resolution product image',
@@ -53,9 +55,11 @@ const FEATURE_QUALITY_GUIDANCE: Record<string, string[]> = {
     'sharp but natural fabric texture',
   ],
   variations: [
-    'controlled apparel variation',
+    'controlled apparel campaign variation',
     'preserve product identity',
-    'commercially usable styling',
+    'natural garment shape without mannequin or neck form',
+    'single finished commerce image, not a grid or collage',
+    'commercially usable styling with realistic fabric',
   ],
 };
 
@@ -74,6 +78,13 @@ const GLOBAL_NEGATIVE_TERMS = [
   'no misspelled text',
   'no broken typography',
   'no distorted garment',
+  'no mannequin',
+  'no neck form',
+  'no ghost mannequin',
+  'no plastic display form',
+  'no headless torso',
+  'no floating collar',
+  'no distorted neckline',
   'no extra limbs',
   'no deformed hands',
   'no low-resolution artifacts',

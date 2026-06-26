@@ -55,8 +55,8 @@ const FEATURE_SPECS = [
   {
     feature: 'scene-coordinate',
     workspace: 'studio',
-    prompt: 'Heavy Chain 10M QA: black chain hoodie styled in a premium urban concrete lookbook scene, garment clearly visible, coordinated with dark denim and silver accessories, editorial lighting, no text, no watermark.',
-    negativePrompt: 'text, logo, watermark, product hidden, distorted clothing, blurry',
+    prompt: 'Heavy Chain 10M QA: black chain hoodie styled in a premium urban concrete lookbook scene, garment front and silver chain motif clearly visible, coordinated with dark denim and silver accessories, editorial lighting, no text, no watermark.',
+    negativePrompt: 'text, logo, watermark, product hidden, chain motif hidden, distorted clothing, blurry',
     width: 1024,
     height: 1024,
     expected: 'Lookbook/scene coordinate image with outfit context and clear garment identity.',
@@ -74,8 +74,8 @@ const FEATURE_SPECS = [
   {
     feature: 'remove-bg',
     workspace: 'studio',
-    prompt: 'Heavy Chain 10M QA: isolated premium black chain hoodie product cutout on a clean pure white studio background, crisp edges, transparent-background-ready appearance, no text, no watermark.',
-    negativePrompt: 'text, logo, watermark, busy background, rough edges, blurry',
+    prompt: 'Heavy Chain 10M QA: isolated premium black chain hoodie product cutout on a clean pure white studio background, crisp edges, natural garment silhouette, transparent-background-ready appearance, no mannequin, no neck form, no text, no watermark.',
+    negativePrompt: 'text, logo, watermark, busy background, rough edges, blurry, mannequin, neck form, ghost mannequin, display bust, floating collar',
     width: 1024,
     height: 1024,
     expected: 'Background-removal-like output: clean cutout feel and crisp apparel edges.',
@@ -101,8 +101,8 @@ const FEATURE_SPECS = [
   {
     feature: 'variations',
     workspace: 'studio',
-    prompt: 'Heavy Chain 10M QA: one standalone variation of a premium black chain hoodie campaign image, same product identity, different premium studio lighting and background, no collage, no text, no watermark.',
-    negativePrompt: 'text, logo, watermark, collage, grid, distorted garment, blurry',
+    prompt: 'Heavy Chain 10M QA: one standalone finished ecommerce campaign variation of a premium black chain hoodie, same product identity and visible silver chain detail, natural garment shape on a clean invisible support or flat studio styling, different premium lighting and background, no mannequin, no neck form, no ghost mannequin, no collage, no text, no watermark.',
+    negativePrompt: 'text, logo, watermark, collage, grid, mannequin, neck form, ghost mannequin, display bust, plastic form, headless torso, floating collar, distorted neckline, distorted garment, blurry',
     width: 1024,
     height: 1024,
     expected: 'A distinct but same-product campaign variation, not a grid.',
@@ -133,6 +133,7 @@ const runId = String(args.runId || `hc-10m-real-generation-${new Date().toISOStr
 const manifestPath = path.resolve(outDir, String(args.manifest || 'run-manifest.json'));
 const brandId = String(args.brandId || process.env.HC_QA_BRAND_ID || DEFAULT_BRAND_ID);
 const userId = String(args.userId || process.env.HC_QA_USER_ID || DEFAULT_USER_ID);
+const selectedFeatureSpecs = selectFeatureSpecs(args.features);
 const supabase = getSupabaseClient();
 
 if (mode === 'enqueue') {
@@ -148,7 +149,7 @@ if (mode === 'enqueue') {
 async function enqueueJobs() {
   await fs.mkdir(outDir, { recursive: true });
   const createdAt = new Date().toISOString();
-  const rows = FEATURE_SPECS.map((spec) => {
+  const rows = selectedFeatureSpecs.map((spec) => {
     const config = WORKSPACE_CONFIG[spec.workspace] || WORKSPACE_CONFIG.studio;
     const requestId = crypto.randomUUID();
     const marker = `${runId}:${spec.feature}`;
@@ -403,6 +404,18 @@ function ratioFromDimensions(width, height) {
 
 function defaultModelForFeature(feature) {
   return feature === 'multilingual-banner' ? 'gpt-image-2' : 'nano-banana-pro';
+}
+
+function selectFeatureSpecs(value) {
+  const requested = String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (!requested.length) return FEATURE_SPECS;
+  const byFeature = new Map(FEATURE_SPECS.map((spec) => [spec.feature, spec]));
+  const missing = requested.filter((feature) => !byFeature.has(feature));
+  if (missing.length) throw new Error(`unknown_feature_filter:${missing.join(',')}`);
+  return requested.map((feature) => byFeature.get(feature));
 }
 
 function asRecord(value) {

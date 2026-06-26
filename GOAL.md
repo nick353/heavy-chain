@@ -2,123 +2,83 @@
 
 ## Loop Metadata
 
-Loop ID: HC-10M-REAL-GENERATION-QA-20260626
-Parent thread name: Goal: Heavy Chain 10M Real Generation QA
-Parent thread ID: 019ef728-e38a-7d01-988d-451c95668bf5
+Loop ID: HC-GENERATION-POLISH-20260626
+Parent thread name: Goal: Heavy Chain Generation Polish
+Parent thread ID: current Codex session
 
 ## Parent Goal
 
-Make Heavy Chain credible as a mass-market apparel generation product by proving, with real generated images and production evidence, that the core generation features create useful outputs, save/recover correctly, continue into Gallery/Jobs/Canvas, and stay understandable on desktop and mobile.
+Make the real Heavy Chain generation experience commercially credible by fixing the only `needs-polish` output from the last ten-feature run, checking adjacent output-quality risks, and proving the improved path with real generation artifacts, visual review, production readback, UI proof, cleanup, and deployment evidence.
 
 ## Strategic Summary
 
-- Real image quality is now the key gap: UI planning passed, but all feature outputs must be generated and judged against expected image criteria.
-- Heavy Chain should preserve its safe production route: Zeabur UI/Edge queue, approved-client Runway MCP, local worker import, DB/Storage readback, Gallery/Jobs/Canvas continuation, and marker-scoped cleanup.
-- A 10M-user product needs quality scoring, failure triage, recovery steps, and launch-readiness proof, not only feature existence.
+- Previous loop proved 10 real generation lanes; `variations` was the only `needs-polish` result because the output looked like a mannequin/neck-form campaign asset instead of a natural finished apparel image.
+- Similar risk exists where outputs can drift into display forms, hidden product identity, or non-commercial layouts: `scene-coordinate`, `remove-bg`, and `design-gacha`.
+- The durable fix must live in product prompt quality and QA harness prompts, not only in a one-off manual prompt.
 - Billing, purchase, payment, identity, OTP/CAPTCHA/security prompts, secrets, and external publishing remain human-only stop points.
 
 ## Current Milestone
 
-Real-generation quality and launch-readiness pass after the Lightchain-style UI expansion. This loop must prove or fix the actual generated outputs for every major generation lane.
+Generation quality polish after the real 10-feature QA run, focused on variations and adjacent commercial-output risks.
 
 ## Root Done Evidence
 
-- All 10 Generate features have at least one real generated output or a precisely documented external/tool blocker: `campaign-image`, `product-shots`, `model-matrix`, `design-gacha`, `scene-coordinate`, `multilingual-banner`, `remove-bg`, `colorize`, `upscale`, and `variations`.
-- For each generated output, there is a prompt/expectation, image artifact, visual QA rubric score, pass/fail decision, and notes on prompt adherence, apparel fidelity, unwanted text/watermark/UI artifacts, composition, and commercial usefulness.
-- Heavy Chain production readback proves generated artifacts can be imported or observed through Jobs, Gallery, History, and Canvas, or the exact blocker is captured with URL/DOM/screenshot/API evidence.
-- Lightchain comparison is refreshed around generation feel, not only static UI: start, upload/reference, planning, generation, result review, and continuation.
-- Product launch readiness covers desktop/mobile route QA, Runway worker failure/retry, storage/cleanup, monitoring/runbook, and no relevant console/page/network failures.
-- Required checks pass before final push: `npm run typecheck`, `npm run lint -- --max-warnings=0`, `npm run build`, `git diff --check`, relevant Playwright/Runway proof, Codex read-only review, Zeabur readback.
+- Product prompt quality explicitly prevents mannequin/neck-form/display-form artifacts for variation-like apparel outputs.
+- QA harness can run only selected features so credit-consuming regression checks are bounded and repeatable.
+- Focused real generation produces new outputs for `variations`, `scene-coordinate`, `remove-bg`, and `design-gacha`, with actual image inspection and a visual scorecard.
+- Production readback proves jobs/images/storage are persisted and usable through Heavy Chain flows, or exact blocker evidence is captured.
+- Zeabur production serves the patched asset after checks and push.
+- Marker-scoped cleanup removes QA jobs/images/storage after proof capture.
 
 ## Quality Bar
 
-No fake image-quality claims. No claiming generated images are correct without inspecting the actual image. No raw reference image persistence regression. No destructive cleanup outside marker-scoped test artifacts. No purchase/payment/identity/secret/CAPTCHA bypass. No direct Runway API fallback or localhost dynamic-client MCP consent flow. No overclaim that Heavy Chain is complete if a generation lane is blocked.
+No claiming image quality without opening the generated image. No direct Runway API fallback or localhost dynamic-client MCP consent loop. No destructive cleanup outside marker-scoped QA artifacts. No overclaiming “perfect” if a feature still needs human subjective approval.
 
 ## Non-Goals
 
 - No billing, purchase, checkout, payment, identity, CAPTCHA/OTP/security prompt automation.
 - No external public publishing.
-- No direct Runway API fallback, hosted `mcp-remote` bridge fallback, or `localhost:15554` consent loop.
-- No broad brand/marketing strategy rewrite beyond release-readiness and UX fixes required by the QA evidence.
+- No broad feature redesign beyond generation-quality polish and verification needed by this loop.
 
 ## Approval Boundaries
 
-### Codex may do automatically
+Allowed automatically: source/script/docs/STATE/GOAL edits, bounded Runway MCP credit use for this QA loop, Supabase marker-scoped QA rows/images/storage, local and Zeabur QA, commits, and push to `origin main` after gates pass.
 
-- write/update allowed files: app source, tests/scripts, docs, `STATE.md`, `PROJECT_DESIGN.md`, `GOAL.md`, `goals/*`, proof artifacts
-- launch `queued` child goals from the approved Goal Map: yes
-- create/use parent wake-up automation: yes if needed while children are active
-- maximum parallel children: five
-- run validation/review commands: yes
-- use Runway MCP credits for bounded QA generation: yes
-- create marker-scoped production jobs/images/usage rows and clean them up: yes
-- integrate accepted child results: yes
-- commit/branch/PR: commit on current branch allowed
-- push: push to `origin main` allowed after passing checks
-
-### Human approval required
-
-- new or materially changed goals outside this map
-- expanded scope or approval boundaries
-- unresolved subjective product decisions after Codex has produced evidence and a recommendation
-- credentials, external accounts, payments, deployments outside GitHub/Zeabur normal push-triggered deploy, or other external side effects
-- merge: not applicable unless a PR is created
-- actions always requiring approval: billing, purchase, payment, checkout, identity verification, OTP/CAPTCHA/security prompt, secrets, external public publishing
+Human-only stop points: credentials, secret entry, billing, purchase, checkout, payment, identity verification, OTP/CAPTCHA/security prompt, external public publishing, or a subjective product decision that remains unresolved after evidence and recommendation.
 
 ## Gap-Closing Goal Map
 
-| ID | Status | Owner | Acceptance | Depends On | Child thread name | Outcome | Acceptance Evidence | Child Packet |
-|---|---|---|---|---|---|---|---|---|
-| G101 | accepted | parent | codex-verifiable | none | Child: G101 Real Generation Harness | Added a repeatable marker-scoped harness for all-feature real generation QA. | `scripts/hc-10m-real-generation-qa.mjs`; `node --check`; enqueue/readback/cleanup modes; production readback with 10 completed jobs/images. | goals/G101.md |
-| G102 | accepted | parent | codex-verifiable | G101 | Child: G102 Ten Feature Image Quality QA | All 10 Generate features produced real Runway images, were imported by the worker, and were visually scored. | `output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json`; `runway-images/`; `readback-after-worker.json`. | goals/G102.md |
-| G103 | accepted | parent | codex-verifiable | G102 | Child: G103 Continuation And Recovery QA | Generated artifacts were verified through Gallery, Jobs, Canvas route load, DB/Storage readback, and worker processed-file archive. | `ui-prod/summary.json`; `readback-after-worker.json`; `output/runway-mcp-results/inbox/processed/*`; local post-fix proof. | goals/G103.md |
-| G104 | accepted | parent | codex-verifiable | G102 | Child: G104 Lightchain Feel And UX Polish | Fixed the two UX gaps found by the real run: Jobs no longer truncates an all-feature batch to 8, and Canvas guide no longer blocks production flow by default. | `src/lib/workspaceActivity.ts`; `src/components/canvas/CanvasGuide.tsx`; `local-after-fix/summary.json`. | goals/G104.md |
-| G105 | accepted | parent | codex-verifiable | G101 | Child: G105 Scale And Launch Ops Readiness | Launch checks passed for the final deployed asset; the broad launch-ops verifier also drove the mobile Canvas label fix and current STATE asset update. | `npm run typecheck`; `npm run lint -- --max-warnings=0`; `npm run build`; `git diff --check`; `launch-ops-final-rerun/summary.json`. | goals/G105.md |
-| G106 | accepted | parent | codex-verifiable | G102,G103,G104,G105 | Child: G106 Final Integration And Release Proof | Final docs/state/goal reflect current truth; commits were pushed, Zeabur served the final asset, production Jobs/Canvas readback passed, and marker-scoped cleanup removed QA rows/images. | `STATE.md`; commits `5599fc5`, `aa88c1c`; final docs commit; Zeabur asset `assets/index.nS7-jc2b.js`; `prod-after-final-deploy/summary.json`; `cleanup-after-final-proof.json`. | goals/G106.md |
+| ID | Status | Owner | Acceptance | Depends On | Outcome | Acceptance Evidence |
+|---|---|---|---|---|---|---|
+| G201 | in-progress | parent | codex-verifiable | none | Durable prompt-quality and focused QA harness polish for variation-like risks. | Prompt-quality source diff, filtered harness support, static checks. |
+| G202 | queued | parent | codex-verifiable | G201 | Bounded real generation and visual QA for variations plus adjacent risk lanes. | Manifest, Runway artifacts, worker import, readback, image scorecard. |
+| G203 | queued | parent | codex-verifiable | G202 | Production deployment, UI/readback proof, marker-scoped cleanup, and state closeout. | Build/check logs, Zeabur asset proof, UI proof, cleanup JSON, updated STATE/GOAL, pushed commit. |
 
 ## Active Child Window
 
-| ID | Window status | Reason for active window | Workspace / worktree | Notes |
-|---|---|---|---|---|
-| G105 | accepted | Launch checks and cleanup proof accepted | current checkout | Complete |
-| G106 | accepted | Final integration, push, deploy readback accepted | current checkout | Complete |
+| ID | Window status | Workspace / worktree | Notes |
+|---|---|---|---|
+| G201 | active | current checkout | Parent is executing inline because the loop is bounded and evidence-heavy. |
 
 ## Human-Needed Queue / Checkpoints
 
 Checklist: [goals/HUMAN_NEEDED.md](goals/HUMAN_NEEDED.md)
 
-| Item | Blocks | Summary | Status |
-|---|---|---|---|
-
-## Child Wait / Automation State
-
-Thread automation:
-- status: not-created
-- cadence: on demand in current session
-- automation id:
+No active human-needed items.
 
 ## Review / Integration / Push Policy
 
-Child gates:
-- Child validation required unless docs/research-only and marked `not_required`.
-- Internal quality pass required for visual output, UX, copy, and strategy goals.
-- Child Codex review required for code/config/runtime changes when available; fallback is parent read-only review.
-
-Parent gates:
-- Verify evidence before accepting.
-- For real-generation QA, do not accept a feature as passing unless the actual generated image has been inspected and scored.
-- Run `npm run typecheck`, `npm run lint -- --max-warnings=0`, `npm run build`, `git diff --check`, relevant Playwright/Runway proof, and Codex read-only review before push.
-- Push after checks pass and production deploy/readback is verified.
+- Verify evidence before accepting each goal-map item.
+- Run `npm run typecheck`, `npm run lint -- --max-warnings=0`, `npm run build`, `git diff --check`, relevant generation/readback/UI proof, and read-only Codex review when available before final push.
+- Push only after deployment/readback and cleanup evidence are captured.
 
 ## Integration Ledger
 
-| Child | Result | Child Gates | Manager Decision | Integration / Push | Goal Map Status Update | Notes |
-|---|---|---|---|---|---|---|
+| Child | Result | Manager Decision | Evidence |
+|---|---|---|---|
 
 ## Achievement Review
 
-Active child window status: none
-Goal map status: G101-G106 accepted
-Parent goal status: complete
-Human-needed checkpoint status: none
-Gap review / refreshed Gap-Closing Goal Map needed: not needed for this loop; remaining product polish is tracked as follow-up, not a blocker
+Active child window status: G201 active
+Goal map status: G201 in-progress, G202 queued, G203 queued
+Parent goal status: active
