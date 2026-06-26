@@ -32,7 +32,7 @@ Heavy Chain を、Lightchain の上位互換として違和感なく使えるだ
 
 1. [done] 全10主要生成機能の既存fresh proofを再監査し、不足分だけ bounded fresh generation で再検証し、画像品質scorecardを更新する。
 2. [done] Lightchain同等UXの最終差分を、生成フローとCanvas連携を中心に再比較する。
-3. [queued] 衣服認識、切り抜き、レイヤー、素材メタデータ、Canvas編集導線を深掘り検証し、足りないUIを実装する。
+3. [done] 衣服認識、切り抜き、レイヤー、素材メタデータ、Canvas編集導線を深掘り検証し、足りないUIを実装する。
 4. [done] 生成失敗時UX、worker待ち、Runway制限、参照画像失敗のユーザー向け表示を検証・改善する。
 5. [queued] 初回オンボーディングとテンプレート体験を、10分以内に価値体験できる形へ磨く。
 6. [done] パフォーマンス、画像一覧負荷、Canvas負荷、bundleを測定し、明確な改善を入れる。
@@ -59,7 +59,8 @@ Heavy Chain を、Lightchain の上位互換として違和感なく使えるだ
 
 ## Current Result
 
-- Active window G601/G602/G604/G606/G608/G613 is accepted in `GOAL.md`.
+- Active window G601/G602/G603/G604/G606/G608/G613 is accepted in `GOAL.md`.
 - Key proof: `output/playwright/10m-product-readiness-g601/proof-reaudit.json`; `output/playwright/lightchain-workbench-parity-apparel-prod-20260626-r5-g602-final/SUMMARY.json`; `output/playwright/10m-product-readiness-g606/summary.json`; `output/playwright/10m-product-readiness-g608-security-audit/audit-readiness.json`; `docs/generation-quality-rubric-2026-06-26.md`.
-- Verification passed in this window: `npm run verify:error-messages`, `npm run verify:g606-performance`, default and explicit `npm run verify:generation-scorecard` runs, remote false-pass negative scorecard, `npm run security:audit`, `SECURITY_AUDIT_INCLUDE_LOCAL_ENV=1 npm run security:audit` negative detection, `bash scripts/supabase-prod-verify.sh`, `npm run typecheck`, `npm run lint -- --max-warnings=0`, `npm run build`, `git diff --check`, and Codex read-only reviews with no remaining high-risk findings.
-- Remaining queued work before calling the whole app complete: G603 garment cut/layer/Canvas, G605 onboarding/templates, G607 unified release gate, G609 legal/safety decision packet, G610 retention workspace features, G611 beta scenario QA, G612 competitor positioning, G614 operations docs, and G615 final production regression/closeout.
+- G603 proof: `output/playwright/g603-garment-layer-canvas-20260626T130426Z/SUMMARY.json` (`ok=true`, `failed=[]`) with screenshots, video, storage/body readback, masked PNG Canvas object, back-placement overlay coordinates, properties panel metadata, and exported PNG.
+- Verification passed in this window: `npm run verify:error-messages`, `npm run verify:g603-garment-canvas`, `npm run verify:g606-performance`, default and explicit `npm run verify:generation-scorecard` runs, remote false-pass negative scorecard, `npm run security:audit`, `SECURITY_AUDIT_INCLUDE_LOCAL_ENV=1 npm run security:audit` negative detection, `bash scripts/supabase-prod-verify.sh`, `npm run typecheck`, `npm run lint -- --max-warnings=0`, `npm run build`, `node --check scripts/verify-g603-garment-layer-canvas.mjs`, `git diff --check`, and Codex read-only reviews with no remaining high-risk findings.
+- Remaining queued work before calling the whole app complete: G605 onboarding/templates, G607 unified release gate, G609 legal/safety decision packet, G610 retention workspace features, G611 beta scenario QA, G612 competitor positioning, G614 operations docs, and G615 final production regression/closeout.

@@ -19,17 +19,58 @@ interface PropertiesPanelProps {
   selectedObject: CanvasObject | null;
 }
 
+function normalizeMaterialWorkflowParameters(parameters: any) {
+  const workbenchState = parameters?.lightchainWorkbenchState ?? parameters?.garmentReferenceState ?? null;
+  const materialReference = Array.isArray(parameters?.materialReferences)
+    ? parameters.materialReferences.find((item: any) => item?.hasImage || item?.materialKind)
+    : parameters?.materialReference ?? parameters?.materialReferences ?? null;
+
+  if (!workbenchState) {
+    return {
+      materialReference,
+      layerPlan: parameters?.layerPlan ?? null,
+      maskPlan: parameters?.maskPlan ?? null,
+      compositionPreview: parameters?.compositionPreview ?? null,
+    };
+  }
+
+  const normalizedMaterialReference = materialReference ?? {
+    hasImage: Boolean(workbenchState.hasImage),
+    fileName: workbenchState.garmentFileName ?? null,
+    materialKind: workbenchState.materialKind,
+    maskMode: workbenchState.cutMode,
+    activeLayer: workbenchState.activeLayer,
+    placement: workbenchState.printPlacement,
+    scale: workbenchState.printScale,
+    note: workbenchState.referenceNote,
+  };
+
+  return {
+    materialReference: normalizedMaterialReference,
+    layerPlan: parameters?.layerPlan ?? {
+      activeLayer: workbenchState.activeLayer,
+      placement: workbenchState.printPlacement,
+      scale: workbenchState.printScale,
+      objectRole: 'design-overlay',
+    },
+    maskPlan: parameters?.maskPlan ?? {
+      mode: workbenchState.cutMode,
+      maskMode: workbenchState.cutMode,
+      source: workbenchState.hasImage ? 'uploaded-garment' : 'brief-only',
+    },
+    compositionPreview: parameters?.compositionPreview ?? {
+      summary: `${workbenchState.materialKind ?? '素材'} / ${workbenchState.activeLayer ?? 'レイヤー'} / ${workbenchState.printPlacement ?? '配置'}`,
+      status: 'Canvas保存済み',
+    },
+  };
+}
+
 export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
   const { updateObject, deleteObject, saveToHistory } = useCanvasStore();
   const [localValues, setLocalValues] = useState<Partial<CanvasObject>>({});
   const lightchainEditStages = selectedObject?.metadata?.lightchainEditStages ?? [];
   const parameters = selectedObject?.metadata?.parameters ?? {};
-  const materialReference = Array.isArray(parameters.materialReferences)
-    ? parameters.materialReferences.find((item: any) => item?.hasImage || item?.materialKind)
-    : parameters.materialReference ?? parameters.materialReferences ?? null;
-  const layerPlan = parameters.layerPlan ?? null;
-  const maskPlan = parameters.maskPlan ?? null;
-  const compositionPreview = parameters.compositionPreview ?? null;
+  const { materialReference, layerPlan, maskPlan, compositionPreview } = normalizeMaterialWorkflowParameters(parameters);
   const sourceLabel = parameters.source ?? selectedObject?.metadata?.feature ?? null;
 
   useEffect(() => {
@@ -273,7 +314,7 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
         </div>
       )}
 
-      {selectedObject.type === 'image' && (sourceLabel || materialReference || layerPlan || maskPlan || compositionPreview) && (
+      {(sourceLabel || materialReference || layerPlan || maskPlan || compositionPreview) && (
         <div className="pt-4 border-t border-neutral-100">
           <h4 className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 mb-3">
             <Layers3 className="w-3.5 h-3.5" />

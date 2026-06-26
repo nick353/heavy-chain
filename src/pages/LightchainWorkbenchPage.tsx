@@ -581,10 +581,60 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+function buildMaskedMaterialDataUrl(imageUrl: string, mode: 'auto' | 'manual' | 'keep'): Promise<string> {
+  if (mode === 'keep') return Promise.resolve(imageUrl);
+
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const size = 720;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        resolve(imageUrl);
+        return;
+      }
+
+      context.clearRect(0, 0, size, size);
+      const ratio = Math.min(size / image.width, size / image.height);
+      const drawWidth = image.width * ratio;
+      const drawHeight = image.height * ratio;
+      const drawX = (size - drawWidth) / 2;
+      const drawY = (size - drawHeight) / 2;
+
+      context.save();
+      context.beginPath();
+      if (mode === 'manual') {
+        context.roundRect(size * 0.16, size * 0.08, size * 0.68, size * 0.84, size * 0.08);
+      } else {
+        context.ellipse(size / 2, size * 0.5, size * 0.35, size * 0.43, 0, 0, Math.PI * 2);
+      }
+      context.clip();
+      context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+      context.restore();
+      resolve(canvas.toDataURL('image/png'));
+    };
+    image.onerror = () => reject(new Error('カット用の画像処理に失敗しました'));
+    image.src = imageUrl;
+  });
+}
+
+function getOverlayPosition(placement: string, scale: number) {
+  const clampedScale = Math.max(20, Math.min(90, scale));
+  const offset = Math.round((clampedScale - 46) * 0.8);
+  if (/背|背面|後/.test(placement)) return { x: 220 - offset, y: 285 - offset };
+  if (/左/.test(placement)) return { x: 170 - offset, y: 235 - offset };
+  if (/右/.test(placement)) return { x: 280 - offset, y: 235 - offset };
+  if (/全面|全体/.test(placement)) return { x: 190 - offset, y: 215 - offset };
+  return { x: 225 - offset, y: 250 - offset };
+}
+
 export function LightchainWorkbenchPage() {
   const navigate = useNavigate();
   const { currentBrand } = useAuthStore();
-  const { createProject, addObject, saveCurrentProject } = useCanvasStore();
+  const { createProject, addObject, selectObject, saveCurrentProject } = useCanvasStore();
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('home');
   const [selectedToolId, setSelectedToolId] = useState('marketing-home');
   const [query, setQuery] = useState('');
@@ -676,6 +726,43 @@ export function LightchainWorkbenchPage() {
         referenceNote,
         hasImage: Boolean(garmentImageUrl),
       } : null;
+      const materialReference = lightchainWorkbenchState ? {
+        hasImage: lightchainWorkbenchState.hasImage,
+        fileName: lightchainWorkbenchState.garmentFileName,
+        materialKind: lightchainWorkbenchState.materialKind,
+        maskMode: lightchainWorkbenchState.cutMode,
+        activeLayer: lightchainWorkbenchState.activeLayer,
+        placement: lightchainWorkbenchState.printPlacement,
+        scale: lightchainWorkbenchState.printScale,
+        note: lightchainWorkbenchState.referenceNote,
+      } : null;
+      const layerPlan = lightchainWorkbenchState ? {
+        activeLayer: lightchainWorkbenchState.activeLayer,
+        placement: lightchainWorkbenchState.printPlacement,
+        scale: lightchainWorkbenchState.printScale,
+        overlayLabel: 'HC',
+        objectRole: 'design-overlay',
+      } : null;
+      const maskPlan = lightchainWorkbenchState ? {
+        mode: lightchainWorkbenchState.cutMode,
+        maskMode: lightchainWorkbenchState.cutMode,
+        source: lightchainWorkbenchState.hasImage ? 'uploaded-garment' : 'brief-only',
+        appliedToCanvasImage: lightchainWorkbenchState.hasImage && lightchainWorkbenchState.cutMode !== 'keep',
+      } : null;
+      const compositionPreview = lightchainWorkbenchState ? {
+        summary: `${lightchainWorkbenchState.materialKind} / ${lightchainWorkbenchState.activeLayer} / ${lightchainWorkbenchState.printPlacement}`,
+        fileName: lightchainWorkbenchState.garmentFileName,
+        status: 'Canvas保存済み',
+      } : null;
+      const workbenchParameters = lightchainWorkbenchState ? {
+        materialReference,
+        materialReferences: materialReference ? [materialReference] : [],
+        layerPlan,
+        maskPlan,
+        compositionPreview,
+        lightchainWorkbenchState,
+        garmentReferenceState: selectedTool.id === 'fitting-clothing-reference' ? lightchainWorkbenchState : null,
+      } : {};
       const artifact = await saveWorkspaceArtifactBestEffort({
         brandId: currentBrand.id,
         featureType: `lightchain-${selectedTool.id}`,
@@ -689,13 +776,17 @@ export function LightchainWorkbenchPage() {
           inputs: selectedTool.inputs,
           outputs: selectedTool.outputs,
           heavyChainHref: selectedTool.heavyChainHref,
-          lightchainWorkbenchState,
-          garmentReferenceState: selectedTool.id === 'fitting-clothing-reference' ? lightchainWorkbenchState : null,
+          ...workbenchParameters,
         },
       });
 
+      let materialObjectId: string | null = null;
+      let overlayObjectId: string | null = null;
+
       if (shouldSaveWorkbenchAsset) {
-        addObject({
+        const processedMaterialImageUrl = await buildMaskedMaterialDataUrl(garmentImageUrl, cutMode);
+        const overlayPosition = getOverlayPosition(printPlacement, printScale);
+        materialObjectId = addObject({
           type: 'image',
           x: 120,
           y: 100,
@@ -707,7 +798,7 @@ export function LightchainWorkbenchPage() {
           opacity: 1,
           locked: false,
           visible: true,
-          src: garmentImageUrl,
+          src: processedMaterialImageUrl,
           label: garmentFileName || `${selectedTool.title} 素材画像`,
           metadata: {
             feature: `lightchain-${selectedTool.id}-material-reference`,
@@ -716,15 +807,16 @@ export function LightchainWorkbenchPage() {
             parameters: {
               toolId: selectedTool.id,
               artifactId: artifact.artifact.id,
-              lightchainWorkbenchState,
+              processedImageKind: cutMode === 'keep' ? 'original' : 'masked-transparent-png',
+              ...workbenchParameters,
             },
           },
         });
 
-        addObject({
+        overlayObjectId = addObject({
           type: 'text',
-          x: 225,
-          y: 250,
+          x: overlayPosition.x,
+          y: overlayPosition.y,
           width: 150,
           height: 58,
           rotation: 0,
@@ -738,15 +830,19 @@ export function LightchainWorkbenchPage() {
           fontFamily: 'Inter',
           fill: '#0f172a',
           label: `レイヤー: ${activeLayer} / ${printPlacement}`,
+          parentId: materialObjectId,
+          derivedFrom: materialObjectId,
           metadata: {
             feature: `lightchain-${selectedTool.id}-overlay-layer`,
             prompt: `${printPlacement}に${activeLayer}レイヤーを配置`,
+            parentId: materialObjectId,
             generation: 0,
             parameters: {
               toolId: selectedTool.id,
               printPlacement,
               printScale,
               activeLayer,
+              ...workbenchParameters,
             },
           },
         });
@@ -754,7 +850,7 @@ export function LightchainWorkbenchPage() {
 
       addObject({
         type: 'text',
-      x: shouldSaveWorkbenchAsset ? 520 : 120,
+        x: shouldSaveWorkbenchAsset ? 520 : 120,
         y: 120,
         width: 520,
         height: 220,
@@ -779,11 +875,13 @@ export function LightchainWorkbenchPage() {
             heavyChainHref: selectedTool.heavyChainHref,
             inputs: selectedTool.inputs,
             outputs: selectedTool.outputs,
-            lightchainWorkbenchState,
-            garmentReferenceState: selectedTool.id === 'fitting-clothing-reference' ? lightchainWorkbenchState : null,
+            ...workbenchParameters,
           },
         },
       });
+      if (overlayObjectId ?? materialObjectId) {
+        selectObject((overlayObjectId ?? materialObjectId) as string);
+      }
       saveCurrentProject();
       toast.success('Lightchain互換の注文票をCanvasへ保存しました');
       navigate(`/canvas/${projectId}`);
