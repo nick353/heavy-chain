@@ -1,7 +1,8 @@
 # Rollback
 
 Status: use this only after a human owner has decided to stop or reverse a
-release. Heavy Chain is **not release-ready** as of 2026-06-18.
+release. Current release readiness is determined by `npm run verify:release-gate`
+and the latest `STATE.md`; this rollback guide is not itself a release approval.
 
 Rollback must preserve evidence. Do not delete usage, audit, edge run, cleanup,
 or generated image rows unless a legal retention policy explicitly requires it.
@@ -54,14 +55,31 @@ rollback evidence and continue only under the human owner's decision.
 
 ## Edge Function Rollback Path
 
-Redeploy the last known good function bundle:
+Redeploy only from a verified last-known-good commit, tag, or exported function
+artifact. Do not run this from an unknown or bad working tree.
+
+Before deployment, capture the rollback target:
 
 ```bash
-supabase functions deploy generate-image
+git rev-parse HEAD
+git status --short
+git diff --stat -- supabase/functions/generate-image
 ```
 
-Run this only after a human owner has chosen rollback and confirmed the target
-project. It is not a normal release-verification command.
+If `HEAD` is not the chosen last-known-good revision, stop and have the human
+owner switch to the correct commit/tag/worktree first. If `git status --short`
+or the function diff is not empty, stop unless the human owner explicitly
+approves that exact rollback artifact.
+
+Deploy the verified function bundle:
+
+```bash
+supabase functions deploy generate-image --project-ref <confirmed-project-ref>
+```
+
+Run this only after a human owner has chosen rollback, confirmed the target
+project ref, and recorded the last-known-good revision or artifact path. It is
+not a normal release-verification command.
 
 Then run read-only DB readback:
 
