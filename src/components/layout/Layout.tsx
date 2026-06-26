@@ -1,41 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Header } from './Header';
-import { Sidebar } from './Sidebar';
-import { MobileNav } from './MobileNav';
-import { MobileHeader } from './MobileHeader';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FeedbackButton } from '../ui/FeedbackForm';
 import { SkipLink, KeyboardShortcuts, defaultShortcuts } from '../ui';
+import { lightchainCategories, lightchainFeatureCatalog, buildLightchainFeatureHref } from '../../lib/lightchainParityCatalog';
+import { HelpCircle, History, UserCircle } from 'lucide-react';
 
 export function Layout() {
   const { user } = useAuthStore();
   const location = useLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   
   // Determine if we should show sidebar (only for authenticated users on dashboard pages)
   // Exclude public pages and auth pages
   const isPublicPage = ['/login', '/signup', '/forgot-password', '/'].includes(location.pathname);
   const showSidebar = user && !isPublicPage;
-
-  // Close mobile menu on route change
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location.pathname]);
-
-  // Close mobile menu on window resize to desktop
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setIsMobileMenuOpen(false);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Handle scroll for header transparency effects
   useEffect(() => {
@@ -54,77 +36,73 @@ export function Layout() {
       {/* Keyboard Shortcuts Help */}
       {showSidebar && <KeyboardShortcuts shortcuts={defaultShortcuts} />}
       
-      {/* Grainy Texture Overlay for Film Look */}
-      <div className="grain-overlay" />
-
-      {/* Ambient Background Lights - Dynamic & Organic */}
-      <div className="fixed inset-0 overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-20%] right-[-10%] w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] rounded-full bg-gradient-to-br from-primary-200/30 to-transparent blur-[100px] dark:from-primary-900/20 animate-float mix-blend-multiply dark:mix-blend-screen" />
-        <div className="absolute bottom-[-20%] left-[-10%] w-[70vw] h-[70vw] max-w-[700px] max-h-[700px] rounded-full bg-gradient-to-tr from-accent-200/20 to-transparent blur-[120px] dark:from-accent-900/20 animate-float-delayed mix-blend-multiply dark:mix-blend-screen" />
-        <div className="absolute top-[40%] left-[20%] w-[40vw] h-[40vw] max-w-[400px] max-h-[400px] rounded-full bg-gold-light/10 blur-[80px] animate-pulse-slow mix-blend-overlay dark:mix-blend-normal" />
-      </div>
-
       {showSidebar ? (
-        <div className="flex min-h-screen relative z-10">
-          {/* Mobile Header */}
-          <MobileHeader
-            isMenuOpen={isMobileMenuOpen}
-            onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          />
+        <div className="dark min-h-screen bg-[#070b0d] text-white">
+          <header className="sticky top-0 z-40 border-b border-white/10 bg-[#070b0d]/95 backdrop-blur-xl">
+            <div className="mx-auto flex h-[70px] max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-7">
+                <Link to="/generate" className="text-sm font-semibold tracking-[0.32em] text-white">
+                  HEAVYCHAIN
+                </Link>
+                <div className="hidden items-center gap-2 text-sm text-neutral-300 md:flex">
+                  {lightchainCategories.map((category) => {
+                    const firstFeature = lightchainFeatureCatalog.find((feature) => feature.category === category.id);
+                    return (
+                      <Link
+                        key={category.id}
+                        to={firstFeature ? buildLightchainFeatureHref(firstFeature) : '/generate'}
+                        className="rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-white"
+                      >
+                        {category.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-neutral-300">
+                <Link to="/history" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
+                  <History className="h-4 w-4" />
+                  生成履歴
+                </Link>
+                <Link to="/jobs" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
+                  <HelpCircle className="h-4 w-4" />
+                  ジョブ
+                </Link>
+                <Link to="/brand/settings" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15" aria-label="アカウント">
+                  <UserCircle className="h-5 w-5" />
+                </Link>
+              </div>
+            </div>
+            <div className="flex gap-2 overflow-x-auto px-4 pb-3 md:hidden">
+              {lightchainCategories.map((category) => {
+                const firstFeature = lightchainFeatureCatalog.find((feature) => feature.category === category.id);
+                return (
+                  <Link
+                    key={category.id}
+                    to={firstFeature ? buildLightchainFeatureHref(firstFeature) : '/generate'}
+                    className="shrink-0 rounded-full border border-white/10 px-3 py-2 text-xs font-semibold text-neutral-200"
+                  >
+                    {category.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </header>
 
-          {/* Mobile Overlay */}
-          <AnimatePresence>
-            {isMobileMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-                animate={{ opacity: 1, backdropFilter: "blur(4px)" }}
-                exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="lg:hidden fixed inset-0 z-40 bg-black/20 dark:bg-black/60"
-              />
-            )}
-          </AnimatePresence>
-
-          {/* Sidebar - Desktop: always visible, Mobile: slide in/out */}
-          {/* Desktop Sidebar */}
-          <div className="hidden lg:block sticky top-0 h-screen overflow-y-auto scrollbar-hide">
-            <Sidebar />
-          </div>
-          
-          {/* Mobile Sidebar Drawer */}
-          <AnimatePresence>
-            {isMobileMenuOpen && (
-              <motion.div
-                initial={{ x: -320, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -320, opacity: 0 }}
-                transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                className="lg:hidden fixed left-0 top-0 z-50 h-screen shadow-2xl"
-              >
-                <Sidebar />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <main id="main-content" className="flex-1 w-full min-w-0 p-4 pt-16 pb-20 lg:pt-8 lg:pb-10 lg:p-10 transition-all duration-500 relative perspective-1000" tabIndex={-1}>
+          <main id="main-content" className="min-h-[calc(100vh-70px)] bg-[#070b0d] px-3 py-5 sm:px-5 lg:px-8" tabIndex={-1}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
-                initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.98, filter: "blur(10px)" }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="w-full max-w-7xl mx-auto"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="mx-auto w-full max-w-[1800px]"
               >
                 <Outlet />
               </motion.div>
             </AnimatePresence>
           </main>
-
-          {/* Mobile Bottom Navigation */}
-          <MobileNav />
-
-          {/* Feedback Button */}
           <FeedbackButton />
         </div>
       ) : (

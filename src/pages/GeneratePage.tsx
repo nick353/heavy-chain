@@ -2,8 +2,8 @@ import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'reac
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   Wand2, 
-  Image as ImageIcon, 
   ChevronDown,
+  Search,
   Loader2,
   Download,
   Heart,
@@ -19,7 +19,12 @@ import {
   AlertCircle,
   CheckCircle2,
   CreditCard,
-  KeyRound
+  Hand,
+  Images,
+  KeyRound,
+  MousePointer2,
+  Redo2,
+  Undo2
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
@@ -49,7 +54,14 @@ import {
 } from '../lib/workspaceHandoff';
 import { buildProductionImagePrompt, mergeProductionNegativePrompt } from '../lib/productPromptQuality';
 import { getWorkflowMetadata, type WorkflowMetadata } from '../lib/workflowMetadata';
-import { getLightchainFeature, getLightchainTaskCodes } from '../lib/lightchainParityCatalog';
+import {
+  buildLightchainFeatureHref,
+  getLightchainFeature,
+  getLightchainTaskCodes,
+  lightchainCategories,
+  lightchainFeatureCatalog,
+  type LightchainCategoryId,
+} from '../lib/lightchainParityCatalog';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -648,7 +660,7 @@ const hydrateLightchainCompatContext = (params: URLSearchParams) => {
     ?.split(',')
     .map((item) => item.trim())
     .filter(Boolean);
-  if (title !== catalogFeature.title) return null;
+  if (title && title !== catalogFeature.title) return null;
   const taskCodes = codes?.length ? codes : getLightchainTaskCodes(catalogFeature);
   return {
     lightchainFeatureId: catalogFeature.id,
@@ -1249,6 +1261,7 @@ export function GeneratePage() {
     setBackgroundReferenceImage(null);
     setPatternReferenceImage(null);
     setShowSuccessCard(false);
+    navigate('/generate', { replace: true });
   };
 
   // 画像を圧縮する関数
@@ -3516,48 +3529,55 @@ export function GeneratePage() {
     }
   };
 
+  const getCatalogFeatureGenerateId = (route: string) => {
+    const [, search = ''] = route.split('?');
+    const featureParam = new URLSearchParams(search).get('feature');
+    return featureParam ? (featureQueryAliases[featureParam] ?? featureParam) : null;
+  };
+
+  const selectedCatalogFeature = selectedFeature
+    ? lightchainFeatureCatalog.find((feature) => {
+        if (lightchainCompat?.lightchainFeatureId === feature.id) return true;
+        if (searchParams.get('lcFeature') === feature.id) return true;
+        return getCatalogFeatureGenerateId(feature.route) === selectedFeature.id;
+      }) ?? null
+    : null;
+
+  const selectedLightchainCategory: LightchainCategoryId = selectedCatalogFeature?.category ?? 'recommended';
+  const selectedLightchainCategoryMeta = lightchainCategories.find((category) => category.id === selectedLightchainCategory) ?? lightchainCategories[0];
+  const activeGenerateCategoryFeatures = lightchainFeatureCatalog.filter((feature) => (
+    feature.category === selectedLightchainCategory && feature.route.startsWith('/generate')
+  ));
+  const activeCategoryFeatures = activeGenerateCategoryFeatures.length
+    ? activeGenerateCategoryFeatures
+    : selectedCatalogFeature
+      ? [selectedCatalogFeature]
+      : [];
+
   // Feature selection view
   if (!selectedFeature) {
     return (
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8"
+        className="mx-auto max-w-[1500px] px-4 py-4 sm:px-6 sm:py-6 lg:px-8"
       >
-        <div className="mb-4 sm:mb-6 lg:mb-8">
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-display font-semibold text-neutral-900 dark:text-white mb-1 sm:mb-2">
-            生成ワークスペース
-          </h1>
-          <p className="text-sm sm:text-base text-neutral-600 dark:text-neutral-400">
-            Lightchain と同じように、作りたいものから生成機能へ進めます
-          </p>
-        </div>
+        <GenerateLightchainEntry />
 
-        <UsageStats className="mb-4 sm:mb-6 lg:mb-8" />
-
-        <section className={`mb-6 rounded-2xl border p-4 shadow-soft lg:mb-8 ${
+        <details className={`mt-5 rounded-2xl border p-4 shadow-soft ${
           generationReadyInApp
               ? 'border-green-200 bg-green-50/80 dark:border-green-800 dark:bg-green-950/20'
             : 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
         }`}>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+            <span className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
                 {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
-                Runway生成前チェック
-              </div>
-              <p className={`mt-1 text-sm ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                {runwayReadinessText}
-              </p>
-            </div>
-            <Link
-              to="/brand/settings"
-              className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/70 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-primary-300 hover:text-primary-700 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
-            >
-              ブランド設定を開く
-              <ExternalLink className="h-3.5 w-3.5" />
-            </Link>
-          </div>
+              運用状態
+            </span>
+            <span className={`text-xs ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+              {runwayReadinessText}
+            </span>
+          </summary>
           <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
             <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
               <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
@@ -3588,183 +3608,183 @@ export function GeneratePage() {
             </div>
           </div>
           {renderLocalRunwayImportControl()}
-        </section>
-
-        <GenerateLightchainEntry />
+          <div className="mt-3 flex justify-end">
+            <Link
+              to="/brand/settings"
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/70 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-primary-300 hover:text-primary-700 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
+            >
+              ブランド設定を開く
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </details>
       </motion.div>
     );
   }
 
   // Feature detail view
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-      <div className="grid xl:grid-cols-[400px,1fr] lg:grid-cols-1 gap-4 sm:gap-6 lg:gap-8">
-        {/* Left Panel */}
-        <motion.div 
+    <div className="mx-auto max-w-[1720px] px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+      <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/95 text-white shadow-soft">
+        <div className="flex flex-col gap-3 px-4 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <button
+              onClick={handleBack}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-sm font-semibold text-neutral-300 transition hover:border-cyan-300/60 hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              戻る
+            </button>
+            <span className="rounded-xl bg-cyan-300 px-3 py-2 text-sm font-semibold text-neutral-950">
+              {selectedLightchainCategoryMeta.label}
+            </span>
+            <div className="flex max-w-full gap-2 overflow-x-auto" data-testid="lightchain-detail-tabs">
+              {activeCategoryFeatures.map((feature) => {
+                const active = selectedCatalogFeature?.id === feature.id;
+                const featureHref = feature.route.startsWith('/generate')
+                  ? buildLightchainFeatureHref(feature)
+                  : `/generate?feature=${encodeURIComponent(selectedFeature.id)}&lcFeature=${encodeURIComponent(feature.id)}`;
+                return (
+                  <Link
+                    key={feature.id}
+                    to={featureHref}
+                    className={`shrink-0 rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                      active
+                        ? 'border-white/80 bg-white text-neutral-950'
+                        : 'border-white/10 bg-white/5 text-neutral-300 hover:border-cyan-300/60 hover:text-white'
+                    }`}
+                  >
+                    {feature.title}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex min-h-[44px] w-full items-center gap-3 rounded-xl border border-white/10 bg-neutral-900 px-3 lg:max-w-xl">
+            <Search className="h-4 w-4 shrink-0 text-cyan-300" />
+            <input
+              value={assistantPrompt}
+              onChange={(event) => {
+                setAssistantPrompt(event.target.value);
+                setAssistantPlanConfirmed(false);
+              }}
+              className="min-w-0 flex-1 border-0 bg-transparent text-sm text-white outline-none placeholder:text-neutral-500"
+              placeholder="指示を入力してください... 例: 黒のチェーン柄フーディー"
+            />
+            <button
+              type="button"
+              onClick={applyAssistantPrompt}
+              className="inline-flex h-8 items-center justify-center rounded-lg bg-cyan-300 px-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
+            >
+              計画
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(760px,1fr)_minmax(360px,0.7fr)]">
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className="space-y-6"
+          className="h-fit space-y-3"
+          data-testid="lightchain-project-panel"
         >
-          <div>
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-2 text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 mb-4 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              機能選択に戻る
-            </button>
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md ${
-                featureConfig?.requiresImage 
-                  ? 'bg-purple-100 dark:bg-purple-900/50' 
-                  : 'bg-primary-100 dark:bg-primary-900/50'
-              }`}>
-                <selectedFeature.icon className={`w-6 h-6 ${
-                  featureConfig?.requiresImage 
-                    ? 'text-purple-600 dark:text-purple-400' 
-                    : 'text-primary-600 dark:text-primary-400'
-                }`} />
-              </div>
-              <div>
-                <h1 className="text-xl font-display font-semibold text-neutral-900 dark:text-white">
-                  {selectedFeature.name}
-                </h1>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  {selectedFeature.description}
+          <section className="rounded-2xl border border-white/10 bg-neutral-950 p-4 shadow-sm">
+            <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-300 text-neutral-950">
+                <selectedFeature.icon className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">
+                  {selectedCatalogFeature?.title ?? selectedFeature.name}
+                </p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  {selectedLightchainCategoryMeta.label}
                 </p>
               </div>
             </div>
-          </div>
 
-          {activeWorkflow && (
-            <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white/70 dark:bg-neutral-800/50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-                業務ワークフロー
-              </p>
-              <h2 className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
-                {activeWorkflow.title}
-              </h2>
-              <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
-                {activeWorkflow.description}
-              </p>
-              <ol className="mt-3 space-y-2">
-                {activeWorkflow.steps.map((step, index) => (
-                  <li key={`${step}-${index}`} className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-100 text-[11px] font-semibold text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
-                      {index + 1}
-                    </span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ol>
+            <Link
+              to="/generate"
+              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-neutral-300 transition hover:text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Untitled
+            </Link>
+          </section>
+
+          <section className="rounded-2xl border border-white/10 bg-neutral-950 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/10">
+                <Images className="h-5 w-5 text-cyan-200" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  {selectedGenerateWorkbench?.title ?? '生成素材'}
+                </p>
+                <p className="mt-1 text-xs text-neutral-500">
+                  {featureConfig?.requiresImage ? '画像入力必須' : 'テキストから開始できます'}
+                </p>
+              </div>
             </div>
-          )}
 
-          {sourceReadback && (
-            <div className="rounded-xl border border-primary-200 bg-primary-50/80 p-4 dark:border-primary-800 dark:bg-primary-950/30">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300">
-                ワークスペース再開
-              </p>
-              <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
-                {sourceReadback.sourceLabel} から受け取った内容で企画書を保存します
-              </p>
-              <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
-                {sourceReadback.workflowVersion} / {sourceReadback.sourceMode}
-              </p>
-              <Link
-                to={sourceReadback.sourceResumePath}
-                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary-700 hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200"
+            <div className="mt-4 rounded-xl bg-white/5 p-3">
+              <p className="text-xs font-semibold text-neutral-400">作業モード</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white">
+                  {selectedCatalogFeature?.title?.includes('プリント') ? 'プリント合成' : '素材合成'}
+                </button>
+                <button type="button" className="rounded-lg bg-neutral-900 px-3 py-2 text-xs font-semibold text-neutral-300">
+                  デザイン作成
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(selectedCatalogFeature?.tags ?? []).slice(0, 4).map((tag) => (
+                <span key={tag} className="rounded-lg bg-white/10 px-2.5 py-1.5 text-xs text-neutral-300">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </section>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+          className="space-y-4"
+        >
+          <div
+            className="mx-auto flex w-fit items-center overflow-hidden rounded-xl border border-white/10 bg-neutral-950 shadow-2xl"
+            data-testid="lightchain-canvas-toolbar"
+          >
+            {[
+              { label: '選択', icon: MousePointer2 },
+              { label: 'ドラッグ', icon: Hand },
+              { label: '前にステップ', icon: Undo2 },
+              { label: '次のステップ', icon: Redo2 },
+            ].map(({ label, icon: Icon }, index) => (
+              <button
+                key={label}
+                type="button"
+                className={`flex min-h-[54px] items-center gap-2 px-4 text-xs font-semibold transition ${
+                  index === 0
+                    ? 'bg-white/10 text-white'
+                    : 'border-l border-white/10 text-neutral-400 hover:text-white'
+                }`}
               >
-                <ArrowLeft className="h-4 w-4" />
-                {sourceReadback.sourceLabel}へ戻る
-              </Link>
-            </div>
-          )}
-
-          {lightchainCompat && (
-            <div className="rounded-xl border border-teal-200 bg-teal-50/80 p-4 dark:border-teal-800 dark:bg-teal-950/30">
-              <p className="text-xs font-semibold uppercase tracking-wide text-teal-700 dark:text-teal-300">
-                Lightchain互換
-              </p>
-              <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
-                {lightchainCompat.lightchainFeatureTitle} として企画書を保存します
-              </p>
-              <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
-                {lightchainCompat.lightchainTaskCodes.join(' / ')}
-              </p>
-            </div>
-          )}
-
-          <UsageStats />
-
-          <div className={`rounded-2xl border p-4 ${
-            generationReadyInApp
-              ? 'border-green-200 bg-green-50/80 dark:border-green-800 dark:bg-green-950/20'
-              : 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
-          }`}>
-            <div className="flex items-start gap-3">
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                generationReadyInApp
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
-                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'
-              }`}>
-                {generationReadyInApp ? <CheckCircle2 className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-900 dark:text-white">
-                      Runway生成前チェック
-                    </p>
-                    <p className={`mt-1 text-sm ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                      {runwayReadinessText}
-                    </p>
-                  </div>
-                  <Link
-                    to="/brand/settings"
-                    className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/70 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-primary-300 hover:text-primary-700 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
-                  >
-                    ブランド設定を開く
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Link>
-                </div>
-
-                <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
-                  <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
-                    <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
-                      <KeyRound className="h-4 w-4" />
-                      接続承認
-                    </div>
-                    <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                      {RUNWAY_APPROVAL_LABELS[runwayStatus]}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
-                    <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
-                      <CreditCard className="h-4 w-4" />
-                      利用量管理
-                    </div>
-                    <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                      {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
-                    <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
-                      {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
-                      最終接続
-                    </div>
-                    <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                      {noImageGenerationMode ? '不要' : 'Hosted bridge'}
-                    </p>
-                  </div>
-                </div>
-                {renderLocalRunwayImportControl()}
-              </div>
-            </div>
+                <Icon className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
           </div>
 
-          <div className="glass-panel p-6 rounded-2xl dark:bg-neutral-800/50 dark:border-neutral-700/50">
+          <section className="rounded-2xl border border-white/10 bg-neutral-950 p-5 shadow-sm" data-testid="lightchain-input-material-panel">
+
             {/* Prompt History Button */}
             {!featureConfig?.requiresImage && selectedFeature.id !== 'chat-edit' && (
               <div className="flex justify-end mb-4">
@@ -3780,24 +3800,28 @@ export function GeneratePage() {
 
             {selectedGenerateWorkbench && (
               <div className="mb-5">
+                <div className="mb-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                    入力素材
+                  </p>
+                  <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+                    Lightchainと同じように、先に画像や素材を入れてから生成条件を調整します。
+                  </p>
+                </div>
                 {supportsAssistantPlanning(selectedFeature.id) && (
-                  <div className="mb-5 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-white dark:bg-white dark:text-neutral-950">
-                        <Sparkles className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                          AIアシスタント
-                        </p>
-                        <h3 className="mt-1 text-base font-semibold text-neutral-900 dark:text-white">
-                          作りたい画像を一文で入力
-                        </h3>
-                        <p className="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-                          Lightchain と同じように、まず制作意図を伝えると、この機能に合わせた生成計画を確認しながら下の詳細設定に進めます。
-                        </p>
-                      </div>
-                    </div>
+                  <details className="mb-5 rounded-2xl border border-white/10 bg-neutral-900 p-4 shadow-sm">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                      <span className="flex items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-cyan-200">
+                          <Sparkles className="h-4 w-4" />
+                        </span>
+                        <span>
+                          <span className="block text-sm font-semibold text-white">デザイン作成</span>
+                          <span className="mt-1 block text-xs text-neutral-500">プロンプトと生成計画</span>
+                        </span>
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-neutral-500" />
+                    </summary>
 
                     <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
                       <Textarea
@@ -3822,9 +3846,9 @@ export function GeneratePage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-700 dark:bg-neutral-950">
+                    <div className="mt-4 rounded-xl border border-white/10 bg-neutral-950 p-3">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-neutral-900 dark:text-white">生成計画</p>
+                        <p className="text-sm font-semibold text-white">生成計画</p>
                         <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
                           assistantPlanConfirmed
                             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'
@@ -3835,8 +3859,8 @@ export function GeneratePage() {
                       </div>
                       <div className="mt-3 grid gap-2 text-sm text-neutral-700 dark:text-neutral-300 md:grid-cols-3">
                         {assistantPlanItems.map((item, index) => (
-                          <div key={`${item.title}-${index}`} className="rounded-lg bg-white p-3 dark:bg-neutral-900">
-                            <p className="font-semibold text-neutral-900 dark:text-white">
+                          <div key={`${item.title}-${index}`} className="rounded-lg bg-white/5 p-3">
+                            <p className="font-semibold text-white">
                               {index + 1}. {item.title}
                             </p>
                             <p className="mt-1 text-xs leading-5">{item.description}</p>
@@ -3854,7 +3878,7 @@ export function GeneratePage() {
                         </Button>
                       </div>
                     </div>
-                  </div>
+                  </details>
                 )}
                 <MaterialWorkbench
                   title={selectedGenerateWorkbench.title}
@@ -3884,7 +3908,73 @@ export function GeneratePage() {
                 {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : localRunwayWorkerMode ? 'Runway workerで生成' : '企画書を保存'}
               </Button>
             )}
-          </div>
+          </section>
+
+          <details className={`rounded-2xl border p-4 ${
+            generationReadyInApp
+              ? 'border-green-200 bg-green-50/80 dark:border-green-800 dark:bg-green-950/20'
+              : 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
+          }`}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-neutral-900 dark:text-white">運用状態・互換情報</span>
+              <span className={`text-xs ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                {runwayReadinessText}
+              </span>
+            </summary>
+            <div className="mt-4 grid gap-3 text-xs md:grid-cols-3">
+              <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+                <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
+                  <KeyRound className="h-4 w-4" />
+                  接続承認
+                </div>
+                <p className="mt-1 text-neutral-500 dark:text-neutral-400">{RUNWAY_APPROVAL_LABELS[runwayStatus]}</p>
+              </div>
+              <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+                <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
+                  <CreditCard className="h-4 w-4" />
+                  利用量管理
+                </div>
+                <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+                  {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
+                </p>
+              </div>
+              <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+                <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
+                  {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
+                  最終接続
+                </div>
+                <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+                  {noImageGenerationMode ? '不要' : 'Hosted bridge'}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 space-y-3">
+              {sourceReadback && (
+                <div className="rounded-xl border border-primary-200 bg-primary-50/80 p-3 dark:border-primary-800 dark:bg-primary-950/30">
+                  <p className="text-xs font-semibold text-primary-700 dark:text-primary-300">ワークスペース再開</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
+                    {sourceReadback.sourceLabel} / {sourceReadback.workflowVersion}
+                  </p>
+                </div>
+              )}
+              {lightchainCompat && (
+                <div className="rounded-xl border border-teal-200 bg-teal-50/80 p-3 dark:border-teal-800 dark:bg-teal-950/30">
+                  <p className="text-xs font-semibold text-teal-700 dark:text-teal-300">Lightchain互換</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
+                    {lightchainCompat.lightchainFeatureTitle} / {lightchainCompat.lightchainTaskCodes.join(' / ')}
+                  </p>
+                </div>
+              )}
+              {activeWorkflow && (
+                <div className="rounded-xl border border-neutral-200 bg-white/70 p-3 dark:border-neutral-700 dark:bg-neutral-900/60">
+                  <p className="text-xs font-semibold text-neutral-800 dark:text-white">{activeWorkflow.title}</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{activeWorkflow.description}</p>
+                </div>
+              )}
+              <UsageStats />
+              {renderLocalRunwayImportControl()}
+            </div>
+          </details>
         </motion.div>
 
         {/* Right Panel - Results */}
@@ -3892,10 +3982,18 @@ export function GeneratePage() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
+          className={`lg:col-start-2 2xl:col-start-auto ${
+            !isGenerating
+            && !generationError
+            && generatedImages.length === 0
+            && !(selectedFeature.id === 'optimize-prompt' && optimizedPromptResult)
+              ? 'hidden'
+              : ''
+          }`}
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-neutral-800 dark:text-white flex items-center gap-2">
-              保存した企画
+              生成結果
               {generatedImages.length > 0 && (
                 <span className="text-xs font-normal text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full">
                   {generatedImages.length}件
@@ -3999,23 +4097,6 @@ export function GeneratePage() {
                   </p>
                 </div>
               )}
-            </div>
-          )}
-
-          {!isGenerating && !generationError && generatedImages.length === 0 && !(selectedFeature.id === 'optimize-prompt' && optimizedPromptResult) && (
-            <div className="glass-panel rounded-2xl p-12 text-center border-2 border-dashed border-neutral-200/50 dark:border-neutral-700/50 min-h-[400px] flex flex-col items-center justify-center">
-              <div className="w-20 h-20 bg-neutral-50 dark:bg-neutral-800/50 rounded-full flex items-center justify-center mb-6">
-                <ImageIcon className="w-10 h-10 text-neutral-300 dark:text-neutral-600" />
-              </div>
-              <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-200 mb-2">
-                保存した企画書がここに表示されます
-              </h3>
-              <p className="text-neutral-500 dark:text-neutral-400">
-                {featureConfig?.requiresImage 
-                  ? '画像をアップロードして開始' 
-                  : '左のフォームに入力して開始'
-                }
-              </p>
             </div>
           )}
 

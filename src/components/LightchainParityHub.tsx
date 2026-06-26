@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
-  Boxes,
   CheckCircle2,
   ChevronRight,
   ClipboardList,
@@ -11,7 +10,6 @@ import {
   PackageOpen,
   Palette,
   PlayCircle,
-  Scissors,
   Search,
   Shirt,
   Sparkles,
@@ -31,8 +29,6 @@ const categoryIcon: Record<LightchainCategoryId, typeof Sparkles> = {
   planning: ClipboardList,
   fitting: UserRound,
   graphics: Palette,
-  editing: Scissors,
-  cases: Boxes,
 };
 
 const statusTone: Record<LightchainFeature['status'], string> = {
@@ -76,8 +72,6 @@ const materialLabels: Record<LightchainCategoryId, string[]> = {
   planning: ['素材・テーマ', '方向性', '採用条件'],
   fitting: ['衣服画像', 'モデル条件', '背景'],
   graphics: ['柄・ロゴ', '対象アイテム', '配色'],
-  editing: ['編集したい画像', '修正内容', '保存先'],
-  cases: ['商品素材', '販売チャネル', '必要な成果物'],
 };
 
 const outputLabels: Record<LightchainCategoryId, string[]> = {
@@ -85,8 +79,6 @@ const outputLabels: Record<LightchainCategoryId, string[]> = {
   planning: ['企画案', '生成条件', '比較候補'],
   fitting: ['着用画像', 'モデル差分', 'EC素材'],
   graphics: ['柄案', 'プリント配置', 'ベクター方針'],
-  editing: ['加工画像', '派生案', '再編集履歴'],
-  cases: ['一括セット', '作業ボード', '再開導線'],
 };
 
 const getRouteBase = (route: string) => route.split('?')[0];

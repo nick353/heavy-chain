@@ -1112,15 +1112,19 @@ test.describe('workspace activity pages', () => {
     await page.getByRole('button', { name: /グラフィックツール/ }).click();
     await expect(page.getByRole('link', { name: /AIグラフィックデザイン/ })).toHaveAttribute('href', '/patterns');
     await expect(page.getByRole('link', { name: /デザインアレンジ/ })).toHaveAttribute('href', /\/generate\?feature=generate-variations&lcFeature=design-arrange/);
+    await expect(page.getByRole('link', { name: /類似バリエーション生成/ })).toHaveAttribute('href', /\/generate\?feature=generate-variations&lcFeature=image-variations/);
 
     await page.getByPlaceholder('機能名で検索').fill('ベクター');
     await expect(page.getByRole('link', { name: /パターンをベクター画像に変換/ })).toBeVisible();
     await page.getByPlaceholder('機能名で検索').fill('');
 
-    await page.getByRole('button', { name: /画像編集/ }).click();
+    await page.getByRole('button', { name: /グラフィックツール/ }).click();
     await expect(page.getByRole('link', { name: /背景削除・切り抜き/ })).toHaveAttribute('href', /\/generate\?feature=remove-bg&lcFeature=remove-background/);
-    await expect(page.getByRole('link', { name: /部分修正・対話編集/ })).toHaveAttribute('href', /\/generate\?feature=chat-edit&lcFeature=partial-fix/);
     await expect(page.getByRole('link', { name: /Canvasで編集・管理/ })).toHaveAttribute('href', '/canvas/new');
+
+    await page.getByRole('button', { name: /企画デザインツール/ }).click();
+    await expect(page.getByRole('link', { name: /部分修正・対話編集/ })).toHaveAttribute('href', /\/generate\?feature=chat-edit&lcFeature=partial-fix/);
+    await page.getByRole('button', { name: /グラフィックツール/ }).click();
 
     await page.getByRole('link', { name: /背景削除・切り抜き/ }).click();
     await expect(page).toHaveURL(/\/generate\?feature=remove-bg&lcFeature=remove-background/);
