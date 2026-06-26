@@ -50,15 +50,15 @@ Human-only stop points: credentials, secret entry, billing, purchase, checkout, 
 
 | ID | Status | Owner | Acceptance | Depends On | Outcome | Acceptance Evidence |
 |---|---|---|---|---|---|---|
-| G201 | in-progress | parent | codex-verifiable | none | Durable prompt-quality and focused QA harness polish for variation-like risks. | Prompt-quality source diff, filtered harness support, static checks. |
-| G202 | queued | parent | codex-verifiable | G201 | Bounded real generation and visual QA for variations plus adjacent risk lanes. | Manifest, Runway artifacts, worker import, readback, image scorecard. |
-| G203 | queued | parent | codex-verifiable | G202 | Production deployment, UI/readback proof, marker-scoped cleanup, and state closeout. | Build/check logs, Zeabur asset proof, UI proof, cleanup JSON, updated STATE/GOAL, pushed commit. |
+| G201 | accepted | parent | codex-verifiable | none | Durable prompt-quality and focused QA harness polish for variation-like risks. | `src/lib/productPromptQuality.ts`; `scripts/hc-10m-real-generation-qa.mjs`; `node --check`; `npm run typecheck`; `npm run lint -- --max-warnings=0`; `npm run build`; `git diff --check`; Codex read-only review. |
+| G202 | accepted | parent | codex-verifiable | G201 | Bounded real generation and visual QA for variations plus adjacent risk lanes. | `output/playwright/hc-generation-polish-20260626/run-manifest.json`; `runway-images/`; `readback-after-worker.json`; `visual-scorecard.json` with 4/4 Pass. |
+| G203 | accepted | parent | codex-verifiable | G202 | Production deployment, UI/readback proof, marker-scoped cleanup, and state closeout. | Zeabur asset `assets/index.BA3jKbTO.js`; `prod-ui-proof/summary.json`; `cleanup-after-proof.json`; `STATE.md`; pushed commit `9faf3e7`. |
 
 ## Active Child Window
 
 | ID | Window status | Workspace / worktree | Notes |
 |---|---|---|---|
-| G201 | active | current checkout | Parent is executing inline because the loop is bounded and evidence-heavy. |
+| G201-G203 | accepted | current checkout | Complete; parent executed inline because the loop was bounded and evidence-heavy. |
 
 ## Human-Needed Queue / Checkpoints
 
@@ -76,9 +76,14 @@ No active human-needed items.
 
 | Child | Result | Manager Decision | Evidence |
 |---|---|---|---|
+| G201 | Prompt quality and bounded QA harness accepted. | accepted | Static gates and Codex read-only review passed. |
+| G202 | Real Runway MCP generation for 4 focused lanes accepted. | accepted | 4/4 worker imports, readback, and visual scorecard passed. |
+| G203 | Deployment, UI proof, cleanup, and state closeout accepted. | accepted | Zeabur asset proof, production UI proof, cleanup proof, and STATE update. |
 
 ## Achievement Review
 
-Active child window status: G201 active
-Goal map status: G201 in-progress, G202 queued, G203 queued
-Parent goal status: active
+Active child window status: none
+Goal map status: G201-G203 accepted
+Parent goal status: complete
+Human-needed checkpoint status: none
+Gap review: no remaining blocker for this focused generation-polish loop
