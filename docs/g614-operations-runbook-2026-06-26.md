@@ -85,7 +85,7 @@ Run the unified gate:
 npm run verify:release-gate -- --out output/playwright/10m-product-readiness-g615/release-gate-summary.json
 ```
 
-The gate must not be accepted with `--allow-dirty` or `--skip-commands`. It binds production monitor, launch-ops, mass-market QA, G603/G605/G606/G608 readbacks, security audit, generation scorecard, typecheck, build, lint, syntax checks, and `git diff --check`.
+The gate must not be accepted with `--allow-dirty` or `--skip-commands`. It binds production monitor, launch-ops, latest matching G611 mass-market QA, latest matching G610 retention search, G603/G605/G606/G608 readbacks, G614 operations docs, security audit, generation scorecard, typecheck, build, lint, syntax checks, and `git diff --check`.
 
 ## Failure Triage
 

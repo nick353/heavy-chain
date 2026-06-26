@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const args = parseArgs(process.argv.slice(2));
 const capturedAt = new Date();
-const outPath = args.out || `output/playwright/10m-product-readiness-g607/release-gate-${dateStamp(capturedAt)}.json`;
+const outPath = args.out || 'output/playwright/10m-product-readiness-g615/release-gate-summary.json';
 const allowDirty = Boolean(args.allowDirty || args['allow-dirty']);
 const skipCommands = Boolean(args.skipCommands || args['skip-commands']);
 const maxArtifactAgeHours = Number(args.maxArtifactAgeHours || args['max-artifact-age-hours'] || 48);
@@ -45,13 +45,26 @@ const requiredReadbacks = [
   },
   {
     name: 'mass-market recorded QA',
-    path: 'output/playwright/mass-market-qa-prod-after-reference-handoff-20260625-rerun/SUMMARY.json',
+    latestSummaryPrefix: '10m-product-readiness-g611-beta-scenarios-20260626',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
       json.cleanup?.contextClosed === true &&
       json.cleanup?.browserClosed === true,
-    expect: 'ok=true, failed=[], contextClosed=true, browserClosed=true',
+    expect: 'latest G611 summary ok=true, failed=[], contextClosed=true, browserClosed=true',
+  },
+  {
+    name: 'G610 retention workspace search',
+    latestSummaryPrefix: 'g610-retention-project-search-20260626',
+    validate: (json) =>
+      json.ok === true &&
+      arrayFrom(json.failed).length === 0 &&
+      arrayFrom(json.assertions).length >= 10 &&
+      json.cleanup?.contextClosed === true &&
+      json.cleanup?.browserClosed === true &&
+      json.cleanup?.previewProcessExit?.exited === true &&
+      json.cleanup?.previewProcessExit?.portFree === true,
+    expect: 'latest G610 summary ok=true, failed=[], >=10 assertions, browser/context closed, preview process exited and port free',
   },
   {
     name: 'G603 garment Canvas',
@@ -134,6 +147,11 @@ const commandChecks = [
     args: ['--check', 'scripts/verify-mass-market-qa.mjs'],
   },
   {
+    name: 'node syntax: G614 operations verifier',
+    command: 'node',
+    args: ['--check', 'scripts/verify-g614-operations-docs.mjs'],
+  },
+  {
     name: 'security audit',
     command: 'npm',
     args: ['run', 'security:audit', '--silent'],
@@ -142,6 +160,11 @@ const commandChecks = [
     name: 'generation scorecard',
     command: 'npm',
     args: ['run', 'verify:generation-scorecard', '--silent'],
+  },
+  {
+    name: 'G614 operations docs',
+    command: 'npm',
+    args: ['run', 'verify:g614-ops', '--silent'],
   },
   {
     name: 'typecheck',
@@ -264,31 +287,75 @@ function checkGitClean() {
 }
 
 function readbackCheck(item) {
+  let resolvedPath = item.path || `${item.latestSummaryPrefix || 'unknown'}*/SUMMARY.json`;
   const entry = {
     name: item.name,
-    path: item.path,
+    path: resolvedPath,
     expected: item.expect,
     passed: false,
   };
 
   try {
-    const raw = fs.readFileSync(item.path, 'utf8');
-    const stat = fs.statSync(item.path);
+    resolvedPath = resolveReadbackPath(item);
+    entry.path = resolvedPath;
+    const raw = fs.readFileSync(resolvedPath, 'utf8');
+    const stat = fs.statSync(resolvedPath);
     const json = JSON.parse(raw);
     entry.safeSummary = summarizeJson(json);
-    entry.freshness = artifactFreshness(item.path, json, stat);
+    entry.freshness = artifactFreshness(resolvedPath, json, stat);
     entry.passed = item.validate(json) && entry.freshness.passed;
     if (!entry.passed) {
       entry.next = entry.freshness.passed
-        ? `Refresh or repair ${item.path}; expected ${item.expect}.`
-        : `Refresh ${item.path}; artifact is older than ${maxArtifactAgeHours}h or lacks a usable timestamp/mtime.`;
+        ? `Refresh or repair ${resolvedPath}; expected ${item.expect}.`
+        : `Refresh ${resolvedPath}; artifact is older than ${maxArtifactAgeHours}h or lacks a usable timestamp/mtime.`;
     }
   } catch (error) {
     entry.error = error.message;
-    entry.next = `Create or restore ${item.path}; expected ${item.expect}.`;
+    entry.next = `Create or restore ${resolvedPath}; expected ${item.expect}.`;
   }
 
   return entry;
+}
+
+function resolveReadbackPath(item) {
+  if (!item.latestSummaryPrefix) return item.path;
+  const baseDir = 'output/playwright';
+  const candidates = [];
+  const invalidCandidates = [];
+  for (const summaryPath of fs
+    .readdirSync(baseDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith(item.latestSummaryPrefix))
+    .map((entry) => path.join(baseDir, entry.name, 'SUMMARY.json'))
+    .filter((summaryPath) => fs.existsSync(summaryPath))) {
+    try {
+      const json = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
+      const timestamp =
+        json.capturedAt ||
+        json.measuredAt ||
+        json.captured_at ||
+        json.verifiedAt ||
+        json.completedAt ||
+        json.finishedAt ||
+        json.generatedAt ||
+        null;
+      const timestampMs = timestamp ? Date.parse(timestamp) : Number.NaN;
+      if (!Number.isFinite(timestampMs)) {
+        invalidCandidates.push(`${summaryPath}:missing_or_invalid_timestamp`);
+      } else {
+        candidates.push({ path: summaryPath, timestampMs });
+      }
+    } catch (error) {
+      invalidCandidates.push(`${summaryPath}:${error.message}`);
+    }
+  }
+  if (invalidCandidates.length > 0) {
+    throw new Error(`Invalid latest-summary candidates for ${item.latestSummaryPrefix}: ${invalidCandidates.join('; ')}`);
+  }
+  candidates.sort((left, right) => right.timestampMs - left.timestampMs || right.path.localeCompare(left.path));
+  if (!candidates[0]) {
+    return path.join(baseDir, `${item.latestSummaryPrefix}*/SUMMARY.json`);
+  }
+  return candidates[0].path;
 }
 
 function artifactFreshness(filePath, json, stat) {

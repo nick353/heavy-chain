@@ -4,20 +4,20 @@ Updated: 2026-06-26
 
 ## Purpose
 
-`npm run verify:release-gate` is the pre-release gate that combines the current production monitor, launch operations proof, recorded mass-market QA, garment Canvas proof, onboarding/template proof, performance baseline, security audit, generation scorecard, typecheck, lint, and syntax checks into one pass/fail artifact.
+`npm run verify:release-gate` is the pre-release gate that combines the current production monitor, launch operations proof, recorded mass-market QA, retention workspace search proof, garment Canvas proof, onboarding/template proof, performance baseline, security audit, operations-doc consistency, generation scorecard, typecheck, lint, build, and syntax checks into one pass/fail artifact.
 
 This gate is read-only. It does not submit generation, deploy, publish externally, purchase, bill, enter secrets, or clean production data.
 
 ## Command
 
 ```bash
-npm run verify:release-gate -- --out output/playwright/10m-product-readiness-g607/release-gate-summary.json
+npm run verify:release-gate -- --out output/playwright/10m-product-readiness-g615/release-gate-summary.json
 ```
 
 During active development only:
 
 ```bash
-npm run verify:release-gate -- --allow-dirty --out output/playwright/10m-product-readiness-g607/release-gate-summary.json
+npm run verify:release-gate -- --allow-dirty --out output/playwright/10m-product-readiness-g615/release-gate-summary.json
 ```
 
 `--allow-dirty` is not release approval. It is only for debugging while a Goal Loop slice is still editing tracked files, and it must exit as a failed/non-acceptance proof.
@@ -27,7 +27,7 @@ npm run verify:release-gate -- --allow-dirty --out output/playwright/10m-product
 The default readback artifact freshness window is 48 hours, and each artifact must carry an embedded timestamp such as `capturedAt`, `measuredAt`, or `captured_at`. File mtime is not accepted as release evidence. Override the window only for deliberate historical audits:
 
 ```bash
-npm run verify:release-gate -- --max-artifact-age-hours 72 --out output/playwright/10m-product-readiness-g607/release-gate-summary.json
+npm run verify:release-gate -- --max-artifact-age-hours 72 --out output/playwright/10m-product-readiness-g615/release-gate-summary.json
 ```
 
 ## Pass Contract
@@ -39,10 +39,10 @@ The JSON summary must have:
 - `allowDirty=false`
 - production monitor `ok=true`, zero blockers, `uiOk=true`, and no skipped UI probe
 - launch-ops `ok=true` and `failed=[]`
-- mass-market QA `ok=true`, `failed=[]`, `contextClosed=true`, `browserClosed=true`
-- G603, G605, G606, G608 readbacks passing
+- latest matching G611 mass-market QA summary `ok=true`, `failed=[]`, `contextClosed=true`, `browserClosed=true`
+- latest matching G610 retention summary plus G603, G605, G606, G608 readbacks passing
 - readback artifacts fresh within the configured freshness window
-- command gates passing: security audit, generation scorecard, typecheck, production build, lint, syntax checks, and `git diff --check`
+- command gates passing: security audit, generation scorecard, G614 operations docs, typecheck, production build, lint, syntax checks, and `git diff --check`
 
 ## Stop Conditions
 
@@ -63,4 +63,4 @@ Use the first failing item in `failed[]`.
 
 ## Relationship To Existing Tools
 
-`release:doctor` remains a narrower legacy safety doctor. `verify:release-gate` is the 10M-readiness release gate for this Goal Loop because it also binds together production monitor, launch operations, mass-market recorded QA, Canvas/deep workflow proof, onboarding proof, performance, security, and generation quality.
+`release:doctor` remains a narrower legacy safety doctor. `verify:release-gate` is the 10M-readiness release gate for this Goal Loop because it also binds together production monitor, launch operations, latest mass-market recorded QA, retention search proof, Canvas/deep workflow proof, onboarding proof, performance, security, operations docs, and generation quality.
