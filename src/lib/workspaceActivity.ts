@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { listWorkspaceGeneratedImages } from './localWorkspaceArtifacts';
 import { buildSourceContextSummaryRows, type SourceContextSummaryRow } from './sourceContextSummary';
+import { getFailureRecoveryGuidance, type FailureRecoveryKind } from './errorMessages';
 import type { GenerationIntent } from './workspaceHandoff';
 import type { Database, GeneratedImage, Json } from '../types/database';
 
@@ -34,6 +35,12 @@ export interface WorkspaceJob {
   productLane: string;
   hasMaterialReference: boolean;
   recoveryAction: string;
+  recoveryKind: FailureRecoveryKind;
+  recoveryTitle: string;
+  recoveryMessage: string;
+  recoveryNextAction: string;
+  retryLabel: string;
+  retryHref: string;
   sourceSummaryRows: SourceContextSummaryRow[];
 }
 
@@ -199,17 +206,19 @@ const hasMaterialReference = (inputParams: Json | null | undefined) => {
 
 const getRecoveryAction = (job: GenerationJob) => {
   if (job.status !== 'failed') return job.status === 'completed' ? 'Galleryで開く' : '進行状況を見る';
-  const message = `${job.error_message ?? ''} ${getJobPrompt(job) ?? ''}`.toLowerCase();
-  if (message.includes('timeout') || message.includes('waiting_for_runway') || message.includes('worker')) {
-    return 'workerとRunway結果JSONを確認';
-  }
-  if (message.includes('subscription') || message.includes('approval') || message.includes('runway_mcp')) {
-    return 'Runway承認状態を確認';
-  }
-  if (message.includes('storage') || message.includes('handoff') || message.includes('reference')) {
-    return '素材画像とStorage読込を確認';
-  }
-  return '入力を直して再開';
+  return getFailureRecoveryGuidance(`${job.error_message ?? ''} ${getJobPrompt(job) ?? ''}`).nextAction;
+};
+
+const getJobRecoveryGuidance = (job: GenerationJob) => {
+  if (job.status === 'failed') return getFailureRecoveryGuidance(`${job.error_message ?? ''} ${getJobPrompt(job) ?? ''}`);
+  return {
+    kind: 'unknown' as const,
+    title: job.status === 'completed' ? '成果物を確認' : '進行状況を確認',
+    userMessage: job.status === 'completed' ? '生成は完了しています。Galleryから成果物を開けます。' : '生成キューで現在の進行状況を確認できます。',
+    nextAction: job.status === 'completed' ? 'Galleryで開く' : '進行状況を見る',
+    retryLabel: job.status === 'completed' ? '成果物を開く' : '進行状況を見る',
+    retryHrefFallback: job.status === 'completed' ? '/gallery' : '/jobs',
+  };
 };
 
 const buildResumeHref = (job: GenerationJob) => {
@@ -222,25 +231,40 @@ const buildResumeHref = (job: GenerationJob) => {
   return `/generate?${params.toString()}`;
 };
 
-const mapJob = (job: GenerationJob, outputCount: number, lightchainTaskSteps: LightchainTaskStep[] = []): WorkspaceJob => ({
-  id: job.id,
-  title: getFeatureLabel(job.feature_type),
-  featureType: job.feature_type,
-  status: job.status,
-  prompt: getJobPrompt(job),
-  errorMessage: job.error_message,
-  createdAt: job.created_at,
-  completedAt: job.completed_at,
-  outputCount,
-  resumeHref: buildResumeHref(job),
-  generationHref: getGenerationHref(job.input_params),
-  sourceLabel: getMetadataString(job.input_params, 'sourceLabel'),
-  sourceResumePath: getMetadataString(job.input_params, 'sourceResumePath'),
-  productLane: getProductLane(job.feature_type),
-  hasMaterialReference: hasMaterialReference(job.input_params),
-  recoveryAction: getRecoveryAction(job),
-  sourceSummaryRows: buildSourceSummaryRows(job.input_params, job.status, lightchainTaskSteps),
-});
+const getRetryHref = (job: GenerationJob, resumeHref: string) => {
+  if (job.status !== 'failed') return job.status === 'completed' ? '/gallery' : '/jobs';
+  return resumeHref;
+};
+
+const mapJob = (job: GenerationJob, outputCount: number, lightchainTaskSteps: LightchainTaskStep[] = []): WorkspaceJob => {
+  const recoveryGuidance = getJobRecoveryGuidance(job);
+  const resumeHref = buildResumeHref(job);
+  return {
+    id: job.id,
+    title: getFeatureLabel(job.feature_type),
+    featureType: job.feature_type,
+    status: job.status,
+    prompt: getJobPrompt(job),
+    errorMessage: job.error_message,
+    createdAt: job.created_at,
+    completedAt: job.completed_at,
+    outputCount,
+    resumeHref,
+    generationHref: getGenerationHref(job.input_params),
+    sourceLabel: getMetadataString(job.input_params, 'sourceLabel'),
+    sourceResumePath: getMetadataString(job.input_params, 'sourceResumePath'),
+    productLane: getProductLane(job.feature_type),
+    hasMaterialReference: hasMaterialReference(job.input_params),
+    recoveryAction: getRecoveryAction(job),
+    recoveryKind: recoveryGuidance.kind,
+    recoveryTitle: recoveryGuidance.title,
+    recoveryMessage: recoveryGuidance.userMessage,
+    recoveryNextAction: recoveryGuidance.nextAction,
+    retryLabel: recoveryGuidance.retryLabel,
+    retryHref: getRetryHref(job, resumeHref),
+    sourceSummaryRows: buildSourceSummaryRows(job.input_params, job.status, lightchainTaskSteps),
+  };
+};
 
 const isGenerationIntent = (value: unknown): value is GenerationIntent => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -377,7 +401,7 @@ const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[]): Time
     description: job.status === 'failed' ? job.errorMessage || '生成に失敗しました' : `${job.outputCount} outputs`,
     prompt: job.prompt,
     status: job.status,
-    href: job.status === 'failed' ? job.resumeHref : '/gallery',
+    href: job.status === 'failed' ? job.retryHref : '/gallery',
     createdAt: job.createdAt,
     completedAt: job.completedAt,
     outputCount: job.outputCount,

@@ -21,7 +21,7 @@ export function FailureRetryCard({ failedJobs, className = '' }: FailureRetryCar
           <p className="text-xs font-semibold uppercase text-red-600 dark:text-red-300">Recovery</p>
           <h2 className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">失敗から再開</h2>
           <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-            {topFailure ? topFailure.errorMessage || '失敗したジョブがあります。入力内容を確認して再開できます。' : '再開が必要な失敗ジョブはありません。'}
+            {topFailure ? topFailure.recoveryMessage : '再開が必要な失敗ジョブはありません。'}
           </p>
         </div>
       </div>
@@ -30,6 +30,10 @@ export function FailureRetryCard({ failedJobs, className = '' }: FailureRetryCar
         <div className="mt-5 rounded-xl bg-white/55 p-4 dark:bg-surface-900/45">
           <p className="truncate text-sm font-semibold text-neutral-950 dark:text-white">{topFailure.title}</p>
           <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{topFailure.prompt || topFailure.featureType}</p>
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-xs leading-5 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/25 dark:text-amber-100">
+            <p className="font-semibold">{topFailure.recoveryTitle}</p>
+            <p className="mt-1">{topFailure.recoveryNextAction}</p>
+          </div>
           {lightchainRows.length > 0 && (
             <dl className="mt-3 space-y-1 rounded-lg bg-teal-50/70 p-3 dark:bg-teal-950/25">
               {lightchainRows.map((row) => (
@@ -40,8 +44,8 @@ export function FailureRetryCard({ failedJobs, className = '' }: FailureRetryCar
               ))}
             </dl>
           )}
-          <Link to={topFailure.resumeHref} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-700 dark:bg-white dark:text-neutral-950">
-            入力を開いて再開
+          <Link to={topFailure.retryHref} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-700 dark:bg-white dark:text-neutral-950">
+            {topFailure.retryLabel}
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>

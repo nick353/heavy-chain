@@ -21,6 +21,19 @@ const directFeatures = [
   { key: 'graphics-variations', url: '/generate?feature=generate-variations&lcFeature=design-arrange', title: 'デザインアレンジ', category: 'グラフィックツール' },
   { key: 'graphics-image-variations', url: '/generate?feature=generate-variations&lcFeature=image-variations', title: '類似バリエーション生成', category: 'グラフィックツール' },
 ];
+const requiredRouteKeys = [
+  'public-landing',
+  'public-login',
+  'desktop-home',
+  'home-click-to-feature',
+  ...directFeatures.map((feature) => feature.key),
+  'desktop-history',
+  'desktop-canvas',
+  'mobile-home',
+  'mobile-graphics-remove-bg',
+  'mobile-history',
+  'mobile-canvas',
+];
 
 const evidence = {
   workflow: 'lightchain-clone-layout-parity',
@@ -96,8 +109,12 @@ try {
   for (const spec of directFeatures) {
     evidence.routes.push(await verifyFeature(context, desktopViewport, spec));
   }
+  evidence.routes.push(await verifyHistory(context, desktopViewport, 'desktop-history'));
+  evidence.routes.push(await verifyCanvas(context, desktopViewport, 'desktop-canvas'));
   evidence.routes.push(await verifyHome(context, mobileViewport, 'mobile-home'));
   evidence.routes.push(await verifyFeature(context, mobileViewport, { ...directFeatures[2], key: 'mobile-graphics-remove-bg' }));
+  evidence.routes.push(await verifyHistory(context, mobileViewport, 'mobile-history'));
+  evidence.routes.push(await verifyCanvas(context, mobileViewport, 'mobile-canvas'));
 } finally {
   if (publicContext) {
     await withTimeout(publicContext.close(), 10000, 'public_context_close_timeout').catch((error) => {
@@ -245,6 +262,50 @@ async function verifyFeature(context, viewport, spec) {
   return routeEvidence;
 }
 
+async function verifyHistory(context, viewport, key) {
+  const page = await newTrackedPage(context, key, viewport);
+  const routeEvidence = newRouteEvidence(key, '/history', viewport);
+  try {
+    await gotoAndSettle(page, '/history');
+    await captureBaseState(page, routeEvidence, {
+      expected: ['生成履歴', '続きから再開', '失敗を確認', '保存済みを見る'],
+    });
+    const body = await bodyText(page);
+    addAssertion(routeEvidence, 'history_has_gallery_continuation', body.includes('ギャラリーへ') || body.includes('Gallery'));
+    addAssertion(routeEvidence, 'history_has_timeline_status', /timeline/i.test(body) && /生成ジョブ|ギャラリー保存|まだ生成履歴/.test(body));
+    await assertHistoryLinks(page, routeEvidence);
+    routeEvidence.screenshot = await screenshot(page, `${key}.png`);
+  } catch (error) {
+    markException(routeEvidence, error);
+  } finally {
+    routeEvidence.video = await closePageAndGetVideo(page);
+  }
+  return routeEvidence;
+}
+
+async function verifyCanvas(context, viewport, key) {
+  const page = await newTrackedPage(context, key, viewport);
+  const routeEvidence = newRouteEvidence(key, '/canvas/new', viewport);
+  try {
+    await gotoAndSettle(page, '/canvas/new');
+    await captureBaseState(page, routeEvidence, {
+      expected: ['画像を置く', '生成する', '素材を見る'],
+      minBodyLength: 40,
+    });
+    const body = await bodyText(page);
+    await assertCanvasSurface(page, routeEvidence);
+    await assertCanvasActions(page, routeEvidence);
+    addAssertion(routeEvidence, 'canvas_has_editing_surface', /選択|移動|レイヤー|プロパティ|Canvas|キャンバス|画像を置く/.test(body));
+    addAssertion(routeEvidence, 'canvas_has_generation_or_gallery_continuation', /生成|Gallery|ギャラリー|画像を置く/.test(body));
+    routeEvidence.screenshot = await screenshot(page, `${key}.png`);
+  } catch (error) {
+    markException(routeEvidence, error);
+  } finally {
+    routeEvidence.video = await closePageAndGetVideo(page);
+  }
+  return routeEvidence;
+}
+
 async function newTrackedPage(context, routeKey, viewport) {
   const page = await context.newPage();
   await page.setViewportSize(viewport);
@@ -277,7 +338,7 @@ async function gotoAndSettle(page, route) {
   await page.waitForFunction(() => !document.body.innerText.includes('読み込み中...'), null, { timeout: 15000 }).catch(() => undefined);
 }
 
-async function captureBaseState(page, routeEvidence, { expected, allowLoginRoute = false }) {
+async function captureBaseState(page, routeEvidence, { expected, allowLoginRoute = false, minBodyLength = 120 }) {
   routeEvidence.url = page.url();
   routeEvidence.title = await page.title();
   const body = await bodyText(page);
@@ -285,7 +346,7 @@ async function captureBaseState(page, routeEvidence, { expected, allowLoginRoute
   addAssertion(routeEvidence, 'not_unexpected_login_redirect', allowLoginRoute || (!isLoginBody(body) && !routeEvidence.url.includes('/login')), {
     url: routeEvidence.url,
   });
-  addAssertion(routeEvidence, 'meaningful_page_content', body.trim().length > 120, {
+  addAssertion(routeEvidence, 'meaningful_page_content', body.trim().length > minBodyLength, {
     bodyLength: body.trim().length,
   });
   addAssertion(routeEvidence, 'expected_text_visible', expected.every((text) => body.includes(text)), { expected });
@@ -361,25 +422,43 @@ async function assertFeatureLayout(page, routeEvidence, spec) {
 }
 
 async function uploadReferenceImage(page, routeEvidence) {
-  const upload = page.locator('input[type="file"]').first();
+  const inputPanel = page.getByTestId('lightchain-input-material-panel');
+  const upload = inputPanel.locator('input[type="file"]').first();
   const count = await upload.count();
   routeEvidence.interactions.push({ type: 'upload-input-count', count });
   addAssertion(routeEvidence, 'upload_input_present', count > 0);
   if (!count) return;
   await upload.setInputFiles(imagePath);
   await page.waitForTimeout(700);
+  const fileInputs = await inputPanel.locator('input[type="file"]').evaluateAll((nodes) => nodes.map((node) => ({
+    files: node.files ? Array.from(node.files).map((file) => file.name) : [],
+  }))).catch(() => []);
   const body = await bodyText(page);
-  const reflected = /S__4235312|読込済み|選択中|画像|素材/.test(body);
-  routeEvidence.interactions.push({ type: 'upload-image', reflected });
+  const materialPanelText = await inputPanel.innerText({ timeout: 5000 }).catch(() => '');
+  const previewImages = await inputPanel.locator('img').evaluateAll((nodes) => nodes.map((node) => ({
+    alt: node.getAttribute('alt') ?? '',
+    naturalWidth: node.naturalWidth,
+    naturalHeight: node.naturalHeight,
+  }))).catch(() => []);
+  const reflected = /S__4235312|読込済み|選択中|参考画像|アップロード済み/.test(materialPanelText || body);
+  routeEvidence.interactions.push({ type: 'upload-image', reflected, fileInputs, previewImages });
+  addAssertion(routeEvidence, 'upload_file_bound_to_input', fileInputs.some((item) => item.files.length > 0), { fileInputs });
   addAssertion(routeEvidence, 'upload_reflected_in_ui', reflected);
+  addAssertion(routeEvidence, 'upload_preview_or_material_state_visible', reflected || previewImages.some((image) => image.naturalWidth > 0), {
+    previewImages,
+    materialPanelText: materialPanelText.slice(0, 500),
+  });
   routeEvidence.uploadScreenshot = await screenshot(page, `${routeEvidence.key}-uploaded.png`);
 }
 
 async function fillPromptAndPlan(page, routeEvidence) {
-  const designSummary = page.getByText('デザイン作成').first();
+  const designSummary = page.locator('summary').filter({ hasText: 'デザイン作成' }).first();
   const designSummaryVisible = await designSummary.isVisible().catch(() => false);
   if (designSummaryVisible) {
-    await designSummary.click();
+    const isOpen = await designSummary.evaluate((node) => node.closest('details')?.open ?? false).catch(() => false);
+    if (!isOpen) {
+      await designSummary.click();
+    }
     await page.waitForTimeout(250);
     routeEvidence.interactions.push({ type: 'open-design-create-panel' });
   }
@@ -393,13 +472,81 @@ async function fillPromptAndPlan(page, routeEvidence) {
   const planButton = page.getByRole('button', { name: /生成計画を作る/ }).first();
   const planVisible = await planButton.isVisible().catch(() => false);
   routeEvidence.interactions.push({ type: 'planning-button-present', planVisible });
-  if (planVisible) {
-    await planButton.click();
-    await page.waitForTimeout(700);
-    const body = await bodyText(page);
-    const planReflected = body.includes('生成計画') && /商品ヒーロー|着用|固定要素|比較|背景/.test(body);
-    routeEvidence.interactions.push({ type: 'planning-preview-created', planReflected });
-    addAssertion(routeEvidence, 'planning_preview_created_without_submit', planReflected);
+  addAssertion(routeEvidence, 'planning_button_visible', planVisible);
+  if (!planVisible) return;
+  await planButton.click();
+  await page.waitForTimeout(700);
+  const body = await bodyText(page);
+  const designText = await designSummary.locator('xpath=ancestor::details[1]').innerText({ timeout: 5000 }).catch(() => '');
+  const planReflected = body.includes('生成計画') && /商品ヒーロー|着用|固定要素|比較|背景/.test(body);
+  routeEvidence.interactions.push({ type: 'planning-preview-created', planReflected });
+  addAssertion(routeEvidence, 'planning_preview_created_without_submit', planReflected);
+  addAssertion(routeEvidence, 'planning_preview_scoped_to_design_panel', /生成計画|確認済み/.test(designText) && /黒|チェーン|フーディー|EC|SNS/.test(designText), {
+    designText: designText.slice(0, 800),
+  });
+}
+
+async function assertHistoryLinks(page, routeEvidence) {
+  const resumeHref = await page.getByRole('link', { name: /続きから再開/ }).first().getAttribute('href').catch(() => null);
+  const failureHref = await page.getByRole('link', { name: /失敗を確認/ }).first().getAttribute('href').catch(() => null);
+  const savedHref = await page.getByRole('link', { name: /保存済みを見る/ }).first().getAttribute('href').catch(() => null);
+  routeEvidence.interactions.push({ type: 'history-links', resumeHref, failureHref, savedHref });
+  addAssertion(routeEvidence, 'history_resume_link_targets_workspace_route', isWorkspaceHref(resumeHref), { resumeHref });
+  addAssertion(routeEvidence, 'history_failure_link_targets_retry_or_jobs', isWorkspaceHref(failureHref), { failureHref });
+  addAssertion(routeEvidence, 'history_saved_link_targets_gallery', savedHref === '/gallery', { savedHref });
+}
+
+async function assertCanvasSurface(page, routeEvidence) {
+  const canvasStats = await page.locator('canvas').first().evaluate((canvas) => ({
+    width: canvas.width,
+    height: canvas.height,
+    clientWidth: canvas.clientWidth,
+    clientHeight: canvas.clientHeight,
+  })).catch(() => null);
+  addAssertion(routeEvidence, 'canvas_element_present', Boolean(canvasStats), { canvasStats });
+  addAssertion(routeEvidence, 'canvas_has_stable_dimensions', Boolean(
+    canvasStats
+      && canvasStats.width >= 250
+      && canvasStats.height >= 250
+      && canvasStats.clientWidth >= 250
+      && canvasStats.clientHeight >= 250,
+  ), { canvasStats });
+}
+
+async function assertCanvasActions(page, routeEvidence) {
+  const generateButton = page.getByRole('button', { name: /生成する/ }).first();
+  const galleryButton = page.getByRole('button', { name: /Galleryから追加/ }).first();
+  const materialButton = page.getByRole('button', { name: /素材を見る/ }).first();
+  const generateEnabled = await generateButton.isEnabled().catch(() => false);
+  const galleryEnabled = await galleryButton.isEnabled().catch(() => false);
+  const materialEnabled = await materialButton.isEnabled().catch(() => false);
+  routeEvidence.interactions.push({ type: 'canvas-action-buttons', generateEnabled, galleryEnabled, materialEnabled });
+  addAssertion(routeEvidence, 'canvas_primary_actions_enabled', generateEnabled && galleryEnabled && materialEnabled, {
+    generateEnabled,
+    galleryEnabled,
+    materialEnabled,
+  });
+
+  if (generateEnabled) {
+    await generateButton.click();
+    await page.waitForTimeout(250);
+    const generateModalVisible = await page.getByText('AI画像生成', { exact: true }).first().isVisible().catch(() => false)
+      || await page.getByText('生成モード', { exact: true }).first().isVisible().catch(() => false);
+    routeEvidence.interactions.push({ type: 'canvas-generate-modal', visible: generateModalVisible });
+    addAssertion(routeEvidence, 'canvas_generate_modal_opens', generateModalVisible);
+    await page.keyboard.press('Escape').catch(() => undefined);
+    await page.waitForTimeout(150);
+  }
+
+  if (galleryEnabled) {
+    await galleryButton.click();
+    await page.waitForTimeout(250);
+    const galleryModalVisible = await page.getByText('ギャラリーから画像を選択', { exact: true }).first().isVisible().catch(() => false)
+      || await page.getByText(/生成画像がありません|画像を選択/).first().isVisible().catch(() => false);
+    routeEvidence.interactions.push({ type: 'canvas-gallery-modal', visible: galleryModalVisible });
+    addAssertion(routeEvidence, 'canvas_gallery_picker_opens', galleryModalVisible);
+    await page.keyboard.press('Escape').catch(() => undefined);
+    await page.waitForTimeout(150);
   }
 }
 
@@ -493,7 +640,10 @@ function recordRequestFailure(request, route) {
 }
 
 function computeOk(result) {
+  assertRequiredRouteCoverage(result);
+  result.comparisonLedger = buildComparisonLedger(result);
   return result.routes.every((route) => route.assertions.every((assertion) => assertion.passed))
+    && result.comparisonLedger.every((item) => item.matchStatus !== 'missing-proof')
     && result.routes.every((route) => Boolean(route.video))
     && result.cleanup.contextClosed === true
     && result.cleanup.browserClosed === true
@@ -502,6 +652,121 @@ function computeOk(result) {
     && result.consoleMessages.length === 0
     && result.pageErrors.length === 0
     && result.requestFailures.length === 0;
+}
+
+function assertRequiredRouteCoverage(result) {
+  const seen = new Set(result.routes.map((route) => route.key));
+  for (const key of requiredRouteKeys) {
+    if (seen.has(key)) continue;
+    result.routes.push({
+      key,
+      route: null,
+      viewport: null,
+      url: null,
+      title: null,
+      screenshot: null,
+      video: null,
+      domExcerpt: null,
+      assertions: [{ name: 'required_route_captured', passed: false, details: { key } }],
+      interactions: [],
+      exactBlocker: 'required_route_captured',
+    });
+  }
+}
+
+function routePassed(result, key) {
+  const route = result.routes.find((item) => item.key === key);
+  return Boolean(route && route.assertions.every((assertion) => assertion.passed) && route.screenshot && route.video);
+}
+
+function routeHasAssertions(result, key, assertionNames) {
+  const route = result.routes.find((item) => item.key === key);
+  if (!route) return false;
+  return assertionNames.every((name) => route.assertions.some((assertion) => assertion.name === name && assertion.passed));
+}
+
+function buildComparisonLedger(result) {
+  const matched = (keys) => keys.every((key) => routePassed(result, key));
+  return [
+    {
+      area: 'generate-home',
+      lightchainReference: 'category-first home before detailed generation input',
+      heavyChainProof: 'desktop-home / mobile-home',
+      matchStatus: matched(['desktop-home', 'mobile-home']) ? 'matched' : 'missing-proof',
+      intentionalHeavyChainAddition: 'Heavy Chain branding and Runway worker readiness remain visible.',
+      remainingMismatch: 'not pixel-identical; richer Heavy Chain workspace cards are intentionally retained.',
+    },
+    {
+      area: 'categories',
+      lightchainReference: categoryLabels.join(' / '),
+      heavyChainProof: 'desktop-home category clicks / home-click-to-feature',
+      matchStatus: matched(['desktop-home', 'home-click-to-feature']) ? 'matched' : 'missing-proof',
+      intentionalHeavyChainAddition: 'Feature links include Heavy Chain lcFeature metadata for readback.',
+      remainingMismatch: 'none found in verified route set.',
+    },
+    {
+      area: 'material-upload',
+      lightchainReference: 'image/material-first editing before generation',
+      heavyChainProof: directFeatures.map((feature) => feature.key).join(' / '),
+      matchStatus: directFeatures.every((feature) => routeHasAssertions(result, feature.key, [
+        'upload_file_bound_to_input',
+        'upload_reflected_in_ui',
+        'upload_preview_or_material_state_visible',
+      ])) ? 'matched' : 'missing-proof',
+      intentionalHeavyChainAddition: 'Material/layer/mask metadata is shown before submit.',
+      remainingMismatch: 'upload recognition is UI-level proof; DB/Storage redaction is covered by separate generation workbench proof.',
+    },
+    {
+      area: 'detail-screen',
+      lightchainReference: 'compact workbench with project panel, tabs, material input, planning, and hidden empty result before generation',
+      heavyChainProof: 'home-click-to-feature plus direct feature pages',
+      matchStatus: matched(['home-click-to-feature'])
+        && directFeatures.every((feature) => routeHasAssertions(result, feature.key, [
+          'lightchain_project_panel_present',
+          'lightchain_detail_tabs_present',
+          'lightchain_canvas_toolbar_present',
+          'planning_preview_scoped_to_design_panel',
+        ])) ? 'matched' : 'missing-proof',
+      intentionalHeavyChainAddition: 'Operations details disclose local Runway worker and Canvas/Gallery continuity.',
+      remainingMismatch: 'assistant plan is deterministic local planning, not Lightchain live LLM response.',
+    },
+    {
+      area: 'history',
+      lightchainReference: 'resume work, inspect failures, reopen saved outputs',
+      heavyChainProof: 'desktop-history / mobile-history',
+      matchStatus: ['desktop-history', 'mobile-history'].every((key) => routeHasAssertions(result, key, [
+        'history_has_gallery_continuation',
+        'history_has_timeline_status',
+        'history_resume_link_targets_workspace_route',
+        'history_failure_link_targets_retry_or_jobs',
+        'history_saved_link_targets_gallery',
+      ])) ? 'matched' : 'missing-proof',
+      intentionalHeavyChainAddition: 'History merges jobs and gallery activity through workspace activity.',
+      remainingMismatch: 'empty state is acceptable when no current rows exist; live data readback is separate from this UI parity check.',
+    },
+    {
+      area: 'canvas',
+      lightchainReference: 'board-like continuation for editing and reusing generated/material assets',
+      heavyChainProof: 'desktop-canvas / mobile-canvas',
+      matchStatus: ['desktop-canvas', 'mobile-canvas'].every((key) => routeHasAssertions(result, key, [
+        'canvas_element_present',
+        'canvas_has_stable_dimensions',
+        'canvas_primary_actions_enabled',
+        'canvas_generate_modal_opens',
+        'canvas_gallery_picker_opens',
+      ])) ? 'matched' : 'missing-proof',
+      intentionalHeavyChainAddition: 'Canvas exposes Gallery add, generation modal, properties, and material metadata path.',
+      remainingMismatch: 'deep generated-image handoff is covered by generated Canvas handoff verifier, not repeated here.',
+    },
+    {
+      area: 'mobile',
+      lightchainReference: 'same category/detail/history/canvas flow remains usable at 390px',
+      heavyChainProof: 'mobile-home / mobile-graphics-remove-bg / mobile-history / mobile-canvas',
+      matchStatus: matched(['mobile-home', 'mobile-graphics-remove-bg', 'mobile-history', 'mobile-canvas']) ? 'matched' : 'missing-proof',
+      intentionalHeavyChainAddition: 'Mobile shell keeps Heavy Chain navigation labels.',
+      remainingMismatch: 'only representative graphics detail is covered on mobile to keep the proof bounded.',
+    },
+  ];
 }
 
 function collectFailures(result) {
@@ -517,7 +782,14 @@ function collectFailures(result) {
     ...result.consoleMessages.map((message) => `${message.route}:console:${message.text}`),
     ...result.pageErrors.map((error) => `${error.route}:pageerror:${error.message}`),
     ...result.requestFailures.map((failure) => `${failure.route}:requestfailed:${failure.url}`),
+    ...(result.comparisonLedger ?? [])
+      .filter((item) => item.matchStatus === 'missing-proof')
+      .map((item) => `comparisonLedger:${item.area}:missing-proof`),
   ];
+}
+
+function isWorkspaceHref(href) {
+  return Boolean(href && /^\/(generate|jobs|gallery|canvas|fitting|marketing|models|patterns|studio|video|lab|workflows|dashboard)(\/|\?|$)/.test(href));
 }
 
 function isLoginBody(body) {

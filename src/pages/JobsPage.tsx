@@ -20,10 +20,10 @@ const statusIcon = {
 
 function JobRow({ job }: { job: WorkspaceJob }) {
   const StatusIcon = statusIcon[job.status];
-  const href = job.status === 'failed' ? job.resumeHref : '/gallery';
+  const href = job.status === 'failed' ? job.retryHref : '/gallery';
   const lightchainRows = job.sourceSummaryRows.filter((row) => row.label.startsWith('Lightchain'));
   const actionLabel = job.status === 'failed'
-    ? '入力を直して再開'
+    ? job.retryLabel
     : job.status === 'completed'
       ? '成果物を開く'
       : '進行状況を見る';
@@ -51,11 +51,22 @@ function JobRow({ job }: { job: WorkspaceJob }) {
             <span className={`rounded-full px-2 py-1 ${job.hasMaterialReference ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200' : 'bg-neutral-100 text-neutral-500 dark:bg-surface-800 dark:text-neutral-300'}`}>
               {job.hasMaterialReference ? '素材あり' : '素材なし'}
             </span>
-            <span className="rounded-full bg-white px-2 py-1 text-neutral-500 dark:bg-white/10 dark:text-neutral-300">{job.recoveryAction}</span>
+            <span className="rounded-full bg-white px-2 py-1 text-neutral-500 dark:bg-white/10 dark:text-neutral-300">{job.recoveryTitle}</span>
           </div>
           <p className="mt-1 line-clamp-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-            {job.status === 'failed' ? job.errorMessage || job.prompt || job.featureType : job.prompt || job.featureType}
+            {job.status === 'failed' ? job.recoveryMessage : job.prompt || job.featureType}
           </p>
+          {job.status === 'failed' && (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-white/65 p-3 text-xs leading-5 text-amber-900 dark:border-amber-900/50 dark:bg-surface-950/30 dark:text-amber-100">
+              <p className="font-semibold">次にやること</p>
+              <p className="mt-1">{job.recoveryNextAction}</p>
+              {job.errorMessage && (
+                <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-200">
+                  詳細: {job.errorMessage}
+                </p>
+              )}
+            </div>
+          )}
           {lightchainRows.length > 0 && (
             <dl className="mt-3 space-y-1 rounded-xl bg-teal-50/70 p-3 dark:bg-teal-950/25">
               {lightchainRows.map((row) => (
@@ -122,9 +133,9 @@ export function JobsPage() {
     {
       label: '止まった作業',
       count: activity.failedJobs.length,
-      href: activity.failedJobs[0]?.resumeHref ?? '/history',
+      href: activity.failedJobs[0]?.retryHref ?? '/history',
       icon: AlertTriangle,
-      detail: '入力、承認、サブスク、Runway状態を見直して再開します。',
+      detail: '原因と次の操作を確認し、入力を保ったまま再開します。',
     },
     {
       label: '完了した成果物',

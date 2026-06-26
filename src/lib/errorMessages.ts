@@ -12,7 +12,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   RATE_LIMIT_HOUR: '時間あたりのリクエスト制限に達しました。しばらくお待ちください。',
   USER_USAGE_RATE_LIMIT: '短時間に生成リクエストが集中しています。1分ほど待ってから再試行してください。',
   BRAND_USAGE_RATE_LIMIT: 'このブランドで短時間に生成リクエストが集中しています。少し待ってから再試行してください。',
-  BRAND_USAGE_QUOTA_EXCEEDED: '今月の生成枠を使い切りました。プラン変更または翌月のリセット後に再試行してください。',
+  BRAND_USAGE_QUOTA_EXCEEDED: '今月の生成枠を使い切りました。今回は生成できません。翌月のリセット後に再試行するか、管理者にRunway側の残量確認を依頼してください。',
   AUTH_EMAIL_RATE_LIMIT: 'サインアップ確認メールの送信制限に達しました。しばらく待ってから再度お試しください。',
   
   // Image generation errors
@@ -20,7 +20,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   IMAGE_INVALID_FORMAT: '対応していない画像形式です。JPEG、PNG、WebP形式をご利用ください。',
   IMAGE_CORRUPT: '画像ファイルが破損しています。別の画像をお試しください。',
   NSFW_CONTENT: '不適切なコンテンツが検出されました。ガイドラインに沿った内容でお試しください。',
-  GENERATION_FAILED: '画像の生成に失敗しました。プロンプトを変更して再度お試しください。',
+  GENERATION_FAILED: '画像の生成に失敗しました。入力内容を少し具体化し、参照画像がある場合は読み込める画像に差し替えて再試行してください。',
   PROMPT_TOO_LONG: 'プロンプトが長すぎます。500文字以内で入力してください。',
   PROMPT_EMPTY: 'プロンプトを入力してください。',
   
@@ -38,13 +38,13 @@ export const ERROR_MESSAGES: Record<string, string> = {
   BRAND_SUBSCRIPTION_UNAVAILABLE: 'このブランドの有効なサブスクが見つかりません。ブランド設定でプランの有効期間を確認してください。',
   RUNWAY_MCP_ELIGIBLE_SUBSCRIPTION_REQUIRED: 'Runway生成にはRunway対応の有料プランが必要です。ブランド設定でプラン状態を確認してください。',
   RUNWAY_MCP_CONNECTION_NOT_APPROVED: 'Runway MCP接続が未承認です。ブランド設定から接続を申請し、管理者承認後に再試行してください。',
-  RUNWAY_MCP_CONNECTION_STATUS_UNAVAILABLE: 'Runway MCP接続状態を確認できません。時間をおいて再試行してください。',
+  RUNWAY_MCP_CONNECTION_STATUS_UNAVAILABLE: 'Runway MCP接続状態を確認できません。少し待ってから更新し、続く場合は管理者に接続状態を確認してください。',
   RUNWAY_MCP_BRIDGE_NOT_CONFIGURED: 'Runway MCPブリッジが本番に設定されていません。管理者がRUNWAY_MCP_BRIDGE_URLとRUNWAY_MCP_BRIDGE_TOKENを設定する必要があります。',
   RUNWAY_MCP_AUTH_REQUIRED: 'Runway MCPブリッジのRunwayログインが切れています。管理者がRunway MCPへ再接続してください。',
-  RUNWAY_MCP_SUBSCRIPTION_INACTIVE: 'Runway側のサブスクまたはクレジットが有効ではありません。Runwayアカウントのプランと残量を確認してください。',
-  RUNWAY_MCP_REQUEST_FAILED: 'Runway MCPとの通信に失敗しました。少し待ってから再試行し、続く場合は管理者に接続状態を確認してください。',
-  LOCAL_RUNWAY_WORKER_NOT_RUNNING: 'Mac側のRunway workerが起動していません。workerを起動してから再度生成してください。',
-  LOCAL_RUNWAY_WORKER_TIMEOUT: 'Runway workerの生成完了を確認できませんでした。workerログとRunway接続状態を確認してください。',
+  RUNWAY_MCP_SUBSCRIPTION_INACTIVE: 'Runway側のサブスクまたはクレジットが有効ではありません。今回は生成できません。Runwayアカウントのプランと残量を確認してから再試行してください。',
+  RUNWAY_MCP_REQUEST_FAILED: 'Runway MCPとの通信に失敗しました。入力は保存されています。少し待ってから再試行し、続く場合は管理者に接続状態を確認してください。',
+  LOCAL_RUNWAY_WORKER_NOT_RUNNING: 'Mac側のRunway workerが起動していません。入力は保存されています。workerを起動してからこのジョブを再開してください。',
+  LOCAL_RUNWAY_WORKER_TIMEOUT: 'Runway workerの生成完了を確認できませんでした。workerの結果JSONとRunway画面を確認し、完了していなければこのジョブを再開してください。',
   LOCAL_RUNWAY_OAUTH_FAILED: 'Runway公式OAuthが失敗しています。Runwayの同意画面で「Consent session missing or expired」が出ているため、Runway MCPを再接続してください。',
   PROJECT_NOT_FOUND: 'プロジェクトが見つかりません。',
   BRAND_LIMIT_REACHED: '作成できるブランド数の上限に達しました。',
@@ -62,6 +62,115 @@ export const ERROR_MESSAGES: Record<string, string> = {
   // Generic
   UNKNOWN_ERROR: '予期しないエラーが発生しました。再度お試しください。',
 };
+
+export type FailureRecoveryKind =
+  | 'runway-limit'
+  | 'worker-wait'
+  | 'reference-image'
+  | 'generation'
+  | 'network-api'
+  | 'runway-approval'
+  | 'unknown';
+
+export interface FailureRecoveryGuidance {
+  kind: FailureRecoveryKind;
+  title: string;
+  userMessage: string;
+  nextAction: string;
+  retryLabel: string;
+  retryHrefFallback: string;
+}
+
+const FAILURE_RECOVERY_GUIDANCE: Record<FailureRecoveryKind, FailureRecoveryGuidance> = {
+  'runway-limit': {
+    kind: 'runway-limit',
+    title: 'Runwayの残量を確認',
+    userMessage: 'Runway側のサブスク、クレジット、または生成枠が不足している可能性があります。入力は残っているため、残量を確認してから再開できます。',
+    nextAction: 'Runwayのプランと残量を確認してから再試行',
+    retryLabel: '残量確認後に再開',
+    retryHrefFallback: '/jobs',
+  },
+  'worker-wait': {
+    kind: 'worker-wait',
+    title: 'workerを起動して再開',
+    userMessage: 'ローカルworkerが未起動、処理待ち、または結果JSON待ちです。画面を閉じても入力は残っています。',
+    nextAction: 'workerを起動し、結果JSONを確認してから再開',
+    retryLabel: 'worker起動後に再開',
+    retryHrefFallback: '/jobs',
+  },
+  'reference-image': {
+    kind: 'reference-image',
+    title: '参照画像を差し替え',
+    userMessage: '参照画像のアップロード、Storage読込、またはhandoffで止まっています。画像形式と読み込み状態を確認してください。',
+    nextAction: 'JPEG/PNG/WebPの参照画像に差し替えて再試行',
+    retryLabel: '参照画像を直して再開',
+    retryHrefFallback: '/generate',
+  },
+  generation: {
+    kind: 'generation',
+    title: '入力を調整して再生成',
+    userMessage: '生成処理で失敗しました。プロンプトを少し具体化し、素材指定を短く整理すると再開しやすくなります。',
+    nextAction: 'プロンプトと素材指定を見直して再試行',
+    retryLabel: '入力を直して再開',
+    retryHrefFallback: '/generate',
+  },
+  'network-api': {
+    kind: 'network-api',
+    title: '接続を確認して再試行',
+    userMessage: 'ネットワークまたはAPI接続が一時的に不安定です。入力は保存されています。',
+    nextAction: '少し待って更新し、同じ入力で再試行',
+    retryLabel: '接続確認後に再試行',
+    retryHrefFallback: '/jobs',
+  },
+  'runway-approval': {
+    kind: 'runway-approval',
+    title: 'Runway承認を確認',
+    userMessage: 'このブランドのRunway接続または管理者承認が未完了です。承認後に同じ入力から再開できます。',
+    nextAction: 'ブランド設定でRunway承認と接続状態を確認',
+    retryLabel: '承認後に再開',
+    retryHrefFallback: '/brand/settings',
+  },
+  unknown: {
+    kind: 'unknown',
+    title: '原因を確認して再開',
+    userMessage: '生成が止まりました。入力は残っているため、内容を確認して再開できます。',
+    nextAction: '入力内容とジョブ詳細を確認して再試行',
+    retryLabel: '入力を開いて再開',
+    retryHrefFallback: '/generate',
+  },
+};
+
+export function getFailureRecoveryGuidance(error: unknown): FailureRecoveryGuidance {
+  const rawMessage = typeof error === 'string'
+    ? error
+    : error && typeof error === 'object' && 'message' in error
+      ? String((error as { message?: unknown }).message ?? '')
+      : '';
+  const message = rawMessage.toLowerCase();
+
+  if (/rate[_ ]?limit|user_usage_rate_limit|brand_usage_rate_limit|短時間|リクエスト制限/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE['network-api'];
+  }
+  if (/quota|credit|workspace_limit|subscription_inactive|usage.*quota.*exceeded|monthly|残量|生成枠|クレジット/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE['runway-limit'];
+  }
+  if (/reference|handoff|reference.*(storage|signed url|download|upload)|local_runway_worker_reference|参照画像|素材画像/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE['reference-image'];
+  }
+  if (/waiting_for_runway|result json|result_json|timeout|pending local runway|local_runway_worker_(not_running|timeout)|worker.*(not running|waiting|timeout|result)/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE['worker-wait'];
+  }
+  if (/approval|not_approved|auth_required|oauth|login|承認|ログイン/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE['runway-approval'];
+  }
+  if (/network|fetch|api|502|503|504|request_failed|bridge_not_configured|connection_status_unavailable|storage|signed url|通信|接続/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE['network-api'];
+  }
+  if (/generation|generate|runway_mcp|image|prompt|nsfw|failed|生成|プロンプト/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE.generation;
+  }
+  return FAILURE_RECOVERY_GUIDANCE.unknown;
+}
 
 const KNOWN_MESSAGE_MAP: Array<[RegExp, string]> = [
   [/email rate limit exceeded/i, ERROR_MESSAGES.AUTH_EMAIL_RATE_LIMIT],

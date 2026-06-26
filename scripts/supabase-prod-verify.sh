@@ -114,8 +114,8 @@ NODE
 
 echo "Checking static safety guards"
 require_no_repo_file_match "service role key value assignment in repository files" "SUPABASE_SERVICE_ROLE_KEY[[:space:]]*=[[:space:]]*['\"]?(eyJ[A-Za-z0-9_-]{20,}|sb_secret_[A-Za-z0-9_-]{20,}|[A-Za-z0-9_-]{40,})" . ':(exclude)*.md'
-require_no_match "OpenAI-style secret literal" "sk-[A-Za-z0-9_-]\\{20,\\}" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=output
-require_no_match "storage/data URL image_url fallback" "image_url:[[:space:]]*storageUrl[[:space:]]*||[[:space:]]*imageDataUrl" supabase/functions
+require_no_match "OpenAI-style secret literal" "(^|[^A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}" . --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=output -E
+require_no_match "storage/data URL image_url fallback" "image_url:[[:space:]]*(storageUrl[[:space:]]*\\|\\|[[:space:]]*imageDataUrl|imageDataUrl)" supabase/functions -E
 require_no_match "data URL image_url persistence" "image_url:[[:space:]]*imageDataUrl" supabase/functions
 require_no_match "deprecated Gemini 2.0 model reference in Supabase functions" "gemini-2\\.0-flash-exp(-image-generation)?" supabase/functions -E
 require_no_repo_file_match "OpenAI/Gemini image env requirement in generation functions" "Deno\\.env\\.get\\(['\"](GEMINI_API_KEY|OPENAI_API_KEY|OPENAI_CHAT_[A-Z_]+)['\"]\\)" supabase/functions/generate-image supabase/functions/remove-background supabase/functions/upscale supabase/functions/colorize supabase/functions/generate-variations supabase/functions/design-gacha supabase/functions/product-shots supabase/functions/model-matrix supabase/functions/multilingual-banner

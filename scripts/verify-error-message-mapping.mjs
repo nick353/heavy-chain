@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { getErrorMessage } from '../src/lib/errorMessages.ts';
+import { getErrorMessage, getFailureRecoveryGuidance } from '../src/lib/errorMessages.ts';
 
 const cases = [
   {
@@ -69,6 +69,71 @@ for (const testCase of cases) {
   }
 }
 
+const recoveryCases = [
+  {
+    name: 'Runway credit limit',
+    input: 'runway_mcp_subscription_inactive: credits exhausted',
+    expectedKind: 'runway-limit',
+    expectedNextAction: 'Runwayのプランと残量を確認',
+  },
+  {
+    name: 'Worker waiting',
+    input: 'local_runway_worker_timeout waiting_for_runway result_json_missing',
+    expectedKind: 'worker-wait',
+    expectedNextAction: 'workerを起動',
+  },
+  {
+    name: 'Reference image failure',
+    input: 'local_runway_worker_reference_handoff_download_failed storage signed url failed',
+    expectedKind: 'reference-image',
+    expectedNextAction: '参照画像',
+  },
+  {
+    name: 'Generation failure',
+    input: 'local_runway_worker_failed generation failed prompt rejected',
+    expectedKind: 'generation',
+    expectedNextAction: 'プロンプト',
+  },
+  {
+    name: 'Network/API failure',
+    input: 'runway_mcp_request_failed:503 bridge api connection failed',
+    expectedKind: 'network-api',
+    expectedNextAction: '少し待って更新',
+  },
+  {
+    name: 'Short-window app rate limit',
+    input: 'user_usage_rate_limit exceeded',
+    expectedKind: 'network-api',
+    expectedNextAction: '少し待って更新',
+  },
+  {
+    name: 'Generated output storage failure',
+    input: 'generated image storage signed url failed',
+    expectedKind: 'network-api',
+    expectedNextAction: '少し待って更新',
+  },
+];
+
+for (const testCase of recoveryCases) {
+  const actual = getFailureRecoveryGuidance(testCase.input);
+  if (actual.kind !== testCase.expectedKind || !actual.nextAction.includes(testCase.expectedNextAction)) {
+    failures.push({
+      name: testCase.name,
+      input: testCase.input,
+      expected: `${testCase.expectedKind} / ${testCase.expectedNextAction}`,
+      actual: `${actual.kind} / ${actual.nextAction}`,
+    });
+  }
+  if (!actual.userMessage || !actual.retryLabel) {
+    failures.push({
+      name: `${testCase.name} copy completeness`,
+      input: testCase.input,
+      expected: 'userMessage and retryLabel',
+      actual: JSON.stringify(actual),
+    });
+  }
+}
+
 if (failures.length > 0) {
   console.error('Error message mapping verification failed.');
   for (const failure of failures) {
@@ -77,4 +142,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`Error message mapping verification passed (${cases.length}/${cases.length}).`);
+console.log(`Error message mapping verification passed (${cases.length}/${cases.length}); failure recovery matrix passed (${recoveryCases.length}/${recoveryCases.length}).`);

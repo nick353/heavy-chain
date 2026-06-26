@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { 
-  Image, 
-  Heart, 
-  Trash2, 
+import {
+  Image,
+  Heart,
+  Trash2,
   X,
   Grid,
   LayoutGrid,
@@ -40,6 +40,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 type FilterType = 'all' | 'favorites' | 'recent';
 type SortType = 'newest' | 'oldest' | 'name';
+const INITIAL_VISIBLE_IMAGE_COUNT = 60;
+const VISIBLE_IMAGE_INCREMENT = 30;
 
 const isGenerationIntent = (value: unknown): value is GenerationIntent => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -63,7 +65,7 @@ const getMetadataString = (image: GeneratedImage | null, key: string) => {
 export function GalleryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentBrand } = useAuthStore();
-  
+
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
@@ -71,6 +73,7 @@ export function GalleryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [gridSize, setGridSize] = useState<'small' | 'large'>('large');
+  const [visibleImageCount, setVisibleImageCount] = useState(INITIAL_VISIBLE_IMAGE_COUNT);
   const [shareLinks, setShareLinks] = useState<Record<string, { url: string; expiresAt?: string }>>({});
   const [isCreatingShareLink, setIsCreatingShareLink] = useState(false);
   const selectedGenerationIntent = getGenerationIntent(selectedImage);
@@ -78,11 +81,11 @@ export function GalleryPage() {
   const selectedSourceResumePath = getMetadataString(selectedImage, 'sourceResumePath');
   const selectedSourceSummaryRows = buildSourceContextSummaryRows(selectedImage?.metadata);
   const selectedShareLink = selectedImage ? shareLinks[selectedImage.id] : undefined;
-  
+
   // Multi-select mode
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  
+
   // Recent searches
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
@@ -135,7 +138,7 @@ export function GalleryPage() {
       setIsLoading(false);
       return;
     }
-    
+
     setIsLoading(true);
     try {
       const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(currentBrand.id);
@@ -229,7 +232,7 @@ export function GalleryPage() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      
+
       toast.success('ダウンロードしました');
     } catch {
       toast.error('ダウンロードに失敗しました');
@@ -267,8 +270,8 @@ export function GalleryPage() {
         .update({ is_favorite: newValue })
         .eq('id', image.id);
 
-      setImages(prev => 
-        prev.map(img => 
+      setImages(prev =>
+        prev.map(img =>
           img.id === image.id ? { ...img, is_favorite: newValue } : img
         )
       );
@@ -438,28 +441,43 @@ export function GalleryPage() {
     });
     return Array.from(features);
   }, [images]);
+  const imageSearchIndex = useMemo(() => {
+    const index = new Map<string, string>();
+    images.forEach((image) => {
+      index.set(
+        image.id,
+        [
+          image.prompt,
+          image.feature_type,
+          image.style_preset,
+          image.id,
+          image.storage_path,
+          JSON.stringify(image.metadata ?? {}),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+      );
+    });
+    return index;
+  }, [images]);
 
   const filteredImages = useMemo(() => {
     if (!searchQuery) return images;
 
     const searchLower = searchQuery.toLowerCase();
-    return images.filter(image => {
-      // Search in prompt
-      if (image.prompt?.toLowerCase().includes(searchLower)) return true;
-      // Search in feature type
-      if (image.feature_type?.toLowerCase().includes(searchLower)) return true;
-      // Search in style preset
-      if (image.style_preset?.toLowerCase().includes(searchLower)) return true;
-      if (JSON.stringify(image.metadata ?? {}).toLowerCase().includes(searchLower)) return true;
-      // Search in ID
-      if (image.id.toLowerCase().includes(searchLower)) return true;
-      // Search in storage path (fallback)
-      if (image.storage_path.toLowerCase().includes(searchLower)) return true;
-      return false;
-    });
-  }, [images, searchQuery]);
+    return images.filter(image => imageSearchIndex.get(image.id)?.includes(searchLower));
+  }, [imageSearchIndex, images, searchQuery]);
+  const visibleImages = useMemo(
+    () => filteredImages.slice(0, visibleImageCount),
+    [filteredImages, visibleImageCount]
+  );
   const favoriteCount = images.filter((image) => image.is_favorite).length;
   const localWorkspaceCount = images.filter(isLocalWorkspaceImage).length;
+
+  useEffect(() => {
+    setVisibleImageCount(INITIAL_VISIBLE_IMAGE_COUNT);
+  }, [filter, sortBy, searchQuery, gridSize]);
 
   const navigateImage = useCallback((direction: 'prev' | 'next') => {
     if (!selectedImage) return;
@@ -481,7 +499,7 @@ export function GalleryPage() {
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
       if (!selectedImage) return;
-      
+
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
         navigateImage('prev');
@@ -496,7 +514,7 @@ export function GalleryPage() {
         handleToggleFavorite(selectedImage);
       }
     };
-    
+
     document.addEventListener('keydown', handleKeydown);
     return () => document.removeEventListener('keydown', handleKeydown);
   }, [selectedImage, navigateImage, setSearchParams, handleToggleFavorite]);
@@ -513,7 +531,7 @@ export function GalleryPage() {
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
@@ -716,81 +734,93 @@ export function GalleryPage() {
 
         {/* Gallery Grid */}
         {filteredImages.length > 0 ? (
-          <motion.div 
-            layout
-            className={`grid gap-4 ${
-              gridSize === 'large' 
-                ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4' 
-                : 'grid-cols-3 sm:grid-cols-4 xl:grid-cols-6'
-            }`}
-          >
-            <AnimatePresence mode="popLayout">
-              {filteredImages.map((image) => (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.3 }}
-                  key={image.id}
-                  className={`group relative aspect-square rounded-xl overflow-hidden bg-white dark:bg-neutral-800 cursor-pointer transition-all shadow-sm hover:shadow-lg ${
-                    selectMode && selectedIds.has(image.id) ? 'ring-2 ring-primary-500 ring-offset-2' : 'hover:ring-2 hover:ring-primary-500'
-                  }`}
-                  onClick={() => selectMode ? toggleSelectImage(image.id) : setSelectedImage(image)}
-                >
-                  {getImageUrl(image) ? (
-                    <img
-                      src={getImageUrl(image)}
-                      alt=""
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        const parent = e.currentTarget.parentElement;
-                        if (parent) {
-                          const errorDiv = document.createElement('div');
-                          errorDiv.className = 'w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700';
-                          errorDiv.innerHTML = '<span class="text-neutral-400 text-sm">読込失敗</span>';
-                          parent.appendChild(errorDiv);
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700">
-                      <span className="text-neutral-400 text-sm">画像なし</span>
-                    </div>
-                  )}
-                  
-                  {/* Select checkbox */}
-                  {selectMode && (
-                    <div className="absolute top-2 left-2">
-                      {selectedIds.has(image.id) ? (
-                        <CheckSquare className="w-6 h-6 text-primary-500 bg-white rounded-md" />
-                      ) : (
-                        <Square className="w-6 h-6 text-white drop-shadow-md" />
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Favorite Badge */}
-                  {image.is_favorite && !selectMode && (
-                    <div className="absolute top-2 right-2 w-7 h-7 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
-                      <Heart className="w-4 h-4 text-red-500 fill-current" />
-                    </div>
-                  )}
+          <>
+            <motion.div
+              layout
+              className={`grid gap-4 ${
+                gridSize === 'large'
+                  ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4'
+                  : 'grid-cols-3 sm:grid-cols-4 xl:grid-cols-6'
+              }`}
+            >
+              <AnimatePresence mode="popLayout">
+                {visibleImages.map((image) => (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.3 }}
+                    key={image.id}
+                    className={`group relative aspect-square rounded-xl overflow-hidden bg-white dark:bg-neutral-800 cursor-pointer transition-all shadow-sm hover:shadow-lg ${
+                      selectMode && selectedIds.has(image.id) ? 'ring-2 ring-primary-500 ring-offset-2' : 'hover:ring-2 hover:ring-primary-500'
+                    }`}
+                    onClick={() => selectMode ? toggleSelectImage(image.id) : setSelectedImage(image)}
+                  >
+                    {getImageUrl(image) ? (
+                      <img
+                        src={getImageUrl(image)}
+                        alt=""
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const parent = e.currentTarget.parentElement;
+                          if (parent) {
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700';
+                            errorDiv.innerHTML = '<span class="text-neutral-400 text-sm">読込失敗</span>';
+                            parent.appendChild(errorDiv);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700">
+                        <span className="text-neutral-400 text-sm">画像なし</span>
+                      </div>
+                    )}
 
-                  {/* Hover Overlay */}
-                  {!selectMode && (
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                      <span className="text-white text-sm font-medium px-4 py-2 border border-white/50 rounded-lg">詳細を見る</span>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+                    {/* Select checkbox */}
+                    {selectMode && (
+                      <div className="absolute top-2 left-2">
+                        {selectedIds.has(image.id) ? (
+                          <CheckSquare className="w-6 h-6 text-primary-500 bg-white rounded-md" />
+                        ) : (
+                          <Square className="w-6 h-6 text-white drop-shadow-md" />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Favorite Badge */}
+                    {image.is_favorite && !selectMode && (
+                      <div className="absolute top-2 right-2 w-7 h-7 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
+                        <Heart className="w-4 h-4 text-red-500 fill-current" />
+                      </div>
+                    )}
+
+                    {/* Hover Overlay */}
+                    {!selectMode && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                        <span className="text-white text-sm font-medium px-4 py-2 border border-white/50 rounded-lg">詳細を見る</span>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+            {visibleImages.length < filteredImages.length && (
+              <div className="mt-6 flex justify-center">
+                <Button
+                  variant="secondary"
+                  onClick={() => setVisibleImageCount((count) => count + VISIBLE_IMAGE_INCREMENT)}
+                >
+                  さらに表示 ({visibleImages.length}/{filteredImages.length})
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="glass-panel rounded-2xl p-12 text-center"
@@ -800,7 +830,7 @@ export function GalleryPage() {
               {filter === 'favorites' ? 'お気に入りの画像がありません' : '画像がありません'}
             </h3>
             <p className="text-neutral-500 dark:text-neutral-400 mb-6">
-              {filter === 'favorites' 
+              {filter === 'favorites'
                 ? 'ハートアイコンをクリックしてお気に入りに追加しましょう'
                 : '画像を生成すると、ここに表示されます'
               }
@@ -815,7 +845,7 @@ export function GalleryPage() {
       {/* Image Detail Modal */}
       <AnimatePresence>
         {selectedImage && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -885,7 +915,7 @@ export function GalleryPage() {
               </div>
 
               {/* Right: Side Panel with Details */}
-              <motion.div 
+              <motion.div
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}
@@ -893,28 +923,28 @@ export function GalleryPage() {
               >
                 <div className="p-6">
                   <h3 className="text-white font-semibold mb-6 text-lg border-b border-white/10 pb-4">画像の詳細</h3>
-                  
+
                   {/* Metadata */}
                   <div className="space-y-4 mb-8">
                     <div className="flex items-center gap-3 text-sm text-white/80">
                       <Clock className="w-4 h-4 flex-shrink-0" />
                       <span>{new Date(selectedImage.created_at).toLocaleString('ja-JP')}</span>
                     </div>
-                    
+
                     {selectedImage.feature_type && (
                       <div className="flex items-center gap-3 text-sm text-white/80">
                         <Sparkles className="w-4 h-4 flex-shrink-0" />
                         <span>{selectedImage.feature_type}</span>
                       </div>
                     )}
-                    
+
                     {selectedImage.style_preset && (
                       <div className="flex items-center gap-3 text-sm text-white/80">
                         <Tag className="w-4 h-4 flex-shrink-0" />
                         <span>{selectedImage.style_preset}</span>
                       </div>
                     )}
-                    
+
                     <div className="flex items-center gap-3 text-sm text-white/80">
                       <Info className="w-4 h-4 flex-shrink-0" />
                       <span className="font-mono text-xs">ID: {selectedImage.id.slice(0, 8)}</span>

@@ -30,19 +30,19 @@ Heavy Chain を、Lightchain の上位互換として違和感なく使えるだ
 
 ## Execution Steps
 
-1. [queued] 全10主要生成機能の既存fresh proofを再監査し、不足分だけ bounded fresh generation で再検証し、画像品質scorecardを更新する。
-2. [queued] Lightchain同等UXの最終差分を、生成フローとCanvas連携を中心に再比較する。
+1. [done] 全10主要生成機能の既存fresh proofを再監査し、不足分だけ bounded fresh generation で再検証し、画像品質scorecardを更新する。
+2. [done] Lightchain同等UXの最終差分を、生成フローとCanvas連携を中心に再比較する。
 3. [queued] 衣服認識、切り抜き、レイヤー、素材メタデータ、Canvas編集導線を深掘り検証し、足りないUIを実装する。
-4. [queued] 生成失敗時UX、worker待ち、Runway制限、参照画像失敗のユーザー向け表示を検証・改善する。
+4. [done] 生成失敗時UX、worker待ち、Runway制限、参照画像失敗のユーザー向け表示を検証・改善する。
 5. [queued] 初回オンボーディングとテンプレート体験を、10分以内に価値体験できる形へ磨く。
-6. [queued] パフォーマンス、画像一覧負荷、Canvas負荷、bundleを測定し、明確な改善を入れる。
+6. [done] パフォーマンス、画像一覧負荷、Canvas負荷、bundleを測定し、明確な改善を入れる。
 7. [queued] production monitor、launch-ops、mass-market QA、完全回帰を統合した release gate を作る。
-8. [queued] セキュリティ/権限/RLS/storage/signed URL/service role の read-only audit を実行する。
+8. [done] セキュリティ/権限/RLS/storage/signed URL/service role の read-only audit を実行する。
 9. [queued] 法務/安全/商用利用/素材保持/ブランド模倣ガードの decision packet を作る。
 10. [queued] リテンション機能、ブランドキット、履歴検索、テンプレ再利用、チーム共有の現状差分を整理し、実装できる低リスク項目を入れる。
 11. [queued] βユーザー相当の実使用タスクを5シナリオ以上録画で流し、詰まりを修正する。
 12. [queued] 競合比較を Lightchain / Canva / Kittl / Photoroom / Adobe Express / Runway / Shopify系AI画像ツールで更新する。
-13. [queued] 画像品質基準、NG例、prompt preset、機能別rubricを docs と verifier に落とす。
+13. [done] 画像品質基準、NG例、prompt preset、機能別rubricを docs と verifier に落とす。
 14. [queued] 運用ドキュメント、障害復旧、worker起動、handoff、rollback、monitor対応を最新化する。
 15. [queued] 最後に本番で完全回帰、ドキュメント更新、Codex review、commit/pushまで閉じる。
 
@@ -59,5 +59,7 @@ Heavy Chain を、Lightchain の上位互換として違和感なく使えるだ
 
 ## Current Result
 
-- This plan starts the next 10M-readiness Goal Loop. Previous Lightchain parity and production monitor slices are accepted through G501.
-- Active execution now moves to G601-G615 in `GOAL.md`.
+- Active window G601/G602/G604/G606/G608/G613 is accepted in `GOAL.md`.
+- Key proof: `output/playwright/10m-product-readiness-g601/proof-reaudit.json`; `output/playwright/lightchain-workbench-parity-apparel-prod-20260626-r5-g602-final/SUMMARY.json`; `output/playwright/10m-product-readiness-g606/summary.json`; `output/playwright/10m-product-readiness-g608-security-audit/audit-readiness.json`; `docs/generation-quality-rubric-2026-06-26.md`.
+- Verification passed in this window: `npm run verify:error-messages`, `npm run verify:g606-performance`, default and explicit `npm run verify:generation-scorecard` runs, remote false-pass negative scorecard, `npm run security:audit`, `SECURITY_AUDIT_INCLUDE_LOCAL_ENV=1 npm run security:audit` negative detection, `bash scripts/supabase-prod-verify.sh`, `npm run typecheck`, `npm run lint -- --max-warnings=0`, `npm run build`, `git diff --check`, and Codex read-only reviews with no remaining high-risk findings.
+- Remaining queued work before calling the whole app complete: G603 garment cut/layer/Canvas, G605 onboarding/templates, G607 unified release gate, G609 legal/safety decision packet, G610 retention workspace features, G611 beta scenario QA, G612 competitor positioning, G614 operations docs, and G615 final production regression/closeout.

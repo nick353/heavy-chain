@@ -192,6 +192,20 @@ const checks = [
     next: '指摘されたファイルから secret らしい値や危険な image_url 永続化を取り除いてください。',
   },
   {
+    name: 'verify:g606-performance',
+    command: 'npm',
+    args: ['run', 'verify:g606-performance', '--silent'],
+    stop: 'G606 performance / scale baseline が通っていません。',
+    next: '`output/playwright/10m-product-readiness-g606/summary.json` の issues、previewLogs、debug screenshot を見て、Gallery/Canvas/route/bundle の失敗原因を修正してください。',
+  },
+  {
+    name: 'verify:generation-scorecard',
+    command: 'npm',
+    args: ['run', 'verify:generation-scorecard', '--silent'],
+    stop: '生成品質 scorecard の証跡が足りないか、readback と成果物画像が対応していません。',
+    next: 'primary/polish の visual-scorecard と readback-after-worker を取り直し、各画像が対応する job id の成果物であることを確認してください。',
+  },
+  {
     name: 'smoke:edge',
     command: 'npm',
     args: ['run', 'smoke:edge', '--silent'],

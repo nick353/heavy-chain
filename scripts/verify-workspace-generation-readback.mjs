@@ -415,7 +415,7 @@ function addFailure(file, message) {
 function containsLikelySecret(raw) {
   const patterns = [
     /eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/,
-    /sk-[A-Za-z0-9_-]{20,}/,
+    /(^|[^A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}/,
     /service_role[_-]?[A-Za-z0-9_-]{20,}/i,
     /AIza[0-9A-Za-z_-]{20,}/,
     /sb_secret_[A-Za-z0-9_-]{20,}/i,

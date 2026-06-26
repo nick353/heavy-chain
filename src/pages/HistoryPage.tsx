@@ -76,7 +76,7 @@ export function HistoryPage() {
               </Link>
 
               <Link
-                to={activity.failedJobs[0]?.resumeHref ?? '/jobs'}
+                to={activity.failedJobs[0]?.retryHref ?? '/jobs'}
                 className="rounded-2xl border border-neutral-200 bg-white/60 p-4 transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-900/45 dark:hover:border-primary-500/70"
               >
                 <span className="flex items-center gap-2 text-sm font-semibold text-neutral-950 dark:text-white">

@@ -35,7 +35,7 @@ import { ImageSelector, type SelectedImage, type ReferenceType } from '../compon
 import { UsageStats } from '../components/UsageStats';
 import { GenerateLightchainEntry } from '../components/GenerateLightchainEntry';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
-import { getErrorMessage } from '../lib/errorMessages';
+import { getErrorMessage, getFailureRecoveryGuidance } from '../lib/errorMessages';
 import { saveWorkspaceArtifact, saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
 import { parseLocalRunwayMcpImportBundle } from '../lib/localRunwayMcpImport';
 import {
@@ -915,6 +915,7 @@ export function GeneratePage() {
   const [overlayColor, setOverlayColor] = useState('#ffffff');
   const [overlayStrokeColor, setOverlayStrokeColor] = useState('#000000');
   const [overlayStrokeWidth, setOverlayStrokeWidth] = useState(2);
+  const generationRecoveryGuidance = getFailureRecoveryGuidance(generationError);
   
   // Reference image state
   const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
@@ -4054,14 +4055,16 @@ export function GeneratePage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-red-800 dark:text-red-200">
-                    生成に失敗しました
+                    {generationRecoveryGuidance.title}
                   </h3>
                   <p className="mt-2 text-sm leading-7 text-red-700 dark:text-red-300">
-                    {generationError}
+                    {generationRecoveryGuidance.userMessage}
                   </p>
-                  <p className="mt-4 text-sm text-red-700/80 dark:text-red-300/80">
-                    入力内容を確認し、少し待ってからもう一度試してください。
-                  </p>
+                  <div className="mt-4 rounded-xl border border-red-200 bg-white/60 p-3 text-sm leading-6 text-red-800 dark:border-red-900/60 dark:bg-surface-950/30 dark:text-red-200">
+                    <p className="font-semibold">次にやること</p>
+                    <p className="mt-1">{generationRecoveryGuidance.nextAction}</p>
+                    <p className="mt-2 text-xs text-red-700/80 dark:text-red-300/80">詳細: {generationError}</p>
+                  </div>
                 </div>
               </div>
             </div>

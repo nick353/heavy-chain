@@ -21,6 +21,8 @@
     "verify:lightchain-navigation": "node scripts/verify-lightchain-production-navigation.mjs",
     "verify:lightchain-clone-layout": "node scripts/verify-lightchain-clone-layout.mjs",
     "verify:mass-market-qa": "node scripts/verify-mass-market-qa.mjs",
+    "verify:g606-performance": "npm run build && node scripts/measure-g606-performance.mjs",
+    "verify:generation-scorecard": "node scripts/verify-generation-quality-scorecard.mjs",
     "verify:goal-readiness": "node scripts/audit-heavy-chain-goal-readiness.mjs",
     "verify:goal-readiness:incomplete-ok": "node scripts/audit-heavy-chain-goal-readiness.mjs --allow-incomplete",
     "test:runway-readiness": "node --test scripts/verify-runway-production-readiness.test.mjs",

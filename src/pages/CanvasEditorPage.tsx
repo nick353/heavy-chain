@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -18,17 +18,13 @@ import {
   Grid3x3,
   CircleHelp
 } from 'lucide-react';
-import {
-  InfiniteCanvas,
-  CanvasToolbar,
-  FloatingToolbar,
-  Minimap,
-  PropertiesPanel,
-  DerivationTree,
-  ImageEditModal,
-  CanvasGuide,
-  useCanvasGuide,
-} from '../components/canvas';
+import { InfiniteCanvas } from '../components/canvas/InfiniteCanvas';
+import { CanvasToolbar } from '../components/canvas/CanvasToolbar';
+import { FloatingToolbar } from '../components/canvas/FloatingToolbar';
+import { Minimap } from '../components/canvas/Minimap';
+import { PropertiesPanel } from '../components/canvas/PropertiesPanel';
+import { ImageEditModal } from '../components/canvas/ImageEditModal';
+import { CanvasGuide, useCanvasGuide } from '../components/canvas/CanvasGuide';
 import { useCanvasStore } from '../stores/canvasStore';
 import { ChatEditor } from '../components/ChatEditor';
 import { GallerySelector } from '../components/GallerySelector';
@@ -46,6 +42,9 @@ type SidePanel = 'properties' | 'chat' | 'templates' | null;
 type GenerateMode = 'basic' | 'gacha' | 'product-shots' | 'model-matrix' | 'multilingual';
 type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'generate-variations' | 'prompt-edit';
 const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
+const DerivationTree = lazy(() =>
+  import('../components/canvas/DerivationTree').then((module) => ({ default: module.DerivationTree }))
+);
 
 const LIGHTCHAIN_EDIT_ACTION_LABELS: Record<LightchainEditAction, string> = {
   'remove-background': '背景削除・切り抜き',
@@ -1535,7 +1534,15 @@ export function CanvasEditorPage() {
                 </div>
               </>
             ) : (
-              <DerivationTree />
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center text-sm text-neutral-500 dark:text-neutral-400">
+                    派生ツリーを読み込み中...
+                  </div>
+                }
+              >
+                <DerivationTree />
+              </Suspense>
             )}
           </div>
         </main>
