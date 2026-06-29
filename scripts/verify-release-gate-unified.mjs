@@ -124,6 +124,12 @@ const requiredReadbacks = [
     validate: validateG618ScaleOps,
     expect: 'ok=true, blockers=[], expected schema, commands/checks passed, imageCount>=1200, canvasObjectCount>=600, monitor/performance nested artifacts valid, and only allowed monitor warnings',
   },
+  {
+    name: 'G620 security operations',
+    path: 'output/playwright/10m-product-readiness-g620/summary.json',
+    validate: validateG620SecurityOps,
+    expect: 'ok=true, blockers=[], expected schema, monitor readback safe, abuse/permission/audit/incident checks passed, and only allowed monitor warnings',
+  },
 ];
 
 const commandChecks = [
@@ -161,6 +167,11 @@ const commandChecks = [
     name: 'node syntax: G618 scale ops verifier',
     command: 'node',
     args: ['--check', 'scripts/verify-g618-scale-ops-baseline.mjs'],
+  },
+  {
+    name: 'node syntax: G620 security ops verifier',
+    command: 'node',
+    args: ['--check', 'scripts/verify-g620-security-ops.mjs'],
   },
   {
     name: 'security audit',
@@ -486,6 +497,82 @@ function validateG618ScaleOps(json) {
     Number(monitor.sections?.generation?.failureRate ?? 0) === 0 &&
     Number(monitor.sections?.generation?.staleActive ?? 0) === 0 &&
     Number(monitor.sections?.storage?.checkedImages ?? 0) >= 4 &&
+    Number(monitor.sections?.storage?.signedUrlOk ?? 0) === Number(monitor.sections?.storage?.checkedImages ?? 0) &&
+    Number(monitor.sections?.storage?.errors ?? 0) === 0 &&
+    Number(monitor.sections?.usage?.failed ?? 0) === 0 &&
+    Number(monitor.sections?.usage?.staleReserved ?? 0) === 0 &&
+    Number(monitor.sections?.edgeFunctions?.failed ?? 0) === 0 &&
+    Number(monitor.sections?.edgeFunctions?.staleStarted ?? 0) === 0
+  );
+}
+
+function validateG620SecurityOps(json) {
+  const checks = arrayFrom(json.checks);
+  const hasMeteredEdgeObservabilityCheck = checks.some((check) =>
+    check?.name === 'all metered functions are edge-observed' && check?.passed === true
+  );
+  if (
+    json.schema !== 'heavy-chain.g620.security-operations.v1' ||
+    json.ok !== true ||
+    arrayFrom(json.blockers).length !== 0 ||
+    Number(json.summary?.checks || 0) !== checks.length ||
+    checks.length < 124 ||
+    !arrayFrom(json.commands).every((command) => command?.passed === true) ||
+    !checks.every((check) => check?.passed === true) ||
+    !hasMeteredEdgeObservabilityCheck ||
+    Number(json.thresholds?.monitorWindowHours || 0) < 96 ||
+    Number(json.thresholds?.maxGenerationFailureRate ?? -1) !== 0 ||
+    Number(json.thresholds?.maxFailedGenerationJobs ?? -1) !== 0 ||
+    Number(json.thresholds?.maxStaleActiveJobs ?? -1) !== 0 ||
+    Number(json.thresholds?.maxStorageErrors ?? -1) !== 0 ||
+    Number(json.thresholds?.maxUsageFailures ?? -1) !== 0 ||
+    Number(json.thresholds?.maxStaleUsageReservations ?? -1) !== 0 ||
+    Number(json.thresholds?.maxEdgeFunctionFailures ?? -1) !== 0 ||
+    Number(json.thresholds?.maxStaleStartedEdgeRuns ?? -1) !== 0
+  ) {
+    return false;
+  }
+
+  const irreversibleActions = json.irreversibleActions || {};
+  const safeIrreversibleActions =
+    irreversibleActions.generationSubmit === 'not_clicked' &&
+    irreversibleActions.purchasePaymentCheckout === 'not_touched' &&
+    irreversibleActions.identityOtpCaptchaSecrets === 'not_touched' &&
+    irreversibleActions.externalPublish === 'not_touched' &&
+    irreversibleActions.destructiveCleanup === 'not_touched' &&
+    irreversibleActions.deploy === 'not_run';
+  if (!safeIrreversibleActions) return false;
+
+  const monitorPath = json.artifacts?.productionMonitorSummary;
+  const runbookPath = json.artifacts?.runbook;
+  if (!monitorPath || !runbookPath || !fs.existsSync(monitorPath) || !fs.existsSync(runbookPath)) return false;
+  const monitor = JSON.parse(fs.readFileSync(monitorPath, 'utf8'));
+  const monitorFreshness = artifactFreshness(monitorPath, monitor, fs.statSync(monitorPath));
+  const monitorWarningCodes = arrayFrom(monitor.warnings).map((warning) => warning?.code).filter(Boolean).sort();
+  const allowedMonitorWarnings = new Set(['local_worker_inbox_stale_files', 'ui_probe_skipped']);
+  const warningsAllowed = monitorWarningCodes.every((code) => allowedMonitorWarnings.has(code));
+  const g620WarningIds = arrayFrom(json.warnings).map((warning) => warning?.id).filter(Boolean);
+  const allowedG620Warnings = new Set(['production_usage_sample_absent', 'production_edge_function_sample_absent']);
+  const g620WarningsAllowed = g620WarningIds.every((id) => allowedG620Warnings.has(id));
+  const usageTotal = Number(monitor.sections?.usage?.total ?? 0);
+  const edgeTotal = Number(monitor.sections?.edgeFunctions?.total ?? 0);
+  const usageSampleAccountedFor = usageTotal >= 1 || g620WarningIds.includes('production_usage_sample_absent');
+  const edgeSampleAccountedFor = edgeTotal >= 1 || g620WarningIds.includes('production_edge_function_sample_absent');
+
+  return (
+    monitor.schema === 'heavy-chain.production-monitor.v1' &&
+    monitor.ok === true &&
+    monitor.mode === 'read-only-no-submit-no-payment-no-cleanup' &&
+    monitorFreshness.passed &&
+    Number(monitor.window?.hours || 0) >= 96 &&
+    arrayFrom(monitor.blockers).length === 0 &&
+    warningsAllowed &&
+    g620WarningsAllowed &&
+    usageSampleAccountedFor &&
+    edgeSampleAccountedFor &&
+    Number(monitor.sections?.generation?.failureRate ?? 0) === 0 &&
+    Number(monitor.sections?.generation?.counts?.failed ?? 0) === 0 &&
+    Number(monitor.sections?.generation?.staleActive ?? 0) === 0 &&
     Number(monitor.sections?.storage?.signedUrlOk ?? 0) === Number(monitor.sections?.storage?.checkedImages ?? 0) &&
     Number(monitor.sections?.storage?.errors ?? 0) === 0 &&
     Number(monitor.sections?.usage?.failed ?? 0) === 0 &&
