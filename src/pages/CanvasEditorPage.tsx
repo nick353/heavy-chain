@@ -42,6 +42,7 @@ type SidePanel = 'properties' | 'chat' | 'templates' | null;
 type GenerateMode = 'basic' | 'gacha' | 'product-shots' | 'model-matrix' | 'multilingual';
 type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'generate-variations' | 'prompt-edit';
 type CanvasTemplateMode = 'size' | 'design';
+type CanvasRenderState = { totalImageObjects: number; loadedImageObjects: number; renderAllObjects: boolean };
 const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
 const DerivationTree = lazy(() =>
   import('../components/canvas/DerivationTree').then((module) => ({ default: module.DerivationTree }))
@@ -70,6 +71,7 @@ export function CanvasEditorPage() {
   const projectNameInputRef = useRef<HTMLInputElement>(null);
   const isMountedRef = useRef(true);
   const canvasStageRef = useRef<Konva.Stage | null>(null);
+  const canvasRenderStateRef = useRef<CanvasRenderState>({ totalImageObjects: 0, loadedImageObjects: 0, renderAllObjects: false });
   const { currentBrand, user, profile } = useAuthStore();
   const { showGuide, completeGuide, resetGuide } = useCanvasGuide(user?.id);
   
@@ -87,6 +89,7 @@ export function CanvasEditorPage() {
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
   const [selectedPosition, setSelectedPosition] = useState({ x: 0, y: 0 });
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isExportRenderingAll, setIsExportRenderingAll] = useState(false);
   
   // Generate modal states
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -934,7 +937,56 @@ export function CanvasEditorPage() {
     }
   };
 
-  const handleExportCanvas = () => {
+  const waitForExportRenderReady = async () => {
+    const deadline = Date.now() + 8000;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    while (Date.now() < deadline) {
+      const state = canvasRenderStateRef.current;
+      if (
+        state.renderAllObjects &&
+        state.loadedImageObjects >= state.totalImageObjects
+      ) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    throw new Error('Canvas export render did not become ready');
+  };
+
+  const getCanvasExportBounds = (stage: Konva.Stage) => {
+    const rects = objects
+      .filter((object) => object.visible !== false)
+      .map((object) => stage.findOne(`#${object.id}`)?.getClientRect({ relativeTo: stage }))
+      .filter((rect): rect is Konva.Vector2d & { width: number; height: number } => Boolean(rect));
+    if (rects.length === 0) {
+      return { x: 0, y: 0, width: canvasSize.width, height: canvasSize.height };
+    }
+    const padding = 24;
+    const bounds = rects.reduce((acc, rect) => {
+      const right = rect.x + rect.width;
+      const bottom = rect.y + rect.height;
+      return {
+        minX: Math.min(acc.minX, rect.x),
+        minY: Math.min(acc.minY, rect.y),
+        maxX: Math.max(acc.maxX, right),
+        maxY: Math.max(acc.maxY, bottom),
+      };
+    }, {
+      minX: Number.POSITIVE_INFINITY,
+      minY: Number.POSITIVE_INFINITY,
+      maxX: Number.NEGATIVE_INFINITY,
+      maxY: Number.NEGATIVE_INFINITY,
+    });
+    return {
+      x: Math.floor(bounds.minX - padding),
+      y: Math.floor(bounds.minY - padding),
+      width: Math.ceil(bounds.maxX - bounds.minX + padding * 2),
+      height: Math.ceil(bounds.maxY - bounds.minY + padding * 2),
+    };
+  };
+
+  const handleExportCanvas = async () => {
     const stage = canvasStageRef.current;
     if (!stage) {
       toast.error('キャンバスの準備が完了していません');
@@ -943,11 +995,18 @@ export function CanvasEditorPage() {
     const previousScale = stage.scale();
     const previousPosition = stage.position();
     try {
+      setIsExportRenderingAll(true);
+      await waitForExportRenderReady();
       stage.scale({ x: 1, y: 1 });
       stage.position({ x: 0, y: 0 });
       stage.batchDraw();
+      const exportBounds = getCanvasExportBounds(stage);
 
       const dataUrl = stage.toDataURL({
+        x: exportBounds.x,
+        y: exportBounds.y,
+        width: Math.max(1, exportBounds.width),
+        height: Math.max(1, exportBounds.height),
         pixelRatio: 2,
         mimeType: 'image/png',
       });
@@ -966,6 +1025,7 @@ export function CanvasEditorPage() {
       stage.scale(previousScale);
       stage.position(previousPosition);
       stage.batchDraw();
+      setIsExportRenderingAll(false);
     }
   };
 
@@ -1696,10 +1756,15 @@ export function CanvasEditorPage() {
                   height={canvasSize.height}
                   onObjectSelect={handleObjectSelect}
                   onContextAction={handleContextAction}
-                  onStageReady={(stage) => {
-                    canvasStageRef.current = stage;
-                  }}
-                />
+										onStageReady={(stage) => {
+											canvasStageRef.current = stage;
+										}}
+										renderAllObjects={isExportRenderingAll}
+										exportMode={isExportRenderingAll}
+										onRenderStateChange={(state) => {
+											canvasRenderStateRef.current = state;
+										}}
+	                />
                 
                 {selectedObject && (
                   <FloatingToolbar

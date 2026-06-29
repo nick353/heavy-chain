@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import { Stage, Layer, Rect, Image as KonvaImage, Text, Transformer, Line, Circle } from 'react-konva';
 import type Konva from 'konva';
 import { useCanvasStore, type CanvasObject } from '../../stores/canvasStore';
@@ -10,13 +10,29 @@ interface InfiniteCanvasProps {
   onObjectSelect?: (id: string | null) => void;
   onContextAction?: (action: string, objectId: string | null) => void;
   onStageReady?: (stage: Konva.Stage | null) => void;
+  renderAllObjects?: boolean;
+  exportMode?: boolean;
+  onRenderStateChange?: (state: { totalImageObjects: number; loadedImageObjects: number; renderAllObjects: boolean }) => void;
 }
 
-export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction, onStageReady }: InfiniteCanvasProps) {
+export function InfiniteCanvas({
+  width,
+  height,
+  onObjectSelect,
+  onContextAction,
+  onStageReady,
+  renderAllObjects = false,
+  exportMode = false,
+  onRenderStateChange,
+}: InfiniteCanvasProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
   const loadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const loadedImageSourcesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const loadingImageSourcesRef = useRef<Map<string, Promise<HTMLImageElement>>>(new Map());
   const loadingImageIdsRef = useRef<Set<string>>(new Set());
+  const pendingLoadedImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const pendingImageFlushRef = useRef<number | null>(null);
   const [loadedImages, setLoadedImages] = useState<Map<string, HTMLImageElement>>(new Map());
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; objectId: string | null; objectType: 'image' | 'text' | 'shape' | 'frame' | null } | null>(null);
   
@@ -46,12 +62,55 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction,
     loadedImagesRef.current = loadedImages;
   }, [loadedImages]);
 
+  const objectById = useMemo(() => new Map(objects.map((obj) => [obj.id, obj])), [objects]);
+  const viewportBounds = useMemo(() => {
+    const padding = 600;
+    const left = (-panX / zoom) - padding;
+    const top = (-panY / zoom) - padding;
+    const right = ((width - panX) / zoom) + padding;
+    const bottom = ((height - panY) / zoom) + padding;
+    return { left, top, right, bottom };
+  }, [height, panX, panY, width, zoom]);
+  const visibleObjects = useMemo(() => objects.filter((obj) => {
+    if (obj.visible === false) return false;
+    const objectLeft = obj.x;
+    const objectTop = obj.y;
+    const objectRight = obj.x + (obj.width * (obj.scaleX || 1));
+    const objectBottom = obj.y + (obj.height * (obj.scaleY || 1));
+    return (
+      objectRight >= viewportBounds.left &&
+      objectLeft <= viewportBounds.right &&
+      objectBottom >= viewportBounds.top &&
+      objectTop <= viewportBounds.bottom
+    );
+  }), [objects, viewportBounds]);
+  const renderedObjects = useMemo(
+    () => (renderAllObjects ? objects.filter((obj) => obj.visible !== false) : visibleObjects),
+    [objects, renderAllObjects, visibleObjects]
+  );
+
   // Load images
   useEffect(() => {
     let cancelled = false;
     const loadingImageIds = loadingImageIdsRef.current;
-    const cleanupLoaders: Array<() => void> = [];
+    const pendingLoadedImages = pendingLoadedImagesRef.current;
     const startedLoadingIds: string[] = [];
+    const flushLoadedImages = () => {
+      pendingImageFlushRef.current = null;
+      if (cancelled || pendingLoadedImages.size === 0) return;
+      const pending = new Map(pendingLoadedImages);
+      pendingLoadedImages.clear();
+      setLoadedImages((prev) => {
+        const next = new Map(prev);
+        pending.forEach((img, id) => next.set(id, img));
+        return next;
+      });
+    };
+    const queueLoadedImage = (id: string, img: HTMLImageElement) => {
+      pendingLoadedImages.set(id, img);
+      if (pendingImageFlushRef.current !== null) return;
+      pendingImageFlushRef.current = window.requestAnimationFrame(flushLoadedImages);
+    };
     const loadImage = (source: string, useCors: boolean) =>
       new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new window.Image();
@@ -75,13 +134,6 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction,
           cleanup();
           callback();
         };
-        cleanupLoaders.push(() => {
-          if (!settled) {
-            settled = true;
-            cleanup();
-            img.src = '';
-          }
-        });
         if (useCors && !source.startsWith('data:')) {
           img.crossOrigin = 'anonymous';
         }
@@ -90,7 +142,7 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction,
         img.src = source;
       });
 
-    objects.forEach((obj) => {
+    renderedObjects.forEach((obj) => {
       if (
         obj.type === 'image' &&
         obj.src &&
@@ -99,12 +151,27 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction,
       ) {
         loadingImageIds.add(obj.id);
         startedLoadingIds.push(obj.id);
-        loadImage(obj.src, true)
-          .catch(() => loadImage(obj.src || '', false))
+        const source = obj.src;
+        const cachedImage = loadedImageSourcesRef.current.get(source);
+        const imagePromise = cachedImage
+          ? Promise.resolve(cachedImage)
+          : loadingImageSourcesRef.current.get(source) || loadImage(source, true)
+            .catch(() => loadImage(source, false))
+            .then((img) => {
+              loadedImageSourcesRef.current.set(source, img);
+              return img;
+            })
+            .finally(() => {
+              loadingImageSourcesRef.current.delete(source);
+            });
+        if (!cachedImage && !loadingImageSourcesRef.current.has(source)) {
+          loadingImageSourcesRef.current.set(source, imagePromise);
+        }
+        imagePromise
           .then((img) => {
             loadingImageIds.delete(obj.id);
             if (!cancelled) {
-              setLoadedImages((prev) => new Map(prev).set(obj.id, img));
+              queueLoadedImage(obj.id, img);
             }
           })
           .catch((error) => {
@@ -116,10 +183,23 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction,
 
     return () => {
       cancelled = true;
-      cleanupLoaders.forEach((cleanup) => cleanup());
+      if (pendingImageFlushRef.current !== null) {
+        window.cancelAnimationFrame(pendingImageFlushRef.current);
+        pendingImageFlushRef.current = null;
+      }
+      pendingLoadedImages.clear();
       startedLoadingIds.forEach((id) => loadingImageIds.delete(id));
     };
-  }, [objects]);
+  }, [renderedObjects]);
+
+  useEffect(() => {
+    if (!onRenderStateChange) return;
+    const totalImageObjects = renderedObjects.filter((obj) => obj.type === 'image' && obj.src).length;
+    const loadedImageObjects = renderedObjects.filter((obj) => (
+      obj.type === 'image' && obj.src && loadedImages.has(obj.id)
+    )).length;
+    onRenderStateChange({ totalImageObjects, loadedImageObjects, renderAllObjects });
+  }, [loadedImages, onRenderStateChange, renderAllObjects, renderedObjects]);
 
   // Update transformer
   useEffect(() => {
@@ -131,7 +211,7 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction,
       transformerRef.current.nodes(selectedNodes);
       transformerRef.current.getLayer()?.batchDraw();
     }
-  }, [selectedIds]);
+  }, [selectedIds, renderedObjects]);
 
   // Handle wheel zoom
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -280,7 +360,7 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction,
 
   // Render object based on type
   const renderObject = (obj: CanvasObject) => {
-    const isSelected = selectedIds.includes(obj.id);
+    const isSelected = !exportMode && selectedIds.includes(obj.id);
     const commonProps = {
       id: obj.id,
       x: obj.x,
@@ -372,9 +452,9 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction,
   const renderDerivationLines = () => {
     const lines: React.ReactNode[] = [];
     
-    objects.forEach((obj) => {
+    renderedObjects.forEach((obj) => {
       if (obj.derivedFrom) {
-        const parent = objects.find((o) => o.id === obj.derivedFrom);
+        const parent = objectById.get(obj.derivedFrom);
         if (parent) {
           const startX = parent.x + parent.width / 2;
           const startY = parent.y + parent.height / 2;
@@ -465,10 +545,8 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction,
     );
   };
 
-  // Sort objects by zIndex
-  const sortedObjects = [...objects]
-    .filter((obj) => obj.visible !== false)
-    .sort((a, b) => a.zIndex - b.zIndex);
+  // Sort visible objects by zIndex
+  const sortedObjects = [...renderedObjects].sort((a, b) => a.zIndex - b.zIndex);
 
   return (
     <>
@@ -491,34 +569,36 @@ export function InfiniteCanvas({ width, height, onObjectSelect, onContextAction,
         }}
         style={{ backgroundColor: '#fafafa' }}
       >
-        {renderGrid()}
+        {!exportMode && renderGrid()}
         
         <Layer>
           {/* Derivation connection lines (drawn first, behind objects) */}
-          {renderDerivationLines()}
+          {!exportMode && renderDerivationLines()}
           
           {sortedObjects.map(renderObject)}
           
           {/* Generation badges (drawn on top of images) */}
-          {sortedObjects.filter(obj => obj.type === 'image').map(renderGenerationBadge)}
+          {!exportMode && sortedObjects.filter(obj => obj.type === 'image').map(renderGenerationBadge)}
           
-          <Transformer
-            ref={transformerRef}
-            boundBoxFunc={(oldBox, newBox) => {
-              // Limit resize
-              if (newBox.width < 5 || newBox.height < 5) {
-                return oldBox;
-              }
-              return newBox;
-            }}
-            rotationSnaps={[0, 45, 90, 135, 180, 225, 270, 315]}
-            anchorFill="#fff"
-            anchorStroke="#806a54"
-            anchorSize={8}
-            anchorCornerRadius={2}
-            borderStroke="#806a54"
-            borderStrokeWidth={1}
-          />
+          {!exportMode && (
+            <Transformer
+              ref={transformerRef}
+              boundBoxFunc={(oldBox, newBox) => {
+                // Limit resize
+                if (newBox.width < 5 || newBox.height < 5) {
+                  return oldBox;
+                }
+                return newBox;
+              }}
+              rotationSnaps={[0, 45, 90, 135, 180, 225, 270, 315]}
+              anchorFill="#fff"
+              anchorStroke="#806a54"
+              anchorSize={8}
+              anchorCornerRadius={2}
+              borderStroke="#806a54"
+              borderStrokeWidth={1}
+            />
+          )}
         </Layer>
       </Stage>
 

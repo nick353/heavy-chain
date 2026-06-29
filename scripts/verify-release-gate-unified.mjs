@@ -118,6 +118,12 @@ const requiredReadbacks = [
     },
     expect: 'complete/ok/passed with blockers=[], expected requirement IDs exactly once, all requirements passed, and summary counts matching requirements',
   },
+  {
+    name: 'G618 scale ops baseline',
+    path: 'output/playwright/10m-product-readiness-g618/summary.json',
+    validate: validateG618ScaleOps,
+    expect: 'ok=true, blockers=[], expected schema, commands/checks passed, imageCount>=1200, canvasObjectCount>=600, monitor/performance nested artifacts valid, and only allowed monitor warnings',
+  },
 ];
 
 const commandChecks = [
@@ -150,6 +156,11 @@ const commandChecks = [
     name: 'node syntax: G614 operations verifier',
     command: 'node',
     args: ['--check', 'scripts/verify-g614-operations-docs.mjs'],
+  },
+  {
+    name: 'node syntax: G618 scale ops verifier',
+    command: 'node',
+    args: ['--check', 'scripts/verify-g618-scale-ops-baseline.mjs'],
   },
   {
     name: 'security audit',
@@ -414,6 +425,74 @@ function summarizeJson(json) {
     capturedAt: json.capturedAt || json.verifiedAt || json.completedAt || null,
     workflow: json.workflow || json.schema || null,
   };
+}
+
+function validateG618ScaleOps(json) {
+  if (
+    json.schema !== 'heavy-chain.g618.scale-ops-baseline.v1' ||
+    json.ok !== true ||
+    arrayFrom(json.blockers).length !== 0 ||
+    Number(json.summary?.checks || 0) !== 16 ||
+    Number(json.summary?.imageCount || 0) < 1200 ||
+    Number(json.summary?.canvasObjectCount || 0) < 600 ||
+    Number(json.thresholds?.maxFailureRate ?? -1) !== 0 ||
+    Number(json.thresholds?.productionReadbackWindowHours || 0) < 96 ||
+    Number(json.thresholds?.minStorageImages || 0) < 4 ||
+    json.summary?.performanceOk !== true ||
+    json.summary?.monitorOk !== true ||
+    !arrayFrom(json.commands).every((command) => command?.passed === true) ||
+    !arrayFrom(json.checks).every((check) => check?.passed === true)
+  ) {
+    return false;
+  }
+
+  const irreversibleActions = json.irreversibleActions || {};
+  const safeIrreversibleActions =
+    irreversibleActions.generationSubmit === 'not_clicked' &&
+    irreversibleActions.purchasePaymentCheckout === 'not_touched' &&
+    irreversibleActions.externalPublish === 'not_touched' &&
+    irreversibleActions.destructiveCleanup === 'not_touched' &&
+    irreversibleActions.deploy === 'not_run';
+  if (!safeIrreversibleActions) return false;
+
+  const performancePath = json.artifacts?.performanceSummary;
+  const monitorPath = json.artifacts?.productionMonitorSummary;
+  if (!performancePath || !monitorPath || !fs.existsSync(performancePath) || !fs.existsSync(monitorPath)) return false;
+
+  const performance = JSON.parse(fs.readFileSync(performancePath, 'utf8'));
+  const monitor = JSON.parse(fs.readFileSync(monitorPath, 'utf8'));
+  const monitorWarningCodes = arrayFrom(monitor.warnings).map((warning) => warning?.code).filter(Boolean).sort();
+  const allowedMonitorWarnings = new Set(['local_worker_inbox_stale_files', 'ui_probe_skipped']);
+  const warningsAllowed = monitorWarningCodes.every((code) => allowedMonitorWarnings.has(code));
+
+  return (
+    performance.ok === true &&
+    arrayFrom(performance.issues).length === 0 &&
+    Number(performance.fixture?.imageCount || 0) >= 1200 &&
+    Number(performance.fixture?.canvasObjectCount || 0) >= 600 &&
+    Number(performance.galleryStress?.renderedTilesInitial || 0) === 60 &&
+    Number(performance.canvasStress?.persistedObjects || 0) >= 600 &&
+    performance.canvasStress?.export?.validPng === true &&
+    Number(performance.canvasStress?.export?.width || 0) > 3000 &&
+    Number(performance.canvasStress?.export?.height || 0) > 8000 &&
+    Number(performance.canvasStress?.export?.edgeColorSamples?.top || 0) > 20 &&
+    Number(performance.canvasStress?.export?.edgeColorSamples?.bottom || 0) > 20 &&
+    performance.cleanup?.previewProcessCleanup?.groupAliveAfter === false &&
+    monitor.schema === 'heavy-chain.production-monitor.v1' &&
+    monitor.ok === true &&
+    Number(monitor.window?.hours || 0) >= 96 &&
+    arrayFrom(monitor.blockers).length === 0 &&
+    warningsAllowed &&
+    Number(monitor.sections?.generation?.failureRate ?? 0) === 0 &&
+    Number(monitor.sections?.generation?.staleActive ?? 0) === 0 &&
+    Number(monitor.sections?.storage?.checkedImages ?? 0) >= 4 &&
+    Number(monitor.sections?.storage?.signedUrlOk ?? 0) === Number(monitor.sections?.storage?.checkedImages ?? 0) &&
+    Number(monitor.sections?.storage?.errors ?? 0) === 0 &&
+    Number(monitor.sections?.usage?.failed ?? 0) === 0 &&
+    Number(monitor.sections?.usage?.staleReserved ?? 0) === 0 &&
+    Number(monitor.sections?.edgeFunctions?.failed ?? 0) === 0 &&
+    Number(monitor.sections?.edgeFunctions?.staleStarted ?? 0) === 0
+  );
 }
 
 function safeTail(text) {

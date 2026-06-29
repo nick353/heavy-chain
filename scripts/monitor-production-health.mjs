@@ -218,9 +218,7 @@ async function collectStorageHealth() {
   const rows = Array.isArray(data) ? data : [];
   const signedUrlChecks = [];
   for (const row of rows) {
-    const { data: signed, error: signedError } = await supabase.storage
-      .from(GENERATED_IMAGES_BUCKET)
-      .createSignedUrl(row.storage_path, 120);
+    const { signed, signedError, attempts } = await createSignedUrlWithRetry(row.storage_path, 120);
     signedUrlChecks.push({
       imageId: row.id,
       jobId: row.job_id,
@@ -228,6 +226,7 @@ async function collectStorageHealth() {
       storagePath: row.storage_path,
       signedUrlOk: Boolean(signed?.signedUrl && !signedError),
       error: signedError?.message || null,
+      attempts,
     });
   }
   const errors = signedUrlChecks.filter((row) => !row.signedUrlOk);
@@ -245,6 +244,26 @@ async function collectStorageHealth() {
   if (errors.length > maxStorageErrors) {
     addBlocker('generated_image_storage_errors', `${errors.length} generated image storage object(s) failed signed-url readback.`, 'Inspect generated_images.storage_path and Storage object existence before trusting Gallery health.');
   }
+}
+
+async function createSignedUrlWithRetry(storagePath, expiresIn) {
+  let signed = null;
+  let signedError = null;
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const { data, error } = await supabase.storage
+      .from(GENERATED_IMAGES_BUCKET)
+      .createSignedUrl(storagePath, expiresIn);
+    signed = data;
+    signedError = error;
+    if (signed?.signedUrl && !signedError) {
+      return { signed, signedError: null, attempts: attempt };
+    }
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+    }
+  }
+  return { signed, signedError, attempts: maxAttempts };
 }
 
 function collectLocalWorkerInboxHealth() {

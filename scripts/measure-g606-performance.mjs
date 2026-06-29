@@ -2,8 +2,9 @@ import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { inflateSync } from 'node:zlib';
 
-const OUT_DIR = path.resolve('output/playwright/10m-product-readiness-g606');
+const OUT_DIR = path.resolve(process.env.G606_OUT_DIR || 'output/playwright/10m-product-readiness-g606');
 const PORT = Number(process.env.G606_PORT || 4173);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const IMAGE_COUNT = Number(process.env.G606_IMAGE_COUNT || 500);
@@ -464,6 +465,155 @@ const inspectCanvasRender = async (page) => page.evaluate(() => {
   };
 });
 
+const readPngDimensions = async (filePath) => {
+  const buffer = await readFile(filePath);
+  if (buffer.length < 24 || buffer.toString('ascii', 1, 4) !== 'PNG') {
+    return { width: null, height: null, validPng: false };
+  }
+  const edgeColorSamples = inspectPngEdgeColorSamples(buffer);
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+    validPng: true,
+    edgeColorSamples,
+  };
+};
+
+const inspectPngEdgeColorSamples = (buffer) => {
+  try {
+    const png = decodePngRgba(buffer);
+    const sampleBand = Math.min(320, Math.floor(png.height / 4));
+    const top = countColoredPixels(png, 0, sampleBand);
+    const bottom = countColoredPixels(png, Math.max(0, png.height - sampleBand), png.height);
+    return { top, bottom, sampleBand };
+  } catch (error) {
+    return { top: 0, bottom: 0, sampleBand: 0, error: error instanceof Error ? error.message : String(error) };
+  }
+};
+
+const decodePngRgba = (buffer) => {
+  const signature = buffer.subarray(0, 8).toString('hex');
+  if (signature !== '89504e470d0a1a0a') throw new Error('invalid png signature');
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let bitDepth = 0;
+  let colorType = 0;
+  const idatChunks = [];
+  while (offset + 8 <= buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString('ascii', offset + 4, offset + 8);
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    const data = buffer.subarray(dataStart, dataEnd);
+    if (type === 'IHDR') {
+      width = data.readUInt32BE(0);
+      height = data.readUInt32BE(4);
+      bitDepth = data[8];
+      colorType = data[9];
+    } else if (type === 'IDAT') {
+      idatChunks.push(data);
+    } else if (type === 'IEND') {
+      break;
+    }
+    offset = dataEnd + 4;
+  }
+  if (bitDepth !== 8 || ![2, 6].includes(colorType)) {
+    throw new Error(`unsupported png format:${bitDepth}:${colorType}`);
+  }
+  const bytesPerPixel = colorType === 6 ? 4 : 3;
+  const inflated = inflateSync(Buffer.concat(idatChunks));
+  const stride = width * bytesPerPixel;
+  const rgba = Buffer.alloc(width * height * 4);
+  let inputOffset = 0;
+  let prior = Buffer.alloc(stride);
+  for (let y = 0; y < height; y += 1) {
+    const filter = inflated[inputOffset];
+    inputOffset += 1;
+    const row = Buffer.from(inflated.subarray(inputOffset, inputOffset + stride));
+    inputOffset += stride;
+    applyPngFilter(row, prior, bytesPerPixel, filter);
+    for (let x = 0; x < width; x += 1) {
+      const source = x * bytesPerPixel;
+      const target = (y * width + x) * 4;
+      rgba[target] = row[source];
+      rgba[target + 1] = row[source + 1];
+      rgba[target + 2] = row[source + 2];
+      rgba[target + 3] = colorType === 6 ? row[source + 3] : 255;
+    }
+    prior = row;
+  }
+  return { width, height, rgba };
+};
+
+const applyPngFilter = (row, prior, bytesPerPixel, filter) => {
+  for (let index = 0; index < row.length; index += 1) {
+    const left = index >= bytesPerPixel ? row[index - bytesPerPixel] : 0;
+    const up = prior[index] || 0;
+    const upLeft = index >= bytesPerPixel ? prior[index - bytesPerPixel] || 0 : 0;
+    if (filter === 1) {
+      row[index] = (row[index] + left) & 255;
+    } else if (filter === 2) {
+      row[index] = (row[index] + up) & 255;
+    } else if (filter === 3) {
+      row[index] = (row[index] + Math.floor((left + up) / 2)) & 255;
+    } else if (filter === 4) {
+      row[index] = (row[index] + paethPredictor(left, up, upLeft)) & 255;
+    } else if (filter !== 0) {
+      throw new Error(`unsupported png filter:${filter}`);
+    }
+  }
+};
+
+const paethPredictor = (left, up, upLeft) => {
+  const estimate = left + up - upLeft;
+  const leftDistance = Math.abs(estimate - left);
+  const upDistance = Math.abs(estimate - up);
+  const upLeftDistance = Math.abs(estimate - upLeft);
+  if (leftDistance <= upDistance && leftDistance <= upLeftDistance) return left;
+  if (upDistance <= upLeftDistance) return up;
+  return upLeft;
+};
+
+const countColoredPixels = ({ width, rgba }, startY, endY) => {
+  let colored = 0;
+  for (let y = startY; y < endY; y += 1) {
+    for (let x = 0; x < width; x += 12) {
+      const index = (y * width + x) * 4;
+      const alpha = rgba[index + 3];
+      const red = rgba[index];
+      const green = rgba[index + 1];
+      const blue = rgba[index + 2];
+      if (
+        alpha > 0 &&
+        (
+          Math.abs(red - green) > 10 ||
+          Math.abs(green - blue) > 10 ||
+          Math.abs(red - blue) > 10
+        )
+      ) {
+        colored += 1;
+      }
+    }
+  }
+  return colored;
+};
+
+const exportCanvasPng = async (page) => {
+  const downloadPromise = page.waitForEvent('download', { timeout: 15000 });
+  await page.getByTitle('エクスポート').first().click();
+  const download = await downloadPromise;
+  const filePath = path.join(OUT_DIR, 'canvas-stress-export.png');
+  await download.saveAs(filePath);
+  const dimensions = await readPngDimensions(filePath);
+  const info = await stat(filePath);
+  return {
+    path: filePath,
+    bytes: info.size,
+    ...dimensions,
+  };
+};
+
 const waitForCanvasObjectRender = async (page, timeoutMs = 5000) => {
   const started = Date.now();
   let latest = await inspectCanvasRender(page);
@@ -495,7 +645,7 @@ const isActionableConsoleError = (message) => {
   return true;
 };
 
-const addPerformanceIssues = ({ issues, routes, buildStats, canvasRender, galleryTileCount }) => {
+const addPerformanceIssues = ({ issues, routes, buildStats, canvasRender, canvasExport, galleryTileCount }) => {
   for (const route of routes) {
     if (route.readyMs > MAX_READY_MS) {
       issues.push(`route_ready_ms_exceeded:${route.route}:${route.readyMs}`);
@@ -537,6 +687,15 @@ const addPerformanceIssues = ({ issues, routes, buildStats, canvasRender, galler
   const stableCanvas = canvasRender.stats.some((item) => item.clientWidth >= 250 && item.clientHeight >= 250);
   if (!stableCanvas) {
     issues.push('canvas_stable_dimensions_missing');
+  }
+  if (!canvasExport?.validPng) {
+    issues.push('canvas_export_png_invalid');
+  }
+  if (Number(canvasExport?.width || 0) <= 3000 || Number(canvasExport?.height || 0) <= 8000) {
+    issues.push(`canvas_export_bounds_too_small:${canvasExport?.width || 0}x${canvasExport?.height || 0}`);
+  }
+  if (Number(canvasExport?.edgeColorSamples?.top || 0) <= 20 || Number(canvasExport?.edgeColorSamples?.bottom || 0) <= 20) {
+    issues.push(`canvas_export_edge_pixels_missing:${canvasExport?.edgeColorSamples?.top || 0}:${canvasExport?.edgeColorSamples?.bottom || 0}`);
   }
 };
 
@@ -592,7 +751,7 @@ const run = async () => {
     await waitForServer(BASE_URL, 20000, () => logs, () => previewExit);
     currentResult.phase = 'launching-browser';
     browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1000 } });
     const page = await context.newPage();
     page.on('console', (message) => {
       if (message.type() === 'error') {
@@ -631,6 +790,7 @@ const run = async () => {
     const canvasObjectCount = await page.evaluate(() => JSON.parse(localStorage.getItem('heavy-chain-canvas') || '{}')?.state?.objects?.length ?? null);
     const canvasRender = await waitForCanvasObjectRender(page);
     await page.screenshot({ path: path.join(OUT_DIR, 'canvas-stress.png'), fullPage: true });
+    const canvasExport = await exportCanvasPng(page);
 
     const buildStats = await collectBuildStats();
     const issues = [];
@@ -640,7 +800,7 @@ const run = async () => {
     if (canvasObjectCount !== CANVAS_OBJECT_COUNT) {
       issues.push(`canvas_object_count_mismatch:${canvasObjectCount}`);
     }
-    addPerformanceIssues({ issues, routes, buildStats, canvasRender, galleryTileCount });
+    addPerformanceIssues({ issues, routes, buildStats, canvasRender, canvasExport, galleryTileCount });
     const actionableConsoleErrors = browserEvents.consoleErrors.filter(isActionableConsoleError);
     const actionableRequestFailures = browserEvents.requestFailures.filter(isActionableRequestFailure);
     const actionableResponseErrors = browserEvents.responseErrors.filter((response) => {
@@ -688,6 +848,7 @@ const run = async () => {
       canvasStress: {
         persistedObjects: canvasObjectCount,
         render: canvasRender,
+        export: canvasExport,
       },
       browserEvents,
       issues,
@@ -723,7 +884,7 @@ const run = async () => {
     };
     if (browser) {
       try {
-        await withTimeout(browser.close(), 3000, 'browser.close timed out');
+        await withTimeout(browser.close(), 10000, 'browser.close timed out');
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         cleanupProof.browserClose = { attempted: true, ok: false, error: message };
