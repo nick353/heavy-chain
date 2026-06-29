@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -29,7 +30,7 @@ const hardStopKeys = [
   'destructiveCleanup',
 ];
 
-const allowedArtifactTypes = new Set(['notes', 'transcript', 'observation', 'observation_notes', 'recording', 'screenshots', 'screenshot', 'readback']);
+const allowedArtifactTypes = new Set(['notes', 'transcript', 'observation', 'observation_notes', 'recording', 'screenshots', 'screenshot', 'readback', 'consent', 'redaction_review']);
 const allowedArtifactExtensions = new Set(['.md', '.txt', '.json', '.webm', '.mp4', '.mov', '.png', '.jpg', '.jpeg']);
 const textArtifactExtensions = new Set(['.md', '.txt', '.json']);
 const artifactExtensionsByType = new Map([
@@ -38,10 +39,16 @@ const artifactExtensionsByType = new Map([
   ['observation', new Set(['.md', '.txt'])],
   ['observation_notes', new Set(['.md', '.txt'])],
   ['readback', new Set(['.json'])],
+  ['consent', new Set(['.json'])],
+  ['redaction_review', new Set(['.json'])],
   ['recording', new Set(['.webm', '.mp4', '.mov'])],
   ['screenshots', new Set(['.png', '.jpg', '.jpeg'])],
   ['screenshot', new Set(['.png', '.jpg', '.jpeg'])],
 ]);
+const behaviorEvidenceTypes = new Set(['transcript', 'observation', 'observation_notes', 'recording', 'screenshots', 'screenshot']);
+const scaffoldPlaceholderPatterns = [
+  /Replace this line with anonymized behavior and friction notes after the real session\./i,
+];
 
 const piiPatterns = [
   { id: 'email_address', pattern: /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i },
@@ -189,12 +196,43 @@ function validateSession(session, evidenceFiles, textBlobs) {
   const workflows = Array.isArray(session?.workflows) ? session.workflows : [];
   const consent = session?.consent || {};
   const hardStops = session?.hardStops || {};
+  const consentArtifact = findRegisteredArtifact(session, 'consent', session?.consentArtifact);
+  const redactionArtifact = findRegisteredArtifact(session, 'redaction_review', session?.redactionReviewArtifact);
+  const consentJson = consentArtifact ? readJson(resolveArtifactPath(consentArtifact.path)) : null;
+  const redactionJson = redactionArtifact ? readJson(resolveArtifactPath(redactionArtifact.path)) : null;
+  const nonRedactionArtifactPaths = artifacts
+    .filter((artifact) => artifact?.type !== 'redaction_review')
+    .map((artifact) => artifact.path)
+    .filter(Boolean);
 
   addCheck(`${prefix} uses anonymized participant alias`, /^beta-[0-9a-z-]+$/i.test(String(session?.participantAlias || '')), {
     participantAlias: session?.participantAlias ?? null,
   });
   addCheck(`${prefix} has consent`, consent.confirmed === true && consent.recordingAllowed === true && consent.publicSharing === false, {
     consent,
+  });
+  addCheck(`${prefix} consent artifact is registered with sha256`, Boolean(consentArtifact?.sha256), {
+    consentArtifact: session?.consentArtifact ?? null,
+    registeredArtifact: consentArtifact ?? null,
+  });
+  addCheck(`${prefix} has consent artifact`, Boolean(consentJson), {
+    consentArtifact: consentArtifact?.path ?? null,
+  });
+  addCheck(`${prefix} consent artifact matches manifest`, Boolean(
+    consentJson &&
+    consentJson.schema === 'heavy-chain.g619.beta-session-consent.v1' &&
+    consentJson.sessionId === session?.sessionId &&
+    consentJson.participantAlias === session?.participantAlias &&
+    consentJson.collectorAlias &&
+    consentJson.consent?.confirmed === consent.confirmed &&
+    consentJson.consent?.recordingAllowed === consent.recordingAllowed &&
+    consentJson.consent?.publicSharing === consent.publicSharing &&
+    consentJson.scope?.productionNonBillingUse === true &&
+    consentJson.scope?.anonymizedEvidenceOnly === true &&
+    consentJson.scope?.noPublicSharing === true &&
+    hardStopKeys.every((key) => consentJson.hardStops?.[key] === 'not_touched')
+  ), {
+    consentArtifact: consentArtifact?.path ?? null,
   });
   addCheck(`${prefix} uses production target`, /^https:\/\/heavy-chain\.zeabur\.app(?:\/|$)/.test(String(session?.baseUrl || '')), {
     baseUrl: session?.baseUrl ?? null,
@@ -207,6 +245,32 @@ function validateSession(session, evidenceFiles, textBlobs) {
   });
   addCheck(`${prefix} hard stops were respected`, hardStopKeys.every((key) => hardStops[key] === 'not_touched'), {
     hardStops,
+  });
+  addCheck(`${prefix} redaction review artifact is registered with sha256`, Boolean(redactionArtifact?.sha256), {
+    redactionReviewArtifact: session?.redactionReviewArtifact ?? null,
+    registeredArtifact: redactionArtifact ?? null,
+  });
+  addCheck(`${prefix} has redaction review artifact`, Boolean(redactionJson), {
+    redactionReviewArtifact: redactionArtifact?.path ?? null,
+  });
+  addCheck(`${prefix} redaction review passed`, Boolean(
+    redactionJson &&
+    redactionJson.schema === 'heavy-chain.g619.beta-redaction-review.v1' &&
+    redactionJson.sessionId === session?.sessionId &&
+    redactionJson.participantAlias === session?.participantAlias &&
+    redactionJson.reviewerAlias &&
+    redactionJson.noSensitiveTextFound === true &&
+    Array.isArray(redactionJson.checkedArtifacts) &&
+    redactionJson.checkedArtifacts.length > 0 &&
+    nonRedactionArtifactPaths.every((artifactPath) => redactionJson.checkedArtifacts.includes(artifactPath)) &&
+    nonRedactionArtifactPaths.every((artifactPath) => {
+      const artifact = artifacts.find((item) => item.path === artifactPath);
+      return artifact?.sha256 && redactionJson.artifactSha256?.[artifactPath] === artifact.sha256;
+    })
+  ), {
+    redactionReviewArtifact: redactionArtifact?.path ?? null,
+    checkedArtifacts: redactionJson?.checkedArtifacts ?? null,
+    requiredArtifacts: nonRedactionArtifactPaths,
   });
   addCheck(`${prefix} has friction list or no-friction note`, meaningfulFriction.length > 0 || String(session?.noFrictionNote || '').trim().length > 0, {
     frictionCount: friction.length,
@@ -223,7 +287,7 @@ function validateSession(session, evidenceFiles, textBlobs) {
     exactBlocker: session?.exactBlocker ?? null,
   }));
 
-  let usableArtifactCount = 0;
+  let usableBehaviorArtifactCount = 0;
   for (const artifact of artifacts) {
     addCheck(`${prefix} artifact has path`, typeof artifact?.path === 'string' && artifact.path.trim().length > 0, {
       artifact,
@@ -249,15 +313,37 @@ function validateSession(session, evidenceFiles, textBlobs) {
     });
     if (!resolved) continue;
     evidenceFiles.push(resolved);
-    if (hasMatchingTypeAndExtension && exists) usableArtifactCount += 1;
+    addCheck(`${prefix} artifact ${artifact.path} has sha256`, typeof artifact.sha256 === 'string' && /^[a-f0-9]{64}$/i.test(artifact.sha256), {
+      artifactPath: artifact.path,
+    });
+    addCheck(`${prefix} artifact ${artifact.path} sha256 matches`, Boolean(artifact.sha256) && exists && sha256(resolved) === artifact.sha256, {
+      artifactPath: artifact.path,
+      hasSha256: Boolean(artifact.sha256),
+    });
+    if (hasMatchingTypeAndExtension && exists && behaviorEvidenceTypes.has(artifact.type)) {
+      usableBehaviorArtifactCount += 1;
+    }
     if (textArtifactExtensions.has(extension) && fs.existsSync(resolved)) {
-      textBlobs.push(fs.readFileSync(resolved, 'utf8'));
+      const text = fs.readFileSync(resolved, 'utf8');
+      textBlobs.push(text);
+      addCheck(`${prefix} artifact ${artifact.path} is not scaffold placeholder text`, !scaffoldPlaceholderPatterns.some((pattern) => pattern.test(text)), {
+        artifactPath: artifact.path,
+      });
     }
   }
-  addCheck(`${prefix} has usable local evidence artifact`, usableArtifactCount > 0, {
+  addCheck(`${prefix} has usable behavior evidence artifact`, usableBehaviorArtifactCount > 0, {
     artifacts,
-    usableArtifactCount,
+    usableBehaviorArtifactCount,
+    acceptedTypes: [...behaviorEvidenceTypes],
   });
+}
+
+function findRegisteredArtifact(session, type, explicitPath) {
+  const artifacts = Array.isArray(session?.artifacts) ? session.artifacts : [];
+  if (explicitPath) {
+    return artifacts.find((artifact) => artifact?.type === type && artifact?.path === explicitPath) || null;
+  }
+  return artifacts.find((artifact) => artifact?.type === type) || null;
 }
 
 function resolveArtifactPath(artifactPath) {
@@ -280,6 +366,10 @@ function findSensitiveText(text) {
     if (item.pattern.test(text)) findings.push(item.id);
   }
   return findings;
+}
+
+function sha256(filePath) {
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
 function hasMeaningfulFriction(item) {

@@ -48,6 +48,14 @@ Create a starter manifest:
 npm run verify:g619-beta-evidence -- --init-template
 ```
 
+Create a consent-safe session scaffold after scheduling a real beta session:
+
+```bash
+npm run create:g619-beta-session -- --session-id g619-beta-001 --alias beta-001 --platform desktop --persona apparel-ec-operator --workflows lightchain_entry,generate_readiness,upload_material
+```
+
+The scaffold writes session-local `consent.json`, `notes.md`, `redaction-review.json`, and `readback.json` files under `output/playwright/g619-real-beta-evidence/sessions/<alias>/`, appends the session to the manifest, and stores artifact `sha256` values. It does not make G619 pass by itself: real consent, real session duration, and at least one behavior evidence artifact such as `recording`, `screenshot(s)`, `transcript`, `observation`, or `observation_notes` are required. Redaction review must cover every non-redaction artifact and match their manifest hashes.
+
 Validate collected evidence:
 
 ```bash
