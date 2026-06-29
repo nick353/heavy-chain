@@ -27,6 +27,8 @@
     "verify:g618-scale-ops": "node scripts/verify-g618-scale-ops-baseline.mjs",
     "verify:g620-security-ops": "node scripts/verify-g620-security-ops.mjs",
     "verify:g619-beta-evidence": "node scripts/verify-g619-beta-evidence.mjs",
+    "verify:10m-completion": "node scripts/verify-10m-completion-audit.mjs",
+    "verify:10m-completion:incomplete-ok": "node scripts/verify-10m-completion-audit.mjs --allow-incomplete",
     "verify:g610-retention": "npm run build && node scripts/verify-g610-retention-project-search.mjs",
     "verify:g614-ops": "node scripts/verify-g614-operations-docs.mjs",
     "verify:release-gate": "node scripts/verify-release-gate-unified.mjs",
