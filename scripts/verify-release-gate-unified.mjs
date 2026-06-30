@@ -28,7 +28,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'production monitor',
-    path: 'output/playwright/production-monitor-post-g635-20260701-r1/summary.json',
+    path: 'output/playwright/production-monitor-post-g636-20260701-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.blockers).length === 0 &&
@@ -45,7 +45,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production mass-market QA current',
-    path: 'output/playwright/prod-post-g635-material-workbench-empty-state-20260701-r2/SUMMARY.json',
+    path: 'output/playwright/prod-post-g636-mobile-floating-controls-20260701-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -60,8 +60,10 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'gallery', 'meaningful_page_content') &&
       hasRouteAssertion(json, 'mobile-gallery', 'meaningful_page_content') &&
       hasRouteAssertion(json, 'generate-campaign', 'h601_rights_confirmation_visible') &&
-      hasRouteAssertion(json, 'mobile-generate-campaign', 'h601_rights_confirmation_visible'),
-    expect: 'current production mass-market QA ok=true with 17 desktop routes, 8 mobile routes, Gallery fallback visible, H601-ready generate route, no console/page/request failures, and cleanup closed',
+      hasRouteAssertion(json, 'mobile-generate-campaign', 'h601_rights_confirmation_visible') &&
+      hasRouteAssertion(json, 'mobile-lightchain', 'mobile_no_intrusive_floating_help_buttons') &&
+      hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_no_intrusive_floating_help_buttons'),
+    expect: 'current production mass-market QA ok=true with 17 desktop routes, 8 mobile routes, Gallery fallback visible, H601-ready generate route, no intrusive mobile floating help buttons, no console/page/request failures, and cleanup closed',
   },
   {
     name: 'G610 retention workspace search',
