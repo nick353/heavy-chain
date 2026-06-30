@@ -54,9 +54,9 @@ const requiredProofs = [
     expect: 'G620 security operations ok=true with no blockers',
   },
   {
-    id: 'g642_current_production_mass_market_qa',
-    goal: 'G642',
-    path: 'output/playwright/prod-post-g642-mobile-dashboard-activity-summary-20260701-r1/SUMMARY.json',
+    id: 'g643_current_production_mass_market_qa',
+    goal: 'G643',
+    path: 'output/playwright/prod-post-g643-mobile-generate-direct-form-20260701-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       Array.isArray(json.failed) &&
@@ -83,11 +83,12 @@ const requiredProofs = [
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_no_intrusive_floating_help_buttons') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_no_intrusive_floating_help_buttons') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_generate_hides_canvas_toolbar') &&
+      hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_generate_starts_at_material_form') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_has_above_fold_quick_start') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_hides_duplicate_quick_action_cards') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_lightchain_has_all_tools_link') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_activity_uses_compact_summary'),
-    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage, no intrusive mobile floating help buttons, mobile Dashboard quick start without duplicate quick-action cards, compact mobile Lightchain hub with all-tools link, compact mobile activity summary, mobile Generate canvas toolbar hidden, and no console/page/request failures',
+    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage, no intrusive mobile floating help buttons, mobile Dashboard quick start without duplicate quick-action cards, compact mobile Lightchain hub with all-tools link, compact mobile activity summary, mobile Generate starts at material form with canvas toolbar hidden, and no console/page/request failures',
   },
   {
     id: 'production_h601_rights_readback',
