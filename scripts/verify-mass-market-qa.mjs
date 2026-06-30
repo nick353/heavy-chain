@@ -178,6 +178,11 @@ async function runRoute(spec, context, viewport) {
     });
     addAssertion(routeEvidence, 'no_framework_overlay', !hasFrameworkOverlay(body));
     addAssertion(routeEvidence, 'no_horizontal_overflow', await hasNoHorizontalOverflow(page));
+    if (spec.key === 'gallery' || spec.key === 'mobile-gallery') {
+      addAssertion(routeEvidence, 'gallery_no_scary_remote_failure_toast', !body.includes('画像の読み込みに失敗しました'), {
+        toastTextVisible: body.includes('画像の読み込みに失敗しました'),
+      });
+    }
     if (spec.mobile) {
       const intrusiveFixedButtons = await visibleIntrusiveFixedButtons(page);
       addAssertion(routeEvidence, 'mobile_no_intrusive_floating_help_buttons', intrusiveFixedButtons.length === 0, {
