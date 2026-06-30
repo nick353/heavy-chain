@@ -47,8 +47,12 @@ const consentRelative = path.join('sessions', participantAlias, 'consent.json');
 const redactionRelative = path.join('sessions', participantAlias, 'redaction-review.json');
 const readbackRelative = path.join('sessions', participantAlias, 'readback.json');
 const observationRelative = path.join('sessions', participantAlias, 'observation.md');
+const instructionsRelative = path.join('sessions', participantAlias, 'session-instructions.md');
+const checklistRelative = path.join('sessions', participantAlias, 'operator-checklist.md');
 
 writeIfMissing(path.join(outDir, notesRelative), sessionNotes());
+writeIfMissing(path.join(outDir, instructionsRelative), sessionInstructions());
+writeIfMissing(path.join(outDir, checklistRelative), operatorChecklist());
 writeJson(path.join(outDir, consentRelative), {
   schema: 'heavy-chain.g619.beta-session-consent.v1',
   sessionId,
@@ -80,7 +84,7 @@ writeJson(path.join(outDir, readbackRelative), {
 if (observationNote) {
   writeIfMissing(path.join(outDir, observationRelative), `# ${sessionId} Observation\n\n${observationNote}\n`);
 }
-const checkedArtifacts = [notesRelative, consentRelative, readbackRelative];
+const checkedArtifacts = [notesRelative, instructionsRelative, checklistRelative, consentRelative, readbackRelative];
 if (observationNote) checkedArtifacts.push(observationRelative);
 writeJson(path.join(outDir, redactionRelative), {
   schema: 'heavy-chain.g619.beta-redaction-review.v1',
@@ -115,10 +119,15 @@ const session = {
   consent,
   consentArtifact: consentRelative,
   redactionReviewArtifact: redactionRelative,
+  readbackArtifact: readbackRelative,
+  sessionInstructionsArtifact: instructionsRelative,
+  operatorChecklistArtifact: checklistRelative,
   workflows,
   hardStops,
   artifacts: [
     artifact('notes', notesRelative),
+    artifact('notes', instructionsRelative),
+    artifact('notes', checklistRelative),
     ...(observationNote ? [artifact('observation', observationRelative)] : []),
     artifact('consent', consentRelative),
     artifact('redaction_review', redactionRelative),
@@ -197,6 +206,60 @@ ${observationNote ? `- ${observationNote}` : '- Replace this line with anonymize
 - Secrets: not touched
 - External public publishing: not touched
 - Destructive cleanup: not touched
+`;
+}
+
+function sessionInstructions() {
+  return `# ${sessionId} Participant Instructions
+
+This session is for consent-safe Heavy Chain beta evidence. Use only anonymized participant alias \`${participantAlias}\`.
+
+## Allowed
+
+- Open ${baseUrl} and use non-billing product flows.
+- Upload only materials the participant confirms they may use for testing.
+- Think aloud about confusion, friction, missing labels, and whether the flow feels usable without help.
+- Stop before any billing, checkout, payment, public publishing, OTP, CAPTCHA, identity verification, secret entry, or destructive cleanup screen.
+
+## Workflows To Try
+
+${workflows.map((workflow) => `- ${workflow}`).join('\n')}
+
+## What To Capture
+
+- Anonymized behavior notes or transcript.
+- Screenshot set or recording when consent allows it.
+- Exact blocker text if the participant cannot continue.
+- A friction list, or an explicit no-friction note if no meaningful friction was observed.
+`;
+}
+
+function operatorChecklist() {
+  return `# ${sessionId} Operator Checklist
+
+## Before Session
+
+- [ ] Participant consent is confirmed.
+- [ ] Recording/screenshot permission is confirmed.
+- [ ] Public sharing is disabled.
+- [ ] Participant alias is anonymized: ${participantAlias}
+- [ ] No personal email, phone number, payment card, OTP, API key, token, or secret will be written into notes.
+
+## During Session
+
+- [ ] Do not coach the participant through the UI unless safety requires stopping.
+- [ ] Record friction in participant behavior terms, not personal identity terms.
+- [ ] Stop at billing, payment, checkout, OTP/CAPTCHA/security prompt, identity verification, secret entry, external public publish, or destructive cleanup.
+- [ ] Record exact blocker if a hard stop is reached.
+
+## After Session
+
+- [ ] Add real observation notes, transcript, screenshots, or recording.
+- [ ] Replace scaffold placeholder text in notes.
+- [ ] Set durationMinutes to the real duration.
+- [ ] Update consent.json and manifest consent fields to match the signed/confirmed consent.
+- [ ] Run redaction review over every non-redaction artifact.
+- [ ] Run npm run verify:g619-beta-evidence.
 `;
 }
 

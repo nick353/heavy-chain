@@ -80,7 +80,7 @@ if (initTemplate) {
     warnings: [],
   });
   console.log(JSON.stringify({ ok: false, manifestPath, summaryPath, blocker: 'real_beta_evidence_missing' }, null, 2));
-  process.exit(0);
+  process.exit(1);
 }
 
 const report = {
@@ -198,8 +198,12 @@ function validateSession(session, evidenceFiles, textBlobs) {
   const hardStops = session?.hardStops || {};
   const consentArtifact = findRegisteredArtifact(session, 'consent', session?.consentArtifact);
   const redactionArtifact = findRegisteredArtifact(session, 'redaction_review', session?.redactionReviewArtifact);
+  const readbackArtifact = findRegisteredArtifact(session, 'readback', session?.readbackArtifact);
+  const instructionsArtifact = findExplicitRegisteredArtifact(session, 'notes', session?.sessionInstructionsArtifact);
+  const checklistArtifact = findExplicitRegisteredArtifact(session, 'notes', session?.operatorChecklistArtifact);
   const consentJson = consentArtifact ? readJson(resolveArtifactPath(consentArtifact.path)) : null;
   const redactionJson = redactionArtifact ? readJson(resolveArtifactPath(redactionArtifact.path)) : null;
+  const readbackJson = readbackArtifact ? readJson(resolveArtifactPath(readbackArtifact.path)) : null;
   const nonRedactionArtifactPaths = artifacts
     .filter((artifact) => artifact?.type !== 'redaction_review')
     .map((artifact) => artifact.path)
@@ -234,6 +238,14 @@ function validateSession(session, evidenceFiles, textBlobs) {
   ), {
     consentArtifact: consentArtifact?.path ?? null,
   });
+  addCheck(`${prefix} has participant instructions artifact`, Boolean(instructionsArtifact?.sha256), {
+    sessionInstructionsArtifact: session?.sessionInstructionsArtifact ?? null,
+    registeredArtifact: instructionsArtifact ?? null,
+  });
+  addCheck(`${prefix} has operator checklist artifact`, Boolean(checklistArtifact?.sha256), {
+    operatorChecklistArtifact: session?.operatorChecklistArtifact ?? null,
+    registeredArtifact: checklistArtifact ?? null,
+  });
   addCheck(`${prefix} uses production target`, /^https:\/\/heavy-chain\.zeabur\.app(?:\/|$)/.test(String(session?.baseUrl || '')), {
     baseUrl: session?.baseUrl ?? null,
   });
@@ -245,6 +257,25 @@ function validateSession(session, evidenceFiles, textBlobs) {
   });
   addCheck(`${prefix} hard stops were respected`, hardStopKeys.every((key) => hardStops[key] === 'not_touched'), {
     hardStops,
+  });
+  addCheck(`${prefix} has readback artifact`, Boolean(readbackArtifact?.sha256 && readbackJson), {
+    readbackArtifact: session?.readbackArtifact ?? null,
+    registeredArtifact: readbackArtifact ?? null,
+  });
+  addCheck(`${prefix} readback artifact matches manifest`, Boolean(
+    readbackJson &&
+    readbackJson.schema === 'heavy-chain.g619.beta-session-readback.v1' &&
+    readbackJson.sessionId === session?.sessionId &&
+    readbackJson.participantAlias === session?.participantAlias &&
+    readbackJson.baseUrl === session?.baseUrl &&
+    readbackJson.platform === session?.platform &&
+    readbackJson.persona === session?.persona &&
+    Number(readbackJson.durationMinutes || 0) === Number(session?.durationMinutes || 0) &&
+    arraysEqual(readbackJson.workflows, workflows) &&
+    hardStopKeys.every((key) => readbackJson.hardStops?.[key] === 'not_touched') &&
+    hardStopKeys.every((key) => readbackJson.irreversibleActions?.[key] === 'not_touched')
+  ), {
+    readbackArtifact: readbackArtifact?.path ?? null,
   });
   addCheck(`${prefix} redaction review artifact is registered with sha256`, Boolean(redactionArtifact?.sha256), {
     redactionReviewArtifact: session?.redactionReviewArtifact ?? null,
@@ -320,7 +351,7 @@ function validateSession(session, evidenceFiles, textBlobs) {
       artifactPath: artifact.path,
       hasSha256: Boolean(artifact.sha256),
     });
-    if (hasMatchingTypeAndExtension && exists && behaviorEvidenceTypes.has(artifact.type)) {
+    if (hasMatchingTypeAndExtension && exists && behaviorEvidenceTypes.has(artifact.type) && isUsableBehaviorArtifact(artifact, resolved)) {
       usableBehaviorArtifactCount += 1;
     }
     if (textArtifactExtensions.has(extension) && fs.existsSync(resolved)) {
@@ -344,6 +375,11 @@ function findRegisteredArtifact(session, type, explicitPath) {
     return artifacts.find((artifact) => artifact?.type === type && artifact?.path === explicitPath) || null;
   }
   return artifacts.find((artifact) => artifact?.type === type) || null;
+}
+
+function findExplicitRegisteredArtifact(session, type, explicitPath) {
+  if (!explicitPath) return null;
+  return findRegisteredArtifact(session, type, explicitPath);
 }
 
 function resolveArtifactPath(artifactPath) {
@@ -378,6 +414,34 @@ function hasMeaningfulFriction(item) {
   return ['note', 'summary', 'description'].some((key) => String(item[key] || '').trim().length > 0);
 }
 
+function isUsableBehaviorArtifact(artifact, filePath) {
+  const extension = path.extname(String(artifact.path || '')).toLowerCase();
+  const stats = fs.statSync(filePath);
+  if (['.md', '.txt'].includes(extension)) {
+    const text = fs.readFileSync(filePath, 'utf8').trim();
+    return text.length >= 200 && !scaffoldPlaceholderPatterns.some((pattern) => pattern.test(text));
+  }
+  if (['.png', '.jpg', '.jpeg'].includes(extension)) {
+    return stats.size >= 1024 && hasImageMagicBytes(filePath, extension);
+  }
+  if (['.webm', '.mp4', '.mov'].includes(extension)) {
+    return stats.size >= 4096;
+  }
+  return false;
+}
+
+function hasImageMagicBytes(filePath, extension) {
+  const header = fs.readFileSync(filePath).subarray(0, 12);
+  if (extension === '.png') return header.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (extension === '.jpg' || extension === '.jpeg') return header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff;
+  return false;
+}
+
+function arraysEqual(left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+  return left.every((value, index) => value === right[index]);
+}
+
 function templateManifest() {
   return {
     schema: 'heavy-chain.g619.real-beta-evidence.v1',
@@ -399,8 +463,13 @@ function templateManifest() {
         },
         workflows: ['lightchain_entry', 'generate_readiness', 'upload_material'],
         hardStops: Object.fromEntries(hardStopKeys.map((key) => [key, 'not_touched'])),
+        readbackArtifact: 'sessions/beta-001/readback.json',
+        sessionInstructionsArtifact: 'sessions/beta-001/session-instructions.md',
+        operatorChecklistArtifact: 'sessions/beta-001/operator-checklist.md',
         artifacts: [
-          { type: 'notes', path: 'sessions/beta-001-notes.md' },
+          { type: 'notes', path: 'sessions/beta-001/notes.md' },
+          { type: 'notes', path: 'sessions/beta-001/session-instructions.md' },
+          { type: 'notes', path: 'sessions/beta-001/operator-checklist.md' },
           { type: 'recording', path: 'sessions/beta-001-recording.webm' },
         ],
         friction: [],
