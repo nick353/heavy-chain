@@ -77,6 +77,33 @@ const requiredProofs = [
     expect: 'G620 security operations ok=true with no blockers',
   },
   {
+    id: 'g622_current_production_mass_market_qa',
+    goal: 'G622',
+    path: 'output/playwright/prod-post-gallery-fix-mass-market-20260701-r1/SUMMARY.json',
+    validate: (json) =>
+      json.ok === true &&
+      Array.isArray(json.failed) &&
+      json.failed.length === 0 &&
+      Number(json.routeCount || 0) >= 17 &&
+      Array.isArray(json.routes) &&
+      json.routes.length >= 17 &&
+      Array.isArray(json.mobile) &&
+      json.mobile.length >= 8 &&
+      json.cleanup?.contextClosed === true &&
+      json.cleanup?.browserClosed === true &&
+      Array.isArray(json.consoleMessages) &&
+      json.consoleMessages.length === 0 &&
+      Array.isArray(json.pageErrors) &&
+      json.pageErrors.length === 0 &&
+      Array.isArray(json.requestFailures) &&
+      json.requestFailures.length === 0 &&
+      hasRouteAssertion(json, 'gallery', 'meaningful_page_content') &&
+      hasRouteAssertion(json, 'mobile-gallery', 'meaningful_page_content') &&
+      hasRouteAssertion(json, 'generate-campaign', 'h601_rights_confirmation_visible') &&
+      hasRouteAssertion(json, 'mobile-generate-campaign', 'h601_rights_confirmation_visible'),
+    expect: 'current production mass-market QA ok=true with Gallery fallback, H601-ready generate route, desktop/mobile coverage, and no console/page/request failures',
+  },
+  {
     id: 'production_h601_rights_readback',
     goal: 'H601',
     path: 'output/playwright/prod-h601-rights-check-20260701-r1/summary.json',
@@ -500,6 +527,17 @@ function readJson(filePath) {
 function hasPassingAssertion(json, assertionId) {
   return Array.isArray(json?.assertions) && json.assertions.some((assertion) =>
     assertion?.id === assertionId && assertion?.ok === true
+  );
+}
+
+function hasRouteAssertion(json, routeKey, assertionName) {
+  const routes = [
+    ...(Array.isArray(json?.routes) ? json.routes : []),
+    ...(Array.isArray(json?.mobile) ? json.mobile : []),
+  ];
+  const route = routes.find((item) => item?.key === routeKey);
+  return Array.isArray(route?.assertions) && route.assertions.some((assertion) =>
+    assertion?.name === assertionName && assertion?.passed === true
   );
 }
 

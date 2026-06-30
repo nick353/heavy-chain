@@ -44,14 +44,24 @@ const requiredReadbacks = [
     expect: 'ok=true and failed=[]',
   },
   {
-    name: 'mass-market recorded QA',
-    latestSummaryPrefix: '10m-product-readiness-g611-beta-scenarios-20260626',
+    name: 'production mass-market QA current',
+    path: 'output/playwright/prod-post-gallery-fix-mass-market-20260701-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
+      Number(json.routeCount || 0) >= 17 &&
+      arrayFrom(json.routes).length >= 17 &&
+      arrayFrom(json.mobile).length >= 8 &&
       json.cleanup?.contextClosed === true &&
-      json.cleanup?.browserClosed === true,
-    expect: 'latest G611 summary ok=true, failed=[], contextClosed=true, browserClosed=true',
+      json.cleanup?.browserClosed === true &&
+      arrayFrom(json.consoleMessages).length === 0 &&
+      arrayFrom(json.pageErrors).length === 0 &&
+      arrayFrom(json.requestFailures).length === 0 &&
+      hasRouteAssertion(json, 'gallery', 'meaningful_page_content') &&
+      hasRouteAssertion(json, 'mobile-gallery', 'meaningful_page_content') &&
+      hasRouteAssertion(json, 'generate-campaign', 'h601_rights_confirmation_visible') &&
+      hasRouteAssertion(json, 'mobile-generate-campaign', 'h601_rights_confirmation_visible'),
+    expect: 'current production mass-market QA ok=true with 17 desktop routes, 8 mobile routes, Gallery fallback visible, H601-ready generate route, no console/page/request failures, and cleanup closed',
   },
   {
     name: 'G610 retention workspace search',
@@ -667,6 +677,14 @@ function arrayFrom(value) {
 function hasPassingAssertion(json, assertionId) {
   return arrayFrom(json?.assertions).some((assertion) =>
     assertion?.id === assertionId && assertion?.ok === true
+  );
+}
+
+function hasRouteAssertion(json, routeKey, assertionName) {
+  const route = [...arrayFrom(json?.routes), ...arrayFrom(json?.mobile)]
+    .find((item) => item?.key === routeKey);
+  return arrayFrom(route?.assertions).some((assertion) =>
+    assertion?.name === assertionName && assertion?.passed === true
   );
 }
 

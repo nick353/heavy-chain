@@ -169,8 +169,8 @@ Thread automation:
 
 ## Achievement Review
 
-Active child window status: G602/G603/G604/G605/G606/G607/G608/G609/G610/G611/G612/G613/G614/G615/G616/G618/G620 accepted; G617 blocked-exact; G619 queued
-Goal map status: G401-G501 accepted, G601/G602/G603/G604/G605/G606/G607/G608/G609/G610/G611/G612/G613/G614/G615/G616/G618/G620 accepted, G617 blocked-exact, G619 queued
+Active child window status: G602/G603/G604/G605/G606/G607/G608/G609/G610/G611/G612/G613/G614/G615/G616/G618/G620/G621/G622 accepted; G617 blocked-exact; G619 queued
+Goal map status: G401-G501 accepted, G601/G602/G603/G604/G605/G606/G607/G608/G609/G610/G611/G612/G613/G614/G615/G616/G618/G620/G621/G622 accepted, G617 blocked-exact, G619 queued
 Parent goal status: active; non-billing/non-public readiness gate passes, but full 10M public-launch completeness is not yet proven
 Human-needed checkpoint status: H601/H602 open but not blocking non-dependent goals; H601 product-side and server-side generation guard is implemented, but final operator/legal decisions remain open
 Gap review / refreshed Gap-Closing Goal Map needed: G617 now has exact blocker evidence at the workspace/model availability layer; G619 has a consent-safe acceptance gate, but remains queued until real beta sessions are collected and `npm run verify:g619-beta-evidence` passes.
