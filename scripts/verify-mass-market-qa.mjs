@@ -183,6 +183,12 @@ async function runRoute(spec, context, viewport) {
       addAssertion(routeEvidence, 'mobile_no_intrusive_floating_help_buttons', intrusiveFixedButtons.length === 0, {
         intrusiveFixedButtons,
       });
+      if (spec.key === 'mobile-generate-campaign') {
+        const toolbarVisible = await page.locator('[data-testid="lightchain-canvas-toolbar"]').isVisible().catch(() => false);
+        addAssertion(routeEvidence, 'mobile_generate_hides_canvas_toolbar', !toolbarVisible, {
+          toolbarVisible,
+        });
+      }
     }
     if (spec.generateReady) {
       const visibleButtons = await visibleButtonTexts(page);

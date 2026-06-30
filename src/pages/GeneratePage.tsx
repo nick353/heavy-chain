@@ -3799,7 +3799,7 @@ export function GeneratePage() {
           className="space-y-4"
         >
           <div
-            className="mx-auto flex w-fit items-center overflow-hidden rounded-xl border border-white/10 bg-neutral-950 shadow-2xl"
+            className="mx-auto hidden w-fit items-center overflow-hidden rounded-xl border border-white/10 bg-neutral-950 shadow-2xl sm:flex"
             data-testid="lightchain-canvas-toolbar"
           >
             {[
