@@ -40,6 +40,7 @@ type FilterType = 'all' | 'favorites' | 'recent';
 type SortType = 'newest' | 'oldest' | 'name';
 const INITIAL_VISIBLE_IMAGE_COUNT = 60;
 const VISIBLE_IMAGE_INCREMENT = 30;
+const GALLERY_REMOTE_TIMEOUT_MS = 10_000;
 
 const isGenerationIntent = (value: unknown): value is GenerationIntent => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -66,6 +67,7 @@ export function GalleryPage() {
 
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadWarning, setLoadWarning] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortType>('newest');
   const [searchQuery, setSearchQuery] = useState('');
@@ -135,6 +137,7 @@ export function GalleryPage() {
     }
 
     setIsLoading(true);
+    setLoadWarning(null);
     try {
       const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(currentBrand.id);
       let query = supabase
@@ -152,15 +155,24 @@ export function GalleryPage() {
         query = query.order('created_at', { ascending: true });
       }
 
-      const { data, error } = await query;
+      const { data, error } = await withTimeout(
+        query,
+        GALLERY_REMOTE_TIMEOUT_MS,
+        'gallery_remote_images_timeout',
+      );
 
       let remoteImages: GeneratedImage[] = [];
       if (error) {
+        setLoadWarning('保存済み画像の取得に失敗しました。ローカル成果物だけを表示しています。');
         if (localImages.length === 0) {
           toast.error('画像の読み込みに失敗しました');
         }
       } else {
-        remoteImages = await withSignedImageUrls(data || []);
+        remoteImages = await withTimeout(
+          withSignedImageUrls(data || []),
+          GALLERY_REMOTE_TIMEOUT_MS,
+          'gallery_signed_urls_timeout',
+        );
       }
 
       const mergedImages = [...remoteImages, ...localImages]
@@ -173,6 +185,7 @@ export function GalleryPage() {
       setImages(mergedImages);
     } catch {
       const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(currentBrand.id);
+      setLoadWarning('保存済み画像の取得に時間がかかっています。ローカル成果物だけを表示しています。');
       if (localImages.length === 0) {
         toast.error('画像の読み込みに失敗しました');
       }
@@ -497,14 +510,6 @@ export function GalleryPage() {
     return () => document.removeEventListener('keydown', handleKeydown);
   }, [selectedImage, navigateImage, setSearchParams, handleToggleFavorite]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="spinner" />
-      </div>
-    );
-  }
-
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -568,6 +573,33 @@ export function GalleryPage() {
             </button>
           </div>
         </motion.div>
+
+        {isLoading ? (
+          <div className="glass-panel mb-6 flex items-center gap-3 rounded-2xl p-5 text-neutral-700 dark:text-neutral-200">
+            <div className="spinner h-5 w-5" />
+            <div>
+              <p className="text-sm font-semibold">ギャラリーを読み込み中</p>
+              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                保存済み画像とローカル成果物を確認しています。
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {loadWarning && !isLoading ? (
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p>{loadWarning}</p>
+              <button
+                type="button"
+                onClick={fetchImages}
+                className="inline-flex w-fit items-center rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold transition hover:bg-amber-100 dark:border-amber-400/40 dark:hover:bg-amber-400/10"
+              >
+                再読み込み
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         <section className="mb-6 grid gap-3 lg:grid-cols-3">
           <button
@@ -711,7 +743,7 @@ export function GalleryPage() {
         </div>
 
         {/* Gallery Grid */}
-        {filteredImages.length > 0 ? (
+        {isLoading ? null : filteredImages.length > 0 ? (
           <>
             <motion.div
               layout
@@ -1048,4 +1080,18 @@ export function GalleryPage() {
       </AnimatePresence>
     </>
   );
+}
+
+async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }

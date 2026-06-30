@@ -254,10 +254,27 @@ async function interactGenerateReady(page, routeEvidence) {
   await page.getByPlaceholder(/夏のサマーセール/).fill('Mass-market QA: uploaded apparel reference should drive campaign output.').catch(() => undefined);
   await page.getByPlaceholder(/SUMMER SALE/).fill('MASS MARKET QA').catch(() => undefined);
   await page.getByPlaceholder(/最大50% OFF/).fill('Visual workflow proof').catch(() => undefined);
+  const rightsCheckbox = page.getByRole('checkbox').first();
+  const rightsCheckboxVisible = await rightsCheckbox.isVisible().catch(() => false);
+  if (rightsCheckboxVisible) {
+    await rightsCheckbox.check().catch(() => undefined);
+  }
+  const body = await bodyText(page);
   const button = page.getByRole('button', { name: /Runway workerで生成/ }).first();
   const visible = await button.isVisible().catch(() => false);
   const enabled = await button.isEnabled().catch(() => false);
-  routeEvidence.interactions.push({ type: 'generate-ready-no-submit', visible, enabled });
+  const h601CopyVisible = /権利・許可|商用デザイン制作|商標クリアランス/.test(body);
+  routeEvidence.interactions.push({
+    type: 'generate-ready-no-submit',
+    visible,
+    enabled,
+    rightsCheckboxVisible,
+    h601CopyVisible,
+  });
+  addAssertion(routeEvidence, 'h601_rights_confirmation_visible', rightsCheckboxVisible && h601CopyVisible, {
+    rightsCheckboxVisible,
+    h601CopyVisible,
+  });
   addAssertion(routeEvidence, 'generate_button_ready_without_submit', visible && enabled);
 }
 
