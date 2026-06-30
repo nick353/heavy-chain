@@ -28,7 +28,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'production monitor',
-    path: 'output/playwright/production-monitor-post-g639-20260701-r1/summary.json',
+    path: 'output/playwright/production-monitor-post-g640-20260701-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.blockers).length === 0 &&
@@ -45,7 +45,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production mass-market QA current',
-    path: 'output/playwright/prod-post-g639-gallery-calm-fallback-20260701-r1/SUMMARY.json',
+    path: 'output/playwright/prod-post-g640-mobile-dashboard-dedup-20260701-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -66,8 +66,9 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_no_intrusive_floating_help_buttons') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_no_intrusive_floating_help_buttons') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_generate_hides_canvas_toolbar') &&
-      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_has_above_fold_quick_start'),
-    expect: 'current production mass-market QA ok=true with 17 desktop routes, 8 mobile routes, Gallery fallback visible without scary remote-failure toast, H601-ready generate route, no intrusive mobile floating help buttons, mobile Dashboard quick start, mobile Generate canvas toolbar hidden, no console/page/request failures, and cleanup closed',
+      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_has_above_fold_quick_start') &&
+      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_hides_duplicate_quick_action_cards'),
+    expect: 'current production mass-market QA ok=true with 17 desktop routes, 8 mobile routes, Gallery fallback visible without scary remote-failure toast, H601-ready generate route, no intrusive mobile floating help buttons, mobile Dashboard quick start without duplicate quick-action cards, mobile Generate canvas toolbar hidden, no console/page/request failures, and cleanup closed',
   },
   {
     name: 'G610 retention workspace search',
