@@ -255,8 +255,8 @@ const makeCanvasObjects = () => {
   return Array.from({ length: CANVAS_OBJECT_COUNT }, (_, index) => ({
     id: `g606-object-${index}`,
     type: index % 4 === 0 ? 'text' : 'image',
-    x: 40 + (index % 15) * 110,
-    y: 40 + Math.floor(index / 15) * 110,
+    x: 40 + (index % 8) * 220,
+    y: 40 + Math.floor(index / 8) * 220,
     width: 86,
     height: 86,
     rotation: 0,

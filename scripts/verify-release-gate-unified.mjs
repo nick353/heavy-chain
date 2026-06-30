@@ -65,7 +65,7 @@ const requiredReadbacks = [
   },
   {
     name: 'G610 retention workspace search',
-    latestSummaryPrefix: 'g610-retention-project-search-20260626',
+    path: 'output/playwright/g610-retention-project-search-20260701-g624-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -78,13 +78,13 @@ const requiredReadbacks = [
   },
   {
     name: 'G603 garment Canvas',
-    path: 'output/playwright/g603-garment-layer-canvas-20260626T130426Z/SUMMARY.json',
+    path: 'output/playwright/g603-garment-layer-canvas-20260701-g624-r1/SUMMARY.json',
     validate: (json) => json.ok === true && arrayFrom(json.failed).length === 0,
     expect: 'ok=true and failed=[]',
   },
   {
     name: 'G605 onboarding templates',
-    path: 'output/playwright/g605-onboarding-templates-20260626T133449Z/SUMMARY.json',
+    path: 'output/playwright/g605-onboarding-templates-20260701-g624-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -94,7 +94,7 @@ const requiredReadbacks = [
   },
   {
     name: 'G606 performance scale',
-    path: 'output/playwright/10m-product-readiness-g606/summary.json',
+    path: 'output/playwright/g606-performance-scale-20260701-g624-r2/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.issues).length === 0 &&
@@ -105,7 +105,7 @@ const requiredReadbacks = [
   },
   {
     name: 'G608 security audit',
-    path: 'output/playwright/10m-product-readiness-g608-security-audit/audit-readiness.json',
+    path: 'output/playwright/g608-security-audit-20260701-g624-r2/audit-readiness.json',
     validate: (json) => {
       const requirements = arrayFrom(json.requirements);
       const requirementIds = requirements.map((requirement) => requirement?.id).filter(Boolean);

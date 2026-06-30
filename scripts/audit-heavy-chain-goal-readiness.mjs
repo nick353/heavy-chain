@@ -84,6 +84,12 @@ const files = Object.fromEntries(
 );
 const readinessBlockers = Array.isArray(files.readiness.json?.blockers) ? files.readiness.json.blockers : [];
 const blockerCodes = new Set(readinessBlockers.map((blocker) => blocker.code));
+const stateMentionsApprovedRunwayClient = /approved (?:existing )?Runway MCP client/i.test(stateText)
+  || /Codex-approved (?:existing )?Runway MCP client/i.test(stateText)
+  || /use Codex-approved `mcp__runway\.\*` tools/i.test(stateText);
+const stateDisallowsOldMcpRemotePath = /Do not use `localhost:15554` consent pages/i.test(stateText)
+  || /older `mcp-remote` localhost consent path remains invalid/i.test(stateText)
+  || /old autonomous `mcp-remote` localhost path remains disallowed/i.test(stateText);
 
 const requirements = [
   requirement({
@@ -521,7 +527,7 @@ function localWorkerOperatorControlsPassed() {
     && (created?.steps || []).some((step) => step.stage === 'before_submit' && step.visible === true && step.enabled === true)
     && afterSubmit?.generateResponse?.status === 202
     && String(afterSubmit?.generateResponse?.body || '').includes('"provider":"runway_mcp_local_worker"')
-    && /use Codex-approved `mcp__runway\.\*` tools/i.test(stateText)
+    && stateMentionsApprovedRunwayClient
     && stateText.includes('`--live-runway` remains diagnostic only')
     && stateText.includes('only use `--allow-unmatched-mcp-result` for a deliberate one-off recovery')
     && runbookText.includes('Do not use it in watch mode')
@@ -542,7 +548,7 @@ function localWorkerOperatorControlsDetails() {
     beforeSubmit: (created.steps || []).find((step) => step.stage === 'before_submit') || null,
     afterSubmitStatus: afterSubmit?.generateResponse?.status,
     afterSubmitUsesLocalWorker: String(afterSubmit?.generateResponse?.body || '').includes('"provider":"runway_mcp_local_worker"'),
-    stateApprovedRunwayTools: /use Codex-approved `mcp__runway\.\*` tools/i.test(stateText),
+    stateApprovedRunwayTools: stateMentionsApprovedRunwayClient,
     stateLiveRunwayDiagnosticOnly: stateText.includes('`--live-runway` remains diagnostic only'),
     stateAllowUnmatchedRestricted: stateText.includes('only use `--allow-unmatched-mcp-result` for a deliberate one-off recovery'),
     runbookAllowUnmatchedNotWatch: runbookText.includes('Do not use it in watch mode'),
@@ -600,7 +606,7 @@ function approvedClientRunwayPathPassed() {
   return files.referenceStability.exists
     && files.launchOps.exists
     && stateText.includes('local Runway MCP worker queue')
-    && stateText.includes('The old autonomous `mcp-remote` localhost path remains disallowed')
+    && stateDisallowsOldMcpRemotePath
     && reference?.uploadHttpCode === 200
     && Boolean(reference?.runwayHostedReferenceAsset)
     && Boolean(reference?.successfulRunwayHostedReferenceTask)
@@ -612,7 +618,7 @@ function approvedClientRunwayPathDetails() {
   const reference = files.referenceStability.json || {};
   return {
     stateUsesLocalWorker: stateText.includes('local Runway MCP worker queue'),
-    oldMcpRemoteDisallowed: stateText.includes('The old autonomous `mcp-remote` localhost path remains disallowed'),
+    oldMcpRemoteDisallowed: stateDisallowsOldMcpRemotePath,
     uploadHttpCode: reference.uploadHttpCode,
     runwayHostedReferenceAsset: Boolean(reference.runwayHostedReferenceAsset),
     successfulRunwayHostedReferenceTask: reference.successfulRunwayHostedReferenceTask,
