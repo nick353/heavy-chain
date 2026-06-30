@@ -39,6 +39,7 @@ const requiredAcceptedGoals = [
   'G626',
   'G627',
   'G628',
+  'G629',
 ];
 
 const requiredHumanItemsClosed = ['H601', 'H602'];
