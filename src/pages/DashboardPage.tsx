@@ -459,7 +459,11 @@ export function DashboardPage() {
         </motion.section>
 
         {/* Quick Actions */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-8 sm:mb-12 lg:mb-16">
+        <motion.div
+          variants={itemVariants}
+          className="hidden sm:grid sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-8 sm:mb-12 lg:mb-16"
+          data-testid="dashboard-desktop-quick-actions"
+        >
           {quickActions.map((action) => (
             <Link
               key={action.id}

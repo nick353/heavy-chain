@@ -197,6 +197,10 @@ async function runRoute(spec, context, viewport) {
       if (spec.key === 'mobile-dashboard') {
         const quickStart = page.locator('[data-testid="mobile-dashboard-quick-start"]');
         const quickStartVisible = await quickStart.isVisible().catch(() => false);
+        const desktopQuickActionsVisible = await page
+          .locator('[data-testid="dashboard-desktop-quick-actions"]')
+          .isVisible()
+          .catch(() => false);
         const quickStartLinks = await quickStart.locator('a').evaluateAll((links) =>
           links.map((link) => ({
             text: link.textContent?.replace(/\s+/g, ' ').trim(),
@@ -212,6 +216,9 @@ async function runRoute(spec, context, viewport) {
         ), {
           quickStartVisible,
           quickStartLinks,
+        });
+        addAssertion(routeEvidence, 'mobile_dashboard_hides_duplicate_quick_action_cards', !desktopQuickActionsVisible, {
+          desktopQuickActionsVisible,
         });
       }
     }
