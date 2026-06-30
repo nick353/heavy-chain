@@ -132,14 +132,20 @@ const requiredReadbacks = [
   },
   {
     name: 'production H601 rights readback',
-    path: 'output/playwright/prod-domain-rights-check-20260630T0952Z/summary.json',
+    path: 'output/playwright/prod-h601-rights-check-20260701-r1/summary.json',
     validate: (json) =>
-      json.findings?.zeaburAuthenticatedGenerateRoute?.reachable === true &&
-      json.findings?.zeaburAuthenticatedGenerateRoute?.loggedIn === true &&
-      json.findings?.zeaburAuthenticatedGenerateRoute?.hasH601RightsLabel === true &&
-      json.findings?.zeaburAuthenticatedGenerateRoute?.hasH601CommercialCaveat === true &&
-      json.findings?.customDomain?.reachable === true,
-    expect: 'production authenticated /generate shows H601 rights label and commercial caveat, and chosen public domain is reachable',
+      json.ok === true &&
+      hasPassingAssertion(json, 'generate_route_loaded') &&
+      hasPassingAssertion(json, 'h601_rights_label_visible') &&
+      hasPassingAssertion(json, 'h601_commercial_caveat_visible') &&
+      hasPassingAssertion(json, 'rights_checkbox_exists'),
+    expect: 'production authenticated /generate shows H601 rights label, commercial caveat, and rights checkbox',
+  },
+  {
+    name: 'production public domain readback',
+    path: 'output/playwright/prod-domain-rights-check-20260630T0952Z/summary.json',
+    validate: (json) => json.findings?.customDomain?.reachable === true,
+    expect: 'chosen public custom domain is reachable',
   },
   {
     name: 'production H602 billing completion readback',
@@ -656,6 +662,12 @@ function redact(text) {
 
 function arrayFrom(value) {
   return Array.isArray(value) ? value : [];
+}
+
+function hasPassingAssertion(json, assertionId) {
+  return arrayFrom(json?.assertions).some((assertion) =>
+    assertion?.id === assertionId && assertion?.ok === true
+  );
 }
 
 function parseArgs(argv) {
