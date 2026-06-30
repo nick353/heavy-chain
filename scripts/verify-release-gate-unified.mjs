@@ -28,7 +28,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'production monitor',
-    path: 'output/playwright/production-monitor-post-g633-20260701-r1/summary.json',
+    path: 'output/playwright/production-monitor-post-g635-20260701-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.blockers).length === 0 &&
@@ -45,7 +45,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production mass-market QA current',
-    path: 'output/playwright/prod-post-g633-mass-market-20260701-r1/SUMMARY.json',
+    path: 'output/playwright/prod-post-g635-material-workbench-empty-state-20260701-r2/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
