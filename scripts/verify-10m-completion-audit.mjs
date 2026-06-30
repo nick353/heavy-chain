@@ -31,6 +31,14 @@ const requiredAcceptedGoals = [
   'G618',
   'G619',
   'G620',
+  'G621',
+  'G622',
+  'G623',
+  'G624',
+  'G625',
+  'G626',
+  'G627',
+  'G628',
 ];
 
 const requiredHumanItemsClosed = ['H601', 'H602'];
@@ -202,7 +210,7 @@ const humanStatuses = parseHumanStatuses(humanText);
 
 for (const goalId of requiredAcceptedGoals) {
   const status = goalStatuses.get(goalId) || 'missing';
-  const passed = status === 'accepted';
+  const passed = isAcceptedGoalStatus(status);
   report.goals.push({ id: goalId, status, passed });
   if (!passed) {
     report.blockers.push({
@@ -210,6 +218,10 @@ for (const goalId of requiredAcceptedGoals) {
       message: `${goalId} is ${status}, not accepted.`,
     });
   }
+}
+
+function isAcceptedGoalStatus(status) {
+  return typeof status === 'string' && /^accepted(?:$|-)/.test(status);
 }
 
 for (const itemId of requiredHumanItemsClosed) {
