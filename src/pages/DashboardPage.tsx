@@ -449,12 +449,53 @@ export function DashboardPage() {
               </button>
             </div>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-4">
-              <JobQueuePanel activeJobs={workspaceActivity.activeJobs} completedJobs={workspaceActivity.completedJobs} className="lg:col-span-2" />
-              <FailureRetryCard failedJobs={workspaceActivity.failedJobs} />
-              <CreditSummaryPanel summary={workspaceActivity.creditSummary} />
-              <WorkspaceGuidePanel className="lg:col-span-4" />
-            </div>
+            <>
+              <div
+                className="grid gap-3 sm:hidden"
+                data-testid="mobile-dashboard-activity-summary"
+              >
+                <div className="grid grid-cols-3 gap-2">
+                  <Link
+                    to="/jobs"
+                    className="rounded-2xl border border-white/10 bg-white/[0.06] p-3"
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">進行中</p>
+                    <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.activeJobs.length}</p>
+                  </Link>
+                  <Link
+                    to="/jobs"
+                    className="rounded-2xl border border-white/10 bg-white/[0.06] p-3"
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">失敗</p>
+                    <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.failedJobs.length}</p>
+                  </Link>
+                  <Link
+                    to="/credits"
+                    className="rounded-2xl border border-white/10 bg-white/[0.06] p-3"
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">残り</p>
+                    <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.creditSummary.remainingUnits.toLocaleString()}</p>
+                  </Link>
+                </div>
+                <Link
+                  to="/jobs"
+                  className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white/70 px-4 py-3 text-sm font-semibold text-neutral-700 shadow-soft dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200"
+                  data-testid="mobile-dashboard-activity-detail-link"
+                >
+                  詳細なジョブ状況を見る
+                  <IconArrowRight className="h-4 w-4" size={16} />
+                </Link>
+              </div>
+              <div
+                className="hidden gap-4 sm:grid lg:grid-cols-4"
+                data-testid="dashboard-workspace-activity-detail"
+              >
+                <JobQueuePanel activeJobs={workspaceActivity.activeJobs} completedJobs={workspaceActivity.completedJobs} className="lg:col-span-2" />
+                <FailureRetryCard failedJobs={workspaceActivity.failedJobs} />
+                <CreditSummaryPanel summary={workspaceActivity.creditSummary} />
+                <WorkspaceGuidePanel className="lg:col-span-4" />
+              </div>
+            </>
           )}
         </motion.section>
 

@@ -219,6 +219,18 @@ async function runRoute(spec, context, viewport) {
           .locator('[data-testid="dashboard-lightchain-all-tools-link"]')
           .getAttribute('href')
           .catch(() => null);
+        const activitySummaryVisible = await page
+          .locator('[data-testid="mobile-dashboard-activity-summary"]')
+          .isVisible()
+          .catch(() => false);
+        const activityDetailVisible = await page
+          .locator('[data-testid="dashboard-workspace-activity-detail"]')
+          .isVisible()
+          .catch(() => false);
+        const activityDetailHref = await page
+          .locator('[data-testid="mobile-dashboard-activity-detail-link"]')
+          .getAttribute('href')
+          .catch(() => null);
         const quickStartLinks = await quickStart.locator('a').evaluateAll((links) =>
           links.map((link) => ({
             text: link.textContent?.replace(/\s+/g, ' ').trim(),
@@ -249,6 +261,16 @@ async function runRoute(spec, context, viewport) {
             dashboardLightchainVisibleFeatureCount,
             allToolsLinkVisible,
             allToolsHref,
+          },
+        );
+        addAssertion(
+          routeEvidence,
+          'mobile_dashboard_activity_uses_compact_summary',
+          activitySummaryVisible && !activityDetailVisible && activityDetailHref === '/jobs',
+          {
+            activitySummaryVisible,
+            activityDetailVisible,
+            activityDetailHref,
           },
         );
       }
