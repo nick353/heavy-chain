@@ -190,9 +190,28 @@ async function runRoute(spec, context, viewport) {
       });
       if (spec.key === 'mobile-generate-campaign') {
         const toolbarVisible = await page.locator('[data-testid="lightchain-canvas-toolbar"]').isVisible().catch(() => false);
+        const assistantPromptBarVisible = await page
+          .locator('[data-testid="mobile-generate-assistant-prompt-bar"]')
+          .isVisible()
+          .catch(() => false);
+        const projectPanelVisible = await page.locator('[data-testid="lightchain-project-panel"]').isVisible().catch(() => false);
+        const inputMaterialPanelVisible = await page
+          .locator('[data-testid="lightchain-input-material-panel"]')
+          .isVisible()
+          .catch(() => false);
         addAssertion(routeEvidence, 'mobile_generate_hides_canvas_toolbar', !toolbarVisible, {
           toolbarVisible,
         });
+        addAssertion(
+          routeEvidence,
+          'mobile_generate_starts_at_material_form',
+          !assistantPromptBarVisible && !projectPanelVisible && inputMaterialPanelVisible,
+          {
+            assistantPromptBarVisible,
+            projectPanelVisible,
+            inputMaterialPanelVisible,
+          },
+        );
       }
       if (spec.key === 'mobile-dashboard') {
         const quickStart = page.locator('[data-testid="mobile-dashboard-quick-start"]');

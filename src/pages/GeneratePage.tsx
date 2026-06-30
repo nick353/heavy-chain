@@ -3701,7 +3701,10 @@ export function GeneratePage() {
             </div>
           </div>
 
-          <div className="flex min-h-[44px] w-full items-center gap-3 rounded-xl border border-white/10 bg-neutral-900 px-3 lg:max-w-xl">
+          <div
+            className="hidden min-h-[44px] w-full items-center gap-3 rounded-xl border border-white/10 bg-neutral-900 px-3 sm:flex lg:max-w-xl"
+            data-testid="mobile-generate-assistant-prompt-bar"
+          >
             <Search className="h-4 w-4 shrink-0 text-cyan-300" />
             <input
               value={assistantPrompt}
@@ -3728,7 +3731,7 @@ export function GeneratePage() {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className="h-fit space-y-3"
+          className="hidden h-fit space-y-3 sm:block"
           data-testid="lightchain-project-panel"
         >
           <section className="rounded-2xl border border-white/10 bg-neutral-950 p-4 shadow-sm">
