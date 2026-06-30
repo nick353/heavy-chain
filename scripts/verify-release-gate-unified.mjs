@@ -28,7 +28,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'production monitor',
-    path: 'output/playwright/goal-loop-10m-20260626/production-monitor-after-deploy/summary.json',
+    path: 'output/playwright/production-monitor-20260701-g623-r2/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.blockers).length === 0 &&
@@ -39,7 +39,7 @@ const requiredReadbacks = [
   },
   {
     name: 'launch operations',
-    path: 'output/playwright/goal-loop-10m-20260626/launch-ops-after-deploy/summary.json',
+    path: 'output/playwright/launch-operations-readiness-20260701-g623-r4/summary.json',
     validate: (json) => json.ok === true && arrayFrom(json.failed).length === 0,
     expect: 'ok=true and failed=[]',
   },
