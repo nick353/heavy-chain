@@ -155,6 +155,19 @@ const requiredReadbacks = [
     expect: 'ok=true, blockers=[], >=5 incident scenarios passed, and no irreversible actions touched',
   },
   {
+    name: 'G633 scale and alerting plan',
+    path: 'output/playwright/g633-scale-alerting-plan/summary.json',
+    validate: (json) =>
+      json.ok === true &&
+      json.schema === 'heavy-chain.g633.scale-alerting-plan.v1' &&
+      arrayFrom(json.blockers).length === 0 &&
+      Number(json.summary?.checks || 0) >= 35 &&
+      Object.values(json.irreversibleActions || {}).every((value) =>
+        ['not_clicked', 'not_touched', 'not_run'].includes(value),
+      ),
+    expect: 'ok=true, blockers=[], scale/load/alerting approval plan checked, and no irreversible actions touched',
+  },
+  {
     name: 'production H601 rights readback',
     path: 'output/playwright/prod-h601-rights-check-20260701-r1/summary.json',
     validate: (json) =>
@@ -245,6 +258,11 @@ const commandChecks = [
     args: ['--check', 'scripts/verify-g632-incident-response-drill.mjs'],
   },
   {
+    name: 'node syntax: G633 scale alerting verifier',
+    command: 'node',
+    args: ['--check', 'scripts/verify-g633-scale-alerting-plan.mjs'],
+  },
+  {
     name: 'node syntax: H601 legal safety verifier',
     command: 'node',
     args: ['--check', 'scripts/verify-h601-legal-safety-guard.mjs'],
@@ -273,6 +291,11 @@ const commandChecks = [
     name: 'G632 incident response drill',
     command: 'npm',
     args: ['run', 'verify:g632-incident-response', '--silent'],
+  },
+  {
+    name: 'G633 scale and alerting plan',
+    command: 'npm',
+    args: ['run', 'verify:g633-scale-alerting-plan', '--silent'],
   },
   {
     name: 'H601 legal safety guard',
