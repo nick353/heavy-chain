@@ -53,6 +53,12 @@ import {
   type PatternGenerationContext,
 } from '../lib/workspaceHandoff';
 import { buildProductionImagePrompt, mergeProductionNegativePrompt } from '../lib/productPromptQuality';
+import {
+  BRAND_LIKENESS_BLOCK_COPY,
+  GENERATION_LEGAL_COPY,
+  UPLOAD_RIGHTS_CONFIRMATION_LABEL,
+  validateLegalSafetyInput,
+} from '../lib/legalSafetyGuard';
 import { getWorkflowMetadata, type WorkflowMetadata } from '../lib/workflowMetadata';
 import {
   buildLightchainFeatureHref,
@@ -915,6 +921,7 @@ export function GeneratePage() {
   const [overlayColor, setOverlayColor] = useState('#ffffff');
   const [overlayStrokeColor, setOverlayStrokeColor] = useState('#000000');
   const [overlayStrokeWidth, setOverlayStrokeWidth] = useState(2);
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const generationRecoveryGuidance = getFailureRecoveryGuidance(generationError);
   
   // Reference image state
@@ -1414,6 +1421,29 @@ export function GeneratePage() {
       return;
     }
 
+    if (selectedFeatureUsesRunwayMcp && !rightsConfirmed) {
+      toast.error('素材と生成指示の権利確認にチェックしてください');
+      return;
+    }
+
+    const legalSafetyAssessment = validateLegalSafetyInput([
+      prompt,
+      productDescription,
+      headline,
+      subheadline,
+      campaignTitle,
+      campaignSubheadline,
+      campaignCTA,
+      overlayText,
+      assistantPrompt,
+      materialReference.note,
+    ]);
+    if (selectedFeatureUsesRunwayMcp && legalSafetyAssessment.blocked) {
+      setGenerationError(BRAND_LIKENESS_BLOCK_COPY);
+      toast.error(BRAND_LIKENESS_BLOCK_COPY);
+      return;
+    }
+
     if (!noImageGenerationMode && selectedFeatureUsesRunwayMcp && !runwayReadyInApp) {
       const message = runwayReadinessIssues.length
         ? runwayReadinessIssues.join(' / ')
@@ -1466,6 +1496,9 @@ export function GeneratePage() {
         referenceType: effectiveReferenceType,
         textOverlay,
         lightchainCompat: lightchainCompat ?? undefined,
+        legalSafety: {
+          rightsConfirmed,
+        },
       };
       const { generateMaterialMetadata, materialPromptLines } = buildGenerateMaterialContext(
         processedImageUrl,
@@ -1576,6 +1609,7 @@ export function GeneratePage() {
             count: Math.max(1, Math.min(resultLabels.length || generateCount, 4)),
             referenceImage: processedImageUrl ?? null,
             referenceType: effectiveReferenceType,
+            rightsConfirmed,
             metadata: {
               source: 'generate_page',
               artifactKind: 'runway_local_worker_request',
@@ -2029,6 +2063,9 @@ export function GeneratePage() {
               width: ratio.width,
               height: ratio.height,
               count: generateCount,
+              legalSafety: {
+                rightsConfirmed,
+              },
               campaignMeta: {
                 title: campaignTitle,
                 subheadline: campaignSubheadline,
@@ -2079,6 +2116,9 @@ export function GeneratePage() {
               width: ratio.width,
               height: ratio.height,
               count: generateCount,
+              legalSafety: {
+                rightsConfirmed,
+              },
             }
           }));
           if (data?.images) {
@@ -3471,6 +3511,7 @@ export function GeneratePage() {
     if (isGenerating) return true;
     if (!noImageGenerationMode && selectedFeatureUsesRunwayMcp && !runwayReadyInApp) return true;
     if (featureConfig?.requiresImage && !referenceImage) return true;
+    if (selectedFeatureUsesRunwayMcp && !rightsConfirmed) return true;
     switch (selectedFeature.id) {
       case 'design-gacha':
         return !prompt.trim() && !referenceImage;
@@ -3642,9 +3683,7 @@ export function GeneratePage() {
             <div className="flex max-w-full gap-2 overflow-x-auto" data-testid="lightchain-detail-tabs">
               {activeCategoryFeatures.map((feature) => {
                 const active = selectedCatalogFeature?.id === feature.id;
-                const featureHref = feature.route.startsWith('/generate')
-                  ? buildLightchainFeatureHref(feature)
-                  : `/generate?feature=${encodeURIComponent(selectedFeature.id)}&lcFeature=${encodeURIComponent(feature.id)}`;
+                const featureHref = buildLightchainFeatureHref(feature);
                 return (
                   <Link
                     key={feature.id}
@@ -3896,6 +3935,27 @@ export function GeneratePage() {
             )}
 
             {renderFeatureForm()}
+
+            {selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && (
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm dark:border-amber-800 dark:bg-amber-950/20">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={rightsConfirmed}
+                    onChange={(event) => setRightsConfirmed(event.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                  />
+                  <span>
+                    <span className="block font-semibold text-amber-900 dark:text-amber-100">
+                      {UPLOAD_RIGHTS_CONFIRMATION_LABEL}
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-amber-800 dark:text-amber-200">
+                      {GENERATION_LEGAL_COPY}
+                    </span>
+                  </span>
+                </label>
+              </div>
+            )}
 
             {selectedFeature.id !== 'chat-edit' && (
               <Button

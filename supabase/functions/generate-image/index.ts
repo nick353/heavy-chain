@@ -6,6 +6,7 @@ import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTas
 import { sanitizeMaterialGenerationMetadata, sanitizeMetadataWithoutImageUrls } from '../_shared/materialMetadata.ts';
 import { generateRunwayImage, runwayImageArtifact } from '../_shared/runway.ts';
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
+import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,6 +30,7 @@ interface GenerateRequest {
   campaignMeta?: unknown
   textOverlay?: unknown
   localRunwayWorker?: unknown
+  legalSafety?: unknown
 }
 
 const SOURCE_CONFIG = {
@@ -310,6 +312,7 @@ serve(async (req) => {
       campaignMeta,
       textOverlay,
       localRunwayWorker,
+      legalSafety,
     }: GenerateRequest = await req.json()
 
     if (!prompt || prompt.length > 8000) {
@@ -329,6 +332,16 @@ serve(async (req) => {
       ? featureType.trim()
       : 'text-to-image'
     const localWorkerRequest = sanitizeLocalRunwayWorkerRequest(localRunwayWorker, persistedFeatureType)
+    requireLegalSafetyApproval(legalSafety, [
+      prompt,
+      negativePrompt,
+      campaignMeta,
+      textOverlay,
+      materialReferences,
+      layerPlan,
+      maskPlan,
+      compositionPreview,
+    ])
     const sourceMetadata = buildSourceMetadata(sourceReadback, generationIntent)
     const materialMetadata = sanitizeMaterialGenerationMetadata({
       materialReferences,

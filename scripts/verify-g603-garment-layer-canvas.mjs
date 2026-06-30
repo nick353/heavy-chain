@@ -75,8 +75,10 @@ try {
 
   await page.getByRole('button', { name: /^AIフィッティング\s*\d*$/ }).first().click();
   await page.getByRole('button', { name: /衣服参考ライブラリ/ }).first().click();
-  await page.locator('input[type="file"]').first().setInputFiles(uploadPath);
+  await page.waitForURL(/\/lightchain\/fitting-clothing-reference$/, { timeout: 10_000 });
+  await uploadMaterialAndWaitForMaskControls(page, uploadPath);
   await page.getByRole('button', { name: /手動/ }).click();
+  await openDetails(page, 'レイヤー詳細');
   const printLayerClicked = await clickFirstVisible(page, [/プリント/]);
   if (!printLayerClicked) throw new Error('print_layer_button_missing');
   const placementSelect = page.locator('select').first();
@@ -267,6 +269,24 @@ async function dismissBlockingOverlays(page) {
       await button.click().catch(() => {});
       await page.waitForTimeout(250);
     }
+  }
+}
+
+async function uploadMaterialAndWaitForMaskControls(page, uploadPath) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.locator('input[type="file"]').first().setInputFiles(uploadPath);
+    await page.waitForTimeout(500);
+    const maskReady = await page.getByRole('button', { name: 'AIマスク認識' }).first().isEnabled({ timeout: 3000 }).catch(() => false);
+    if (maskReady) return;
+  }
+  throw new Error('material_upload_did_not_enable_mask_controls');
+}
+
+async function openDetails(page, summaryText) {
+  const summary = page.locator('summary').filter({ hasText: summaryText }).first();
+  if (await summary.isVisible({ timeout: 1000 }).catch(() => false)) {
+    const isOpen = await summary.evaluate((node) => node.parentElement?.hasAttribute('open') ?? false);
+    if (!isOpen) await summary.click();
   }
 }
 

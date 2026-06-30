@@ -9,6 +9,10 @@ export type MaterialReferenceState = {
   placement: string;
   scale: number;
   note: string;
+  maskCandidates?: string[];
+  selectedMaskCandidate?: string | null;
+  extractedLayerReady?: boolean;
+  nextStepReady?: boolean;
 };
 
 export type MaterialReferenceMetadata = Record<string, Json | undefined> & {
@@ -21,6 +25,10 @@ export type MaterialReferenceMetadata = Record<string, Json | undefined> & {
   placement: string;
   scale: number;
   note: string;
+  maskCandidates?: string[];
+  selectedMaskCandidate?: string | null;
+  extractedLayerReady?: boolean;
+  nextStepReady?: boolean;
 };
 
 export const readWorkspaceImageAsDataUrl = (file: File): Promise<string> => {
@@ -50,4 +58,8 @@ export const buildMaterialReferenceMetadata = (
   placement: state.placement,
   scale: state.scale,
   note: state.note,
+  maskCandidates: state.maskCandidates ?? [],
+  selectedMaskCandidate: state.selectedMaskCandidate ?? null,
+  extractedLayerReady: Boolean(state.extractedLayerReady),
+  nextStepReady: Boolean(state.nextStepReady),
 });

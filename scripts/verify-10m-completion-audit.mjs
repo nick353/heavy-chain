@@ -8,7 +8,7 @@ const args = parseArgs(process.argv.slice(2));
 const outDir = args.out || 'output/playwright/10m-completion-audit';
 const summaryPath = args.summary || path.join(outDir, 'summary.json');
 const allowIncomplete = args.allowIncomplete === true || args['allow-incomplete'] === true;
-const g617Dir = args.g617Dir || 'output/playwright/g617-same-run-fresh-generation-20260627';
+const g617Dir = args.g617Dir || 'output/playwright/g617-same-run-fresh-generation-hc-g617-same-run-fresh-20260630T063740Z';
 
 const requiredAcceptedGoals = [
   'G601',
@@ -75,6 +75,64 @@ const requiredProofs = [
     path: 'output/playwright/10m-product-readiness-g620/summary.json',
     validate: (json) => json.ok === true && Number(json.summary?.blockers || json.blockers?.length || 0) === 0,
     expect: 'G620 security operations ok=true with no blockers',
+  },
+  {
+    id: 'production_h601_rights_readback',
+    goal: 'H601',
+    path: 'output/playwright/prod-domain-rights-check-20260630T0952Z/summary.json',
+    validate: (json) =>
+      json.findings?.zeaburAuthenticatedGenerateRoute?.reachable === true &&
+      json.findings?.zeaburAuthenticatedGenerateRoute?.loggedIn === true &&
+      json.findings?.zeaburAuthenticatedGenerateRoute?.hasH601RightsLabel === true &&
+      json.findings?.zeaburAuthenticatedGenerateRoute?.hasH601CommercialCaveat === true &&
+      json.findings?.customDomain?.reachable === true,
+    expect: 'production authenticated /generate shows H601 rights label and commercial caveat, and chosen public domain is reachable',
+  },
+  {
+    id: 'production_h602_billing_completion_readback',
+    goal: 'H602',
+    path: 'output/playwright/h602-production-billing-readback-20260630/summary.json',
+    validate: (json) =>
+      json.ok === true &&
+      json.migration?.applied === true &&
+      json.purchaseProofMigration?.applied === true &&
+      json.purchaseProofHardeningMigration?.applied === true &&
+      json.purchaseProofHashOnlyMigration?.applied === true &&
+      json.purchaseProofArtifactAllowlistMigration?.applied === true &&
+      json.billingSettings?.generationQuotaEnforced === true &&
+      json.billingSettings?.productionCheckoutEnabled === false &&
+      json.securityReadback?.purchaseProofMetadataRawReceiptLikeBlocked === true &&
+      json.securityReadback?.purchaseProofMetadataBareReceiptPayloadBlocked === true &&
+      json.securityReadback?.purchaseProofHashFieldsSha256HexOnly === true &&
+      json.securityReadback?.purchaseProofMetadataKeysAllowlisted === true &&
+      json.securityReadback?.purchaseProofArtifactUriSafeLocatorOnly === true &&
+      json.securityReadback?.purchaseProofSummaryRpcScope === 'brand_scoped_only; no user/email cross-brand aggregation' &&
+      json.sandboxTester?.registered === true &&
+      json.sandboxTester?.emailRedacted === true &&
+      Number(json.purchaseProofReadback?.verifiedNoRealChargeProofCount || 0) > 0 &&
+      json.purchaseProofReadback?.transactionOrEntitlementReadback === true &&
+      Array.isArray(json.remainingBlockers) &&
+      json.remainingBlockers.length === 0,
+    expect: 'production H602 readback ok=true with hardening/hash-only/artifact-allowlist migrations applied, raw receipt/payload storage blocked, verified no-real-charge proof, transaction/entitlement readback, and no remaining blockers',
+  },
+];
+
+const requiredCommands = [
+  {
+    name: 'g619 beta evidence verifier',
+    args: ['npm', 'run', 'verify:g619-beta-evidence'],
+  },
+  {
+    name: 'H601 legal safety verifier',
+    args: ['npm', 'run', 'verify:h601-legal-safety'],
+  },
+  {
+    name: 'H602 billing readiness verifier',
+    args: ['npm', 'run', 'verify:h602-billing'],
+  },
+  {
+    name: 'release gate verifier',
+    args: ['npm', 'run', 'verify:release-gate', '--', '--out', path.join(outDir, 'release-gate-summary.json')],
   },
 ];
 
@@ -153,7 +211,9 @@ for (const proof of requiredProofs) {
   }
 }
 
-report.commands.push(runCommand('g619 beta evidence verifier', ['npm', 'run', 'verify:g619-beta-evidence']));
+for (const command of requiredCommands) {
+  report.commands.push(runCommand(command.name, command.args));
+}
 for (const command of report.commands) {
   if (command.status !== 0) {
     report.blockers.push({
@@ -290,6 +350,9 @@ function validateG617FreshGeneration(readback, artifactDir) {
     Number(readbackCounts.failedJobs || 0) === 0 &&
     Number(readbackCounts.images || 0) >= allGenerationFeatures.length &&
     Number(readbackCounts.storage || 0) >= allGenerationFeatures.length &&
+    Number(readbackCounts.signedUrlOk || 0) >= allGenerationFeatures.length &&
+    readbackStorage.length >= allGenerationFeatures.length &&
+    readbackStorage.every((row) => row.signedUrlOk === true || row.signed_url_ok === true || row.downloadOk === true || row.download_ok === true) &&
     scorecard?.ok === true &&
     Number(scorecard.summary?.fail || scorecard.fail || 0) === 0 &&
     Number(scorecard.summary?.pass || scorecard.pass || 0) >= allGenerationFeatures.length

@@ -4,7 +4,7 @@ Updated: 2026-06-26
 
 ## Purpose
 
-`npm run verify:release-gate` is the pre-release gate that combines the current production monitor, launch operations proof, recorded mass-market QA, retention workspace search proof, garment Canvas proof, onboarding/template proof, performance baseline, security audit, operations-doc consistency, generation scorecard, typecheck, lint, build, and syntax checks into one pass/fail artifact.
+`npm run verify:release-gate` is the pre-release gate that combines the current production monitor, launch operations proof, recorded mass-market QA, retention workspace search proof, garment Canvas proof, onboarding/template proof, performance baseline, security audit, H601 legal-safety production readback, H602 billing completion readback, operations-doc consistency, generation scorecard, typecheck, lint, build, and syntax checks into one pass/fail artifact.
 
 This gate is read-only. It does not submit generation, deploy, publish externally, purchase, bill, enter secrets, or clean production data.
 
@@ -41,6 +41,8 @@ The JSON summary must have:
 - launch-ops `ok=true` and `failed=[]`
 - latest matching G611 mass-market QA summary `ok=true`, `failed=[]`, `contextClosed=true`, `browserClosed=true`
 - latest matching G610 retention summary plus G603, G605, G606, G608 readbacks passing
+- production H601 rights readback passing
+- production H602 billing completion readback passing, including hardening/hash-only migrations applied, verified no-real-charge proof greater than zero, transaction/entitlement readback true, raw receipt/payload storage blocked, and no remaining blockers
 - readback artifacts fresh within the configured freshness window
 - command gates passing: security audit, generation scorecard, G614 operations docs, typecheck, production build, lint, syntax checks, and `git diff --check`
 
@@ -53,6 +55,7 @@ Stop before billing, payment, checkout, purchase, identity verification, OTP/CAP
 Use the first failing item in `failed[]`.
 
 - `readback:*`: refresh or repair the named proof artifact before release.
+- `readback:production H602 billing completion readback`: attach real transaction/receipt-hash/entitlement proof, keep raw receipt/payload data out of storage, update production readback, and rerun the gate.
 - stale readback freshness: rerun the named proof or deliberately rerun with a larger `--max-artifact-age-hours` for historical audit only.
 - `command:security audit`: remove leaked secret-like values or unsafe persisted image URLs.
 - `command:generation scorecard`: repair missing image/readback pairing or visual quality evidence.

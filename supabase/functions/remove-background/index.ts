@@ -7,6 +7,7 @@ import { generateRunwayImage, runwayImageArtifact, runwayProviderName, runwayRef
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
+import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,6 +62,15 @@ serve(async (req) => {
     if (!imageUrl || !brandId) {
       throw new Error('Missing required parameters: imageUrl, brandId');
     }
+
+    requireLegalSafetyApproval(body.legalSafety, [
+      newBackground,
+      lightchainCompat,
+      body.materialReferences,
+      body.layerPlan,
+      body.maskPlan,
+      body.compositionPreview,
+    ]);
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
     await requireRunwayMcpConnectionApproval(supabaseService, brandId);

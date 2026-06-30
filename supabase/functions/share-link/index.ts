@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 const generatedImagesBucket = 'generated-images';
+const publicShareEnabled = () => Deno.env.get('HEAVY_CHAIN_PUBLIC_SHARE_ENABLED') === 'true';
 
 const readToken = (req: Request) => {
   const url = new URL(req.url);
@@ -64,6 +65,12 @@ serve(async (req) => {
     telemetryClient = supabaseService;
 
     if (req.method === 'GET') {
+      if (!publicShareEnabled()) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'external_public_sharing_disabled_pending_h602' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
       const token = readToken(req);
       if (!token) {
         return new Response(
@@ -156,6 +163,13 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ success: false, error: 'Method not allowed' }),
         { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    if (!publicShareEnabled()) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'external_public_sharing_disabled_pending_h602' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 

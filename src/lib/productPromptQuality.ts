@@ -1,4 +1,5 @@
 import type { Feature } from '../components/FeatureSelector';
+import { SAFETY_PROMPT_APPENDIX } from './legalSafetyGuard';
 
 const FEATURE_QUALITY_GUIDANCE: Record<string, string[]> = {
   'campaign-image': [
@@ -127,6 +128,7 @@ export const buildProductionImagePrompt = ({
     textOverlay
       ? `Text overlay must use only the requested copy and remain legible: ${JSON.stringify(textOverlay)}`
       : 'Do not add any visible text, letters, captions, logo marks, approval notes, or watermarks unless explicitly requested.',
+    SAFETY_PROMPT_APPENDIX,
     'Output must look like a finished apparel commerce asset, not a mock test image.',
   ].filter(Boolean);
 

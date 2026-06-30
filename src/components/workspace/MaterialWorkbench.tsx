@@ -31,6 +31,9 @@ const maskModeLabel: Record<MaterialReferenceState['maskMode'], string> = {
   keep: '背景維持',
 };
 
+const defaultMaskCandidates = ['トップス', '無地部分', '柄'];
+const manualMaskCandidates = ['手動範囲'];
+
 const getOverlayPositionClass = (placement: string) => {
   const y = placement.includes('袖') || placement.includes('上') || placement.includes('顔')
     ? 'top-[28%]'
@@ -75,11 +78,61 @@ export function MaterialWorkbench({
       updateState({
         imageUrl: await readWorkspaceImageAsDataUrl(file),
         fileName: file.name,
+        maskCandidates: [],
+        selectedMaskCandidate: null,
+        extractedLayerReady: false,
+        nextStepReady: false,
       });
       toast.success('素材画像を読み込み、レイヤー編集を準備しました');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '画像を読み込めませんでした');
     }
+  };
+
+  const recognizeMask = () => {
+    if (!state.imageUrl) {
+      toast.error('先に素材画像を選択してください');
+      return;
+    }
+    updateState({
+      maskMode: 'auto',
+      maskCandidates: defaultMaskCandidates,
+      selectedMaskCandidate: 'トップス',
+      activeLayer: 'トップス',
+      extractedLayerReady: false,
+      nextStepReady: false,
+    });
+    toast.success('AIマスク認識で候補を検出しました');
+  };
+
+  const selectMaskCandidate = (candidate: string) => {
+    updateState({
+      selectedMaskCandidate: candidate,
+      activeLayer: candidate,
+      extractedLayerReady: false,
+      nextStepReady: false,
+    });
+  };
+
+  const extractMask = () => {
+    if (!state.selectedMaskCandidate || state.maskMode === 'keep') {
+      toast.error('保存したい範囲を選択してください');
+      return;
+    }
+    updateState({
+      extractedLayerReady: true,
+      nextStepReady: false,
+    });
+    toast.success(`${state.selectedMaskCandidate}を抽出してレイヤーに重ねました`);
+  };
+
+  const confirmNextStep = () => {
+    if (!state.extractedLayerReady) {
+      toast.error('先に抽出を完了してください');
+      return;
+    }
+    updateState({ nextStepReady: true });
+    toast.success('次のステップへ進める状態です');
   };
 
   return (
@@ -106,17 +159,30 @@ export function MaterialWorkbench({
                 <img
                   src={state.imageUrl}
                   alt={uploadLabel}
-                  className={`max-h-64 max-w-[82%] rounded-xl object-contain transition ${state.maskMode === 'auto' ? 'drop-shadow-[0_18px_28px_rgba(15,23,42,0.28)]' : ''}`}
+                  className={`max-h-64 max-w-[82%] rounded-xl object-contain transition ${state.extractedLayerReady ? 'opacity-40' : state.maskMode === 'auto' ? 'drop-shadow-[0_18px_28px_rgba(15,23,42,0.28)]' : ''}`}
                 />
-                <div
-                  className={`absolute ${getOverlayPositionClass(state.placement)} flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-cyan-200 bg-neutral-950/90 px-4 py-2 text-[11px] font-black tracking-[0.18em] text-cyan-100 shadow-xl`}
-                  style={{ minWidth: `${Math.max(56, state.scale * 1.6)}px` }}
-                >
-                  {state.activeLayer.slice(0, 4)}
-                </div>
+                {state.extractedLayerReady ? (
+                  <img
+                    src={state.imageUrl}
+                    alt="抽出済みレイヤー"
+                    className="absolute max-h-60 max-w-[78%] rounded-xl object-contain drop-shadow-[0_18px_28px_rgba(15,23,42,0.34)]"
+                  />
+                ) : (
+                  <div
+                    className={`absolute ${getOverlayPositionClass(state.placement)} flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-cyan-200 bg-neutral-950/90 px-4 py-2 text-[11px] font-black tracking-[0.18em] text-cyan-100 shadow-xl`}
+                    style={{ minWidth: `${Math.max(56, state.scale * 1.6)}px` }}
+                  >
+                    {state.activeLayer.slice(0, 4)}
+                  </div>
+                )}
                 <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-neutral-700 shadow-sm dark:bg-neutral-900/90 dark:text-neutral-100">
                   {state.fileName || 'uploaded material'}
                 </div>
+                {state.nextStepReady && (
+                  <div className="absolute bottom-3 right-3 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                    OK
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -196,7 +262,12 @@ export function MaterialWorkbench({
                 <button
                   key={layer}
                   type="button"
-                  onClick={() => updateState({ activeLayer: layer })}
+                  onClick={() => updateState({
+                    activeLayer: layer,
+                    extractedLayerReady: false,
+                    nextStepReady: false,
+                    selectedMaskCandidate: state.maskCandidates?.includes(layer) ? layer : null,
+                  })}
                   className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                     state.activeLayer === layer
                       ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
@@ -216,7 +287,14 @@ export function MaterialWorkbench({
                 <button
                   key={mode.id}
                   type="button"
-                  onClick={() => updateState({ maskMode: mode.id })}
+                  onClick={() => updateState({
+                    maskMode: mode.id,
+                    maskCandidates: mode.id === 'manual' ? manualMaskCandidates : mode.id === 'keep' ? [] : defaultMaskCandidates,
+                    selectedMaskCandidate: mode.id === 'manual' ? '手動範囲' : null,
+                    activeLayer: mode.id === 'manual' ? '手動範囲' : state.activeLayer,
+                    extractedLayerReady: false,
+                    nextStepReady: false,
+                  })}
                   className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
                     state.maskMode === mode.id
                       ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
@@ -227,6 +305,53 @@ export function MaterialWorkbench({
                 </button>
               ))}
             </div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={recognizeMask}
+                disabled={!state.imageUrl}
+                className="rounded-xl bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+              >
+                AIマスク認識
+              </button>
+              <button
+                type="button"
+                onClick={extractMask}
+                disabled={!state.selectedMaskCandidate || state.maskMode === 'keep'}
+                className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+              >
+                抽出
+              </button>
+            </div>
+            {(state.maskCandidates?.length ?? 0) > 0 && (
+              <div className="mt-2 rounded-xl border border-cyan-100 bg-cyan-50 p-2 dark:border-cyan-400/20 dark:bg-cyan-400/10">
+                <p className="text-[11px] font-semibold text-cyan-800 dark:text-cyan-100">保存したい範囲を選択してください</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(state.maskCandidates ?? []).map((candidate) => (
+                    <button
+                      key={candidate}
+                      type="button"
+                      onClick={() => selectMaskCandidate(candidate)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                        state.selectedMaskCandidate === candidate
+                          ? 'border-cyan-500 bg-cyan-600 text-white'
+                          : 'border-cyan-200 bg-white text-cyan-700 hover:border-cyan-400 dark:bg-neutral-950 dark:text-cyan-200'
+                      }`}
+                    >
+                      {candidate}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={confirmNextStep}
+                  disabled={!state.extractedLayerReady}
+                  className="mt-2 w-full rounded-xl bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-50 dark:bg-white dark:text-neutral-950"
+                >
+                  次のステップ
+                </button>
+              </div>
+            )}
           </div>
 
           <label className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400">
@@ -264,6 +389,11 @@ export function MaterialWorkbench({
           <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
             {state.placement} / {maskModeLabel[state.maskMode]} / {state.scale}%
           </p>
+          {state.extractedLayerReady && (
+            <p className="mt-2 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200">
+              {state.selectedMaskCandidate ?? '選択範囲'}を抽出してレイヤー重ね済み
+            </p>
+          )}
         </div>
       </div>
     </section>

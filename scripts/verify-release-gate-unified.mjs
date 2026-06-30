@@ -130,6 +130,42 @@ const requiredReadbacks = [
     validate: validateG620SecurityOps,
     expect: 'ok=true, blockers=[], expected schema, monitor readback safe, abuse/permission/audit/incident checks passed, and only allowed monitor warnings',
   },
+  {
+    name: 'production H601 rights readback',
+    path: 'output/playwright/prod-domain-rights-check-20260630T0952Z/summary.json',
+    validate: (json) =>
+      json.findings?.zeaburAuthenticatedGenerateRoute?.reachable === true &&
+      json.findings?.zeaburAuthenticatedGenerateRoute?.loggedIn === true &&
+      json.findings?.zeaburAuthenticatedGenerateRoute?.hasH601RightsLabel === true &&
+      json.findings?.zeaburAuthenticatedGenerateRoute?.hasH601CommercialCaveat === true &&
+      json.findings?.customDomain?.reachable === true,
+    expect: 'production authenticated /generate shows H601 rights label and commercial caveat, and chosen public domain is reachable',
+  },
+  {
+    name: 'production H602 billing completion readback',
+    path: 'output/playwright/h602-production-billing-readback-20260630/summary.json',
+    validate: (json) =>
+      json.ok === true &&
+      json.migration?.applied === true &&
+      json.purchaseProofMigration?.applied === true &&
+      json.purchaseProofHardeningMigration?.applied === true &&
+      json.purchaseProofHashOnlyMigration?.applied === true &&
+      json.purchaseProofArtifactAllowlistMigration?.applied === true &&
+      json.billingSettings?.generationQuotaEnforced === true &&
+      json.billingSettings?.productionCheckoutEnabled === false &&
+      json.securityReadback?.purchaseProofMetadataRawReceiptLikeBlocked === true &&
+      json.securityReadback?.purchaseProofMetadataBareReceiptPayloadBlocked === true &&
+      json.securityReadback?.purchaseProofHashFieldsSha256HexOnly === true &&
+      json.securityReadback?.purchaseProofMetadataKeysAllowlisted === true &&
+      json.securityReadback?.purchaseProofArtifactUriSafeLocatorOnly === true &&
+      json.securityReadback?.purchaseProofSummaryRpcScope === 'brand_scoped_only; no user/email cross-brand aggregation' &&
+      json.sandboxTester?.registered === true &&
+      json.sandboxTester?.emailRedacted === true &&
+      Number(json.purchaseProofReadback?.verifiedNoRealChargeProofCount || 0) > 0 &&
+      json.purchaseProofReadback?.transactionOrEntitlementReadback === true &&
+      arrayFrom(json.remainingBlockers).length === 0,
+    expect: 'production H602 readback ok=true with quota enforcement, purchase-proof hardening/hash-only/artifact-allowlist migrations applied, raw receipt/payload storage blocked, checkout disabled until operator release, redacted sandbox tester, verified no-real-charge proof >0, transaction/entitlement readback=true, and no remaining blockers',
+  },
 ];
 
 const commandChecks = [
@@ -174,6 +210,16 @@ const commandChecks = [
     args: ['--check', 'scripts/verify-g620-security-ops.mjs'],
   },
   {
+    name: 'node syntax: H601 legal safety verifier',
+    command: 'node',
+    args: ['--check', 'scripts/verify-h601-legal-safety-guard.mjs'],
+  },
+  {
+    name: 'node syntax: H602 billing verifier',
+    command: 'node',
+    args: ['--check', 'scripts/verify-h602-billing-readiness.mjs'],
+  },
+  {
     name: 'security audit',
     command: 'npm',
     args: ['run', 'security:audit', '--silent'],
@@ -187,6 +233,16 @@ const commandChecks = [
     name: 'G614 operations docs',
     command: 'npm',
     args: ['run', 'verify:g614-ops', '--silent'],
+  },
+  {
+    name: 'H601 legal safety guard',
+    command: 'npm',
+    args: ['run', 'verify:h601-legal-safety', '--silent'],
+  },
+  {
+    name: 'H602 billing readiness',
+    command: 'npm',
+    args: ['run', 'verify:h602-billing', '--silent'],
   },
   {
     name: 'typecheck',

@@ -4,6 +4,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import { Layout } from './components/layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import {
+  BRAND_LIKENESS_BLOCK_COPY,
+  GENERATION_LEGAL_COPY,
+  UPLOAD_RIGHTS_CONFIRMATION_LABEL,
+} from './lib/legalSafetyGuard';
 
 const LandingPage = lazy(() => import('./pages/LandingPage').then((module) => ({ default: module.LandingPage })));
 const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })));
@@ -238,11 +243,15 @@ function AppRoutes() {
               },
               {
                 heading: '生成物と責任',
-                body: '生成結果は利用者が内容を確認したうえで使用してください。公開前にはブランド、権利、表現、品質を必ず確認してください。',
+                body: GENERATION_LEGAL_COPY,
+              },
+              {
+                heading: 'アップロード素材の権利',
+                body: UPLOAD_RIGHTS_CONFIRMATION_LABEL + '。衣服写真、モデル画像、ロゴ、ブランド素材、作品、参考画像をアップロードする場合も同じです。',
               },
               {
                 heading: '禁止事項',
-                body: '不正アクセス、秘密情報の入力、権利侵害、他者になりすます行為、サービスの安定運用を妨げる行為は禁止します。',
+                body: `不正アクセス、秘密情報の入力、権利侵害、他者になりすます行為、サービスの安定運用を妨げる行為は禁止します。${BRAND_LIKENESS_BLOCK_COPY}`,
               },
             ]}
           />
@@ -257,7 +266,7 @@ function AppRoutes() {
             sections={[
               {
                 heading: '取得する情報',
-                body: 'アカウント情報、ブランド設定、生成履歴、利用状況など、サービス提供に必要な情報を扱います。',
+                body: 'アカウント情報、ブランド設定、プロンプト、生成履歴、生成ジョブ、生成画像、アップロード素材、利用状況など、サービス提供に必要な情報を扱います。',
               },
               {
                 heading: '利用目的',
@@ -266,6 +275,10 @@ function AppRoutes() {
               {
                 heading: '秘密情報の扱い',
                 body: 'APIキー、認証情報、個人情報は必要最小限で扱い、画面や証跡に表示しない運用を前提にします。',
+              },
+              {
+                heading: '保持と削除',
+                body: '生成handoff用の一時素材は生成完了または検証後のcleanup対象とし、プロジェクト資産は利用者の削除またはアカウント運用方針に従って保持されます。最終保持期間は公開前に運営者が確定します。',
               },
             ]}
           />
@@ -284,7 +297,7 @@ function AppRoutes() {
               },
               {
                 heading: '料金',
-                body: '画面上または契約書に表示された料金条件に従います。無料期間やプラン条件は変更される場合があります。',
+                body: '現在このサービスでは、運営者が有効化するまで課金、支払い、購入、checkout、外部公開は扱いません。将来の料金条件は、公開前に運営者が確定した画面表示または契約条件に従います。',
               },
               {
                 heading: '問い合わせ',
@@ -422,6 +435,16 @@ function AppRoutes() {
         />
         <Route
           path="/lightchain"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<LightchainWorkbenchPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lightchain/:toolId"
           element={
             <ProtectedRoute>
               <ErrorBoundary>

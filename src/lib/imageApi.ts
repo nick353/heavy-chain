@@ -21,6 +21,10 @@ export interface LightchainCompatPayload {
   }>;
 }
 
+type LegalSafetyOptions = {
+  rightsConfirmed?: boolean;
+};
+
 export interface ImageEditResult {
   success: boolean;
   imageUrl?: string;
@@ -78,10 +82,11 @@ export async function removeBackground(
   imageUrl: string,
   brandId: string,
   lightchainCompat?: LightchainCompatPayload,
+  legalSafety?: LegalSafetyOptions,
 ): Promise<ImageEditResult> {
   try {
     const { data, error } = await supabase.functions.invoke('remove-background', {
-      body: { imageUrl, brandId, lightchainCompat },
+      body: { imageUrl, brandId, lightchainCompat, legalSafety: { rightsConfirmed: legalSafety?.rightsConfirmed === true } },
     });
 
     if (error) throw error;
@@ -101,10 +106,11 @@ export async function generateColorVariations(
   colors?: string[],
   count?: number,
   lightchainCompat?: LightchainCompatPayload,
+  legalSafety?: LegalSafetyOptions,
 ): Promise<ColorVariationResult> {
   try {
     const { data, error } = await supabase.functions.invoke('colorize', {
-      body: { imageUrl, brandId, colors, count, lightchainCompat },
+      body: { imageUrl, brandId, colors, count, lightchainCompat, legalSafety: { rightsConfirmed: legalSafety?.rightsConfirmed === true } },
     });
 
     if (error) throw error;
@@ -123,10 +129,11 @@ export async function upscaleImage(
   brandId: string,
   scale: 2 | 4 = 2,
   lightchainCompat?: LightchainCompatPayload,
+  legalSafety?: LegalSafetyOptions,
 ): Promise<ImageEditResult> {
   try {
     const { data, error } = await supabase.functions.invoke('upscale', {
-      body: { imageUrl, brandId, scale, lightchainCompat },
+      body: { imageUrl, brandId, scale, lightchainCompat, legalSafety: { rightsConfirmed: legalSafety?.rightsConfirmed === true } },
     });
 
     if (error) throw error;
@@ -149,11 +156,19 @@ export async function generateVariations(
     strength?: number;
     textOverlay?: TextOverlayPayload;
     lightchainCompat?: LightchainCompatPayload;
+    rightsConfirmed?: boolean;
   }
 ): Promise<VariationsResult> {
   try {
     const { data, error } = await supabase.functions.invoke('generate-variations', {
-      body: { imageUrl, brandId, prompt, count, ...options },
+      body: {
+        imageUrl,
+        brandId,
+        prompt,
+        count,
+        ...options,
+        legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
+      },
     });
 
     if (error) throw error;
@@ -179,11 +194,19 @@ export async function generateImage(
     count?: number;
     textOverlay?: TextOverlayPayload;
     campaignMeta?: Record<string, any>;
+    rightsConfirmed?: boolean;
   }
 ): Promise<ImageEditResult> {
   try {
     const { data, error } = await supabase.functions.invoke('generate-image', {
-      body: { prompt, brandId, ...options },
+      body: {
+        prompt,
+        brandId,
+        ...options,
+        legalSafety: {
+          rightsConfirmed: options?.rightsConfirmed === true,
+        },
+      },
     });
 
     if (error) throw error;
@@ -200,11 +223,12 @@ export async function generateImage(
 export async function editImageWithPrompt(
   imageUrl: string,
   prompt: string,
-  brandId: string
+  brandId: string,
+  options?: LegalSafetyOptions,
 ): Promise<ImageEditResult> {
   try {
     const { data, error } = await supabase.functions.invoke('edit-image', {
-      body: { imageUrl, prompt, brandId },
+      body: { imageUrl, prompt, brandId, legalSafety: { rightsConfirmed: options?.rightsConfirmed === true } },
     });
 
     if (error) throw error;
@@ -255,6 +279,7 @@ export async function designGacha(
     fixedElements?: string[];
     randomizedElements?: string[];
     textOverlay?: TextOverlayPayload;
+    rightsConfirmed?: boolean;
   }
 ): Promise<{
   success: boolean;
@@ -268,7 +293,7 @@ export async function designGacha(
 }> {
   try {
     const { data, error } = await supabase.functions.invoke('design-gacha', {
-      body: { brief, brandId, directions, ...options },
+      body: { brief, brandId, directions, ...options, legalSafety: { rightsConfirmed: options?.rightsConfirmed === true } },
     });
 
     if (error) throw error;
@@ -289,6 +314,7 @@ export async function generateProductShots(
   options?: {
     background?: string;
     textOverlay?: TextOverlayPayload;
+    rightsConfirmed?: boolean;
   }
 ): Promise<{
   success: boolean;
@@ -302,7 +328,7 @@ export async function generateProductShots(
 }> {
   try {
     const { data, error } = await supabase.functions.invoke('product-shots', {
-      body: { productDescription, brandId, shots, ...options },
+      body: { productDescription, brandId, shots, ...options, legalSafety: { rightsConfirmed: options?.rightsConfirmed === true } },
     });
 
     if (error) throw error;
@@ -325,6 +351,7 @@ export async function generateModelMatrix(
     gender?: 'male' | 'female';
     imageUrl?: string;
     textOverlay?: TextOverlayPayload;
+    rightsConfirmed?: boolean;
   }
 ): Promise<{
   success: boolean;
@@ -346,7 +373,7 @@ export async function generateModelMatrix(
 }> {
   try {
     const { data, error } = await supabase.functions.invoke('model-matrix', {
-      body: { productDescription, brandId, ...options },
+      body: { productDescription, brandId, ...options, legalSafety: { rightsConfirmed: options?.rightsConfirmed === true } },
     });
 
     if (error) throw error;
@@ -368,6 +395,7 @@ export async function generateMultilingualBanners(
     style?: string;
     aspectRatio?: string;
     textOverlay?: TextOverlayPayload;
+    rightsConfirmed?: boolean;
   }
 ): Promise<{
   success: boolean;
@@ -381,7 +409,7 @@ export async function generateMultilingualBanners(
 }> {
   try {
     const { data, error } = await supabase.functions.invoke('multilingual-banner', {
-      body: { headline, brandId, ...options },
+      body: { headline, brandId, ...options, legalSafety: { rightsConfirmed: options?.rightsConfirmed === true } },
     });
 
     if (error) throw error;

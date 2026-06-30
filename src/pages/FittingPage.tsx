@@ -15,6 +15,12 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { generateModelMatrix } from '../lib/imageApi';
+import {
+  BRAND_LIKENESS_BLOCK_COPY,
+  GENERATION_LEGAL_COPY,
+  UPLOAD_RIGHTS_CONFIRMATION_LABEL,
+  validateLegalSafetyInput,
+} from '../lib/legalSafetyGuard';
 import { saveWorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
@@ -167,12 +173,13 @@ export function FittingPage() {
   const [history, setHistory] = useState<HistoryItem[]>(seedHistory);
   const [errorMessage, setErrorMessage] = useState('');
   const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const garmentImageUrl = materialReference.imageUrl || undefined;
   const garmentFileName = materialReference.fileName;
 
   const canGenerate = useMemo(() => {
-    return Boolean(currentBrand && !isGenerating && (productDescription.trim() || garmentImageUrl) && selectedBodyTypes.length && selectedAgeGroups.length);
-  }, [currentBrand, garmentImageUrl, isGenerating, productDescription, selectedAgeGroups.length, selectedBodyTypes.length]);
+    return Boolean(currentBrand && rightsConfirmed && !isGenerating && (productDescription.trim() || garmentImageUrl) && selectedBodyTypes.length && selectedAgeGroups.length);
+  }, [currentBrand, garmentImageUrl, isGenerating, productDescription, rightsConfirmed, selectedAgeGroups.length, selectedBodyTypes.length]);
   const activeWorkflow = fittingWorkflows.find((workflow) => workflow.id === activeWorkflowId) ?? fittingWorkflows[0];
   const selectedBodyTypeLabels = bodyTypeOptions
     .filter((option) => selectedBodyTypes.includes(option.id))
@@ -212,11 +219,31 @@ export function FittingPage() {
     setResultMatrix([]);
     setLastRequest(request);
 
+    if (!rightsConfirmed) {
+      setIsGenerating(false);
+      setErrorMessage('素材と生成指示の権利確認にチェックしてください。');
+      return;
+    }
+    const legalSafetyAssessment = validateLegalSafetyInput([
+      request.productDescription,
+      request.materialReference?.fileName,
+      request.materialReference?.note,
+      request.layerPlan ? JSON.stringify(request.layerPlan) : undefined,
+      request.maskPlan ? JSON.stringify(request.maskPlan) : undefined,
+      request.compositionPreview ? JSON.stringify(request.compositionPreview) : undefined,
+    ]);
+    if (legalSafetyAssessment.blocked) {
+      setIsGenerating(false);
+      setErrorMessage(BRAND_LIKENESS_BLOCK_COPY);
+      return;
+    }
+
     const response = await generateModelMatrix(request.productDescription, currentBrand.id, {
       imageUrl: request.imageUrl,
       bodyTypes: request.bodyTypes,
       ageGroups: request.ageGroups,
       gender: request.gender,
+      rightsConfirmed,
     });
 
     setIsGenerating(false);
@@ -600,6 +627,19 @@ export function FittingPage() {
                       </button>
                     ))}
                   </div>
+                  <label className="flex max-w-xl items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100">
+                    <input
+                      type="checkbox"
+                      checked={rightsConfirmed}
+                      onChange={(event) => setRightsConfirmed(event.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                      disabled={isGenerating}
+                    />
+                    <span>
+                      <span className="block font-semibold">{UPLOAD_RIGHTS_CONFIRMATION_LABEL}</span>
+                      <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
+                    </span>
+                  </label>
                   <button
                     type="button"
                     onClick={handleGenerate}

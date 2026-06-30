@@ -528,7 +528,7 @@ export function BrandSettingsPage() {
               </p>
               <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-300">
                 Hosted bridge とサイト承認が完了するまで、Runway MCPを使う画像生成は使用量予約前に停止します。
-                Heavy Chain側の課金システムは現時点では生成条件に含めません。
+                Heavy Chain側の月間 quota は通常アカウントの生成条件に含まれ、Apple sandbox tester はテスト用 bypass の対象です。
               </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                 <div className="rounded-xl border border-neutral-200 bg-white/55 p-3 dark:border-neutral-700 dark:bg-neutral-800/55">

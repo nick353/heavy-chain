@@ -8,7 +8,10 @@ interface CreditSummaryPanelProps {
 }
 
 export function CreditSummaryPanel({ summary, className = '' }: CreditSummaryPanelProps) {
-  const activityPercent = summary.usedUnits + summary.reservedUnits > 0 ? 100 : 0;
+  const activityPercent =
+    summary.monthlyQuota > 0
+      ? Math.min(((summary.usedUnits + summary.reservedUnits) / summary.monthlyQuota) * 100, 100)
+      : 0;
 
   return (
     <section className={`glass-panel rounded-2xl p-5 ${className}`}>
@@ -25,8 +28,15 @@ export function CreditSummaryPanel({ summary, className = '' }: CreditSummaryPan
       <div className="mt-5">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-3xl font-semibold text-neutral-950 dark:text-white">有効</p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">生成利用 / 課金ゲートなし</p>
+            <p className="text-3xl font-semibold text-neutral-950 dark:text-white">{summary.remainingUnits.toLocaleString()}</p>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              今月残り / {summary.appleSandboxTesterNoRealCharge ? 'Sandbox' : summary.planName} 上限 {summary.monthlyQuota.toLocaleString()}
+            </p>
+            {summary.billingTestAccountQuotaBypass && (
+              <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                {summary.appleSandboxTesterNoRealCharge ? 'Apple sandbox tester / 実請求なし' : 'テストアカウント quota bypass'}
+              </p>
+            )}
           </div>
           <div className="text-right text-xs text-neutral-500 dark:text-neutral-400">
             <p>使用 {summary.usedUnits.toLocaleString()}</p>

@@ -2,6 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Plus } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { editImageWithPrompt, generateImage } from '../lib/imageApi';
+import {
+  BRAND_LIKENESS_BLOCK_COPY,
+  GENERATION_LEGAL_COPY,
+  UPLOAD_RIGHTS_CONFIRMATION_LABEL,
+  validateLegalSafetyInput,
+} from '../lib/legalSafetyGuard';
 import toast from 'react-hot-toast';
 
 interface Message {
@@ -30,6 +36,7 @@ export function ChatEditor({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentImage, setCurrentImage] = useState(initialImage || selectedImageUrl);
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitializedRef = useRef(false);
 
@@ -94,13 +101,20 @@ export function ChatEditor({
 
     try {
       let result;
+      if (!rightsConfirmed) {
+        throw new Error('素材と生成指示の権利確認にチェックしてください');
+      }
+      const legalSafetyAssessment = validateLegalSafetyInput([userInput]);
+      if (legalSafetyAssessment.blocked) {
+        throw new Error(BRAND_LIKENESS_BLOCK_COPY);
+      }
 
       if (currentImage) {
         // Edit existing image
-        result = await editImageWithPrompt(currentImage, userInput, currentBrand.id);
+        result = await editImageWithPrompt(currentImage, userInput, currentBrand.id, { rightsConfirmed });
       } else {
         // Generate new image
-        result = await generateImage(userInput, currentBrand.id);
+        result = await generateImage(userInput, currentBrand.id, { rightsConfirmed });
       }
 
       if (result.success && result.imageUrl) {
@@ -278,6 +292,21 @@ export function ChatEditor({
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-neutral-100">
+        {!currentImage && (
+          <label className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
+            <input
+              type="checkbox"
+              checked={rightsConfirmed}
+              onChange={(event) => setRightsConfirmed(event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+              disabled={isLoading}
+            />
+            <span>
+              <span className="block font-semibold">{UPLOAD_RIGHTS_CONFIRMATION_LABEL}</span>
+              <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
+            </span>
+          </label>
+        )}
         <div className="flex gap-2">
           <input
             type="text"

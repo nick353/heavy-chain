@@ -17,6 +17,7 @@ export interface LocalRunwayWorkerRequestInput {
   count: number;
   referenceImage?: string | null;
   referenceType?: string | null;
+  rightsConfirmed?: boolean;
   metadata?: Record<string, Json | undefined>;
 }
 
@@ -40,6 +41,9 @@ export const enqueueLocalRunwayWorkerGeneration = async (
       negativePrompt: input.negativePrompt ?? null,
       width: input.width,
       height: input.height,
+      legalSafety: {
+        rightsConfirmed: input.rightsConfirmed === true,
+      },
       localRunwayWorker: {
         enabled: true,
         provider: LOCAL_RUNWAY_WORKER_PROVIDER,

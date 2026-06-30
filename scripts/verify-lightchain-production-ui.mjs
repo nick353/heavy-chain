@@ -80,7 +80,7 @@ const pages = [
   {
     name: 'brand-settings',
     path: '/brand/settings',
-    expected: ['Runway MCP接続', '承認済み', '生成可否', 'Heavy Chain側の課金システムは現時点では生成条件に含めません'],
+    expected: ['Runway MCP接続', '承認済み', '生成可否', 'Heavy Chain側の月間 quota は通常アカウントの生成条件に含まれ'],
   },
   {
     name: 'admin-runway',

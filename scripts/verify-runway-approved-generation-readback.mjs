@@ -113,6 +113,9 @@ const invokeResult = await userClient.functions.invoke('generate-image', {
     width: 1024,
     height: 1024,
     featureType: 'text-to-image',
+    legalSafety: {
+      rightsConfirmed: true,
+    },
     sourceReadback: {
       sourceWorkspace: 'studio',
       workflowVersion: 'studio-selection-local-v1',

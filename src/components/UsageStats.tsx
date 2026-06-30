@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Gauge, Infinity as InfinityIcon, Loader2 } from 'lucide-react';
+import { CheckCircle2, CreditCard, Gauge, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 
@@ -34,6 +34,8 @@ interface UsageSummaryRow {
   used_units: number | null;
   reserved_units: number | null;
   remaining_units: number | null;
+  billing_test_account_quota_bypass?: boolean | null;
+  apple_sandbox_tester_no_real_charge?: boolean | null;
 }
 
 interface QuotaSummary {
@@ -42,6 +44,8 @@ interface QuotaSummary {
   reservedUnits: number;
   monthlyQuota: number;
   planName: string;
+  billingTestAccountQuotaBypass: boolean;
+  appleSandboxTesterNoRealCharge: boolean;
 }
 
 interface UsageStatsProps {
@@ -78,6 +82,8 @@ export function UsageStats({ className }: UsageStatsProps) {
     reservedUnits: 0,
     monthlyQuota: FREE_PLAN_QUOTA,
     planName: 'Free',
+    billingTestAccountQuotaBypass: false,
+    appleSandboxTesterNoRealCharge: false,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -111,6 +117,8 @@ export function UsageStats({ className }: UsageStatsProps) {
           reservedUnits: toNumber(rpcSummary.reserved_units),
           remainingUnits: toNumber(rpcSummary.remaining_units, FREE_PLAN_QUOTA),
           planName: getPlanCodeLabel(rpcSummary.plan_code),
+          billingTestAccountQuotaBypass: rpcSummary.billing_test_account_quota_bypass === true,
+          appleSandboxTesterNoRealCharge: rpcSummary.apple_sandbox_tester_no_real_charge === true,
         });
         return;
       }
@@ -186,6 +194,8 @@ export function UsageStats({ className }: UsageStatsProps) {
         reservedUnits,
         remainingUnits: Math.max(normalizedQuota - usedUnits - reservedUnits, 0),
         planName: getPlanLabel(activePlan),
+        billingTestAccountQuotaBypass: false,
+        appleSandboxTesterNoRealCharge: false,
       });
     } catch (error) {
       console.error('Failed to fetch usage summary:', error);
@@ -195,6 +205,8 @@ export function UsageStats({ className }: UsageStatsProps) {
         reservedUnits: 0,
         monthlyQuota: FREE_PLAN_QUOTA,
         planName: 'Free',
+        billingTestAccountQuotaBypass: false,
+        appleSandboxTesterNoRealCharge: false,
       });
     } finally {
       setIsLoading(false);
@@ -207,12 +219,20 @@ export function UsageStats({ className }: UsageStatsProps) {
 
   const statItems = [
     {
-      label: '生成利用',
-      value: '有効',
+      label: 'プラン',
+      value: summary.appleSandboxTesterNoRealCharge ? 'Sandbox' : summary.planName,
       suffix: '',
-      icon: InfinityIcon,
+      icon: CreditCard,
       color: 'text-emerald-500',
       bgColor: 'bg-emerald-50 dark:bg-emerald-900/20',
+    },
+    {
+      label: '今月残り',
+      value: summary.remainingUnits.toLocaleString(),
+      suffix: '回',
+      icon: Gauge,
+      color: 'text-purple-500',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
     },
     {
       label: '今月使用',
@@ -231,9 +251,9 @@ export function UsageStats({ className }: UsageStatsProps) {
       bgColor: 'bg-amber-50 dark:bg-amber-900/20',
     },
     {
-      label: '上限',
-      value: '停止なし',
-      suffix: '',
+      label: '月間上限',
+      value: summary.monthlyQuota.toLocaleString(),
+      suffix: '回',
       icon: Gauge,
       color: 'text-purple-500',
       bgColor: 'bg-purple-50 dark:bg-purple-900/20',
@@ -254,6 +274,13 @@ export function UsageStats({ className }: UsageStatsProps) {
 
   return (
     <div className={className}>
+      {summary.billingTestAccountQuotaBypass && (
+        <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+          {summary.appleSandboxTesterNoRealCharge
+            ? 'Apple sandbox tester: 購入フロー検証はテスト扱いで、実請求されない想定です。'
+            : 'テストアカウント: 運用確認用の生成 quota bypass が有効です。'}
+        </div>
+      )}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3 sm:gap-4 lg:gap-6">
         {statItems.map((item, index) => (
           <motion.div

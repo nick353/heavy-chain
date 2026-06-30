@@ -1,5 +1,5 @@
 import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowRight,
   Bot,
@@ -24,6 +24,8 @@ import { saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts'
 
 type ToolCategory = 'home' | 'marketing' | 'fitting' | 'planning' | 'graphics' | 'model' | 'video' | 'lab';
 type ToolStatus = 'ready' | 'workspace' | 'needs-image' | 'coming-soon';
+type MaskCandidate = 'トップス' | '無地部分' | '柄' | '手動範囲';
+type WorkbenchStep = 'asset' | 'mask' | 'extracted' | 'next';
 
 type CompatTool = {
   id: string;
@@ -631,8 +633,18 @@ function getOverlayPosition(placement: string, scale: number) {
   return { x: 225 - offset, y: 250 - offset };
 }
 
+const defaultMaskCandidates: MaskCandidate[] = ['トップス', '無地部分', '柄'];
+
+const maskCandidateLayer: Record<MaskCandidate, string> = {
+  トップス: 'garment',
+  無地部分: 'base',
+  柄: 'pattern',
+  手動範囲: 'mask',
+};
+
 export function LightchainWorkbenchPage() {
   const navigate = useNavigate();
+  const { toolId } = useParams<{ toolId?: string }>();
   const { currentBrand } = useAuthStore();
   const { createProject, addObject, selectObject, saveCurrentProject } = useCanvasStore();
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('home');
@@ -649,6 +661,11 @@ export function LightchainWorkbenchPage() {
   const [printPlacement, setPrintPlacement] = useState('胸中央');
   const [printScale, setPrintScale] = useState(46);
   const [analysisStatus, setAnalysisStatus] = useState<'empty' | 'ready'>('empty');
+  const [workbenchStep, setWorkbenchStep] = useState<WorkbenchStep>('asset');
+  const [maskCandidates, setMaskCandidates] = useState<MaskCandidate[]>([]);
+  const [selectedMaskCandidate, setSelectedMaskCandidate] = useState<MaskCandidate | null>(null);
+  const [extractedLayerReady, setExtractedLayerReady] = useState(false);
+  const [nextStepConfirmed, setNextStepConfirmed] = useState(false);
 
   const filteredTools = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -666,16 +683,40 @@ export function LightchainWorkbenchPage() {
     });
   }, [activeCategory, query]);
 
-  const selectedTool = tools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? tools[0];
-  const selectedCategory = categories.find((category) => category.id === activeCategory) ?? categories[0];
+  const routeTool = toolId ? tools.find((tool) => tool.id === toolId) ?? null : null;
+  const isFeatureDetail = Boolean(toolId);
+  const selectedTool = routeTool ?? tools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? tools[0];
+  const selectedCategory = categories.find((category) => category.id === (isFeatureDetail ? selectedTool.category : activeCategory)) ?? categories[0];
   const workbenchLabels = categoryWorkbenchLabels[selectedTool.category] ?? categoryWorkbenchLabels.home;
   const workbenchEnabled = selectedTool.status !== 'coming-soon';
+  const layerIds = workbenchLabels.layers.map(([layer]) => layer);
+  const beginnerStep = nextStepConfirmed ? 3 : extractedLayerReady ? 2 : garmentImageUrl ? 1 : 0;
+
+  const getLayerForMaskCandidate = (candidate: MaskCandidate) => {
+    const preferredLayer = maskCandidateLayer[candidate];
+    if (layerIds.includes(preferredLayer)) return preferredLayer;
+    if (candidate === '柄' && layerIds.includes('print')) return 'print';
+    if ((candidate === 'トップス' || candidate === '無地部分') && layerIds.includes('garment')) return 'garment';
+    if (candidate === '手動範囲' && layerIds.includes('mask')) return 'mask';
+    return layerIds[0] ?? preferredLayer;
+  };
+
+  const resetWorkbenchMaskState = () => {
+    setWorkbenchStep('asset');
+    setMaskCandidates([]);
+    setSelectedMaskCandidate(null);
+    setExtractedLayerReady(false);
+    setNextStepConfirmed(false);
+  };
 
   useEffect(() => {
     const defaults = categoryWorkbenchLabels[selectedTool.category] ?? categoryWorkbenchLabels.home;
     setGarmentCategory(defaults.materialKinds[0] ?? '素材');
     setActiveLayer(defaults.layers[0]?.[0] ?? 'base');
     setPrintPlacement(defaults.placements[0] ?? '中央');
+    setSelectedToolId(selectedTool.id);
+    setActiveCategory(selectedTool.category);
+    resetWorkbenchMaskState();
   }, [selectedTool.category, selectedTool.id]);
 
   const handleCategoryChange = (categoryId: ToolCategory) => {
@@ -683,6 +724,10 @@ export function LightchainWorkbenchPage() {
     setQuery('');
     setSelectedToolId(tools.find((tool) => tool.category === categoryId)?.id ?? tools[0].id);
   };
+
+  if (toolId && !routeTool) {
+    return <Navigate to="/lightchain" replace />;
+  }
 
   const handleGarmentUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -698,10 +743,109 @@ export function LightchainWorkbenchPage() {
       setGarmentImageUrl(await readFileAsDataUrl(file));
       setGarmentFileName(file.name);
       setAnalysisStatus('ready');
+      setWorkbenchStep('asset');
+      setMaskCandidates([]);
+      setSelectedMaskCandidate(null);
+      setExtractedLayerReady(false);
+      setNextStepConfirmed(false);
       toast.success('素材画像を読み込み、編集レイヤーを準備しました');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '画像を読み込めませんでした');
     }
+  };
+
+  const handleOpenMaskAdjustment = () => {
+    if (!garmentImageUrl) {
+      toast.error('先に素材画像を選択してください');
+      return;
+    }
+    setWorkbenchStep('mask');
+    if (maskCandidates.length === 0) setMaskCandidates(defaultMaskCandidates);
+    toast.success('マスク調整を開きました');
+  };
+
+  const handleRecognizeMask = () => {
+    if (!garmentImageUrl) {
+      toast.error('先に素材画像を選択してください');
+      return;
+    }
+    setWorkbenchStep('mask');
+    setMaskCandidates(defaultMaskCandidates);
+    setSelectedMaskCandidate('トップス');
+    setCutMode('auto');
+    setActiveLayer(getLayerForMaskCandidate('トップス'));
+    setExtractedLayerReady(false);
+    setNextStepConfirmed(false);
+    toast.success('AIマスク認識でトップス候補を検出しました');
+  };
+
+  const handleSelectMaskCandidate = (candidate: MaskCandidate) => {
+    setSelectedMaskCandidate(candidate);
+    setActiveLayer(getLayerForMaskCandidate(candidate));
+    setExtractedLayerReady(false);
+    setNextStepConfirmed(false);
+    setWorkbenchStep('mask');
+  };
+
+  const handleSetCutMode = (mode: typeof cutMode) => {
+    setCutMode(mode);
+    setExtractedLayerReady(false);
+    setNextStepConfirmed(false);
+    if (mode === 'keep') {
+      setMaskCandidates([]);
+      setSelectedMaskCandidate(null);
+    }
+    if (mode === 'auto') {
+      setMaskCandidates(defaultMaskCandidates);
+      setSelectedMaskCandidate(null);
+    }
+    if (mode === 'manual') {
+      setMaskCandidates(['手動範囲']);
+      setSelectedMaskCandidate('手動範囲');
+      setActiveLayer(getLayerForMaskCandidate('手動範囲'));
+    }
+    if (workbenchStep === 'extracted' || workbenchStep === 'next') setWorkbenchStep('mask');
+  };
+
+  const handleSelectDesignLayer = (layer: string) => {
+    setActiveLayer(layer);
+    setExtractedLayerReady(false);
+    setNextStepConfirmed(false);
+    setSelectedMaskCandidate(maskCandidates.includes(layer as MaskCandidate) ? (layer as MaskCandidate) : null);
+    if (workbenchStep === 'extracted' || workbenchStep === 'next') setWorkbenchStep('mask');
+  };
+
+  const handleExtractMask = () => {
+    if (!selectedMaskCandidate) {
+      toast.error('保存したい範囲を選択してください');
+      return;
+    }
+    setExtractedLayerReady(true);
+    setWorkbenchStep('extracted');
+    if (cutMode === 'keep') setCutMode('auto');
+    toast.success(`${selectedMaskCandidate}を抽出してレイヤーに重ねました`);
+  };
+
+  const handleConfirmNextStep = () => {
+    if (!extractedLayerReady) {
+      toast.error('先に抽出を完了してください');
+      return;
+    }
+    setNextStepConfirmed(true);
+    setWorkbenchStep('next');
+    toast.success('次のステップへ進める状態です');
+  };
+
+  const handleExtractAndConfirmNextStep = () => {
+    if (!selectedMaskCandidate) {
+      toast.error('保存したい範囲を選択してください');
+      return;
+    }
+    if (cutMode === 'keep') setCutMode('auto');
+    setExtractedLayerReady(true);
+    setNextStepConfirmed(true);
+    setWorkbenchStep('next');
+    toast.success(`${selectedMaskCandidate}を抽出して次へ進めます`);
   };
 
   const handleSaveToCanvas = async () => {
@@ -725,6 +869,11 @@ export function LightchainWorkbenchPage() {
         printScale,
         referenceNote,
         hasImage: Boolean(garmentImageUrl),
+        workbenchStep,
+        selectedMaskCandidate,
+        maskCandidates,
+        extractedLayerReady,
+        nextStepConfirmed,
       } : null;
       const materialReference = lightchainWorkbenchState ? {
         hasImage: lightchainWorkbenchState.hasImage,
@@ -735,6 +884,8 @@ export function LightchainWorkbenchPage() {
         placement: lightchainWorkbenchState.printPlacement,
         scale: lightchainWorkbenchState.printScale,
         note: lightchainWorkbenchState.referenceNote,
+        selectedMaskCandidate: lightchainWorkbenchState.selectedMaskCandidate,
+        extractedLayerReady: lightchainWorkbenchState.extractedLayerReady,
       } : null;
       const layerPlan = lightchainWorkbenchState ? {
         activeLayer: lightchainWorkbenchState.activeLayer,
@@ -742,18 +893,40 @@ export function LightchainWorkbenchPage() {
         scale: lightchainWorkbenchState.printScale,
         overlayLabel: 'HC',
         objectRole: 'design-overlay',
+        stack: lightchainWorkbenchState.extractedLayerReady ? ['original-base', 'extracted-cutout', 'design-overlay'] : ['material-reference', 'design-overlay'],
+        extractedLayer: lightchainWorkbenchState.extractedLayerReady ? {
+          role: 'extracted-cutout',
+          sourceCandidate: lightchainWorkbenchState.selectedMaskCandidate,
+          zIndex: 2,
+        } : null,
       } : null;
       const maskPlan = lightchainWorkbenchState ? {
         mode: lightchainWorkbenchState.cutMode,
         maskMode: lightchainWorkbenchState.cutMode,
         source: lightchainWorkbenchState.hasImage ? 'uploaded-garment' : 'brief-only',
         appliedToCanvasImage: lightchainWorkbenchState.hasImage && lightchainWorkbenchState.cutMode !== 'keep',
+        candidates: lightchainWorkbenchState.maskCandidates,
+        selectedCandidate: lightchainWorkbenchState.selectedMaskCandidate,
+        recognition: lightchainWorkbenchState.maskCandidates.length > 0 ? 'ai-mask-recognition' : 'not-run',
+        extracted: lightchainWorkbenchState.extractedLayerReady,
       } : null;
       const compositionPreview = lightchainWorkbenchState ? {
         summary: `${lightchainWorkbenchState.materialKind} / ${lightchainWorkbenchState.activeLayer} / ${lightchainWorkbenchState.printPlacement}`,
         fileName: lightchainWorkbenchState.garmentFileName,
-        status: 'Canvas保存済み',
+        status: lightchainWorkbenchState.extractedLayerReady ? '抽出レイヤー重ね済み' : 'Canvas保存済み',
+        flow: lightchainWorkbenchState.nextStepConfirmed ? 'next-step-ready' : lightchainWorkbenchState.workbenchStep,
       } : null;
+      const lightchainCompat = {
+        lightchainFeatureId: selectedTool.id,
+        lightchainFeatureTitle: selectedTool.title,
+        lightchainRoute: selectedTool.lightchainRoute,
+        lightchainTaskCodes: [selectedTool.id],
+        lightchainTaskSteps: [{
+          taskCode: selectedTool.id,
+          route: selectedTool.lightchainRoute,
+          status: 'processing' as const,
+        }],
+      };
       const workbenchParameters = lightchainWorkbenchState ? {
         materialReference,
         materialReferences: materialReference ? [materialReference] : [],
@@ -786,6 +959,35 @@ export function LightchainWorkbenchPage() {
       if (shouldSaveWorkbenchAsset) {
         const processedMaterialImageUrl = await buildMaskedMaterialDataUrl(garmentImageUrl, cutMode);
         const overlayPosition = getOverlayPosition(printPlacement, printScale);
+        if (extractedLayerReady) {
+          addObject({
+            type: 'image',
+            x: 120,
+            y: 100,
+            width: 360,
+            height: 360,
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1,
+            opacity: 0.46,
+            locked: false,
+            visible: true,
+            src: garmentImageUrl,
+            label: `${garmentFileName || selectedTool.title} 元画像ベース`,
+            metadata: {
+              feature: `lightchain-${selectedTool.id}-original-base-layer`,
+              prompt: selectedTool.promptTemplate,
+              generation: 0,
+              lightchainCompat,
+              parameters: {
+                toolId: selectedTool.id,
+                artifactId: artifact.artifact.id,
+                layerRole: 'original-base',
+                ...workbenchParameters,
+              },
+            },
+          });
+        }
         materialObjectId = addObject({
           type: 'image',
           x: 120,
@@ -799,15 +1001,19 @@ export function LightchainWorkbenchPage() {
           locked: false,
           visible: true,
           src: processedMaterialImageUrl,
-          label: garmentFileName || `${selectedTool.title} 素材画像`,
+          label: extractedLayerReady
+            ? `${selectedMaskCandidate ?? '抽出'} カットレイヤー`
+            : garmentFileName || `${selectedTool.title} 素材画像`,
           metadata: {
             feature: `lightchain-${selectedTool.id}-material-reference`,
             prompt: selectedTool.promptTemplate,
             generation: 0,
+            lightchainCompat,
             parameters: {
               toolId: selectedTool.id,
               artifactId: artifact.artifact.id,
               processedImageKind: cutMode === 'keep' ? 'original' : 'masked-transparent-png',
+              layerRole: extractedLayerReady ? 'extracted-cutout' : 'material-reference',
               ...workbenchParameters,
             },
           },
@@ -837,6 +1043,7 @@ export function LightchainWorkbenchPage() {
             prompt: `${printPlacement}に${activeLayer}レイヤーを配置`,
             parentId: materialObjectId,
             generation: 0,
+            lightchainCompat,
             parameters: {
               toolId: selectedTool.id,
               printPlacement,
@@ -868,6 +1075,7 @@ export function LightchainWorkbenchPage() {
           feature: 'lightchain-workbench',
           prompt: `${selectedTool.promptTemplate}\n\n依頼: ${brief}\n参考: ${referenceNote}`,
           generation: 0,
+          lightchainCompat,
           parameters: {
             toolId: selectedTool.id,
             artifactId: artifact.artifact.id,
@@ -901,13 +1109,13 @@ export function LightchainWorkbenchPage() {
             <div className="min-w-0">
               <p className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 ring-1 ring-primary-100 dark:bg-primary-400/10 dark:text-primary-300 dark:ring-primary-400/20">
                 <Sparkles className="h-3.5 w-3.5" />
-                Lightchain互換 / {totalToolCount}機能
+                {isFeatureDetail ? selectedTool.lightchainRoute : `Lightchain互換 / ${totalToolCount}機能`}
               </p>
               <h1 className="mt-4 text-2xl font-semibold tracking-tight text-neutral-950 dark:text-white sm:text-3xl">
-                用途を選んで、そのまま制作へ進む
+                {isFeatureDetail ? selectedTool.title : '用途を選んで、そのまま制作へ進む'}
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-7 text-neutral-600 dark:text-neutral-300">
-                既存の生成、フィッティング、柄、モデル、動画、Canvasへつながる入口です。
+                {isFeatureDetail ? selectedTool.description : '既存の生成、フィッティング、柄、モデル、動画、Canvasへつながる入口です。'}
               </p>
             </div>
             <label className="flex min-w-0 items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm dark:border-neutral-700 dark:bg-neutral-950 lg:w-[420px]">
@@ -923,6 +1131,7 @@ export function LightchainWorkbenchPage() {
         </section>
 
         <section className="space-y-5">
+          {!isFeatureDetail && (
           <div className="rounded-2xl border border-neutral-200 bg-white p-2 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
             <div className="flex gap-1.5 overflow-x-auto">
               {categories.map((category) => {
@@ -952,8 +1161,40 @@ export function LightchainWorkbenchPage() {
               })}
             </div>
           </div>
+          )}
 
-          <div className="grid gap-5 xl:grid-cols-[1fr_420px]">
+          {isFeatureDetail && (
+            <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
+                  <Link
+                    to="/lightchain"
+                    className="shrink-0 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 transition hover:border-neutral-400 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
+                  >
+                    機能一覧
+                  </Link>
+                  {['素材入力', 'マスク/レイヤー', 'Canvas保存'].map((step, index) => (
+                    <span
+                      key={step}
+                      className={`shrink-0 rounded-lg px-3 py-2 text-sm font-semibold ${
+                        beginnerStep >= index
+                          ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                          : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300'
+                      }`}
+                    >
+                      {step}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+                  画像を入れて、範囲を選び、Canvasへ保存します。
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className={isFeatureDetail ? 'grid gap-5' : 'grid gap-5 xl:grid-cols-[1fr_420px]'}>
+            {!isFeatureDetail && (
             <section className="space-y-4">
               <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -978,7 +1219,11 @@ export function LightchainWorkbenchPage() {
                   <button
                     key={tool.id}
                     type="button"
-                    onClick={() => setSelectedToolId(tool.id)}
+                    onClick={() => {
+                      setSelectedToolId(tool.id);
+                      resetWorkbenchMaskState();
+                      navigate(`/lightchain/${tool.id}`);
+                    }}
                       className={`rounded-xl border bg-white p-4 text-left transition dark:bg-neutral-900 ${
                       selectedTool.id === tool.id
                         ? 'border-neutral-950 shadow-soft dark:border-white'
@@ -1005,9 +1250,10 @@ export function LightchainWorkbenchPage() {
                 ))}
               </div>
             </section>
+            )}
 
             <aside>
-              <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-soft dark:border-neutral-800 dark:bg-neutral-900 xl:sticky xl:top-24">
+              <div className={`rounded-2xl border border-neutral-200 bg-white p-5 shadow-soft dark:border-neutral-800 dark:bg-neutral-900 ${isFeatureDetail ? 'mx-auto w-full max-w-6xl' : 'xl:sticky xl:top-24'}`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
@@ -1042,7 +1288,14 @@ export function LightchainWorkbenchPage() {
                         )}
                       </label>
 
-                      <div className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+                      <details className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+                        <summary className="cursor-pointer rounded-lg text-sm font-semibold text-neutral-800 outline-none focus-visible:ring-2 focus-visible:ring-primary-300 dark:text-neutral-100">
+                          詳細設定
+                          <span className="ml-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            素材種別・レイヤー・配置
+                          </span>
+                        </summary>
+                        <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
                         <div className="flex items-center justify-between gap-2">
                           <div>
                             <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">素材読み込み</p>
@@ -1070,10 +1323,16 @@ export function LightchainWorkbenchPage() {
                             </button>
                           ))}
                         </div>
-                      </div>
+                        </div>
+                      </details>
 
                       <div className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
-                        <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">切り抜き / マスク</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">切り抜き / マスク</p>
+                          <span className="rounded-full bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-200">
+                            {workbenchStep === 'next' ? '次ステップ可' : workbenchStep === 'extracted' ? '抽出済み' : workbenchStep === 'mask' ? 'マスク調整' : '素材選択'}
+                          </span>
+                        </div>
                         <div className="mt-2 grid grid-cols-3 gap-2">
                           {[
                             ['auto', '自動カット'],
@@ -1083,7 +1342,7 @@ export function LightchainWorkbenchPage() {
                             <button
                               key={mode}
                               type="button"
-                              onClick={() => setCutMode(mode as typeof cutMode)}
+                              onClick={() => handleSetCutMode(mode as typeof cutMode)}
                               className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${
                                 cutMode === mode
                                   ? 'bg-primary-600 text-white'
@@ -1094,10 +1353,81 @@ export function LightchainWorkbenchPage() {
                             </button>
                           ))}
                         </div>
+                        <div className="mt-3 grid gap-2">
+                          <button
+                            type="button"
+                            onClick={handleOpenMaskAdjustment}
+                            disabled={!garmentImageUrl}
+                            className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-cyan-300 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
+                          >
+                            クリッピング
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRecognizeMask}
+                            disabled={!garmentImageUrl}
+                            className="rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+                          >
+                            AIマスク認識
+                          </button>
+                        </div>
+                        {maskCandidates.length > 0 && (
+                          <div className="mt-3 rounded-lg border border-cyan-100 bg-cyan-50 p-2 dark:border-cyan-400/20 dark:bg-cyan-400/10">
+                            <p className="text-[11px] font-semibold text-cyan-800 dark:text-cyan-100">保存したい範囲を選択してください</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {maskCandidates.map((candidate) => (
+                                <button
+                                  key={candidate}
+                                  type="button"
+                                  onClick={() => handleSelectMaskCandidate(candidate)}
+                                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                                    selectedMaskCandidate === candidate
+                                      ? 'border-cyan-500 bg-cyan-600 text-white'
+                                      : 'border-cyan-200 bg-white text-cyan-700 hover:border-cyan-400 dark:bg-neutral-950 dark:text-cyan-200'
+                                  }`}
+                                >
+                                  {candidate}
+                                </button>
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleExtractAndConfirmNextStep}
+                              disabled={!selectedMaskCandidate || cutMode === 'keep'}
+                              className="mt-3 w-full rounded-lg bg-neutral-950 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-50 dark:bg-white dark:text-neutral-950"
+                            >
+                              抽出して次へ
+                            </button>
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={handleExtractMask}
+                                disabled={!selectedMaskCandidate || cutMode === 'keep'}
+                                className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+                              >
+                                抽出
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleConfirmNextStep}
+                                disabled={!extractedLayerReady}
+                                className="rounded-lg bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-50 dark:bg-white dark:text-neutral-950"
+                              >
+                                次のステップ
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
-                        <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">デザインレイヤー</p>
+                      <details className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+                        <summary className="cursor-pointer rounded-lg text-sm font-semibold text-neutral-800 outline-none focus-visible:ring-2 focus-visible:ring-primary-300 dark:text-neutral-100">
+                          レイヤー詳細
+                          <span className="ml-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                            {activeLayer} / {printPlacement}
+                          </span>
+                        </summary>
+                        <p className="mt-3 text-xs font-semibold text-neutral-500 dark:text-neutral-400">デザインレイヤー</p>
                         <div className="mt-2 grid grid-cols-2 gap-2">
                           {[
 	                            ...workbenchLabels.layers,
@@ -1105,7 +1435,7 @@ export function LightchainWorkbenchPage() {
                             <button
                               key={layer}
                               type="button"
-	                              onClick={() => setActiveLayer(layer)}
+		                              onClick={() => handleSelectDesignLayer(layer)}
                               className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${
                                 activeLayer === layer
                                   ? 'bg-cyan-600 text-white'
@@ -1142,19 +1472,28 @@ export function LightchainWorkbenchPage() {
                             className="mt-2 w-full accent-cyan-600"
                           />
                         </label>
-                      </div>
+                      </details>
 
                       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
                         <div className="relative flex min-h-[260px] items-center justify-center bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f4f5_75%),linear-gradient(-45deg,transparent_75%,#f4f4f5_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0] dark:bg-neutral-950">
                           {garmentImageUrl ? (
-                            <img src={garmentImageUrl} alt="衣服レイヤープレビュー" className={`max-h-56 max-w-[78%] object-contain ${cutMode === 'auto' ? 'drop-shadow-[0_12px_24px_rgba(0,0,0,0.24)]' : ''}`} />
+                            <>
+                              <img src={garmentImageUrl} alt="衣服レイヤープレビュー" className={`max-h-56 max-w-[78%] object-contain ${extractedLayerReady ? 'opacity-45' : ''}`} />
+                              {extractedLayerReady && (
+                                <img
+                                  src={garmentImageUrl}
+                                  alt="抽出済みカットレイヤー"
+                                  className="absolute max-h-52 max-w-[72%] rounded-xl object-contain drop-shadow-[0_16px_26px_rgba(15,23,42,0.35)]"
+                                />
+                              )}
+                            </>
                           ) : (
                             <div className="text-center">
                               <ImagePlus className="mx-auto h-10 w-10 text-neutral-300 dark:text-neutral-700" />
                               <p className="mt-2 text-sm font-semibold text-neutral-500 dark:text-neutral-400">衣服画像を置くとここで合成確認できます</p>
                             </div>
                           )}
-                          {garmentImageUrl && (
+                          {garmentImageUrl && !extractedLayerReady && (
                             <div
                               className="absolute left-1/2 top-1/2 flex -translate-x-1/2 items-center justify-center rounded-full border-2 border-cyan-200 bg-neutral-950/88 px-5 py-3 text-xs font-black tracking-[0.18em] text-cyan-100 shadow-xl"
                               style={{
@@ -1163,6 +1502,11 @@ export function LightchainWorkbenchPage() {
                               }}
                             >
                               HC
+                            </div>
+                          )}
+                          {nextStepConfirmed && (
+                            <div className="absolute bottom-3 right-3 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                              OK
                             </div>
                           )}
                         </div>
@@ -1185,7 +1529,11 @@ export function LightchainWorkbenchPage() {
                   </section>
                 )}
 
-                <div className="mt-5 grid gap-4">
+                <details className="mt-5 rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
+                  <summary className="cursor-pointer rounded-lg text-sm font-semibold text-neutral-800 outline-none focus-visible:ring-2 focus-visible:ring-primary-300 dark:text-neutral-100">
+                    この機能の詳細
+                  </summary>
+                <div className="mt-4 grid gap-4">
                   <div>
                     <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">入力</p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -1207,6 +1555,14 @@ export function LightchainWorkbenchPage() {
                     </div>
                   </div>
                 </div>
+                  <Link
+                    to={selectedTool.heavyChainHref}
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+                  >
+                    {selectedTool.runLabel}
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </details>
 
                 <label className="mt-5 block">
                   <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">参考条件</span>
@@ -1218,13 +1574,6 @@ export function LightchainWorkbenchPage() {
                 </label>
 
                 <div className="mt-5 grid gap-2">
-                  <Link
-                    to={selectedTool.heavyChainHref}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-                  >
-                    {selectedTool.runLabel}
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
                   <button
                     type="button"
                     onClick={handleSaveToCanvas}

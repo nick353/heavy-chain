@@ -79,11 +79,18 @@ export function CreditsPage() {
             <CreditSummaryPanel summary={summary} />
             <div className="rounded-2xl bg-white/55 p-5 dark:bg-surface-900/45">
               <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">内訳</h2>
+              {summary.billingTestAccountQuotaBypass && (
+                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+                  {summary.appleSandboxTesterNoRealCharge
+                    ? 'Apple sandbox tester: 購入フロー検証はテスト扱いで、実請求されない想定です。'
+                    : 'テストアカウント: 運用確認用の生成 quota bypass が有効です。'}
+                </div>
+              )}
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl bg-white/60 p-4 dark:bg-surface-950/45">
                   <Gauge className="h-5 w-5 text-primary-600 dark:text-primary-300" />
-                  <p className="mt-3 text-2xl font-semibold text-neutral-950 dark:text-white">停止なし</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">生成上限</p>
+                  <p className="mt-3 text-2xl font-semibold text-neutral-950 dark:text-white">{summary.remainingUnits.toLocaleString()}</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">今月残り / 上限 {summary.monthlyQuota.toLocaleString()}</p>
                 </div>
                 <div className="rounded-xl bg-white/60 p-4 dark:bg-surface-950/45">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />

@@ -32,6 +32,12 @@ import { TemplateSelector, type DesignTemplate, type SizeTemplate } from '../com
 import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { supabase } from '../lib/supabase';
+import {
+  BRAND_LIKENESS_BLOCK_COPY,
+  GENERATION_LEGAL_COPY,
+  UPLOAD_RIGHTS_CONFIRMATION_LABEL,
+  validateLegalSafetyInput,
+} from '../lib/legalSafetyGuard';
 import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -103,6 +109,7 @@ export function CanvasEditorPage() {
   const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s', '30s', '40s']);
   const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
   
   // Reference image states for generate modal
   const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
@@ -555,12 +562,26 @@ export function CanvasEditorPage() {
     try {
       let data;
       let error;
+      const safetyText = [generatePrompt, productDescription, headline, subheadline].filter(Boolean).join(' ');
+      if (!rightsConfirmed) {
+        toast.error('素材と生成指示の権利確認にチェックしてください');
+        setIsGenerating(false);
+        return;
+      }
+      if (validateLegalSafetyInput([safetyText]).blocked) {
+        toast.error(BRAND_LIKENESS_BLOCK_COPY);
+        setIsGenerating(false);
+        return;
+      }
 
       // 共通のベースボディ（参照画像を含む）
       const baseBody = {
         brandId: currentBrand.id,
         referenceImage: referenceImage?.url,
         referenceType: referenceImage?.referenceType,
+        legalSafety: {
+          rightsConfirmed,
+        },
       };
 
       switch (generateMode) {
@@ -812,7 +833,7 @@ export function CanvasEditorPage() {
         toast.loading('背景削除を実行中...', { id: 'remove-bg' });
         try {
           const { data, error } = await supabase.functions.invoke('remove-background', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id, ...lightchainEditMetadata }
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.resultUrl) {
@@ -834,7 +855,7 @@ export function CanvasEditorPage() {
         toast.loading('カラバリを生成中...', { id: 'colorize' });
         try {
           const { data, error } = await supabase.functions.invoke('colorize', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id, colors: ['red', 'blue', 'green', 'yellow'], ...lightchainEditMetadata }
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id, colors: ['red', 'blue', 'green', 'yellow'], legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.variations) {
@@ -859,7 +880,7 @@ export function CanvasEditorPage() {
         toast.loading('アップスケール中...', { id: 'upscale' });
         try {
           const { data, error } = await supabase.functions.invoke('upscale', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id, scale: 2, ...lightchainEditMetadata }
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.resultUrl) {
@@ -880,7 +901,7 @@ export function CanvasEditorPage() {
         toast.loading('バリエーションを生成中...', { id: 'variations' });
         try {
           const { data, error } = await supabase.functions.invoke('generate-variations', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id, count: 4, ...lightchainEditMetadata }
+            body: { imageUrl: imageSrc, brandId: currentBrand?.id, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.variations) {
@@ -1265,7 +1286,7 @@ export function CanvasEditorPage() {
 
     if (action === 'remove-bg') {
       const { data, error } = await supabase.functions.invoke('remove-background', {
-        body: { imageUrl: editingImage, brandId: currentBrand.id, ...lightchainEditMetadata },
+        body: { imageUrl: editingImage, brandId: currentBrand.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
       });
       if (error) throw error;
       if (data?.resultUrl) {
@@ -1281,7 +1302,7 @@ export function CanvasEditorPage() {
     if (action === 'colorize') {
       const colors = params.prompt?.split(/[、,\\s]+/).map((item) => item.trim()).filter(Boolean);
       const { data, error } = await supabase.functions.invoke('colorize', {
-        body: { imageUrl: editingImage, brandId: currentBrand.id, colors: colors?.length ? colors : undefined, ...lightchainEditMetadata },
+        body: { imageUrl: editingImage, brandId: currentBrand.id, colors: colors?.length ? colors : undefined, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
       });
       if (error) throw error;
       data?.variations?.forEach((variation: any) => {
@@ -1298,7 +1319,7 @@ export function CanvasEditorPage() {
 
     if (action === 'upscale') {
       const { data, error } = await supabase.functions.invoke('upscale', {
-        body: { imageUrl: editingImage, brandId: currentBrand.id, scale: 2, ...lightchainEditMetadata },
+        body: { imageUrl: editingImage, brandId: currentBrand.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
       });
       if (error) throw error;
       if (data?.resultUrl) {
@@ -1313,7 +1334,7 @@ export function CanvasEditorPage() {
 
     if (action === 'variations') {
       const { data, error } = await supabase.functions.invoke('generate-variations', {
-        body: { imageUrl: editingImage, brandId: currentBrand.id, prompt: params.prompt || undefined, count: 4, ...lightchainEditMetadata },
+        body: { imageUrl: editingImage, brandId: currentBrand.id, prompt: params.prompt || undefined, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
       });
       if (error) throw error;
       data?.variations?.forEach((variation: any, index: number) => {
@@ -1917,6 +1938,19 @@ export function CanvasEditorPage() {
 
           {/* Dynamic form */}
           {renderGenerateForm()}
+          <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100">
+            <input
+              type="checkbox"
+              checked={rightsConfirmed}
+              onChange={(event) => setRightsConfirmed(event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+              disabled={isGenerating}
+            />
+            <span>
+              <span className="block font-semibold">{UPLOAD_RIGHTS_CONFIRMATION_LABEL}</span>
+              <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
+            </span>
+          </label>
 
           <div className="flex justify-end gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800">
             <Button

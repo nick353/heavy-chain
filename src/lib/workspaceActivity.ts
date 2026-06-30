@@ -16,6 +16,8 @@ export interface CreditSummary {
   usedUnits: number;
   reservedUnits: number;
   remainingUnits: number;
+  billingTestAccountQuotaBypass: boolean;
+  appleSandboxTesterNoRealCharge: boolean;
 }
 
 export interface WorkspaceJob {
@@ -89,6 +91,8 @@ interface UsageSummaryRow {
   used_units: number | null;
   reserved_units: number | null;
   remaining_units: number | null;
+  billing_test_account_quota_bypass?: boolean | null;
+  apple_sandbox_tester_no_real_charge?: boolean | null;
 }
 
 const FREE_PLAN_QUOTA = 25;
@@ -106,6 +110,8 @@ export const emptyWorkspaceActivity: WorkspaceActivity = {
     usedUnits: 0,
     reservedUnits: 0,
     remainingUnits: FREE_PLAN_QUOTA,
+    billingTestAccountQuotaBypass: false,
+    appleSandboxTesterNoRealCharge: false,
   },
   activeJobs: [],
   failedJobs: [],
@@ -455,6 +461,8 @@ const fetchCreditSummary = async (brandId: string): Promise<CreditSummary> => {
       usedUnits: toNumber(summary.used_units),
       reservedUnits: toNumber(summary.reserved_units),
       remainingUnits: toNumber(summary.remaining_units, FREE_PLAN_QUOTA),
+      billingTestAccountQuotaBypass: summary.billing_test_account_quota_bypass === true,
+      appleSandboxTesterNoRealCharge: summary.apple_sandbox_tester_no_real_charge === true,
     };
   } catch (error) {
     logWorkspaceActivityFetchError('Failed to fetch workspace credit summary:', error);

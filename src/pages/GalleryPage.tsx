@@ -20,7 +20,6 @@ import {
   FileText,
   ExternalLink,
   Share2,
-  Link as LinkIcon,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
@@ -31,7 +30,6 @@ import {
   listWorkspaceGeneratedImages,
 } from '../lib/localWorkspaceArtifacts';
 import { buildSourceContextSummaryRows } from '../lib/sourceContextSummary';
-import { createShareLink } from '../lib/imageApi';
 import { Button, SearchInput } from '../components/ui';
 import type { GeneratedImage } from '../types/database';
 import type { GenerationIntent } from '../lib/workspaceHandoff';
@@ -74,13 +72,10 @@ export function GalleryPage() {
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [gridSize, setGridSize] = useState<'small' | 'large'>('large');
   const [visibleImageCount, setVisibleImageCount] = useState(INITIAL_VISIBLE_IMAGE_COUNT);
-  const [shareLinks, setShareLinks] = useState<Record<string, { url: string; expiresAt?: string }>>({});
-  const [isCreatingShareLink, setIsCreatingShareLink] = useState(false);
   const selectedGenerationIntent = getGenerationIntent(selectedImage);
   const selectedSourceLabel = getMetadataString(selectedImage, 'sourceLabel');
   const selectedSourceResumePath = getMetadataString(selectedImage, 'sourceResumePath');
   const selectedSourceSummaryRows = buildSourceContextSummaryRows(selectedImage?.metadata);
-  const selectedShareLink = selectedImage ? shareLinks[selectedImage.id] : undefined;
 
   // Multi-select mode
   const [selectMode, setSelectMode] = useState(false);
@@ -403,8 +398,6 @@ export function GalleryPage() {
   };
 
   const handleCreateShareLink = async (image: GeneratedImage) => {
-    if (isCreatingShareLink) return;
-
     if (isLocalWorkspaceImage(image)) {
       const imageUrl = getImageUrl(image);
       if (!imageUrl) {
@@ -415,22 +408,7 @@ export function GalleryPage() {
       return;
     }
 
-    setIsCreatingShareLink(true);
-    try {
-      const result = await createShareLink(image.id, 7);
-      if (!result.success || !result.shareUrl) {
-        throw new Error(result.error || '共有リンクの作成に失敗しました');
-      }
-      setShareLinks((prev) => ({
-        ...prev,
-        [image.id]: { url: result.shareUrl!, expiresAt: result.expiresAt },
-      }));
-      await copyText(result.shareUrl, '共有リンクをコピーしました');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : '共有リンクの作成に失敗しました');
-    } finally {
-      setIsCreatingShareLink(false);
-    }
+    toast.error('共有リンク作成は公開範囲と責任分界が確定するまで無効です');
   };
 
   // Get unique feature types for suggestions
@@ -1017,34 +995,14 @@ export function GalleryPage() {
 
                   {/* Actions */}
                   <div className="space-y-3">
-                    <button
-                      onClick={() => handleCreateShareLink(selectedImage)}
-                      disabled={isCreatingShareLink}
+                      <button
+                        onClick={() => handleCreateShareLink(selectedImage)}
+                      disabled={!isLocalWorkspaceImage(selectedImage)}
                       className="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60 text-white rounded-xl text-sm font-semibold transition-all"
                     >
                       <Share2 className="w-4 h-4" />
-                      {isCreatingShareLink ? '共有リンクを作成中' : isLocalWorkspaceImage(selectedImage) ? 'ローカルURLをコピー' : '共有リンクを作成'}
+                      {isLocalWorkspaceImage(selectedImage) ? 'ローカルURLをコピー' : '共有リンクは未有効'}
                     </button>
-                    {selectedShareLink && (
-                      <div className="rounded-xl bg-white/5 p-3">
-                        <div className="mb-2 flex items-center gap-2 text-xs font-medium text-white/50 uppercase tracking-wider">
-                          <LinkIcon className="h-3.5 w-3.5" />
-                          共有リンク
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => copyText(selectedShareLink.url, '共有リンクをコピーしました')}
-                          className="block w-full truncate rounded-lg bg-white/10 px-3 py-2 text-left text-xs text-white/80 transition hover:bg-white/15"
-                        >
-                          {selectedShareLink.url}
-                        </button>
-                        {selectedShareLink.expiresAt && (
-                          <p className="mt-2 text-xs text-white/45">
-                            有効期限: {new Date(selectedShareLink.expiresAt).toLocaleString('ja-JP')}
-                          </p>
-                        )}
-                      </div>
-                    )}
                     {selectedSourceLabel && selectedSourceResumePath && (
                       <Link
                         to={selectedSourceResumePath}
