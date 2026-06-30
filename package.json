@@ -29,6 +29,7 @@
     "verify:g606-performance": "npm run build && node scripts/measure-g606-performance.mjs",
     "verify:g618-scale-ops": "node scripts/verify-g618-scale-ops-baseline.mjs",
     "verify:g620-security-ops": "node scripts/verify-g620-security-ops.mjs",
+    "verify:g632-incident-response": "node scripts/verify-g632-incident-response-drill.mjs",
     "verify:g619-beta-evidence": "node scripts/verify-g619-beta-evidence.mjs",
     "create:g619-beta-session": "node scripts/create-g619-beta-session.mjs",
     "verify:h601-legal-safety": "node scripts/verify-h601-legal-safety-guard.mjs",

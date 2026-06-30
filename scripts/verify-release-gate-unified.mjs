@@ -141,6 +141,20 @@ const requiredReadbacks = [
     expect: 'ok=true, blockers=[], expected schema, monitor readback safe, abuse/permission/audit/incident checks passed, and only allowed monitor warnings',
   },
   {
+    name: 'G632 incident response drill',
+    path: 'output/playwright/g632-incident-response-drill/summary.json',
+    validate: (json) =>
+      json.ok === true &&
+      json.schema === 'heavy-chain.g632.incident-response-drill.v1' &&
+      arrayFrom(json.blockers).length === 0 &&
+      Number(json.summary?.scenarios || 0) >= 5 &&
+      Number(json.summary?.passedScenarios || 0) === Number(json.summary?.scenarios || 0) &&
+      Object.values(json.irreversibleActions || {}).every((value) =>
+        ['not_clicked', 'not_touched', 'not_run'].includes(value),
+      ),
+    expect: 'ok=true, blockers=[], >=5 incident scenarios passed, and no irreversible actions touched',
+  },
+  {
     name: 'production H601 rights readback',
     path: 'output/playwright/prod-h601-rights-check-20260701-r1/summary.json',
     validate: (json) =>
@@ -226,6 +240,11 @@ const commandChecks = [
     args: ['--check', 'scripts/verify-g620-security-ops.mjs'],
   },
   {
+    name: 'node syntax: G632 incident response verifier',
+    command: 'node',
+    args: ['--check', 'scripts/verify-g632-incident-response-drill.mjs'],
+  },
+  {
     name: 'node syntax: H601 legal safety verifier',
     command: 'node',
     args: ['--check', 'scripts/verify-h601-legal-safety-guard.mjs'],
@@ -249,6 +268,11 @@ const commandChecks = [
     name: 'G614 operations docs',
     command: 'npm',
     args: ['run', 'verify:g614-ops', '--silent'],
+  },
+  {
+    name: 'G632 incident response drill',
+    command: 'npm',
+    args: ['run', 'verify:g632-incident-response', '--silent'],
   },
   {
     name: 'H601 legal safety guard',
