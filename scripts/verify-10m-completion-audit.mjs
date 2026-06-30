@@ -10,38 +10,6 @@ const summaryPath = args.summary || path.join(outDir, 'summary.json');
 const allowIncomplete = args.allowIncomplete === true || args['allow-incomplete'] === true;
 const g617Dir = args.g617Dir || 'output/playwright/g617-same-run-fresh-generation-hc-g617-same-run-fresh-20260630T063740Z';
 
-const requiredAcceptedGoals = [
-  'G601',
-  'G602',
-  'G603',
-  'G604',
-  'G605',
-  'G606',
-  'G607',
-  'G608',
-  'G609',
-  'G610',
-  'G611',
-  'G612',
-  'G613',
-  'G614',
-  'G615',
-  'G616',
-  'G617',
-  'G618',
-  'G619',
-  'G620',
-  'G621',
-  'G622',
-  'G623',
-  'G624',
-  'G625',
-  'G626',
-  'G627',
-  'G628',
-  'G629',
-];
-
 const requiredHumanItemsClosed = ['H601', 'H602'];
 const allGenerationFeatures = [
   'campaign-image',
@@ -207,6 +175,7 @@ const report = {
 const goalText = readText('GOAL.md');
 const humanText = readText('goals/HUMAN_NEEDED.md');
 const goalStatuses = mergeGoalStatuses(parseGoalMapStatuses(goalText), parseGoalStatuses(goalText));
+const requiredAcceptedGoals = deriveRequiredAcceptedGoals(goalStatuses);
 const humanStatuses = parseHumanStatuses(humanText);
 
 for (const goalId of requiredAcceptedGoals) {
@@ -223,6 +192,12 @@ for (const goalId of requiredAcceptedGoals) {
 
 function isAcceptedGoalStatus(status) {
   return typeof status === 'string' && /^accepted(?:$|-)/.test(status);
+}
+
+function deriveRequiredAcceptedGoals(statuses) {
+  return [...statuses.keys()]
+    .filter((goalId) => /^G6\d+$/.test(goalId))
+    .sort((left, right) => Number(left.slice(1)) - Number(right.slice(1)));
 }
 
 for (const itemId of requiredHumanItemsClosed) {
@@ -493,7 +468,8 @@ function mergeGoalStatuses(summaryStatuses, tableStatuses) {
   if (!summaryStatuses) return tableStatuses;
   if (!tableStatuses) return summaryStatuses;
   const merged = new Map(summaryStatuses);
-  for (const goalId of requiredAcceptedGoals) {
+  const goalIds = new Set([...summaryStatuses.keys(), ...tableStatuses.keys()]);
+  for (const goalId of goalIds) {
     const summaryStatus = summaryStatuses.get(goalId);
     const tableStatus = tableStatuses.get(goalId);
     if (!summaryStatus && tableStatus) {
