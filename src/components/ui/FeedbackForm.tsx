@@ -238,7 +238,7 @@ export function FeedbackButton() {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 1 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 right-4 lg:bottom-6 lg:right-6 z-40 w-12 h-12 rounded-full bg-primary-600 hover:bg-primary-700 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center group"
+        className="fixed bottom-20 right-4 z-40 hidden h-12 w-12 items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all hover:bg-primary-700 hover:shadow-xl lg:bottom-6 lg:right-6 lg:flex group"
         aria-label="フィードバックを送信"
       >
         <MessageSquare className="w-5 h-5 group-hover:scale-110 transition-transform" />

@@ -178,6 +178,12 @@ async function runRoute(spec, context, viewport) {
     });
     addAssertion(routeEvidence, 'no_framework_overlay', !hasFrameworkOverlay(body));
     addAssertion(routeEvidence, 'no_horizontal_overflow', await hasNoHorizontalOverflow(page));
+    if (spec.mobile) {
+      const intrusiveFixedButtons = await visibleIntrusiveFixedButtons(page);
+      addAssertion(routeEvidence, 'mobile_no_intrusive_floating_help_buttons', intrusiveFixedButtons.length === 0, {
+        intrusiveFixedButtons,
+      });
+    }
     if (spec.generateReady) {
       const visibleButtons = await visibleButtonTexts(page);
       addAssertion(routeEvidence, 'upload_first_generation_screen_hides_advanced_controls', (
@@ -354,6 +360,20 @@ async function visibleButtonTexts(page) {
       .map((button) => button.textContent?.replace(/\s+/g, ' ').trim())
       .filter(Boolean),
   );
+}
+
+async function visibleIntrusiveFixedButtons(page) {
+  return page.evaluate(() => {
+    const labels = ['キーボードショートカットを表示', 'フィードバックを送信'];
+    return labels.flatMap((label) => {
+      const element = document.querySelector(`button[aria-label="${label}"]`);
+      if (!element) return [];
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      const visible = rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+      return visible ? [{ label, rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height } }] : [];
+    });
+  }).catch(() => []);
 }
 
 async function installSafeMocks(context) {

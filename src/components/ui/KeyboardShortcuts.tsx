@@ -51,7 +51,7 @@ export function KeyboardShortcuts({ shortcuts, triggerKey = '?' }: KeyboardShort
       {/* Trigger button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-20 left-4 lg:bottom-6 lg:left-6 z-40 p-3 rounded-xl bg-white/80 dark:bg-surface-900/80 backdrop-blur-md shadow-lg border border-neutral-200 dark:border-neutral-700 hover:shadow-xl transition-all group"
+        className="fixed bottom-20 left-4 z-40 hidden rounded-xl border border-neutral-200 bg-white/80 p-3 shadow-lg backdrop-blur-md transition-all hover:shadow-xl dark:border-neutral-700 dark:bg-surface-900/80 lg:bottom-6 lg:left-6 lg:block group"
         aria-label="キーボードショートカットを表示"
       >
         <Keyboard className="w-5 h-5 text-neutral-500 dark:text-neutral-400 group-hover:text-primary-500 transition-colors" />
@@ -161,4 +161,3 @@ export const defaultShortcuts: Shortcut[] = [
   { keys: ['⌘', 'Shift', 'Z'], description: 'やり直し', category: 'キャンバス' },
   { keys: ['Space'], description: 'キャンバスをパン', category: 'キャンバス' },
 ];
-
