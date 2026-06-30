@@ -1288,6 +1288,7 @@ export function LightchainWorkbenchPage() {
                         )}
                       </label>
 
+                      {garmentImageUrl && (
                       <details className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
                         <summary className="cursor-pointer rounded-lg text-sm font-semibold text-neutral-800 outline-none focus-visible:ring-2 focus-visible:ring-primary-300 dark:text-neutral-100">
                           詳細設定
@@ -1325,52 +1326,54 @@ export function LightchainWorkbenchPage() {
                         </div>
                         </div>
                       </details>
+                      )}
 
+                      {garmentImageUrl && (
                       <div className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">切り抜き / マスク</p>
                           <span className="rounded-full bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-200">
-                            {workbenchStep === 'next' ? '次ステップ可' : workbenchStep === 'extracted' ? '抽出済み' : workbenchStep === 'mask' ? 'マスク調整' : '素材選択'}
+                            {workbenchStep === 'next' ? '次ステップ可' : workbenchStep === 'extracted' ? '抽出済み' : workbenchStep === 'mask' ? 'マスク調整' : garmentImageUrl ? '素材選択' : 'アップロード後'}
                           </span>
                         </div>
-                        <div className="mt-2 grid grid-cols-3 gap-2">
-                          {[
-                            ['auto', '自動カット'],
-                            ['manual', '手動マスク'],
-                            ['keep', '背景維持'],
-                          ].map(([mode, label]) => (
-                            <button
-                              key={mode}
-                              type="button"
-                              onClick={() => handleSetCutMode(mode as typeof cutMode)}
-                              className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${
-                                cutMode === mode
-                                  ? 'bg-primary-600 text-white'
-                                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300'
-                              }`}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="mt-3 grid gap-2">
-                          <button
-                            type="button"
-                            onClick={handleOpenMaskAdjustment}
-                            disabled={!garmentImageUrl}
-                            className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-cyan-300 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
-                          >
-                            クリッピング
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleRecognizeMask}
-                            disabled={!garmentImageUrl}
-                            className="rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-50"
-                          >
-                            AIマスク認識
-                          </button>
-                        </div>
+                        <>
+                            <div className="mt-2 grid grid-cols-3 gap-2">
+                              {[
+                                ['auto', '自動カット'],
+                                ['manual', '手動マスク'],
+                                ['keep', '背景維持'],
+                              ].map(([mode, label]) => (
+                                <button
+                                  key={mode}
+                                  type="button"
+                                  onClick={() => handleSetCutMode(mode as typeof cutMode)}
+                                  className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${
+                                    cutMode === mode
+                                      ? 'bg-primary-600 text-white'
+                                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300'
+                                  }`}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="mt-3 grid gap-2">
+                              <button
+                                type="button"
+                                onClick={handleOpenMaskAdjustment}
+                                className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-cyan-300 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
+                              >
+                                クリッピング
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleRecognizeMask}
+                                className="rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-500"
+                              >
+                                AIマスク認識
+                              </button>
+                            </div>
+                        </>
                         {maskCandidates.length > 0 && (
                           <div className="mt-3 rounded-lg border border-cyan-100 bg-cyan-50 p-2 dark:border-cyan-400/20 dark:bg-cyan-400/10">
                             <p className="text-[11px] font-semibold text-cyan-800 dark:text-cyan-100">保存したい範囲を選択してください</p>
@@ -1419,7 +1422,9 @@ export function LightchainWorkbenchPage() {
                           </div>
                         )}
                       </div>
+                      )}
 
+                      {garmentImageUrl && (
                       <details className="rounded-xl border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
                         <summary className="cursor-pointer rounded-lg text-sm font-semibold text-neutral-800 outline-none focus-visible:ring-2 focus-visible:ring-primary-300 dark:text-neutral-100">
                           レイヤー詳細
@@ -1473,9 +1478,11 @@ export function LightchainWorkbenchPage() {
                           />
                         </label>
                       </details>
+                      )}
 
+                      {garmentImageUrl && (
                       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
-                        <div className="relative flex min-h-[260px] items-center justify-center bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f4f5_75%),linear-gradient(-45deg,transparent_75%,#f4f4f5_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0] dark:bg-neutral-950">
+                        <div className={`relative flex min-h-[220px] items-center justify-center ${garmentImageUrl ? 'bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f4f5_75%),linear-gradient(-45deg,transparent_75%,#f4f4f5_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0] dark:bg-neutral-950' : 'bg-neutral-50 dark:bg-neutral-950'}`}>
                           {garmentImageUrl ? (
                             <>
                               <img src={garmentImageUrl} alt="衣服レイヤープレビュー" className={`max-h-56 max-w-[78%] object-contain ${extractedLayerReady ? 'opacity-45' : ''}`} />
@@ -1490,7 +1497,7 @@ export function LightchainWorkbenchPage() {
                           ) : (
                             <div className="text-center">
                               <ImagePlus className="mx-auto h-10 w-10 text-neutral-300 dark:text-neutral-700" />
-                              <p className="mt-2 text-sm font-semibold text-neutral-500 dark:text-neutral-400">衣服画像を置くとここで合成確認できます</p>
+                              <p className="mt-2 text-sm font-semibold text-neutral-500 dark:text-neutral-400">素材を入れると合成プレビューが表示されます</p>
                             </div>
                           )}
                           {garmentImageUrl && !extractedLayerReady && (
@@ -1525,6 +1532,7 @@ export function LightchainWorkbenchPage() {
                           </div>
                         </div>
                       </div>
+                      )}
                     </div>
                   </section>
                 )}
@@ -1564,6 +1572,7 @@ export function LightchainWorkbenchPage() {
                   </Link>
                 </details>
 
+                {garmentImageUrl && (
                 <label className="mt-5 block">
                   <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">参考条件</span>
                   <textarea
@@ -1572,7 +1581,9 @@ export function LightchainWorkbenchPage() {
                     className="mt-2 min-h-[110px] w-full rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-neutral-700 dark:bg-neutral-950 dark:text-white"
                   />
                 </label>
+                )}
 
+                {garmentImageUrl && (
                 <div className="mt-5 grid gap-2">
                   <button
                     type="button"
@@ -1584,6 +1595,7 @@ export function LightchainWorkbenchPage() {
                     Canvasに注文票を保存
                   </button>
                 </div>
+                )}
               </div>
             </aside>
           </div>

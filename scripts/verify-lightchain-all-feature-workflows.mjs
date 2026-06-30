@@ -133,14 +133,20 @@ async function verifyFeatureWorkflow(page, tool) {
   await page.evaluate((key) => window.localStorage.removeItem(key), canvasStoreKey);
   await page.goto(`${baseUrl}/lightchain/${tool.id}`, { waitUntil: 'networkidle' });
   await page.getByRole('heading', { name: exactText(tool.title) }).first().waitFor({ state: 'visible', timeout: 10_000 });
-  await page.getByRole('button', { name: /Canvasに注文票を保存/ }).waitFor({ state: 'visible', timeout: 10_000 });
 
   const body = await bodyText(page);
   recordFeatureAssertion(result, 'screen_title_visible', body.includes(tool.title), { title: tool.title });
   recordFeatureAssertion(result, 'stage_tabs_visible', ['素材入力', 'マスク/レイヤー', 'Canvas保存'].every((label) => body.includes(label)));
-  recordFeatureAssertion(result, 'workbench_controls_visible', body.includes('AIマスク認識') && body.includes('Canvasに注文票を保存'));
+  recordFeatureAssertion(result, 'upload_first_state_hides_advanced_controls', (
+    !body.includes('AIマスク認識')
+    && !body.includes('Canvasに注文票を保存')
+    && !body.includes('レイヤー詳細')
+  ), { bodyExcerpt: body.slice(0, 800) });
 
   await uploadMaterialAndWaitForMaskControls(page, uploadPath);
+  await page.getByRole('button', { name: /Canvasに注文票を保存/ }).waitFor({ state: 'visible', timeout: 10_000 });
+  const uploadedBody = await bodyText(page);
+  recordFeatureAssertion(result, 'workbench_controls_visible_after_upload', uploadedBody.includes('AIマスク認識') && uploadedBody.includes('Canvasに注文票を保存'));
   await openDetails(page, 'レイヤー詳細');
   const layerLabel = firstLayerLabelForCategory(tool.category);
   const layerButton = page.getByRole('button', { name: exactText(layerLabel) }).first();
@@ -249,9 +255,13 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
 async function verifyMobileFeatureScreen(page, tool) {
   await page.goto(`${baseUrl}/lightchain/${tool.id}`, { waitUntil: 'networkidle' });
   await page.getByRole('heading', { name: exactText(tool.title) }).first().waitFor({ state: 'visible', timeout: 10_000 });
-  await page.getByRole('button', { name: /Canvasに注文票を保存/ }).waitFor({ state: 'visible', timeout: 10_000 });
   const body = await bodyText(page);
-  addAssertion(`mobile_screen:${tool.id}`, body.includes(tool.title) && body.includes('素材入力') && body.includes('Canvasに注文票を保存'), {
+  addAssertion(`mobile_screen:${tool.id}`, (
+    body.includes(tool.title)
+    && body.includes('素材入力')
+    && !body.includes('AIマスク認識')
+    && !body.includes('Canvasに注文票を保存')
+  ), {
     url: page.url(),
   });
 }

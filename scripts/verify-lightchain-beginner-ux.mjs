@@ -67,19 +67,29 @@ try {
     }).map((button) => button.textContent?.trim()).filter(Boolean),
   );
   fs.writeFileSync(path.join(outDir, '01-empty-body.txt'), emptyBody);
-  addAssertion('beginner_primary_path_visible_before_upload', ['素材入力', 'AIマスク認識', 'Canvasに注文票を保存'].every((label) => emptyBody.includes(label)), {
+  addAssertion('beginner_upload_only_before_upload', (
+    emptyBody.includes('素材入力')
+    && emptyBody.includes('衣服画像をアップロード')
+    && !emptyBody.includes('AIマスク認識')
+    && !emptyBody.includes('Canvasに注文票を保存')
+  ), {
     bodyExcerpt: emptyBody.slice(0, 1200),
   });
-  addAssertion('advanced_controls_collapsed_before_upload', emptyBody.includes('詳細設定') && emptyBody.includes('レイヤー詳細') && !emptyBody.includes('素材ベース'), {
+  addAssertion('advanced_controls_hidden_before_upload', (
+    !emptyBody.includes('詳細設定')
+    && !emptyBody.includes('レイヤー詳細')
+    && !emptyBody.includes('参考条件')
+  ), {
     bodyExcerpt: emptyBody.slice(0, 1200),
   });
-  addAssertion('visible_button_count_reduced_before_upload', visibleButtonsBeforeUpload.length <= 12, {
+  addAssertion('visible_button_count_reduced_before_upload', visibleButtonsBeforeUpload.length <= 8, {
     count: visibleButtonsBeforeUpload.length,
     visibleButtonsBeforeUpload,
   });
 
   await page.locator('input[type="file"]').first().setInputFiles(uploadPath);
   await page.getByRole('button', { name: 'AIマスク認識' }).waitFor({ state: 'visible', timeout: 5000 });
+  await page.getByRole('button', { name: /Canvasに注文票を保存/ }).waitFor({ state: 'visible', timeout: 5000 });
   await page.getByRole('button', { name: 'AIマスク認識' }).click();
   await page.getByRole('button', { name: '柄' }).click();
   await screenshot(page, '02-after-mask-candidates');
@@ -112,7 +122,12 @@ try {
   await dismissBlockingOverlays(page);
   await screenshot(page, '05-mobile-empty');
   const mobileBody = await bodyText(page);
-  addAssertion('mobile_beginner_path_visible', ['素材入力', 'AIマスク認識', 'Canvasに注文票を保存'].every((label) => mobileBody.includes(label)), {
+  addAssertion('mobile_beginner_upload_only', (
+    mobileBody.includes('素材入力')
+    && mobileBody.includes('衣服画像をアップロード')
+    && !mobileBody.includes('AIマスク認識')
+    && !mobileBody.includes('Canvasに注文票を保存')
+  ), {
     bodyExcerpt: mobileBody.slice(0, 1200),
   });
 
