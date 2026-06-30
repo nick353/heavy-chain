@@ -60,6 +60,7 @@ export function MaterialWorkbench({
   placementOptions,
   maxFileSizeMb = 5,
 }: MaterialWorkbenchProps) {
+  const hasImage = Boolean(state.imageUrl);
   const updateState = (patch: Partial<MaterialReferenceState>) => {
     onChange({ ...state, ...patch });
   };
@@ -145,16 +146,22 @@ export function MaterialWorkbench({
           </h3>
           <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{description}</p>
         </div>
-        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${state.imageUrl ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200' : 'bg-neutral-100 text-neutral-500 dark:bg-surface-800 dark:text-neutral-300'}`}>
-          {state.imageUrl ? '読込済み' : '未読込'}
+        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${hasImage ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200' : 'bg-neutral-100 text-neutral-500 dark:bg-surface-800 dark:text-neutral-300'}`}>
+          {hasImage ? '読込済み' : '未読込'}
         </span>
       </div>
 
       <div className="mt-4 grid min-w-0 gap-4 2xl:grid-cols-[minmax(280px,1fr)_minmax(300px,0.86fr)]">
         <div className="min-w-0 overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-white/10 dark:bg-surface-950/50">
-          <label className="relative flex min-h-[300px] cursor-pointer flex-col items-center justify-center overflow-hidden bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f4f5_75%),linear-gradient(-45deg,transparent_75%,#f4f4f5_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0] p-4 text-center transition hover:ring-2 hover:ring-primary-200 dark:bg-neutral-950">
+          <label
+            className={`relative flex min-h-[300px] cursor-pointer flex-col items-center justify-center overflow-hidden p-4 text-center transition hover:ring-2 hover:ring-primary-200 ${
+              hasImage
+                ? 'bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f4f5_75%),linear-gradient(-45deg,transparent_75%,#f4f4f5_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0] dark:bg-neutral-950'
+                : 'bg-neutral-50 dark:bg-surface-950/60'
+            }`}
+          >
             <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-            {state.imageUrl ? (
+            {hasImage ? (
               <>
                 <img
                   src={state.imageUrl}
@@ -199,19 +206,20 @@ export function MaterialWorkbench({
             </div>
             <div className="border-x border-neutral-200 p-3 dark:border-white/10">
               <p className="font-semibold text-neutral-400">処理</p>
-              <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{maskModeLabel[state.maskMode]}</p>
+              <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{hasImage ? maskModeLabel[state.maskMode] : '未設定'}</p>
             </div>
             <div className="p-3">
               <p className="font-semibold text-neutral-400">レイヤー</p>
-              <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{state.activeLayer}</p>
+              <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{hasImage ? state.activeLayer : '未設定'}</p>
             </div>
           </div>
         </div>
 
+        {hasImage ? (
         <div className="min-w-0 space-y-3">
           <div className="grid gap-2 sm:grid-cols-3">
             {[
-              { icon: ScanLine, label: state.imageUrl ? '素材認識済み' : '素材待ち' },
+              { icon: ScanLine, label: '素材認識済み' },
               { icon: Scissors, label: maskModeLabel[state.maskMode] },
               { icon: CheckCircle2, label: `${state.scale}%で配置` },
             ].map((item) => {
@@ -369,8 +377,19 @@ export function MaterialWorkbench({
             />
           </label>
         </div>
+        ) : (
+          <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-white/10 dark:bg-surface-950/40">
+            <p className="text-sm font-semibold text-neutral-900 dark:text-white">素材を置くと編集を始められます</p>
+            <div className="mt-3 grid gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+              <div className="rounded-xl bg-white px-3 py-2 dark:bg-surface-900">1. 画像をアップロード</div>
+              <div className="rounded-xl bg-white px-3 py-2 dark:bg-surface-900">2. AIマスク認識で範囲を選択</div>
+              <div className="rounded-xl bg-white px-3 py-2 dark:bg-surface-900">3. 抽出してCanvasへ保存</div>
+            </div>
+          </div>
+        )}
       </div>
 
+      {hasImage && (
       <div className="mt-4 grid min-w-0 gap-4 2xl:grid-cols-[minmax(0,1fr)_260px]">
         <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
           素材メモ
@@ -396,6 +415,7 @@ export function MaterialWorkbench({
           )}
         </div>
       </div>
+      )}
     </section>
   );
 }

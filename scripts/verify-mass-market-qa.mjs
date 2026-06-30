@@ -178,6 +178,17 @@ async function runRoute(spec, context, viewport) {
     });
     addAssertion(routeEvidence, 'no_framework_overlay', !hasFrameworkOverlay(body));
     addAssertion(routeEvidence, 'no_horizontal_overflow', await hasNoHorizontalOverflow(page));
+    if (spec.generateReady) {
+      const visibleButtons = await visibleButtonTexts(page);
+      addAssertion(routeEvidence, 'upload_first_generation_screen_hides_advanced_controls', (
+        body.includes('素材を置くと編集を始められます') &&
+        !visibleButtons.some((text) => /AIマスク認識|抽出|Canvasに注文票を保存/.test(text)) &&
+        !body.includes('Canvas保存時の構造')
+      ), {
+        visibleButtons,
+        bodyExcerpt: body.slice(0, 1200),
+      });
+    }
 
     routeEvidence.screenshot = await screenshot(page, `${spec.key}.png`);
 
@@ -330,6 +341,19 @@ async function dismissBlockingGuides(page, routeEvidence) {
   await skip.click();
   await page.waitForTimeout(400);
   routeEvidence.interactions.push({ type: 'dismiss-guide', label: 'スキップ' });
+}
+
+async function visibleButtonTexts(page) {
+  return page.getByRole('button').evaluateAll((buttons) =>
+    buttons
+      .filter((button) => {
+        const rect = button.getBoundingClientRect();
+        const style = window.getComputedStyle(button);
+        return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+      })
+      .map((button) => button.textContent?.replace(/\s+/g, ' ').trim())
+      .filter(Boolean),
+  );
 }
 
 async function installSafeMocks(context) {
