@@ -293,6 +293,23 @@ async function runRoute(spec, context, viewport) {
           },
         );
       }
+      if (spec.key === 'mobile-jobs') {
+        const visibleJobCount = await page
+          .locator('[data-testid="jobs-list-item"]')
+          .evaluateAll((items) =>
+            items.filter((item) => {
+              const style = window.getComputedStyle(item);
+              const rect = item.getBoundingClientRect();
+              return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+            }).length,
+          )
+          .catch(() => 0);
+        const showAllVisible = await page.locator('[data-testid="mobile-jobs-show-all"]').isVisible().catch(() => false);
+        addAssertion(routeEvidence, 'mobile_jobs_initial_list_is_bounded', visibleJobCount <= 5 && (showAllVisible || visibleJobCount < 5), {
+          visibleJobCount,
+          showAllVisible,
+        });
+      }
     }
     if (spec.generateReady) {
       const visibleButtons = await visibleButtonTexts(page);

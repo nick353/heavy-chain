@@ -96,6 +96,7 @@ export function JobsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [activityError, setActivityError] = useState<string | null>(null);
   const [showFailedJobs, setShowFailedJobs] = useState(false);
+  const [showAllMobileJobs, setShowAllMobileJobs] = useState(false);
 
   const loadActivity = useCallback(async () => {
     if (!currentBrand) {
@@ -122,6 +123,8 @@ export function JobsPage() {
 
   const primaryJobs = [...activity.activeJobs, ...activity.completedJobs];
   const visibleJobs = showFailedJobs ? [...primaryJobs, ...activity.failedJobs] : primaryJobs;
+  const mobileInitialJobLimit = 5;
+  const hiddenMobileJobCount = Math.max(visibleJobs.length - mobileInitialJobLimit, 0);
   const queueCards = [
     {
       label: '再開できる作業',
@@ -243,8 +246,29 @@ export function JobsPage() {
                   </button>
                 </div>
               ) : visibleJobs.length > 0 ? (
-                <div className="grid gap-3 lg:grid-cols-2">
-                  {visibleJobs.map((job) => <JobRow key={job.id} job={job} />)}
+                <div className="space-y-3">
+                  <div className="grid gap-3 lg:grid-cols-2" data-testid="jobs-list">
+                    {visibleJobs.map((job, index) => (
+                      <div
+                        key={job.id}
+                        className={!showAllMobileJobs && index >= mobileInitialJobLimit ? 'hidden sm:block' : undefined}
+                        data-testid="jobs-list-item"
+                      >
+                        <JobRow job={job} />
+                      </div>
+                    ))}
+                  </div>
+                  {hiddenMobileJobCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAllMobileJobs((current) => !current)}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white/70 px-4 py-3 text-sm font-semibold text-neutral-700 shadow-soft transition hover:border-primary-300 dark:border-white/10 dark:bg-surface-900/55 dark:text-neutral-200 sm:hidden"
+                      data-testid="mobile-jobs-show-all"
+                    >
+                      {showAllMobileJobs ? '最新5件に戻す' : `さらに${hiddenMobileJobCount}件を表示`}
+                      <ArrowRight className={`h-4 w-4 transition ${showAllMobileJobs ? '-rotate-90' : 'rotate-90'}`} />
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-neutral-200 bg-white/45 p-6 text-center dark:border-white/10 dark:bg-surface-900/35">
