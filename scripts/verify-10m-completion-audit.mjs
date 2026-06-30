@@ -54,9 +54,9 @@ const requiredProofs = [
     expect: 'G620 security operations ok=true with no blockers',
   },
   {
-    id: 'g637_current_production_mass_market_qa',
-    goal: 'G637',
-    path: 'output/playwright/prod-post-g637-mobile-generate-toolbar-20260701-r1/SUMMARY.json',
+    id: 'g638_current_production_mass_market_qa',
+    goal: 'G638',
+    path: 'output/playwright/prod-post-g638-mobile-dashboard-quick-start-20260701-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       Array.isArray(json.failed) &&
@@ -80,8 +80,9 @@ const requiredProofs = [
       hasRouteAssertion(json, 'mobile-generate-campaign', 'h601_rights_confirmation_visible') &&
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_no_intrusive_floating_help_buttons') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_no_intrusive_floating_help_buttons') &&
-      hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_generate_hides_canvas_toolbar'),
-    expect: 'current production mass-market QA ok=true with Gallery fallback, H601-ready generate route, desktop/mobile coverage, no intrusive mobile floating help buttons, mobile Generate canvas toolbar hidden, and no console/page/request failures',
+      hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_generate_hides_canvas_toolbar') &&
+      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_has_above_fold_quick_start'),
+    expect: 'current production mass-market QA ok=true with Gallery fallback, H601-ready generate route, desktop/mobile coverage, no intrusive mobile floating help buttons, mobile Dashboard quick start, mobile Generate canvas toolbar hidden, and no console/page/request failures',
   },
   {
     id: 'production_h601_rights_readback',
