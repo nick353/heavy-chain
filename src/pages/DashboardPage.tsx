@@ -394,6 +394,26 @@ export function DashboardPage() {
           </button>
         </motion.div>
 
+        <motion.nav
+          variants={itemVariants}
+          className="mb-6 grid grid-cols-3 gap-2 sm:hidden"
+          aria-label="モバイルクイック開始"
+          data-testid="mobile-dashboard-quick-start"
+        >
+          {quickActions.map((action) => (
+            <Link
+              key={action.id}
+              to={action.href}
+              className="flex min-h-[76px] flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-2 py-3 text-center shadow-sm transition active:scale-[0.98]"
+            >
+              <span className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${action.color}`}>
+                <action.icon className="h-4 w-4 text-white" size={16} />
+              </span>
+              <span className="text-[11px] font-semibold leading-tight text-white">{action.title}</span>
+            </Link>
+          ))}
+        </motion.nav>
+
         <motion.section variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
           <LightchainParityHub />
         </motion.section>

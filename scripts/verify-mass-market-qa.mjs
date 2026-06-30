@@ -189,6 +189,26 @@ async function runRoute(spec, context, viewport) {
           toolbarVisible,
         });
       }
+      if (spec.key === 'mobile-dashboard') {
+        const quickStart = page.locator('[data-testid="mobile-dashboard-quick-start"]');
+        const quickStartVisible = await quickStart.isVisible().catch(() => false);
+        const quickStartLinks = await quickStart.locator('a').evaluateAll((links) =>
+          links.map((link) => ({
+            text: link.textContent?.replace(/\s+/g, ' ').trim(),
+            href: link.getAttribute('href'),
+          })),
+        ).catch(() => []);
+        addAssertion(routeEvidence, 'mobile_dashboard_has_above_fold_quick_start', (
+          quickStartVisible &&
+          quickStartLinks.length >= 3 &&
+          quickStartLinks.some((link) => link.href === '/generate') &&
+          quickStartLinks.some((link) => link.href === '/canvas/new') &&
+          quickStartLinks.some((link) => link.href === '/gallery')
+        ), {
+          quickStartVisible,
+          quickStartLinks,
+        });
+      }
     }
     if (spec.generateReady) {
       const visibleButtons = await visibleButtonTexts(page);
