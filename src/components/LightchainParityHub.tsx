@@ -93,7 +93,11 @@ const getRouteIcon = (feature: LightchainFeature) => {
   return routeIcon[base] ?? Sparkles;
 };
 
-export function LightchainParityHub() {
+interface LightchainParityHubProps {
+  compactOnMobile?: boolean;
+}
+
+export function LightchainParityHub({ compactOnMobile = false }: LightchainParityHubProps) {
   const [activeCategory, setActiveCategory] = useState<LightchainCategoryId>('recommended');
   const [selectedFeatureId, setSelectedFeatureId] = useState(lightchainFeatureCatalog[0]?.id ?? '');
   const [query, setQuery] = useState('');
@@ -201,10 +205,14 @@ export function LightchainParityHub() {
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              {visibleFeatures.map((feature) => {
+            <div
+              className="grid gap-3 md:grid-cols-2"
+              data-testid={compactOnMobile ? 'dashboard-lightchain-feature-list' : undefined}
+            >
+              {visibleFeatures.map((feature, index) => {
                 const Icon = getRouteIcon(feature);
                 const selected = feature.id === selectedFeature?.id;
+                const mobileHidden = compactOnMobile && index >= 4;
 
                 return (
                   <button
@@ -212,6 +220,8 @@ export function LightchainParityHub() {
                     type="button"
                     onClick={() => setSelectedFeatureId(feature.id)}
                     className={`group rounded-2xl border bg-white p-4 text-left shadow-soft transition dark:bg-neutral-900 ${
+                      mobileHidden ? 'hidden md:block' : ''
+                    } ${
                       selected
                         ? 'border-primary-400 ring-2 ring-primary-100 dark:border-primary-300 dark:ring-primary-400/20'
                         : 'border-neutral-200 hover:border-primary-300 dark:border-neutral-800 dark:hover:border-primary-500/70'
@@ -247,6 +257,17 @@ export function LightchainParityHub() {
                 );
               })}
             </div>
+
+            {compactOnMobile && (
+              <Link
+                to="/lightchain"
+                className="flex items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 shadow-soft transition active:scale-[0.99] dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 md:hidden"
+                data-testid="dashboard-lightchain-all-tools-link"
+              >
+                {lightchainFeatureCatalog.length}機能をすべて見る
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
           </div>
 
           {selectedFeature && (

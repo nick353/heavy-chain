@@ -415,7 +415,7 @@ export function DashboardPage() {
         </motion.nav>
 
         <motion.section variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
-          <LightchainParityHub />
+          <LightchainParityHub compactOnMobile />
         </motion.section>
 
         {/* Workspace Activity */}

@@ -201,6 +201,24 @@ async function runRoute(spec, context, viewport) {
           .locator('[data-testid="dashboard-desktop-quick-actions"]')
           .isVisible()
           .catch(() => false);
+        const dashboardLightchainVisibleFeatureCount = await page
+          .locator('[data-testid="dashboard-lightchain-feature-list"] > button')
+          .evaluateAll((buttons) =>
+            buttons.filter((button) => {
+              const style = window.getComputedStyle(button);
+              const rect = button.getBoundingClientRect();
+              return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+            }).length,
+          )
+          .catch(() => 0);
+        const allToolsLinkVisible = await page
+          .locator('[data-testid="dashboard-lightchain-all-tools-link"]')
+          .isVisible()
+          .catch(() => false);
+        const allToolsHref = await page
+          .locator('[data-testid="dashboard-lightchain-all-tools-link"]')
+          .getAttribute('href')
+          .catch(() => null);
         const quickStartLinks = await quickStart.locator('a').evaluateAll((links) =>
           links.map((link) => ({
             text: link.textContent?.replace(/\s+/g, ' ').trim(),
@@ -220,6 +238,19 @@ async function runRoute(spec, context, viewport) {
         addAssertion(routeEvidence, 'mobile_dashboard_hides_duplicate_quick_action_cards', !desktopQuickActionsVisible, {
           desktopQuickActionsVisible,
         });
+        addAssertion(
+          routeEvidence,
+          'mobile_dashboard_lightchain_has_all_tools_link',
+          dashboardLightchainVisibleFeatureCount > 0 &&
+            dashboardLightchainVisibleFeatureCount <= 4 &&
+            allToolsLinkVisible &&
+            allToolsHref === '/lightchain',
+          {
+            dashboardLightchainVisibleFeatureCount,
+            allToolsLinkVisible,
+            allToolsHref,
+          },
+        );
       }
     }
     if (spec.generateReady) {
