@@ -54,9 +54,9 @@ const requiredProofs = [
     expect: 'G620 security operations ok=true with no blockers',
   },
   {
-    id: 'g649_current_production_mass_market_qa',
-    goal: 'G649',
-    path: 'output/playwright/prod-post-g649-mobile-dashboard-focus-20260701-r1/SUMMARY.json',
+    id: 'g650_current_production_mass_market_qa',
+    goal: 'G650',
+    path: 'output/playwright/prod-post-g650-brand-settings-readiness-20260701-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       Array.isArray(json.failed) &&
@@ -90,6 +90,7 @@ const requiredProofs = [
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_activity_uses_compact_summary') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_has_single_primary_next_action') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_hides_low_priority_desktop_panels') &&
+      hasRouteAssertion(json, 'brand-settings', 'brand_settings_has_readiness_and_safe_next_actions') &&
       hasRouteAssertion(json, 'credits', 'credits_has_actionable_workspace_panel') &&
       hasRouteAssertion(json, 'history', 'history_has_reuse_action_panel') &&
       hasRouteAssertion(json, 'mobile-history', 'history_has_reuse_action_panel') &&
@@ -97,7 +98,7 @@ const requiredProofs = [
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_tool_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-canvas', 'mobile_canvas_content_fits_initial_view'),
-    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage including mobile History, actionable Credits workspace panel, History reuse panel, bounded mobile History timeline, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures',
+    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage including mobile History, Brand Settings readiness and safe next actions, actionable Credits workspace panel, History reuse panel, bounded mobile History timeline, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures',
   },
   {
     id: 'production_h601_rights_readback',
