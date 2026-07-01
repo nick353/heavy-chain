@@ -166,6 +166,7 @@ async function runRoute(spec, context, viewport) {
     await page.waitForTimeout(600);
     await page.waitForFunction(() => !document.body.innerText.includes('読み込み中...'), null, { timeout: 15000 }).catch(() => undefined);
     await dismissBlockingGuides(page, routeEvidence);
+    await waitForRouteReady(page, spec);
     routeEvidence.url = page.url();
     routeEvidence.title = await page.title();
     const body = await bodyText(page);
@@ -1057,6 +1058,22 @@ async function visibleIntrusiveFixedButtons(page) {
       return visible ? [{ label, rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height } }] : [];
     });
   }).catch(() => []);
+}
+
+async function waitForRouteReady(page, spec) {
+  await page
+    .waitForFunction(
+      ({ expected }) => {
+        const body = document.body.innerText;
+        const loadingFallback = body.includes('読み込み後にこの導線をそのまま使えます。')
+          || body.includes('認証状態とブランド設定を確認しています。');
+        return !loadingFallback && expected.every((text) => body.includes(text));
+      },
+      { expected: spec.expected },
+      { timeout: 20000 },
+    )
+    .catch(() => undefined);
+  await page.waitForTimeout(300);
 }
 
 async function installSafeMocks(context) {

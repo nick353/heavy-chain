@@ -44,24 +44,121 @@ const queryClient = new QueryClient({
   },
 });
 
-function PageLoading() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
-      <div className="text-center">
-        <div className="spinner mb-4" />
-        <p className="text-neutral-500 dark:text-neutral-400">読み込み中...</p>
-      </div>
-    </div>
-  );
+const loadingRouteCopy: Record<string, { eyebrow: string; title: string; description: string; actions: string[] }> = {
+  '/dashboard': {
+    eyebrow: 'Dashboard',
+    title: '制作ワークフローを準備しています',
+    description: '商品画像、Lightchain互換、Canvas、ジョブ状況へすぐ戻れるようにワークスペースを準備しています。',
+    actions: ['商品画像から始める', 'Lightchain互換を開く', 'ジョブ状況を見る'],
+  },
+  '/jobs': {
+    eyebrow: 'Production Queue',
+    title: '制作キューを準備しています',
+    description: '進行中、止まった作業、完了した成果物を確認できるようにしています。',
+    actions: ['止まった作業を確認', '成果物を開く', '新しく作る'],
+  },
+  '/gallery': {
+    eyebrow: 'Gallery',
+    title: 'ギャラリーを準備しています',
+    description: '保存済み画像、Canvas再編集、お気に入りを確認できるようにしています。',
+    actions: ['成果物を確認', 'Canvasへ追加', '新しく生成'],
+  },
+  '/marketing': {
+    eyebrow: 'Marketing',
+    title: 'マーケティング画面を準備しています',
+    description: '商品画像から販促brief、Canvas保存、Gallery確認へ進む導線を準備しています。',
+    actions: ['販促briefを作る', 'Canvasへ保存', 'Galleryで確認'],
+  },
+  '/fitting': {
+    eyebrow: 'AI Fitting',
+    title: 'AIフィッティング画面を準備しています',
+    description: '衣服画像、モデル条件、着用画像の制作フローを準備しています。',
+    actions: ['衣服画像を入れる', 'モデル条件を選ぶ', 'Canvasへ保存'],
+  },
+  '/studio': {
+    eyebrow: 'Fashion Studio',
+    title: 'Fashion Studioを準備しています',
+    description: '服、モデル、背景、小物を組み合わせる撮影注文票を準備しています。',
+    actions: ['素材を入れる', '構図を確認', 'Galleryで確認'],
+  },
+  '/models': {
+    eyebrow: 'Model Library',
+    title: 'モデルライブラリを準備しています',
+    description: '顔、ポーズ、体型、年齢層などのモデル条件を準備しています。',
+    actions: ['モデル条件を選ぶ', '生成条件へ渡す', 'Canvasへ保存'],
+  },
+  '/patterns': {
+    eyebrow: 'Pattern Workspace',
+    title: '柄ワークスペースを準備しています',
+    description: '柄、配置、リピート、商品への見え方を確認できる画面を準備しています。',
+    actions: ['柄を作る', '配置を確認', 'Galleryで確認'],
+  },
+  '/video': {
+    eyebrow: 'Video',
+    title: '動画ワークスペースを準備しています',
+    description: 'Storyboard、ショット構成、CTAを確認できる画面を準備しています。',
+    actions: ['Storyboardを作る', 'ショットを確認', 'Galleryで確認'],
+  },
+  '/lab': {
+    eyebrow: 'Lab',
+    title: 'Lab画面を準備しています',
+    description: '仮説、評価軸、採用候補を確認できる画面を準備しています。',
+    actions: ['仮説を作る', '評価軸を見る', '採用候補を確認'],
+  },
+  '/canvas/new': {
+    eyebrow: 'Canvas',
+    title: 'Canvasを準備しています',
+    description: '画像配置、Gallery追加、書き出しの編集画面を準備しています。',
+    actions: ['画像を置く', 'Galleryから追加', '書き出す'],
+  },
+  '/history': {
+    eyebrow: 'History',
+    title: '生成履歴を準備しています',
+    description: '過去の生成、再利用、Canvas再編集の導線を準備しています。',
+    actions: ['履歴を見る', 'Galleryへ移動', 'Canvasで再編集'],
+  },
+  '/credits': {
+    eyebrow: 'Credits',
+    title: '利用状況を準備しています',
+    description: '残量、利用量、次にできる作業を確認できる画面を準備しています。',
+    actions: ['利用状況を見る', '生成へ戻る', 'ジョブを見る'],
+  },
+  '/brand/settings': {
+    eyebrow: 'Brand',
+    title: 'ブランド設定を準備しています',
+    description: '制作前の準備状態、権利確認、ブランド情報を確認できる画面を準備しています。',
+    actions: ['準備状態を見る', '生成へ戻る', 'Galleryで確認'],
+  },
+};
+
+function getLoadingCopy(pathname: string) {
+  if (pathname.startsWith('/generate')) {
+    return {
+      eyebrow: 'Generate',
+      title: '生成画面を準備しています',
+      description: '素材アップロード、権利確認、Gemini生成の準備をしています。',
+      actions: ['素材を入れる', '権利確認を行う', 'Geminiで生成'],
+    };
+  }
+  if (pathname.startsWith('/lightchain')) {
+    return {
+      eyebrow: 'Lightchain Compatible',
+      title: 'Lightchain互換画面を準備しています',
+      description: 'アップロード、AIマスク認識、抽出、Canvas保存の導線を準備しています。',
+      actions: ['画像をアップロード', 'AIマスク認識', 'Canvasに保存'],
+    };
+  }
+  return loadingRouteCopy[pathname] ?? {
+    eyebrow: 'Workspace',
+    title: 'ワークスペースを準備しています',
+    description: '認証状態とブランド設定を確認しています。時間がかかる場合でも、画面を閉じずに再読み込みできます。',
+    actions: ['再読み込み', 'ログイン確認', '状態を確認'],
+  };
 }
 
-function lazyPage(page: React.ReactNode) {
-  return <Suspense fallback={<PageLoading />}>{page}</Suspense>;
-}
-
-function AuthLoadingFallback() {
+function WorkspaceLoadingFallback({ authRecovery = false }: { authRecovery?: boolean }) {
   const location = useLocation();
-  const isDashboard = location.pathname === '/dashboard';
+  const copy = getLoadingCopy(location.pathname);
 
   return (
     <div className="min-h-screen bg-surface-50 px-4 py-8 dark:bg-surface-950">
@@ -70,50 +167,58 @@ function AuthLoadingFallback() {
           <div className="mb-5 flex items-center gap-3">
             <div className="spinner" />
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary-600 dark:text-primary-300">
-              {isDashboard ? 'Dashboard' : 'Workspace'}
+              {copy.eyebrow}
             </p>
           </div>
           <h1 className="text-2xl font-display font-semibold text-neutral-950 dark:text-white sm:text-3xl">
-            {isDashboard ? '制作ワークフローを準備しています' : 'ワークスペースを準備しています'}
+            {copy.title}
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-            認証状態とブランド設定を確認しています。時間がかかる場合でも、画面を閉じずに再読み込みできます。
+            {copy.description}
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="rounded-xl bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-            >
-              再読み込み
-            </button>
-            <a
-              href="/login"
-              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200 dark:hover:bg-white/[0.1]"
-            >
-              ログイン画面へ
-            </a>
-          </div>
-        </div>
-        {isDashboard ? (
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {['商品画像から始める', 'Lightchain互換を開く', 'ジョブ状況を見る'].map((label) => (
-              <div
-                key={label}
-                className="rounded-2xl border border-neutral-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-white/[0.06]"
+          {authRecovery ? (
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="rounded-xl bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
               >
-                <div className="mb-3 h-8 w-8 rounded-xl bg-primary-100 dark:bg-primary-900/40" />
-                <p className="text-sm font-semibold text-neutral-900 dark:text-white">{label}</p>
-                <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
-                  認証確認後にこの導線をそのまま使えます。
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : null}
+                再読み込み
+              </button>
+              <a
+                href="/login"
+                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200 dark:hover:bg-white/[0.1]"
+              >
+                ログイン画面へ
+              </a>
+            </div>
+          ) : null}
+        </div>
+        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          {copy.actions.map((label) => (
+            <div
+              key={label}
+              className="rounded-2xl border border-neutral-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-white/[0.06]"
+            >
+              <div className="mb-3 h-8 w-8 rounded-xl bg-primary-100 dark:bg-primary-900/40" />
+              <p className="text-sm font-semibold text-neutral-900 dark:text-white">{label}</p>
+              <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+                読み込み後にこの導線をそのまま使えます。
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
+}
+
+function PageLoading() {
+  return <WorkspaceLoadingFallback />;
+}
+
+function lazyPage(page: React.ReactNode) {
+  return <Suspense fallback={<PageLoading />}>{page}</Suspense>;
 }
 
 // Protected Route wrapper
@@ -122,7 +227,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // 初期化が完了していない、またはローディング中の場合
   if (!isInitialized || isLoading) {
-    return <AuthLoadingFallback />;
+    return <WorkspaceLoadingFallback authRecovery />;
   }
 
   // 認証されていない場合
