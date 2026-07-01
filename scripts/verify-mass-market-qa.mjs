@@ -362,6 +362,10 @@ async function runRoute(spec, context, viewport) {
         .first()
         .getAttribute('src')
         .catch(() => '');
+      const shotPreviewTones = await page
+        .locator('[data-testid="video-shot-preview-card"]')
+        .evaluateAll((cards) => cards.map((card) => card.getAttribute('data-shot-tone') || ''))
+        .catch(() => []);
       addAssertion(
         routeEvidence,
         'video_workspace_has_clear_generation_flow',
@@ -390,6 +394,17 @@ async function runRoute(spec, context, viewport) {
           hasSelectedStoryboard: previewSource?.includes('selected-video-storyboard') ?? false,
           hasMotionSignature: previewSource?.includes('motionSignature%3A') ?? false,
           hasFramingSignature: previewSource?.includes('framingSignature%3A') ?? false,
+        },
+      );
+      addAssertion(
+        routeEvidence,
+        'video_shot_cards_are_meaningful',
+        shotPreviewTones.length >= 4 &&
+          new Set(shotPreviewTones.filter(Boolean)).size >= 3 &&
+          shotPreviewTones.every((tone) => tone !== 'neutral'),
+        {
+          shotPreviewTones,
+          uniqueToneCount: new Set(shotPreviewTones.filter(Boolean)).size,
         },
       );
     }

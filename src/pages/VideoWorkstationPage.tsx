@@ -116,6 +116,23 @@ const escapeSvgText = (value: string) => {
     .replaceAll('"', '&quot;');
 };
 
+const getShotVisual = (step: string, index: number) => {
+  const lower = step.toLowerCase();
+  if (lower.includes('logo') || step.includes('ロゴ')) {
+    return { label: 'LOGO', sublabel: 'Brand flash', tone: 'blue' };
+  }
+  if (lower.includes('product') || lower.includes('hero') || step.includes('商品')) {
+    return { label: 'PRODUCT', sublabel: 'Hero detail', tone: 'amber' };
+  }
+  if (lower.includes('model') || lower.includes('stride') || lower.includes('fit') || step.includes('モデル') || step.includes('着用')) {
+    return { label: 'MODEL', sublabel: 'Fit motion', tone: 'green' };
+  }
+  if (lower.includes('cta') || lower.includes('swipe') || step.includes('CTA')) {
+    return { label: 'CTA', sublabel: 'End frame', tone: 'dark' };
+  }
+  return { label: `SHOT ${index + 1}`, sublabel: 'Storyboard', tone: 'neutral' };
+};
+
 const buildVideoStoryboardPreviewSvg = ({
   activeChoice,
   selectedStoryboard,
@@ -646,15 +663,45 @@ export function VideoWorkstationPage() {
           </div>
           <div className="mt-4 rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40">
             <div className="grid gap-3 md:grid-cols-4">
-              {shotSteps.slice(0, 4).map((step, index) => (
-                <div key={`${step}-${index}`} className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-white/10 dark:bg-surface-900/70">
-                  <div className="flex aspect-[9/14] items-center justify-center rounded-lg bg-surface-100 text-primary-600 dark:bg-surface-800 dark:text-primary-300">
-                    <Film className="h-8 w-8" />
+              {shotSteps.slice(0, 4).map((step, index) => {
+                const shotVisual = getShotVisual(step, index);
+                return (
+                  <div key={`${step}-${index}`} className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-white/10 dark:bg-surface-900/70">
+                    <div
+                      data-testid="video-shot-preview-card"
+                      data-shot-tone={shotVisual.tone}
+                      className={`flex aspect-[9/14] flex-col justify-between rounded-lg p-4 text-left ${
+                        shotVisual.tone === 'blue'
+                          ? 'bg-sky-50 text-sky-950 dark:bg-sky-950/35 dark:text-sky-100'
+                          : shotVisual.tone === 'amber'
+                            ? 'bg-amber-50 text-amber-950 dark:bg-amber-950/35 dark:text-amber-100'
+                            : shotVisual.tone === 'green'
+                              ? 'bg-emerald-50 text-emerald-950 dark:bg-emerald-950/35 dark:text-emerald-100'
+                              : shotVisual.tone === 'dark'
+                                ? 'bg-neutral-950 text-white dark:bg-black'
+                                : 'bg-surface-100 text-neutral-800 dark:bg-surface-800 dark:text-neutral-100'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="rounded-full bg-white/75 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-neutral-700 dark:bg-white/15 dark:text-white">
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        <Film className="h-4 w-4 opacity-75" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-black leading-tight">{shotVisual.label}</p>
+                        <p className="mt-1 text-xs font-semibold opacity-75">{shotVisual.sublabel}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="h-1.5 rounded-full bg-current opacity-40" />
+                        <div className="h-1.5 w-2/3 rounded-full bg-current opacity-25" />
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">Shot {index + 1}</p>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-neutral-800 dark:text-neutral-100">{step}</p>
                   </div>
-                  <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">Shot {index + 1}</p>
-                  <p className="mt-1 text-sm font-semibold leading-6 text-neutral-800 dark:text-neutral-100">{step}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-900/60">
