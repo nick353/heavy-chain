@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Upload, 
@@ -484,6 +484,30 @@ export function BrandSettingsPage() {
   const runwayReadinessLabel = runwayReadyInApp
     ? 'サイト側の条件は満たしています'
     : runwayReadinessIssues.join(' / ');
+  const brandProfileComplete = Boolean(form.name.trim() && form.toneDescription.trim() && form.targetAudience.trim());
+  const setupItems = [
+    {
+      label: 'ブランド情報',
+      ready: brandProfileComplete,
+      detail: brandProfileComplete ? '生成プロンプトへ反映できます' : '世界観とターゲット層を入力',
+    },
+    {
+      label: 'Runway接続',
+      ready: runwayReadyInApp,
+      detail: runwayReadyInApp ? '生成条件は準備済み' : runwayReadinessLabel || '接続確認が必要',
+    },
+    {
+      label: 'チーム',
+      ready: members.length > 0,
+      detail: members.length > 0 ? `${members.length}名が参加中` : '共同編集者を招待できます',
+    },
+    {
+      label: '権利確認',
+      ready: true,
+      detail: '生成前に素材権利を確認します',
+    },
+  ];
+  const readySetupCount = setupItems.filter((item) => item.ready).length;
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -510,6 +534,80 @@ export function BrandSettingsPage() {
       </motion.div>
 
       <div className="space-y-8">
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+          className="glass-panel rounded-2xl p-5 sm:p-6"
+          data-testid="brand-settings-readiness-panel"
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary-600 dark:text-primary-300">
+                Workspace readiness
+              </p>
+              <h2 className="mt-1 text-lg font-semibold text-neutral-900 dark:text-white">
+                生成前に整えること
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                ブランド情報、Runway接続、権利確認の状態を見て、すぐ制作へ戻れます。
+              </p>
+            </div>
+            <div className="rounded-2xl border border-neutral-200 bg-white/70 px-4 py-3 text-sm dark:border-neutral-800 dark:bg-white/[0.06]">
+              <span className="font-semibold text-neutral-900 dark:text-white">{readySetupCount}</span>
+              <span className="text-neutral-500 dark:text-neutral-400"> / {setupItems.length} ready</span>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {setupItems.map((item) => (
+              <div
+                key={item.label}
+                className={`rounded-xl border p-3 ${
+                  item.ready
+                    ? 'border-green-200 bg-green-50/75 dark:border-green-900/60 dark:bg-green-950/20'
+                    : 'border-amber-200 bg-amber-50/75 dark:border-amber-900/60 dark:bg-amber-950/20'
+                }`}
+                data-testid="brand-settings-readiness-item"
+              >
+                <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+                  {item.ready ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-300" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-300" />
+                  )}
+                  {item.label}
+                </div>
+                <p className="mt-2 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
+                  {item.detail}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div
+            className="mt-5 grid gap-2 sm:grid-cols-3"
+            data-testid="brand-settings-next-actions"
+          >
+            <Link
+              to="/generate?feature=campaign-image"
+              className="flex min-h-11 items-center justify-center rounded-xl bg-neutral-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+            >
+              生成へ進む
+            </Link>
+            <Link
+              to="/gallery"
+              className="flex min-h-11 items-center justify-center rounded-xl border border-neutral-200 bg-white/75 px-4 text-sm font-semibold text-neutral-700 transition hover:bg-white dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200"
+            >
+              素材を見る
+            </Link>
+            <Link
+              to="/credits"
+              className="flex min-h-11 items-center justify-center rounded-xl border border-neutral-200 bg-white/75 px-4 text-sm font-semibold text-neutral-700 transition hover:bg-white dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200"
+            >
+              利用状況
+            </Link>
+          </div>
+        </motion.section>
+
         {/* Runway MCP Connection */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

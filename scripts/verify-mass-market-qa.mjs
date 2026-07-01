@@ -227,6 +227,35 @@ async function runRoute(spec, context, viewport) {
         });
       }
     }
+    if (spec.key === 'brand-settings') {
+      const readinessPanelVisible = await page
+        .locator('[data-testid="brand-settings-readiness-panel"]')
+        .isVisible()
+        .catch(() => false);
+      const readinessItemCount = await page
+        .locator('[data-testid="brand-settings-readiness-item"]')
+        .count()
+        .catch(() => 0);
+      const nextActionLinks = await page
+        .locator('[data-testid="brand-settings-next-actions"] a')
+        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+        .catch(() => []);
+      addAssertion(
+        routeEvidence,
+        'brand_settings_has_readiness_and_safe_next_actions',
+        readinessPanelVisible &&
+          readinessItemCount >= 4 &&
+          nextActionLinks.includes('/generate?feature=campaign-image') &&
+          nextActionLinks.includes('/gallery') &&
+          nextActionLinks.includes('/credits') &&
+          !nextActionLinks.some((href) => href && /checkout|payment|billing\/checkout/.test(href)),
+        {
+          readinessPanelVisible,
+          readinessItemCount,
+          nextActionLinks,
+        },
+      );
+    }
     if (spec.mobile) {
       const intrusiveFixedButtons = await visibleIntrusiveFixedButtons(page);
       addAssertion(routeEvidence, 'mobile_no_intrusive_floating_help_buttons', intrusiveFixedButtons.length === 0, {
