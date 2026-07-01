@@ -54,9 +54,9 @@ const requiredProofs = [
     expect: 'G620 security operations ok=true with no blockers',
   },
   {
-    id: 'g657_current_production_mass_market_qa',
-    goal: 'G657',
-    path: 'output/playwright/prod-post-g657-marketing-flow-20260701-r2/SUMMARY.json',
+    id: 'g658_current_production_mass_market_qa',
+    goal: 'G658',
+    path: 'output/playwright/prod-post-g658-fitting-flow-20260701-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       Array.isArray(json.failed) &&
@@ -93,6 +93,8 @@ const requiredProofs = [
       hasRouteAssertion(json, 'brand-settings', 'brand_settings_has_readiness_and_safe_next_actions') &&
       hasRouteAssertion(json, 'marketing', 'marketing_workspace_has_clear_generation_flow') &&
       hasRouteAssertion(json, 'marketing', 'marketing_preview_has_brief_context') &&
+      hasRouteAssertion(json, 'fitting', 'fitting_workspace_has_clear_generation_flow') &&
+      hasRouteAssertion(json, 'fitting', 'fitting_preview_has_model_matrix_context') &&
       hasRouteAssertion(json, 'models', 'model_library_has_clear_generation_flow') &&
       hasRouteAssertion(json, 'patterns', 'pattern_workspace_has_clear_generation_flow') &&
       hasRouteAssertion(json, 'patterns', 'pattern_preview_uses_garment_mockup_context') &&
@@ -111,7 +113,7 @@ const requiredProofs = [
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_tool_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-canvas', 'mobile_canvas_content_fits_initial_view'),
-    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage including mobile History, Brand Settings readiness and safe next actions, clear Marketing generation flow with brief-context preview, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures',
+    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage including mobile History, Brand Settings readiness and safe next actions, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix preview/context, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures',
   },
   {
     id: 'production_h601_rights_readback',
