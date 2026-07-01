@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, ChevronRight, Save } from 'lucide-react';
+import { Check, ChevronRight, Images, Layers3, Save, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import {
@@ -108,6 +108,12 @@ const initialStudioMaterial: MaterialReferenceState = {
   scale: 62,
   note: '実商品、背景、小物の参照を置いて撮影セットを組む',
 };
+
+const studioReadinessItems = [
+  { label: '素材', detail: '衣服、背景、小物を1つの撮影セットとして扱う' },
+  { label: '構成', detail: 'モデル、ポーズ、背景を選んで注文票にする' },
+  { label: '保存先', detail: 'Canvas、Gallery、生成プロンプトへ同じ条件で渡す' },
+];
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -457,6 +463,65 @@ export function FashionStudioPage() {
         </div>
       </section>
 
+      <section
+        data-testid="studio-action-panel"
+        className="grid gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/20 lg:grid-cols-[minmax(0,1fr)_auto]"
+      >
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+            Studio flow
+          </p>
+          <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
+            素材を置いて、撮影セットを決め、生成かCanvasへ進む
+          </h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {studioReadinessItems.map((item) => (
+              <div
+                key={item.label}
+                data-testid="studio-readiness-item"
+                className="rounded-xl border border-white/70 bg-white/70 p-3 text-sm dark:border-white/10 dark:bg-surface-900/60"
+              >
+                <p className="font-semibold text-neutral-950 dark:text-white">{item.label}</p>
+                <p className="mt-1 leading-5 text-neutral-600 dark:text-neutral-300">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div
+          data-testid="studio-next-actions"
+          className="flex flex-col gap-2 sm:flex-row lg:min-w-64 lg:flex-col lg:justify-center"
+        >
+          <Link
+            to={buildGenerationIntentHref({
+              feature: 'model-matrix',
+              prompt: `${productLine}\n${modelProfile}\n${pose}\n${background}`,
+              sourceWorkspace: 'studio',
+              workflowVersion: 'studio-selection-local-v1',
+              sourceLabel: workspaceSourceConfig.studio.label,
+              sourceResumePath: workspaceSourceConfig.studio.resumePath,
+              sourceMode: 'local-workflow-intake',
+            })}
+            className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+          >
+            <Sparkles className="h-4 w-4" />
+            生成指示へ送る
+          </Link>
+          <button
+            type="button"
+            onClick={handoffToCanvas}
+            disabled={!currentBrand}
+            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Layers3 className="h-4 w-4" />
+            Canvasへ保存
+          </button>
+          <Link to="/gallery" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
+            <Images className="h-4 w-4" />
+            Galleryで確認
+          </Link>
+        </div>
+      </section>
+
       <section className="grid gap-5 lg:grid-cols-2">
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
 	          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
@@ -551,6 +616,7 @@ export function FashionStudioPage() {
             </div>
             <figure>
               <img
+                data-testid="studio-preview-image"
                 src={previewImageUrl}
                 alt="Studio setup preview"
                 className="aspect-[3/2] w-full rounded-xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
