@@ -565,8 +565,75 @@ const categoryWorkbenchLabels: Record<ToolCategory, {
   },
 };
 
-const textArtifactPreview =
-  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAwIiBoZWlnaHQ9IjkwMCIgdmlld0JveD0iMCAwIDEyMDAgOTAwIj48cmVjdCB3aWR0aD0iMTIwMCIgaGVpZ2h0PSI5MDAiIGZpbGw9IiMwZjE3MmEiLz48cmVjdCB4PSI5NiIgeT0iOTYiIHdpZHRoPSIxMDA4IiBoZWlnaHQ9IjcwOCIgcng9IjQwIiBmaWxsPSIjMTExODI3IiBzdHJva2U9IiMyMmQzZWUiIHN0cm9rZS13aWR0aD0iNCIvPjx0ZXh0IHg9IjE1MCIgeT0iMjEwIiBmaWxsPSIjZTVlN2ViIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNTQiIGZvbnQtd2VpZ2h0PSI3MDAiPkxpZ2h0Y2hhaW4gY29tcGF0aWJsZSBicmllZjwvdGV4dD48dGV4dCB4PSIxNTAiIHk9IjMwMCIgZmlsbD0iIzY3ZThmOSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjM0Ij5IZWF2eSBDaGFpbiBDYW52YXMgb3JkZXIgc2hlZXQ8L3RleHQ+PC9zdmc+';
+const encodeSvgDataUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.trim())}`;
+
+const escapeSvgText = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+const truncateSvgText = (value: string, maxLength: number) => {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}…` : normalized;
+};
+
+const buildOrderSheetPreview = ({
+  tool,
+  brief,
+  referenceNote,
+  materialKind,
+  activeLayer,
+  printPlacement,
+  printScale,
+  selectedMaskCandidate,
+  workbenchStep,
+  outputs,
+}: {
+  tool: CompatTool;
+  brief: string;
+  referenceNote: string;
+  materialKind: string;
+  activeLayer: string;
+  printPlacement: string;
+  printScale: number;
+  selectedMaskCandidate: MaskCandidate | null;
+  workbenchStep: WorkbenchStep;
+  outputs: string[];
+}) => {
+  const title = escapeSvgText(truncateSvgText(tool.title, 34));
+  const request = escapeSvgText(truncateSvgText(brief, 58));
+  const reference = escapeSvgText(truncateSvgText(referenceNote, 58));
+  const outputText = escapeSvgText(outputs.slice(0, 3).join(' / '));
+  const maskText = escapeSvgText(selectedMaskCandidate ?? 'not-selected');
+  const layerText = escapeSvgText(`${materialKind} / ${activeLayer} / ${printPlacement} / ${printScale}%`);
+  const nextStep = workbenchStep === 'next' ? 'Canvas-ready' : workbenchStep === 'extracted' ? 'Extracted' : workbenchStep === 'mask' ? 'Mask review' : 'Material intake';
+
+  return encodeSvgDataUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" data-lightchain-order-preview="lightchain-order-sheet-v1" data-tool-id="${escapeSvgText(tool.id)}">
+      <rect width="1200" height="900" fill="#f8fafc"/>
+      <rect x="70" y="64" width="1060" height="772" rx="34" fill="#ffffff" stroke="#d4d4d8" stroke-width="3"/>
+      <rect x="70" y="64" width="1060" height="156" rx="34" fill="#0f172a"/>
+      <text x="112" y="126" fill="#67e8f9" font-family="Arial, sans-serif" font-size="28" font-weight="700">LIGHTCHAIN ORDER SHEET</text>
+      <text x="112" y="178" fill="#ffffff" font-family="Arial, sans-serif" font-size="48" font-weight="800">${title}</text>
+      <text x="112" y="276" fill="#0f172a" font-family="Arial, sans-serif" font-size="28" font-weight="700">Selected tool</text>
+      <text x="112" y="316" fill="#334155" font-family="Arial, sans-serif" font-size="26">${escapeSvgText(tool.id)} / ${escapeSvgText(tool.lightchainRoute)}</text>
+      <text x="112" y="392" fill="#0f172a" font-family="Arial, sans-serif" font-size="28" font-weight="700">Request</text>
+      <text x="112" y="432" fill="#334155" font-family="Arial, sans-serif" font-size="25">${request}</text>
+      <text x="112" y="492" fill="#64748b" font-family="Arial, sans-serif" font-size="22">${reference}</text>
+      <rect x="112" y="560" width="460" height="172" rx="22" fill="#ecfeff" stroke="#67e8f9" stroke-width="2"/>
+      <text x="144" y="612" fill="#0f172a" font-family="Arial, sans-serif" font-size="26" font-weight="700">Material / Layer</text>
+      <text x="144" y="658" fill="#0f766e" font-family="Arial, sans-serif" font-size="24">${layerText}</text>
+      <text x="144" y="704" fill="#155e75" font-family="Arial, sans-serif" font-size="22">mask: ${maskText}</text>
+      <rect x="628" y="560" width="460" height="172" rx="22" fill="#f0fdf4" stroke="#86efac" stroke-width="2"/>
+      <text x="660" y="612" fill="#0f172a" font-family="Arial, sans-serif" font-size="26" font-weight="700">Output / Next step</text>
+      <text x="660" y="658" fill="#166534" font-family="Arial, sans-serif" font-size="24">${outputText}</text>
+      <text x="660" y="704" fill="#15803d" font-family="Arial, sans-serif" font-size="22">${nextStep}</text>
+      <text x="112" y="794" fill="#94a3b8" font-family="Arial, sans-serif" font-size="22">lightchain-order-sheet-v1 / selected-tool-preview / Canvas handoff</text>
+    </svg>
+  `);
+};
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -938,15 +1005,28 @@ export function LightchainWorkbenchPage() {
         lightchainWorkbenchState,
         garmentReferenceState: selectedTool.id === 'fitting-clothing-reference' ? lightchainWorkbenchState : null,
       } : {};
+      const orderSheetPreview = buildOrderSheetPreview({
+        tool: selectedTool,
+        brief,
+        referenceNote,
+        materialKind: garmentCategory,
+        activeLayer,
+        printPlacement,
+        printScale,
+        selectedMaskCandidate,
+        workbenchStep,
+        outputs: selectedTool.outputs,
+      });
       const artifact = await saveWorkspaceArtifactBestEffort({
         brandId: currentBrand.id,
         featureType: `lightchain-${selectedTool.id}`,
         title: selectedTool.title,
-        imageUrl: shouldSaveWorkbenchAsset ? garmentImageUrl : textArtifactPreview,
+        imageUrl: orderSheetPreview,
         prompt: `${selectedTool.promptTemplate}\n\n依頼: ${brief}\n参考: ${referenceNote}${lightchainWorkbenchState ? `\n素材: ${garmentCategory} / ${cutMode} / ${printPlacement} / ${printScale}%` : ''}`,
         canvasProjectId: projectId,
         metadata: {
           sourceWorkspace: 'lightchain-workbench',
+          previewKind: 'lightchain-order-sheet-v1',
           lightchainRoute: selectedTool.lightchainRoute,
           inputs: selectedTool.inputs,
           outputs: selectedTool.outputs,

@@ -179,6 +179,20 @@ async function verifyFeatureWorkflow(page, tool) {
   const overlayObject = objects.find((object) => object?.metadata?.feature === `lightchain-${tool.id}-overlay-layer`);
   const projectMaterialObject = projectObjects.find((object) => object?.metadata?.feature === `lightchain-${tool.id}-material-reference`);
   const projectOverlayObject = projectObjects.find((object) => object?.metadata?.feature === `lightchain-${tool.id}-overlay-layer`);
+  const workspaceArtifact = await page.evaluate((featureType) => {
+    const artifacts = [];
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key?.startsWith('heavy-chain-workspace-artifacts:v1:')) continue;
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem(key) || '[]');
+        if (Array.isArray(parsed)) artifacts.push(...parsed);
+      } catch {
+        // Ignore unrelated localStorage values.
+      }
+    }
+    return artifacts.find((artifact) => artifact?.featureType === featureType) ?? null;
+  }, `lightchain-${tool.id}`);
   const params = projectMaterialObject?.metadata?.parameters ?? {};
   const validLayerIds = catalog.categoryLayers[tool.category] ?? [];
   recordFeatureAssertion(result, 'canvas_route_opened', /\/canvas\//.test(page.url()), { url: page.url() });
@@ -211,6 +225,17 @@ async function verifyFeatureWorkflow(page, tool) {
   recordFeatureAssertion(result, 'mask_and_composition_metadata_saved', Boolean(params.maskPlan?.selectedCandidate && params.compositionPreview?.flow), {
     maskPlan: params.maskPlan ?? null,
     compositionPreview: params.compositionPreview ?? null,
+  });
+  recordFeatureAssertion(result, 'workspace_artifact_preview_is_tool_specific_order_sheet', (
+    typeof workspaceArtifact?.imageUrl === 'string' &&
+    workspaceArtifact.imageUrl.includes('lightchain-order-sheet-v1') &&
+    workspaceArtifact.imageUrl.includes(encodeURIComponent(tool.id)) &&
+    workspaceArtifact.imageUrl.includes('selected-tool-preview') &&
+    workspaceArtifact?.metadata?.previewKind === 'lightchain-order-sheet-v1'
+  ), {
+    featureType: workspaceArtifact?.featureType ?? null,
+    imageUrlExcerpt: typeof workspaceArtifact?.imageUrl === 'string' ? workspaceArtifact.imageUrl.slice(0, 500) : null,
+    previewKind: workspaceArtifact?.metadata?.previewKind ?? null,
   });
 
   await screenshot(page, `desktop-${tool.id}`);
@@ -360,7 +385,7 @@ async function bodyText(page) {
 function readLightchainCatalog() {
   const source = fs.readFileSync(path.join(process.cwd(), 'src/pages/LightchainWorkbenchPage.tsx'), 'utf8');
   const toolsBlock = source.match(/const tools: CompatTool\[] = \[([\s\S]+?)\];\n\nconst statusLabel/);
-  const categoryBlock = source.match(/const categoryWorkbenchLabels:[\s\S]+?= \{([\s\S]+?)\n\};\n\nconst textArtifactPreview/);
+  const categoryBlock = source.match(/const categoryWorkbenchLabels:[\s\S]+?= \{([\s\S]+?)\n\};\n\nconst encodeSvgDataUrl/);
   const tools = [];
   if (toolsBlock) {
     for (const match of toolsBlock[1].matchAll(/\{\s*id: '([^']+)'[\s\S]+?title: '([^']+)'[\s\S]+?category: '([^']+)'/g)) {
