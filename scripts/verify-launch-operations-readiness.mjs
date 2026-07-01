@@ -112,7 +112,7 @@ async function checkRoute({ key, path: routePath, expected }) {
   const page = await newObservedPage();
   await page.goto(`${baseUrl}${routePath}`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => undefined);
-  await page.waitForTimeout(1000);
+  await waitForExpectedRouteText(page, expected, 30000);
   const body = await page.locator('body').innerText({ timeout: 15000 }).catch((error) => `__ERROR__ ${error.message}`);
   const screenshot = `${outDir}/${key}.png`;
   await page.screenshot({ path: screenshot, fullPage: false });
@@ -258,7 +258,7 @@ async function checkMobileRoutes() {
       attachPageObservers(page);
       await page.goto(`${baseUrl}${item.path}`, { waitUntil: 'domcontentloaded' });
       await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => undefined);
-      await page.waitForTimeout(1000);
+      await waitForExpectedRouteText(page, item.expected, 30000);
       const body = await page.locator('body').innerText({ timeout: 15000 });
       const screenshot = `${outDir}/${item.key}.png`;
       await page.screenshot({ path: screenshot, fullPage: false });
@@ -274,6 +274,14 @@ async function checkMobileRoutes() {
   } finally {
     await mobile.close();
   }
+}
+
+async function waitForExpectedRouteText(page, expected, timeout = 30000) {
+  await page.waitForFunction((texts) => {
+    const body = document.body?.innerText || '';
+    const loading = /読み込み中|Loading/.test(body);
+    return !loading && texts.every((text) => body.includes(text));
+  }, expected, { timeout }).catch(() => undefined);
 }
 
 async function checkDocsAndProofFiles() {
