@@ -7,6 +7,7 @@ interface ActivityTimelineProps {
   items: TimelineItem[];
   emptyMessage?: string;
   mobileInitialLimit?: number;
+  desktopInitialLimit?: number;
 }
 
 const statusStyles = {
@@ -43,10 +44,11 @@ const formatDate = (dateString: string) => {
   return date.toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-export function ActivityTimeline({ items, emptyMessage = 'まだ表示できる履歴がありません。', mobileInitialLimit }: ActivityTimelineProps) {
+export function ActivityTimeline({ items, emptyMessage = 'まだ表示できる履歴がありません。', mobileInitialLimit, desktopInitialLimit }: ActivityTimelineProps) {
   const [expandedId, setExpandedId] = useState(items[0]?.id ?? '');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [mobileExpanded, setMobileExpanded] = useState(false);
+  const [desktopExpanded, setDesktopExpanded] = useState(false);
 
   const handleCopy = async (id: string, prompt: string) => {
     try {
@@ -73,12 +75,17 @@ export function ActivityTimeline({ items, emptyMessage = 'まだ表示できる�
         const status = statusStyles[item.status];
         const StatusIcon = status.icon;
         const hiddenOnMobile = Boolean(mobileInitialLimit && !mobileExpanded && index >= mobileInitialLimit);
+        const hiddenOnDesktop = Boolean(desktopInitialLimit && !desktopExpanded && index >= desktopInitialLimit);
 
         return (
           <article
             key={item.id}
             data-testid="activity-timeline-item"
-            className={`relative rounded-2xl border border-white/60 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/45 ${hiddenOnMobile ? 'hidden md:block' : ''}`}
+            className={[
+              'relative rounded-2xl border border-white/60 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/45',
+              hiddenOnMobile ? 'hidden md:block' : '',
+              hiddenOnDesktop ? 'md:hidden' : '',
+            ].filter(Boolean).join(' ')}
           >
             <div className="flex gap-4">
               <div className="flex flex-col items-center">
@@ -167,6 +174,16 @@ export function ActivityTimeline({ items, emptyMessage = 'まだ表示できる�
           data-testid="mobile-history-show-all"
         >
           {mobileExpanded ? '少なく表示' : `さらに${items.length - mobileInitialLimit}件を表示`}
+        </button>
+      )}
+      {desktopInitialLimit && items.length > desktopInitialLimit && (
+        <button
+          type="button"
+          onClick={() => setDesktopExpanded((expanded) => !expanded)}
+          className="hidden w-full items-center justify-center rounded-xl border border-neutral-200 bg-white/70 px-4 py-3 text-sm font-semibold text-neutral-700 shadow-soft transition hover:bg-white dark:border-white/10 dark:bg-surface-900/70 dark:text-neutral-200 md:flex"
+          data-testid="desktop-history-show-all"
+        >
+          {desktopExpanded ? '少なく表示' : `さらに${items.length - desktopInitialLimit}件を表示`}
         </button>
       )}
     </div>

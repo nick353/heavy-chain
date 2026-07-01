@@ -142,7 +142,12 @@ export function HistoryPage() {
                   </button>
                 </div>
               ) : (
-                <ActivityTimeline items={activity.timelineItems} emptyMessage="まだ生成履歴がありません。" mobileInitialLimit={8} />
+                <ActivityTimeline
+                  items={activity.timelineItems}
+                  emptyMessage="まだ生成履歴がありません。"
+                  mobileInitialLimit={8}
+                  desktopInitialLimit={12}
+                />
               )}
             </div>
           </div>

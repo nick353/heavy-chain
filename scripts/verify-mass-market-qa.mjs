@@ -209,6 +209,23 @@ async function runRoute(spec, context, viewport) {
         timelinePanelVisible,
         actionLinks,
       });
+      if (spec.key === 'history') {
+        const visibleTimelineCount = await page
+          .locator('[data-testid="activity-timeline-item"]')
+          .evaluateAll((items) =>
+            items.filter((item) => {
+              const style = window.getComputedStyle(item);
+              const rect = item.getBoundingClientRect();
+              return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+            }).length,
+          )
+          .catch(() => 0);
+        const showAllVisible = await page.locator('[data-testid="desktop-history-show-all"]').isVisible().catch(() => false);
+        addAssertion(routeEvidence, 'desktop_history_timeline_is_bounded', visibleTimelineCount <= 12 && (showAllVisible || visibleTimelineCount < 12), {
+          visibleTimelineCount,
+          showAllVisible,
+        });
+      }
       if (spec.key === 'mobile-history') {
         const visibleTimelineCount = await page
           .locator('[data-testid="activity-timeline-item"]')
