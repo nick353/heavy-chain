@@ -28,7 +28,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'production monitor',
-    path: 'output/playwright/production-monitor-post-g655-20260701-r1/summary.json',
+    path: 'output/playwright/production-monitor-post-g656-20260701-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.blockers).length === 0 &&
@@ -45,7 +45,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production mass-market QA current',
-    path: 'output/playwright/prod-post-g655-studio-flow-20260701-r1/SUMMARY.json',
+    path: 'output/playwright/prod-post-g656-lab-flow-20260701-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -82,6 +82,8 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'video', 'video_shot_cards_are_meaningful') &&
       hasRouteAssertion(json, 'studio', 'studio_workspace_has_clear_generation_flow') &&
       hasRouteAssertion(json, 'studio', 'studio_preview_has_composition_context') &&
+      hasRouteAssertion(json, 'lab', 'lab_workspace_has_clear_generation_flow') &&
+      hasRouteAssertion(json, 'lab', 'lab_preview_has_evaluation_context') &&
       hasRouteAssertion(json, 'credits', 'credits_has_actionable_workspace_panel') &&
       hasRouteAssertion(json, 'history', 'history_has_reuse_action_panel') &&
       hasRouteAssertion(json, 'history', 'desktop_history_timeline_is_bounded') &&
@@ -90,7 +92,7 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_tool_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-canvas', 'mobile_canvas_content_fits_initial_view'),
-    expect: 'current production mass-market QA ok=true with 17 desktop routes, 9 mobile routes including mobile History, Gallery fallback visible without scary remote-failure toast, H601-ready generate route, Brand Settings readiness and safe next actions, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, no console/page/request failures, and cleanup closed',
+    expect: 'current production mass-market QA ok=true with 17 desktop routes, 9 mobile routes including mobile History, Gallery fallback visible without scary remote-failure toast, H601-ready generate route, Brand Settings readiness and safe next actions, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, no console/page/request failures, and cleanup closed',
   },
   {
     name: 'G610 retention workspace search',
