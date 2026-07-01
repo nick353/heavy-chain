@@ -642,15 +642,27 @@ async function runRoute(spec, context, viewport) {
           .isVisible()
           .catch(() => false);
         const dashboardLightchainVisibleFeatureCount = await page
-          .locator('[data-testid="dashboard-lightchain-feature-list"] > button')
-          .evaluateAll((buttons) =>
-            buttons.filter((button) => {
-              const style = window.getComputedStyle(button);
-              const rect = button.getBoundingClientRect();
+          .locator('[data-testid="dashboard-lightchain-feature-list"] > a')
+          .evaluateAll((links) =>
+            links.filter((link) => {
+              const style = window.getComputedStyle(link);
+              const rect = link.getBoundingClientRect();
               return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
             }).length,
           )
           .catch(() => 0);
+        const dashboardLightchainVisibleFeatureLinks = await page
+          .locator('[data-testid="dashboard-lightchain-feature-list"] > a')
+          .evaluateAll((links) =>
+            links
+              .filter((link) => {
+                const style = window.getComputedStyle(link);
+                const rect = link.getBoundingClientRect();
+                return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+              })
+              .map((link) => link.getAttribute('href')),
+          )
+          .catch(() => []);
         const allToolsLinkVisible = await page
           .locator('[data-testid="dashboard-lightchain-all-tools-link"]')
           .isVisible()
@@ -720,12 +732,23 @@ async function runRoute(spec, context, viewport) {
           'mobile_dashboard_lightchain_has_all_tools_link',
           dashboardLightchainVisibleFeatureCount > 0 &&
             dashboardLightchainVisibleFeatureCount <= 4 &&
+            dashboardLightchainVisibleFeatureLinks.every((href) => typeof href === 'string' && href.startsWith('/lightchain/')) &&
             allToolsLinkVisible &&
             allToolsHref === '/lightchain',
           {
             dashboardLightchainVisibleFeatureCount,
+            dashboardLightchainVisibleFeatureLinks,
             allToolsLinkVisible,
             allToolsHref,
+          },
+        );
+        addAssertion(
+          routeEvidence,
+          'mobile_dashboard_lightchain_cards_open_detail_routes',
+          dashboardLightchainVisibleFeatureLinks.length > 0 &&
+            dashboardLightchainVisibleFeatureLinks.every((href) => typeof href === 'string' && href.startsWith('/lightchain/')),
+          {
+            dashboardLightchainVisibleFeatureLinks,
           },
         );
         addAssertion(

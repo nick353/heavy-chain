@@ -43,18 +43,6 @@ const statusLabel: Record<LightchainFeature['status'], string> = {
   'local-proof': '検証中',
 };
 
-const routeLabel: Record<string, string> = {
-  '/marketing': '販促を作る',
-  '/fitting': '着用画像を作る',
-  '/lab': '企画を試す',
-  '/video': '動画構成へ',
-  '/models': 'モデルを選ぶ',
-  '/studio': '撮影セットへ',
-  '/patterns': '柄を作る',
-  '/brand/settings': 'ブランド設定へ',
-  '/canvas/new': 'Canvasで編集',
-};
-
 const routeIcon: Record<string, typeof Sparkles> = {
   '/marketing': PackageOpen,
   '/fitting': Shirt,
@@ -67,26 +55,7 @@ const routeIcon: Record<string, typeof Sparkles> = {
   '/canvas/new': Layers3,
 };
 
-const materialLabels: Record<LightchainCategoryId, string[]> = {
-  recommended: ['商品画像', '用途', 'ブランドトーン'],
-  planning: ['素材・テーマ', '方向性', '採用条件'],
-  fitting: ['衣服画像', 'モデル条件', '背景'],
-  graphics: ['柄・ロゴ', '対象アイテム', '配色'],
-};
-
-const outputLabels: Record<LightchainCategoryId, string[]> = {
-  recommended: ['生成画像', '履歴', 'Canvas'],
-  planning: ['企画案', '生成条件', '比較候補'],
-  fitting: ['着用画像', 'モデル差分', 'EC素材'],
-  graphics: ['柄案', 'プリント配置', 'ベクター方針'],
-};
-
 const getRouteBase = (route: string) => route.split('?')[0];
-
-const getActionLabel = (feature: LightchainFeature) => {
-  const base = getRouteBase(feature.route);
-  return routeLabel[base] ?? '開く';
-};
 
 const getRouteIcon = (feature: LightchainFeature) => {
   const base = getRouteBase(feature.route);
@@ -99,7 +68,6 @@ interface LightchainParityHubProps {
 
 export function LightchainParityHub({ compactOnMobile = false }: LightchainParityHubProps) {
   const [activeCategory, setActiveCategory] = useState<LightchainCategoryId>('recommended');
-  const [selectedFeatureId, setSelectedFeatureId] = useState(lightchainFeatureCatalog[0]?.id ?? '');
   const [query, setQuery] = useState('');
 
   const activeCategoryMeta = lightchainCategories.find((category) => category.id === activeCategory) ?? lightchainCategories[0];
@@ -122,14 +90,8 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
     return filtered.length ? filtered : lightchainFeatureCatalog.filter((feature) => feature.category === activeCategory);
   }, [activeCategory, query]);
 
-  const selectedFeature = visibleFeatures.find((feature) => feature.id === selectedFeatureId) ?? visibleFeatures[0] ?? lightchainFeatureCatalog[0];
-  const SelectedIcon = selectedFeature ? getRouteIcon(selectedFeature) : Sparkles;
-  const selectedHref = selectedFeature ? buildLightchainFeatureHref(selectedFeature) : '/generate';
-
   const handleCategoryChange = (categoryId: LightchainCategoryId) => {
-    const firstFeature = lightchainFeatureCatalog.find((feature) => feature.category === categoryId);
     setActiveCategory(categoryId);
-    setSelectedFeatureId(firstFeature?.id ?? '');
     setQuery('');
   };
 
@@ -190,8 +152,7 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
           })}
         </div>
 
-        <div className="grid gap-5 lg:col-span-9 xl:grid-cols-12">
-          <div className="space-y-4 xl:col-span-8">
+        <div className="space-y-4 lg:col-span-9">
             <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -211,26 +172,20 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
             >
               {visibleFeatures.map((feature, index) => {
                 const Icon = getRouteIcon(feature);
-                const selected = feature.id === selectedFeature?.id;
                 const mobileHidden = compactOnMobile && index >= 4;
+                const featureHref = buildLightchainFeatureHref(feature);
 
                 return (
-                  <button
+                  <Link
                     key={feature.id}
-                    type="button"
-                    onClick={() => setSelectedFeatureId(feature.id)}
-                    className={`group rounded-2xl border bg-white p-4 text-left shadow-soft transition dark:bg-neutral-900 ${
+                    to={featureHref}
+                    className={`group rounded-2xl border bg-white p-4 text-left shadow-soft transition hover:-translate-y-0.5 dark:bg-neutral-900 ${
                       mobileHidden ? 'hidden md:block' : ''
-                    } ${
-                      selected
-                        ? 'border-primary-400 ring-2 ring-primary-100 dark:border-primary-300 dark:ring-primary-400/20'
-                        : 'border-neutral-200 hover:border-primary-300 dark:border-neutral-800 dark:hover:border-primary-500/70'
-                    }`}
+                    } border-neutral-200 hover:border-primary-300 hover:shadow-lg dark:border-neutral-800 dark:hover:border-primary-500/70`}
+                    data-testid="dashboard-lightchain-feature-link"
                   >
                     <div className="flex items-start gap-3">
-                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                        selected ? 'bg-primary-600 text-white' : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-200'
-                      }`}>
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-neutral-600 transition group-hover:bg-primary-600 group-hover:text-white dark:bg-neutral-800 dark:text-neutral-200">
                         <Icon className="h-5 w-5" />
                       </span>
                       <span className="min-w-0 flex-1">
@@ -246,14 +201,20 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
                       </span>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {feature.tags.slice(0, 3).map((tag) => (
-                        <span key={tag} className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
-                          {tag}
-                        </span>
-                      ))}
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <span className="flex min-w-0 flex-wrap gap-2">
+                        {feature.tags.slice(0, 3).map((tag) => (
+                          <span key={tag} className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
+                            {tag}
+                          </span>
+                        ))}
+                      </span>
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-primary-600 dark:text-primary-300">
+                        開く
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </span>
                     </div>
-                  </button>
+                  </Link>
                 );
               })}
             </div>
@@ -268,59 +229,6 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
                 <ArrowRight className="h-4 w-4" />
               </Link>
             )}
-          </div>
-
-          {selectedFeature && (
-            <aside className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-soft dark:border-neutral-800 dark:bg-neutral-900 xl:col-span-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-950">
-                  <SelectedIcon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-base font-semibold text-neutral-900 dark:text-white">{selectedFeature.title}</h3>
-                  <p className="mt-1 text-xs text-neutral-400">{selectedFeature.lightchainName}</p>
-                </div>
-              </div>
-
-              <div className="mt-5 space-y-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">必要なもの</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {materialLabels[selectedFeature.category].map((label) => (
-                      <span key={label} className="rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">作れるもの</p>
-                  <div className="mt-2 grid gap-2">
-                    {outputLabels[selectedFeature.category].map((label) => (
-                      <div key={label} className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        <span>{label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-xl bg-neutral-50 p-3 dark:bg-neutral-800/70">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">次に行く場所</p>
-                  <p className="mt-1 text-sm leading-6 text-neutral-600 dark:text-neutral-300">{selectedFeature.capability}</p>
-                </div>
-              </div>
-
-              <Link
-                to={selectedHref}
-                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-300"
-              >
-                {getActionLabel(selectedFeature)}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </aside>
-          )}
         </div>
       </div>
     </section>
