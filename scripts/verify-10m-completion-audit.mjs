@@ -54,9 +54,9 @@ const requiredProofs = [
     expect: 'G620 security operations ok=true with no blockers',
   },
   {
-    id: 'g644_current_production_mass_market_qa',
-    goal: 'G644',
-    path: 'output/playwright/prod-post-g644-mobile-jobs-bounded-list-20260701-r2/SUMMARY.json',
+    id: 'g645_current_production_mass_market_qa',
+    goal: 'G645',
+    path: 'output/playwright/prod-post-g645-mobile-canvas-fit-20260701-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       Array.isArray(json.failed) &&
@@ -88,8 +88,9 @@ const requiredProofs = [
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_hides_duplicate_quick_action_cards') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_lightchain_has_all_tools_link') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_activity_uses_compact_summary') &&
-      hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded'),
-    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage, no intrusive mobile floating help buttons, mobile Dashboard quick start without duplicate quick-action cards, compact mobile Lightchain hub with all-tools link, compact mobile activity summary, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Jobs list, and no console/page/request failures',
+      hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded') &&
+      hasRouteAssertion(json, 'mobile-canvas', 'mobile_canvas_content_fits_initial_view'),
+    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage, no intrusive mobile floating help buttons, mobile Dashboard quick start without duplicate quick-action cards, compact mobile Lightchain hub with all-tools link, compact mobile activity summary, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures',
   },
   {
     id: 'production_h601_rights_readback',
