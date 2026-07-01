@@ -344,6 +344,55 @@ async function runRoute(spec, context, viewport) {
         },
       );
     }
+    if (spec.key === 'video') {
+      const actionPanelVisible = await page
+        .locator('[data-testid="video-action-panel"]')
+        .isVisible()
+        .catch(() => false);
+      const readinessItemCount = await page
+        .locator('[data-testid="video-readiness-item"]')
+        .count()
+        .catch(() => 0);
+      const nextActionLinks = await page
+        .locator('[data-testid="video-next-actions"] a')
+        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+        .catch(() => []);
+      const previewSource = await page
+        .locator('[data-testid="video-storyboard-preview-image"]')
+        .first()
+        .getAttribute('src')
+        .catch(() => '');
+      addAssertion(
+        routeEvidence,
+        'video_workspace_has_clear_generation_flow',
+        actionPanelVisible &&
+          readinessItemCount >= 3 &&
+          nextActionLinks.some((href) => href?.startsWith('/generate?feature=campaign-image')) &&
+          nextActionLinks.includes('/gallery') &&
+          !nextActionLinks.some((href) => href && /checkout|payment|billing\/checkout/.test(href)),
+        {
+          actionPanelVisible,
+          readinessItemCount,
+          nextActionLinks,
+        },
+      );
+      addAssertion(
+        routeEvidence,
+        'video_storyboard_preview_has_shot_context',
+        Boolean(previewSource) &&
+          previewSource.includes('video-storyboard-local-v1') &&
+          previewSource.includes('selected-video-storyboard') &&
+          previewSource.includes('motionSignature%3A') &&
+          previewSource.includes('framingSignature%3A'),
+        {
+          hasPreviewSource: Boolean(previewSource),
+          hasWorkflowMarker: previewSource?.includes('video-storyboard-local-v1') ?? false,
+          hasSelectedStoryboard: previewSource?.includes('selected-video-storyboard') ?? false,
+          hasMotionSignature: previewSource?.includes('motionSignature%3A') ?? false,
+          hasFramingSignature: previewSource?.includes('framingSignature%3A') ?? false,
+        },
+      );
+    }
     if (spec.mobile) {
       const intrusiveFixedButtons = await visibleIntrusiveFixedButtons(page);
       addAssertion(routeEvidence, 'mobile_no_intrusive_floating_help_buttons', intrusiveFixedButtons.length === 0, {

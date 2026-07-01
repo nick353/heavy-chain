@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, Clapperboard, Film, Save, Smartphone } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
@@ -220,6 +220,26 @@ export function VideoWorkstationPage() {
     subtitleCta,
     materials,
   }), [activeChoice, aspectRatio, duration, materials, selectedStoryboard, shotPlan, subtitleCta]);
+  const primaryInput = `${duration} / ${aspectRatio} / ${shotPlan}`;
+  const nextStep = `${shotPlan}をvideo-shot-planとしてレンダー指示へ進める`;
+  const directVideoGenerationHref = buildGenerationIntentHref({
+    feature: 'campaign-image',
+    prompt: [
+      `Storyboard: ${selectedStoryboard.label}`,
+      `Shot order: ${shotPlan}`,
+      `Motion: ${selectedStoryboard.motion}`,
+      `Framing: ${selectedStoryboard.framing}`,
+      `CTA: ${subtitleCta}`,
+      `Materials: ${materials}`,
+      `Format: ${aspectRatio}`,
+    ].join('\n'),
+    aspectRatio,
+    sourceWorkspace: 'video',
+    workflowVersion: 'video-storyboard-local-v1',
+    sourceLabel: workspaceSourceConfig.video.label,
+    sourceResumePath: workspaceSourceConfig.video.resumePath,
+    sourceMode: 'local-workflow-intake',
+  });
 
   const recordProgress = (choice: string) => {
     const historyItem = {
@@ -248,8 +268,6 @@ export function VideoWorkstationPage() {
     }
 
     const note = history[0]?.label ?? 'ローカルメモなし';
-    const primaryInput = `${duration} / ${aspectRatio} / ${shotPlan}`;
-    const nextStep = `${shotPlan}をvideo-shot-planとしてレンダー指示へ進める`;
     const generationSource = {
       sourceWorkspace: 'video' as const,
       workflowVersion: 'video-storyboard-local-v1',
@@ -500,6 +518,63 @@ export function VideoWorkstationPage() {
         </div>
       </section>
 
+      <section
+        data-testid="video-action-panel"
+        className="glass-panel rounded-2xl border border-primary-200/70 bg-primary-50/70 p-5 dark:border-primary-400/20 dark:bg-primary-950/20"
+      >
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-700 dark:text-primary-200">
+              Video flow
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-neutral-950 dark:text-white">
+              ショット順、尺、CTAを決めて、生成指示かCanvas仕上げへ進む
+            </h2>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              {[
+                { label: '構成', value: selectedStoryboard.label },
+                { label: '比率', value: aspectRatio },
+                { label: '素材', value: materialReference.imageUrl ? '参照あり' : '参照なしでも開始可' },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  data-testid="video-readiness-item"
+                  className="rounded-xl bg-white/75 p-3 text-sm dark:bg-surface-900/60"
+                >
+                  <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{item.label}</p>
+                  <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div data-testid="video-next-actions" className="grid gap-2">
+            <Link
+              to={directVideoGenerationHref}
+              className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+            >
+              <Film className="h-4 w-4" />
+              生成指示へ送る
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+            <button
+              type="button"
+              onClick={handoffToCanvas}
+              disabled={!currentBrand}
+              className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              Canvasへ保存して構成する
+            </button>
+            <Link
+              to="/gallery"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white/80 px-4 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-white dark:border-white/10 dark:bg-surface-900/70 dark:text-neutral-100"
+            >
+              Galleryで素材を見る
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="grid gap-5 lg:grid-cols-2">
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <MaterialWorkbench
@@ -547,18 +622,26 @@ export function VideoWorkstationPage() {
             <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">Storyboardプレビュー</h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">{selectedStoryboard.label} / {selectedStoryboard.motionSignature}</p>
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Motion</p>
-              <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{selectedStoryboard.motion}</p>
-            </div>
-            <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Framing</p>
-              <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{selectedStoryboard.framing}</p>
-            </div>
-            <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
-              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Output</p>
-              <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{(storyboardOutputLabels[selectedStoryboard.id] ?? []).join(' / ')}</p>
+          <div className="mt-4 grid gap-4 xl:grid-cols-[420px_1fr]">
+            <img
+              src={previewImageUrl}
+              alt="Video storyboard preview"
+              data-testid="video-storyboard-preview-image"
+              className="aspect-[3/2] w-full rounded-2xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
+            />
+            <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1">
+              <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Motion</p>
+                <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{selectedStoryboard.motion}</p>
+              </div>
+              <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Framing</p>
+                <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{selectedStoryboard.framing}</p>
+              </div>
+              <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Output</p>
+                <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{(storyboardOutputLabels[selectedStoryboard.id] ?? []).join(' / ')}</p>
+              </div>
             </div>
           </div>
           <div className="mt-4 rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40">
