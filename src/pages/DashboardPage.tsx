@@ -100,6 +100,7 @@ export function DashboardPage() {
   const { createProject, deleteProject, loadProject, clearCanvas, getRecentProjects, projects } = useCanvasStore();
   const { showOnboarding, completeOnboarding, resetOnboarding } = useOnboarding(user?.id);
   const [recentImages, setRecentImages] = useState<GeneratedImage[]>([]);
+  const [failedRecentImageIds, setFailedRecentImageIds] = useState<Set<string>>(new Set());
   const [workspaceActivity, setWorkspaceActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
   const [isActivityLoading, setIsActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState<string | null>(null);
@@ -171,13 +172,16 @@ export function DashboardPage() {
         logDashboardFetchError('Failed to fetch images:', error);
         toast.error('画像の取得に失敗しました');
         setRecentImages([]);
+        setFailedRecentImageIds(new Set());
       } else {
         setRecentImages(await withSignedImageUrls(data || []));
+        setFailedRecentImageIds(new Set());
       }
     } catch (error) {
       logDashboardFetchError('Failed to fetch images:', error);
       toast.error('画像の取得に失敗しました');
       setRecentImages([]);
+      setFailedRecentImageIds(new Set());
     } finally {
       setIsLoading(false);
     }
@@ -357,6 +361,8 @@ export function DashboardPage() {
   }, [getRecentProjects, normalizedProjectSearch, projects]);
 
   const isSearchingProjects = normalizedProjectSearch.length > 0;
+  const displayableRecentImages = recentImages.filter((image) => Boolean(getImageUrl(image)) && !failedRecentImageIds.has(image.id));
+  const unresolvedRecentImageCount = recentImages.length - displayableRecentImages.length;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -807,13 +813,14 @@ export function DashboardPage() {
 
           {recentImages.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6">
-              {recentImages.map((image, i) => (
+              {displayableRecentImages.map((image, i) => (
                 <motion.div
                   key={image.id}
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.05 }}
                   className="group aspect-square rounded-xl sm:rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 cursor-pointer relative shadow-sm hover:shadow-lg transition-all duration-300"
+                  data-testid="dashboard-recent-image-card"
                   onClick={() => navigate(`/gallery?image=${image.id}`)}
                 >
                   {getImageUrl(image) ? (
@@ -822,15 +829,13 @@ export function DashboardPage() {
                       alt=""
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       loading="lazy"
-                      onError={(e) => {
+                      onError={() => {
                         logDashboardFetchError(`Failed to load image: ${image.storage_path || image.image_url || 'unknown'}`, image);
-                        e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3E画像なし%3C/text%3E%3C/svg%3E';
+                        setFailedRecentImageIds((previous) => new Set(previous).add(image.id));
                       }}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700">
-                      <span className="text-neutral-400 text-sm">画像なし</span>
-                    </div>
+                    null
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-3 sm:right-3">
@@ -841,6 +846,32 @@ export function DashboardPage() {
                   </div>
                 </motion.div>
               ))}
+              {unresolvedRecentImageCount > 0 && (
+                <div
+                  className="col-span-2 sm:col-span-3 xl:col-span-2 rounded-2xl border border-amber-200/70 bg-amber-50/80 p-5 text-left dark:border-amber-900/50 dark:bg-amber-950/20"
+                  data-testid="dashboard-recent-image-recovery"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Preview check</p>
+                  <h3 className="mt-2 text-base font-semibold text-neutral-950 dark:text-white">最近の成果物を確認中</h3>
+                  <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+                    {unresolvedRecentImageCount}件の成果物はプレビューURLを確認中です。壊れた画像として並べず、GalleryかJobsから状態を確認できます。
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Link
+                      to="/gallery"
+                      className="rounded-xl bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950"
+                    >
+                      Galleryで確認
+                    </Link>
+                    <Link
+                      to="/jobs"
+                      className="rounded-xl border border-neutral-200 bg-white/80 px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-white dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200"
+                    >
+                      Jobsを見る
+                    </Link>
+                  </div>
+                </div>
+              )}
               
               {/* Add New Button */}
               <Link to="/generate" className="group aspect-square rounded-xl sm:rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-2 sm:gap-3 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all duration-300">

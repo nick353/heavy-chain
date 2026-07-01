@@ -185,6 +185,18 @@ async function runRoute(spec, context, viewport) {
         toastTextVisible: body.includes('画像の読み込みに失敗しました'),
       });
     }
+    if (spec.key === 'dashboard') {
+      const recentPanelVisible = await page.locator('[data-testid="dashboard-desktop-recent-images"]').isVisible().catch(() => false);
+      const brokenRecentPlaceholderVisible = await page.getByText('画像なし').first().isVisible().catch(() => false);
+      const failedRecentImageCards = await page.locator('[data-testid="dashboard-recent-image-card"][data-image-load-failed="true"]').count().catch(() => 0);
+      const recoveryVisible = await page.locator('[data-testid="dashboard-recent-image-recovery"]').isVisible().catch(() => false);
+      addAssertion(routeEvidence, 'dashboard_recent_images_no_broken_placeholders', recentPanelVisible && !brokenRecentPlaceholderVisible && failedRecentImageCards === 0, {
+        recentPanelVisible,
+        brokenRecentPlaceholderVisible,
+        failedRecentImageCards,
+        recoveryVisible,
+      });
+    }
     if (spec.key === 'credits') {
       const workspacePanelVisible = await page.locator('[data-testid="credits-workspace-panel"]').isVisible().catch(() => false);
       const nextActionsVisible = await page.locator('[data-testid="credits-next-actions"]').isVisible().catch(() => false);
