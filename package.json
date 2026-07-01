@@ -41,6 +41,7 @@
     "verify:g614-ops": "node scripts/verify-g614-operations-docs.mjs",
     "verify:release-gate": "node scripts/verify-release-gate-unified.mjs",
     "verify:generation-scorecard": "node scripts/verify-generation-quality-scorecard.mjs",
+    "qa:g617-gemini-live": "node scripts/hc-10m-real-generation-qa.mjs --mode invoke-gemini",
     "verify:goal-readiness": "node scripts/audit-heavy-chain-goal-readiness.mjs",
     "verify:goal-readiness:incomplete-ok": "node scripts/audit-heavy-chain-goal-readiness.mjs --allow-incomplete",
     "test:runway-readiness": "node --test scripts/verify-runway-production-readiness.test.mjs",

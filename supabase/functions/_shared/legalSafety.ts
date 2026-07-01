@@ -66,6 +66,17 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const protectedBrandTermMatches = (text: string, term: string) => {
+  const normalized = term.toLowerCase();
+  if (/^[a-z0-9][a-z0-9\s'-]*[a-z0-9]$/.test(normalized)) {
+    const compact = normalized.replace(/\s+/g, '\\s+');
+    return new RegExp(`(^|[^a-z0-9])${compact}([^a-z0-9]|$)`, 'i').test(text);
+  }
+  return text.includes(normalized);
+};
+
 const stringifySafetyValue = (value: unknown) => {
   if (typeof value === 'string') return value;
   if (!isRecord(value) && !Array.isArray(value)) return '';
@@ -86,7 +97,9 @@ export const validateLegalSafetyInput = (values: unknown[]) => {
     .toLowerCase();
 
   const reasons: string[] = [];
-  const mentionsProtectedBrand = protectedBrandTerms.some((term) => text.includes(term.toLowerCase()));
+  const mentionsProtectedBrand = protectedBrandTerms.some((term) =>
+    protectedBrandTermMatches(text, escapeRegExp(term))
+  );
   const requestsImitation = brandImitationPhrases.some((phrase) => text.includes(phrase.toLowerCase()));
 
   if (mentionsProtectedBrand && requestsImitation) {

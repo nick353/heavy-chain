@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 
 const PROVIDER = 'runway_mcp_local_worker';
+const GEMINI_PROVIDER = 'gemini';
 const CONTRACT_VERSION = 'heavy-chain.local-runway-worker.v1';
 const BUCKET = 'generated-images';
 const DEFAULT_USER_ID = '86b39a16-3ae0-4717-9e91-4764e8ee7292';
@@ -19,7 +20,7 @@ const FEATURE_SPECS = [
   {
     feature: 'campaign-image',
     workspace: 'studio',
-    prompt: 'Heavy Chain 10M QA: premium black chain hoodie hero campaign image on a clean stone pedestal, silver chain detail, realistic apparel texture, controlled studio shadows, no visible text, no logo, no watermark.',
+    prompt: 'Apparel generation QA: premium black chain hoodie hero campaign image on a clean stone pedestal, silver chain detail, realistic apparel texture, controlled studio shadows, no visible text, no logo, no watermark.',
     negativePrompt: 'text, logo, watermark, distorted clothing, extra sleeves, blurry, low quality',
     width: 1024,
     height: 1024,
@@ -28,7 +29,7 @@ const FEATURE_SPECS = [
   {
     feature: 'product-shots',
     workspace: 'studio',
-    prompt: 'Heavy Chain 10M QA: ecommerce-ready premium black hoodie product photograph, front view on clean light-gray studio background, visible fabric texture, silver chain motif detail, no model, no text, no watermark.',
+    prompt: 'Apparel generation QA: ecommerce-ready premium black hoodie product photograph, front view on clean light-gray studio background, visible fabric texture, silver chain motif detail, no model, no text, no watermark.',
     negativePrompt: 'text, logo, watermark, mannequin distortion, blurry, low quality',
     width: 1024,
     height: 1024,
@@ -37,7 +38,7 @@ const FEATURE_SPECS = [
   {
     feature: 'model-matrix',
     workspace: 'studio',
-    prompt: 'Heavy Chain 10M QA: realistic fashion model wearing a premium black streetwear hoodie with subtle silver chain graphic, neutral studio catalog pose, full torso visible, natural hands, no text, no watermark.',
+    prompt: 'Apparel generation QA: realistic fashion model wearing a premium black streetwear hoodie with subtle silver chain graphic, neutral studio catalog pose, full torso visible, natural hands, no text, no watermark.',
     negativePrompt: 'text, logo, watermark, extra fingers, deformed body, distorted garment, blurry',
     width: 1024,
     height: 1024,
@@ -46,7 +47,7 @@ const FEATURE_SPECS = [
   {
     feature: 'design-gacha',
     workspace: 'patterns',
-    prompt: 'Heavy Chain 10M QA: standalone premium streetwear hoodie design concept, black base with silver chain graphic placement across chest and sleeves, apparel design mockup style, no readable text, no watermark.',
+    prompt: 'Apparel generation QA: standalone premium streetwear hoodie design concept, black base with silver chain graphic placement across chest and sleeves, apparel design mockup style, no readable text, no watermark.',
     negativePrompt: 'text, logo, watermark, messy layout, low quality, illegible garment',
     width: 1024,
     height: 1024,
@@ -55,7 +56,7 @@ const FEATURE_SPECS = [
   {
     feature: 'scene-coordinate',
     workspace: 'studio',
-    prompt: 'Heavy Chain 10M QA: black chain hoodie styled in a premium urban concrete lookbook scene, garment front and silver chain motif clearly visible, coordinated with dark denim and silver accessories, editorial lighting, no text, no watermark.',
+    prompt: 'Apparel generation QA: black chain hoodie styled in a premium urban concrete lookbook scene, garment front and silver chain motif clearly visible, coordinated with dark denim and silver accessories, editorial lighting, no text, no watermark.',
     negativePrompt: 'text, logo, watermark, product hidden, chain motif hidden, distorted clothing, blurry',
     width: 1024,
     height: 1024,
@@ -64,17 +65,17 @@ const FEATURE_SPECS = [
   {
     feature: 'multilingual-banner',
     workspace: 'studio',
-    prompt: 'Heavy Chain 10M QA: premium ecommerce banner for black chain hoodie with clean negative space and a sharp product hero. Include exactly this readable headline text: HEAVY CHAIN. No other words, no watermark.',
+    prompt: 'Apparel generation QA: premium ecommerce banner for black chain hoodie with clean negative space and a sharp product hero. Include exactly this readable headline text: CHAIN WORKS. No other words, no watermark.',
     negativePrompt: 'extra text, misspelled text, watermark, clutter, distorted garment, low quality',
     width: 1792,
     height: 1024,
     model: 'gpt-image-2',
-    expected: 'Banner composition with readable HEAVY CHAIN text and no extra copy.',
+    expected: 'Banner composition with readable CHAIN WORKS text and no extra copy.',
   },
   {
     feature: 'remove-bg',
     workspace: 'studio',
-    prompt: 'Heavy Chain 10M QA: isolated premium black chain hoodie product cutout on a clean pure white studio background, crisp edges, natural garment silhouette, transparent-background-ready appearance, no mannequin, no neck form, no text, no watermark.',
+    prompt: 'Apparel generation QA: isolated premium black chain hoodie product cutout on a clean pure white studio background, crisp edges, natural garment silhouette, transparent-background-ready appearance, no mannequin, no neck form, no text, no watermark.',
     negativePrompt: 'text, logo, watermark, busy background, rough edges, blurry, mannequin, neck form, ghost mannequin, display bust, floating collar',
     width: 1024,
     height: 1024,
@@ -83,7 +84,7 @@ const FEATURE_SPECS = [
   {
     feature: 'colorize',
     workspace: 'patterns',
-    prompt: 'Heavy Chain 10M QA: premium hoodie recolor concept preserving the chain design, black fabric shifted to deep burgundy while silver chain accents remain metallic, studio product view, no text, no watermark.',
+    prompt: 'Apparel generation QA: premium hoodie recolor concept preserving the chain design, black fabric shifted to deep burgundy while silver chain accents remain metallic, studio product view, no text, no watermark.',
     negativePrompt: 'text, logo, watermark, color bleeding, distorted garment, blurry',
     width: 1024,
     height: 1024,
@@ -92,7 +93,7 @@ const FEATURE_SPECS = [
   {
     feature: 'upscale',
     workspace: 'studio',
-    prompt: 'Heavy Chain 10M QA: ultra-sharp high-resolution close product photograph of black hoodie fabric with silver chain embroidery detail, crisp textile fibers, premium ecommerce detail shot, no text, no watermark.',
+    prompt: 'Apparel generation QA: ultra-sharp high-resolution close product photograph of black hoodie fabric with silver chain embroidery detail, crisp textile fibers, premium ecommerce detail shot, no text, no watermark.',
     negativePrompt: 'text, logo, watermark, soft focus, plastic texture, low detail',
     width: 1024,
     height: 1024,
@@ -101,7 +102,7 @@ const FEATURE_SPECS = [
   {
     feature: 'variations',
     workspace: 'studio',
-    prompt: 'Heavy Chain 10M QA: one standalone finished ecommerce campaign variation of a premium black chain hoodie, same product identity and visible silver chain detail, natural garment shape on a clean invisible support or flat studio styling, different premium lighting and background, no mannequin, no neck form, no ghost mannequin, no collage, no text, no watermark.',
+    prompt: 'Apparel generation QA: one standalone finished ecommerce campaign variation of a premium black chain hoodie, same product identity and visible silver chain detail, natural garment shape on a clean invisible support or flat studio styling, different premium lighting and background, no mannequin, no neck form, no ghost mannequin, no collage, no text, no watermark.',
     negativePrompt: 'text, logo, watermark, collage, grid, mannequin, neck form, ghost mannequin, display bust, plastic form, headless torso, floating collar, distorted neckline, distorted garment, blurry',
     width: 1024,
     height: 1024,
@@ -138,6 +139,8 @@ const supabase = getSupabaseClient();
 
 if (mode === 'enqueue') {
   await enqueueJobs();
+} else if (mode === 'invoke-gemini') {
+  await invokeGeminiJobs();
 } else if (mode === 'readback') {
   await readbackJobs();
 } else if (mode === 'cleanup') {
@@ -236,6 +239,134 @@ async function enqueueJobs() {
   };
   await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   console.log(JSON.stringify({ ok: true, mode, manifestPath, runId, jobCount: jobs.length, jobs }, null, 2));
+}
+
+async function invokeGeminiJobs() {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const authStatePath = String(args.authState || process.env.LIGHTCHAIN_UI_AUTH_STATE || 'output/playwright/prod-auth-dashboard-20260623/auth-state-after-tutorial.json');
+  if (!supabaseUrl || !anonKey) throw new Error('supabase_user_env_missing');
+
+  const userClient = createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const session = await restoreUserSession(userClient, authStatePath);
+  if (!session?.access_token) throw new Error('production_auth_state_unavailable');
+
+  await fs.mkdir(outDir, { recursive: true });
+  const createdAt = new Date().toISOString();
+  const jobs = [];
+  const invokes = [];
+
+  for (const spec of selectedFeatureSpecs) {
+    const config = WORKSPACE_CONFIG[spec.workspace] || WORKSPACE_CONFIG.studio;
+    const marker = `${runId}:${spec.feature}`;
+    const idempotencyKey = `g617-gemini-${marker}-${crypto.randomUUID()}`;
+    const prompt = `${spec.prompt}\nMarker: ${marker}`;
+    const body = {
+      brandId,
+      prompt,
+      negativePrompt: spec.negativePrompt,
+      width: spec.width,
+      height: spec.height,
+      featureType: spec.feature,
+      generationProvider: GEMINI_PROVIDER,
+      legalSafety: { rightsConfirmed: true },
+      campaignMeta: {
+        verificationRunId: runId,
+        verificationFeature: spec.feature,
+        expectedVisualOutcome: spec.expected,
+        source: 'hc_10m_gemini_live_generation_qa',
+      },
+      sourceReadback: {
+        sourceWorkspace: spec.workspace,
+        workflowVersion: config.workflowVersion,
+        sourceLabel: config.sourceLabel,
+        sourceResumePath: config.sourceResumePath,
+        sourceMode: 'local-workflow-intake',
+      },
+      generationIntent: {
+        feature: spec.feature,
+        prompt,
+        href: `/generate?feature=${encodeURIComponent(spec.feature)}`,
+        label: `${spec.feature} 10M Gemini live generation QA`,
+        sourceWorkspace: spec.workspace,
+        workflowVersion: config.workflowVersion,
+        sourceLabel: config.sourceLabel,
+        sourceResumePath: config.sourceResumePath,
+        sourceMode: 'local-workflow-intake',
+        aspectRatio: ratioFromDimensions(spec.width, spec.height),
+      },
+      lightchainCompat: {
+        lightchainFeatureId: `hc-10m-${spec.feature}`,
+        lightchainFeatureTitle: `Heavy Chain 10M QA ${spec.feature}`,
+        lightchainTaskCodes: [config.taskCode],
+      },
+    };
+
+    const startedAt = new Date().toISOString();
+    const result = await userClient.functions.invoke('generate-image', {
+      body,
+      headers: { 'idempotency-key': idempotencyKey },
+    });
+    const normalized = await normalizeInvokeResult(result);
+    const finishedAt = new Date().toISOString();
+    invokes.push({
+      feature: spec.feature,
+      idempotencyKey,
+      startedAt,
+      finishedAt,
+      invoke: normalized,
+    });
+
+    const jobId = normalized.data?.jobId || normalized.response_json?.jobId || null;
+    if (jobId) {
+      jobs.push({
+        id: jobId,
+        feature: spec.feature,
+        status: normalized.data?.persistenceStatus || 'unknown',
+        prompt,
+        negativePrompt: spec.negativePrompt,
+        width: spec.width,
+        height: spec.height,
+        ratio: ratioFromDimensions(spec.width, spec.height),
+        model: spec.model || defaultModelForFeature(spec.feature),
+        expected: spec.expected,
+        createdAt: startedAt,
+        provider: GEMINI_PROVIDER,
+        idempotencyKey,
+      });
+    }
+
+    if (!(normalized.has_data && normalized.data?.success === true)) break;
+  }
+
+  const manifest = {
+    schema: 'heavy-chain.10m-real-generation-qa.v1',
+    runId,
+    brandId,
+    userId: session.user?.id || userId,
+    provider: GEMINI_PROVIDER,
+    createdAt,
+    authStatePath,
+    outDir: path.relative(repoRoot, outDir),
+    jobs,
+    invokes,
+    completed: jobs.length === selectedFeatureSpecs.length && invokes.every((row) => row.invoke?.data?.success === true),
+  };
+  await fs.writeFile(manifestPath, `${JSON.stringify(redactObject(manifest), null, 2)}\n`);
+  console.log(JSON.stringify({
+    ok: manifest.completed,
+    mode,
+    manifestPath,
+    runId,
+    attempted: invokes.length,
+    jobCount: jobs.length,
+    firstFailure: invokes.find((row) => row.invoke?.data?.success !== true)?.invoke?.error_message
+      || invokes.find((row) => row.invoke?.data?.success !== true)?.invoke?.response_json?.error
+      || null,
+  }, null, 2));
+  if (!manifest.completed) process.exit(1);
 }
 
 async function readbackJobs() {
@@ -424,6 +555,8 @@ function asRecord(value) {
 
 function projectJob(row) {
   const input = asRecord(row.input_params);
+  const prompt = String(input.prompt || '');
+  const markerFromPrompt = prompt.match(/Marker:\s*([^:\s]+):/)?.[1] || null;
   return {
     id: row.id,
     feature: row.feature_type,
@@ -431,10 +564,11 @@ function projectJob(row) {
     errorMessage: row.error_message,
     createdAt: row.created_at,
     completedAt: row.completed_at,
-    marker: input.verificationRunId || null,
+    marker: input.verificationRunId || asRecord(input.campaignMeta).verificationRunId || markerFromPrompt,
     expected: input.expectedVisualOutcome || null,
     workerImageIds: Array.isArray(input.workerImageIds) ? input.workerImageIds : [],
     workerArtifactDir: input.workerArtifactDir || null,
+    provider: input.provider || null,
   };
 }
 
@@ -450,7 +584,65 @@ function projectImage(row) {
     createdAt: row.created_at,
     imageSha256: metadata.imageSha256 || null,
     workerTaskId: metadata.workerTaskId || null,
+    provider: metadata.provider || null,
+    providerTaskId: metadata.providerTaskId || null,
     source: metadata.source || null,
     artifactKind: metadata.artifactKind || null,
   };
+}
+
+async function restoreUserSession(client, filePath) {
+  const state = JSON.parse(await fs.readFile(filePath, 'utf8'));
+  const origin = state.origins?.find((entry) => entry.origin === 'https://heavy-chain.zeabur.app') || state.origins?.[0];
+  const authItem = origin?.localStorage?.find((entry) => entry.name.startsWith('sb-') && entry.name.endsWith('-auth-token'));
+  if (!authItem?.value) return null;
+  const parsed = JSON.parse(authItem.value);
+  const { data, error } = await client.auth.setSession({
+    access_token: parsed.access_token,
+    refresh_token: parsed.refresh_token,
+  });
+  if (error) return null;
+  return data.session;
+}
+
+async function normalizeInvokeResult(result) {
+  const responseText = result.error?.context
+    ? await result.error.context.clone().text().catch(() => '')
+    : '';
+  let responseJson = null;
+  if (responseText) {
+    try {
+      responseJson = JSON.parse(responseText);
+    } catch {
+      responseJson = null;
+    }
+  }
+  return redactObject({
+    has_data: Boolean(result.data),
+    data: result.data || null,
+    error_name: result.error?.name || null,
+    error_message: result.error?.message || null,
+    status: result.error?.context?.status || null,
+    response_text: responseJson ? null : responseText,
+    response_json: responseJson,
+  });
+}
+
+function redactObject(value) {
+  if (typeof value === 'string') return redact(value);
+  if (Array.isArray(value)) return value.map(redactObject);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, entryValue]) => [key, redactObject(entryValue)]));
+  }
+  return value;
+}
+
+function redact(value) {
+  return String(value)
+    .replaceAll(/AIza[0-9A-Za-z_-]{20,}/g, '[redacted-gemini-key]')
+    .replaceAll(/eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g, '[redacted-jwt]')
+    .replaceAll(/Bearer\s+[a-zA-Z0-9._-]+/gi, 'Bearer [redacted]')
+    .replaceAll(/access_token["=:]\s*["']?[^"',\s}]+/gi, 'access_token=[redacted]')
+    .replaceAll(/refresh_token["=:]\s*["']?[^"',\s}]+/gi, 'refresh_token=[redacted]')
+    .replaceAll(/key=([^&\s]+)/g, 'key=[redacted]');
 }

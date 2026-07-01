@@ -135,6 +135,7 @@ addCheck('Canvas legal safety guard runs before every generation mode branch', a
 addCheck('Edge legal safety guard requires rights confirmation and blocks unsafe prompts', allIncludes(edgeLegalSafety, [
   'legal_safety_rights_confirmation_required',
   'legal_safety_prompt_blocked',
+  'protectedBrandTermMatches',
   'third_party_brand_or_logo_imitation',
   'person_or_celebrity_likeness_without_permission',
 ]), {
@@ -241,6 +242,8 @@ function tableDrivenLegalSafetyChecks() {
     { text: 'Taylor Swift face on a model', blocked: true },
     { text: '有名人そっくりな顔のモデル画像', blocked: true },
     { text: 'minimal black hoodie product photo, no logo', blocked: false },
+    { text: 'silver chain hoodie campaign image, no logo, no watermark', blocked: false },
+    { text: 'LV logo hoodie replica', blocked: true },
   ];
   const results = cases.map((item) => ({ ...item, actual: legalSafetyBlocked(item.text) }));
   return {
@@ -251,14 +254,22 @@ function tableDrivenLegalSafetyChecks() {
 
 function legalSafetyBlocked(text) {
   const lower = text.toLowerCase();
-  const protectedBrandTerms = ['nike', 'ナイキ'];
+  const protectedBrandTerms = ['nike', 'lv', 'ナイキ'];
   const brandImitationPhrases = ['in the style of', 'style of', 'logo', 'brand logo', 'swoosh', '風', 'ロゴ'];
   const personLikenessPatterns = [
     /(有名人|芸能人|アイドル|俳優|本人風|celebrity|famous person|public figure|そっくりな顔)/i,
     /\b[a-z][a-z'-]+\s+[a-z][a-z'-]+\s+(?:face|likeness|style)\b/i,
   ];
   return (
-    protectedBrandTerms.some((term) => lower.includes(term.toLowerCase())) &&
+    protectedBrandTerms.some((term) => protectedBrandTermMatches(lower, term)) &&
     brandImitationPhrases.some((phrase) => lower.includes(phrase.toLowerCase()))
   ) || personLikenessPatterns.some((pattern) => pattern.test(text));
+}
+
+function protectedBrandTermMatches(text, term) {
+  const normalized = term.toLowerCase();
+  if (/^[a-z0-9][a-z0-9\s'-]*[a-z0-9]$/.test(normalized)) {
+    return new RegExp(`(^|[^a-z0-9])${normalized.replace(/\s+/g, '\\s+')}([^a-z0-9]|$)`, 'i').test(text);
+  }
+  return text.includes(normalized);
 }

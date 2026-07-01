@@ -429,7 +429,7 @@ function validateG617FreshGeneration(readback, artifactDir) {
     readbackJobs.length === allGenerationFeatures.length &&
     scorecardRows.length === allGenerationFeatures.length &&
     manifestJobs.every((job) => String(job.prompt || '').includes(`Marker: ${runId}:`)) &&
-    readbackJobs.every((job) => job.marker === runId && job.status === 'completed' && Array.isArray(job.workerImageIds) && job.workerImageIds.length > 0) &&
+    readbackJobs.every((job) => job.marker === runId && job.status === 'completed' && jobHasGeneratedArtifact(job, readbackRefsByFeature)) &&
     scorecardRows.every((row) => row.runId === runId && row.status === 'pass' && scorecardRowMatchesReadback(row, readbackRefsByFeature)) &&
     Number(readbackCounts.jobs || 0) === allGenerationFeatures.length &&
     Number(readbackCounts.completedJobs || 0) === allGenerationFeatures.length &&
@@ -506,6 +506,16 @@ function scorecardRowMatchesReadback(row, readbackRefsByFeature) {
   }
   for (const storagePath of refs.storagePaths) {
     if (imagePath.includes(storagePath)) return true;
+  }
+  return false;
+}
+
+function jobHasGeneratedArtifact(job, readbackRefsByFeature) {
+  if (Array.isArray(job.workerImageIds) && job.workerImageIds.length > 0) return true;
+  const refs = readbackRefsByFeature.get(job.feature);
+  if (!refs) return false;
+  if (job.id && refs.jobIds.has(String(job.id))) {
+    return refs.imageIds.size > 0 || refs.storagePaths.size > 0;
   }
   return false;
 }
