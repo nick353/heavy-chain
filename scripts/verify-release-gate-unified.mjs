@@ -28,7 +28,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'production monitor',
-    path: 'output/playwright/production-monitor-post-g643-20260701-r1/summary.json',
+    path: 'output/playwright/production-monitor-post-g644-20260701-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.blockers).length === 0 &&
@@ -45,7 +45,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production mass-market QA current',
-    path: 'output/playwright/prod-post-g643-mobile-generate-direct-form-20260701-r1/SUMMARY.json',
+    path: 'output/playwright/prod-post-g644-mobile-jobs-bounded-list-20260701-r2/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -70,8 +70,9 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_has_above_fold_quick_start') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_hides_duplicate_quick_action_cards') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_lightchain_has_all_tools_link') &&
-      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_activity_uses_compact_summary'),
-    expect: 'current production mass-market QA ok=true with 17 desktop routes, 8 mobile routes, Gallery fallback visible without scary remote-failure toast, H601-ready generate route, no intrusive mobile floating help buttons, mobile Dashboard quick start without duplicate quick-action cards, compact mobile Lightchain hub with all-tools link, compact mobile activity summary, mobile Generate starts at material form with canvas toolbar hidden, no console/page/request failures, and cleanup closed',
+      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_activity_uses_compact_summary') &&
+      hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded'),
+    expect: 'current production mass-market QA ok=true with 17 desktop routes, 8 mobile routes, Gallery fallback visible without scary remote-failure toast, H601-ready generate route, no intrusive mobile floating help buttons, mobile Dashboard quick start without duplicate quick-action cards, compact mobile Lightchain hub with all-tools link, compact mobile activity summary, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Jobs list, no console/page/request failures, and cleanup closed',
   },
   {
     name: 'G610 retention workspace search',
