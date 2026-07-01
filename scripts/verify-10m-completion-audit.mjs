@@ -54,9 +54,9 @@ const requiredProofs = [
     expect: 'G620 security operations ok=true with no blockers',
   },
   {
-    id: 'g667_current_production_mass_market_qa',
-    goal: 'G667',
-    path: 'output/playwright/prod-post-g667-route-aware-loading-20260701-r3/SUMMARY.json',
+    id: 'g668_current_production_mass_market_qa',
+    goal: 'G668',
+    path: 'output/playwright/prod-post-g668-dashboard-recent-preview-20260702-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       Array.isArray(json.failed) &&

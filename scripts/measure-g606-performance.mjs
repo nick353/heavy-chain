@@ -783,6 +783,11 @@ const run = async () => {
     const routes = [];
     routes.push(await measureRoute(page, '/', 'text=Heavy Chain'));
     routes.push(await measureRoute(page, '/gallery', 'text=ギャラリー'));
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-g606-gallery-tile], .group.relative.aspect-square').length >= 60,
+      null,
+      { timeout: 5000 },
+    ).catch(() => {});
     const galleryTileCount = await page.locator('[data-g606-gallery-tile], .group.relative.aspect-square').count();
     await page.screenshot({ path: path.join(OUT_DIR, 'gallery-stress.png'), fullPage: true });
 
