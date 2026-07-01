@@ -183,6 +183,19 @@ async function runRoute(spec, context, viewport) {
         toastTextVisible: body.includes('画像の読み込みに失敗しました'),
       });
     }
+    if (spec.key === 'credits') {
+      const workspacePanelVisible = await page.locator('[data-testid="credits-workspace-panel"]').isVisible().catch(() => false);
+      const nextActionsVisible = await page.locator('[data-testid="credits-next-actions"]').isVisible().catch(() => false);
+      const nextActionLinks = await page
+        .locator('[data-testid="credits-next-actions"] a')
+        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+        .catch(() => []);
+      addAssertion(routeEvidence, 'credits_has_actionable_workspace_panel', workspacePanelVisible && nextActionsVisible && nextActionLinks.includes('/generate') && nextActionLinks.includes('/jobs'), {
+        workspacePanelVisible,
+        nextActionsVisible,
+        nextActionLinks,
+      });
+    }
     if (spec.mobile) {
       const intrusiveFixedButtons = await visibleIntrusiveFixedButtons(page);
       addAssertion(routeEvidence, 'mobile_no_intrusive_floating_help_buttons', intrusiveFixedButtons.length === 0, {
