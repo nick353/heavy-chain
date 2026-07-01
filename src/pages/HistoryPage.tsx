@@ -58,9 +58,10 @@ export function HistoryPage() {
           </div>
         ) : (
           <div className="mt-6 space-y-4">
-            <div className="grid gap-3 lg:grid-cols-3">
+            <div className="grid gap-3 lg:grid-cols-3" data-testid="history-action-panel">
               <Link
                 to={activity.activeJobs[0]?.resumeHref ?? activity.completedJobs[0]?.resumeHref ?? '/generate'}
+                data-testid="history-action-resume"
                 className="rounded-2xl border border-neutral-200 bg-white/60 p-4 transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-900/45 dark:hover:border-primary-500/70"
               >
                 <span className="flex items-center gap-2 text-sm font-semibold text-neutral-950 dark:text-white">
@@ -77,6 +78,7 @@ export function HistoryPage() {
 
               <Link
                 to={activity.failedJobs[0]?.retryHref ?? '/jobs'}
+                data-testid="history-action-jobs"
                 className="rounded-2xl border border-neutral-200 bg-white/60 p-4 transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-900/45 dark:hover:border-primary-500/70"
               >
                 <span className="flex items-center gap-2 text-sm font-semibold text-neutral-950 dark:text-white">
@@ -93,6 +95,7 @@ export function HistoryPage() {
 
               <Link
                 to="/gallery"
+                data-testid="history-action-gallery"
                 className="rounded-2xl border border-neutral-200 bg-white/60 p-4 transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-900/45 dark:hover:border-primary-500/70"
               >
                 <span className="flex items-center gap-2 text-sm font-semibold text-neutral-950 dark:text-white">
@@ -108,7 +111,7 @@ export function HistoryPage() {
               </Link>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[0.25fr_1fr]">
+            <div className="grid gap-4 lg:grid-cols-[0.25fr_1fr]" data-testid="history-timeline-panel">
               <aside className="rounded-2xl bg-white/50 p-4 dark:bg-surface-900/45">
                 <p className="text-xs font-semibold uppercase text-primary-600 dark:text-primary-300">Timeline</p>
                 <p className="mt-2 text-2xl font-semibold text-neutral-950 dark:text-white">{activity.timelineItems.length}</p>
@@ -139,7 +142,7 @@ export function HistoryPage() {
                   </button>
                 </div>
               ) : (
-                <ActivityTimeline items={activity.timelineItems} emptyMessage="まだ生成履歴がありません。" />
+                <ActivityTimeline items={activity.timelineItems} emptyMessage="まだ生成履歴がありません。" mobileInitialLimit={8} />
               )}
             </div>
           </div>

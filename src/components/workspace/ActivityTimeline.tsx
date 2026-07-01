@@ -6,6 +6,7 @@ import type { TimelineItem } from '../../lib/workspaceActivity';
 interface ActivityTimelineProps {
   items: TimelineItem[];
   emptyMessage?: string;
+  mobileInitialLimit?: number;
 }
 
 const statusStyles = {
@@ -42,9 +43,10 @@ const formatDate = (dateString: string) => {
   return date.toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-export function ActivityTimeline({ items, emptyMessage = 'まだ表示できる履歴がありません。' }: ActivityTimelineProps) {
+export function ActivityTimeline({ items, emptyMessage = 'まだ表示できる履歴がありません。', mobileInitialLimit }: ActivityTimelineProps) {
   const [expandedId, setExpandedId] = useState(items[0]?.id ?? '');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [mobileExpanded, setMobileExpanded] = useState(false);
 
   const handleCopy = async (id: string, prompt: string) => {
     try {
@@ -70,9 +72,14 @@ export function ActivityTimeline({ items, emptyMessage = 'まだ表示できる�
         const expanded = expandedId === item.id;
         const status = statusStyles[item.status];
         const StatusIcon = status.icon;
+        const hiddenOnMobile = Boolean(mobileInitialLimit && !mobileExpanded && index >= mobileInitialLimit);
 
         return (
-          <article key={item.id} className="relative rounded-2xl border border-white/60 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/45">
+          <article
+            key={item.id}
+            data-testid="activity-timeline-item"
+            className={`relative rounded-2xl border border-white/60 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/45 ${hiddenOnMobile ? 'hidden md:block' : ''}`}
+          >
             <div className="flex gap-4">
               <div className="flex flex-col items-center">
                 <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${status.className}`}>
@@ -152,6 +159,16 @@ export function ActivityTimeline({ items, emptyMessage = 'まだ表示できる�
           </article>
         );
       })}
+      {mobileInitialLimit && items.length > mobileInitialLimit && (
+        <button
+          type="button"
+          onClick={() => setMobileExpanded((expanded) => !expanded)}
+          className="flex w-full items-center justify-center rounded-xl border border-neutral-200 bg-white/70 px-4 py-3 text-sm font-semibold text-neutral-700 shadow-soft transition active:scale-[0.99] dark:border-white/10 dark:bg-surface-900/70 dark:text-neutral-200 md:hidden"
+          data-testid="mobile-history-show-all"
+        >
+          {mobileExpanded ? '少なく表示' : `さらに${items.length - mobileInitialLimit}件を表示`}
+        </button>
+      )}
     </div>
   );
 }

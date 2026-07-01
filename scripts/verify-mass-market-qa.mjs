@@ -42,6 +42,7 @@ const mobileSpecs = [
   'marketing',
   'fitting',
   'jobs',
+  'history',
   'gallery',
   'canvas',
 ];
@@ -195,6 +196,36 @@ async function runRoute(spec, context, viewport) {
         nextActionsVisible,
         nextActionLinks,
       });
+    }
+    if (spec.key === 'history' || spec.key === 'mobile-history') {
+      const actionPanelVisible = await page.locator('[data-testid="history-action-panel"]').isVisible().catch(() => false);
+      const timelinePanelVisible = await page.locator('[data-testid="history-timeline-panel"]').isVisible().catch(() => false);
+      const actionLinks = await page
+        .locator('[data-testid="history-action-panel"] a')
+        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+        .catch(() => []);
+      addAssertion(routeEvidence, 'history_has_reuse_action_panel', actionPanelVisible && timelinePanelVisible && actionLinks.includes('/gallery') && actionLinks.length >= 3, {
+        actionPanelVisible,
+        timelinePanelVisible,
+        actionLinks,
+      });
+      if (spec.key === 'mobile-history') {
+        const visibleTimelineCount = await page
+          .locator('[data-testid="activity-timeline-item"]')
+          .evaluateAll((items) =>
+            items.filter((item) => {
+              const style = window.getComputedStyle(item);
+              const rect = item.getBoundingClientRect();
+              return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+            }).length,
+          )
+          .catch(() => 0);
+        const showAllVisible = await page.locator('[data-testid="mobile-history-show-all"]').isVisible().catch(() => false);
+        addAssertion(routeEvidence, 'mobile_history_timeline_is_bounded', visibleTimelineCount <= 8 && (showAllVisible || visibleTimelineCount < 8), {
+          visibleTimelineCount,
+          showAllVisible,
+        });
+      }
     }
     if (spec.mobile) {
       const intrusiveFixedButtons = await visibleIntrusiveFixedButtons(page);
