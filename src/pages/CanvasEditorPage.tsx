@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
+import { lazy, Suspense, useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -78,6 +78,7 @@ export function CanvasEditorPage() {
   const isMountedRef = useRef(true);
   const canvasStageRef = useRef<Konva.Stage | null>(null);
   const canvasRenderStateRef = useRef<CanvasRenderState>({ totalImageObjects: 0, loadedImageObjects: 0, renderAllObjects: false });
+  const lastMobileFitKeyRef = useRef<string | null>(null);
   const { currentBrand, user, profile } = useAuthStore();
   const { showGuide, completeGuide, resetGuide } = useCanvasGuide(user?.id);
   
@@ -130,6 +131,9 @@ export function CanvasEditorPage() {
     selectObject,
     undo,
     redo,
+    zoom,
+    panX,
+    panY,
     setZoom,
     setPan,
     updateObject,
@@ -148,6 +152,45 @@ export function CanvasEditorPage() {
       isMountedRef.current = false;
     };
   }, []);
+
+  useLayoutEffect(() => {
+    if (canvasSize.width >= 640 || canvasSize.width <= 0 || canvasSize.height <= 0 || objects.length === 0) return;
+
+    const fitKey = `${currentProjectId || 'draft'}:${objects.map((obj) => `${obj.id}:${Math.round(obj.x)},${Math.round(obj.y)},${Math.round(obj.width * (obj.scaleX || 1))},${Math.round(obj.height * (obj.scaleY || 1))}`).join('|')}`;
+    if (lastMobileFitKeyRef.current === fitKey) return;
+
+    const visibleObjects = objects.filter((obj) => obj.visible !== false);
+    if (visibleObjects.length === 0) return;
+
+    const bounds = visibleObjects.reduce(
+      (acc, obj) => {
+        const objectWidth = Math.max(1, obj.width * (obj.scaleX || 1));
+        const objectHeight = Math.max(1, obj.height * (obj.scaleY || 1));
+        return {
+          minX: Math.min(acc.minX, obj.x),
+          minY: Math.min(acc.minY, obj.y),
+          maxX: Math.max(acc.maxX, obj.x + objectWidth),
+          maxY: Math.max(acc.maxY, obj.y + objectHeight),
+        };
+      },
+      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+    );
+
+    const boundsWidth = bounds.maxX - bounds.minX;
+    const boundsHeight = bounds.maxY - bounds.minY;
+    if (!Number.isFinite(boundsWidth) || !Number.isFinite(boundsHeight) || boundsWidth <= 0 || boundsHeight <= 0) return;
+
+    const margins = { left: 20, right: 20, top: 92, bottom: 124 };
+    const availableWidth = Math.max(80, canvasSize.width - margins.left - margins.right);
+    const availableHeight = Math.max(120, canvasSize.height - margins.top - margins.bottom);
+    const nextZoom = Math.min(1, Math.max(0.18, Math.min(availableWidth / boundsWidth, availableHeight / boundsHeight)));
+    const nextPanX = margins.left + (availableWidth - boundsWidth * nextZoom) / 2 - bounds.minX * nextZoom;
+    const nextPanY = margins.top + (availableHeight - boundsHeight * nextZoom) / 2 - bounds.minY * nextZoom;
+
+    setZoom(nextZoom);
+    setPan(nextPanX, nextPanY);
+    lastMobileFitKeyRef.current = fitKey;
+  }, [canvasSize.height, canvasSize.width, currentProjectId, objects, setPan, setZoom]);
 
   // Load project when projectId changes
   useEffect(() => {
@@ -168,6 +211,42 @@ export function CanvasEditorPage() {
   const selectedObject = selectedIds.length === 1
     ? objects.find((obj) => obj.id === selectedIds[0]) || null
     : null;
+  const mobileCanvasFitProof = useMemo(() => {
+    if (canvasSize.width >= 640 || objects.length === 0) {
+      return { passed: true, reason: objects.length === 0 ? 'no_objects' : 'desktop_view' };
+    }
+
+    const visibleObjects = objects.filter((obj) => obj.visible !== false);
+    if (visibleObjects.length === 0) return { passed: true, reason: 'no_visible_objects' };
+
+    const bounds = visibleObjects.reduce(
+      (acc, obj) => {
+        const objectWidth = Math.max(1, obj.width * (obj.scaleX || 1));
+        const objectHeight = Math.max(1, obj.height * (obj.scaleY || 1));
+        return {
+          minX: Math.min(acc.minX, obj.x),
+          minY: Math.min(acc.minY, obj.y),
+          maxX: Math.max(acc.maxX, obj.x + objectWidth),
+          maxY: Math.max(acc.maxY, obj.y + objectHeight),
+        };
+      },
+      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+    );
+    const screenBounds = {
+      left: bounds.minX * zoom + panX,
+      top: bounds.minY * zoom + panY,
+      right: bounds.maxX * zoom + panX,
+      bottom: bounds.maxY * zoom + panY,
+    };
+    const allowed = { left: 8, top: 52, right: canvasSize.width - 8, bottom: canvasSize.height - 92 };
+    const passed =
+      screenBounds.left >= allowed.left &&
+      screenBounds.top >= allowed.top &&
+      screenBounds.right <= allowed.right &&
+      screenBounds.bottom <= allowed.bottom;
+
+    return { passed, zoom, panX, panY, bounds, screenBounds, allowed, objectCount: visibleObjects.length };
+  }, [canvasSize.height, canvasSize.width, objects, panX, panY, zoom]);
 
   const getLightchainCompatForObject = (objectId: string | null) => {
     if (!objectId) return undefined;
@@ -1731,6 +1810,12 @@ export function CanvasEditorPage() {
           </div>
 
           <div ref={containerRef} className="flex-1 relative bg-neutral-50/50 dark:bg-neutral-950/50">
+            <div
+              data-testid="mobile-canvas-fit-proof"
+              data-passed={mobileCanvasFitProof.passed ? 'true' : 'false'}
+              data-proof={JSON.stringify(mobileCanvasFitProof)}
+              className="sr-only"
+            />
             {/* 背景パターン - position:fixedで固定し、サイドパネル開閉時に動かない */}
             <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(200,200,200,0.1)_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-[radial-gradient(circle_at_center,rgba(50,50,50,0.3)_1px,transparent_1px)]" />

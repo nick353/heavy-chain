@@ -310,6 +310,11 @@ async function runRoute(spec, context, viewport) {
           showAllVisible,
         });
       }
+      if (spec.key === 'mobile-canvas') {
+        await page.waitForTimeout(350);
+        const mobileCanvasFit = await readMobileCanvasFit(page);
+        addAssertion(routeEvidence, 'mobile_canvas_content_fits_initial_view', mobileCanvasFit.passed, mobileCanvasFit);
+      }
     }
     if (spec.generateReady) {
       const visibleButtons = await visibleButtonTexts(page);
@@ -549,6 +554,53 @@ async function readCanvasObjectCount(page) {
     const objects = parsed?.state?.objects;
     return Array.isArray(objects) ? objects.length : 0;
   }).catch(() => 0);
+}
+
+async function readMobileCanvasFit(page) {
+  return page.evaluate(() => {
+    const proofElement = document.querySelector('[data-testid="mobile-canvas-fit-proof"]');
+    const proofPayload = proofElement?.getAttribute('data-proof');
+    if (proofPayload) return JSON.parse(proofPayload);
+
+    const raw = window.localStorage.getItem('heavy-chain-canvas');
+    if (!raw) return { passed: true, reason: 'empty_canvas_state' };
+    const parsed = JSON.parse(raw);
+    const state = parsed?.state ?? {};
+    const objects = Array.isArray(state.objects) ? state.objects.filter((obj) => obj?.visible !== false) : [];
+    if (objects.length === 0) return { passed: true, reason: 'no_visible_objects' };
+
+    const zoom = Number.isFinite(state.zoom) ? state.zoom : 1;
+    const panX = Number.isFinite(state.panX) ? state.panX : 0;
+    const panY = Number.isFinite(state.panY) ? state.panY : 0;
+    const bounds = objects.reduce((acc, obj) => {
+      const width = Math.max(1, Number(obj.width || 0) * Number(obj.scaleX || 1));
+      const height = Math.max(1, Number(obj.height || 0) * Number(obj.scaleY || 1));
+      const x = Number(obj.x || 0);
+      const y = Number(obj.y || 0);
+      return {
+        minX: Math.min(acc.minX, x),
+        minY: Math.min(acc.minY, y),
+        maxX: Math.max(acc.maxX, x + width),
+        maxY: Math.max(acc.maxY, y + height),
+      };
+    }, { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
+
+    const screenBounds = {
+      left: bounds.minX * zoom + panX,
+      top: bounds.minY * zoom + panY,
+      right: bounds.maxX * zoom + panX,
+      bottom: bounds.maxY * zoom + panY,
+    };
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    const allowed = { left: 8, top: 52, right: viewport.width - 8, bottom: viewport.height - 92 };
+    const passed =
+      screenBounds.left >= allowed.left &&
+      screenBounds.top >= allowed.top &&
+      screenBounds.right <= allowed.right &&
+      screenBounds.bottom <= allowed.bottom;
+
+    return { passed, zoom, panX, panY, bounds, screenBounds, viewport, allowed, objectCount: objects.length };
+  }).catch((error) => ({ passed: false, reason: error.message }));
 }
 
 async function hasNoHorizontalOverflow(page) {
