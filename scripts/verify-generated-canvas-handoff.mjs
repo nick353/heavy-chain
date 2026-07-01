@@ -83,7 +83,7 @@ await page.getByRole('button', { name: '生成計画を作る' }).click();
 await page.getByText('確認済み', { exact: true }).waitFor({ state: 'visible', timeout: 10_000 });
 await page.getByRole('button', { name: 'フォームへ反映' }).click();
 
-const saveButton = page.getByRole('button', { name: /企画書を保存|Runway workerで生成/ }).first();
+const saveButton = page.getByRole('button', { name: /企画書を保存|Geminiで生成|Runway workerで生成/ }).first();
 await saveButton.click();
 await page.getByText('保存した企画', { exact: false }).waitFor({ state: 'visible', timeout: 30_000 });
 await page.screenshot({ path: path.join(outDir, 'g002-generate-before-canvas-click.png'), fullPage: true });

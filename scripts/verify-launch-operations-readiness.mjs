@@ -136,7 +136,7 @@ async function checkGenerateForm() {
   await textarea.fill(prompt, { timeout: 15000 });
   await page.getByLabel('タイトル').first().fill('Heavy Chain launch proof').catch(() => undefined);
   const textareaValue = await textarea.inputValue();
-  const button = page.getByRole('button', { name: 'Runway workerで生成' }).first();
+  const button = page.getByRole('button', { name: /Geminiで生成|Runway workerで生成/ }).first();
   const buttonVisible = await button.isVisible().catch(() => false);
   const rightsCheckbox = page.getByRole('checkbox').first();
   const rightsVisible = await rightsCheckbox.isVisible().catch(() => false);
@@ -247,7 +247,7 @@ async function checkMobileRoutes() {
     isMobile: true,
   });
   const mobileChecks = [
-    { key: 'mobile-generate', path: '/generate?feature=campaign-image', expected: ['HEAVYCHAIN', 'キャンペーン画像', 'Runway workerで生成'] },
+    { key: 'mobile-generate', path: '/generate?feature=campaign-image', expected: ['HEAVYCHAIN', 'キャンペーン画像', 'Geminiで生成'] },
     { key: 'mobile-gallery', path: '/gallery', expected: ['ギャラリー'] },
     { key: 'mobile-canvas', path: '/canvas/new', expected: ['キャンバス'] },
   ];

@@ -46,6 +46,9 @@ export const ERROR_MESSAGES: Record<string, string> = {
   LOCAL_RUNWAY_WORKER_NOT_RUNNING: 'Mac側のRunway workerが起動していません。入力は保存されています。workerを起動してからこのジョブを再開してください。',
   LOCAL_RUNWAY_WORKER_TIMEOUT: 'Runway workerの生成完了を確認できませんでした。workerの結果JSONとRunway画面を確認し、完了していなければこのジョブを再開してください。',
   LOCAL_RUNWAY_OAUTH_FAILED: 'Runway公式OAuthが失敗しています。Runwayの同意画面で「Consent session missing or expired」が出ているため、Runway MCPを再接続してください。',
+  GEMINI_API_KEY_MISSING: 'Gemini生成のAPIキーがサーバーに設定されていません。管理者がSupabase Edge Function secretsにGEMINI_API_KEYを設定してから再試行してください。',
+  GEMINI_IMAGE_REQUEST_FAILED: 'Geminiでの画像生成に失敗しました。入力を少し短く具体化して再試行し、続く場合はAPIキー、モデル名、利用上限を確認してください。',
+  GEMINI_IMAGE_EMPTY_RESPONSE: 'Geminiから画像が返りませんでした。プロンプトを調整して再試行してください。',
   PROJECT_NOT_FOUND: 'プロジェクトが見つかりません。',
   BRAND_LIMIT_REACHED: '作成できるブランド数の上限に達しました。',
   
@@ -189,6 +192,9 @@ const KNOWN_MESSAGE_MAP: Array<[RegExp, string]> = [
   [/runway_mcp_output_fetch_failed|runway_mcp_empty_image_response/i, ERROR_MESSAGES.RUNWAY_MCP_REQUEST_FAILED],
   [/local_runway_worker_not_running/i, ERROR_MESSAGES.LOCAL_RUNWAY_WORKER_NOT_RUNNING],
   [/local_runway_worker_timeout/i, ERROR_MESSAGES.LOCAL_RUNWAY_WORKER_TIMEOUT],
+  [/gemini_api_key_missing/i, ERROR_MESSAGES.GEMINI_API_KEY_MISSING],
+  [/gemini_image_empty_response/i, ERROR_MESSAGES.GEMINI_IMAGE_EMPTY_RESPONSE],
+  [/gemini_image_request_failed/i, ERROR_MESSAGES.GEMINI_IMAGE_REQUEST_FAILED],
   [/brand not found or access denied/i, ERROR_MESSAGES.BRAND_ACCESS_DENIED],
   [/missing authorization|unauthorized/i, ERROR_MESSAGES.SESSION_EXPIRED],
 ];

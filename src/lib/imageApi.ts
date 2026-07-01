@@ -27,8 +27,22 @@ type LegalSafetyOptions = {
 
 export interface ImageEditResult {
   success: boolean;
+  jobId?: string | null;
+  imageId?: string | null;
   imageUrl?: string;
   storagePath?: string;
+  images?: Array<{
+    id?: string | null;
+    imageUrl: string;
+    prompt?: string;
+    jobId?: string | null;
+    imageId?: string | null;
+    storagePath?: string | null;
+    persistenceStatus?: 'completed' | 'failed' | 'processing' | 'pending';
+  }>;
+  provider?: string;
+  persistenceStatus?: 'not_started' | 'processing' | 'completed' | 'failed' | 'pending';
+  cleanupStatus?: 'none' | 'attempted' | 'failed';
   error?: string;
 }
 
@@ -186,6 +200,8 @@ export async function generateImage(
   prompt: string,
   brandId: string,
   options?: {
+    generationProvider?: 'gemini' | 'gemini_image' | 'runway' | 'runway_mcp';
+    featureType?: string;
     style?: string;
     aspectRatio?: string;
     negativePrompt?: string;
@@ -194,6 +210,13 @@ export async function generateImage(
     count?: number;
     textOverlay?: TextOverlayPayload;
     campaignMeta?: Record<string, any>;
+    lightchainCompat?: LightchainCompatPayload;
+    sourceReadback?: unknown;
+    generationIntent?: unknown;
+    materialReferences?: unknown;
+    layerPlan?: unknown;
+    maskPlan?: unknown;
+    compositionPreview?: unknown;
     rightsConfirmed?: boolean;
   }
 ): Promise<ImageEditResult> {

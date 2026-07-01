@@ -88,7 +88,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'queue',
     title: '生成キューと復帰',
-    description: 'Runway workerで生成する作業はJobsに入り、進行中、完了、止まった作業を後から見直せます。',
+    description: 'Geminiで生成する作業は保存され、進行中、完了、止まった作業を後から見直せます。',
     icon: Clock3,
     tips: [
       '生成後に画面を閉じてもJobsから状態を確認できます',

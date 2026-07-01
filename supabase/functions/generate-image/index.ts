@@ -7,6 +7,7 @@ import { sanitizeMaterialGenerationMetadata, sanitizeMetadataWithoutImageUrls } 
 import { generateRunwayImage, runwayImageArtifact } from '../_shared/runway.ts';
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
+import { generateGeminiImage, geminiImageArtifact, geminiProviderName } from '../_shared/geminiImage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,6 +31,7 @@ interface GenerateRequest {
   campaignMeta?: unknown
   textOverlay?: unknown
   localRunwayWorker?: unknown
+  generationProvider?: unknown
   legalSafety?: unknown
 }
 
@@ -207,6 +209,13 @@ const sanitizeLocalRunwayWorkerRequest = (value: unknown, persistedFeatureType: 
   }
 }
 
+const sanitizeGenerationProvider = (value: unknown) => {
+  const requested = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (requested === 'runway' || requested === 'runway_mcp') return 'runway'
+  if (requested === 'gemini' || requested === 'gemini_image') return 'gemini'
+  return geminiProviderName()
+}
+
 const sanitizeSourceReadback = (value: unknown) => {
   if (!isRecord(value)) return null
 
@@ -312,6 +321,7 @@ serve(async (req) => {
       campaignMeta,
       textOverlay,
       localRunwayWorker,
+      generationProvider,
       legalSafety,
     }: GenerateRequest = await req.json()
 
@@ -327,11 +337,14 @@ serve(async (req) => {
 
     const supabaseClient = createServiceClient()
     telemetryClient = supabaseClient
-    await requireRunwayMcpConnectionApproval(supabaseClient, brandId);
     const persistedFeatureType = typeof featureType === 'string' && featureType.trim()
       ? featureType.trim()
       : 'text-to-image'
     const localWorkerRequest = sanitizeLocalRunwayWorkerRequest(localRunwayWorker, persistedFeatureType)
+    const selectedProvider = localWorkerRequest ? localWorkerRequest.provider : sanitizeGenerationProvider(generationProvider)
+    if (selectedProvider === 'runway' || localWorkerRequest) {
+      await requireRunwayMcpConnectionApproval(supabaseClient, brandId);
+    }
     requireLegalSafetyApproval(legalSafety, [
       prompt,
       negativePrompt,
@@ -362,7 +375,7 @@ serve(async (req) => {
       units: 1,
       requestId,
       idempotencyKey: req.headers.get('idempotency-key'),
-      metadata: localWorkerRequest ? { provider: localWorkerRequest.provider, queued: true } : {},
+      metadata: { provider: selectedProvider, queued: Boolean(localWorkerRequest) },
     });
     const referenceImageHandoff = localWorkerRequest
       ? await createLocalWorkerReferenceImageHandoff({
@@ -382,6 +395,7 @@ serve(async (req) => {
       width,
       height,
       featureType: persistedFeatureType,
+      provider: selectedProvider,
       requestId,
       ...(isRecord(campaignMeta) ? { campaignMeta } : {}),
       ...(isRecord(textOverlay) ? { textOverlay } : {}),
@@ -486,16 +500,26 @@ serve(async (req) => {
     }
 
     failedStage = 'generation'
-    const runwayResult = await generateRunwayImage({
-      brandId,
-      prompt: `Generate a high-quality professional fashion/apparel image: ${optimizedPrompt}. Style: Professional fashion photography, studio lighting, high resolution, commercial quality.`,
-      negativePrompt,
-      width,
-      height,
-    })
-    const imageBase64 = runwayResult.base64
-    const usedModel = runwayResult.model
-    const imageAsset = runwayImageArtifact(runwayResult)
+    const productionPrompt = `Generate a high-quality professional fashion/apparel image: ${optimizedPrompt}. Style: Professional fashion photography, studio lighting, high resolution, commercial quality.`
+    const generatedResult = selectedProvider === 'runway'
+      ? await generateRunwayImage({
+        brandId,
+        prompt: productionPrompt,
+        negativePrompt,
+        width,
+        height,
+      })
+      : await generateGeminiImage({
+        prompt: productionPrompt,
+        negativePrompt,
+        width,
+        height,
+      })
+    const imageBase64 = generatedResult.base64
+    const usedModel = generatedResult.model
+    const imageAsset = selectedProvider === 'runway'
+      ? runwayImageArtifact(generatedResult)
+      : geminiImageArtifact(generatedResult)
     console.log(`Image generated with model: ${usedModel}`)
 
     // Base64 Data URLを作成（ブラウザで直接表示可能）
@@ -539,10 +563,12 @@ serve(async (req) => {
           negative_prompt: negativePrompt || null,
           feature_type: persistedFeatureType,
           model_used: usedModel,
-          generation_params: { width, height },
+          generation_params: { width, height, provider: selectedProvider },
           metadata: {
             remoteSaveStatus: 'succeeded',
             source: 'generate-image',
+            provider: selectedProvider,
+            providerTaskId: generatedResult.taskId,
             requestId,
             ...(sourceMetadata ?? {}),
             ...(materialMetadata ?? {}),
@@ -610,6 +636,7 @@ serve(async (req) => {
         jobId: job.id,
         imageId,
         storagePath: fileName,
+        provider: selectedProvider,
         persistenceStatus: 'completed',
         cleanupStatus: 'none',
         images: [{

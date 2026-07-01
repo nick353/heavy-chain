@@ -6,15 +6,16 @@ const required = [
   'SUPABASE_URL',
   'SUPABASE_ANON_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
-  'RUNWAY_MCP_BRIDGE_URL',
-  'RUNWAY_MCP_BRIDGE_TOKEN',
-  'RUNWAY_MCP_TOKEN_ENCRYPTION_KEY',
+  'GEMINI_API_KEY',
   'PUBLIC_URL',
 ];
 
 const optional = [
   'SUPABASE_PROJECT_REF',
   'SUPABASE_ACCESS_TOKEN',
+  'RUNWAY_MCP_BRIDGE_URL',
+  'RUNWAY_MCP_BRIDGE_TOKEN',
+  'RUNWAY_MCP_TOKEN_ENCRYPTION_KEY',
 ];
 
 const missing = required.filter((key) => !process.env[key]);

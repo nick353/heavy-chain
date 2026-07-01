@@ -960,7 +960,7 @@ async function interactGenerateReady(page, routeEvidence) {
     await rightsCheckbox.check().catch(() => undefined);
   }
   const body = await bodyText(page);
-  const button = page.getByRole('button', { name: /Runway workerで生成/ }).first();
+  const button = page.getByRole('button', { name: /Geminiで生成|Runway workerで生成/ }).first();
   const visible = await button.isVisible().catch(() => false);
   const enabled = await button.isEnabled().catch(() => false);
   const h601CopyVisible = /権利・許可|商用デザイン制作|商標クリアランス/.test(body);

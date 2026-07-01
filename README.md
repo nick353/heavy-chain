@@ -171,7 +171,8 @@ supabase functions deploy upscale
 
 Edge Functions用の環境変数をSupabase Dashboardで設定：
 - `GEMINI_API_KEY` - Google AI Studio APIキー
-- `GEMINI_IMAGE_MODEL` - 使用するモデル名（例: `imagen-3.0-generate-001`）
+- `GEMINI_IMAGE_MODEL` - 使用する画像生成モデル名（既定: `gemini-2.5-flash-image`）
+- `VITE_GENERATION_PROVIDER` - 通常は `gemini`。Runway workerを明示的に使う場合だけ `local-runway`
 - `OPENAI_API_KEY` - OpenAI APIキー
 
 #### 5. 開発サーバーを起動
@@ -413,7 +414,8 @@ supabase functions deploy upscale
 
 Set environment variables for Edge Functions in Supabase Dashboard:
 - `GEMINI_API_KEY` - Google AI Studio API key
-- `GEMINI_IMAGE_MODEL` - Model name (e.g., `imagen-3.0-generate-001`)
+- `GEMINI_IMAGE_MODEL` - Image generation model name (default: `gemini-2.5-flash-image`)
+- `VITE_GENERATION_PROVIDER` - Use `gemini` by default. Use `local-runway` only for the explicit Runway worker path.
 - `OPENAI_API_KEY` - OpenAI API key
 
 #### 5. Start development server

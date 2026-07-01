@@ -29,6 +29,7 @@ const runwayImageFunctions = [
   'model-matrix',
   'multilingual-banner',
 ];
+const geminiStandardImageFunctions = ['generate-image'];
 const failures = [];
 const quotaGuardMigration = 'supabase/migrations/20260617080031_harden_usage_quota_guards.sql';
 const authenticatedUsageSummaryMigration =
@@ -121,10 +122,10 @@ for (const name of guarded) {
   if (hasUnsafePersistedImageUrl(text)) {
     failures.push(`${name}: persists signed/data URL as image_url`);
   }
-  if (runwayImageFunctions.includes(name) && name !== 'upscale' && !text.includes('generateRunwayImage')) {
+  if (runwayImageFunctions.includes(name) && !geminiStandardImageFunctions.includes(name) && name !== 'upscale' && !text.includes('generateRunwayImage')) {
     failures.push(`${name}: missing Runway image generation helper`);
   }
-  if (runwayImageFunctions.includes(name) && /Deno\.env\.get\(['"](GEMINI_API_KEY|OPENAI_API_KEY|OPENAI_CHAT_[A-Z_]+)['"]\)/.test(text)) {
+  if (runwayImageFunctions.includes(name) && !geminiStandardImageFunctions.includes(name) && /Deno\.env\.get\(['"](GEMINI_API_KEY|OPENAI_API_KEY|OPENAI_CHAT_[A-Z_]+)['"]\)/.test(text)) {
     failures.push(`${name}: still requires OpenAI/Gemini environment`);
   }
   if (runwayImageFunctions.includes(name)) {
@@ -159,6 +160,7 @@ for (const name of serviceRoleWriteFunctions) {
 }
 
 const runwayHelper = readFileSync('supabase/functions/_shared/runway.ts', 'utf8');
+const geminiHelper = readFileSync('supabase/functions/_shared/geminiImage.ts', 'utf8');
 const runwayApprovalHelper = readFileSync('supabase/functions/_shared/runwayApproval.ts', 'utf8');
 const runwayMcpConnectionHelper = readFileSync('supabase/functions/_shared/runwayMcpConnection.ts', 'utf8');
 const supabaseConfig = readFileSync('supabase/config.toml', 'utf8');
@@ -252,6 +254,30 @@ for (const forbidden of [
   }
 }
 
+for (const needle of [
+  'GEMINI_API_KEY',
+  'gemini_api_key_missing',
+  'responseModalities',
+  'IMAGE',
+  'inlineData',
+  'geminiImageArtifact',
+]) {
+  if (!geminiHelper.includes(needle)) {
+    failures.push(`supabase/functions/_shared/geminiImage.ts: missing ${needle}`);
+  }
+}
+const generateImageText = readFileSync('supabase/functions/generate-image/index.ts', 'utf8');
+for (const needle of [
+  'generateGeminiImage',
+  "sanitizeGenerationProvider(generationProvider)",
+  "generationProvider?: unknown",
+  "provider: selectedProvider",
+]) {
+  if (!generateImageText.includes(needle)) {
+    failures.push(`generate-image: missing Gemini provider route ${needle}`);
+  }
+}
+
 for (const name of ['remove-background', 'colorize', 'generate-variations', 'design-gacha', 'product-shots', 'model-matrix']) {
   const text = readFileSync(`supabase/functions/${name}/index.ts`, 'utf8');
   if (!text.includes('runwayReferenceImage')) {
@@ -278,12 +304,12 @@ if (!upscaleText.includes('upscaleRunwayImage') || upscaleText.includes('generat
 }
 
 const checkEnv = readFileSync('scripts/check-env.mjs', 'utf8');
-for (const needle of ['RUNWAY_MCP_BRIDGE_URL', 'RUNWAY_MCP_BRIDGE_TOKEN']) {
+for (const needle of ['GEMINI_API_KEY']) {
   if (!checkEnv.includes(needle)) {
     failures.push(`scripts/check-env.mjs: ${needle} is not required`);
   }
 }
-for (const forbidden of ['RUNWAYML_API_SECRET', 'GEMINI_API_KEY', 'OPENAI_API_KEY', 'OPENAI_CHAT_API_KEY', 'OPENAI_CHAT_BASE_URL', 'OPENAI_CHAT_MODEL']) {
+for (const forbidden of ['RUNWAYML_API_SECRET', 'OPENAI_API_KEY', 'OPENAI_CHAT_API_KEY', 'OPENAI_CHAT_BASE_URL', 'OPENAI_CHAT_MODEL']) {
   if (checkEnv.includes(forbidden)) {
     failures.push(`scripts/check-env.mjs: ${forbidden} must not be required or optional`);
   }

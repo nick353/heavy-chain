@@ -46,6 +46,7 @@
     "test:runway-readiness": "node --test scripts/verify-runway-production-readiness.test.mjs",
     "verify:runway-readiness": "node scripts/verify-runway-production-readiness.mjs",
     "verify:runway-approved-generation": "node scripts/verify-runway-approved-generation-readback.mjs",
+    "verify:gemini-provider": "node scripts/verify-gemini-provider-readiness.mjs",
     "verify:launch-ops": "node scripts/verify-launch-operations-readiness.mjs",
     "monitor:production": "node scripts/monitor-production-health.mjs",
     "build:local-runway-handoff": "node scripts/build-local-runway-mcp-handoff.mjs",

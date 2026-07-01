@@ -118,10 +118,15 @@ require_no_match "OpenAI-style secret literal" "(^|[^A-Za-z0-9_-])sk-[A-Za-z0-9_
 require_no_match "storage/data URL image_url fallback" "image_url:[[:space:]]*(storageUrl[[:space:]]*\\|\\|[[:space:]]*imageDataUrl|imageDataUrl)" supabase/functions -E
 require_no_match "data URL image_url persistence" "image_url:[[:space:]]*imageDataUrl" supabase/functions
 require_no_match "deprecated Gemini 2.0 model reference in Supabase functions" "gemini-2\\.0-flash-exp(-image-generation)?" supabase/functions -E
-require_no_repo_file_match "OpenAI/Gemini image env requirement in generation functions" "Deno\\.env\\.get\\(['\"](GEMINI_API_KEY|OPENAI_API_KEY|OPENAI_CHAT_[A-Z_]+)['\"]\\)" supabase/functions/generate-image supabase/functions/remove-background supabase/functions/upscale supabase/functions/colorize supabase/functions/generate-variations supabase/functions/design-gacha supabase/functions/product-shots supabase/functions/model-matrix supabase/functions/multilingual-banner
+require_no_repo_file_match "OpenAI image env requirement in generation functions" "Deno\\.env\\.get\\(['\"](OPENAI_API_KEY|OPENAI_CHAT_[A-Z_]+)['\"]\\)" supabase/functions/generate-image supabase/functions/remove-background supabase/functions/upscale supabase/functions/colorize supabase/functions/generate-variations supabase/functions/design-gacha supabase/functions/product-shots supabase/functions/model-matrix supabase/functions/multilingual-banner
+require_no_repo_file_match "Gemini env requirement outside standard generate-image helper" "Deno\\.env\\.get\\(['\"]GEMINI_API_KEY['\"]\\)" supabase/functions/remove-background supabase/functions/upscale supabase/functions/colorize supabase/functions/generate-variations supabase/functions/design-gacha supabase/functions/product-shots supabase/functions/model-matrix supabase/functions/multilingual-banner
+grep -q "GEMINI_API_KEY" scripts/check-env.mjs
 grep -q "RUNWAY_MCP_BRIDGE_URL" scripts/check-env.mjs
 grep -q "RUNWAY_MCP_BRIDGE_TOKEN" scripts/check-env.mjs
 grep -q "RUNWAY_MCP_TOKEN_ENCRYPTION_KEY" scripts/check-env.mjs
+grep -q "GEMINI_API_KEY" supabase/functions/_shared/geminiImage.ts
+grep -q "gemini_api_key_missing" supabase/functions/_shared/geminiImage.ts
+grep -q "generateGeminiImage" supabase/functions/generate-image/index.ts
 grep -q "RUNWAY_MCP_BRIDGE_URL" supabase/functions/_shared/runway.ts
 grep -q "RUNWAY_MCP_BRIDGE_TOKEN" supabase/functions/_shared/runway.ts
 grep -q "RUNWAY_MCP_TOKEN_ENCRYPTION_KEY" supabase/functions/_shared/runwayMcpConnection.ts
@@ -219,7 +224,7 @@ for function_name in generate-image remove-background upscale colorize generate-
   require_no_match "hard-coded PNG data URL in ${function_name}" "data:image/png;base64" "supabase/functions/${function_name}/index.ts"
   require_no_match "hard-coded PNG contentType in ${function_name}" "contentType:[[:space:]]*['\"]image/png['\"]" "supabase/functions/${function_name}/index.ts" -E
 done
-require_no_match "Runway direct API/OpenAI/Gemini env in check-env" "RUNWAYML_API_SECRET|GEMINI_API_KEY|OPENAI_API_KEY|OPENAI_CHAT_API_KEY|OPENAI_CHAT_BASE_URL|OPENAI_CHAT_MODEL" scripts/check-env.mjs -E
+require_no_match "Runway direct API/OpenAI env in check-env" "RUNWAYML_API_SECRET|OPENAI_API_KEY|OPENAI_CHAT_API_KEY|OPENAI_CHAT_BASE_URL|OPENAI_CHAT_MODEL" scripts/check-env.mjs -E
 
 echo "Checking required private RPC definitions"
 grep -q "private.reserve_brand_usage" supabase/migrations/20260617044009_billing_usage_limits.sql

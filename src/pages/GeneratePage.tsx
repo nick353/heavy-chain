@@ -46,6 +46,7 @@ import {
   enqueueLocalRunwayWorkerGeneration,
   pollLocalRunwayWorkerGeneration,
 } from '../lib/localRunwayWorkerQueue';
+import { generateImage } from '../lib/imageApi';
 import {
   hydrateGenerationIntentSource,
   hydratePatternGenerationContext,
@@ -606,8 +607,10 @@ interface GeneratedResult {
 }
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
-const noImageGenerationMode = true;
-const localRunwayWorkerMode = import.meta.env.VITE_LOCAL_RUNWAY_WORKER_MODE !== 'false';
+const generationProvider = String(import.meta.env.VITE_GENERATION_PROVIDER || 'gemini').toLowerCase();
+const localRunwayWorkerMode = generationProvider === 'local-runway' || generationProvider === 'runway-local';
+const geminiGenerationMode = generationProvider === 'gemini' || generationProvider === 'gemini-image';
+const noImageGenerationMode = generationProvider === 'planning' || localRunwayWorkerMode || geminiGenerationMode;
 
 const debugLog = (message: string, details?: Record<string, unknown>) => {
   if (!debugGeneration) return;
@@ -1587,6 +1590,76 @@ export function GeneratePage() {
           const count = Math.max(1, Math.min(generateCount, 6));
           return Array.from({ length: count }, (_, index) => `${planningFeature.name} 企画 ${index + 1}`);
         })();
+        if (geminiGenerationMode) {
+          const ratio = aspectRatios.find(r => r.id === selectedRatio) || aspectRatios[0];
+          const geminiPrompt = buildProductionImagePrompt({
+            feature: planningFeature,
+            userBrief: primaryBrief || fallbackBrief,
+            styleLabel: selectedStyleLabel,
+            aspectRatio: selectedRatio,
+            textOverlay,
+            referenceImagePresent: Boolean(processedImageUrl),
+            extraLines: featureLines,
+          });
+          const productionNegativePrompt = mergeProductionNegativePrompt(negativePrompt);
+          const generationTotal = Math.max(1, Math.min(resultLabels.length || generateCount, 4));
+          const geminiResults: GeneratedResult[] = [];
+
+          for (let index = 0; index < generationTotal; index += 1) {
+            const result = await generateImage(geminiPrompt, currentBrand.id, {
+              generationProvider: 'gemini',
+              featureType: planningFeature.id,
+              negativePrompt: productionNegativePrompt,
+              width: ratio.width,
+              height: ratio.height,
+              count: 1,
+              textOverlay,
+              campaignMeta: {
+                title: campaignTitle,
+                subheadline: campaignSubheadline,
+                cta: campaignCTA,
+              },
+              rightsConfirmed,
+              ...buildRemoteGenerationContext(planningFeature, geminiPrompt, selectedRatio),
+              ...generateMaterialMetadata,
+            });
+            if (!result.success) {
+              throw new Error(result.error || 'gemini_generation_failed');
+            }
+            const image = result.images?.[0] ?? (
+              result.imageUrl
+                ? {
+                  imageUrl: result.imageUrl,
+                  id: result.imageId ?? result.storagePath ?? `gemini-${Date.now()}-${index}`,
+                  prompt: geminiPrompt,
+                  storagePath: result.storagePath,
+                  imageId: result.imageId,
+                  jobId: result.jobId,
+                }
+                : null
+            );
+            if (!image?.imageUrl) throw new Error('gemini_generation_image_missing');
+            geminiResults.push({
+              id: image.id || image.imageId || image.storagePath || `gemini-${Date.now()}-${index}`,
+              imageUrl: image.imageUrl,
+              prompt: image.prompt || geminiPrompt,
+              label: resultLabels[index] || `${planningFeature.name} ${index + 1}`,
+              jobId: image.jobId || result.jobId || undefined,
+              imageId: image.imageId || undefined,
+              storagePath: image.storagePath || result.storagePath || undefined,
+              artifactKind: 'image',
+              ...generateMaterialMetadata,
+            });
+          }
+
+          replaceGeneratedImages(geminiResults);
+          if (primaryBrief) {
+            addToHistory(primaryBrief, `${planningFeature.name} Gemini生成`);
+          }
+          setShowSuccessCard(true);
+          toast.success('Geminiで生成しました');
+          return;
+        }
         if (localRunwayWorkerMode) {
           const ratio = aspectRatios.find(r => r.id === selectedRatio) || aspectRatios[0];
           const workerPrompt = buildProductionImagePrompt({
@@ -3500,7 +3573,9 @@ export function GeneratePage() {
     : null;
   const generationReadyInApp = noImageGenerationMode || runwayReadyInApp;
   const runwayReadinessText = noImageGenerationMode
-    ? localRunwayWorkerMode
+    ? geminiGenerationMode
+      ? 'Geminiを標準providerとして生成します。Runway workerは使いません'
+      : localRunwayWorkerMode
       ? 'Mac側ローカルRunway workerで実生成します。Hosted bridgeは使いません'
       : '画像生成はオフです。Runway接続なしで企画書を保存できます'
     : runwayReadyInApp
@@ -3969,7 +4044,7 @@ export function GeneratePage() {
                 size="lg"
                 leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
               >
-                {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : localRunwayWorkerMode ? 'Runway workerで生成' : '企画書を保存'}
+                {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : geminiGenerationMode ? 'Geminiで生成' : localRunwayWorkerMode ? 'Runway workerで生成' : '企画書を保存'}
               </Button>
             )}
           </section>
