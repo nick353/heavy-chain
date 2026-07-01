@@ -350,6 +350,55 @@ async function runRoute(spec, context, viewport) {
         },
       );
     }
+    if (spec.key === 'fitting') {
+      const actionPanelVisible = await page
+        .locator('[data-testid="fitting-action-panel"]')
+        .isVisible()
+        .catch(() => false);
+      const readinessItemCount = await page
+        .locator('[data-testid="fitting-readiness-item"]')
+        .count()
+        .catch(() => 0);
+      const nextActionLinks = await page
+        .locator('[data-testid="fitting-next-actions"] a')
+        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+        .catch(() => []);
+      const previewSource = await page
+        .locator('[data-testid="fitting-preview-image"]')
+        .first()
+        .getAttribute('src')
+        .catch(() => '');
+      addAssertion(
+        routeEvidence,
+        'fitting_workspace_has_clear_generation_flow',
+        actionPanelVisible &&
+          readinessItemCount >= 3 &&
+          nextActionLinks.some((href) => href?.startsWith('/generate?feature=model-matrix')) &&
+          nextActionLinks.includes('/gallery') &&
+          !nextActionLinks.some((href) => href && /checkout|payment|billing\/checkout/.test(href)),
+        {
+          actionPanelVisible,
+          readinessItemCount,
+          nextActionLinks,
+        },
+      );
+      addAssertion(
+        routeEvidence,
+        'fitting_preview_has_model_matrix_context',
+        Boolean(previewSource) &&
+          previewSource.includes('fitting-brief-local-v1') &&
+          previewSource.includes('selected-fitting-workflow') &&
+          previewSource.includes('patternCount') &&
+          previewSource.includes('Next%20step'),
+        {
+          hasPreviewSource: Boolean(previewSource),
+          hasWorkflowMarker: previewSource?.includes('fitting-brief-local-v1') ?? false,
+          hasSelectedWorkflow: previewSource?.includes('selected-fitting-workflow') ?? false,
+          hasPatternCount: previewSource?.includes('patternCount') ?? false,
+          hasNextStep: previewSource?.includes('Next%20step') ?? false,
+        },
+      );
+    }
     if (spec.key === 'patterns') {
       const actionPanelVisible = await page
         .locator('[data-testid="pattern-action-panel"]')

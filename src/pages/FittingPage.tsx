@@ -5,6 +5,7 @@ import {
   Check,
   Camera,
   Download,
+  Images,
   Pencil,
   RefreshCw,
   Ruler,
@@ -30,6 +31,7 @@ import {
   type MaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
+import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import type { Json } from '../types/database';
 
 type Gender = 'female' | 'male';
@@ -156,6 +158,80 @@ const initialMaterialReference: MaterialReferenceState = {
   note: '着用生成に使う衣服素材と、モデル上で効かせるレイヤーを先に決めます。',
 };
 
+const fittingReadinessItems = [
+  { label: '素材', detail: '衣服、モデル、背景を着用生成の参照にする' },
+  { label: '条件', detail: '用途、体型、年代、性別を生成前に決める' },
+  { label: '出力', detail: 'model-matrix生成、Canvas、履歴へ同じ条件で渡す' },
+];
+
+const encodeSvg = (svg: string) => {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const escapeSvgText = (value: string) => {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+};
+
+const buildFittingPreviewSvg = ({
+  workflowTitle,
+  selectedBodyTypeLabels,
+  selectedAgeGroupLabels,
+  genderLabel,
+  materialReference,
+  patternCount,
+}: {
+  workflowTitle: string;
+  selectedBodyTypeLabels: string[];
+  selectedAgeGroupLabels: string[];
+  genderLabel: string;
+  materialReference: MaterialReferenceState;
+  patternCount: number;
+}) => {
+  const safeWorkflow = escapeSvgText(workflowTitle);
+  const safeBodyTypes = escapeSvgText(selectedBodyTypeLabels.join(' / ') || '未選択');
+  const safeAgeGroups = escapeSvgText(selectedAgeGroupLabels.join(' / ') || '未選択');
+  const safeGender = escapeSvgText(genderLabel);
+  const safeMaterial = escapeSvgText(materialReference.fileName || '素材未読込');
+  const safeLayer = escapeSvgText(materialReference.activeLayer);
+  const safePlacement = escapeSvgText(materialReference.placement);
+
+  return encodeSvg(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" data-fitting-preview="fitting-brief-local-v1">
+      <metadata>
+        <fitting-brief workflowVersion="fitting-brief-local-v1" selectedFittingWorkflow="${safeWorkflow}" patternCount="${patternCount}" activeLayer="${safeLayer}" placement="${safePlacement}" />
+      </metadata>
+      <rect width="960" height="640" rx="36" fill="#f7f7f5"/>
+      <rect x="54" y="54" width="852" height="532" rx="30" fill="#ffffff" stroke="#e5e5e5"/>
+      <rect x="92" y="110" width="382" height="398" rx="30" fill="#f8fafc" stroke="#d4d4d4"/>
+      <g transform="translate(180 142)">
+        <circle cx="104" cy="54" r="40" fill="#f1d1b5" stroke="#171717" stroke-width="4"/>
+        <path d="M70 120h70l42 170h-154z" fill="#0ea5e9" opacity=".88"/>
+        <path d="M70 130c-30 42-44 86-42 128M140 130c36 36 54 80 60 128" fill="none" stroke="#171717" stroke-width="13" stroke-linecap="round"/>
+        <path d="M70 290l-24 90M140 290l28 90" fill="none" stroke="#171717" stroke-width="16" stroke-linecap="round"/>
+        <path d="M50 178h112" stroke="#ffffff" stroke-width="7" opacity=".72"/>
+      </g>
+      <rect x="126" y="438" width="310" height="28" rx="14" fill="#e0f2fe"/>
+      <text x="144" y="458" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800" fill="#0369a1">model-matrix patterns:${patternCount}</text>
+      <text x="126" y="548" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="#171717">selected-fitting-workflow:${safeWorkflow}</text>
+      <text x="126" y="576" font-family="Inter, Arial, sans-serif" font-size="16" fill="#737373">workflowVersion:fitting-brief-local-v1</text>
+      <text x="548" y="138" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#0284c7">Fitting brief</text>
+      <text x="548" y="190" font-family="Inter, Arial, sans-serif" font-size="40" font-weight="800" fill="#171717">${safeWorkflow}</text>
+      <text x="548" y="254" font-family="Inter, Arial, sans-serif" font-size="19" fill="#525252">body types: ${safeBodyTypes}</text>
+      <text x="548" y="304" font-family="Inter, Arial, sans-serif" font-size="19" fill="#525252">age groups: ${safeAgeGroups}</text>
+      <text x="548" y="354" font-family="Inter, Arial, sans-serif" font-size="19" fill="#525252">gender: ${safeGender}</text>
+      <text x="548" y="404" font-family="Inter, Arial, sans-serif" font-size="19" fill="#525252">material: ${safeMaterial}</text>
+      <text x="548" y="454" font-family="Inter, Arial, sans-serif" font-size="19" fill="#525252">layer: ${safeLayer}</text>
+      <text x="548" y="504" font-family="Inter, Arial, sans-serif" font-size="19" fill="#525252">placement: ${safePlacement}</text>
+      <text x="548" y="560" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#171717">Next step</text>
+      <text x="548" y="588" font-family="Inter, Arial, sans-serif" font-size="16" fill="#525252">model-matrix generation or Canvas fitting board</text>
+    </svg>
+  `);
+};
+
 export function FittingPage() {
   const navigate = useNavigate();
   const { currentBrand } = useAuthStore();
@@ -187,6 +263,16 @@ export function FittingPage() {
   const selectedAgeGroupLabels = ageGroupOptions
     .filter((option) => selectedAgeGroups.includes(option.id))
     .map((option) => option.label);
+  const genderLabel = genderOptions.find((option) => option.id === gender)?.label ?? '女性';
+  const patternCount = selectedBodyTypes.length * selectedAgeGroups.length;
+  const fittingPreviewImageUrl = useMemo(() => buildFittingPreviewSvg({
+    workflowTitle: activeWorkflow.title,
+    selectedBodyTypeLabels,
+    selectedAgeGroupLabels,
+    genderLabel,
+    materialReference,
+    patternCount,
+  }), [activeWorkflow.title, genderLabel, materialReference, patternCount, selectedAgeGroupLabels, selectedBodyTypeLabels]);
 
   const applyWorkflow = (workflow: typeof fittingWorkflows[number]) => {
     setActiveWorkflowId(workflow.id);
@@ -509,6 +595,67 @@ export function FittingPage() {
             </div>
           </section>
 
+          <section
+            data-testid="fitting-action-panel"
+            className="mt-6 grid gap-4 rounded-2xl border border-sky-200 bg-sky-50/80 p-5 dark:border-sky-900/60 dark:bg-sky-950/20 lg:grid-cols-[minmax(0,1fr)_auto]"
+          >
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
+                Fitting flow
+              </p>
+              <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
+                衣服素材とモデル条件を決め、model-matrix生成かCanvasへ進める
+              </h2>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                {fittingReadinessItems.map((item) => (
+                  <div
+                    key={item.label}
+                    data-testid="fitting-readiness-item"
+                    className="rounded-xl border border-white/70 bg-white/70 p-3 text-sm dark:border-white/10 dark:bg-surface-900/60"
+                  >
+                    <p className="font-semibold text-neutral-950 dark:text-white">{item.label}</p>
+                    <p className="mt-1 leading-5 text-neutral-600 dark:text-neutral-300">{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div
+              data-testid="fitting-next-actions"
+              className="flex flex-col gap-2 sm:flex-row lg:min-w-64 lg:flex-col lg:justify-center"
+            >
+              <Link
+                to={buildGenerationIntentHref({
+                  feature: 'model-matrix',
+                  prompt: `${activeWorkflow.title}\n${productDescription}\n体型: ${selectedBodyTypeLabels.join(' / ')}\n年代: ${selectedAgeGroupLabels.join(' / ')}`,
+                  sourceWorkspace: 'fitting',
+                  workflowVersion: 'fitting-brief-local-v1',
+                  sourceLabel: workspaceSourceConfig.fitting.label,
+                  sourceResumePath: workspaceSourceConfig.fitting.resumePath,
+                  sourceMode: 'local-workflow-intake',
+                  bodyTypes: selectedBodyTypes,
+                  ageGroups: selectedAgeGroups,
+                })}
+                className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+              >
+                <Sparkles className="h-4 w-4" />
+                生成指示へ送る
+              </Link>
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={!canGenerate}
+                className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Sparkles className="h-4 w-4" />
+                AI生成
+              </button>
+              <Link to="/gallery" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
+                <Images className="h-4 w-4" />
+                Galleryで確認
+              </Link>
+            </div>
+          </section>
+
           <div className="mt-6 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
             <MaterialWorkbench
               title="フィッティング素材作業台"
@@ -558,6 +705,17 @@ export function FittingPage() {
                   onChange={(event) => setProductDescription(event.target.value)}
                 />
               </div>
+              <figure className="mt-4">
+                <img
+                  data-testid="fitting-preview-image"
+                  src={fittingPreviewImageUrl}
+                  alt="Fitting brief preview"
+                  className="aspect-[3/2] w-full rounded-2xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
+                />
+                <figcaption className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
+                  用途、体型、年代、素材配置を生成前に確認する着用briefプレビューです。
+                </figcaption>
+              </figure>
 
               <div className="mt-4 space-y-4">
                 <div>

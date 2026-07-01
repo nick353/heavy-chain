@@ -17,7 +17,7 @@ export interface GenerationIntent extends Record<string, Json | undefined> {
   prompt: string;
   href: string;
   label: string;
-  sourceWorkspace: 'studio' | 'video' | 'lab' | 'patterns' | 'models' | 'marketing';
+  sourceWorkspace: 'studio' | 'video' | 'lab' | 'patterns' | 'models' | 'marketing' | 'fitting';
   workflowVersion?: string;
   sourceLabel?: string;
   sourceResumePath?: string;
@@ -122,6 +122,7 @@ export const workspaceSourceConfig: Record<WorkspaceSource, { label: string; res
   video: { label: 'Video Workstation', resumePath: '/video' },
   lab: { label: 'Lab', resumePath: '/lab' },
   marketing: { label: 'マーケティングワークスペース', resumePath: '/marketing' },
+  fitting: { label: 'AIフィッティング', resumePath: '/fitting' },
 };
 
 const workspaceAllowedWorkflowVersions: Record<WorkspaceSource, readonly string[]> = {
@@ -131,12 +132,13 @@ const workspaceAllowedWorkflowVersions: Record<WorkspaceSource, readonly string[
   video: ['video-storyboard-local-v1'],
   lab: ['lab-evaluation-local-v1'],
   marketing: ['marketing-brief-local-v1'],
+  fitting: ['fitting-brief-local-v1'],
 };
 
 const allowedSourceModes = new Set<WorkspaceHandoffKind>(['local-workflow-intake']);
 
 const isWorkspaceSource = (value: string | null): value is WorkspaceSource => {
-  return value === 'studio' || value === 'models' || value === 'patterns' || value === 'video' || value === 'lab' || value === 'marketing';
+  return value === 'studio' || value === 'models' || value === 'patterns' || value === 'video' || value === 'lab' || value === 'marketing' || value === 'fitting';
 };
 
 const isWorkspaceHandoffKind = (value: string | null): value is WorkspaceHandoffKind => {
