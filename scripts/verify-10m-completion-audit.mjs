@@ -54,9 +54,9 @@ const requiredProofs = [
     expect: 'G620 security operations ok=true with no blockers',
   },
   {
-    id: 'g653_current_production_mass_market_qa',
-    goal: 'G653',
-    path: 'output/playwright/prod-post-g653-pattern-flow-20260701-r1/SUMMARY.json',
+    id: 'g654_current_production_mass_market_qa',
+    goal: 'G654',
+    path: 'output/playwright/prod-post-g654-video-flow-20260701-r3/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       Array.isArray(json.failed) &&
@@ -94,6 +94,9 @@ const requiredProofs = [
       hasRouteAssertion(json, 'models', 'model_library_has_clear_generation_flow') &&
       hasRouteAssertion(json, 'patterns', 'pattern_workspace_has_clear_generation_flow') &&
       hasRouteAssertion(json, 'patterns', 'pattern_preview_uses_garment_mockup_context') &&
+      hasRouteAssertion(json, 'video', 'video_workspace_has_clear_generation_flow') &&
+      hasRouteAssertion(json, 'video', 'video_storyboard_preview_has_shot_context') &&
+      hasRouteAssertion(json, 'video', 'video_shot_cards_are_meaningful') &&
       hasRouteAssertion(json, 'credits', 'credits_has_actionable_workspace_panel') &&
       hasRouteAssertion(json, 'history', 'history_has_reuse_action_panel') &&
       hasRouteAssertion(json, 'history', 'desktop_history_timeline_is_bounded') &&
@@ -102,7 +105,7 @@ const requiredProofs = [
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_tool_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-canvas', 'mobile_canvas_content_fits_initial_view'),
-    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage including mobile History, Brand Settings readiness and safe next actions, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures',
+    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage including mobile History, Brand Settings readiness and safe next actions, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures',
   },
   {
     id: 'production_h601_rights_readback',
