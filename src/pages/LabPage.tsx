@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { BarChart3, Check, ChevronRight, FlaskConical, Lightbulb, Save, Target } from 'lucide-react';
+import { BarChart3, Check, ChevronRight, FlaskConical, Images, Layers3, Lightbulb, Save, Sparkles, Target } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import {
@@ -99,6 +99,12 @@ const initialMaterialReference: MaterialReferenceState = {
   scale: 58,
   note: '比較したい素材や生成候補を置いて、採用判断の対象を明確にします。',
 };
+
+const labReadinessItems = [
+  { label: '仮説', detail: '何を比較するかを先に決める' },
+  { label: '評価', detail: 'scoreと評価軸で採用判断を残す' },
+  { label: '出力', detail: '生成、Canvas、Galleryへ同じ条件で渡す' },
+];
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -481,6 +487,65 @@ export function LabPage() {
         </div>
       </section>
 
+      <section
+        data-testid="lab-action-panel"
+        className="grid gap-4 rounded-2xl border border-amber-200 bg-amber-50/80 p-5 dark:border-amber-900/60 dark:bg-amber-950/20 lg:grid-cols-[minmax(0,1fr)_auto]"
+      >
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+            Lab flow
+          </p>
+          <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
+            仮説を選び、評価軸で採点し、採用候補を生成かCanvasへ進める
+          </h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {labReadinessItems.map((item) => (
+              <div
+                key={item.label}
+                data-testid="lab-readiness-item"
+                className="rounded-xl border border-white/70 bg-white/70 p-3 text-sm dark:border-white/10 dark:bg-surface-900/60"
+              >
+                <p className="font-semibold text-neutral-950 dark:text-white">{item.label}</p>
+                <p className="mt-1 leading-5 text-neutral-600 dark:text-neutral-300">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div
+          data-testid="lab-next-actions"
+          className="flex flex-col gap-2 sm:flex-row lg:min-w-64 lg:flex-col lg:justify-center"
+        >
+          <Link
+            to={buildGenerationIntentHref({
+              feature: 'campaign-image',
+              prompt: `${promptDraft}\nHypothesis: ${hypothesis}\nEvaluation axis: ${evaluationAxis}\nCandidate direction: ${candidate}`,
+              sourceWorkspace: 'lab',
+              workflowVersion: 'lab-evaluation-local-v1',
+              sourceLabel: workspaceSourceConfig.lab.label,
+              sourceResumePath: workspaceSourceConfig.lab.resumePath,
+              sourceMode: 'local-workflow-intake',
+            })}
+            className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+          >
+            <Sparkles className="h-4 w-4" />
+            生成指示へ送る
+          </Link>
+          <button
+            type="button"
+            onClick={handoffToCanvas}
+            disabled={!currentBrand}
+            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Layers3 className="h-4 w-4" />
+            Canvasへ保存
+          </button>
+          <Link to="/gallery" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
+            <Images className="h-4 w-4" />
+            Galleryで確認
+          </Link>
+        </div>
+      </section>
+
       <section className="grid gap-5 lg:grid-cols-2">
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <MaterialWorkbench
@@ -549,6 +614,17 @@ export function LabPage() {
             <p className="text-sm text-neutral-500 dark:text-neutral-400">{selectedExperiment.label} / score {selectedExperiment.score}</p>
           </div>
           <div className="mt-4 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+            <figure className="lg:row-span-2">
+              <img
+                data-testid="lab-preview-image"
+                src={previewImageUrl}
+                alt="Lab evaluation preview"
+                className="aspect-[3/2] w-full rounded-2xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
+              />
+              <figcaption className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
+                仮説、評価軸、採用候補、次アクションを生成前に確認するローカル評価プレビューです。
+              </figcaption>
+            </figure>
             <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">決定的スコア</p>
               <div className="mt-3 flex items-end gap-2">

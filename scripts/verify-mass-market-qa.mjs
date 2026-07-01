@@ -457,6 +457,55 @@ async function runRoute(spec, context, viewport) {
         },
       );
     }
+    if (spec.key === 'lab') {
+      const actionPanelVisible = await page
+        .locator('[data-testid="lab-action-panel"]')
+        .isVisible()
+        .catch(() => false);
+      const readinessItemCount = await page
+        .locator('[data-testid="lab-readiness-item"]')
+        .count()
+        .catch(() => 0);
+      const nextActionLinks = await page
+        .locator('[data-testid="lab-next-actions"] a')
+        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+        .catch(() => []);
+      const previewSource = await page
+        .locator('[data-testid="lab-preview-image"]')
+        .first()
+        .getAttribute('src')
+        .catch(() => '');
+      addAssertion(
+        routeEvidence,
+        'lab_workspace_has_clear_generation_flow',
+        actionPanelVisible &&
+          readinessItemCount >= 3 &&
+          nextActionLinks.some((href) => href?.startsWith('/generate?feature=campaign-image')) &&
+          nextActionLinks.includes('/gallery') &&
+          !nextActionLinks.some((href) => href && /checkout|payment|billing\/checkout/.test(href)),
+        {
+          actionPanelVisible,
+          readinessItemCount,
+          nextActionLinks,
+        },
+      );
+      addAssertion(
+        routeEvidence,
+        'lab_preview_has_evaluation_context',
+        Boolean(previewSource) &&
+          previewSource.includes('lab-evaluation-local-v1') &&
+          previewSource.includes('selected-lab-experiment') &&
+          previewSource.includes('scoreSignature') &&
+          previewSource.includes('Next%20step'),
+        {
+          hasPreviewSource: Boolean(previewSource),
+          hasWorkflowMarker: previewSource?.includes('lab-evaluation-local-v1') ?? false,
+          hasSelectedExperiment: previewSource?.includes('selected-lab-experiment') ?? false,
+          hasScoreSignature: previewSource?.includes('scoreSignature') ?? false,
+          hasNextStep: previewSource?.includes('Next%20step') ?? false,
+        },
+      );
+    }
     if (spec.mobile) {
       const intrusiveFixedButtons = await visibleIntrusiveFixedButtons(page);
       addAssertion(routeEvidence, 'mobile_no_intrusive_floating_help_buttons', intrusiveFixedButtons.length === 0, {
