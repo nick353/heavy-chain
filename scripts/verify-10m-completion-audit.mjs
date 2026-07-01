@@ -116,6 +116,32 @@ const requiredProofs = [
     expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage including mobile History, Brand Settings readiness and safe next actions, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix preview/context, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures',
   },
   {
+    id: 'g659_lightchain_order_preview_production_readback',
+    goal: 'G659',
+    path: 'output/playwright/prod-post-g659-lightchain-order-preview-20260701-r2/SUMMARY.json',
+    validate: (json) =>
+      json.ok === true &&
+      Array.isArray(json.failed) &&
+      json.failed.length === 0 &&
+      Number(json.featureCount || 0) >= 33 &&
+      Array.isArray(json.featureResults) &&
+      json.featureResults.length >= 33 &&
+      Array.isArray(json.assertions) &&
+      json.assertions.filter((assertion) =>
+        String(assertion?.id ?? '').includes('workspace_artifact_preview_is_tool_specific_order_sheet') &&
+        assertion?.ok === true
+      ).length >= 33 &&
+      json.cleanup?.contextClosed === true &&
+      json.cleanup?.browserClosed === true &&
+      Array.isArray(json.consoleMessages) &&
+      json.consoleMessages.length === 0 &&
+      Array.isArray(json.pageErrors) &&
+      json.pageErrors.length === 0 &&
+      Array.isArray(json.requestFailures) &&
+      json.requestFailures.length === 0,
+    expect: 'G659 production Lightchain all-feature workflow ok=true with 33 features, 33 tool-specific order-sheet preview assertions, no console/page/request failures, and cleanup closed',
+  },
+  {
     id: 'production_h601_rights_readback',
     goal: 'H601',
     path: 'output/playwright/prod-h601-rights-check-20260701-r1/summary.json',
