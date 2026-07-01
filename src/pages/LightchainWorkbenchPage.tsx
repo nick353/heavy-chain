@@ -666,6 +666,7 @@ export function LightchainWorkbenchPage() {
   const [selectedMaskCandidate, setSelectedMaskCandidate] = useState<MaskCandidate | null>(null);
   const [extractedLayerReady, setExtractedLayerReady] = useState(false);
   const [nextStepConfirmed, setNextStepConfirmed] = useState(false);
+  const [mobileToolsExpanded, setMobileToolsExpanded] = useState(false);
 
   const filteredTools = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -722,6 +723,7 @@ export function LightchainWorkbenchPage() {
   const handleCategoryChange = (categoryId: ToolCategory) => {
     setActiveCategory(categoryId);
     setQuery('');
+    setMobileToolsExpanded(false);
     setSelectedToolId(tools.find((tool) => tool.category === categoryId)?.id ?? tools[0].id);
   };
 
@@ -1206,7 +1208,10 @@ export function LightchainWorkbenchPage() {
                     <Search className="h-4 w-4 text-neutral-400" />
                     <input
                       value={query}
-                      onChange={(event) => setQuery(event.target.value)}
+                      onChange={(event) => {
+                        setQuery(event.target.value);
+                        setMobileToolsExpanded(false);
+                      }}
                       className="w-full min-w-0 border-0 bg-transparent outline-none placeholder:text-neutral-400"
                       placeholder="機能を検索"
                     />
@@ -1214,8 +1219,10 @@ export function LightchainWorkbenchPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 2xl:grid-cols-2">
-                {filteredTools.map((tool) => (
+              <div className="grid gap-3 2xl:grid-cols-2" data-testid="lightchain-tool-list">
+                {filteredTools.map((tool, index) => {
+                  const hiddenOnMobile = !mobileToolsExpanded && index >= 6;
+                  return (
                   <button
                     key={tool.id}
                     type="button"
@@ -1224,7 +1231,10 @@ export function LightchainWorkbenchPage() {
                       resetWorkbenchMaskState();
                       navigate(`/lightchain/${tool.id}`);
                     }}
+                      data-testid="lightchain-tool-card"
                       className={`rounded-xl border bg-white p-4 text-left transition dark:bg-neutral-900 ${
+                      hiddenOnMobile ? 'hidden md:block' : ''
+                    } ${
                       selectedTool.id === tool.id
                         ? 'border-neutral-950 shadow-soft dark:border-white'
                         : 'border-neutral-200 hover:border-neutral-400 hover:shadow-soft dark:border-neutral-800 dark:hover:border-neutral-500'
@@ -1247,8 +1257,20 @@ export function LightchainWorkbenchPage() {
                       </span>
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
+
+              {filteredTools.length > 6 && (
+                <button
+                  type="button"
+                  onClick={() => setMobileToolsExpanded((expanded) => !expanded)}
+                  className="flex w-full items-center justify-center rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 shadow-soft transition active:scale-[0.99] dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 md:hidden"
+                  data-testid="mobile-lightchain-show-all-tools"
+                >
+                  {mobileToolsExpanded ? '少なく表示' : `さらに${filteredTools.length - 6}件を表示`}
+                </button>
+              )}
             </section>
             )}
 

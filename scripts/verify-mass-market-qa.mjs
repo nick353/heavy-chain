@@ -310,6 +310,23 @@ async function runRoute(spec, context, viewport) {
           showAllVisible,
         });
       }
+      if (spec.key === 'mobile-lightchain') {
+        const visibleToolCount = await page
+          .locator('[data-testid="lightchain-tool-card"]')
+          .evaluateAll((items) =>
+            items.filter((item) => {
+              const style = window.getComputedStyle(item);
+              const rect = item.getBoundingClientRect();
+              return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+            }).length,
+          )
+          .catch(() => 0);
+        const showAllVisible = await page.locator('[data-testid="mobile-lightchain-show-all-tools"]').isVisible().catch(() => false);
+        addAssertion(routeEvidence, 'mobile_lightchain_tool_list_is_bounded', visibleToolCount <= 6 && showAllVisible, {
+          visibleToolCount,
+          showAllVisible,
+        });
+      }
       if (spec.key === 'mobile-canvas') {
         await page.waitForTimeout(350);
         const mobileCanvasFit = await readMobileCanvasFit(page);
