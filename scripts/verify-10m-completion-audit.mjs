@@ -54,9 +54,9 @@ const requiredProofs = [
     expect: 'G620 security operations ok=true with no blockers',
   },
   {
-    id: 'g660_current_production_mass_market_qa',
-    goal: 'G660',
-    path: 'output/playwright/prod-post-g660-dashboard-lightchain-direct-links-20260701-r1/SUMMARY.json',
+    id: 'g662_current_production_mass_market_qa',
+    goal: 'G662',
+    path: 'output/playwright/prod-post-g662-gemini-provider-default-20260701-r3/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       Array.isArray(json.failed) &&
@@ -80,6 +80,8 @@ const requiredProofs = [
       hasRouteAssertion(json, 'mobile-gallery', 'gallery_no_scary_remote_failure_toast') &&
       hasRouteAssertion(json, 'generate-campaign', 'h601_rights_confirmation_visible') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'h601_rights_confirmation_visible') &&
+      routeAssertionDetailsIncludes(json, 'generate-campaign', 'upload_first_generation_screen_hides_advanced_controls', 'Geminiで生成') &&
+      routeAssertionDetailsIncludes(json, 'mobile-generate-campaign', 'upload_first_generation_screen_hides_advanced_controls', 'Geminiで生成') &&
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_no_intrusive_floating_help_buttons') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_no_intrusive_floating_help_buttons') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_generate_hides_canvas_toolbar') &&
@@ -114,7 +116,7 @@ const requiredProofs = [
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_tool_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-canvas', 'mobile_canvas_content_fits_initial_view'),
-    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready generate route, desktop/mobile coverage including mobile History, Brand Settings readiness and safe next actions, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix preview/context, clear Model Library generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link and direct detail-route cards, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures',
+    expect: 'current production mass-market QA ok=true with Gallery fallback, no scary Gallery remote-failure toast, H601-ready Gemini generate route, desktop/mobile coverage including mobile History, Brand Settings readiness and safe next actions, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix preview/context, clear Model Library generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link and direct detail-route cards, compact mobile activity summary, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, and no console/page/request failures',
   },
   {
     id: 'g659_lightchain_order_preview_production_readback',
@@ -354,14 +356,14 @@ function parseGoalMapStatuses(text) {
   const body = line.replace(/^Goal map status:\s*/, '');
   for (const segment of body.split(',')) {
     const item = segment.trim();
-    const acceptedMatch = item.match(/^(.+?)\s+accepted$/);
+    const acceptedMatch = item.match(/^(.+?)\s+(accepted(?:-[a-z0-9-]+)?)$/);
     if (acceptedMatch) {
       for (const goalId of expandGoalList(acceptedMatch[1])) {
-        rememberGoalStatus(statuses, seen, goalId, 'accepted');
+        rememberGoalStatus(statuses, seen, goalId, acceptedMatch[2]);
       }
       continue;
     }
-    const statusMatch = item.match(/^(G\d+)\s+(accepted|blocked-exact|queued|human-needed|blocked)$/);
+    const statusMatch = item.match(/^(G\d+)\s+(accepted(?:-[a-z0-9-]+)?|blocked-exact|queued|human-needed|blocked)$/);
     if (statusMatch) {
       rememberGoalStatus(statuses, seen, statusMatch[1], statusMatch[2]);
     }
@@ -538,11 +540,15 @@ function mergeGoalStatuses(summaryStatuses, tableStatuses) {
       merged.set(goalId, tableStatus);
       continue;
     }
-    if (summaryStatus && tableStatus && summaryStatus !== tableStatus) {
+    if (summaryStatus && tableStatus && summaryStatus !== tableStatus && !compatibleGoalStatuses(summaryStatus, tableStatus)) {
       merged.set(goalId, `conflict:goal-map=${summaryStatus};table=${tableStatus}`);
     }
   }
   return merged;
+}
+
+function compatibleGoalStatuses(left, right) {
+  return isAcceptedGoalStatus(left) && isAcceptedGoalStatus(right);
 }
 
 function runCommand(name, command) {
@@ -590,6 +596,18 @@ function hasRouteAssertion(json, routeKey, assertionName) {
   return Array.isArray(route?.assertions) && route.assertions.some((assertion) =>
     assertion?.name === assertionName && assertion?.passed === true
   );
+}
+
+function routeAssertionDetailsIncludes(json, routeKey, assertionName, expectedText) {
+  const routes = [
+    ...(Array.isArray(json?.routes) ? json.routes : []),
+    ...(Array.isArray(json?.mobile) ? json.mobile : []),
+  ];
+  const route = routes.find((item) => item?.key === routeKey);
+  const assertion = Array.isArray(route?.assertions)
+    ? route.assertions.find((item) => item?.name === assertionName && item?.passed === true)
+    : null;
+  return JSON.stringify(assertion?.details || {}).includes(expectedText);
 }
 
 function writeJson(filePath, data) {

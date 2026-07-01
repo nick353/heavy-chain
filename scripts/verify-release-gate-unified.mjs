@@ -45,7 +45,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production mass-market QA current',
-    path: 'output/playwright/prod-post-g660-dashboard-lightchain-direct-links-20260701-r1/SUMMARY.json',
+    path: 'output/playwright/prod-post-g662-gemini-provider-default-20260701-r3/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -63,6 +63,8 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'mobile-gallery', 'gallery_no_scary_remote_failure_toast') &&
       hasRouteAssertion(json, 'generate-campaign', 'h601_rights_confirmation_visible') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'h601_rights_confirmation_visible') &&
+      routeAssertionDetailsIncludes(json, 'generate-campaign', 'upload_first_generation_screen_hides_advanced_controls', 'Geminiで生成') &&
+      routeAssertionDetailsIncludes(json, 'mobile-generate-campaign', 'upload_first_generation_screen_hides_advanced_controls', 'Geminiで生成') &&
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_no_intrusive_floating_help_buttons') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_no_intrusive_floating_help_buttons') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_generate_hides_canvas_toolbar') &&
@@ -97,7 +99,7 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_tool_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-canvas', 'mobile_canvas_content_fits_initial_view'),
-    expect: 'current production mass-market QA ok=true with 17 desktop routes, 9 mobile routes including mobile History, Gallery fallback visible without scary remote-failure toast, H601-ready generate route, Brand Settings readiness and safe next actions, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix preview/context, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link and direct detail-route cards, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, no console/page/request failures, and cleanup closed',
+    expect: 'current production mass-market QA ok=true with 17 desktop routes, 9 mobile routes including mobile History, Gallery fallback visible without scary remote-failure toast, H601-ready Gemini generate route, Brand Settings readiness and safe next actions, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix preview/context, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link and direct detail-route cards, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, no console/page/request failures, and cleanup closed',
   },
   {
     name: 'production Lightchain all-feature order previews',
@@ -788,6 +790,15 @@ function hasRouteAssertion(json, routeKey, assertionName) {
   return arrayFrom(route?.assertions).some((assertion) =>
     assertion?.name === assertionName && assertion?.passed === true
   );
+}
+
+function routeAssertionDetailsIncludes(json, routeKey, assertionName, expectedText) {
+  const route = [...arrayFrom(json?.routes), ...arrayFrom(json?.mobile)]
+    .find((item) => item?.key === routeKey);
+  const assertion = arrayFrom(route?.assertions).find((item) =>
+    item?.name === assertionName && item?.passed === true
+  );
+  return JSON.stringify(assertion?.details || {}).includes(expectedText);
 }
 
 function parseArgs(argv) {
