@@ -301,6 +301,49 @@ async function runRoute(spec, context, viewport) {
         },
       );
     }
+    if (spec.key === 'patterns') {
+      const actionPanelVisible = await page
+        .locator('[data-testid="pattern-action-panel"]')
+        .isVisible()
+        .catch(() => false);
+      const readinessItemCount = await page
+        .locator('[data-testid="pattern-readiness-item"]')
+        .count()
+        .catch(() => 0);
+      const nextActionLinks = await page
+        .locator('[data-testid="pattern-next-actions"] a')
+        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+        .catch(() => []);
+      const previewSources = await page
+        .locator('[data-testid="pattern-preview-image"]')
+        .evaluateAll((images) => images.map((image) => image.getAttribute('src') || ''))
+        .catch(() => []);
+      addAssertion(
+        routeEvidence,
+        'pattern_workspace_has_clear_generation_flow',
+        actionPanelVisible &&
+          readinessItemCount >= 3 &&
+          nextActionLinks.some((href) => href?.startsWith('/generate?feature=design-gacha')) &&
+          nextActionLinks.includes('/gallery') &&
+          !nextActionLinks.some((href) => href && /checkout|payment|billing\/checkout/.test(href)),
+        {
+          actionPanelVisible,
+          readinessItemCount,
+          nextActionLinks,
+        },
+      );
+      addAssertion(
+        routeEvidence,
+        'pattern_preview_uses_garment_mockup_context',
+        previewSources.length >= 3 &&
+          previewSources.every((src) => src.includes('GARMENT%20MOCKUP') && src.includes('placement%3A')),
+        {
+          previewCount: previewSources.length,
+          garmentMockupPreviewCount: previewSources.filter((src) => src.includes('GARMENT%20MOCKUP')).length,
+          placementPreviewCount: previewSources.filter((src) => src.includes('placement%3A')).length,
+        },
+      );
+    }
     if (spec.mobile) {
       const intrusiveFixedButtons = await visibleIntrusiveFixedButtons(page);
       addAssertion(routeEvidence, 'mobile_no_intrusive_floating_help_buttons', intrusiveFixedButtons.length === 0, {

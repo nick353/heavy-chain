@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, ImagePlus, Palette, Repeat2, Save, Shapes, Shirt, Upload, WandSparkles } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
@@ -137,6 +137,19 @@ const escapeSvgText = (value: string) => {
     .replaceAll('"', '&quot;');
 };
 
+const materialReferencePlacementFromText = (repeatStyle: string, garmentTarget: string) => {
+  if (garmentTarget.includes('キャップ') || garmentTarget.includes('バッグ') || garmentTarget.includes('小物')) {
+    return 'small-goods-front-mark';
+  }
+  if (repeatStyle.includes('全面') || garmentTarget.includes('背面')) {
+    return 'large-back-or-all-over-print';
+  }
+  if (repeatStyle.includes('ワンポイント') || garmentTarget.includes('胸元')) {
+    return 'front-chest-one-point';
+  }
+  return 'front-balanced-print';
+};
+
 const buildPatternPreviewSvg = ({
   id,
   label,
@@ -167,9 +180,41 @@ const buildPatternPreviewSvg = ({
   const safeNextStep = escapeSvgText(`${repeatStyle}をpattern-design-briefとして、${vectorIntent}へ進める`.slice(0, 74));
   const isGraphic = id === 'graphic-emblem';
   const isRepeat = id === 'bandana-grid';
+  const isHoodie = garmentTarget.includes('パーカー');
+  const isAccessory = garmentTarget.includes('キャップ') || garmentTarget.includes('バッグ') || garmentTarget.includes('小物');
+  const isBackPrint = garmentTarget.includes('背面') || repeatStyle.includes('全面');
+  const isOnePoint = repeatStyle.includes('ワンポイント') || garmentTarget.includes('胸元');
+  const isLogo = motifPrompt.includes('ロゴ');
+  const isJapanesePattern = motifPrompt.includes('和柄') || motifPrompt.includes('波') || motifPrompt.includes('格子');
+  const printX = isBackPrint ? 262 : isOnePoint ? 304 : 304;
+  const printY = isBackPrint ? 316 : isOnePoint ? 276 : 304;
+  const printW = isBackPrint ? 150 : isOnePoint ? 76 : 122;
+  const printH = isBackPrint ? 178 : isOnePoint ? 54 : 116;
   const accent = isGraphic ? '#ef4444' : isRepeat ? '#2563eb' : '#111827';
   const secondary = isGraphic ? '#111827' : isRepeat ? '#f8fafc' : '#f59e0b';
   const patternId = `${id}-tile`;
+  const motifMark = isLogo
+    ? `<text x="304" y="308" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="900" fill="${accent}">HC</text>`
+    : isJapanesePattern
+      ? `<path d="M270 306c18-22 42-22 60 0s42 22 60 0" fill="none" stroke="${accent}" stroke-width="8" stroke-linecap="round"/>
+         <path d="M272 334c18-22 42-22 60 0s42 22 60 0" fill="none" stroke="${secondary}" stroke-width="6" stroke-linecap="round"/>`
+      : `<path d="M260 318c28-34 60-34 88 0M260 350c28-34 60-34 88 0" fill="none" stroke="${accent}" stroke-width="12" stroke-linecap="round"/>
+         <circle cx="304" cy="292" r="38" fill="none" stroke="${secondary}" stroke-width="5"/>`;
+  const garmentMockup = isAccessory
+    ? `<path d="M194 292c16-72 204-72 220 0v34H194v-34Z" fill="#171717" stroke="#404040" stroke-width="4"/>
+       <path d="M236 326h136c28 0 54 20 64 48H172c10-28 36-48 64-48Z" fill="#262626" stroke="#404040" stroke-width="4"/>
+       <rect x="${printX - printW / 2}" y="${printY - printH / 2}" width="${printW}" height="${printH}" rx="14" fill="#f8fafc" stroke="${accent}" stroke-width="4"/>
+       ${motifMark}`
+    : isHoodie
+      ? `<path d="M228 174c32-46 120-46 152 0l36 72-42 24v214H234V270l-42-24 36-72Z" fill="#171717" stroke="#404040" stroke-width="4"/>
+         <path d="M260 184c20-28 68-28 88 0l-18 48h-52l-18-48Z" fill="#262626" stroke="#525252" stroke-width="4"/>
+         <path d="M278 236h52" stroke="#737373" stroke-width="5" stroke-linecap="round"/>
+         <rect x="${printX - printW / 2}" y="${printY - printH / 2}" width="${printW}" height="${printH}" rx="18" fill="url(#${patternId})" stroke="${accent}" stroke-width="4"/>
+         ${motifMark}`
+      : `<path d="M210 184l52-38h84l52 38 58 84-50 34-30-42v222H232V260l-30 42-50-34 58-84Z" fill="#171717" stroke="#404040" stroke-width="4"/>
+         <path d="M262 146c12 28 72 28 84 0" fill="none" stroke="#525252" stroke-width="5"/>
+         <rect x="${printX - printW / 2}" y="${printY - printH / 2}" width="${printW}" height="${printH}" rx="16" fill="url(#${patternId})" stroke="${accent}" stroke-width="4"/>
+         ${motifMark}`;
 
   return encodeSvg(`
     <svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" data-pattern-preview="${id}">
@@ -192,18 +237,12 @@ const buildPatternPreviewSvg = ({
       </defs>
       <rect width="960" height="640" rx="36" fill="#f7f7f5"/>
       <rect x="54" y="54" width="852" height="532" rx="30" fill="#ffffff" stroke="#e5e5e5"/>
-      <rect x="92" y="98" width="420" height="420" rx="24" fill="url(#${patternId})" stroke="#d4d4d4"/>
-      <rect x="138" y="144" width="328" height="328" rx="${isGraphic ? 164 : 22}" fill="none" stroke="${accent}" stroke-width="${isRepeat ? 2 : 6}" opacity=".9"/>
-      ${
-        isRepeat
-          ? `<path d="M170 190h264M170 256h264M170 322h264M170 388h264" stroke="#ffffff" stroke-width="6" opacity=".72"/>
-             <path d="M204 158v296M270 158v296M336 158v296M402 158v296" stroke="${accent}" stroke-width="4" opacity=".86"/>`
-          : isGraphic
-            ? `<path d="M208 312c64-70 128-70 192 0M208 360c64-70 128-70 192 0" fill="none" stroke="#111827" stroke-width="24" stroke-linecap="round"/>
-               <text x="304" y="236" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800" fill="${accent}">HC</text>`
-            : `<path d="M214 406 C258 202 350 202 394 406" fill="none" stroke="#111827" stroke-width="18" stroke-linecap="round"/>
-               <path d="M256 404 L304 236 L352 404 M282 330 H330" fill="none" stroke="${secondary}" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>`
-      }
+      <text x="92" y="94" font-family="Inter, Arial, sans-serif" font-size="15" font-weight="800" fill="#737373">GARMENT MOCKUP</text>
+      <rect x="92" y="112" width="424" height="404" rx="24" fill="#f3f4f1" stroke="#d4d4d4"/>
+      ${garmentMockup}
+      <rect x="${printX - printW / 2}" y="${printY - printH / 2}" width="${printW}" height="${printH}" rx="12" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="9 7" opacity=".88"/>
+      <path d="M500 ${printY}h36" stroke="${accent}" stroke-width="4" stroke-linecap="round"/>
+      <text x="92" y="548" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800" fill="#171717">placement:${escapeSvgText(materialReferencePlacementFromText(repeatStyle, garmentTarget))}</text>
       <text x="560" y="140" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="${accent}">${safeMode}</text>
       <text x="560" y="190" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="800" fill="#171717">${safeLabel}</text>
       <text x="560" y="252" font-family="Inter, Arial, sans-serif" font-size="20" fill="#525252">motif: ${safeMotif}</text>
@@ -215,8 +254,8 @@ const buildPatternPreviewSvg = ({
       <text x="560" y="500" font-family="Inter, Arial, sans-serif" font-size="16" fill="#525252">${safePrimaryInput}</text>
       <text x="560" y="530" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#171717">Next step</text>
       <text x="560" y="556" font-family="Inter, Arial, sans-serif" font-size="16" fill="#525252">${safeNextStep}</text>
-      <text x="92" y="552" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#171717">selected-pattern-preview:${id}</text>
-      <text x="92" y="580" font-family="Inter, Arial, sans-serif" font-size="16" fill="#737373">repeatSignature:${isRepeat ? 'half-drop-bandana-grid' : isGraphic ? 'single-emblem-lockup' : 'vector-path-caps'}</text>
+      <text x="92" y="574" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#171717">selected-pattern-preview:${id}</text>
+      <text x="92" y="604" font-family="Inter, Arial, sans-serif" font-size="16" fill="#737373">repeatSignature:${isRepeat ? 'half-drop-bandana-grid' : isGraphic ? 'single-emblem-lockup' : 'vector-path-caps'}</text>
     </svg>
   `);
 };
@@ -279,6 +318,40 @@ export function PatternWorkspacePage() {
     }));
   }, [garmentTarget, motifPrompt, paletteNotes, repeatStyle, vectorIntent]);
   const selectedPreview = previewCandidates.find((candidate) => candidate.id === selectedPreviewId) ?? previewCandidates[0];
+  const primaryInput = `${motifPrompt} / ${garmentTarget}`;
+  const nextStep = `${repeatStyle}をpattern-design-briefとして、${vectorIntent}へ進める`;
+  const directPatternGenerationHref = buildGenerationIntentHref({
+    feature: 'design-gacha',
+    prompt: [
+      motifPrompt,
+      `Repeat style: ${repeatStyle}`,
+      `Garment target: ${garmentTarget}`,
+      `Palette: ${paletteNotes}`,
+      `Vector intent: ${vectorIntent}`,
+      `Reference assets: ${referenceAssets}`,
+    ].join('\n'),
+    patternContext: {
+      selectedPatternPreview: {
+        id: selectedPreview.id,
+        label: selectedPreview.label,
+        mode: selectedPreview.mode,
+        repeatSignature: selectedPreview.repeatSignature,
+        vectorSignature: selectedPreview.vectorSignature,
+        paletteSignature: selectedPreview.paletteSignature,
+      },
+      motifPrompt,
+      repeatStyle,
+      garmentTarget,
+      paletteNotes,
+      vectorIntent,
+      referenceAssets,
+    },
+    sourceWorkspace: 'patterns',
+    workflowVersion: 'pattern-preview-local-v1',
+    sourceLabel: workspaceSourceConfig.patterns.label,
+    sourceResumePath: workspaceSourceConfig.patterns.resumePath,
+    sourceMode: 'local-workflow-intake',
+  });
 
   const recordProgress = (mode: Mode) => {
     const historyItem = {
@@ -311,8 +384,6 @@ export function PatternWorkspacePage() {
     }
 
     const note = history[0]?.label ?? 'ローカルメモなし';
-    const primaryInput = `${motifPrompt} / ${garmentTarget}`;
-    const nextStep = `${repeatStyle}をpattern-design-briefとして、${vectorIntent}へ進める`;
     const generationSource = {
       sourceWorkspace: 'patterns' as const,
       workflowVersion: 'pattern-preview-local-v1',
@@ -502,6 +573,63 @@ export function PatternWorkspacePage() {
               {mode}
             </button>
           ))}
+        </div>
+      </section>
+
+      <section
+        data-testid="pattern-action-panel"
+        className="glass-panel rounded-2xl border border-primary-200/70 bg-primary-50/70 p-5 dark:border-primary-400/20 dark:bg-primary-950/20"
+      >
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-700 dark:text-primary-200">
+              Pattern flow
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-neutral-950 dark:text-white">
+              モチーフ、配置、版下を決めて、生成かCanvas仕上げへ進む
+            </h2>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              {[
+                { label: '候補', value: selectedPreview.label },
+                { label: '用途', value: activeMode },
+                { label: '素材', value: materialReference.imageUrl ? '参照あり' : '参照なしでも開始可' },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  data-testid="pattern-readiness-item"
+                  className="rounded-xl bg-white/75 p-3 text-sm dark:bg-surface-900/60"
+                >
+                  <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{item.label}</p>
+                  <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div data-testid="pattern-next-actions" className="grid gap-2">
+            <Link
+              to={directPatternGenerationHref}
+              className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+            >
+              <WandSparkles className="h-4 w-4" />
+              デザインガチャで生成
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+            <button
+              type="button"
+              onClick={handoffToCanvas}
+              disabled={!currentBrand}
+              className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              Canvasへ保存して重ねる
+            </button>
+            <Link
+              to="/gallery"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white/80 px-4 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-white dark:border-white/10 dark:bg-surface-900/70 dark:text-neutral-100"
+            >
+              Galleryで結果を見る
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -697,7 +825,7 @@ export function PatternWorkspacePage() {
             <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">プレビュー候補</h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">{selectedPreview.label} / {selectedPreview.repeatSignature}</p>
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="mt-4 grid gap-3 md:grid-cols-3" data-testid="pattern-preview-candidates">
             {previewCandidates.map((candidate) => {
               const selected = candidate.id === selectedPreview.id;
               return (
@@ -722,6 +850,7 @@ export function PatternWorkspacePage() {
                   <img
                     src={candidate.imageUrl}
                     alt={`${candidate.label} preview`}
+                    data-testid="pattern-preview-image"
                     className="mt-3 aspect-[3/2] w-full rounded-lg border border-black/5 object-cover dark:border-white/10"
                   />
                   <span className="mt-3 block text-xs text-neutral-500 dark:text-neutral-400">
