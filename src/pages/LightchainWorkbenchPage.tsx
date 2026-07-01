@@ -1303,13 +1303,12 @@ export function LightchainWorkbenchPage() {
                 {filteredTools.map((tool, index) => {
                   const hiddenOnMobile = !mobileToolsExpanded && index >= 6;
                   return (
-                  <button
+                  <Link
                     key={tool.id}
-                    type="button"
+                    to={`/lightchain/${tool.id}`}
                     onClick={() => {
                       setSelectedToolId(tool.id);
                       resetWorkbenchMaskState();
-                      navigate(`/lightchain/${tool.id}`);
                     }}
                       data-testid="lightchain-tool-card"
                       className={`rounded-xl border bg-white p-4 text-left transition dark:bg-neutral-900 ${
@@ -1336,7 +1335,11 @@ export function LightchainWorkbenchPage() {
                         </span>
                       </span>
                     </div>
-                  </button>
+                    <div className="mt-4 flex items-center justify-end text-xs font-semibold text-primary-600 dark:text-primary-300">
+                      機能画面へ
+                      <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                    </div>
+                  </Link>
                   );
                 })}
               </div>

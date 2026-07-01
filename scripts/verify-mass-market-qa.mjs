@@ -604,6 +604,29 @@ async function runRoute(spec, context, viewport) {
         },
       );
     }
+    if (spec.key === 'lightchain') {
+      const visibleToolLinks = await page
+        .locator('[data-testid="lightchain-tool-card"]')
+        .evaluateAll((items) =>
+          items
+            .filter((item) => {
+              const style = window.getComputedStyle(item);
+              const rect = item.getBoundingClientRect();
+              return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+            })
+            .map((item) => item.getAttribute('href')),
+        )
+        .catch(() => []);
+      addAssertion(
+        routeEvidence,
+        'lightchain_tool_cards_open_detail_routes',
+        visibleToolLinks.length > 0 &&
+          visibleToolLinks.every((href) => typeof href === 'string' && href.startsWith('/lightchain/')),
+        {
+          visibleToolLinks,
+        },
+      );
+    }
     if (spec.mobile) {
       const intrusiveFixedButtons = await visibleIntrusiveFixedButtons(page);
       addAssertion(routeEvidence, 'mobile_no_intrusive_floating_help_buttons', intrusiveFixedButtons.length === 0, {
@@ -802,8 +825,8 @@ async function runRoute(spec, context, viewport) {
         });
       }
       if (spec.key === 'mobile-lightchain') {
-        const visibleToolCount = await page
-          .locator('[data-testid="lightchain-tool-card"]')
+        const visibleToolCards = page.locator('[data-testid="lightchain-tool-card"]');
+        const visibleToolCount = await visibleToolCards
           .evaluateAll((items) =>
             items.filter((item) => {
               const style = window.getComputedStyle(item);
@@ -812,11 +835,31 @@ async function runRoute(spec, context, viewport) {
             }).length,
           )
           .catch(() => 0);
+        const visibleToolLinks = await visibleToolCards
+          .evaluateAll((items) =>
+            items
+              .filter((item) => {
+                const style = window.getComputedStyle(item);
+                const rect = item.getBoundingClientRect();
+                return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+              })
+              .map((item) => item.getAttribute('href')),
+          )
+          .catch(() => []);
         const showAllVisible = await page.locator('[data-testid="mobile-lightchain-show-all-tools"]').isVisible().catch(() => false);
         addAssertion(routeEvidence, 'mobile_lightchain_tool_list_is_bounded', visibleToolCount <= 6 && showAllVisible, {
           visibleToolCount,
           showAllVisible,
         });
+        addAssertion(
+          routeEvidence,
+          'mobile_lightchain_tool_cards_open_detail_routes',
+          visibleToolLinks.length > 0 &&
+            visibleToolLinks.every((href) => typeof href === 'string' && href.startsWith('/lightchain/')),
+          {
+            visibleToolLinks,
+          },
+        );
       }
       if (spec.key === 'mobile-canvas') {
         await page.waitForTimeout(350);
