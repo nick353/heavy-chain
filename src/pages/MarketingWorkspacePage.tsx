@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   AlertCircle,
@@ -8,12 +8,14 @@ import {
   Brush,
   CheckCircle2,
   ChevronRight,
+  Images,
   Layers,
   Megaphone,
   MonitorUp,
   Radio,
   Settings2,
   ShoppingBag,
+  Sparkles,
   Store,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
@@ -24,6 +26,7 @@ import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
+import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
 const channels = [
   { id: 'ec', label: 'EC', icon: ShoppingBag },
@@ -78,6 +81,76 @@ const initialMaterialReference: MaterialReferenceState = {
   note: '販促素材の主役にする商品画像と配置を先に決めます。',
 };
 
+const marketingReadinessItems = [
+  { label: '素材', detail: '商品、ロゴ、背景を販促レイヤーにする' },
+  { label: '訴求', detail: 'チャネル、テンプレート、コピーを1つにまとめる' },
+  { label: '出力', detail: '生成、Canvas、Galleryへ同じ条件で渡す' },
+];
+
+const encodeSvg = (svg: string) => {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const escapeSvgText = (value: string) => {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+};
+
+const buildMarketingPreviewSvg = ({
+  activeLabel,
+  selectedTemplate,
+  campaignCopy,
+  materialReference,
+}: {
+  activeLabel: string;
+  selectedTemplate: string;
+  campaignCopy: string;
+  materialReference: MaterialReferenceState;
+}) => {
+  const safeChannel = escapeSvgText(activeLabel);
+  const safeTemplate = escapeSvgText(selectedTemplate);
+  const safeCopy = escapeSvgText((campaignCopy.trim() || 'コピー未入力').slice(0, 72));
+  const safeLayer = escapeSvgText(materialReference.activeLayer);
+  const safePlacement = escapeSvgText(materialReference.placement);
+  const safeMaterialKind = escapeSvgText(materialReference.materialKind);
+  const safeFileName = escapeSvgText(materialReference.fileName || '素材未読込');
+  const accent = activeLabel === 'SNS'
+    ? '#7c3aed'
+    : activeLabel === '店舗・オフライン'
+      ? '#0f766e'
+      : activeLabel === 'ライブ配信'
+        ? '#dc2626'
+        : '#d97706';
+
+  return encodeSvg(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" data-marketing-preview="marketing-brief-local-v1">
+      <metadata>
+        <marketing-brief workflowVersion="marketing-brief-local-v1" selectedMarketingChannel="${safeChannel}" selectedTemplate="${safeTemplate}" activeLayer="${safeLayer}" placement="${safePlacement}" />
+      </metadata>
+      <rect width="960" height="640" rx="36" fill="#f7f7f5"/>
+      <rect x="54" y="54" width="852" height="532" rx="30" fill="#ffffff" stroke="#e5e5e5"/>
+      <rect x="92" y="104" width="372" height="404" rx="30" fill="#fafafa" stroke="#d4d4d4"/>
+      <rect x="128" y="150" width="300" height="240" rx="26" fill="${accent}" opacity=".12" stroke="${accent}" stroke-width="4"/>
+      <circle cx="278" cy="242" r="74" fill="${accent}" opacity=".82"/>
+      <path d="M160 426h236M160 464h170" stroke="#171717" stroke-width="18" stroke-linecap="round" opacity=".82"/>
+      <text x="128" y="548" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="#171717">selected-marketing-brief:${safeChannel}/${safeTemplate}</text>
+      <text x="128" y="576" font-family="Inter, Arial, sans-serif" font-size="16" fill="#737373">workflowVersion:marketing-brief-local-v1</text>
+      <text x="548" y="138" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="${accent}">Marketing brief</text>
+      <text x="548" y="190" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="800" fill="#171717">${safeChannel}</text>
+      <text x="548" y="238" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#171717">${safeTemplate}</text>
+      <text x="548" y="292" font-family="Inter, Arial, sans-serif" font-size="18" fill="#525252">copy: ${safeCopy}</text>
+      <text x="548" y="342" font-family="Inter, Arial, sans-serif" font-size="18" fill="#525252">material: ${safeMaterialKind} / ${safeFileName}</text>
+      <text x="548" y="392" font-family="Inter, Arial, sans-serif" font-size="18" fill="#525252">layer: ${safeLayer}</text>
+      <text x="548" y="442" font-family="Inter, Arial, sans-serif" font-size="18" fill="#525252">placement: ${safePlacement}</text>
+      <text x="548" y="504" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#171717">Next step</text>
+      <text x="548" y="532" font-family="Inter, Arial, sans-serif" font-size="16" fill="#525252">campaign-image generation or Canvas layout</text>
+    </svg>
+  `);
+};
+
 export function MarketingWorkspacePage() {
   const navigate = useNavigate();
   const { currentBrand } = useAuthStore();
@@ -98,6 +171,12 @@ export function MarketingWorkspacePage() {
     [activeChannel]
   );
   const templateOptions = templatesByChannel[activeChannel];
+  const previewImageUrl = useMemo(() => buildMarketingPreviewSvg({
+    activeLabel,
+    selectedTemplate,
+    campaignCopy,
+    materialReference,
+  }), [activeLabel, campaignCopy, materialReference, selectedTemplate]);
   const canStart = Boolean(productImageUrl && campaignCopy.trim());
   const canHandoff = Boolean(
     currentBrand &&
@@ -379,6 +458,65 @@ export function MarketingWorkspacePage() {
         </div>
       </section>
 
+      <section
+        data-testid="marketing-action-panel"
+        className="grid gap-4 rounded-2xl border border-orange-200 bg-orange-50/80 p-5 dark:border-orange-900/60 dark:bg-orange-950/20 lg:grid-cols-[minmax(0,1fr)_auto]"
+      >
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-700 dark:text-orange-300">
+            Marketing flow
+          </p>
+          <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
+            素材とコピーを販促briefにまとめ、生成かCanvasへ進める
+          </h2>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {marketingReadinessItems.map((item) => (
+              <div
+                key={item.label}
+                data-testid="marketing-readiness-item"
+                className="rounded-xl border border-white/70 bg-white/70 p-3 text-sm dark:border-white/10 dark:bg-surface-900/60"
+              >
+                <p className="font-semibold text-neutral-950 dark:text-white">{item.label}</p>
+                <p className="mt-1 leading-5 text-neutral-600 dark:text-neutral-300">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div
+          data-testid="marketing-next-actions"
+          className="flex flex-col gap-2 sm:flex-row lg:min-w-64 lg:flex-col lg:justify-center"
+        >
+          <Link
+            to={buildGenerationIntentHref({
+              feature: 'campaign-image',
+              prompt: `${activeLabel} / ${selectedTemplate}\n${campaignCopy.trim()}`,
+              sourceWorkspace: 'marketing',
+              workflowVersion: 'marketing-brief-local-v1',
+              sourceLabel: workspaceSourceConfig.marketing.label,
+              sourceResumePath: workspaceSourceConfig.marketing.resumePath,
+              sourceMode: 'local-workflow-intake',
+            })}
+            className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+          >
+            <Sparkles className="h-4 w-4" />
+            生成指示へ送る
+          </Link>
+          <button
+            type="button"
+            onClick={() => void handoffToCanvas()}
+            disabled={!canHandoff || isHandingOff}
+            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Layers className="h-4 w-4" />
+            Canvasへ保存
+          </button>
+          <Link to="/gallery" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
+            <Images className="h-4 w-4" />
+            Galleryで確認
+          </Link>
+        </div>
+      </section>
+
       <section className="grid gap-5 xl:grid-cols-[0.85fr_1.25fr_0.9fr]">
         <aside className="glass-panel rounded-2xl p-5">
           <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">テンプレート</h2>
@@ -508,6 +646,17 @@ export function MarketingWorkspacePage() {
                     {campaignCopy.trim() || 'コピーを入力してください。'}
                   </p>
                 </div>
+                <figure>
+                  <img
+                    data-testid="marketing-preview-image"
+                    src={previewImageUrl}
+                    alt="Marketing brief preview"
+                    className="aspect-[3/2] w-full rounded-2xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
+                  />
+                  <figcaption className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
+                    チャネル、テンプレート、コピー、素材配置を生成前に確認する販促briefプレビューです。
+                  </figcaption>
+                </figure>
               </div>
             </div>
           </div>

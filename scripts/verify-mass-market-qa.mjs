@@ -301,6 +301,55 @@ async function runRoute(spec, context, viewport) {
         },
       );
     }
+    if (spec.key === 'marketing') {
+      const actionPanelVisible = await page
+        .locator('[data-testid="marketing-action-panel"]')
+        .isVisible()
+        .catch(() => false);
+      const readinessItemCount = await page
+        .locator('[data-testid="marketing-readiness-item"]')
+        .count()
+        .catch(() => 0);
+      const nextActionLinks = await page
+        .locator('[data-testid="marketing-next-actions"] a')
+        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+        .catch(() => []);
+      const previewSource = await page
+        .locator('[data-testid="marketing-preview-image"]')
+        .first()
+        .getAttribute('src')
+        .catch(() => '');
+      addAssertion(
+        routeEvidence,
+        'marketing_workspace_has_clear_generation_flow',
+        actionPanelVisible &&
+          readinessItemCount >= 3 &&
+          nextActionLinks.some((href) => href?.startsWith('/generate?feature=campaign-image')) &&
+          nextActionLinks.includes('/gallery') &&
+          !nextActionLinks.some((href) => href && /checkout|payment|billing\/checkout/.test(href)),
+        {
+          actionPanelVisible,
+          readinessItemCount,
+          nextActionLinks,
+        },
+      );
+      addAssertion(
+        routeEvidence,
+        'marketing_preview_has_brief_context',
+        Boolean(previewSource) &&
+          previewSource.includes('marketing-brief-local-v1') &&
+          previewSource.includes('selected-marketing-brief') &&
+          previewSource.includes('selectedTemplate') &&
+          previewSource.includes('Next%20step'),
+        {
+          hasPreviewSource: Boolean(previewSource),
+          hasWorkflowMarker: previewSource?.includes('marketing-brief-local-v1') ?? false,
+          hasSelectedBrief: previewSource?.includes('selected-marketing-brief') ?? false,
+          hasSelectedTemplate: previewSource?.includes('selectedTemplate') ?? false,
+          hasNextStep: previewSource?.includes('Next%20step') ?? false,
+        },
+      );
+    }
     if (spec.key === 'patterns') {
       const actionPanelVisible = await page
         .locator('[data-testid="pattern-action-panel"]')
