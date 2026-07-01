@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, Save, Shirt, SlidersHorizontal, Sparkles, UserRound } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
@@ -230,6 +230,28 @@ export function ModelLibraryPage() {
   const selectedCandidate = modelCandidates.find((candidate) => candidate.id === selectedCandidateId) ?? modelCandidates[0];
   const primaryInput = `${face} / ${pose} / ${bodyType} / ${skinTone} / ${ageGroup} / ${usage} / ${productDescription}`;
   const nextStep = `${usage}向けモデル候補 ${selectedCandidate.label} をmodel-library-workspaceとしてモデルマトリクスへ渡す`;
+  const directModelMatrixHref = buildGenerationIntentHref({
+    feature: 'model-matrix',
+    prompt: [
+      `Face: ${face}`,
+      `Pose: ${pose}`,
+      `Body type: ${bodyType}`,
+      `Skin tone: ${skinTone}`,
+      `Age group: ${ageGroup}`,
+      `Usage: ${usage}`,
+      `Product description: ${productDescription}`,
+    ].join('\n'),
+    bodyTypes: selectedCandidate.modelMatrixBodyTypes,
+    ageGroups: selectedCandidate.modelMatrixAgeGroups,
+    skinTone: selectedCandidate.modelMatrixSkinTone,
+    hairStyle: selectedCandidate.modelMatrixHairStyle,
+    modelCandidateLabel: selectedCandidate.label,
+    sourceWorkspace: 'models',
+    workflowVersion: 'model-library-local-v1',
+    sourceLabel: workspaceSourceConfig.models.label,
+    sourceResumePath: workspaceSourceConfig.models.resumePath,
+    sourceMode: 'local-workflow-intake',
+  });
   const previewImageUrl = useMemo(() => buildModelLibraryPreviewSvg({
     candidate: selectedCandidate,
     face,
@@ -498,6 +520,63 @@ export function ModelLibraryPage() {
               </span>
             </button>
           ))}
+        </div>
+      </section>
+
+      <section
+        data-testid="model-library-action-panel"
+        className="glass-panel rounded-2xl border border-primary-200/70 bg-primary-50/70 p-5 dark:border-primary-400/20 dark:bg-primary-950/20"
+      >
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-700 dark:text-primary-200">
+              Production flow
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-neutral-950 dark:text-white">
+              まず候補を選び、必要なら参照素材を置いて、モデルマトリクスへ送る
+            </h2>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              {[
+                { label: '候補', value: selectedCandidate.label },
+                { label: '用途', value: usage },
+                { label: '素材', value: materialReference.imageUrl ? '参照あり' : '参照なしでも開始可' },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  data-testid="model-library-readiness-item"
+                  className="rounded-xl bg-white/75 p-3 text-sm dark:bg-surface-900/60"
+                >
+                  <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{item.label}</p>
+                  <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div data-testid="model-library-next-actions" className="grid gap-2">
+            <Link
+              to={directModelMatrixHref}
+              className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+            >
+              <Sparkles className="h-4 w-4" />
+              モデルマトリクスで生成
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+            <button
+              type="button"
+              onClick={handoffToCanvas}
+              disabled={!currentBrand}
+              className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              Canvasへ保存して重ねる
+            </button>
+            <Link
+              to="/gallery"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white/80 px-4 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-white dark:border-white/10 dark:bg-surface-900/70 dark:text-neutral-100"
+            >
+              Galleryで結果を見る
+            </Link>
+          </div>
         </div>
       </section>
 

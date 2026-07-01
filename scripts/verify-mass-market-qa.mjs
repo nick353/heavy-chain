@@ -273,6 +273,34 @@ async function runRoute(spec, context, viewport) {
         },
       );
     }
+    if (spec.key === 'models') {
+      const actionPanelVisible = await page
+        .locator('[data-testid="model-library-action-panel"]')
+        .isVisible()
+        .catch(() => false);
+      const readinessItemCount = await page
+        .locator('[data-testid="model-library-readiness-item"]')
+        .count()
+        .catch(() => 0);
+      const nextActionLinks = await page
+        .locator('[data-testid="model-library-next-actions"] a')
+        .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+        .catch(() => []);
+      addAssertion(
+        routeEvidence,
+        'model_library_has_clear_generation_flow',
+        actionPanelVisible &&
+          readinessItemCount >= 3 &&
+          nextActionLinks.some((href) => href?.startsWith('/generate?feature=model-matrix')) &&
+          nextActionLinks.includes('/gallery') &&
+          !nextActionLinks.some((href) => href && /checkout|payment|billing\/checkout/.test(href)),
+        {
+          actionPanelVisible,
+          readinessItemCount,
+          nextActionLinks,
+        },
+      );
+    }
     if (spec.mobile) {
       const intrusiveFixedButtons = await visibleIntrusiveFixedButtons(page);
       addAssertion(routeEvidence, 'mobile_no_intrusive_floating_help_buttons', intrusiveFixedButtons.length === 0, {
