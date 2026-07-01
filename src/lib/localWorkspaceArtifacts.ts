@@ -34,8 +34,9 @@ export interface WorkspaceArtifactBestEffortResult {
   cleanupError?: unknown;
 }
 
-type RemoteSaveStage = 'function' | 'auth' | 'prepare' | 'storage' | 'job' | 'image' | 'completed';
+type RemoteSaveStage = 'function' | 'auth' | 'prepare' | 'storage' | 'job' | 'image' | 'timeout' | 'completed';
 type RemoteCleanupStatus = 'none' | 'attempted' | 'failed';
+const REMOTE_WORKSPACE_ARTIFACT_TIMEOUT_MS = 8000;
 
 interface RemoteSaveFunctionResult {
   success?: boolean;
@@ -63,6 +64,22 @@ const readRemoteSaveErrorBody = async (response?: Response): Promise<RemoteSaveF
     return await response.clone().json() as RemoteSaveFunctionResult;
   } catch {
     return null;
+  }
+};
+
+const withRemoteSaveTimeout = async <T,>(promise: Promise<T>): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`Remote workspace artifact save timed out after ${REMOTE_WORKSPACE_ARTIFACT_TIMEOUT_MS}ms.`));
+        }, REMOTE_WORKSPACE_ARTIFACT_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 };
 
@@ -136,19 +153,21 @@ export const saveWorkspaceArtifactBestEffort = async (
   let remoteCleanupStatus: RemoteCleanupStatus = 'none';
 
   try {
-    const { data, error, response } = await supabase.functions.invoke('marketing-workspace-artifact', {
-      body: {
-        brandId: input.brandId,
-        featureType: input.featureType,
-        title: input.title,
-        imageUrl: input.imageUrl,
-        prompt: input.prompt ?? null,
-        createdAt: input.createdAt ?? new Date().toISOString(),
-        metadata: input.metadata ?? {},
-        canvasProjectId: input.canvasProjectId ?? null,
-        sourceJobId: input.sourceJobId ?? null,
-      },
-    });
+    const { data, error, response } = await withRemoteSaveTimeout(
+      supabase.functions.invoke('marketing-workspace-artifact', {
+        body: {
+          brandId: input.brandId,
+          featureType: input.featureType,
+          title: input.title,
+          imageUrl: input.imageUrl,
+          prompt: input.prompt ?? null,
+          createdAt: input.createdAt ?? new Date().toISOString(),
+          metadata: input.metadata ?? {},
+          canvasProjectId: input.canvasProjectId ?? null,
+          sourceJobId: input.sourceJobId ?? null,
+        },
+      })
+    );
 
     const result = (data ?? await readRemoteSaveErrorBody(response)) as RemoteSaveFunctionResult | null;
 
@@ -164,6 +183,7 @@ export const saveWorkspaceArtifactBestEffort = async (
     remote = result.remote;
   } catch (error) {
     remoteError = error;
+    if (error instanceof Error && error.message.includes('timed out')) remoteSaveStage = 'timeout';
     console.warn('Remote workspace artifact save failed; falling back to localStorage:', error);
   }
 
