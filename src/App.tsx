@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import { Layout } from './components/layout';
@@ -59,20 +59,70 @@ function lazyPage(page: React.ReactNode) {
   return <Suspense fallback={<PageLoading />}>{page}</Suspense>;
 }
 
+function AuthLoadingFallback() {
+  const location = useLocation();
+  const isDashboard = location.pathname === '/dashboard';
+
+  return (
+    <div className="min-h-screen bg-surface-50 px-4 py-8 dark:bg-surface-950">
+      <div className="mx-auto flex min-h-[60vh] max-w-5xl flex-col justify-center">
+        <div className="max-w-2xl">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="spinner" />
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary-600 dark:text-primary-300">
+              {isDashboard ? 'Dashboard' : 'Workspace'}
+            </p>
+          </div>
+          <h1 className="text-2xl font-display font-semibold text-neutral-950 dark:text-white sm:text-3xl">
+            {isDashboard ? '制作ワークフローを準備しています' : 'ワークスペースを準備しています'}
+          </h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+            認証状態とブランド設定を確認しています。時間がかかる場合でも、画面を閉じずに再読み込みできます。
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="rounded-xl bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+            >
+              再読み込み
+            </button>
+            <a
+              href="/login"
+              className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200 dark:hover:bg-white/[0.1]"
+            >
+              ログイン画面へ
+            </a>
+          </div>
+        </div>
+        {isDashboard ? (
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            {['商品画像から始める', 'Lightchain互換を開く', 'ジョブ状況を見る'].map((label) => (
+              <div
+                key={label}
+                className="rounded-2xl border border-neutral-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-white/[0.06]"
+              >
+                <div className="mb-3 h-8 w-8 rounded-xl bg-primary-100 dark:bg-primary-900/40" />
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white">{label}</p>
+                <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+                  認証確認後にこの導線をそのまま使えます。
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isInitialized } = useAuthStore();
 
   // 初期化が完了していない、またはローディング中の場合
   if (!isInitialized || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
-        <div className="text-center">
-          <div className="spinner mb-4" />
-          <p className="text-neutral-500 dark:text-neutral-400">読み込み中...</p>
-        </div>
-      </div>
-    );
+    return <AuthLoadingFallback />;
   }
 
   // 認証されていない場合
