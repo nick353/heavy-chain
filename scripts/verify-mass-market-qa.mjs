@@ -294,6 +294,31 @@ async function runRoute(spec, context, viewport) {
           .locator('[data-testid="mobile-dashboard-activity-detail-link"]')
           .getAttribute('href')
           .catch(() => null);
+        const nextActionVisible = await page
+          .locator('[data-testid="mobile-dashboard-next-action"]')
+          .isVisible()
+          .catch(() => false);
+        const nextActionPrimaryHref = await page
+          .locator('[data-testid="mobile-dashboard-next-action"] a[href="/generate?feature=campaign-image"]')
+          .getAttribute('href')
+          .catch(() => null);
+        const managementLinks = await page
+          .locator('[data-testid="mobile-dashboard-management-links"] a')
+          .evaluateAll((links) => links.map((link) => link.getAttribute('href')))
+          .catch(() => []);
+        const lowPriorityDesktopPanelsVisible = await page
+          .locator([
+            '[data-testid="dashboard-desktop-workflows"]',
+            '[data-testid="dashboard-desktop-projects"]',
+            '[data-testid="dashboard-desktop-recent-images"]',
+            '[data-testid="dashboard-desktop-usage"]',
+          ].join(', '))
+          .evaluateAll((panels) => panels.some((panel) => {
+            const style = window.getComputedStyle(panel);
+            const rect = panel.getBoundingClientRect();
+            return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+          }))
+          .catch(() => true);
         const quickStartLinks = await quickStart.locator('a').evaluateAll((links) =>
           links.map((link) => ({
             text: link.textContent?.replace(/\s+/g, ' ').trim(),
@@ -334,6 +359,28 @@ async function runRoute(spec, context, viewport) {
             activitySummaryVisible,
             activityDetailVisible,
             activityDetailHref,
+          },
+        );
+        addAssertion(
+          routeEvidence,
+          'mobile_dashboard_has_single_primary_next_action',
+          nextActionVisible &&
+            nextActionPrimaryHref === '/generate?feature=campaign-image' &&
+            managementLinks.includes('/history') &&
+            managementLinks.includes('/canvas') &&
+            managementLinks.includes('/credits'),
+          {
+            nextActionVisible,
+            nextActionPrimaryHref,
+            managementLinks,
+          },
+        );
+        addAssertion(
+          routeEvidence,
+          'mobile_dashboard_hides_low_priority_desktop_panels',
+          !lowPriorityDesktopPanelsVisible,
+          {
+            lowPriorityDesktopPanelsVisible,
           },
         );
       }

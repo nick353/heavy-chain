@@ -414,6 +414,32 @@ export function DashboardPage() {
           ))}
         </motion.nav>
 
+        <motion.section
+          variants={itemVariants}
+          className="mb-6 rounded-2xl border border-primary-200/50 bg-primary-50/80 p-4 shadow-sm dark:border-primary-900/40 dark:bg-primary-950/20 sm:hidden"
+          data-testid="mobile-dashboard-next-action"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300">Next</p>
+          <h2 className="mt-1 text-base font-semibold text-neutral-950 dark:text-white">まず1つ作る</h2>
+          <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
+            商品画像を入れて、生成かCanvas保存まで進めます。
+          </p>
+          <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+            <Link
+              to="/generate?feature=campaign-image"
+              className="flex min-h-11 items-center justify-center rounded-xl bg-neutral-950 px-4 text-sm font-semibold text-white shadow-sm active:scale-[0.99] dark:bg-white dark:text-neutral-950"
+            >
+              商品画像から始める
+            </Link>
+            <Link
+              to="/jobs"
+              className="flex min-h-11 items-center justify-center rounded-xl border border-neutral-200 bg-white/80 px-3 text-xs font-semibold text-neutral-700 dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200"
+            >
+              状況
+            </Link>
+          </div>
+        </motion.section>
+
         <motion.section variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
           <LightchainParityHub compactOnMobile />
         </motion.section>
@@ -499,6 +525,32 @@ export function DashboardPage() {
           )}
         </motion.section>
 
+        <motion.nav
+          variants={itemVariants}
+          className="mb-8 grid grid-cols-3 gap-2 sm:hidden"
+          aria-label="モバイル管理導線"
+          data-testid="mobile-dashboard-management-links"
+        >
+          <Link
+            to="/history"
+            className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-center text-xs font-semibold text-neutral-800 dark:text-neutral-100"
+          >
+            履歴
+          </Link>
+          <Link
+            to="/canvas"
+            className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-center text-xs font-semibold text-neutral-800 dark:text-neutral-100"
+          >
+            Canvas
+          </Link>
+          <Link
+            to="/credits"
+            className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-center text-xs font-semibold text-neutral-800 dark:text-neutral-100"
+          >
+            利用状況
+          </Link>
+        </motion.nav>
+
         {/* Quick Actions */}
         <motion.div
           variants={itemVariants}
@@ -532,12 +584,20 @@ export function DashboardPage() {
           ))}
         </motion.div>
 
-        <motion.section variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
+        <motion.section
+          variants={itemVariants}
+          className="mb-8 hidden sm:block sm:mb-12 lg:mb-16"
+          data-testid="dashboard-desktop-workflows"
+        >
           <QuickWorkflows />
         </motion.section>
 
         {/* Canvas Projects */}
-        <motion.div variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
+        <motion.div
+          variants={itemVariants}
+          className="mb-8 hidden sm:block sm:mb-12 lg:mb-16"
+          data-testid="dashboard-desktop-projects"
+        >
           <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-1.5 sm:p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -723,7 +783,11 @@ export function DashboardPage() {
         </motion.div>
 
         {/* Recent Images */}
-        <motion.div variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
+        <motion.div
+          variants={itemVariants}
+          className="mb-8 hidden sm:block sm:mb-12 lg:mb-16"
+          data-testid="dashboard-desktop-recent-images"
+        >
           <div className="flex items-center justify-between mb-4 sm:mb-6 lg:mb-8">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-1.5 sm:p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
@@ -809,7 +873,7 @@ export function DashboardPage() {
         </motion.div>
 
         {/* Usage quota */}
-        <motion.div variants={itemVariants}>
+        <motion.div variants={itemVariants} className="hidden sm:block" data-testid="dashboard-desktop-usage">
           <UsageStats />
         </motion.div>
       </motion.div>
