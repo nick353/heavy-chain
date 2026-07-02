@@ -695,6 +695,10 @@ export function LightchainWorkbenchPage() {
   const [extractedLayerReady, setExtractedLayerReady] = useState(false);
   const [extractedGarmentImageUrl, setExtractedGarmentImageUrl] = useState<string | null>(null);
   const [cutoutBounds, setCutoutBounds] = useState<MaterialCutoutBounds | null>(null);
+  const [cutoutOutputSize, setCutoutOutputSize] = useState<{ width: number; height: number } | null>(null);
+  const [cutoutDataUrlBytes, setCutoutDataUrlBytes] = useState<number | null>(null);
+  const [cutoutMaxDataUrlBytes, setCutoutMaxDataUrlBytes] = useState<number | null>(null);
+  const [cutoutStoragePolicy, setCutoutStoragePolicy] = useState<string | null>(null);
   const [maskEngine, setMaskEngine] = useState<string | null>(null);
   const [nextStepConfirmed, setNextStepConfirmed] = useState(false);
   const [mobileToolsExpanded, setMobileToolsExpanded] = useState(false);
@@ -740,6 +744,10 @@ export function LightchainWorkbenchPage() {
     setExtractedLayerReady(false);
     setExtractedGarmentImageUrl(null);
     setCutoutBounds(null);
+    setCutoutOutputSize(null);
+    setCutoutDataUrlBytes(null);
+    setCutoutMaxDataUrlBytes(null);
+    setCutoutStoragePolicy(null);
     setMaskEngine(null);
     setNextStepConfirmed(false);
   };
@@ -785,6 +793,10 @@ export function LightchainWorkbenchPage() {
       setExtractedLayerReady(false);
       setExtractedGarmentImageUrl(null);
       setCutoutBounds(null);
+      setCutoutOutputSize(null);
+      setCutoutDataUrlBytes(null);
+      setCutoutMaxDataUrlBytes(null);
+      setCutoutStoragePolicy(null);
       setMaskEngine(null);
       setNextStepConfirmed(false);
       toast.success('素材画像を読み込み、編集レイヤーを準備しました');
@@ -816,6 +828,10 @@ export function LightchainWorkbenchPage() {
     setExtractedLayerReady(false);
     setExtractedGarmentImageUrl(null);
     setCutoutBounds(null);
+    setCutoutOutputSize(null);
+    setCutoutDataUrlBytes(null);
+    setCutoutMaxDataUrlBytes(null);
+    setCutoutStoragePolicy(null);
     setMaskEngine(null);
     setNextStepConfirmed(false);
     toast.success('AIマスク認識でトップス候補を検出しました');
@@ -827,6 +843,10 @@ export function LightchainWorkbenchPage() {
     setExtractedLayerReady(false);
     setExtractedGarmentImageUrl(null);
     setCutoutBounds(null);
+    setCutoutOutputSize(null);
+    setCutoutDataUrlBytes(null);
+    setCutoutMaxDataUrlBytes(null);
+    setCutoutStoragePolicy(null);
     setMaskEngine(null);
     setNextStepConfirmed(false);
     setWorkbenchStep('mask');
@@ -837,6 +857,10 @@ export function LightchainWorkbenchPage() {
     setExtractedLayerReady(false);
     setExtractedGarmentImageUrl(null);
     setCutoutBounds(null);
+    setCutoutOutputSize(null);
+    setCutoutDataUrlBytes(null);
+    setCutoutMaxDataUrlBytes(null);
+    setCutoutStoragePolicy(null);
     setMaskEngine(null);
     setNextStepConfirmed(false);
     if (mode === 'keep') {
@@ -860,6 +884,10 @@ export function LightchainWorkbenchPage() {
     setExtractedLayerReady(false);
     setExtractedGarmentImageUrl(null);
     setCutoutBounds(null);
+    setCutoutOutputSize(null);
+    setCutoutDataUrlBytes(null);
+    setCutoutMaxDataUrlBytes(null);
+    setCutoutStoragePolicy(null);
     setMaskEngine(null);
     setNextStepConfirmed(false);
     setSelectedMaskCandidate(maskCandidates.includes(layer as MaskCandidate) ? (layer as MaskCandidate) : null);
@@ -879,6 +907,10 @@ export function LightchainWorkbenchPage() {
     });
     setExtractedGarmentImageUrl(cutout.dataUrl);
     setCutoutBounds(cutout.bounds);
+    setCutoutOutputSize(cutout.outputSize);
+    setCutoutDataUrlBytes(cutout.dataUrlBytes);
+    setCutoutMaxDataUrlBytes(750_000);
+    setCutoutStoragePolicy(cutout.storagePolicy);
     setMaskEngine(cutout.engine);
     setExtractedLayerReady(true);
     return cutout;
@@ -925,8 +957,22 @@ export function LightchainWorkbenchPage() {
 
     setIsSaving(true);
     try {
-      const projectId = createProject(`Lightchain互換: ${selectedTool.title}`, currentBrand.id);
       const shouldSaveWorkbenchAsset = workbenchEnabled && Boolean(garmentImageUrl);
+      const ensuredCutout = shouldSaveWorkbenchAsset && extractedLayerReady && !extractedGarmentImageUrl
+        ? await buildMaterialCutoutDataUrl({
+          imageUrl: garmentImageUrl,
+          mode: cutMode === 'keep' ? 'auto' : cutMode,
+          candidate: selectedMaskCandidate,
+        })
+        : null;
+      const finalExtractedImageUrl = extractedGarmentImageUrl || ensuredCutout?.dataUrl || null;
+      const finalCutoutBounds = cutoutBounds || ensuredCutout?.bounds || null;
+      const finalCutoutOutputSize = cutoutOutputSize || ensuredCutout?.outputSize || null;
+      const finalCutoutDataUrlBytes = cutoutDataUrlBytes || ensuredCutout?.dataUrlBytes || null;
+      const finalCutoutMaxDataUrlBytes = cutoutMaxDataUrlBytes || (ensuredCutout ? 750_000 : null);
+      const finalCutoutStoragePolicy = cutoutStoragePolicy || ensuredCutout?.storagePolicy || null;
+      const finalMaskEngine = maskEngine || ensuredCutout?.engine || null;
+      const projectId = createProject(`Lightchain互換: ${selectedTool.title}`, currentBrand.id);
       const lightchainWorkbenchState = workbenchEnabled ? {
         toolId: selectedTool.id,
         toolCategory: selectedTool.category,
@@ -942,9 +988,13 @@ export function LightchainWorkbenchPage() {
         selectedMaskCandidate,
         maskCandidates,
         extractedLayerReady,
-        extractedImageUrl: extractedGarmentImageUrl,
-        cutoutBounds,
-        maskEngine,
+        extractedImageUrl: finalExtractedImageUrl,
+        cutoutBounds: finalCutoutBounds,
+        cutoutOutputSize: finalCutoutOutputSize,
+        cutoutDataUrlBytes: finalCutoutDataUrlBytes,
+        cutoutMaxDataUrlBytes: finalCutoutMaxDataUrlBytes,
+        cutoutStoragePolicy: finalCutoutStoragePolicy,
+        maskEngine: finalMaskEngine,
         nextStepConfirmed,
       } : null;
       const materialReference = lightchainWorkbenchState ? {
@@ -960,6 +1010,10 @@ export function LightchainWorkbenchPage() {
         extractedLayerReady: lightchainWorkbenchState.extractedLayerReady,
         extractedImageUrl: lightchainWorkbenchState.extractedImageUrl,
         cutoutBounds: lightchainWorkbenchState.cutoutBounds,
+        cutoutOutputSize: lightchainWorkbenchState.cutoutOutputSize,
+        cutoutDataUrlBytes: lightchainWorkbenchState.cutoutDataUrlBytes,
+        cutoutMaxDataUrlBytes: lightchainWorkbenchState.cutoutMaxDataUrlBytes,
+        cutoutStoragePolicy: lightchainWorkbenchState.cutoutStoragePolicy,
         maskEngine: lightchainWorkbenchState.maskEngine,
       } : null;
       const layerPlan = lightchainWorkbenchState ? {
@@ -974,6 +1028,10 @@ export function LightchainWorkbenchPage() {
           sourceCandidate: lightchainWorkbenchState.selectedMaskCandidate,
           sourceImageUrl: lightchainWorkbenchState.extractedImageUrl,
           cutoutBounds: lightchainWorkbenchState.cutoutBounds,
+          outputSize: lightchainWorkbenchState.cutoutOutputSize,
+          dataUrlBytes: lightchainWorkbenchState.cutoutDataUrlBytes,
+          maxDataUrlBytes: lightchainWorkbenchState.cutoutMaxDataUrlBytes,
+          storagePolicy: lightchainWorkbenchState.cutoutStoragePolicy,
           maskEngine: lightchainWorkbenchState.maskEngine,
           zIndex: 2,
         } : null,
@@ -989,6 +1047,10 @@ export function LightchainWorkbenchPage() {
         extracted: lightchainWorkbenchState.extractedLayerReady,
         extractedImageKind: lightchainWorkbenchState.extractedImageUrl ? 'transparent-png' : null,
         cutoutBounds: lightchainWorkbenchState.cutoutBounds,
+        cutoutOutputSize: lightchainWorkbenchState.cutoutOutputSize,
+        cutoutDataUrlBytes: lightchainWorkbenchState.cutoutDataUrlBytes,
+        cutoutMaxDataUrlBytes: lightchainWorkbenchState.cutoutMaxDataUrlBytes,
+        cutoutStoragePolicy: lightchainWorkbenchState.cutoutStoragePolicy,
         maskEngine: lightchainWorkbenchState.maskEngine,
       } : null;
       const compositionPreview = lightchainWorkbenchState ? {
@@ -1051,16 +1113,7 @@ export function LightchainWorkbenchPage() {
       let overlayObjectId: string | null = null;
 
       if (shouldSaveWorkbenchAsset) {
-        const savedCutout = extractedLayerReady && !extractedGarmentImageUrl
-          ? await buildMaterialCutoutDataUrl({
-            imageUrl: garmentImageUrl,
-            mode: cutMode === 'keep' ? 'auto' : cutMode,
-            candidate: selectedMaskCandidate,
-          })
-          : null;
-        const processedMaterialImageUrl = extractedGarmentImageUrl || savedCutout?.dataUrl || garmentImageUrl;
-        const savedCutoutBounds = cutoutBounds || savedCutout?.bounds || null;
-        const savedMaskEngine = maskEngine || savedCutout?.engine || null;
+        const processedMaterialImageUrl = finalExtractedImageUrl || garmentImageUrl;
         const overlayPosition = getOverlayPosition(printPlacement, printScale);
         if (extractedLayerReady) {
           addObject({
@@ -1117,8 +1170,12 @@ export function LightchainWorkbenchPage() {
               artifactId: artifact.artifact.id,
               processedImageKind: cutMode === 'keep' ? 'original' : 'masked-transparent-png',
               layerRole: extractedLayerReady ? 'extracted-cutout' : 'material-reference',
-              cutoutBounds: savedCutoutBounds,
-              maskEngine: savedMaskEngine,
+              cutoutBounds: finalCutoutBounds,
+              cutoutOutputSize: finalCutoutOutputSize,
+              cutoutDataUrlBytes: finalCutoutDataUrlBytes,
+              cutoutMaxDataUrlBytes: finalCutoutMaxDataUrlBytes,
+              cutoutStoragePolicy: finalCutoutStoragePolicy,
+              maskEngine: finalMaskEngine,
               hasTransparentCutout: Boolean(extractedLayerReady && processedMaterialImageUrl.startsWith('data:image/png')),
               ...workbenchParameters,
             },

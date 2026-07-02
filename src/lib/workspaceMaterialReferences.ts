@@ -14,6 +14,10 @@ export type MaterialReferenceState = {
   extractedLayerReady?: boolean;
   extractedImageUrl?: string | null;
   cutoutBounds?: MaterialCutoutBounds | null;
+  cutoutOutputSize?: { width: number; height: number } | null;
+  cutoutDataUrlBytes?: number | null;
+  cutoutMaxDataUrlBytes?: number | null;
+  cutoutStoragePolicy?: MaterialCutoutResult['storagePolicy'] | null;
   maskEngine?: string | null;
   nextStepReady?: boolean;
 };
@@ -29,6 +33,9 @@ export type MaterialCutoutResult = {
   dataUrl: string;
   bounds: MaterialCutoutBounds;
   sourceSize: { width: number; height: number };
+  outputSize: { width: number; height: number };
+  dataUrlBytes: number;
+  storagePolicy: 'bounded-local-canvas-data-url-v1';
   engine: 'browser-canvas-geometric-mask-v1';
   hasTransparentPixels: boolean;
 };
@@ -48,6 +55,10 @@ export type MaterialReferenceMetadata = Record<string, Json | undefined> & {
   extractedLayerReady?: boolean;
   extractedImageUrl?: string | null;
   cutoutBounds?: MaterialCutoutBounds | null;
+  cutoutOutputSize?: { width: number; height: number } | null;
+  cutoutDataUrlBytes?: number | null;
+  cutoutMaxDataUrlBytes?: number | null;
+  cutoutStoragePolicy?: MaterialCutoutResult['storagePolicy'] | null;
   maskEngine?: string | null;
   nextStepReady?: boolean;
 };
@@ -84,6 +95,10 @@ export const buildMaterialReferenceMetadata = (
   extractedLayerReady: Boolean(state.extractedLayerReady),
   extractedImageUrl: state.extractedImageUrl ?? null,
   cutoutBounds: state.cutoutBounds ?? null,
+  cutoutOutputSize: state.cutoutOutputSize ?? null,
+  cutoutDataUrlBytes: state.cutoutDataUrlBytes ?? null,
+  cutoutMaxDataUrlBytes: state.cutoutMaxDataUrlBytes ?? null,
+  cutoutStoragePolicy: state.cutoutStoragePolicy ?? null,
   maskEngine: state.maskEngine ?? null,
   nextStepReady: Boolean(state.nextStepReady),
 });
@@ -96,6 +111,8 @@ const loadImageElement = (imageUrl: string): Promise<HTMLImageElement> => {
     image.src = imageUrl;
   });
 };
+
+const estimateDataUrlBytes = (dataUrl: string) => Math.ceil(dataUrl.length * 0.75);
 
 const getMaskAlpha = ({
   x,
@@ -147,18 +164,30 @@ export async function buildMaterialCutoutDataUrl({
   mode,
   candidate,
   maxSize = 720,
+  maxDataUrlBytes = 750_000,
 }: {
   imageUrl: string;
   mode: MaterialReferenceState['maskMode'];
   candidate?: string | null;
   maxSize?: number;
+  maxDataUrlBytes?: number;
 }): Promise<MaterialCutoutResult> {
+  const storagePolicy = 'bounded-local-canvas-data-url-v1' as const;
   if (mode === 'keep') {
     const image = await loadImageElement(imageUrl);
+    const sourceWidth = image.naturalWidth || image.width;
+    const sourceHeight = image.naturalHeight || image.height;
+    const dataUrlBytes = estimateDataUrlBytes(imageUrl);
+    if (dataUrlBytes > maxDataUrlBytes) {
+      throw new Error(`画像が保存上限を超えています。画像を小さくして再試行してください。${dataUrlBytes}/${maxDataUrlBytes} bytes`);
+    }
     return {
       dataUrl: imageUrl,
-      bounds: { x: 0, y: 0, width: image.naturalWidth || image.width, height: image.naturalHeight || image.height },
-      sourceSize: { width: image.naturalWidth || image.width, height: image.naturalHeight || image.height },
+      bounds: { x: 0, y: 0, width: sourceWidth, height: sourceHeight },
+      sourceSize: { width: sourceWidth, height: sourceHeight },
+      outputSize: { width: sourceWidth, height: sourceHeight },
+      dataUrlBytes,
+      storagePolicy,
       engine: 'browser-canvas-geometric-mask-v1',
       hasTransparentPixels: false,
     };
@@ -167,6 +196,47 @@ export async function buildMaterialCutoutDataUrl({
   const image = await loadImageElement(imageUrl);
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
+  let targetMaxSize = Math.max(240, maxSize);
+  let lastResult: MaterialCutoutResult | null = null;
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const result = buildCutoutFromImage({
+      image,
+      sourceWidth,
+      sourceHeight,
+      mode,
+      candidate,
+      maxSize: targetMaxSize,
+      storagePolicy,
+    });
+    lastResult = result;
+    if (result.dataUrlBytes <= maxDataUrlBytes) return result;
+    targetMaxSize = Math.max(240, Math.floor(targetMaxSize * 0.72));
+  }
+
+  if (lastResult) {
+    throw new Error(`透明PNGが保存上限を超えています。画像を小さくして再試行してください。${lastResult.dataUrlBytes}/${maxDataUrlBytes} bytes`);
+  }
+  throw new Error('透明PNGの抽出に失敗しました');
+}
+
+function buildCutoutFromImage({
+  image,
+  sourceWidth,
+  sourceHeight,
+  mode,
+  candidate,
+  maxSize,
+  storagePolicy,
+}: {
+  image: HTMLImageElement;
+  sourceWidth: number;
+  sourceHeight: number;
+  mode: MaterialReferenceState['maskMode'];
+  candidate?: string | null;
+  maxSize: number;
+  storagePolicy: MaterialCutoutResult['storagePolicy'];
+}): MaterialCutoutResult {
   const ratio = Math.min(1, maxSize / Math.max(sourceWidth, sourceHeight));
   const width = Math.max(1, Math.round(sourceWidth * ratio));
   const height = Math.max(1, Math.round(sourceHeight * ratio));
@@ -206,10 +276,14 @@ export async function buildMaterialCutoutDataUrl({
 
   context.putImageData(imageData, 0, 0);
   if (maxX < minX || maxY < minY) {
+    const dataUrl = canvas.toDataURL('image/png');
     return {
-      dataUrl: canvas.toDataURL('image/png'),
+      dataUrl,
       bounds: { x: 0, y: 0, width, height },
       sourceSize: { width: sourceWidth, height: sourceHeight },
+      outputSize: { width, height },
+      dataUrlBytes: estimateDataUrlBytes(dataUrl),
+      storagePolicy,
       engine: 'browser-canvas-geometric-mask-v1',
       hasTransparentPixels,
     };
@@ -228,11 +302,15 @@ export async function buildMaterialCutoutDataUrl({
   const cropContext = cropCanvas.getContext('2d');
   if (!cropContext) throw new Error('Canvasを初期化できませんでした');
   cropContext.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+  const dataUrl = cropCanvas.toDataURL('image/png');
 
   return {
-    dataUrl: cropCanvas.toDataURL('image/png'),
+    dataUrl,
     bounds: { x: cropX, y: cropY, width: cropWidth, height: cropHeight },
     sourceSize: { width: sourceWidth, height: sourceHeight },
+    outputSize: { width: cropWidth, height: cropHeight },
+    dataUrlBytes: estimateDataUrlBytes(dataUrl),
+    storagePolicy,
     engine: 'browser-canvas-geometric-mask-v1',
     hasTransparentPixels,
   };

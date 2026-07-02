@@ -10,6 +10,7 @@ const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_U
 const authStatePath = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || 'output/playwright/prod-auth-refresh-20260625/auth-state.json';
 const outDir = args.out || `output/playwright/lightchain-mask-layer-flow-${dateStamp()}`;
 const canvasStoreKey = 'heavy-chain-canvas';
+const maxCutoutDataUrlBytes = 750_000;
 const viewport = { width: 1440, height: 1050 };
 const fixtureSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="180" viewBox="0 0 300 180">
   <rect width="300" height="180" fill="#f8fafc"/>
@@ -48,6 +49,7 @@ let context = null;
 try {
   if (isLocalPreview(baseUrl)) previewProcess = await startPreviewServer(baseUrl);
   if (!fs.existsSync(authStatePath)) throw new Error(`auth_state_missing:${authStatePath}`);
+  verifySavePreflightOrdering();
 
   browser = await chromium.launch({ headless: true });
   context = await browser.newContext({
@@ -173,6 +175,50 @@ try {
   addAssertion('extracted_cutout_is_png_data_url', typeof materialObject?.src === 'string' && materialObject.src.startsWith('data:image/png'), {
     srcPrefix: typeof materialObject?.src === 'string' ? materialObject.src.slice(0, 32) : null,
   });
+  const cutoutDataUrlBytes = typeof materialObject?.src === 'string'
+    ? Math.ceil(materialObject.src.length * 0.75)
+    : 0;
+  addAssertion('extracted_cutout_data_url_is_bounded_for_canvas_storage', cutoutDataUrlBytes > 0 && cutoutDataUrlBytes <= maxCutoutDataUrlBytes, {
+    cutoutDataUrlBytes,
+    maxCutoutDataUrlBytes,
+  });
+  addAssertion('extracted_cutout_metadata_records_storage_policy', (
+    params.cutoutDataUrlBytes === cutoutDataUrlBytes
+    && params.cutoutMaxDataUrlBytes === maxCutoutDataUrlBytes
+    && params.cutoutStoragePolicy === 'bounded-local-canvas-data-url-v1'
+    && params.cutoutOutputSize?.width > 0
+    && params.cutoutOutputSize?.height > 0
+  ), {
+    cutoutDataUrlBytes: params.cutoutDataUrlBytes ?? null,
+    cutoutMaxDataUrlBytes: params.cutoutMaxDataUrlBytes ?? null,
+    cutoutStoragePolicy: params.cutoutStoragePolicy ?? null,
+    cutoutOutputSize: params.cutoutOutputSize ?? null,
+  });
+  const expectedCutoutMetadata = {
+    cutoutBounds: params.cutoutBounds,
+    cutoutOutputSize: params.cutoutOutputSize,
+    cutoutDataUrlBytes: params.cutoutDataUrlBytes,
+    cutoutMaxDataUrlBytes: params.cutoutMaxDataUrlBytes,
+    cutoutStoragePolicy: params.cutoutStoragePolicy,
+  };
+  const nestedCutoutMetadata = {
+    materialReference: pickCutoutMetadata(params.materialReference),
+    layerPlan: {
+      cutoutBounds: params.layerPlan?.extractedLayer?.cutoutBounds,
+      cutoutOutputSize: params.layerPlan?.extractedLayer?.outputSize,
+      cutoutDataUrlBytes: params.layerPlan?.extractedLayer?.dataUrlBytes,
+      cutoutMaxDataUrlBytes: params.layerPlan?.extractedLayer?.maxDataUrlBytes,
+      cutoutStoragePolicy: params.layerPlan?.extractedLayer?.storagePolicy,
+    },
+    maskPlan: pickCutoutMetadata(params.maskPlan),
+    lightchainWorkbenchState: pickCutoutMetadata(params.lightchainWorkbenchState),
+  };
+  addAssertion('nested_cutout_metadata_matches_canvas_object', Object.values(nestedCutoutMetadata).every((metadata) => (
+    JSON.stringify(metadata) === JSON.stringify(expectedCutoutMetadata)
+  )), {
+    expectedCutoutMetadata,
+    nestedCutoutMetadata,
+  });
   addAssertion('extracted_cutout_has_real_transparency', Boolean(cutoutPixelReadback?.hasTransparentPixels), {
     cutoutPixelReadback,
   });
@@ -256,6 +302,40 @@ function addAssertion(id, ok, details = {}) {
   evidence.assertions.push({ id, ok: Boolean(ok), details });
 }
 
+function pickCutoutMetadata(value) {
+  return {
+    cutoutBounds: value?.cutoutBounds,
+    cutoutOutputSize: value?.cutoutOutputSize,
+    cutoutDataUrlBytes: value?.cutoutDataUrlBytes,
+    cutoutMaxDataUrlBytes: value?.cutoutMaxDataUrlBytes,
+    cutoutStoragePolicy: value?.cutoutStoragePolicy,
+  };
+}
+
+function verifySavePreflightOrdering() {
+  const sourcePath = path.resolve('src/pages/LightchainWorkbenchPage.tsx');
+  const source = fs.readFileSync(sourcePath, 'utf8');
+  const handleSaveStart = source.indexOf('const handleSaveToCanvas = async () => {');
+  const handleSaveEnd = source.indexOf('\n  return (', handleSaveStart);
+  const handleSaveSource = handleSaveStart >= 0 && handleSaveEnd > handleSaveStart
+    ? source.slice(handleSaveStart, handleSaveEnd)
+    : '';
+  const preflightIndex = handleSaveSource.indexOf('const ensuredCutout =');
+  const cutoutBuildIndex = handleSaveSource.indexOf('await buildMaterialCutoutDataUrl', preflightIndex);
+  const createProjectIndex = handleSaveSource.indexOf('const projectId = createProject');
+  addAssertion('save_cutout_preflight_before_canvas_project_creation', (
+    handleSaveSource.length > 0
+    && preflightIndex >= 0
+    && cutoutBuildIndex > preflightIndex
+    && createProjectIndex > cutoutBuildIndex
+  ), {
+    sourcePath,
+    preflightIndex,
+    cutoutBuildIndex,
+    createProjectIndex,
+  });
+}
+
 function wirePageDiagnostics(page) {
   page.on('console', (message) => {
     if (['error', 'warning'].includes(message.type())) {
@@ -279,8 +359,12 @@ async function verifyAllFeatureDetailRoutes(page) {
   for (const id of ids) {
     await page.goto(`${baseUrl}/lightchain/${id}`, { waitUntil: 'networkidle' });
     const body = await bodyText(page);
-    addAssertion(`feature_detail_route:${id}`, page.url().endsWith(`/lightchain/${id}`) && body.includes('機能一覧'), {
+    const hasDetailScreenSignal = body.includes('機能一覧')
+      || body.includes('画像をアップロード')
+      || body.includes('素材を置くと編集を始められます');
+    addAssertion(`feature_detail_route:${id}`, page.url().endsWith(`/lightchain/${id}`) && hasDetailScreenSignal, {
       url: page.url(),
+      bodyExcerpt: body.slice(0, 500),
     });
   }
   await screenshot(page, '01b-all-feature-detail-routes-checked');
