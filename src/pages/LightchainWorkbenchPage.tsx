@@ -20,6 +20,7 @@ import {
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
+import { buildMaterialCutoutDataUrl, type MaterialCutoutBounds } from '../lib/workspaceMaterialReferences';
 import { saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
 
 type ToolCategory = 'home' | 'marketing' | 'fitting' | 'planning' | 'graphics' | 'model' | 'video' | 'lab';
@@ -650,46 +651,6 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-function buildMaskedMaterialDataUrl(imageUrl: string, mode: 'auto' | 'manual' | 'keep'): Promise<string> {
-  if (mode === 'keep') return Promise.resolve(imageUrl);
-
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => {
-      const size = 720;
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const context = canvas.getContext('2d');
-      if (!context) {
-        resolve(imageUrl);
-        return;
-      }
-
-      context.clearRect(0, 0, size, size);
-      const ratio = Math.min(size / image.width, size / image.height);
-      const drawWidth = image.width * ratio;
-      const drawHeight = image.height * ratio;
-      const drawX = (size - drawWidth) / 2;
-      const drawY = (size - drawHeight) / 2;
-
-      context.save();
-      context.beginPath();
-      if (mode === 'manual') {
-        context.roundRect(size * 0.16, size * 0.08, size * 0.68, size * 0.84, size * 0.08);
-      } else {
-        context.ellipse(size / 2, size * 0.5, size * 0.35, size * 0.43, 0, 0, Math.PI * 2);
-      }
-      context.clip();
-      context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
-      context.restore();
-      resolve(canvas.toDataURL('image/png'));
-    };
-    image.onerror = () => reject(new Error('カット用の画像処理に失敗しました'));
-    image.src = imageUrl;
-  });
-}
-
 function getOverlayPosition(placement: string, scale: number) {
   const clampedScale = Math.max(20, Math.min(90, scale));
   const offset = Math.round((clampedScale - 46) * 0.8);
@@ -732,6 +693,9 @@ export function LightchainWorkbenchPage() {
   const [maskCandidates, setMaskCandidates] = useState<MaskCandidate[]>([]);
   const [selectedMaskCandidate, setSelectedMaskCandidate] = useState<MaskCandidate | null>(null);
   const [extractedLayerReady, setExtractedLayerReady] = useState(false);
+  const [extractedGarmentImageUrl, setExtractedGarmentImageUrl] = useState<string | null>(null);
+  const [cutoutBounds, setCutoutBounds] = useState<MaterialCutoutBounds | null>(null);
+  const [maskEngine, setMaskEngine] = useState<string | null>(null);
   const [nextStepConfirmed, setNextStepConfirmed] = useState(false);
   const [mobileToolsExpanded, setMobileToolsExpanded] = useState(false);
 
@@ -774,6 +738,9 @@ export function LightchainWorkbenchPage() {
     setMaskCandidates([]);
     setSelectedMaskCandidate(null);
     setExtractedLayerReady(false);
+    setExtractedGarmentImageUrl(null);
+    setCutoutBounds(null);
+    setMaskEngine(null);
     setNextStepConfirmed(false);
   };
 
@@ -816,6 +783,9 @@ export function LightchainWorkbenchPage() {
       setMaskCandidates([]);
       setSelectedMaskCandidate(null);
       setExtractedLayerReady(false);
+      setExtractedGarmentImageUrl(null);
+      setCutoutBounds(null);
+      setMaskEngine(null);
       setNextStepConfirmed(false);
       toast.success('素材画像を読み込み、編集レイヤーを準備しました');
     } catch (error) {
@@ -844,6 +814,9 @@ export function LightchainWorkbenchPage() {
     setCutMode('auto');
     setActiveLayer(getLayerForMaskCandidate('トップス'));
     setExtractedLayerReady(false);
+    setExtractedGarmentImageUrl(null);
+    setCutoutBounds(null);
+    setMaskEngine(null);
     setNextStepConfirmed(false);
     toast.success('AIマスク認識でトップス候補を検出しました');
   };
@@ -852,6 +825,9 @@ export function LightchainWorkbenchPage() {
     setSelectedMaskCandidate(candidate);
     setActiveLayer(getLayerForMaskCandidate(candidate));
     setExtractedLayerReady(false);
+    setExtractedGarmentImageUrl(null);
+    setCutoutBounds(null);
+    setMaskEngine(null);
     setNextStepConfirmed(false);
     setWorkbenchStep('mask');
   };
@@ -859,6 +835,9 @@ export function LightchainWorkbenchPage() {
   const handleSetCutMode = (mode: typeof cutMode) => {
     setCutMode(mode);
     setExtractedLayerReady(false);
+    setExtractedGarmentImageUrl(null);
+    setCutoutBounds(null);
+    setMaskEngine(null);
     setNextStepConfirmed(false);
     if (mode === 'keep') {
       setMaskCandidates([]);
@@ -879,20 +858,41 @@ export function LightchainWorkbenchPage() {
   const handleSelectDesignLayer = (layer: string) => {
     setActiveLayer(layer);
     setExtractedLayerReady(false);
+    setExtractedGarmentImageUrl(null);
+    setCutoutBounds(null);
+    setMaskEngine(null);
     setNextStepConfirmed(false);
     setSelectedMaskCandidate(maskCandidates.includes(layer as MaskCandidate) ? (layer as MaskCandidate) : null);
     if (workbenchStep === 'extracted' || workbenchStep === 'next') setWorkbenchStep('mask');
   };
 
-  const handleExtractMask = () => {
+  const runCutoutExtraction = async () => {
     if (!selectedMaskCandidate) {
       toast.error('保存したい範囲を選択してください');
-      return;
+      return null;
     }
-    setExtractedLayerReady(true);
-    setWorkbenchStep('extracted');
     if (cutMode === 'keep') setCutMode('auto');
-    toast.success(`${selectedMaskCandidate}を抽出してレイヤーに重ねました`);
+    const cutout = await buildMaterialCutoutDataUrl({
+      imageUrl: garmentImageUrl,
+      mode: cutMode === 'keep' ? 'auto' : cutMode,
+      candidate: selectedMaskCandidate,
+    });
+    setExtractedGarmentImageUrl(cutout.dataUrl);
+    setCutoutBounds(cutout.bounds);
+    setMaskEngine(cutout.engine);
+    setExtractedLayerReady(true);
+    return cutout;
+  };
+
+  const handleExtractMask = async () => {
+    try {
+      const cutout = await runCutoutExtraction();
+      if (!cutout) return;
+      setWorkbenchStep('extracted');
+      toast.success(`${selectedMaskCandidate}を透明PNGで抽出しました`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '抽出に失敗しました');
+    }
   };
 
   const handleConfirmNextStep = () => {
@@ -905,16 +905,16 @@ export function LightchainWorkbenchPage() {
     toast.success('次のステップへ進める状態です');
   };
 
-  const handleExtractAndConfirmNextStep = () => {
-    if (!selectedMaskCandidate) {
-      toast.error('保存したい範囲を選択してください');
-      return;
+  const handleExtractAndConfirmNextStep = async () => {
+    try {
+      const cutout = await runCutoutExtraction();
+      if (!cutout) return;
+      setNextStepConfirmed(true);
+      setWorkbenchStep('next');
+      toast.success(`${selectedMaskCandidate}を透明PNGで抽出して次へ進めます`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '抽出に失敗しました');
     }
-    if (cutMode === 'keep') setCutMode('auto');
-    setExtractedLayerReady(true);
-    setNextStepConfirmed(true);
-    setWorkbenchStep('next');
-    toast.success(`${selectedMaskCandidate}を抽出して次へ進めます`);
   };
 
   const handleSaveToCanvas = async () => {
@@ -942,6 +942,9 @@ export function LightchainWorkbenchPage() {
         selectedMaskCandidate,
         maskCandidates,
         extractedLayerReady,
+        extractedImageUrl: extractedGarmentImageUrl,
+        cutoutBounds,
+        maskEngine,
         nextStepConfirmed,
       } : null;
       const materialReference = lightchainWorkbenchState ? {
@@ -955,6 +958,9 @@ export function LightchainWorkbenchPage() {
         note: lightchainWorkbenchState.referenceNote,
         selectedMaskCandidate: lightchainWorkbenchState.selectedMaskCandidate,
         extractedLayerReady: lightchainWorkbenchState.extractedLayerReady,
+        extractedImageUrl: lightchainWorkbenchState.extractedImageUrl,
+        cutoutBounds: lightchainWorkbenchState.cutoutBounds,
+        maskEngine: lightchainWorkbenchState.maskEngine,
       } : null;
       const layerPlan = lightchainWorkbenchState ? {
         activeLayer: lightchainWorkbenchState.activeLayer,
@@ -966,6 +972,9 @@ export function LightchainWorkbenchPage() {
         extractedLayer: lightchainWorkbenchState.extractedLayerReady ? {
           role: 'extracted-cutout',
           sourceCandidate: lightchainWorkbenchState.selectedMaskCandidate,
+          sourceImageUrl: lightchainWorkbenchState.extractedImageUrl,
+          cutoutBounds: lightchainWorkbenchState.cutoutBounds,
+          maskEngine: lightchainWorkbenchState.maskEngine,
           zIndex: 2,
         } : null,
       } : null;
@@ -978,6 +987,9 @@ export function LightchainWorkbenchPage() {
         selectedCandidate: lightchainWorkbenchState.selectedMaskCandidate,
         recognition: lightchainWorkbenchState.maskCandidates.length > 0 ? 'ai-mask-recognition' : 'not-run',
         extracted: lightchainWorkbenchState.extractedLayerReady,
+        extractedImageKind: lightchainWorkbenchState.extractedImageUrl ? 'transparent-png' : null,
+        cutoutBounds: lightchainWorkbenchState.cutoutBounds,
+        maskEngine: lightchainWorkbenchState.maskEngine,
       } : null;
       const compositionPreview = lightchainWorkbenchState ? {
         summary: `${lightchainWorkbenchState.materialKind} / ${lightchainWorkbenchState.activeLayer} / ${lightchainWorkbenchState.printPlacement}`,
@@ -1039,7 +1051,16 @@ export function LightchainWorkbenchPage() {
       let overlayObjectId: string | null = null;
 
       if (shouldSaveWorkbenchAsset) {
-        const processedMaterialImageUrl = await buildMaskedMaterialDataUrl(garmentImageUrl, cutMode);
+        const savedCutout = extractedLayerReady && !extractedGarmentImageUrl
+          ? await buildMaterialCutoutDataUrl({
+            imageUrl: garmentImageUrl,
+            mode: cutMode === 'keep' ? 'auto' : cutMode,
+            candidate: selectedMaskCandidate,
+          })
+          : null;
+        const processedMaterialImageUrl = extractedGarmentImageUrl || savedCutout?.dataUrl || garmentImageUrl;
+        const savedCutoutBounds = cutoutBounds || savedCutout?.bounds || null;
+        const savedMaskEngine = maskEngine || savedCutout?.engine || null;
         const overlayPosition = getOverlayPosition(printPlacement, printScale);
         if (extractedLayerReady) {
           addObject({
@@ -1096,6 +1117,9 @@ export function LightchainWorkbenchPage() {
               artifactId: artifact.artifact.id,
               processedImageKind: cutMode === 'keep' ? 'original' : 'masked-transparent-png',
               layerRole: extractedLayerReady ? 'extracted-cutout' : 'material-reference',
+              cutoutBounds: savedCutoutBounds,
+              maskEngine: savedMaskEngine,
+              hasTransparentCutout: Boolean(extractedLayerReady && processedMaterialImageUrl.startsWith('data:image/png')),
               ...workbenchParameters,
             },
           },
@@ -1593,7 +1617,7 @@ export function LightchainWorkbenchPage() {
                               <img src={garmentImageUrl} alt="衣服レイヤープレビュー" className={`max-h-56 max-w-[78%] object-contain ${extractedLayerReady ? 'opacity-45' : ''}`} />
                               {extractedLayerReady && (
                                 <img
-                                  src={garmentImageUrl}
+                                  src={extractedGarmentImageUrl || garmentImageUrl}
                                   alt="抽出済みカットレイヤー"
                                   className="absolute max-h-52 max-w-[72%] rounded-xl object-contain drop-shadow-[0_16px_26px_rgba(15,23,42,0.35)]"
                                 />

@@ -2,6 +2,7 @@ import type { ChangeEvent } from 'react';
 import { CheckCircle2, ImagePlus, Layers3, ScanLine, Scissors, SlidersHorizontal, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
+  buildMaterialCutoutDataUrl,
   type MaterialReferenceState,
   readWorkspaceImageAsDataUrl,
 } from '../../lib/workspaceMaterialReferences';
@@ -65,6 +66,17 @@ export function MaterialWorkbench({
     onChange({ ...state, ...patch });
   };
 
+  const resetExtraction = (patch: Partial<MaterialReferenceState> = {}) => {
+    updateState({
+      ...patch,
+      extractedLayerReady: false,
+      extractedImageUrl: null,
+      cutoutBounds: null,
+      maskEngine: null,
+      nextStepReady: false,
+    });
+  };
+
   const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -82,6 +94,9 @@ export function MaterialWorkbench({
         maskCandidates: [],
         selectedMaskCandidate: null,
         extractedLayerReady: false,
+        extractedImageUrl: null,
+        cutoutBounds: null,
+        maskEngine: null,
         nextStepReady: false,
       });
       toast.success('素材画像を読み込み、レイヤー編集を準備しました');
@@ -95,36 +110,44 @@ export function MaterialWorkbench({
       toast.error('先に素材画像を選択してください');
       return;
     }
-    updateState({
+    resetExtraction({
       maskMode: 'auto',
       maskCandidates: defaultMaskCandidates,
       selectedMaskCandidate: 'トップス',
       activeLayer: 'トップス',
-      extractedLayerReady: false,
-      nextStepReady: false,
     });
     toast.success('AIマスク認識で候補を検出しました');
   };
 
   const selectMaskCandidate = (candidate: string) => {
-    updateState({
+    resetExtraction({
       selectedMaskCandidate: candidate,
       activeLayer: candidate,
-      extractedLayerReady: false,
-      nextStepReady: false,
     });
   };
 
-  const extractMask = () => {
+  const extractMask = async () => {
     if (!state.selectedMaskCandidate || state.maskMode === 'keep') {
       toast.error('保存したい範囲を選択してください');
       return;
     }
-    updateState({
-      extractedLayerReady: true,
-      nextStepReady: false,
-    });
-    toast.success(`${state.selectedMaskCandidate}を抽出してレイヤーに重ねました`);
+    try {
+      const cutout = await buildMaterialCutoutDataUrl({
+        imageUrl: state.imageUrl,
+        mode: state.maskMode,
+        candidate: state.selectedMaskCandidate,
+      });
+      updateState({
+        extractedLayerReady: true,
+        extractedImageUrl: cutout.dataUrl,
+        cutoutBounds: cutout.bounds,
+        maskEngine: cutout.engine,
+        nextStepReady: false,
+      });
+      toast.success(`${state.selectedMaskCandidate}を透明PNGで抽出しました`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '抽出に失敗しました');
+    }
   };
 
   const confirmNextStep = () => {
@@ -170,7 +193,7 @@ export function MaterialWorkbench({
                 />
                 {state.extractedLayerReady ? (
                   <img
-                    src={state.imageUrl}
+                    src={state.extractedImageUrl || state.imageUrl}
                     alt="抽出済みレイヤー"
                     className="absolute max-h-60 max-w-[78%] rounded-xl object-contain drop-shadow-[0_18px_28px_rgba(15,23,42,0.34)]"
                   />
@@ -273,6 +296,9 @@ export function MaterialWorkbench({
                   onClick={() => updateState({
                     activeLayer: layer,
                     extractedLayerReady: false,
+                    extractedImageUrl: null,
+                    cutoutBounds: null,
+                    maskEngine: null,
                     nextStepReady: false,
                     selectedMaskCandidate: state.maskCandidates?.includes(layer) ? layer : null,
                   })}
@@ -301,6 +327,9 @@ export function MaterialWorkbench({
                     selectedMaskCandidate: mode.id === 'manual' ? '手動範囲' : null,
                     activeLayer: mode.id === 'manual' ? '手動範囲' : state.activeLayer,
                     extractedLayerReady: false,
+                    extractedImageUrl: null,
+                    cutoutBounds: null,
+                    maskEngine: null,
                     nextStepReady: false,
                   })}
                   className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
@@ -410,7 +439,7 @@ export function MaterialWorkbench({
           </p>
           {state.extractedLayerReady && (
             <p className="mt-2 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200">
-              {state.selectedMaskCandidate ?? '選択範囲'}を抽出してレイヤー重ね済み
+              {state.selectedMaskCandidate ?? '選択範囲'}を透明PNGで抽出済み
             </p>
           )}
         </div>

@@ -11,12 +11,16 @@ const authStatePath = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || 'o
 const outDir = args.out || `output/playwright/lightchain-mask-layer-flow-${dateStamp()}`;
 const canvasStoreKey = 'heavy-chain-canvas';
 const viewport = { width: 1440, height: 1050 };
-const fixturePng =
-  'iVBORw0KGgoAAAANSUhEUgAAASwAAACWCAIAAADrOSKFAAABfklEQVR4nO3VwQ2DMBQFQYp2/6mOBtYiHhSg2R+TR6VJ4FD3Yh8nAAAAAAAAAAAAAAAAAAAAAACwq3n7vQG8Lr3f93nP8xz7B2z67bLvG7BXn8z3/V6f8yP4nff4+v0G7NVd9j7f6wN4u9QzAAAAAAAAAAAAAAAAAADgT2EDAiwIsCDAggALAiysx8O+vV6vR3e73V6vV6vR6fP5/PL5fL1eL5fL5fL5fL5fK9Xq9Xq9Xq9Xq9Xq9Xq8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLw8Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pg8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Px8fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fAAAAAAAAAAAAAAAAAAAAAAD4O8EGAiwIsCDAggALAiysQw4oEJQ4AAAAAElFTkSuQmCC';
+const fixtureSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="180" viewBox="0 0 300 180">
+  <rect width="300" height="180" fill="#f8fafc"/>
+  <path d="M98 32h104l30 38-28 24-18-18v78H114V76L96 94 68 70z" fill="#111827"/>
+  <rect x="126" y="82" width="48" height="42" rx="6" fill="#22d3ee"/>
+  <path d="M132 96h36M132 110h36" stroke="#0f172a" stroke-width="5" stroke-linecap="round"/>
+</svg>`;
 
 fs.mkdirSync(outDir, { recursive: true });
-const uploadPath = path.join(outDir, 'mask-layer-upload.png');
-fs.writeFileSync(uploadPath, Buffer.from(fixturePng, 'base64'));
+const uploadPath = path.join(outDir, 'mask-layer-upload.svg');
+fs.writeFileSync(uploadPath, fixtureSvg);
 
 const evidence = {
   workflow: 'lightchain-mask-layer-flow',
@@ -65,8 +69,7 @@ try {
   await verifyInvalidFeatureRouteRedirect(page);
   await page.goto(`${baseUrl}/lightchain`, { waitUntil: 'networkidle' });
 
-  await page.getByRole('button', { name: /^AIフィッティング\s*\d*$/ }).first().click();
-  await page.getByRole('button', { name: /衣服参考ライブラリ/ }).first().click();
+  await page.goto(`${baseUrl}/lightchain/fitting-clothing-reference`, { waitUntil: 'networkidle' });
   await page.waitForURL(/\/lightchain\/fitting-clothing-reference$/, { timeout: 10_000 });
   addAssertion('feature_detail_screen_opened', /\/lightchain\/fitting-clothing-reference$/.test(page.url()), { url: page.url() });
   await screenshot(page, '01a-lightchain-feature-detail');
@@ -152,6 +155,9 @@ try {
   const originalBase = objects.find((object) => object?.metadata?.feature === 'lightchain-fitting-clothing-reference-original-base-layer');
   const overlayObject = objects.find((object) => object?.metadata?.feature === 'lightchain-fitting-clothing-reference-overlay-layer');
   const params = materialObject?.metadata?.parameters ?? {};
+  const cutoutPixelReadback = materialObject?.src
+    ? await inspectImageAlpha(page, materialObject.src)
+    : null;
 
   addAssertion('canvas_route_opened', /\/canvas\//.test(page.url()), { url: page.url() });
   addAssertion('durable_project_objects_readback', Boolean(project?.id && materialObject?.id && overlayObject?.id), {
@@ -163,6 +169,19 @@ try {
   addAssertion('extracted_cutout_layer_saved', params.layerRole === 'extracted-cutout', {
     id: materialObject?.id ?? null,
     layerRole: params.layerRole ?? null,
+  });
+  addAssertion('extracted_cutout_is_png_data_url', typeof materialObject?.src === 'string' && materialObject.src.startsWith('data:image/png'), {
+    srcPrefix: typeof materialObject?.src === 'string' ? materialObject.src.slice(0, 32) : null,
+  });
+  addAssertion('extracted_cutout_has_real_transparency', Boolean(cutoutPixelReadback?.hasTransparentPixels), {
+    cutoutPixelReadback,
+  });
+  addAssertion('extracted_cutout_records_bounds_and_engine', Boolean(params.cutoutBounds?.width && params.cutoutBounds?.height && params.maskEngine), {
+    cutoutBounds: params.cutoutBounds ?? null,
+    maskEngine: params.maskEngine ?? null,
+  });
+  addAssertion('material_reference_records_extracted_png', params.materialReference?.extractedImageUrl?.startsWith('data:image/png') && params.materialReference?.maskEngine, {
+    materialReference: params.materialReference ?? null,
   });
   addAssertion('overlay_layer_still_saved', Boolean(overlayObject?.id), { id: overlayObject?.id ?? null });
   addAssertion('mask_metadata_has_candidates_and_selection', Array.isArray(params.maskPlan?.candidates) && params.maskPlan.candidates.includes('トップス') && params.maskPlan.selectedCandidate === '柄', {
@@ -326,6 +345,37 @@ async function closePageAndGetVideo(page) {
   return video.path().catch(() => null);
 }
 
+async function inspectImageAlpha(page, imageUrl) {
+  return page.evaluate(async (src) => {
+    const image = await new Promise((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('image_alpha_read_failed'));
+      element.src = src;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth || image.width;
+    canvas.height = image.naturalHeight || image.height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('canvas_context_missing');
+    context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let transparent = 0;
+    let opaque = 0;
+    for (let index = 3; index < pixels.length; index += 4) {
+      if (pixels[index] < 250) transparent += 1;
+      if (pixels[index] > 4) opaque += 1;
+    }
+    return {
+      width: canvas.width,
+      height: canvas.height,
+      transparent,
+      opaque,
+      hasTransparentPixels: transparent > 0 && opaque > 0,
+    };
+  }, imageUrl);
+}
+
 async function startPreviewServer(targetBaseUrl) {
   const { port } = new URL(targetBaseUrl);
   const child = spawn('npm', ['run', 'preview', '--', '--host', '127.0.0.1', '--port', port || '4173'], {
@@ -376,7 +426,7 @@ function parseArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (!arg.startsWith('--')) continue;
-    const key = arg.slice(2);
+    const key = arg.slice(2).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
     const next = argv[index + 1];
     if (!next || next.startsWith('--')) {
       parsed[key] = true;

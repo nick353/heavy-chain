@@ -328,6 +328,9 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
   const projectId = canvasStore.createProject(input.projectName, input.brandId);
   const imageUrl = input.imageUrl ?? buildPreviewImage(input);
   const createdAt = new Date().toISOString();
+  const extractedMaterialReference = input.materialReferences?.find((reference) => (
+    reference.hasImage && reference.extractedLayerReady && reference.extractedImageUrl
+  ));
 
   const artifact = saveWorkspaceArtifact({
     brandId: input.brandId,
@@ -366,45 +369,116 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
     },
   });
 
-  canvasStore.addObject({
-    type: 'image',
-    x: 96,
-    y: 96,
-    width: 420,
-    height: 280,
-    rotation: 0,
-    scaleX: 1,
-    scaleY: 1,
-    opacity: 1,
-    locked: false,
-    visible: true,
-    src: imageUrl,
-    label: input.title,
-    metadata: {
-      feature: input.featureType,
-      prompt: input.prompt,
-      generation: 0,
-      parameters: {
-        source: 'workspace-handoff',
-        sourceArtifactId: artifact.id,
-        activeChoice: input.activeChoice,
-        progress: input.progress,
-        workflowVersion: input.workflow.workflowVersion,
-        handoffKind: input.workflow.handoffKind,
-        resumePath: input.workflow.resumePath,
-        generationIntent: input.workflow.generationIntent,
-        preview: input.previewMetadata,
-        selectedStudioSetup: input.selectedStudioSetup,
-        selectedModelCandidate: input.selectedModelCandidate,
-        selectedVideoStoryboard: input.selectedVideoStoryboard,
-        selectedLabExperiment: input.selectedLabExperiment,
-        materialReferences: input.materialReferences,
-        layerPlan: input.layerPlan,
-        maskPlan: input.maskPlan,
-        compositionPreview: input.compositionPreview,
+  if (extractedMaterialReference?.imageUrl && extractedMaterialReference.extractedImageUrl) {
+    const baseObjectId = canvasStore.addObject({
+      type: 'image',
+      x: 96,
+      y: 96,
+      width: 420,
+      height: 280,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 0.42,
+      locked: false,
+      visible: true,
+      src: extractedMaterialReference.imageUrl,
+      label: `${input.title} 元画像ベース`,
+      metadata: {
+        feature: input.featureType,
+        prompt: input.prompt,
+        generation: 0,
+        parameters: {
+          source: 'workspace-handoff-original-base',
+          sourceArtifactId: artifact.id,
+          layerRole: 'original-base',
+          materialReference: extractedMaterialReference,
+          materialReferences: input.materialReferences,
+          layerPlan: input.layerPlan,
+          maskPlan: input.maskPlan,
+          compositionPreview: input.compositionPreview,
+        },
       },
-    },
-  });
+    });
+
+    canvasStore.addObject({
+      type: 'image',
+      x: 96,
+      y: 96,
+      width: 420,
+      height: 280,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      locked: false,
+      visible: true,
+      src: extractedMaterialReference.extractedImageUrl,
+      label: `${input.title} カットレイヤー`,
+      parentId: baseObjectId,
+      derivedFrom: baseObjectId,
+      metadata: {
+        feature: input.featureType,
+        prompt: input.prompt,
+        parentId: baseObjectId,
+        generation: 0,
+        parameters: {
+          source: 'workspace-handoff-extracted-cutout',
+          sourceArtifactId: artifact.id,
+          layerRole: 'extracted-cutout',
+          processedImageKind: 'masked-transparent-png',
+          cutoutBounds: extractedMaterialReference.cutoutBounds,
+          maskEngine: extractedMaterialReference.maskEngine,
+          hasTransparentCutout: extractedMaterialReference.extractedImageUrl.startsWith('data:image/png'),
+          materialReference: extractedMaterialReference,
+          materialReferences: input.materialReferences,
+          layerPlan: input.layerPlan,
+          maskPlan: input.maskPlan,
+          compositionPreview: input.compositionPreview,
+        },
+      },
+    });
+  } else {
+    canvasStore.addObject({
+      type: 'image',
+      x: 96,
+      y: 96,
+      width: 420,
+      height: 280,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      locked: false,
+      visible: true,
+      src: imageUrl,
+      label: input.title,
+      metadata: {
+        feature: input.featureType,
+        prompt: input.prompt,
+        generation: 0,
+        parameters: {
+          source: 'workspace-handoff',
+          sourceArtifactId: artifact.id,
+          activeChoice: input.activeChoice,
+          progress: input.progress,
+          workflowVersion: input.workflow.workflowVersion,
+          handoffKind: input.workflow.handoffKind,
+          resumePath: input.workflow.resumePath,
+          generationIntent: input.workflow.generationIntent,
+          preview: input.previewMetadata,
+          selectedStudioSetup: input.selectedStudioSetup,
+          selectedModelCandidate: input.selectedModelCandidate,
+          selectedVideoStoryboard: input.selectedVideoStoryboard,
+          selectedLabExperiment: input.selectedLabExperiment,
+          materialReferences: input.materialReferences,
+          layerPlan: input.layerPlan,
+          maskPlan: input.maskPlan,
+          compositionPreview: input.compositionPreview,
+        },
+      },
+    });
+  }
 
   canvasStore.addObject({
     type: 'text',
