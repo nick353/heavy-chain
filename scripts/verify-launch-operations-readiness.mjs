@@ -69,7 +69,7 @@ try {
   await checkRoute({
     key: 'dashboard',
     path: '/dashboard',
-    expected: ['画像生成', 'ギャラリー'],
+    expected: ['まず1つ作る', '商品画像から作る'],
   });
   await checkGenerateForm();
   await checkGalleryImages();
