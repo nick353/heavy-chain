@@ -40,6 +40,7 @@
         "npm:eslint@^9.39.1",
         "npm:framer-motion@^12.23.25",
         "npm:globals@^16.5.0",
+        "npm:html2canvas@^1.4.1",
         "npm:konva@^10.0.12",
         "npm:lucide-react@0.555",
         "npm:mcp-remote@0.1.37",

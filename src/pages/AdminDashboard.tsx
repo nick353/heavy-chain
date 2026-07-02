@@ -13,7 +13,10 @@ import {
   Eye,
   Activity,
   Clock,
-  KeyRound
+  Camera,
+  ExternalLink,
+  KeyRound,
+  MessageSquare
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Button, Input, Modal } from '../components/ui';
@@ -48,6 +51,8 @@ interface ModerationItem {
 }
 
 type RunwayMcpConnectionStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
+type FeedbackStatus = 'new' | 'in_progress' | 'done';
+type FeedbackType = 'lost' | 'result' | 'save' | 'speed' | 'other';
 
 interface RunwayMcpApproval {
   id: string;
@@ -61,6 +66,33 @@ interface RunwayMcpApproval {
   brand?: {
     id: string;
     name: string;
+  } | null;
+}
+
+interface FeedbackSubmission {
+  id: string;
+  user_id: string;
+  brand_id: string | null;
+  type: FeedbackType;
+  message: string;
+  email: string | null;
+  page_url: string;
+  pathname: string;
+  viewport: any;
+  user_agent: string | null;
+  screenshot_path: string | null;
+  screenshot_capture_status: 'captured' | 'screenshot_capture_failed' | 'screenshot_upload_failed';
+  status: FeedbackStatus;
+  admin_note: string | null;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+  user?: {
+    email: string | null;
+    name: string | null;
+  } | null;
+  brand?: {
+    name: string | null;
   } | null;
 }
 
@@ -91,6 +123,45 @@ const RUNWAY_STATUS_STYLES: Record<RunwayMcpConnectionStatus, string> = {
   revoked: 'bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300',
 };
 
+const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, string> = {
+  new: '未対応',
+  in_progress: '対応中',
+  done: '完了',
+};
+
+const FEEDBACK_STATUS_STYLES: Record<FeedbackStatus, string> = {
+  new: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  done: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+};
+
+const FEEDBACK_TYPE_LABELS: Record<FeedbackType, string> = {
+  lost: 'どこを押すかわからない',
+  result: '生成結果が微妙',
+  save: '保存先がわからない',
+  speed: '動作が遅い',
+  other: 'その他',
+};
+
+const SAFE_FEEDBACK_URL_ORIGINS = new Set([
+  'https://heavy-chain.zeabur.app',
+  'https://heavy-chain.com',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+]);
+
+const getSafeFeedbackUrl = (value: string) => {
+  try {
+    const url = value.startsWith('/') ? new URL(value, 'https://heavy-chain.zeabur.app') : new URL(value);
+    if (!['http:', 'https:'].includes(url.protocol) || !SAFE_FEEDBACK_URL_ORIGINS.has(url.origin)) {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
+
 const getPlanLabel = (subscription: RunwayBrandSubscription | null | undefined) => (
   subscription?.plan?.name || subscription?.plan?.code || 'Free'
 );
@@ -101,6 +172,7 @@ export function AdminDashboard() {
   const initialTab = (
     requestedTab === 'users' ||
     requestedTab === 'runway' ||
+    requestedTab === 'feedback' ||
     requestedTab === 'moderation' ||
     requestedTab === 'announcements'
   ) ? requestedTab : 'overview';
@@ -116,11 +188,16 @@ export function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [runwayApprovals, setRunwayApprovals] = useState<RunwayMcpApproval[]>([]);
   const [runwaySubscriptionsByBrand, setRunwaySubscriptionsByBrand] = useState<Record<string, RunwayBrandSubscription>>({});
+  const [feedbackItems, setFeedbackItems] = useState<FeedbackSubmission[]>([]);
   const [_moderationQueue, _setModerationQueue] = useState<ModerationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingRunwayBrandId, setUpdatingRunwayBrandId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'runway' | 'moderation' | 'announcements'>(initialTab);
+  const [updatingFeedbackId, setUpdatingFeedbackId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'runway' | 'feedback' | 'moderation' | 'announcements'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackSubmission | null>(null);
+  const [feedbackScreenshotUrl, setFeedbackScreenshotUrl] = useState<string | null>(null);
+  const [feedbackNoteDraft, setFeedbackNoteDraft] = useState('');
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({
     title: '',
@@ -132,6 +209,7 @@ export function AdminDashboard() {
     fetchStats();
     fetchUsers();
     fetchRunwayApprovals();
+    fetchFeedbackItems();
   }, []);
 
   useEffect(() => {
@@ -139,6 +217,7 @@ export function AdminDashboard() {
       requestedTab === 'overview' ||
       requestedTab === 'users' ||
       requestedTab === 'runway' ||
+      requestedTab === 'feedback' ||
       requestedTab === 'moderation' ||
       requestedTab === 'announcements'
     ) {
@@ -233,6 +312,27 @@ export function AdminDashboard() {
       toast.error('統計情報の取得に失敗しました');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchFeedbackItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('feedback_submissions')
+        .select('*, user:users(email, name), brand:brands(name)')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.error('Failed to fetch feedback:', error);
+        setFeedbackItems([]);
+        return;
+      }
+
+      setFeedbackItems((data || []) as unknown as FeedbackSubmission[]);
+    } catch (error) {
+      console.error('Failed to fetch feedback:', error);
+      setFeedbackItems([]);
     }
   };
 
@@ -364,6 +464,54 @@ export function AdminDashboard() {
     }
   };
 
+  const openFeedbackDetail = async (item: FeedbackSubmission) => {
+    setSelectedFeedback(item);
+    setFeedbackNoteDraft(item.admin_note || '');
+    setFeedbackScreenshotUrl(null);
+
+    if (!item.screenshot_path) return;
+
+    const { data, error } = await supabase.storage
+      .from('feedback-screenshots')
+      .createSignedUrl(item.screenshot_path, 60 * 10);
+
+    if (error) {
+      console.error('Failed to create feedback screenshot URL:', error);
+      return;
+    }
+
+    setFeedbackScreenshotUrl(data.signedUrl);
+  };
+
+  const updateFeedback = async (
+    item: FeedbackSubmission,
+    updates: Partial<Pick<FeedbackSubmission, 'status' | 'admin_note'>>,
+  ) => {
+    try {
+      setUpdatingFeedbackId(item.id);
+      const nextStatus = updates.status || item.status;
+      const { error } = await supabase
+        .from('feedback_submissions')
+        .update({
+          ...updates,
+          resolved_at: nextStatus === 'done' ? new Date().toISOString() : null,
+        })
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      toast.success('フィードバックを更新しました');
+      await fetchFeedbackItems();
+      setSelectedFeedback((current) => current?.id === item.id
+        ? { ...current, ...updates, resolved_at: nextStatus === 'done' ? new Date().toISOString() : null }
+        : current);
+    } catch (error: any) {
+      toast.error(error.message || 'フィードバック更新に失敗しました');
+    } finally {
+      setUpdatingFeedbackId(null);
+    }
+  };
+
   const filteredUsers = users.filter(user =>
     user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.name?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -372,6 +520,7 @@ export function AdminDashboard() {
   const runwayPendingCount = runwayApprovals.filter((approval) => approval.status === 'pending').length;
   const runwayReadyCount = runwayApprovals.filter((approval) => approval.status === 'approved').length;
   const runwayBlockedCount = runwayApprovals.filter((approval) => approval.status !== 'approved').length;
+  const feedbackOpenCount = feedbackItems.filter((item) => item.status !== 'done').length;
 
   const StatCard = ({ icon: Icon, label, value, trend, color }: any) => (
     <div className="glass-card p-6 hover:shadow-elegant transition-all duration-300">
@@ -429,6 +578,7 @@ export function AdminDashboard() {
             { id: 'overview', label: '概要' },
             { id: 'users', label: 'ユーザー' },
             { id: 'runway', label: 'Runway MCP' },
+            { id: 'feedback', label: 'フィードバック' },
             { id: 'moderation', label: 'モデレーション' },
             { id: 'announcements', label: 'お知らせ' },
           ].map((tab) => (
@@ -503,6 +653,12 @@ export function AdminDashboard() {
                 label="Edge実行数"
                 value={stats.edgeRunCount}
                 color="bg-rose-500"
+              />
+              <StatCard
+                icon={MessageSquare}
+                label="未完了フィードバック"
+                value={feedbackOpenCount}
+                color="bg-indigo-500"
               />
             </div>
 
@@ -754,6 +910,128 @@ export function AdminDashboard() {
           </div>
         )}
 
+        {/* Feedback */}
+        {activeTab === 'feedback' && (
+          <div className="space-y-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid gap-4 md:grid-cols-3"
+            >
+              {(['new', 'in_progress', 'done'] as FeedbackStatus[]).map((status) => (
+                <div key={status} className="glass-card p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                    {FEEDBACK_STATUS_LABELS[status]}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-neutral-900 dark:text-white">
+                    {feedbackItems.filter((item) => item.status === status).length}
+                  </p>
+                </div>
+              ))}
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-panel rounded-2xl overflow-hidden"
+            >
+              <div className="flex items-center justify-between gap-4 border-b border-neutral-100 p-6 dark:border-neutral-700">
+                <div>
+                  <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
+                    <MessageSquare className="mr-2 inline-block h-5 w-5" />
+                    社内betaフィードバック
+                  </h2>
+                  <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                    右下ボタンから送られたコメントと画面スクショを確認します。
+                  </p>
+                </div>
+                <Button variant="secondary" size="sm" onClick={fetchFeedbackItems}>
+                  更新
+                </Button>
+              </div>
+
+              {feedbackItems.length === 0 ? (
+                <div className="p-12 text-center text-neutral-500 dark:text-neutral-400">
+                  フィードバックはまだありません
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-neutral-50 text-left dark:bg-neutral-800/50">
+                      <tr>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">状態</th>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">内容</th>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">ページ</th>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">投稿者</th>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">日時</th>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">詳細</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                      {feedbackItems.map((item) => (
+                        <tr key={item.id} className="transition-colors hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
+                          <td className="px-6 py-4">
+                            <select
+                              value={item.status}
+                              disabled={updatingFeedbackId === item.id}
+                              onChange={(event) => updateFeedback(item, { status: event.target.value as FeedbackStatus })}
+                              className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
+                            >
+                              {(['new', 'in_progress', 'done'] as FeedbackStatus[]).map((status) => (
+                                <option key={status} value={status}>{FEEDBACK_STATUS_LABELS[status]}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="max-w-sm px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${FEEDBACK_STATUS_STYLES[item.status]}`}>
+                                {FEEDBACK_TYPE_LABELS[item.type]}
+                              </span>
+                              {item.screenshot_path && <Camera className="h-4 w-4 text-neutral-400" />}
+                            </div>
+                            <p className="mt-2 truncate text-sm text-neutral-700 dark:text-neutral-200">
+                              {item.message}
+                            </p>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">
+                            {getSafeFeedbackUrl(item.page_url) ? (
+                              <a
+                                href={getSafeFeedbackUrl(item.page_url) || undefined}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex max-w-[220px] items-center gap-1 truncate text-primary-600 hover:underline dark:text-primary-300"
+                              >
+                                {item.pathname}
+                                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                              </a>
+                            ) : (
+                              <span className="inline-flex max-w-[220px] truncate">{item.pathname || '不明なページ'}</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">
+                            <p>{item.email || item.user?.email || '未入力'}</p>
+                            {item.brand?.name && (
+                              <p className="text-xs text-neutral-400">{item.brand.name}</p>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">
+                            {new Date(item.created_at).toLocaleString('ja-JP')}
+                          </td>
+                          <td className="px-6 py-4">
+                            <Button size="sm" variant="secondary" onClick={() => openFeedbackDetail(item)}>
+                              開く
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+
         {/* Moderation */}
         {activeTab === 'moderation' && (
           <motion.div 
@@ -795,6 +1073,121 @@ export function AdminDashboard() {
           </motion.div>
         )}
       </div>
+
+      {/* Feedback Detail Modal */}
+      <Modal
+        isOpen={Boolean(selectedFeedback)}
+        onClose={() => {
+          setSelectedFeedback(null);
+          setFeedbackScreenshotUrl(null);
+          setFeedbackNoteDraft('');
+        }}
+        title="フィードバック詳細"
+        size="lg"
+      >
+        {selectedFeedback && (
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${FEEDBACK_STATUS_STYLES[selectedFeedback.status]}`}>
+                {FEEDBACK_STATUS_LABELS[selectedFeedback.status]}
+              </span>
+              <span className="inline-flex rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
+                {FEEDBACK_TYPE_LABELS[selectedFeedback.type]}
+              </span>
+              <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                {new Date(selectedFeedback.created_at).toLocaleString('ja-JP')}
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-900">
+              <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">コメント</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-neutral-800 dark:text-neutral-100">
+                {selectedFeedback.message}
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-700">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">ページ</p>
+                {getSafeFeedbackUrl(selectedFeedback.page_url) ? (
+                  <a
+                    href={getSafeFeedbackUrl(selectedFeedback.page_url) || undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 inline-flex items-center gap-1 break-all text-sm text-primary-600 hover:underline dark:text-primary-300"
+                  >
+                    {selectedFeedback.page_url}
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                  </a>
+                ) : (
+                  <p className="mt-2 break-all text-sm text-neutral-600 dark:text-neutral-300">
+                    {selectedFeedback.page_url || '不明なページ'}
+                  </p>
+                )}
+              </div>
+              <div className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-700">
+                <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">投稿者 / 環境</p>
+                <p className="mt-2 text-sm text-neutral-800 dark:text-neutral-100">
+                  {selectedFeedback.email || selectedFeedback.user?.email || '未入力'}
+                </p>
+                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  {selectedFeedback.viewport?.width || '?'} x {selectedFeedback.viewport?.height || '?'} / {selectedFeedback.screenshot_capture_status}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-700">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">スクショ</p>
+              {feedbackScreenshotUrl ? (
+                <img
+                  src={feedbackScreenshotUrl}
+                  alt="フィードバック画面スクショ"
+                  className="max-h-[420px] w-full rounded-lg object-contain object-top"
+                />
+              ) : (
+                <div className="flex h-40 items-center justify-center rounded-lg bg-neutral-100 text-sm text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
+                  スクショはありません
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                管理メモ
+              </label>
+              <textarea
+                value={feedbackNoteDraft}
+                onChange={(event) => setFeedbackNoteDraft(event.target.value)}
+                rows={4}
+                className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-neutral-900 transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
+                placeholder="対応内容や次のアクションを記録"
+              />
+            </div>
+
+            <div className="flex flex-wrap justify-between gap-3 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+              <div className="flex flex-wrap gap-2">
+                {(['new', 'in_progress', 'done'] as FeedbackStatus[]).map((status) => (
+                  <Button
+                    key={status}
+                    size="sm"
+                    variant={selectedFeedback.status === status ? 'primary' : 'secondary'}
+                    disabled={updatingFeedbackId === selectedFeedback.id}
+                    onClick={() => updateFeedback(selectedFeedback, { status })}
+                  >
+                    {FEEDBACK_STATUS_LABELS[status]}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                isLoading={updatingFeedbackId === selectedFeedback.id}
+                onClick={() => updateFeedback(selectedFeedback, { admin_note: feedbackNoteDraft })}
+              >
+                メモを保存
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Announcement Modal */}
       <Modal

@@ -496,6 +496,65 @@ export interface Database {
           created_at?: string
         }
       }
+      feedback_submissions: {
+        Row: {
+          id: string
+          user_id: string
+          brand_id: string | null
+          type: 'lost' | 'result' | 'save' | 'speed' | 'other'
+          message: string
+          email: string | null
+          page_url: string
+          pathname: string
+          viewport: Json
+          user_agent: string | null
+          screenshot_path: string | null
+          screenshot_capture_status: 'captured' | 'screenshot_capture_failed' | 'screenshot_upload_failed'
+          status: 'new' | 'in_progress' | 'done'
+          admin_note: string | null
+          created_at: string
+          updated_at: string
+          resolved_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          brand_id?: string | null
+          type: 'lost' | 'result' | 'save' | 'speed' | 'other'
+          message: string
+          email?: string | null
+          page_url: string
+          pathname: string
+          viewport?: Json
+          user_agent?: string | null
+          screenshot_path?: string | null
+          screenshot_capture_status?: 'captured' | 'screenshot_capture_failed' | 'screenshot_upload_failed'
+          status?: 'new' | 'in_progress' | 'done'
+          admin_note?: string | null
+          created_at?: string
+          updated_at?: string
+          resolved_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          brand_id?: string | null
+          type?: 'lost' | 'result' | 'save' | 'speed' | 'other'
+          message?: string
+          email?: string | null
+          page_url?: string
+          pathname?: string
+          viewport?: Json
+          user_agent?: string | null
+          screenshot_path?: string | null
+          screenshot_capture_status?: 'captured' | 'screenshot_capture_failed' | 'screenshot_upload_failed'
+          status?: 'new' | 'in_progress' | 'done'
+          admin_note?: string | null
+          created_at?: string
+          updated_at?: string
+          resolved_at?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -517,6 +576,8 @@ export interface Database {
     }
     Enums: {
       runway_mcp_connection_status: 'pending' | 'approved' | 'rejected' | 'revoked'
+      feedback_submission_status: 'new' | 'in_progress' | 'done'
+      feedback_screenshot_capture_status: 'captured' | 'screenshot_capture_failed' | 'screenshot_upload_failed'
     }
   }
 }
@@ -535,6 +596,7 @@ export type ApiUsageLog = Database['public']['Tables']['api_usage_logs']['Row']
 export type ShareLink = Database['public']['Tables']['share_links']['Row']
 export type AdminAnnouncement = Database['public']['Tables']['admin_announcements']['Row']
 export type RunwayMcpConnectionApproval = Database['public']['Tables']['runway_mcp_connection_approvals']['Row']
+export type FeedbackSubmission = Database['public']['Tables']['feedback_submissions']['Row']
 
 // Extended types with metadata
 export interface ImageMetadata {

@@ -13,6 +13,8 @@ test -f supabase/migrations/20260622230000_allow_runway_api_usage_provider.sql
 test -f supabase/migrations/20260622141350_require_runway_mcp_generation_plan_feature.sql
 test -f supabase/migrations/20260623090000_runway_mcp_connection_approvals.sql
 test -f supabase/migrations/20260625092000_disable_generation_quota_while_billing_inactive.sql
+test -f supabase/migrations/20260702100000_beta_feedback_submissions.sql
+test -f supabase/migrations/20260702112251_revoke_direct_feedback_insert.sql
 grep -q 'schemas = \["public", "storage"\]' supabase/config.toml
 
 verify_mode="${SUPABASE_VERIFY_MODE:-static}"
@@ -296,6 +298,27 @@ grep -q "Brand editors can update Lightchain task steps" supabase/migrations/202
 grep -q "idx_lightchain_task_steps_job" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
 grep -q "idx_lightchain_task_steps_task_code" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
 grep -q "idx_lightchain_task_steps_status" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+feedback_migration="supabase/migrations/20260702100000_beta_feedback_submissions.sql"
+grep -q "CREATE TABLE IF NOT EXISTS public.feedback_submissions" "$feedback_migration"
+grep -q "ALTER TABLE public.feedback_submissions ENABLE ROW LEVEL SECURITY" "$feedback_migration"
+grep -q "Users can insert own beta feedback" "$feedback_migration"
+grep -q "Users can view own beta feedback" "$feedback_migration"
+grep -q "Admins can update beta feedback" "$feedback_migration"
+grep -q "private.is_current_user_admin()" "$feedback_migration"
+grep -q "feedback-screenshots" "$feedback_migration"
+grep -q "screenshot_capture_failed" "$feedback_migration"
+grep -q "screenshot_upload_failed" "$feedback_migration"
+grep -q "GRANT ALL ON TABLE public.feedback_submissions TO service_role" "$feedback_migration"
+feedback_revoke_migration="supabase/migrations/20260702112251_revoke_direct_feedback_insert.sql"
+grep -q "DROP POLICY IF EXISTS \"Users can insert own beta feedback\"" "$feedback_revoke_migration"
+grep -q "REVOKE INSERT ON TABLE public.feedback_submissions FROM authenticated" "$feedback_revoke_migration"
+grep -q "GRANT SELECT ON TABLE public.feedback_submissions TO authenticated" "$feedback_revoke_migration"
+grep -q "submit-feedback" scripts/deploy-edge-functions.sh
+grep -q "MAX_REQUEST_BYTES" supabase/functions/submit-feedback/index.ts
+grep -q "content-length" supabase/functions/submit-feedback/index.ts
+grep -q "readJsonWithLimit" supabase/functions/submit-feedback/index.ts
+grep -q "normalizePageUrl" supabase/functions/submit-feedback/index.ts
+grep -q "getSafeFeedbackUrl" src/pages/AdminDashboard.tsx
 
 echo "Checking required public service RPC wrappers"
 grep -q "public.service_reserve_brand_usage" supabase/migrations/20260617054556_public_service_rpc_wrappers.sql

@@ -16,10 +16,13 @@ const generate = read('src/pages/GeneratePage.tsx');
 const lightchain = read('src/pages/LightchainWorkbenchPage.tsx');
 const app = read('src/App.tsx');
 const feedback = read('src/components/ui/FeedbackForm.tsx');
+const admin = read('src/pages/AdminDashboard.tsx');
 const nav = read('src/components/layout/navigation.ts');
 const materialWorkbench = read('src/components/workspace/MaterialWorkbench.tsx');
 const gallery = read('src/pages/GalleryPage.tsx');
 const onboarding = read('src/components/Onboarding.tsx');
+const packageJson = read('package.json');
+const submitFeedback = read('supabase/functions/submit-feedback/index.ts');
 
 const userFacingBundle = [
   ['DashboardPage.tsx', dashboard],
@@ -27,6 +30,7 @@ const userFacingBundle = [
   ['LightchainWorkbenchPage.tsx', lightchain],
   ['App.tsx', app],
   ['FeedbackForm.tsx', feedback],
+  ['AdminDashboard.tsx', admin],
   ['navigation.ts', nav],
   ['MaterialWorkbench.tsx', materialWorkbench],
   ['GalleryPage.tsx', gallery],
@@ -67,6 +71,38 @@ addCheck('feedback_collects_internal_beta_friction_categories', (
   && feedback.includes('保存先がわからない')
   && feedback.includes('動作が遅い')
   && feedback.includes('社内beta')
+), {});
+
+addCheck('feedback_collects_screenshot_and_context', (
+  packageJson.includes('"html2canvas"')
+  && feedback.includes("import html2canvas from 'html2canvas'")
+  && feedback.includes("supabase.functions.invoke('submit-feedback'")
+  && feedback.includes('screenshot_capture_status')
+  && feedback.includes('MAX_SCREENSHOT_DATA_URL_LENGTH')
+  && feedback.includes('height: window.innerHeight')
+  && feedback.includes('page_url: window.location.href')
+  && feedback.includes('user_agent: window.navigator.userAgent')
+  && feedback.includes('再撮影')
+  && submitFeedback.includes("FEEDBACK_SCREENSHOT_BUCKET = 'feedback-screenshots'")
+  && submitFeedback.includes(".from('feedback_submissions')")
+  && submitFeedback.includes('.remove([uploadedScreenshotPath])')
+  && submitFeedback.includes('MAX_SCREENSHOT_BYTES')
+  && submitFeedback.includes('MAX_REQUEST_BYTES')
+  && submitFeedback.includes('content-length')
+  && submitFeedback.includes('readJsonWithLimit')
+  && submitFeedback.includes('normalizePageUrl')
+), {});
+
+addCheck('admin_dashboard_reviews_beta_feedback', (
+  admin.includes("{ id: 'feedback', label: 'フィードバック' }")
+  && admin.includes("from('feedback_submissions')")
+  && admin.includes("from('feedback-screenshots')")
+  && admin.includes('getSafeFeedbackUrl')
+  && admin.includes('FEEDBACK_STATUS_LABELS')
+  && admin.includes('管理メモ')
+  && admin.includes('未対応')
+  && admin.includes('対応中')
+  && admin.includes('完了')
 ), {});
 
 addCheck('navigation_uses_material_workbench_label', (

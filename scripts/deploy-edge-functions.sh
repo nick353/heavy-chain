@@ -19,6 +19,7 @@ all_functions=(
   runway-mcp-connect-callback
   runway-mcp-connection-status
   runway-mcp-bridge
+  submit-feedback
 )
 
 jwt_disabled_functions=(
