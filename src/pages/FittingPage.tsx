@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
@@ -274,6 +274,20 @@ export function FittingPage() {
     patternCount,
   }), [activeWorkflow.title, genderLabel, materialReference, patternCount, selectedAgeGroupLabels, selectedBodyTypeLabels]);
 
+  const scrollToMaterialWorkbench = () => {
+    document.getElementById('fitting-material-workbench')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+  };
+
+  useEffect(() => {
+    if (window.location.hash !== '#fitting-material-workbench') return;
+    window.requestAnimationFrame(scrollToMaterialWorkbench);
+    const timeout = window.setTimeout(scrollToMaterialWorkbench, 250);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
   const applyWorkflow = (workflow: typeof fittingWorkflows[number]) => {
     setActiveWorkflowId(workflow.id);
     setProductDescription(workflow.productDescription);
@@ -537,10 +551,14 @@ export function FittingPage() {
                 衣服画像と商品説明から、体型・年齢別のモデルセット写真を生成します。
               </p>
             </div>
-            <Link to="/generate" className="btn-secondary inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm">
+            <button
+              type="button"
+              onClick={scrollToMaterialWorkbench}
+              className="btn-primary inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm"
+            >
               <Sparkles className="h-4 w-4" />
-              既存生成へ
-            </Link>
+              画像を入れて作る
+            </button>
           </div>
 
           <section className="mt-6 rounded-2xl border border-neutral-200 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/40">
@@ -604,7 +622,7 @@ export function FittingPage() {
                 Fitting flow
               </p>
               <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
-                衣服素材とモデル条件を決め、model-matrix生成かCanvasへ進める
+                1. 衣服画像を入れる → 2. 条件を確認 → 3. AI生成
               </h2>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 {fittingReadinessItems.map((item) => (
@@ -638,7 +656,7 @@ export function FittingPage() {
                 className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
               >
                 <Sparkles className="h-4 w-4" />
-                生成指示へ送る
+                生成指示を確認
               </Link>
               <button
                 type="button"
@@ -656,7 +674,7 @@ export function FittingPage() {
             </div>
           </section>
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+          <div id="fitting-material-workbench" className="mt-6 scroll-mt-24 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
             <MaterialWorkbench
               title="フィッティング素材作業台"
               description="衣服画像、モデル参照、ポーズ、背景を置き、着用生成へ渡すレイヤーを先に決めます。"

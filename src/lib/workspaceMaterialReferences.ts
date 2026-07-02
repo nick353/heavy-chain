@@ -36,7 +36,7 @@ export type MaterialCutoutResult = {
   outputSize: { width: number; height: number };
   dataUrlBytes: number;
   storagePolicy: 'bounded-local-canvas-data-url-v1';
-  engine: 'browser-canvas-geometric-mask-v1';
+  engine: 'browser-canvas-geometric-mask-v1' | 'browser-canvas-background-flood-cutout-v2';
   hasTransparentPixels: boolean;
 };
 
@@ -113,6 +113,143 @@ const loadImageElement = (imageUrl: string): Promise<HTMLImageElement> => {
 };
 
 const estimateDataUrlBytes = (dataUrl: string) => Math.ceil(dataUrl.length * 0.75);
+
+type Rgb = { r: number; g: number; b: number };
+type BackgroundEstimate = Rgb & { sampleSpread: number };
+
+const colorDistance = (a: Rgb, b: Rgb) => Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b);
+
+const readRgb = (data: Uint8ClampedArray, index: number): Rgb => ({
+  r: data[index],
+  g: data[index + 1],
+  b: data[index + 2],
+});
+
+const estimateBackgroundColor = (data: Uint8ClampedArray, width: number, height: number): BackgroundEstimate => {
+  const samples: Rgb[] = [];
+  const insetX = Math.max(1, Math.floor(width * 0.06));
+  const insetY = Math.max(1, Math.floor(height * 0.06));
+  const samplePoints = [
+    [insetX, insetY],
+    [width - 1 - insetX, insetY],
+    [insetX, height - 1 - insetY],
+    [width - 1 - insetX, height - 1 - insetY],
+    [Math.floor(width / 2), insetY],
+    [Math.floor(width / 2), height - 1 - insetY],
+    [insetX, Math.floor(height / 2)],
+    [width - 1 - insetX, Math.floor(height / 2)],
+  ];
+
+  for (const [x, y] of samplePoints) {
+    const clampedX = Math.min(width - 1, Math.max(0, x));
+    const clampedY = Math.min(height - 1, Math.max(0, y));
+    samples.push(readRgb(data, (clampedY * width + clampedX) * 4));
+  }
+
+  const background = {
+    r: Math.round(samples.reduce((sum, color) => sum + color.r, 0) / samples.length),
+    g: Math.round(samples.reduce((sum, color) => sum + color.g, 0) / samples.length),
+    b: Math.round(samples.reduce((sum, color) => sum + color.b, 0) / samples.length),
+  };
+  const sampleSpread = Math.max(...samples.map((color) => colorDistance(color, background)));
+  return { ...background, sampleSpread };
+};
+
+const buildEdgeConnectedBackgroundMask = (
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+  background: Rgb,
+) => {
+  const visited = new Uint8Array(width * height);
+  const queue: number[] = [];
+  const threshold = 46;
+  const enqueue = (x: number, y: number) => {
+    if (x < 0 || x >= width || y < 0 || y >= height) return;
+    const pixelIndex = y * width + x;
+    if (visited[pixelIndex]) return;
+    const rgbaIndex = pixelIndex * 4;
+    if (data[rgbaIndex + 3] <= 4 || colorDistance(readRgb(data, rgbaIndex), background) <= threshold) {
+      visited[pixelIndex] = 1;
+      queue.push(pixelIndex);
+    }
+  };
+
+  for (let x = 0; x < width; x += 1) {
+    enqueue(x, 0);
+    enqueue(x, height - 1);
+  }
+  for (let y = 1; y < height - 1; y += 1) {
+    enqueue(0, y);
+    enqueue(width - 1, y);
+  }
+
+  for (let cursor = 0; cursor < queue.length; cursor += 1) {
+    const pixelIndex = queue[cursor];
+    const x = pixelIndex % width;
+    const y = Math.floor(pixelIndex / width);
+    enqueue(x + 1, y);
+    enqueue(x - 1, y);
+    enqueue(x, y + 1);
+    enqueue(x, y - 1);
+  }
+
+  return visited;
+};
+
+const hasBackgroundNeighbor = (mask: Uint8Array, x: number, y: number, width: number, height: number) => {
+  for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+    for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+      if (offsetX === 0 && offsetY === 0) continue;
+      const nx = x + offsetX;
+      const ny = y + offsetY;
+      if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+      if (mask[ny * width + nx]) return true;
+    }
+  }
+  return false;
+};
+
+const countMaskPixels = (mask: Uint8Array) => mask.reduce((sum, value) => sum + value, 0);
+
+const isProtectedCutoutCenter = (x: number, y: number, width: number, height: number) => {
+  const nx = (x / width - 0.5) * 2;
+  const ny = (y / height - 0.5) * 2;
+  return (nx / 0.42) ** 2 + ((ny + 0.02) / 0.54) ** 2 <= 1;
+};
+
+const shouldUseBackgroundMask = ({
+  mask,
+  background,
+  width,
+  height,
+}: {
+  mask: Uint8Array;
+  background: BackgroundEstimate;
+  width: number;
+  height: number;
+}) => {
+  const totalPixels = width * height;
+  const backgroundRatio = countMaskPixels(mask) / totalPixels;
+  let protectedCenterPixels = 0;
+  let maskedProtectedCenterPixels = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (!isProtectedCutoutCenter(x, y, width, height)) continue;
+      protectedCenterPixels += 1;
+      if (mask[y * width + x]) maskedProtectedCenterPixels += 1;
+    }
+  }
+
+  const centerMaskRatio = protectedCenterPixels > 0 ? maskedProtectedCenterPixels / protectedCenterPixels : 1;
+  return (
+    background.sampleSpread <= 70
+    && backgroundRatio >= 0.05
+    && backgroundRatio <= 0.96
+    && centerMaskRatio <= 0.55
+  );
+};
 
 const getMaskAlpha = ({
   x,
@@ -250,6 +387,18 @@ function buildCutoutFromImage({
   context.drawImage(image, 0, 0, width, height);
   const imageData = context.getImageData(0, 0, width, height);
   const { data } = imageData;
+  const background = estimateBackgroundColor(data, width, height);
+  const candidateBackgroundMask = mode === 'auto' || candidate?.includes('無地') || candidate?.includes('トップス') || candidate?.includes('garment')
+    ? buildEdgeConnectedBackgroundMask(data, width, height, background)
+    : null;
+  const backgroundMask = candidateBackgroundMask && shouldUseBackgroundMask({
+    mask: candidateBackgroundMask,
+    background,
+    width,
+    height,
+  })
+    ? candidateBackgroundMask
+    : null;
   let minX = width;
   let minY = height;
   let maxX = -1;
@@ -259,9 +408,22 @@ function buildCutoutFromImage({
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const index = (y * width + x) * 4;
+      const geometricAlpha = getMaskAlpha({ x, y, width, height, mode, candidate });
+      const protectedCenter = isProtectedCutoutCenter(x, y, width, height);
+      const backgroundPixel = !protectedCenter && backgroundMask?.[y * width + x] === 1;
+      const nearBackgroundEdge = !protectedCenter && backgroundMask
+        ? hasBackgroundNeighbor(backgroundMask, x, y, width, height)
+        : false;
+      const backgroundDistance = colorDistance(readRgb(data, index), background);
+      const backgroundAlpha = backgroundPixel
+        ? 0
+        : nearBackgroundEdge && backgroundDistance < 66
+          ? Math.max(48, Math.min(210, Math.round((backgroundDistance - 34) * 8)))
+          : 255;
       const alpha = Math.min(
         data[index + 3],
-        getMaskAlpha({ x, y, width, height, mode, candidate }),
+        geometricAlpha,
+        backgroundAlpha,
       );
       data[index + 3] = alpha;
       if (alpha > 4) {
@@ -284,7 +446,7 @@ function buildCutoutFromImage({
       outputSize: { width, height },
       dataUrlBytes: estimateDataUrlBytes(dataUrl),
       storagePolicy,
-      engine: 'browser-canvas-geometric-mask-v1',
+      engine: backgroundMask ? 'browser-canvas-background-flood-cutout-v2' : 'browser-canvas-geometric-mask-v1',
       hasTransparentPixels,
     };
   }
@@ -311,7 +473,7 @@ function buildCutoutFromImage({
     outputSize: { width: cropWidth, height: cropHeight },
     dataUrlBytes: estimateDataUrlBytes(dataUrl),
     storagePolicy,
-    engine: 'browser-canvas-geometric-mask-v1',
+    engine: backgroundMask ? 'browser-canvas-background-flood-cutout-v2' : 'browser-canvas-geometric-mask-v1',
     hasTransparentPixels,
   };
 }

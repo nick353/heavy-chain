@@ -723,6 +723,8 @@ export function LightchainWorkbenchPage() {
   const isFeatureDetail = Boolean(toolId);
   const selectedTool = routeTool ?? tools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? tools[0];
   const selectedCategory = categories.find((category) => category.id === (isFeatureDetail ? selectedTool.category : activeCategory)) ?? categories[0];
+  const isFittingDetail = selectedTool.id === 'ai-fitting' || selectedTool.id === 'ai-fitting-reference';
+  const selectedToolActionHref = isFittingDetail ? '/fitting#fitting-material-workbench' : selectedTool.heavyChainHref;
   const workbenchLabels = categoryWorkbenchLabels[selectedTool.category] ?? categoryWorkbenchLabels.home;
   const workbenchEnabled = selectedTool.status !== 'coming-soon';
   const layerIds = workbenchLabels.layers.map(([layer]) => layer);
@@ -1749,11 +1751,16 @@ export function LightchainWorkbenchPage() {
                     </div>
                   </div>
                 </div>
+                  {isFittingDetail && (
+                    <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-800 dark:bg-amber-400/10 dark:text-amber-100">
+                      着用画像を作る時は、この素材作業台ではなくAIフィッティング画面で「画像を入れて作る」から進みます。
+                    </p>
+                  )}
                   <Link
-                    to={selectedTool.heavyChainHref}
-                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+                    to={selectedToolActionHref}
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
                   >
-                    {selectedTool.runLabel}
+                    {isFittingDetail ? 'AIフィッティング画面で作る' : selectedTool.runLabel}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </details>
