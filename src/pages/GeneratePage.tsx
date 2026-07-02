@@ -612,6 +612,57 @@ const localRunwayWorkerMode = generationProvider === 'local-runway' || generatio
 const geminiGenerationMode = generationProvider === 'gemini' || generationProvider === 'gemini-image';
 const noImageGenerationMode = generationProvider === 'planning' || localRunwayWorkerMode || geminiGenerationMode;
 
+const generationModelOptions = [
+  {
+    id: 'imagen-4.0-fast-generate-001',
+    provider: 'gemini',
+    label: '低コスト',
+    title: 'Imagen 4 Fast',
+    cost: '1枚 約$0.02',
+    description: '量産・社内確認向け',
+  },
+  {
+    id: 'imagen-4.0-generate-001',
+    provider: 'gemini',
+    label: '標準',
+    title: 'Imagen 4',
+    cost: '1枚 約$0.04',
+    description: '商品画像の標準品質',
+  },
+  {
+    id: 'gemini-3.1-flash-lite-image',
+    provider: 'gemini',
+    label: '編集向き',
+    title: 'Gemini Flash Lite Image',
+    cost: '1枚 約$0.0336',
+    description: '高速で安いGemini系',
+  },
+  {
+    id: 'gemini-3.1-flash-image',
+    provider: 'gemini',
+    label: '高品質',
+    title: 'Nano Banana 2',
+    cost: '1枚 約$0.067',
+    description: '文脈理解と編集に強い',
+  },
+  {
+    id: 'gpt-image-2',
+    provider: 'openai',
+    label: 'OpenAI標準',
+    title: 'GPT Image 2',
+    cost: '1枚 約$0.006-$0.211',
+    description: 'OpenAIの画像生成',
+  },
+  {
+    id: 'gpt-image-1-mini',
+    provider: 'openai',
+    label: 'OpenAI軽量',
+    title: 'GPT Image 1 mini',
+    cost: '1枚 約$0.005-$0.052',
+    description: '試作・社内確認向け',
+  },
+] as const;
+
 const debugLog = (message: string, details?: Record<string, unknown>) => {
   if (!debugGeneration) return;
   if (details) {
@@ -924,6 +975,8 @@ export function GeneratePage() {
   const [overlayColor, setOverlayColor] = useState('#ffffff');
   const [overlayStrokeColor, setOverlayStrokeColor] = useState('#000000');
   const [overlayStrokeWidth, setOverlayStrokeWidth] = useState(2);
+  const [selectedGenerationModel, setSelectedGenerationModel] = useState<string>(generationModelOptions[0].id);
+  const selectedGenerationModelOption = generationModelOptions.find((option) => option.id === selectedGenerationModel) ?? generationModelOptions[0];
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const generationRecoveryGuidance = getFailureRecoveryGuidance(generationError);
   
@@ -1607,7 +1660,8 @@ export function GeneratePage() {
 
           for (let index = 0; index < generationTotal; index += 1) {
             const result = await generateImage(geminiPrompt, currentBrand.id, {
-              generationProvider: 'gemini',
+              generationProvider: selectedGenerationModelOption.provider,
+              generationModel: selectedGenerationModel,
               featureType: planningFeature.id,
               negativePrompt: productionNegativePrompt,
               width: ratio.width,
@@ -1624,7 +1678,7 @@ export function GeneratePage() {
               ...generateMaterialMetadata,
             });
             if (!result.success) {
-              throw new Error(result.error || 'gemini_generation_failed');
+              throw new Error(result.error || 'image_generation_failed');
             }
             const image = result.images?.[0] ?? (
               result.imageUrl
@@ -1638,7 +1692,7 @@ export function GeneratePage() {
                 }
                 : null
             );
-            if (!image?.imageUrl) throw new Error('gemini_generation_image_missing');
+            if (!image?.imageUrl) throw new Error('image_generation_image_missing');
             geminiResults.push({
               id: image.id || image.imageId || image.storagePath || `gemini-${Date.now()}-${index}`,
               imageUrl: image.imageUrl,
@@ -1654,10 +1708,10 @@ export function GeneratePage() {
 
           replaceGeneratedImages(geminiResults);
           if (primaryBrief) {
-            addToHistory(primaryBrief, `${planningFeature.name} Gemini生成`);
+            addToHistory(primaryBrief, `${planningFeature.name} ${selectedGenerationModelOption.title}生成`);
           }
           setShowSuccessCard(true);
-          toast.success('Geminiで生成しました');
+          toast.success(`${selectedGenerationModelOption.title}で生成しました`);
           return;
         }
         if (localRunwayWorkerMode) {
@@ -4014,6 +4068,42 @@ export function GeneratePage() {
 
             {renderFeatureForm()}
 
+            {geminiGenerationMode && selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && (
+              <div className="mt-5 rounded-2xl border border-neutral-200 bg-white/85 p-4 dark:border-neutral-800 dark:bg-neutral-900/70">
+                <div className="flex flex-wrap items-end justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-white">生成モデル</p>
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">GoogleとOpenAIを切り替え、まず低コストで確認します。</p>
+                  </div>
+                  <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
+                    {selectedGenerationModelOption.cost}
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  {generationModelOptions.map((option) => {
+                    const selected = selectedGenerationModel === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setSelectedGenerationModel(option.id)}
+                        className={`min-h-[86px] rounded-xl border p-3 text-left transition ${
+                          selected
+                            ? 'border-neutral-900 bg-neutral-900 text-white shadow-sm dark:border-white dark:bg-white dark:text-neutral-950'
+                            : 'border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:border-neutral-500'
+                        }`}
+                      >
+                        <span className={`text-[11px] font-semibold ${selected ? 'text-white/75 dark:text-neutral-700' : 'text-neutral-500 dark:text-neutral-400'}`}>{option.label}</span>
+                        <span className="mt-1 block text-sm font-semibold">{option.title}</span>
+                        <span className={`mt-1 block text-xs font-semibold ${selected ? 'text-white dark:text-neutral-900' : 'text-neutral-800 dark:text-neutral-200'}`}>{option.cost}</span>
+                        <span className={`mt-1 block text-xs ${selected ? 'text-white/75 dark:text-neutral-700' : 'text-neutral-500 dark:text-neutral-400'}`}>{option.description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && (
               <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm dark:border-amber-800 dark:bg-amber-950/20">
                 <label className="flex items-start gap-3">
@@ -4044,7 +4134,7 @@ export function GeneratePage() {
                 size="lg"
                 leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
               >
-                {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : geminiGenerationMode ? 'Geminiで生成' : localRunwayWorkerMode ? 'Runway workerで生成' : '企画書を保存'}
+                {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : geminiGenerationMode ? `${selectedGenerationModelOption.title}で生成` : localRunwayWorkerMode ? 'Runway workerで生成' : '企画書を保存'}
               </Button>
             )}
           </section>

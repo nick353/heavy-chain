@@ -173,7 +173,8 @@ Edge Functions用の環境変数をSupabase Dashboardで設定：
 - `GEMINI_API_KEY` - Google AI Studio APIキー
 - `GEMINI_IMAGE_MODEL` - 使用する画像生成モデル名（既定: `gemini-2.5-flash-image`）
 - `VITE_GENERATION_PROVIDER` - 通常は `gemini`。Runway workerを明示的に使う場合だけ `local-runway`
-- `OPENAI_API_KEY` - OpenAI APIキー
+- `OPENAI_IMAGE_API_KEY` - OpenAI Images APIキー（未設定時は `OPENAI_API_KEY` を使用）
+- `OPENAI_IMAGE_MODEL` - 使用するOpenAI画像生成モデル名（既定: `gpt-image-2`）
 
 #### 5. 開発サーバーを起動
 
@@ -416,7 +417,8 @@ Set environment variables for Edge Functions in Supabase Dashboard:
 - `GEMINI_API_KEY` - Google AI Studio API key
 - `GEMINI_IMAGE_MODEL` - Image generation model name (default: `gemini-2.5-flash-image`)
 - `VITE_GENERATION_PROVIDER` - Use `gemini` by default. Use `local-runway` only for the explicit Runway worker path.
-- `OPENAI_API_KEY` - OpenAI API key
+- `OPENAI_IMAGE_API_KEY` - OpenAI Images API key (falls back to `OPENAI_API_KEY`)
+- `OPENAI_IMAGE_MODEL` - OpenAI image generation model name (default: `gpt-image-2`)
 
 #### 5. Start development server
 

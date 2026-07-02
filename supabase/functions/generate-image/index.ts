@@ -8,6 +8,8 @@ import { generateRunwayImage, runwayImageArtifact } from '../_shared/runway.ts';
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 import { generateGeminiImage, geminiImageArtifact, geminiProviderName } from '../_shared/geminiImage.ts';
+import { generateOpenAiImage, openAiImageArtifact } from '../_shared/openaiImage.ts';
+import { generateMockImage, mockImageArtifact } from '../_shared/mockImage.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,6 +34,7 @@ interface GenerateRequest {
   textOverlay?: unknown
   localRunwayWorker?: unknown
   generationProvider?: unknown
+  generationModel?: unknown
   legalSafety?: unknown
 }
 
@@ -213,7 +216,14 @@ const sanitizeGenerationProvider = (value: unknown) => {
   const requested = typeof value === 'string' ? value.trim().toLowerCase() : ''
   if (requested === 'runway' || requested === 'runway_mcp') return 'runway'
   if (requested === 'gemini' || requested === 'gemini_image') return 'gemini'
+  if (requested === 'openai' || requested === 'openai_image' || requested === 'gpt_image') return 'openai'
+  if (requested === 'mock' || requested === 'mock_image') return 'mock'
   return geminiProviderName()
+}
+
+const sanitizeGenerationModel = (value: unknown) => {
+  const requested = typeof value === 'string' ? value.trim() : ''
+  return requested || null
 }
 
 const sanitizeSourceReadback = (value: unknown) => {
@@ -322,6 +332,7 @@ serve(async (req) => {
       textOverlay,
       localRunwayWorker,
       generationProvider,
+      generationModel,
       legalSafety,
     }: GenerateRequest = await req.json()
 
@@ -342,6 +353,9 @@ serve(async (req) => {
       : 'text-to-image'
     const localWorkerRequest = sanitizeLocalRunwayWorkerRequest(localRunwayWorker, persistedFeatureType)
     const selectedProvider = localWorkerRequest ? localWorkerRequest.provider : sanitizeGenerationProvider(generationProvider)
+    const selectedGenerationModel = selectedProvider === 'gemini' || selectedProvider === 'openai' || selectedProvider === 'mock'
+      ? sanitizeGenerationModel(generationModel)
+      : null
     if (selectedProvider === 'runway' || localWorkerRequest) {
       await requireRunwayMcpConnectionApproval(supabaseClient, brandId);
     }
@@ -396,6 +410,7 @@ serve(async (req) => {
       height,
       featureType: persistedFeatureType,
       provider: selectedProvider,
+      ...(selectedGenerationModel ? { generationModel: selectedGenerationModel } : {}),
       requestId,
       ...(isRecord(campaignMeta) ? { campaignMeta } : {}),
       ...(isRecord(textOverlay) ? { textOverlay } : {}),
@@ -509,17 +524,37 @@ serve(async (req) => {
         width,
         height,
       })
-      : await generateGeminiImage({
-        prompt: productionPrompt,
-        negativePrompt,
-        width,
-        height,
-      })
+      : selectedProvider === 'openai'
+        ? await generateOpenAiImage({
+          prompt: productionPrompt,
+          negativePrompt,
+          width,
+          height,
+          model: selectedGenerationModel,
+        })
+        : selectedProvider === 'mock'
+          ? await generateMockImage({
+            prompt: productionPrompt,
+            width,
+            height,
+            model: selectedGenerationModel,
+          })
+        : await generateGeminiImage({
+          prompt: productionPrompt,
+          negativePrompt,
+          width,
+          height,
+          model: selectedGenerationModel,
+        })
     const imageBase64 = generatedResult.base64
     const usedModel = generatedResult.model
     const imageAsset = selectedProvider === 'runway'
       ? runwayImageArtifact(generatedResult)
-      : geminiImageArtifact(generatedResult)
+      : selectedProvider === 'openai'
+        ? openAiImageArtifact(generatedResult)
+        : selectedProvider === 'mock'
+          ? mockImageArtifact(generatedResult)
+        : geminiImageArtifact(generatedResult)
     console.log(`Image generated with model: ${usedModel}`)
 
     // Base64 Data URLを作成（ブラウザで直接表示可能）
@@ -563,11 +598,12 @@ serve(async (req) => {
           negative_prompt: negativePrompt || null,
           feature_type: persistedFeatureType,
           model_used: usedModel,
-          generation_params: { width, height, provider: selectedProvider },
+          generation_params: { width, height, provider: selectedProvider, ...(selectedGenerationModel ? { generationModel: selectedGenerationModel } : {}) },
           metadata: {
             remoteSaveStatus: 'succeeded',
             source: 'generate-image',
             provider: selectedProvider,
+            ...(selectedGenerationModel ? { generationModel: selectedGenerationModel } : {}),
             providerTaskId: generatedResult.taskId,
             requestId,
             ...(sourceMetadata ?? {}),

@@ -1,0 +1,154 @@
+export type OpenAiImageResult = {
+  base64: string;
+  mimeType: string;
+  model: string;
+  taskId: string;
+};
+
+export type OpenAiImageArtifact = {
+  base64: string;
+  dataUrl: string;
+  contentType: string;
+  extension: string;
+};
+
+const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2';
+
+const OPENAI_IMAGE_MODELS = new Set([
+  'gpt-image-2',
+  'gpt-image-1.5',
+  'gpt-image-1-mini',
+]);
+
+function openAiImageApiKey() {
+  const key = Deno.env.get('OPENAI_IMAGE_API_KEY')?.trim()
+    || Deno.env.get('OPENAI_API_KEY')?.trim();
+  if (!key) throw new Error('openai_image_api_key_missing');
+  return key;
+}
+
+function openAiImageBaseUrl() {
+  return (Deno.env.get('OPENAI_IMAGE_BASE_URL') || 'https://api.openai.com/v1').replace(/\/+$/, '');
+}
+
+function resolveOpenAiImageModel(requestedModel?: string | null) {
+  const requested = String(requestedModel || '').trim();
+  if (OPENAI_IMAGE_MODELS.has(requested)) return requested;
+  return Deno.env.get('OPENAI_IMAGE_MODEL')?.trim() || DEFAULT_OPENAI_IMAGE_MODEL;
+}
+
+function normalizeMimeType(mimeType?: string | null) {
+  const cleanMimeType = String(mimeType || '').split(';')[0].trim().toLowerCase();
+  return cleanMimeType.startsWith('image/') ? cleanMimeType : 'image/png';
+}
+
+function extensionFromMimeType(mimeType: string) {
+  switch (normalizeMimeType(mimeType)) {
+    case 'image/jpeg':
+    case 'image/jpg':
+      return 'jpg';
+    case 'image/webp':
+      return 'webp';
+    case 'image/png':
+    default:
+      return 'png';
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function extractOpenAiImage(data: unknown) {
+  const record = asRecord(data);
+  const images = Array.isArray(record?.data) ? record.data : [];
+  for (const image of images) {
+    const imageRecord = asRecord(image);
+    const base64 = imageRecord?.b64_json;
+    if (typeof base64 === 'string' && base64.trim()) {
+      return {
+        base64: base64.trim(),
+        mimeType: normalizeMimeType(typeof imageRecord?.mime_type === 'string' ? imageRecord.mime_type : 'image/png'),
+      };
+    }
+  }
+  return null;
+}
+
+function openAiSizeFromDimensions(width?: number, height?: number) {
+  if (!width || !height) return '1024x1024';
+  const ratio = width / height;
+  if (Math.abs(ratio - 3 / 2) < 0.08 || Math.abs(ratio - 16 / 9) < 0.08 || width > height) return '1536x1024';
+  if (Math.abs(ratio - 2 / 3) < 0.08 || Math.abs(ratio - 9 / 16) < 0.08 || height > width) return '1024x1536';
+  return '1024x1024';
+}
+
+function sanitizeOpenAiError(error: unknown): string {
+  const key = Deno.env.get('OPENAI_IMAGE_API_KEY')?.trim()
+    || Deno.env.get('OPENAI_API_KEY')?.trim();
+  let message = error instanceof Error ? error.message : String(error ?? 'openai_image_request_failed');
+  if (key) message = message.split(key).join('[redacted]');
+  return message
+    .replace(/sk-[A-Za-z0-9_-]{20,}/g, '[redacted-openai-key]')
+    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/g, 'Bearer [redacted]')
+    .slice(0, 600);
+}
+
+export async function generateOpenAiImage(params: {
+  prompt: string;
+  negativePrompt?: string | null;
+  width?: number;
+  height?: number;
+  model?: string | null;
+}): Promise<OpenAiImageResult> {
+  const model = resolveOpenAiImageModel(params.model);
+  const promptText = [
+    params.prompt,
+    params.negativePrompt ? `Avoid: ${params.negativePrompt}` : '',
+  ].filter(Boolean).join('\n\n');
+
+  try {
+    const response = await fetch(`${openAiImageBaseUrl()}/images/generations`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${openAiImageApiKey()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        prompt: promptText,
+        n: 1,
+        size: openAiSizeFromDimensions(params.width, params.height),
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(`openai_image_request_failed:${response.status}:${JSON.stringify(data)}`);
+    }
+    const image = extractOpenAiImage(data);
+    if (!image?.base64) throw new Error('openai_image_empty_response');
+    return {
+      ...image,
+      model,
+      taskId: `openai-${crypto.randomUUID()}`,
+    };
+  } catch (error) {
+    throw new Error(sanitizeOpenAiError(error));
+  }
+}
+
+export function openAiImageDataUri(base64: string, mimeType?: string | null) {
+  return `data:${normalizeMimeType(mimeType)};base64,${base64}`;
+}
+
+export function openAiImageArtifact(result: Pick<OpenAiImageResult, 'base64' | 'mimeType'>): OpenAiImageArtifact {
+  const contentType = normalizeMimeType(result.mimeType);
+  return {
+    base64: result.base64,
+    dataUrl: openAiImageDataUri(result.base64, contentType),
+    contentType,
+    extension: extensionFromMimeType(contentType),
+  };
+}

@@ -200,7 +200,8 @@ export async function generateImage(
   prompt: string,
   brandId: string,
   options?: {
-    generationProvider?: 'gemini' | 'gemini_image' | 'runway' | 'runway_mcp';
+    generationProvider?: 'gemini' | 'gemini_image' | 'openai' | 'openai_image' | 'mock' | 'mock_image' | 'runway' | 'runway_mcp';
+    generationModel?: string;
     featureType?: string;
     style?: string;
     aspectRatio?: string;

@@ -39,6 +39,12 @@ const DEFAULT_SCORECARDS = [
     readback: 'output/playwright/hc-generation-polish-20260626/readback-after-worker.json',
     expectedFeatures: ['variations', 'scene-coordinate', 'remove-bg', 'design-gacha'],
   },
+  {
+    name: 'g677-openai-mini-split-polish',
+    scorecard: 'output/playwright/g677-openai-mini-low-cost-proof/visual-scorecard.json',
+    readback: 'output/playwright/g677-openai-mini-low-cost-proof/readback-merged-before-cleanup.json',
+    expectedFeatures: Object.keys(FEATURE_REQUIREMENTS),
+  },
 ];
 
 const DECISION_VALUES = new Set(['Pass', 'Needs polish', 'Fail']);

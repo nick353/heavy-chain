@@ -83,9 +83,10 @@ Supabase Dashboard で：
 1. Supabase Dashboard → **Edge Functions** → **Secrets**
 2. 以下の環境変数を追加：
    ```
-   OPENAI_API_KEY=your-openai-api-key
    GEMINI_API_KEY=your-gemini-api-key
+   OPENAI_IMAGE_API_KEY=your-openai-api-key
    ```
+   OpenAI のチャット系キーと共通にしたい場合だけ `OPENAI_API_KEY` でも動きます。画像生成専用に分けるなら `OPENAI_IMAGE_API_KEY` を使ってください。
 
 ## 💡 重要な注意事項
 

@@ -1,4 +1,4 @@
-import { geminiGenerateContentUrl, geminiImageModel } from './geminiModels.ts';
+import { geminiGenerateContentUrl, imagenPredictUrl, isImagenImageModel, resolveGeminiImageModel } from './geminiModels.ts';
 
 export type GeminiImageResult = {
   base64: string;
@@ -71,6 +71,23 @@ function extractInlineImage(data: unknown) {
   return null;
 }
 
+function extractImagenImage(data: unknown) {
+  const record = asRecord(data);
+  const predictions = Array.isArray(record?.predictions) ? record.predictions : [];
+  for (const prediction of predictions) {
+    const predictionRecord = asRecord(prediction);
+    const bytesBase64Encoded = predictionRecord?.bytesBase64Encoded;
+    const mimeType = predictionRecord?.mimeType;
+    if (typeof bytesBase64Encoded === 'string' && bytesBase64Encoded.trim()) {
+      return {
+        base64: bytesBase64Encoded.trim(),
+        mimeType: normalizeMimeType(typeof mimeType === 'string' ? mimeType : 'image/png'),
+      };
+    }
+  }
+  return null;
+}
+
 function sanitizeGeminiError(error: unknown): string {
   const key = Deno.env.get('GEMINI_API_KEY')?.trim();
   let message = error instanceof Error ? error.message : String(error ?? 'gemini_image_request_failed');
@@ -87,8 +104,9 @@ export async function generateGeminiImage(params: {
   negativePrompt?: string | null;
   width?: number;
   height?: number;
+  model?: string | null;
 }): Promise<GeminiImageResult> {
-  const model = geminiImageModel();
+  const model = resolveGeminiImageModel(params.model);
   const promptText = [
     params.prompt,
     params.negativePrompt ? `Avoid: ${params.negativePrompt}` : '',
@@ -96,6 +114,34 @@ export async function generateGeminiImage(params: {
   ].filter(Boolean).join('\n\n');
 
   try {
+    if (isImagenImageModel(model)) {
+      const response = await fetch(imagenPredictUrl(model), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': geminiApiKey(),
+        },
+        body: JSON.stringify({
+          instances: [{ prompt: promptText }],
+          parameters: {
+            sampleCount: 1,
+            aspectRatio: aspectRatioFromDimensions(params.width, params.height),
+          },
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(`gemini_image_request_failed:${response.status}:${JSON.stringify(data)}`);
+      }
+      const image = extractImagenImage(data);
+      if (!image?.base64) throw new Error('gemini_image_empty_response');
+      return {
+        ...image,
+        model,
+        taskId: `gemini-${crypto.randomUUID()}`,
+      };
+    }
+
     const response = await fetch(geminiGenerateContentUrl(model, geminiApiKey()), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -125,6 +171,16 @@ export async function generateGeminiImage(params: {
   } catch (error) {
     throw new Error(sanitizeGeminiError(error));
   }
+}
+
+function aspectRatioFromDimensions(width?: number, height?: number) {
+  if (!width || !height) return '1:1';
+  const ratio = width / height;
+  if (Math.abs(ratio - 16 / 9) < 0.08) return '16:9';
+  if (Math.abs(ratio - 9 / 16) < 0.08) return '9:16';
+  if (Math.abs(ratio - 4 / 3) < 0.08) return '4:3';
+  if (Math.abs(ratio - 3 / 4) < 0.08) return '3:4';
+  return '1:1';
 }
 
 export function geminiImageDataUri(base64: string, mimeType?: string | null) {

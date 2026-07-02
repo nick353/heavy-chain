@@ -8,6 +8,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const PROVIDER = 'runway_mcp_local_worker';
 const GEMINI_PROVIDER = 'gemini';
+const OPENAI_PROVIDER = 'openai';
+const DEFAULT_OPENAI_LIVE_MODEL = 'gpt-image-1-mini';
 const CONTRACT_VERSION = 'heavy-chain.local-runway-worker.v1';
 const BUCKET = 'generated-images';
 const DEFAULT_USER_ID = '86b39a16-3ae0-4717-9e91-4764e8ee7292';
@@ -47,7 +49,7 @@ const FEATURE_SPECS = [
   {
     feature: 'design-gacha',
     workspace: 'patterns',
-    prompt: 'Apparel generation QA: standalone premium streetwear hoodie design concept, black base with silver chain graphic placement across chest and sleeves, apparel design mockup style, no readable text, no watermark.',
+    prompt: 'Apparel generation QA: standalone premium streetwear hoodie design concept, black base with silver chain graphic placement across chest and sleeves, apparel design mockup format, no readable text, no watermark.',
     negativePrompt: 'text, logo, watermark, messy layout, low quality, illegible garment',
     width: 1024,
     height: 1024,
@@ -75,8 +77,8 @@ const FEATURE_SPECS = [
   {
     feature: 'remove-bg',
     workspace: 'studio',
-    prompt: 'Apparel generation QA: isolated premium black chain hoodie product cutout on a clean pure white studio background, crisp edges, natural garment silhouette, transparent-background-ready appearance, no mannequin, no neck form, no text, no watermark.',
-    negativePrompt: 'text, logo, watermark, busy background, rough edges, blurry, mannequin, neck form, ghost mannequin, display bust, floating collar',
+    prompt: 'Apparel generation QA: clean ecommerce background-removal result: one premium black chain hoodie already cut out as a product PNG-style asset, centered on solid pure white (#ffffff), crisp garment edge mask, no shadows except a very faint contact shadow, no scene, no wall, no floor, no mannequin, no neck form, no text, no logo, no watermark.',
+    negativePrompt: 'text, logo, watermark, colored background, gradient background, dark background, wall, floor, scene, rough edges, blurry, mannequin, neck form, ghost mannequin, display bust, floating collar',
     width: 1024,
     height: 1024,
     expected: 'Background-removal-like output: clean cutout feel and crisp apparel edges.',
@@ -140,7 +142,9 @@ const supabase = getSupabaseClient();
 if (mode === 'enqueue') {
   await enqueueJobs();
 } else if (mode === 'invoke-gemini') {
-  await invokeGeminiJobs();
+  await invokeProviderJobs(GEMINI_PROVIDER);
+} else if (mode === 'invoke-openai') {
+  await invokeProviderJobs(OPENAI_PROVIDER);
 } else if (mode === 'readback') {
   await readbackJobs();
 } else if (mode === 'cleanup') {
@@ -241,7 +245,7 @@ async function enqueueJobs() {
   console.log(JSON.stringify({ ok: true, mode, manifestPath, runId, jobCount: jobs.length, jobs }, null, 2));
 }
 
-async function invokeGeminiJobs() {
+async function invokeProviderJobs(provider) {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
   const authStatePath = String(args.authState || process.env.LIGHTCHAIN_UI_AUTH_STATE || 'output/playwright/prod-auth-dashboard-20260623/auth-state-after-tutorial.json');
@@ -261,8 +265,11 @@ async function invokeGeminiJobs() {
   for (const spec of selectedFeatureSpecs) {
     const config = WORKSPACE_CONFIG[spec.workspace] || WORKSPACE_CONFIG.studio;
     const marker = `${runId}:${spec.feature}`;
-    const idempotencyKey = `g617-gemini-${marker}-${crypto.randomUUID()}`;
+    const idempotencyKey = `g617-${provider}-${marker}-${crypto.randomUUID()}`;
     const prompt = `${spec.prompt}\nMarker: ${marker}`;
+    const providerModel = provider === OPENAI_PROVIDER
+      ? String(args.model || process.env.OPENAI_IMAGE_MODEL || DEFAULT_OPENAI_LIVE_MODEL)
+      : spec.model;
     const body = {
       brandId,
       prompt,
@@ -270,14 +277,16 @@ async function invokeGeminiJobs() {
       width: spec.width,
       height: spec.height,
       featureType: spec.feature,
-      generationProvider: GEMINI_PROVIDER,
+      generationProvider: provider,
+      generationModel: providerModel,
       legalSafety: { rightsConfirmed: true },
       campaignMeta: {
         verificationRunId: runId,
         verificationFeature: spec.feature,
         expectedVisualOutcome: spec.expected,
-        source: 'hc_10m_gemini_live_generation_qa',
+        source: `hc_10m_${provider}_live_generation_qa`,
       },
+      model: providerModel,
       sourceReadback: {
         sourceWorkspace: spec.workspace,
         workflowVersion: config.workflowVersion,
@@ -289,7 +298,7 @@ async function invokeGeminiJobs() {
         feature: spec.feature,
         prompt,
         href: `/generate?feature=${encodeURIComponent(spec.feature)}`,
-        label: `${spec.feature} 10M Gemini live generation QA`,
+        label: `${spec.feature} 10M ${provider} live generation QA`,
         sourceWorkspace: spec.workspace,
         workflowVersion: config.workflowVersion,
         sourceLabel: config.sourceLabel,
@@ -330,10 +339,10 @@ async function invokeGeminiJobs() {
         width: spec.width,
         height: spec.height,
         ratio: ratioFromDimensions(spec.width, spec.height),
-        model: spec.model || defaultModelForFeature(spec.feature),
+        model: providerModel || spec.model || defaultModelForFeature(spec.feature),
         expected: spec.expected,
         createdAt: startedAt,
-        provider: GEMINI_PROVIDER,
+        provider,
         idempotencyKey,
       });
     }
@@ -346,7 +355,7 @@ async function invokeGeminiJobs() {
     runId,
     brandId,
     userId: session.user?.id || userId,
-    provider: GEMINI_PROVIDER,
+    provider,
     createdAt,
     authStatePath,
     outDir: path.relative(repoRoot, outDir),
