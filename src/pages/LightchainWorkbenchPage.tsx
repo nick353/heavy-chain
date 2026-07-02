@@ -1266,6 +1266,51 @@ export function LightchainWorkbenchPage() {
     }
   };
 
+  if (isFeatureDetail && isFittingDetail) {
+    return (
+      <main className="min-h-screen bg-surface-50 px-4 py-5 dark:bg-surface-950 sm:px-6 lg:px-8">
+        <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-5xl items-center">
+          <section className="w-full rounded-2xl border border-neutral-200 bg-white p-6 shadow-soft dark:border-neutral-800 dark:bg-neutral-900 sm:p-8">
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 ring-1 ring-primary-100 dark:bg-primary-400/10 dark:text-primary-300 dark:ring-primary-400/20">
+              <Sparkles className="h-3.5 w-3.5" />
+              AIフィッティング
+            </p>
+            <h1 className="mt-5 text-3xl font-semibold tracking-tight text-neutral-950 dark:text-white">
+              服の画像から着用画像を作る
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600 dark:text-neutral-300">
+              ここでは細かい素材設定は出しません。次の画面で服の画像を入れて、背景を抜いて、そのまま生成へ進めます。
+            </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {['画像を入れる', '背景を抜く', 'AI生成'].map((step, index) => (
+                <div key={step} className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-white/10 dark:bg-surface-950/50">
+                  <p className="text-xs font-semibold text-neutral-400">STEP {index + 1}</p>
+                  <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">{step}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-8 flex flex-col gap-2 sm:flex-row">
+              <Link
+                to="/fitting#fitting-material-workbench"
+                className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+              >
+                <Shirt className="h-4 w-4" />
+                画像を入れて作る
+              </Link>
+              <Link
+                to="/gallery"
+                className="btn-secondary inline-flex items-center justify-center gap-2 text-sm"
+              >
+                <ImagePlus className="h-4 w-4" />
+                過去の画像を見る
+              </Link>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-surface-50 px-4 py-5 dark:bg-surface-950 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-5">

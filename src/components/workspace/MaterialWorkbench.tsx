@@ -18,6 +18,7 @@ type MaterialWorkbenchProps = {
   layerOptions: string[];
   placementOptions: string[];
   maxFileSizeMb?: number;
+  simpleMode?: boolean;
 };
 
 const maskModes: Array<{ id: MaterialReferenceState['maskMode']; label: string }> = [
@@ -60,6 +61,7 @@ export function MaterialWorkbench({
   layerOptions,
   placementOptions,
   maxFileSizeMb = 5,
+  simpleMode = false,
 }: MaterialWorkbenchProps) {
   const hasImage = Boolean(state.imageUrl);
   const updateState = (patch: Partial<MaterialReferenceState>) => {
@@ -162,11 +164,47 @@ export function MaterialWorkbench({
     }
   };
 
-  const confirmNextStep = () => {
-    if (!state.extractedLayerReady) {
-      toast.error('先に抽出を完了してください');
+	const autoExtractMask = async () => {
+    if (!state.imageUrl) {
+      toast.error('先に素材画像を選択してください');
       return;
     }
+    try {
+      const cutout = await buildMaterialCutoutDataUrl({
+        imageUrl: state.imageUrl,
+        mode: 'auto',
+        candidate: 'トップス',
+      });
+	      updateState({
+        maskMode: 'auto',
+        maskCandidates: defaultMaskCandidates,
+        selectedMaskCandidate: 'トップス',
+        activeLayer: 'トップス',
+        extractedLayerReady: true,
+        extractedImageUrl: cutout.dataUrl,
+        cutoutBounds: cutout.bounds,
+        cutoutOutputSize: cutout.outputSize,
+        cutoutDataUrlBytes: cutout.dataUrlBytes,
+        cutoutMaxDataUrlBytes: 750_000,
+	        cutoutStoragePolicy: cutout.storagePolicy,
+	        maskEngine: cutout.engine,
+	        nextStepReady: false,
+	      });
+	      toast('確認用プレビューを作りました。生成には高精度AI切り抜きが必要です。', { icon: '!' });
+	    } catch (error) {
+	      toast.error(error instanceof Error ? error.message : '切り抜きに失敗しました');
+	    }
+	  };
+
+	  const confirmNextStep = () => {
+	    if (simpleMode) {
+	      toast.error('この切り抜き品質ではAI生成に進めません');
+	      return;
+	    }
+	    if (!state.extractedLayerReady) {
+	      toast.error('先に抽出を完了してください');
+	      return;
+	    }
     updateState({ nextStepReady: true });
     toast.success('次のステップへ進める状態です');
   };
@@ -189,13 +227,13 @@ export function MaterialWorkbench({
       <div className="mt-4 grid min-w-0 gap-4 2xl:grid-cols-[minmax(280px,1fr)_minmax(300px,0.86fr)]">
         <div className="min-w-0 overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-white/10 dark:bg-surface-950/50">
           <label
-            className={`relative flex min-h-[300px] cursor-pointer flex-col items-center justify-center overflow-hidden p-4 text-center transition hover:ring-2 hover:ring-primary-200 ${
+            className={`relative flex min-h-[300px] cursor-pointer flex-col items-center justify-center overflow-hidden p-4 text-center transition hover:ring-2 hover:ring-primary-200 focus-within:ring-2 focus-within:ring-primary-400 ${
               hasImage
                 ? 'bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f4f5_75%),linear-gradient(-45deg,transparent_75%,#f4f4f5_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0] dark:bg-neutral-950'
                 : 'bg-neutral-50 dark:bg-surface-950/60'
             }`}
           >
-            <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+            <input type="file" accept="image/*" className="sr-only" onChange={handleUpload} />
             {hasImage ? (
               <>
                 <img
@@ -220,11 +258,11 @@ export function MaterialWorkbench({
                 <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-neutral-700 shadow-sm dark:bg-neutral-900/90 dark:text-neutral-100">
                   {state.fileName || 'uploaded material'}
                 </div>
-                {state.nextStepReady && (
-                  <div className="absolute bottom-3 right-3 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
-                    OK
-                  </div>
-                )}
+	                {state.nextStepReady && (
+	                  <div className="absolute bottom-3 right-3 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+	                    OK
+	                  </div>
+	                )}
               </>
             ) : (
               <>
@@ -234,211 +272,254 @@ export function MaterialWorkbench({
               </>
             )}
           </label>
-          <div className="grid grid-cols-3 border-t border-neutral-200 text-xs dark:border-white/10">
-            <div className="p-3">
-              <p className="font-semibold text-neutral-400">認識</p>
-              <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{state.imageUrl ? state.materialKind : '画像待ち'}</p>
+          {!simpleMode && (
+            <div className="grid grid-cols-3 border-t border-neutral-200 text-xs dark:border-white/10">
+              <div className="p-3">
+                <p className="font-semibold text-neutral-400">認識</p>
+                <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{state.imageUrl ? state.materialKind : '画像待ち'}</p>
+              </div>
+              <div className="border-x border-neutral-200 p-3 dark:border-white/10">
+                <p className="font-semibold text-neutral-400">処理</p>
+                <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{hasImage ? maskModeLabel[state.maskMode] : '素材後に設定'}</p>
+              </div>
+              <div className="p-3">
+                <p className="font-semibold text-neutral-400">レイヤー</p>
+                <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{hasImage ? state.activeLayer : '素材後に設定'}</p>
+              </div>
             </div>
-            <div className="border-x border-neutral-200 p-3 dark:border-white/10">
-              <p className="font-semibold text-neutral-400">処理</p>
-              <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{hasImage ? maskModeLabel[state.maskMode] : '素材後に設定'}</p>
-            </div>
-            <div className="p-3">
-              <p className="font-semibold text-neutral-400">レイヤー</p>
-              <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{hasImage ? state.activeLayer : '素材後に設定'}</p>
-            </div>
-          </div>
+          )}
         </div>
 
         {hasImage ? (
         <div className="min-w-0 space-y-3">
-          <div className="grid gap-2 sm:grid-cols-3">
-            {[
-              { icon: ScanLine, label: '素材認識済み' },
-              { icon: Scissors, label: maskModeLabel[state.maskMode] },
-              { icon: CheckCircle2, label: `${state.scale}%で配置` },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.label} className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 dark:border-white/10 dark:bg-surface-950/50">
-                  <Icon className="h-4 w-4 text-primary-500" />
-                  <p className="mt-1 text-xs font-semibold text-neutral-700 dark:text-neutral-200">{item.label}</p>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2">
-            <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-              素材タイプ
-              <select
-                value={state.materialKind}
-                onChange={(event) => updateState({ materialKind: event.target.value })}
-                className="mt-1 w-full min-w-0 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
-              >
-                {materialKinds.map((kind) => (
-                  <option key={kind} value={kind}>{kind}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-              配置
-              <select
-                value={state.placement}
-                onChange={(event) => updateState({ placement: event.target.value })}
-                className="mt-1 w-full min-w-0 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
-              >
-                {placementOptions.map((placement) => (
-                  <option key={placement} value={placement}>{placement}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div>
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-              <Layers3 className="h-3.5 w-3.5" />
-              レイヤー
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 dark:border-emerald-400/20 dark:bg-emerald-400/10">
+            <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+              次にやること
             </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {layerOptions.map((layer) => (
-                <button
-                  key={layer}
-                  type="button"
-                  onClick={() => updateState({
-                    activeLayer: layer,
-                    extractedLayerReady: false,
-                    extractedImageUrl: null,
-                    cutoutBounds: null,
-                    cutoutOutputSize: null,
-                    cutoutDataUrlBytes: null,
-                    cutoutMaxDataUrlBytes: null,
-                    cutoutStoragePolicy: null,
-                    maskEngine: null,
-                    nextStepReady: false,
-                    selectedMaskCandidate: state.maskCandidates?.includes(layer) ? layer : null,
-                  })}
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                    state.activeLayer === layer
-                      ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
-                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-surface-800 dark:text-neutral-300'
-                  }`}
-                >
-                  {layer}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">カット/マスク</p>
-            <div className="mt-2 grid gap-2 sm:grid-cols-3">
-              {maskModes.map((mode) => (
-                <button
-                  key={mode.id}
-                  type="button"
-                  onClick={() => updateState({
-                    maskMode: mode.id,
-                    maskCandidates: mode.id === 'manual' ? manualMaskCandidates : mode.id === 'keep' ? [] : defaultMaskCandidates,
-                    selectedMaskCandidate: mode.id === 'manual' ? '手動範囲' : null,
-                    activeLayer: mode.id === 'manual' ? '手動範囲' : state.activeLayer,
-                    extractedLayerReady: false,
-                    extractedImageUrl: null,
-                    cutoutBounds: null,
-                    cutoutOutputSize: null,
-                    cutoutDataUrlBytes: null,
-                    cutoutMaxDataUrlBytes: null,
-                    cutoutStoragePolicy: null,
-                    maskEngine: null,
-                    nextStepReady: false,
-                  })}
-                  className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
-                    state.maskMode === mode.id
-                      ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                      : 'border-neutral-200 bg-white text-neutral-600 hover:border-primary-200 dark:border-white/10 dark:bg-surface-950/40 dark:text-neutral-300'
-                  }`}
-                >
-                  {mode.label}
-                </button>
-              ))}
-            </div>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={recognizeMask}
-                disabled={!state.imageUrl}
-                className="rounded-xl bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+            <p className="mt-1 text-xs leading-5 text-emerald-800 dark:text-emerald-100">
+              まず背景を抜きます。細かい設定は必要になった時だけ開けます。
+            </p>
+            <button
+              type="button"
+              onClick={autoExtractMask}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
+            >
+              <Scissors className="h-4 w-4" />
+              自動で切り抜く
+            </button>
+	            {state.extractedLayerReady && (
+	              <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+	                これは確認用です。袖や薄い生地が欠ける可能性があるため、この品質ではAI生成に進めません。
+	              </p>
+	            )}
+	            {state.extractedLayerReady && !simpleMode && (
+	              <button
+	                type="button"
+	                onClick={confirmNextStep}
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 px-3 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950"
               >
-                AIマスク認識
+                <CheckCircle2 className="h-4 w-4" />
+                次へ進む
               </button>
-              <button
-                type="button"
-                onClick={extractMask}
-                disabled={!state.selectedMaskCandidate || state.maskMode === 'keep'}
-                className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
-              >
-                抽出
-              </button>
-            </div>
-            {(state.maskCandidates?.length ?? 0) > 0 && (
-              <div className="mt-2 rounded-xl border border-cyan-100 bg-cyan-50 p-2 dark:border-cyan-400/20 dark:bg-cyan-400/10">
-                <p className="text-[11px] font-semibold text-cyan-800 dark:text-cyan-100">保存したい範囲を選択してください</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(state.maskCandidates ?? []).map((candidate) => (
-                    <button
-                      key={candidate}
-                      type="button"
-                      onClick={() => selectMaskCandidate(candidate)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                        state.selectedMaskCandidate === candidate
-                          ? 'border-cyan-500 bg-cyan-600 text-white'
-                          : 'border-cyan-200 bg-white text-cyan-700 hover:border-cyan-400 dark:bg-neutral-950 dark:text-cyan-200'
-                      }`}
-                    >
-                      {candidate}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={confirmNextStep}
-                  disabled={!state.extractedLayerReady}
-                  className="mt-2 w-full rounded-xl bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-50 dark:bg-white dark:text-neutral-950"
-                >
-                  次のステップ
-                </button>
-              </div>
             )}
           </div>
 
-          <label className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-            <span className="flex items-center gap-1.5">
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              レイヤーサイズ {state.scale}%
-            </span>
-            <input
-              type="range"
-              min={20}
-              max={120}
-              value={state.scale}
-              onChange={(event) => updateState({ scale: Number(event.target.value) })}
-              className="mt-2 w-full accent-primary-500"
-            />
-          </label>
+          <details className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3 dark:border-white/10 dark:bg-surface-950/50" open={!simpleMode}>
+            <summary className="cursor-pointer text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+              詳細設定
+            </summary>
+            <div className="mt-3 space-y-3">
+              <div className="grid gap-2 sm:grid-cols-3">
+                {[
+                  { icon: ScanLine, label: '素材認識済み' },
+                  { icon: Scissors, label: maskModeLabel[state.maskMode] },
+                  { icon: CheckCircle2, label: `${state.scale}%で配置` },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.label} className="rounded-xl border border-neutral-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-surface-950/50">
+                      <Icon className="h-4 w-4 text-primary-500" />
+                      <p className="mt-1 text-xs font-semibold text-neutral-700 dark:text-neutral-200">{item.label}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                  素材タイプ
+                  <select
+                    value={state.materialKind}
+                    onChange={(event) => updateState({ materialKind: event.target.value })}
+                    className="mt-1 w-full min-w-0 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
+                  >
+                    {materialKinds.map((kind) => (
+                      <option key={kind} value={kind}>{kind}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                  配置
+                  <select
+                    value={state.placement}
+                    onChange={(event) => updateState({ placement: event.target.value })}
+                    className="mt-1 w-full min-w-0 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
+                  >
+                    {placementOptions.map((placement) => (
+                      <option key={placement} value={placement}>{placement}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div>
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                  <Layers3 className="h-3.5 w-3.5" />
+                  レイヤー
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {layerOptions.map((layer) => (
+                    <button
+                      key={layer}
+                      type="button"
+                      onClick={() => updateState({
+                        activeLayer: layer,
+                        extractedLayerReady: false,
+                        extractedImageUrl: null,
+                        cutoutBounds: null,
+                        cutoutOutputSize: null,
+                        cutoutDataUrlBytes: null,
+                        cutoutMaxDataUrlBytes: null,
+                        cutoutStoragePolicy: null,
+                        maskEngine: null,
+                        nextStepReady: false,
+                        selectedMaskCandidate: state.maskCandidates?.includes(layer) ? layer : null,
+                      })}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                        state.activeLayer === layer
+                          ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
+                          : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-surface-800 dark:text-neutral-300'
+                      }`}
+                    >
+                      {layer}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">カット/マスク</p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  {maskModes.map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => updateState({
+                        maskMode: mode.id,
+                        maskCandidates: mode.id === 'manual' ? manualMaskCandidates : mode.id === 'keep' ? [] : defaultMaskCandidates,
+                        selectedMaskCandidate: mode.id === 'manual' ? '手動範囲' : null,
+                        activeLayer: mode.id === 'manual' ? '手動範囲' : state.activeLayer,
+                        extractedLayerReady: false,
+                        extractedImageUrl: null,
+                        cutoutBounds: null,
+                        cutoutOutputSize: null,
+                        cutoutDataUrlBytes: null,
+                        cutoutMaxDataUrlBytes: null,
+                        cutoutStoragePolicy: null,
+                        maskEngine: null,
+                        nextStepReady: false,
+                      })}
+                      className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                        state.maskMode === mode.id
+                          ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
+                          : 'border-neutral-200 bg-white text-neutral-600 hover:border-primary-200 dark:border-white/10 dark:bg-surface-950/40 dark:text-neutral-300'
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={recognizeMask}
+                    disabled={!state.imageUrl}
+                    className="rounded-xl bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-500 disabled:opacity-50"
+                  >
+                    AIマスク認識
+                  </button>
+                  <button
+                    type="button"
+                    onClick={extractMask}
+                    disabled={!state.selectedMaskCandidate || state.maskMode === 'keep'}
+                    className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    抽出
+                  </button>
+                </div>
+                {(state.maskCandidates?.length ?? 0) > 0 && (
+                  <div className="mt-2 rounded-xl border border-cyan-100 bg-cyan-50 p-2 dark:border-cyan-400/20 dark:bg-cyan-400/10">
+                    <p className="text-[11px] font-semibold text-cyan-800 dark:text-cyan-100">保存したい範囲を選択してください</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(state.maskCandidates ?? []).map((candidate) => (
+                        <button
+                          key={candidate}
+                          type="button"
+                          onClick={() => selectMaskCandidate(candidate)}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                            state.selectedMaskCandidate === candidate
+                              ? 'border-cyan-500 bg-cyan-600 text-white'
+                              : 'border-cyan-200 bg-white text-cyan-700 hover:border-cyan-400 dark:bg-neutral-950 dark:text-cyan-200'
+                          }`}
+                        >
+                          {candidate}
+                        </button>
+                      ))}
+                    </div>
+	                    {!simpleMode && (
+	                      <button
+	                        type="button"
+	                        onClick={confirmNextStep}
+	                        disabled={!state.extractedLayerReady}
+	                        className="mt-2 w-full rounded-xl bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-50 dark:bg-white dark:text-neutral-950"
+	                      >
+	                        次のステップ
+	                      </button>
+	                    )}
+                  </div>
+                )}
+              </div>
+
+              <label className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                <span className="flex items-center gap-1.5">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  レイヤーサイズ {state.scale}%
+                </span>
+                <input
+                  type="range"
+                  min={20}
+                  max={120}
+                  value={state.scale}
+                  onChange={(event) => updateState({ scale: Number(event.target.value) })}
+                  className="mt-2 w-full accent-primary-500"
+                />
+              </label>
+            </div>
+          </details>
         </div>
         ) : (
           <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-white/10 dark:bg-surface-950/40">
-            <p className="text-sm font-semibold text-neutral-900 dark:text-white">素材を置くと編集を始められます</p>
-            <div className="mt-3 grid gap-2 text-xs text-neutral-600 dark:text-neutral-300">
-              <div className="rounded-xl bg-white px-3 py-2 dark:bg-surface-900">1. 画像をアップロード</div>
-              <div className="rounded-xl bg-white px-3 py-2 dark:bg-surface-900">2. AIマスク認識で範囲を選択</div>
-              <div className="rounded-xl bg-white px-3 py-2 dark:bg-surface-900">3. 抽出してCanvasへ保存</div>
-            </div>
+            <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+              服の写真を入れてください
+            </p>
+            <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+              アップロード後に、背景を抜くボタンだけ表示します。
+            </p>
           </div>
         )}
       </div>
 
-      {hasImage && (
+      {hasImage && !simpleMode && (
       <div className="mt-4 grid min-w-0 gap-4 2xl:grid-cols-[minmax(0,1fr)_260px]">
         <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
           素材メモ

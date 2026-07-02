@@ -408,7 +408,7 @@ function buildCutoutFromImage({
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const index = (y * width + x) * 4;
-      const geometricAlpha = getMaskAlpha({ x, y, width, height, mode, candidate });
+      const geometricAlpha = backgroundMask ? 255 : getMaskAlpha({ x, y, width, height, mode, candidate });
       const protectedCenter = isProtectedCutoutCenter(x, y, width, height);
       const backgroundPixel = !protectedCenter && backgroundMask?.[y * width + x] === 1;
       const nearBackgroundEdge = !protectedCenter && backgroundMask

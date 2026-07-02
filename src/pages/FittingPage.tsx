@@ -4,7 +4,6 @@ import {
   AlertCircle,
   Check,
   Camera,
-  Download,
   Images,
   Pencil,
   RefreshCw,
@@ -31,7 +30,6 @@ import {
   type MaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
-import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import type { Json } from '../types/database';
 
 type Gender = 'female' | 'male';
@@ -158,11 +156,9 @@ const initialMaterialReference: MaterialReferenceState = {
   note: '着用生成に使う衣服素材と、モデル上で効かせるレイヤーを先に決めます。',
 };
 
-const fittingReadinessItems = [
-  { label: '素材', detail: '衣服、モデル、背景を着用生成の参照にする' },
-  { label: '条件', detail: '用途、体型、年代、性別を生成前に決める' },
-  { label: '出力', detail: 'model-matrix生成、Canvas、履歴へ同じ条件で渡す' },
-];
+const isLocalCanvasMaskEngine = (maskEngine?: string | null) => (
+  !maskEngine || maskEngine.startsWith('browser-canvas-')
+);
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -251,11 +247,36 @@ export function FittingPage() {
   const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const garmentImageUrl = materialReference.imageUrl || undefined;
+  const extractedGarmentImageUrl = materialReference.extractedImageUrl || undefined;
   const garmentFileName = materialReference.fileName;
 
   const canGenerate = useMemo(() => {
-    return Boolean(currentBrand && rightsConfirmed && !isGenerating && (productDescription.trim() || garmentImageUrl) && selectedBodyTypes.length && selectedAgeGroups.length);
-  }, [currentBrand, garmentImageUrl, isGenerating, productDescription, rightsConfirmed, selectedAgeGroups.length, selectedBodyTypes.length]);
+    return Boolean(
+      currentBrand
+      && rightsConfirmed
+      && !isGenerating
+      && garmentImageUrl
+	      && extractedGarmentImageUrl
+	      && materialReference.extractedLayerReady
+	      && materialReference.nextStepReady
+	      && !isLocalCanvasMaskEngine(materialReference.maskEngine)
+	      && productDescription.trim()
+      && selectedBodyTypes.length
+      && selectedAgeGroups.length,
+    );
+  }, [
+    currentBrand,
+    extractedGarmentImageUrl,
+    garmentImageUrl,
+    isGenerating,
+	    materialReference.extractedLayerReady,
+	    materialReference.maskEngine,
+	    materialReference.nextStepReady,
+    productDescription,
+    rightsConfirmed,
+    selectedAgeGroups.length,
+    selectedBodyTypes.length,
+  ]);
   const activeWorkflow = fittingWorkflows.find((workflow) => workflow.id === activeWorkflowId) ?? fittingWorkflows[0];
   const selectedBodyTypeLabels = bodyTypeOptions
     .filter((option) => selectedBodyTypes.includes(option.id))
@@ -308,13 +329,23 @@ export function FittingPage() {
     ));
   };
 
-  const runGeneration = async (request: LastRequest) => {
-    if (!currentBrand) {
-      setErrorMessage('ブランドを読み込んでからもう一度試してください。');
-      return;
-    }
+	  const runGeneration = async (request: LastRequest) => {
+	    if (!currentBrand) {
+	      setErrorMessage('ブランドを読み込んでからもう一度試してください。');
+	      return;
+	    }
+	    if (
+	      !request.imageUrl
+	      || request.imageUrl !== request.materialReference?.extractedImageUrl
+	      || request.materialReference?.extractedLayerReady !== true
+	      || request.materialReference?.nextStepReady !== true
+	      || isLocalCanvasMaskEngine(request.materialReference?.maskEngine)
+	    ) {
+	      setErrorMessage('高精度AI切り抜きが完了するまで生成できません。');
+	      return;
+	    }
 
-    setIsGenerating(true);
+	    setIsGenerating(true);
     setErrorMessage('');
     setResultMatrix([]);
     setLastRequest(request);
@@ -414,8 +445,12 @@ export function FittingPage() {
     ]);
   };
 
-  const handleGenerate = () => {
-    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
+	  const handleGenerate = () => {
+	    if (!canGenerate) {
+	      setErrorMessage('高精度AI切り抜きが完了するまで生成できません。');
+	      return;
+	    }
+	    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
     const materialReferenceSummary = materialReferenceMetadata.hasImage
       ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
       : '素材を追加するとここに反映されます';
@@ -445,7 +480,7 @@ export function FittingPage() {
 
     void runGeneration({
       productDescription: fittingBrief,
-      imageUrl: garmentImageUrl,
+      imageUrl: extractedGarmentImageUrl,
       sourceMaterialImageUrl: garmentImageUrl,
       bodyTypes: selectedBodyTypes,
       ageGroups: selectedAgeGroups,
@@ -540,7 +575,7 @@ export function FittingPage() {
 
   return (
     <div className="space-y-6">
-      <section className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+      <section className="grid gap-5">
         <div className="glass-panel rounded-2xl p-5 sm:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -561,8 +596,11 @@ export function FittingPage() {
             </button>
           </div>
 
-          <section className="mt-6 rounded-2xl border border-neutral-200 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/40">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <details className="mt-6 rounded-2xl border border-neutral-200 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/40">
+            <summary className="cursor-pointer text-base font-semibold text-neutral-950 dark:text-white">
+              用途を変える
+            </summary>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-base font-semibold text-neutral-950 dark:text-white">着用ワークフローを選ぶ</h2>
                 <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
@@ -611,84 +649,74 @@ export function FittingPage() {
                 );
               })}
             </div>
-          </section>
+          </details>
 
           <section
             data-testid="fitting-action-panel"
-            className="mt-6 grid gap-4 rounded-2xl border border-sky-200 bg-sky-50/80 p-5 dark:border-sky-900/60 dark:bg-sky-950/20 lg:grid-cols-[minmax(0,1fr)_auto]"
+            className="mt-6 rounded-2xl border border-sky-200 bg-sky-50/80 p-5 dark:border-sky-900/60 dark:bg-sky-950/20"
           >
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">
-                Fitting flow
-              </p>
               <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
-                1. 衣服画像を入れる → 2. 条件を確認 → 3. AI生成
+                1. 衣服画像を入れる → 2. 背景を抜く → 3. AI生成
               </h2>
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                {fittingReadinessItems.map((item) => (
-                  <div
-                    key={item.label}
-                    data-testid="fitting-readiness-item"
-                    className="rounded-xl border border-white/70 bg-white/70 p-3 text-sm dark:border-white/10 dark:bg-surface-900/60"
-                  >
-                    <p className="font-semibold text-neutral-950 dark:text-white">{item.label}</p>
-                    <p className="mt-1 leading-5 text-neutral-600 dark:text-neutral-300">{item.detail}</p>
-                  </div>
-                ))}
-              </div>
+              <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+                まず服の写真を入れてください。細かい設定は必要になった時だけ開けます。
+              </p>
             </div>
             <div
               data-testid="fitting-next-actions"
-              className="flex flex-col gap-2 sm:flex-row lg:min-w-64 lg:flex-col lg:justify-center"
+              className="mt-4 flex flex-col gap-2 sm:flex-row"
             >
-              <Link
-                to={buildGenerationIntentHref({
-                  feature: 'model-matrix',
-                  prompt: `${activeWorkflow.title}\n${productDescription}\n体型: ${selectedBodyTypeLabels.join(' / ')}\n年代: ${selectedAgeGroupLabels.join(' / ')}`,
-                  sourceWorkspace: 'fitting',
-                  workflowVersion: 'fitting-brief-local-v1',
-                  sourceLabel: workspaceSourceConfig.fitting.label,
-                  sourceResumePath: workspaceSourceConfig.fitting.resumePath,
-                  sourceMode: 'local-workflow-intake',
-                  bodyTypes: selectedBodyTypes,
-                  ageGroups: selectedAgeGroups,
-                })}
+              <button
+                type="button"
+                onClick={scrollToMaterialWorkbench}
                 className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
               >
                 <Sparkles className="h-4 w-4" />
-                生成指示を確認
-              </Link>
-              <button
-                type="button"
-                onClick={handleGenerate}
-                disabled={!canGenerate}
-                className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Sparkles className="h-4 w-4" />
-                AI生成
+                画像を入れる
               </button>
               <Link to="/gallery" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
                 <Images className="h-4 w-4" />
-                Galleryで確認
+                過去の画像を見る
               </Link>
             </div>
           </section>
 
-          <div id="fitting-material-workbench" className="mt-6 scroll-mt-24 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+          <div id="fitting-material-workbench" className="mt-6 scroll-mt-24 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
             <MaterialWorkbench
-              title="フィッティング素材作業台"
-              description="衣服画像、モデル参照、ポーズ、背景を置き、着用生成へ渡すレイヤーを先に決めます。"
-              uploadLabel="衣服・モデル・背景素材をアップロード"
-              emptyLabel="素材を置くと、生成リクエストとCanvas履歴へ参照画像として残せます"
+              title="衣服画像"
+              description="まず服の写真を入れて、自動で背景を抜きます。"
+              uploadLabel="衣服画像をアップロード"
+              emptyLabel="ここに服の写真を入れてください"
               state={materialReference}
               onChange={setMaterialReference}
               materialKinds={['衣服画像', 'モデル参照', 'ポーズ参照', '背景参照', 'サイズ比較']}
               layerOptions={['衣服', 'モデル', 'ポーズ', '背景', 'サイズ表']}
               placementOptions={['モデル前面', '平置き参照', '横並び比較', '背景全面', 'サイズ表横']}
+              simpleMode
             />
 
             <div className="rounded-2xl border border-white/60 bg-white/50 p-4 dark:border-white/10 dark:bg-surface-900/40">
-              <div className="mb-4 grid gap-3 sm:grid-cols-2">
+              <h2 className="text-base font-semibold text-neutral-950 dark:text-white">生成する</h2>
+              <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                服の画像を入れて切り抜いたら、権利確認にチェックして生成します。
+              </p>
+              <div className="mt-4 rounded-xl bg-white/75 p-3 dark:bg-surface-950/60">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">現在の設定</p>
+	                <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+	                  {activeWorkflow.title} / {selectedBodyTypeLabels.join(' / ')} / {selectedAgeGroupLabels.join(' / ')}
+	                </p>
+	                {materialReference.extractedLayerReady && !materialReference.nextStepReady && (
+	                  <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+	                    切り抜きは確認用です。袖や薄い部分を守る高精度AI切り抜きが必要です。
+	                  </p>
+	                )}
+	              </div>
+              <details className="mt-4 rounded-xl border border-neutral-200 bg-white/70 p-3 dark:border-white/10 dark:bg-surface-950/50">
+                <summary className="cursor-pointer text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+                  詳細条件
+                </summary>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl bg-white/75 p-3 dark:bg-surface-950/60">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">体型</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">{selectedBodyTypeLabels.join(' / ')}</p>
@@ -785,6 +813,8 @@ export function FittingPage() {
                     })}
                   </div>
                 </div>
+              </div>
+              </details>
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="inline-flex rounded-xl bg-surface-100 p-1 dark:bg-surface-950/70">
@@ -813,20 +843,22 @@ export function FittingPage() {
                     />
                     <span>
                       <span className="block font-semibold">{UPLOAD_RIGHTS_CONFIRMATION_LABEL}</span>
-                      <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
+                      <details className="mt-1">
+                        <summary className="cursor-pointer font-semibold">注意事項</summary>
+                        <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
+                      </details>
                     </span>
                   </label>
                   <button
                     type="button"
                     onClick={handleGenerate}
                     disabled={!canGenerate}
-                    className="btn-primary inline-flex items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    className="btn-primary inline-flex w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                   >
                     {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     {isGenerating ? '生成中' : 'AI生成'}
                   </button>
                 </div>
-              </div>
             </div>
           </div>
 
@@ -886,41 +918,32 @@ export function FittingPage() {
             </section>
           )}
         </div>
-
-        <aside className="glass-panel rounded-2xl p-5 sm:p-6">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">ローカル生成履歴</h2>
-          <div className="mt-4 space-y-3">
+        <details className="glass-panel rounded-2xl p-5 sm:p-6">
+          <summary className="cursor-pointer text-lg font-semibold text-neutral-950 dark:text-white">
+            生成履歴
+          </summary>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
             {history.map((item) => (
               <div key={item.id} className="rounded-2xl border border-white/60 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/50">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-100 text-primary-600 dark:bg-surface-800 dark:text-primary-300">
-                      {item.previewUrl ? (
-                        <img src={item.previewUrl} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <Shirt className="h-5 w-5" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{item.title}</p>
-                      <p className="text-xs text-neutral-500 dark:text-neutral-400">{item.status} / {item.time} / {item.count}枚</p>
-                    </div>
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-100 text-primary-600 dark:bg-surface-800 dark:text-primary-300">
+                    {item.previewUrl ? (
+                      <img src={item.previewUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <Shirt className="h-5 w-5" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{item.title}</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">{item.status} / {item.time} / {item.count}枚</p>
                   </div>
                 </div>
-                <div className="mt-4 grid grid-cols-4 gap-2">
-                  <button type="button" className="flex items-center justify-center gap-1 rounded-lg bg-surface-100 px-2 py-2 text-xs font-medium text-neutral-600 transition hover:bg-primary-50 hover:text-primary-700 dark:bg-surface-800 dark:text-neutral-300 dark:hover:bg-primary-900/30">
-                    <Download className="h-3.5 w-3.5" />
-                    DL
-                  </button>
-                  <button type="button" onClick={() => handleEditHistory(item)} disabled={!item.previewUrl} className="flex items-center justify-center gap-1 rounded-lg bg-surface-100 px-2 py-2 text-xs font-medium text-neutral-600 transition hover:bg-primary-50 hover:text-primary-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-800 dark:text-neutral-300 dark:hover:bg-primary-900/30">
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => handleEditHistory(item)} disabled={!item.previewUrl} className="btn-secondary inline-flex items-center justify-center gap-1 text-xs disabled:cursor-not-allowed disabled:opacity-50">
                     <Pencil className="h-3.5 w-3.5" />
                     編集
                   </button>
-                  <button type="button" onClick={handleRetry} disabled={!lastRequest || isGenerating} className="flex items-center justify-center gap-1 rounded-lg bg-surface-100 px-2 py-2 text-xs font-medium text-neutral-600 transition hover:bg-primary-50 hover:text-primary-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-surface-800 dark:text-neutral-300 dark:hover:bg-primary-900/30">
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    再生成
-                  </button>
-                  <button type="button" onClick={() => setHistory((items) => items.filter((historyItem) => historyItem.id !== item.id))} className="flex items-center justify-center gap-1 rounded-lg bg-surface-100 px-2 py-2 text-xs font-medium text-neutral-600 transition hover:bg-primary-50 hover:text-primary-700 dark:bg-surface-800 dark:text-neutral-300 dark:hover:bg-primary-900/30">
+                  <button type="button" onClick={() => setHistory((items) => items.filter((historyItem) => historyItem.id !== item.id))} className="btn-secondary inline-flex items-center justify-center gap-1 text-xs">
                     <Trash2 className="h-3.5 w-3.5" />
                     削除
                   </button>
@@ -928,7 +951,7 @@ export function FittingPage() {
               </div>
             ))}
           </div>
-        </aside>
+        </details>
       </section>
     </div>
   );
