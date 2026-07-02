@@ -780,7 +780,7 @@ export function GalleryPage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700">
-                        <span className="text-neutral-400 text-sm">画像なし</span>
+                        <span className="text-neutral-400 text-sm">プレビュー準備中</span>
                       </div>
                     )}
 
@@ -831,7 +831,7 @@ export function GalleryPage() {
           >
             <Image className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-200 mb-2">
-              {filter === 'favorites' ? 'お気に入りの画像がありません' : '画像がありません'}
+              {filter === 'favorites' ? 'お気に入りはまだありません' : 'まだ画像はありません'}
             </h3>
             <p className="text-neutral-500 dark:text-neutral-400 mb-6">
               {filter === 'favorites'

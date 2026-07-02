@@ -182,7 +182,7 @@ export function MaterialWorkbench({
           <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{description}</p>
         </div>
         <span className={`rounded-full px-2 py-1 text-xs font-semibold ${hasImage ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200' : 'bg-neutral-100 text-neutral-500 dark:bg-surface-800 dark:text-neutral-300'}`}>
-          {hasImage ? '読込済み' : '未読込'}
+          {hasImage ? '素材あり' : '素材を追加'}
         </span>
       </div>
 
@@ -241,11 +241,11 @@ export function MaterialWorkbench({
             </div>
             <div className="border-x border-neutral-200 p-3 dark:border-white/10">
               <p className="font-semibold text-neutral-400">処理</p>
-              <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{hasImage ? maskModeLabel[state.maskMode] : '未設定'}</p>
+              <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{hasImage ? maskModeLabel[state.maskMode] : '素材後に設定'}</p>
             </div>
             <div className="p-3">
               <p className="font-semibold text-neutral-400">レイヤー</p>
-              <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{hasImage ? state.activeLayer : '未設定'}</p>
+              <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{hasImage ? state.activeLayer : '素材後に設定'}</p>
             </div>
           </div>
         </div>

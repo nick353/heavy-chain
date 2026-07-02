@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, ThumbsUp, Bug, Lightbulb, Star } from 'lucide-react';
+import { MessageSquare, X, Send, ThumbsUp, MousePointerClick, ImageOff, FolderOpen, Gauge, CircleHelp } from 'lucide-react';
 import { Button, Textarea, Input } from './index';
 import toast from 'react-hot-toast';
 
@@ -9,17 +9,18 @@ interface FeedbackFormProps {
   onClose: () => void;
 }
 
-type FeedbackType = 'bug' | 'feature' | 'general' | 'praise';
+type FeedbackType = 'lost' | 'result' | 'save' | 'speed' | 'other';
 
 const feedbackTypes = [
-  { id: 'bug', label: 'バグ報告', icon: Bug, color: 'text-red-500 bg-red-50 dark:bg-red-900/20' },
-  { id: 'feature', label: '機能リクエスト', icon: Lightbulb, color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' },
-  { id: 'general', label: '一般的なフィードバック', icon: MessageSquare, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' },
-  { id: 'praise', label: '良かった点', icon: Star, color: 'text-green-500 bg-green-50 dark:bg-green-900/20' },
+  { id: 'lost', label: 'どこを押すかわからない', icon: MousePointerClick, color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-900/20' },
+  { id: 'result', label: '生成結果が微妙', icon: ImageOff, color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' },
+  { id: 'save', label: '保存先がわからない', icon: FolderOpen, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' },
+  { id: 'speed', label: '動作が遅い', icon: Gauge, color: 'text-red-500 bg-red-50 dark:bg-red-900/20' },
+  { id: 'other', label: 'その他', icon: CircleHelp, color: 'text-green-500 bg-green-50 dark:bg-green-900/20' },
 ] as const;
 
 export function FeedbackForm({ isOpen, onClose }: FeedbackFormProps) {
-  const [type, setType] = useState<FeedbackType>('general');
+  const [type, setType] = useState<FeedbackType>('lost');
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,7 +40,7 @@ export function FeedbackForm({ isOpen, onClose }: FeedbackFormProps) {
       // In production, this would call an API endpoint
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      console.log('Feedback submitted:', { type, message, email });
+      console.log('Internal beta feedback submitted:', { type, message, email });
       
       setSubmitted(true);
       toast.success('フィードバックを送信しました');
@@ -49,7 +50,7 @@ export function FeedbackForm({ isOpen, onClose }: FeedbackFormProps) {
         setSubmitted(false);
         setMessage('');
         setEmail('');
-        setType('general');
+        setType('lost');
         onClose();
       }, 2000);
     } catch {
@@ -63,7 +64,7 @@ export function FeedbackForm({ isOpen, onClose }: FeedbackFormProps) {
     if (!isSubmitting) {
       setSubmitted(false);
       setMessage('');
-      setType('general');
+      setType('lost');
       onClose();
     }
   };
@@ -96,10 +97,10 @@ export function FeedbackForm({ isOpen, onClose }: FeedbackFormProps) {
                 </div>
                 <div>
                   <h2 className="font-semibold text-neutral-900 dark:text-white">
-                    フィードバックを送信
+                    使いにくかった場所を教えてください
                   </h2>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    ご意見・ご要望をお聞かせください
+                    社内betaの改善に使います
                   </p>
                 </div>
               </div>
@@ -146,7 +147,7 @@ export function FeedbackForm({ isOpen, onClose }: FeedbackFormProps) {
                   {/* Feedback Type */}
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                      フィードバックの種類
+                      困ったこと
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       {feedbackTypes.map((item) => (
@@ -175,13 +176,15 @@ export function FeedbackForm({ isOpen, onClose }: FeedbackFormProps) {
                   <Textarea
                     label="メッセージ"
                     placeholder={
-                      type === 'bug'
-                        ? '問題の内容と再現手順を教えてください...'
-                        : type === 'feature'
-                        ? 'どのような機能があると便利ですか？...'
-                        : type === 'praise'
-                        ? '気に入っている機能や体験を教えてください...'
-                        : 'ご意見・ご感想をお書きください...'
+                      type === 'lost'
+                        ? 'どの画面で、次に何をすればよいかわからなくなりましたか？'
+                        : type === 'result'
+                        ? '期待していた見た目と、実際の結果の違いを教えてください'
+                        : type === 'save'
+                        ? '生成後、どこに保存・再利用したかったかを教えてください'
+                        : type === 'speed'
+                        ? '遅いと感じた画面や操作を教えてください'
+                        : '気づいたことをそのまま書いてください'
                     }
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}

@@ -57,7 +57,7 @@ export const enqueueLocalRunwayWorkerGeneration = async (
   });
 
   if (error || !data?.job) {
-    throw error ?? new Error('ローカルRunway worker queueの作成に失敗しました。');
+    throw error ?? new Error('生成キューの作成に失敗しました。');
   }
 
   return { job: data.job as GenerationJob };
@@ -73,7 +73,7 @@ export const pollLocalRunwayWorkerGeneration = async (
     .single();
 
   if (jobError || !job) {
-    throw jobError ?? new Error('ローカルRunway worker jobを確認できません。');
+    throw jobError ?? new Error('生成ジョブを確認できません。');
   }
 
   const { data: images, error: imagesError } = await supabase

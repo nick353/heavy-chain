@@ -76,7 +76,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'material-workbench',
     title: '素材ワークベンチ',
-    description: 'Lightchainに近い流れで、衣服参考、商品素材、背景、ロゴを読み込み、どのレイヤーに使うかを先に決めます。',
+    description: '衣服参考、商品素材、背景、ロゴを読み込み、どのレイヤーに使うかを先に決めます。',
     icon: Wand2,
     tips: [
       '衣服参考ライブラリ、販促素材、モデル参照を画像から始めます',
@@ -88,7 +88,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'queue',
     title: '生成キューと復帰',
-    description: 'Geminiで生成する作業は保存され、進行中、完了、止まった作業を後から見直せます。',
+    description: '生成する作業は保存され、進行中、完了、止まった作業を後から見直せます。',
     icon: Clock3,
     tips: [
       '生成後に画面を閉じてもJobsから状態を確認できます',

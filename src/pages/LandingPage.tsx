@@ -57,7 +57,7 @@ export function LandingPage() {
             HEAVY CHAIN AI
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-400">
-            Lightchainと同じ使い心地で、生成、フィッティング、柄、Canvas編集まで進めるアパレル特化AIワークスペース。
+            生成、フィッティング、柄、Canvas編集まで進めるアパレル特化AIワークスペース。
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link

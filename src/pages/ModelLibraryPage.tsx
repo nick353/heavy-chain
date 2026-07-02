@@ -329,7 +329,7 @@ export function ModelLibraryPage() {
     const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
     const materialReferenceSummary = materialReferenceMetadata.hasImage
       ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
-      : '素材画像なし';
+      : '素材を追加するとここに反映されます';
     const generationPrompt = [
       `Face: ${face}`,
       `Pose: ${pose}`,
@@ -478,7 +478,7 @@ export function ModelLibraryPage() {
               モデルライブラリ
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-              Lightchainでモデル条件を選んでいた感覚のまま、用途、モデル候補、出力先を選んでモデルマトリクスへ渡します。
+              用途、モデル候補、出力先を選んでモデルマトリクスへ渡します。
             </p>
           </div>
           <button

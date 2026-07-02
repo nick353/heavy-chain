@@ -411,7 +411,7 @@ export function PatternWorkspacePage() {
     const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
     const materialReferenceSummary = materialReferenceMetadata.hasImage
       ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
-      : '素材画像なし';
+      : '素材を追加するとここに反映されます';
     const generationPrompt = [
       motifPrompt,
       `Repeat style: ${repeatStyle}`,
@@ -639,7 +639,7 @@ export function PatternWorkspacePage() {
             <div>
               <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">制作ボード</h2>
               <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                Lightchainで選んでいた条件を、素材・柄・配置・色・版下の順に組み立てます。
+                素材・柄・配置・色・版下の順に、生成と入稿へ使う条件を組み立てます。
               </p>
             </div>
             <div className="rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-800 dark:bg-primary-950/40 dark:text-primary-100">

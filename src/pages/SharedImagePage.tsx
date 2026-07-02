@@ -100,7 +100,7 @@ export function SharedImagePage() {
               {image?.prompt ?? 'Heavy Chain 共有画像'}
             </h1>
             <p className="mt-4 text-sm leading-7 text-white/65">
-              生成画像、プロンプト、Lightchain互換タスクをまとめて確認できます。リンクは期限付きで公開されます。
+              生成画像、プロンプト、素材ワークベンチの情報をまとめて確認できます。リンクは期限付きで公開されます。
             </p>
 
             <div className="mt-6 grid gap-3 text-sm">

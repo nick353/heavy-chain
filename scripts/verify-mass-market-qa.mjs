@@ -16,9 +16,9 @@ const desktopViewport = { width: 1440, height: 1050 };
 const mobileViewport = { width: 390, height: 844 };
 
 const routeSpecs = [
-  { key: 'dashboard', path: '/dashboard', expected: ['DASHBOARD', '制作ワークフロー'] },
-  { key: 'lightchain', path: '/lightchain', expected: ['Lightchain互換'], upload: true },
-  { key: 'generate-home', path: '/generate', expected: ['Lightchain'] },
+  { key: 'dashboard', path: '/dashboard', expected: ['まず1つ作る', '商品画像から作る'] },
+  { key: 'lightchain', path: '/lightchain', expected: ['素材ワークベンチ'], upload: true },
+  { key: 'generate-home', path: '/generate', expected: ['素材', '生成'] },
   { key: 'generate-campaign', path: '/generate?feature=campaign-image', expected: ['キャンペーン画像'], upload: true, generateReady: true },
   { key: 'marketing', path: '/marketing', expected: ['マーケティング'], upload: true },
   { key: 'fitting', path: '/fitting', expected: ['AIフィッティング'], upload: true },
@@ -671,8 +671,14 @@ async function runRoute(spec, context, viewport) {
         );
       }
       if (spec.key === 'mobile-dashboard') {
-        const quickStart = page.locator('[data-testid="mobile-dashboard-quick-start"]');
-        const quickStartVisible = await quickStart.isVisible().catch(() => false);
+        const quickStart = page.locator('[data-testid="mobile-dashboard-quick-start"], [data-testid="dashboard-internal-beta-start"]');
+        const quickStartVisible = await quickStart
+          .evaluateAll((sections) => sections.some((section) => {
+            const style = window.getComputedStyle(section);
+            const rect = section.getBoundingClientRect();
+            return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+          }))
+          .catch(() => false);
         const desktopQuickActionsVisible = await page
           .locator('[data-testid="dashboard-desktop-quick-actions"]')
           .isVisible()
@@ -753,7 +759,7 @@ async function runRoute(spec, context, viewport) {
         addAssertion(routeEvidence, 'mobile_dashboard_has_above_fold_quick_start', (
           quickStartVisible &&
           quickStartLinks.length >= 3 &&
-          quickStartLinks.some((link) => link.href === '/generate') &&
+          quickStartLinks.some((link) => link.href === '/generate?feature=campaign-image') &&
           quickStartLinks.some((link) => link.href === '/canvas/new') &&
           quickStartLinks.some((link) => link.href === '/gallery')
         ), {
@@ -973,9 +979,7 @@ async function interactGenerateReady(page, routeEvidence) {
     await rightsCheckbox.check().catch(() => undefined);
   }
   const body = await bodyText(page);
-  const button = page.getByRole('button', {
-    name: /Imagen 4 Fastで生成|Imagen 4で生成|Gemini Flash Lite Imageで生成|Nano Banana 2で生成|GPT Image 2で生成|GPT Image 1 miniで生成|Geminiで生成|Runway workerで生成/,
-  }).first();
+  const button = page.getByRole('button', { name: /生成する/ }).first();
   const visible = await button.isVisible().catch(() => false);
   const enabled = await button.isEnabled().catch(() => false);
   const h601CopyVisible = /権利・許可|商用デザイン制作|商標クリアランス/.test(body);

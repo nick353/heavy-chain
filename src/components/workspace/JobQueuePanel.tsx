@@ -59,12 +59,12 @@ export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }
                 <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">{job.prompt || job.featureType}</span>
                 {lightchainTask && (
                   <span className="mt-1 block truncate text-[11px] font-medium text-teal-700 dark:text-teal-300">
-                    Lightchain task: {lightchainTask.value}
+                    素材ワークベンチ: {lightchainTask.value}
                   </span>
                 )}
                 {lightchainSteps && (
                   <span className="mt-0.5 block truncate text-[11px] font-medium text-teal-700 dark:text-teal-300">
-                    Lightchain steps: {lightchainSteps.value}
+                    進行ステップ: {lightchainSteps.value}
                   </span>
                 )}
               </span>
@@ -86,12 +86,12 @@ export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }
                 <span className="block text-xs text-neutral-500 dark:text-neutral-400">{job.outputCount} outputs</span>
                 {lightchainTask && (
                   <span className="mt-1 block truncate text-[11px] font-medium text-teal-700 dark:text-teal-300">
-                    Lightchain task: {lightchainTask.value}
+                    素材ワークベンチ: {lightchainTask.value}
                   </span>
                 )}
                 {lightchainSteps && (
                   <span className="mt-0.5 block truncate text-[11px] font-medium text-teal-700 dark:text-teal-300">
-                    Lightchain steps: {lightchainSteps.value}
+                    進行ステップ: {lightchainSteps.value}
                   </span>
                 )}
               </span>

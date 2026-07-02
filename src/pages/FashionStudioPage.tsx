@@ -300,7 +300,7 @@ export function FashionStudioPage() {
     const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
     const materialReferenceSummary = materialReferenceMetadata.hasImage
       ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
-      : '素材画像なし';
+      : '素材を追加するとここに反映されます';
     const generationPrompt = [
       productLine,
       modelProfile,

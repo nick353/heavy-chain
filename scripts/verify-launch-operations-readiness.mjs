@@ -49,8 +49,8 @@ const trackedHostnames = new Set([
   new URL(baseUrl).hostname,
   'ghwjymozrwmcrpjqvbmo.supabase.co',
 ]);
-const generationButtonPattern = /Imagen 4 Fastで生成|Imagen 4で生成|Gemini Flash Lite Imageで生成|Nano Banana 2で生成|GPT Image 2で生成|GPT Image 1 miniで生成|Geminiで生成|Runway workerで生成/;
-const generationButtonExpectedText = 'で生成';
+const generationButtonPattern = /生成する/;
+const generationButtonExpectedText = '生成する';
 
 fs.mkdirSync(outDir, { recursive: true });
 

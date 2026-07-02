@@ -263,7 +263,7 @@ export function LabPage() {
     const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
     const materialReferenceSummary = materialReferenceMetadata.hasImage
       ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
-      : '実験素材画像なし';
+      : '素材を追加するとここに反映されます';
     const generationPrompt = [
       promptDraft,
       `Hypothesis: ${hypothesis}`,
@@ -434,7 +434,7 @@ export function LabPage() {
             <div>
               <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">実験レーンを選ぶ</h2>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-                Lightchainで候補を見比べる感覚に合わせて、仮説・評価軸・採用判断を先に選びます。
+                候補を見比べながら、仮説・評価軸・採用判断を先に選びます。
               </p>
             </div>
             <span className="w-fit rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-950/50 dark:text-primary-200">

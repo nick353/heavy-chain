@@ -116,7 +116,7 @@ const buildMarketingPreviewSvg = ({
   const safeLayer = escapeSvgText(materialReference.activeLayer);
   const safePlacement = escapeSvgText(materialReference.placement);
   const safeMaterialKind = escapeSvgText(materialReference.materialKind);
-  const safeFileName = escapeSvgText(materialReference.fileName || '素材未読込');
+  const safeFileName = escapeSvgText(materialReference.fileName || '素材追加前');
   const accent = activeLabel === 'SNS'
     ? '#7c3aed'
     : activeLabel === '店舗・オフライン'
@@ -281,7 +281,7 @@ export function MarketingWorkspacePage() {
     const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
     const materialReferenceSummary = materialReferenceMetadata.hasImage
       ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
-      : '販促素材画像なし';
+      : '素材を追加するとここに反映されます';
     try {
       const result = await saveWorkspaceArtifactBestEffort({
         brandId: currentBrand.id,

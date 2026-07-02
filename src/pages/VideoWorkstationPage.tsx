@@ -309,7 +309,7 @@ export function VideoWorkstationPage() {
     const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
     const materialReferenceSummary = materialReferenceMetadata.hasImage
       ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
-      : '動画素材画像なし';
+      : '素材を追加するとここに反映されます';
     const generationPrompt = [
       `Storyboard: ${selectedStoryboard.label}`,
       `Shot order: ${shotPlan}`,
@@ -482,7 +482,7 @@ export function VideoWorkstationPage() {
             <div>
               <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">動画レーンを選ぶ</h2>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-                Lightchainで動画用途を選んでいた流れに合わせて、尺・比率・ショット順・CTAをまとめて決めます。
+                尺・比率・ショット順・CTAをまとめて決め、動画生成に使う構成を整えます。
               </p>
             </div>
             <span className="w-fit rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-950/50 dark:text-primary-200">

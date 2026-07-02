@@ -375,7 +375,7 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
 
       {selectedObject.type === 'image' && lightchainEditStages.length > 0 && (
         <div className="pt-4 border-t border-neutral-100">
-          <h4 className="text-xs font-semibold text-neutral-500 mb-2">Lightchain編集履歴</h4>
+          <h4 className="text-xs font-semibold text-neutral-500 mb-2">素材編集履歴</h4>
           <div className="space-y-2">
             {lightchainEditStages.map((stage) => (
               <div

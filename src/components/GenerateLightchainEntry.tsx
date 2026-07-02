@@ -133,7 +133,7 @@ export function GenerateLightchainEntry() {
           <div>
             <h2 className="text-4xl font-semibold tracking-normal text-white sm:text-5xl">HEAVY CHAIN AI</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
-              アパレル特化のAIデザインワークスペース。指示を入力するか、Lightchainと同じ4カテゴリから開始します。
+              アパレル特化のAIデザインワークスペース。指示を入力するか、目的別の4カテゴリから開始します。
             </p>
           </div>
           <Link

@@ -43,9 +43,9 @@ add('runway_approval_only_for_runway_paths',
 add('frontend_defaults_to_gemini',
   files.generatePage.includes("VITE_GENERATION_PROVIDER || 'gemini'") &&
     files.generatePage.includes('const geminiGenerationMode') &&
-    files.generatePage.includes("generationProvider: 'gemini'") &&
-    files.generatePage.includes('Geminiで生成') &&
-    files.generatePage.includes('Runway workerは使いません'),
+    files.generatePage.includes('generationProvider: selectedGenerationModelOption.provider') &&
+    files.generatePage.includes("noImageGenerationMode ? '生成する'") &&
+    files.generatePage.includes('社内確認では低コスト設定から始めます'),
 );
 
 add('image_api_accepts_gemini_provider',

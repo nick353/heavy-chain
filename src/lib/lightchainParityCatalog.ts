@@ -35,7 +35,7 @@ export const lightchainCategories: LightchainCategory[] = [
     id: 'recommended',
     label: 'おすすめ',
     eyebrow: 'Hot',
-    description: 'Lightchain のトップ画面に出ていた主要ワークスペースを、Heavy Chain の入口へ揃えます。',
+    description: '社内でよく使う主要ワークスペースを、Heavy Chain の入口へ揃えます。',
   },
   {
     id: 'planning',

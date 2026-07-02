@@ -359,7 +359,8 @@ async function verifyAllFeatureDetailRoutes(page) {
   for (const id of ids) {
     await page.goto(`${baseUrl}/lightchain/${id}`, { waitUntil: 'networkidle' });
     const body = await bodyText(page);
-    const hasDetailScreenSignal = body.includes('機能一覧')
+    const hasDetailScreenSignal = body.includes('すべての機能')
+      || body.includes('機能一覧')
       || body.includes('画像をアップロード')
       || body.includes('素材を置くと編集を始められます');
     addAssertion(`feature_detail_route:${id}`, page.url().endsWith(`/lightchain/${id}`) && hasDetailScreenSignal, {

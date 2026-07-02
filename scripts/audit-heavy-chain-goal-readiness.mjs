@@ -785,7 +785,7 @@ function nonbillingUiRouteDetails(ui, expected = {}) {
     mobileGenerate: mobile.some((route) => route.key === '09-mobile-generate'
       && route.checks?.notLogin === true
       && route.checks?.meaningful === true
-      && /Geminiで生成|Runway workerで生成/.test(String(route.bodyExcerpt || ''))),
+      && /生成する/.test(String(route.bodyExcerpt || ''))),
     mobileJobs: mobileCheck('10-mobile-jobs'),
     mobileGallery: mobile.some((route) => route.key === '11-mobile-gallery'
       && route.checks?.notLogin === true

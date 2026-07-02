@@ -31,17 +31,17 @@ import { LightchainParityHub } from '../components/LightchainParityHub';
 const quickActions = [
   {
     id: 'text-to-image',
-    title: '画像生成',
-    description: 'プロンプトから画像を生成',
+    title: '商品画像から作る',
+    description: '素材を入れてEC/SNS画像を作る',
     icon: IconSparkles,
-    href: '/generate',
+    href: '/generate?feature=campaign-image',
     color: 'from-primary-500 to-gold-DEFAULT',
     delay: 0
   },
   {
     id: 'canvas',
-    title: 'キャンバス',
-    description: 'フリーキャンバスで編集',
+    title: 'Canvasで編集する',
+    description: '保存した素材を配置して整える',
     icon: IconLayout,
     href: '/canvas/new',
     color: 'from-blue-500 to-purple-500',
@@ -49,8 +49,8 @@ const quickActions = [
   },
   {
     id: 'gallery',
-    title: 'ギャラリー',
-    description: '生成した画像を管理',
+    title: 'SNS/EC画像を探す',
+    description: '成果物を見直して再利用する',
     icon: IconImage,
     href: '/gallery',
     color: 'from-accent-500 to-pink-500',
@@ -443,6 +443,41 @@ export function DashboardPage() {
             >
               状況
             </Link>
+          </div>
+        </motion.section>
+
+        <motion.section
+          variants={itemVariants}
+          className="mb-8 hidden rounded-3xl border border-white/10 bg-white/[0.05] p-5 shadow-soft sm:block"
+          data-testid="dashboard-internal-beta-start"
+        >
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary-300">Start</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white">まず1つ作る</h2>
+              <p className="mt-2 text-sm leading-6 text-neutral-300">
+                素材を入れて、生成・Canvas保存・再利用までを短い流れで進めます。
+              </p>
+            </div>
+            <div className="grid min-w-0 flex-1 gap-3 lg:grid-cols-3">
+              {quickActions.map((action) => (
+                <Link
+                  key={action.id}
+                  to={action.href}
+                  className="group rounded-2xl border border-white/10 bg-neutral-950/70 p-4 transition hover:border-primary-300/60 hover:bg-neutral-900"
+                >
+                  <span className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${action.color}`}>
+                    <action.icon className="h-4 w-4 text-white" size={16} />
+                  </span>
+                  <span className="mt-4 block text-sm font-semibold text-white">{action.title}</span>
+                  <span className="mt-1 block text-xs leading-5 text-neutral-400">{action.description}</span>
+                  <span className="mt-4 inline-flex items-center text-xs font-semibold text-primary-300">
+                    開始する
+                    <IconArrowRight className="ml-1 h-3.5 w-3.5 transition group-hover:translate-x-0.5" size={14} />
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
         </motion.section>
 
@@ -890,7 +925,7 @@ export function DashboardPage() {
                 クリエイティブな旅を始めましょう
               </h3>
               <p className="text-neutral-600 dark:text-neutral-400 mb-8 max-w-md mx-auto leading-relaxed">
-                まだ画像がありません。日本語でプロンプトを入力するだけで、AIがあなたの想像を形にします。
+                まだ生成画像はありません。商品画像やプロンプトを入れると、ここに成果物が並びます。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/generate">

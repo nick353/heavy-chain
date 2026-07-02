@@ -1381,7 +1381,7 @@ export function GeneratePage() {
       id: image.id || `${image.job_id || 'local-runway'}-${index}`,
       imageUrl,
       prompt: image.prompt || image.metadata?.prompt || image.generation_params?.prompt || '',
-      label: image.metadata?.title || `Runway worker result ${index + 1}`,
+      label: image.metadata?.title || `生成結果 ${index + 1}`,
       jobId: image.job_id || undefined,
       imageId: image.id || undefined,
       storagePath: image.storage_path || undefined,
@@ -1770,14 +1770,14 @@ export function GeneratePage() {
               ...(patternContext ?? {}),
             },
           });
-          toast.success('ローカルRunway workerに生成依頼を送信しました');
+          toast.success('生成依頼を送信しました');
           const workerResults = await waitForLocalRunwayWorkerResults(job.id);
           replaceGeneratedImages(workerResults);
           if (primaryBrief) {
             addToHistory(primaryBrief, `${planningFeature.name} 生成`);
           }
           setShowSuccessCard(true);
-          toast.success('ローカルRunway workerの生成が完了しました');
+          toast.success('生成が完了しました');
           return;
         }
         const planIdBase = Date.now().toString();
@@ -3628,9 +3628,9 @@ export function GeneratePage() {
   const generationReadyInApp = noImageGenerationMode || runwayReadyInApp;
   const runwayReadinessText = noImageGenerationMode
     ? geminiGenerationMode
-      ? 'Geminiを標準providerとして生成します。Runway workerは使いません'
+      ? `${selectedGenerationModelOption.title}で生成します`
       : localRunwayWorkerMode
-      ? 'Mac側ローカルRunway workerで実生成します。Hosted bridgeは使いません'
+      ? '社内連携の生成環境で実行します'
       : '画像生成はオフです。Runway接続なしで企画書を保存できます'
     : runwayReadyInApp
     ? 'サイト側の生成条件は満たしています'
@@ -3883,7 +3883,7 @@ export function GeneratePage() {
               className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-neutral-300 transition hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
-              Untitled
+              新しい制作
             </Link>
           </section>
 
@@ -3977,7 +3977,7 @@ export function GeneratePage() {
                     入力素材
                   </p>
                   <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
-                    Lightchainと同じように、先に画像や素材を入れてから生成条件を調整します。
+                    先に画像や素材を入れてから、必要な生成条件だけを調整します。
                   </p>
                 </div>
                 {supportsAssistantPlanning(selectedFeature.id) && (
@@ -4073,7 +4073,7 @@ export function GeneratePage() {
                 <div className="flex flex-wrap items-end justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold text-neutral-900 dark:text-white">生成モデル</p>
-                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">GoogleとOpenAIを切り替え、まず低コストで確認します。</p>
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">社内確認では低コスト設定から始めます。必要な時だけ変更してください。</p>
                   </div>
                   <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
                     {selectedGenerationModelOption.cost}
@@ -4134,7 +4134,7 @@ export function GeneratePage() {
                 size="lg"
                 leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
               >
-                {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : geminiGenerationMode ? `${selectedGenerationModelOption.title}で生成` : localRunwayWorkerMode ? 'Runway workerで生成' : '企画書を保存'}
+                {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : noImageGenerationMode ? '生成する' : '企画書を保存'}
               </Button>
             )}
           </section>
@@ -4145,7 +4145,7 @@ export function GeneratePage() {
               : 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
           }`}>
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-neutral-900 dark:text-white">運用状態・互換情報</span>
+              <span className="text-sm font-semibold text-neutral-900 dark:text-white">詳細情報</span>
               <span className={`text-xs ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
                 {runwayReadinessText}
               </span>
@@ -4188,7 +4188,7 @@ export function GeneratePage() {
               )}
               {lightchainCompat && (
                 <div className="rounded-xl border border-teal-200 bg-teal-50/80 p-3 dark:border-teal-800 dark:bg-teal-950/30">
-                  <p className="text-xs font-semibold text-teal-700 dark:text-teal-300">Lightchain互換</p>
+                  <p className="text-xs font-semibold text-teal-700 dark:text-teal-300">素材ワークベンチ連携</p>
                   <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
                     {lightchainCompat.lightchainFeatureTitle} / {lightchainCompat.lightchainTaskCodes.join(' / ')}
                   </p>

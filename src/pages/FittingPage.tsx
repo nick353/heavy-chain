@@ -195,7 +195,7 @@ const buildFittingPreviewSvg = ({
   const safeBodyTypes = escapeSvgText(selectedBodyTypeLabels.join(' / ') || '未選択');
   const safeAgeGroups = escapeSvgText(selectedAgeGroupLabels.join(' / ') || '未選択');
   const safeGender = escapeSvgText(genderLabel);
-  const safeMaterial = escapeSvgText(materialReference.fileName || '素材未読込');
+  const safeMaterial = escapeSvgText(materialReference.fileName || '素材追加前');
   const safeLayer = escapeSvgText(materialReference.activeLayer);
   const safePlacement = escapeSvgText(materialReference.placement);
 
@@ -404,7 +404,7 @@ export function FittingPage() {
     const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
     const materialReferenceSummary = materialReferenceMetadata.hasImage
       ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
-      : '衣服素材画像なし';
+      : '素材を追加するとここに反映されます';
     const layerPlan = {
       activeLayer: materialReference.activeLayer,
       placement: materialReference.placement,
@@ -548,7 +548,7 @@ export function FittingPage() {
               <div>
                 <h2 className="text-base font-semibold text-neutral-950 dark:text-white">着用ワークフローを選ぶ</h2>
                 <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-                  Lightchainで用途を選んでいた感覚のまま、モデル条件と出力目的を先に決めます。
+                  用途、モデル条件、出力目的を先に決めて、迷わず着用画像を作れます。
                 </p>
               </div>
               <span className="w-fit whitespace-nowrap rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-950/50 dark:text-primary-200">
@@ -686,7 +686,7 @@ export function FittingPage() {
                 <div className="rounded-xl bg-white/75 p-3 dark:bg-surface-950/60 sm:col-span-2">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">素材</p>
                   <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-                    {garmentFileName || '素材未読込'} / {materialReference.activeLayer} / {materialReference.placement}
+                    {garmentFileName || '素材追加前'} / {materialReference.activeLayer} / {materialReference.placement}
                   </p>
                 </div>
               </div>

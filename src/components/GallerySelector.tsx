@@ -260,7 +260,7 @@ export function GallerySelector({
             <div className="flex flex-col items-center justify-center py-12 text-neutral-500">
               <ImageIcon className="w-12 h-12 mb-3 text-neutral-300" />
               <p className="text-sm">
-                {filter === 'favorites' ? 'お気に入りの画像がありません' : '画像がありません'}
+                {filter === 'favorites' ? 'お気に入りはまだありません' : 'まだ画像はありません'}
               </p>
             </div>
           )}
@@ -287,4 +287,3 @@ export function GallerySelector({
     </Modal>
   );
 }
-

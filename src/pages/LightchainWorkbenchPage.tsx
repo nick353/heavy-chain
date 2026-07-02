@@ -43,7 +43,7 @@ type CompatTool = {
 };
 
 const categories: Array<{ id: ToolCategory; label: string; icon: typeof Sparkles; description: string }> = [
-  { id: 'home', label: 'おすすめ', icon: Sparkles, description: 'Lightchainトップの主要ワークスペースをまとめた入口です。' },
+  { id: 'home', label: 'おすすめ', icon: Sparkles, description: '主要ワークスペースをまとめた入口です。' },
   { id: 'marketing', label: 'マーケティング', icon: MessageSquareText, description: 'EC、SNS、ブランド、店舗、ライブ配信、販促素材を一括で作ります。' },
   { id: 'fitting', label: 'AIフィッティング', icon: Shirt, description: '商品画像からモデル着用、ポーズ、背景、体型差分を作ります。' },
   { id: 'planning', label: '企画デザイン', icon: ClipboardList, description: '企画書、ディテール変更、シリーズ案、スタイル方向を作ります。' },
@@ -225,7 +225,7 @@ const tools: CompatTool[] = [
   },
   {
     id: 'lab',
-    title: 'Lightchain Lab',
+    title: 'Heavy Chain Lab',
     lightchainRoute: '/flow/laboratory',
     category: 'lab',
     status: 'workspace',
@@ -972,7 +972,7 @@ export function LightchainWorkbenchPage() {
       const finalCutoutMaxDataUrlBytes = cutoutMaxDataUrlBytes || (ensuredCutout ? 750_000 : null);
       const finalCutoutStoragePolicy = cutoutStoragePolicy || ensuredCutout?.storagePolicy || null;
       const finalMaskEngine = maskEngine || ensuredCutout?.engine || null;
-      const projectId = createProject(`Lightchain互換: ${selectedTool.title}`, currentBrand.id);
+      const projectId = createProject(`素材ワークベンチ: ${selectedTool.title}`, currentBrand.id);
       const lightchainWorkbenchState = workbenchEnabled ? {
         toolId: selectedTool.id,
         toolCategory: selectedTool.category,
@@ -1254,7 +1254,7 @@ export function LightchainWorkbenchPage() {
         selectObject((overlayObjectId ?? materialObjectId) as string);
       }
       saveCurrentProject();
-      toast.success('Lightchain互換の注文票をCanvasへ保存しました');
+      toast.success('素材ワークベンチの内容をCanvasへ保存しました');
       navigate(`/canvas/${projectId}`);
     } catch (error) {
       console.error('Failed to save Lightchain workbench artifact:', error);
@@ -1272,7 +1272,7 @@ export function LightchainWorkbenchPage() {
             <div className="min-w-0">
               <p className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 ring-1 ring-primary-100 dark:bg-primary-400/10 dark:text-primary-300 dark:ring-primary-400/20">
                 <Sparkles className="h-3.5 w-3.5" />
-                {isFeatureDetail ? selectedTool.lightchainRoute : `Lightchain互換 / ${totalToolCount}機能`}
+                {isFeatureDetail ? selectedTool.lightchainRoute : `素材ワークベンチ / ${totalToolCount}機能`}
               </p>
               <h1 className="mt-4 text-2xl font-semibold tracking-tight text-neutral-950 dark:text-white sm:text-3xl">
                 {isFeatureDetail ? selectedTool.title : '用途を選んで、そのまま制作へ進む'}
@@ -1334,9 +1334,9 @@ export function LightchainWorkbenchPage() {
                     to="/lightchain"
                     className="shrink-0 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 transition hover:border-neutral-400 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
                   >
-                    機能一覧
+                    すべての機能
                   </Link>
-                  {['素材入力', 'マスク/レイヤー', 'Canvas保存'].map((step, index) => (
+                  {['素材を入れる', '調整する', 'Canvasへ保存'].map((step, index) => (
                     <span
                       key={step}
                       className={`shrink-0 rounded-lg px-3 py-2 text-sm font-semibold ${
@@ -1350,7 +1350,7 @@ export function LightchainWorkbenchPage() {
                   ))}
                 </div>
                 <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-                  画像を入れて、範囲を選び、Canvasへ保存します。
+                  素材を入れて、必要な調整をして、Canvasへ保存します。
                 </p>
               </div>
             </div>
@@ -1491,7 +1491,7 @@ export function LightchainWorkbenchPage() {
                             </p>
                           </div>
                           <span className={`rounded-full px-2 py-1 text-xs font-semibold ${analysisStatus === 'ready' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200' : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300'}`}>
-                            {analysisStatus === 'ready' ? '読み込み済み' : '未読込'}
+                            {analysisStatus === 'ready' ? '素材あり' : '素材を追加'}
                           </span>
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2">
