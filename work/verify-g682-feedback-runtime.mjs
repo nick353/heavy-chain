@@ -183,7 +183,20 @@ const run = async () => {
   await createRoutes(mobilePage, captured);
   await mobilePage.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle' });
   const mobileButton = mobilePage.getByLabel('フィードバックを送信');
-  await mobileButton.waitFor({ timeout: 15000 });
+  const mobileButtonCount = await mobileButton.count();
+  const mobileButtonHidden = await mobileButton.isHidden().catch(() => false);
+  const mobileButtonStyle = mobileButtonCount === 1
+    ? await mobileButton.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      return {
+        display: style.display,
+        visibility: style.visibility,
+        width: rect.width,
+        height: rect.height,
+      };
+    })
+    : null;
   const box = await mobileButton.boundingBox();
   await mobilePage.screenshot({ path: path.join(outDir, 'mobile-dashboard-feedback-button.png'), fullPage: true });
   await mobile.close();
@@ -196,7 +209,8 @@ const run = async () => {
     submissionHasContext: submission?.page_url?.includes('/dashboard') && submission?.pathname === '/dashboard' && submission?.viewport?.width === 1366 && Boolean(submission?.user_agent),
     mainRoutesButtonVisible: true,
     adminFeedbackDetailVisible: await page.getByText('フィードバック詳細').isVisible(),
-    mobileButtonBottomRight: Boolean(box && box.x > 300 && box.y > 760 && box.width <= 52 && box.height <= 52),
+    mobileButtonExistsOnce: mobileButtonCount === 1,
+    mobileButtonHiddenToAvoidCtaOverlap: mobileButtonCount === 1 && mobileButtonHidden && !box && mobileButtonStyle?.display === 'none',
     noPageErrors: captured.pageErrors.length === 0,
     noRelevantConsoleErrors: captured.consoleErrors.filter((message) => (
       message.includes('submit-feedback')
