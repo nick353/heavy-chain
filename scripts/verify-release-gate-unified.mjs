@@ -28,7 +28,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'production monitor',
-    path: 'output/playwright/g699-production-monitor-post-g698-r1/summary.json',
+    path: 'output/playwright/g702-production-monitor-refresh-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.blockers).length === 0 &&
@@ -165,7 +165,7 @@ const requiredReadbacks = [
   },
   {
     name: 'G608 security audit',
-    path: 'output/playwright/g699-g608-security-audit-r1/audit-readiness.json',
+    path: 'output/playwright/g702-g608-security-audit-r1/audit-readiness.json',
     validate: (json) => {
       const requirements = arrayFrom(json.requirements);
       const requirementIds = requirements.map((requirement) => requirement?.id).filter(Boolean);
@@ -190,13 +190,13 @@ const requiredReadbacks = [
   },
   {
     name: 'G618 scale ops baseline',
-    path: 'output/playwright/g699-g618-scale-ops-r2/summary.json',
+    path: 'output/playwright/g702-g618-scale-ops-r1/summary.json',
     validate: validateG618ScaleOps,
     expect: 'ok=true, blockers=[], expected schema, commands/checks passed, imageCount>=1200, canvasObjectCount>=600, monitor/performance nested artifacts valid, and only allowed monitor warnings',
   },
   {
     name: 'G620 security operations',
-    path: 'output/playwright/g698-g620-security-ops-r1/summary.json',
+    path: 'output/playwright/g702-g620-security-ops-r1/summary.json',
     validate: validateG620SecurityOps,
     expect: 'ok=true, blockers=[], expected schema, monitor readback safe, abuse/permission/audit/incident checks passed, and only allowed monitor warnings',
   },
@@ -229,7 +229,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production H601 rights readback',
-    path: 'output/playwright/prod-h601-rights-check-20260701-r1/summary.json',
+    path: 'output/playwright/g702-prod-h601-rights-check-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       hasPassingAssertion(json, 'generate_route_loaded') &&

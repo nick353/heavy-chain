@@ -1,7 +1,8 @@
-import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 const root = process.cwd();
+const args = parseArgs(process.argv.slice(2));
 const failures = [];
 const checks = [];
 
@@ -235,9 +236,27 @@ const summary = {
 };
 
 console.log(JSON.stringify(summary, null, 2));
+if (args.out) {
+  const outPath = join(root, args.out);
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, `${JSON.stringify(summary, null, 2)}\n`);
+}
 if (!ok) process.exit(1);
 
 function assertJson(ok, label) {
   checks.push({ label, ok: Boolean(ok) });
   if (!ok) failures.push(label);
+}
+
+function parseArgs(rawArgs) {
+  const parsed = { out: null };
+  for (let index = 0; index < rawArgs.length; index += 1) {
+    const arg = rawArgs[index];
+    const next = rawArgs[index + 1];
+    if (arg === '--out' && next) {
+      parsed.out = next;
+      index += 1;
+    }
+  }
+  return parsed;
 }
