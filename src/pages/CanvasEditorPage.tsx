@@ -54,6 +54,7 @@ type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'gene
 type CanvasTemplateMode = 'size' | 'design';
 type CanvasRenderState = { totalImageObjects: number; loadedImageObjects: number; renderAllObjects: boolean };
 const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
+const MAX_MODEL_MATRIX_PATTERNS = 3;
 const DerivationTree = lazy(() =>
   import('../components/canvas/DerivationTree').then((module) => ({ default: module.DerivationTree }))
 );
@@ -125,8 +126,8 @@ export function CanvasEditorPage() {
   const [productDescription, setProductDescription] = useState('');
   const [headline, setHeadline] = useState('');
   const [subheadline, setSubheadline] = useState('');
-  const [selectedBodyTypes, setSelectedBodyTypes] = useState(['slim', 'regular', 'plus']);
-  const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s', '30s', '40s']);
+  const [selectedBodyTypes, setSelectedBodyTypes] = useState(['regular']);
+  const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s']);
   const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
   const [isGenerating, setIsGenerating] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
@@ -740,6 +741,11 @@ export function CanvasEditorPage() {
         case 'model-matrix':
           if (!productDescription.trim() && !referenceImage) {
             toast.error('商品説明または商品画像を入力してください');
+            setIsGenerating(false);
+            return;
+          }
+          if (selectedBodyTypes.length * selectedAgeGroups.length > MAX_MODEL_MATRIX_PATTERNS) {
+            toast.error(`一度に生成できる着用画像は${MAX_MODEL_MATRIX_PATTERNS}パターンまでです。体型または年代を減らしてください。`);
             setIsGenerating(false);
             return;
           }
@@ -2158,7 +2164,7 @@ export function CanvasEditorPage() {
             </Button>
             <Button
               onClick={handleGenerate}
-              disabled={isGenerating}
+              disabled={isGenerating || (generateMode === 'model-matrix' && selectedBodyTypes.length * selectedAgeGroups.length > MAX_MODEL_MATRIX_PATTERNS)}
               leftIcon={isGenerating ? undefined : <Sparkles className="w-4 h-4" />}
               className="shadow-glow"
             >

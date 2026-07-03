@@ -90,6 +90,8 @@ const aspectRatios = [
   { id: '9:16', name: 'ストーリー', width: 576, height: 1024, usage: 'IG/LINEストーリー・縦動画' }
 ];
 
+const MAX_MODEL_MATRIX_PATTERNS = 3;
+
 const backgroundOptions = [
   { id: 'white', name: '白背景', prompt: 'white background, studio lighting' },
   { id: 'transparent', name: '透明', prompt: 'transparent background' },
@@ -991,8 +993,8 @@ export function GeneratePage() {
   const [headline, setHeadline] = useState('');
   const [subheadline, setSubheadline] = useState('');
   const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
-  const [selectedBodyTypes, setSelectedBodyTypes] = useState(['slim', 'regular', 'plus']);
-  const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s', '30s', '40s']);
+  const [selectedBodyTypes, setSelectedBodyTypes] = useState(['regular']);
+  const [selectedAgeGroups, setSelectedAgeGroups] = useState(['20s']);
   const [selectedScenes, setSelectedScenes] = useState(['cafe', 'street', 'office']);
   const [selectedShots, setSelectedShots] = useState(['front', 'side', 'back', 'detail']);
   const [fixedElements, setFixedElements] = useState<string[]>(['logo']);
@@ -1210,9 +1212,12 @@ export function GeneratePage() {
       const sourceSkinTone = parseAllowedParam(searchParams.get('skinTone'), modelMatrixSkinTones);
       const sourceHairStyle = parseAllowedParam(searchParams.get('hairStyle'), modelMatrixHairStyles);
       const sourceModelCandidateLabel = parseAllowedParam(searchParams.get('modelCandidateLabel'), modelCandidateLabels);
+      const requestedPatternCount = Math.max(1, bodyTypes.length) * Math.max(1, ageGroups.length);
+      const safeBodyTypes = requestedPatternCount > 1 ? ['regular'] : bodyTypes;
+      const safeAgeGroups = requestedPatternCount > 1 ? ['20s'] : ageGroups;
 
-      if (bodyTypes.length) setSelectedBodyTypes(bodyTypes);
-      if (ageGroups.length) setSelectedAgeGroups(ageGroups);
+      if (safeBodyTypes.length) setSelectedBodyTypes(safeBodyTypes);
+      if (safeAgeGroups.length) setSelectedAgeGroups(safeAgeGroups);
       if (sourceSkinTone) setSkinTone(sourceSkinTone);
       if (sourceHairStyle) setHairStyle(sourceHairStyle);
       setModelCandidateLabel(sourceModelCandidateLabel ?? '');
@@ -1299,8 +1304,8 @@ export function GeneratePage() {
       setSelectedShots((current) => current.length ? current : ['front', 'side', 'back', 'detail']);
     }
     if (selectedFeature?.id === 'model-matrix') {
-      setSelectedBodyTypes((current) => current.length ? current : ['slim', 'regular', 'plus']);
-      setSelectedAgeGroups((current) => current.length ? current : ['20s', '30s', '40s']);
+      setSelectedBodyTypes((current) => current.length ? current : ['regular']);
+      setSelectedAgeGroups((current) => current.length ? current : ['20s']);
     }
     if (selectedFeature?.id === 'multilingual-banner') {
       setSelectedLanguages((current) => current.length ? current : ['ja', 'en', 'ko']);
@@ -1474,6 +1479,11 @@ export function GeneratePage() {
     // Validate required image
     if (featureConfig?.requiresImage && !referenceImage) {
       toast.error('画像をアップロードしてください');
+      return;
+    }
+
+    if (selectedFeature?.id === 'model-matrix' && selectedBodyTypes.length * selectedAgeGroups.length > MAX_MODEL_MATRIX_PATTERNS) {
+      toast.error(`一度に生成できる着用画像は${MAX_MODEL_MATRIX_PATTERNS}パターンまでです。体型または年代を減らしてください。`);
       return;
     }
 
@@ -3653,7 +3663,8 @@ export function GeneratePage() {
       case 'product-shots':
         return !productDescription.trim() && !referenceImage;
       case 'model-matrix':
-        return !productDescription.trim() && !referenceImage;
+        return (!productDescription.trim() && !referenceImage)
+          || selectedBodyTypes.length * selectedAgeGroups.length > MAX_MODEL_MATRIX_PATTERNS;
       default:
         if (selectedFeature.id === 'chat-edit') return false;
         if (!featureConfig?.requiresImage && !prompt.trim()) return true;

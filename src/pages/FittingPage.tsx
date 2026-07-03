@@ -135,8 +135,8 @@ const fittingWorkflows = [
     title: 'EC標準フィット',
     description: '白背景で正面・側面の購買判断に使う',
     productDescription: 'EC商品ページ向け。自然光、白背景、服のシルエットと素材感が分かる落ち着いたモデル着用画像。',
-    bodyTypes: ['slim', 'regular'],
-    ageGroups: ['20s', '30s'],
+    bodyTypes: ['regular'],
+    ageGroups: ['20s'],
     gender: 'female' as Gender,
     icon: Shirt,
     outputs: ['正面着用', '側面確認', '商品ページ'],
@@ -146,8 +146,8 @@ const fittingWorkflows = [
     title: 'サイズ比較',
     description: '体型差を並べて返品リスクを下げる',
     productDescription: '同じ衣服を体型別に比較。ECのサイズ感説明に使える、同一背景・同一ポーズのモデル着用画像。',
-    bodyTypes: ['slim', 'regular', 'plus'],
-    ageGroups: ['20s', '30s'],
+    bodyTypes: ['regular'],
+    ageGroups: ['20s'],
     gender: 'female' as Gender,
     icon: Ruler,
     outputs: ['体型差比較', 'サイズ説明', '一覧画像'],
@@ -158,7 +158,7 @@ const fittingWorkflows = [
     description: 'SNS・LOOK向けに雰囲気まで確認する',
     productDescription: 'ブランドLOOK向け。自然なポーズ、上品な背景、衣服の雰囲気とコーディネートが伝わるモデル着用画像。',
     bodyTypes: ['regular'],
-    ageGroups: ['20s', '30s', '40s'],
+    ageGroups: ['20s'],
     gender: 'female' as Gender,
     icon: Camera,
     outputs: ['LOOK素材', 'SNS候補', '雰囲気確認'],
@@ -168,8 +168,8 @@ const fittingWorkflows = [
     title: '顧客層確認',
     description: '年代ごとの見え方をまとめて確認する',
     productDescription: 'ターゲット顧客層の違いを確認。年代別に同じ衣服の印象差が分かる、ECと販促の両方に使える着用画像。',
-    bodyTypes: ['regular', 'plus'],
-    ageGroups: ['20s', '30s', '40s'],
+    bodyTypes: ['regular'],
+    ageGroups: ['20s'],
     gender: 'female' as Gender,
     icon: Users,
     outputs: ['年代比較', '販促判断', '顧客層確認'],
@@ -201,6 +201,8 @@ const isLocalCanvasMaskEngine = (maskEngine?: string | null) => (
   !maskEngine || maskEngine.startsWith('browser-canvas-')
 );
 
+const MAX_MODEL_MATRIX_PATTERNS = 3;
+
 const buildGenerationBlockers = ({
   currentBrandLoaded,
   rightsConfirmed,
@@ -211,6 +213,7 @@ const buildGenerationBlockers = ({
   productDescription,
   selectedBodyTypesCount,
   selectedAgeGroupsCount,
+  patternCount,
 }: {
   currentBrandLoaded: boolean;
   rightsConfirmed: boolean;
@@ -221,6 +224,7 @@ const buildGenerationBlockers = ({
   productDescription: string;
   selectedBodyTypesCount: number;
   selectedAgeGroupsCount: number;
+  patternCount: number;
 }) => {
   if (isGenerating) return ['生成中です'];
   const blockers: string[] = [];
@@ -238,6 +242,7 @@ const buildGenerationBlockers = ({
   if (!productDescription.trim()) blockers.push('生成brief');
   if (!selectedBodyTypesCount) blockers.push('体型');
   if (!selectedAgeGroupsCount) blockers.push('年代');
+  if (patternCount > MAX_MODEL_MATRIX_PATTERNS) blockers.push(`一度に${MAX_MODEL_MATRIX_PATTERNS}パターンまで`);
   return blockers;
 };
 
@@ -318,8 +323,8 @@ export function FittingPage() {
   );
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
   const [modelReference, setModelReference] = useState<ModelReferenceState>({ imageUrl: '', fileName: '' });
-  const [selectedBodyTypes, setSelectedBodyTypes] = useState<string[]>(['slim', 'regular']);
-  const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>(['20s', '30s']);
+  const [selectedBodyTypes, setSelectedBodyTypes] = useState<string[]>(['regular']);
+  const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>(['20s']);
   const [gender, setGender] = useState<Gender>('female');
   const [activeWorkflowId, setActiveWorkflowId] = useState(fittingWorkflows[0].id);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -333,6 +338,7 @@ export function FittingPage() {
   const extractedGarmentImageUrl = materialReference.extractedImageUrl || undefined;
   const garmentFileName = materialReference.fileName;
   const modelReferenceImageUrl = modelReference.imageUrl || undefined;
+  const patternCount = selectedBodyTypes.length * selectedAgeGroups.length;
 
   const canGenerate = useMemo(() => {
     return Boolean(
@@ -346,7 +352,8 @@ export function FittingPage() {
 	      && !isLocalCanvasMaskEngine(materialReference.maskEngine)
 	      && productDescription.trim()
       && selectedBodyTypes.length
-      && selectedAgeGroups.length,
+      && selectedAgeGroups.length
+      && patternCount <= MAX_MODEL_MATRIX_PATTERNS,
     );
   }, [
     currentBrand,
@@ -360,6 +367,7 @@ export function FittingPage() {
     rightsConfirmed,
     selectedAgeGroups.length,
     selectedBodyTypes.length,
+    patternCount,
   ]);
   const activeWorkflow = fittingWorkflows.find((workflow) => workflow.id === activeWorkflowId) ?? fittingWorkflows[0];
   const selectedBodyTypeLabels = bodyTypeOptions
@@ -369,7 +377,6 @@ export function FittingPage() {
     .filter((option) => selectedAgeGroups.includes(option.id))
     .map((option) => option.label);
   const genderLabel = genderOptions.find((option) => option.id === gender)?.label ?? '女性';
-  const patternCount = selectedBodyTypes.length * selectedAgeGroups.length;
   const generationBlockers = useMemo(() => buildGenerationBlockers({
     currentBrandLoaded: Boolean(currentBrand),
     rightsConfirmed,
@@ -380,6 +387,7 @@ export function FittingPage() {
     productDescription,
     selectedBodyTypesCount: selectedBodyTypes.length,
     selectedAgeGroupsCount: selectedAgeGroups.length,
+    patternCount,
   }), [
     currentBrand,
     extractedGarmentImageUrl,
@@ -390,6 +398,7 @@ export function FittingPage() {
     rightsConfirmed,
     selectedAgeGroups.length,
     selectedBodyTypes.length,
+    patternCount,
   ]);
   const fittingPreviewImageUrl = useMemo(() => buildFittingPreviewSvg({
     workflowTitle: activeWorkflow.title,
@@ -468,6 +477,11 @@ export function FittingPage() {
 	      setErrorMessage('高精度AI切り抜きが完了するまで生成できません。');
 	      return;
 	    }
+      const requestPatternCount = request.bodyTypes.length * request.ageGroups.length;
+      if (requestPatternCount > MAX_MODEL_MATRIX_PATTERNS) {
+        setErrorMessage(`一度に生成できる着用画像は${MAX_MODEL_MATRIX_PATTERNS}パターンまでです。体型または年代を減らしてください。`);
+        return;
+      }
 
 	    setIsGenerating(true);
     setErrorMessage('');

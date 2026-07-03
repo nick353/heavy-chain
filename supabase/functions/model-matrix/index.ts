@@ -420,8 +420,8 @@ serve(async (req) => {
       imageUrl,
       modelReferenceImageUrl,
       brandId, 
-      bodyTypes = ['slim', 'regular', 'plus'],
-      ageGroups = ['20s', '30s', '40s'],
+      bodyTypes = ['regular'],
+      ageGroups = ['20s'],
       gender = 'female',
       skinTone,
       hairStyle,
@@ -429,13 +429,16 @@ serve(async (req) => {
       modelCandidateLabel,
       lightchainCompat,
     } = body;
-    bodyTypes = pickAllowedList(bodyTypes, BODY_TYPES.map((bodyType) => bodyType.id), ['slim', 'regular', 'plus']);
-    ageGroups = pickAllowedList(ageGroups, AGE_GROUPS.map((ageGroup) => ageGroup.id), ['20s', '30s', '40s']);
+    bodyTypes = pickAllowedList(bodyTypes, BODY_TYPES.map((bodyType) => bodyType.id), ['regular']);
+    ageGroups = pickAllowedList(ageGroups, AGE_GROUPS.map((ageGroup) => ageGroup.id), ['20s']);
     gender = typeof gender === 'string' && gender.trim() ? gender.trim() : 'female';
     skinTone = pickAllowedString(skinTone, SKIN_TONES);
     hairStyle = pickAllowedString(hairStyle, HAIR_STYLES);
     modelCandidateLabel = pickAllowedString(modelCandidateLabel, MODEL_CANDIDATE_LABELS);
     const requestedGenerationUnits = Math.max(1, bodyTypes.length * ageGroups.length);
+    if (requestedGenerationUnits > 3) {
+      throw new Error('一度に生成できる着用画像は3パターンまでです。体型または年代を減らしてください。');
+    }
     const requestSourceMetadata = buildSourceMetadata({
       sourceReadback,
       productDescription: typeof productDescription === 'string' ? productDescription : '',
