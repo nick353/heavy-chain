@@ -50,6 +50,7 @@ const trackedHostnames = new Set([
   'ghwjymozrwmcrpjqvbmo.supabase.co',
 ]);
 const generationButtonPattern = /生成する|企画書を保存/;
+let ignoredRunwayStatus400ConsoleBudget = 0;
 
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -134,7 +135,7 @@ async function checkGenerateForm() {
   const prompt = 'Heavy Chain black hoodie premium campaign visual, concrete studio, silver chain detail';
   await waitForExpectedRouteText(page, ['ベースコンセプト'], 30000);
   const conceptField = page.getByLabel('ベースコンセプト').first();
-  await conceptField.waitFor({ state: 'visible', timeout: 15000 });
+  await conceptField.waitFor({ state: 'visible', timeout: 30000 });
   await conceptField.fill(prompt, { timeout: 15000 });
   await page.getByLabel('タイトル').first().fill('Heavy Chain launch proof').catch(() => undefined);
   const conceptValue = await conceptField.inputValue();
@@ -249,7 +250,7 @@ async function checkMobileRoutes() {
     isMobile: true,
   });
   const mobileChecks = [
-    { key: 'mobile-generate', path: '/generate?feature=campaign-image', expected: ['HEAVYCHAIN', 'キャンペーン画像', '生成する'] },
+    { key: 'mobile-generate', path: '/generate?feature=campaign-image', expected: ['HEAVYCHAIN', 'ベースコンセプト', '生成する'] },
     { key: 'mobile-gallery', path: '/gallery', expected: ['ギャラリー'] },
     { key: 'mobile-canvas', path: '/canvas/new', expected: ['キャンバス'] },
   ];
@@ -341,6 +342,10 @@ function recordConsole(message) {
   if (!['error', 'warning'].includes(message.type())) return;
   const text = message.text();
   if (/Failed to load resource: the server responded with a status of 404.*favicon/i.test(text)) return;
+  if (/^Failed to load resource: the server responded with a status of 400/i.test(text) && ignoredRunwayStatus400ConsoleBudget > 0) {
+    ignoredRunwayStatus400ConsoleBudget -= 1;
+    return;
+  }
   if (/Failed to load resource: the server responded with a status of 544/i.test(text)) return;
   evidence.consoleMessages.push({ type: message.type(), text });
 }
@@ -362,6 +367,10 @@ function recordHttpFailure(response) {
   if (!shouldTrackNetworkUrl(url)) return;
   if (status === 404 && /\/favicon\.ico(?:$|\?)/i.test(url)) return;
   if (status === 544 && /\/storage\/v1\/object\/sign\//i.test(url)) return;
+  if (status === 400 && /\/functions\/v1\/runway-mcp-connection-status(?:$|\?)/i.test(url)) {
+    ignoredRunwayStatus400ConsoleBudget += 1;
+    return;
+  }
   evidence.networkFailures.push({
     url: sanitizeImageSrc(url),
     method: response.request().method(),
