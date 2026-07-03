@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MoreVertical, Trash2, Edit3, Search, X } from 'lucide-react';
-import { useAuthStore } from '../stores/authStore';
+import { fetchAccessibleBrandsForCurrentUser, useAuthStore } from '../stores/authStore';
 import {
   IconSparkles,
   IconArrowRight,
@@ -84,44 +84,43 @@ export function DashboardPage() {
   });
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
 
-  const checkBrands = useCallback(async () => {
+  const checkBrands = useCallback(async (): Promise<Brand | null> => {
     if (!user) {
       setIsLoading(false);
-      return;
+      return null;
     }
 
     try {
       setIsLoading(true);
-      const { data: brands, error } = await supabase
-        .from('brands')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (error) {
-        logDashboardFetchError('Failed to check brands:', error);
-        toast.error('ブランド情報の取得に失敗しました');
-        setIsLoading(false);
-        return;
-      }
+      const brands = await fetchAccessibleBrandsForCurrentUser(user.id);
 
       if (!brands || brands.length === 0) {
+        setCurrentBrand(null);
         setShowBrandModal(true);
         setIsLoading(false);
+        return null;
       } else {
-        setCurrentBrand(brands[0]);
+        const currentBrandIsAccessible = currentBrand && brands.some((brand) => brand.id === currentBrand.id);
+        const nextBrand = currentBrandIsAccessible ? currentBrand : brands[0];
+        if (nextBrand.id !== currentBrand?.id) {
+          setCurrentBrand(nextBrand);
+        }
+        setShowBrandModal(false);
         setIsLoading(false);
         // ブランド設定後にuseEffectが再実行されて画像を取得する
+        return nextBrand;
       }
     } catch (error) {
       logDashboardFetchError('Failed to check brands:', error);
       toast.error('ブランド情報の取得に失敗しました');
       setIsLoading(false);
+      return null;
     }
-  }, [setCurrentBrand, user]);
+  }, [currentBrand, setCurrentBrand, user]);
 
-  const fetchRecentImages = useCallback(async () => {
-    if (!currentBrand) {
+  const fetchRecentImages = useCallback(async (brandOverride?: Brand | null) => {
+    const targetBrand = brandOverride ?? currentBrand;
+    if (!targetBrand) {
       setIsLoading(false);
       return;
     }
@@ -131,7 +130,7 @@ export function DashboardPage() {
       const { data, error } = await supabase
         .from('generated_images')
         .select('*')
-        .eq('brand_id', currentBrand.id)
+        .eq('brand_id', targetBrand.id)
         .order('created_at', { ascending: false })
         .limit(6);
 
@@ -154,8 +153,9 @@ export function DashboardPage() {
     }
   }, [currentBrand]);
 
-  const fetchActivity = useCallback(async () => {
-    if (!currentBrand) {
+  const fetchActivity = useCallback(async (brandOverride?: Brand | null) => {
+    const targetBrand = brandOverride ?? currentBrand;
+    if (!targetBrand) {
       setWorkspaceActivity(emptyWorkspaceActivity);
       setActivityError(null);
       return;
@@ -164,7 +164,7 @@ export function DashboardPage() {
     setIsActivityLoading(true);
     setActivityError(null);
     try {
-      setWorkspaceActivity(await fetchWorkspaceActivity(currentBrand.id));
+      setWorkspaceActivity(await fetchWorkspaceActivity(targetBrand.id));
     } catch (error) {
       logDashboardFetchError('Failed to load workspace activity:', error);
       setActivityError('workspace activity');
@@ -183,11 +183,8 @@ export function DashboardPage() {
         return;
       }
 
-      if (!currentBrand) {
-        await checkBrands();
-      } else {
-        await Promise.all([fetchRecentImages(), fetchActivity()]);
-      }
+      const resolvedBrand = await checkBrands();
+      if (resolvedBrand) await Promise.all([fetchRecentImages(resolvedBrand), fetchActivity(resolvedBrand)]);
     };
 
     loadData();

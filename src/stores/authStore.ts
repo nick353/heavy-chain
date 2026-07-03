@@ -21,14 +21,46 @@ interface AuthState {
   setCurrentBrand: (brand: Brand | null) => void;
 }
 
-const fetchFirstAccessibleBrand = async (): Promise<Brand | null> => {
-  const { data: brands, error } = await supabase
+export const fetchAccessibleBrandsForCurrentUser = async (userId: string): Promise<Brand[]> => {
+  const { data: ownedBrands, error: ownedError } = await supabase
     .from('brands')
     .select('*')
-    .order('created_at', { ascending: false })
-    .limit(1);
+    .eq('owner_id', userId)
+    .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  if (ownedError) throw ownedError;
+
+  const { data: memberships, error: membershipError } = await supabase
+    .from('brand_members')
+    .select('brand_id')
+    .eq('user_id', userId)
+    .not('joined_at', 'is', null);
+
+  if (membershipError) throw membershipError;
+
+  const memberBrandIds = Array.from(new Set((memberships || []).map((item) => item.brand_id).filter(Boolean)));
+  let memberBrands: Brand[] = [];
+  if (memberBrandIds.length > 0) {
+    const { data, error } = await supabase
+      .from('brands')
+      .select('*')
+      .in('id', memberBrandIds)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    memberBrands = data || [];
+  }
+
+  const byId = new Map<string, Brand>();
+  for (const brand of [...(ownedBrands || []), ...memberBrands]) {
+    byId.set(brand.id, brand);
+  }
+  return Array.from(byId.values()).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+};
+
+const fetchFirstAccessibleBrand = async (userId: string): Promise<Brand | null> => {
+  const brands = await fetchAccessibleBrandsForCurrentUser(userId);
+
   return brands?.[0] || null;
 };
 
@@ -94,7 +126,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           let retries = 3;
           while (retries > 0 && !currentBrand) {
             try {
-              currentBrand = await fetchFirstAccessibleBrand();
+              currentBrand = await fetchFirstAccessibleBrand(session.user.id);
               break;
             } catch (brandsError) {
               logAuthError(`Failed to fetch brands (retry: ${4 - retries}):`, brandsError);
@@ -126,7 +158,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           try {
             const profile = await ensureUserProfile(session.user);
             
-            const currentBrand = await fetchFirstAccessibleBrand();
+            const currentBrand = await fetchFirstAccessibleBrand(session.user.id);
             
             set({
               user: session.user,

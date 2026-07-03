@@ -582,6 +582,10 @@ const isRembgModelLoadError = (error: unknown) => {
 let aiGarmentCutoutSession: Awaited<ReturnType<typeof newSession>> | null = null;
 
 const rembgModelBaseUrl = String(import.meta.env.VITE_REMBG_MODEL_BASE_URL || '/models').replace(/\/$/, '');
+const rembgIsnetGeneralUseModelUrl = String(
+  import.meta.env.VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL
+  || 'https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx',
+).trim();
 
 export async function buildHighPrecisionMaterialCutoutDataUrl({
   imageUrl,
@@ -591,6 +595,9 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   maxDataUrlBytes?: number;
 }): Promise<MaterialCutoutResult> {
   rembgConfig.setBaseUrl(rembgModelBaseUrl);
+  if (rembgIsnetGeneralUseModelUrl) {
+    rembgConfig.setCustomModelPath('isnet-general-use', rembgIsnetGeneralUseModelUrl);
+  }
   const image = await loadImageElement(imageUrl);
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;

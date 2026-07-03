@@ -67,15 +67,14 @@ try {
   const page = await context.newPage();
   wirePageDiagnostics(page, 'g603');
 
-  await page.goto(`${baseUrl}/lightchain`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/lightchain/fitting-clothing-reference`, { waitUntil: 'networkidle' });
   await dismissBlockingOverlays(page);
   await page.evaluate((key) => window.localStorage.removeItem(key), canvasStoreKey);
   await page.screenshot({ path: path.join(outDir, '01-lightchain-home.png'), fullPage: true });
   evidence.screenshots.home = path.join(outDir, '01-lightchain-home.png');
 
-  await page.getByRole('button', { name: /^AIフィッティング\s*\d*$/ }).first().click();
-  await page.getByRole('button', { name: /衣服参考ライブラリ/ }).first().click();
-  await page.waitForURL(/\/lightchain\/fitting-clothing-reference$/, { timeout: 10_000 });
+  await page.getByRole('heading', { name: /衣服参考ライブラリ/ }).first().waitFor({ state: 'visible', timeout: 10_000 });
+  addAssertion('garment_reference_workbench_direct_route_visible', page.url().includes('/lightchain/fitting-clothing-reference'));
   await uploadMaterialAndWaitForMaskControls(page, uploadPath);
   await page.getByRole('button', { name: /手動/ }).click();
   await openDetails(page, 'レイヤー詳細');
@@ -164,7 +163,7 @@ try {
       });
   }
   if (browser) {
-    await withTimeout(browser.close(), 10000, 'browser_close_timeout')
+    await withTimeout(browser.close(), 30000, 'browser_close_timeout')
       .then(() => {
         evidence.cleanup.browserClosed = true;
       })

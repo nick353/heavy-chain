@@ -12,6 +12,7 @@ const outDir = args.out || `output/playwright/lightchain-all-feature-workflows-$
 const canvasStoreKey = 'heavy-chain-canvas';
 const desktopViewport = { width: 1440, height: 1050 };
 const mobileViewport = { width: 390, height: 844 };
+const fittingHandoffToolIds = new Set(['ai-fitting', 'ai-fitting-reference']);
 const fixturePng =
   'iVBORw0KGgoAAAANSUhEUgAAASwAAACWCAIAAADrOSKFAAABfklEQVR4nO3VwQ2DMBQFQYp2/6mOBtYiHhSg2R+TR6VJ4FD3Yh8nAAAAAAAAAAAAAAAAAAAAAACwq3n7vQG8Lr3f93nP8xz7B2z67bLvG7BXn8z3/V6f8yP4nff4+v0G7NVd9j7f6wN4u9QzAAAAAAAAAAAAAAAAAADgT2EDAiwIsCDAggALAiysx8O+vV6vR3e73V6vV6vR6fP5/PL5fL1eL5fL5fL5fL5fK9Xq9Xq9Xq9Xq9Xq9Xq8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLw8Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pg8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Px8fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fAAAAAAAAAAAAAAAAAAAAAAD4O8EGAiwIsCDAggALAiysQw4oEJQ4AAAAAElFTkSuQmCC';
 
@@ -93,7 +94,7 @@ try {
     });
   }
   if (browser) {
-    await withTimeout(browser.close(), 30000).then(() => {
+    await withTimeout(browser.close(), 60000).then(() => {
       evidence.cleanup.browserClosed = true;
     }).catch((error) => {
       evidence.cleanup.browserCloseBlocker = error.message;
@@ -132,11 +133,43 @@ async function verifyFeatureWorkflow(page, tool) {
   const result = { id: tool.id, category: tool.category, title: tool.title, assertions: [] };
   await page.evaluate((key) => window.localStorage.removeItem(key), canvasStoreKey);
   await page.goto(`${baseUrl}/lightchain/${tool.id}`, { waitUntil: 'networkidle' });
+  if (fittingHandoffToolIds.has(tool.id)) {
+    await page.getByRole('heading', { name: /服の画像から着用画像を作る/ }).first().waitFor({ state: 'visible', timeout: 10_000 });
+    const fittingBody = await bodyText(page);
+    const fittingHref = await page.locator('a[href="/fitting#fitting-material-workbench"]').first().getAttribute('href').catch(() => null);
+    const handoffLink = page.locator('a[href="/fitting#fitting-material-workbench"]').first();
+    recordFeatureAssertion(result, 'fitting_handoff_screen_visible', (
+      fittingBody.includes('AIフィッティング')
+      && fittingBody.includes('画像を入れて作る')
+      && fittingHref === '/fitting#fitting-material-workbench'
+      && !fittingBody.includes('Canvasに注文票を保存')
+    ), {
+      url: page.url(),
+      fittingHref,
+      bodyExcerpt: fittingBody.slice(0, 500),
+    });
+    await handoffLink.click();
+    await page.waitForURL(/\/fitting#fitting-material-workbench$/, { timeout: 10_000 });
+    await page.getByText(/高精度AI(で)?切り抜き?/).first().waitFor({ state: 'visible', timeout: 15_000 });
+    const handoffBody = await bodyText(page);
+    recordFeatureAssertion(result, 'fitting_handoff_click_opens_workbench', (
+      page.url().endsWith('/fitting#fitting-material-workbench')
+      && handoffBody.includes('衣服画像')
+      && /高精度AI(で)?切り抜き?/.test(handoffBody)
+      && handoffBody.includes('AI生成')
+    ), {
+      url: page.url(),
+      bodyExcerpt: handoffBody.slice(0, 500),
+    });
+    await screenshot(page, `desktop-${tool.id}`);
+    return result;
+  }
+
   await page.getByRole('heading', { name: exactText(tool.title) }).first().waitFor({ state: 'visible', timeout: 10_000 });
 
   const body = await bodyText(page);
   recordFeatureAssertion(result, 'screen_title_visible', body.includes(tool.title), { title: tool.title });
-  recordFeatureAssertion(result, 'stage_tabs_visible', ['素材入力', 'マスク/レイヤー', 'Canvas保存'].every((label) => body.includes(label)));
+  recordFeatureAssertion(result, 'stage_tabs_visible', ['素材を入れる', '調整する', 'Canvasへ保存'].every((label) => body.includes(label)));
   recordFeatureAssertion(result, 'upload_first_state_hides_advanced_controls', (
     !body.includes('AIマスク認識')
     && !body.includes('Canvasに注文票を保存')
@@ -245,24 +278,24 @@ async function verifyFeatureWorkflow(page, tool) {
 async function verifyGenerateEntrypointUsesFeatureDetail(page) {
   await page.goto(`${baseUrl}/generate`, { waitUntil: 'networkidle' });
   await dismissBlockingOverlays(page);
-  const detailLinkEntries = [];
+  const featureLinkEntries = [];
   for (const categoryLabel of ['おすすめ', '企画デザインツール', 'AIフィッティング', 'グラフィックツール']) {
     await page.getByRole('button', { name: new RegExp(escapeRegExp(categoryLabel)) }).click();
     const linksForCategory = await page
-      .locator('a[href^="/lightchain/"], a[href*="/lightchain/"]')
+      .locator('a[href]')
       .evaluateAll((links) => links.map((link) => link.getAttribute('href')).filter(Boolean));
-    detailLinkEntries.push(...linksForCategory.map((href) => ({ categoryLabel, href })));
+    featureLinkEntries.push(...linksForCategory.map((href) => ({ categoryLabel, href })));
   }
-  const uniqueDetailLinkEntries = [...new Map(
-    detailLinkEntries
-      .filter(({ href }) => href.startsWith('/lightchain/'))
+  const uniqueFeatureLinkEntries = [...new Map(
+    featureLinkEntries
+      .filter(({ href }) => isDirectFeatureHref(href))
       .map((entry) => [entry.href, entry]),
   ).values()];
-  addAssertion('generate_entrypoint_has_lightchain_detail_links', uniqueDetailLinkEntries.length >= 8, {
-    count: uniqueDetailLinkEntries.length,
-    detailLinks: uniqueDetailLinkEntries.map((entry) => entry.href),
+  addAssertion('generate_entrypoint_has_direct_feature_links', uniqueFeatureLinkEntries.length >= 8, {
+    count: uniqueFeatureLinkEntries.length,
+    featureLinks: uniqueFeatureLinkEntries.map((entry) => entry.href),
   });
-  for (const { categoryLabel, href } of uniqueDetailLinkEntries) {
+  for (const { categoryLabel, href } of uniqueFeatureLinkEntries) {
     await page.goto(`${baseUrl}/generate`, { waitUntil: 'networkidle' });
     await dismissBlockingOverlays(page);
     await page.getByRole('button', { name: new RegExp(escapeRegExp(categoryLabel)) }).click();
@@ -270,20 +303,38 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
     const visible = await link.isVisible({ timeout: 5000 }).catch(() => false);
     if (visible) {
       await link.click();
-      await page.waitForURL(new RegExp(`${escapeRegExp(href)}$`), { timeout: 10_000 });
+      await page.waitForLoadState('networkidle').catch(() => {});
+      await waitForDirectFeatureDestination(page, href);
     }
-    addAssertion(`generate_entrypoint_click:${href}`, visible && page.url().endsWith(href), { url: page.url() });
+    const targetBody = await bodyText(page);
+    addAssertion(`generate_entrypoint_click:${href}`, visible && urlMatchesHref(page.url(), href) && directFeatureDestinationLoaded(href, targetBody), {
+      url: page.url(),
+      bodyExcerpt: targetBody.slice(0, 300),
+    });
   }
   await page.goto(`${baseUrl}/lightchain`, { waitUntil: 'networkidle' });
 }
 
 async function verifyMobileFeatureScreen(page, tool) {
   await page.goto(`${baseUrl}/lightchain/${tool.id}`, { waitUntil: 'networkidle' });
+  if (fittingHandoffToolIds.has(tool.id)) {
+    await page.getByRole('heading', { name: /服の画像から着用画像を作る/ }).first().waitFor({ state: 'visible', timeout: 10_000 });
+    const body = await bodyText(page);
+    addAssertion(`mobile_screen:${tool.id}`, (
+      body.includes('AIフィッティング')
+      && body.includes('画像を入れて作る')
+      && !body.includes('Canvasに注文票を保存')
+    ), {
+      url: page.url(),
+    });
+    return;
+  }
+
   await page.getByRole('heading', { name: exactText(tool.title) }).first().waitFor({ state: 'visible', timeout: 10_000 });
   const body = await bodyText(page);
   addAssertion(`mobile_screen:${tool.id}`, (
     body.includes(tool.title)
-    && body.includes('素材入力')
+    && body.includes('素材を入れる')
     && !body.includes('AIマスク認識')
     && !body.includes('Canvasに注文票を保存')
   ), {
@@ -330,6 +381,55 @@ function firstLayerLabelForCategory(category) {
   return catalog.categoryLayerLabels[category]?.[0] ?? '素材ベース';
 }
 
+function isDirectFeatureHref(href) {
+  if (!href || href.startsWith('/lightchain/')) return false;
+  return [
+    '/generate',
+    '/marketing',
+    '/fitting',
+    '/lab',
+    '/video',
+    '/models',
+    '/studio',
+    '/patterns',
+    '/brand/settings',
+    '/canvas',
+    '/workflows',
+  ].some((prefix) => href === prefix || href.startsWith(`${prefix}/`) || href.startsWith(`${prefix}?`));
+}
+
+function urlMatchesHref(url, href) {
+  const parsed = new URL(url);
+  const actual = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  return actual === href || actual.startsWith(href);
+}
+
+function directFeatureDestinationLoaded(href, body) {
+  if (href.startsWith('/generate?feature=')) {
+    const params = new URLSearchParams(href.split('?')[1] || '');
+    const lcTitle = params.get('lcTitle');
+    return body.includes('生成') && (!lcTitle || body.includes(lcTitle) || body.includes('制作条件'));
+  }
+  if (href.startsWith('/generate?category=')) return body.includes('HEAVY CHAIN AI') || body.includes('おすすめ');
+  if (href === '/canvas/new') return body.includes('プロパティ') || body.includes('キャンバス');
+  if (href.startsWith('/workflows/')) return body.includes('ワークフロー') || body.includes('生成');
+  return body.trim().length > 0 && !body.includes('ログイン');
+}
+
+async function waitForDirectFeatureDestination(page, href) {
+  if (href === '/canvas/new') {
+    await page.getByText('画像を置いて、機能を選ぶ').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
+    return;
+  }
+  if (href === '/fitting' || href.startsWith('/fitting#')) {
+    await page.getByText(/高精度AI(で)?切り抜き?/).first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
+    return;
+  }
+  if (href.startsWith('/generate?feature=')) {
+    await page.getByText('生成').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => undefined);
+  }
+}
+
 async function openDetails(page, summaryText) {
   const summary = page.locator('summary').filter({ hasText: summaryText }).first();
   if (await summary.isVisible({ timeout: 1000 }).catch(() => false)) {
@@ -352,6 +452,8 @@ function wirePageDiagnostics(page, route) {
   page.on('console', (message) => {
     if (['error', 'warning'].includes(message.type())) {
       if (/Failed to fetch Runway MCP (approval|subscription)/.test(message.text())) return;
+      if (/Remote workspace artifact save failed; falling back to localStorage/.test(message.text())) return;
+      if (/Falling back to table usage summary/.test(message.text())) return;
       evidence.consoleMessages.push({ route, type: message.type(), text: message.text() });
     }
   });

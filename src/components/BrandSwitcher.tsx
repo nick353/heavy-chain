@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronDown, Plus, Check, Building2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { useAuthStore } from '../stores/authStore';
+import { fetchAccessibleBrandsForCurrentUser, useAuthStore } from '../stores/authStore';
 import type { Brand } from '../types/database';
 
 export function BrandSwitcher() {
@@ -13,17 +12,19 @@ export function BrandSwitcher() {
 
   const fetchBrands = useCallback(async () => {
     try {
-      const { data: brandsData, error } = await supabase
-        .from('brands')
-        .select('*')
-        .order('created_at', { ascending: false });
+      if (!user) {
+        setBrands([]);
+        return;
+      }
 
-      if (error) throw error;
-
+      const brandsData = await fetchAccessibleBrandsForCurrentUser(user.id);
       setBrands(brandsData || []);
 
       // Set first brand as current if none selected
-      if (!currentBrand && brandsData && brandsData.length > 0) {
+      const currentBrandIsAccessible = currentBrand && brandsData.some((brand) => brand.id === currentBrand.id);
+      if (currentBrand && !currentBrandIsAccessible && brandsData.length === 0) {
+        setCurrentBrand(null);
+      } else if ((!currentBrand || !currentBrandIsAccessible) && brandsData && brandsData.length > 0) {
         setCurrentBrand(brandsData[0]);
       }
     } catch (error) {
@@ -31,7 +32,7 @@ export function BrandSwitcher() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentBrand, setCurrentBrand]);
+  }, [currentBrand, setCurrentBrand, user]);
 
   useEffect(() => {
     if (user) {
@@ -153,7 +154,4 @@ export function BrandSwitcher() {
     </div>
   );
 }
-
-
-
 

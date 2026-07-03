@@ -477,7 +477,7 @@ serve(async (req) => {
       body.compositionPreview,
     ]);
 
-    await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
+    await requireBrandRole(supabaseService, brandId, user.id, 'editor');
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {

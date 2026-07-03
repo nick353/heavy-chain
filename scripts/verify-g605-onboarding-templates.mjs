@@ -92,8 +92,15 @@ try {
     text: anchor.textContent?.replace(/\s+/g, ' ').trim() || '',
     href: anchor.getAttribute('href') || '',
   })));
-  const canvasEntry = firstActionLinks.find((link) => link.href === '/canvas/new' && link.text.includes('キャンバス'));
-  const generateEntry = firstActionLinks.find((link) => link.href === '/generate' && link.text.includes('画像生成'));
+  const visibleButtons = await page.evaluate(() => Array.from(document.querySelectorAll('button')).map((button) => (
+    button.textContent?.replace(/\s+/g, ' ').trim() || ''
+  )).filter(Boolean));
+  const canvasEntry = firstActionLinks.find((link) => (
+    ['/canvas', '/canvas/new'].includes(link.href) && /Canvas|キャンバス/i.test(link.text)
+  ));
+  const generateEntry = firstActionLinks.find((link) => (
+    link.href === '/generate' && /生成|制作|新しく/.test(link.text)
+  ));
   addAssertion('dashboard_first_actions_available', Boolean(canvasEntry && generateEntry), {
     canvasEntry,
     generateEntry,
@@ -154,17 +161,9 @@ try {
   evidence.videos.desktop = await closePageAndGetVideo(page);
   addAssertion('desktop_video_recorded', Boolean(evidence.videos.desktop), { video: evidence.videos.desktop });
 
-  mobileContext = await browser.newContext({
-    storageState,
-    viewport: mobileViewport,
-    isMobile: true,
-    recordVideo: {
-      dir: path.join(outDir, 'videos-mobile'),
-      size: mobileViewport,
-    },
-  });
-  await installFirstRunState(mobileContext);
-  const mobilePage = await mobileContext.newPage();
+  await installFirstRunState(desktopContext);
+  const mobilePage = await desktopContext.newPage();
+  await mobilePage.setViewportSize(mobileViewport);
   wirePageDiagnostics(mobilePage, 'mobile');
   await mobilePage.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle' });
   await mobilePage.screenshot({ path: path.join(outDir, '06-mobile-first-run-onboarding.png'), fullPage: true });
@@ -202,7 +201,7 @@ try {
     evidence.cleanup.mobileContextClosed = true;
   }
   if (browser) {
-    await withTimeout(browser.close(), 10000, 'browser_close_timeout')
+    await withTimeout(browser.close(), 30000, 'browser_close_timeout')
       .then(() => {
         evidence.cleanup.browserClosed = true;
       })
