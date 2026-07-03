@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
@@ -60,6 +60,35 @@ type LastRequest = {
   maskPlan?: Record<string, Json | undefined>;
   compositionPreview?: Record<string, Json | undefined>;
 };
+
+const normalizeFittingReferenceImage = async (imageUrl?: string): Promise<string | undefined> => {
+  if (!imageUrl || !imageUrl.startsWith('data:image/')) return imageUrl;
+
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const maxSize = 1536;
+      const ratio = Math.min(1, maxSize / Math.max(image.naturalWidth || 1, image.naturalHeight || 1));
+      const width = Math.max(1, Math.round((image.naturalWidth || 1) * ratio));
+      const height = Math.max(1, Math.round((image.naturalHeight || 1) * ratio));
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        resolve(imageUrl);
+        return;
+      }
+      context.fillStyle = '#f3f4f6';
+      context.fillRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.92));
+    };
+    image.onerror = () => resolve(imageUrl);
+    image.src = imageUrl;
+  });
+};
+
 type HistoryItem = {
   id: string;
   title: string;
@@ -293,6 +322,7 @@ export function FittingPage() {
   const [gender, setGender] = useState<Gender>('female');
   const [activeWorkflowId, setActiveWorkflowId] = useState(fittingWorkflows[0].id);
   const [isGenerating, setIsGenerating] = useState(false);
+  const generationClickLockedRef = useRef(false);
   const [resultMatrix, setResultMatrix] = useState<MatrixItem[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>(seedHistory);
   const [errorMessage, setErrorMessage] = useState('');
@@ -547,12 +577,36 @@ export function FittingPage() {
     ]);
   };
 
-	  const handleGenerate = () => {
+	  const handleGenerate = async () => {
+	    if (generationClickLockedRef.current) return;
 	    if (!canGenerate) {
 	      setErrorMessage('高精度AI切り抜きが完了するまで生成できません。');
 	      return;
 	    }
-	    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
+	    generationClickLockedRef.current = true;
+	    setIsGenerating(true);
+	    let normalizedGarmentImageUrl: string | undefined;
+	    let normalizedModelReferenceImageUrl: string | undefined;
+	    try {
+	      normalizedGarmentImageUrl = await normalizeFittingReferenceImage(extractedGarmentImageUrl);
+	      normalizedModelReferenceImageUrl = await normalizeFittingReferenceImage(modelReferenceImageUrl);
+	    } catch {
+	      generationClickLockedRef.current = false;
+	      setIsGenerating(false);
+	      setErrorMessage('生成用画像の準備に失敗しました。画像を入れ直してもう一度試してください。');
+	      return;
+	    }
+	    const baseMaterialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
+	    const materialReferenceMetadata = {
+	      ...baseMaterialReferenceMetadata,
+	      extractedImageUrl: normalizedGarmentImageUrl,
+	      note: [
+	        baseMaterialReferenceMetadata.note,
+	        normalizedGarmentImageUrl && normalizedGarmentImageUrl !== extractedGarmentImageUrl
+	          ? 'AI生成用に透明PNGを薄いグレー背景JPEGへ正規化'
+	          : '',
+	      ].filter(Boolean).join(' / '),
+	    };
     const materialReferenceSummary = materialReferenceMetadata.hasImage
       ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
       : '素材を追加するとここに反映されます';
@@ -581,26 +635,35 @@ export function FittingPage() {
       modelReference.fileName ? `モデル参照: ${modelReference.fileName}の人物にこの服を自然に着せる` : 'モデル参照: 未指定の場合は条件からモデルを生成',
     ].filter(Boolean).join('\n');
 
-    void runGeneration({
-      productDescription: fittingBrief,
-      imageUrl: extractedGarmentImageUrl,
-      modelReferenceImageUrl,
-      modelReferenceFileName: modelReference.fileName || undefined,
-      sourceMaterialImageUrl: garmentImageUrl,
-      bodyTypes: selectedBodyTypes,
-      ageGroups: selectedAgeGroups,
-      gender,
-      materialReference: materialReferenceMetadata,
-      materialReferences: [materialReferenceMetadata],
-      layerPlan,
-      maskPlan,
-      compositionPreview,
-    });
+    try {
+      await runGeneration({
+        productDescription: fittingBrief,
+        imageUrl: normalizedGarmentImageUrl,
+        modelReferenceImageUrl: normalizedModelReferenceImageUrl,
+        modelReferenceFileName: modelReference.fileName || undefined,
+        sourceMaterialImageUrl: garmentImageUrl,
+        bodyTypes: selectedBodyTypes,
+        ageGroups: selectedAgeGroups,
+        gender,
+        materialReference: materialReferenceMetadata,
+        materialReferences: [materialReferenceMetadata],
+        layerPlan,
+        maskPlan,
+        compositionPreview,
+      });
+    } finally {
+      generationClickLockedRef.current = false;
+    }
   };
 
-  const handleRetry = () => {
-    if (!lastRequest) return;
-    void runGeneration(lastRequest);
+  const handleRetry = async () => {
+    if (!lastRequest || generationClickLockedRef.current) return;
+    generationClickLockedRef.current = true;
+    try {
+      await runGeneration(lastRequest);
+    } finally {
+      generationClickLockedRef.current = false;
+    }
   };
 
   const handleEditHistory = (item: HistoryItem) => {

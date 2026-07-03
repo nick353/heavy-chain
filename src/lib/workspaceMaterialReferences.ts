@@ -574,9 +574,40 @@ const buildWhiteBackgroundFallbackCutout = async ({
   };
 };
 
+const REMBG_OPERATION_TIMEOUT_MS = 30_000;
+
+const withRembgOperationTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(`rembg_timeout:${label}`)), REMBG_OPERATION_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  }
+};
+
 const isRembgModelLoadError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
-  return message.includes('Failed to download model') || message.includes('HTTP error');
+  return [
+    'Failed to download model',
+    'HTTP error',
+    'Failed to create session',
+    'no available backend found',
+    'backend not found',
+    'rembg_timeout',
+  ].some((fragment) => message.includes(fragment));
+};
+
+const canUseBrowserWebGlBackend = () => {
+  try {
+    if (navigator.webdriver) return false;
+    const canvas = document.createElement('canvas');
+    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+  } catch {
+    return false;
+  }
 };
 
 let aiGarmentCutoutSession: Awaited<ReturnType<typeof newSession>> | null = null;
@@ -594,6 +625,11 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   imageUrl: string;
   maxDataUrlBytes?: number;
 }): Promise<MaterialCutoutResult> {
+  if (!canUseBrowserWebGlBackend()) {
+    console.warn('Falling back to local white-background garment cutout because WebGL is unavailable.');
+    return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
+  }
+
   rembgConfig.setBaseUrl(rembgModelBaseUrl);
   if (rembgIsnetGeneralUseModelUrl) {
     rembgConfig.setCustomModelPath('isnet-general-use', rembgIsnetGeneralUseModelUrl);
@@ -602,10 +638,13 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
   try {
-    aiGarmentCutoutSession ??= await newSession('isnet-general-use', undefined, { numThreads: 1 });
+    aiGarmentCutoutSession ??= await withRembgOperationTimeout(
+      newSession('isnet-general-use', undefined, { numThreads: 1 }),
+      'new_session',
+    );
   } catch (error) {
     if (!isRembgModelLoadError(error)) throw error;
-    console.warn('Falling back to local white-background garment cutout because rembg model failed to load.', {
+    console.warn('Falling back to local white-background garment cutout because rembg could not start.', {
       rembgModelBaseUrl,
       error,
     });
@@ -614,13 +653,16 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   const inputBlob = await dataUrlToBlob(imageUrl);
   let outputBlob: Blob;
   try {
-    outputBlob = await remove(inputBlob, {
-      session: aiGarmentCutoutSession,
-      postProcessMask: true,
-    });
+    outputBlob = await withRembgOperationTimeout(
+      remove(inputBlob, {
+        session: aiGarmentCutoutSession,
+        postProcessMask: true,
+      }),
+      'remove',
+    );
   } catch (error) {
     if (!isRembgModelLoadError(error)) throw error;
-    console.warn('Falling back to local white-background garment cutout because rembg model download failed during remove.', {
+    console.warn('Falling back to local white-background garment cutout because rembg failed during cutout.', {
       rembgModelBaseUrl,
       error,
     });

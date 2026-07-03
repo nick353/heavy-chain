@@ -216,16 +216,24 @@ if grep -q "generateRunwayImage" supabase/functions/upscale/index.ts; then
   echo "Static guard failed: upscale must use image_upscale helper, not text_to_image" >&2
   exit 1
 fi
-for function_name in remove-background colorize generate-variations design-gacha product-shots model-matrix; do
+for function_name in remove-background colorize generate-variations design-gacha product-shots; do
   grep -q "runwayReferenceImage" "supabase/functions/${function_name}/index.ts"
 done
-for function_name in generate-image remove-background upscale colorize generate-variations design-gacha product-shots model-matrix multilingual-banner; do
+for function_name in generate-image remove-background upscale colorize generate-variations design-gacha product-shots multilingual-banner; do
   grep -q "runwayImageArtifact" "supabase/functions/${function_name}/index.ts"
   grep -q "requireRunwayMcpConnectionApproval" "supabase/functions/${function_name}/index.ts"
   require_runway_approval_before_reserve "$function_name"
   require_no_match "hard-coded PNG data URL in ${function_name}" "data:image/png;base64" "supabase/functions/${function_name}/index.ts"
   require_no_match "hard-coded PNG contentType in ${function_name}" "contentType:[[:space:]]*['\"]image/png['\"]" "supabase/functions/${function_name}/index.ts" -E
 done
+grep -q "editOpenAiImage" supabase/functions/model-matrix/index.ts
+grep -q "generateOpenAiImage" supabase/functions/model-matrix/index.ts
+grep -q "provider: 'openai'" supabase/functions/model-matrix/index.ts
+grep -q "reserveBrandUsage" supabase/functions/model-matrix/index.ts
+grep -q "requireBrandRole" supabase/functions/model-matrix/index.ts
+require_no_match "Runway approval gate in model-matrix OpenAI path" "requireRunwayMcpConnectionApproval" supabase/functions/model-matrix/index.ts
+require_no_match "hard-coded PNG data URL in model-matrix" "data:image/png;base64" supabase/functions/model-matrix/index.ts
+require_no_match "hard-coded PNG contentType in model-matrix" "contentType:[[:space:]]*['\"]image/png['\"]" supabase/functions/model-matrix/index.ts -E
 require_no_match "Runway direct API/OpenAI env in check-env" "RUNWAYML_API_SECRET|OPENAI_API_KEY|OPENAI_CHAT_API_KEY|OPENAI_CHAT_BASE_URL|OPENAI_CHAT_MODEL" scripts/check-env.mjs -E
 
 echo "Checking required private RPC definitions"

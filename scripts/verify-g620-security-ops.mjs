@@ -20,9 +20,9 @@ const runwayGenerationFunctions = [
   'generate-variations',
   'design-gacha',
   'product-shots',
-  'model-matrix',
   'multilingual-banner',
 ];
+const openAiGenerationFunctions = ['model-matrix'];
 const edgeObservedFunctions = discoverFunctionsUsing('recordEdgeFunctionRun');
 const meteredFunctions = discoverFunctionsUsing('reserveBrandUsage');
 
@@ -266,6 +266,29 @@ function checkGenerationFunctionControls() {
         'requireRunwayMcpConnectionApproval',
         'reserveBrandUsage',
       ]), { file });
+    }
+    if (openAiGenerationFunctions.includes(functionName)) {
+      addCheck(`${functionName} requires brand editor and usage reserve before OpenAI generation`, ordered(text, [
+        'requireBrandRole',
+        "'editor'",
+        'reserveBrandUsage',
+        'recordEdgeFunctionRun',
+        'generatedImage = await generateWithReference',
+      ]) || ordered(text, [
+        'requireBrandRole',
+        "'editor'",
+        'reserveBrandUsage',
+        'recordEdgeFunctionRun',
+        'generatedImage = await generateFromText',
+      ]), { file });
+      addCheck(`${functionName} records OpenAI provider metadata without Runway approval gate`, allIncludes(text, [
+        'editOpenAiImage',
+        'generateOpenAiImage',
+        "metadata: { provider: 'openai'",
+        'generation_params',
+        "provider: 'openai'",
+        "metadata: {",
+      ]) && !text.includes('requireRunwayMcpConnectionApproval'), { file });
     }
     addCheck(`${functionName} records started/succeeded/failed Edge runs`, countOccurrences(text, 'recordEdgeFunctionRun') >= 3, {
       file,

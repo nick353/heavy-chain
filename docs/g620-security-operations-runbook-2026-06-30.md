@@ -25,7 +25,8 @@ Allowed without extra approval:
 |---|---|---|
 | Anonymous generation attempt | Edge Functions require user auth before brand access | `createUserClient`, `requireUser`, and JWT config guards |
 | Viewer/member privilege escalation | Generation requires brand `editor` or stronger | `requireBrandRole(..., 'editor')` in every generation function |
-| Unapproved Runway MCP use | Brand approval is required before usage reservation | `requireRunwayMcpConnectionApproval` appears before `reserveBrandUsage` |
+| Unapproved Runway MCP use | Runway-backed generation requires brand approval before usage reservation | `requireRunwayMcpConnectionApproval` appears before `reserveBrandUsage` in Runway-backed functions |
+| OpenAI fitting generation misuse | `model-matrix` uses the OpenAI image path with brand editor, H601, usage, provider metadata, and Edge observability controls | `model-matrix` checks `requireBrandRole`, `reserveBrandUsage`, OpenAI provider metadata, `recordEdgeFunctionRun`, and no Runway approval gate |
 | Generation spam | Short-window brand/user rate limits remain active while billing is inactive | `v_brand_recent_units + p_units > 5`, `v_user_recent_units + p_units > 3` |
 | Stale reservation abuse | Old reservations are released and marked | `reservation_stale`, `INTERVAL '15 minutes'`, `status = 'released'` |
 | Edge failure invisibility | Started/succeeded/failed Edge runs are recorded | `edge_function_runs`, `recordEdgeFunctionRun`, monitor readback |
