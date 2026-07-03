@@ -10,7 +10,11 @@ const authStatePath = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || 'o
 const outDir = args.out || `output/playwright/mass-market-qa-${dateStamp()}`;
 const imagePath = args.image || process.env.HEAVY_CHAIN_QA_IMAGE || '/Users/nichikatanaka/Downloads/S__4235312(1).jpg';
 const mockFunctions = args.mockFunctions === 'true' || args.mockFunctions === true || process.env.HEAVY_CHAIN_QA_MOCK_FUNCTIONS === 'true';
-const browserPath = args.browserPath || 'in-app Browser unavailable: iab; Playwright recordVideo fallback';
+const recordVideo = args.recordVideo !== 'false' && process.env.HEAVY_CHAIN_QA_RECORD_VIDEO !== 'false';
+const browserPath = args.browserPath || (recordVideo
+  ? 'in-app Browser unavailable: iab; Playwright recordVideo fallback'
+  : 'in-app Browser unavailable: iab; Playwright screenshot-only fallback');
+const routeTimeoutMs = Number(args.routeTimeoutMs || process.env.HEAVY_CHAIN_QA_ROUTE_TIMEOUT_MS || 90000);
 
 const desktopViewport = { width: 1440, height: 1050 };
 const mobileViewport = { width: 390, height: 844 };
@@ -56,6 +60,8 @@ const evidence = {
   outDir,
   browserPath,
   mockFunctions,
+  recordVideo,
+  routeTimeoutMs,
   irreversibleActions: {
     generationSubmit: 'not_clicked',
     purchasePaymentCheckout: 'not_touched',
@@ -93,10 +99,10 @@ try {
   context = await browser.newContext({
     storageState,
     viewport: desktopViewport,
-    recordVideo: {
+    ...(recordVideo ? { recordVideo: {
       dir: path.join(outDir, 'videos'),
       size: desktopViewport,
-    },
+    } } : {}),
   });
   await installSafeMocks(context);
 
@@ -141,6 +147,7 @@ process.exit(evidence.ok ? 0 : 1);
 async function runRoute(spec, context, viewport) {
   const page = await context.newPage();
   await page.setViewportSize(viewport);
+  page.setDefaultTimeout(12000);
   const routeEvidence = {
     key: spec.key,
     path: spec.path,
@@ -159,6 +166,13 @@ async function runRoute(spec, context, viewport) {
   page.on('console', (message) => recordConsole(message, spec.key));
   page.on('pageerror', (error) => evidence.pageErrors.push({ route: spec.key, message: error.message }));
   page.on('requestfailed', (request) => recordRequestFailure(request, spec.key));
+
+  let routeTimedOut = false;
+  const routeTimer = setTimeout(() => {
+    routeTimedOut = true;
+    routeEvidence.exactBlocker = routeEvidence.exactBlocker || `route_timeout:${spec.key}`;
+    page.close().catch(() => undefined);
+  }, routeTimeoutMs);
 
   try {
     await page.goto(`${baseUrl}${spec.path}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
@@ -920,9 +934,17 @@ async function runRoute(spec, context, viewport) {
       await interactCanvasGallery(page, routeEvidence);
     }
   } catch (error) {
-    routeEvidence.exactBlocker = `route_exception:${error.message}`;
-    addAssertion(routeEvidence, 'route_exception_free', false, { error: error.message });
+    routeEvidence.exactBlocker = routeTimedOut ? `route_timeout:${spec.key}` : `route_exception:${error.message}`;
+    addAssertion(routeEvidence, routeTimedOut ? 'route_completed_within_timeout' : 'route_exception_free', false, {
+      error: error.message,
+      routeTimeoutMs,
+      routeTimedOut,
+    });
   } finally {
+    clearTimeout(routeTimer);
+    if (!routeTimedOut) {
+      addAssertion(routeEvidence, 'route_completed_within_timeout', true, { routeTimeoutMs });
+    }
     routeEvidence.video = await closePageAndGetVideo(page);
   }
 
@@ -1199,7 +1221,7 @@ async function hasNoHorizontalOverflow(page) {
 
 async function screenshot(page, fileName) {
   const filePath = path.join(outDir, fileName);
-  await page.screenshot({ path: filePath, fullPage: true });
+  await page.screenshot({ path: filePath, fullPage: true, timeout: 15000 });
   return filePath;
 }
 
@@ -1248,7 +1270,7 @@ function computeOk(result) {
   const allRoutes = [...result.routes, ...result.mobile];
   return result.routes.every((route) => route.assertions.every((assertion) => assertion.passed))
     && result.mobile.every((route) => route.assertions.every((assertion) => assertion.passed))
-    && allRoutes.every((route) => Boolean(route.video))
+    && (!result.recordVideo || allRoutes.every((route) => Boolean(route.video)))
     && result.cleanup.contextClosed === true
     && result.cleanup.browserClosed === true
     && !result.cleanup.closeBlocker
@@ -1266,7 +1288,7 @@ function collectFailures(result) {
       .map((assertion) => `${route.key}:${assertion.name}`));
   return [
     ...routeFailures,
-    ...allRoutes.filter((route) => !route.video).map((route) => `${route.key}:video_missing`),
+    ...(result.recordVideo ? allRoutes.filter((route) => !route.video).map((route) => `${route.key}:video_missing`) : []),
     ...(result.cleanup.contextClosed ? [] : ['cleanup:context_close_failed']),
     ...(result.cleanup.browserClosed ? [] : ['cleanup:browser_close_failed']),
     ...(result.cleanup.closeBlocker ? [`cleanup:${result.cleanup.closeBlocker}`] : []),
