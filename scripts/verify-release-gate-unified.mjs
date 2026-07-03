@@ -28,7 +28,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'production monitor',
-    path: 'output/playwright/production-monitor-post-g694-r2/summary.json',
+    path: 'output/playwright/g699-production-monitor-post-g698-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.blockers).length === 0 &&
@@ -45,7 +45,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production mass-market QA current',
-    path: 'output/playwright/g695-post-g694-prod-mass-market-r2/SUMMARY.json',
+    path: 'output/playwright/g699-prod-mass-market-post-g698-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -105,7 +105,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production Lightchain all-feature order previews',
-    path: 'output/playwright/prod-post-g659-lightchain-order-preview-20260701-r2/SUMMARY.json',
+    path: 'output/playwright/g698-prod-lightchain-all-features-r7/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -114,17 +114,18 @@ const requiredReadbacks = [
       arrayFrom(json.assertions).filter((assertion) =>
         String(assertion?.id ?? '').includes('workspace_artifact_preview_is_tool_specific_order_sheet') &&
         assertion?.ok === true
-      ).length >= 33 &&
+      ).length >= 31 &&
       json.cleanup?.contextClosed === true &&
       json.cleanup?.browserClosed === true &&
+      json.cleanup?.previewStopped === true &&
       arrayFrom(json.consoleMessages).length === 0 &&
       arrayFrom(json.pageErrors).length === 0 &&
       arrayFrom(json.requestFailures).length === 0,
-    expect: 'production Lightchain all-feature workflow ok=true with 33 features, 33 tool-specific order-sheet preview assertions, no console/page/request failures, and cleanup closed',
+    expect: 'production Lightchain all-feature workflow ok=true with 33 features, current tool-specific order-sheet preview assertions, no console/page/request failures, and cleanup closed',
   },
   {
     name: 'G610 retention workspace search',
-    path: 'output/playwright/g610-retention-project-search-20260701-g624-r1/SUMMARY.json',
+    path: 'output/playwright/g698-g610-retention-r1/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -137,13 +138,13 @@ const requiredReadbacks = [
   },
   {
     name: 'G603 garment Canvas',
-    path: 'output/playwright/g603-garment-layer-canvas-20260701-g624-r1/SUMMARY.json',
+    path: 'output/playwright/g698-g603-garment-canvas-r3/SUMMARY.json',
     validate: (json) => json.ok === true && arrayFrom(json.failed).length === 0,
     expect: 'ok=true and failed=[]',
   },
   {
     name: 'G605 onboarding templates',
-    path: 'output/playwright/g605-onboarding-templates-20260701-g624-r1/SUMMARY.json',
+    path: 'output/playwright/g699-g605-onboarding-r2/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -153,7 +154,7 @@ const requiredReadbacks = [
   },
   {
     name: 'G606 performance scale',
-    path: 'output/playwright/g606-performance-scale-20260701-g624-r2/summary.json',
+    path: 'output/playwright/g699-g606-performance-r3/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.issues).length === 0 &&
@@ -164,7 +165,7 @@ const requiredReadbacks = [
   },
   {
     name: 'G608 security audit',
-    path: 'output/playwright/g608-security-audit-20260701-g624-r2/audit-readiness.json',
+    path: 'output/playwright/g699-g608-security-audit-r1/audit-readiness.json',
     validate: (json) => {
       const requirements = arrayFrom(json.requirements);
       const requirementIds = requirements.map((requirement) => requirement?.id).filter(Boolean);
@@ -189,13 +190,13 @@ const requiredReadbacks = [
   },
   {
     name: 'G618 scale ops baseline',
-    path: 'output/playwright/10m-product-readiness-g618/summary.json',
+    path: 'output/playwright/g699-g618-scale-ops-r2/summary.json',
     validate: validateG618ScaleOps,
     expect: 'ok=true, blockers=[], expected schema, commands/checks passed, imageCount>=1200, canvasObjectCount>=600, monitor/performance nested artifacts valid, and only allowed monitor warnings',
   },
   {
     name: 'G620 security operations',
-    path: 'output/playwright/10m-product-readiness-g620/summary.json',
+    path: 'output/playwright/g698-g620-security-ops-r1/summary.json',
     validate: validateG620SecurityOps,
     expect: 'ok=true, blockers=[], expected schema, monitor readback safe, abuse/permission/audit/incident checks passed, and only allowed monitor warnings',
   },

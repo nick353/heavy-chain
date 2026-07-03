@@ -360,6 +360,12 @@ const setupMockedApp = async (page) => {
       if (url.includes('/rest/v1/brands')) {
         return json([brand]);
       }
+      if (url.includes('/rest/v1/brand_members')) {
+        if (init?.method && init.method !== 'GET' && init.method !== 'HEAD') {
+          return json({ error: 'G606 mock blocks writes' }, 405);
+        }
+        return json([]);
+      }
       if (url.includes('/rest/v1/generated_images')) {
         return json(images, 200, { 'content-range': `0-${images.length - 1}/${images.length}` });
       }
