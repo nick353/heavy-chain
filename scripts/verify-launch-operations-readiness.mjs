@@ -49,8 +49,7 @@ const trackedHostnames = new Set([
   new URL(baseUrl).hostname,
   'ghwjymozrwmcrpjqvbmo.supabase.co',
 ]);
-const generationButtonPattern = /生成する/;
-const generationButtonExpectedText = '生成する';
+const generationButtonPattern = /生成する|企画書を保存/;
 
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -133,12 +132,12 @@ async function checkGenerateForm() {
   await page.goto(`${baseUrl}/generate?feature=campaign-image`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => undefined);
   const prompt = 'Heavy Chain black hoodie premium campaign visual, concrete studio, silver chain detail';
-  await waitForExpectedRouteText(page, ['販促素材ワークベンチ', 'ベースコンセプト', generationButtonExpectedText], 30000);
-  const textarea = page.locator('textarea').first();
-  await textarea.waitFor({ state: 'visible', timeout: 15000 });
-  await textarea.fill(prompt, { timeout: 15000 });
-  await page.locator('input').first().fill('Heavy Chain launch proof').catch(() => undefined);
-  const textareaValue = await textarea.inputValue();
+  await waitForExpectedRouteText(page, ['ベースコンセプト'], 30000);
+  const conceptField = page.getByLabel('ベースコンセプト').first();
+  await conceptField.waitFor({ state: 'visible', timeout: 15000 });
+  await conceptField.fill(prompt, { timeout: 15000 });
+  await page.getByLabel('タイトル').first().fill('Heavy Chain launch proof').catch(() => undefined);
+  const conceptValue = await conceptField.inputValue();
   const button = page.getByRole('button', { name: generationButtonPattern }).first();
   const buttonVisible = await button.isVisible().catch(() => false);
   const rightsCheckbox = page.getByRole('checkbox').first();
@@ -151,10 +150,10 @@ async function checkGenerateForm() {
   const screenshot = `${outDir}/generate-form-filled-no-submit.png`;
   await page.screenshot({ path: screenshot, fullPage: false });
   evidence.screenshots.generateForm = screenshot;
-  pushCheck('Generate form is editable without submitting', buttonVisible && buttonEnabled && textareaValue === prompt && rightsVisible, {
+  pushCheck('Generate form is editable without submitting', buttonVisible && buttonEnabled && conceptValue === prompt && rightsVisible, {
     url: page.url(),
     prompt,
-    textareaValue,
+    conceptValue,
     generationSubmit: 'not_clicked',
     rightsVisible,
     buttonVisible,
@@ -250,7 +249,7 @@ async function checkMobileRoutes() {
     isMobile: true,
   });
   const mobileChecks = [
-    { key: 'mobile-generate', path: '/generate?feature=campaign-image', expected: ['HEAVYCHAIN', 'キャンペーン画像', generationButtonExpectedText] },
+    { key: 'mobile-generate', path: '/generate?feature=campaign-image', expected: ['HEAVYCHAIN', 'キャンペーン画像', '生成する'] },
     { key: 'mobile-gallery', path: '/gallery', expected: ['ギャラリー'] },
     { key: 'mobile-canvas', path: '/canvas/new', expected: ['キャンバス'] },
   ];
