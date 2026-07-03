@@ -28,7 +28,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'production monitor',
-    path: 'output/playwright/production-monitor-post-g668-20260702-r1/summary.json',
+    path: 'output/playwright/production-monitor-post-g694-r2/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.blockers).length === 0 &&
@@ -39,13 +39,13 @@ const requiredReadbacks = [
   },
   {
     name: 'launch operations',
-    path: 'output/playwright/launch-operations-readiness-20260701-g623-r4/summary.json',
+    path: 'output/playwright/g695-launch-ops-standalone-r7/summary.json',
     validate: (json) => json.ok === true && arrayFrom(json.failed).length === 0,
     expect: 'ok=true and failed=[]',
   },
   {
     name: 'production mass-market QA current',
-    path: 'output/playwright/prod-post-g668-dashboard-recent-preview-20260702-r1/SUMMARY.json',
+    path: 'output/playwright/g695-post-g694-prod-mass-market-r2/SUMMARY.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.failed).length === 0 &&
@@ -70,18 +70,18 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_generate_hides_canvas_toolbar') &&
       hasRouteAssertion(json, 'mobile-generate-campaign', 'mobile_generate_starts_at_material_form') &&
       hasRouteAssertion(json, 'dashboard', 'dashboard_recent_images_no_broken_placeholders') &&
-      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_has_above_fold_quick_start') &&
+      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_old_quick_start_hidden_by_design') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_hides_duplicate_quick_action_cards') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_lightchain_has_all_tools_link') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_lightchain_cards_open_detail_routes') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_activity_uses_compact_summary') &&
-      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_has_single_primary_next_action') &&
+      hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_next_action_hidden_by_design') &&
       hasRouteAssertion(json, 'mobile-dashboard', 'mobile_dashboard_hides_low_priority_desktop_panels') &&
-      hasRouteAssertion(json, 'brand-settings', 'brand_settings_has_readiness_and_safe_next_actions') &&
+      hasRouteAssertion(json, 'brand-settings', 'brand_settings_hides_removed_readiness_blocks') &&
       hasRouteAssertion(json, 'marketing', 'marketing_workspace_has_clear_generation_flow') &&
       hasRouteAssertion(json, 'marketing', 'marketing_preview_has_brief_context') &&
       hasRouteAssertion(json, 'fitting', 'fitting_workspace_has_clear_generation_flow') &&
-      hasRouteAssertion(json, 'fitting', 'fitting_preview_has_model_matrix_context') &&
+      hasRouteAssertion(json, 'fitting', 'fitting_preview_has_model_matrix_context_when_visible') &&
       hasRouteAssertion(json, 'models', 'model_library_has_clear_generation_flow') &&
       hasRouteAssertion(json, 'patterns', 'pattern_workspace_has_clear_generation_flow') &&
       hasRouteAssertion(json, 'patterns', 'pattern_preview_uses_garment_mockup_context') &&
@@ -97,10 +97,11 @@ const requiredReadbacks = [
       hasRouteAssertion(json, 'history', 'desktop_history_timeline_is_bounded') &&
       hasRouteAssertion(json, 'mobile-history', 'history_has_reuse_action_panel') &&
       hasRouteAssertion(json, 'mobile-history', 'mobile_history_timeline_is_bounded') &&
-      hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_tool_list_is_bounded') &&
+      hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_category_entry_is_compact') &&
+      hasRouteAssertion(json, 'mobile-lightchain', 'mobile_lightchain_category_cards_open_real_feature_routes') &&
       hasRouteAssertion(json, 'mobile-jobs', 'mobile_jobs_initial_list_is_bounded') &&
       hasRouteAssertion(json, 'mobile-canvas', 'mobile_canvas_content_fits_initial_view'),
-    expect: 'current production mass-market QA ok=true with 17 desktop routes, 9 mobile routes including mobile History, Gallery fallback visible without scary remote-failure toast, H601-ready Gemini generate route, Dashboard recent images without broken placeholders, Brand Settings readiness and safe next actions, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix preview/context, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard quick start with one primary next action, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link and direct detail-route cards, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, bounded mobile Lightchain tool list, bounded mobile Jobs list, mobile Canvas content fit on open, no console/page/request failures, and cleanup closed',
+    expect: 'current production mass-market QA ok=true with 17 desktop routes, 9 mobile routes including mobile History, Gallery fallback visible without scary remote-failure toast, H601-ready generation route, Dashboard recent images without broken placeholders, Brand Settings removed readiness blocks hidden, clear Marketing generation flow with brief-context preview, clear Fitting generation flow with model-matrix context when preview is visible, clear Model Library generation flow, clear Pattern Workspace generation flow with garment mockup preview context, clear Video Workspace generation flow with storyboard context and meaningful shot cards, clear Studio generation flow with composition-context preview, clear Lab generation flow with evaluation-context preview, actionable Credits workspace panel, History reuse panel, bounded desktop and mobile History timelines, no intrusive mobile floating help buttons, mobile Dashboard old quick start and next action hidden by design, no duplicate quick-action cards, compact mobile Dashboard Lightchain hub with all-tools link and direct detail-route cards, compact mobile activity summary, hidden low-priority desktop panels on mobile, mobile Generate starts at material form with canvas toolbar hidden, compact mobile Lightchain category entry with real feature links, bounded mobile Jobs list, mobile Canvas content fit on open, no console/page/request failures, and cleanup closed',
   },
   {
     name: 'production Lightchain all-feature order previews',
