@@ -31,6 +31,26 @@ const protectedGenerationEdgeFiles = [
 ];
 
 const checks = [];
+const imagePayloadKeysForTest = new Set([
+  'image',
+  'imageurl',
+  'image_url',
+  'referenceimage',
+  'referenceimageurl',
+  'reference_image_url',
+  'modelreferenceimageurl',
+  'model_reference_image_url',
+  'sourceimageurl',
+  'source_image_url',
+  'extractedimageurl',
+  'extracted_image_url',
+  'dataurl',
+  'data_url',
+  'src',
+  'thumbnail',
+  'preview',
+]);
+
 for (const [id, file] of Object.entries(files)) {
   addCheck(`${id} file exists`, fs.existsSync(file), { file });
 }
@@ -141,6 +161,15 @@ addCheck('Edge legal safety guard requires rights confirmation and blocks unsafe
 ]), {
   file: files.edgeLegalSafety,
 });
+addCheck('Edge legal safety guard ignores image data payloads while keeping text metadata', allIncludes(edgeLegalSafety, [
+  'imagePayloadKeys',
+  'extractedimageurl',
+  'data:image',
+  'A-Za-z0-9+/=',
+  'stringifySafetyValue(entryValue, entryKey',
+]), {
+  file: files.edgeLegalSafety,
+});
 addCheck('All generation Edge Functions import shared H601 guard', edgeFiles.every(({ text }) => text.includes("from '../_shared/legalSafety.ts'")), {
   files: protectedGenerationEdgeFiles,
 });
@@ -235,6 +264,8 @@ function addCheck(name, passed, details = {}) {
 }
 
 function tableDrivenLegalSafetyChecks() {
+  const pngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const jpegBase64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/2w==';
   const cases = [
     { text: 'Nike風のロゴ入りキャンペーン画像', blocked: true },
     { text: 'Nike swoosh hoodie', blocked: true },
@@ -246,13 +277,95 @@ function tableDrivenLegalSafetyChecks() {
     { text: 'LV logo hoodie replica', blocked: true },
   ];
   const results = cases.map((item) => ({ ...item, actual: legalSafetyBlocked(item.text) }));
+  const imagePayloadCases = [
+    {
+      value: {
+        fileName: 'white-shirt.jpg',
+        materialKind: '衣服画像',
+        extractedImageUrl: `data:image/png;base64,${pngBase64}`,
+        imageUrl: `data:image/jpeg;base64,${jpegBase64}`,
+        note: 'EC用の白シャツ',
+      },
+      blocked: false,
+    },
+    {
+      value: {
+        fileName: 'white-shirt.jpg',
+        materialKind: '衣服画像',
+        extractedImageUrl: `data:image/png;base64,${pngBase64}`,
+        note: 'Nike風のロゴ入り',
+      },
+      blocked: true,
+    },
+    {
+      value: { preview: 'Nike風のロゴ入り' },
+      blocked: true,
+    },
+    {
+      value: { imageUrl: 'Nike logo replica' },
+      blocked: true,
+    },
+    {
+      value: {
+        image: {
+          src: `data:image/png;base64,${pngBase64}`,
+          note: 'Nike風ロゴ',
+        },
+      },
+      blocked: true,
+    },
+    {
+      value: { prompt: `data:image/png;base64,${pngBase64} Nike風ロゴ` },
+      blocked: true,
+    },
+    {
+      value: { imageUrl: `data:image/png;base64,${'A'.repeat(220)} Nike logo replica` },
+      blocked: true,
+    },
+    {
+      value: { preview: 'blob:https://example.test/Nike風ロゴ' },
+      blocked: true,
+    },
+    {
+      value: { imageUrl: 'https://cdn.example.test/Nike-logo-replica.png' },
+      blocked: true,
+    },
+    {
+      value: { imageUrl: pngBase64 },
+      blocked: false,
+    },
+    {
+      value: { imageUrl: jpegBase64 },
+      blocked: false,
+    },
+    {
+      value: { a: { b: { c: { d: { e: { note: 'Nike風ロゴ' } } } } } },
+      blocked: true,
+    },
+  ];
+  const imagePayloadResults = imagePayloadCases.map((item) => ({
+    blocked: item.blocked,
+    actual: legalSafetyBlockedFromUnknown([item.value]),
+  }));
   return {
-    passed: results.every((item) => item.actual === item.blocked),
-    details: { cases: results },
+    passed: results.every((item) => item.actual === item.blocked)
+      && imagePayloadResults.every((item) => item.actual === item.blocked),
+    details: { cases: results, imagePayloadCases: imagePayloadResults },
   };
 }
 
 function legalSafetyBlocked(text) {
+  return legalSafetyBlockedFromUnknown([text]);
+}
+
+function legalSafetyBlockedFromUnknown(values) {
+  const text = values
+    .map((value) => stringifySafetyValueForTest(value, '', new WeakSet()))
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
   const lower = text.toLowerCase();
   const protectedBrandTerms = ['nike', 'lv', 'ナイキ'];
   const brandImitationPhrases = ['in the style of', 'style of', 'logo', 'brand logo', 'swoosh', '風', 'ロゴ'];
@@ -264,6 +377,48 @@ function legalSafetyBlocked(text) {
     protectedBrandTerms.some((term) => protectedBrandTermMatches(lower, term)) &&
     brandImitationPhrases.some((phrase) => lower.includes(phrase.toLowerCase()))
   ) || personLikenessPatterns.some((pattern) => pattern.test(text));
+}
+
+function stringifySafetyValueForTest(value, key = '', seen = new WeakSet()) {
+  if (typeof value === 'string') {
+    if (imagePayloadKeysForTest.has(key.toLowerCase()) && isLikelyImagePayloadStringForTest(value)) return '';
+    return value;
+  }
+  if (Array.isArray(value)) {
+    if (seen.has(value)) return '';
+    seen.add(value);
+    return value.map((item) => stringifySafetyValueForTest(item, key, seen)).filter(Boolean).join(' ');
+  }
+  if (!value || typeof value !== 'object') return '';
+  if (seen.has(value)) return '';
+  seen.add(value);
+  return Object.entries(value)
+    .map(([entryKey, entryValue]) => stringifySafetyValueForTest(entryValue, entryKey, seen))
+    .filter(Boolean)
+    .join(' ');
+}
+
+function isLikelyImagePayloadStringForTest(value) {
+  const trimmed = value.trim();
+  const dataUrlMatch = trimmed.match(/^data:image\/[a-z0-9.+-]+;base64,([A-Za-z0-9+/=\s]+)$/i);
+  if (dataUrlMatch) return hasImageMagicHeaderForTest(dataUrlMatch[1]);
+  if (!/^[A-Za-z0-9+/=\s]{200,}$/.test(trimmed)) return false;
+  return hasImageMagicHeaderForTest(trimmed);
+}
+
+function hasImageMagicHeaderForTest(base64Value) {
+  const compactBase64 = base64Value.replace(/\s+/g, '');
+  if (!/^[A-Za-z0-9+/=]+$/.test(compactBase64)) return false;
+  try {
+    const bytes = Buffer.from(compactBase64.slice(0, 64), 'base64');
+    const header = bytes.subarray(0, 12).toString('hex');
+    return header.startsWith('89504e47')
+      || header.startsWith('ffd8ff')
+      || header.startsWith('47494638')
+      || header.startsWith('52494646');
+  } catch {
+    return false;
+  }
 }
 
 function protectedBrandTermMatches(text, term) {

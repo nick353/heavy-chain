@@ -66,6 +66,26 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
 
+const imagePayloadKeys = new Set([
+  'image',
+  'imageurl',
+  'image_url',
+  'referenceimage',
+  'referenceimageurl',
+  'reference_image_url',
+  'modelreferenceimageurl',
+  'model_reference_image_url',
+  'sourceimageurl',
+  'source_image_url',
+  'extractedimageurl',
+  'extracted_image_url',
+  'dataurl',
+  'data_url',
+  'src',
+  'thumbnail',
+  'preview',
+]);
+
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const protectedBrandTermMatches = (text: string, term: string) => {
@@ -77,11 +97,55 @@ const protectedBrandTermMatches = (text: string, term: string) => {
   return text.includes(normalized);
 };
 
-const stringifySafetyValue = (value: unknown) => {
-  if (typeof value === 'string') return value;
-  if (!isRecord(value) && !Array.isArray(value)) return '';
+const isLikelyImagePayloadString = (value: string) => {
+  const trimmed = value.trim();
+  const dataUrlMatch = trimmed.match(/^data:image\/[a-z0-9.+-]+;base64,([A-Za-z0-9+/=\s]+)$/i);
+  if (dataUrlMatch) return hasImageMagicHeader(dataUrlMatch[1]);
+  if (!/^[A-Za-z0-9+/=\s]{200,}$/.test(trimmed)) return false;
+  return hasImageMagicHeader(trimmed);
+};
+
+const hasImageMagicHeader = (base64Value: string) => {
+  const compactBase64 = base64Value.replace(/\s+/g, '');
+  if (!/^[A-Za-z0-9+/=]+$/.test(compactBase64)) return false;
   try {
-    return JSON.stringify(value);
+    const binary = atob(compactBase64.slice(0, 64));
+    const bytes = Array.from(binary).map((char) => char.charCodeAt(0));
+    const header = bytesToHex(bytes.slice(0, 12));
+    return header.startsWith('89504e47')
+      || header.startsWith('ffd8ff')
+      || header.startsWith('47494638')
+      || header.startsWith('52494646');
+  } catch {
+    return false;
+  }
+};
+
+const bytesToHex = (bytes: number[]) => bytes
+  .map((byte) => byte.toString(16).padStart(2, '0'))
+  .join('');
+
+const stringifySafetyValue = (value: unknown, key = '', seen = new WeakSet<object>()): string => {
+  if (typeof value === 'string') {
+    if (imagePayloadKeys.has(key.toLowerCase()) && isLikelyImagePayloadString(value)) return '';
+    return value;
+  }
+  if (Array.isArray(value)) {
+    if (seen.has(value)) return '';
+    seen.add(value);
+    return value
+      .map((item) => stringifySafetyValue(item, key, seen))
+      .filter(Boolean)
+      .join(' ');
+  }
+  if (!isRecord(value)) return '';
+  if (seen.has(value)) return '';
+  seen.add(value);
+  try {
+    return Object.entries(value)
+      .map(([entryKey, entryValue]) => stringifySafetyValue(entryValue, entryKey, seen))
+      .filter(Boolean)
+      .join(' ');
   } catch {
     return '';
   }
@@ -89,7 +153,7 @@ const stringifySafetyValue = (value: unknown) => {
 
 export const validateLegalSafetyInput = (values: unknown[]) => {
   const text = values
-    .map(stringifySafetyValue)
+    .map((value) => stringifySafetyValue(value, '', new WeakSet<object>()))
     .filter(Boolean)
     .join(' ')
     .replace(/\s+/g, ' ')

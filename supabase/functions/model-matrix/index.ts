@@ -463,6 +463,7 @@ serve(async (req) => {
 
     requireLegalSafetyApproval(body.legalSafety, [
       productDescription,
+      imageUrl,
       bodyTypes,
       ageGroups,
       gender,
