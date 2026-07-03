@@ -25,6 +25,20 @@ type LegalSafetyOptions = {
   rightsConfirmed?: boolean;
 };
 
+async function edgeFunctionErrorMessage(error: any) {
+  const context = error?.context;
+  if (context && typeof context.json === 'function') {
+    try {
+      const body = await context.clone?.().json?.() ?? await context.json();
+      if (typeof body?.error === 'string' && body.error.trim()) return body.error.trim();
+    } catch {
+      // Fall through to the SDK message below.
+    }
+  }
+  if (typeof error?.message === 'string' && error.message.trim()) return error.message.trim();
+  return 'Edge Function call failed';
+}
+
 export interface ImageEditResult {
   success: boolean;
   jobId?: string | null;
@@ -375,6 +389,7 @@ export async function generateModelMatrix(
     gender?: 'male' | 'female';
     imageUrl?: string;
     modelReferenceImageUrl?: string;
+    generationModel?: string;
     sourceReadback?: unknown;
     materialReferences?: unknown;
     layerPlan?: unknown;
@@ -409,7 +424,7 @@ export async function generateModelMatrix(
     if (error) throw error;
     return data;
   } catch (error: any) {
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error) };
   }
 }
 

@@ -3,8 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { generateRunwayImage, runwayImageArtifact, runwayReferenceImage, type RunwayImageResult } from '../_shared/runway.ts';
-import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
+import { editOpenAiImage, generateOpenAiImage, openAiImageArtifact, openAiImageDataUri, type OpenAiImageResult } from '../_shared/openaiImage.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
@@ -30,6 +29,13 @@ const AGE_GROUPS = [
 const SKIN_TONES = ['light', 'medium', 'dark'] as const;
 const HAIR_STYLES = ['short', 'medium', 'long'] as const;
 const MODEL_CANDIDATE_LABELS = ['Clean EC 20s', 'Street LOOK 30s', 'Premium AD 40s'] as const;
+const MAX_REFERENCE_IMAGE_BYTES = 8 * 1024 * 1024;
+const ALLOWED_REFERENCE_IMAGE_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+]);
 
 const SOURCE_CONFIG = {
   studio: { label: 'Fashion Studio', resumePath: '/studio', versions: ['studio-selection-local-v1'] },
@@ -87,6 +93,86 @@ const pickAllowedList = (value: unknown, allowed: readonly string[], fallback: s
   const allowedSet = new Set(allowed);
   const items = value.filter((item): item is string => typeof item === 'string' && allowedSet.has(item));
   return items.length ? items : fallback;
+};
+
+const normalizeImageMimeType = (mimeType: string | null | undefined) => {
+  const cleanMimeType = String(mimeType || '').split(';')[0].trim().toLowerCase();
+  return ALLOWED_REFERENCE_IMAGE_MIME_TYPES.has(cleanMimeType) ? cleanMimeType : null;
+};
+
+const base64ByteLength = (base64: string) => {
+  const cleanBase64 = base64.trim();
+  const padding = cleanBase64.endsWith('==') ? 2 : cleanBase64.endsWith('=') ? 1 : 0;
+  return Math.floor((cleanBase64.length * 3) / 4) - padding;
+};
+
+const isBlockedReferenceHost = (hostname: string) => {
+  const host = hostname.trim().toLowerCase();
+  if (!host) return true;
+  if (host === 'localhost' || host === '0.0.0.0' || host.endsWith('.localhost')) return true;
+  if (host === '::1' || host.startsWith('127.')) return true;
+  if (/^10\./.test(host)) return true;
+  if (/^192\.168\./.test(host)) return true;
+  const private172 = host.match(/^172\.(\d{1,3})\./);
+  if (private172) {
+    const secondOctet = Number(private172[1]);
+    if (secondOctet >= 16 && secondOctet <= 31) return true;
+  }
+  if (/^169\.254\./.test(host)) return true;
+  if (/^\[?(fc|fd)[0-9a-f]{2}:/i.test(host)) return true;
+  if (/^\[?fe80:/i.test(host)) return true;
+  return false;
+};
+
+const allowedReferenceUrlHostnames = () => {
+  const hostnames = new Set<string>();
+  for (const rawUrl of [
+    Deno.env.get('SUPABASE_URL'),
+    Deno.env.get('VITE_SUPABASE_URL'),
+  ]) {
+    try {
+      if (rawUrl) hostnames.add(new URL(rawUrl).hostname.toLowerCase());
+    } catch {
+      // Ignore malformed optional env URLs.
+    }
+  }
+  return hostnames;
+};
+
+const bytesToBase64 = (bytes: Uint8Array) => {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+};
+
+const readResponseBytesCapped = async (response: Response) => {
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  const reader = response.body?.getReader();
+  if (!reader) return null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+    totalBytes += value.byteLength;
+    if (totalBytes > MAX_REFERENCE_IMAGE_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 };
 
 const sanitizeSourceReadback = (value: unknown) => {
@@ -203,15 +289,29 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
     if (imageUrl.startsWith('data:')) {
       const matches = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
       if (matches) {
-        return { base64: matches[2], mimeType: matches[1] };
+        const mimeType = normalizeImageMimeType(matches[1]);
+        const base64 = matches[2].trim();
+        if (!mimeType || base64ByteLength(base64) > MAX_REFERENCE_IMAGE_BYTES) return null;
+        return { base64, mimeType };
       }
+      return null;
     }
-    const response = await fetch(imageUrl);
+    const parsedUrl = new URL(imageUrl);
+    if (!['https:', 'http:'].includes(parsedUrl.protocol)) return null;
+    if (isBlockedReferenceHost(parsedUrl.hostname)) return null;
+    const allowedHostnames = allowedReferenceUrlHostnames();
+    if (!allowedHostnames.has(parsedUrl.hostname.toLowerCase())) return null;
+
+    const response = await fetch(imageUrl, { redirect: 'manual' });
     if (!response.ok) return null;
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    const arrayBuffer = await response.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    return { base64, mimeType: contentType };
+    const contentType = normalizeImageMimeType(response.headers.get('content-type'));
+    if (!contentType) return null;
+    const contentLength = Number(response.headers.get('content-length') || 0);
+    if (contentLength > MAX_REFERENCE_IMAGE_BYTES) return null;
+
+    const bytes = await readResponseBytesCapped(response);
+    if (!bytes) return null;
+    return { base64: bytesToBase64(bytes), mimeType: contentType };
   } catch (e) {
     console.log('⚠️ Failed to fetch image:', clientError(e));
     return null;
@@ -220,7 +320,6 @@ async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; m
 
 // 参照画像を使って生成
 async function generateWithReference(
-  brandId: string,
   originalBase64: string,
   originalMimeType: string,
   modelBase64: string | null,
@@ -229,9 +328,8 @@ async function generateWithReference(
   bodyType: typeof BODY_TYPES[0],
   ageGroup: typeof AGE_GROUPS[0],
   gender: string,
-  _apiKey?: string,
-  _imageModel?: string
-): Promise<RunwayImageResult | null> {
+  imageModel?: string | null
+): Promise<OpenAiImageResult | null> {
   console.log(`🎨 Generating ${bodyType.name} x ${ageGroup.name} with reference...`);
 
   const modelReferenceInstruction = modelBase64
@@ -254,29 +352,28 @@ CRITICAL REQUIREMENTS:
 STYLE: Professional fashion photography, full body shot, studio lighting, neutral background`;
 
   const referenceImages = [
-    runwayReferenceImage(originalBase64, originalMimeType, 'garment'),
-    ...(modelBase64 ? [runwayReferenceImage(modelBase64, modelMimeType || 'image/png', 'model')] : []),
+    { imageUrl: openAiImageDataUri(originalBase64, originalMimeType) },
+    ...(modelBase64 ? [{ imageUrl: openAiImageDataUri(modelBase64, modelMimeType || 'image/png') }] : []),
   ];
 
-  return await generateRunwayImage({
-    brandId,
+  return await editOpenAiImage({
     prompt,
-    referenceImages,
+    images: referenceImages,
+    model: imageModel,
+    background: 'auto',
   });
 }
 
 // テキストのみで生成
 async function generateFromText(
-  brandId: string,
   description: string,
   bodyType: typeof BODY_TYPES[0],
   ageGroup: typeof AGE_GROUPS[0],
   gender: string,
-  _apiKey?: string,
-  _imageModel?: string
-): Promise<RunwayImageResult | null> {
+  imageModel?: string | null
+): Promise<OpenAiImageResult | null> {
   const prompt = `${gender} model wearing ${description}, ${bodyType.prompt}, ${ageGroup.prompt}, fashion photography, full body shot, professional studio lighting, neutral background, high quality`;
-  return await generateRunwayImage({ brandId, prompt });
+  return await generateOpenAiImage({ prompt, model: imageModel });
 }
 
 serve(async (req) => {
@@ -338,6 +435,7 @@ serve(async (req) => {
     skinTone = pickAllowedString(skinTone, SKIN_TONES);
     hairStyle = pickAllowedString(hairStyle, HAIR_STYLES);
     modelCandidateLabel = pickAllowedString(modelCandidateLabel, MODEL_CANDIDATE_LABELS);
+    const requestedGenerationUnits = Math.max(1, bodyTypes.length * ageGroups.length);
     const requestSourceMetadata = buildSourceMetadata({
       sourceReadback,
       productDescription: typeof productDescription === 'string' ? productDescription : '',
@@ -379,16 +477,16 @@ serve(async (req) => {
     ]);
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
-    await requireRunwayMcpConnectionApproval(supabaseService, brandId);
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {
       brandId,
       userId: user.id,
       functionName,
-      units: 1,
+      units: requestedGenerationUnits,
       requestId,
       idempotencyKey: req.headers.get('idempotency-key'),
+      metadata: { provider: 'openai', imageCount: requestedGenerationUnits },
     });
     await recordEdgeFunctionRun(telemetryClient, {
       reservation: usageReservation,
@@ -443,7 +541,9 @@ serve(async (req) => {
       requestId,
     });
 
-    const imageModel = 'runway';
+    const imageModel = typeof body.generationModel === 'string' && body.generationModel.trim()
+      ? body.generationModel.trim()
+      : null;
 
     // 画像がある場合は分析
     let originalImageBase64: string | null = null;
@@ -491,12 +591,11 @@ serve(async (req) => {
     // Generate matrix
     for (const bodyType of selectedBodyTypes) {
       for (const ageGroup of selectedAgeGroups) {
-        let generatedImage: RunwayImageResult | null = null;
+        let generatedImage: OpenAiImageResult | null = null;
 
         // 元画像がある場合は参照生成
         if (originalImageBase64) {
           generatedImage = await generateWithReference(
-            brandId,
             originalImageBase64,
             originalMimeType,
             modelImageBase64,
@@ -515,7 +614,6 @@ serve(async (req) => {
             throw new Error('参照画像を使った着用生成に失敗しました。参照なしの別画像は作らず停止しました。');
           }
           generatedImage = await generateFromText(
-            brandId,
             finalDescription,
             bodyType,
             ageGroup,
@@ -525,7 +623,7 @@ serve(async (req) => {
         }
 
         if (generatedImage) {
-          const imageAsset = runwayImageArtifact(generatedImage);
+          const imageAsset = openAiImageArtifact(generatedImage);
           const imageBase64 = imageAsset.base64;
           const imageDataUrl = imageAsset.dataUrl;
           const fileName = `${user.id}/${brandId}/${jobId}_matrix_${bodyType.id}_${ageGroup.id}_${Date.now()}.${imageAsset.extension}`;
@@ -553,16 +651,20 @@ serve(async (req) => {
               image_url: null,
               prompt: finalDescription,
               feature_type: 'model-matrix',
-              model_used: imageModel,
+              model_used: generatedImage.model,
               generation_params: { 
                 bodyType: bodyType.id, 
                 ageGroup: ageGroup.id,
                 gender,
-                productDescription: finalDescription 
+                productDescription: finalDescription,
+                provider: 'openai',
+                providerTaskId: generatedImage.taskId,
               },
               metadata: {
                 remoteSaveStatus: 'succeeded',
                 source: 'model-matrix',
+                provider: 'openai',
+                providerTaskId: generatedImage.taskId,
                 requestId,
                 ...(finalSourceMetadata ?? {}),
                 ...(materialMetadata ?? {}),

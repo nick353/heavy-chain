@@ -17,7 +17,15 @@ const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2';
 const OPENAI_IMAGE_MODELS = new Set([
   'gpt-image-2',
   'gpt-image-1.5',
+  'gpt-image-1',
   'gpt-image-1-mini',
+]);
+
+const OPENAI_IMAGE_EDIT_MODELS = new Set([
+  'gpt-image-1.5',
+  'gpt-image-1',
+  'gpt-image-1-mini',
+  'chatgpt-image-latest',
 ]);
 
 function openAiImageApiKey() {
@@ -35,6 +43,15 @@ function resolveOpenAiImageModel(requestedModel?: string | null) {
   const requested = String(requestedModel || '').trim();
   if (OPENAI_IMAGE_MODELS.has(requested)) return requested;
   return Deno.env.get('OPENAI_IMAGE_MODEL')?.trim() || DEFAULT_OPENAI_IMAGE_MODEL;
+}
+
+function resolveOpenAiImageEditModel(requestedModel?: string | null) {
+  const requested = String(requestedModel || '').trim();
+  if (OPENAI_IMAGE_EDIT_MODELS.has(requested)) return requested;
+  const envModel = Deno.env.get('OPENAI_IMAGE_EDIT_MODEL')?.trim()
+    || Deno.env.get('OPENAI_IMAGE_MODEL')?.trim();
+  if (envModel && OPENAI_IMAGE_EDIT_MODELS.has(envModel)) return envModel;
+  return 'gpt-image-1-mini';
 }
 
 function normalizeMimeType(mimeType?: string | null) {
@@ -133,6 +150,52 @@ export async function generateOpenAiImage(params: {
       ...image,
       model,
       taskId: `openai-${crypto.randomUUID()}`,
+    };
+  } catch (error) {
+    throw new Error(sanitizeOpenAiError(error));
+  }
+}
+
+export async function editOpenAiImage(params: {
+  prompt: string;
+  images: Array<{ imageUrl: string }>;
+  model?: string | null;
+  background?: 'transparent' | 'opaque' | 'auto';
+}): Promise<OpenAiImageResult> {
+  const model = resolveOpenAiImageEditModel(params.model);
+  const images = params.images
+    .map((image) => image.imageUrl.trim())
+    .filter(Boolean)
+    .slice(0, 16)
+    .map((image_url) => ({ image_url }));
+  if (!images.length) throw new Error('openai_image_edit_input_missing');
+
+  try {
+    const response = await fetch(`${openAiImageBaseUrl()}/images/edits`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${openAiImageApiKey()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        prompt: params.prompt,
+        images,
+        n: 1,
+        background: params.background || 'auto',
+        output_format: 'png',
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(`openai_image_edit_failed:${response.status}:${JSON.stringify(data)}`);
+    }
+    const image = extractOpenAiImage(data);
+    if (!image?.base64) throw new Error('openai_image_edit_empty_response');
+    return {
+      ...image,
+      model,
+      taskId: `openai-edit-${crypto.randomUUID()}`,
     };
   } catch (error) {
     throw new Error(sanitizeOpenAiError(error));
