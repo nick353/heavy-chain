@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { generateModelMatrix } from '../lib/imageApi';
+import { getErrorMessage } from '../lib/errorMessages';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
   GENERATION_LEGAL_COPY,
@@ -510,7 +511,7 @@ export function FittingPage() {
     const matrix = response.matrix ?? [];
 
     if (!response.success || matrix.length === 0) {
-      setErrorMessage(response.error || 'モデルセット写真を生成できませんでした。');
+      setErrorMessage(getErrorMessage(response.error || 'モデルセット写真を生成できませんでした。'));
       return;
     }
 
