@@ -10,7 +10,7 @@ const FEEDBACK_SCREENSHOT_BUCKET = 'feedback-screenshots';
 const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 const MAX_REQUEST_BYTES = 7 * 1024 * 1024;
 const PNG_DATA_URL_PREFIX = 'data:image/png;base64,';
-const FEEDBACK_TYPES = new Set(['lost', 'result', 'save', 'speed', 'other']);
+const FEEDBACK_TYPES = new Set(['lost', 'cutout', 'result', 'save', 'speed', 'other']);
 const ALLOWED_PAGE_ORIGINS = new Set([
   'https://heavy-chain.zeabur.app',
   'https://heavy-chain.com',
@@ -18,7 +18,7 @@ const ALLOWED_PAGE_ORIGINS = new Set([
   'http://127.0.0.1:5173',
 ]);
 
-type FeedbackType = 'lost' | 'result' | 'save' | 'speed' | 'other';
+type FeedbackType = 'lost' | 'cutout' | 'result' | 'save' | 'speed' | 'other';
 type ScreenshotCaptureStatus = 'captured' | 'screenshot_capture_failed' | 'screenshot_upload_failed';
 
 interface SubmitFeedbackRequest {

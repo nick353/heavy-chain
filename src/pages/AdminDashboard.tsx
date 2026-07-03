@@ -52,7 +52,7 @@ interface ModerationItem {
 
 type RunwayMcpConnectionStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
 type FeedbackStatus = 'new' | 'in_progress' | 'done';
-type FeedbackType = 'lost' | 'result' | 'save' | 'speed' | 'other';
+type FeedbackType = 'lost' | 'cutout' | 'result' | 'save' | 'speed' | 'other';
 
 interface RunwayMcpApproval {
   id: string;
@@ -137,6 +137,7 @@ const FEEDBACK_STATUS_STYLES: Record<FeedbackStatus, string> = {
 
 const FEEDBACK_TYPE_LABELS: Record<FeedbackType, string> = {
   lost: 'どこを押すかわからない',
+  cutout: '切り抜きがうまくいかない',
   result: '生成結果が微妙',
   save: '保存先がわからない',
   speed: '動作が遅い',

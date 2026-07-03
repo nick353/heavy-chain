@@ -46,13 +46,16 @@ artifacts/
 *.mov
 *.webm
 
+# Large local AI model cache. Configure VITE_REMBG_MODEL_BASE_URL or provide
+# this directory at deploy time; do not commit ONNX/WASM model binaries.
+public/models/
+
 # TypeScript
 *.tsbuildinfo
 
 # Supabase
 supabase/.branches
 supabase/.temp
-
 
 
 

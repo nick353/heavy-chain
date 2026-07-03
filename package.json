@@ -51,6 +51,7 @@
     "verify:runway-approved-generation": "node scripts/verify-runway-approved-generation-readback.mjs",
     "verify:gemini-provider": "node scripts/verify-gemini-provider-readiness.mjs",
     "verify:api-less-generation": "node scripts/verify-api-less-generation-readiness.mjs",
+    "verify:rembg-model-deploy": "node scripts/verify-rembg-model-deploy-readiness.mjs",
     "verify:internal-ux": "node scripts/verify-internal-ux-consistency.mjs",
     "verify:launch-ops": "node scripts/verify-launch-operations-readiness.mjs",
     "monitor:production": "node scripts/monitor-production-health.mjs",
@@ -77,6 +78,7 @@
     "smoke:edge": "node scripts/smoke-edge-functions.mjs"
   },
   "dependencies": {
+    "@bunnio/rembg-web": "^1.0.2",
     "@reactflow/background": "^11.3.14",
     "@reactflow/controls": "^11.2.14",
     "@reactflow/core": "^11.11.4",
@@ -89,6 +91,7 @@
     "konva": "^10.0.12",
     "lucide-react": "^0.555.0",
     "mcp-remote": "0.1.37",
+    "onnxruntime-web": "^1.27.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hot-toast": "^2.6.0",

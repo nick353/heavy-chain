@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
+  ArrowRight,
   Check,
   Camera,
   Images,
@@ -29,6 +30,7 @@ import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceMetadata,
   type MaterialReferenceState,
+  readWorkspaceImageAsDataUrl,
 } from '../lib/workspaceMaterialReferences';
 import type { Json } from '../types/database';
 
@@ -46,6 +48,8 @@ type MatrixItem = {
 type LastRequest = {
   productDescription: string;
   imageUrl?: string;
+  modelReferenceImageUrl?: string;
+  modelReferenceFileName?: string;
   sourceMaterialImageUrl?: string;
   bodyTypes: string[];
   ageGroups: string[];
@@ -69,6 +73,8 @@ type HistoryItem = {
   remoteImageIds?: Array<string | null>;
   remoteStoragePaths?: Array<string | null>;
   sourceMaterialImageUrl?: string;
+  modelReferenceImageUrl?: string;
+  modelReferenceFileName?: string;
   materialReference?: MaterialReferenceMetadata;
   materialReferences?: MaterialReferenceMetadata[];
   layerPlan?: Record<string, Json | undefined>;
@@ -156,9 +162,54 @@ const initialMaterialReference: MaterialReferenceState = {
   note: '着用生成に使う衣服素材と、モデル上で効かせるレイヤーを先に決めます。',
 };
 
+type ModelReferenceState = {
+  imageUrl: string;
+  fileName: string;
+};
+
 const isLocalCanvasMaskEngine = (maskEngine?: string | null) => (
   !maskEngine || maskEngine.startsWith('browser-canvas-')
 );
+
+const buildGenerationBlockers = ({
+  currentBrandLoaded,
+  rightsConfirmed,
+  isGenerating,
+  garmentImageUrl,
+  extractedGarmentImageUrl,
+  materialReference,
+  productDescription,
+  selectedBodyTypesCount,
+  selectedAgeGroupsCount,
+}: {
+  currentBrandLoaded: boolean;
+  rightsConfirmed: boolean;
+  isGenerating: boolean;
+  garmentImageUrl?: string;
+  extractedGarmentImageUrl?: string;
+  materialReference: MaterialReferenceState;
+  productDescription: string;
+  selectedBodyTypesCount: number;
+  selectedAgeGroupsCount: number;
+}) => {
+  if (isGenerating) return ['生成中です'];
+  const blockers: string[] = [];
+  if (!currentBrandLoaded) blockers.push('ブランド読込');
+  if (!garmentImageUrl) blockers.push('衣服画像');
+  if (
+    !extractedGarmentImageUrl
+    || !materialReference.extractedLayerReady
+    || !materialReference.nextStepReady
+    || isLocalCanvasMaskEngine(materialReference.maskEngine)
+  ) {
+    blockers.push('高精度AI切り抜き');
+  }
+  if (!rightsConfirmed) blockers.push('権利確認');
+  if (!productDescription.trim()) blockers.push('生成brief');
+  if (!selectedBodyTypesCount) blockers.push('体型');
+  if (!selectedAgeGroupsCount) blockers.push('年代');
+  return blockers;
+};
 
 const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -236,6 +287,7 @@ export function FittingPage() {
     '春夏向けのリネン混シャツ。自然光、EC商品ページのメイン画像として使える落ち着いた構図。'
   );
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
+  const [modelReference, setModelReference] = useState<ModelReferenceState>({ imageUrl: '', fileName: '' });
   const [selectedBodyTypes, setSelectedBodyTypes] = useState<string[]>(['slim', 'regular']);
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>(['20s', '30s']);
   const [gender, setGender] = useState<Gender>('female');
@@ -249,6 +301,7 @@ export function FittingPage() {
   const garmentImageUrl = materialReference.imageUrl || undefined;
   const extractedGarmentImageUrl = materialReference.extractedImageUrl || undefined;
   const garmentFileName = materialReference.fileName;
+  const modelReferenceImageUrl = modelReference.imageUrl || undefined;
 
   const canGenerate = useMemo(() => {
     return Boolean(
@@ -286,6 +339,27 @@ export function FittingPage() {
     .map((option) => option.label);
   const genderLabel = genderOptions.find((option) => option.id === gender)?.label ?? '女性';
   const patternCount = selectedBodyTypes.length * selectedAgeGroups.length;
+  const generationBlockers = useMemo(() => buildGenerationBlockers({
+    currentBrandLoaded: Boolean(currentBrand),
+    rightsConfirmed,
+    isGenerating,
+    garmentImageUrl,
+    extractedGarmentImageUrl,
+    materialReference,
+    productDescription,
+    selectedBodyTypesCount: selectedBodyTypes.length,
+    selectedAgeGroupsCount: selectedAgeGroups.length,
+  }), [
+    currentBrand,
+    extractedGarmentImageUrl,
+    garmentImageUrl,
+    isGenerating,
+    materialReference,
+    productDescription,
+    rightsConfirmed,
+    selectedAgeGroups.length,
+    selectedBodyTypes.length,
+  ]);
   const fittingPreviewImageUrl = useMemo(() => buildFittingPreviewSvg({
     workflowTitle: activeWorkflow.title,
     selectedBodyTypeLabels,
@@ -294,6 +368,25 @@ export function FittingPage() {
     materialReference,
     patternCount,
   }), [activeWorkflow.title, genderLabel, materialReference, patternCount, selectedAgeGroupLabels, selectedBodyTypeLabels]);
+
+  const handleModelReferenceUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('モデル画像は5MB以下にしてください。');
+      event.target.value = '';
+      return;
+    }
+    try {
+      setModelReference({
+        imageUrl: await readWorkspaceImageAsDataUrl(file),
+        fileName: file.name,
+      });
+      setErrorMessage('');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'モデル画像を読み込めませんでした。');
+    }
+  };
 
   const scrollToMaterialWorkbench = () => {
     document.getElementById('fitting-material-workbench')?.scrollIntoView({
@@ -371,9 +464,14 @@ export function FittingPage() {
 
     const response = await generateModelMatrix(request.productDescription, currentBrand.id, {
       imageUrl: request.imageUrl,
+      modelReferenceImageUrl: request.modelReferenceImageUrl,
       bodyTypes: request.bodyTypes,
       ageGroups: request.ageGroups,
       gender: request.gender,
+      materialReferences: request.materialReferences,
+      layerPlan: request.layerPlan,
+      maskPlan: request.maskPlan,
+      compositionPreview: request.compositionPreview,
       rightsConfirmed,
     });
 
@@ -412,6 +510,8 @@ export function FittingPage() {
           sourceStoragePath: item.storagePath ?? null,
           materialReference: request.materialReference,
           materialReferences: request.materialReferences,
+          modelReferenceImageUrl: request.modelReferenceImageUrl ? '[provided]' : null,
+          modelReferenceFileName: request.modelReferenceFileName ?? null,
           layerPlan: request.layerPlan,
           maskPlan: request.maskPlan,
           compositionPreview: request.compositionPreview,
@@ -437,6 +537,8 @@ export function FittingPage() {
         sourceMaterialImageUrl: request.sourceMaterialImageUrl ?? request.imageUrl,
         materialReference: request.materialReference,
         materialReferences: request.materialReferences,
+        modelReferenceImageUrl: request.modelReferenceImageUrl,
+        modelReferenceFileName: request.modelReferenceFileName,
         layerPlan: request.layerPlan,
         maskPlan: request.maskPlan,
         compositionPreview: request.compositionPreview,
@@ -476,11 +578,14 @@ export function FittingPage() {
       `体型: ${selectedBodyTypeLabels.join(' / ')}`,
       `年代: ${selectedAgeGroupLabels.join(' / ')}`,
       `素材: ${materialReferenceSummary}`,
+      modelReference.fileName ? `モデル参照: ${modelReference.fileName}の人物にこの服を自然に着せる` : 'モデル参照: 未指定の場合は条件からモデルを生成',
     ].filter(Boolean).join('\n');
 
     void runGeneration({
       productDescription: fittingBrief,
       imageUrl: extractedGarmentImageUrl,
+      modelReferenceImageUrl,
+      modelReferenceFileName: modelReference.fileName || undefined,
       sourceMaterialImageUrl: garmentImageUrl,
       bodyTypes: selectedBodyTypes,
       ageGroups: selectedAgeGroups,
@@ -679,6 +784,32 @@ export function FittingPage() {
                 <Images className="h-4 w-4" />
                 過去の画像を見る
               </Link>
+              <Link
+                to="/generate?feature=model-matrix"
+                className="btn-secondary inline-flex items-center justify-center gap-2 text-sm"
+              >
+                <ArrowRight className="h-4 w-4" />
+                生成条件へ送る
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              {[
+                ['1', '衣服画像', '服の写真を入れる'],
+                ['2', '高精度AI切り抜き', '背景を抜いて品質確認'],
+                ['3', '生成確認', '権利確認後にAI生成'],
+              ].map(([step, title, description]) => (
+                <div
+                  key={step}
+                  data-testid="fitting-readiness-item"
+                  className="rounded-xl border border-white/70 bg-white/75 p-3 dark:border-white/10 dark:bg-surface-950/50"
+                >
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-cyan-300 text-xs font-bold text-neutral-950">
+                    {step}
+                  </span>
+                  <p className="mt-2 text-sm font-semibold text-neutral-950 dark:text-white">{title}</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{description}</p>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -712,6 +843,42 @@ export function FittingPage() {
 	                  </p>
 	                )}
 	              </div>
+              <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50/80 p-3 dark:border-cyan-400/20 dark:bg-cyan-400/10">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-950 dark:text-white">モデル画像</p>
+                    <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
+                      指定した人物・ポーズに服を着せたい場合は、ここにモデル画像を入れてください。
+                    </p>
+                  </div>
+                  {modelReference.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setModelReference({ imageUrl: '', fileName: '' })}
+                      className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-700 ring-1 ring-neutral-200 dark:bg-neutral-950 dark:text-neutral-200 dark:ring-white/10"
+                    >
+                      解除
+                    </button>
+                  )}
+                </div>
+                <label className="mt-3 flex min-h-32 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-cyan-300 bg-white/75 p-3 transition hover:border-cyan-500 dark:border-cyan-400/30 dark:bg-surface-950/60">
+                  <input type="file" accept="image/*" className="sr-only" onChange={handleModelReferenceUpload} />
+                  {modelReference.imageUrl ? (
+                    <>
+                      <img src={modelReference.imageUrl} alt="モデル参照" className="h-24 w-20 rounded-lg object-cover" />
+                      <span className="min-w-0 text-sm font-semibold text-neutral-900 dark:text-white">
+                        <span className="block truncate">{modelReference.fileName}</span>
+                        <span className="mt-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">このモデルに服を着せる参照として使います</span>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="h-6 w-6 text-cyan-700 dark:text-cyan-200" />
+                      <span className="text-sm font-semibold text-neutral-900 dark:text-white">モデル画像を追加</span>
+                    </>
+                  )}
+                </label>
+              </div>
               <details className="mt-4 rounded-xl border border-neutral-200 bg-white/70 p-3 dark:border-white/10 dark:bg-surface-950/50">
                 <summary className="cursor-pointer text-sm font-semibold text-neutral-700 dark:text-neutral-200">
                   詳細条件
@@ -752,14 +919,29 @@ export function FittingPage() {
                 />
               </div>
               <figure className="mt-4">
-                <img
+                <div
                   data-testid="fitting-preview-image"
-                  src={fittingPreviewImageUrl}
-                  alt="Fitting brief preview"
-                  className="aspect-[3/2] w-full rounded-2xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
-                />
+                  className="grid min-h-60 gap-3 rounded-2xl border border-neutral-200 bg-white p-3 dark:border-white/10 dark:bg-surface-900 sm:grid-cols-2"
+                >
+                  <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-950">
+                    {modelReference.imageUrl ? (
+                      <img src={modelReference.imageUrl} alt="使用するモデル" className="h-full max-h-72 w-full object-contain" />
+                    ) : (
+                      <img src={fittingPreviewImageUrl} alt="モデル条件プレビュー" className="h-full max-h-72 w-full object-cover" />
+                    )}
+                  </div>
+                  <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f4f5_75%),linear-gradient(-45deg,transparent_75%,#f4f4f5_75%)] bg-[length:22px_22px] bg-[position:0_0,0_11px,11px_-11px,-11px_0] dark:bg-neutral-950">
+                    {extractedGarmentImageUrl ? (
+                      <img src={extractedGarmentImageUrl} alt="着せる服" className="h-full max-h-72 w-full object-contain drop-shadow-xl" />
+                    ) : garmentImageUrl ? (
+                      <img src={garmentImageUrl} alt="切り抜き前の服" className="h-full max-h-72 w-full object-contain opacity-75" />
+                    ) : (
+                      <span className="px-4 text-center text-sm font-semibold text-neutral-500 dark:text-neutral-400">服画像を入れるとここに表示されます</span>
+                    )}
+                  </div>
+                </div>
                 <figcaption className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
-                  用途、体型、年代、素材配置を生成前に確認する着用briefプレビューです。
+                  左のモデル画像と右の服画像を組み合わせて、モデル着用画像を生成します。モデル未指定時は条件からモデルを作ります。
                 </figcaption>
               </figure>
 
@@ -859,6 +1041,11 @@ export function FittingPage() {
                     {isGenerating ? '生成中' : 'AI生成'}
                   </button>
                 </div>
+                {!canGenerate && generationBlockers.length > 0 && (
+                  <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                    AI生成までに必要なもの: {generationBlockers.join(' / ')}
+                  </p>
+                )}
             </div>
           </div>
 

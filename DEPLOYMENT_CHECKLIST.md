@@ -164,6 +164,7 @@ vercel --prod
 4. 環境変数を設定
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_REMBG_MODEL_BASE_URL`（CORS対応の `/models/isnet-general-use.onnx` 配信元）
 5. Deploy
 
 ### 6. デプロイ後の設定
@@ -171,6 +172,7 @@ vercel --prod
 - [ ] デプロイURLをREADME.mdに追加
 - [ ] デプロイURLをGitHub About欄に追加
 - [ ] デプロイされたアプリをテスト
+- [ ] `VITE_REMBG_MODEL_BASE_URL` から `isnet-general-use.onnx` をブラウザ取得できることを確認
 
 ---
 
@@ -323,4 +325,3 @@ GitHubで公開する準備が整いました！
 4. GitHubにプッシュ
 5. プロフィールREADMEを作成
 6. 世界に共有！🚀
-

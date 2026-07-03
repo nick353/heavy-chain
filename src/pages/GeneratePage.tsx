@@ -3902,8 +3902,10 @@ export function GeneratePage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl bg-white/5 p-3">
-              <p className="text-xs font-semibold text-neutral-400">作業モード</p>
+            <details className="mt-4 rounded-xl bg-white/5 p-3">
+              <summary className="cursor-pointer text-xs font-semibold text-neutral-300">
+                作業モードを変更
+              </summary>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold text-white">
                   {selectedCatalogFeature?.title?.includes('プリント') ? 'プリント合成' : '素材合成'}
@@ -3912,7 +3914,7 @@ export function GeneratePage() {
                   デザイン作成
                 </button>
               </div>
-            </div>
+            </details>
 
             <div className="mt-4 flex flex-wrap gap-2">
               {(selectedCatalogFeature?.tags ?? []).slice(0, 4).map((tag) => (
@@ -3930,30 +3932,35 @@ export function GeneratePage() {
           transition={{ duration: 0.45 }}
           className="space-y-4"
         >
-          <div
-            className="mx-auto hidden w-fit items-center overflow-hidden rounded-xl border border-white/10 bg-neutral-950 shadow-2xl sm:flex"
+          <details
+            className="mx-auto hidden w-fit overflow-hidden rounded-xl border border-white/10 bg-neutral-950 shadow-2xl sm:block"
             data-testid="lightchain-canvas-toolbar"
           >
-            {[
-              { label: '選択', icon: MousePointer2 },
-              { label: 'ドラッグ', icon: Hand },
-              { label: '前にステップ', icon: Undo2 },
-              { label: '次のステップ', icon: Redo2 },
-            ].map(({ label, icon: Icon }, index) => (
-              <button
-                key={label}
-                type="button"
-                className={`flex min-h-[54px] items-center gap-2 px-4 text-xs font-semibold transition ${
-                  index === 0
-                    ? 'bg-white/10 text-white'
-                    : 'border-l border-white/10 text-neutral-400 hover:text-white'
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </button>
-            ))}
-          </div>
+            <summary className="cursor-pointer px-4 py-3 text-xs font-semibold text-neutral-300">
+              詳細操作: 選択 / ドラッグ / 前にステップ / 次のステップ
+            </summary>
+            <div className="flex border-t border-white/10">
+              {[
+                { label: '選択', icon: MousePointer2 },
+                { label: 'ドラッグ', icon: Hand },
+                { label: '前にステップ', icon: Undo2 },
+                { label: '次のステップ', icon: Redo2 },
+              ].map(({ label, icon: Icon }, index) => (
+                <button
+                  key={label}
+                  type="button"
+                  className={`flex min-h-[54px] items-center gap-2 px-4 text-xs font-semibold transition ${
+                    index === 0
+                      ? 'bg-white/10 text-white'
+                      : 'border-l border-white/10 text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </details>
 
           <section className="rounded-2xl border border-white/10 bg-neutral-950 p-5 shadow-sm" data-testid="lightchain-input-material-panel">
 
@@ -3978,6 +3985,9 @@ export function GeneratePage() {
                   </p>
                   <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
                     先に画像や素材を入れてから、必要な生成条件だけを調整します。
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-cyan-700 dark:text-cyan-200">
+                    素材を置くと編集を始められます。
                   </p>
                 </div>
                 {supportsAssistantPlanning(selectedFeature.id) && (
@@ -4069,16 +4079,18 @@ export function GeneratePage() {
             {renderFeatureForm()}
 
             {geminiGenerationMode && selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && (
-              <div className="mt-5 rounded-2xl border border-neutral-200 bg-white/85 p-4 dark:border-neutral-800 dark:bg-neutral-900/70">
-                <div className="flex flex-wrap items-end justify-between gap-2">
+              <details className="mt-5 rounded-2xl border border-neutral-200 bg-white/85 p-4 dark:border-neutral-800 dark:bg-neutral-900/70">
+                <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold text-neutral-900 dark:text-white">生成モデル</p>
-                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">社内確認では低コスト設定から始めます。必要な時だけ変更してください。</p>
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      現在: {selectedGenerationModelOption.title} / {selectedGenerationModelOption.cost}
+                    </p>
                   </div>
                   <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
-                    {selectedGenerationModelOption.cost}
+                    必要な時だけ変更
                   </span>
-                </div>
+                </summary>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                   {generationModelOptions.map((option) => {
                     const selected = selectedGenerationModel === option.id;
@@ -4101,7 +4113,7 @@ export function GeneratePage() {
                     );
                   })}
                 </div>
-              </div>
+              </details>
             )}
 
             {selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && (

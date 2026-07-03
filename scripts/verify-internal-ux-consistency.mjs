@@ -67,6 +67,7 @@ addCheck('lightchain_surface_uses_material_workbench_language', (
 
 addCheck('feedback_collects_internal_beta_friction_categories', (
   feedback.includes('どこを押すかわからない')
+  && feedback.includes('切り抜きがうまくいかない')
   && feedback.includes('生成結果が微妙')
   && feedback.includes('保存先がわからない')
   && feedback.includes('動作が遅い')

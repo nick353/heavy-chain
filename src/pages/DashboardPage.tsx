@@ -96,7 +96,7 @@ const canvasObjectTypeLabels: Record<CanvasProject['objects'][number]['type'], s
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { user, profile, currentBrand, setCurrentBrand } = useAuthStore();
+  const { user, currentBrand, setCurrentBrand } = useAuthStore();
   const { createProject, deleteProject, loadProject, clearCanvas, getRecentProjects, projects } = useCanvasStore();
   const { showOnboarding, completeOnboarding, resetOnboarding } = useOnboarding(user?.id);
   const [recentImages, setRecentImages] = useState<GeneratedImage[]>([]);
@@ -364,13 +364,6 @@ export function DashboardPage() {
   const displayableRecentImages = recentImages.filter((image) => Boolean(getImageUrl(image)) && !failedRecentImageIds.has(image.id));
   const unresolvedRecentImageCount = recentImages.length - displayableRecentImages.length;
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'おはようございます';
-    if (hour < 18) return 'こんにちは';
-    return 'こんばんは';
-  };
-
   return (
     <>
       {/* Onboarding */}
@@ -382,23 +375,67 @@ export function DashboardPage() {
         animate="visible"
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8"
       >
-        {/* Welcome Section */}
-        <motion.div variants={itemVariants} className="mb-6 sm:mb-10 flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4">
-          <div>
-            <p className="text-xs sm:text-sm font-medium text-primary-600 dark:text-primary-400 mb-1 sm:mb-2 uppercase tracking-wider">Dashboard</p>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-semibold text-neutral-900 dark:text-white">
-              {getGreeting()}、<span className="text-neutral-500 dark:text-neutral-400">{profile?.name || 'ゲスト'}さん</span>
-            </h1>
+        <motion.section
+          variants={itemVariants}
+          className="mb-6 overflow-hidden rounded-[28px] border border-white/10 bg-[#050707] shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:mb-8"
+          data-testid="dashboard-internal-beta-start"
+        >
+          <div className="flex flex-col gap-8 px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h1 className="text-4xl font-semibold tracking-normal text-white sm:text-5xl lg:text-6xl">
+                  HEAVY CHAIN AI
+                </h1>
+                <p className="mt-4 max-w-4xl text-sm leading-6 text-neutral-300 sm:text-base">
+                  アパレル特化のAIデザインワークスペース。指示を入力するか、目的別の4カテゴリから開始します。
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={resetOnboarding}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-4 text-sm font-semibold text-neutral-200 transition hover:border-white/25 hover:bg-white/[0.12]"
+                >
+                  <IconHelp className="h-4 w-4" size={16} />
+                  チュートリアルを見る
+                </button>
+                <a
+                  href="#dashboard-workflow"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-4 text-sm font-semibold text-white transition hover:border-white/25 hover:bg-white/[0.12]"
+                >
+                  制作ワークフロー
+                  <IconArrowRight className="h-4 w-4" size={16} />
+                </a>
+              </div>
+            </div>
+
+            <form
+              className="flex min-h-[76px] items-center gap-3 rounded-full border border-cyan-300/70 bg-[#050707] px-5 shadow-[0_0_0_1px_rgba(103,232,249,0.12)] focus-within:border-cyan-200"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const formData = new FormData(event.currentTarget);
+                const prompt = String(formData.get('dashboardPrompt') || '').trim();
+                const searchParams = new URLSearchParams({ feature: 'campaign-image' });
+                if (prompt) searchParams.set('prompt', prompt);
+                navigate(`/generate?${searchParams.toString()}`);
+              }}
+            >
+              <Search className="h-6 w-6 shrink-0 text-cyan-300" />
+              <input
+                name="dashboardPrompt"
+                className="min-w-0 flex-1 border-0 bg-transparent text-sm text-white outline-none placeholder:text-neutral-500 sm:text-base"
+                placeholder="指示を入力してください... 例: モデルの着せ替え、夏のSNSバナー、背景削除"
+                aria-label="制作したい内容"
+              />
+              <button
+                type="submit"
+                className="inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-full bg-cyan-300 px-6 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
+              >
+                開始
+                <IconArrowRight className="h-4 w-4" size={16} />
+              </button>
+            </form>
           </div>
-          <button
-            onClick={resetOnboarding}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 hover:bg-white/50 dark:hover:bg-white/5 rounded-full transition-colors border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700"
-          >
-            <IconHelp className="w-3.5 h-3.5 sm:w-4 sm:h-4" size={16} />
-            <span className="hidden sm:inline">チュートリアルを見る</span>
-            <span className="sm:hidden">ヘルプ</span>
-          </button>
-        </motion.div>
+        </motion.section>
 
         <motion.nav
           variants={itemVariants}
@@ -449,7 +486,7 @@ export function DashboardPage() {
         <motion.section
           variants={itemVariants}
           className="mb-8 hidden rounded-3xl border border-white/10 bg-white/[0.05] p-5 shadow-soft sm:block"
-          data-testid="dashboard-internal-beta-start"
+          data-testid="dashboard-quick-start"
         >
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-xl">
@@ -481,7 +518,7 @@ export function DashboardPage() {
           </div>
         </motion.section>
 
-        <motion.section variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
+        <motion.section id="dashboard-workflow" variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
           <LightchainParityHub compactOnMobile />
         </motion.section>
 

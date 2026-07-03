@@ -374,6 +374,12 @@ export async function generateModelMatrix(
     ageGroups?: string[];
     gender?: 'male' | 'female';
     imageUrl?: string;
+    modelReferenceImageUrl?: string;
+    sourceReadback?: unknown;
+    materialReferences?: unknown;
+    layerPlan?: unknown;
+    maskPlan?: unknown;
+    compositionPreview?: unknown;
     textOverlay?: TextOverlayPayload;
     rightsConfirmed?: boolean;
   }

@@ -21,6 +21,7 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@bunnio/rembg-web@^1.0.2",
         "npm:@eslint/js@^9.39.1",
         "npm:@playwright/test@^1.57.0",
         "npm:@reactflow/background@^11.3.14",
@@ -44,6 +45,7 @@
         "npm:konva@^10.0.12",
         "npm:lucide-react@0.555",
         "npm:mcp-remote@0.1.37",
+        "npm:onnxruntime-web@^1.27.0",
         "npm:postcss@^8.5.6",
         "npm:react-dom@^19.2.0",
         "npm:react-hot-toast@^2.6.0",

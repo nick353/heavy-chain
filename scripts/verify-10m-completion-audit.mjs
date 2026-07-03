@@ -158,11 +158,20 @@ const requiredProofs = [
     expect: 'production authenticated /generate shows H601 rights label, commercial caveat, and rights checkbox',
   },
   {
-    id: 'production_public_domain_readback',
+    id: 'production_chosen_public_entrypoint_readback',
     goal: 'public-entrypoint',
-    path: 'output/playwright/prod-domain-rights-check-20260630T0952Z/summary.json',
-    validate: (json) => json.findings?.customDomain?.reachable === true,
-    expect: 'chosen public custom domain is reachable',
+    path: 'output/playwright/prod-chosen-public-entrypoint-readback-20260703-r1/summary.json',
+    validate: (json) =>
+      json.ok === true &&
+      json.urls?.chosenPublicEntrypoint === 'https://heavy-chain.zeabur.app' &&
+      json.findings?.chosenPublicEntrypoint?.reachable === true &&
+      Number(json.findings?.chosenPublicEntrypoint?.status || 0) >= 200 &&
+      Number(json.findings?.chosenPublicEntrypoint?.status || 0) < 300 &&
+      json.findings?.chosenPublicEntrypoint?.hasHeavyChainShell === true &&
+      json.safetyBoundaries?.generationSubmit === 'not_clicked' &&
+      json.safetyBoundaries?.billingCheckoutPayment === 'not_touched' &&
+      json.safetyBoundaries?.externalPublish === 'not_touched',
+    expect: 'chosen public entrypoint https://heavy-chain.zeabur.app is reachable without submit/payment/publish actions',
   },
   {
     id: 'production_h602_billing_completion_readback',

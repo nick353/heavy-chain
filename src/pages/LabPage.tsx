@@ -395,10 +395,10 @@ export function LabPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="font-display text-3xl font-semibold text-neutral-950 dark:text-white">
-              Lab
+              ウェアデザインラボ
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-              生成前の仮説、品質評価、採用候補メモを、Gallery/History と Canvas に渡せる実験ワークスペースです。
+              服の方向性、素材感、採用候補を比べて、生成指示かCanvasへそのまま渡す場所です。
             </p>
           </div>
           <button
@@ -493,10 +493,10 @@ export function LabPage() {
       >
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
-            Lab flow
+            Wear Design Lab
           </p>
           <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
-            仮説を選び、評価軸で採点し、採用候補を生成かCanvasへ進める
+            まず素材や候補を置き、良い方向だけを生成へ進める
           </h2>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
             {labReadinessItems.map((item) => (
@@ -528,7 +528,7 @@ export function LabPage() {
             className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
           >
             <Sparkles className="h-4 w-4" />
-            生成指示へ送る
+            ラボで試す
           </Link>
           <button
             type="button"

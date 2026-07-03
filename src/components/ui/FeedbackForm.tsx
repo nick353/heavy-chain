@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import html2canvas from 'html2canvas';
-import { Camera, MessageSquare, RefreshCw, X, Send, ThumbsUp, MousePointerClick, ImageOff, FolderOpen, Gauge, CircleHelp } from 'lucide-react';
+import { Camera, MessageSquare, RefreshCw, X, Send, ThumbsUp, MousePointerClick, ImageOff, FolderOpen, Gauge, CircleHelp, Scissors } from 'lucide-react';
 import { Button, Textarea, Input } from './index';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
@@ -15,7 +15,7 @@ interface FeedbackFormProps {
   onRecapture: () => Promise<void>;
 }
 
-type FeedbackType = 'lost' | 'result' | 'save' | 'speed' | 'other';
+type FeedbackType = 'lost' | 'cutout' | 'result' | 'save' | 'speed' | 'other';
 type ScreenshotCaptureStatus = 'captured' | 'screenshot_capture_failed' | 'screenshot_upload_failed';
 
 interface FeedbackScreenshotState {
@@ -27,6 +27,7 @@ interface FeedbackScreenshotState {
 
 const feedbackTypes = [
   { id: 'lost', label: 'どこを押すかわからない', icon: MousePointerClick, color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-900/20' },
+  { id: 'cutout', label: '切り抜きがうまくいかない', icon: Scissors, color: 'text-rose-500 bg-rose-50 dark:bg-rose-900/20' },
   { id: 'result', label: '生成結果が微妙', icon: ImageOff, color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' },
   { id: 'save', label: '保存先がわからない', icon: FolderOpen, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' },
   { id: 'speed', label: '動作が遅い', icon: Gauge, color: 'text-red-500 bg-red-50 dark:bg-red-900/20' },
@@ -261,6 +262,8 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
                     placeholder={
                       type === 'lost'
                         ? 'どの画面で、次に何をすればよいかわからなくなりましたか？'
+                        : type === 'cutout'
+                        ? '背景が残った、袖や裾が消えた、服だけにならなかった等を教えてください'
                         : type === 'result'
                         ? '期待していた見た目と、実際の結果の違いを教えてください'
                         : type === 'save'

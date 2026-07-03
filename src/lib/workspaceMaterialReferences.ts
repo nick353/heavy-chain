@@ -1,5 +1,7 @@
 import type { Json } from '../types/database';
 
+import { newSession, remove, rembgConfig } from '@bunnio/rembg-web';
+
 export type MaterialReferenceState = {
   imageUrl: string;
   fileName: string;
@@ -35,8 +37,11 @@ export type MaterialCutoutResult = {
   sourceSize: { width: number; height: number };
   outputSize: { width: number; height: number };
   dataUrlBytes: number;
-  storagePolicy: 'bounded-local-canvas-data-url-v1';
-  engine: 'browser-canvas-geometric-mask-v1' | 'browser-canvas-background-flood-cutout-v2';
+  storagePolicy: 'bounded-local-canvas-data-url-v1' | 'bounded-local-ai-cutout-data-url-v1';
+  engine:
+    | 'browser-canvas-geometric-mask-v1'
+    | 'browser-canvas-background-flood-cutout-v2'
+    | 'browser-ai-isnet-general-use-v1';
   hasTransparentPixels: boolean;
 };
 
@@ -113,6 +118,181 @@ const loadImageElement = (imageUrl: string): Promise<HTMLImageElement> => {
 };
 
 const estimateDataUrlBytes = (dataUrl: string) => Math.ceil(dataUrl.length * 0.75);
+
+const blobToDataUrl = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (typeof reader.result === 'string') {
+      resolve(reader.result);
+      return;
+    }
+    reject(new Error('AI切り抜き結果を読み込めませんでした'));
+  };
+  reader.onerror = () => reject(new Error('AI切り抜き結果を読み込めませんでした'));
+  reader.readAsDataURL(blob);
+});
+
+const dataUrlToBlob = async (dataUrl: string) => {
+  const response = await fetch(dataUrl);
+  return response.blob();
+};
+
+const getAlphaBounds = (imageData: ImageData): { bounds: MaterialCutoutBounds; hasTransparentPixels: boolean } | null => {
+  const { data, width, height } = imageData;
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+  let hasTransparentPixels = false;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const alpha = data[(y * width + x) * 4 + 3];
+      if (alpha > 4) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+      if (alpha < 250) hasTransparentPixels = true;
+    }
+  }
+
+  if (maxX < minX || maxY < minY) return null;
+  return {
+    bounds: {
+      x: minX,
+      y: minY,
+      width: maxX - minX + 1,
+      height: maxY - minY + 1,
+    },
+    hasTransparentPixels,
+  };
+};
+
+const calculateOpaqueBorderRatio = (imageData: ImageData, bounds: MaterialCutoutBounds) => {
+  const { data, width, height } = imageData;
+  const x1 = Math.max(0, bounds.x);
+  const y1 = Math.max(0, bounds.y);
+  const x2 = Math.min(width - 1, bounds.x + bounds.width - 1);
+  const y2 = Math.min(height - 1, bounds.y + bounds.height - 1);
+  let borderSamples = 0;
+  let opaqueSamples = 0;
+
+  const sample = (x: number, y: number) => {
+    borderSamples += 1;
+    if (data[(y * width + x) * 4 + 3] > 220) opaqueSamples += 1;
+  };
+
+  for (let x = x1; x <= x2; x += 1) {
+    sample(x, y1);
+    if (y2 !== y1) sample(x, y2);
+  }
+  for (let y = y1 + 1; y < y2; y += 1) {
+    sample(x1, y);
+    if (x2 !== x1) sample(x2, y);
+  }
+
+  return borderSamples > 0 ? opaqueSamples / borderSamples : 0;
+};
+
+const calculateNeutralBackgroundRisk = (imageData: ImageData) => {
+  const { data, width, height } = imageData;
+  let opaquePixels = 0;
+  let flatNeutralPixels = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      const alpha = data[index + 3];
+      if (alpha <= 120) continue;
+      opaquePixels += 1;
+      const r = data[index];
+      const g = data[index + 1];
+      const b = data[index + 2];
+      const channelSpread = Math.max(r, g, b) - Math.min(r, g, b);
+      const isFlatNeutral = channelSpread <= 10 && r >= 120 && r <= 235 && g >= 120 && g <= 235 && b >= 120 && b <= 235;
+      if (isFlatNeutral) flatNeutralPixels += 1;
+    }
+  }
+
+  return opaquePixels > 0 ? flatNeutralPixels / opaquePixels : 0;
+};
+
+const canvasToPngDataUrl = (canvas: HTMLCanvasElement) => canvas.toDataURL('image/png');
+
+const buildBoundedPngFromCanvas = ({
+  canvas,
+  sourceWidth,
+  sourceHeight,
+  maxDataUrlBytes,
+  storagePolicy,
+  engine,
+}: {
+  canvas: HTMLCanvasElement;
+  sourceWidth: number;
+  sourceHeight: number;
+  maxDataUrlBytes: number;
+  storagePolicy: MaterialCutoutResult['storagePolicy'];
+  engine: MaterialCutoutResult['engine'];
+}): MaterialCutoutResult => {
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Canvasを初期化できませんでした');
+
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const alphaBounds = getAlphaBounds(imageData);
+  if (!alphaBounds?.hasTransparentPixels) {
+    throw new Error('背景を十分に分離できませんでした。白い背景や平置き写真で再試行してください。');
+  }
+  const opaqueBorderRatio = calculateOpaqueBorderRatio(imageData, alphaBounds.bounds);
+  const neutralBackgroundRisk = calculateNeutralBackgroundRisk(imageData);
+  if (opaqueBorderRatio > 0.58 || neutralBackgroundRisk > 0.18) {
+    throw new Error('背景の四角い範囲が残っています。服だけを分離できる写真で再試行してください。');
+  }
+
+  const padding = Math.round(Math.max(canvas.width, canvas.height) * 0.025);
+  const cropX = Math.max(0, alphaBounds.bounds.x - padding);
+  const cropY = Math.max(0, alphaBounds.bounds.y - padding);
+  const cropRight = Math.min(canvas.width, alphaBounds.bounds.x + alphaBounds.bounds.width - 1 + padding);
+  const cropBottom = Math.min(canvas.height, alphaBounds.bounds.y + alphaBounds.bounds.height - 1 + padding);
+  let cropWidth = Math.max(1, cropRight - cropX + 1);
+  let cropHeight = Math.max(1, cropBottom - cropY + 1);
+  let scale = 1;
+  let lastDataUrl = '';
+  let lastOutputSize = { width: cropWidth, height: cropHeight };
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const outputWidth = Math.max(1, Math.round(cropWidth * scale));
+    const outputHeight = Math.max(1, Math.round(cropHeight * scale));
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = outputWidth;
+    outputCanvas.height = outputHeight;
+    const outputContext = outputCanvas.getContext('2d');
+    if (!outputContext) throw new Error('Canvasを初期化できませんでした');
+    outputContext.imageSmoothingEnabled = true;
+    outputContext.imageSmoothingQuality = 'high';
+    outputContext.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, outputWidth, outputHeight);
+    lastDataUrl = canvasToPngDataUrl(outputCanvas);
+    lastOutputSize = { width: outputWidth, height: outputHeight };
+    if (estimateDataUrlBytes(lastDataUrl) <= maxDataUrlBytes) {
+      return {
+        dataUrl: lastDataUrl,
+        bounds: { x: cropX, y: cropY, width: cropWidth, height: cropHeight },
+        sourceSize: { width: sourceWidth, height: sourceHeight },
+        outputSize: lastOutputSize,
+        dataUrlBytes: estimateDataUrlBytes(lastDataUrl),
+        storagePolicy,
+        engine,
+        hasTransparentPixels: true,
+      };
+    }
+    scale *= 0.72;
+  }
+
+  cropWidth = Math.max(1, cropWidth);
+  cropHeight = Math.max(1, cropHeight);
+  throw new Error(`透明PNGが保存上限を超えています。画像を小さくして再試行してください。${estimateDataUrlBytes(lastDataUrl)}/${maxDataUrlBytes} bytes`);
+};
 
 type Rgb = { r: number; g: number; b: number };
 type BackgroundEstimate = Rgb & { sampleSpread: number };
@@ -355,6 +535,53 @@ export async function buildMaterialCutoutDataUrl({
     throw new Error(`透明PNGが保存上限を超えています。画像を小さくして再試行してください。${lastResult.dataUrlBytes}/${maxDataUrlBytes} bytes`);
   }
   throw new Error('透明PNGの抽出に失敗しました');
+}
+
+let aiGarmentCutoutSession: Awaited<ReturnType<typeof newSession>> | null = null;
+
+const rembgModelBaseUrl = String(import.meta.env.VITE_REMBG_MODEL_BASE_URL || '/models').replace(/\/$/, '');
+
+export async function buildHighPrecisionMaterialCutoutDataUrl({
+  imageUrl,
+  maxDataUrlBytes = 750_000,
+}: {
+  imageUrl: string;
+  maxDataUrlBytes?: number;
+}): Promise<MaterialCutoutResult> {
+  rembgConfig.setBaseUrl(rembgModelBaseUrl);
+  const image = await loadImageElement(imageUrl);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  try {
+    aiGarmentCutoutSession ??= await newSession('isnet-general-use', undefined, { numThreads: 1 });
+  } catch (error) {
+    throw new Error(
+      `高精度AI切り抜きモデルを読み込めませんでした。モデル配信URLを確認してください: ${rembgModelBaseUrl}`,
+      { cause: error },
+    );
+  }
+  const inputBlob = await dataUrlToBlob(imageUrl);
+  const outputBlob = await remove(inputBlob, {
+    session: aiGarmentCutoutSession,
+    postProcessMask: true,
+  });
+  const outputDataUrl = await blobToDataUrl(outputBlob);
+  const outputImage = await loadImageElement(outputDataUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = outputImage.naturalWidth || outputImage.width;
+  canvas.height = outputImage.naturalHeight || outputImage.height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Canvasを初期化できませんでした');
+  context.drawImage(outputImage, 0, 0, canvas.width, canvas.height);
+
+  return buildBoundedPngFromCanvas({
+    canvas,
+    sourceWidth,
+    sourceHeight,
+    maxDataUrlBytes,
+    storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
+    engine: 'browser-ai-isnet-general-use-v1',
+  });
 }
 
 function buildCutoutFromImage({

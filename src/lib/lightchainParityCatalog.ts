@@ -438,41 +438,7 @@ export const buildLightchainCompatContext = (feature: LightchainFeature): Lightc
   };
 };
 
-const lightchainWorkbenchToolIdByFeatureId: Record<string, string> = {
-  'marketing-workspace': 'marketing-home',
-  'virtual-fitting': 'ai-fitting',
-  'wear-design-lab': 'wear-design-lab',
-  'video-workstation': 'video-workstation',
-  'model-library': 'model-library',
-  'fashion-studio': 'fashion-studio',
-  'design-agent': 'design-agent',
-  'heavychain-lab': 'lab',
-  'inspiration-design': 'design-agent',
-  'fabric-simulation': 'fabric-image',
-  'lineart-to-real': 'line-to-real',
-  'change-color': 'image-repair',
-  'flat-vector': 'svg-convert',
-  'custom-style': 'custom-style',
-  'model-change-background': 'background-change',
-  'model-body-shape': 'body-shape',
-  'flat-to-model': 'ai-fitting-reference',
-  'graphic-design': 'print-design-project',
-  'pattern-vector-pro': 'pattern-vector-pro',
-  'design-arrange': 'printing-image',
-  'print-design': 'print-design-detail',
-  'remove-background': 'image-repair',
-  'upscale-image': 'image-repair',
-  'image-variations': 'printing-image',
-  'partial-fix': 'wear-design-detail',
-  'canvas-editing': 'marketing-detail',
-  'case-series-design': 'design-agent',
-  'case-ec-fusion': 'ai-fitting',
-  'case-sns-video': 'video-detail',
-};
-
 export const buildLightchainFeatureHref = (feature: LightchainFeature) => {
-  const workbenchToolId = lightchainWorkbenchToolIdByFeatureId[feature.id];
-  if (workbenchToolId) return `/lightchain/${workbenchToolId}`;
   if (!feature.route.startsWith('/generate')) return feature.route;
   const [path, search = ''] = feature.route.split('?');
   const params = new URLSearchParams(search);

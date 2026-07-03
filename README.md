@@ -137,6 +137,7 @@ npm install
 # Supabase
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_REMBG_MODEL_BASE_URL=https://your-cors-enabled-model-host.example.com/models
 
 # Stripe (将来用)
 VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
@@ -173,6 +174,7 @@ Edge Functions用の環境変数をSupabase Dashboardで設定：
 - `GEMINI_API_KEY` - Google AI Studio APIキー
 - `GEMINI_IMAGE_MODEL` - 使用する画像生成モデル名（既定: `gemini-2.5-flash-image`）
 - `VITE_GENERATION_PROVIDER` - 通常は `gemini`。Runway workerを明示的に使う場合だけ `local-runway`
+- `VITE_REMBG_MODEL_BASE_URL` - ブラウザAI切り抜き用の `isnet-general-use.onnx` を配信するCORS対応URL。末尾は `/models` にしてください。
 - `OPENAI_IMAGE_API_KEY` - OpenAI Images APIキー（未設定時は `OPENAI_API_KEY` を使用）
 - `OPENAI_IMAGE_MODEL` - 使用するOpenAI画像生成モデル名（既定: `gpt-image-2`）
 

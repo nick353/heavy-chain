@@ -7,6 +7,7 @@ import {
   Wand2
 } from 'lucide-react';
 import { Modal, Button, Textarea } from '../ui';
+import toast from 'react-hot-toast';
 
 interface ImageEditModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export function ImageEditModal({ isOpen, onClose, imageUrl, onEdit }: ImageEditM
       onClose();
     } catch (error) {
       console.error('Edit failed:', error);
+      toast.error(error instanceof Error ? error.message : '画像編集に失敗しました');
     } finally {
       setIsProcessing(false);
     }
@@ -161,4 +163,3 @@ export function ImageEditModal({ isOpen, onClose, imageUrl, onEdit }: ImageEditM
     </Modal>
   );
 }
-

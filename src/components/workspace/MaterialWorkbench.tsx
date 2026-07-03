@@ -1,7 +1,8 @@
-import type { ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { CheckCircle2, ImagePlus, Layers3, ScanLine, Scissors, SlidersHorizontal, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
+  buildHighPrecisionMaterialCutoutDataUrl,
   buildMaterialCutoutDataUrl,
   type MaterialReferenceState,
   readWorkspaceImageAsDataUrl,
@@ -36,6 +37,8 @@ const maskModeLabel: Record<MaterialReferenceState['maskMode'], string> = {
 const defaultMaskCandidates = ['トップス', '無地部分', '柄'];
 const manualMaskCandidates = ['手動範囲'];
 
+const isPreviewOnlyCutout = (maskEngine?: string | null) => !maskEngine || maskEngine.startsWith('browser-canvas-');
+
 const getOverlayPositionClass = (placement: string) => {
   const y = placement.includes('袖') || placement.includes('上') || placement.includes('顔')
     ? 'top-[28%]'
@@ -63,12 +66,15 @@ export function MaterialWorkbench({
   maxFileSizeMb = 5,
   simpleMode = false,
 }: MaterialWorkbenchProps) {
+  const [cutoutError, setCutoutError] = useState('');
+  const [isCutoutProcessing, setIsCutoutProcessing] = useState(false);
   const hasImage = Boolean(state.imageUrl);
   const updateState = (patch: Partial<MaterialReferenceState>) => {
     onChange({ ...state, ...patch });
   };
 
   const resetExtraction = (patch: Partial<MaterialReferenceState> = {}) => {
+    setCutoutError('');
     updateState({
       ...patch,
       extractedLayerReady: false,
@@ -94,6 +100,7 @@ export function MaterialWorkbench({
     }
 
     try {
+      setCutoutError('');
       updateState({
         imageUrl: await readWorkspaceImageAsDataUrl(file),
         fileName: file.name,
@@ -164,18 +171,23 @@ export function MaterialWorkbench({
     }
   };
 
-	const autoExtractMask = async () => {
+  const autoExtractMask = async () => {
     if (!state.imageUrl) {
       toast.error('先に素材画像を選択してください');
       return;
     }
     try {
-      const cutout = await buildMaterialCutoutDataUrl({
-        imageUrl: state.imageUrl,
-        mode: 'auto',
-        candidate: 'トップス',
-      });
-	      updateState({
+      setCutoutError('');
+      setIsCutoutProcessing(true);
+      toast.loading('高精度AIで服だけを切り抜いています。初回は少し時間がかかります。', { id: 'ai-cloth-cutout' });
+      const cutout = simpleMode
+        ? await buildHighPrecisionMaterialCutoutDataUrl({ imageUrl: state.imageUrl })
+        : await buildMaterialCutoutDataUrl({
+          imageUrl: state.imageUrl,
+          mode: 'auto',
+          candidate: 'トップス',
+        });
+      updateState({
         maskMode: 'auto',
         maskCandidates: defaultMaskCandidates,
         selectedMaskCandidate: 'トップス',
@@ -186,25 +198,33 @@ export function MaterialWorkbench({
         cutoutOutputSize: cutout.outputSize,
         cutoutDataUrlBytes: cutout.dataUrlBytes,
         cutoutMaxDataUrlBytes: 750_000,
-	        cutoutStoragePolicy: cutout.storagePolicy,
-	        maskEngine: cutout.engine,
-	        nextStepReady: false,
-	      });
-	      toast('確認用プレビューを作りました。生成には高精度AI切り抜きが必要です。', { icon: '!' });
-	    } catch (error) {
-	      toast.error(error instanceof Error ? error.message : '切り抜きに失敗しました');
-	    }
-	  };
+        cutoutStoragePolicy: cutout.storagePolicy,
+        maskEngine: cutout.engine,
+        nextStepReady: !isPreviewOnlyCutout(cutout.engine),
+      });
+      if (isPreviewOnlyCutout(cutout.engine)) {
+        toast('確認用プレビューを作りました。生成には高精度AI切り抜きが必要です。', { id: 'ai-cloth-cutout', icon: '!' });
+        return;
+      }
+      toast.success('服だけを高精度AIで切り抜きました。権利確認後にAI生成できます。', { id: 'ai-cloth-cutout' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '切り抜きに失敗しました';
+      setCutoutError(message);
+      toast.error(message, { id: 'ai-cloth-cutout' });
+    } finally {
+      setIsCutoutProcessing(false);
+    }
+  };
 
-	  const confirmNextStep = () => {
-	    if (simpleMode) {
-	      toast.error('この切り抜き品質ではAI生成に進めません');
-	      return;
-	    }
-	    if (!state.extractedLayerReady) {
-	      toast.error('先に抽出を完了してください');
-	      return;
-	    }
+  const confirmNextStep = () => {
+    if (!state.extractedLayerReady) {
+      toast.error('先に抽出を完了してください');
+      return;
+    }
+    if (isPreviewOnlyCutout(state.maskEngine)) {
+      toast.error('高精度AI切り抜きが必要です');
+      return;
+    }
     updateState({ nextStepReady: true });
     toast.success('次のステップへ進める状態です');
   };
@@ -297,21 +317,42 @@ export function MaterialWorkbench({
               次にやること
             </p>
             <p className="mt-1 text-xs leading-5 text-emerald-800 dark:text-emerald-100">
-              まず背景を抜きます。細かい設定は必要になった時だけ開けます。
+              服だけをAIで切り抜きます。細かい設定は必要になった時だけ開けます。
             </p>
             <button
               type="button"
               onClick={autoExtractMask}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500"
+              disabled={isCutoutProcessing}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-70"
             >
-              <Scissors className="h-4 w-4" />
-              自動で切り抜く
+              <Scissors className={`h-4 w-4 ${isCutoutProcessing ? 'animate-pulse' : ''}`} />
+              {isCutoutProcessing ? 'AI切り抜き中' : simpleMode ? '高精度AIで切り抜く' : '自動で切り抜く'}
             </button>
-	            {state.extractedLayerReady && (
-	              <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
-	                これは確認用です。袖や薄い生地が欠ける可能性があるため、この品質ではAI生成に進めません。
-	              </p>
-	            )}
+            {isCutoutProcessing && (
+              <p className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold leading-5 text-cyan-900 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-100">
+                初回はAIモデルを読み込むため時間がかかります。この画面のまま待ってください。
+              </p>
+            )}
+            {state.extractedLayerReady && isPreviewOnlyCutout(state.maskEngine) && (
+              <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                これは確認用です。袖や薄い生地が欠ける可能性があるため、この品質ではAI生成に進めません。
+              </p>
+            )}
+            {state.extractedLayerReady && !isPreviewOnlyCutout(state.maskEngine) && (
+              <p className="mt-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold leading-5 text-emerald-900 dark:border-emerald-400/30 dark:bg-neutral-950/40 dark:text-emerald-100">
+                高精度AI切り抜き済みです。権利確認後にAI生成できます。
+              </p>
+            )}
+            {cutoutError && (
+              <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold leading-5 text-rose-900 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-100">
+                <p>{cutoutError}</p>
+                <div className="mt-2 grid gap-1.5 text-rose-800 dark:text-rose-100">
+                  <span>次は白または単色の背景で撮り直してください。</span>
+                  <span>服全体、袖口、裾、襟が画面内に入る写真を使ってください。</span>
+                  <span>改善依頼は右下のフィードバックからスクショ付きで送れます。</span>
+                </div>
+              </div>
+            )}
 	            {state.extractedLayerReady && !simpleMode && (
 	              <button
 	                type="button"

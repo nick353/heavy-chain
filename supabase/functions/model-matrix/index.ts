@@ -223,6 +223,8 @@ async function generateWithReference(
   brandId: string,
   originalBase64: string,
   originalMimeType: string,
+  modelBase64: string | null,
+  modelMimeType: string | null,
   description: string,
   bodyType: typeof BODY_TYPES[0],
   ageGroup: typeof AGE_GROUPS[0],
@@ -232,23 +234,34 @@ async function generateWithReference(
 ): Promise<RunwayImageResult | null> {
   console.log(`🎨 Generating ${bodyType.name} x ${ageGroup.name} with reference...`);
 
-  const prompt = `Generate a professional fashion model photo.
+  const modelReferenceInstruction = modelBase64
+    ? `REFERENCE MODEL: Use the second reference image as the person/model basis. Preserve the person's pose direction, body proportions, face visibility level, hairstyle impression, and overall styling mood unless it conflicts with the garment.`
+    : `MODEL: ${gender} model, ${bodyType.prompt}, ${ageGroup.prompt}`;
 
-MODEL: ${gender} model, ${bodyType.prompt}, ${ageGroup.prompt}
-CLOTHING: The model is wearing EXACTLY this garment: ${description}
+  const prompt = `Generate a professional fashion model try-on photo.
+
+${modelReferenceInstruction}
+CLOTHING: The model is wearing EXACTLY the garment from the first reference image: ${description}
 
 CRITICAL REQUIREMENTS:
-1. The clothing must be IDENTICAL to the reference image
+1. The clothing must be IDENTICAL to the first reference image
 2. Same colors, same design, same fabric texture
 3. Same pockets, zippers, logos, all details
-4. Only the MODEL changes, not the clothing
+4. Put the garment naturally on the model body; do not create a flat product mockup
+5. Do not replace the garment with a similar item
+6. If a second reference model is provided, keep that model as the person being dressed
 
 STYLE: Professional fashion photography, full body shot, studio lighting, neutral background`;
+
+  const referenceImages = [
+    runwayReferenceImage(originalBase64, originalMimeType, 'garment'),
+    ...(modelBase64 ? [runwayReferenceImage(modelBase64, modelMimeType || 'image/png', 'model')] : []),
+  ];
 
   return await generateRunwayImage({
     brandId,
     prompt,
-    referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
+    referenceImages,
   });
 }
 
@@ -308,6 +321,7 @@ serve(async (req) => {
     let { 
       productDescription, 
       imageUrl,
+      modelReferenceImageUrl,
       brandId, 
       bodyTypes = ['slim', 'regular', 'plus'],
       ageGroups = ['20s', '30s', '40s'],
@@ -339,7 +353,7 @@ serve(async (req) => {
     observedSourceMetadata = requestSourceMetadata;
     observedLightchainMetadata = lightchainMetadata;
 
-    console.log('📥 Request:', { productDescription: !!productDescription, imageUrl: !!imageUrl, brandId });
+    console.log('📥 Request:', { productDescription: !!productDescription, imageUrl: !!imageUrl, modelReferenceImageUrl: !!modelReferenceImageUrl, brandId });
 
     if (!productDescription && !imageUrl) {
       throw new Error('商品説明または商品画像を入力してください');
@@ -358,6 +372,7 @@ serve(async (req) => {
       hairStyle,
       modelCandidateLabel,
       body.materialReferences,
+      modelReferenceImageUrl ? '[model_reference_image_provided]' : null,
       body.layerPlan,
       body.maskPlan,
       body.compositionPreview,
@@ -394,6 +409,7 @@ serve(async (req) => {
         input_params: {
           productDescription: productDescription ?? null,
           imageUrl: imageUrl ? '[provided]' : null,
+          modelReferenceImageUrl: modelReferenceImageUrl ? '[provided]' : null,
           bodyTypes,
           ageGroups,
           gender,
@@ -432,6 +448,8 @@ serve(async (req) => {
     // 画像がある場合は分析
     let originalImageBase64: string | null = null;
     let originalMimeType = 'image/jpeg';
+    let modelImageBase64: string | null = null;
+    let modelMimeType: string | null = null;
     let finalDescription = productDescription;
 
     if (imageUrl) {
@@ -439,7 +457,17 @@ serve(async (req) => {
       if (imageData) {
         originalImageBase64 = imageData.base64;
         originalMimeType = imageData.mimeType;
-        
+      } else {
+        throw new Error('衣服画像を読み込めませんでした。画像を入れ直してからもう一度試してください。');
+      }
+    }
+    if (modelReferenceImageUrl) {
+      const modelImageData = await fetchImageAsBase64(modelReferenceImageUrl);
+      if (modelImageData) {
+        modelImageBase64 = modelImageData.base64;
+        modelMimeType = modelImageData.mimeType;
+      } else {
+        throw new Error('モデル画像を読み込めませんでした。モデル画像を入れ直してからもう一度試してください。');
       }
     }
 
@@ -471,6 +499,8 @@ serve(async (req) => {
             brandId,
             originalImageBase64,
             originalMimeType,
+            modelImageBase64,
+            modelMimeType,
             finalDescription,
             bodyType,
             ageGroup,
@@ -481,6 +511,9 @@ serve(async (req) => {
 
         // 参照生成が失敗した場合はテキストのみで生成
         if (!generatedImage) {
+          if (imageUrl || modelReferenceImageUrl) {
+            throw new Error('参照画像を使った着用生成に失敗しました。参照なしの別画像は作らず停止しました。');
+          }
           generatedImage = await generateFromText(
             brandId,
             finalDescription,

@@ -1,9 +1,9 @@
 import { lazy, Suspense, useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Layers, 
-  GitBranch, 
+import {
+  ArrowLeft,
+  Layers,
+  GitBranch,
   Settings2,
   Upload,
   Wand2,
@@ -16,7 +16,10 @@ import {
   Layout,
   Globe,
   Grid3x3,
-  CircleHelp
+  CircleHelp,
+  Palette,
+  Maximize2,
+  CopyPlus
 } from 'lucide-react';
 import { InfiniteCanvas } from '../components/canvas/InfiniteCanvas';
 import { CanvasToolbar } from '../components/canvas/CanvasToolbar';
@@ -32,6 +35,7 @@ import { TemplateSelector, type DesignTemplate, type SizeTemplate } from '../com
 import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { supabase } from '../lib/supabase';
+import { editImageWithPrompt } from '../lib/imageApi';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
   GENERATION_LEGAL_COPY,
@@ -70,6 +74,21 @@ const GENERATE_MODES = [
   { id: 'multilingual', name: '多言語バナー', icon: Globe, description: '日/英/中/韓バナー' },
 ] as const;
 
+const canvasImageActions: Array<{
+  id: string;
+  label: string;
+  description: string;
+  icon: typeof Wand2;
+  requiresSelection: boolean;
+}> = [
+  { id: 'removeBackground', label: '背景を消す', description: '選択画像を切り抜く', icon: Wand2, requiresSelection: true },
+  { id: 'colorize', label: '色を変える', description: 'カラバリを派生', icon: Palette, requiresSelection: true },
+  { id: 'upscale', label: '高解像度', description: '掲載用に拡大', icon: Maximize2, requiresSelection: true },
+  { id: 'variations', label: '派生させる', description: '近い案を4つ作る', icon: CopyPlus, requiresSelection: true },
+  { id: 'edit', label: '指示で編集', description: '文章で直す', icon: MessageSquare, requiresSelection: true },
+  { id: 'generate', label: '新しく生成', description: 'Heavy Chain生成', icon: Sparkles, requiresSelection: false },
+];
+
 export function CanvasEditorPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -81,7 +100,7 @@ export function CanvasEditorPage() {
   const lastMobileFitKeyRef = useRef<string | null>(null);
   const { currentBrand, user, profile } = useAuthStore();
   const { showGuide, completeGuide, resetGuide } = useCanvasGuide(user?.id);
-  
+
   const [viewMode, setViewMode] = useState<ViewMode>('canvas');
   // Start with no side panel on mobile, properties on desktop
   const [sidePanel, setSidePanel] = useState<SidePanel>(() => {
@@ -97,7 +116,7 @@ export function CanvasEditorPage() {
   const [selectedPosition, setSelectedPosition] = useState({ x: 0, y: 0 });
   const [isEditingName, setIsEditingName] = useState(false);
   const [isExportRenderingAll, setIsExportRenderingAll] = useState(false);
-  
+
   // Generate modal states
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showGallerySelector, setShowGallerySelector] = useState(false);
@@ -111,19 +130,20 @@ export function CanvasEditorPage() {
   const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
   const [isGenerating, setIsGenerating] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
-  
+
   // Reference image states for generate modal
   const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
-  
+  const [modelReferenceImage, setModelReferenceImage] = useState<SelectedImage | null>(null);
+
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingImage, setEditingImage] = useState<string | null>(null);
   const [editingObjectId, setEditingObjectId] = useState<string | null>(null);
-  
+
   // Invite modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  
+
   const {
     objects,
     selectedIds,
@@ -636,7 +656,7 @@ export function CanvasEditorPage() {
       toast.error('ブランドを選択してください');
       return;
     }
-    
+
     setIsGenerating(true);
     try {
       let data;
@@ -671,11 +691,11 @@ export function CanvasEditorPage() {
             return;
           }
           ({ data, error } = await supabase.functions.invoke('design-gacha', {
-            body: { 
+            body: {
               ...baseBody,
-              brief: generatePrompt, 
+              brief: generatePrompt,
               imageUrl: referenceImage?.url,
-              directions: 4 
+              directions: 4
             }
           }));
           if (data?.variations) {
@@ -698,9 +718,9 @@ export function CanvasEditorPage() {
             return;
           }
           ({ data, error } = await supabase.functions.invoke('product-shots', {
-            body: { 
+            body: {
               ...baseBody,
-              productDescription, 
+              productDescription,
               imageUrl: referenceImage?.url,
             }
           }));
@@ -724,10 +744,11 @@ export function CanvasEditorPage() {
             return;
           }
           ({ data, error } = await supabase.functions.invoke('model-matrix', {
-            body: { 
+            body: {
               ...baseBody,
-              productDescription, 
+              productDescription,
               imageUrl: referenceImage?.url,
+              modelReferenceImageUrl: referenceImage ? modelReferenceImage?.url : undefined,
               bodyTypes: selectedBodyTypes,
               ageGroups: selectedAgeGroups
             }
@@ -752,9 +773,9 @@ export function CanvasEditorPage() {
             return;
           }
           ({ data, error } = await supabase.functions.invoke('multilingual-banner', {
-            body: { 
+            body: {
               ...baseBody,
-              headline, 
+              headline,
               subheadline,
               imageUrl: referenceImage?.url,
               languages: selectedLanguages,
@@ -801,7 +822,7 @@ export function CanvasEditorPage() {
       }
 
       if (error) throw error;
-      
+
       setShowGenerateModal(false);
       setGeneratePrompt('');
       setProductDescription('');
@@ -905,6 +926,14 @@ export function CanvasEditorPage() {
 
     const imageSrc = obj.src;
     const lightchainEditMetadata = buildLightchainEditMetadata(objectId);
+    if (!currentBrand?.id) {
+      toast.error('ブランドを選択してから実行してください');
+      return;
+    }
+    if (!rightsConfirmed) {
+      toast.error('素材の利用権利を確認してください');
+      return;
+    }
 
     switch (action) {
       case 'removeBackground':
@@ -912,7 +941,7 @@ export function CanvasEditorPage() {
         toast.loading('背景削除を実行中...', { id: 'remove-bg' });
         try {
           const { data, error } = await supabase.functions.invoke('remove-background', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
+            body: { imageUrl: imageSrc, brandId: currentBrand.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.resultUrl) {
@@ -934,7 +963,7 @@ export function CanvasEditorPage() {
         toast.loading('カラバリを生成中...', { id: 'colorize' });
         try {
           const { data, error } = await supabase.functions.invoke('colorize', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id, colors: ['red', 'blue', 'green', 'yellow'], legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
+            body: { imageUrl: imageSrc, brandId: currentBrand.id, colors: ['red', 'blue', 'green', 'yellow'], legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.variations) {
@@ -959,7 +988,7 @@ export function CanvasEditorPage() {
         toast.loading('アップスケール中...', { id: 'upscale' });
         try {
           const { data, error } = await supabase.functions.invoke('upscale', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
+            body: { imageUrl: imageSrc, brandId: currentBrand.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.resultUrl) {
@@ -980,7 +1009,7 @@ export function CanvasEditorPage() {
         toast.loading('バリエーションを生成中...', { id: 'variations' });
         try {
           const { data, error } = await supabase.functions.invoke('generate-variations', {
-            body: { imageUrl: imageSrc, brandId: currentBrand?.id, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
+            body: { imageUrl: imageSrc, brandId: currentBrand.id, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
           if (data?.variations) {
@@ -1340,7 +1369,15 @@ export function CanvasEditorPage() {
   };
 
   const handleEditModalAction = async (action: string, params: { prompt?: string }) => {
-    if (!editingImage || !currentBrand?.id) return;
+    if (!editingImage) return;
+    if (!currentBrand?.id) {
+      toast.error('ブランドを選択してから実行してください');
+      return;
+    }
+    if (!rightsConfirmed) {
+      toast.error('素材の利用権利を確認してください');
+      return;
+    }
     const sourceObject = editingObjectId
       ? objects.find((item) => item.id === editingObjectId) ?? null
       : null;
@@ -1351,7 +1388,19 @@ export function CanvasEditorPage() {
     };
 
     if (action === 'prompt') {
-      addImageToCanvasSafely(editingImage, '編集結果', {
+      if (!params.prompt?.trim()) {
+        toast.error('編集したい内容を入力してください');
+        return;
+      }
+      if (validateLegalSafetyInput([params.prompt]).blocked) {
+        toast.error(BRAND_LIKENESS_BLOCK_COPY);
+        return;
+      }
+      const result = await editImageWithPrompt(editingImage, params.prompt, currentBrand.id, { rightsConfirmed });
+      if (!result.success || !result.imageUrl) {
+        throw new Error(result.error || '画像編集に失敗しました');
+      }
+      addImageToCanvasSafely(result.imageUrl, '編集結果', {
         ...baseMetadata,
         feature: 'prompt-edit',
         prompt: params.prompt,
@@ -1379,6 +1428,10 @@ export function CanvasEditorPage() {
     }
 
     if (action === 'colorize') {
+      if (params.prompt && validateLegalSafetyInput([params.prompt]).blocked) {
+        toast.error(BRAND_LIKENESS_BLOCK_COPY);
+        return;
+      }
       const colors = params.prompt?.split(/[、,\\s]+/).map((item) => item.trim()).filter(Boolean);
       const { data, error } = await supabase.functions.invoke('colorize', {
         body: { imageUrl: editingImage, brandId: currentBrand.id, colors: colors?.length ? colors : undefined, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
@@ -1412,6 +1465,10 @@ export function CanvasEditorPage() {
     }
 
     if (action === 'variations') {
+      if (params.prompt && validateLegalSafetyInput([params.prompt]).blocked) {
+        toast.error(BRAND_LIKENESS_BLOCK_COPY);
+        return;
+      }
       const { data, error } = await supabase.functions.invoke('generate-variations', {
         body: { imageUrl: editingImage, brandId: currentBrand.id, prompt: params.prompt || undefined, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
       });
@@ -1497,6 +1554,14 @@ export function CanvasEditorPage() {
               allowedReferenceTypes={['base', 'style']}
               defaultReferenceType="base"
               hint="モデルに着用させる商品の参考画像"
+            />
+            <ImageSelector
+              label="着せたいモデル画像（任意）"
+              value={modelReferenceImage}
+              onChange={setModelReferenceImage}
+              allowedReferenceTypes={['base', 'style']}
+              defaultReferenceType="base"
+              hint="商品画像も入っている場合、その人物・雰囲気を参照して着用画像を作ります"
             />
             <div>
               <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">体型</label>
@@ -1616,13 +1681,13 @@ export function CanvasEditorPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-neutral-50 dark:bg-neutral-950">
+    <div className="h-screen flex flex-col bg-[#050808] text-white">
       {/* Header */}
-      <header className="glass-nav h-12 sm:h-14 flex items-center justify-between px-2 sm:px-4 z-20">
+      <header className="h-12 sm:h-14 flex items-center justify-between border-b border-white/10 bg-[#070b0b]/95 px-2 sm:px-4 z-20 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <button
             onClick={() => navigate('/dashboard')}
-            className="p-1.5 sm:p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors text-neutral-600 dark:text-neutral-400 flex-shrink-0"
+            className="p-1.5 sm:p-2 hover:bg-white/[0.08] rounded-lg transition-colors text-neutral-300 flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
@@ -1635,17 +1700,17 @@ export function CanvasEditorPage() {
                 onChange={handleNameChange}
                 onBlur={handleNameBlur}
                 onKeyDown={handleNameKeyDown}
-                className="text-sm sm:text-base font-semibold text-neutral-800 dark:text-white bg-transparent border-b border-primary-500 outline-none px-0 py-0.5 w-full max-w-[150px] sm:max-w-[200px]"
+                className="text-sm sm:text-base font-semibold text-white bg-transparent border-b border-cyan-300 outline-none px-0 py-0.5 w-full max-w-[150px] sm:max-w-[200px]"
               />
             ) : (
               <h1
                 onClick={() => setIsEditingName(true)}
-                className="text-sm sm:text-base font-semibold text-neutral-800 dark:text-white cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"
+                className="text-sm sm:text-base font-semibold text-white cursor-pointer hover:text-cyan-200 transition-colors truncate"
               >
                 {currentProjectName || '無題'}
               </h1>
             )}
-            <p className="text-[10px] sm:text-xs text-neutral-500 dark:text-neutral-400">
+            <p className="text-[10px] sm:text-xs text-neutral-400">
               キャンバス · {currentProjectId ? '自動保存' : '未保存'}
             </p>
           </div>
@@ -1653,13 +1718,13 @@ export function CanvasEditorPage() {
 
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           {/* View mode toggle - hidden on mobile */}
-          <div className="hidden sm:flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1 border border-neutral-200 dark:border-neutral-700">
+          <div className="hidden sm:flex items-center rounded-lg border border-white/10 bg-white/[0.06] p-1">
             <button
               onClick={() => setViewMode('canvas')}
               className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'canvas'
-                  ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
-                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
+                  ? 'bg-cyan-300 text-neutral-950 shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
               }`}
             >
               <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block sm:mr-1.5" />
@@ -1669,8 +1734,8 @@ export function CanvasEditorPage() {
               onClick={() => setViewMode('tree')}
               className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'tree'
-                  ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
-                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
+                  ? 'bg-cyan-300 text-neutral-950 shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
               }`}
             >
               <GitBranch className="w-3.5 h-3.5 sm:w-4 sm:h-4 inline-block sm:mr-1.5" />
@@ -1678,7 +1743,7 @@ export function CanvasEditorPage() {
             </button>
           </div>
 
-          <div className="hidden sm:block w-px h-6 bg-neutral-200 dark:bg-neutral-700 mx-1 sm:mx-2" />
+          <div className="hidden sm:block w-px h-6 bg-white/10 mx-1 sm:mx-2" />
 
           <Button
             variant="secondary"
@@ -1693,7 +1758,7 @@ export function CanvasEditorPage() {
 
           {/* Active user avatar - shows current logged in user */}
           <div className="hidden md:flex -space-x-2 items-center">
-            <div 
+            <div
               className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 border-2 border-white dark:border-neutral-800 flex items-center justify-center overflow-hidden shadow-sm"
               title={profile?.name || user?.email || 'ユーザー'}
             >
@@ -1708,11 +1773,11 @@ export function CanvasEditorPage() {
             {/* Online indicator */}
             <div className="w-2.5 h-2.5 rounded-full bg-green-500 border-2 border-white dark:border-neutral-800 -ml-1 -mt-4" />
           </div>
-          
+
           {/* Invite button - hidden on mobile */}
-          <Button 
-            variant="secondary" 
-            size="sm" 
+          <Button
+            variant="secondary"
+            size="sm"
             className="hidden md:flex shadow-sm text-xs sm:text-sm px-2 sm:px-3"
             onClick={() => setShowInviteModal(true)}
           >
@@ -1730,7 +1795,7 @@ export function CanvasEditorPage() {
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar - Tools */}
-        <aside className="w-10 sm:w-14 glass-panel border-r border-white/20 dark:border-white/5 flex flex-col items-center py-2 sm:py-4 gap-1 sm:gap-2 z-10">
+        <aside className="w-10 sm:w-14 border-r border-white/10 bg-[#070b0b] flex flex-col items-center py-2 sm:py-4 gap-1 sm:gap-2 z-10">
           <input
             type="file"
             id="file-upload"
@@ -1741,29 +1806,29 @@ export function CanvasEditorPage() {
           />
           <label
             htmlFor="file-upload"
-            className="p-2 sm:p-3 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg sm:rounded-xl cursor-pointer transition-colors text-neutral-600 dark:text-neutral-400"
+            className="p-2 sm:p-3 hover:bg-white/[0.08] rounded-lg sm:rounded-xl cursor-pointer transition-colors text-neutral-300"
             title="画像をアップロード"
           >
             <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
           </label>
-          
+
           <button
             onClick={() => setShowGenerateModal(true)}
-            className="p-2 sm:p-3 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 rounded-lg sm:rounded-xl transition-colors text-primary-600 dark:text-primary-400"
+            className="p-2 sm:p-3 bg-cyan-300/15 hover:bg-cyan-300/25 rounded-lg sm:rounded-xl transition-colors text-cyan-200"
             title="AI画像生成"
           >
             <Wand2 className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
-          <div className="w-6 sm:w-8 h-px bg-neutral-200 dark:bg-neutral-700 my-1 sm:my-2" />
+          <div className="w-6 sm:w-8 h-px bg-white/10 my-1 sm:my-2" />
 
           {/* Side panel toggles */}
           <button
             onClick={() => setSidePanel(sidePanel === 'chat' ? null : 'chat')}
             className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
-              sidePanel === 'chat' 
-                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
-                : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+              sidePanel === 'chat'
+                ? 'bg-cyan-300/15 text-cyan-200'
+                : 'hover:bg-white/[0.08] text-neutral-300'
             }`}
             title="チャットエディター"
           >
@@ -1773,9 +1838,9 @@ export function CanvasEditorPage() {
           <button
             onClick={() => setSidePanel(sidePanel === 'templates' ? null : 'templates')}
             className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
-              sidePanel === 'templates' 
-                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
-                : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+              sidePanel === 'templates'
+                ? 'bg-cyan-300/15 text-cyan-200'
+                : 'hover:bg-white/[0.08] text-neutral-300'
             }`}
             title="テンプレート"
           >
@@ -1785,9 +1850,9 @@ export function CanvasEditorPage() {
           <button
             onClick={() => setSidePanel(sidePanel === 'properties' ? null : 'properties')}
             className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
-              sidePanel === 'properties' 
-                ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' 
-                : 'hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400'
+              sidePanel === 'properties'
+                ? 'bg-cyan-300/15 text-cyan-200'
+                : 'hover:bg-white/[0.08] text-neutral-300'
             }`}
             title="プロパティ"
           >
@@ -1799,7 +1864,7 @@ export function CanvasEditorPage() {
         <main className="flex-1 flex flex-col relative overflow-hidden">
           {/* Toolbar container - centered on desktop, full width on mobile */}
           <div className="absolute top-2 sm:top-4 inset-x-2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-10 flex justify-center pointer-events-none">
-            <div className="pointer-events-auto glass-panel rounded-lg sm:rounded-xl p-0 sm:p-1 shadow-lg border border-white/40 dark:border-white/10">
+            <div className="pointer-events-auto rounded-lg sm:rounded-xl border border-white/10 bg-[#101313]/95 p-0 sm:p-1 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur">
               <CanvasToolbar
                 onAddText={handleAddText}
                 onAddShape={handleAddShape}
@@ -1809,7 +1874,7 @@ export function CanvasEditorPage() {
             </div>
           </div>
 
-          <div ref={containerRef} className="flex-1 relative bg-neutral-50/50 dark:bg-neutral-950/50">
+          <div ref={containerRef} className="flex-1 relative bg-[#050808]">
             <div
               data-testid="mobile-canvas-fit-proof"
               data-passed={mobileCanvasFitProof.passed ? 'true' : 'false'}
@@ -1817,8 +1882,52 @@ export function CanvasEditorPage() {
               className="sr-only"
             />
             {/* 背景パターン - position:fixedで固定し、サイドパネル開閉時に動かない */}
-            <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(200,200,200,0.1)_1px,transparent_1px)] bg-[length:20px_20px] dark:bg-[radial-gradient(circle_at_center,rgba(50,50,50,0.3)_1px,transparent_1px)]" />
+            <div className="fixed inset-0 pointer-events-none bg-[#050808]" style={{ zIndex: 0 }}>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(103,232,249,0.14)_1px,transparent_1px)] bg-[length:24px_24px]" />
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[length:96px_96px]" />
+            </div>
+
+            {objects.length === 0 && (
+              <div className="pointer-events-none absolute inset-x-4 top-24 z-[1] mx-auto max-w-3xl rounded-[28px] border border-white/10 bg-[#090a0a]/90 p-6 text-center shadow-[0_24px_90px_rgba(0,0,0,0.4)] backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Canvas</p>
+                <h2 className="mt-3 text-2xl font-semibold text-white">画像を置いて、機能を選ぶ</h2>
+                <p className="mt-3 text-sm leading-6 text-neutral-400">
+                  商品画像や生成結果を置くと、背景削除、色変更、高解像度化、派生生成、指示編集を画像に直接かけられます。
+                </p>
+              </div>
+            )}
+
+            <div className="absolute left-2 right-2 top-16 z-10 mx-auto max-w-5xl rounded-2xl border border-white/10 bg-[#0f1212]/95 p-2 shadow-[0_18px_70px_rgba(0,0,0,0.4)] backdrop-blur sm:left-20 sm:right-auto sm:w-[720px]">
+              <div className="grid gap-2 sm:grid-cols-6">
+                {canvasImageActions.map((action) => {
+                  const Icon = action.icon;
+                  const disabled = action.requiresSelection && (!selectedObject || selectedObject.type !== 'image');
+                  return (
+                    <button
+                      key={action.id}
+                      type="button"
+                      onClick={() => {
+                        if (action.id === 'generate') {
+                          setShowGenerateModal(true);
+                          return;
+                        }
+                        void handleFloatingAction(action.id);
+                      }}
+                      disabled={disabled}
+                      className="group flex min-h-16 flex-col justify-center rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-left transition hover:border-cyan-300/50 hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      <span className="flex items-center gap-2 text-xs font-semibold text-white">
+                        <Icon className="h-4 w-4 text-cyan-300" />
+                        {action.label}
+                      </span>
+                      <span className="mt-1 text-[11px] leading-4 text-neutral-400">{action.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {!selectedObject && (
+                <p className="mt-2 px-1 text-xs text-neutral-500">画像を選択すると、背景削除・色変更・派生などを直接かけられます。</p>
+              )}
             </div>
 
             <div className="absolute bottom-2 left-2 right-2 z-10 grid grid-cols-2 gap-2 sm:bottom-4 sm:left-4 sm:right-auto sm:w-[560px] sm:grid-cols-4">
@@ -1871,7 +1980,7 @@ export function CanvasEditorPage() {
 											canvasRenderStateRef.current = state;
 										}}
 	                />
-                
+
                 {selectedObject && (
                   <FloatingToolbar
                     selectedObject={selectedObject}
@@ -1882,7 +1991,7 @@ export function CanvasEditorPage() {
 
                 {/* Minimap - hidden on mobile */}
                 <div className="hidden sm:block absolute bottom-2 sm:bottom-4 right-2 sm:right-4 z-10">
-                  <div className="glass-panel rounded-lg sm:rounded-xl overflow-hidden border border-white/40 dark:border-white/10 shadow-lg">
+                  <div className="rounded-lg sm:rounded-xl overflow-hidden border border-white/10 bg-[#101313]/95 shadow-lg">
                     <Minimap
                       canvasWidth={canvasSize.width}
                       canvasHeight={canvasSize.height}
@@ -1917,22 +2026,22 @@ export function CanvasEditorPage() {
                 onClick={() => setSidePanel(null)}
                 className="md:hidden fixed inset-0 bg-black/50 z-20"
               />
-              <motion.aside 
+              <motion.aside
                 initial={{ x: '100%', opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: '100%', opacity: 0 }}
                 transition={{ duration: 0.2, ease: 'easeOut' }}
-                className="fixed right-0 top-12 sm:top-14 bottom-0 w-[85vw] max-w-[320px] md:w-80 glass-panel border-l border-white/20 dark:border-white/5 flex flex-col overflow-hidden z-30"
+                className="fixed right-0 top-12 sm:top-14 bottom-0 w-[85vw] max-w-[320px] md:w-80 border-l border-white/10 bg-[#090a0a]/98 flex flex-col overflow-hidden z-30 shadow-[0_24px_90px_rgba(0,0,0,0.55)]"
               >
-                <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b border-neutral-100 dark:border-neutral-800">
-                  <h2 className="font-semibold text-sm sm:text-base text-neutral-800 dark:text-white">
+                <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 border-b border-white/10">
+                  <h2 className="font-semibold text-sm sm:text-base text-white">
                     {sidePanel === 'properties' && 'プロパティ'}
                     {sidePanel === 'chat' && 'チャット'}
                     {sidePanel === 'templates' && 'テンプレート'}
                   </h2>
                   <button
                     onClick={() => setSidePanel(null)}
-                    className="p-1.5 sm:p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors text-neutral-500 dark:text-neutral-400"
+                    className="p-1.5 sm:p-1 hover:bg-white/[0.08] rounded transition-colors text-neutral-400"
                   >
                     <X className="w-5 h-5 sm:w-4 sm:h-4" />
                   </button>
@@ -1942,7 +2051,7 @@ export function CanvasEditorPage() {
                     <PropertiesPanel selectedObject={selectedObject} />
                   )}
                   {sidePanel === 'chat' && (
-                    <ChatEditor 
+                    <ChatEditor
                       selectedImageUrl={selectedObject?.type === 'image' ? (selectedObject as any).src : undefined}
                       onEditResult={handleChatEditResult}
                     />

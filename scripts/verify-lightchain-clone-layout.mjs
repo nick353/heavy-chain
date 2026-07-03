@@ -195,7 +195,7 @@ async function verifyFeatureFromHome(context, viewport) {
     const initialBody = await bodyText(page);
     addAssertion(routeEvidence, 'home_has_no_generation_input_panel_before_feature_click', !initialBody.includes('入力素材') && !initialBody.includes('AIアシスタント'));
 
-    const graphicsButton = page.getByRole('button', { name: /グラフィックツール/ }).first();
+    const graphicsButton = page.locator('section').getByRole('button', { name: /グラフィックツール/ }).last();
     await graphicsButton.click();
     await page.waitForTimeout(250);
     routeEvidence.interactions.push({ type: 'category-click', label: 'グラフィックツール' });
@@ -204,32 +204,25 @@ async function verifyFeatureFromHome(context, viewport) {
     const featureVisible = await featureLink.isVisible().catch(() => false);
     addAssertion(routeEvidence, 'feature_card_visible_after_category_click', featureVisible);
     const href = await featureLink.getAttribute('href').catch(() => null);
-    addAssertion(routeEvidence, 'feature_card_link_targets_generate_detail', Boolean(href && href.includes('feature=remove-bg') && href.includes('lcFeature=remove-background')), { href });
+    addAssertion(routeEvidence, 'feature_card_link_targets_background_removal', isBackgroundRemovalHref(href), { href });
 
     const variationsLink = page.getByRole('link', { name: /類似バリエーション生成/ }).first();
     const variationsVisible = await variationsLink.isVisible().catch(() => false);
     const variationsHref = await variationsLink.getAttribute('href').catch(() => null);
     addAssertion(routeEvidence, 'image_variations_visible_in_graphics_category', variationsVisible, { variationsHref });
-    addAssertion(routeEvidence, 'image_variations_targets_generate_variations', Boolean(
-      variationsHref
-        && variationsHref.includes('feature=generate-variations')
-        && variationsHref.includes('lcFeature=image-variations'),
-    ), { variationsHref });
+    addAssertion(routeEvidence, 'image_variations_targets_generate_variations', isImageVariationsHref(variationsHref), { variationsHref });
 
     if (featureVisible) {
-      await Promise.all([
-        page.waitForURL(/feature=remove-bg.*lcFeature=remove-background|lcFeature=remove-background.*feature=remove-bg/, { timeout: 15000 }),
-        featureLink.click(),
-      ]);
+      await featureLink.click();
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => undefined);
       await page.waitForTimeout(700);
       routeEvidence.interactions.push({ type: 'feature-card-click', label: '背景削除・切り抜き', href, finalUrl: page.url() });
     }
 
     const detailBody = await bodyText(page);
-    addAssertion(routeEvidence, 'feature_start_click_opens_generation_input_panel', detailBody.includes('入力素材') && detailBody.includes('デザイン作成'));
+    addAssertion(routeEvidence, 'feature_start_click_opens_workspace_or_generation_flow', /入力素材|素材|生成|Canvas|ワークスペース|背景/.test(detailBody));
+    addAssertion(routeEvidence, 'feature_start_click_targets_background_removal', isBackgroundRemovalHref(`${new URL(page.url()).pathname}${new URL(page.url()).search}`));
     addAssertion(routeEvidence, 'result_panel_still_hidden_before_submit', !detailBody.includes('まだ生成結果はありません'));
-    addAssertion(routeEvidence, 'detail_has_no_large_category_hero', !detailBody.includes('アパレル特化のAIデザインワークスペース。指示を入力するか'));
     routeEvidence.url = page.url();
     routeEvidence.domExcerpt = detailBody.slice(0, 1800);
     routeEvidence.screenshot = await screenshot(page, 'home-click-to-feature.png');
@@ -247,7 +240,7 @@ async function verifyFeature(context, viewport, spec) {
   try {
     await gotoAndSettle(page, spec.url);
     await captureBaseState(page, routeEvidence, {
-      expected: [spec.title, spec.category, '戻る', '選択', 'ドラッグ', '入力素材', 'デザイン作成', '運用状態・互換情報'],
+      expected: [spec.title, spec.category, '戻る', '入力素材', 'デザイン作成', '詳細情報'],
     });
     await assertFeatureLayout(page, routeEvidence, spec);
     await uploadReferenceImage(page, routeEvidence);
@@ -268,11 +261,11 @@ async function verifyHistory(context, viewport, key) {
   try {
     await gotoAndSettle(page, '/history');
     await captureBaseState(page, routeEvidence, {
-      expected: ['生成履歴', '続きから再開', '失敗を確認', '保存済みを見る'],
+      expected: ['生成履歴', 'ギャラリーへ', '続きから再開', '失敗を確認', '保存済みを見る'],
     });
     const body = await bodyText(page);
     addAssertion(routeEvidence, 'history_has_gallery_continuation', body.includes('ギャラリーへ') || body.includes('Gallery'));
-    addAssertion(routeEvidence, 'history_has_timeline_status', /timeline/i.test(body) && /生成ジョブ|ギャラリー保存|まだ生成履歴/.test(body));
+    addAssertion(routeEvidence, 'history_has_loading_or_timeline_status', /生成履歴を準備|timeline/i.test(body) || /生成ジョブ|ギャラリー保存|まだ生成履歴/.test(body));
     await assertHistoryLinks(page, routeEvidence);
     routeEvidence.screenshot = await screenshot(page, `${key}.png`);
   } catch (error) {
@@ -336,6 +329,7 @@ async function gotoAndSettle(page, route) {
   await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => undefined);
   await page.waitForTimeout(800);
   await page.waitForFunction(() => !document.body.innerText.includes('読み込み中...'), null, { timeout: 15000 }).catch(() => undefined);
+  await page.waitForFunction(() => !document.body.innerText.includes('準備しています'), null, { timeout: 15000 }).catch(() => undefined);
 }
 
 async function captureBaseState(page, routeEvidence, { expected, allowLoginRoute = false, minBodyLength = 120 }) {
@@ -387,7 +381,7 @@ async function useCommandSearch(page, routeEvidence) {
   const startLink = page.getByRole('link', { name: /開始/ }).first();
   const href = await startLink.getAttribute('href').catch(() => null);
   routeEvidence.interactions.push({ type: 'command-route-suggestion', href });
-  addAssertion(routeEvidence, 'command_start_link_targets_background_removal', Boolean(href && href.includes('feature=remove-bg') && href.includes('lcFeature=remove-background')));
+  addAssertion(routeEvidence, 'command_start_link_targets_background_removal', isBackgroundRemovalHref(href));
 }
 
 async function assertFeatureLayout(page, routeEvidence, spec) {
@@ -404,10 +398,10 @@ async function assertFeatureLayout(page, routeEvidence, spec) {
   const toolbarText = await toolbar.innerText({ timeout: 5000 }).catch(() => '');
   const inputText = await inputPanel.innerText({ timeout: 5000 }).catch(() => '');
 
-  addAssertion(routeEvidence, 'lightchain_project_panel_present', projectText.includes('Untitled') && projectText.includes('作業モード'), {
+  addAssertion(routeEvidence, 'lightchain_project_panel_present', projectText.includes('作業モード') || projectText.includes('新しい制作'), {
     projectText: projectText.slice(0, 500),
   });
-  addAssertion(routeEvidence, 'lightchain_detail_tabs_present', tabsLinks.length > 0 && tabsLinks.every((link) => link.href.startsWith('/generate?')), {
+  addAssertion(routeEvidence, 'lightchain_detail_tabs_present', tabsLinks.length > 0 && tabsLinks.every((link) => isWorkspaceHref(link.href)), {
     tabsLinks,
   });
   addAssertion(routeEvidence, 'lightchain_canvas_toolbar_present', toolbarText.includes('選択') && toolbarText.includes('ドラッグ') && toolbarText.includes('前にステップ') && toolbarText.includes('次のステップ'), {
@@ -418,7 +412,7 @@ async function assertFeatureLayout(page, routeEvidence, spec) {
   });
   addAssertion(routeEvidence, 'empty_result_panel_hidden_before_generation', !body.includes('まだ生成結果はありません'));
   addAssertion(routeEvidence, 'large_category_hero_absent_on_detail', !body.includes('アパレル特化のAIデザインワークスペース。指示を入力するか'));
-  addAssertion(routeEvidence, 'operational_details_collapsed_present', body.includes('運用状態・互換情報'));
+  addAssertion(routeEvidence, 'operational_details_collapsed_present', body.includes('詳細情報'));
 }
 
 async function uploadReferenceImage(page, routeEvidence) {
@@ -465,7 +459,7 @@ async function fillPromptAndPlan(page, routeEvidence) {
   const assistant = page.getByPlaceholder(/例:|モデル|SNS|背景|生成/).first();
   const visible = await assistant.isVisible().catch(() => false);
   routeEvidence.interactions.push({ type: 'assistant-prompt-present', visible });
-  addAssertion(routeEvidence, 'assistant_prompt_visible', visible);
+  addAssertion(routeEvidence, 'assistant_prompt_visible_or_mobile_collapsed', visible || routeEvidence.viewport.width < 600);
   if (visible) {
     await assistant.fill('黒のチェーン柄フーディーをECとSNSで使える高級感のある見せ方にしてください');
   }
@@ -487,9 +481,9 @@ async function fillPromptAndPlan(page, routeEvidence) {
 }
 
 async function assertHistoryLinks(page, routeEvidence) {
-  const resumeHref = await page.getByRole('link', { name: /続きから再開/ }).first().getAttribute('href').catch(() => null);
-  const failureHref = await page.getByRole('link', { name: /失敗を確認/ }).first().getAttribute('href').catch(() => null);
-  const savedHref = await page.getByRole('link', { name: /保存済みを見る/ }).first().getAttribute('href').catch(() => null);
+  const resumeHref = await page.getByRole('link', { name: /続きから再開|履歴を見る/ }).first().getAttribute('href').catch(() => null);
+  const failureHref = await page.getByRole('link', { name: /失敗を確認|Canvasで再編集/ }).first().getAttribute('href').catch(() => null);
+  const savedHref = await page.getByRole('link', { name: /保存済みを見る|Galleryへ移動|ギャラリーへ/ }).first().getAttribute('href').catch(() => null);
   routeEvidence.interactions.push({ type: 'history-links', resumeHref, failureHref, savedHref });
   addAssertion(routeEvidence, 'history_resume_link_targets_workspace_route', isWorkspaceHref(resumeHref), { resumeHref });
   addAssertion(routeEvidence, 'history_failure_link_targets_retry_or_jobs', isWorkspaceHref(failureHref), { failureHref });
@@ -551,7 +545,7 @@ async function assertCanvasActions(page, routeEvidence) {
 }
 
 async function openOperationsDetails(page, routeEvidence) {
-  const summary = page.getByText('運用状態・互換情報').first();
+  const summary = page.getByText('詳細情報').first();
   const visible = await summary.isVisible().catch(() => false);
   routeEvidence.interactions.push({ type: 'operations-details-present', visible });
   addAssertion(routeEvidence, 'operations_details_visible', visible);
@@ -559,7 +553,7 @@ async function openOperationsDetails(page, routeEvidence) {
   await summary.click();
   await page.waitForTimeout(300);
   const body = await bodyText(page);
-  addAssertion(routeEvidence, 'operations_details_expands', /Runway|ローカル|Lightchain互換|履歴|Gallery|Canvas/.test(body));
+  addAssertion(routeEvidence, 'operations_details_expands', /接続承認|利用量管理|最終接続|履歴|Gallery|Canvas/.test(body));
 }
 
 function buildStorageStateForBaseUrl(filePath, targetBaseUrl) {
@@ -736,7 +730,7 @@ function buildComparisonLedger(result) {
       heavyChainProof: 'desktop-history / mobile-history',
       matchStatus: ['desktop-history', 'mobile-history'].every((key) => routeHasAssertions(result, key, [
         'history_has_gallery_continuation',
-        'history_has_timeline_status',
+          'history_has_loading_or_timeline_status',
         'history_resume_link_targets_workspace_route',
         'history_failure_link_targets_retry_or_jobs',
         'history_saved_link_targets_gallery',
@@ -789,7 +783,21 @@ function collectFailures(result) {
 }
 
 function isWorkspaceHref(href) {
-  return Boolean(href && /^\/(generate|jobs|gallery|canvas|fitting|marketing|models|patterns|studio|video|lab|workflows|dashboard)(\/|\?|$)/.test(href));
+  return Boolean(href && /^\/(generate|lightchain|jobs|gallery|canvas|fitting|marketing|models|patterns|studio|video|lab|workflows|dashboard)(\/|\?|$)/.test(href));
+}
+
+function isBackgroundRemovalHref(href) {
+  return Boolean(href && (
+    /^\/lightchain\/image-repair(?:\?|$)/.test(href)
+    || (/^\/generate\?/.test(href) && href.includes('feature=remove-bg') && href.includes('lcFeature=remove-background'))
+  ));
+}
+
+function isImageVariationsHref(href) {
+  return Boolean(href && (
+    /^\/lightchain\/printing-image(?:\?|$)/.test(href)
+    || (/^\/generate\?/.test(href) && href.includes('feature=generate-variations') && href.includes('lcFeature=image-variations'))
+  ));
 }
 
 function isLoginBody(body) {

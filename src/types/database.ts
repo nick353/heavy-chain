@@ -501,7 +501,7 @@ export interface Database {
           id: string
           user_id: string
           brand_id: string | null
-          type: 'lost' | 'result' | 'save' | 'speed' | 'other'
+          type: 'lost' | 'cutout' | 'result' | 'save' | 'speed' | 'other'
           message: string
           email: string | null
           page_url: string
@@ -520,7 +520,7 @@ export interface Database {
           id?: string
           user_id: string
           brand_id?: string | null
-          type: 'lost' | 'result' | 'save' | 'speed' | 'other'
+          type: 'lost' | 'cutout' | 'result' | 'save' | 'speed' | 'other'
           message: string
           email?: string | null
           page_url: string
@@ -539,7 +539,7 @@ export interface Database {
           id?: string
           user_id?: string
           brand_id?: string | null
-          type?: 'lost' | 'result' | 'save' | 'speed' | 'other'
+          type?: 'lost' | 'cutout' | 'result' | 'save' | 'speed' | 'other'
           message?: string
           email?: string | null
           page_url?: string
