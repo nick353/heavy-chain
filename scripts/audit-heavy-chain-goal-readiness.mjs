@@ -90,6 +90,12 @@ const stateMentionsApprovedRunwayClient = /approved (?:existing )?Runway MCP cli
 const stateDisallowsOldMcpRemotePath = /Do not use `localhost:15554` consent pages/i.test(stateText)
   || /older `mcp-remote` localhost consent path remains invalid/i.test(stateText)
   || /old autonomous `mcp-remote` localhost path remains disallowed/i.test(stateText);
+const stateMentionsLocalWorkerPath = /local-worker jobs/i.test(stateText)
+  || /local Runway worker handoff/i.test(stateText)
+  || /local worker handoff/i.test(stateText)
+  || /local worker import/i.test(stateText)
+  || /worker:local-runway:watch/i.test(stateText)
+  || /local Runway MCP worker queue/i.test(stateText);
 
 const requirements = [
   requirement({
@@ -605,7 +611,7 @@ function approvedClientRunwayPathPassed() {
   const launch = files.launchOps.json;
   return files.referenceStability.exists
     && files.launchOps.exists
-    && stateText.includes('local Runway MCP worker queue')
+    && stateMentionsLocalWorkerPath
     && stateDisallowsOldMcpRemotePath
     && reference?.uploadHttpCode === 200
     && Boolean(reference?.runwayHostedReferenceAsset)
@@ -617,7 +623,7 @@ function approvedClientRunwayPathPassed() {
 function approvedClientRunwayPathDetails() {
   const reference = files.referenceStability.json || {};
   return {
-    stateUsesLocalWorker: stateText.includes('local Runway MCP worker queue'),
+    stateUsesLocalWorker: stateMentionsLocalWorkerPath,
     oldMcpRemoteDisallowed: stateDisallowsOldMcpRemotePath,
     uploadHttpCode: reference.uploadHttpCode,
     runwayHostedReferenceAsset: Boolean(reference.runwayHostedReferenceAsset),
