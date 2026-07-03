@@ -6,7 +6,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FeedbackButton } from '../ui/FeedbackForm';
 import { SkipLink, KeyboardShortcuts, defaultShortcuts } from '../ui';
-import { lightchainCategories, lightchainFeatureCatalog, buildLightchainFeatureHref } from '../../lib/lightchainParityCatalog';
+import { lightchainCategories } from '../../lib/lightchainParityCatalog';
 import { HelpCircle, History, UserCircle } from 'lucide-react';
 
 export function Layout() {
@@ -45,18 +45,15 @@ export function Layout() {
                   HEAVYCHAIN
                 </Link>
                 <div className="hidden items-center gap-2 text-sm text-neutral-300 md:flex">
-                  {lightchainCategories.map((category) => {
-                    const firstFeature = lightchainFeatureCatalog.find((feature) => feature.category === category.id);
-                    return (
-                      <Link
-                        key={category.id}
-                        to={firstFeature ? buildLightchainFeatureHref(firstFeature) : '/generate'}
-                        className="rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-white"
-                      >
-                        {category.label}
-                      </Link>
-                    );
-                  })}
+                  {lightchainCategories.map((category) => (
+                    <Link
+                      key={category.id}
+                      to={`/generate?category=${category.id}`}
+                      className="rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-white"
+                    >
+                      {category.label}
+                    </Link>
+                  ))}
                 </div>
               </div>
               <div className="flex items-center gap-2 text-neutral-300">
@@ -74,18 +71,15 @@ export function Layout() {
               </div>
             </div>
             <div className="flex gap-2 overflow-x-auto px-4 pb-3 md:hidden">
-              {lightchainCategories.map((category) => {
-                const firstFeature = lightchainFeatureCatalog.find((feature) => feature.category === category.id);
-                return (
-                  <Link
-                    key={category.id}
-                    to={firstFeature ? buildLightchainFeatureHref(firstFeature) : '/generate'}
-                    className="shrink-0 rounded-full border border-white/10 px-3 py-2 text-xs font-semibold text-neutral-200"
-                  >
-                    {category.label}
-                  </Link>
-                );
-              })}
+              {lightchainCategories.map((category) => (
+                <Link
+                  key={category.id}
+                  to={`/generate?category=${category.id}`}
+                  className="shrink-0 rounded-full border border-white/10 px-3 py-2 text-xs font-semibold text-neutral-200"
+                >
+                  {category.label}
+                </Link>
+              ))}
             </div>
           </header>
 

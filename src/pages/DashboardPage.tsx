@@ -4,13 +4,11 @@ import { MoreVertical, Trash2, Edit3, Search, X } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import {
   IconSparkles,
-  IconImage,
   IconArrowRight,
   IconClock,
   IconLayout,
   IconHelp,
   IconPlus,
-  IconChevronRight,
   IconPalette,
   IconFolder
 } from '../components/icons';
@@ -19,7 +17,6 @@ import { supabase } from '../lib/supabase';
 import { withSignedImageUrls } from '../lib/storage';
 import { Button, Modal, Input, Textarea } from '../components/ui';
 import { Onboarding, useOnboarding } from '../components/Onboarding';
-import { QuickWorkflows } from '../components/QuickWorkflows';
 import { UsageStats } from '../components/UsageStats';
 import type { Brand, GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
@@ -27,36 +24,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { fetchWorkspaceActivity, emptyWorkspaceActivity, type WorkspaceActivity } from '../lib/workspaceActivity';
 import { CreditSummaryPanel, FailureRetryCard, JobQueuePanel, WorkspaceGuidePanel } from '../components/workspace';
 import { LightchainParityHub } from '../components/LightchainParityHub';
-
-const quickActions = [
-  {
-    id: 'text-to-image',
-    title: '商品画像から作る',
-    description: '素材を入れてEC/SNS画像を作る',
-    icon: IconSparkles,
-    href: '/generate?feature=campaign-image',
-    color: 'from-primary-500 to-gold-DEFAULT',
-    delay: 0
-  },
-  {
-    id: 'canvas',
-    title: 'Canvasで編集する',
-    description: '保存した素材を配置して整える',
-    icon: IconLayout,
-    href: '/canvas/new',
-    color: 'from-blue-500 to-purple-500',
-    delay: 0.1
-  },
-  {
-    id: 'gallery',
-    title: 'SNS/EC画像を探す',
-    description: '成果物を見直して再利用する',
-    icon: IconImage,
-    href: '/gallery',
-    color: 'from-accent-500 to-pink-500',
-    delay: 0.2
-  }
-];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -437,87 +404,6 @@ export function DashboardPage() {
           </div>
         </motion.section>
 
-        <motion.nav
-          variants={itemVariants}
-          className="mb-6 grid grid-cols-3 gap-2 sm:hidden"
-          aria-label="モバイルクイック開始"
-          data-testid="mobile-dashboard-quick-start"
-        >
-          {quickActions.map((action) => (
-            <Link
-              key={action.id}
-              to={action.href}
-              className="flex min-h-[76px] flex-col items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-2 py-3 text-center shadow-sm transition active:scale-[0.98]"
-            >
-              <span className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${action.color}`}>
-                <action.icon className="h-4 w-4 text-white" size={16} />
-              </span>
-              <span className="text-[11px] font-semibold leading-tight text-white">{action.title}</span>
-            </Link>
-          ))}
-        </motion.nav>
-
-        <motion.section
-          variants={itemVariants}
-          className="mb-6 rounded-2xl border border-primary-200/50 bg-primary-50/80 p-4 shadow-sm dark:border-primary-900/40 dark:bg-primary-950/20 sm:hidden"
-          data-testid="mobile-dashboard-next-action"
-        >
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-primary-700 dark:text-primary-300">Next</p>
-          <h2 className="mt-1 text-base font-semibold text-neutral-950 dark:text-white">まず1つ作る</h2>
-          <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
-            商品画像を入れて、生成かCanvas保存まで進めます。
-          </p>
-          <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
-            <Link
-              to="/generate?feature=campaign-image"
-              className="flex min-h-11 items-center justify-center rounded-xl bg-neutral-950 px-4 text-sm font-semibold text-white shadow-sm active:scale-[0.99] dark:bg-white dark:text-neutral-950"
-            >
-              商品画像から始める
-            </Link>
-            <Link
-              to="/jobs"
-              className="flex min-h-11 items-center justify-center rounded-xl border border-neutral-200 bg-white/80 px-3 text-xs font-semibold text-neutral-700 dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200"
-            >
-              状況
-            </Link>
-          </div>
-        </motion.section>
-
-        <motion.section
-          variants={itemVariants}
-          className="mb-8 hidden rounded-3xl border border-white/10 bg-white/[0.05] p-5 shadow-soft sm:block"
-          data-testid="dashboard-quick-start"
-        >
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-xl">
-              <p className="text-xs font-semibold uppercase tracking-wider text-primary-300">Start</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">まず1つ作る</h2>
-              <p className="mt-2 text-sm leading-6 text-neutral-300">
-                素材を入れて、生成・Canvas保存・再利用までを短い流れで進めます。
-              </p>
-            </div>
-            <div className="grid min-w-0 flex-1 gap-3 lg:grid-cols-3">
-              {quickActions.map((action) => (
-                <Link
-                  key={action.id}
-                  to={action.href}
-                  className="group rounded-2xl border border-white/10 bg-neutral-950/70 p-4 transition hover:border-primary-300/60 hover:bg-neutral-900"
-                >
-                  <span className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${action.color}`}>
-                    <action.icon className="h-4 w-4 text-white" size={16} />
-                  </span>
-                  <span className="mt-4 block text-sm font-semibold text-white">{action.title}</span>
-                  <span className="mt-1 block text-xs leading-5 text-neutral-400">{action.description}</span>
-                  <span className="mt-4 inline-flex items-center text-xs font-semibold text-primary-300">
-                    開始する
-                    <IconArrowRight className="ml-1 h-3.5 w-3.5 transition group-hover:translate-x-0.5" size={14} />
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </motion.section>
-
         <motion.section id="dashboard-workflow" variants={itemVariants} className="mb-8 sm:mb-12 lg:mb-16">
           <LightchainParityHub compactOnMobile />
         </motion.section>
@@ -628,47 +514,6 @@ export function DashboardPage() {
             利用状況
           </Link>
         </motion.nav>
-
-        {/* Quick Actions */}
-        <motion.div
-          variants={itemVariants}
-          className="hidden sm:grid sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-8 sm:mb-12 lg:mb-16"
-          data-testid="dashboard-desktop-quick-actions"
-        >
-          {quickActions.map((action) => (
-            <Link
-              key={action.id}
-              to={action.href}
-              className="group relative overflow-hidden rounded-2xl sm:rounded-3xl bg-white dark:bg-surface-900 border border-neutral-100 dark:border-white/5 p-5 sm:p-6 lg:p-8 shadow-sm hover:shadow-floating transition-all duration-500 hover:-translate-y-1"
-            >
-              {/* Background Gradient */}
-              <div className={`absolute top-0 right-0 w-32 sm:w-48 h-32 sm:h-48 bg-gradient-to-br ${action.color} opacity-[0.08] rounded-full -translate-y-1/4 translate-x-1/4 group-hover:scale-125 transition-transform duration-700 blur-3xl`} />
-              
-              <div className="relative z-10 flex items-start gap-4">
-                <div className={`w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br ${action.color} rounded-xl sm:rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 flex-shrink-0`}>
-                  <action.icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" size={28} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-neutral-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                    {action.title}
-                  </h3>
-                  <p className="text-sm sm:text-base text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                    {action.description}
-                  </p>
-                </div>
-                <IconChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all flex-shrink-0" size={20} />
-              </div>
-            </Link>
-          ))}
-        </motion.div>
-
-        <motion.section
-          variants={itemVariants}
-          className="mb-8 hidden sm:block sm:mb-12 lg:mb-16"
-          data-testid="dashboard-desktop-workflows"
-        >
-          <QuickWorkflows />
-        </motion.section>
 
         {/* Canvas Projects */}
         <motion.div

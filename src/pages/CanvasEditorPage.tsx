@@ -1759,7 +1759,7 @@ export function CanvasEditorPage() {
           {/* Active user avatar - shows current logged in user */}
           <div className="hidden md:flex -space-x-2 items-center">
             <div
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 border-2 border-white dark:border-neutral-800 flex items-center justify-center overflow-hidden shadow-sm"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-cyan-300/30 bg-cyan-300/15 flex items-center justify-center overflow-hidden shadow-sm"
               title={profile?.name || user?.email || 'ユーザー'}
             >
               {profile?.avatar_url ? (
@@ -1933,7 +1933,7 @@ export function CanvasEditorPage() {
             <div className="absolute bottom-2 left-2 right-2 z-10 grid grid-cols-2 gap-2 sm:bottom-4 sm:left-4 sm:right-auto sm:w-[560px] sm:grid-cols-4">
               <label
                 htmlFor="file-upload"
-                className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/50 bg-white/85 px-3 py-2 text-xs font-semibold text-neutral-700 shadow-lg backdrop-blur transition hover:border-primary-300 hover:text-primary-700 dark:border-white/10 dark:bg-neutral-900/80 dark:text-neutral-200"
+                className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#101313]/95 px-3 py-2 text-xs font-semibold text-neutral-200 shadow-lg backdrop-blur transition hover:border-cyan-300/50 hover:bg-white/[0.08] hover:text-white"
               >
                 <Upload className="h-4 w-4" />
                 画像を置く
@@ -1941,7 +1941,7 @@ export function CanvasEditorPage() {
               <button
                 type="button"
                 onClick={() => setShowGenerateModal(true)}
-                className="flex items-center justify-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-3 py-2 text-xs font-semibold text-primary-700 shadow-lg backdrop-blur transition hover:bg-primary-100 dark:border-primary-400/20 dark:bg-primary-400/10 dark:text-primary-200"
+                className="flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-3 py-2 text-xs font-semibold text-neutral-950 shadow-lg backdrop-blur transition hover:bg-cyan-200"
               >
                 <Wand2 className="h-4 w-4" />
                 生成する
@@ -1949,7 +1949,7 @@ export function CanvasEditorPage() {
               <button
                 type="button"
                 onClick={() => navigate('/gallery')}
-                className="flex items-center justify-center gap-2 rounded-xl border border-white/50 bg-white/85 px-3 py-2 text-xs font-semibold text-neutral-700 shadow-lg backdrop-blur transition hover:border-primary-300 hover:text-primary-700 dark:border-white/10 dark:bg-neutral-900/80 dark:text-neutral-200"
+                className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#101313]/95 px-3 py-2 text-xs font-semibold text-neutral-200 shadow-lg backdrop-blur transition hover:border-cyan-300/50 hover:bg-white/[0.08] hover:text-white"
               >
                 <Image className="h-4 w-4" />
                 素材を見る
@@ -1957,7 +1957,7 @@ export function CanvasEditorPage() {
               <button
                 type="button"
                 onClick={() => setShowGallerySelector(true)}
-                className="flex items-center justify-center gap-2 rounded-xl border border-white/50 bg-white/85 px-3 py-2 text-xs font-semibold text-neutral-700 shadow-lg backdrop-blur transition hover:border-primary-300 hover:text-primary-700 dark:border-white/10 dark:bg-neutral-900/80 dark:text-neutral-200"
+                className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-[#101313]/95 px-3 py-2 text-xs font-semibold text-neutral-200 shadow-lg backdrop-blur transition hover:border-cyan-300/50 hover:bg-white/[0.08] hover:text-white"
               >
                 <Image className="h-4 w-4" />
                 Galleryから追加
@@ -2116,12 +2116,12 @@ export function CanvasEditorPage() {
                   onClick={() => setGenerateMode(mode.id as GenerateMode)}
                   className={`p-3 rounded-xl border-2 transition-all text-left ${
                     generateMode === mode.id
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
+                      ? 'border-cyan-300 bg-cyan-300/15'
                       : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
                   }`}
                 >
                   <mode.icon className={`w-5 h-5 mb-2 ${
-                    generateMode === mode.id ? 'text-primary-600 dark:text-primary-400' : 'text-neutral-500 dark:text-neutral-400'
+                    generateMode === mode.id ? 'text-cyan-300' : 'text-neutral-500 dark:text-neutral-400'
                   }`} />
                   <div className="font-medium text-sm text-neutral-800 dark:text-white">{mode.name}</div>
                   <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">{mode.description}</div>
@@ -2132,12 +2132,12 @@ export function CanvasEditorPage() {
 
           {/* Dynamic form */}
           {renderGenerateForm()}
-          <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100">
+          <label className="flex items-start gap-3 rounded-xl border border-cyan-300/35 bg-cyan-300/[0.08] p-3 text-xs text-cyan-100">
             <input
               type="checkbox"
               checked={rightsConfirmed}
               onChange={(event) => setRightsConfirmed(event.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+              className="mt-0.5 h-4 w-4 rounded border-cyan-300 text-cyan-300 focus:ring-cyan-300"
               disabled={isGenerating}
             />
             <span>

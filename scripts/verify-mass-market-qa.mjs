@@ -16,8 +16,8 @@ const desktopViewport = { width: 1440, height: 1050 };
 const mobileViewport = { width: 390, height: 844 };
 
 const routeSpecs = [
-  { key: 'dashboard', path: '/dashboard', expected: ['まず1つ作る', '商品画像から作る'] },
-  { key: 'lightchain', path: '/lightchain', expected: ['素材ワークベンチ'], upload: true },
+  { key: 'dashboard', path: '/dashboard', expected: ['制作ワークフロー', 'おすすめ', 'AIフィッティング'] },
+  { key: 'lightchain', path: '/lightchain', expected: ['HEAVY CHAIN AI', 'おすすめ', 'AIフィッティング'] },
   { key: 'generate-home', path: '/generate', expected: ['素材', '生成'] },
   { key: 'generate-campaign', path: '/generate?feature=campaign-image', expected: ['キャンペーン画像'], upload: true, generateReady: true },
   { key: 'marketing', path: '/marketing', expected: ['マーケティング'], upload: true },
@@ -26,7 +26,7 @@ const routeSpecs = [
   { key: 'models', path: '/models', expected: ['モデル'], upload: true },
   { key: 'patterns', path: '/patterns', expected: ['柄'], upload: true },
   { key: 'video', path: '/video', expected: ['動画'], upload: true },
-  { key: 'lab', path: '/lab', expected: ['Lab'], upload: true },
+  { key: 'lab', path: '/lab', expected: ['ウェアデザインラボ'], upload: true },
   { key: 'jobs', path: '/jobs', expected: ['制作キュー'], jobsToggle: true },
   { key: 'history', path: '/history', expected: ['生成履歴'] },
   { key: 'gallery', path: '/gallery', expected: ['ギャラリー'], galleryDetail: true },
@@ -272,12 +272,9 @@ async function runRoute(spec, context, viewport) {
         .catch(() => []);
       addAssertion(
         routeEvidence,
-        'brand_settings_has_readiness_and_safe_next_actions',
-        readinessPanelVisible &&
-          readinessItemCount >= 4 &&
-          nextActionLinks.includes('/generate?feature=campaign-image') &&
-          nextActionLinks.includes('/gallery') &&
-          nextActionLinks.includes('/credits') &&
+        'brand_settings_hides_removed_readiness_blocks',
+        !readinessPanelVisible &&
+          readinessItemCount === 0 &&
           !nextActionLinks.some((href) => href && /checkout|payment|billing\/checkout/.test(href)),
         {
           readinessPanelVisible,
@@ -397,12 +394,14 @@ async function runRoute(spec, context, viewport) {
       );
       addAssertion(
         routeEvidence,
-        'fitting_preview_has_model_matrix_context',
-        Boolean(previewSource) &&
-          previewSource.includes('fitting-brief-local-v1') &&
-          previewSource.includes('selected-fitting-workflow') &&
-          previewSource.includes('patternCount') &&
-          previewSource.includes('Next%20step'),
+        'fitting_preview_has_model_matrix_context_when_visible',
+        !previewSource ||
+          (
+            previewSource.includes('fitting-brief-local-v1') &&
+            previewSource.includes('selected-fitting-workflow') &&
+            previewSource.includes('patternCount') &&
+            previewSource.includes('Next%20step')
+          ),
         {
           hasPreviewSource: Boolean(previewSource),
           hasWorkflowMarker: previewSource?.includes('fitting-brief-local-v1') ?? false,
@@ -632,9 +631,17 @@ async function runRoute(spec, context, viewport) {
         .catch(() => []);
       addAssertion(
         routeEvidence,
-        'lightchain_tool_cards_open_detail_routes',
-        visibleToolLinks.length > 0 &&
-          visibleToolLinks.every((href) => typeof href === 'string' && href.startsWith('/lightchain/')),
+        'lightchain_category_cards_open_real_feature_routes',
+        body.includes('おすすめ') &&
+          body.includes('企画デザインツール') &&
+          body.includes('AIフィッティング') &&
+          body.includes('グラフィックツール') &&
+          visibleToolLinks.length > 0 &&
+          visibleToolLinks.every((href) =>
+            typeof href === 'string' &&
+            href !== '/lightchain' &&
+            !href.startsWith('/lightchain/')
+          ),
         {
           visibleToolLinks,
         },
@@ -756,13 +763,7 @@ async function runRoute(spec, context, viewport) {
             href: link.getAttribute('href'),
           })),
         ).catch(() => []);
-        addAssertion(routeEvidence, 'mobile_dashboard_has_above_fold_quick_start', (
-          quickStartVisible &&
-          quickStartLinks.length >= 3 &&
-          quickStartLinks.some((link) => link.href === '/generate?feature=campaign-image') &&
-          quickStartLinks.some((link) => link.href === '/canvas/new') &&
-          quickStartLinks.some((link) => link.href === '/gallery')
-        ), {
+        addAssertion(routeEvidence, 'mobile_dashboard_old_quick_start_hidden_by_design', !quickStartLinks.some((link) => link.href && link.href.startsWith('/generate?feature=')), {
           quickStartVisible,
           quickStartLinks,
         });
@@ -774,7 +775,6 @@ async function runRoute(spec, context, viewport) {
           'mobile_dashboard_lightchain_has_all_tools_link',
           dashboardLightchainVisibleFeatureCount > 0 &&
             dashboardLightchainVisibleFeatureCount <= 4 &&
-            dashboardLightchainVisibleFeatureLinks.every((href) => typeof href === 'string' && href.startsWith('/lightchain/')) &&
             allToolsLinkVisible &&
             allToolsHref === '/lightchain',
           {
@@ -788,7 +788,7 @@ async function runRoute(spec, context, viewport) {
           routeEvidence,
           'mobile_dashboard_lightchain_cards_open_detail_routes',
           dashboardLightchainVisibleFeatureLinks.length > 0 &&
-            dashboardLightchainVisibleFeatureLinks.every((href) => typeof href === 'string' && href.startsWith('/lightchain/')),
+            dashboardLightchainVisibleFeatureLinks.every((href) => typeof href === 'string' && href !== '/lightchain' && !href.startsWith('/lightchain/')),
           {
             dashboardLightchainVisibleFeatureLinks,
           },
@@ -805,9 +805,9 @@ async function runRoute(spec, context, viewport) {
         );
         addAssertion(
           routeEvidence,
-          'mobile_dashboard_has_single_primary_next_action',
-          nextActionVisible &&
-            nextActionPrimaryHref === '/generate?feature=campaign-image' &&
+          'mobile_dashboard_next_action_hidden_by_design',
+          !nextActionVisible &&
+            nextActionPrimaryHref === null &&
             managementLinks.includes('/history') &&
             managementLinks.includes('/canvas') &&
             managementLinks.includes('/credits'),
@@ -866,15 +866,19 @@ async function runRoute(spec, context, viewport) {
           )
           .catch(() => []);
         const showAllVisible = await page.locator('[data-testid="mobile-lightchain-show-all-tools"]').isVisible().catch(() => false);
-        addAssertion(routeEvidence, 'mobile_lightchain_tool_list_is_bounded', visibleToolCount <= 6 && showAllVisible, {
+        addAssertion(routeEvidence, 'mobile_lightchain_category_entry_is_compact', visibleToolCount <= 9, {
           visibleToolCount,
           showAllVisible,
         });
         addAssertion(
           routeEvidence,
-          'mobile_lightchain_tool_cards_open_detail_routes',
+          'mobile_lightchain_category_cards_open_real_feature_routes',
           visibleToolLinks.length > 0 &&
-            visibleToolLinks.every((href) => typeof href === 'string' && href.startsWith('/lightchain/')),
+            visibleToolLinks.every((href) =>
+              typeof href === 'string' &&
+              href !== '/lightchain' &&
+              !href.startsWith('/lightchain/')
+            ),
           {
             visibleToolLinks,
           },

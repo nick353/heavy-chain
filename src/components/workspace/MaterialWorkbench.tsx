@@ -230,27 +230,27 @@ export function MaterialWorkbench({
   };
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-surface-900/60">
+    <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-none">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-950 dark:text-white">
-            <ImagePlus className="h-4 w-4 text-primary-600" />
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+            <ImagePlus className="h-4 w-4 text-cyan-300" />
             {title}
           </h3>
           <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{description}</p>
         </div>
-        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${hasImage ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200' : 'bg-neutral-100 text-neutral-500 dark:bg-surface-800 dark:text-neutral-300'}`}>
+        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${hasImage ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-300/30' : 'bg-white/[0.06] text-neutral-300 ring-1 ring-white/10'}`}>
           {hasImage ? '素材あり' : '素材を追加'}
         </span>
       </div>
 
       <div className="mt-4 grid min-w-0 gap-4 2xl:grid-cols-[minmax(280px,1fr)_minmax(300px,0.86fr)]">
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-neutral-200 bg-white dark:border-white/10 dark:bg-surface-950/50">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#050707]">
           <label
-            className={`relative flex min-h-[300px] cursor-pointer flex-col items-center justify-center overflow-hidden p-4 text-center transition hover:ring-2 hover:ring-primary-200 focus-within:ring-2 focus-within:ring-primary-400 ${
+            className={`relative flex min-h-[300px] cursor-pointer flex-col items-center justify-center overflow-hidden p-4 text-center transition hover:ring-2 hover:ring-cyan-300/30 focus-within:ring-2 focus-within:ring-cyan-300/50 ${
               hasImage
-                ? 'bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f4f5_75%),linear-gradient(-45deg,transparent_75%,#f4f4f5_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0] dark:bg-neutral-950'
-                : 'bg-neutral-50 dark:bg-surface-950/60'
+                ? 'bg-[linear-gradient(45deg,rgba(255,255,255,.08)_25%,transparent_25%),linear-gradient(-45deg,rgba(255,255,255,.08)_25%,transparent_25%),linear-gradient(45deg,transparent_75%,rgba(255,255,255,.08)_75%),linear-gradient(-45deg,transparent_75%,rgba(255,255,255,.08)_75%)] bg-[length:24px_24px] bg-[position:0_0,0_12px,12px_-12px,-12px_0]'
+                : 'bg-white/[0.03]'
             }`}
           >
             <input type="file" accept="image/*" className="sr-only" onChange={handleUpload} />
@@ -275,7 +275,7 @@ export function MaterialWorkbench({
                     {state.activeLayer.slice(0, 4)}
                   </div>
                 )}
-                <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-neutral-700 shadow-sm dark:bg-neutral-900/90 dark:text-neutral-100">
+                <div className="absolute left-3 top-3 rounded-full bg-neutral-950/90 px-2.5 py-1 text-xs font-semibold text-neutral-100 shadow-sm ring-1 ring-white/10">
                   {state.fileName || 'uploaded material'}
                 </div>
 	                {state.nextStepReady && (
@@ -286,25 +286,25 @@ export function MaterialWorkbench({
               </>
             ) : (
               <>
-                <Upload className="h-8 w-8 text-primary-500" />
-                <span className="mt-2 text-sm font-semibold text-neutral-900 dark:text-white">{uploadLabel}</span>
+                <Upload className="h-8 w-8 text-cyan-300" />
+                <span className="mt-2 text-sm font-semibold text-white">{uploadLabel}</span>
                 <span className="mt-1 max-w-xs text-xs leading-5 text-neutral-500 dark:text-neutral-400">{emptyLabel}</span>
               </>
             )}
           </label>
           {!simpleMode && (
-            <div className="grid grid-cols-3 border-t border-neutral-200 text-xs dark:border-white/10">
+            <div className="grid grid-cols-3 border-t border-white/10 text-xs">
               <div className="p-3">
                 <p className="font-semibold text-neutral-400">認識</p>
-                <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{state.imageUrl ? state.materialKind : '画像待ち'}</p>
+                <p className="mt-1 truncate font-semibold text-white">{state.imageUrl ? state.materialKind : '画像待ち'}</p>
               </div>
-              <div className="border-x border-neutral-200 p-3 dark:border-white/10">
+              <div className="border-x border-white/10 p-3">
                 <p className="font-semibold text-neutral-400">処理</p>
-                <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{hasImage ? maskModeLabel[state.maskMode] : '素材後に設定'}</p>
+                <p className="mt-1 font-semibold text-white">{hasImage ? maskModeLabel[state.maskMode] : '素材後に設定'}</p>
               </div>
               <div className="p-3">
                 <p className="font-semibold text-neutral-400">レイヤー</p>
-                <p className="mt-1 truncate font-semibold text-neutral-900 dark:text-white">{hasImage ? state.activeLayer : '素材後に設定'}</p>
+                <p className="mt-1 truncate font-semibold text-white">{hasImage ? state.activeLayer : '素材後に設定'}</p>
               </div>
             </div>
           )}
@@ -312,34 +312,34 @@ export function MaterialWorkbench({
 
         {hasImage ? (
         <div className="min-w-0 space-y-3">
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-3 dark:border-emerald-400/20 dark:bg-emerald-400/10">
-            <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+          <div className="rounded-2xl border border-cyan-300/25 bg-cyan-300/[0.08] p-3">
+            <p className="text-sm font-semibold text-cyan-100">
               次にやること
             </p>
-            <p className="mt-1 text-xs leading-5 text-emerald-800 dark:text-emerald-100">
+            <p className="mt-1 text-xs leading-5 text-neutral-200">
               服だけをAIで切り抜きます。細かい設定は必要になった時だけ開けます。
             </p>
             <button
               type="button"
               onClick={autoExtractMask}
               disabled={isCutoutProcessing}
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:opacity-70"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 px-3 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-70"
             >
               <Scissors className={`h-4 w-4 ${isCutoutProcessing ? 'animate-pulse' : ''}`} />
               {isCutoutProcessing ? 'AI切り抜き中' : simpleMode ? '高精度AIで切り抜く' : '自動で切り抜く'}
             </button>
             {isCutoutProcessing && (
-              <p className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold leading-5 text-cyan-900 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-100">
+              <p className="mt-2 rounded-xl border border-cyan-300/30 bg-cyan-300/[0.08] px-3 py-2 text-xs font-semibold leading-5 text-cyan-100">
                 初回はAIモデルを読み込むため時間がかかります。この画面のまま待ってください。
               </p>
             )}
             {state.extractedLayerReady && isPreviewOnlyCutout(state.maskEngine) && (
-              <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+              <p className="mt-2 rounded-xl border border-cyan-300/30 bg-cyan-300/[0.08] px-3 py-2 text-xs font-semibold leading-5 text-cyan-100">
                 これは確認用です。袖や薄い生地が欠ける可能性があるため、この品質ではAI生成に進めません。
               </p>
             )}
             {state.extractedLayerReady && !isPreviewOnlyCutout(state.maskEngine) && (
-              <p className="mt-2 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold leading-5 text-emerald-900 dark:border-emerald-400/30 dark:bg-neutral-950/40 dark:text-emerald-100">
+              <p className="mt-2 rounded-xl border border-cyan-300/30 bg-[#050707] px-3 py-2 text-xs font-semibold leading-5 text-cyan-100">
                 高精度AI切り抜き済みです。権利確認後にAI生成できます。
               </p>
             )}
@@ -357,7 +357,7 @@ export function MaterialWorkbench({
 	              <button
 	                type="button"
 	                onClick={confirmNextStep}
-                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 px-3 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950"
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 px-3 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
               >
                 <CheckCircle2 className="h-4 w-4" />
                 次へ進む
@@ -365,7 +365,7 @@ export function MaterialWorkbench({
             )}
           </div>
 
-          <details className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3 dark:border-white/10 dark:bg-surface-950/50" open={!simpleMode}>
+          <details className="rounded-2xl border border-white/10 bg-white/[0.04] p-3" open={!simpleMode}>
             <summary className="cursor-pointer text-sm font-semibold text-neutral-700 dark:text-neutral-200">
               詳細設定
             </summary>
@@ -378,9 +378,9 @@ export function MaterialWorkbench({
                 ].map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div key={item.label} className="rounded-xl border border-neutral-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-surface-950/50">
-                      <Icon className="h-4 w-4 text-primary-500" />
-                      <p className="mt-1 text-xs font-semibold text-neutral-700 dark:text-neutral-200">{item.label}</p>
+                    <div key={item.label} className="rounded-xl border border-white/10 bg-[#050707] px-3 py-2">
+                      <Icon className="h-4 w-4 text-cyan-300" />
+                      <p className="mt-1 text-xs font-semibold text-neutral-200">{item.label}</p>
                     </div>
                   );
                 })}
@@ -392,7 +392,7 @@ export function MaterialWorkbench({
                   <select
                     value={state.materialKind}
                     onChange={(event) => updateState({ materialKind: event.target.value })}
-                    className="mt-1 w-full min-w-0 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
+                    className="mt-1 w-full min-w-0 rounded-xl border border-white/10 bg-[#050707] px-3 py-2 text-sm text-white outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
                   >
                     {materialKinds.map((kind) => (
                       <option key={kind} value={kind}>{kind}</option>
@@ -404,7 +404,7 @@ export function MaterialWorkbench({
                   <select
                     value={state.placement}
                     onChange={(event) => updateState({ placement: event.target.value })}
-                    className="mt-1 w-full min-w-0 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
+                    className="mt-1 w-full min-w-0 rounded-xl border border-white/10 bg-[#050707] px-3 py-2 text-sm text-white outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
                   >
                     {placementOptions.map((placement) => (
                       <option key={placement} value={placement}>{placement}</option>
@@ -438,8 +438,8 @@ export function MaterialWorkbench({
                       })}
                       className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                         state.activeLayer === layer
-                          ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
-                          : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-surface-800 dark:text-neutral-300'
+                          ? 'bg-cyan-300 text-neutral-950'
+                          : 'border border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                       }`}
                     >
                       {layer}
@@ -472,8 +472,8 @@ export function MaterialWorkbench({
                       })}
                       className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
                         state.maskMode === mode.id
-                          ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                          : 'border-neutral-200 bg-white text-neutral-600 hover:border-primary-200 dark:border-white/10 dark:bg-surface-950/40 dark:text-neutral-300'
+                          ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                          : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                       }`}
                     >
                       {mode.label}
@@ -499,8 +499,8 @@ export function MaterialWorkbench({
                   </button>
                 </div>
                 {(state.maskCandidates?.length ?? 0) > 0 && (
-                  <div className="mt-2 rounded-xl border border-cyan-100 bg-cyan-50 p-2 dark:border-cyan-400/20 dark:bg-cyan-400/10">
-                    <p className="text-[11px] font-semibold text-cyan-800 dark:text-cyan-100">保存したい範囲を選択してください</p>
+                  <div className="mt-2 rounded-xl border border-cyan-300/25 bg-cyan-300/[0.08] p-2">
+                    <p className="text-[11px] font-semibold text-cyan-100">保存したい範囲を選択してください</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {(state.maskCandidates ?? []).map((candidate) => (
                         <button
@@ -510,7 +510,7 @@ export function MaterialWorkbench({
                           className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                             state.selectedMaskCandidate === candidate
                               ? 'border-cyan-500 bg-cyan-600 text-white'
-                              : 'border-cyan-200 bg-white text-cyan-700 hover:border-cyan-400 dark:bg-neutral-950 dark:text-cyan-200'
+                              : 'border-cyan-300/30 bg-[#050707] text-cyan-100 hover:border-cyan-300'
                           }`}
                         >
                           {candidate}
@@ -522,7 +522,7 @@ export function MaterialWorkbench({
 	                        type="button"
 	                        onClick={confirmNextStep}
 	                        disabled={!state.extractedLayerReady}
-	                        className="mt-2 w-full rounded-xl bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-50 dark:bg-white dark:text-neutral-950"
+		                        className="mt-2 w-full rounded-xl bg-cyan-300 px-3 py-2 text-xs font-semibold text-neutral-950 transition hover:bg-cyan-200 disabled:opacity-50"
 	                      >
 	                        次のステップ
 	                      </button>
@@ -542,15 +542,15 @@ export function MaterialWorkbench({
                   max={120}
                   value={state.scale}
                   onChange={(event) => updateState({ scale: Number(event.target.value) })}
-                  className="mt-2 w-full accent-primary-500"
+	                  className="mt-2 w-full accent-cyan-300"
                 />
               </label>
             </div>
           </details>
         </div>
         ) : (
-          <div className="min-w-0 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 dark:border-white/10 dark:bg-surface-950/40">
-            <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+          <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <p className="text-sm font-semibold text-white">
               服の写真を入れてください
             </p>
             <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
@@ -568,12 +568,12 @@ export function MaterialWorkbench({
             value={state.note}
             onChange={(event) => updateState({ note: event.target.value })}
             rows={2}
-            className="mt-1 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-[#050707] px-3 py-2 text-sm text-white outline-none focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
           />
         </label>
-        <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-white/10 dark:bg-surface-950/50">
+        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
           <p className="text-xs font-semibold text-neutral-400">Canvas保存時の構造</p>
-          <p className="mt-1 text-sm font-semibold text-neutral-900 dark:text-white">
+          <p className="mt-1 text-sm font-semibold text-white">
             {state.imageUrl ? `${state.materialKind} / ${state.activeLayer}` : '画像待ち'}
           </p>
           <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">

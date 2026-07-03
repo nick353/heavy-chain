@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { 
-  Type, 
-  Palette, 
-  Move, 
+import {
+  Type,
+  Palette,
+  Move,
   RotateCw,
   Lock,
   Unlock,
@@ -124,8 +124,8 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
           <button
             onClick={toggleLock}
             className={`p-1.5 rounded-lg transition-colors ${
-              selectedObject.locked 
-                ? 'bg-primary-100 text-primary-700' 
+              selectedObject.locked
+                ? 'bg-cyan-300 text-neutral-950'
                 : 'text-neutral-400 hover:bg-neutral-100'
             }`}
             title={selectedObject.locked ? 'ロック解除' : 'ロック'}

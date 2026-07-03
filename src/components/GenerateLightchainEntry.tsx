@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
   CheckCircle2,
@@ -88,9 +88,18 @@ const findFeatureFromPrompt = (prompt: string) => {
 };
 
 export function GenerateLightchainEntry() {
+  const [searchParams] = useSearchParams();
   const [activeCategory, setActiveCategory] = useState<LightchainCategoryId>('recommended');
   const [query, setQuery] = useState('');
   const [command, setCommand] = useState('');
+  const categoryParam = searchParams.get('category');
+
+  useEffect(() => {
+    if (categoryParam && lightchainCategories.some((category) => category.id === categoryParam)) {
+      setActiveCategory(categoryParam as LightchainCategoryId);
+      setQuery('');
+    }
+  }, [categoryParam]);
 
   const activeCategoryMeta = lightchainCategories.find((category) => category.id === activeCategory) ?? lightchainCategories[0];
 
@@ -216,6 +225,7 @@ export function GenerateLightchainEntry() {
                     key={feature.id}
                     to={selectedHref}
                     className="group min-h-[150px] rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-cyan-300/70 hover:bg-white/[0.07]"
+                    data-testid="lightchain-tool-card"
                   >
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-cyan-200 transition group-hover:bg-cyan-300 group-hover:text-neutral-950">

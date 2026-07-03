@@ -77,14 +77,14 @@ export function ImageEditModal({ isOpen, onClose, imageUrl, onEdit }: ImageEditM
                 className={`
                   flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all
                   ${mode === m.id
-                    ? 'border-primary-500 bg-primary-50'
+                    ? 'border-cyan-300 bg-cyan-300/15'
                     : 'border-neutral-200 hover:border-neutral-300'
                   }
                 `}
               >
                 <div className={`
                   w-10 h-10 rounded-lg flex items-center justify-center
-                  ${mode === m.id ? 'bg-primary-500 text-white' : 'bg-neutral-100 text-neutral-500'}
+                  ${mode === m.id ? 'bg-cyan-300 text-white' : 'bg-neutral-100 text-neutral-500'}
                 `}>
                   <m.icon className="w-5 h-5" />
                 </div>

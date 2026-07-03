@@ -11,7 +11,7 @@ import {
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
 const choices = ['プロンプト実験', '品質評価', '採用候補'];
-const fieldClass = 'mt-2 w-full rounded-xl border border-neutral-200 bg-white/75 px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-900/70 dark:text-white dark:focus:border-primary-500';
+const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
 type LabExperimentCandidate = {
   id: string;
   label: string;
@@ -420,8 +420,8 @@ export function LabPage() {
               onClick={() => recordProgress(choice)}
               className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
                 activeChoice === choice
-                  ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                  : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
+                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                  : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
               }`}
             >
               {choice}
@@ -429,7 +429,7 @@ export function LabPage() {
           ))}
         </div>
 
-        <div className="mt-6 rounded-2xl border border-neutral-200 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/40">
+        <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">実験レーンを選ぶ</h2>
@@ -437,7 +437,7 @@ export function LabPage() {
                 候補を見比べながら、仮説・評価軸・採用判断を先に選びます。
               </p>
             </div>
-            <span className="w-fit rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-950/50 dark:text-primary-200">
+            <span className="w-fit rounded-full bg-cyan-300/15 px-3 py-1 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-300/30">
               score {selectedExperiment.score}
             </span>
           </div>
@@ -455,20 +455,20 @@ export function LabPage() {
                   aria-pressed={isSelected}
                   className={`rounded-2xl border p-4 text-left transition ${
                     isSelected
-                      ? 'border-primary-400 bg-primary-50/70 ring-2 ring-primary-100 dark:border-primary-300 dark:bg-primary-400/10 dark:ring-primary-400/20'
-                      : 'border-neutral-200 bg-white/75 hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-950/50 dark:hover:border-primary-500/70'
+                      ? 'border-cyan-300 bg-cyan-300 text-neutral-950 ring-2 ring-cyan-300/20 dark:border-cyan-300 dark:bg-cyan-300 dark:ring-cyan-300/20'
+                      : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                   }`}
                 >
                   <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${
                     isSelected
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-surface-100 text-neutral-600 dark:bg-surface-800 dark:text-neutral-300'
+                      ? 'bg-cyan-300 text-neutral-950'
+                      : 'bg-white/[0.06] text-neutral-300'
                   }`}>
                     <Icon className="h-5 w-5" />
                   </span>
                   <span className="mt-3 flex items-center justify-between gap-3 text-sm font-semibold text-neutral-950 dark:text-white">
                     {experiment.label}
-                    {isSelected && <Check className="h-4 w-4 text-primary-600 dark:text-primary-200" />}
+                    {isSelected && <Check className="h-4 w-4 text-cyan-300 dark:text-cyan-300" />}
                   </span>
                   <span className="mt-2 block text-sm leading-6 text-neutral-500 dark:text-neutral-400">
                     {experiment.decision}
@@ -489,10 +489,10 @@ export function LabPage() {
 
       <section
         data-testid="lab-action-panel"
-        className="grid gap-4 rounded-2xl border border-amber-200 bg-amber-50/80 p-5 dark:border-amber-900/60 dark:bg-amber-950/20 lg:grid-cols-[minmax(0,1fr)_auto]"
+        className="grid gap-4 rounded-2xl border border-cyan-300/35 bg-cyan-300/[0.08] p-5 dark:border-cyan-300/30 dark:bg-cyan-300/[0.08] lg:grid-cols-[minmax(0,1fr)_auto]"
       >
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300 dark:text-cyan-300">
             Wear Design Lab
           </p>
           <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
@@ -588,7 +588,7 @@ export function LabPage() {
           <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">ローカル進捗</h2>
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{activeChoice} / {progress}%</p>
           <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
-            <div className="h-full rounded-full bg-primary-500" style={{ width: `${progress}%` }} />
+            <div className="h-full rounded-full bg-cyan-300" style={{ width: `${progress}%` }} />
           </div>
           <p className="mt-4 text-sm font-semibold text-neutral-900 dark:text-white">
             決定的スコア {selectedExperiment.score}
@@ -632,7 +632,7 @@ export function LabPage() {
                 <span className="pb-1 text-sm font-semibold text-neutral-400">/ 100</span>
               </div>
               <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
-                <div className="h-full rounded-full bg-primary-500" style={{ width: `${selectedExperiment.score}%` }} />
+                <div className="h-full rounded-full bg-cyan-300" style={{ width: `${selectedExperiment.score}%` }} />
               </div>
               <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">{selectedExperiment.scoreSignature}</p>
             </div>

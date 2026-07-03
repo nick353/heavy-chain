@@ -44,12 +44,12 @@ for (const [label, source] of userFacingBundle) {
   });
 }
 
-addCheck('dashboard_has_three_internal_beta_start_ctas', (
-  dashboard.includes('まず1つ作る')
-  && dashboard.includes('商品画像から作る')
-  && dashboard.includes('SNS/EC画像を探す')
-  && dashboard.includes('Canvasで編集する')
-  && dashboard.includes('dashboard-internal-beta-start')
+addCheck('dashboard_uses_category_workflow_entry_without_quick_start_noise', (
+  dashboard.includes('<LightchainParityHub compactOnMobile />')
+  && !dashboard.includes('まず1つ作る')
+  && !dashboard.includes('商品画像から作る')
+  && !dashboard.includes('SNS/EC画像を探す')
+  && !dashboard.includes('Canvasで編集する')
 ), {});
 
 addCheck('generate_primary_action_is_provider_neutral', (

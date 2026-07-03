@@ -566,8 +566,8 @@ export function PatternWorkspacePage() {
               onClick={() => recordProgress(mode)}
               className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
                 activeMode === mode
-                  ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                  : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
+                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                  : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
               }`}
             >
               {mode}
@@ -578,11 +578,11 @@ export function PatternWorkspacePage() {
 
       <section
         data-testid="pattern-action-panel"
-        className="glass-panel rounded-2xl border border-primary-200/70 bg-primary-50/70 p-5 dark:border-primary-400/20 dark:bg-primary-950/20"
+        className="glass-panel rounded-2xl border dark:border-cyan-300/30 border-cyan-300/35 bg-cyan-300/[0.08] p-5 dark:border-cyan-300/30 dark:bg-cyan-300/[0.08]"
       >
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-700 dark:text-primary-200">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300 dark:text-cyan-300">
               Pattern flow
             </p>
             <h2 className="mt-2 text-xl font-semibold text-neutral-950 dark:text-white">
@@ -597,7 +597,7 @@ export function PatternWorkspacePage() {
                 <div
                   key={item.label}
                   data-testid="pattern-readiness-item"
-                  className="rounded-xl bg-white/75 p-3 text-sm dark:bg-surface-900/60"
+                  className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm"
                 >
                   <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{item.label}</p>
                   <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{item.value}</p>
@@ -642,7 +642,7 @@ export function PatternWorkspacePage() {
                 素材・柄・配置・色・版下の順に、生成と入稿へ使う条件を組み立てます。
               </p>
             </div>
-            <div className="rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-800 dark:bg-primary-950/40 dark:text-primary-100">
+            <div className="rounded-full bg-cyan-300/15 px-3 py-1.5 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-300/30">
               {activeMode} / {selectedPreview.label}
             </div>
           </div>
@@ -663,7 +663,7 @@ export function PatternWorkspacePage() {
 
 	              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
                 <div className="flex items-center gap-2">
-                  <Upload className="h-4 w-4 text-primary-600" />
+                  <Upload className="h-4 w-4 text-cyan-300" />
                   <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">素材スロット</h3>
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
@@ -676,11 +676,11 @@ export function PatternWorkspacePage() {
                         onClick={() => toggleReferenceAsset(slot.value)}
                         className={`rounded-xl border px-3 py-3 text-left transition ${
                           active
-                            ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                            : 'border-neutral-200 bg-white text-neutral-600 hover:border-primary-200 dark:border-white/10 dark:bg-surface-950/40 dark:text-neutral-300'
+                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                            : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                         }`}
                       >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-primary-700 dark:bg-surface-800 dark:text-primary-200">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.08] text-cyan-200">
                           <ImagePlus className="h-4 w-4" />
                         </span>
                         <span className="mt-2 block text-sm font-semibold">{slot.label}</span>
@@ -694,7 +694,7 @@ export function PatternWorkspacePage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
                   <div className="flex items-center gap-2">
-                    <Shapes className="h-4 w-4 text-primary-600" />
+                    <Shapes className="h-4 w-4 text-cyan-300" />
                     <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">モチーフ</h3>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -717,7 +717,7 @@ export function PatternWorkspacePage() {
 
                 <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
                   <div className="flex items-center gap-2">
-                    <Repeat2 className="h-4 w-4 text-primary-600" />
+                    <Repeat2 className="h-4 w-4 text-cyan-300" />
                     <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">配置</h3>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -740,7 +740,7 @@ export function PatternWorkspacePage() {
 
                 <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
                   <div className="flex items-center gap-2">
-                    <Shirt className="h-4 w-4 text-primary-600" />
+                    <Shirt className="h-4 w-4 text-cyan-300" />
                     <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">対象アイテム</h3>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -763,7 +763,7 @@ export function PatternWorkspacePage() {
 
                 <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
                   <div className="flex items-center gap-2">
-                    <Palette className="h-4 w-4 text-primary-600" />
+                    <Palette className="h-4 w-4 text-cyan-300" />
                     <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">配色</h3>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -788,7 +788,7 @@ export function PatternWorkspacePage() {
 
             <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
               <div className="flex items-center gap-2">
-                <WandSparkles className="h-4 w-4 text-primary-600" />
+                <WandSparkles className="h-4 w-4 text-cyan-300" />
                 <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">現在の制作Brief</h3>
               </div>
               <div className="mt-4 space-y-3">
@@ -797,7 +797,7 @@ export function PatternWorkspacePage() {
                   <select
                     value={vectorIntent}
                     onChange={(event) => setVectorIntent(event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-950/50 dark:text-white"
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
                   >
                     {vectorPresets.map((preset) => (
                       <option key={preset.label} value={preset.value}>{preset.label}</option>
@@ -839,8 +839,8 @@ export function PatternWorkspacePage() {
                   aria-pressed={selected}
                   className={`group rounded-xl border p-3 text-left transition ${
                     selected
-                      ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                      : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
+                      ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                      : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                   }`}
                 >
                   <span className="flex items-center justify-between gap-3 text-sm font-semibold">
@@ -865,7 +865,7 @@ export function PatternWorkspacePage() {
           <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">ローカル進捗</h2>
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{activeMode} / {progress}%</p>
           <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
-            <div className="h-full rounded-full bg-primary-500" style={{ width: `${progress}%` }} />
+            <div className="h-full rounded-full bg-cyan-300" style={{ width: `${progress}%` }} />
           </div>
         </div>
         <div className="glass-panel rounded-2xl p-5">

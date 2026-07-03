@@ -1,7 +1,7 @@
-import { 
-  ZoomIn, 
-  ZoomOut, 
-  Grid3X3, 
+import {
+  ZoomIn,
+  ZoomOut,
+  Grid3X3,
   Magnet,
   Type,
   Square,
@@ -28,14 +28,14 @@ interface CanvasToolbarProps {
   onExport?: () => void;
 }
 
-export function CanvasToolbar({ 
-  onAddText, 
-  onAddShape, 
+export function CanvasToolbar({
+  onAddText,
+  onAddShape,
   onAddFrame,
-  onExport 
+  onExport
 }: CanvasToolbarProps) {
   const [showMoreTools, setShowMoreTools] = useState(false);
-  
+
   const {
     zoom,
     gridVisible,
@@ -64,16 +64,16 @@ export function CanvasToolbar({
   const zoomOut = () => setZoom(zoom / 1.2);
   const resetZoom = () => setZoom(1);
 
-  const ToolButton = ({ 
-    onClick, 
-    active, 
-    disabled, 
-    children, 
+  const ToolButton = ({
+    onClick,
+    active,
+    disabled,
+    children,
     title,
     className = ''
-  }: { 
-    onClick: () => void; 
-    active?: boolean; 
+  }: {
+    onClick: () => void;
+    active?: boolean;
     disabled?: boolean;
     children: React.ReactNode;
     title: string;
@@ -85,9 +85,9 @@ export function CanvasToolbar({
       title={title}
       className={`
         p-1.5 sm:p-2 rounded-md sm:rounded-lg transition-all touch-manipulation
-        ${active 
-          ? 'bg-primary-100 text-primary-700' 
-          : 'text-neutral-600 hover:bg-neutral-100 active:bg-neutral-200'
+        ${active
+          ? 'bg-cyan-300 text-neutral-950'
+          : 'text-neutral-300 hover:bg-white/[0.08] hover:text-white active:bg-white/[0.12]'
         }
         ${disabled ? 'opacity-40 cursor-not-allowed' : ''}
         ${className}
@@ -98,13 +98,13 @@ export function CanvasToolbar({
   );
 
   const Divider = () => (
-    <div className="hidden sm:block w-px h-5 sm:h-6 bg-neutral-200 mx-0.5 sm:mx-1" />
+    <div className="hidden sm:block w-px h-5 sm:h-6 bg-white/10 mx-0.5 sm:mx-1" />
   );
 
   return (
     <div className="relative">
       {/* Main toolbar */}
-      <div className="flex items-center gap-0.5 sm:gap-1 p-1 sm:p-2 bg-white rounded-lg sm:rounded-xl shadow-soft border border-neutral-100">
+      <div className="flex items-center gap-0.5 sm:gap-1 p-1 sm:p-2 bg-[#101313] rounded-lg sm:rounded-xl shadow-none border border-white/10">
         {/* Zoom controls - always visible */}
         <div className="flex items-center">
           <ToolButton onClick={zoomOut} title="ズームアウト">
@@ -112,7 +112,7 @@ export function CanvasToolbar({
           </ToolButton>
           <button
             onClick={resetZoom}
-            className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs sm:text-sm font-medium text-neutral-600 hover:bg-neutral-100 rounded min-w-[40px] sm:min-w-[60px] touch-manipulation"
+            className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs sm:text-sm font-medium text-neutral-300 hover:bg-white/[0.08] hover:text-white rounded min-w-[40px] sm:min-w-[60px] touch-manipulation"
             title="ズームをリセット"
           >
             {Math.round(zoom * 100)}%
@@ -142,7 +142,7 @@ export function CanvasToolbar({
         <ToolButton onClick={() => onAddShape?.('rect')} title="四角形を追加">
           <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </ToolButton>
-        
+
         {/* Hidden on mobile */}
         <div className="hidden sm:flex items-center">
           <ToolButton onClick={() => onAddShape?.('circle')} title="円を追加">
@@ -166,16 +166,16 @@ export function CanvasToolbar({
         {/* Selection actions - hidden on mobile */}
         <div className="hidden sm:flex items-center">
           <Divider />
-          <ToolButton 
-            onClick={duplicateSelected} 
-            disabled={!hasSelection} 
+          <ToolButton
+            onClick={duplicateSelected}
+            disabled={!hasSelection}
             title="複製 (Ctrl+D)"
           >
             <Copy className="w-4 h-4" />
           </ToolButton>
-          <ToolButton 
-            onClick={deleteSelected} 
-            disabled={!hasSelection} 
+          <ToolButton
+            onClick={deleteSelected}
+            disabled={!hasSelection}
             title="削除 (Delete)"
           >
             <Trash2 className="w-4 h-4" />
@@ -185,29 +185,29 @@ export function CanvasToolbar({
         {/* Layer controls - hidden on mobile */}
         <div className="hidden lg:flex items-center">
           <Divider />
-          <ToolButton 
-            onClick={() => selectedIds[0] && bringToFront(selectedIds[0])} 
+          <ToolButton
+            onClick={() => selectedIds[0] && bringToFront(selectedIds[0])}
             disabled={!hasSelection}
             title="最前面へ"
           >
             <ArrowUpToLine className="w-4 h-4" />
           </ToolButton>
-          <ToolButton 
-            onClick={() => selectedIds[0] && bringForward(selectedIds[0])} 
+          <ToolButton
+            onClick={() => selectedIds[0] && bringForward(selectedIds[0])}
             disabled={!hasSelection}
             title="前面へ"
           >
             <ChevronUp className="w-4 h-4" />
           </ToolButton>
-          <ToolButton 
-            onClick={() => selectedIds[0] && sendBackward(selectedIds[0])} 
+          <ToolButton
+            onClick={() => selectedIds[0] && sendBackward(selectedIds[0])}
             disabled={!hasSelection}
             title="背面へ"
           >
             <ChevronDown className="w-4 h-4" />
           </ToolButton>
-          <ToolButton 
-            onClick={() => selectedIds[0] && sendToBack(selectedIds[0])} 
+          <ToolButton
+            onClick={() => selectedIds[0] && sendToBack(selectedIds[0])}
             disabled={!hasSelection}
             title="最背面へ"
           >
@@ -225,8 +225,8 @@ export function CanvasToolbar({
 
         {/* More button - visible only on mobile */}
         <div className="sm:hidden">
-          <ToolButton 
-            onClick={() => setShowMoreTools(!showMoreTools)} 
+          <ToolButton
+            onClick={() => setShowMoreTools(!showMoreTools)}
             active={showMoreTools}
             title="その他のツール"
           >
@@ -254,29 +254,29 @@ export function CanvasToolbar({
             <ToolButton onClick={() => onExport?.()} title="エクスポート">
               <Download className="w-4 h-4" />
             </ToolButton>
-            <ToolButton 
-              onClick={duplicateSelected} 
-              disabled={!hasSelection} 
+            <ToolButton
+              onClick={duplicateSelected}
+              disabled={!hasSelection}
               title="複製"
             >
               <Copy className="w-4 h-4" />
             </ToolButton>
-            <ToolButton 
-              onClick={deleteSelected} 
-              disabled={!hasSelection} 
+            <ToolButton
+              onClick={deleteSelected}
+              disabled={!hasSelection}
               title="削除"
             >
               <Trash2 className="w-4 h-4" />
             </ToolButton>
-            <ToolButton 
-              onClick={() => selectedIds[0] && bringToFront(selectedIds[0])} 
+            <ToolButton
+              onClick={() => selectedIds[0] && bringToFront(selectedIds[0])}
               disabled={!hasSelection}
               title="最前面へ"
             >
               <ArrowUpToLine className="w-4 h-4" />
             </ToolButton>
-            <ToolButton 
-              onClick={() => selectedIds[0] && sendToBack(selectedIds[0])} 
+            <ToolButton
+              onClick={() => selectedIds[0] && sendToBack(selectedIds[0])}
               disabled={!hasSelection}
               title="最背面へ"
             >

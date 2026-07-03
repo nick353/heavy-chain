@@ -17,6 +17,7 @@ const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then((mod
 const SharedImagePage = lazy(() => import('./pages/SharedImagePage').then((module) => ({ default: module.SharedImagePage })));
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const GeneratePage = lazy(() => import('./pages/GeneratePage').then((module) => ({ default: module.GeneratePage })));
+const GenerateLightchainEntry = lazy(() => import('./components/GenerateLightchainEntry').then((module) => ({ default: module.GenerateLightchainEntry })));
 const WorkflowBoardPage = lazy(() => import('./pages/WorkflowBoardPage').then((module) => ({ default: module.WorkflowBoardPage })));
 const FittingPage = lazy(() => import('./pages/FittingPage').then((module) => ({ default: module.FittingPage })));
 const MarketingWorkspacePage = lazy(() => import('./pages/MarketingWorkspacePage').then((module) => ({ default: module.MarketingWorkspacePage })));
@@ -593,7 +594,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<LightchainWorkbenchPage />)}
+                {lazyPage(
+                  <div className="py-10">
+                    <GenerateLightchainEntry />
+                  </div>
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }

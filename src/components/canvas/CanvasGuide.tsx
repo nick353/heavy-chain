@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { 
-  Upload, 
-  Wand2, 
-  MousePointer2, 
+import {
+  Upload,
+  Wand2,
+  MousePointer2,
   ZoomIn,
   MessageSquare,
   Layers,
@@ -148,8 +148,8 @@ export function CanvasGuide({ onComplete, userId }: CanvasGuideProps) {
       <div className="w-full max-w-lg bg-white dark:bg-neutral-800 rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
         {/* Progress bar */}
         <div className="h-1 bg-neutral-100 dark:bg-neutral-700">
-          <div 
-            className="h-full bg-primary-500 transition-all duration-300"
+          <div
+            className="h-full bg-cyan-300 transition-all duration-300"
             style={{ width: `${((currentStep + 1) / GUIDE_STEPS.length) * 100}%` }}
           />
         </div>
@@ -158,7 +158,7 @@ export function CanvasGuide({ onComplete, userId }: CanvasGuideProps) {
         <div className="p-8">
           {/* Icon */}
           <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-accent-100 dark:from-primary-900/50 dark:to-accent-900/50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <step.icon className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+            <step.icon className="w-8 h-8 text-cyan-300" />
           </div>
 
           {/* Title & Description */}
@@ -174,7 +174,7 @@ export function CanvasGuide({ onComplete, userId }: CanvasGuideProps) {
             <div className="bg-neutral-50 dark:bg-neutral-700 rounded-xl p-4 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-primary-100 dark:bg-primary-800 rounded-lg flex items-center justify-center animate-pulse">
-                  <step.icon className="w-5 h-5 text-primary-600 dark:text-primary-300" />
+                  <step.icon className="w-5 h-5 text-cyan-300" />
                 </div>
                 <div className="text-sm text-neutral-600 dark:text-neutral-300">
                   {step.highlight === 'upload' && '← 左サイドバーのこのボタン'}
@@ -223,10 +223,10 @@ export function CanvasGuide({ onComplete, userId }: CanvasGuideProps) {
               <div
                 key={i}
                 className={`w-2 h-2 rounded-full transition-colors ${
-                  i === currentStep 
-                    ? 'bg-primary-500' 
-                    : i < currentStep 
-                      ? 'bg-primary-200 dark:bg-primary-700' 
+                  i === currentStep
+                    ? 'bg-cyan-300'
+                    : i < currentStep
+                      ? 'bg-primary-200 dark:bg-primary-700'
                       : 'bg-neutral-200 dark:bg-neutral-600'
                 }`}
               />

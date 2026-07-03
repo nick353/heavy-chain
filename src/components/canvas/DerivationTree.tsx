@@ -20,14 +20,14 @@ function ImageNode({ data, selected }: NodeProps) {
     <div
       className={`
         bg-white rounded-lg shadow-soft border-2 overflow-hidden transition-all relative
-        ${selected ? 'border-primary-500 shadow-elegant' : 'border-neutral-200'}
+        ${selected ? 'border-cyan-300 shadow-none' : 'border-neutral-200'}
       `}
       style={{ width: 120, height: 120 }}
     >
       <Handle
         type="target"
         position={Position.Left}
-        className="!bg-primary-500 !w-2 !h-2"
+        className="!bg-cyan-300 !w-2 !h-2"
       />
       
       {data.src ? (
@@ -45,7 +45,7 @@ function ImageNode({ data, selected }: NodeProps) {
       <Handle
         type="source"
         position={Position.Right}
-        className="!bg-primary-500 !w-2 !h-2"
+        className="!bg-cyan-300 !w-2 !h-2"
       />
       
       <div className="absolute bottom-0 left-0 right-0 px-2 py-1 bg-gradient-to-t from-black/60 to-transparent">
@@ -53,7 +53,7 @@ function ImageNode({ data, selected }: NodeProps) {
       </div>
       
       {data.derivativeCount > 0 && (
-        <div className="absolute top-1 right-1 flex items-center gap-0.5 px-1.5 py-0.5 bg-primary-500 text-white rounded text-xs font-medium">
+        <div className="absolute top-1 right-1 flex items-center gap-0.5 px-1.5 py-0.5 bg-cyan-300 text-white rounded text-xs font-medium">
           <GitBranch className="w-3 h-3" />
           {data.derivativeCount}
         </div>

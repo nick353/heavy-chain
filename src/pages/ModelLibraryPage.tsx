@@ -11,7 +11,7 @@ import {
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
 const intents = ['EC標準', 'LOOK確認', '広告検証'] as const;
-const fieldClass = 'mt-2 w-full rounded-xl border border-neutral-200 bg-white/75 px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-900/70 dark:text-white dark:focus:border-primary-500';
+const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
 
 type Intent = (typeof intents)[number];
 type ModelCandidate = {
@@ -500,8 +500,8 @@ export function ModelLibraryPage() {
               onClick={() => recordProgress(intent)}
               className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
                 activeIntent === intent
-                  ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                  : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
+                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                  : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
               }`}
             >
               <span className="flex items-center gap-2">
@@ -525,11 +525,11 @@ export function ModelLibraryPage() {
 
       <section
         data-testid="model-library-action-panel"
-        className="glass-panel rounded-2xl border border-primary-200/70 bg-primary-50/70 p-5 dark:border-primary-400/20 dark:bg-primary-950/20"
+        className="glass-panel rounded-2xl border dark:border-cyan-300/30 border-cyan-300/35 bg-cyan-300/[0.08] p-5 dark:border-cyan-300/30 dark:bg-cyan-300/[0.08]"
       >
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-700 dark:text-primary-200">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300 dark:text-cyan-300">
               Production flow
             </p>
             <h2 className="mt-2 text-xl font-semibold text-neutral-950 dark:text-white">
@@ -544,7 +544,7 @@ export function ModelLibraryPage() {
                 <div
                   key={item.label}
                   data-testid="model-library-readiness-item"
-                  className="rounded-xl bg-white/75 p-3 text-sm dark:bg-surface-900/60"
+                  className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm"
                 >
                   <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{item.label}</p>
                   <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{item.value}</p>
@@ -591,7 +591,7 @@ export function ModelLibraryPage() {
                     用途に合う候補を選ぶだけで、顔・ポーズ・体型・肌色・年齢層がそろいます。
                   </p>
                 </div>
-                <div className="hidden rounded-full bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 dark:bg-primary-400/10 dark:text-primary-200 sm:block">
+                <div className="hidden rounded-full bg-cyan-300/15 px-3 py-1.5 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-300/30 sm:block">
                   {activeIntentMeta.label}
                 </div>
               </div>
@@ -606,8 +606,8 @@ export function ModelLibraryPage() {
                       onClick={() => selectCandidate(candidate)}
                       className={`rounded-xl border p-4 text-left text-sm transition ${
                         selected
-                          ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                          : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
+                          ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                          : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                       }`}
                     >
                       <span className="flex items-center justify-between gap-3 font-semibold">
@@ -632,7 +632,7 @@ export function ModelLibraryPage() {
 
 	          <div className="glass-panel rounded-2xl p-5">
 	            <div className="flex items-center gap-2">
-	              <SlidersHorizontal className="h-5 w-5 text-primary-500" />
+	              <SlidersHorizontal className="h-5 w-5 text-cyan-300" />
 	              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">細部を調整</h2>
 	            </div>
 	            <div className="mt-4">
@@ -677,7 +677,7 @@ export function ModelLibraryPage() {
               className="aspect-[3/2] w-full rounded-xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
             />
             <figcaption className="mt-3 flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
-              <UserRound className="h-4 w-4 text-primary-500" />
+              <UserRound className="h-4 w-4 text-cyan-300" />
               {selectedCandidate.label}
             </figcaption>
             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
@@ -687,7 +687,7 @@ export function ModelLibraryPage() {
 
           <div className="glass-panel rounded-2xl p-5">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-neutral-950 dark:text-white">
-              <Shirt className="h-5 w-5 text-primary-500" />
+              <Shirt className="h-5 w-5 text-cyan-300" />
               条件プレビュー
             </h2>
             <div className="mt-4 space-y-3">
@@ -700,12 +700,12 @@ export function ModelLibraryPage() {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {selectedCandidate.modelMatrixBodyTypes.map((item) => (
-                <span key={item} className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-400/10 dark:text-primary-200">
+                <span key={item} className="rounded-full bg-cyan-300/15 px-2.5 py-1 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-300/30">
                   {item}
                 </span>
               ))}
               {selectedCandidate.modelMatrixAgeGroups.map((item) => (
-                <span key={item} className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-400/10 dark:text-primary-200">
+                <span key={item} className="rounded-full bg-cyan-300/15 px-2.5 py-1 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-300/30">
                   {item}
                 </span>
               ))}
@@ -716,7 +716,7 @@ export function ModelLibraryPage() {
             <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">保存状態</h2>
             <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{activeIntent} / {progress}%</p>
             <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
-              <div className="h-full rounded-full bg-primary-500" style={{ width: `${progress}%` }} />
+              <div className="h-full rounded-full bg-cyan-300" style={{ width: `${progress}%` }} />
             </div>
             <div className="mt-4 space-y-2">
               {history.map((item) => (

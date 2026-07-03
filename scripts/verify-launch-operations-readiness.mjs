@@ -69,7 +69,7 @@ try {
   await checkRoute({
     key: 'dashboard',
     path: '/dashboard',
-    expected: ['まず1つ作る', '商品画像から作る'],
+    expected: ['制作ワークフロー', 'おすすめ', 'AIフィッティング'],
   });
   await checkGenerateForm();
   await checkGalleryImages();
@@ -133,10 +133,11 @@ async function checkGenerateForm() {
   await page.goto(`${baseUrl}/generate?feature=campaign-image`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => undefined);
   const prompt = 'Heavy Chain black hoodie premium campaign visual, concrete studio, silver chain detail';
-  const textarea = page.getByLabel('ベースコンセプト').first();
+  await waitForExpectedRouteText(page, ['販促素材ワークベンチ', 'ベースコンセプト', generationButtonExpectedText], 30000);
+  const textarea = page.locator('textarea').first();
   await textarea.waitFor({ state: 'visible', timeout: 15000 });
   await textarea.fill(prompt, { timeout: 15000 });
-  await page.getByLabel('タイトル').first().fill('Heavy Chain launch proof').catch(() => undefined);
+  await page.locator('input').first().fill('Heavy Chain launch proof').catch(() => undefined);
   const textareaValue = await textarea.inputValue();
   const button = page.getByRole('button', { name: generationButtonPattern }).first();
   const buttonVisible = await button.isVisible().catch(() => false);

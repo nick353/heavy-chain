@@ -29,10 +29,10 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
   const isImage = selectedObject.type === 'image';
 
   const primaryActions = isImage ? [
-    { id: 'remove-bg', icon: Scissors, label: '背景削除', color: 'text-purple-600' },
-    { id: 'colorize', icon: Palette, label: 'カラバリ', color: 'text-blue-600' },
-    { id: 'upscale', icon: Maximize2, label: 'アップスケール', color: 'text-green-600' },
-    { id: 'variations', icon: RefreshCw, label: 'バリエーション', color: 'text-orange-600' },
+    { id: 'remove-bg', icon: Scissors, label: '背景削除', color: 'text-cyan-200' },
+    { id: 'colorize', icon: Palette, label: 'カラバリ', color: 'text-cyan-200' },
+    { id: 'upscale', icon: Maximize2, label: 'アップスケール', color: 'text-cyan-200' },
+    { id: 'variations', icon: RefreshCw, label: 'バリエーション', color: 'text-cyan-200' },
   ] : [];
 
   return (
@@ -44,7 +44,7 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
         transform: 'translateX(-50%)',
       }}
     >
-      <div className="flex items-center gap-1 p-1.5 bg-white rounded-xl shadow-elegant border border-neutral-100">
+      <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-[#101313]/95 p-1.5 shadow-[0_18px_60px_rgba(0,0,0,0.4)] backdrop-blur">
         {/* Primary AI actions for images */}
         {primaryActions.map((action) => (
           <button
@@ -53,7 +53,7 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
             className={`
               flex items-center gap-1.5 px-3 py-1.5 rounded-lg
               text-sm font-medium transition-all
-              hover:bg-neutral-100 ${action.color}
+              hover:bg-white/[0.08] ${action.color}
             `}
             title={action.label}
           >
@@ -63,27 +63,27 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
         ))}
 
         {primaryActions.length > 0 && (
-          <div className="w-px h-6 bg-neutral-200 mx-1" />
+          <div className="w-px h-6 bg-white/10 mx-1" />
         )}
 
         {/* Secondary actions */}
         <button
           onClick={() => onAction('duplicate')}
-          className="p-2 text-neutral-500 hover:bg-neutral-100 rounded-lg transition-all"
+          className="p-2 text-neutral-300 hover:bg-white/[0.08] hover:text-white rounded-lg transition-all"
           title="複製"
         >
           <Copy className="w-4 h-4" />
         </button>
         <button
           onClick={() => onAction('download')}
-          className="p-2 text-neutral-500 hover:bg-neutral-100 rounded-lg transition-all"
+          className="p-2 text-neutral-300 hover:bg-white/[0.08] hover:text-white rounded-lg transition-all"
           title="ダウンロード"
         >
           <Download className="w-4 h-4" />
         </button>
         <button
           onClick={deleteSelected}
-          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+          className="p-2 text-red-300 hover:bg-red-500/10 rounded-lg transition-all"
           title="削除"
         >
           <Trash2 className="w-4 h-4" />
@@ -93,7 +93,7 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
         <div className="relative">
           <button
             onClick={() => setShowMore(!showMore)}
-            className="p-2 text-neutral-500 hover:bg-neutral-100 rounded-lg transition-all"
+            className="p-2 text-neutral-300 hover:bg-white/[0.08] hover:text-white rounded-lg transition-all"
             title="その他"
           >
             <MoreHorizontal className="w-4 h-4" />
@@ -105,7 +105,7 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
                 className="fixed inset-0"
                 onClick={() => setShowMore(false)}
               />
-              <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-elegant border border-neutral-100 py-1 z-10">
+              <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-xl border border-white/10 bg-[#101313] py-1 shadow-[0_18px_60px_rgba(0,0,0,0.4)]">
                 {isImage && (
                   <>
                     <button
@@ -113,7 +113,7 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
                         onAction('edit-prompt');
                         setShowMore(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-200 hover:bg-white/[0.08]"
                     >
                       <Wand2 className="w-4 h-4" />
                       プロンプト編集
@@ -123,12 +123,12 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
                         onAction('derive');
                         setShowMore(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-200 hover:bg-white/[0.08]"
                     >
                       <ImagePlus className="w-4 h-4" />
                       派生画像を生成
                     </button>
-                    <div className="h-px bg-neutral-100 my-1" />
+                    <div className="h-px bg-white/10 my-1" />
                   </>
                 )}
                 <button
@@ -136,7 +136,7 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
                     onAction('favorite');
                     setShowMore(false);
                   }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-200 hover:bg-white/[0.08]"
                 >
                   <Heart className="w-4 h-4" />
                   お気に入りに追加
@@ -149,4 +149,3 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
     </div>
   );
 }
-

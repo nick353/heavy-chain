@@ -11,7 +11,7 @@ import {
 import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
 
 const choices = ['ライン企画', '素材確認', 'EC準備'];
-const fieldClass = 'mt-2 w-full rounded-xl border border-neutral-200 bg-white/75 px-3 py-2 text-sm text-neutral-900 outline-none transition focus:border-primary-400 focus:ring-2 focus:ring-primary-100 dark:border-white/10 dark:bg-surface-900/70 dark:text-white dark:focus:border-primary-500';
+const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
 const optionCardClass = 'rounded-xl border px-4 py-3 text-left text-sm transition';
 
 type StudioOption = {
@@ -453,8 +453,8 @@ export function FashionStudioPage() {
               onClick={() => recordProgress(choice)}
               className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
                 activeChoice === choice
-                  ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                  : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
+                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                  : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
               }`}
             >
               {choice}
@@ -551,8 +551,8 @@ export function FashionStudioPage() {
                         onClick={() => selectModel(option)}
                         className={`${optionCardClass} ${
                           selectedModelId === option.id
-                            ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                            : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
+                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                            : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                         }`}
                       >
                         <span className="flex items-center justify-between gap-2 font-semibold">
@@ -575,8 +575,8 @@ export function FashionStudioPage() {
                         onClick={() => selectPose(option)}
                         className={`${optionCardClass} ${
                           selectedPoseId === option.id
-                            ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                            : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
+                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                            : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                         }`}
                       >
                         <span className="flex items-center justify-between gap-2 font-semibold">
@@ -599,8 +599,8 @@ export function FashionStudioPage() {
                         onClick={() => selectBackground(option)}
                         className={`${optionCardClass} ${
                           selectedBackgroundId === option.id
-                            ? 'border-primary-300 bg-primary-50 text-primary-900 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                            : 'border-white/60 bg-white/55 text-neutral-700 hover:bg-white dark:border-white/10 dark:bg-surface-900/50 dark:text-neutral-300'
+                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                            : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                         }`}
                       >
                         <span className="flex items-center justify-between gap-2 font-semibold">
@@ -660,7 +660,7 @@ export function FashionStudioPage() {
           <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">ローカル進捗</h2>
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{activeChoice} / {progress}%</p>
           <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
-            <div className="h-full rounded-full bg-primary-500" style={{ width: `${progress}%` }} />
+            <div className="h-full rounded-full bg-cyan-300" style={{ width: `${progress}%` }} />
           </div>
         </div>
         <div className="glass-panel rounded-2xl p-5">

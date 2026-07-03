@@ -117,36 +117,30 @@ const buildMarketingPreviewSvg = ({
   const safePlacement = escapeSvgText(materialReference.placement);
   const safeMaterialKind = escapeSvgText(materialReference.materialKind);
   const safeFileName = escapeSvgText(materialReference.fileName || '素材追加前');
-  const accent = activeLabel === 'SNS'
-    ? '#7c3aed'
-    : activeLabel === '店舗・オフライン'
-      ? '#0f766e'
-      : activeLabel === 'ライブ配信'
-        ? '#dc2626'
-        : '#d97706';
+  const accent = '#67e8f9';
 
   return encodeSvg(`
     <svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" data-marketing-preview="marketing-brief-local-v1">
       <metadata>
         <marketing-brief workflowVersion="marketing-brief-local-v1" selectedMarketingChannel="${safeChannel}" selectedTemplate="${safeTemplate}" activeLayer="${safeLayer}" placement="${safePlacement}" />
       </metadata>
-      <rect width="960" height="640" rx="36" fill="#f7f7f5"/>
-      <rect x="54" y="54" width="852" height="532" rx="30" fill="#ffffff" stroke="#e5e5e5"/>
-      <rect x="92" y="104" width="372" height="404" rx="30" fill="#fafafa" stroke="#d4d4d4"/>
+      <rect width="960" height="640" rx="36" fill="#050707"/>
+      <rect x="54" y="54" width="852" height="532" rx="30" fill="#0a0b0b" stroke="#1f2937"/>
+      <rect x="92" y="104" width="372" height="404" rx="30" fill="#101313" stroke="#1f2937"/>
       <rect x="128" y="150" width="300" height="240" rx="26" fill="${accent}" opacity=".12" stroke="${accent}" stroke-width="4"/>
       <circle cx="278" cy="242" r="74" fill="${accent}" opacity=".82"/>
-      <path d="M160 426h236M160 464h170" stroke="#171717" stroke-width="18" stroke-linecap="round" opacity=".82"/>
-      <text x="128" y="548" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="#171717">selected-marketing-brief:${safeChannel}/${safeTemplate}</text>
-      <text x="128" y="576" font-family="Inter, Arial, sans-serif" font-size="16" fill="#737373">workflowVersion:marketing-brief-local-v1</text>
+      <path d="M160 426h236M160 464h170" stroke="#e5e7eb" stroke-width="18" stroke-linecap="round" opacity=".82"/>
+      <text x="128" y="548" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="#f9fafb">selected-marketing-brief:${safeChannel}/${safeTemplate}</text>
+      <text x="128" y="576" font-family="Inter, Arial, sans-serif" font-size="16" fill="#a3a3a3">workflowVersion:marketing-brief-local-v1</text>
       <text x="548" y="138" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="${accent}">Marketing brief</text>
-      <text x="548" y="190" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="800" fill="#171717">${safeChannel}</text>
-      <text x="548" y="238" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#171717">${safeTemplate}</text>
-      <text x="548" y="292" font-family="Inter, Arial, sans-serif" font-size="18" fill="#525252">copy: ${safeCopy}</text>
-      <text x="548" y="342" font-family="Inter, Arial, sans-serif" font-size="18" fill="#525252">material: ${safeMaterialKind} / ${safeFileName}</text>
-      <text x="548" y="392" font-family="Inter, Arial, sans-serif" font-size="18" fill="#525252">layer: ${safeLayer}</text>
-      <text x="548" y="442" font-family="Inter, Arial, sans-serif" font-size="18" fill="#525252">placement: ${safePlacement}</text>
-      <text x="548" y="504" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#171717">Next step</text>
-      <text x="548" y="532" font-family="Inter, Arial, sans-serif" font-size="16" fill="#525252">campaign-image generation or Canvas layout</text>
+      <text x="548" y="190" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="800" fill="#f9fafb">${safeChannel}</text>
+      <text x="548" y="238" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#f9fafb">${safeTemplate}</text>
+      <text x="548" y="292" font-family="Inter, Arial, sans-serif" font-size="18" fill="#d4d4d4">copy: ${safeCopy}</text>
+      <text x="548" y="342" font-family="Inter, Arial, sans-serif" font-size="18" fill="#d4d4d4">material: ${safeMaterialKind} / ${safeFileName}</text>
+      <text x="548" y="392" font-family="Inter, Arial, sans-serif" font-size="18" fill="#d4d4d4">layer: ${safeLayer}</text>
+      <text x="548" y="442" font-family="Inter, Arial, sans-serif" font-size="18" fill="#d4d4d4">placement: ${safePlacement}</text>
+      <text x="548" y="504" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#f9fafb">Next step</text>
+      <text x="548" y="532" font-family="Inter, Arial, sans-serif" font-size="16" fill="#d4d4d4">campaign-image generation or Canvas layout</text>
     </svg>
   `);
 };
@@ -413,13 +407,13 @@ export function MarketingWorkspacePage() {
 
   return (
     <div className="space-y-6">
-      <section className="glass-panel rounded-2xl p-5 sm:p-7">
+      <section className="rounded-[28px] border border-white/10 bg-[#050707] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-9">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-semibold text-neutral-950 dark:text-white">
+            <h1 className="text-3xl font-semibold tracking-normal text-white sm:text-4xl">
               マーケティングワークスペース
             </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-300">
               商品画像、販促チャネル、テンプレート、コピーをまとめてローカルジョブ化し、制作中の状態からキャンバスへ渡せます。
             </p>
           </div>
@@ -446,8 +440,8 @@ export function MarketingWorkspacePage() {
                 aria-pressed={active}
                 className={`rounded-2xl border p-4 text-left transition ${
                   active
-                    ? 'border-primary-300 bg-primary-50/80 text-primary-900 shadow-sm dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-100'
-                    : 'border-white/60 bg-white/45 text-neutral-600 hover:bg-white/70 dark:border-white/10 dark:bg-surface-900/40 dark:text-neutral-300'
+                    ? 'border-cyan-300 bg-cyan-300 text-neutral-950 shadow-[0_0_24px_rgba(103,232,249,0.18)] dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
+                    : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                 }`}
               >
                 <Icon className="h-5 w-5" />
@@ -460,13 +454,13 @@ export function MarketingWorkspacePage() {
 
       <section
         data-testid="marketing-action-panel"
-        className="grid gap-4 rounded-2xl border border-orange-200 bg-orange-50/80 p-5 dark:border-orange-900/60 dark:bg-orange-950/20 lg:grid-cols-[minmax(0,1fr)_auto]"
+        className="grid gap-4 rounded-[24px] border border-cyan-300/30 bg-cyan-300/[0.08] p-5 lg:grid-cols-[minmax(0,1fr)_auto]"
       >
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-700 dark:text-orange-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300 dark:text-cyan-300">
             Marketing flow
           </p>
-          <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
+          <h2 className="mt-2 text-lg font-semibold text-white">
             素材とコピーを販促briefにまとめ、生成かCanvasへ進める
           </h2>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -474,10 +468,10 @@ export function MarketingWorkspacePage() {
               <div
                 key={item.label}
                 data-testid="marketing-readiness-item"
-                className="rounded-xl border border-white/70 bg-white/70 p-3 text-sm dark:border-white/10 dark:bg-surface-900/60"
+                className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm"
               >
-                <p className="font-semibold text-neutral-950 dark:text-white">{item.label}</p>
-                <p className="mt-1 leading-5 text-neutral-600 dark:text-neutral-300">{item.detail}</p>
+                <p className="font-semibold text-white">{item.label}</p>
+                <p className="mt-1 leading-5 text-neutral-300">{item.detail}</p>
               </div>
             ))}
           </div>
@@ -530,8 +524,8 @@ export function MarketingWorkspacePage() {
                 aria-pressed={selectedTemplate === template}
                 className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold transition ${
                   selectedTemplate === template
-                    ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
-                    : 'bg-white/55 text-neutral-700 hover:bg-white dark:bg-surface-900/50 dark:text-neutral-300'
+                    ? 'bg-cyan-300 text-neutral-950 shadow-[0_0_22px_rgba(103,232,249,0.16)]'
+                    : 'border border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                 }`}
               >
                 {template}
@@ -540,31 +534,31 @@ export function MarketingWorkspacePage() {
             ))}
           </div>
 
-          <div className="mt-6 rounded-2xl bg-surface-100 p-4 dark:bg-surface-950/70">
-            <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
-              <BarChart3 className="h-4 w-4 text-primary-600" />
+          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-white">
+              <BarChart3 className="h-4 w-4 text-cyan-300" />
               ローカルジョブ
             </div>
             <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
-              状態: <span className="font-semibold text-neutral-800 dark:text-neutral-200">{statusLabel}</span>
+              状態: <span className="font-semibold text-neutral-200">{statusLabel}</span>
             </p>
-            <div className="mt-4 h-2 rounded-full bg-white dark:bg-surface-800" aria-label="ジョブ進捗">
+            <div className="mt-4 h-2 rounded-full bg-white/10" aria-label="ジョブ進捗">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
                   job.status === 'failed'
                     ? 'bg-red-500'
                     : job.status === 'stalled'
-                      ? 'bg-amber-500'
-                      : 'bg-gradient-to-r from-primary-500 to-gold-DEFAULT'
+                      ? 'bg-cyan-300'
+                      : 'bg-gradient-to-r from-cyan-300 to-cyan-200'
                 }`}
                 style={{ width: `${job.progress}%` }}
               />
             </div>
-            <p className="mt-2 text-xs font-semibold text-primary-700 dark:text-primary-300">
+            <p className="mt-2 text-xs font-semibold text-cyan-300">
               {statusLabel} {job.progress}%
             </p>
             {job.status === 'stalled' && (
-              <p className="mt-2 flex items-start gap-2 text-xs leading-5 text-amber-700 dark:text-amber-300">
+              <p className="mt-2 flex items-start gap-2 text-xs leading-5 text-cyan-300 dark:text-cyan-300">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 応答が遅れています。処理中のままキャンバスへ渡すか、完了/失敗で状態を確認できます。
               </p>
@@ -593,7 +587,7 @@ export function MarketingWorkspacePage() {
         </aside>
 
         <main className="glass-panel rounded-2xl p-5">
-          <div className="rounded-2xl border border-white/60 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/45">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">
@@ -637,11 +631,11 @@ export function MarketingWorkspacePage() {
                   value={campaignCopy}
                   onChange={(event) => setCampaignCopy(event.target.value)}
                   rows={6}
-                  className="w-full rounded-2xl border border-white/70 bg-white/80 p-4 text-sm leading-6 text-neutral-900 shadow-inner outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200 dark:border-white/10 dark:bg-surface-950/70 dark:text-white dark:focus:border-primary-700 dark:focus:ring-primary-900/50"
+                  className="w-full rounded-2xl border border-white/10 bg-[#050707] p-4 text-sm leading-6 text-white shadow-inner outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
                 />
-                <div className="rounded-2xl bg-surface-100 p-4 dark:bg-surface-950/70">
-                  <p className="text-xs font-semibold uppercase text-primary-600 dark:text-primary-300">Preview brief</p>
-                  <p className="mt-2 text-sm font-semibold text-neutral-950 dark:text-white">{activeLabel} / {selectedTemplate}</p>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <p className="text-xs font-semibold uppercase text-cyan-300">Preview brief</p>
+                  <p className="mt-2 text-sm font-semibold text-white">{activeLabel} / {selectedTemplate}</p>
                   <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
                     {campaignCopy.trim() || 'コピーを入力してください。'}
                   </p>
@@ -651,7 +645,7 @@ export function MarketingWorkspacePage() {
                     data-testid="marketing-preview-image"
                     src={previewImageUrl}
                     alt="Marketing brief preview"
-                    className="aspect-[3/2] w-full rounded-2xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
+                    className="aspect-[3/2] w-full rounded-2xl border border-white/10 bg-[#050707] object-cover"
                   />
                   <figcaption className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
                     チャネル、テンプレート、コピー、素材配置を生成前に確認する販促briefプレビューです。
@@ -667,8 +661,8 @@ export function MarketingWorkspacePage() {
             <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">マイプロジェクト</h2>
             <div className="mt-4 space-y-3">
               {projects.map((project) => (
-                <button key={project.name} type="button" className="w-full rounded-2xl bg-white/55 p-4 text-left transition hover:bg-white dark:bg-surface-900/45 dark:hover:bg-surface-900/70">
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">{project.name}</p>
+                <button key={project.name} type="button" className="w-full rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-cyan-300/50 hover:bg-white/[0.07]">
+                  <p className="text-sm font-semibold text-white">{project.name}</p>
                   <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{project.format} / {project.updated}</p>
                 </button>
               ))}
@@ -683,9 +677,9 @@ export function MarketingWorkspacePage() {
                 { icon: Layers, label: 'レイヤー設計', text: '画像とコピーをキャンバスの初期レイヤーに変換' },
                 { icon: Settings2, label: '出力準備', text: job.status === 'succeeded' ? 'キャンバスへ渡せます' : '処理中でも制作を続行できます' },
               ].map((item) => (
-                <div key={item.label} className="rounded-xl border border-white/60 bg-white/45 p-4 dark:border-white/10 dark:bg-surface-900/45">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
-                    <item.icon className="h-4 w-4 text-primary-600" />
+                <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                    <item.icon className="h-4 w-4 text-cyan-300" />
                     {item.label}
                   </div>
                   <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{item.text}</p>

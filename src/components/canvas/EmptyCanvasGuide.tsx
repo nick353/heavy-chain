@@ -28,7 +28,7 @@ export function EmptyCanvasGuide({
         {/* Main CTA */}
         <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-xl p-8 mb-6">
           <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-accent-100 dark:from-primary-900/50 dark:to-accent-900/50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Sparkles className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+            <Sparkles className="w-8 h-8 text-cyan-300" />
           </div>
           
           <h2 className="text-xl font-display font-semibold text-neutral-800 dark:text-white mb-2">
@@ -43,10 +43,10 @@ export function EmptyCanvasGuide({
               onClick={onGenerateImage}
               className="flex flex-col items-center gap-2 p-4 bg-primary-50 dark:bg-primary-900/30 hover:bg-primary-100 dark:hover:bg-primary-900/50 rounded-xl transition-colors"
             >
-              <div className="w-10 h-10 bg-primary-500 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-cyan-300 rounded-lg flex items-center justify-center">
                 <Wand2 className="w-5 h-5 text-white" />
               </div>
-              <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
+              <span className="text-sm font-medium text-cyan-100">
                 AI生成
               </span>
             </button>
