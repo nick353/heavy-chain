@@ -6,7 +6,10 @@ import { chromium } from '@playwright/test';
 
 const args = parseArgs(process.argv.slice(2));
 const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain.zeabur.app');
-const authState = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || 'output/playwright/prod-auth-refresh-20260625/auth-state.json';
+const authState = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || firstExistingAuthState([
+  'output/playwright/g689-prod-temp-auth-r2/auth-state.json',
+  'output/playwright/prod-auth-refresh-20260625/auth-state.json',
+]);
 const outDir = args.out || `output/playwright/launch-operations-readiness-${dateStamp()}`;
 const expectedAsset = args.expectedAsset
   || process.env.HEAVY_CHAIN_EXPECTED_ASSET
@@ -133,12 +136,11 @@ async function checkGenerateForm() {
   await page.goto(`${baseUrl}/generate?feature=campaign-image`, { waitUntil: 'domcontentloaded' });
   await page.waitForLoadState('networkidle', { timeout: 20000 }).catch(() => undefined);
   const prompt = 'Heavy Chain black hoodie premium campaign visual, concrete studio, silver chain detail';
-  await waitForExpectedRouteText(page, ['ベースコンセプト'], 30000);
-  const conceptField = page.getByLabel('ベースコンセプト').first();
-  await conceptField.waitFor({ state: 'visible', timeout: 30000 });
+  await ensureGenerateDetailForm(page);
+  const conceptField = await findEditableGeneratePromptField(page);
   await conceptField.fill(prompt, { timeout: 15000 });
   await page.getByLabel('タイトル').first().fill('Heavy Chain launch proof').catch(() => undefined);
-  const conceptValue = await conceptField.inputValue();
+  const conceptValue = await readFieldValue(conceptField);
   const button = page.getByRole('button', { name: generationButtonPattern }).first();
   const buttonVisible = await button.isVisible().catch(() => false);
   const rightsCheckbox = page.getByRole('checkbox').first();
@@ -163,6 +165,38 @@ async function checkGenerateForm() {
     screenshot,
   });
   await page.close();
+}
+
+async function ensureGenerateDetailForm(page) {
+  const detailReady = await page.getByLabel('ベースコンセプト').first().isVisible({ timeout: 5000 }).catch(() => false);
+  if (detailReady) return;
+
+  const body = await page.locator('body').innerText({ timeout: 10000 }).catch(() => '');
+  const entryReady = body.includes('HEAVY CHAIN AI') || body.includes('制作ワークフロー');
+  if (!entryReady) {
+    await waitForExpectedRouteText(page, ['ベースコンセプト'], 15000);
+  }
+
+  await page.getByLabel('ベースコンセプト').first().waitFor({ state: 'visible', timeout: 30000 });
+}
+
+async function findEditableGeneratePromptField(page) {
+  const candidates = [
+    page.getByLabel('ベースコンセプト').first(),
+    page.getByLabel('生成リクエスト').first(),
+    page.locator('textarea:visible').first(),
+  ];
+
+  for (const candidate of candidates) {
+    const visible = await candidate.isVisible({ timeout: 5000 }).catch(() => false);
+    if (visible) return candidate;
+  }
+
+  throw new Error('generate_prompt_field_missing');
+}
+
+async function readFieldValue(locator) {
+  return locator.inputValue().catch(() => locator.evaluate((node) => node.value || node.textContent || ''));
 }
 
 async function checkGalleryImages() {
@@ -250,7 +284,7 @@ async function checkMobileRoutes() {
     isMobile: true,
   });
   const mobileChecks = [
-    { key: 'mobile-generate', path: '/generate?feature=campaign-image', expected: ['HEAVYCHAIN', 'ベースコンセプト', '生成する'] },
+    { key: 'mobile-generate', path: '/generate?feature=campaign-image', expected: ['ベースコンセプト', '生成する', '生成モデル'] },
     { key: 'mobile-gallery', path: '/gallery', expected: ['ギャラリー'] },
     { key: 'mobile-canvas', path: '/canvas/new', expected: ['キャンバス'] },
   ];
@@ -412,6 +446,10 @@ function readCurrentBuildAsset() {
   const htmlPath = 'dist/index.html';
   if (!fs.existsSync(htmlPath)) return null;
   return extractIndexAsset(fs.readFileSync(htmlPath, 'utf8'));
+}
+
+function firstExistingAuthState(candidates) {
+  return candidates.find((candidate) => fs.existsSync(candidate)) || candidates[candidates.length - 1];
 }
 
 function extractIndexAsset(html) {
