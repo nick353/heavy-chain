@@ -289,6 +289,9 @@ export function BrandSettingsPage() {
           <h2 className="text-lg font-semibold text-neutral-800 dark:text-white mb-6">
             ブランド情報
           </h2>
+          <p className="mb-6 text-sm text-neutral-500 dark:text-neutral-400">
+            Heavy Chain側の月間 quota は通常アカウントの生成条件に含まれ、Apple sandbox tester は実請求なしの検証アカウントとして扱われます。
+          </p>
 
           {/* Logo */}
           <div className="flex items-center gap-6 mb-8">
