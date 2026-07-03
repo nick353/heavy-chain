@@ -39,7 +39,13 @@ add('no_public_models_tracked_by_git', gitTrackedModels.length === 0, {
 add('source_supports_model_base_url_env', source.includes('VITE_REMBG_MODEL_BASE_URL') && source.includes("'/models'"), {
   file: 'src/lib/workspaceMaterialReferences.ts',
 });
-add('model_load_failure_is_fail_closed', source.includes('高精度AI切り抜きモデルを読み込めませんでした'), {
+add('model_load_failure_has_quality_gated_fallback', (
+  source.includes('buildWhiteBackgroundFallbackCutout') &&
+  source.includes('browser-local-white-background-garment-cutout-v1') &&
+  source.includes("result.engine !== 'browser-canvas-background-flood-cutout-v2'") &&
+  source.includes('白背景から服だけを分離できませんでした') &&
+  source.includes('boundsRatio > 0.92')
+), {
   file: 'src/lib/workspaceMaterialReferences.ts',
 });
 add('env_examples_include_model_base_url', envExample.includes('VITE_REMBG_MODEL_BASE_URL') && prodEnvExample.includes('VITE_REMBG_MODEL_BASE_URL'), {
@@ -66,7 +72,7 @@ const summary = {
     verifies: [
       'large ONNX model is not committed to Git',
       'production build has an explicit CORS-enabled model base URL requirement',
-      'missing model URL fails closed instead of enabling AI fitting generation',
+      'missing model URL falls back only through a bounded white-background quality gate',
     ],
     notPerformed: [
       'Zeabur dashboard environment mutation',

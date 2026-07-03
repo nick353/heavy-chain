@@ -41,7 +41,8 @@ export type MaterialCutoutResult = {
   engine:
     | 'browser-canvas-geometric-mask-v1'
     | 'browser-canvas-background-flood-cutout-v2'
-    | 'browser-ai-isnet-general-use-v1';
+    | 'browser-ai-isnet-general-use-v1'
+    | 'browser-local-white-background-garment-cutout-v1';
   hasTransparentPixels: boolean;
 };
 
@@ -246,7 +247,7 @@ const buildBoundedPngFromCanvas = ({
   }
   const opaqueBorderRatio = calculateOpaqueBorderRatio(imageData, alphaBounds.bounds);
   const neutralBackgroundRisk = calculateNeutralBackgroundRisk(imageData);
-  if (opaqueBorderRatio > 0.58 || neutralBackgroundRisk > 0.18) {
+  if (opaqueBorderRatio > 0.58 || (opaqueBorderRatio > 0.22 && neutralBackgroundRisk > 0.55)) {
     throw new Error('背景の四角い範囲が残っています。服だけを分離できる写真で再試行してください。');
   }
 
@@ -298,6 +299,7 @@ type Rgb = { r: number; g: number; b: number };
 type BackgroundEstimate = Rgb & { sampleSpread: number };
 
 const colorDistance = (a: Rgb, b: Rgb) => Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b);
+const luminance = ({ r, g, b }: Rgb) => (0.2126 * r) + (0.7152 * g) + (0.0722 * b);
 
 const readRgb = (data: Uint8ClampedArray, index: number): Rgb => ({
   r: data[index],
@@ -343,13 +345,19 @@ const buildEdgeConnectedBackgroundMask = (
 ) => {
   const visited = new Uint8Array(width * height);
   const queue: number[] = [];
-  const threshold = 46;
+  const backgroundLum = luminance(background);
+  const threshold = backgroundLum > 185 ? 34 : 46;
+  const shouldTreatAsBackground = (color: Rgb) => {
+    const lum = luminance(color);
+    if (backgroundLum > 185 && lum > backgroundLum + 10) return false;
+    return colorDistance(color, background) <= threshold;
+  };
   const enqueue = (x: number, y: number) => {
     if (x < 0 || x >= width || y < 0 || y >= height) return;
     const pixelIndex = y * width + x;
     if (visited[pixelIndex]) return;
     const rgbaIndex = pixelIndex * 4;
-    if (data[rgbaIndex + 3] <= 4 || colorDistance(readRgb(data, rgbaIndex), background) <= threshold) {
+    if (data[rgbaIndex + 3] <= 4 || shouldTreatAsBackground(readRgb(data, rgbaIndex))) {
       visited[pixelIndex] = 1;
       queue.push(pixelIndex);
     }
@@ -537,6 +545,33 @@ export async function buildMaterialCutoutDataUrl({
   throw new Error('透明PNGの抽出に失敗しました');
 }
 
+const buildWhiteBackgroundFallbackCutout = async ({
+  imageUrl,
+  maxDataUrlBytes,
+}: {
+  imageUrl: string;
+  maxDataUrlBytes: number;
+}): Promise<MaterialCutoutResult> => {
+  const result = await buildMaterialCutoutDataUrl({
+    imageUrl,
+    mode: 'auto',
+    candidate: 'トップス',
+    maxSize: 840,
+    maxDataUrlBytes,
+  });
+  const sourceArea = result.sourceSize.width * result.sourceSize.height;
+  const boundsArea = result.bounds.width * result.bounds.height;
+  const boundsRatio = sourceArea > 0 ? boundsArea / sourceArea : 1;
+  if (result.engine !== 'browser-canvas-background-flood-cutout-v2' || !result.hasTransparentPixels || boundsRatio > 0.92) {
+    throw new Error('白背景から服だけを分離できませんでした。服の外周が背景と重ならない写真で再試行してください。');
+  }
+  return {
+    ...result,
+    storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
+    engine: 'browser-local-white-background-garment-cutout-v1',
+  };
+};
+
 let aiGarmentCutoutSession: Awaited<ReturnType<typeof newSession>> | null = null;
 
 const rembgModelBaseUrl = String(import.meta.env.VITE_REMBG_MODEL_BASE_URL || '/models').replace(/\/$/, '');
@@ -555,10 +590,11 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   try {
     aiGarmentCutoutSession ??= await newSession('isnet-general-use', undefined, { numThreads: 1 });
   } catch (error) {
-    throw new Error(
-      `高精度AI切り抜きモデルを読み込めませんでした。モデル配信URLを確認してください: ${rembgModelBaseUrl}`,
-      { cause: error },
-    );
+    console.warn('Falling back to local white-background garment cutout because rembg model failed to load.', {
+      rembgModelBaseUrl,
+      error,
+    });
+    return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
   }
   const inputBlob = await dataUrlToBlob(imageUrl);
   const outputBlob = await remove(inputBlob, {
