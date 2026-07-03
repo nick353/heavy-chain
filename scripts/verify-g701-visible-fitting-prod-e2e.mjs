@@ -13,6 +13,9 @@ const authState = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || 'outpu
 const imagePath = args.image || 'output/playwright/g684-live-fitting-operation-r1/shirt-input-from-user-screenshot.png';
 const headed = args.headed !== 'false';
 const submit = args.submit === true || args.submit === 'true';
+const acceptVisualQuality = args.acceptVisualQuality === true || args.acceptVisualQuality === 'true';
+const visualReviewer = args.visualReviewer || args.reviewer || '';
+const visualReviewArtifact = args.visualReviewArtifact || args.reviewedArtifact || '';
 const timeoutMs = Number(args.timeoutMs || 180000);
 
 await loadEnvFile('.env');
@@ -44,6 +47,11 @@ const evidence = {
   technicalOk: false,
   visualQualityAccepted: false,
   visualQualityReview: submit ? 'required_after_download' : 'not_applicable_preflight_only',
+  visualQualityAcceptanceMode: acceptVisualQuality ? 'explicit_cli_flag_after_human_review' : 'not_accepted_by_default',
+  visualQualityReviewEvidence: acceptVisualQuality ? {
+    reviewer: visualReviewer || null,
+    reviewedArtifact: visualReviewArtifact || null,
+  } : null,
   preflight: {
     cutoutReady: false,
     generateButtonEnabled: false,
@@ -57,6 +65,9 @@ const evidence = {
 
 if (!fsSync.existsSync(authState)) fail(`auth_state_missing:${authState}`);
 if (!fsSync.existsSync(imagePath)) fail(`image_missing:${imagePath}`);
+if (acceptVisualQuality && (!visualReviewer || !visualReviewArtifact)) {
+  fail('visual_quality_acceptance_requires_visualReviewer_and_visualReviewArtifact');
+}
 
 const browser = await chromium.launch({ headless: !headed });
 let context;
@@ -101,7 +112,11 @@ try {
     try {
       body = JSON.parse(text);
     } catch {
-      body = text.slice(0, 1000);
+      body = {
+        nonJson: true,
+        preview: sanitizeResponsePreview(text),
+        originalBytes: Buffer.byteLength(text),
+      };
     }
     evidence.responses.push({
       url: response.url(),
@@ -139,10 +154,7 @@ try {
     ]);
     const modelMatrixResponse = evidence.responses.at(-1);
     if (modelMatrixResponse && modelMatrixResponse.status !== 200) {
-      await Promise.race([
-        page.getByText(/生成に失敗しました/).waitFor({ state: 'visible', timeout: 30000 }).catch(() => null),
-        page.getByRole('button', { name: /^AI生成$/ }).waitFor({ state: 'visible', timeout: 30000 }).catch(() => null),
-      ]);
+      await waitForFailureUi(page, 45000);
     }
     await page.waitForTimeout(1500);
     await screenshot(page, '05-after-generate.png');
@@ -165,6 +177,7 @@ try {
   evidence.bodySignals = {
     hasCutoutReadyText: bodyText.includes('高精度AI切り抜き済みです'),
     hasGenerationFailureText: bodyText.includes('生成に失敗しました'),
+    hasJapaneseRateLimitGuidance: bodyText.includes('短時間に生成リクエストが集中しています。1分ほど待ってから再試行してください。'),
     hasGalleryText: bodyText.includes('生成履歴') || bodyText.includes('Gallery'),
   };
   evidence.finishedAt = new Date().toISOString();
@@ -221,7 +234,11 @@ evidence.technicalOk = Boolean(
     && image.png?.height >= 512
   ))
 );
-evidence.ok = evidence.technicalOk;
+evidence.visualQualityAccepted = Boolean(acceptVisualQuality && evidence.technicalOk);
+if (evidence.technicalOk && !evidence.visualQualityAccepted) {
+  evidence.visualQualityReview = 'technical_output_downloaded_but_human_visual_quality_review_required';
+}
+evidence.ok = Boolean(evidence.technicalOk && evidence.visualQualityAccepted);
 evidence.exactBlocker = evidence.ok
   ? null
   : classifyBlocker(evidence);
@@ -262,6 +279,15 @@ async function waitForModelMatrixResponse(targetEvidence, timeout) {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   return null;
+}
+
+async function waitForFailureUi(page, timeout) {
+  return page.waitForFunction(() => {
+    const text = document.body?.innerText || '';
+    return text.includes('生成に失敗しました')
+      || text.includes('短時間に生成リクエストが集中しています')
+      || text.includes('User usage rate limit exceeded');
+  }, null, { timeout }).catch(() => null);
 }
 
 async function readbackJob(jobId, out) {
@@ -401,6 +427,9 @@ function classifyBlocker(targetEvidence) {
   if (/User usage rate limit exceeded/i.test(errorText)) {
     return 'production_ai_generation_blocked_by_usage_rate_limit';
   }
+  if (targetEvidence.technicalOk && !targetEvidence.visualQualityAccepted) {
+    return 'human_visual_quality_review_required_before_acceptance';
+  }
   if (/invalid_image_file/i.test(errorText)) {
     return 'production_ai_generation_invalid_reference_image';
   }
@@ -418,6 +447,15 @@ function classifyBlocker(targetEvidence) {
 
 function tailPath(value) {
   return String(value || '').split('/').slice(-2).join('/');
+}
+
+function sanitizeResponsePreview(value) {
+  return String(value || '')
+    .replace(/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/g, '[redacted.jwt]')
+    .replace(/sb_secret_[A-Za-z0-9_-]+/g, '[redacted.supabase_secret]')
+    .replace(/sk-[A-Za-z0-9_-]+/g, '[redacted.openai_key]')
+    .replace(/AIza[0-9A-Za-z_-]+/g, '[redacted.google_key]')
+    .slice(0, 500);
 }
 
 async function sha256Hex(bytes) {
