@@ -309,31 +309,32 @@ const readRgb = (data: Uint8ClampedArray, index: number): Rgb => ({
 
 const estimateBackgroundColor = (data: Uint8ClampedArray, width: number, height: number): BackgroundEstimate => {
   const samples: Rgb[] = [];
-  const insetX = Math.max(1, Math.floor(width * 0.06));
-  const insetY = Math.max(1, Math.floor(height * 0.06));
-  const samplePoints = [
-    [insetX, insetY],
-    [width - 1 - insetX, insetY],
-    [insetX, height - 1 - insetY],
-    [width - 1 - insetX, height - 1 - insetY],
-    [Math.floor(width / 2), insetY],
-    [Math.floor(width / 2), height - 1 - insetY],
-    [insetX, Math.floor(height / 2)],
-    [width - 1 - insetX, Math.floor(height / 2)],
-  ];
-
-  for (const [x, y] of samplePoints) {
-    const clampedX = Math.min(width - 1, Math.max(0, x));
-    const clampedY = Math.min(height - 1, Math.max(0, y));
-    samples.push(readRgb(data, (clampedY * width + clampedX) * 4));
+  const inset = Math.max(1, Math.floor(Math.min(width, height) * 0.035));
+  const step = Math.max(8, Math.floor(Math.min(width, height) / 18));
+  for (let x = inset; x < width - inset; x += step) {
+    samples.push(readRgb(data, (inset * width + x) * 4));
+    samples.push(readRgb(data, ((height - 1 - inset) * width + x) * 4));
   }
+  for (let y = inset; y < height - inset; y += step) {
+    samples.push(readRgb(data, (y * width + inset) * 4));
+    samples.push(readRgb(data, (y * width + (width - 1 - inset)) * 4));
+  }
+  const neutralBrightSamples = samples.filter((color) => {
+    const spread = Math.max(color.r, color.g, color.b) - Math.min(color.r, color.g, color.b);
+    return luminance(color) >= 130 && spread <= 55;
+  });
+  const usableSamples = neutralBrightSamples.length >= 6 ? neutralBrightSamples : samples;
+  const medianChannel = (channel: keyof Rgb) => {
+    const values = usableSamples.map((color) => color[channel]).sort((a, b) => a - b);
+    return values[Math.floor(values.length / 2)] ?? 255;
+  };
 
   const background = {
-    r: Math.round(samples.reduce((sum, color) => sum + color.r, 0) / samples.length),
-    g: Math.round(samples.reduce((sum, color) => sum + color.g, 0) / samples.length),
-    b: Math.round(samples.reduce((sum, color) => sum + color.b, 0) / samples.length),
+    r: medianChannel('r'),
+    g: medianChannel('g'),
+    b: medianChannel('b'),
   };
-  const sampleSpread = Math.max(...samples.map((color) => colorDistance(color, background)));
+  const sampleSpread = Math.max(...usableSamples.map((color) => colorDistance(color, background)));
   return { ...background, sampleSpread };
 };
 
@@ -349,6 +350,7 @@ const buildEdgeConnectedBackgroundMask = (
   const threshold = backgroundLum > 185 ? 34 : 46;
   const shouldTreatAsBackground = (color: Rgb) => {
     const lum = luminance(color);
+    if (backgroundLum > 185 && lum < 70) return true;
     if (backgroundLum > 185 && lum > backgroundLum + 10) return false;
     return colorDistance(color, background) <= threshold;
   };
@@ -572,6 +574,11 @@ const buildWhiteBackgroundFallbackCutout = async ({
   };
 };
 
+const isRembgModelLoadError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('Failed to download model') || message.includes('HTTP error');
+};
+
 let aiGarmentCutoutSession: Awaited<ReturnType<typeof newSession>> | null = null;
 
 const rembgModelBaseUrl = String(import.meta.env.VITE_REMBG_MODEL_BASE_URL || '/models').replace(/\/$/, '');
@@ -590,6 +597,7 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   try {
     aiGarmentCutoutSession ??= await newSession('isnet-general-use', undefined, { numThreads: 1 });
   } catch (error) {
+    if (!isRembgModelLoadError(error)) throw error;
     console.warn('Falling back to local white-background garment cutout because rembg model failed to load.', {
       rembgModelBaseUrl,
       error,
@@ -597,10 +605,21 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
     return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
   }
   const inputBlob = await dataUrlToBlob(imageUrl);
-  const outputBlob = await remove(inputBlob, {
-    session: aiGarmentCutoutSession,
-    postProcessMask: true,
-  });
+  let outputBlob: Blob;
+  try {
+    outputBlob = await remove(inputBlob, {
+      session: aiGarmentCutoutSession,
+      postProcessMask: true,
+    });
+  } catch (error) {
+    if (!isRembgModelLoadError(error)) throw error;
+    console.warn('Falling back to local white-background garment cutout because rembg model download failed during remove.', {
+      rembgModelBaseUrl,
+      error,
+    });
+    aiGarmentCutoutSession = null;
+    return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
+  }
   const outputDataUrl = await blobToDataUrl(outputBlob);
   const outputImage = await loadImageElement(outputDataUrl);
   const canvas = document.createElement('canvas');
@@ -681,7 +700,7 @@ function buildCutoutFromImage({
       const backgroundAlpha = backgroundPixel
         ? 0
         : nearBackgroundEdge && backgroundDistance < 66
-          ? Math.max(48, Math.min(210, Math.round((backgroundDistance - 34) * 8)))
+          ? Math.max(0, Math.min(210, Math.round((backgroundDistance - 34) * 8)))
           : 255;
       const alpha = Math.min(
         data[index + 3],

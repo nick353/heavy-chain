@@ -41,6 +41,8 @@ add('source_supports_model_base_url_env', source.includes('VITE_REMBG_MODEL_BASE
 });
 add('model_load_failure_has_quality_gated_fallback', (
   source.includes('buildWhiteBackgroundFallbackCutout') &&
+  source.includes('isRembgModelLoadError') &&
+  source.includes('rembg model download failed during remove') &&
   source.includes('browser-local-white-background-garment-cutout-v1') &&
   source.includes("result.engine !== 'browser-canvas-background-flood-cutout-v2'") &&
   source.includes('白背景から服だけを分離できませんでした') &&
