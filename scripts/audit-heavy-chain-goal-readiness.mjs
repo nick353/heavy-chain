@@ -45,6 +45,8 @@ const nonbillingDbPath = args.nonbillingDb || 'output/playwright/nonbilling-live
 const nonbillingUiPath = args.nonbillingUi || 'output/playwright/nonbilling-live-uat-1782396855131/05-ui-readback-summary.json';
 const nonbillingCleanupPath = args.nonbillingCleanup || 'output/playwright/nonbilling-live-uat-1782396855131/06-cleanup-readback.json';
 const nonbillingUsageCleanupPath = args.nonbillingUsageCleanup || 'output/playwright/nonbilling-live-uat-1782396855131/07-usage-cleanup-readback.json';
+const openaiFittingSubmitPath = args.openaiFittingSubmit || 'output/playwright/g705-visible-fitting-prod-submit-post-deploy-r8-accepted/summary.json';
+const openaiFittingVisualReviewPath = args.openaiFittingVisualReview || 'output/playwright/g705-visible-fitting-prod-visual-review-r1/visual-review.json';
 const outPath = args.out || 'output/playwright/heavy-chain-goal-readiness-current/audit.json';
 const stateNextAction = stateField(stateText, 'next_action');
 
@@ -77,6 +79,8 @@ const paths = {
   nonbillingUi: nonbillingUiPath,
   nonbillingCleanup: nonbillingCleanupPath,
   nonbillingUsageCleanup: nonbillingUsageCleanupPath,
+  openaiFittingSubmit: openaiFittingSubmitPath,
+  openaiFittingVisualReview: openaiFittingVisualReviewPath,
 };
 
 const files = Object.fromEntries(
@@ -169,7 +173,17 @@ const requirements = [
     id: 'approved_live_generation_readback',
     title: 'Approved brand production generation has DB/Storage/UI readback',
     status: approvedLiveGenerationReadbackPassed() ? 'passed' : 'failed',
-    evidence: [paths.nonbillingCreate, paths.nonbillingReference, paths.nonbillingDb, paths.nonbillingUi, paths.liveWorkerSummary, paths.liveWorkerDb, paths.liveWorkerUi],
+    evidence: [
+      paths.nonbillingCreate,
+      paths.nonbillingReference,
+      paths.nonbillingDb,
+      paths.nonbillingUi,
+      paths.liveWorkerSummary,
+      paths.liveWorkerDb,
+      paths.liveWorkerUi,
+      paths.openaiFittingSubmit,
+      paths.openaiFittingVisualReview,
+    ],
     details: approvedLiveGenerationReadbackDetails(),
     next_action: 'Run a fresh non-billing production UI submit, local worker import, DB/Storage readback, and UI readback if any proof regresses.',
   }),
@@ -338,6 +352,12 @@ function parseArgs(rawArgs) {
       index += 1;
     } else if (arg === '--nonbilling-usage-cleanup' && next) {
       parsed.nonbillingUsageCleanup = next;
+      index += 1;
+    } else if (arg === '--openai-fitting-submit' && next) {
+      parsed.openaiFittingSubmit = next;
+      index += 1;
+    } else if (arg === '--openai-fitting-visual-review' && next) {
+      parsed.openaiFittingVisualReview = next;
       index += 1;
     }
   }
@@ -634,7 +654,7 @@ function approvedClientRunwayPathDetails() {
 }
 
 function approvedLiveGenerationReadbackPassed() {
-  return nonbillingGenerationPassed();
+  return nonbillingGenerationPassed() || openaiFittingGenerationPassed();
 }
 
 function approvedLiveGenerationReadbackDetails() {
@@ -666,6 +686,95 @@ function approvedLiveGenerationReadbackDetails() {
       consoleCount: (files.nonbillingUi.json?.consoleErrors || []).length,
       pageErrorCount: (files.nonbillingUi.json?.pageErrors || []).length,
       requestFailureCount: (files.nonbillingUi.json?.failedRequests || []).length,
+    },
+    openaiFitting: openaiFittingGenerationDetails(),
+  };
+}
+
+function openaiFittingGenerationPassed() {
+  const submit = files.openaiFittingSubmit.json;
+  const review = files.openaiFittingVisualReview.json;
+  const response = (submit?.responses || [])[submit?.submittedResponseIndex ?? 0]?.body || {};
+  const request = (submit?.requests || [])[0] || {};
+  const image = (submit?.readback?.images || [])[0] || {};
+  const download = submit?.readback?.downloadedImage || {};
+  return files.openaiFittingSubmit.exists
+    && files.openaiFittingVisualReview.exists
+    && submit?.baseUrl === 'https://heavy-chain.zeabur.app'
+    && submit?.mode === 'submit-e2e'
+    && submit?.submit === true
+    && submit?.irreversibleActions?.purchasePaymentCheckout === 'not_touched'
+    && submit?.irreversibleActions?.externalPublish === 'not_touched'
+    && request.method === 'POST'
+    && String(request.url || '').endsWith('/functions/v1/model-matrix')
+    && request.hasRightsConfirmed === true
+    && response.success === true
+    && response.persistenceStatus === 'completed'
+    && response.failedStage == null
+    && submit?.readback?.job?.status === 'completed'
+    && submit?.readback?.job?.featureType === 'model-matrix'
+    && submit?.readback?.job?.errorMessage == null
+    && image.featureType === 'model-matrix'
+    && image.modelUsed === 'gpt-image-1-mini'
+    && download.bytes > 0
+    && download.png?.valid === true
+    && download.png?.width >= 512
+    && download.png?.height >= 512
+    && Boolean(download.sha256)
+    && review?.ok === true
+    && review?.sourceSummary === paths.openaiFittingSubmit
+    && review?.sourceOk === true
+    && review?.technicalOk === true
+    && review?.visualQualityAccepted === true
+    && review?.artifactMatchesDownloadedImage === true
+    && review?.downloadedSha256 === download.sha256;
+}
+
+function openaiFittingGenerationDetails() {
+  const submit = files.openaiFittingSubmit.json || {};
+  const response = (submit.responses || [])[submit.submittedResponseIndex ?? 0]?.body || {};
+  const request = (submit.requests || [])[0] || {};
+  const image = (submit.readback?.images || [])[0] || {};
+  const download = submit.readback?.downloadedImage || {};
+  const review = files.openaiFittingVisualReview.json || {};
+  return {
+    submitExists: files.openaiFittingSubmit.exists,
+    reviewExists: files.openaiFittingVisualReview.exists,
+    baseUrl: submit.baseUrl,
+    mode: submit.mode,
+    submit: submit.submit,
+    generationSubmit: submit.irreversibleActions?.generationSubmit,
+    purchasePaymentCheckout: submit.irreversibleActions?.purchasePaymentCheckout,
+    externalPublish: submit.irreversibleActions?.externalPublish,
+    request: {
+      method: request.method,
+      modelMatrix: String(request.url || '').endsWith('/functions/v1/model-matrix'),
+      hasRightsConfirmed: request.hasRightsConfirmed,
+      bodyTypes: request.bodyTypes,
+      ageGroups: request.ageGroups,
+    },
+    response: {
+      success: response.success,
+      jobId: response.jobId,
+      persistenceStatus: response.persistenceStatus,
+      failedStage: response.failedStage,
+    },
+    readback: {
+      jobStatus: submit.readback?.job?.status,
+      featureType: submit.readback?.job?.featureType,
+      imageId: image.id,
+      modelUsed: image.modelUsed,
+      downloadedBytes: download.bytes,
+      png: download.png,
+      sha256: download.sha256,
+    },
+    visualReview: {
+      ok: review.ok,
+      sourceOk: review.sourceOk,
+      technicalOk: review.technicalOk,
+      visualQualityAccepted: review.visualQualityAccepted,
+      artifactMatchesDownloadedImage: review.artifactMatchesDownloadedImage,
+      downloadedSha256: review.downloadedSha256,
     },
   };
 }
