@@ -196,7 +196,7 @@ const requiredReadbacks = [
   },
   {
     name: 'G620 security operations',
-    path: 'output/playwright/g702-g620-security-ops-r1/summary.json',
+    path: 'output/playwright/g722-g620-security-ops-current-r1/summary.json',
     validate: validateG620SecurityOps,
     expect: 'ok=true, blockers=[], expected schema, monitor readback safe, abuse/permission/audit/incident checks passed, and only allowed monitor warnings',
   },

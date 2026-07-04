@@ -49,7 +49,7 @@ const requiredProofs = [
   {
     id: 'g620_security_ops',
     goal: 'G620',
-    path: 'output/playwright/g702-g620-security-ops-r1/summary.json',
+    path: 'output/playwright/g722-g620-security-ops-current-r1/summary.json',
     validate: (json) => json.ok === true && Number(json.summary?.blockers || json.blockers?.length || 0) === 0,
     expect: 'G620 security operations ok=true with no blockers',
   },
