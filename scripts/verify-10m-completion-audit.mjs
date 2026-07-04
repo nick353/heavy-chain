@@ -9,6 +9,8 @@ const outDir = args.out || 'output/playwright/10m-completion-audit';
 const summaryPath = args.summary || path.join(outDir, 'summary.json');
 const allowIncomplete = args.allowIncomplete === true || args['allow-incomplete'] === true;
 const g617Dir = args.g617Dir || 'output/playwright/g617-same-run-fresh-generation-hc-g617-same-run-fresh-20260630T063740Z';
+const defaultCommandTimeoutMs = Number(args.commandTimeoutMs || args['command-timeout-ms'] || 10 * 60 * 1000);
+const releaseGateTimeoutMs = Number(args.releaseGateTimeoutMs || args['release-gate-timeout-ms'] || 30 * 60 * 1000);
 
 const requiredHumanItemsClosed = ['H601', 'H602'];
 const allGenerationFeatures = [
@@ -218,6 +220,7 @@ const requiredCommands = [
   {
     name: 'release gate verifier',
     args: ['npm', 'run', 'verify:release-gate', '--', '--out', path.join(outDir, 'release-gate-summary.json')],
+    timeoutMs: releaseGateTimeoutMs,
   },
 ];
 
@@ -316,14 +319,16 @@ for (const proof of requiredProofs) {
 }
 
 for (const command of requiredCommands) {
-  report.commands.push(runCommand(command.name, command.args));
+  report.commands.push(runCommand(command));
 }
 for (const command of report.commands) {
   if (command.status !== 0) {
+    const reason = command.timedOut ? ' timed out before completion.' : ' failed.';
     report.blockers.push({
       id: `command_failed:${slug(command.name)}`,
-      message: `${command.name} failed.`,
+      message: `${command.name}${reason}`,
       status: command.status,
+      timedOut: command.timedOut,
     });
   }
 }
@@ -579,15 +584,27 @@ function compatibleGoalStatuses(left, right) {
   return isAcceptedGoalStatus(left) && isAcceptedGoalStatus(right);
 }
 
-function runCommand(name, command) {
+function runCommand(item) {
+  const command = item.args;
+  const startedAt = new Date();
+  const timeoutMs = Number(item.timeoutMs || defaultCommandTimeoutMs);
   const result = spawnSync(command[0], command.slice(1), {
     encoding: 'utf8',
     maxBuffer: 1024 * 1024 * 5,
+    timeout: timeoutMs,
+    killSignal: 'SIGTERM',
   });
+  const timedOut = result.error?.code === 'ETIMEDOUT';
   return {
-    name,
+    name: item.name,
     command: command.join(' '),
+    startedAt: startedAt.toISOString(),
+    durationMs: Date.now() - startedAt.getTime(),
+    timeoutMs,
     status: result.status ?? 1,
+    timedOut,
+    signal: result.signal ?? null,
+    error: result.error?.message,
     stdoutTail: tail(result.stdout || ''),
     stderrTail: tail(result.stderr || ''),
   };

@@ -10,6 +10,7 @@ const outPath = args.out || 'output/playwright/10m-product-readiness-g615/releas
 const allowDirty = Boolean(args.allowDirty || args['allow-dirty']);
 const skipCommands = Boolean(args.skipCommands || args['skip-commands']);
 const maxArtifactAgeHours = Number(args.maxArtifactAgeHours || args['max-artifact-age-hours'] || 48);
+const defaultCommandTimeoutMs = Number(args.commandTimeoutMs || args['command-timeout-ms'] || 10 * 60 * 1000);
 
 const REQUIRED_G608_REQUIREMENT_IDS = [
   'logged_in_production_ui',
@@ -594,21 +595,28 @@ function artifactFreshness(filePath, json, stat) {
 
 function runCommand(item) {
   const startedAt = new Date();
+  const timeoutMs = Number(item.timeoutMs || defaultCommandTimeoutMs);
   const result = spawnSync(item.command, item.args, {
     cwd: process.cwd(),
     encoding: 'utf8',
     env: process.env,
     shell: false,
     maxBuffer: 10 * 1024 * 1024,
+    timeout: timeoutMs,
+    killSignal: 'SIGTERM',
   });
   const output = `${result.stdout || ''}${result.stderr || ''}`;
+  const timedOut = result.error?.code === 'ETIMEDOUT';
   return {
     name: item.name,
     command: [item.command, ...item.args].join(' '),
     startedAt: startedAt.toISOString(),
     durationMs: Date.now() - startedAt.getTime(),
+    timeoutMs,
     status: result.status,
     passed: result.error === undefined && result.status === 0,
+    timedOut,
+    signal: result.signal ?? null,
     outputTail: safeTail(output),
     error: result.error?.message,
   };
