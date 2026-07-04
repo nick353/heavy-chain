@@ -29,7 +29,8 @@ Human approval is required for billing, purchase, payment, checkout, identity ve
 
 3. G619 real beta evidence:
    - Recommended default: collect consented beta sessions without personal data, public posting, purchases, payment, checkout, or destructive actions.
-   - Human action needed: recruit or provide at least three consenting testers or session recordings/notes that meet the packet requirements. For each session, use `npm run create:g619-beta-session`, give the participant the generated `session-instructions.md`, follow `operator-checklist.md`, then attach anonymized behavior evidence, real duration, consent, friction/no-friction notes, redaction review, and sha256-covered artifacts.
+   - Human action needed: recruit or provide at least three consenting testers or session recordings/notes that meet the packet requirements. For each session, use the current `npm run create:g619-beta-session` scaffold, give the participant the generated `session-instructions.md`, follow `operator-checklist.md`, then attach anonymized behavior evidence, real duration, consent, friction/no-friction notes, redaction review, and sha256-covered artifacts.
+   - Each session must preserve the H601/H602 boundary with `h601H602DecisionStatus: open_not_closed_by_g619`, link `docs/h601-h602-operator-decision-checklist-2026-07-04.md`, and keep Apple login, real/sandbox purchase, checkout confirmation, and legal-policy finalization as `not_touched`.
    - Blocks: `npm run verify:g619-beta-evidence` passing and full 10M completion.
 
 4. G617 Runway availability:

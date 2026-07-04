@@ -39,6 +39,8 @@ Minimum acceptance:
 - required workflows covered at least once: `lightchain_entry`, `generate_readiness`, `upload_material`, `canvas_edit`, `gallery_or_history_reuse`, `jobs_or_failure_recovery`
 - every session has a local evidence file: recording, screenshot set, transcript, or observation notes
 - every session records hard-stop compliance
+- every session records `h601H602DecisionStatus: open_not_closed_by_g619` and links `docs/h601-h602-operator-decision-checklist-2026-07-04.md`
+- every session records operator-only hard stops for Apple login, real/sandbox purchase, checkout confirmation, and legal-policy finalization as `not_touched`
 - every session has a friction list or an explicit no-friction note
 - no email address, phone number, payment card pattern, OTP/security code, access token, API key, secret, or public-publish receipt appears in the manifest or evidence notes
 
@@ -58,7 +60,7 @@ Create a consent-safe session scaffold after scheduling a real beta session:
 npm run create:g619-beta-session -- --session-id g619-beta-001 --alias beta-001 --platform desktop --persona apparel-ec-operator --workflows lightchain_entry,generate_readiness,upload_material
 ```
 
-The scaffold writes session-local `session-instructions.md`, `operator-checklist.md`, `consent.json`, `notes.md`, `redaction-review.json`, and `readback.json` files under `output/playwright/g619-real-beta-evidence/sessions/<alias>/`, appends the session to the manifest, and stores artifact `sha256` values. It does not make G619 pass by itself: real consent, real session duration, and at least one behavior evidence artifact such as `recording`, `screenshot(s)`, `transcript`, `observation`, or `observation_notes` are required. Redaction review must cover every non-redaction artifact, including the participant instructions and operator checklist, and match their manifest hashes.
+The scaffold writes session-local `session-instructions.md`, `operator-checklist.md`, `consent.json`, `notes.md`, `redaction-review.json`, and `readback.json` files under `output/playwright/g619-real-beta-evidence/sessions/<alias>/`, appends the session to the manifest, and stores artifact `sha256` values. It also records the H601/H602 decision boundary and operator-only hard stops that G619 must not cross. It does not make G619 pass by itself: real consent, real session duration, and at least one behavior evidence artifact such as `recording`, `screenshot(s)`, `transcript`, `observation`, or `observation_notes` are required. Redaction review must cover every non-redaction artifact, including the participant instructions and operator checklist, and match their manifest hashes.
 
 Validate collected evidence:
 
@@ -75,6 +77,7 @@ The verifier is intentionally strict. Missing real-user evidence is not accepted
 - Give each participant the generated `session-instructions.md`; use `operator-checklist.md` during and after the session so coaching, hard stops, redaction, and artifact review are consistent.
 - Notes should describe behavior and friction, not personal identity.
 - If a user reaches billing, payment, external publish, OTP, CAPTCHA, or secret-entry screens, stop and record `exactBlocker`.
+- If a user reaches Apple login, real/sandbox purchase, checkout confirmation, legal-policy finalization, identity verification, or external publishing, stop and record `exactBlocker`; do not try to complete the action as part of G619.
 - If marker-scoped generation is performed, include DB/Storage/readback and cleanup artifacts.
 
 ## Completion Boundary
