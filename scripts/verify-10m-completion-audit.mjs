@@ -42,14 +42,14 @@ const requiredProofs = [
   {
     id: 'g618_scale_ops',
     goal: 'G618',
-    path: 'output/playwright/10m-product-readiness-g618/summary.json',
+    path: 'output/playwright/g728-g618-scale-ops-current-r1/summary.json',
     validate: (json) => json.ok === true && Number(json.summary?.blockers || json.blockers?.length || 0) === 0,
     expect: 'G618 scale/ops baseline ok=true with no blockers',
   },
   {
     id: 'g620_security_ops',
     goal: 'G620',
-    path: 'output/playwright/g722-g620-security-ops-current-r1/summary.json',
+    path: 'output/playwright/g728-g620-security-ops-current-r1/summary.json',
     validate: (json) => json.ok === true && Number(json.summary?.blockers || json.blockers?.length || 0) === 0,
     expect: 'G620 security operations ok=true with no blockers',
   },
