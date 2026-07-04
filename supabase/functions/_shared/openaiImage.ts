@@ -72,6 +72,21 @@ function extensionFromMimeType(mimeType: string) {
   }
 }
 
+function dataUrlToBlob(imageUrl: string, index: number) {
+  const match = imageUrl.match(/^data:([^;,]+);base64,(.+)$/);
+  if (!match) throw new Error(`openai_image_edit_input_not_data_url:${index}`);
+  const mimeType = normalizeMimeType(match[1]);
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return {
+    blob: new Blob([bytes], { type: mimeType }),
+    fileName: `reference-${index + 1}.${extensionFromMimeType(mimeType)}`,
+  };
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -166,25 +181,27 @@ export async function editOpenAiImage(params: {
   const images = params.images
     .map((image) => image.imageUrl.trim())
     .filter(Boolean)
-    .slice(0, 16)
-    .map((image_url) => ({ image_url }));
+    .slice(0, 16);
   if (!images.length) throw new Error('openai_image_edit_input_missing');
 
   try {
+    const formData = new FormData();
+    formData.set('model', model);
+    formData.set('prompt', params.prompt);
+    formData.set('n', '1');
+    formData.set('background', params.background || 'auto');
+    formData.set('output_format', 'png');
+    images.forEach((imageUrl, index) => {
+      const image = dataUrlToBlob(imageUrl, index);
+      formData.append('image[]', image.blob, image.fileName);
+    });
+
     const response = await fetch(`${openAiImageBaseUrl()}/images/edits`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${openAiImageApiKey()}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model,
-        prompt: params.prompt,
-        images,
-        n: 1,
-        background: params.background || 'auto',
-        output_format: 'png',
-      }),
+      body: formData,
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
