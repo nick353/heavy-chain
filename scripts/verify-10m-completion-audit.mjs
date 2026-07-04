@@ -178,7 +178,7 @@ const requiredProofs = [
   {
     id: 'production_h602_billing_completion_readback',
     goal: 'H602',
-    path: 'output/playwright/g759-h602-production-completion-current-r1/summary.json',
+    path: 'output/playwright/g766-h602-production-completion-current-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       json.migration?.applied === true &&
