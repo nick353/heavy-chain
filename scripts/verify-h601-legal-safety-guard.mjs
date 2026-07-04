@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
+import path from 'node:path';
+
+const args = parseArgs(process.argv.slice(2));
 
 const files = {
   guard: 'src/lib/legalSafetyGuard.ts',
@@ -249,7 +252,24 @@ const summary = {
 };
 
 console.log(JSON.stringify(summary, null, 2));
+if (args.out) {
+  fs.mkdirSync(path.dirname(args.out), { recursive: true });
+  fs.writeFileSync(args.out, `${JSON.stringify(summary, null, 2)}\n`);
+}
 process.exit(summary.ok ? 0 : 1);
+
+function parseArgs(rawArgs) {
+  const parsed = { out: null };
+  for (let index = 0; index < rawArgs.length; index += 1) {
+    const arg = rawArgs[index];
+    const next = rawArgs[index + 1];
+    if (arg === '--out' && next) {
+      parsed.out = next;
+      index += 1;
+    }
+  }
+  return parsed;
+}
 
 function read(file) {
   return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
