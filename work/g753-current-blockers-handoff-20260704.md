@@ -2,8 +2,8 @@
 
 Status: public/10M readiness is still not accepted.
 
-Handoff baseline commit:
-- `fa76b74` is the current HEAD for this blocker/proof snapshot.
+Handoff proof baseline:
+- `fa76b74` is the fixed blocker/proof baseline summarized by this handoff; repository HEAD may be newer because this handoff document was added afterward.
 
 Baseline proof locators:
 - G753 10M audit: `output/playwright/g753-10m-completion-post-g752-handoff-stabilized-r1/summary.json`
