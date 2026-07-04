@@ -67,6 +67,7 @@ export function GalleryPage() {
 
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingStalled, setIsLoadingStalled] = useState(false);
   const [loadWarning, setLoadWarning] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortType>('newest');
@@ -133,10 +134,12 @@ export function GalleryPage() {
   const fetchImages = useCallback(async () => {
     if (!currentBrand) {
       setIsLoading(false);
+      setIsLoadingStalled(false);
       return;
     }
 
     setIsLoading(true);
+    setIsLoadingStalled(false);
     setLoadWarning(null);
     try {
       const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(currentBrand.id);
@@ -186,6 +189,7 @@ export function GalleryPage() {
       setImages(localImages);
     } finally {
       setIsLoading(false);
+      setIsLoadingStalled(false);
     }
   }, [currentBrand, filter, sortBy]);
 
@@ -208,6 +212,19 @@ export function GalleryPage() {
       mounted = false;
     };
   }, [currentBrand, fetchImages]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setIsLoadingStalled(false);
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsLoadingStalled(true);
+    }, GALLERY_REMOTE_TIMEOUT_MS + 2_000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isLoading]);
 
   useEffect(() => {
     // Check for image ID in URL
@@ -571,12 +588,31 @@ export function GalleryPage() {
         {isLoading ? (
           <div className="glass-panel mb-6 flex items-center gap-3 rounded-2xl p-5 text-neutral-700 dark:text-neutral-200">
             <div className="spinner h-5 w-5" />
-            <div>
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold">ギャラリーを読み込み中</p>
               <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                保存済み画像とローカル成果物を確認しています。
+                {isLoadingStalled
+                  ? '画像の読み込みに時間がかかっています。待ちながら次の作業へ進めます。'
+                  : '保存済み画像とローカル成果物を確認しています。'}
               </p>
             </div>
+            {isLoadingStalled ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchImages}
+                  className="inline-flex rounded-lg border border-primary-300 px-3 py-1.5 text-xs font-semibold text-primary-700 transition hover:bg-primary-50 dark:border-primary-400/40 dark:text-primary-100 dark:hover:bg-primary-400/10"
+                >
+                  再読み込み
+                </button>
+                <Link
+                  to="/generate"
+                  className="inline-flex rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-400"
+                >
+                  新しく生成
+                </Link>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
