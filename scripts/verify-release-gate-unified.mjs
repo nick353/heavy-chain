@@ -165,7 +165,7 @@ const requiredReadbacks = [
   },
   {
     name: 'G608 security audit',
-    path: 'output/playwright/g703-g608-security-audit-r1/audit-readiness.json',
+    path: 'output/playwright/g711-g608-goal-readiness-current-r1/audit-readiness.json',
     validate: (json) => {
       const requirements = arrayFrom(json.requirements);
       const requirementIds = requirements.map((requirement) => requirement?.id).filter(Boolean);
