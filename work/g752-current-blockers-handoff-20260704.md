@@ -2,8 +2,8 @@
 
 Status: public/10M readiness is still not accepted.
 
-Latest pushed commit:
-- `3bd1945` adds this G752 current blockers handoff.
+Handoff baseline commit:
+- `3bd1945` is the commit whose blocker/proof/timing state this handoff summarizes.
 
 Current G619 proof:
 - `output/playwright/g752-g619-beta-evidence-post-g750-current-r1/current-summary.json`
