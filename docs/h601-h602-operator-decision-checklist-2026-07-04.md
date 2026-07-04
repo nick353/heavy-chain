@@ -4,6 +4,8 @@ Updated: 2026-07-04
 
 This checklist does not close H601 or H602. It lists the operator decisions and proof still required before public launch, paid checkout, or external publishing.
 
+Use `docs/h601-h602-operator-readback-template-2026-07-04.md` to record the final decisions and redacted proof locators. Do not paste secrets, raw receipts, JWTs, signed payloads, OTP/security codes, payment-card data, or personal identity data.
+
 ## H601 Legal / Safety Decisions
 
 - [ ] Final Terms wording is approved.
