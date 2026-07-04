@@ -35,6 +35,7 @@
     "create:g619-beta-session": "node scripts/create-g619-beta-session.mjs",
     "verify:h601-legal-safety": "node scripts/verify-h601-legal-safety-guard.mjs",
     "verify:h602-billing": "node scripts/verify-h602-billing-readiness.mjs",
+    "verify:h602-production-completion-readback": "node scripts/verify-h602-production-completion-readback.mjs",
     "verify:10m-completion": "node scripts/verify-10m-completion-audit.mjs",
     "verify:10m-completion:incomplete-ok": "node scripts/verify-10m-completion-audit.mjs --allow-incomplete",
     "verify:g610-retention": "npm run build && node scripts/verify-g610-retention-project-search.mjs",
