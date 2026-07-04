@@ -151,6 +151,10 @@ report.summary = {
   warnings: report.warnings.length,
   sessions: Array.isArray(manifest?.sessions) ? manifest.sessions.length : 0,
   workflows: manifest ? uniqueWorkflows(manifest).length : 0,
+  supersededScaffolds: Array.isArray(manifest?.supersededScaffolds) ? manifest.supersededScaffolds.length : 0,
+  supersededScaffoldIds: Array.isArray(manifest?.supersededScaffolds)
+    ? manifest.supersededScaffolds.map((item) => item?.sessionId).filter(Boolean)
+    : [],
 };
 
 writeSummary(report);
