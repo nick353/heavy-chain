@@ -271,7 +271,15 @@ function isAcceptedGoalStatus(status) {
 function deriveRequiredAcceptedGoals(statuses) {
   return [...statuses.keys()]
     .filter((goalId) => /^G6\d+$/.test(goalId))
+    .filter((goalId) => !isSupersededByAcceptedGoal(statuses.get(goalId), statuses))
     .sort((left, right) => Number(left.slice(1)) - Number(right.slice(1)));
+}
+
+function isSupersededByAcceptedGoal(status, statuses) {
+  if (typeof status !== 'string') return false;
+  const match = status.match(/^superseded-by-(G\d+)$/i);
+  if (!match) return false;
+  return isAcceptedGoalStatus(statuses.get(match[1].toUpperCase()));
 }
 
 for (const itemId of requiredHumanItemsClosed) {
