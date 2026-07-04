@@ -6,11 +6,13 @@ Updated: 2026-06-30
 
 G619 is the real-user evidence layer after G611 recorded QA. G611 proves that the product can be operated by scripted beta-like scenarios. G619 must prove that consented beta users or external collaborators can use Heavy Chain in production without the operator hand-holding the flow.
 
-This packet does not replace G617 fresh all-feature generation, H601 legal decisions, or H602 billing/external-publish decisions.
+This packet does not replace G617 fresh all-feature generation, H601 legal decisions, or H602 billing/external-publish decisions. Use `docs/h601-h602-operator-decision-checklist-2026-07-04.md` as the separate operator checklist for those still-open H601/H602 decisions; collecting G619 beta evidence does not close that checklist.
 
 ## Hard Stops
 
 Stop before billing, purchase, payment, checkout, identity verification, OTP/CAPTCHA/security prompts, secret entry, external public publishing, broad data deletion, destructive cleanup, or legal-policy finalization.
+
+If a beta session reaches Apple login, OTP/security prompt, checkout/payment confirmation, real or sandbox purchase, identity verification, or external public publishing, stop immediately. Those actions are human/operator-only; Codex and beta-session operators must not perform them as part of G619 evidence collection.
 
 Allowed:
 
