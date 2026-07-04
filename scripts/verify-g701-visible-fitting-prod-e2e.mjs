@@ -2,11 +2,14 @@
 
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
+import https from 'node:https';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
 
 const args = parseArgs(process.argv.slice(2));
+await loadEnvFile('.env.production.local');
+await loadEnvFile('.env');
+
 const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain.zeabur.app');
 const outDir = args.out || `output/playwright/g701-visible-fitting-prod-${dateStamp()}`;
 const authState = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || 'output/playwright/g689-prod-temp-auth-r2/auth-state.json';
@@ -16,9 +19,9 @@ const submit = args.submit === true || args.submit === 'true';
 const acceptVisualQuality = args.acceptVisualQuality === true || args.acceptVisualQuality === 'true';
 const visualReviewer = args.visualReviewer || args.reviewer || '';
 const visualReviewArtifact = args.visualReviewArtifact || args.reviewedArtifact || '';
+const reviewSummary = args.reviewSummary || '';
 const timeoutMs = Number(args.timeoutMs || 180000);
 
-await loadEnvFile('.env');
 await fs.mkdir(outDir, { recursive: true });
 
 const evidence = {
@@ -40,6 +43,7 @@ const evidence = {
   screenshots: [],
   requests: [],
   responses: [],
+  submittedResponseIndex: null,
   readback: null,
   downloadedImage: null,
   downloadedImages: [],
@@ -51,6 +55,7 @@ const evidence = {
   visualQualityReviewEvidence: acceptVisualQuality ? {
     reviewer: visualReviewer || null,
     reviewedArtifact: visualReviewArtifact || null,
+    matchesDownloadedImage: false,
   } : null,
   preflight: {
     cutoutReady: false,
@@ -63,6 +68,13 @@ const evidence = {
   },
 };
 
+if (reviewSummary) {
+  const reviewResult = await reviewExistingSummary(reviewSummary, outDir);
+  console.log(JSON.stringify(reviewResult.console, null, 2));
+  if (!reviewResult.ok) process.exit(1);
+  process.exit(0);
+}
+
 if (!fsSync.existsSync(authState)) fail(`auth_state_missing:${authState}`);
 if (!fsSync.existsSync(imagePath)) fail(`image_missing:${imagePath}`);
 if (acceptVisualQuality && (!visualReviewer || !visualReviewArtifact)) {
@@ -71,6 +83,7 @@ if (acceptVisualQuality && (!visualReviewer || !visualReviewArtifact)) {
 
 const browser = await chromium.launch({ headless: !headed });
 let context;
+let pendingReadbackJobId = null;
 
 try {
   context = await browser.newContext({
@@ -145,14 +158,16 @@ try {
   evidence.preflight.generateButtonEnabled = await generateButton.isEnabled().catch(() => false);
   await screenshot(page, '04-before-generate.png');
 
+  let submittedModelMatrixResponse = null;
   if (submit) {
+    const responseCountBeforeGenerate = evidence.responses.length;
     await generateButton.click({ timeout: 30000 });
-    await Promise.race([
-      page.getByText(/生成に失敗しました/).waitFor({ state: 'visible', timeout: timeoutMs }).catch(() => null),
-      page.getByText(/生成結果|生成履歴|Galleryで確認|AI生成が完了/).waitFor({ state: 'visible', timeout: timeoutMs }).catch(() => null),
-      waitForModelMatrixResponse(evidence, timeoutMs),
-    ]);
-    const modelMatrixResponse = evidence.responses.at(-1);
+    const modelMatrixResponse = await waitForModelMatrixResponse(evidence, timeoutMs, responseCountBeforeGenerate);
+    submittedModelMatrixResponse = modelMatrixResponse;
+    evidence.submittedResponseIndex = modelMatrixResponse ? evidence.responses.length - 1 : null;
+    if (!modelMatrixResponse) {
+      evidence.errors.push('model_matrix_response_timeout_after_submit');
+    }
     if (modelMatrixResponse && modelMatrixResponse.status !== 200) {
       await waitForFailureUi(page, 45000);
     }
@@ -165,12 +180,10 @@ try {
     }
   }
 
-  const latestResponse = evidence.responses.at(-1);
+  const latestResponse = submit ? submittedModelMatrixResponse : evidence.responses.at(-1);
   const jobId = latestResponse?.body?.jobId || null;
   if (jobId) {
-    evidence.readback = await readbackJob(jobId, outDir);
-    evidence.downloadedImage = evidence.readback?.downloadedImage ?? null;
-    evidence.downloadedImages = evidence.readback?.downloadedImages ?? [];
+    pendingReadbackJobId = jobId;
   }
 
   const bodyText = await page.locator('body').innerText().catch(() => '');
@@ -199,7 +212,21 @@ try {
   });
 }
 
-const lastResponse = evidence.responses.at(-1);
+if (pendingReadbackJobId) {
+  try {
+    evidence.readback = await readbackJob(pendingReadbackJobId, outDir);
+    evidence.downloadedImage = evidence.readback?.downloadedImage ?? null;
+    evidence.downloadedImages = evidence.readback?.downloadedImages ?? [];
+  } catch (error) {
+    evidence.errors.push(`readback_after_browser_close_failed:${String(error?.message || error).slice(0, 240)}`);
+  }
+}
+
+const lastResponse = submit && Number.isInteger(evidence.submittedResponseIndex)
+  ? evidence.responses[evidence.submittedResponseIndex]
+  : submit
+  ? null
+  : evidence.responses.at(-1);
 const firstRequest = evidence.requests[0];
 evidence.preflightOk = Boolean(
   evidence.errors.length === 0
@@ -234,7 +261,20 @@ evidence.technicalOk = Boolean(
     && image.png?.height >= 512
   ))
 );
-evidence.visualQualityAccepted = Boolean(acceptVisualQuality && evidence.technicalOk);
+const visualReviewMatchesDownloadedImage = Boolean(
+  acceptVisualQuality
+  && evidence.downloadedImage
+  && (
+    normalizeArtifactPath(visualReviewArtifact) === normalizeArtifactPath(evidence.downloadedImage.filePath)
+    || visualReviewArtifact === evidence.downloadedImage.sha256
+  )
+);
+if (evidence.visualQualityReviewEvidence) {
+  evidence.visualQualityReviewEvidence.downloadedArtifact = evidence.downloadedImage?.filePath || null;
+  evidence.visualQualityReviewEvidence.downloadedSha256 = evidence.downloadedImage?.sha256 || null;
+  evidence.visualQualityReviewEvidence.matchesDownloadedImage = visualReviewMatchesDownloadedImage;
+}
+evidence.visualQualityAccepted = Boolean(acceptVisualQuality && evidence.technicalOk && visualReviewMatchesDownloadedImage);
 if (evidence.technicalOk && !evidence.visualQualityAccepted) {
   evidence.visualQualityReview = 'technical_output_downloaded_but_human_visual_quality_review_required';
 }
@@ -272,10 +312,10 @@ async function screenshot(page, fileName) {
   evidence.screenshots.push(screenshotPath);
 }
 
-async function waitForModelMatrixResponse(targetEvidence, timeout) {
+async function waitForModelMatrixResponse(targetEvidence, timeout, previousResponseCount = 0) {
   const started = Date.now();
   while (Date.now() - started < timeout) {
-    if (targetEvidence.responses.length > 0) return targetEvidence.responses.at(-1);
+    if (targetEvidence.responses.length > previousResponseCount) return targetEvidence.responses.at(-1);
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   return null;
@@ -291,24 +331,21 @@ async function waitForFailureUi(page, timeout) {
 }
 
 async function readbackJob(jobId, out) {
-  const supabase = getServiceClient();
-  const { data: job, error: jobError } = await supabase
-    .from('generation_jobs')
-    .select('id,status,feature_type,error_message,created_at,completed_at')
-    .eq('id', jobId)
-    .maybeSingle();
-  const { data: images, error: imagesError } = await supabase
-    .from('generated_images')
-    .select('id,job_id,storage_path,feature_type,model_used,created_at')
-    .eq('job_id', jobId)
-    .order('created_at', { ascending: false });
+  const jobResult = await supabaseRestJson(
+    `/rest/v1/generation_jobs?id=eq.${encodeURIComponent(jobId)}&select=id,status,feature_type,error_message,created_at,completed_at`,
+  );
+  const imagesResult = await supabaseRestJson(
+    `/rest/v1/generated_images?job_id=eq.${encodeURIComponent(jobId)}&select=id,job_id,storage_path,feature_type,model_used,created_at&order=created_at.desc`,
+  );
+  const job = Array.isArray(jobResult.data) ? jobResult.data[0] || null : null;
+  const images = Array.isArray(imagesResult.data) ? imagesResult.data : [];
 
   const downloadedImages = [];
   for (const image of images || []) {
     if (!image?.storage_path) continue;
-    const { data, error } = await supabase.storage.from('generated-images').download(image.storage_path);
-    if (!error && data) {
-      const bytes = Buffer.from(await data.arrayBuffer());
+    const download = await supabaseStorageDownload('generated-images', image.storage_path);
+    if (download.ok && download.bytes) {
+      const bytes = download.bytes;
       const filePath = path.join(out, `downloaded-${image.id}.png`);
       await fs.writeFile(filePath, bytes);
       downloadedImages.push({
@@ -323,7 +360,7 @@ async function readbackJob(jobId, out) {
     } else {
       downloadedImages.push({
         id: image.id,
-        error: String(error?.message || error || 'download_failed').slice(0, 240),
+        error: String(download.error || 'download_failed').slice(0, 240),
         storagePathTail: tailPath(image.storage_path),
       });
     }
@@ -339,7 +376,7 @@ async function readbackJob(jobId, out) {
       createdAt: job.created_at,
       completedAt: job.completed_at,
     } : null,
-    jobError: jobError?.message || null,
+    jobError: jobResult.error || null,
     images: (images || []).map((image) => ({
       id: image.id,
       jobId: image.job_id,
@@ -348,7 +385,7 @@ async function readbackJob(jobId, out) {
       storagePathTail: tailPath(image.storage_path),
       createdAt: image.created_at,
     })),
-    imagesError: imagesError?.message || null,
+    imagesError: imagesResult.error || null,
     downloadedImage,
     downloadedImages,
   };
@@ -359,6 +396,64 @@ function latestSuccessfulJobId(targetEvidence) {
     if (response.status === 200 && response.body?.jobId) return response.body.jobId;
   }
   return null;
+}
+
+function normalizeArtifactPath(value) {
+  if (!value || typeof value !== 'string') return '';
+  return path.resolve(value);
+}
+
+async function reviewExistingSummary(summaryFile, out) {
+  const text = await fs.readFile(summaryFile, 'utf8');
+  const target = JSON.parse(text);
+  const downloaded = target.downloadedImage || null;
+  const artifactMatches = Boolean(
+    acceptVisualQuality
+    && downloaded
+    && (
+      normalizeArtifactPath(visualReviewArtifact) === normalizeArtifactPath(downloaded.filePath)
+      || visualReviewArtifact === downloaded.sha256
+    )
+  );
+  const review = {
+    schema: 'heavy-chain.g701.visible-fitting-prod-visual-review.v1',
+    reviewedAt: new Date().toISOString(),
+    sourceSummary: summaryFile,
+    sourceMode: target.mode || null,
+    reviewer: visualReviewer || null,
+    reviewedArtifact: visualReviewArtifact || null,
+    downloadedArtifact: downloaded?.filePath || null,
+    downloadedSha256: downloaded?.sha256 || null,
+    technicalOk: target.technicalOk === true,
+    sourceOk: target.ok === true,
+    visualQualityAccepted: Boolean(target.technicalOk === true && artifactMatches),
+    artifactMatchesDownloadedImage: artifactMatches,
+    exactBlocker: null,
+  };
+  review.ok = Boolean(review.visualQualityAccepted);
+  if (!acceptVisualQuality) {
+    review.exactBlocker = 'visual_quality_acceptance_flag_missing';
+  } else if (!visualReviewer || !visualReviewArtifact) {
+    review.exactBlocker = 'visual_quality_acceptance_requires_visualReviewer_and_visualReviewArtifact';
+  } else if (target.technicalOk !== true) {
+    review.exactBlocker = 'source_summary_not_technically_ok';
+  } else if (!artifactMatches) {
+    review.exactBlocker = 'visual_review_artifact_does_not_match_downloaded_image';
+  }
+
+  const reviewPath = path.join(out, 'visual-review.json');
+  await fs.writeFile(reviewPath, `${JSON.stringify(review, null, 2)}\n`);
+  return {
+    ok: review.ok,
+    console: {
+      ok: review.ok,
+      visualQualityAccepted: review.visualQualityAccepted,
+      reviewPath,
+      exactBlocker: review.exactBlocker,
+      downloadedArtifact: review.downloadedArtifact,
+      downloadedSha256: review.downloadedSha256,
+    },
+  };
 }
 
 function summarizeModelMatrixResponse(body) {
@@ -386,12 +481,81 @@ function summarizeModelMatrixResponse(body) {
   };
 }
 
-function getServiceClient() {
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+function getServiceConfig() {
+  const supabaseUrl = pickUsableSupabaseUrl();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceRoleKey) throw new Error('supabase_service_role_env_missing');
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
+  return {
+    supabaseUrl: trimTrailingSlash(supabaseUrl),
+    serviceRoleKey,
+  };
+}
+
+function pickUsableSupabaseUrl() {
+  return [process.env.SUPABASE_URL, process.env.VITE_SUPABASE_URL]
+    .map((value) => String(value || '').trim())
+    .find((value) => (
+      /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(value)
+      && !/project_ref|your-|xxxxx/i.test(value)
+    )) || '';
+}
+
+async function supabaseRestJson(pathname) {
+  try {
+    const { supabaseUrl, serviceRoleKey } = getServiceConfig();
+    const response = await httpsRequest(`${supabaseUrl}${pathname}`, {
+      apikey: serviceRoleKey,
+      authorization: `Bearer ${serviceRoleKey}`,
+    });
+    const text = response.body.toString('utf8');
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return { data: null, error: `HTTP ${response.statusCode}: ${text.slice(0, 240)}` };
+    }
+    return { data: text ? JSON.parse(text) : null, error: null };
+  } catch (error) {
+    return { data: null, error: String(error?.message || error).slice(0, 240) };
+  }
+}
+
+async function supabaseStorageDownload(bucket, objectPath) {
+  try {
+    const { supabaseUrl, serviceRoleKey } = getServiceConfig();
+    const encodedPath = objectPath.split('/').map(encodeURIComponent).join('/');
+    const response = await httpsRequest(`${supabaseUrl}/storage/v1/object/${encodeURIComponent(bucket)}/${encodedPath}`, {
+      apikey: serviceRoleKey,
+      authorization: `Bearer ${serviceRoleKey}`,
+    });
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      const text = response.body.toString('utf8');
+      return { ok: false, bytes: null, error: `HTTP ${response.statusCode}: ${text.slice(0, 240)}` };
+    }
+    return { ok: true, bytes: response.body, error: null };
+  } catch (error) {
+    return { ok: false, bytes: null, error: String(error?.message || error).slice(0, 240) };
+  }
+}
+
+function httpsRequest(url, headers) {
+  return new Promise((resolve, reject) => {
+    const request = https.request(url, {
+      method: 'GET',
+      headers,
+      timeout: 30000,
+    }, (response) => {
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => {
+        resolve({
+          statusCode: response.statusCode || 0,
+          body: Buffer.concat(chunks),
+        });
+      });
+    });
+    request.on('timeout', () => {
+      request.destroy(new Error('https_request_timeout'));
+    });
+    request.on('error', reject);
+    request.end();
   });
 }
 
@@ -402,9 +566,12 @@ async function loadEnvFile(filePath) {
       const match = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
       if (!match) continue;
       const [, key, rawValue] = match;
-      if (process.env[key]) continue;
       const value = rawValue.replace(/^['"]|['"]$/g, '').trim();
       if (!value || /REPLACE_ME|YOUR_|example\.com/i.test(value)) continue;
+      if (
+        Object.prototype.hasOwnProperty.call(process.env, key)
+        && !isPlaceholderEnvValue(process.env[key])
+      ) continue;
       process.env[key] = value;
     }
   } catch {
@@ -412,8 +579,16 @@ async function loadEnvFile(filePath) {
   }
 }
 
+function isPlaceholderEnvValue(value) {
+  return /project_ref|your-|xxxxx|REPLACE_ME|replace-with|replace-in|example\.com/i.test(String(value || ''));
+}
+
 function classifyBlocker(targetEvidence) {
-  const last = targetEvidence.responses.at(-1);
+  const last = targetEvidence.submit && Number.isInteger(targetEvidence.submittedResponseIndex)
+    ? targetEvidence.responses[targetEvidence.submittedResponseIndex]
+    : targetEvidence.submit
+    ? null
+    : targetEvidence.responses.at(-1);
   const errorText = JSON.stringify(last?.body || targetEvidence.errors || '');
   if (!targetEvidence.preflight.cutoutReady) {
     return 'fitting_cutout_not_ready';
