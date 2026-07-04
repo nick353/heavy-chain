@@ -3,7 +3,7 @@
 Status: public/10M readiness is still not accepted.
 
 Latest pushed commit:
-- `af00a39` records G752 G619 verifier readback after G751/G750.
+- `3bd1945` adds this G752 current blockers handoff.
 
 Current G619 proof:
 - `output/playwright/g752-g619-beta-evidence-post-g750-current-r1/current-summary.json`
