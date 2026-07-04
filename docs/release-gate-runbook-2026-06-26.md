@@ -56,6 +56,7 @@ Use the first failing item in `failed[]`.
 
 - `readback:*`: refresh or repair the named proof artifact before release.
 - `readback:production H602 billing completion readback`: attach real transaction/receipt-hash/entitlement proof, keep raw receipt/payload data out of storage, update production readback, and rerun the gate.
+- To refresh the current fail-closed H602 completion proof, run `npm run verify:h602-production-completion-readback`; exit 1 is expected until H602 is complete, and the refreshed artifact is `output/playwright/g745-h602-production-completion-template-current-r1/summary.json`.
 - stale readback freshness: rerun the named proof or deliberately rerun with a larger `--max-artifact-age-hours` for historical audit only.
 - `command:security audit`: remove leaked secret-like values or unsafe persisted image URLs.
 - `command:generation scorecard`: repair missing image/readback pairing or visual quality evidence.
