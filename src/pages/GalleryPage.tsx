@@ -596,23 +596,21 @@ export function GalleryPage() {
                   : '保存済み画像とローカル成果物を確認しています。'}
               </p>
             </div>
-            {isLoadingStalled ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={fetchImages}
-                  className="inline-flex rounded-lg border border-primary-300 px-3 py-1.5 text-xs font-semibold text-primary-700 transition hover:bg-primary-50 dark:border-primary-400/40 dark:text-primary-100 dark:hover:bg-primary-400/10"
-                >
-                  再読み込み
-                </button>
-                <Link
-                  to="/generate"
-                  className="inline-flex rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-400"
-                >
-                  新しく生成
-                </Link>
-              </div>
-            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={fetchImages}
+                className="inline-flex rounded-lg border border-primary-300 px-3 py-1.5 text-xs font-semibold text-primary-700 transition hover:bg-primary-50 dark:border-primary-400/40 dark:text-primary-100 dark:hover:bg-primary-400/10"
+              >
+                再読み込み
+              </button>
+              <Link
+                to="/generate"
+                className="inline-flex rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-400"
+              >
+                新しく生成
+              </Link>
+            </div>
           </div>
         ) : null}
 

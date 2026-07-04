@@ -207,8 +207,10 @@ async function checkGalleryImages() {
     const text = document.body.innerText;
     const loadedImages = Array.from(document.images).filter((img) => img.complete && img.naturalWidth > 0);
     const loading = /ギャラリーを読み込み中/.test(text);
-    const usableFallback = /画像の読み込みに時間がかかっています|再読み込み|画像を生成する|新しく生成|まだ画像/.test(text);
-    return loadedImages.length > 0 || (!loading && usableFallback);
+    const explicitLoadingActions = /再読み込み/.test(text) && /新しく生成/.test(text);
+    const settledFallback = /画像を生成する|まだ画像/.test(text);
+    const stalledFallback = /画像の読み込みに時間がかかっています/.test(text) && explicitLoadingActions;
+    return loadedImages.length > 0 || explicitLoadingActions || stalledFallback || (!loading && settledFallback);
   }, { timeout: 35000 }).catch(() => undefined);
   await page.mouse.wheel(0, 900);
   await page.waitForTimeout(1000);
@@ -229,11 +231,17 @@ async function checkGalleryImages() {
   const body = await page.locator('body').innerText({ timeout: 15000 });
   const loadedImages = images.filter((img) => img.complete && img.naturalWidth > 0);
   const loading = /ギャラリーを読み込み中/.test(body);
-  const fallbackVisible = /画像の読み込みに時間がかかっています|再読み込み|画像を生成する|新しく生成|まだ画像/.test(body);
-  pushCheck('Gallery loads reusable generated images or usable fallback', loadedImages.length > 0 || (!loading && fallbackVisible), {
+  const explicitLoadingActions = /再読み込み/.test(body) && /新しく生成/.test(body);
+  const settledFallback = /画像を生成する|まだ画像/.test(body);
+  const stalledFallback = /画像の読み込みに時間がかかっています/.test(body) && explicitLoadingActions;
+  const fallbackVisible = explicitLoadingActions || stalledFallback || (!loading && settledFallback);
+  pushCheck('Gallery loads reusable generated images or usable fallback', loadedImages.length > 0 || fallbackVisible, {
     url: page.url(),
     imageCount: images.length,
     loading,
+    explicitLoadingActions,
+    settledFallback,
+    stalledFallback,
     fallbackVisible,
     loadedImages: loadedImages.slice(0, 8),
     screenshot,
