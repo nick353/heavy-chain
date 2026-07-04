@@ -29,6 +29,25 @@ const hardStopKeys = [
   'externalPublicPublish',
   'destructiveCleanup',
 ];
+const operatorOnlyHardStopKeys = [
+  'appleLogin',
+  'sandboxOrRealPurchase',
+  'checkoutConfirmation',
+  'legalPolicyFinalization',
+];
+const h601H602ChecklistPath = 'docs/h601-h602-operator-decision-checklist-2026-07-04.md';
+const h601H602DecisionStatus = 'open_not_closed_by_g619';
+const requiredChecklistPhrases = [
+  h601H602ChecklistPath,
+  'H601/H602 decisions remain separate and open',
+  'Apple login',
+  'OTP/CAPTCHA/security prompt',
+  'checkout confirmation',
+  'real or sandbox purchase',
+  'identity verification',
+  'external publishing',
+  'legal-policy finalization',
+];
 
 const allowedArtifactTypes = new Set(['notes', 'transcript', 'observation', 'observation_notes', 'recording', 'screenshots', 'screenshot', 'readback', 'consent', 'redaction_review']);
 const allowedArtifactExtensions = new Set(['.md', '.txt', '.json', '.webm', '.mp4', '.mov', '.png', '.jpg', '.jpeg']);
@@ -204,6 +223,7 @@ function validateSession(session, evidenceFiles, textBlobs) {
   const consentJson = consentArtifact ? readJson(resolveArtifactPath(consentArtifact.path)) : null;
   const redactionJson = redactionArtifact ? readJson(resolveArtifactPath(redactionArtifact.path)) : null;
   const readbackJson = readbackArtifact ? readJson(resolveArtifactPath(readbackArtifact.path)) : null;
+  const checklistText = checklistArtifact?.path ? readText(resolveArtifactPath(checklistArtifact.path)) : '';
   const nonRedactionArtifactPaths = artifacts
     .filter((artifact) => artifact?.type !== 'redaction_review')
     .map((artifact) => artifact.path)
@@ -234,7 +254,10 @@ function validateSession(session, evidenceFiles, textBlobs) {
     consentJson.scope?.productionNonBillingUse === true &&
     consentJson.scope?.anonymizedEvidenceOnly === true &&
     consentJson.scope?.noPublicSharing === true &&
-    hardStopKeys.every((key) => consentJson.hardStops?.[key] === 'not_touched')
+    consentJson.scope?.h601H602ChecklistPath === h601H602ChecklistPath &&
+    consentJson.scope?.h601H602DecisionStatus === h601H602DecisionStatus &&
+    hardStopKeys.every((key) => consentJson.hardStops?.[key] === 'not_touched') &&
+    operatorOnlyHardStopKeys.every((key) => consentJson.operatorOnlyHardStops?.[key] === 'not_touched')
   ), {
     consentArtifact: consentArtifact?.path ?? null,
   });
@@ -245,6 +268,15 @@ function validateSession(session, evidenceFiles, textBlobs) {
   addCheck(`${prefix} has operator checklist artifact`, Boolean(checklistArtifact?.sha256), {
     operatorChecklistArtifact: session?.operatorChecklistArtifact ?? null,
     registeredArtifact: checklistArtifact ?? null,
+  });
+  addCheck(`${prefix} has H601/H602 checklist linkage`, Boolean(
+    session?.h601H602ChecklistPath === h601H602ChecklistPath &&
+    session?.h601H602DecisionStatus === h601H602DecisionStatus &&
+    requiredChecklistPhrases.every((phrase) => checklistText.includes(phrase))
+  ), {
+    h601H602ChecklistPath: session?.h601H602ChecklistPath ?? null,
+    h601H602DecisionStatus: session?.h601H602DecisionStatus ?? null,
+    missingPhrases: requiredChecklistPhrases.filter((phrase) => !checklistText.includes(phrase)),
   });
   addCheck(`${prefix} uses production target`, /^https:\/\/heavy-chain\.zeabur\.app(?:\/|$)/.test(String(session?.baseUrl || '')), {
     baseUrl: session?.baseUrl ?? null,
@@ -257,6 +289,9 @@ function validateSession(session, evidenceFiles, textBlobs) {
   });
   addCheck(`${prefix} hard stops were respected`, hardStopKeys.every((key) => hardStops[key] === 'not_touched'), {
     hardStops,
+  });
+  addCheck(`${prefix} operator-only hard stops were respected`, operatorOnlyHardStopKeys.every((key) => session?.operatorOnlyHardStops?.[key] === 'not_touched'), {
+    operatorOnlyHardStops: session?.operatorOnlyHardStops ?? null,
   });
   addCheck(`${prefix} has readback artifact`, Boolean(readbackArtifact?.sha256 && readbackJson), {
     readbackArtifact: session?.readbackArtifact ?? null,
@@ -272,7 +307,10 @@ function validateSession(session, evidenceFiles, textBlobs) {
     readbackJson.persona === session?.persona &&
     Number(readbackJson.durationMinutes || 0) === Number(session?.durationMinutes || 0) &&
     arraysEqual(readbackJson.workflows, workflows) &&
+    readbackJson.h601H602ChecklistPath === h601H602ChecklistPath &&
+    readbackJson.h601H602DecisionStatus === h601H602DecisionStatus &&
     hardStopKeys.every((key) => readbackJson.hardStops?.[key] === 'not_touched') &&
+    operatorOnlyHardStopKeys.every((key) => readbackJson.operatorOnlyHardStops?.[key] === 'not_touched') &&
     hardStopKeys.every((key) => readbackJson.irreversibleActions?.[key] === 'not_touched')
   ), {
     readbackArtifact: readbackArtifact?.path ?? null,
@@ -448,6 +486,7 @@ function templateManifest() {
     mode: 'consent-safe-real-beta-no-payment-no-public-publish',
     capturedAt: new Date().toISOString(),
     irreversibleActions: Object.fromEntries(hardStopKeys.map((key) => [key, 'not_touched'])),
+    operatorOnlyHardStops: Object.fromEntries(operatorOnlyHardStopKeys.map((key) => [key, 'not_touched'])),
     sessions: [
       {
         sessionId: 'g619-beta-001',
@@ -462,7 +501,10 @@ function templateManifest() {
           publicSharing: false,
         },
         workflows: ['lightchain_entry', 'generate_readiness', 'upload_material'],
+        h601H602ChecklistPath,
+        h601H602DecisionStatus,
         hardStops: Object.fromEntries(hardStopKeys.map((key) => [key, 'not_touched'])),
+        operatorOnlyHardStops: Object.fromEntries(operatorOnlyHardStopKeys.map((key) => [key, 'not_touched'])),
         readbackArtifact: 'sessions/beta-001/readback.json',
         sessionInstructionsArtifact: 'sessions/beta-001/session-instructions.md',
         operatorChecklistArtifact: 'sessions/beta-001/operator-checklist.md',
@@ -484,6 +526,14 @@ function readJson(filePath) {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));
   } catch {
     return null;
+  }
+}
+
+function readText(filePath) {
+  try {
+    return fs.readFileSync(filePath, 'utf8');
+  } catch {
+    return '';
   }
 }
 

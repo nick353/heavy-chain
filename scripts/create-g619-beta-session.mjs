@@ -21,6 +21,7 @@ const friction = listArg(args.friction || '').map((note) => ({ note }));
 const noFrictionNote = args.noFrictionNote || args['no-friction-note'] || '';
 const exactBlocker = args.exactBlocker || args['exact-blocker'] || '';
 const observationNote = args.observationNote || args['observation-note'] || '';
+const h601H602ChecklistPath = 'docs/h601-h602-operator-decision-checklist-2026-07-04.md';
 
 const hardStopKeys = [
   'billingPurchasePaymentCheckout',
@@ -29,8 +30,15 @@ const hardStopKeys = [
   'externalPublicPublish',
   'destructiveCleanup',
 ];
+const operatorOnlyHardStopKeys = [
+  'appleLogin',
+  'sandboxOrRealPurchase',
+  'checkoutConfirmation',
+  'legalPolicyFinalization',
+];
 
 const hardStops = Object.fromEntries(hardStopKeys.map((key) => [key, 'not_touched']));
+const operatorOnlyHardStops = Object.fromEntries(operatorOnlyHardStopKeys.map((key) => [key, 'not_touched']));
 const consent = {
   confirmed: booleanArg('consent-confirmed', false),
   recordingAllowed: booleanArg('recording-allowed', false),
@@ -64,8 +72,11 @@ writeJson(path.join(outDir, consentRelative), {
     productionNonBillingUse: true,
     anonymizedEvidenceOnly: true,
     noPublicSharing: true,
+    h601H602ChecklistPath,
+    h601H602DecisionStatus: 'open_not_closed_by_g619',
   },
   hardStops,
+  operatorOnlyHardStops,
 });
 writeJson(path.join(outDir, readbackRelative), {
   schema: 'heavy-chain.g619.beta-session-readback.v1',
@@ -78,7 +89,10 @@ writeJson(path.join(outDir, readbackRelative), {
   workflows,
   durationMinutes,
   exactBlocker: exactBlocker || null,
+  h601H602ChecklistPath,
+  h601H602DecisionStatus: 'open_not_closed_by_g619',
   hardStops,
+  operatorOnlyHardStops,
   irreversibleActions: hardStops,
 });
 if (observationNote) {
@@ -123,7 +137,10 @@ const session = {
   sessionInstructionsArtifact: instructionsRelative,
   operatorChecklistArtifact: checklistRelative,
   workflows,
+  h601H602ChecklistPath,
+  h601H602DecisionStatus: 'open_not_closed_by_g619',
   hardStops,
+  operatorOnlyHardStops,
   artifacts: [
     artifact('notes', notesRelative),
     artifact('notes', instructionsRelative),
@@ -165,6 +182,7 @@ function readManifest() {
     mode: 'consent-safe-real-beta-no-payment-no-public-publish',
     capturedAt: new Date().toISOString(),
     irreversibleActions: hardStops,
+    operatorOnlyHardStops,
     sessions: [],
   };
 }
@@ -220,6 +238,7 @@ This session is for consent-safe Heavy Chain beta evidence. Use only anonymized 
 - Upload only materials the participant confirms they may use for testing.
 - Think aloud about confusion, friction, missing labels, and whether the flow feels usable without help.
 - Stop before any billing, checkout, payment, public publishing, OTP, CAPTCHA, identity verification, secret entry, or destructive cleanup screen.
+- Treat H601 legal decisions and H602 billing/public-release decisions as out of scope. Use \`${h601H602ChecklistPath}\` only as the separate human/operator decision checklist.
 
 ## Workflows To Try
 
@@ -244,12 +263,15 @@ function operatorChecklist() {
 - [ ] Public sharing is disabled.
 - [ ] Participant alias is anonymized: ${participantAlias}
 - [ ] No personal email, phone number, payment card, OTP, API key, token, or secret will be written into notes.
+- [ ] H601/H602 decisions remain separate and open; this G619 session will not finalize legal, billing, checkout, or public-release readiness.
+- [ ] The separate H601/H602 checklist has been read if the session could touch policy, billing, checkout, or public-release scope: ${h601H602ChecklistPath}
 
 ## During Session
 
 - [ ] Do not coach the participant through the UI unless safety requires stopping.
 - [ ] Record friction in participant behavior terms, not personal identity terms.
 - [ ] Stop at billing, payment, checkout, OTP/CAPTCHA/security prompt, identity verification, secret entry, external public publish, or destructive cleanup.
+- [ ] Do not perform Apple login, real or sandbox purchase, checkout confirmation, external publishing, or legal-policy finalization during this session.
 - [ ] Record exact blocker if a hard stop is reached.
 
 ## After Session
