@@ -255,7 +255,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production H602 billing completion readback',
-    path: 'output/playwright/g745-h602-production-completion-template-current-r1/summary.json',
+    path: 'output/playwright/g759-h602-production-completion-current-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       json.migration?.applied === true &&

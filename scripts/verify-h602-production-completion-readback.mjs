@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 const root = process.cwd();
 const args = parseArgs(process.argv.slice(2));
 const sourcePath = args.source || 'output/playwright/h602-production-billing-readback-20260630/summary.json';
-const outPath = args.out || 'output/playwright/g745-h602-production-completion-template-current-r1/summary.json';
+const outPath = args.out || 'output/playwright/g759-h602-production-completion-current-r1/summary.json';
 const capturedAt = new Date().toISOString();
 const source = readJson(sourcePath);
 
