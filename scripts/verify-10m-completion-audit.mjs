@@ -35,7 +35,7 @@ const requiredProofs = [
   {
     id: 'g619_real_beta_evidence',
     goal: 'G619',
-    path: 'output/playwright/g742-g619-beta-evidence-current-hard-stop-linkage-r1/summary.json',
+    path: 'output/playwright/g752-g619-beta-evidence-post-g750-current-r1/current-summary.json',
     validate: (json) => json.ok === true && Number(json.summary?.sessions || 0) >= 3,
     expect: 'real consented beta evidence verifier ok=true with at least 3 sessions',
   },
