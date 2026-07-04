@@ -238,6 +238,6 @@ Gap review / refreshed Gap-Closing Goal Map needed: G617 still has Gemini blocke
 
 ## Latest Current Readback
 
-- G721 refreshed the production monitor proof to `output/playwright/g721-production-monitor-refresh-r1/summary.json`; it remains red with `generation_failure_rate_high` and `recent_generation_jobs_failed`, while `uiOk=true`, `staleActiveJobs=0`, and `storageErrors=0`.
-- Clean release gate `output/playwright/g721-release-gate-current-clean-r1` now fails only on production monitor, G618, G620, and production H602 billing completion. Clean 10M audit `output/playwright/g721-10m-completion-incomplete-clean-r1/summary.json` remains red with the same 13 blockers.
+- G722 refreshed the G620 security-ops proof to `output/playwright/g722-g620-security-ops-current-r1/summary.json`; it remains red because the 96h production monitor readback command failed, with nested monitor blockers `generation_failure_rate_high` and `recent_generation_jobs_failed`.
+- Clean release gate `output/playwright/g722-release-gate-current-clean-r1` now fails only on production monitor, G618, G620, and production H602 billing completion. Clean 10M audit `output/playwright/g722-10m-completion-incomplete-clean-r1/summary.json` remains red with the same 13 blockers.
 - This does not accept public readiness, G617 strict same-run proof, G619 real beta evidence, H601 final legal decision, or H602 production billing completion. No billing, checkout, payment, purchase, identity verification, CAPTCHA/OTP, external publishing, destructive cleanup, quota bypass, or generation submit was performed.
