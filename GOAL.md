@@ -235,3 +235,9 @@ Goal map status: G401-G501 accepted, G601/G602/G603/G604/G605/G606/G607/G608/G60
 Parent goal status: active; non-billing/non-public readiness gate passes, but full 10M public-launch completeness is not yet proven
 Human-needed checkpoint status: H601/H602 open but not blocking non-dependent goals; H601 product-side and server-side generation guard is implemented, but final operator/legal decisions remain open
 Gap review / refreshed Gap-Closing Goal Map needed: G617 still has Gemini blocked by image free-tier quota `limit: 0` and Runway blocked by connected workspace `workspace_limit`. OpenAI is now the working low-cost generation path through G677, with 10/10 visual pass across split-run plus one-feature polish, but strict same-run all-10 G617 is not closed because the accepted proof was intentionally split to reduce paid usage. G619 has a consent-safe acceptance gate plus session instructions/checklist scaffolding, but remains queued until real beta sessions are collected and `npm run verify:g619-beta-evidence` passes.
+
+## Latest Current Readback
+
+- G720 refreshed the production monitor proof to `output/playwright/g720-production-monitor-refresh-r1/summary.json`; it remains red with `generation_failure_rate_high` and `recent_generation_jobs_failed`, while `uiOk=true`, `staleActiveJobs=0`, and `storageErrors=0`.
+- Clean release gate `output/playwright/g720-release-gate-current-clean-r1` now fails only on production monitor, G618, G620, and production H602 billing completion. Clean 10M audit `output/playwright/g720-10m-completion-incomplete-clean-r1/summary.json` remains red with the same 13 blockers.
+- This does not accept public readiness, G617 strict same-run proof, G619 real beta evidence, H601 final legal decision, or H602 production billing completion. No billing, checkout, payment, purchase, identity verification, CAPTCHA/OTP, external publishing, destructive cleanup, quota bypass, or generation submit was performed.
