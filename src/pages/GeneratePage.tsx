@@ -1568,6 +1568,8 @@ export function GeneratePage() {
         brandId: currentBrand.id,
         referenceImage: processedImageUrl,
         referenceType: effectiveReferenceType,
+        generationProvider: selectedGenerationModelOption.provider,
+        generationModel: selectedGenerationModel,
         textOverlay,
         lightchainCompat: lightchainCompat ?? undefined,
         legalSafety: {
