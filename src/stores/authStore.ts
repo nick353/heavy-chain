@@ -19,6 +19,7 @@ interface AuthState {
   signInWithApple: () => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<DbUser>) => Promise<void>;
+  refreshCurrentBrand: () => Promise<Brand | null>;
   setCurrentBrand: (brand: Brand | null) => void;
 }
 
@@ -67,6 +68,8 @@ const isRecoverableNetworkError = (error: unknown) => {
 const AUTH_SESSION_TIMEOUT_MS = 8_000;
 const AUTH_PROFILE_TIMEOUT_MS = 10_000;
 let authStateListenerRegistered = false;
+let authBrandRefreshSeq = 0;
+let currentBrandRefreshSeq = 0;
 const SUPABASE_PROJECT_REF = (() => {
   try {
     return new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split('.')[0] || null;
@@ -195,12 +198,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({ user: session.user, authRecoveryRequired: false });
           } else if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
             const { user } = session;
-            set((state) => ({
+            set({
               user,
-              profile: state.user?.id === user.id ? state.profile : null,
-              currentBrand: state.user?.id === user.id ? state.currentBrand : null,
+              profile: null,
+              currentBrand: null,
               authRecoveryRequired: false,
-            }));
+            });
 
             setTimeout(async () => {
               try {
@@ -210,6 +213,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                   'auth_profile_timeout',
                 );
 
+                if (get().user?.id !== user.id) return;
+                set({ user, profile: profile || null, authRecoveryRequired: false });
+
+                const brandRefreshSeq = ++authBrandRefreshSeq;
                 const brands = await withAuthTimeout(
                   fetchAccessibleBrandsForCurrentUser(user.id),
                   AUTH_PROFILE_TIMEOUT_MS,
@@ -217,6 +224,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 );
 
                 const state = get();
+                if (brandRefreshSeq !== authBrandRefreshSeq) return;
                 if (state.user?.id !== user.id) return;
                 const currentBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
                   ? state.currentBrand
@@ -233,7 +241,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 if (get().user?.id !== user.id) return;
                 set({
                   user,
-                  profile: null,
+                  profile: get().profile,
                   currentBrand: get().currentBrand,
                   authRecoveryRequired: false,
                 });
@@ -247,12 +255,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const storedUser = getStoredSessionUser();
       if (storedUser) {
-        set((state) => ({
+        set({
           user: storedUser,
-          profile: state.user?.id === storedUser.id ? state.profile : null,
-          currentBrand: state.user?.id === storedUser.id ? state.currentBrand : null,
+          profile: null,
+          currentBrand: null,
           authRecoveryRequired: false,
-        }));
+        });
 
         setTimeout(async () => {
           try {
@@ -262,6 +270,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               'auth_profile_timeout',
             );
 
+            if (get().user?.id !== storedUser.id) return;
+            set({ user: storedUser, profile: profile || null, authRecoveryRequired: false });
+
+            const brandRefreshSeq = ++authBrandRefreshSeq;
             const brands = await withAuthTimeout(
               fetchAccessibleBrandsForCurrentUser(storedUser.id),
               AUTH_PROFILE_TIMEOUT_MS,
@@ -269,6 +281,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             );
 
             const state = get();
+            if (brandRefreshSeq !== authBrandRefreshSeq) return;
             if (state.user?.id !== storedUser.id) return;
             const currentBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
               ? state.currentBrand
@@ -285,7 +298,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (get().user?.id !== storedUser.id) return;
             set({
               user: storedUser,
-              profile: null,
+              profile: get().profile,
               currentBrand: get().currentBrand,
               authRecoveryRequired: false,
             });
@@ -302,12 +315,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       if (session?.user) {
         const { user } = session;
-        set((state) => ({
+        set({
           user,
-          profile: state.user?.id === user.id ? state.profile : null,
-          currentBrand: state.user?.id === user.id ? state.currentBrand : null,
+          profile: null,
+          currentBrand: null,
           authRecoveryRequired: false,
-        }));
+        });
 
         setTimeout(async () => {
           try {
@@ -317,6 +330,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               'auth_profile_timeout',
             );
 
+            if (get().user?.id !== user.id) return;
+            set({ user, profile: profile || null, authRecoveryRequired: false });
+
+            const brandRefreshSeq = ++authBrandRefreshSeq;
             let brands: Brand[] = [];
             let retries = 3;
             while (retries > 0 && brands.length === 0) {
@@ -337,6 +354,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
 
             const state = get();
+            if (brandRefreshSeq !== authBrandRefreshSeq) return;
             if (state.user?.id !== user.id) return;
             const currentBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
               ? state.currentBrand
@@ -353,7 +371,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (get().user?.id !== user.id) return;
             set({
               user,
-              profile: null,
+              profile: get().profile,
               currentBrand: get().currentBrand,
               authRecoveryRequired: false,
             });
@@ -468,7 +486,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }));
   },
 
+  refreshCurrentBrand: async () => {
+    const { user } = get();
+    if (!user) {
+      set({ currentBrand: null });
+      return null;
+    }
+
+    const refreshSeq = ++currentBrandRefreshSeq;
+    try {
+      const brands = await withAuthTimeout(
+        fetchAccessibleBrandsForCurrentUser(user.id),
+        AUTH_PROFILE_TIMEOUT_MS,
+        'auth_brand_timeout',
+      );
+      const state = get();
+      if (refreshSeq !== currentBrandRefreshSeq) return null;
+      if (state.user?.id !== user.id) return null;
+
+      const nextBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
+        ? state.currentBrand
+        : brands[0] || null;
+
+      authBrandRefreshSeq++;
+      set({ currentBrand: nextBrand });
+      return nextBrand;
+    } catch (error) {
+      logAuthError('Failed to refresh current brand:', error);
+      return null;
+    }
+  },
+
   setCurrentBrand: (brand: Brand | null) => {
+    authBrandRefreshSeq++;
+    currentBrandRefreshSeq++;
     set({ currentBrand: brand });
   },
 }));

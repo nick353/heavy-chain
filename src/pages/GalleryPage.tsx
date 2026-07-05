@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
   Image,
@@ -63,7 +63,7 @@ const getMetadataString = (image: GeneratedImage | null, key: string) => {
 
 export function GalleryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { currentBrand } = useAuthStore();
+  const { user, currentBrand, refreshCurrentBrand } = useAuthStore();
 
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,6 +75,7 @@ export function GalleryPage() {
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [gridSize, setGridSize] = useState<'small' | 'large'>('large');
   const [visibleImageCount, setVisibleImageCount] = useState(INITIAL_VISIBLE_IMAGE_COUNT);
+  const fetchImagesSeqRef = useRef(0);
   const selectedGenerationIntent = getGenerationIntent(selectedImage);
   const selectedSourceLabel = getMetadataString(selectedImage, 'sourceLabel');
   const selectedSourceResumePath = getMetadataString(selectedImage, 'sourceResumePath');
@@ -138,15 +139,21 @@ export function GalleryPage() {
       return;
     }
 
+    const brandId = currentBrand.id;
+    const requestSeq = ++fetchImagesSeqRef.current;
+    const isCurrentRequest = () => (
+      fetchImagesSeqRef.current === requestSeq &&
+      useAuthStore.getState().currentBrand?.id === brandId
+    );
     setIsLoading(true);
     setIsLoadingStalled(false);
     setLoadWarning(null);
     try {
-      const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(currentBrand.id);
+      const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(brandId);
       let query = supabase
         .from('generated_images')
         .select('*')
-        .eq('brand_id', currentBrand.id);
+        .eq('brand_id', brandId);
 
       if (filter === 'favorites') {
         query = query.eq('is_favorite', true);
@@ -166,6 +173,7 @@ export function GalleryPage() {
 
       let remoteImages: GeneratedImage[] = [];
       if (error) {
+        if (!isCurrentRequest()) return;
         setLoadWarning('保存済み画像の取得に失敗しました。ローカル成果物だけを表示しています。');
       } else {
         const remoteRows = data || [];
@@ -176,6 +184,7 @@ export function GalleryPage() {
             'gallery_signed_urls_timeout',
           );
         } catch {
+          if (!isCurrentRequest()) return;
           remoteImages = remoteRows;
           setLoadWarning('画像プレビューURLの取得に時間がかかっています。成果物一覧は表示しています。');
         }
@@ -188,14 +197,18 @@ export function GalleryPage() {
           }
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         });
+      if (!isCurrentRequest()) return;
       setImages(mergedImages);
     } catch {
-      const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(currentBrand.id);
+      const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(brandId);
+      if (!isCurrentRequest()) return;
       setLoadWarning('保存済み画像の取得に時間がかかっています。ローカル成果物だけを表示しています。');
       setImages(localImages);
     } finally {
-      setIsLoading(false);
-      setIsLoadingStalled(false);
+      if (isCurrentRequest()) {
+        setIsLoading(false);
+        setIsLoadingStalled(false);
+      }
     }
   }, [currentBrand, filter, sortBy]);
 
@@ -203,6 +216,11 @@ export function GalleryPage() {
     let mounted = true;
 
     const loadData = async () => {
+      if (!currentBrand && user) {
+        const refreshedBrand = await refreshCurrentBrand();
+        if (refreshedBrand) return;
+      }
+
       if (!currentBrand) {
         // ブランドがない場合はローディングを解除
         if (mounted) setIsLoading(false);
@@ -217,7 +235,7 @@ export function GalleryPage() {
     return () => {
       mounted = false;
     };
-  }, [currentBrand, fetchImages]);
+  }, [currentBrand, fetchImages, refreshCurrentBrand, user]);
 
   useEffect(() => {
     if (!isLoading) {

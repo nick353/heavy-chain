@@ -11,28 +11,35 @@ export function BrandSwitcher() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchBrands = useCallback(async () => {
+    const userId = user?.id ?? null;
+    setIsLoading(true);
+
     try {
-      if (!user) {
+      if (!userId) {
         setBrands([]);
         return;
       }
 
-      const brandsData = await fetchAccessibleBrandsForCurrentUser(user.id);
+      const brandsData = await fetchAccessibleBrandsForCurrentUser(userId);
+      if (useAuthStore.getState().user?.id !== userId) return;
       setBrands(brandsData || []);
 
       // Set first brand as current if none selected
-      const currentBrandIsAccessible = currentBrand && brandsData.some((brand) => brand.id === currentBrand.id);
-      if (currentBrand && !currentBrandIsAccessible && brandsData.length === 0) {
+      const latestCurrentBrand = useAuthStore.getState().currentBrand;
+      const currentBrandIsAccessible = latestCurrentBrand && brandsData.some((brand) => brand.id === latestCurrentBrand.id);
+      if (latestCurrentBrand && !currentBrandIsAccessible && brandsData.length === 0) {
         setCurrentBrand(null);
-      } else if ((!currentBrand || !currentBrandIsAccessible) && brandsData && brandsData.length > 0) {
+      } else if ((!latestCurrentBrand || !currentBrandIsAccessible) && brandsData && brandsData.length > 0) {
         setCurrentBrand(brandsData[0]);
       }
     } catch (error) {
       console.error('Failed to fetch brands:', error);
     } finally {
-      setIsLoading(false);
+      if (!userId || useAuthStore.getState().user?.id === userId) {
+        setIsLoading(false);
+      }
     }
-  }, [currentBrand, setCurrentBrand, user]);
+  }, [setCurrentBrand, user]);
 
   useEffect(() => {
     if (user) {
@@ -154,4 +161,3 @@ export function BrandSwitcher() {
     </div>
   );
 }
-

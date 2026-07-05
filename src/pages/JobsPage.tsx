@@ -91,7 +91,7 @@ function JobRow({ job }: { job: WorkspaceJob }) {
 }
 
 export function JobsPage() {
-  const { currentBrand } = useAuthStore();
+  const { user, currentBrand, refreshCurrentBrand } = useAuthStore();
   const [activity, setActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
   const [isLoading, setIsLoading] = useState(false);
   const [activityError, setActivityError] = useState<string | null>(null);
@@ -99,23 +99,35 @@ export function JobsPage() {
   const [showAllMobileJobs, setShowAllMobileJobs] = useState(false);
 
   const loadActivity = useCallback(async () => {
+    if (!currentBrand && user) {
+      const refreshedBrand = await refreshCurrentBrand();
+      if (refreshedBrand) return;
+    }
+
     if (!currentBrand) {
       setActivity(emptyWorkspaceActivity);
       setActivityError(null);
+      setIsLoading(false);
       return;
     }
 
+    const brandId = currentBrand.id;
     setIsLoading(true);
     setActivityError(null);
     try {
-      setActivity(await fetchWorkspaceActivity(currentBrand.id));
+      const nextActivity = await fetchWorkspaceActivity(brandId);
+      if (useAuthStore.getState().currentBrand?.id !== brandId) return;
+      setActivity(nextActivity);
     } catch (error) {
+      if (useAuthStore.getState().currentBrand?.id !== brandId) return;
       console.warn('Failed to load jobs:', error);
       setActivityError('jobs');
     } finally {
-      setIsLoading(false);
+      if (useAuthStore.getState().currentBrand?.id === brandId) {
+        setIsLoading(false);
+      }
     }
-  }, [currentBrand]);
+  }, [currentBrand, refreshCurrentBrand, user]);
 
   useEffect(() => {
     void loadActivity();

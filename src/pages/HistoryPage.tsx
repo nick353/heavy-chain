@@ -6,29 +6,41 @@ import { ActivityTimeline } from '../components/workspace';
 import { emptyWorkspaceActivity, fetchWorkspaceActivity, type WorkspaceActivity } from '../lib/workspaceActivity';
 
 export function HistoryPage() {
-  const { currentBrand } = useAuthStore();
+  const { user, currentBrand, refreshCurrentBrand } = useAuthStore();
   const [activity, setActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
   const [isLoading, setIsLoading] = useState(false);
   const [activityError, setActivityError] = useState<string | null>(null);
 
   const loadActivity = useCallback(async () => {
+    if (!currentBrand && user) {
+      const refreshedBrand = await refreshCurrentBrand();
+      if (refreshedBrand) return;
+    }
+
     if (!currentBrand) {
       setActivity(emptyWorkspaceActivity);
       setActivityError(null);
+      setIsLoading(false);
       return;
     }
 
+    const brandId = currentBrand.id;
     setIsLoading(true);
     setActivityError(null);
     try {
-      setActivity(await fetchWorkspaceActivity(currentBrand.id));
+      const nextActivity = await fetchWorkspaceActivity(brandId);
+      if (useAuthStore.getState().currentBrand?.id !== brandId) return;
+      setActivity(nextActivity);
     } catch (error) {
+      if (useAuthStore.getState().currentBrand?.id !== brandId) return;
       console.warn('Failed to load history activity:', error);
       setActivityError('history');
     } finally {
-      setIsLoading(false);
+      if (useAuthStore.getState().currentBrand?.id === brandId) {
+        setIsLoading(false);
+      }
     }
-  }, [currentBrand]);
+  }, [currentBrand, refreshCurrentBrand, user]);
 
   useEffect(() => {
     void loadActivity();

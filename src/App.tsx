@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
@@ -241,8 +241,23 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, isLoading, isInitialized, authRecoveryRequired } = useAuthStore();
+  const [profileWaitExpired, setProfileWaitExpired] = useState(false);
 
-  if (!isInitialized || isLoading || authRecoveryRequired) {
+  useEffect(() => {
+    const shouldWaitForProfile = Boolean(user && profile === null && isInitialized && !isLoading && !authRecoveryRequired);
+    if (!shouldWaitForProfile) {
+      setProfileWaitExpired(false);
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setProfileWaitExpired(true);
+    }, 15_000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [authRecoveryRequired, isInitialized, isLoading, profile, user]);
+
+  if (!isInitialized || isLoading || authRecoveryRequired || (user && profile === null && !profileWaitExpired)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
         <div className="text-center">

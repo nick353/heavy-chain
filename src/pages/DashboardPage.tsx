@@ -92,7 +92,9 @@ export function DashboardPage() {
 
     try {
       setIsLoading(true);
-      const brands = await fetchAccessibleBrandsForCurrentUser(user.id);
+      const userId = user.id;
+      const brands = await fetchAccessibleBrandsForCurrentUser(userId);
+      if (useAuthStore.getState().user?.id !== userId) return null;
 
       if (!brands || brands.length === 0) {
         setCurrentBrand(null);
@@ -100,9 +102,10 @@ export function DashboardPage() {
         setIsLoading(false);
         return null;
       } else {
-        const currentBrandIsAccessible = currentBrand && brands.some((brand) => brand.id === currentBrand.id);
-        const nextBrand = currentBrandIsAccessible ? currentBrand : brands[0];
-        if (nextBrand.id !== currentBrand?.id) {
+        const latestCurrentBrand = useAuthStore.getState().currentBrand;
+        const currentBrandIsAccessible = latestCurrentBrand && brands.some((brand) => brand.id === latestCurrentBrand.id);
+        const nextBrand = currentBrandIsAccessible ? latestCurrentBrand : brands[0];
+        if (nextBrand.id !== latestCurrentBrand?.id) {
           setCurrentBrand(nextBrand);
         }
         setShowBrandModal(false);
@@ -116,7 +119,7 @@ export function DashboardPage() {
       setIsLoading(false);
       return null;
     }
-  }, [currentBrand, setCurrentBrand, user]);
+  }, [setCurrentBrand, user]);
 
   const fetchRecentImages = useCallback(async (brandOverride?: Brand | null) => {
     const targetBrand = brandOverride ?? currentBrand;
@@ -137,19 +140,25 @@ export function DashboardPage() {
       if (error) {
         logDashboardFetchError('Failed to fetch images:', error);
         toast.error('画像の取得に失敗しました');
+        if (useAuthStore.getState().currentBrand?.id !== targetBrand.id) return;
         setRecentImages([]);
         setFailedRecentImageIds(new Set());
       } else {
-        setRecentImages(await withSignedImageUrls(data || []));
+        const signedImages = await withSignedImageUrls(data || []);
+        if (useAuthStore.getState().currentBrand?.id !== targetBrand.id) return;
+        setRecentImages(signedImages);
         setFailedRecentImageIds(new Set());
       }
     } catch (error) {
       logDashboardFetchError('Failed to fetch images:', error);
       toast.error('画像の取得に失敗しました');
+      if (useAuthStore.getState().currentBrand?.id !== targetBrand.id) return;
       setRecentImages([]);
       setFailedRecentImageIds(new Set());
     } finally {
-      setIsLoading(false);
+      if (useAuthStore.getState().currentBrand?.id === targetBrand.id) {
+        setIsLoading(false);
+      }
     }
   }, [currentBrand]);
 
@@ -158,18 +167,24 @@ export function DashboardPage() {
     if (!targetBrand) {
       setWorkspaceActivity(emptyWorkspaceActivity);
       setActivityError(null);
+      setIsActivityLoading(false);
       return;
     }
 
     setIsActivityLoading(true);
     setActivityError(null);
     try {
-      setWorkspaceActivity(await fetchWorkspaceActivity(targetBrand.id));
+      const nextActivity = await fetchWorkspaceActivity(targetBrand.id);
+      if (useAuthStore.getState().currentBrand?.id !== targetBrand.id) return;
+      setWorkspaceActivity(nextActivity);
     } catch (error) {
+      if (useAuthStore.getState().currentBrand?.id !== targetBrand.id) return;
       logDashboardFetchError('Failed to load workspace activity:', error);
       setActivityError('workspace activity');
     } finally {
-      setIsActivityLoading(false);
+      if (useAuthStore.getState().currentBrand?.id === targetBrand.id) {
+        setIsActivityLoading(false);
+      }
     }
   }, [currentBrand]);
 
