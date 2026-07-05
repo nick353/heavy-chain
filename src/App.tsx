@@ -224,10 +224,10 @@ function lazyPage(page: React.ReactNode) {
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, isInitialized } = useAuthStore();
+  const { user, isLoading, isInitialized, authRecoveryRequired } = useAuthStore();
 
   // 初期化が完了していない、またはローディング中の場合
-  if (!isInitialized || isLoading) {
+  if (!isInitialized || isLoading || authRecoveryRequired) {
     return <WorkspaceLoadingFallback authRecovery />;
   }
 
@@ -240,14 +240,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, isLoading, isInitialized } = useAuthStore();
+  const { user, profile, isLoading, isInitialized, authRecoveryRequired } = useAuthStore();
 
-  if (!isInitialized || isLoading) {
+  if (!isInitialized || isLoading || authRecoveryRequired) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
         <div className="text-center">
           <div className="spinner mb-4" />
-          <p className="text-neutral-500 dark:text-neutral-400">読み込み中...</p>
+          <p className="text-neutral-500 dark:text-neutral-400">
+            {authRecoveryRequired ? 'ログイン状態を確認できませんでした。再読み込みしてください。' : '読み込み中...'}
+          </p>
         </div>
       </div>
     );
@@ -266,10 +268,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 // Public Route wrapper (redirects to dashboard if already logged in)
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, isInitialized } = useAuthStore();
+  const { user, isLoading, isInitialized, authRecoveryRequired } = useAuthStore();
 
   // 初期化が完了していない、またはローディング中の場合
-  if (!isInitialized || isLoading) {
+  if (!isInitialized || (isLoading && !authRecoveryRequired)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
         <div className="text-center">
@@ -281,7 +283,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
 
   // すでにログイン済みの場合
-  if (user) {
+  if (user && !authRecoveryRequired) {
     return <Navigate to="/dashboard" replace />;
   }
 

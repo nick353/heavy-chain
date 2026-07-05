@@ -9,6 +9,7 @@ interface AuthState {
   currentBrand: Brand | null;
   isLoading: boolean;
   isInitialized: boolean;
+  authRecoveryRequired: boolean;
   
   // Actions
   initialize: () => Promise<void>;
@@ -69,6 +70,24 @@ const isRecoverableNetworkError = (error: unknown) => {
   return /Failed to fetch|NetworkError|Load failed|ERR_ABORTED/i.test(message);
 };
 
+const AUTH_SESSION_TIMEOUT_MS = 8_000;
+const AUTH_PROFILE_TIMEOUT_MS = 10_000;
+let authStateListenerRegistered = false;
+
+async function withAuthTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 const logAuthError = (message: string, error: unknown) => {
   if (!import.meta.env.DEV) return;
 
@@ -110,23 +129,76 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   currentBrand: null,
   isLoading: true,
   isInitialized: false,
+  authRecoveryRequired: false,
 
   initialize: async () => {
     try {
-      set({ isLoading: true });
+      set({ isLoading: true, authRecoveryRequired: false });
+
+      // Set up auth state listener before reading the current session so the UI can recover
+      // even when the initial session read is slow or interrupted by browser storage state.
+      if (!authStateListenerRegistered) {
+        authStateListenerRegistered = true;
+        supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'SIGNED_IN' && session?.user) {
+            try {
+              const profile = await withAuthTimeout(
+                ensureUserProfile(session.user),
+                AUTH_PROFILE_TIMEOUT_MS,
+                'auth_profile_timeout',
+              );
+
+              const currentBrand = await withAuthTimeout(
+                fetchFirstAccessibleBrand(session.user.id),
+                AUTH_PROFILE_TIMEOUT_MS,
+                'auth_brand_timeout',
+              );
+
+              set({
+                user: session.user,
+                profile: profile || null,
+                currentBrand,
+                authRecoveryRequired: false,
+              });
+            } catch (error) {
+              logAuthError('Error in auth state change:', error);
+              set({
+                user: session.user,
+                profile: null,
+                currentBrand: null,
+                authRecoveryRequired: false,
+              });
+            }
+          } else if (event === 'SIGNED_OUT') {
+            set({ user: null, profile: null, currentBrand: null, authRecoveryRequired: false });
+          }
+        });
+      }
       
       // Get current session
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await withAuthTimeout(
+        supabase.auth.getSession(),
+        AUTH_SESSION_TIMEOUT_MS,
+        'auth_session_timeout',
+      );
       
       if (session?.user) {
         try {
-          const profile = await ensureUserProfile(session.user);
+          const profile = await withAuthTimeout(
+            ensureUserProfile(session.user),
+            AUTH_PROFILE_TIMEOUT_MS,
+            'auth_profile_timeout',
+          );
           
           let currentBrand: Brand | null = null;
           let retries = 3;
           while (retries > 0 && !currentBrand) {
             try {
-              currentBrand = await fetchFirstAccessibleBrand(session.user.id);
+              currentBrand = await withAuthTimeout(
+                fetchFirstAccessibleBrand(session.user.id),
+                AUTH_PROFILE_TIMEOUT_MS,
+                'auth_brand_timeout',
+              );
               break;
             } catch (brandsError) {
               logAuthError(`Failed to fetch brands (retry: ${4 - retries}):`, brandsError);
@@ -141,6 +213,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             user: session.user,
             profile: profile || null,
             currentBrand,
+            authRecoveryRequired: false,
           });
         } catch (error) {
           logAuthError('Error fetching user data:', error);
@@ -148,37 +221,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             user: session.user,
             profile: null,
             currentBrand: null,
+            authRecoveryRequired: false,
           });
         }
       }
-      
-      // Set up auth state listener
-      supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          try {
-            const profile = await ensureUserProfile(session.user);
-            
-            const currentBrand = await fetchFirstAccessibleBrand(session.user.id);
-            
-            set({
-              user: session.user,
-              profile: profile || null,
-              currentBrand,
-            });
-          } catch (error) {
-            logAuthError('Error in auth state change:', error);
-            set({
-              user: session.user,
-              profile: null,
-              currentBrand: null,
-            });
-          }
-        } else if (event === 'SIGNED_OUT') {
-          set({ user: null, profile: null, currentBrand: null });
-        }
-      });
     } catch (error) {
       logAuthError('Failed to initialize auth:', error);
+      const message = error instanceof Error ? error.message : String(error || '');
+      set({ authRecoveryRequired: message === 'auth_session_timeout' });
     } finally {
       set({ isLoading: false, isInitialized: true });
     }
