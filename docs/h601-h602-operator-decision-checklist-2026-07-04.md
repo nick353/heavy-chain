@@ -34,6 +34,7 @@ Use `docs/h601-h602-operator-readback-template-2026-07-04.md` to record the fina
 ## Current Implemented / Verified Baseline
 
 - H601 product-side guards are implemented and locally verified, but final legal/operator decisions remain open.
+- `npm run verify:h601-operator-readiness` is a non-acceptance checklist for the missing H601 operator decisions. It exits 0 by default for readable review and `-- --strict` exits 1 until safe final Terms/Privacy/retention/rights/brand/person/copyright/commercial-use/counsel decision JSON is attached.
 - H602 quota enforcement, checkout-disabled state, Apple sandbox tester table, purchase-proof tables, RLS, fail-closed hardening, SHA-256 hash constraints, metadata allowlist, and safe artifact URI constraints are implemented/read back.
 - Current H602 completion readback remains `ok=false`.
 - Verified no-real-charge proof count is `0`.

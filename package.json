@@ -35,6 +35,7 @@
     "verify:g619-beta-evidence": "node scripts/verify-g619-beta-evidence.mjs",
     "create:g619-beta-session": "node scripts/create-g619-beta-session.mjs",
     "verify:h601-legal-safety": "node scripts/verify-h601-legal-safety-guard.mjs",
+    "verify:h601-operator-readiness": "node scripts/verify-h601-operator-readiness.mjs",
     "verify:h602-billing": "node scripts/verify-h602-billing-readiness.mjs",
     "verify:h602-production-completion-readback": "node scripts/verify-h602-production-completion-readback.mjs",
     "verify:h602-operator-readiness": "node scripts/verify-h602-operator-readiness.mjs",
