@@ -21,16 +21,18 @@ const FEATURE_QUALITY_GUIDANCE: Record<string, string[]> = {
     'clean editorial lighting',
   ],
   'design-gacha': [
-    'apparel design concept board',
-    'production-ready garment idea',
-    'clear silhouette and material details',
-    'brandable streetwear direction',
+    'apparel design concept board or finished single concept',
+    'production-ready garment idea with clear silhouette and material details',
+    'use abstract chain or pattern graphics when the user asks for chain/pattern direction',
+    'no alphabet letters, monograms, logo-like emblems, or fake brand marks',
+    'brandable streetwear direction without readable marks',
   ],
   'multilingual-banner': [
-    'premium ecommerce banner composition',
-    'clean typography area',
-    'consistent brand hierarchy',
-    'international storefront ready',
+    'finished ecommerce banner composition, not a plain model portrait',
+    'large readable headline and supporting copy integrated into the layout',
+    'clear typography hierarchy with enough contrast and spacing',
+    'product remains visible while leaving a dedicated text area',
+    'international storefront ready promotional banner',
   ],
   'scene-coordinate': [
     'realistic lifestyle product scene',
@@ -127,7 +129,9 @@ export const buildProductionImagePrompt = ({
     `Quality bar: ${qualityLines.join(', ')}`,
     textOverlay
       ? `Text overlay must use only the requested copy and remain legible: ${JSON.stringify(textOverlay)}`
-      : 'Do not add any visible text, letters, captions, logo marks, approval notes, or watermarks unless explicitly requested.',
+      : feature?.id === 'multilingual-banner'
+        ? 'If headline or subheadline copy is supplied in the prompt, include it as readable banner typography. Do not invent extra words, fake brand names, random letters, or watermarks.'
+        : 'Do not add any visible text, letters, captions, logo marks, approval notes, or watermarks unless explicitly requested.',
     SAFETY_PROMPT_APPENDIX,
     'Output must look like a finished apparel commerce asset, not a mock test image.',
   ].filter(Boolean);

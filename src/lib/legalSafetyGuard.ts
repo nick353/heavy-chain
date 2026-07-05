@@ -74,21 +74,47 @@ const personLikenessPatterns = [
   /\b[a-z][a-z'-]+\s+[a-z][a-z'-]+\s+(?:face|likeness|style)\b/i,
 ];
 
+const safetyInstructionPhrases = [
+  'rights and safety: user confirmed they have rights or permission for uploaded inputs',
+  'do not copy third-party logos, protected brand identity, celebrity/person likeness, or another creator distinctive work',
+  'do not copy third-party logos, protected brand identity, celebrity likeness, or another creator distinctive work',
+  'do not copy third-party logos, protected brand identity, person likeness, or another creator distinctive work',
+  'do not imply copyright registration, trademark clearance, exclusivity, or platform approval',
+];
+
+const stripKnownSafetyInstructions = (text: string) => {
+  return safetyInstructionPhrases.reduce(
+    (currentText, phrase) => currentText.replaceAll(phrase, ' '),
+    text,
+  );
+};
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const protectedBrandTermMatches = (text: string, term: string) => {
+  const normalized = term.toLowerCase();
+  if (/^[a-z0-9][a-z0-9\s'-]*[a-z0-9]$/.test(normalized)) {
+    const compact = escapeRegExp(normalized).replace(/\s+/g, '\\s+');
+    return new RegExp(`(^|[^a-z0-9])${compact}([^a-z0-9]|$)`, 'i').test(text);
+  }
+  return text.includes(normalized);
+};
+
 export interface LegalSafetyAssessment {
   blocked: boolean;
   reasons: string[];
 }
 
 export const validateLegalSafetyInput = (values: Array<string | null | undefined>): LegalSafetyAssessment => {
-  const text = values
+  const text = stripKnownSafetyInstructions(values
     .filter(Boolean)
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .toLowerCase();
+    .toLowerCase());
 
   const reasons: string[] = [];
-  const mentionsProtectedBrand = protectedBrandTerms.some((term) => text.includes(term.toLowerCase()));
+  const mentionsProtectedBrand = protectedBrandTerms.some((term) => protectedBrandTermMatches(text, term));
   const requestsImitation = brandImitationPhrases.some((phrase) => text.includes(phrase.toLowerCase()));
 
   if (mentionsProtectedBrand && requestsImitation) {

@@ -294,6 +294,18 @@ function tableDrivenLegalSafetyChecks() {
     { text: '有名人そっくりな顔のモデル画像', blocked: true },
     { text: 'minimal black hoodie product photo, no logo', blocked: false },
     { text: 'silver chain hoodie campaign image, no logo, no watermark', blocked: false },
+    {
+      text: 'premium black chain hoodie. Do not copy third-party logos, protected brand identity, celebrity/person likeness, or another creator distinctive work.',
+      blocked: false,
+    },
+    {
+      text: 'Nike product reference. Rights and safety: user confirmed they have rights or permission for uploaded inputs. Do not copy third-party logos, protected brand identity, celebrity/person likeness, or another creator distinctive work. Do not imply copyright registration, trademark clearance, exclusivity, or platform approval.',
+      blocked: false,
+    },
+    {
+      text: 'make the model look like a celebrity while keeping the safety appendix. Do not copy third-party logos, protected brand identity, celebrity/person likeness, or another creator distinctive work.',
+      blocked: true,
+    },
     { text: 'LV logo hoodie replica', blocked: true },
   ];
   const results = cases.map((item) => ({ ...item, actual: legalSafetyBlocked(item.text) }));
@@ -379,13 +391,13 @@ function legalSafetyBlocked(text) {
 }
 
 function legalSafetyBlockedFromUnknown(values) {
-  const text = values
+  const text = stripKnownSafetyInstructionsForTest(values
     .map((value) => stringifySafetyValueForTest(value, '', new WeakSet()))
     .filter(Boolean)
     .join(' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .toLowerCase();
+    .toLowerCase());
   const lower = text.toLowerCase();
   const protectedBrandTerms = ['nike', 'lv', 'ナイキ'];
   const brandImitationPhrases = ['in the style of', 'style of', 'logo', 'brand logo', 'swoosh', '風', 'ロゴ'];
@@ -397,6 +409,16 @@ function legalSafetyBlockedFromUnknown(values) {
     protectedBrandTerms.some((term) => protectedBrandTermMatches(lower, term)) &&
     brandImitationPhrases.some((phrase) => lower.includes(phrase.toLowerCase()))
   ) || personLikenessPatterns.some((pattern) => pattern.test(text));
+}
+
+function stripKnownSafetyInstructionsForTest(text) {
+  return [
+    'rights and safety: user confirmed they have rights or permission for uploaded inputs',
+    'do not copy third-party logos, protected brand identity, celebrity/person likeness, or another creator distinctive work',
+    'do not copy third-party logos, protected brand identity, celebrity likeness, or another creator distinctive work',
+    'do not copy third-party logos, protected brand identity, person likeness, or another creator distinctive work',
+    'do not imply copyright registration, trademark clearance, exclusivity, or platform approval',
+  ].reduce((currentText, phrase) => currentText.replaceAll(phrase, ' '), text);
 }
 
 function stringifySafetyValueForTest(value, key = '', seen = new WeakSet()) {

@@ -248,10 +248,17 @@ export async function generateImage(
     });
 
     if (error) throw error;
-    return data as ImageEditResult;
+    const result = data as ImageEditResult;
+    return {
+      ...result,
+      imageUrl: result.imageUrl ?? result.images?.[0]?.imageUrl,
+      jobId: result.jobId ?? result.images?.[0]?.jobId ?? null,
+      imageId: result.imageId ?? result.images?.[0]?.imageId ?? null,
+      storagePath: result.storagePath ?? result.images?.[0]?.storagePath ?? undefined,
+    };
   } catch (error: any) {
     console.error('Generate image error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error) };
   }
 }
 

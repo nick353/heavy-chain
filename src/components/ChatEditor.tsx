@@ -114,7 +114,16 @@ export function ChatEditor({
         result = await editImageWithPrompt(currentImage, userInput, currentBrand.id, { rightsConfirmed });
       } else {
         // Generate new image
-        result = await generateImage(userInput, currentBrand.id, { rightsConfirmed });
+        result = await generateImage(userInput, currentBrand.id, {
+          generationProvider: 'openai',
+          generationModel: 'gpt-image-1-mini',
+          featureType: 'chat-edit',
+          width: 1024,
+          height: 1024,
+          count: 1,
+          negativePrompt: 'no test text, no verification labels, no watermark, no random logo, no misspelled text, no broken typography, no distorted garment',
+          rightsConfirmed,
+        });
       }
 
       if (result.success && result.imageUrl) {
