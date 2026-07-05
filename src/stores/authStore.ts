@@ -67,6 +67,13 @@ const isRecoverableNetworkError = (error: unknown) => {
 const AUTH_SESSION_TIMEOUT_MS = 8_000;
 const AUTH_PROFILE_TIMEOUT_MS = 10_000;
 let authStateListenerRegistered = false;
+const SUPABASE_PROJECT_REF = (() => {
+  try {
+    return new URL(import.meta.env.VITE_SUPABASE_URL).hostname.split('.')[0] || null;
+  } catch {
+    return null;
+  }
+})();
 
 async function withAuthTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -90,6 +97,56 @@ const logAuthError = (message: string, error: unknown) => {
     return;
   }
   console.error(message, error);
+};
+
+const getStoredSessionUser = (): User | null => {
+  if (typeof window === 'undefined' || !SUPABASE_PROJECT_REF) return null;
+
+  try {
+    const key = `sb-${SUPABASE_PROJECT_REF}-auth-token`;
+    if (!key) return null;
+
+    const rawSession = window.localStorage.getItem(key);
+    if (!rawSession) return null;
+
+    const session = JSON.parse(rawSession) as { access_token?: string; expires_at?: number; user?: User };
+    if (!session.access_token) return null;
+
+    const [, payload] = session.access_token.split('.');
+    if (!payload) return null;
+
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedPayload = normalizedPayload.padEnd(normalizedPayload.length + ((4 - normalizedPayload.length % 4) % 4), '=');
+    const claims = JSON.parse(window.atob(paddedPayload)) as {
+      aud?: string;
+      email?: string;
+      exp?: number;
+      role?: string;
+      sub?: string;
+      user_metadata?: Record<string, unknown>;
+      app_metadata?: Record<string, unknown>;
+    };
+
+    const expiresAtMs = (session.expires_at || claims.exp || 0) * 1000;
+    if (!claims.sub || expiresAtMs <= Date.now()) return null;
+    if (claims.aud && claims.aud !== 'authenticated') return null;
+    if (claims.role && claims.role !== 'authenticated') return null;
+
+    return {
+      ...(session.user || {}),
+      id: claims.sub,
+      aud: session.user?.aud || claims.aud || 'authenticated',
+      role: session.user?.role || claims.role || 'authenticated',
+      email: session.user?.email || claims.email,
+      app_metadata: session.user?.app_metadata || claims.app_metadata || {},
+      user_metadata: session.user?.user_metadata || claims.user_metadata || {},
+      created_at: session.user?.created_at || '',
+      updated_at: session.user?.updated_at || '',
+    } as User;
+  } catch (error) {
+    logAuthError('Failed to read stored auth session:', error);
+    return null;
+  }
 };
 
 export const ensureUserProfile = async (user: User, name?: string | null): Promise<DbUser | null> => {
@@ -187,6 +244,54 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
         });
       }
+
+      const storedUser = getStoredSessionUser();
+      if (storedUser) {
+        set((state) => ({
+          user: storedUser,
+          profile: state.user?.id === storedUser.id ? state.profile : null,
+          currentBrand: state.user?.id === storedUser.id ? state.currentBrand : null,
+          authRecoveryRequired: false,
+        }));
+
+        setTimeout(async () => {
+          try {
+            const profile = await withAuthTimeout(
+              ensureUserProfile(storedUser),
+              AUTH_PROFILE_TIMEOUT_MS,
+              'auth_profile_timeout',
+            );
+
+            const brands = await withAuthTimeout(
+              fetchAccessibleBrandsForCurrentUser(storedUser.id),
+              AUTH_PROFILE_TIMEOUT_MS,
+              'auth_brand_timeout',
+            );
+
+            const state = get();
+            if (state.user?.id !== storedUser.id) return;
+            const currentBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
+              ? state.currentBrand
+              : brands[0] || null;
+
+            set({
+              user: storedUser,
+              profile: profile || null,
+              currentBrand,
+              authRecoveryRequired: false,
+            });
+          } catch (error) {
+            logAuthError('Error restoring stored auth user data:', error);
+            if (get().user?.id !== storedUser.id) return;
+            set({
+              user: storedUser,
+              profile: null,
+              currentBrand: get().currentBrand,
+              authRecoveryRequired: false,
+            });
+          }
+        }, 0);
+      }
       
       // Get current session
       const { data: { session } } = await withAuthTimeout(
@@ -254,6 +359,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
           }
         }, 0);
+      } else {
+        set({ user: null, profile: null, currentBrand: null, authRecoveryRequired: false });
       }
     } catch (error) {
       logAuthError('Failed to initialize auth:', error);
