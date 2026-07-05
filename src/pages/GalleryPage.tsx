@@ -168,11 +168,17 @@ export function GalleryPage() {
       if (error) {
         setLoadWarning('保存済み画像の取得に失敗しました。ローカル成果物だけを表示しています。');
       } else {
-        remoteImages = await withTimeout(
-          withSignedImageUrls(data || []),
-          GALLERY_REMOTE_TIMEOUT_MS,
-          'gallery_signed_urls_timeout',
-        );
+        const remoteRows = data || [];
+        try {
+          remoteImages = await withTimeout(
+            withSignedImageUrls(remoteRows),
+            GALLERY_REMOTE_TIMEOUT_MS,
+            'gallery_signed_urls_timeout',
+          );
+        } catch {
+          remoteImages = remoteRows;
+          setLoadWarning('画像プレビューURLの取得に時間がかかっています。成果物一覧は表示しています。');
+        }
       }
 
       const mergedImages = [...remoteImages, ...localImages]
