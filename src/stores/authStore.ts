@@ -59,12 +59,6 @@ export const fetchAccessibleBrandsForCurrentUser = async (userId: string): Promi
   return Array.from(byId.values()).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
 };
 
-const fetchFirstAccessibleBrand = async (userId: string): Promise<Brand | null> => {
-  const brands = await fetchAccessibleBrandsForCurrentUser(userId);
-
-  return brands?.[0] || null;
-};
-
 const isRecoverableNetworkError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error || '');
   return /Failed to fetch|NetworkError|Load failed|ERR_ABORTED/i.test(message);
@@ -143,34 +137,51 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (event === 'TOKEN_REFRESHED' && session?.user) {
             set({ user: session.user, authRecoveryRequired: false });
           } else if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
-            try {
-              const profile = await withAuthTimeout(
-                ensureUserProfile(session.user),
-                AUTH_PROFILE_TIMEOUT_MS,
-                'auth_profile_timeout',
-              );
+            const { user } = session;
+            set((state) => ({
+              user,
+              profile: state.user?.id === user.id ? state.profile : null,
+              currentBrand: state.user?.id === user.id ? state.currentBrand : null,
+              authRecoveryRequired: false,
+            }));
 
-              const currentBrand = await withAuthTimeout(
-                fetchFirstAccessibleBrand(session.user.id),
-                AUTH_PROFILE_TIMEOUT_MS,
-                'auth_brand_timeout',
-              );
+            setTimeout(async () => {
+              try {
+                const profile = await withAuthTimeout(
+                  ensureUserProfile(user),
+                  AUTH_PROFILE_TIMEOUT_MS,
+                  'auth_profile_timeout',
+                );
 
-              set({
-                user: session.user,
-                profile: profile || null,
-                currentBrand,
-                authRecoveryRequired: false,
-              });
-            } catch (error) {
-              logAuthError('Error in auth state change:', error);
-              set({
-                user: session.user,
-                profile: null,
-                currentBrand: null,
-                authRecoveryRequired: false,
-              });
-            }
+                const brands = await withAuthTimeout(
+                  fetchAccessibleBrandsForCurrentUser(user.id),
+                  AUTH_PROFILE_TIMEOUT_MS,
+                  'auth_brand_timeout',
+                );
+
+                const state = get();
+                if (state.user?.id !== user.id) return;
+                const currentBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
+                  ? state.currentBrand
+                  : brands[0] || null;
+
+                set({
+                  user,
+                  profile: profile || null,
+                  currentBrand,
+                  authRecoveryRequired: false,
+                });
+              } catch (error) {
+                logAuthError('Error in auth state change:', error);
+                if (get().user?.id !== user.id) return;
+                set({
+                  user,
+                  profile: null,
+                  currentBrand: get().currentBrand,
+                  authRecoveryRequired: false,
+                });
+              }
+            }, 0);
           } else if (event === 'SIGNED_OUT') {
             set({ user: null, profile: null, currentBrand: null, authRecoveryRequired: false });
           }
@@ -185,47 +196,64 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       );
       
       if (session?.user) {
-        try {
-          const profile = await withAuthTimeout(
-            ensureUserProfile(session.user),
-            AUTH_PROFILE_TIMEOUT_MS,
-            'auth_profile_timeout',
-          );
-          
-          let currentBrand: Brand | null = null;
-          let retries = 3;
-          while (retries > 0 && !currentBrand) {
-            try {
-              currentBrand = await withAuthTimeout(
-                fetchFirstAccessibleBrand(session.user.id),
-                AUTH_PROFILE_TIMEOUT_MS,
-                'auth_brand_timeout',
-              );
-              break;
-            } catch (brandsError) {
-              logAuthError(`Failed to fetch brands (retry: ${4 - retries}):`, brandsError);
-              retries--;
-              if (retries > 0) {
-                await new Promise(resolve => setTimeout(resolve, 500));
+        const { user } = session;
+        set((state) => ({
+          user,
+          profile: state.user?.id === user.id ? state.profile : null,
+          currentBrand: state.user?.id === user.id ? state.currentBrand : null,
+          authRecoveryRequired: false,
+        }));
+
+        setTimeout(async () => {
+          try {
+            const profile = await withAuthTimeout(
+              ensureUserProfile(user),
+              AUTH_PROFILE_TIMEOUT_MS,
+              'auth_profile_timeout',
+            );
+
+            let brands: Brand[] = [];
+            let retries = 3;
+            while (retries > 0 && brands.length === 0) {
+              try {
+                brands = await withAuthTimeout(
+                  fetchAccessibleBrandsForCurrentUser(user.id),
+                  AUTH_PROFILE_TIMEOUT_MS,
+                  'auth_brand_timeout',
+                );
+                break;
+              } catch (brandsError) {
+                logAuthError(`Failed to fetch brands (retry: ${4 - retries}):`, brandsError);
+                retries--;
+                if (retries > 0) {
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                }
               }
             }
+
+            const state = get();
+            if (state.user?.id !== user.id) return;
+            const currentBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
+              ? state.currentBrand
+              : brands[0] || null;
+
+            set({
+              user,
+              profile: profile || null,
+              currentBrand,
+              authRecoveryRequired: false,
+            });
+          } catch (error) {
+            logAuthError('Error fetching user data:', error);
+            if (get().user?.id !== user.id) return;
+            set({
+              user,
+              profile: null,
+              currentBrand: get().currentBrand,
+              authRecoveryRequired: false,
+            });
           }
-          
-          set({
-            user: session.user,
-            profile: profile || null,
-            currentBrand,
-            authRecoveryRequired: false,
-          });
-        } catch (error) {
-          logAuthError('Error fetching user data:', error);
-          set({
-            user: session.user,
-            profile: null,
-            currentBrand: null,
-            authRecoveryRequired: false,
-          });
-        }
+        }, 0);
       }
     } catch (error) {
       logAuthError('Failed to initialize auth:', error);
