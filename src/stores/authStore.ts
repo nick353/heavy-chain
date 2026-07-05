@@ -20,6 +20,7 @@ interface AuthState {
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<DbUser>) => Promise<void>;
   refreshCurrentBrand: () => Promise<Brand | null>;
+  clearAuthRecoveryRequired: () => void;
   setCurrentBrand: (brand: Brand | null) => void;
 }
 
@@ -195,7 +196,59 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         authStateListenerRegistered = true;
         supabase.auth.onAuthStateChange(async (event, session) => {
           if (event === 'TOKEN_REFRESHED' && session?.user) {
-            set({ user: session.user, authRecoveryRequired: false });
+            const { user } = session;
+            set((state) => ({
+              user,
+              profile: state.user?.id === user.id ? state.profile : null,
+              currentBrand: state.user?.id === user.id ? state.currentBrand : null,
+              authRecoveryRequired: false,
+            }));
+
+            const brandRefreshSeq = ++authBrandRefreshSeq;
+            setTimeout(async () => {
+              try {
+                const profile = await withAuthTimeout(
+                  ensureUserProfile(user),
+                  AUTH_PROFILE_TIMEOUT_MS,
+                  'auth_profile_timeout',
+                );
+
+                if (get().user?.id !== user.id) return;
+                set({ user, profile: profile || null, authRecoveryRequired: false });
+
+                const brands = await withAuthTimeout(
+                  fetchAccessibleBrandsForCurrentUser(user.id),
+                  AUTH_PROFILE_TIMEOUT_MS,
+                  'auth_brand_timeout',
+                );
+
+                const state = get();
+                if (brandRefreshSeq !== authBrandRefreshSeq) return;
+                if (state.user?.id !== user.id) return;
+                const currentBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
+                  ? state.currentBrand
+                  : brands[0] || null;
+
+                set({
+                  user,
+                  profile: profile || null,
+                  currentBrand,
+                  authRecoveryRequired: false,
+                });
+              } catch (error) {
+                logAuthError('Error refreshing auth user data:', error);
+                if (get().user?.id !== user.id) return;
+                const state = get();
+                if (brandRefreshSeq !== authBrandRefreshSeq) return;
+                const canKeepUserScopedData = state.profile?.id === user.id;
+                set({
+                  user,
+                  profile: canKeepUserScopedData ? state.profile : null,
+                  currentBrand: null,
+                  authRecoveryRequired: false,
+                });
+              }
+            }, 0);
           } else if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
             const { user } = session;
             set({
@@ -515,6 +568,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       logAuthError('Failed to refresh current brand:', error);
       return null;
     }
+  },
+
+  clearAuthRecoveryRequired: () => {
+    set({ authRecoveryRequired: false });
   },
 
   setCurrentBrand: (brand: Brand | null) => {

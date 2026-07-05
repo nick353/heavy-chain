@@ -224,7 +224,13 @@ function lazyPage(page: React.ReactNode) {
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, isInitialized, authRecoveryRequired } = useAuthStore();
+  const { user, isLoading, isInitialized, authRecoveryRequired, clearAuthRecoveryRequired } = useAuthStore();
+
+  useEffect(() => {
+    if (user && authRecoveryRequired) {
+      clearAuthRecoveryRequired();
+    }
+  }, [authRecoveryRequired, clearAuthRecoveryRequired, user]);
 
   // 初期化が完了していない、またはローディング中の場合
   if (!isInitialized || isLoading || authRecoveryRequired) {
@@ -240,11 +246,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, isLoading, isInitialized, authRecoveryRequired } = useAuthStore();
+  const { user, profile, isLoading, isInitialized, authRecoveryRequired, clearAuthRecoveryRequired } = useAuthStore();
   const [profileWaitExpired, setProfileWaitExpired] = useState(false);
 
   useEffect(() => {
-    const shouldWaitForProfile = Boolean(user && profile === null && isInitialized && !isLoading && !authRecoveryRequired);
+    if (user && authRecoveryRequired) {
+      clearAuthRecoveryRequired();
+    }
+  }, [authRecoveryRequired, clearAuthRecoveryRequired, user]);
+
+  useEffect(() => {
+    const shouldWaitForProfile = Boolean(user && profile === null && isInitialized && !isLoading);
     if (!shouldWaitForProfile) {
       setProfileWaitExpired(false);
       return undefined;
@@ -274,7 +286,24 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!profile?.is_admin) {
+  if (profile === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-surface-950">
+        <div className="text-center">
+          <p className="text-neutral-700 dark:text-neutral-200">プロフィールを確認できませんでした。</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-4 rounded-xl bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+          >
+            再読み込み
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (profile && !profile.is_admin) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -283,7 +312,13 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 // Public Route wrapper (redirects to dashboard if already logged in)
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, isInitialized, authRecoveryRequired } = useAuthStore();
+  const { user, isLoading, isInitialized, authRecoveryRequired, clearAuthRecoveryRequired } = useAuthStore();
+
+  useEffect(() => {
+    if (user && authRecoveryRequired) {
+      clearAuthRecoveryRequired();
+    }
+  }, [authRecoveryRequired, clearAuthRecoveryRequired, user]);
 
   // 初期化が完了していない、またはローディング中の場合
   if (!isInitialized || (isLoading && !authRecoveryRequired)) {
