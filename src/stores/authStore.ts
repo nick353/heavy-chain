@@ -140,7 +140,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!authStateListenerRegistered) {
         authStateListenerRegistered = true;
         supabase.auth.onAuthStateChange(async (event, session) => {
-          if (event === 'SIGNED_IN' && session?.user) {
+          if (event === 'TOKEN_REFRESHED' && session?.user) {
+            set({ user: session.user, authRecoveryRequired: false });
+          } else if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
             try {
               const profile = await withAuthTimeout(
                 ensureUserProfile(session.user),
@@ -228,7 +230,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       logAuthError('Failed to initialize auth:', error);
       const message = error instanceof Error ? error.message : String(error || '');
-      set({ authRecoveryRequired: message === 'auth_session_timeout' });
+      set((state) => ({ authRecoveryRequired: message === 'auth_session_timeout' && !state.user }));
     } finally {
       set({ isLoading: false, isInitialized: true });
     }
