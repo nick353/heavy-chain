@@ -665,6 +665,14 @@ const generationModelOptions = [
   },
 ] as const;
 
+const getInitialGenerationModel = () => {
+  const configuredModel = String(import.meta.env.VITE_DEFAULT_GENERATION_MODEL || '').trim();
+  if (generationModelOptions.some((option) => option.id === configuredModel)) {
+    return configuredModel;
+  }
+  return 'gpt-image-1-mini';
+};
+
 const debugLog = (message: string, details?: Record<string, unknown>) => {
   if (!debugGeneration) return;
   if (details) {
@@ -977,7 +985,7 @@ export function GeneratePage() {
   const [overlayColor, setOverlayColor] = useState('#ffffff');
   const [overlayStrokeColor, setOverlayStrokeColor] = useState('#000000');
   const [overlayStrokeWidth, setOverlayStrokeWidth] = useState(2);
-  const [selectedGenerationModel, setSelectedGenerationModel] = useState<string>(generationModelOptions[0].id);
+  const [selectedGenerationModel, setSelectedGenerationModel] = useState<string>(getInitialGenerationModel);
   const selectedGenerationModelOption = generationModelOptions.find((option) => option.id === selectedGenerationModel) ?? generationModelOptions[0];
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const generationRecoveryGuidance = getFailureRecoveryGuidance(generationError);
@@ -4109,6 +4117,8 @@ export function GeneratePage() {
                       <button
                         key={option.id}
                         type="button"
+                        data-testid={`generation-model-option-${option.id}`}
+                        aria-pressed={selected}
                         onClick={() => setSelectedGenerationModel(option.id)}
                         className={`min-h-[86px] rounded-xl border p-3 text-left transition ${
                           selected
