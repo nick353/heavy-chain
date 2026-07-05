@@ -557,9 +557,6 @@ serve(async (req) => {
         : geminiImageArtifact(generatedResult)
     console.log(`Image generated with model: ${usedModel}`)
 
-    // Base64 Data URLを作成（ブラウザで直接表示可能）
-    const imageDataUrl = imageAsset.dataUrl
-
     // Convert base64 to Uint8Array for storage
     const imageBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0))
 
@@ -578,6 +575,15 @@ serve(async (req) => {
       throw new Error('Storage upload failed')
     }
     uploadedStoragePaths.push(fileName)
+
+    const { data: signedUrlData, error: signedUrlError } = await supabaseClient
+      .storage
+      .from('generated-images')
+      .createSignedUrl(fileName, 60 * 60)
+
+    if (signedUrlError || !signedUrlData?.signedUrl) {
+      throw signedUrlError ?? new Error('Storage signed URL failed')
+    }
 
     // Calculate expiry (30 days)
     const expiresAt = new Date()
@@ -651,7 +657,6 @@ serve(async (req) => {
       throw new Error('Failed to save generated image')
     }
 
-    // Base64 Data URLを返す（確実に表示可能）
     if (telemetryClient) {
       await completeBrandUsage(telemetryClient, usageReservation, 'succeeded');
       await recordEdgeFunctionRun(telemetryClient, {
@@ -677,7 +682,7 @@ serve(async (req) => {
         cleanupStatus: 'none',
         images: [{
           id: imageId ?? job.id,
-          imageUrl: imageDataUrl,
+          imageUrl: signedUrlData.signedUrl,
           prompt: optimizedPrompt,
           jobId: job.id,
           imageId,
