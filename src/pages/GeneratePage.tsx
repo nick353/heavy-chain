@@ -1402,6 +1402,34 @@ export function GeneratePage() {
     };
   };
 
+  const designGachaVariationToResult = async (variation: any, index: number, jobId?: string | null): Promise<GeneratedResult> => {
+    let imageUrl = variation.imageUrl || '';
+    if (!imageUrl && variation.storagePath) {
+      const { data, error } = await supabase.storage
+        .from('generated-images')
+        .createSignedUrl(variation.storagePath, 60 * 60);
+      if (error || !data?.signedUrl) {
+        const details = [variation.imageId, variation.storagePath].filter(Boolean).join(':');
+        throw error ?? new Error(`design_gacha_signed_url_failed:${details}`);
+      }
+      imageUrl = data.signedUrl;
+    }
+    if (!imageUrl) {
+      const details = [variation.imageId, variation.storagePath].filter(Boolean).join(':');
+      throw new Error(`design_gacha_image_url_missing:${details}`);
+    }
+    return {
+      id: variation.imageId || variation.storagePath || `${jobId || 'design-gacha'}-${index}`,
+      imageUrl,
+      prompt: variation.prompt || prompt || '',
+      label: variation.directionName || `デザイン案 ${index + 1}`,
+      jobId: jobId || undefined,
+      imageId: variation.imageId || undefined,
+      storagePath: variation.storagePath || undefined,
+      artifactKind: 'image',
+    };
+  };
+
   const waitForLocalRunwayWorkerResults = async (jobId: string): Promise<GeneratedResult[]> => {
     const maxAttempts = 120;
     const maxPendingAttempts = 12;
@@ -2010,15 +2038,11 @@ export function GeneratePage() {
             }
           }));
           if (data?.variations) {
-            replaceGeneratedImages(data.variations.map((v: any) => ({
-              id: v.imageId || v.storagePath,
-              imageUrl: v.imageUrl,
-              prompt: v.prompt,
-              label: v.directionName,
-              jobId: data.jobId,
-              imageId: v.imageId,
-              storagePath: v.storagePath,
-            })));
+            replaceGeneratedImages(await Promise.all(
+              data.variations.map((variation: any, index: number) =>
+                designGachaVariationToResult(variation, index, data.jobId)
+              )
+            ));
           }
           break;
 

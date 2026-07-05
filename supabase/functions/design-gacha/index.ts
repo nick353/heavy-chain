@@ -448,7 +448,6 @@ serve(async (req) => {
       if (generatedImage) {
         const imageAsset = runwayImageArtifact(generatedImage);
         const imageBase64 = imageAsset.base64;
-        const imageDataUrl = imageAsset.dataUrl;
         const fileName = `${user.id}/${brandId}/${jobId}_gacha_${direction.id}_${Date.now()}.${imageAsset.extension}`;
         const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
 
@@ -509,7 +508,6 @@ serve(async (req) => {
         results.push({
           direction: direction.id,
           directionName: direction.name,
-          imageUrl: imageDataUrl,
           storagePath: fileName,
           imageId: image.id,
           prompt: productDescription,
