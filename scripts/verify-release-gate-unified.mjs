@@ -29,7 +29,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'production monitor',
-    path: 'output/playwright/g758-production-monitor-post-window-r2/summary.json',
+    path: 'output/playwright/g774-production-monitor-current-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.blockers).length === 0 &&
@@ -241,7 +241,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production chosen public entrypoint readback',
-    path: 'output/playwright/prod-chosen-public-entrypoint-readback-20260703-r1/summary.json',
+    path: 'output/playwright/g774-chosen-public-entrypoint-readback-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       json.urls?.chosenPublicEntrypoint === 'https://heavy-chain.zeabur.app' &&
@@ -256,7 +256,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production H602 billing completion readback',
-    path: 'output/playwright/g766-h602-production-completion-current-r1/summary.json',
+    path: 'output/playwright/g774-h602-production-completion-current-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       json.migration?.applied === true &&

@@ -162,7 +162,7 @@ const requiredProofs = [
   {
     id: 'production_chosen_public_entrypoint_readback',
     goal: 'public-entrypoint',
-    path: 'output/playwright/prod-chosen-public-entrypoint-readback-20260703-r1/summary.json',
+    path: 'output/playwright/g774-chosen-public-entrypoint-readback-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       json.urls?.chosenPublicEntrypoint === 'https://heavy-chain.zeabur.app' &&
@@ -178,7 +178,7 @@ const requiredProofs = [
   {
     id: 'production_h602_billing_completion_readback',
     goal: 'H602',
-    path: 'output/playwright/g766-h602-production-completion-current-r1/summary.json',
+    path: 'output/playwright/g774-h602-production-completion-current-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       json.migration?.applied === true &&
