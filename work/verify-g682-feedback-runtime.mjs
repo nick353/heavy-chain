@@ -153,10 +153,13 @@ const run = async () => {
   await page.getByText('使いにくかった場所を教えてください').waitFor({ timeout: 15000 });
   await page.getByText('画面スクショ', { exact: true }).waitFor();
   await page.locator('img[alt="送信される画面スクショ"]').waitFor({ timeout: 15000 });
+  const noFeedbackCategoryControls = await page.getByText('困ったこと', { exact: true }).count() === 0
+    && await page.getByText('動作が遅い', { exact: true }).count() === 0;
+  const noEmailInput = await page.getByLabel('メールアドレス（任意）').count() === 0;
   await page.screenshot({ path: path.join(outDir, 'dashboard-feedback-modal.png'), fullPage: true });
   await page.getByRole('button', { name: '再撮影' }).click();
   await page.locator('img[alt="送信される画面スクショ"]').waitFor({ timeout: 15000 });
-  await page.getByLabel('メッセージ').fill('G682 runtime check: screenshot feedback submission.');
+  await page.getByLabel('コメント').fill('G682 runtime check: screenshot feedback submission.');
   await page.getByRole('button', { name: '送信する' }).click();
   await page.getByText('ありがとうございます！').waitFor({ timeout: 15000 });
   const successVisibleAfterSubmit = await page.getByText('ありがとうございます！').isVisible();
@@ -205,8 +208,11 @@ const run = async () => {
   const assertions = {
     dashboardFeedbackModalVisible: successVisibleAfterSubmit,
     submitFeedbackInvoked: captured.submissions.length === 1,
+    submissionUsesOtherType: submission?.type === 'other',
     submissionHasScreenshotDataUrl: typeof submission?.screenshot_data_url === 'string' && submission.screenshot_data_url.startsWith('data:image/png;base64,'),
     submissionHasContext: submission?.page_url?.includes('/dashboard') && submission?.pathname === '/dashboard' && submission?.viewport?.width === 1366 && Boolean(submission?.user_agent),
+    noFeedbackCategoryControls,
+    noEmailInput,
     mainRoutesButtonVisible: true,
     adminFeedbackDetailVisible: await page.getByText('フィードバック詳細').isVisible(),
     mobileButtonExistsOnce: mobileButtonCount === 1,

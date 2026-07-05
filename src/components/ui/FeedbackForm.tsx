@@ -2,8 +2,8 @@ import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import html2canvas from 'html2canvas';
-import { Camera, MessageSquare, RefreshCw, X, Send, ThumbsUp, MousePointerClick, ImageOff, FolderOpen, Gauge, CircleHelp, Scissors } from 'lucide-react';
-import { Button, Textarea, Input } from './index';
+import { Camera, MessageSquare, RefreshCw, X, Send, ThumbsUp } from 'lucide-react';
+import { Button } from './index';
 import toast from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../stores/authStore';
@@ -25,22 +25,12 @@ interface FeedbackScreenshotState {
   error: string | null;
 }
 
-const feedbackTypes = [
-  { id: 'lost', label: 'どこを押すかわからない', icon: MousePointerClick, color: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-900/20' },
-  { id: 'cutout', label: '切り抜きがうまくいかない', icon: Scissors, color: 'text-rose-500 bg-rose-50 dark:bg-rose-900/20' },
-  { id: 'result', label: '生成結果が微妙', icon: ImageOff, color: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' },
-  { id: 'save', label: '保存先がわからない', icon: FolderOpen, color: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20' },
-  { id: 'speed', label: '動作が遅い', icon: Gauge, color: 'text-red-500 bg-red-50 dark:bg-red-900/20' },
-  { id: 'other', label: 'その他', icon: CircleHelp, color: 'text-green-500 bg-green-50 dark:bg-green-900/20' },
-] as const;
-
 const MAX_SCREENSHOT_DATA_URL_LENGTH = 6_500_000;
 
 export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: FeedbackFormProps) {
   const { user, currentBrand, profile } = useAuthStore();
-  const [type, setType] = useState<FeedbackType>('lost');
+  const type: FeedbackType = 'other';
   const [message, setMessage] = useState('');
-  const [email, setEmail] = useState(profile?.email || user?.email || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -64,7 +54,7 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
           brand_id: currentBrand?.id || null,
           type,
           message: message.trim(),
-          email: email.trim() || null,
+          email: profile?.email || user.email || null,
           page_url: window.location.href,
           pathname: window.location.pathname,
           viewport: {
@@ -91,8 +81,6 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
       setTimeout(() => {
         setSubmitted(false);
         setMessage('');
-        setEmail(profile?.email || user?.email || '');
-        setType('lost');
         onClose();
       }, 2000);
     } catch (error) {
@@ -106,8 +94,6 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
     if (!isSubmitting) {
       setSubmitted(false);
       setMessage('');
-      setEmail(profile?.email || user?.email || '');
-      setType('lost');
       onClose();
     }
   };
@@ -187,34 +173,6 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
                   onSubmit={handleSubmit}
                   className="p-6 space-y-5"
                 >
-                  {/* Feedback Type */}
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                      困ったこと
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {feedbackTypes.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setType(item.id)}
-                          className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border-2 transition-all ${
-                            type === item.id
-                              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                              : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300'
-                          }`}
-                        >
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${item.color}`}>
-                            <item.icon className="w-4 h-4" />
-                          </div>
-                          <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                            {item.label}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
                   {/* Screenshot */}
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
@@ -257,36 +215,22 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
                   </div>
 
                   {/* Message */}
-                  <Textarea
-                    label="メッセージ"
-                    placeholder={
-                      type === 'lost'
-                        ? 'どの画面で、次に何をすればよいかわからなくなりましたか？'
-                        : type === 'cutout'
-                        ? '背景が残った、袖や裾が消えた、服だけにならなかった等を教えてください'
-                        : type === 'result'
-                        ? '期待していた見た目と、実際の結果の違いを教えてください'
-                        : type === 'save'
-                        ? '生成後、どこに保存・再利用したかったかを教えてください'
-                        : type === 'speed'
-                        ? '遅いと感じた画面や操作を教えてください'
-                        : '気づいたことをそのまま書いてください'
-                    }
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    rows={4}
-                    required
-                  />
-
-                  {/* Email (optional) */}
-                  <Input
-                    type="email"
-                    label="メールアドレス（任意）"
-                    placeholder="返信をご希望の場合はメールアドレスを入力"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
+                  <div>
+                    <label htmlFor="feedback-message" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                      コメント
+                    </label>
+                    <textarea
+                      id="feedback-message"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      rows={5}
+                      required
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder="気づいたことをそのまま書いてください"
+                      className="block w-full resize-none rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-base leading-7 text-neutral-950 shadow-sm outline-none transition placeholder:text-neutral-400 focus:border-primary-400 focus:ring-4 focus:ring-primary-200/50 dark:border-neutral-700 dark:bg-surface-950 dark:text-white dark:placeholder:text-neutral-500 dark:focus:border-primary-400"
+                    />
+                  </div>
 
                   {/* Submit */}
                   <div className="flex items-center justify-end gap-3 pt-2">
@@ -361,8 +305,8 @@ export function FeedbackButton() {
   }, []);
 
   const handleOpen = async () => {
-    await captureScreenshot();
     setIsOpen(true);
+    await captureScreenshot();
   };
 
   if (typeof document === 'undefined') return null;
@@ -375,7 +319,8 @@ export function FeedbackButton() {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 1 }}
         onClick={handleOpen}
-        className="fixed bottom-5 right-5 z-[2147483647] hidden h-11 w-11 items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all hover:bg-primary-700 hover:shadow-xl md:flex lg:bottom-6 lg:right-6 lg:h-12 lg:w-12 group"
+        type="button"
+        className="fixed bottom-5 right-5 z-[2147483647] hidden h-14 w-14 touch-manipulation select-none items-center justify-center rounded-full bg-primary-600 text-white shadow-xl ring-4 ring-white/20 transition-all hover:bg-primary-700 hover:shadow-2xl active:scale-95 md:flex lg:bottom-6 lg:right-6 group"
         aria-label="フィードバックを送信"
       >
         <MessageSquare className="w-5 h-5 group-hover:scale-110 transition-transform" />

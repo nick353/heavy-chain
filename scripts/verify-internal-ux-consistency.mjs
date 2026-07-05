@@ -65,13 +65,19 @@ addCheck('lightchain_surface_uses_material_workbench_language', (
   && lightchain.includes('Canvasへ保存')
 ), {});
 
-addCheck('feedback_collects_internal_beta_friction_categories', (
-  feedback.includes('どこを押すかわからない')
-  && feedback.includes('切り抜きがうまくいかない')
-  && feedback.includes('生成結果が微妙')
-  && feedback.includes('保存先がわからない')
-  && feedback.includes('動作が遅い')
-  && feedback.includes('社内beta')
+addCheck('feedback_collects_screenshot_and_comment_only', (
+  feedback.includes('画面スクショ')
+  && feedback.includes('コメント')
+  && feedback.includes("const type: FeedbackType = 'other'")
+  && feedback.includes('placeholder="気づいたことをそのまま書いてください"')
+  && feedback.includes('setIsOpen(true)')
+  && !feedback.includes('困ったこと')
+  && !feedback.includes('どこを押すかわからない')
+  && !feedback.includes('切り抜きがうまくいかない')
+  && !feedback.includes('動作が遅い')
+  && !feedback.includes('メールアドレス（任意）')
+  && !feedback.includes('返信をご希望の場合')
+  && !feedback.includes('import { Button, Textarea, Input }')
 ), {});
 
 addCheck('feedback_collects_screenshot_and_context', (
