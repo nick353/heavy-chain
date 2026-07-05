@@ -75,8 +75,11 @@ Run:
 ```bash
 npm run verify:h602-billing
 npm run verify:h602-production-completion-readback
+npm run verify:h602-operator-readiness
 ```
 
 `npm run verify:h602-billing` passing proves the readiness layer and fail-closed incomplete boundary only. H602 can be closed only after production H602 readback is `ok=true`, verified no-real-charge proof is greater than zero, transaction/entitlement readback is true, and human Apple/operator proof is attached to `STATE.md`, `GOAL.md`, and `goals/HUMAN_NEEDED.md`.
 
-`npm run verify:h602-production-completion-readback` refreshes `output/playwright/g759-h602-production-completion-current-r1/summary.json` from the existing production readback and is expected to exit 1 while H602 remains incomplete. That failing artifact is the current fail-closed proof until verified no-real-charge and transaction/entitlement evidence are captured.
+`npm run verify:h602-production-completion-readback` refreshes the current default H602 production completion summary from the existing production readback and is expected to exit 1 while H602 remains incomplete. That failing artifact is the current fail-closed proof until verified no-real-charge and transaction/entitlement evidence are captured.
+
+`npm run verify:h602-operator-readiness` is a non-acceptance operator checklist. It exits 0 by default so the missing H602 evidence can be reviewed as a readable artifact, and `-- --strict` exits 1 until verified no-real-charge proof, transaction/entitlement readback, and a safe final checkout/public-release decision JSON are attached. Use `-- --source <current-h602-summary> --operator-decision <safe-json> --strict` when operator proof is ready; the decision JSON must use safe summary fields only, not raw receipts, JWTs, signed payloads, payment-card data, OTP/security codes, or identity data.
