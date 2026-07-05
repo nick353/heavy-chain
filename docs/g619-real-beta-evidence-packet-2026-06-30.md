@@ -62,6 +62,14 @@ npm run create:g619-beta-session -- --session-id g619-beta-001 --alias beta-001 
 
 The scaffold writes session-local `session-instructions.md`, `operator-checklist.md`, `consent.json`, `notes.md`, `redaction-review.json`, and `readback.json` files under `output/playwright/g619-real-beta-evidence/sessions/<alias>/`, appends the session to the manifest, and stores artifact `sha256` values. It also records the H601/H602 decision boundary and operator-only hard stops that G619 must not cross. It does not make G619 pass by itself: real consent, real session duration, and at least one behavior evidence artifact such as `recording`, `screenshot(s)`, `transcript`, `observation`, or `observation_notes` are required. Redaction review must cover every non-redaction artifact, including the participant instructions and operator checklist, and match their manifest hashes.
 
+Check the short collection readiness summary during or before evidence collection:
+
+```bash
+npm run verify:g619-beta-readiness
+```
+
+This readiness command is not acceptance proof. It writes `readiness-summary.json`, keeps `acceptance: not_claimed`, and only summarizes missing consent, duration, friction/no-friction notes, redaction review, placeholder notes, and behavior evidence per session. Use `--strict` only when a non-zero exit is useful for automation.
+
 Validate collected evidence:
 
 ```bash
