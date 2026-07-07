@@ -40,6 +40,15 @@
 - No deploy/publish/destructive cleanup/quota or security bypass.
 - No paid video generation.
 
+## Production Tab Interaction Fix - 2026-07-07
+- Fixed user-reported `/lightchain/fashion-studio` issue where `コーディネート` and `360度表示` did not visibly switch the screen.
+- Workspace tabs now update selected state, helper copy, examples, textarea prompt/placeholder, and history heading; per-tab drafts are preserved instead of overwritten.
+- Same interaction coverage now protects `/lightchain/design-agent` and AI fitting task/input tabs.
+- Commit: `5d386ab` pushed to `main`; production asset verified as `assets/index.CC7SsdCO.js`.
+- Local proof: `output/playwright/lightchain-all-feature-workflows-20260707-tab-interactions-r4/SUMMARY.json` (`ok=true`, 31 routes).
+- Chrome plugin/Profile 2 production proof: `output/playwright/lightchain-chrome-proof-20260707-profile2-prod-tab-interactions-r1/SUMMARY.json` (`ok=true`).
+- No payment, checkout, billing, CAPTCHA/OTP, identity verification, publish, destructive cleanup, quota/security bypass, or paid video generation was crossed.
+
 ## Stage 5 Fitting Reference Slice - 2026-07-07
 - Completed local implementation for `/lightchain/fitting-clothing-reference` and `/lightchain/fitting-background-reference`.
 - Both routes now use the same Lightchain-style AI fitting screen as route-03/04: left fitting input flow, single/multi task tabs, upload card, `説明生成` / `参考画像` / `モデルのセット写真`, bottom `スマート` / `1K` / `AI生成`, right `生成履歴` panel.
