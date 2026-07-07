@@ -346,3 +346,16 @@
 - DOM/readback JSON: `output/playwright/lightchain-chrome-proof-20260707-profile2-prod-fashion-studio-current-r1/fashion-studio-prod-current.readback.json`.
 - No deploy, credential entry, auth bypass, payment, checkout, publish, destructive cleanup, external generation submit, quota/security bypass, or paid/video generation was performed.
 - Completion matrix remains `fashion-studio=ほぼ同等`; next safe step still requires explicit deploy approval before production upgraded-surface proof can pass.
+
+## Stage 28 Approved Production Deploy And Chrome Proof - 2026-07-07
+- User explicitly approved deploy/external-action continuation with `全て許可、承認します`.
+- Committed and pushed upgraded Lightchain parity surface to `main`: commit `26e408d` (`Complete Lightchain UI parity surfaces`).
+- Deployed the changed Supabase Edge Function only: `marketing-workspace-artifact`; secrets were not printed.
+- Chrome plugin/Profile 2 production proof completed for `https://heavy-chain.zeabur.app/lightchain/fashion-studio`.
+- Artifact: `output/playwright/lightchain-chrome-proof-20260707-profile2-prod-fashion-studio-upgraded-r1/SUMMARY.json`.
+- Result: `ok=true`, `blocker=null`, route stayed `/lightchain/fashion-studio`, asset `index.qEiyaDcx.js`.
+- Checks passed: Heavy Chain logo, `ファッションスタジオ`, tabs `スタジオ案` / `コーディネート` / `360度表示`, examples, prompt fill/input value確認, `AI生成`, `生成履歴`.
+- Safe local preview action was exercised once: prompt fill -> `AI生成`; readback confirmed `生成履歴にプレビューを追加しました` and `Canvasへ保存`.
+- Screenshot/readback saved: `fashion-studio-prod-upgraded.png`, `fashion-studio-prod-upgraded.readback.json`, `fashion-studio-prod-upgraded-after-ai.png`, `fashion-studio-prod-upgraded-after-ai.readback.json`.
+- Completion matrix updated to `31 Lightchain同等 / 0 ほぼ同等 / 0 部分一致 / 0 Heavy未実装` for the 31-route non-video UI parity scope.
+- No payment, checkout, billing/credit purchase, credential/OTP/CAPTCHA/security-code/identity flow, paid/video generation, destructive cleanup, quota/security bypass, or external/real AI generation submit was crossed.

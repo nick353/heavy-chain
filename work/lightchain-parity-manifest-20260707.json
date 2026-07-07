@@ -14,8 +14,8 @@
     ]
   },
   "classification": {
-    "Lightchain同等": 30,
-    "ほぼ同等": 1,
+    "Lightchain同等": 31,
+    "ほぼ同等": 0,
     "部分一致": 0,
     "Heavy未実装": 0,
     "要承認": "external/real generation and production mutation paths only"
@@ -44,25 +44,20 @@
       "ok": false,
       "blocker": "production_upgraded_surface_not_available",
       "artifact": "output/playwright/lightchain-chrome-proof-20260707-profile2-prod-fashion-studio-current-r1/SUMMARY.json"
+    },
+    "chromeProfile2ProductionFashionStudioUpgraded": {
+      "ok": true,
+      "blocker": null,
+      "commit": "26e408d",
+      "edgeFunctionDeployed": "marketing-workspace-artifact",
+      "artifact": "output/playwright/lightchain-chrome-proof-20260707-profile2-prod-fashion-studio-upgraded-r1/SUMMARY.json"
     }
   },
-  "routeExceptions": [
-    {
-      "toolId": "fashion-studio",
-      "status": "ほぼ同等",
-      "reason": "Local upgraded Lightchain-style workspace is verified, but production still serves the older simplified surface.",
-      "promotionRequiredEvidence": [
-        "approved deploy of the upgraded local surface",
-        "Chrome plugin/Profile 2 production read-only proof ok=true",
-        "no hard stop crossed",
-        "STATE, status, and matrix updated with production proof URI"
-      ]
-    }
-  ],
+  "routeExceptions": [],
   "hardStops": {
     "crossed": false,
     "maintained": true,
-    "notes": "No payment, checkout, billing, credit purchase, credential entry, OTP/CAPTCHA/security-code, identity verification, deploy, publish, destructive cleanup, quota/security bypass, external/real AI generation submit, or paid/video generation was performed in this proof slice."
+    "notes": "Deploy and the marketing-workspace-artifact Edge Function update were performed after explicit user approval. No payment, checkout, billing, credit purchase, credential entry, OTP/CAPTCHA/security-code, identity verification, publish, destructive cleanup, quota/security bypass, external/real AI generation submit, or paid/video generation was performed in this proof slice."
   },
   "sourceOfTruth": [
     "STATE.md",
@@ -71,8 +66,8 @@
     "work/lightchain-production-proof-next-steps-20260707.md"
   ],
   "nextSafeStep": {
-    "requiresApproval": true,
-    "action": "After explicit deploy approval and deployment of the upgraded local fashion-studio surface, run Chrome plugin/Profile 2 read-only production proof for https://heavy-chain.zeabur.app/lightchain/fashion-studio.",
-    "blockedUntil": "approved_deploy_of_upgraded_surface"
+    "requiresApproval": false,
+    "action": "Scope any external/real AI generation, paid/video generation, or production mutation QA as a separate proof slice with exact safety and cost boundaries.",
+    "blockedUntil": null
   }
 }

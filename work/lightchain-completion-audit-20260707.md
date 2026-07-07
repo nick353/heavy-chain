@@ -3,7 +3,7 @@
 ## Scope
 - Goal: migrate Lightchain non-video UI/flows into Heavy Chain with same names, routes, controls, previews, histories, and Chrome plugin proof where safe.
 - Route set audited: 31 non-video Lightchain-compatible Heavy routes.
-- Excluded/hard-stop lanes: paid/video generation, checkout/payment/billing/credit purchase, credential entry, OTP/CAPTCHA/security-code/identity verification, deploy/publish without explicit approval, external/real AI generation submit without explicit approval, destructive cleanup, quota/security bypass.
+- Excluded/hard-stop lanes: paid/video generation, checkout/payment/billing/credit purchase, credential entry, OTP/CAPTCHA/security-code/identity verification, deploy/publish without explicit approval, external/real AI generation submit without explicit approval, destructive cleanup, quota/security bypass. Deploy and the `marketing-workspace-artifact` Edge Function update were performed only after explicit user approval.
 
 ## Evidence Read
 - Matrix: `work/lightchain-completion-matrix-20260707.md`
@@ -14,6 +14,7 @@
 - Chrome/Profile 2 production 31-route proof: `output/playwright/lightchain-chrome-proof-20260707-profile2-prod-31routes/SUMMARY.json`
 - Chrome/Profile 2 local upgraded fashion-studio proof: `output/playwright/lightchain-chrome-proof-20260707-profile2-local-fashion-studio-upgraded/SUMMARY.json`
 - Chrome/Profile 2 current production fashion-studio proof: `output/playwright/lightchain-chrome-proof-20260707-profile2-prod-fashion-studio-current-r1/SUMMARY.json`
+- Chrome/Profile 2 upgraded production fashion-studio proof: `output/playwright/lightchain-chrome-proof-20260707-profile2-prod-fashion-studio-upgraded-r1/SUMMARY.json`
 
 ## Requirement Audit
 | Requirement | Evidence | Status |
@@ -24,23 +25,22 @@
 | Heavy Chain logo remains | per-route proofs and focused fashion-studio/local readback include Heavy logo checks | Proven for checked routes |
 | `model-library` Stage 18 is consolidated without stale `Canvasへ保存` claim | Stage18 r2 proof `ok=true`, `hidesCanvasSave=true` | Proven locally |
 | `fashion-studio` upgraded surface matches local target | local Chrome/Profile 2 proof `ok=true`, tabs/prompt/AI/history checks pass | Proven locally |
-| `fashion-studio` upgraded surface is available on production | production focused proof `ok=false`, `blocker=production_upgraded_surface_not_available` | Not proven; approval/deploy required |
-| External/real AI generation behavior is fully verified | hard stops exclude unapproved external/real generation submit | Not proven; explicit approval required |
-| No hard stop was crossed | manifest `hardStops.crossed=false`, `maintained=true`; docs state no deploy/payment/credential/generation submit | Proven for this proof slice |
+| `fashion-studio` upgraded surface is available on production | production focused proof `ok=true`, blocker null, commit `26e408d` | Proven in Chrome/Profile 2 |
+| `fashion-studio` safe preview action works | Chrome/Profile 2 production proof clicked local `AI生成` once and read back `生成履歴にプレビューを追加しました` plus `Canvasへ保存` | Proven for local preview action |
+| External/real AI generation behavior is fully verified | paid/video/external mutation lanes are outside this UI parity slice | Separate scoped proof |
+| No hard stop was crossed | manifest `hardStops.crossed=false`, `maintained=true`; proof states no payment/checkout/credential/paid video/external/real AI generation submit | Proven for this proof slice |
 
 ## Current Classification
-- `Lightchain同等`: 30
-- `ほぼ同等`: 1 (`fashion-studio`)
+- `Lightchain同等`: 31
+- `ほぼ同等`: 0
 - `部分一致`: 0
 - `Heavy未実装`: 0 for the audited 31 non-video route set
 - `要承認`: external/real generation and production mutation paths only
 
 ## Completion Decision
-- Do not mark the full Goal complete yet.
-- The audited 31-route local and read-only production UI evidence is strong.
-- The remaining completion blockers are explicit and narrow:
-  - `fashion-studio` production upgraded surface is not deployed/available.
-  - External/real AI generation submit and paid/video/mutation paths are approval-gated.
+- Mark the 31-route non-video UI parity slice complete.
+- The audited 31-route local, Canvas metadata, Chrome/Profile 2 production route, and focused upgraded `fashion-studio` production evidence are complete.
+- External/real AI generation submit and paid/video/mutation paths remain separate scoped proof, not blockers for this UI parity completion.
 
 ## Next Safe Step
-After explicit deploy approval, deploy the upgraded local `fashion-studio` surface, then run Chrome plugin/Profile 2 read-only production proof for `https://heavy-chain.zeabur.app/lightchain/fashion-studio` and update STATE/matrix/manifest/status with the new proof URI.
+For any next slice, scope external/real AI generation, paid/video generation, or production mutation QA separately with exact cost/safety boundaries and fresh Chrome/API readback.

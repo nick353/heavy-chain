@@ -14,7 +14,8 @@
   - `output/playwright/lightchain-chrome-proof-20260707-profile2-local-fashion-studio-upgraded/SUMMARY.json`
   - `output/playwright/lightchain-chrome-proof-20260707-profile2-prod-31routes/SUMMARY.json`
   - `output/playwright/lightchain-chrome-proof-20260707-profile2-prod-fashion-studio-current-r1/SUMMARY.json`
-- Hard stops observed: no payment, checkout, credential entry, auth bypass, paid/video generation, deploy, publish, destructive cleanup, quota/security bypass.
+  - `output/playwright/lightchain-chrome-proof-20260707-profile2-prod-fashion-studio-upgraded-r1/SUMMARY.json`
+- Hard stops observed: no payment, checkout, credential entry, auth bypass, paid/video generation, publish, destructive cleanup, quota/security bypass. Deploy was performed only after explicit user approval.
 
 ## Current Gate
 - Local all-feature workflow: latest `ok=true`, `31` non-video routes, `failed=[]`; current artifact `output/playwright/lightchain-all-feature-workflows-20260707-stage18-status-r1/SUMMARY.json`.
@@ -22,8 +23,8 @@
 - Chrome plugin/Profile 2 local proof: `profile2_local_auth_missing`, final URL `http://127.0.0.1:4183/login`.
 - Chrome plugin/Profile 2 local focused proof for upgraded `fashion-studio`: `ok=true`, final URL `http://127.0.0.1:4185/lightchain/fashion-studio`, initial readback confirms logo, tabs, prompt, AI action, and history; `Canvasへ保存` is covered by Canvas metadata proof after preview rather than the initial Chrome readback.
 - Chrome plugin/Profile 2 production proof: `ok=true`, `31` routes captured, `failedRoutes=[]`, no `profile2_prod_auth_missing`.
-- Chrome plugin/Profile 2 production focused proof for current `fashion-studio`: `ok=false`, blocker `production_upgraded_surface_not_available`; production still shows the older/simplified studio surface.
-- Therefore, all 31 non-video UI routes have local workflow and metadata coverage; `fashion-studio` remains `ほぼ同等` for release judgment until the upgraded studio workspace is available on the production-checked surface.
+- Chrome plugin/Profile 2 production focused proof for upgraded `fashion-studio`: `ok=true`, artifact `output/playwright/lightchain-chrome-proof-20260707-profile2-prod-fashion-studio-upgraded-r1/SUMMARY.json`; production shows the upgraded studio workspace and safe local `AI生成` preview action adds history/readback.
+- Therefore, all 31 non-video UI routes have local workflow, metadata coverage, and production Chrome/Profile 2 route proof; the audited route set is `31/31 Lightchain同等`.
 
 ## 判定基準
 - `Lightchain同等`: local workflow + Canvas metadata + authenticated Chrome/Profile 2 route proof all pass.
@@ -44,7 +45,7 @@
 | 7 | `wear-design-lab` | ウェアデザインラボ | `/flow/orientedDesign` | `/lightchain/wear-design-lab` | Lightchain同等 | all-feature ok; Canvas assertions ok; Stage15 proof; Chrome prod Profile2 proof ok | real generation not executed |
 | 8 | `wear-design-detail` | ウェアデザイン詳細 | `/flow/orientedDesign/detail` | `/lightchain/wear-design-detail` | Lightchain同等 | all-feature ok; Canvas assertions ok; Stage15 proof; Chrome prod Profile2 proof ok | real generation not executed |
 | 9 | `model-library` | モデル企画ライブラリ | `/model-library/*` | `/lightchain/model-library` | Lightchain同等 | all-feature ok; Canvas assertions ok; Stage18 proof; Chrome prod Profile2 proof ok | real generation not executed |
-| 10 | `fashion-studio` | ファッションスタジオ | `/studio-equivalent` | `/lightchain/fashion-studio` | ほぼ同等 | upgraded local all-feature ok; upgraded Canvas metadata readback ok; authenticated Chrome/Profile 2 local upgraded proof ok; older Chrome prod Profile2 route proof ok; current production focused proof records `production_upgraded_surface_not_available` | production Chrome proof for the upgraded studio workspace is blocked until approved deploy; initial Chrome readback does not show post-generation `Canvasへ保存`; real external generation not executed |
+| 10 | `fashion-studio` | ファッションスタジオ | `/studio-equivalent` | `/lightchain/fashion-studio` | Lightchain同等 | upgraded local all-feature ok; upgraded Canvas metadata readback ok; authenticated Chrome/Profile 2 local upgraded proof ok; Chrome prod Profile2 31-route proof ok; focused production upgraded proof ok after commit `26e408d`; safe local `AI生成` click readback confirms preview history and `Canvasへ保存` | real external generation not executed |
 | 11 | `design-agent` | デザインエージェント | `/agent` | `/lightchain/design-agent` | Lightchain同等 | all-feature ok; Canvas assertions ok; Chrome prod Profile2 proof ok | real generation not executed |
 | 12 | `lab` | Heavy Chain Lab | `/flow/laboratory` | `/lightchain/lab` | Lightchain同等 | all-feature ok; Canvas assertions ok; Chrome prod Profile2 proof ok | real generation not executed |
 | 13 | `print-design-project` | プリントデザイン | `/editor/patternDesign` | `/lightchain/print-design-project` | Lightchain同等 | all-feature ok; Canvas assertions ok; Stage17 proof; Chrome prod Profile2 proof ok | real generation not executed |
@@ -68,13 +69,12 @@
 | 31 | `custom-style` | カスタムスタイル | `/model-base/style` | `/lightchain/custom-style` | Lightchain同等 | all-feature ok; Canvas assertions ok; Stage14 proof; Chrome prod Profile2 proof ok | real generation not executed |
 
 ## Summary
-- `Lightchain同等`: 30
-- `ほぼ同等`: 1
+- `Lightchain同等`: 31
+- `ほぼ同等`: 0
 - `部分一致`: 0
 - `Heavy未実装`: 0 for the 31 non-video route set
 - `要承認`: external/real generation verification only
 
 ## Next Safe Step
-1. Keep `fashion-studio` at `ほぼ同等` until the upgraded implementation is available on the production-checked surface; do not deploy without explicit approval.
-2. Treat external/real AI generation, paid/video generation, and production mutation paths as separate approval-gated proof.
-3. If local-only Chrome proof is required, repeat Chrome/Profile 2 after local auth is available; do not enter credentials or bypass auth automatically.
+1. Treat external/real AI generation, paid/video generation, and production mutation paths as separate scoped proof, not as blockers for the 31-route UI parity slice.
+2. If local-only Chrome proof is required, repeat Chrome/Profile 2 after local auth is available; do not enter credentials or bypass auth automatically.
