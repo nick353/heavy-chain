@@ -915,6 +915,10 @@ export function LightchainWorkbenchPage() {
   const [modelFormState, setModelFormState] = useState<ModelFormState>(defaultModelFormState);
   const [lightchainResult, setLightchainResult] = useState<{ toolId: string; title: string; summary: string; imageUrl: string } | null>(null);
   const [workspaceText, setWorkspaceText] = useState('');
+  const [workspaceTextDrafts, setWorkspaceTextDrafts] = useState<Record<string, string>>({});
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('');
+  const [activeFittingTaskTab, setActiveFittingTaskTab] = useState('シングルタスク');
+  const [activeFittingInputTab, setActiveFittingInputTab] = useState('説明生成');
   const [printingMode, setPrintingMode] = useState<'スポット' | '全体'>('スポット');
   const [printingNotice, setPrintingNotice] = useState('');
   const [fabricPrompt, setFabricPrompt] = useState('');
@@ -1199,7 +1203,14 @@ export function LightchainWorkbenchPage() {
     setPrintDesignPrompt('');
     setMarketingDetailTab('assistant');
     setMarketingDetailPrompt('');
-    setWorkspaceText(['agent', 'studio'].includes(workspaceStyleConfig[selectedTool.id]?.kind ?? '') ? workspaceStyleConfig[selectedTool.id]?.prompt ?? '' : '');
+    const nextWorkspaceStyle = workspaceStyleConfig[selectedTool.id];
+    const nextWorkspaceTab = nextWorkspaceStyle?.tabs?.[0] ?? '';
+    const nextWorkspaceText = ['agent', 'studio'].includes(nextWorkspaceStyle?.kind ?? '') ? nextWorkspaceStyle?.prompt ?? '' : '';
+    setActiveWorkspaceTab(nextWorkspaceTab);
+    setWorkspaceTextDrafts(nextWorkspaceTab ? { [nextWorkspaceTab]: nextWorkspaceText } : {});
+    setActiveFittingTaskTab('シングルタスク');
+    setActiveFittingInputTab('説明生成');
+    setWorkspaceText(nextWorkspaceText);
     resetWorkbenchMaskState();
   }, [selectedTool.category, selectedTool.id]);
 
@@ -2103,12 +2114,15 @@ export function LightchainWorkbenchPage() {
           <section className="border-r border-white/10 bg-[#141717]" data-testid="lightchain-fitting-input-flow">
             <div className="flex h-12 items-center justify-between border-b border-white/10 px-4">
               <h1 className="text-sm font-semibold text-white">AIフィッティング</h1>
-              <div className="inline-flex rounded-xl bg-[#262b2e] p-1">
-                {['シングルタスク', 'マルチタスク'].map((tab, index) => (
+              <div className="inline-flex rounded-xl bg-[#262b2e] p-1" role="tablist" aria-label="AIフィッティングタスク">
+                {['シングルタスク', 'マルチタスク'].map((tab) => (
                   <button
                     key={tab}
                     type="button"
-                    className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${index === 0 ? 'bg-[#687178] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]' : 'text-neutral-400'}`}
+                    role="tab"
+                    onClick={() => setActiveFittingTaskTab(tab)}
+                    aria-selected={activeFittingTaskTab === tab}
+                    className={`rounded-lg px-4 py-1.5 text-sm font-semibold transition ${activeFittingTaskTab === tab ? 'bg-[#687178] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]' : 'text-neutral-400 hover:text-neutral-200'}`}
                   >
                     {tab}
                   </button>
@@ -2134,8 +2148,16 @@ export function LightchainWorkbenchPage() {
                   <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
                   <div className="flex flex-col items-center justify-center px-5 text-center">
                     <ImagePlus className="h-6 w-6 text-neutral-300" />
-                    <p className="mt-5 text-base font-semibold leading-7 text-neutral-100">複数のコーディネートのアップロードに対応</p>
-                    <p className="mt-2 text-xs leading-5 text-neutral-400">ここをクリック/ドラッグしてアイテムを追加します。</p>
+                    <p className="mt-5 text-base font-semibold leading-7 text-neutral-100">
+                      {activeFittingTaskTab === 'マルチタスク' ? '複数のコーディネートのアップロードに対応' : '1つの衣服画像から着用画像を作成'}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-neutral-400">
+                      {activeFittingInputTab === '説明生成'
+                        ? 'ここをクリック/ドラッグしてアイテムを追加します。'
+                        : activeFittingInputTab === '参考画像'
+                          ? '衣服と一緒に使う参考画像の条件を指定します。'
+                          : 'モデルのセット写真に合わせた条件を指定します。'}
+                    </p>
                     <span className="mt-3 rounded-full bg-cyan-400 px-3 py-1 text-xs font-bold text-neutral-950">必須項目</span>
                   </div>
                   <div className="flex items-center justify-center rounded-xl bg-white p-2">
@@ -2149,12 +2171,15 @@ export function LightchainWorkbenchPage() {
                   </div>
                 </label>
               </div>
-              <div className="grid grid-cols-3 border-b border-white/10">
-                {['説明生成', '参考画像', 'モデルのセット写真'].map((tab, index) => (
+              <div className="grid grid-cols-3 border-b border-white/10" role="tablist" aria-label="AIフィッティング入力">
+                {['説明生成', '参考画像', 'モデルのセット写真'].map((tab) => (
                   <button
                     key={tab}
                     type="button"
-                    className={`px-2 py-3 text-sm font-semibold ${index === 0 ? 'rounded-lg bg-[#707980] text-white' : 'text-neutral-400'}`}
+                    role="tab"
+                    onClick={() => setActiveFittingInputTab(tab)}
+                    aria-selected={activeFittingInputTab === tab}
+                    className={`px-2 py-3 text-sm font-semibold transition ${activeFittingInputTab === tab ? 'rounded-lg bg-[#707980] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
                   >
                     {tab}
                   </button>
@@ -2164,8 +2189,14 @@ export function LightchainWorkbenchPage() {
                 value={referenceNote}
                 onChange={(event) => setReferenceNote(event.target.value)}
                 className="min-h-[114px] w-full resize-none rounded-2xl border border-white/5 bg-[#181d1f] px-4 py-4 text-sm text-white outline-none placeholder:text-neutral-500"
-                placeholder="背景の説明をここに記入してください"
+                placeholder={activeFittingInputTab === '説明生成' ? '背景の説明をここに記入してください' : activeFittingInputTab === '参考画像' ? '参考画像で残したい雰囲気や衣服の条件を記入してください' : 'モデルセット写真で合わせたいポーズ、背景、小物を記入してください'}
               />
+              <div className="rounded-2xl border border-white/5 bg-[#181d1f] px-4 py-3 text-left text-xs leading-5 text-neutral-400">
+                {activeFittingTaskTab === 'マルチタスク'
+                  ? 'マルチタスクでは複数コーディネートを同時に管理し、各参考条件を生成履歴へまとめます。'
+                  : 'シングルタスクでは1つの衣服画像から最短で着用イメージを作ります。'}
+                <span className="mt-1 block text-[#65d3cf]">{activeFittingInputTab}</span>
+              </div>
             </div>
             <div className="absolute bottom-0 left-0 grid w-full gap-2 border-t border-white/10 bg-[#141717] p-2 sm:grid-cols-[1fr_1fr_2fr] lg:w-[432px]">
               {['スマート', '1K'].map((control) => (
@@ -2351,6 +2382,66 @@ export function LightchainWorkbenchPage() {
       );
     }
 
+    const workspaceTabs = workspaceStyle.tabs ?? [];
+    const currentWorkspaceTab = activeWorkspaceTab || workspaceTabs[0] || '';
+    const workspaceTabCopy: Record<string, { helper: string; prompt: string; historyLabel: string; examples?: string[] }> = {
+      企画案: {
+        helper: 'ブランド情報と参考コレクションから、企画書の構成案を作ります。',
+        prompt: workspaceStyle.prompt,
+        historyLabel: '企画履歴',
+        examples: workspaceStyle.examples,
+      },
+      インスピレーション: {
+        helper: 'ムード、素材、色、シルエットの参照を集めるモードです。',
+        prompt: '参考ブランド、年代、素材感、色、シルエットを入力してください。',
+        historyLabel: 'インスピレーション履歴',
+        examples: [
+          'メタリック素材、ショート丈、都会的な春夏スタイリングを集める。',
+          'ヴィンテージスポーツとラグジュアリーを組み合わせたムードボードを作る。',
+        ],
+      },
+      AIグラフィックデザイン: {
+        helper: '企画からプリント、柄、配置案へ展開するモードです。',
+        prompt: '服に入れたいグラフィック、柄、配置、色数を入力してください。',
+        historyLabel: 'グラフィック履歴',
+        examples: [
+          'チェーンモチーフを胸元と袖に配置した2色プリントを作る。',
+          'モノグラム調の総柄を、黒地に銀で展開する。',
+        ],
+      },
+      スタジオ案: {
+        helper: '商品、モデル、背景、小物を組み合わせた撮影案を作ります。',
+        prompt: workspaceStyle.prompt,
+        historyLabel: 'スタジオ案履歴',
+        examples: workspaceStyle.examples,
+      },
+      コーディネート: {
+        helper: '服と小物、靴、バッグを合わせたコーディネート案を作ります。',
+        prompt: '黒のチェーン柄フーディーに合わせるボトムス、靴、バッグ、小物の方向性を入力してください。',
+        historyLabel: 'コーディネート履歴',
+        examples: [
+          'ワイドデニム、シルバースニーカー、レザーバッグを合わせる。',
+          '黒スラックス、チェーンアクセサリー、ミニマルな背景でまとめる。',
+        ],
+      },
+      '360度表示': {
+        helper: '正面、背面、横、ディテールなど多角度の見せ方を作ります。',
+        prompt: '360度表示で見せたい角度、ディテール、背景、回転順を入力してください。',
+        historyLabel: '360度表示履歴',
+        examples: [
+          '正面、左斜め、背面、袖ディテールの4カットを作る。',
+          'EC用にフード、袖口、裾、チェーン柄を順番に見せる。',
+        ],
+      },
+    };
+    const currentWorkspaceCopy = workspaceTabCopy[currentWorkspaceTab] ?? {
+      helper: workspaceStyle.subtitle,
+      prompt: workspaceStyle.prompt,
+      historyLabel: workspaceStyle.kind === 'marketing' ? 'マイプロジェクト' : '生成履歴',
+      examples: workspaceStyle.examples,
+    };
+    const visibleExamples = currentWorkspaceCopy.examples ?? workspaceStyle.examples;
+
     return (
       <main className="dark min-h-[calc(100vh-70px)] bg-[#101313] text-white" data-testid={`lightchain-workspace-${workspaceStyle.kind}`}>
         <section className="relative min-h-[calc(100vh-70px)] overflow-hidden px-4 py-14 sm:px-8">
@@ -2379,24 +2470,37 @@ export function LightchainWorkbenchPage() {
             <p className="mt-4 text-sm text-neutral-400">{workspaceStyle.subtitle}</p>
 
             {workspaceStyle.tabs && (
-              <div className="mx-auto mt-6 inline-flex rounded-xl border border-white/10 bg-[#1a1f22] p-1">
-                {workspaceStyle.tabs.map((tab, index) => (
+              <div className="mx-auto mt-6 inline-flex rounded-xl border border-white/10 bg-[#1a1f22] p-1" role="tablist" aria-label={`${workspaceStyle.title}タブ`}>
+                {workspaceTabs.map((tab) => (
                   <button
                     key={tab}
                     type="button"
-                    className={`rounded-lg px-4 py-2 text-sm font-semibold ${index === 0 ? 'bg-[#3b4247] text-white' : 'text-neutral-400'}`}
+                    role="tab"
+                    aria-selected={currentWorkspaceTab === tab}
+                    onClick={() => {
+                      setWorkspaceTextDrafts((drafts) => ({ ...drafts, [currentWorkspaceTab]: workspaceText }));
+                      setActiveWorkspaceTab(tab);
+                      const nextCopy = workspaceTabCopy[tab];
+                      setWorkspaceText(workspaceTextDrafts[tab] ?? nextCopy?.prompt ?? '');
+                    }}
+                    className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${currentWorkspaceTab === tab ? 'bg-[#3b4247] text-white' : 'text-neutral-400 hover:text-neutral-200'}`}
                   >
                     {tab}
                   </button>
                 ))}
               </div>
             )}
+            {workspaceTabs.length > 0 && (
+              <p className="mx-auto mt-3 max-w-[560px] text-xs leading-5 text-[#65d3cf]" data-testid="lightchain-workspace-tab-state">
+                {currentWorkspaceCopy.helper}
+              </p>
+            )}
 
-            {workspaceStyle.examples && (
+            {visibleExamples && (
               <div className="mt-7 text-left">
                 <p className="text-sm text-neutral-300">こちらをお試しください</p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {workspaceStyle.examples.map((example) => (
+                  {visibleExamples.map((example) => (
                     <button
                       key={example}
                       type="button"
@@ -2431,8 +2535,14 @@ export function LightchainWorkbenchPage() {
                   )}
                   <textarea
                     value={workspaceText}
-                    onChange={(event) => setWorkspaceText(event.target.value)}
-                    placeholder={workspaceStyle.prompt}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      setWorkspaceText(nextValue);
+                      if (currentWorkspaceTab) {
+                        setWorkspaceTextDrafts((drafts) => ({ ...drafts, [currentWorkspaceTab]: nextValue }));
+                      }
+                    }}
+                    placeholder={currentWorkspaceCopy.prompt}
                     maxLength={4000}
                     className={`h-full min-h-[112px] w-full resize-none border-0 bg-transparent ${workspaceStyle.kind === 'agent' ? 'pt-[74px]' : 'py-5'} text-sm leading-7 text-neutral-200 outline-none placeholder:text-neutral-400`}
                   />
@@ -2476,7 +2586,7 @@ export function LightchainWorkbenchPage() {
 
           <section className={`relative mx-auto mt-8 ${workspaceStyle.kind === 'marketing' ? 'max-w-[1130px]' : 'max-w-[720px]'}`}>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{workspaceStyle.kind === 'marketing' ? 'マイプロジェクト' : '生成履歴'}</h2>
+              <h2 className="text-lg font-semibold">{currentWorkspaceCopy.historyLabel}</h2>
               {lightchainResult && (
                 <button
                   type="button"

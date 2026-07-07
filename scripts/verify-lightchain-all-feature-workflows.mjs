@@ -194,6 +194,7 @@ async function verifyFeatureWorkflow(page, tool) {
     expectedTitle: tool.title,
     bodyExcerpt: body.slice(0, 900),
   });
+  await verifyVisibleTabInteractions(page, tool, result);
 
   const generateButton = page.getByRole('button', { name: /AI生成|更新|保存|開始/ }).first();
   const hasSafeLocalAction = await generateButton.isVisible({ timeout: 1000 }).catch(() => false);
@@ -204,6 +205,95 @@ async function verifyFeatureWorkflow(page, tool) {
 
   await screenshot(page, `desktop-${tool.id}`);
   return result;
+}
+
+async function verifyVisibleTabInteractions(page, tool, result) {
+  const tabChecks = {
+    'fashion-studio': [
+      { tab: 'コーディネート', expected: 'コーディネート履歴', promptValue: 'ボトムス、靴、バッグ', helper: '服と小物、靴、バッグを合わせたコーディネート案を作ります。', example: 'ワイドデニム、シルバースニーカー', placeholder: '黒のチェーン柄フーディーに合わせるボトムス、靴、バッグ、小物の方向性を入力してください。' },
+      { tab: '360度表示', expected: '360度表示履歴', promptValue: '360度表示で見せたい角度', helper: '正面、背面、横、ディテールなど多角度の見せ方を作ります。', example: '正面、左斜め、背面', placeholder: '360度表示で見せたい角度、ディテール、背景、回転順を入力してください。' },
+      { tab: 'スタジオ案', expected: 'スタジオ案履歴', promptValue: 'モデル、背景、小物', helper: '商品、モデル、背景、小物を組み合わせた撮影案を作ります。', example: '平置き商品画像', placeholder: '黒のチェーン柄フーディーを、モデル、背景、小物と組み合わせてEC/SNS向けの撮影案にしてください。' },
+    ],
+    'design-agent': [
+      { tab: 'インスピレーション', expected: 'インスピレーション履歴', promptValue: '素材感、色、シルエット', helper: 'ムード、素材、色、シルエットの参照を集めるモードです。', example: 'メタリック素材', placeholder: '参考ブランド、年代、素材感、色、シルエットを入力してください。' },
+      { tab: 'AIグラフィックデザイン', expected: 'グラフィック履歴', promptValue: '柄、配置、色数', helper: '企画からプリント、柄、配置案へ展開するモードです。', example: 'チェーンモチーフ', placeholder: '服に入れたいグラフィック、柄、配置、色数を入力してください。' },
+      { tab: '企画案', expected: '企画履歴', promptValue: 'LOUIS VUITTON', helper: 'ブランド情報と参考コレクションから、企画書の構成案を作ります。', example: 'ZIMMERMANN', placeholder: 'LOUIS VUITTON の 2026年春夏 コレクションからインスピレーションを得て、ショートジャケット、シャツ、ロングパンツ、ショートパンツで構成するメンズ デザイン企画書を作成する。' },
+    ],
+  }[tool.id] ?? [];
+
+  for (const check of tabChecks) {
+    const tabButton = page.getByRole('tab', { name: exactText(check.tab) });
+    await tabButton.click();
+    await page.waitForTimeout(100);
+    const body = await bodyText(page);
+    const textareaValue = await page.locator('textarea').first().inputValue().catch(() => '');
+    const ariaSelected = await tabButton.getAttribute('aria-selected').catch(() => null);
+    const placeholder = await page.locator('textarea').first().getAttribute('placeholder').catch(() => null);
+    recordFeatureAssertion(result, `tab_click_updates_state:${check.tab}`, ariaSelected === 'true' && body.includes(check.expected) && body.includes(check.helper) && body.includes(check.example) && textareaValue.includes(check.promptValue) && placeholder === check.placeholder, {
+      expected: check.expected,
+      ariaSelected,
+      helper: check.helper,
+      example: check.example,
+      placeholder,
+      expectedPlaceholder: check.placeholder,
+      promptValue: check.promptValue,
+      textareaValue,
+      bodyExcerpt: body.slice(0, 700),
+    });
+  }
+
+  if (['ai-fitting', 'ai-fitting-reference', 'fitting-clothing-reference', 'fitting-background-reference'].includes(tool.id)) {
+    const fittingChecks = [
+      {
+        tab: 'マルチタスク',
+        expected: '複数コーディネートを同時に管理',
+        headline: '複数のコーディネートのアップロードに対応',
+      },
+      {
+        tab: 'シングルタスク',
+        expected: '1つの衣服画像から最短',
+        headline: '1つの衣服画像から着用画像を作成',
+      },
+      {
+        tab: '参考画像',
+        expected: '参考画像',
+        placeholder: '参考画像で残したい雰囲気や衣服の条件を記入してください',
+        helper: '衣服と一緒に使う参考画像の条件を指定します。',
+      },
+      {
+        tab: 'モデルのセット写真',
+        expected: 'モデルのセット写真',
+        placeholder: 'モデルセット写真で合わせたいポーズ、背景、小物を記入してください',
+        helper: 'モデルのセット写真に合わせた条件を指定します。',
+      },
+      {
+        tab: '説明生成',
+        expected: '説明生成',
+        placeholder: '背景の説明をここに記入してください',
+        helper: 'ここをクリック/ドラッグしてアイテムを追加します。',
+      },
+    ];
+    for (const check of fittingChecks) {
+      const tabButton = page.getByRole('tab', { name: exactText(check.tab) }).first();
+      await tabButton.click();
+      await page.waitForTimeout(100);
+      const body = await bodyText(page);
+      const ariaSelected = await tabButton.getAttribute('aria-selected').catch(() => null);
+      const placeholder = await page.locator('textarea').first().getAttribute('placeholder').catch(() => null);
+      const placeholderOk = !check.placeholder || placeholder === check.placeholder;
+      const headlineOk = !check.headline || body.includes(check.headline);
+      const helperOk = !check.helper || body.includes(check.helper);
+      recordFeatureAssertion(result, `fitting_tab_click_updates_state:${check.tab}`, ariaSelected === 'true' && body.includes(check.expected) && placeholderOk && headlineOk && helperOk, {
+        expected: check.expected,
+        ariaSelected,
+        placeholder,
+        expectedPlaceholder: check.placeholder ?? null,
+        expectedHeadline: check.headline ?? null,
+        expectedHelper: check.helper ?? null,
+        bodyExcerpt: body.slice(0, 700),
+      });
+    }
+  }
 }
 
 async function verifyGenerateEntrypointUsesFeatureDetail(page) {
@@ -315,7 +405,7 @@ function isReadOnlyWorkspaceTool(toolId) {
 }
 
 function matchesLightchainSignature(tool, body) {
-  if (tool.id === 'fashion-studio') return body.includes('ファッションスタジオ') && body.includes('生成履歴') && body.includes('360度表示');
+  if (tool.id === 'fashion-studio') return body.includes('ファッションスタジオ') && body.includes('スタジオ案履歴') && body.includes('360度表示');
   if (tool.id === 'marketing-home') return body.includes('マーケティングワークスペース') && body.includes('おすすめのシーン');
   if (tool.id === 'design-agent') return body.includes('Hello') && body.includes('企画案') && body.includes('AIグラフィックデザイン');
   if (tool.id === 'lab') return body.includes('Lightchain Lab') && body.includes('参考事例');
