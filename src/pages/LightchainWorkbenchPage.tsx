@@ -3743,6 +3743,7 @@ export function LightchainWorkbenchPage() {
                                 onClick={() => updateModelFormState('keepSize', modelFormState.keepSize === 'on' ? 'off' : 'on')}
                                 className={`h-5 w-10 rounded-full p-0.5 transition ${modelFormState.keepSize === 'on' ? 'bg-[#65d3cf]' : 'bg-[#3a4246]'}`}
                                 aria-label="サイズを維持する"
+                                aria-pressed={modelFormState.keepSize === 'on'}
                               >
                                 <span className={`block h-4 w-4 rounded-full bg-white transition ${modelFormState.keepSize === 'on' ? 'translate-x-5' : ''}`} />
                               </button>
@@ -3769,11 +3770,12 @@ export function LightchainWorkbenchPage() {
                             </div>
                           </div>
 	                          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-	                            <button type="button" onClick={() => updateModelFormState('bodyType', modelFormState.bodyType === '標準体型' ? 'スマート' : '標準体型')} className="rounded-xl bg-[#252b2e] px-4 py-3 text-left text-sm font-semibold text-neutral-200">体型 <span className="float-right text-white">{modelFormState.bodyType === 'スマート' ? '標準体型' : modelFormState.bodyType}</span></button>
-	                            <button
+                              <button type="button" onClick={() => updateModelFormState('bodyType', modelFormState.bodyType === '標準体型' ? 'スマート' : '標準体型')} className="rounded-xl bg-[#252b2e] px-4 py-3 text-left text-sm font-semibold text-neutral-200">体型 <span className="float-right text-white">{modelFormState.bodyType}</span></button>
+                              <button
                                 type="button"
                                 onClick={() => updateModelFormState('customBody', modelFormState.customBody === 'on' ? 'off' : 'on')}
                                 className="flex items-center justify-between gap-3 rounded-xl bg-[#252b2e] px-4 py-3 text-sm font-semibold text-neutral-200"
+                                aria-pressed={modelFormState.customBody === 'on'}
                               >
                                 <span>カスタムボディ</span>
                                 <span className={`h-3 w-3 rounded-full ${modelFormState.customBody === 'on' ? 'bg-[#65d3cf]' : 'bg-neutral-500'}`} />
@@ -3839,6 +3841,7 @@ export function LightchainWorkbenchPage() {
                                 onClick={() => updateModelFormState('backView', modelFormState.backView === 'on' ? 'off' : 'on')}
                                 className={`h-5 w-10 rounded-full p-0.5 transition ${modelFormState.backView === 'on' ? 'bg-[#65d3cf]' : 'bg-[#3a4246]'}`}
                                 aria-label="背面"
+                                aria-pressed={modelFormState.backView === 'on'}
                               >
                                 <span className={`block h-4 w-4 rounded-full bg-white transition ${modelFormState.backView === 'on' ? 'translate-x-5' : ''}`} />
                               </button>

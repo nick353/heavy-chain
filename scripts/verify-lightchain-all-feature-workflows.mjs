@@ -195,6 +195,9 @@ async function verifyFeatureWorkflow(page, tool) {
     bodyExcerpt: body.slice(0, 900),
   });
   await verifyVisibleTabInteractions(page, tool, result);
+  await verifyAllVisibleTabsRespond(page, tool, result);
+  await verifyToolSpecificChoiceControls(page, tool, result);
+  await verifyVisibleRangeControlsRespond(page, tool, result);
 
   const generateButton = page.getByRole('button', { name: /AI生成|更新|保存|開始/ }).first();
   const hasSafeLocalAction = await generateButton.isVisible({ timeout: 1000 }).catch(() => false);
@@ -294,6 +297,265 @@ async function verifyVisibleTabInteractions(page, tool, result) {
       });
     }
   }
+}
+
+async function verifyAllVisibleTabsRespond(page, tool, result) {
+  const tabs = await page.locator('[role="tab"]').evaluateAll((nodes) => nodes.map((node, index) => ({
+    index,
+    tablistIndex: Array.from(document.querySelectorAll('[role="tablist"]')).findIndex((tablist) => tablist.contains(node)),
+    indexInTablist: node.closest('[role="tablist"]')
+      ? Array.from(node.closest('[role="tablist"]').querySelectorAll('[role="tab"]')).indexOf(node)
+      : index,
+    text: node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+    selected: node.getAttribute('aria-selected'),
+  })).filter((item) => item.text));
+  recordFeatureAssertion(result, 'visible_tabs_have_click_targets', tabs.length > 0 || !expectsInteractiveTabs(tool.id), {
+    tabCount: tabs.length,
+    tabs,
+  });
+  for (const tab of tabs) {
+    const tabButton = tab.tablistIndex >= 0
+      ? page.locator('[role="tablist"]').nth(tab.tablistIndex).locator('[role="tab"]').nth(tab.indexInTablist)
+      : page.locator('[role="tab"]').nth(tab.index);
+    if (tab.selected === 'true' && tabs.length > 1) {
+      const alternate = tabs.find((candidate) => candidate.tablistIndex === tab.tablistIndex && candidate.index !== tab.index);
+      if (alternate) {
+        const alternateButton = alternate.tablistIndex >= 0
+          ? page.locator('[role="tablist"]').nth(alternate.tablistIndex).locator('[role="tab"]').nth(alternate.indexInTablist)
+          : page.locator('[role="tab"]').nth(alternate.index);
+        await alternateButton.click();
+        await page.waitForTimeout(150);
+      }
+    }
+    const before = await interactionSnapshot(page);
+    await tabButton.click();
+    await page.waitForTimeout(150);
+    const after = await interactionSnapshot(page);
+    const ariaSelected = await tabButton.getAttribute('aria-selected').catch(() => null);
+    const selectedOk = ariaSelected === 'true';
+    const changedOk = before.fingerprint !== after.fingerprint;
+    recordFeatureAssertion(result, `visible_tab_responds:${tab.index}:${tab.text}`, selectedOk && changedOk, {
+      text: tab.text,
+      selectedBefore: tab.selected,
+      ariaSelected,
+      before,
+      after,
+    });
+  }
+}
+
+async function verifyToolSpecificChoiceControls(page, tool, result) {
+  const checksByTool = {
+    'printing-image': [
+      { name: 'print_mode_overall', button: '全体', expectBody: '全体', expectSelectedClass: 'bg-[#737d84]' },
+      { name: 'print_mode_spot', button: 'スポット', expectBody: 'スポット', expectSelectedClass: 'bg-[#737d84]' },
+    ],
+    'line-to-real': [
+      { name: 'line_draft_monochrome', button: 'モノクロ線画', expectBody: 'モノクロ線画', expectSelectedClass: 'bg-[#737d84]' },
+      { name: 'line_draft_color', button: 'カラー線画', expectBody: 'カラー線画', expectSelectedClass: 'bg-[#737d84]' },
+    ],
+    'line-generation': [
+      { name: 'flat_image_type_model', button: 'モデル図', expectBody: 'モデル図', expectSelectedClass: 'bg-[#737d84]' },
+      { name: 'flat_image_type_flatlay', button: '平置き画像', expectBody: '平置き画像', expectSelectedClass: 'bg-[#737d84]' },
+    ],
+    'image-repair': [
+      { name: 'repair_mask_tool', button: 'マスクツール', expectBody: 'マスクツール」を使用して手足の部分をマスクで選択してください', expectSelectedClass: 'bg-[#737d84]' },
+      { name: 'repair_deformation', button: '手足の変形を修正', expectBody: '手足の変形を修正', expectSelectedClass: 'bg-[#737d84]' },
+    ],
+    'pattern-vector': [
+      { name: 'pattern_vector_split', button: '分割', expectBody: '分割', expectSelectedClass: 'bg-[#737d84]' },
+    ],
+    'pattern-vector-pro': [
+      { name: 'pattern_vector_pro_split', button: '分割', expectBody: '分割', expectSelectedClass: 'bg-[#737d84]' },
+    ],
+    'model-change': [
+      { name: 'model_change_keep_size_toggle', button: 'サイズを維持する', expectBody: 'サイズを維持する', expectStateChange: true },
+    ],
+    'pose-change': [
+      { name: 'pose_mode_custom', button: 'カスタム', expectBody: 'カスタム', expectSelectedClass: 'bg-[#747e85]' },
+    ],
+    'background-change': [
+      { name: 'background_mode_custom', button: 'カスタム', expectBody: 'カスタム', expectSelectedClass: 'bg-[#747e85]' },
+    ],
+    'body-shape': [
+      { name: 'body_gender_women', button: '女性', expectBody: '女性', expectSelectedClass: 'bg-[#747e85]' },
+      { name: 'body_type_toggle', button: '体型', expectBody: '体型', expectStateChange: true },
+      { name: 'body_custom_toggle', button: 'カスタムボディ', expectBody: 'カスタムボディ', expectStateChange: true },
+    ],
+    'clothing-size': [
+      { name: 'garment_type_full', button: '全身', expectBody: '全身', expectSelectedClass: 'bg-[#747e85]' },
+      { name: 'source_size_toggle', button: '元のサイズ', expectBody: '元のサイズ', expectStateChange: true },
+      { name: 'target_size_toggle', button: '変更サイズ', expectBody: '変更サイズ', expectStateChange: true },
+    ],
+    'angle-change': [
+      { name: 'back_view_toggle', button: '背面', expectBody: '背面', expectStateChange: true },
+    ],
+    'model-custom': [
+      { name: 'custom_mode_custom', button: 'カスタム', expectBody: 'カスタム', expectSelectedClass: 'bg-[#747e85]' },
+      { name: 'custom_gender_women', button: '女性', expectBody: '女性', expectSelectedClass: 'bg-[#747e85]' },
+      { name: 'custom_age_toggle', button: '年齢', expectBody: '年齢', expectStateChange: true },
+      { name: 'custom_nationality_toggle', button: '国籍', expectBody: '国籍', expectStateChange: true },
+      { name: 'custom_skin_tone_toggle', button: '肌の色', expectBody: '肌の色', expectStateChange: true },
+      { name: 'custom_body_type_toggle', button: '体型', expectBody: '体型', expectStateChange: true },
+      { name: 'custom_half_toggle', button: 'ハーフ', expectBody: 'ハーフ', expectStateChange: true },
+    ],
+  };
+  const checks = checksByTool[tool.id] ?? [];
+  for (const check of checks) {
+    const button = await buttonByText(page, check.button);
+    const visible = await button.isVisible({ timeout: 1000 }).catch(() => false);
+    const before = await interactionSnapshot(page);
+    const classNameBefore = visible ? await button.getAttribute('class').catch(() => '') : '';
+    if (visible) await button.click();
+    await page.waitForTimeout(150);
+    const after = await interactionSnapshot(page);
+    const className = visible ? await button.getAttribute('class').catch(() => '') : '';
+    const selectedOk = check.expectSelectedClass ? className?.includes(check.expectSelectedClass) : true;
+    const wasAlreadySelected = check.expectSelectedClass ? classNameBefore?.includes(check.expectSelectedClass) : false;
+    const changedOk = check.expectStateChange || !wasAlreadySelected ? before.fingerprint !== after.fingerprint : true;
+    const bodyOk = !check.expectBody || after.body.includes(check.expectBody);
+    recordFeatureAssertion(result, `choice_control_responds:${check.name}`, visible && selectedOk && changedOk && bodyOk, {
+      button: check.button,
+      visible,
+      classNameBefore,
+      className,
+      expectSelectedClass: check.expectSelectedClass ?? null,
+      expectStateChange: Boolean(check.expectStateChange),
+      before,
+      after,
+    });
+  }
+  await verifyToolSpecificRangeControls(page, tool, result);
+}
+
+async function verifyToolSpecificRangeControls(page, tool, result) {
+  const rangeChecksByTool = {
+    'angle-change': [
+      { name: 'angle_horizontal', label: '左視⇔右視', value: '82' },
+      { name: 'angle_vertical', label: '見上げる⇔見下ろす', value: '18' },
+      { name: 'angle_zoom', label: 'ズームイン⇔ズームアウト', value: '76' },
+    ],
+  };
+  const checks = rangeChecksByTool[tool.id] ?? [];
+  for (const check of checks) {
+    const range = page.getByRole('slider', { name: exactText(check.label) }).first();
+    const visible = await range.isVisible({ timeout: 1000 }).catch(() => false);
+    const before = await interactionSnapshot(page);
+    if (visible) {
+      await range.fill(check.value);
+      await range.dispatchEvent('change');
+    }
+    await page.waitForTimeout(150);
+    const after = await interactionSnapshot(page);
+    const value = visible ? await range.inputValue().catch(() => '') : '';
+    recordFeatureAssertion(result, `range_control_responds:${check.name}`, visible && value === check.value && before.fingerprint !== after.fingerprint, {
+      label: check.label,
+      visible,
+      expectedValue: check.value,
+      value,
+      before,
+      after,
+    });
+  }
+}
+
+async function verifyVisibleRangeControlsRespond(page, tool, result) {
+  const ranges = await page.locator('input[type="range"]:visible').evaluateAll((nodes) => nodes.map((node, index) => ({
+    index,
+    label: node.getAttribute('aria-label') || node.closest('label')?.innerText?.replace(/\s+/g, ' ').trim() || `range-${index}`,
+    value: node.value,
+    min: node.getAttribute('min') ?? '0',
+    max: node.getAttribute('max') ?? '100',
+  })));
+  for (const rangeInfo of ranges) {
+    const range = page.locator('input[type="range"]:visible').nth(rangeInfo.index);
+    const min = Number(rangeInfo.min);
+    const max = Number(rangeInfo.max);
+    const current = Number(rangeInfo.value);
+    const next = Number.isFinite(min) && Number.isFinite(max) && max > min
+      ? String(current === max ? min : max)
+      : '75';
+    const before = await interactionSnapshot(page);
+    await range.fill(next);
+    await range.dispatchEvent('change');
+    await page.waitForTimeout(150);
+    const after = await interactionSnapshot(page);
+    const value = await range.inputValue().catch(() => '');
+    recordFeatureAssertion(result, `visible_range_control_responds:${rangeInfo.index}:${rangeInfo.label}`, value === next && before.fingerprint !== after.fingerprint, {
+      label: rangeInfo.label,
+      beforeValue: rangeInfo.value,
+      expectedValue: next,
+      value,
+      before,
+      after,
+    });
+  }
+}
+
+async function interactionSnapshot(page) {
+  return page.evaluate(() => {
+    const textareas = Array.from(document.querySelectorAll('textarea')).map((node) => ({
+      value: node.value,
+      placeholder: node.getAttribute('placeholder') ?? '',
+    }));
+    const inputs = Array.from(document.querySelectorAll('input')).map((node) => ({
+      type: node.getAttribute('type') ?? '',
+      label: node.getAttribute('aria-label') ?? '',
+      value: node.value,
+      checked: node.checked,
+    })).filter((item) => item.type !== 'file');
+    const selectedTabs = Array.from(document.querySelectorAll('[role="tab"]')).map((node) => ({
+      text: node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+      selected: node.getAttribute('aria-selected') ?? '',
+      className: node.getAttribute('class') ?? '',
+    }));
+    const highlightedButtons = Array.from(document.querySelectorAll('button')).map((node) => ({
+      text: node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+      className: node.getAttribute('class') ?? '',
+      ariaPressed: node.getAttribute('aria-pressed') ?? '',
+      childClasses: Array.from(node.querySelectorAll('*')).map((child) => child.getAttribute('class') ?? '').filter(Boolean),
+    })).filter((item) => item.className.includes('bg-[#737d84]') || item.className.includes('bg-[#747e85]') || item.className.includes('bg-[#65d3cf]') || item.ariaPressed === 'true');
+    const body = document.body.innerText.replace(/\s+/g, ' ').trim();
+    const fingerprint = JSON.stringify({
+      body: body.slice(0, 10000),
+      textareas,
+      inputs,
+      selectedTabs,
+      highlightedButtons,
+    });
+    return {
+      body: body.slice(0, 900),
+      textareas,
+      inputs,
+      selectedTabs,
+      highlightedButtons,
+      fingerprint,
+    };
+  });
+}
+
+function expectsInteractiveTabs(toolId) {
+  return [
+    'fashion-studio',
+    'design-agent',
+    'ai-fitting',
+    'ai-fitting-reference',
+    'fitting-clothing-reference',
+    'fitting-background-reference',
+  ].includes(toolId);
+}
+
+async function buttonByText(page, text) {
+  const panelButton = page
+    .locator('[data-testid="lightchain-model-panel"], [data-testid="lightchain-fitting-input-flow"]')
+    .getByRole('button', { name: exactText(text) })
+    .or(page.locator('[data-testid="lightchain-model-panel"] button, [data-testid="lightchain-fitting-input-flow"] button').filter({ hasText: new RegExp(`^\\s*${escapeRegExp(text)}`) }))
+    .first();
+  if (await panelButton.isVisible({ timeout: 300 }).catch(() => false)) return panelButton;
+  return page
+    .getByRole('button', { name: exactText(text) })
+    .or(page.locator('button').filter({ hasText: new RegExp(`^\\s*${escapeRegExp(text)}`) }))
+    .first();
 }
 
 async function verifyGenerateEntrypointUsesFeatureDetail(page) {
@@ -553,7 +815,7 @@ async function waitForSettledRoute(page, toolId) {
     const text = document.body.innerText.trim();
     if (currentToolId === 'fashion-studio' && text.includes('ファッションスタジオ') && text.includes('生成履歴')) return true;
     if (['ai-fitting', 'ai-fitting-reference', 'fitting-clothing-reference', 'fitting-background-reference'].includes(currentToolId)) {
-      return text.includes('AIフィッティング') && !text.includes('ログイン');
+      return text.includes('AIフィッティング') && text.includes('シングルタスク') && text.includes('生成履歴') && !text.includes('素材ワークベンチを準備しています') && !text.includes('ログイン');
     }
     return text.length > 0
       && !text.includes('MATERIAL WORKBENCH')

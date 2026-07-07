@@ -29,7 +29,7 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
 const requiredReadbacks = [
   {
     name: 'production monitor',
-    path: 'output/playwright/g774-production-monitor-current-r1/summary.json',
+    path: 'output/playwright/g764-production-monitor-current-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       arrayFrom(json.blockers).length === 0 &&
@@ -191,13 +191,13 @@ const requiredReadbacks = [
   },
   {
     name: 'G618 scale ops baseline',
-    path: 'output/playwright/g728-g618-scale-ops-current-r1/summary.json',
+    path: 'output/playwright/g764-g618-scale-ops-r1/summary.json',
     validate: validateG618ScaleOps,
     expect: 'ok=true, blockers=[], expected schema, commands/checks passed, imageCount>=1200, canvasObjectCount>=600, monitor/performance nested artifacts valid, and only allowed monitor warnings',
   },
   {
     name: 'G620 security operations',
-    path: 'output/playwright/g728-g620-security-ops-current-r1/summary.json',
+    path: 'output/playwright/g764-g620-security-ops-r1/summary.json',
     validate: validateG620SecurityOps,
     expect: 'ok=true, blockers=[], expected schema, monitor readback safe, abuse/permission/audit/incident checks passed, and only allowed monitor warnings',
   },
