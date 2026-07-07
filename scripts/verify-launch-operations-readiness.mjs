@@ -61,13 +61,15 @@ if (!fs.existsSync(authState)) {
   failEarly(`auth_state_missing: ${authState}`);
 }
 
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({
-  storageState: authState,
-  viewport: { width: 1440, height: 1000 },
-});
+let browser = null;
+let context = null;
 
 try {
+  browser = await chromium.launch({ headless: true });
+  context = await browser.newContext({
+    storageState: authState,
+    viewport: { width: 1440, height: 1000 },
+  });
   await checkProductionAsset();
   await checkRoute({
     key: 'dashboard',
@@ -80,9 +82,21 @@ try {
   await checkPublicSurface();
   await checkMobileRoutes();
   await checkDocsAndProofFiles();
+} catch (error) {
+  evidence.exactBlocker = error instanceof Error ? error.message : String(error);
+  evidence.ok = false;
+  evidence.failed = ['route_exception_free'];
 } finally {
-  await context.close();
-  await browser.close();
+  if (context) {
+    await context.close().catch((error) => {
+      evidence.closeErrors = [...(evidence.closeErrors || []), `context_close:${error.message}`];
+    });
+  }
+  if (browser) {
+    await browser.close().catch((error) => {
+      evidence.closeErrors = [...(evidence.closeErrors || []), `browser_close:${error.message}`];
+    });
+  }
 }
 
 pushCheck('No relevant console/page errors', evidence.consoleMessages.length === 0 && evidence.pageErrors.length === 0, {
@@ -92,9 +106,15 @@ pushCheck('No relevant console/page errors', evidence.consoleMessages.length ===
 pushCheck('No app/Supabase HTTP request failures', evidence.networkFailures.length === 0, {
   networkFailures: evidence.networkFailures,
 });
+pushCheck('Browser cleanup completed', (evidence.closeErrors || []).length === 0, {
+  closeErrors: evidence.closeErrors || [],
+});
 
-evidence.ok = evidence.checks.every((check) => check.passed);
-evidence.failed = evidence.checks.filter((check) => !check.passed).map((check) => check.name);
+evidence.ok = evidence.ok === false ? false : evidence.checks.every((check) => check.passed);
+evidence.failed = [
+  ...(evidence.failed || []),
+  ...evidence.checks.filter((check) => !check.passed).map((check) => check.name),
+];
 
 const summaryPath = path.join(outDir, 'summary.json');
 fs.writeFileSync(summaryPath, `${JSON.stringify(evidence, null, 2)}\n`);
@@ -168,7 +188,7 @@ async function checkGenerateForm() {
 }
 
 async function ensureGenerateDetailForm(page) {
-  const detailReady = await page.getByLabel('ベースコンセプト').first().isVisible({ timeout: 5000 }).catch(() => false);
+  const detailReady = await waitForGenerateDetailField(page, 5000).catch(() => null);
   if (detailReady) return;
 
   const body = await page.locator('body').innerText({ timeout: 10000 }).catch(() => '');
@@ -177,19 +197,33 @@ async function ensureGenerateDetailForm(page) {
     await waitForExpectedRouteText(page, ['ベースコンセプト'], 15000);
   }
 
-  await page.getByLabel('ベースコンセプト').first().waitFor({ state: 'visible', timeout: 30000 });
+  await waitForGenerateDetailField(page, 30000);
 }
 
 async function findEditableGeneratePromptField(page) {
-  const candidates = [
-    page.getByLabel('ベースコンセプト').first(),
-    page.getByLabel('生成リクエスト').first(),
-    page.locator('textarea:visible').first(),
-  ];
+  return waitForEditableGeneratePromptField(page, 5000);
+}
 
-  for (const candidate of candidates) {
-    const visible = await candidate.isVisible({ timeout: 5000 }).catch(() => false);
-    if (visible) return candidate;
+async function waitForGenerateDetailField(page, timeout) {
+  const locator = page.getByLabel('ベースコンセプト').first();
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const visible = await locator.isVisible({ timeout: 250 }).catch(() => false);
+    if (visible) return locator;
+    await page.waitForTimeout(250);
+  }
+
+  throw new Error('generate_detail_form_missing');
+}
+
+async function waitForEditableGeneratePromptField(page, timeout) {
+  const locator = page.getByLabel('ベースコンセプト').first();
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const visible = await locator.isVisible({ timeout: 250 }).catch(() => false);
+    const enabled = visible && await locator.isEnabled().catch(() => false);
+    if (enabled) return locator;
+    await page.waitForTimeout(250);
   }
 
   throw new Error('generate_prompt_field_missing');
@@ -319,7 +353,9 @@ async function checkMobileRoutes() {
       await page.close();
     }
   } finally {
-    await mobile.close();
+    await mobile.close().catch((error) => {
+      evidence.closeErrors = [...(evidence.closeErrors || []), `mobile_context_close:${error.message}`];
+    });
   }
 }
 

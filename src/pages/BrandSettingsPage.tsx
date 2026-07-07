@@ -51,6 +51,7 @@ export function BrandSettingsPage() {
   const [inviteCode, setInviteCode] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false);
   
   const [form, setForm] = useState({
     name: '',
@@ -102,6 +103,7 @@ export function BrandSettingsPage() {
         primaryColor: (currentBrand.brand_colors as any)?.primary || '#806a54',
         secondaryColor: (currentBrand.brand_colors as any)?.secondary || '#c4a57c',
       });
+      setLogoLoadFailed(false);
       fetchMembers();
     }
   }, [currentBrand, fetchMembers]);
@@ -296,14 +298,18 @@ export function BrandSettingsPage() {
           {/* Logo */}
           <div className="flex items-center gap-6 mb-8">
             <div className="w-24 h-24 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center overflow-hidden shadow-inner">
-              {currentBrand.logo_url ? (
+              {currentBrand.logo_url && !logoLoadFailed ? (
                 <img 
                   src={currentBrand.logo_url} 
                   alt="Logo" 
                   className="w-full h-full object-cover"
+                  onError={() => setLogoLoadFailed(true)}
                 />
               ) : (
-                <span className="text-3xl font-bold text-neutral-400 dark:text-neutral-600 font-display">
+                <span
+                  data-testid="brand-logo-fallback"
+                  className="text-3xl font-bold text-neutral-400 dark:text-neutral-600 font-display"
+                >
                   {form.name.charAt(0).toUpperCase()}
                 </span>
               )}

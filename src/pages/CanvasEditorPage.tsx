@@ -1869,8 +1869,8 @@ export function CanvasEditorPage() {
         {/* Canvas area */}
         <main className="flex-1 flex flex-col relative overflow-hidden">
           {/* Toolbar container - centered on desktop, full width on mobile */}
-          <div className="absolute top-2 sm:top-4 inset-x-2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-10 flex justify-center pointer-events-none">
-            <div className="pointer-events-auto rounded-lg sm:rounded-xl border border-white/10 bg-[#101313]/95 p-0 sm:p-1 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur">
+          <div className="absolute top-2 sm:top-4 inset-x-2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-10 flex max-w-[calc(100%-1rem)] justify-center pointer-events-none">
+            <div className="pointer-events-auto max-w-full rounded-lg sm:rounded-xl border border-white/10 bg-[#101313]/95 p-0 sm:p-1 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur">
               <CanvasToolbar
                 onAddText={handleAddText}
                 onAddShape={handleAddShape}

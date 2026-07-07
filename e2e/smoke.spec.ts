@@ -1289,6 +1289,80 @@ test.describe('workspace activity pages', () => {
     });
   });
 
+  test('canvas mobile toolbar and more menu stay within the viewport', async ({ page }) => {
+    await mockSupabase(page);
+    await completeOnboardingForMockUser(page);
+
+    for (const viewport of [
+      { width: 390, height: 844 },
+      { width: 320, height: 568 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await page.goto('/canvas/new');
+      await expect(page.getByTestId('canvas-toolbar')).toBeVisible();
+      await expect(page.getByTestId('canvas-toolbar-scroll')).toBeVisible();
+
+      const initialMetrics = await page.evaluate(() => {
+        const toolbar = document.querySelector('[data-testid="canvas-toolbar"]');
+        const scroller = document.querySelector('[data-testid="canvas-toolbar-scroll"]');
+        const moreButton = document.querySelector('button[title="その他のツール"]');
+        const toolbarRect = toolbar?.getBoundingClientRect();
+        const scrollerRect = scroller?.getBoundingClientRect();
+        const moreButtonRect = moreButton?.getBoundingClientRect();
+        return {
+          viewportWidth: window.innerWidth,
+          documentScrollWidth: document.documentElement.scrollWidth,
+          toolbar: toolbarRect ? { left: toolbarRect.left, right: toolbarRect.right, width: toolbarRect.width } : null,
+          moreButton: moreButtonRect
+            ? { left: moreButtonRect.left, right: moreButtonRect.right, top: moreButtonRect.top, bottom: moreButtonRect.bottom }
+            : null,
+          scroller: scrollerRect
+            ? {
+                left: scrollerRect.left,
+                right: scrollerRect.right,
+                width: scrollerRect.width,
+                scrollWidth: scroller?.scrollWidth ?? 0,
+                clientWidth: scroller?.clientWidth ?? 0,
+              }
+            : null,
+        };
+      });
+
+      expect(initialMetrics.toolbar).not.toBeNull();
+      expect(initialMetrics.moreButton).not.toBeNull();
+      expect(initialMetrics.scroller).not.toBeNull();
+      expect(initialMetrics.documentScrollWidth).toBeLessThanOrEqual(initialMetrics.viewportWidth + 1);
+      expect(initialMetrics.toolbar!.left).toBeGreaterThanOrEqual(-1);
+      expect(initialMetrics.toolbar!.right).toBeLessThanOrEqual(initialMetrics.viewportWidth + 1);
+      expect(initialMetrics.moreButton!.left).toBeGreaterThanOrEqual(-1);
+      expect(initialMetrics.moreButton!.right).toBeLessThanOrEqual(initialMetrics.viewportWidth + 1);
+      expect(initialMetrics.scroller!.left).toBeGreaterThanOrEqual(-1);
+      expect(initialMetrics.scroller!.right).toBeLessThanOrEqual(initialMetrics.viewportWidth + 1);
+      expect(initialMetrics.scroller!.scrollWidth).toBeGreaterThanOrEqual(initialMetrics.scroller!.clientWidth);
+
+      await page.locator('button[title="その他のツール"]').click();
+      await expect(page.getByTestId('canvas-toolbar-more-menu')).toBeVisible();
+
+      const menuMetrics = await page.evaluate(() => {
+        const menu = document.querySelector('[data-testid="canvas-toolbar-more-menu"]');
+        const menuRect = menu?.getBoundingClientRect();
+        return {
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          documentScrollWidth: document.documentElement.scrollWidth,
+          menu: menuRect ? { left: menuRect.left, right: menuRect.right, top: menuRect.top, bottom: menuRect.bottom } : null,
+        };
+      });
+
+      expect(menuMetrics.menu).not.toBeNull();
+      expect(menuMetrics.documentScrollWidth).toBeLessThanOrEqual(menuMetrics.viewportWidth + 1);
+      expect(menuMetrics.menu!.left).toBeGreaterThanOrEqual(-1);
+      expect(menuMetrics.menu!.right).toBeLessThanOrEqual(menuMetrics.viewportWidth + 1);
+      expect(menuMetrics.menu!.top).toBeGreaterThanOrEqual(0);
+      expect(menuMetrics.menu!.bottom).toBeLessThanOrEqual(menuMetrics.viewportHeight + 1);
+    }
+  });
+
   test('dashboard renders activity panels', async ({ page }) => {
     await mockSupabase(page);
 

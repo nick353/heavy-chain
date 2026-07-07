@@ -18,6 +18,8 @@ export function Layout() {
   // Exclude public pages and auth pages
   const isPublicPage = ['/login', '/signup', '/forgot-password', '/'].includes(location.pathname);
   const showSidebar = user && !isPublicPage;
+  const isLightchainRoute = location.pathname.startsWith('/lightchain');
+  const isLightchainNotFoundRoute = location.pathname === '/lightchain/fashion-studio';
 
   // Handle scroll for header transparency effects
   useEffect(() => {
@@ -38,13 +40,13 @@ export function Layout() {
       
       {showSidebar ? (
         <div className="dark min-h-screen bg-[#070b0d] text-white">
-          <header className="sticky top-0 z-40 border-b border-white/10 bg-[#070b0d]/95 backdrop-blur-xl">
+          {!isLightchainNotFoundRoute && <header className="sticky top-0 z-40 border-b border-white/10 bg-[#070b0d]/95 backdrop-blur-xl">
             <div className="mx-auto flex h-[70px] max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
               <div className="flex items-center gap-7">
-                <Link to="/dashboard" className="text-sm font-semibold tracking-[0.32em] text-white">
+                <Link to={isLightchainRoute ? '/lightchain' : '/dashboard'} className="text-sm font-semibold tracking-[0.32em] text-white">
                   HEAVYCHAIN
                 </Link>
-                <div className="hidden items-center gap-2 text-sm text-neutral-300 md:flex">
+                <div className={`hidden items-center gap-2 text-sm text-neutral-300 md:flex ${isLightchainRoute ? 'opacity-0 pointer-events-none' : ''}`}>
                   {lightchainCategories.map((category) => (
                     <Link
                       key={category.id}
@@ -57,9 +59,14 @@ export function Layout() {
                 </div>
               </div>
               <div className="flex items-center gap-2 text-neutral-300">
+                {isLightchainRoute && (
+                  <span className="hidden rounded-full px-3 py-2 text-sm text-neutral-300 sm:inline-flex">
+                    日本語
+                  </span>
+                )}
                 <Link to="/history" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
                   <History className="h-4 w-4" />
-                  生成履歴
+                  {isLightchainRoute ? '生成履歴' : '生成履歴'}
                 </Link>
                 <Link to="/jobs" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
                   <HelpCircle className="h-4 w-4" />
@@ -70,7 +77,7 @@ export function Layout() {
                 </Link>
               </div>
             </div>
-            <div className="flex gap-2 overflow-x-auto px-4 pb-3 md:hidden">
+            <div className={`flex gap-2 overflow-x-auto px-4 pb-3 md:hidden ${isLightchainRoute ? 'hidden' : ''}`}>
               {lightchainCategories.map((category) => (
                 <Link
                   key={category.id}
@@ -81,9 +88,9 @@ export function Layout() {
                 </Link>
               ))}
             </div>
-          </header>
+          </header>}
 
-          <main id="main-content" className="min-h-[calc(100vh-70px)] bg-[#070b0d] px-3 py-5 sm:px-5 lg:px-8" tabIndex={-1}>
+          <main id="main-content" className={`${isLightchainNotFoundRoute ? 'min-h-screen bg-white' : 'min-h-[calc(100vh-70px)] bg-[#070b0d]'} ${isLightchainRoute ? 'px-0 py-0' : 'px-3 py-5 sm:px-5 lg:px-8'}`} tabIndex={-1}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
@@ -91,7 +98,7 @@ export function Layout() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.25 }}
-                className="mx-auto w-full max-w-[1800px]"
+                className={isLightchainRoute ? 'w-full' : 'mx-auto w-full max-w-[1800px]'}
               >
                 <Outlet />
               </motion.div>

@@ -102,142 +102,144 @@ export function CanvasToolbar({
   );
 
   return (
-    <div className="relative">
+    <div className="relative max-w-full" data-testid="canvas-toolbar">
       {/* Main toolbar */}
-      <div className="flex items-center gap-0.5 sm:gap-1 p-1 sm:p-2 bg-[#101313] rounded-lg sm:rounded-xl shadow-none border border-white/10">
-        {/* Zoom controls - always visible */}
-        <div className="flex items-center">
-          <ToolButton onClick={zoomOut} title="ズームアウト">
-            <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </ToolButton>
-          <button
-            onClick={resetZoom}
-            className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs sm:text-sm font-medium text-neutral-300 hover:bg-white/[0.08] hover:text-white rounded min-w-[40px] sm:min-w-[60px] touch-manipulation"
-            title="ズームをリセット"
-          >
-            {Math.round(zoom * 100)}%
-          </button>
-          <ToolButton onClick={zoomIn} title="ズームイン">
-            <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </ToolButton>
-        </div>
+      <div className="max-w-full overflow-x-auto" data-testid="canvas-toolbar-scroll">
+        <div className="flex w-max items-center gap-0.5 sm:gap-1 p-1 sm:p-2 bg-[#101313] rounded-lg sm:rounded-xl shadow-none border border-white/10">
+          {/* Zoom controls - always visible */}
+          <div className="flex items-center">
+            <ToolButton onClick={zoomOut} title="ズームアウト">
+              <ZoomOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </ToolButton>
+            <button
+              onClick={resetZoom}
+              className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs sm:text-sm font-medium text-neutral-300 hover:bg-white/[0.08] hover:text-white rounded min-w-[40px] sm:min-w-[60px] touch-manipulation"
+              title="ズームをリセット"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <ToolButton onClick={zoomIn} title="ズームイン">
+              <ZoomIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </ToolButton>
+          </div>
 
-        <Divider />
-
-        {/* Grid controls - visible on sm+ */}
-        <div className="hidden sm:flex items-center">
-          <ToolButton onClick={toggleGrid} active={gridVisible} title="グリッド表示">
-            <Grid3X3 className="w-4 h-4" />
-          </ToolButton>
-          <ToolButton onClick={toggleSnap} active={snapToGrid} title="スナップ">
-            <Magnet className="w-4 h-4" />
-          </ToolButton>
           <Divider />
-        </div>
 
-        {/* Add tools - compact on mobile */}
-        <ToolButton onClick={() => onAddText?.()} title="テキストを追加">
-          <Type className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </ToolButton>
-        <ToolButton onClick={() => onAddShape?.('rect')} title="四角形を追加">
-          <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </ToolButton>
+          {/* Grid controls - visible on sm+ */}
+          <div className="hidden sm:flex items-center">
+            <ToolButton onClick={toggleGrid} active={gridVisible} title="グリッド表示">
+              <Grid3X3 className="w-4 h-4" />
+            </ToolButton>
+            <ToolButton onClick={toggleSnap} active={snapToGrid} title="スナップ">
+              <Magnet className="w-4 h-4" />
+            </ToolButton>
+            <Divider />
+          </div>
 
-        {/* Hidden on mobile */}
-        <div className="hidden sm:flex items-center">
-          <ToolButton onClick={() => onAddShape?.('circle')} title="円を追加">
-            <Circle className="w-4 h-4" />
+          {/* Add tools - compact on mobile */}
+          <ToolButton onClick={() => onAddText?.()} title="テキストを追加">
+            <Type className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </ToolButton>
-          <ToolButton onClick={() => onAddFrame?.()} title="フレームを追加">
-            <Frame className="w-4 h-4" />
+          <ToolButton onClick={() => onAddShape?.('rect')} title="四角形を追加">
+            <Square className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </ToolButton>
-        </div>
 
-        <Divider />
+          {/* Hidden on mobile */}
+          <div className="hidden sm:flex items-center">
+            <ToolButton onClick={() => onAddShape?.('circle')} title="円を追加">
+              <Circle className="w-4 h-4" />
+            </ToolButton>
+            <ToolButton onClick={() => onAddFrame?.()} title="フレームを追加">
+              <Frame className="w-4 h-4" />
+            </ToolButton>
+          </div>
 
-        {/* History - always visible */}
-        <ToolButton onClick={undo} disabled={!canUndo} title="元に戻す (Ctrl+Z)">
-          <Undo2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </ToolButton>
-        <ToolButton onClick={redo} disabled={!canRedo} title="やり直し (Ctrl+Shift+Z)">
-          <Redo2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </ToolButton>
-
-        {/* Selection actions - hidden on mobile */}
-        <div className="hidden sm:flex items-center">
           <Divider />
-          <ToolButton
-            onClick={duplicateSelected}
-            disabled={!hasSelection}
-            title="複製 (Ctrl+D)"
-          >
-            <Copy className="w-4 h-4" />
-          </ToolButton>
-          <ToolButton
-            onClick={deleteSelected}
-            disabled={!hasSelection}
-            title="削除 (Delete)"
-          >
-            <Trash2 className="w-4 h-4" />
-          </ToolButton>
-        </div>
 
-        {/* Layer controls - hidden on mobile */}
-        <div className="hidden lg:flex items-center">
-          <Divider />
-          <ToolButton
-            onClick={() => selectedIds[0] && bringToFront(selectedIds[0])}
-            disabled={!hasSelection}
-            title="最前面へ"
-          >
-            <ArrowUpToLine className="w-4 h-4" />
+          {/* History - always visible */}
+          <ToolButton onClick={undo} disabled={!canUndo} title="元に戻す (Ctrl+Z)">
+            <Undo2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </ToolButton>
-          <ToolButton
-            onClick={() => selectedIds[0] && bringForward(selectedIds[0])}
-            disabled={!hasSelection}
-            title="前面へ"
-          >
-            <ChevronUp className="w-4 h-4" />
+          <ToolButton onClick={redo} disabled={!canRedo} title="やり直し (Ctrl+Shift+Z)">
+            <Redo2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </ToolButton>
-          <ToolButton
-            onClick={() => selectedIds[0] && sendBackward(selectedIds[0])}
-            disabled={!hasSelection}
-            title="背面へ"
-          >
-            <ChevronDown className="w-4 h-4" />
-          </ToolButton>
-          <ToolButton
-            onClick={() => selectedIds[0] && sendToBack(selectedIds[0])}
-            disabled={!hasSelection}
-            title="最背面へ"
-          >
-            <ArrowDownToLine className="w-4 h-4" />
-          </ToolButton>
-        </div>
 
-        {/* Export - hidden on mobile */}
-        <div className="hidden sm:flex items-center">
-          <Divider />
-          <ToolButton onClick={() => onExport?.()} title="エクスポート">
-            <Download className="w-4 h-4" />
-          </ToolButton>
-        </div>
+          {/* Selection actions - hidden on mobile */}
+          <div className="hidden sm:flex items-center">
+            <Divider />
+            <ToolButton
+              onClick={duplicateSelected}
+              disabled={!hasSelection}
+              title="複製 (Ctrl+D)"
+            >
+              <Copy className="w-4 h-4" />
+            </ToolButton>
+            <ToolButton
+              onClick={deleteSelected}
+              disabled={!hasSelection}
+              title="削除 (Delete)"
+            >
+              <Trash2 className="w-4 h-4" />
+            </ToolButton>
+          </div>
 
-        {/* More button - visible only on mobile */}
-        <div className="sm:hidden">
-          <ToolButton
-            onClick={() => setShowMoreTools(!showMoreTools)}
-            active={showMoreTools}
-            title="その他のツール"
-          >
-            <MoreHorizontal className="w-3.5 h-3.5" />
-          </ToolButton>
+          {/* Layer controls - hidden on mobile */}
+          <div className="hidden lg:flex items-center">
+            <Divider />
+            <ToolButton
+              onClick={() => selectedIds[0] && bringToFront(selectedIds[0])}
+              disabled={!hasSelection}
+              title="最前面へ"
+            >
+              <ArrowUpToLine className="w-4 h-4" />
+            </ToolButton>
+            <ToolButton
+              onClick={() => selectedIds[0] && bringForward(selectedIds[0])}
+              disabled={!hasSelection}
+              title="前面へ"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </ToolButton>
+            <ToolButton
+              onClick={() => selectedIds[0] && sendBackward(selectedIds[0])}
+              disabled={!hasSelection}
+              title="背面へ"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </ToolButton>
+            <ToolButton
+              onClick={() => selectedIds[0] && sendToBack(selectedIds[0])}
+              disabled={!hasSelection}
+              title="最背面へ"
+            >
+              <ArrowDownToLine className="w-4 h-4" />
+            </ToolButton>
+          </div>
+
+          {/* Export - hidden on mobile */}
+          <div className="hidden sm:flex items-center">
+            <Divider />
+            <ToolButton onClick={() => onExport?.()} title="エクスポート">
+              <Download className="w-4 h-4" />
+            </ToolButton>
+          </div>
+
+          {/* More button - visible only on mobile */}
+          <div className="sm:hidden">
+            <ToolButton
+              onClick={() => setShowMoreTools(!showMoreTools)}
+              active={showMoreTools}
+              title="その他のツール"
+            >
+              <MoreHorizontal className="w-3.5 h-3.5" />
+            </ToolButton>
+          </div>
         </div>
       </div>
 
       {/* Mobile expanded menu */}
       {showMoreTools && (
-        <div className="sm:hidden absolute top-full left-0 right-0 mt-1 p-2 bg-white rounded-lg shadow-lg border border-neutral-100 z-50">
+        <div className="sm:hidden absolute top-full left-0 right-0 mt-1 p-2 bg-white rounded-lg shadow-lg border border-neutral-100 z-50" data-testid="canvas-toolbar-more-menu">
           <div className="grid grid-cols-5 gap-1">
             <ToolButton onClick={toggleGrid} active={gridVisible} title="グリッド表示">
               <Grid3X3 className="w-4 h-4" />

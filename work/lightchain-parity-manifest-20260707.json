@@ -1,0 +1,78 @@
+{
+  "name": "lightchain_full_ui_parity",
+  "date": "2026-07-07",
+  "scope": {
+    "routeSet": "31 non-video Lightchain-compatible Heavy Chain routes",
+    "excluded": [
+      "paid video generation",
+      "checkout/payment/billing/credit purchase",
+      "credential/OTP/CAPTCHA/security-code/identity verification",
+      "deploy/publish without explicit approval",
+      "external or real AI generation submit without explicit approval",
+      "destructive cleanup",
+      "quota/security bypass"
+    ]
+  },
+  "classification": {
+    "Lightchain同等": 30,
+    "ほぼ同等": 1,
+    "部分一致": 0,
+    "Heavy未実装": 0,
+    "要承認": "external/real generation and production mutation paths only"
+  },
+  "currentGate": {
+    "localAllFeatureWorkflow": {
+      "ok": true,
+      "routeCount": 31,
+      "artifact": "output/playwright/lightchain-all-feature-workflows-20260707-stage18-status-r1/SUMMARY.json"
+    },
+    "localCanvasMetadataReadback": {
+      "ok": true,
+      "artifact": "output/playwright/lightchain-canvas-metadata-readback-20260707-stage18-status-r1/SUMMARY.json"
+    },
+    "chromeProfile2Production31Routes": {
+      "ok": true,
+      "routeCountCaptured": 31,
+      "artifact": "output/playwright/lightchain-chrome-proof-20260707-profile2-prod-31routes/SUMMARY.json"
+    },
+    "chromeProfile2LocalFashionStudioUpgraded": {
+      "ok": true,
+      "blocker": null,
+      "artifact": "output/playwright/lightchain-chrome-proof-20260707-profile2-local-fashion-studio-upgraded/SUMMARY.json"
+    },
+    "chromeProfile2ProductionFashionStudioCurrent": {
+      "ok": false,
+      "blocker": "production_upgraded_surface_not_available",
+      "artifact": "output/playwright/lightchain-chrome-proof-20260707-profile2-prod-fashion-studio-current-r1/SUMMARY.json"
+    }
+  },
+  "routeExceptions": [
+    {
+      "toolId": "fashion-studio",
+      "status": "ほぼ同等",
+      "reason": "Local upgraded Lightchain-style workspace is verified, but production still serves the older simplified surface.",
+      "promotionRequiredEvidence": [
+        "approved deploy of the upgraded local surface",
+        "Chrome plugin/Profile 2 production read-only proof ok=true",
+        "no hard stop crossed",
+        "STATE, status, and matrix updated with production proof URI"
+      ]
+    }
+  ],
+  "hardStops": {
+    "crossed": false,
+    "maintained": true,
+    "notes": "No payment, checkout, billing, credit purchase, credential entry, OTP/CAPTCHA/security-code, identity verification, deploy, publish, destructive cleanup, quota/security bypass, external/real AI generation submit, or paid/video generation was performed in this proof slice."
+  },
+  "sourceOfTruth": [
+    "STATE.md",
+    "work/lightchain-full-ui-migration-status-20260707.md",
+    "work/lightchain-completion-matrix-20260707.md",
+    "work/lightchain-production-proof-next-steps-20260707.md"
+  ],
+  "nextSafeStep": {
+    "requiresApproval": true,
+    "action": "After explicit deploy approval and deployment of the upgraded local fashion-studio surface, run Chrome plugin/Profile 2 read-only production proof for https://heavy-chain.zeabur.app/lightchain/fashion-studio.",
+    "blockedUntil": "approved_deploy_of_upgraded_surface"
+  }
+}

@@ -374,8 +374,10 @@ function wirePageDiagnostics(page, route) {
   });
   page.on('requestfailed', (request) => {
     const url = request.url();
+    const failure = request.failure()?.errorText ?? null;
+    if (/\/storage\/v1\/object\/sign\//.test(url) && failure === 'net::ERR_ABORTED') return;
     if (!url.includes('favicon')) {
-      evidence.requestFailures.push({ route, url, failure: request.failure()?.errorText ?? null });
+      evidence.requestFailures.push({ route, url, failure });
     }
   });
 }

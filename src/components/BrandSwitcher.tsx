@@ -8,6 +8,7 @@ export function BrandSwitcher() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [failedLogoUrls, setFailedLogoUrls] = useState<Set<string>>(() => new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchBrands = useCallback(async () => {
@@ -47,6 +48,15 @@ export function BrandSwitcher() {
     }
   }, [user, fetchBrands]);
 
+  const markLogoFailed = (url: string) => {
+    setFailedLogoUrls((current) => {
+      if (current.has(url)) return current;
+      const next = new Set(current);
+      next.add(url);
+      return next;
+    });
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -81,11 +91,12 @@ export function BrandSwitcher() {
         className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors min-w-[160px]"
       >
         <div className="w-6 h-6 rounded bg-primary-100 flex items-center justify-center flex-shrink-0">
-          {currentBrand?.logo_url ? (
+          {currentBrand?.logo_url && !failedLogoUrls.has(currentBrand.logo_url) ? (
             <img 
               src={currentBrand.logo_url} 
               alt="" 
               className="w-full h-full rounded object-cover"
+              onError={() => markLogoFailed(currentBrand.logo_url!)}
             />
           ) : (
             <span className="text-xs font-bold text-primary-600">
@@ -116,11 +127,12 @@ export function BrandSwitcher() {
                 `}
               >
                 <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
-                  {brand.logo_url ? (
+                  {brand.logo_url && !failedLogoUrls.has(brand.logo_url) ? (
                     <img 
                       src={brand.logo_url} 
                       alt="" 
                       className="w-full h-full rounded-lg object-cover"
+                      onError={() => markLogoFailed(brand.logo_url!)}
                     />
                   ) : (
                     <Building2 className="w-4 h-4 text-primary-600" />

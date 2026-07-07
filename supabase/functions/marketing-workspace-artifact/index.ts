@@ -11,6 +11,7 @@ import type { Json } from '../../../src/types/database.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
@@ -73,7 +74,7 @@ const dataUrlToBytes = (dataUrl: string) => {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return jsonResponse({ ok: true });
   }
 
   let remoteSaveStage: RemoteSaveStage = 'auth';
