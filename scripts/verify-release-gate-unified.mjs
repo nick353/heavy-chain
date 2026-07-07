@@ -241,7 +241,7 @@ const requiredReadbacks = [
   },
   {
     name: 'production chosen public entrypoint readback',
-    path: 'output/playwright/g774-chosen-public-entrypoint-readback-r1/summary.json',
+    path: 'output/playwright/g835-chosen-public-entrypoint-readback-r1/summary.json',
     validate: (json) =>
       json.ok === true &&
       json.urls?.chosenPublicEntrypoint === 'https://heavy-chain.zeabur.app' &&
