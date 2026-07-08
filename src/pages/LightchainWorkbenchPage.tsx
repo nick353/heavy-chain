@@ -3477,7 +3477,7 @@ export function LightchainWorkbenchPage() {
           )}
 
           {isFeatureDetail && !isModelToolDetail && (
-            <div className={`rounded-xl border border-white/10 bg-[#171c1e] p-3 shadow-soft lg:ml-[108px] lg:max-w-[596px] ${lightchainToolPanelConfig || selectedTool.id === 'printing-image' ? 'pb-3' : ''}`}>
+            <div className={`rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,13,15,0.98),rgba(13,17,20,0.94))] p-3 shadow-soft lg:ml-[92px] lg:max-w-[636px] ${lightchainToolPanelConfig || selectedTool.id === 'printing-image' ? 'pb-3' : ''}`}>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
                   <Link
@@ -3500,7 +3500,7 @@ export function LightchainWorkbenchPage() {
                   ))}
                 </div>
                 {!lightchainToolPanelConfig && selectedTool.id !== 'printing-image' && (
-                <p className="hidden text-sm font-medium text-neutral-500 lg:block">
+                <p className="hidden text-sm font-medium text-neutral-400 lg:block">
                   素材を入れて、必要な調整をして、Canvasへ保存します。
                 </p>
                 )}
@@ -3510,10 +3510,10 @@ export function LightchainWorkbenchPage() {
                   <Link
                     key={tool.id}
                     to={`/lightchain/${tool.id}`}
-                    className={`shrink-0 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                    className={`shrink-0 rounded-full border px-3 py-2 text-sm font-semibold transition ${
                       selectedTool.id === tool.id
-                        ? 'border-white/10 bg-[#353a3e] text-white'
-                        : 'border-white/5 bg-[#202426] text-neutral-300 hover:border-white/20'
+                        ? 'border-cyan-300/40 bg-cyan-300/10 text-white'
+                        : 'border-white/5 bg-white/[0.03] text-neutral-300 hover:border-cyan-300/20 hover:bg-white/[0.06]'
                     }`}
                   >
                     {tool.id === 'pattern-vector'
@@ -3529,7 +3529,7 @@ export function LightchainWorkbenchPage() {
 
           <div className={isFeatureDetail ? isModelToolDetail ? 'grid gap-4 lg:grid-cols-[80px_432px_minmax(0,1fr)]' : 'grid gap-4 lg:grid-cols-[84px_596px_minmax(0,1fr)]' : 'grid gap-5 xl:grid-cols-[1fr_420px]'}>
             {isFeatureDetail && (
-              <aside className="hidden rounded-2xl border border-neutral-800 bg-neutral-900/90 p-3 lg:block">
+              <aside className="hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,16,18,0.98),rgba(10,13,15,0.96))] p-3 lg:block">
                 <div className="flex flex-col items-center gap-5">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-200">
                     <Bot className="h-6 w-6" />
@@ -3548,7 +3548,7 @@ export function LightchainWorkbenchPage() {
                       onClick={() => {
                         if (isModelToolDetail) navigate(`/lightchain/${id}`);
                       }}
-                      className={`flex w-full flex-col items-center gap-2 rounded-xl px-2 py-3 text-[11px] font-semibold leading-4 transition ${
+                      className={`flex w-full flex-col items-center gap-2 rounded-2xl px-2 py-3 text-[11px] font-semibold leading-4 transition ${
                         isModelToolDetail && selectedTool.id === id
                           ? 'bg-cyan-400/15 text-cyan-200'
                           : selectedTool.category === 'graphics' && label === 'グラフィックツール'
@@ -3649,9 +3649,10 @@ export function LightchainWorkbenchPage() {
             <aside>
               <div className={`shadow-soft ${isFeatureDetail ? 'w-full' : 'rounded-2xl border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900 xl:sticky xl:top-24'}`}>
                 {isFeatureDetail && currentModelPanel ? (
-	                  <section className="flex h-[calc(100vh-104px)] min-h-[520px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#141717]" data-testid="lightchain-model-panel">
+	                  <section className="flex h-[calc(100vh-104px)] min-h-[520px] flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,17,19,0.98),rgba(9,13,15,0.96))]" data-testid="lightchain-model-panel">
 	                    <div className="px-4 pb-3 pt-5">
-	                      <h1 className="text-base font-semibold text-white">{currentModelPanel.title}</h1>
+	                      <p className="text-xs font-semibold uppercase tracking-[0.26em] text-cyan-300">Lightchain / Heavy Chain</p>
+	                      <h1 className="mt-2 text-base font-semibold text-white">{currentModelPanel.title}</h1>
                         {currentModelPanel.subtitle && (
                           <p className="mt-2 text-xs font-semibold text-neutral-400">{currentModelPanel.subtitle}</p>
                         )}
@@ -4739,7 +4740,7 @@ export function LightchainWorkbenchPage() {
               <aside className="relative min-h-[560px] lg:sticky lg:top-24 lg:self-start">
                 <button
                   type="button"
-                  className="absolute right-0 top-0 z-10 rounded-xl border border-white/15 bg-[#111517] px-4 py-2 text-sm font-semibold text-white"
+                  className="absolute right-0 top-0 z-10 rounded-full border border-white/15 bg-white/[0.05] px-4 py-2 text-sm font-semibold text-white"
                 >
                   生成履歴
                 </button>
@@ -4846,33 +4847,34 @@ export function LightchainWorkbenchPage() {
         </section>
       </div>
       {materialModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end bg-neutral-950/55 p-3 backdrop-blur-sm sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-label="素材選択">
-          <div className="max-h-[88vh] w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900 sm:max-w-4xl">
-            <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
+        <div className="fixed inset-0 z-50 flex items-end bg-neutral-950/65 p-3 backdrop-blur-md sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-label="素材選択">
+          <div className="max-h-[88vh] w-full overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(13,17,20,0.98),rgba(9,12,14,0.96))] shadow-2xl sm:max-w-4xl">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
               <div>
-                <h2 className="text-base font-semibold text-neutral-900 dark:text-white">素材選択</h2>
-                <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">Lightchainと同じ素材導線で選びます。</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Lightchain</p>
+                <h2 className="mt-1 text-base font-semibold text-white">素材選択</h2>
+                <p className="mt-0.5 text-xs text-neutral-400">Lightchainと同じ素材導線で選びます。</p>
               </div>
               <button
                 type="button"
                 onClick={() => setMaterialModalOpen(false)}
-                className="rounded-lg border border-neutral-200 px-3 py-2 text-sm font-semibold text-neutral-600 transition hover:border-neutral-400 dark:border-neutral-700 dark:text-neutral-200"
+                className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-white"
               >
                 閉じる
               </button>
             </div>
             <div className="grid max-h-[calc(88vh-64px)] overflow-y-auto md:grid-cols-[220px_1fr]">
-              <div className="border-b border-neutral-200 p-3 dark:border-neutral-800 md:border-b-0 md:border-r">
+              <div className="border-b border-white/10 p-3 md:border-b-0 md:border-r">
                 <div className="flex gap-2 overflow-x-auto md:block md:space-y-2">
                   {materialTabs.map((tab) => (
                     <button
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveMaterialTab(tab.id)}
-                      className={`w-full shrink-0 rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${
+                      className={`w-full shrink-0 rounded-2xl px-3 py-2 text-left text-sm font-semibold transition ${
                         activeMaterialTab === tab.id
-                          ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
-                          : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300'
+                          ? 'bg-cyan-300 text-neutral-950'
+                          : 'bg-white/[0.04] text-neutral-300 hover:bg-white/[0.08]'
                       }`}
                     >
                       {tab.label}
@@ -4881,27 +4883,27 @@ export function LightchainWorkbenchPage() {
                 </div>
               </div>
               <div className="p-4">
-                <p className="text-sm font-semibold text-neutral-900 dark:text-white">
+                <p className="text-sm font-semibold text-white">
                   {materialTabs.find((tab) => tab.id === activeMaterialTab)?.label}
                 </p>
-                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                <p className="mt-1 text-sm text-neutral-400">
                   {materialTabs.find((tab) => tab.id === activeMaterialTab)?.description}
                 </p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {materialTabItems[activeMaterialTab].map((item) => (
-                    <div key={`${activeMaterialTab}-${item.title}`} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
-                      <div className="flex min-h-[92px] items-center justify-center rounded-lg bg-white text-sm font-semibold text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
+                    <div key={`${activeMaterialTab}-${item.title}`} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                      <div className="flex min-h-[92px] items-center justify-center rounded-xl bg-white/[0.04] text-sm font-semibold text-neutral-400">
                         {item.kind}
                       </div>
                       <div className="mt-3 flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-neutral-900 dark:text-white">{item.title}</p>
-                          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{item.note}</p>
+                          <p className="text-sm font-semibold text-white">{item.title}</p>
+                          <p className="mt-1 text-xs text-neutral-400">{item.note}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleUseMaterialAsset(item)}
-                          className="shrink-0 rounded-lg bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950"
+                          className="shrink-0 rounded-full bg-cyan-300 px-3 py-2 text-xs font-semibold text-neutral-950 transition hover:bg-cyan-200"
                         >
                           使用
                         </button>
