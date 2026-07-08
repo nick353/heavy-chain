@@ -109,7 +109,7 @@ export function SignupPage() {
               <Layers className="w-7 h-7 text-white" />
             </div>
             <span className="font-display text-2xl font-semibold text-neutral-900 dark:text-white tracking-wide">
-              Heavy Chain
+              Lightchain
             </span>
           </Link>
         </div>
@@ -137,7 +137,7 @@ export function SignupPage() {
             アカウント作成
           </h1>
           <p className="text-neutral-500 dark:text-neutral-400 text-center mb-8">
-            無料でHeavy Chainを始めましょう
+            無料でLightchainを始めましょう
           </p>
 
           {/* OAuth Buttons */}

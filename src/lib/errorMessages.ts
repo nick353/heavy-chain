@@ -12,7 +12,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   RATE_LIMIT_HOUR: '時間あたりのリクエスト制限に達しました。しばらくお待ちください。',
   USER_USAGE_RATE_LIMIT: '短時間に生成リクエストが集中しています。1分ほど待ってから再試行してください。',
   BRAND_USAGE_RATE_LIMIT: 'このブランドで短時間に生成リクエストが集中しています。少し待ってから再試行してください。',
-  BRAND_USAGE_QUOTA_EXCEEDED: '今月の生成枠を使い切りました。今回は生成できません。翌月のリセット後に再試行するか、管理者にHeavy Chainのプランと月間quotaの確認を依頼してください。',
+  BRAND_USAGE_QUOTA_EXCEEDED: '今月の生成枠を使い切りました。今回は生成できません。翌月のリセット後に再試行するか、管理者にLightchainのプランと月間quotaの確認を依頼してください。',
   AUTH_EMAIL_RATE_LIMIT: 'サインアップ確認メールの送信制限に達しました。しばらく待ってから再度お試しください。',
   
   // Image generation errors

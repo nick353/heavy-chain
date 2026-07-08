@@ -48,5 +48,5 @@ export const isWorkspacePathActive = (pathname: string, path: string) => {
 
 export const getWorkspacePageTitle = (pathname: string) => {
   const item = workspaceNavItems.find((navItem) => isWorkspacePathActive(pathname, navItem.path));
-  return item?.label ?? 'Heavy Chain';
+  return item?.label ?? 'Lightchain';
 };

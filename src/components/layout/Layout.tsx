@@ -44,7 +44,7 @@ export function Layout() {
             <div className="mx-auto flex h-[70px] max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
               <div className="flex items-center gap-7">
                 <Link to={isLightchainRoute ? '/lightchain' : '/dashboard'} className="text-sm font-semibold tracking-[0.32em] text-white">
-                  HEAVYCHAIN
+                  LIGHTCHAIN
                 </Link>
                 <div className={`hidden items-center gap-2 text-sm text-neutral-300 md:flex ${isLightchainRoute ? 'opacity-0 pointer-events-none' : ''}`}>
                   {lightchainCategories.map((category) => (

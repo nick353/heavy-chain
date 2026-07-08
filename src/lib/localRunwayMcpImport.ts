@@ -43,7 +43,7 @@ const asMetadata = (value: unknown): Record<string, Json | undefined> => {
 
 export const parseLocalRunwayMcpImportBundle = (value: unknown): LocalRunwayMcpImportBundle => {
   if (!isRecord(value) || value.schema !== LOCAL_RUNWAY_MCP_IMPORT_SCHEMA) {
-    throw new Error('Heavy Chain用のローカルRunway MCP取り込みJSONではありません。');
+    throw new Error('Lightchain用のローカルRunway MCP取り込みJSONではありません。');
   }
   if (!Array.isArray(value.images) || value.images.length === 0) {
     throw new Error('取り込める画像が見つかりません。');

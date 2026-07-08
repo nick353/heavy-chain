@@ -351,7 +351,7 @@ function StaticInfoPage({
           href="/"
           className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
         >
-          Heavy Chainへ戻る
+          Lightchainへ戻る
         </a>
         <div className="mt-8 glass-panel rounded-2xl p-6 sm:p-8">
           <h1 className="text-2xl font-display font-semibold text-neutral-900 dark:text-white">

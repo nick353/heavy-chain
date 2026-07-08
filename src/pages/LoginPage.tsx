@@ -64,7 +64,7 @@ export function LoginPage() {
       <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1500px] flex-col">
         <header className="flex items-center justify-between">
           <Link to="/" className="text-sm font-semibold tracking-[0.32em] text-white">
-            HEAVYCHAIN
+            LIGHTCHAIN
           </Link>
           <Link to="/" className="rounded-full border border-white/10 px-4 py-2 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white">
             トップへ
@@ -92,7 +92,7 @@ export function LoginPage() {
           <div className="hidden lg:block">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">APPAREL AI WORKSPACE</p>
             <h1 className="mt-5 max-w-3xl text-6xl font-semibold leading-none tracking-normal">
-              LIGHTCHAIN型の制作フローを、そのままHeavy Chainへ。
+              Lightchainの流れを、そのままHeavy Chainへ。
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-400">
               おすすめ、企画デザインツール、AIフィッティング、グラフィックツールから制作を開始します。
@@ -101,8 +101,8 @@ export function LoginPage() {
 
           <div className="rounded-[28px] border border-white/10 bg-[#171b1d] p-7 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-10">
             <div className="mb-8">
-              <p className="text-sm font-semibold tracking-[0.26em] text-white">HEAVYCHAIN</p>
-              <h2 className="mt-6 text-2xl font-semibold">アカウントIDを下に入力してログインをお願いします。</h2>
+              <p className="text-sm font-semibold tracking-[0.26em] text-white">LIGHTCHAIN</p>
+              <h2 className="mt-6 text-2xl font-semibold">Lightchainアカウントでログインしてください。</h2>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">

@@ -78,7 +78,7 @@ export function ForgotPasswordPage() {
                 <Layers className="w-7 h-7 text-white" />
               </div>
               <span className="font-display text-2xl font-semibold text-neutral-900 dark:text-white tracking-wide">
-                Heavy Chain
+                Lightchain
               </span>
             </Link>
           </div>
@@ -150,7 +150,7 @@ export function ForgotPasswordPage() {
               <Layers className="w-7 h-7 text-white" />
             </div>
             <span className="font-display text-2xl font-semibold text-neutral-900 dark:text-white tracking-wide">
-              Heavy Chain
+                Lightchain
             </span>
           </Link>
         </div>

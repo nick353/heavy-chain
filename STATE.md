@@ -544,3 +544,20 @@ latest_g833_final_local_hardening_locator: src/pages/BrandSettingsPage.tsx; src/
   - Closed item count this turn: `0` (no blocker transitions from this read-only lane).
   - Blocked items remain `13`: `G617`, `G619`, `G669`, `G670`, `H601`, `H602`, `g617_same_run_fresh_all_10`, `g619_real_beta_evidence`, `g618_scale_ops`, `g620_security_ops`, `production_h602_billing_completion_readback`, `g619_beta_evidence_verifier`, `release_gate_verifier`.
 - Evidence note: production monitor remains `blocked_by_fresh_auth_required`; no auth retry extension performed in this lane.
+
+## 2026-07-08T15:00+09:00 Session Continuity Summary
+### 完了済み
+- Lightchain UI の主要導線整備: `LoginPage` / `SignupPage` / `ForgotPasswordPage` / `DashboardPage` / `Onboarding` / `SharedImagePage` / `Layout` / `navigation` / `index.html` / 各種補助文言を整理済み。
+- 各機能の UI 寄せ: `LightchainWorkbenchPage`, `GeneratePage`, `LightchainParityHub`, `CanvasEditorPage`, `FashionStudioPage`, `LabPage`, `PatternWorkspacePage`, `ModelLibraryPage`, `BrandSettingsPage`, `AdminDashboard` の見た目・説明文・導線を順次 Lightchain 寄りに調整済み。
+- 直近の read-only 再確認: production monitor 再実行、release-gate readback、G619/H602 の既存証跡確認、カスタムドメイン readback を実施済み。
+
+### 進行中
+- UI の残り表記ゆれの統一: `Heavy Chain` ブランドは残しつつ、画面の密度・余白・CTA・導線を Lightchain っぽくさらに揃える作業。
+- `STATE.md` / artifact 側の引き継ぎ整理: 多段セッションの成果と未完了を読みやすくする作業。
+
+### 未完了
+- `G619` 実セッション証跡の作成。
+- `H602` transaction / entitlement readback と final checkout/public release decision。
+- production monitor の完全復帰。
+- `release/10M` の closure。
+- まだ残る UI/表記の候補: `LandingPage`, `LightchainWorkbenchPage` の一部, `App.tsx` の利用条件系文言, `public/og-image.svg`, `src/index.css` コメント, `src/components/icons/index.tsx` コメント。  

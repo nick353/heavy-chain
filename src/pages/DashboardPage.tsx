@@ -863,8 +863,8 @@ export function DashboardPage() {
                 <IconSparkles className="w-5 h-5 text-primary-600 dark:text-primary-400" size={20} />
               </div>
               <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                <span className="font-semibold text-primary-700 dark:text-primary-300 block mb-1">ようこそ、Heavy Chainへ！</span>
-                まずはあなたのブランドを作成しましょう。AIがブランドの世界観を学習し、最適な画像を生成します。
+                <span className="font-semibold text-primary-700 dark:text-primary-300 block mb-1">ようこそ、Lightchainへ！</span>
+                まずはあなたのブランドを作成しましょう。Lightchainがブランドの世界観を整理し、最適な制作導線を案内します。
               </p>
             </div>
           </div>

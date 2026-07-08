@@ -58,7 +58,7 @@ export function SharedImagePage() {
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500 text-neutral-950">
               <ImageIcon className="h-5 w-5" />
             </span>
-            <span className="font-display text-lg font-semibold tracking-wide">HEAVY CHAIN</span>
+            <span className="font-display text-lg font-semibold tracking-wide">LIGHTCHAIN</span>
           </Link>
           <Link
             to="/dashboard"
@@ -86,7 +86,7 @@ export function SharedImagePage() {
             ) : (
               <img
                 src={image?.imageUrl ?? ''}
-                alt={image?.prompt ?? 'Heavy Chain shared image'}
+                alt={image?.prompt ?? 'Lightchain shared image'}
                 className="h-full max-h-[78vh] w-full object-contain"
               />
             )}
@@ -97,7 +97,7 @@ export function SharedImagePage() {
               Shared output
             </p>
             <h1 className="mt-4 font-display text-2xl font-semibold leading-tight sm:text-3xl">
-              {image?.prompt ?? 'Heavy Chain 共有画像'}
+              {image?.prompt ?? 'Lightchain 共有画像'}
             </h1>
             <p className="mt-4 text-sm leading-7 text-white/65">
               生成画像、プロンプト、素材ワークベンチの情報をまとめて確認できます。リンクは期限付きで公開されます。
@@ -137,7 +137,7 @@ export function SharedImagePage() {
                 to="/generate"
                 className="inline-flex flex-1 items-center justify-center rounded-lg bg-primary-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-primary-300"
               >
-                Heavy Chainで生成する
+                Lightchainで生成する
               </Link>
               <Link
                 to="/signup"

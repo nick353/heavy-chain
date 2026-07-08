@@ -46,7 +46,7 @@ const modelOptions: StudioOption[] = [
     id: 'street-neutral-30s',
     label: 'Street 30s',
     value: '30代ユニセックス / 175cm / 都市的なストリートモデル',
-    supportingText: 'Heavy Chain の日常着トーン',
+    supportingText: 'Lightchain の日常着トーン',
   },
   {
     id: 'mature-premium-40s',
@@ -219,7 +219,7 @@ export function FashionStudioPage() {
   const [pose, setPose] = useState('正面立ち、片手をポケット、自然な肩線');
   const [background, setBackground] = useState('白背景の自然光スタジオ、薄い影');
   const [props, setProps] = useState('シルバーアクセサリー、ミニバッグ');
-  const [productLine, setProductLine] = useState('Heavy Chain 2026 SS シアージャケット');
+  const [productLine, setProductLine] = useState('Lightchain 2026 SS シアージャケット');
   const [referenceImage, setReferenceImage] = useState('参照画像: lookbook_ref_01.jpg / fabric_ref_02.png');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialStudioMaterial);
   const nextHistoryId = useRef(3);
