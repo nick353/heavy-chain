@@ -11,15 +11,23 @@
   }
 
   body {
-    @apply bg-[#030707] text-neutral-100 font-sans selection:bg-cyan-300 selection:text-neutral-950 transition-colors duration-500;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+    @apply bg-[#060708] text-neutral-100 font-sans selection:bg-cyan-300 selection:text-neutral-950 transition-colors duration-500;
+    background-image:
+      radial-gradient(circle at top left, rgba(34, 211, 238, 0.16), transparent 30%),
+      radial-gradient(circle at top right, rgba(59, 130, 246, 0.14), transparent 28%),
+      linear-gradient(180deg, rgba(255,255,255,0.04), transparent 28%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
     background-attachment: fixed;
   }
 
   /* Dark mode base styles */
   html.dark body {
-    @apply bg-[#030707] text-surface-100;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    @apply bg-[#050607] text-surface-100;
+    background-image:
+      radial-gradient(circle at top left, rgba(34, 211, 238, 0.2), transparent 28%),
+      radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 26%),
+      linear-gradient(180deg, rgba(255,255,255,0.03), transparent 24%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
   }
 
 }
@@ -36,16 +44,16 @@
 @layer components {
   /* Heavy Chain dark cyan surface */
   .glass-panel {
-    @apply bg-[#0a0b0b] backdrop-blur-2xl border border-white/10 shadow-none
-           dark:bg-[#0a0b0b] dark:border-white/10
+    @apply bg-[#080c0d]/95 backdrop-blur-2xl border border-cyan-300/10 shadow-none
+           dark:bg-[#080c0d]/95 dark:border-cyan-300/10
            transition-all duration-500;
   }
 
   .glass-card {
-    @apply bg-white/[0.04] backdrop-blur-xl border border-white/10 shadow-none rounded-2xl
-           hover:bg-white/[0.07] hover:border-cyan-300/60 hover:-translate-y-1
+    @apply bg-white/[0.05] backdrop-blur-xl border border-white/10 shadow-none rounded-[24px]
+           hover:bg-white/[0.08] hover:border-cyan-300/60 hover:-translate-y-1
            transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
-           dark:bg-white/[0.04] dark:border-white/10 dark:hover:bg-white/[0.07];
+           dark:bg-white/[0.05] dark:border-white/10 dark:hover:bg-white/[0.08];
   }
 
   .glass-card:hover {

@@ -60,19 +60,22 @@ export function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#05090b] px-4 py-8 text-white">
+    <main className="min-h-screen px-4 py-8 text-white">
       <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1500px] flex-col">
         <header className="flex items-center justify-between">
-          <Link to="/" className="text-sm font-semibold tracking-[0.32em] text-white">
-            LIGHTCHAIN
+          <Link to="/" className="inline-flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-xs font-semibold tracking-[0.28em] text-cyan-200">
+              HC
+            </span>
+            <span className="text-sm font-semibold tracking-[0.32em] text-white">HEAVY CHAIN</span>
           </Link>
-          <Link to="/" className="rounded-full border border-white/10 px-4 py-2 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white">
+          <Link to="/" className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-neutral-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-white">
             トップへ
           </Link>
         </header>
 
         {user && (
-          <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm text-cyan-50">
+          <div className="mt-5 flex items-center justify-between gap-3 rounded-[24px] border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm text-cyan-50 backdrop-blur-xl">
             <div className="min-w-0">
               <p className="font-semibold">現在ログイン中です</p>
               <p className="truncate text-cyan-100/80">{user.email}</p>
@@ -88,27 +91,27 @@ export function LoginPage() {
           </div>
         )}
 
-        <section className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_520px]">
+        <section className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_560px]">
           <div className="hidden lg:block">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">APPAREL AI WORKSPACE</p>
             <h1 className="mt-5 max-w-3xl text-6xl font-semibold leading-none tracking-normal">
-              Lightchainの流れを、そのままHeavy Chainへ。
+              Heavy Chainを、もっとLightchainらしく。
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-400">
-              おすすめ、企画デザインツール、AIフィッティング、グラフィックツールから制作を開始します。
+              背景、カード、入力、CTAの見た目を刷新して、すぐに別物だと分かるワークスペースへ寄せています。
             </p>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-[#171b1d] p-7 shadow-[0_24px_80px_rgba(0,0,0,0.45)] sm:p-10">
+          <div className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(8,12,13,0.96),rgba(11,15,18,0.92))] p-7 shadow-[0_28px_90px_rgba(0,0,0,0.5)] sm:p-10">
             <div className="mb-8">
-              <p className="text-sm font-semibold tracking-[0.26em] text-white">LIGHTCHAIN</p>
-              <h2 className="mt-6 text-2xl font-semibold">Lightchainアカウントでログインしてください。</h2>
+              <p className="text-sm font-semibold tracking-[0.26em] text-cyan-300">HEAVY CHAIN / LIGHTCHAIN UI</p>
+              <h2 className="mt-6 text-2xl font-semibold">新しい見た目のログイン画面です。</h2>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <label className="block">
                 <span className="sr-only">メールアドレス</span>
-                <span className="flex min-h-[58px] items-center gap-3 rounded-xl bg-[#101416] px-4 ring-1 ring-white/5 focus-within:ring-cyan-300/70">
+                <span className="flex min-h-[58px] items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.04] px-4 ring-1 ring-transparent focus-within:border-cyan-300/70 focus-within:bg-cyan-300/[0.06]">
                   <Mail className="h-5 w-5 text-neutral-500" />
                   <input
                     type="email"
@@ -125,7 +128,7 @@ export function LoginPage() {
 
               <label className="block">
                 <span className="sr-only">パスワード</span>
-                <span className="flex min-h-[58px] items-center gap-3 rounded-xl bg-[#101416] px-4 ring-1 ring-white/5 focus-within:ring-cyan-300/70">
+                <span className="flex min-h-[58px] items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.04] px-4 ring-1 ring-transparent focus-within:border-cyan-300/70 focus-within:bg-cyan-300/[0.06]">
                   <LockKeyhole className="h-5 w-5 text-neutral-500" />
                   <input
                     type="password"
@@ -147,7 +150,7 @@ export function LoginPage() {
                 </Link>
               </div>
 
-              <Button type="submit" isLoading={isLoading} size="lg" className="min-h-[58px] w-full rounded-xl bg-cyan-300 text-base font-semibold text-neutral-950 hover:bg-cyan-200">
+              <Button type="submit" isLoading={isLoading} size="lg" className="min-h-[58px] w-full rounded-2xl bg-gradient-to-r from-cyan-300 via-sky-300 to-indigo-300 text-base font-semibold text-neutral-950 hover:opacity-95">
                 ログイン
               </Button>
             </form>
@@ -157,7 +160,7 @@ export function LoginPage() {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={isLoading}
-                className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10"
+                className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-white"
               >
                 <Chrome className="h-4 w-4" />
                 Google
@@ -166,7 +169,7 @@ export function LoginPage() {
                 type="button"
                 onClick={handleAppleLogin}
                 disabled={isLoading}
-                className="min-h-[48px] rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-neutral-200 transition hover:bg-white/10"
+                className="min-h-[48px] rounded-2xl border border-white/10 bg-white/[0.04] text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-white"
               >
                 Apple
               </button>
