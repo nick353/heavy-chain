@@ -470,14 +470,17 @@ export function ModelLibraryPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="glass-panel rounded-2xl p-5 sm:p-7">
+    <div className="space-y-6 text-white">
+      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-semibold text-neutral-950 dark:text-white">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
+              LIGHTCHAIN / MODELS
+            </p>
+            <h1 className="mt-2 font-display text-3xl font-semibold text-white">
               モデルライブラリ
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">
               用途、モデル候補、出力先を選んでモデルマトリクスへ渡します。
             </p>
           </div>
@@ -485,7 +488,7 @@ export function ModelLibraryPage() {
             type="button"
             onClick={handoffToCanvas}
             disabled={!currentBrand}
-            className="btn-secondary inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             Canvasへ保存
@@ -500,8 +503,8 @@ export function ModelLibraryPage() {
               onClick={() => recordProgress(intent)}
               className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
                 activeIntent === intent
-                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
-                  : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
+                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                  : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
               }`}
             >
               <span className="flex items-center gap-2">
@@ -513,7 +516,7 @@ export function ModelLibraryPage() {
               </span>
               <span className="mt-3 flex flex-wrap gap-1.5">
                 {intentMeta[intent].outputs.map((output) => (
-                  <span key={output} className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium text-neutral-600 dark:bg-surface-900/70 dark:text-neutral-200">
+                  <span key={output} className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-neutral-200">
                     {output}
                   </span>
                 ))}
@@ -525,14 +528,14 @@ export function ModelLibraryPage() {
 
       <section
         data-testid="model-library-action-panel"
-        className="glass-panel rounded-2xl border dark:border-cyan-300/30 border-cyan-300/35 bg-cyan-300/[0.08] p-5 dark:border-cyan-300/30 dark:bg-cyan-300/[0.08]"
+        className="rounded-[28px] border border-cyan-300/25 bg-cyan-300/[0.08] p-5 shadow-soft"
       >
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300 dark:text-cyan-300">
               Production flow
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-neutral-950 dark:text-white">
+            <h2 className="mt-2 text-xl font-semibold text-white">
               まず候補を選び、必要なら参照素材を置いて、モデルマトリクスへ送る
             </h2>
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
@@ -544,10 +547,10 @@ export function ModelLibraryPage() {
                 <div
                   key={item.label}
                   data-testid="model-library-readiness-item"
-                  className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm"
+                  className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm"
                 >
                   <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{item.label}</p>
-                  <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{item.value}</p>
+                  <p className="mt-1 font-semibold text-white">{item.value}</p>
                 </div>
               ))}
             </div>
@@ -555,7 +558,7 @@ export function ModelLibraryPage() {
           <div data-testid="model-library-next-actions" className="grid gap-2">
             <Link
               to={directModelMatrixHref}
-              className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
             >
               <Sparkles className="h-4 w-4" />
               モデルマトリクスで生成
@@ -565,14 +568,14 @@ export function ModelLibraryPage() {
               type="button"
               onClick={handoffToCanvas}
               disabled={!currentBrand}
-              className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               Canvasへ保存して重ねる
             </button>
             <Link
               to="/gallery"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white/80 px-4 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-white dark:border-white/10 dark:bg-surface-900/70 dark:text-neutral-100"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white"
             >
               Galleryで結果を見る
             </Link>
@@ -582,12 +585,12 @@ export function ModelLibraryPage() {
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-5">
-          <div className="glass-panel rounded-2xl p-5">
+          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
             <div>
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">モデル候補を選ぶ</h2>
-                  <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                  <h2 className="text-lg font-semibold text-white">モデル候補を選ぶ</h2>
+                  <p className="mt-1 text-sm text-neutral-400">
                     用途に合う候補を選ぶだけで、顔・ポーズ・体型・肌色・年齢層がそろいます。
                   </p>
                 </div>
@@ -606,8 +609,8 @@ export function ModelLibraryPage() {
                       onClick={() => selectCandidate(candidate)}
                       className={`rounded-xl border p-4 text-left text-sm transition ${
                         selected
-                          ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
-                          : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
+                          ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                          : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                       }`}
                     >
                       <span className="flex items-center justify-between gap-3 font-semibold">
@@ -616,7 +619,7 @@ export function ModelLibraryPage() {
                       </span>
                       <span className="mt-3 flex flex-wrap gap-1.5">
                         {[candidate.ageGroup, candidate.skinTone, candidate.usage].map((item) => (
-                          <span key={item} className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-neutral-700 dark:bg-surface-900/70 dark:text-neutral-200">
+                          <span key={item} className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-neutral-200">
                             {item}
                           </span>
                         ))}
@@ -630,10 +633,10 @@ export function ModelLibraryPage() {
             </div>
           </div>
 
-	          <div className="glass-panel rounded-2xl p-5">
+	          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
 	            <div className="flex items-center gap-2">
 	              <SlidersHorizontal className="h-5 w-5 text-cyan-300" />
-	              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">細部を調整</h2>
+	              <h2 className="text-lg font-semibold text-white">細部を調整</h2>
 	            </div>
 	            <div className="mt-4">
 	              <MaterialWorkbench
@@ -649,19 +652,19 @@ export function ModelLibraryPage() {
 	              />
 	            </div>
 	            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+              <label className="text-sm font-semibold text-white">
                 顔
                 <textarea value={face} onChange={(event) => setFace(event.target.value)} rows={2} className={fieldClass} />
               </label>
-              <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+              <label className="text-sm font-semibold text-white">
                 ポーズ
                 <textarea value={pose} onChange={(event) => setPose(event.target.value)} rows={2} className={fieldClass} />
               </label>
-              <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+              <label className="text-sm font-semibold text-white">
                 体型
                 <textarea value={bodyType} onChange={(event) => setBodyType(event.target.value)} rows={2} className={fieldClass} />
               </label>
-              <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+              <label className="text-sm font-semibold text-white">
                 商品説明
                 <textarea value={productDescription} onChange={(event) => setProductDescription(event.target.value)} rows={2} className={fieldClass} />
               </label>
@@ -670,31 +673,31 @@ export function ModelLibraryPage() {
         </div>
 
         <aside className="space-y-5">
-          <figure className="glass-panel rounded-2xl p-5">
+          <figure className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
             <img
               src={previewImageUrl}
               alt="Model library candidate preview"
-              className="aspect-[3/2] w-full rounded-xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
+              className="aspect-[3/2] w-full rounded-xl border border-white/10 bg-white object-cover"
             />
-            <figcaption className="mt-3 flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+            <figcaption className="mt-3 flex items-center gap-2 text-sm font-semibold text-white">
               <UserRound className="h-4 w-4 text-cyan-300" />
               {selectedCandidate.label}
             </figcaption>
-            <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+            <p className="mt-1 text-sm text-neutral-400">
               {usage}向けモデル候補をCanvasとモデルマトリクスへ渡します。
             </p>
           </figure>
 
-          <div className="glass-panel rounded-2xl p-5">
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-neutral-950 dark:text-white">
+          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
               <Shirt className="h-5 w-5 text-cyan-300" />
               条件プレビュー
             </h2>
             <div className="mt-4 space-y-3">
               {selectedProfileRows.map((row) => (
-                <div key={row.label} className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
+                <div key={row.label} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                   <p className="text-xs font-semibold text-neutral-400">{row.label}</p>
-                  <p className="mt-1 text-sm leading-5 text-neutral-700 dark:text-neutral-200">{row.value}</p>
+                  <p className="mt-1 text-sm leading-5 text-neutral-200">{row.value}</p>
                 </div>
               ))}
             </div>
@@ -712,15 +715,15 @@ export function ModelLibraryPage() {
             </div>
           </div>
 
-          <div className="glass-panel rounded-2xl p-5">
-            <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">保存状態</h2>
-            <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{activeIntent} / {progress}%</p>
-            <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
+          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
+            <h2 className="text-lg font-semibold text-white">保存状態</h2>
+            <p className="mt-2 text-sm text-neutral-400">{activeIntent} / {progress}%</p>
+            <div className="mt-4 h-2 rounded-full bg-white/10">
               <div className="h-full rounded-full bg-cyan-300" style={{ width: `${progress}%` }} />
             </div>
             <div className="mt-4 space-y-2">
               {history.map((item) => (
-                <div key={item.id} className="rounded-xl bg-white/60 p-3 text-sm text-neutral-700 dark:bg-surface-900/50 dark:text-neutral-300">
+                <div key={item.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm text-neutral-200">
                   {item.label}
                 </div>
               ))}

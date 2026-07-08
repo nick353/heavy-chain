@@ -171,7 +171,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: '生地プリントの試着シミュレーション',
     lightchainName: 'FabricBody / DesignatedFabric / PrintingTiling',
     description: '柄、生地、対象アイテムを構造化し、服への反映条件を残します。',
-    route: '/patterns/workbench',
+    route: '/lightchain/fabric-image',
     category: 'planning',
     status: 'workspace',
     capability: 'motif、repeat、garment、palette、referenceAssets',

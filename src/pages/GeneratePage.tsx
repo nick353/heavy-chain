@@ -1,7 +1,7 @@
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  Wand2, 
+import {
+  Wand2,
   ChevronDown,
   Search,
   Loader2,
@@ -24,7 +24,8 @@ import {
   KeyRound,
   MousePointer2,
   Redo2,
-  Undo2
+  Undo2,
+  ArrowRight,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
@@ -33,7 +34,6 @@ import { FEATURES, type Feature } from '../components/FeatureSelector';
 import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
 import { ImageSelector, type SelectedImage, type ReferenceType } from '../components/ImageSelector';
 import { UsageStats } from '../components/UsageStats';
-import { GenerateLightchainEntry } from '../components/GenerateLightchainEntry';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { getErrorMessage, getFailureRecoveryGuidance } from '../lib/errorMessages';
 import { saveWorkspaceArtifact, saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
@@ -3778,7 +3778,52 @@ export function GeneratePage() {
         animate={{ opacity: 1, y: 0 }}
         className="mx-auto max-w-[1500px] px-4 py-4 sm:px-6 sm:py-6 lg:px-8"
       >
-        <GenerateLightchainEntry />
+        <section className="overflow-hidden rounded-[28px] border border-white/10 bg-neutral-950 text-white shadow-soft">
+          <div className="border-b border-white/10 px-4 py-6 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
+                  LIGHTCHAIN / ENTRY
+                </p>
+                <h2 className="mt-2 text-3xl font-semibold tracking-normal text-white sm:text-4xl">生成ワークスペース</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
+                  目的別の入口だけを並べています。押したら各作業台へそのまま入れます。
+                </p>
+              </div>
+              <Link
+                to="/dashboard"
+                className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white"
+              >
+                制作ワークフロー
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+          <div className="grid gap-4 p-4 sm:p-6 lg:grid-cols-2 xl:grid-cols-3">
+            {[
+              { title: 'マーケティングワークスペース', to: '/marketing', desc: '販促画像、コピー、売場素材をすぐ作る' },
+              { title: 'AIフィッティング', to: '/fitting', desc: '衣服画像から着用画像へ直行する' },
+              { title: 'ファッションスタジオ', to: '/studio', desc: 'モデル、背景、小物を組んで撮影条件へ進む' },
+              { title: 'モデル企画ライブラリ', to: '/models', desc: 'モデル条件をすぐ詰める' },
+              { title: '柄・グラフィック作業台', to: '/patterns/workbench', desc: '柄、総柄、ベクター化をすぐ開く' },
+              { title: '動画ワークステーション', to: '/video', desc: 'ショット構成とCTAをすぐ作る' },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="group rounded-2xl border border-white/10 bg-white/[0.04] p-5 transition hover:border-cyan-300/60 hover:bg-white/[0.07]"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-white">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-neutral-400">{item.desc}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-cyan-300 transition group-hover:translate-x-0.5" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         <details className={`mt-5 rounded-2xl border p-4 shadow-soft ${
           generationReadyInApp

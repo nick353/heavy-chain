@@ -423,14 +423,17 @@ export function FashionStudioPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="glass-panel rounded-2xl p-5 sm:p-7">
+    <div className="space-y-6 text-white">
+      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-semibold text-neutral-950 dark:text-white">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
+              LIGHTCHAIN / STUDIO
+            </p>
+            <h1 className="mt-2 font-display text-3xl font-semibold text-white">
               Fashion Studio
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">
               商品企画の切り口と進捗メモを、Gallery/History と Canvas に渡せるスタジオワークスペースです。
             </p>
           </div>
@@ -438,7 +441,7 @@ export function FashionStudioPage() {
             type="button"
             onClick={handoffToCanvas}
             disabled={!currentBrand}
-            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             保存してCanvasへ
@@ -453,8 +456,8 @@ export function FashionStudioPage() {
               onClick={() => recordProgress(choice)}
               className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
                 activeChoice === choice
-                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
-                  : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
+                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                  : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
               }`}
             >
               {choice}
@@ -465,13 +468,13 @@ export function FashionStudioPage() {
 
       <section
         data-testid="studio-action-panel"
-        className="grid gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-5 dark:border-emerald-900/60 dark:bg-emerald-950/20 lg:grid-cols-[minmax(0,1fr)_auto]"
+        className="grid gap-4 rounded-[28px] border border-cyan-300/25 bg-cyan-300/[0.08] p-5 shadow-soft lg:grid-cols-[minmax(0,1fr)_auto]"
       >
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
             Studio flow
           </p>
-          <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
+          <h2 className="mt-2 text-lg font-semibold text-white">
             素材を置いて、撮影セットを決め、生成かCanvasへ進む
           </h2>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -479,10 +482,10 @@ export function FashionStudioPage() {
               <div
                 key={item.label}
                 data-testid="studio-readiness-item"
-                className="rounded-xl border border-white/70 bg-white/70 p-3 text-sm dark:border-white/10 dark:bg-surface-900/60"
+                className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm"
               >
-                <p className="font-semibold text-neutral-950 dark:text-white">{item.label}</p>
-                <p className="mt-1 leading-5 text-neutral-600 dark:text-neutral-300">{item.detail}</p>
+                <p className="font-semibold text-white">{item.label}</p>
+                <p className="mt-1 leading-5 text-neutral-300">{item.detail}</p>
               </div>
             ))}
           </div>
@@ -501,7 +504,7 @@ export function FashionStudioPage() {
               sourceResumePath: workspaceSourceConfig.studio.resumePath,
               sourceMode: 'local-workflow-intake',
             })}
-            className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
           >
             <Sparkles className="h-4 w-4" />
             生成指示へ送る
@@ -510,12 +513,12 @@ export function FashionStudioPage() {
             type="button"
             onClick={handoffToCanvas}
             disabled={!currentBrand}
-            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Layers3 className="h-4 w-4" />
             Canvasへ保存
           </button>
-          <Link to="/gallery" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
+          <Link to="/gallery" className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white">
             <Images className="h-4 w-4" />
             Galleryで確認
           </Link>
@@ -523,10 +526,10 @@ export function FashionStudioPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
-        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
+        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft lg:col-span-2">
 	          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
 	            <div>
-	              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">生成前スタジオ設定</h2>
+	              <h2 className="text-lg font-semibold text-white">生成前スタジオ設定</h2>
 	              <div className="mt-4 space-y-5">
 	                <MaterialWorkbench
 	                  title="スタジオ素材"
@@ -541,7 +544,7 @@ export function FashionStudioPage() {
 	                />
 
 	                <div>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">モデル候補</p>
+                  <p className="text-sm font-semibold text-white">モデル候補</p>
                   <div className="mt-2 grid gap-3 md:grid-cols-3">
                     {modelOptions.map((option) => (
                       <button
@@ -551,8 +554,8 @@ export function FashionStudioPage() {
                         onClick={() => selectModel(option)}
                         className={`${optionCardClass} ${
                           selectedModelId === option.id
-                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
-                            : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
+                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                            : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                         }`}
                       >
                         <span className="flex items-center justify-between gap-2 font-semibold">
@@ -565,7 +568,7 @@ export function FashionStudioPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">ポーズ候補</p>
+                  <p className="text-sm font-semibold text-white">ポーズ候補</p>
                   <div className="mt-2 grid gap-3 md:grid-cols-3">
                     {poseOptions.map((option) => (
                       <button
@@ -575,8 +578,8 @@ export function FashionStudioPage() {
                         onClick={() => selectPose(option)}
                         className={`${optionCardClass} ${
                           selectedPoseId === option.id
-                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
-                            : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
+                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                            : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                         }`}
                       >
                         <span className="flex items-center justify-between gap-2 font-semibold">
@@ -589,7 +592,7 @@ export function FashionStudioPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-white">背景候補</p>
+                  <p className="text-sm font-semibold text-white">背景候補</p>
                   <div className="mt-2 grid gap-3 md:grid-cols-3">
                     {backgroundOptions.map((option) => (
                       <button
@@ -599,8 +602,8 @@ export function FashionStudioPage() {
                         onClick={() => selectBackground(option)}
                         className={`${optionCardClass} ${
                           selectedBackgroundId === option.id
-                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
-                            : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
+                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                            : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                         }`}
                       >
                         <span className="flex items-center justify-between gap-2 font-semibold">
@@ -619,55 +622,55 @@ export function FashionStudioPage() {
                 data-testid="studio-preview-image"
                 src={previewImageUrl}
                 alt="Studio setup preview"
-                className="aspect-[3/2] w-full rounded-xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
+                className="aspect-[3/2] w-full rounded-xl border border-white/10 bg-white object-cover"
               />
-              <figcaption className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
+              <figcaption className="mt-3 text-sm text-neutral-400">
                 選択内容をモデルマトリクスへ渡すためのローカルプレビューです。
               </figcaption>
             </figure>
           </div>
         </div>
-        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">生成前インテーク</h2>
+        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft lg:col-span-2">
+          <h2 className="text-lg font-semibold text-white">生成前インテーク</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+            <label className="text-sm font-semibold text-white">
               モデル
               <input value={modelProfile} onChange={(event) => setModelProfile(event.target.value)} className={fieldClass} />
             </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+            <label className="text-sm font-semibold text-white">
               ポーズ
               <input value={pose} onChange={(event) => setPose(event.target.value)} className={fieldClass} />
             </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+            <label className="text-sm font-semibold text-white">
               背景
               <input value={background} onChange={(event) => setBackground(event.target.value)} className={fieldClass} />
             </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+            <label className="text-sm font-semibold text-white">
               小物
               <input value={props} onChange={(event) => setProps(event.target.value)} className={fieldClass} />
             </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+            <label className="text-sm font-semibold text-white">
               商品ライン
               <input value={productLine} onChange={(event) => setProductLine(event.target.value)} className={fieldClass} />
             </label>
-            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
+            <label className="text-sm font-semibold text-white">
               参照画像
               <input value={referenceImage} onChange={(event) => setReferenceImage(event.target.value)} className={fieldClass} />
             </label>
           </div>
         </div>
-        <div className="glass-panel rounded-2xl p-5">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">ローカル進捗</h2>
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{activeChoice} / {progress}%</p>
-          <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
+        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
+          <h2 className="text-lg font-semibold text-white">ローカル進捗</h2>
+          <p className="mt-2 text-sm text-neutral-400">{activeChoice} / {progress}%</p>
+          <div className="mt-4 h-2 rounded-full bg-white/10">
             <div className="h-full rounded-full bg-cyan-300" style={{ width: `${progress}%` }} />
           </div>
         </div>
-        <div className="glass-panel rounded-2xl p-5">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">履歴</h2>
+        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
+          <h2 className="text-lg font-semibold text-white">履歴</h2>
           <div className="mt-4 space-y-3">
             {history.map((item) => (
-              <div key={item.id} className="rounded-xl bg-white/60 p-3 text-sm text-neutral-700 dark:bg-surface-900/50 dark:text-neutral-300">
+              <div key={item.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm text-neutral-200">
                 {item.label}
               </div>
             ))}
