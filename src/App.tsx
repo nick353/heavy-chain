@@ -90,9 +90,9 @@ const loadingRouteCopy: Record<string, { eyebrow: string; title: string; descrip
   },
   '/patterns': {
     eyebrow: 'Pattern Workspace',
-    title: '柄ワークスペースを準備しています',
-    description: '柄、配置、リピート、商品への見え方を確認できる画面を準備しています。',
-    actions: ['柄を作る', '配置を確認', 'Galleryで確認'],
+    title: '柄・グラフィック作業台を準備しています',
+    description: '柄、配置、リピート、商品への見え方をすぐ確認できる画面を準備しています。',
+    actions: ['柄を作る', '配置を確認', '作業台へ進む'],
   },
   '/video': {
     eyebrow: 'Video',
@@ -608,6 +608,16 @@ function AppRoutes() {
         />
         <Route
           path="/patterns"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<PatternWorkspacePage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/patterns/workbench"
           element={
             <ProtectedRoute>
               <ErrorBoundary>

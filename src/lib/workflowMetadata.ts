@@ -128,12 +128,12 @@ export const workflowMetadata: WorkflowMetadata[] = [
     steps: ['商品コンセプトを入力', '複数スタイルを設計', '有望案を選定'],
     artifactCandidates: [
       { title: 'デザイン方向案', description: '素材感、ロゴ量、シルエット違いを複数案で比較します。' },
-      { title: '総柄プリント案', description: 'Pattern workspace でリピート、配色、対象アイテムを詰められる候補にします。' },
+      { title: '総柄プリント案', description: '柄・グラフィック作業台でリピート、配色、対象アイテムを詰められる候補にします。' },
       { title: 'ベクター化メモ', description: '刺繍、プリント、タグ展開に使う線数や色数の意図を残します。' },
     ],
     ctas: [
       { label: '企画を作る', href: '/generate?workflow=design-exploration', variant: 'primary' },
-      { label: 'Pattern workspace', href: '/patterns', variant: 'secondary' },
+      { label: 'Pattern workspace', href: '/patterns/workbench', variant: 'secondary' },
       { label: 'Canvasで編集', href: '/canvas/new', variant: 'secondary' },
     ],
     prefill: {

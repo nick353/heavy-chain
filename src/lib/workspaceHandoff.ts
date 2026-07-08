@@ -118,7 +118,7 @@ const featureAccent: Record<WorkspaceHandoffFeatureType, string> = {
 export const workspaceSourceConfig: Record<WorkspaceSource, { label: string; resumePath: string }> = {
   studio: { label: 'Fashion Studio', resumePath: '/studio' },
   models: { label: 'モデルライブラリ', resumePath: '/models' },
-  patterns: { label: '柄・グラフィック', resumePath: '/patterns' },
+  patterns: { label: '柄・グラフィック', resumePath: '/patterns/workbench' },
   video: { label: 'Video Workstation', resumePath: '/video' },
   lab: { label: 'Lab', resumePath: '/lab' },
   marketing: { label: 'マーケティングワークスペース', resumePath: '/marketing' },

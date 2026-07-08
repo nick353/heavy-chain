@@ -41,7 +41,7 @@ const routeIcon: Record<string, typeof Sparkles> = {
   '/video': PlayCircle,
   '/models': UserRound,
   '/studio': Images,
-  '/patterns': Palette,
+  '/patterns/workbench': Palette,
   '/brand/settings': CheckCircle2,
   '/canvas/new': Layers3,
 };

@@ -36,11 +36,11 @@ const initialHistory: HistoryItem[] = [
 const motifPresets = [
   {
     label: '鎖モチーフ',
-    value: 'Lightchainの鎖モチーフ、細い線画、Tシャツ胸元向けの静かなグラフィック',
+    value: 'Heavy Chainの鎖モチーフ、細い線画、Tシャツ胸元向けの静かなグラフィック',
   },
   {
     label: 'ロゴ中心',
-    value: 'Lightchainロゴを中心にした単色エンブレム、刺繍とシルクスクリーン向け',
+    value: 'Heavy Chainロゴを中心にした単色エンブレム、刺繍とシルクスクリーン向け',
   },
   {
     label: '和柄ミックス',
@@ -267,7 +267,7 @@ export function PatternWorkspacePage() {
   const [selectedPreviewId, setSelectedPreviewId] = useState('graphic-emblem');
   const [progress, setProgress] = useState(32);
   const [history, setHistory] = useState(initialHistory);
-  const [motifPrompt, setMotifPrompt] = useState('Lightchainの鎖モチーフ、細い線画、Tシャツ胸元向けの静かなグラフィック');
+  const [motifPrompt, setMotifPrompt] = useState('Heavy Chainの鎖モチーフ、細い線画、Tシャツ胸元向けの静かなグラフィック');
   const [repeatStyle, setRepeatStyle] = useState('ハーフドロップ、余白多め、遠目でうるさくならない密度');
   const [garmentTarget, setGarmentTarget] = useState('ブラックのヘビーウェイトTシャツ / 胸元ワンポイントと背面総柄');
   const [paletteNotes, setPaletteNotes] = useState('墨黒、オフホワイト、くすんだシルバー、差し色に深い赤');
@@ -435,8 +435,8 @@ export function PatternWorkspacePage() {
     const { projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
       featureType: 'graphic-pattern-workspace',
-      projectName: `柄・グラフィック: ${activeMode}`,
-	      title: `柄・グラフィック: ${activeMode}`,
+      projectName: `柄・グラフィック作業台: ${activeMode}`,
+      title: `柄・グラフィック作業台: ${activeMode}`,
 	      prompt,
 	      imageUrl: materialReference.imageUrl || selectedPreview.imageUrl,
       summary: `${activeMode}の進捗 ${progress}%`,
@@ -472,7 +472,7 @@ export function PatternWorkspacePage() {
           searchTokens: ['pattern-design-brief', activeMode, garmentTarget],
         },
         status: 'planned',
-        resumePath: '/patterns',
+        resumePath: '/patterns/workbench',
         handoffKind: 'local-workflow-intake',
         primaryInput,
         nextStep,
@@ -541,7 +541,7 @@ export function PatternWorkspacePage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="font-display text-3xl font-semibold text-neutral-950 dark:text-white">
-              柄・グラフィック
+              柄・グラフィック作業台
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
               グラフィック、総柄、ベクター化のインテークを、Gallery/History と Canvas に渡せるローカルワークスペースです。
@@ -661,7 +661,7 @@ export function PatternWorkspacePage() {
 	                placementOptions={['胸中央', '背面大判', '袖', '全面総柄', '小物ワンポイント']}
 	              />
 
-	              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
                 <div className="flex items-center gap-2">
                   <Upload className="h-4 w-4 text-cyan-300" />
                   <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">素材スロット</h3>
@@ -695,9 +695,9 @@ export function PatternWorkspacePage() {
                 <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
                   <div className="flex items-center gap-2">
                     <Shapes className="h-4 w-4 text-cyan-300" />
-                    <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">モチーフ</h3>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">モチーフ</h3>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
                     {motifPresets.map((preset) => (
                       <button
                         key={preset.label}
@@ -718,9 +718,9 @@ export function PatternWorkspacePage() {
                 <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
                   <div className="flex items-center gap-2">
                     <Repeat2 className="h-4 w-4 text-cyan-300" />
-                    <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">配置</h3>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">配置</h3>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
                     {repeatPresets.map((preset) => (
                       <button
                         key={preset.label}
@@ -741,9 +741,9 @@ export function PatternWorkspacePage() {
                 <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
                   <div className="flex items-center gap-2">
                     <Shirt className="h-4 w-4 text-cyan-300" />
-                    <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">対象アイテム</h3>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">対象アイテム</h3>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
                     {targetPresets.map((preset) => (
                       <button
                         key={preset.label}
@@ -764,9 +764,9 @@ export function PatternWorkspacePage() {
                 <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
                   <div className="flex items-center gap-2">
                     <Palette className="h-4 w-4 text-cyan-300" />
-                    <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">配色</h3>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">配色</h3>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
                     {palettePresets.map((preset) => (
                       <button
                         key={preset.label}

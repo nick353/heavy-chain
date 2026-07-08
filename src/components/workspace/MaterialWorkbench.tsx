@@ -551,10 +551,10 @@ export function MaterialWorkbench({
         ) : (
           <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <p className="text-sm font-semibold text-white">
-              服の写真を入れてください
+              まず1枚、素材写真を入れてください
             </p>
             <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-              アップロード後に、背景を抜くボタンだけ表示します。
+              入れたら、切り抜きとレイヤー調整の操作がそのまま続きます。
             </p>
           </div>
         )}
