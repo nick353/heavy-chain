@@ -79,6 +79,11 @@ const SUPABASE_PROJECT_REF = (() => {
   }
 })();
 
+const clearStoredAuthSession = () => {
+  if (typeof window === 'undefined' || !SUPABASE_PROJECT_REF) return;
+  window.localStorage.removeItem(`sb-${SUPABASE_PROJECT_REF}-auth-token`);
+};
+
 async function withAuthTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, message: string): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -517,6 +522,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      clearStoredAuthSession();
       set({ user: null, profile: null, currentBrand: null });
     } finally {
       set({ isLoading: false });

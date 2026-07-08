@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const { signUpWithEmail, signInWithGoogle, signInWithApple, isLoading } = useAuthStore();
+  const { user, signOut, signUpWithEmail, signInWithGoogle, signInWithApple, isLoading } = useAuthStore();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -78,6 +78,16 @@ export function SignupPage() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('ログアウトしました');
+      navigate('/signup', { replace: true });
+    } catch (error: any) {
+      toast.error(error.message || 'ログアウトに失敗しました');
+    }
+  };
+
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-surface-50 dark:bg-surface-950">
       {/* Animated Background */}
@@ -103,6 +113,23 @@ export function SignupPage() {
             </span>
           </Link>
         </div>
+
+        {user && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-primary-500/20 bg-primary-500/10 px-4 py-3 text-sm text-primary-900 dark:text-primary-100">
+            <div className="min-w-0">
+              <p className="font-semibold">現在ログイン中です</p>
+              <p className="truncate text-primary-800/80 dark:text-primary-200/80">{user.email}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isLoading}
+              className="shrink-0 rounded-full border border-primary-500/25 px-4 py-2 font-semibold text-primary-900 transition hover:bg-primary-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:text-primary-50"
+            >
+              ログアウト
+            </button>
+          </div>
+        )}
 
         {/* Card */}
         <div className="glass-panel rounded-2xl p-8 md:p-10 backdrop-blur-xl border-white/40 dark:border-white/10">

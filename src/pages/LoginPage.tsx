@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { signInWithEmail, signInWithGoogle, signInWithApple, isLoading } = useAuthStore();
+  const { user, signOut, signInWithEmail, signInWithGoogle, signInWithApple, isLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
@@ -49,6 +49,16 @@ export function LoginPage() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('ログアウトしました');
+      navigate('/login', { replace: true });
+    } catch (error: any) {
+      toast.error(error.message || 'ログアウトに失敗しました');
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[#05090b] px-4 py-8 text-white">
       <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1500px] flex-col">
@@ -60,6 +70,23 @@ export function LoginPage() {
             トップへ
           </Link>
         </header>
+
+        {user && (
+          <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm text-cyan-50">
+            <div className="min-w-0">
+              <p className="font-semibold">現在ログイン中です</p>
+              <p className="truncate text-cyan-100/80">{user.email}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isLoading}
+              className="shrink-0 rounded-full border border-cyan-200/30 px-4 py-2 font-semibold text-cyan-50 transition hover:bg-cyan-200/10 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              ログアウト
+            </button>
+          </div>
+        )}
 
         <section className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_520px]">
           <div className="hidden lg:block">

@@ -2,6 +2,59 @@
 
 Updated: 2026-07-07
 
+g835_current_readback_refresh_g618_g620_h602_g619_20260708: 2026-07-08 の最新再実行で `G618/G620` は再び readback fail。`H602/G619` は未完了のまま。`release/10M` は fail クローズ状態として再反映。
+browser_group_hygiene_20260708: 今後の web 操作では、役目が終わったブラウザグループ/タブは必ず閉じてから終える。残グループを放置しない。
+browser_group_hygiene_exception_20260708: ただし、ユーザーが「そのタブは残しておいて」「最後に自分で進める」と明示したものだけは残す。他の終わったタブは閉じる。
+g835_current_continuation_refresh_20260708: 既存 artifact の再読込では `production monitor` は `Invalid Refresh Token: Already Used` と login redirect のまま、`G619` は consent/duration/evidence/scaffold 未達、`H602` は no-real-charge / transaction_or_entitlement_readback 未達。`release/10M` の残りは fail-close を維持し、次の安全な一手は read-only 監視復帰か G619/H602 の証跡補強に限定される。
+g835_current_readback_refresh_20260708_r2: 直近の再読込でも `g835-10m-completion-current-clean-r2/release-gate-summary.json` は `ok=false`、failed は `production monitor` / `production mass-market QA current` / `production Lightchain all-feature order previews` / `G618 scale ops baseline` / `G620 security operations` / `production H602 billing completion readback` / `git_dirty`。`git_dirty` の detail は `M STATE.md` と `?? recover_profile2_auth_tmp.mjs` のままで、`G619` は `g776-g619-beta-readiness-current-r2` で 3 セッションとも未達、`H602` は `g831-h602-production-completion-current-r1` で `transactionOrEntitlementReadback=null` / `verifiedNoRealChargeProofCount=null` / `liveProductionReadbackPerformed=false`。ここから閉じられる blocker は増えていない。
+git_dirty_current_classification_20260708: `git status --short` の dirty は `M STATE.md` と `?? recover_profile2_auth_tmp.mjs`。`STATE.md` は証跡更新、`recover_profile2_auth_tmp.mjs` は認証回復用の一時ファイルで、どちらも revert しない。
+git_dirty_exact_blocker_20260708: `git_dirty_worktree_contains_state_or_evidence_updates` を release/10M の exact blocker として固定。既存 artifact の read-only 再評価は続行可だが、worktree をクリーン化しない限り release-gate の完了扱いにはしない。
+release_gate_readonly_recheck_20260708: 既存 artifact の再読込では `g835-release-gate-current-clean-r3` は `production monitor` / `production mass-market QA current` / `production Lightchain all-feature order previews` などが fail のままで、`g835-10m-completion-current-clean-r2` は `G617 blocked-exact` と `G619 queued` を含む未完了状態。今回の exact blocker は `git_dirty_worktree_contains_state_or_evidence_updates` として扱う。
+release_gate_readonly_recheck_20260708_r2: 直近の再読込でも `g835-10m-completion-current-clean-r2/release-gate-summary.json` は `ok=false`、failed は `readback:production monitor` / `readback:production mass-market QA current` / `readback:production Lightchain all-feature order previews` / `readback:G618 scale ops baseline` / `readback:G620 security operations` / `readback:production H602 billing completion readback` / `blocker:git_dirty`。`blocker:git_dirty` の detail は `M STATE.md` と `?? recover_profile2_auth_tmp.mjs` のままで、G619/H602 を飛ばしても release/10M はまだ fail-close のまま。
+g619_h602_existing_artifact_recheck_20260708: 既存 artifact の再点検でも `G619 beta 004/005/006` は consent/duration/friction/redaction/usable evidence/scaffold 置換が未達で、実セッション証跡作成が必要。`H602` も human_attestation どまりで `transactionOrEntitlementReadback=false`、`verifiedNoRealChargeProofCount=0` のまま。閉じられる blocker は増えず、exact blocker は固定。
+auth_recovery_r1_20260708: `recover_profile2_auth_tmp.mjs` で Profile 2 から fresh auth 再取得を試したが `ok=false`、`exactBlocker=initial_route_login_redirect`。証跡 URI: `output/playwright/g835-production-monitor-auth-recovery-r1/summary.json`。`production monitor` の stale auth 側は解消せず、現状 blocker は固定。
+auth_recovery_r2_20260708: 既存の `output/playwright/g830-prod-auth-from-chrome-profile2-r1/auth-state.json` を使った read-only 再確認でも `ok=false`、`exactBlocker=generate_detail_form_missing`。証跡 URI: `output/playwright/g835-production-monitor-with-g830-auth-r1/summary.json`。`Invalid Refresh Token: Already Used` が継続し、auth blocker は固定。
+auth_recovery_r3_20260708: `output/playwright/g835-production-monitor-auth-recovery-r1/auth-state.json` を流用した live auth 再確認でも `ok=false`、`exactBlocker=generate_detail_form_missing`。UI probe は `/login` に落ち、production asset は `assets/index.CC7SsdCO.js` のままで、current expected asset `assets/index.CxLJvrDR.js` と不一致。証跡 URI: `output/playwright/g835-production-monitor-liveauth-r3/summary.json` と `.../ui/summary.json`。`production monitor` の read-only 復帰はまだ未達。
+
+- 実施結果（再実行）
+  - `output/playwright/g764-g618-scale-ops-r1/summary.json` (`ok=false`)
+    - `exact_blocker=command_failed:production_monitor_readback`
+    - 再実行 nested monitor `output/playwright/g764-g618-scale-ops-r1/production-monitor-readback/summary.json` (`ok=false`, `blockers=1`, `warnings=4`)
+    - monitor blocker: `recent_generation_jobs_failed`
+  - `output/playwright/g764-g620-security-ops-r1/summary.json` (`ok=false`)
+    - `exact_blocker=command_failed:production_monitor_readback`
+    - 再実行 nested monitor `output/playwright/g764-g620-security-ops-r1/production-monitor-readback/summary.json` (`ok=false`, `blockers=2`, `warnings=4`)
+    - monitor blockers: `generation_failure_rate_high`, `recent_generation_jobs_failed`
+
+- H602 final blocker（最新既存 readback）
+  - `output/playwright/g831-h602-production-completion-current-r1/summary.json` (`ok=false`)
+  - blockers:
+    - `sandbox_purchase_transaction_or_entitlement_readback`
+    - `final_h602_release_gate_readback`
+    - `verified_no_real_charge_proof_missing`
+    - `transaction_or_entitlement_readback_missing`
+    - `operator_final_checkout_public_release_decision_missing`
+  - 補足: `liveProductionReadbackPerformed=false`（読み出しのみ）
+
+- G619不足（最新既存 readback）
+  - `output/playwright/g776-g619-beta-readiness-current-r2/summary.json` (`ok=false`, `readySessions=0`, `missingCount=18`)
+  - `output/playwright/g776-g619-beta-evidence-current-r2/summary.json` (`blocked` /不足)
+  - 各セッション（g619-beta-004/005/006）共通で未達:
+    - consent confirmed / recordingAllowed true
+    - durationMinutes >= 5
+    - friction note or explicit noFrictionNote
+    - redaction review passed
+    - usable_behavior_evidence artifact
+    - scaffold placeholder text置換
+
+- release/10M split 更新（最新反映）
+  - `output/playwright/g835-release-gate-current-clean-r3` (`ok=false`)
+    - failed: `production monitor`, `production mass-market QA current`, `production Lightchain all-feature order previews`, `G618 scale ops baseline`, `G620 security operations`, `production H602 billing completion readback`
+    - `blockers: git_dirty`（`STATE.md`編集による作業木の変更）
+  - `output/playwright/g835-10m-completion-current-clean-r2/summary.json` (`ok=false`)
+    - `summary.blockers=13`
+    - `G601-615` accepted, `G617` blocked-exact, `G618/G620` acceptance true, `G619 queued`
+
 This file is the project-owned source of truth entrypoint for Codex/Obsidian resume. Generated Obsidian pages are locators, not execution proof.
 
 ## Obsidian Context Fields
@@ -456,3 +509,31 @@ g831_remaining_safe_readbacks_20260706: Continued the active Goal to execute all
 latest_g831_remaining_safe_readbacks_locator: work/heavy-chain-prod-click-qa-result-20260706.md; work/heavy-chain-prod-click-qa-triage-20260706.md; output/playwright/g832-release-gate-readback-current-r1; output/playwright/g831-10m-completion-current-r1/summary.json; output/playwright/g831-prod-mass-market-current-r1/SUMMARY.json; output/playwright/g831-prod-lightchain-all-features-current-r1/SUMMARY.json; output/playwright/g831-prod-h601-rights-check-r1/summary.json; output/playwright/g831-h602-production-completion-current-r1/summary.json; output/playwright/g831-g608-goal-readiness-current-r1/audit-readiness.json
 g833_final_local_hardening_before_stop_20260707: Performed the last safe Heavy Chain local hardening pass without deploy, billing, checkout, payment, purchase, credential entry, OTP/CAPTCHA/security prompt, identity verification, quota bypass, destructive cleanup, external publish, or generation submit. Current UTC time was `2026-07-06T15:36:49Z`, so the G618/G620 useful rerun window (`2026-07-07T17:38Z`, preferably `18:28Z`) had not arrived. Readback confirmed the Brand Settings signed logo URL from G831 returns HTTP 400 JSON, explaining the Chrome `net::ERR_BLOCKED_BY_ORB` image-load blocker. Local fixes added: `supabase/functions/marketing-workspace-artifact/index.ts` now explicitly allows `POST, OPTIONS` and returns JSON/CORS headers for OPTIONS; `src/pages/BrandSettingsPage.tsx` and `src/components/BrandSwitcher.tsx` now fall back to initials/icon when a stored brand `logo_url` fails to load. Verification passed: `npm run typecheck -- --pretty false`, `npm run lint -- --max-warnings=0`, `deno check supabase/functions/marketing-workspace-artifact/index.ts`, `git diff --check`, and `npm run build`. Read-only Codex review found no TS/lint regression, but correctly noted these fixes do not affect current production until normal deploy/Edge Function deploy approval. Production mass-market, production Lightchain all-feature, release gate, and 10M audit remain not accepted until deploy/readback and the remaining human/time-window blockers close.
 latest_g833_final_local_hardening_locator: src/pages/BrandSettingsPage.tsx; src/components/BrandSwitcher.tsx; supabase/functions/marketing-workspace-artifact/index.ts; work/heavy-chain-prod-click-qa-result-20260706.md; work/heavy-chain-prod-click-qa-triage-20260706.md
+
+## 2026-07-08T14:25+09:00 Auth Recovery Convergence
+- `g835-production-monitor-auth-recovery-r2` captured login-body (`output/playwright/g835-production-monitor-auth-recovery-r2/summary.json`, `page-body.txt`, `summary.png`); outcome: `exact_blocker=initial_route_login_redirect`, `auth-state.json` persisted with empty cookies/origins.
+- `g835-production-monitor-launch-rerun-with-oldauth-r2` (existing auth fallback `output/playwright/g830-prod-auth-from-chrome-profile2-r1/auth-state.json`, expected asset `assets/index.CC7SsdCO.js`) was blocked before generate form and ended with `exactBlocker=generate_detail_form_missing`, console error `AuthApiError: Invalid Refresh Token: Already Used`, network failure `https://ghwjymozrwmcrpjqvbmo.supabase.co/auth/v1/token 400`.
+- production monitor is currently `blocked_by_fresh_auth_required`; do not continue Playwright authentication mutation in this lane without fresh approved recovery path.
+- Next read-only continuation candidates: `g774-`/`g835` custom-domain readback, G619 beta readiness (`g776` path), H601/H602 operator readiness completion checks.
+
+## 2026-07-08T14:27+09:00 Read-only Lane Follow-through (No Auth Retrying)
+- `custom-domain readback` executed read-only in `output/playwright/g835-custom-domain-readback-20260708/summary.json`; current status: `https://heavy-chain.zeabur.app` reachable (`200`), `https://heavy-chain.com` blocked on 443 (`connect ECONNREFUSED`), `exactBlocker=custom_domain_https_blocked_or_unreachable`.
+- `G619 beta evidence` verified from existing artifacts only:
+  - `output/playwright/g776-g619-beta-readiness-current-r2/summary.json`
+  - `output/playwright/g776-g619-beta-evidence-current-r2/summary.json`
+  - `output/playwright/g776-g619-beta-readiness-current-strict-r2/summary.json`
+- `G619` remains unready: session evidence for `g619-beta-004` / `005` / `006` lacks consent, useful duration (`durationMinutes: 0`), usable behavior evidence, and friction/no-friction notes; several scaffold placeholders not replaced; `exactBlocker` remains unresolved as multi-session evidence gaps (`g619-evidence-blocker` equivalent in these artifacts).
+- `H601/H602` status confirmed read-only:
+  - `output/playwright/g831-h601-legal-safety-current-r1/summary.json` is `ok=true`.
+  - `output/playwright/g831-prod-h601-rights-check-r1/summary.json` is `ok=true`.
+  - `output/playwright/g779-h601-operator-readiness-current-r4/summary.json` and `...-strict-r3` are `ok=false` with 10 missing operator-decision items.
+  - `output/playwright/g831-h602-billing-readiness-current-r1/summary.json` is `ok=true`.
+  - `output/playwright/g831-h602-production-completion-current-r1/summary.json` is `ok=false` (transaction/entitlement and no-real-charge evidence missing, operator checkout/public release decision missing).
+  - `output/playwright/g777-h602-operator-readiness-current-r3/summary.json` is `ok=false` with 3 human readiness blockers (`verified_no_real_charge_proof_missing` etc.), plus `live_production_readback_not_performed_by_codex`.
+- Release gate split update at this stop (`output/playwright/g835-release-gate-current-clean-r3`):
+  - Closed readbacks this turn: `launch operations`, `G610 retention workspace search`, `G603 garment Canvas`, `G605 onboarding templates`, `G606 performance scale`, `G608 security audit`, `G632 incident response drill`, `G633 scale and alerting plan`, `production H601 rights readback`, `production chosen public entrypoint readback`.
+  - Blocked readbacks: `production monitor`, `production mass-market QA current`, `production Lightchain all-feature order previews`, `G618 scale ops baseline`, `G620 security operations`, `production H602 billing completion readback`.
+- 10M split update (`output/playwright/g835-10m-completion-current-clean-r2/summary.json`):
+  - Closed item count this turn: `0` (no blocker transitions from this read-only lane).
+  - Blocked items remain `13`: `G617`, `G619`, `G669`, `G670`, `H601`, `H602`, `g617_same_run_fresh_all_10`, `g619_real_beta_evidence`, `g618_scale_ops`, `g620_security_ops`, `production_h602_billing_completion_readback`, `g619_beta_evidence_verifier`, `release_gate_verifier`.
+- Evidence note: production monitor remains `blocked_by_fresh_auth_required`; no auth retry extension performed in this lane.

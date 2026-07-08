@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Layers, ArrowLeft, Mail, Check } from 'lucide-react';
 import { Button, Input } from '../components/ui';
+import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
 export function ForgotPasswordPage() {
+  const { user, signOut, isLoading: isAuthLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
@@ -47,6 +49,15 @@ export function ForgotPasswordPage() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success('ログアウトしました');
+    } catch (error: any) {
+      toast.error(error.message || 'ログアウトに失敗しました');
+    }
+  };
+
   if (isSent) {
     return (
       <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-surface-50 dark:bg-surface-950">
@@ -71,6 +82,23 @@ export function ForgotPasswordPage() {
               </span>
             </Link>
           </div>
+
+          {user && (
+            <div className="mb-6 flex items-center justify-between gap-3 rounded-2xl border border-primary-500/20 bg-primary-500/10 px-4 py-3 text-sm text-primary-900 dark:text-primary-100">
+              <div className="min-w-0">
+                <p className="font-semibold">現在ログイン中です</p>
+                <p className="truncate text-primary-800/80 dark:text-primary-200/80">{user.email}</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={isAuthLoading}
+                className="shrink-0 rounded-full border border-primary-500/25 px-4 py-2 font-semibold text-primary-900 transition hover:bg-primary-500/10 disabled:cursor-not-allowed disabled:opacity-60 dark:text-primary-50"
+              >
+                ログアウト
+              </button>
+            </div>
+          )}
 
           <div className="glass-panel rounded-2xl p-8 md:p-10 backdrop-blur-xl border-white/40 dark:border-white/10 text-center">
             <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-slow">

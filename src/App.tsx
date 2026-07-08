@@ -332,11 +332,6 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // すでにログイン済みの場合
-  if (user && !authRecoveryRequired) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   return <>{children}</>;
 }
 
