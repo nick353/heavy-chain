@@ -20,7 +20,7 @@ export function AuthCallbackPage() {
             session.user.user_metadata?.full_name || session.user.user_metadata?.name || null
           );
           
-          navigate('/dashboard');
+          navigate('/lightchain', { replace: true });
         } else {
           navigate('/login');
         }
@@ -45,7 +45,6 @@ export function AuthCallbackPage() {
     </div>
   );
 }
-
 
 
 

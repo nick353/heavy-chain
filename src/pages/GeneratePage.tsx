@@ -1,5 +1,5 @@
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Wand2,
   ChevronDown,
@@ -960,6 +960,7 @@ export function GeneratePage() {
   const { currentBrand } = useAuthStore();
   const { addToHistory } = usePromptHistory();
   const initialFeatureRef = useRef<Feature | null>(getInitialFeatureFromLocation());
+  const categoryParam = searchParams.get('category');
   
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(() => initialFeatureRef.current);
   const [activeWorkflow, setActiveWorkflow] = useState<WorkflowMetadata | null>(null);
@@ -1338,7 +1339,7 @@ export function GeneratePage() {
     setBackgroundReferenceImage(null);
     setPatternReferenceImage(null);
     setShowSuccessCard(false);
-    navigate('/generate', { replace: true });
+    navigate('/lightchain', { replace: true });
   };
 
   // 画像を圧縮する関数
@@ -3759,6 +3760,13 @@ export function GeneratePage() {
       }) ?? null
     : null;
 
+  if (!selectedFeature) {
+    const nextPath = categoryParam
+      ? `/lightchain?category=${encodeURIComponent(categoryParam)}`
+      : '/lightchain';
+    return <Navigate to={nextPath} replace />;
+  }
+
   const selectedLightchainCategory: LightchainCategoryId = selectedCatalogFeature?.category ?? 'recommended';
   const selectedLightchainCategoryMeta = lightchainCategories.find((category) => category.id === selectedLightchainCategory) ?? lightchainCategories[0];
   const activeGenerateCategoryFeatures = lightchainFeatureCatalog.filter((feature) => (
@@ -3969,7 +3977,7 @@ export function GeneratePage() {
             </div>
 
             <Link
-              to="/generate"
+              to="/lightchain"
               className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-neutral-300 transition hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />

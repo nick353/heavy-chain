@@ -141,7 +141,7 @@ export function JobsPage() {
     {
       label: '再開できる作業',
       count: activity.activeJobs.length,
-      href: activity.activeJobs[0]?.resumeHref ?? '/generate',
+      href: activity.activeJobs[0]?.resumeHref ?? '/lightchain',
       icon: PlayCircle,
       detail: '進行中の生成や直近の制作レーンへ戻ります。',
     },
@@ -182,7 +182,7 @@ export function JobsPage() {
               <RotateCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               更新
             </button>
-            <Link to="/generate" className="inline-flex items-center gap-2 rounded-xl bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-700 dark:bg-white dark:text-neutral-950">
+            <Link to="/lightchain" className="inline-flex items-center gap-2 rounded-xl bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-700 dark:bg-white dark:text-neutral-950">
               新しく作る
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -285,7 +285,7 @@ export function JobsPage() {
               ) : (
                 <div className="rounded-2xl border border-dashed border-neutral-200 bg-white/45 p-6 text-center dark:border-white/10 dark:bg-surface-900/35">
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">まだジョブはありません。</p>
-                  <Link to="/generate" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-700 dark:bg-white dark:text-neutral-950">
+                  <Link to="/lightchain" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-primary-700 dark:bg-white dark:text-neutral-950">
                     生成を開始
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Link>

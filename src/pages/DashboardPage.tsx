@@ -7,7 +7,6 @@ import {
   IconArrowRight,
   IconClock,
   IconLayout,
-  IconHelp,
   IconPlus,
   IconPalette,
   IconFolder
@@ -65,7 +64,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { user, currentBrand, setCurrentBrand } = useAuthStore();
   const { createProject, deleteProject, loadProject, clearCanvas, getRecentProjects, projects } = useCanvasStore();
-  const { showOnboarding, completeOnboarding, resetOnboarding } = useOnboarding(user?.id);
+  const { showOnboarding, completeOnboarding } = useOnboarding(user?.id);
   const [recentImages, setRecentImages] = useState<GeneratedImage[]>([]);
   const [failedRecentImageIds, setFailedRecentImageIds] = useState<Set<string>>(new Set());
   const [workspaceActivity, setWorkspaceActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
@@ -373,13 +372,6 @@ export function DashboardPage() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={resetOnboarding}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/15 bg-white/[0.05] px-4 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-white"
-                >
-                  <IconHelp className="h-4 w-4" size={16} />
-                  チュートリアルを見る
-                </button>
                 <a
                   href="#dashboard-workflow"
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-semibold text-white transition hover:border-cyan-300/40 hover:bg-cyan-300/15"
@@ -806,7 +798,7 @@ export function DashboardPage() {
               )}
               
               {/* Add New Button */}
-              <Link to="/generate" className="group aspect-square rounded-xl sm:rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-2 sm:gap-3 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all duration-300">
+              <Link to="/lightchain" className="group aspect-square rounded-xl sm:rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 flex flex-col items-center justify-center gap-2 sm:gap-3 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all duration-300">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:bg-white dark:group-hover:bg-neutral-700">
                   <IconPlus className="w-5 h-5 sm:w-6 sm:h-6 text-neutral-400 group-hover:text-primary-500" size={24} />
                 </div>
@@ -825,7 +817,7 @@ export function DashboardPage() {
                 まだ生成画像はありません。商品画像やプロンプトを入れると、ここに成果物が並びます。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/generate">
+                <Link to="/lightchain">
                   <Button size="lg" className="rounded-full shadow-glow hover:shadow-glow-lg" leftIcon={<IconSparkles className="w-5 h-5" size={20} />}>
                     画像を生成する
                   </Button>

@@ -7,6 +7,7 @@ import { chromium } from '@playwright/test';
 const args = parseArgs(process.argv.slice(2));
 const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain.zeabur.app');
 const authState = args.authState || process.env.HEAVY_CHAIN_AUTH_STATE || firstExistingAuthState([
+  'output/playwright/g830-prod-auth-from-chrome-profile2-r1/auth-state.json',
   'output/playwright/g689-prod-temp-auth-r2/auth-state.json',
   'output/playwright/prod-auth-refresh-20260625/auth-state.json',
 ]);

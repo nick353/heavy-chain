@@ -11,7 +11,7 @@ export function WorkspaceGuidePanel({ className = '' }: WorkspaceGuidePanelProps
       <p className="text-xs font-semibold uppercase text-primary-600 dark:text-primary-300">Next</p>
       <h2 className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">次の作業</h2>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-        <Link to="/generate" className="group flex items-center gap-3 rounded-xl bg-white/55 p-3 transition hover:bg-white dark:bg-surface-900/40 dark:hover:bg-surface-900/70">
+        <Link to="/lightchain" className="group flex items-center gap-3 rounded-xl bg-white/55 p-3 transition hover:bg-white dark:bg-surface-900/40 dark:hover:bg-surface-900/70">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-900/25 dark:text-primary-200">
             <WandSparkles className="h-5 w-5" />
           </span>

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, ImagePlus, Palette, Shirt, Sparkles, WandSparkles } from 'lucide-react';
-import { lightchainCategories, lightchainFeatureCatalog, buildLightchainFeatureHref } from '../lib/lightchainParityCatalog';
+import { lightchainCategories, lightchainFeatureCatalog } from '../lib/lightchainParityCatalog';
 
 const heroCards = [
   {
@@ -23,8 +23,6 @@ const heroCards = [
 const icons = [Sparkles, WandSparkles, Shirt, Palette];
 
 export function LandingPage() {
-  const firstGenerateFeature = lightchainFeatureCatalog.find((feature) => feature.route.startsWith('/generate'));
-
   return (
     <main className="min-h-screen bg-[#05090b] text-white">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#05090b]/90 backdrop-blur-xl">
@@ -61,7 +59,7 @@ export function LandingPage() {
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
-              to={firstGenerateFeature ? buildLightchainFeatureHref(firstGenerateFeature) : '/generate'}
+              to="/lightchain"
               className="inline-flex min-h-[54px] items-center justify-center gap-2 rounded-full bg-cyan-300 px-7 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
             >
               生成を始める

@@ -230,9 +230,10 @@ const getJobRecoveryGuidance = (job: GenerationJob) => {
 const buildResumeHref = (job: GenerationJob) => {
   const generationHref = getGenerationHref(job.input_params);
   if (generationHref) return generationHref;
+  if (!job.feature_type) return '/lightchain';
   const params = new URLSearchParams({ resumeJob: job.id });
   const prompt = getJobPrompt(job);
-  if (job.feature_type) params.set('feature', job.feature_type);
+  params.set('feature', job.feature_type);
   if (prompt) params.set('prompt', prompt);
   return `/generate?${params.toString()}`;
 };

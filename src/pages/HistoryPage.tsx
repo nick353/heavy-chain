@@ -72,7 +72,7 @@ export function HistoryPage() {
           <div className="mt-6 space-y-4">
             <div className="grid gap-3 lg:grid-cols-3" data-testid="history-action-panel">
               <Link
-                to={activity.activeJobs[0]?.resumeHref ?? activity.completedJobs[0]?.resumeHref ?? '/generate'}
+                to={activity.activeJobs[0]?.resumeHref ?? activity.completedJobs[0]?.resumeHref ?? '/lightchain'}
                 data-testid="history-action-resume"
                 className="rounded-2xl border border-neutral-200 bg-white/60 p-4 transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-900/45 dark:hover:border-primary-500/70"
               >

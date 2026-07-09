@@ -27,7 +27,7 @@ export function LoginPage() {
     try {
       await signInWithEmail(email, password);
       toast.success('ログインしました');
-      navigate('/generate');
+      navigate('/lightchain', { replace: true });
     } catch (error: any) {
       toast.error(error.message || 'ログインに失敗しました');
     }

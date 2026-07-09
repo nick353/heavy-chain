@@ -47,7 +47,7 @@ export function CreditsPage() {
               今月の使用量、処理中の予約分、生成利用の状態を確認します。
             </p>
           </div>
-          <Link to="/generate" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
+          <Link to="/lightchain" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
             生成へ
             <ArrowRight className="h-4 w-4" />
           </Link>
@@ -55,7 +55,7 @@ export function CreditsPage() {
 
         <div className="mt-6 space-y-4" data-testid="credits-workspace-panel">
           <div className="grid gap-3 lg:grid-cols-3" data-testid="credits-next-actions">
-            <Link to="/generate" className="group rounded-2xl border border-neutral-200 bg-white/65 p-4 transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-900/45 dark:hover:border-primary-400/40">
+            <Link to="/lightchain" className="group rounded-2xl border border-neutral-200 bg-white/65 p-4 transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-900/45 dark:hover:border-primary-400/40">
               <Sparkles className="h-5 w-5 text-primary-600 dark:text-primary-300" />
               <p className="mt-3 text-sm font-semibold text-neutral-950 dark:text-white">生成を続ける</p>
               <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">残り枠を待たずに素材制作へ戻れます。</p>

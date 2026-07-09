@@ -112,7 +112,7 @@ const FAILURE_RECOVERY_GUIDANCE: Record<FailureRecoveryKind, FailureRecoveryGuid
     userMessage: '参照画像のアップロード、Storage読込、またはhandoffで止まっています。画像形式と読み込み状態を確認してください。',
     nextAction: 'JPEG/PNG/WebPの参照画像に差し替えて再試行',
     retryLabel: '参照画像を直して再開',
-    retryHrefFallback: '/generate',
+    retryHrefFallback: '/lightchain',
   },
   generation: {
     kind: 'generation',
@@ -120,7 +120,7 @@ const FAILURE_RECOVERY_GUIDANCE: Record<FailureRecoveryKind, FailureRecoveryGuid
     userMessage: '生成処理で失敗しました。プロンプトを少し具体化し、素材指定を短く整理すると再開しやすくなります。',
     nextAction: 'プロンプトと素材指定を見直して再試行',
     retryLabel: '入力を直して再開',
-    retryHrefFallback: '/generate',
+    retryHrefFallback: '/lightchain',
   },
   'network-api': {
     kind: 'network-api',
@@ -144,7 +144,7 @@ const FAILURE_RECOVERY_GUIDANCE: Record<FailureRecoveryKind, FailureRecoveryGuid
     userMessage: '生成が止まりました。入力は残っているため、内容を確認して再開できます。',
     nextAction: '入力内容とジョブ詳細を確認して再試行',
     retryLabel: '入力を開いて再開',
-    retryHrefFallback: '/generate',
+    retryHrefFallback: '/lightchain',
   },
 };
 

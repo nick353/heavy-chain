@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
   CheckCircle2,
@@ -58,8 +58,17 @@ interface LightchainParityHubProps {
 }
 
 export function LightchainParityHub({ compactOnMobile = false }: LightchainParityHubProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryParam = searchParams.get('category');
   const [activeCategory, setActiveCategory] = useState<LightchainCategoryId>('recommended');
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (categoryParam && lightchainCategories.some((category) => category.id === categoryParam)) {
+      setActiveCategory(categoryParam as LightchainCategoryId);
+      setQuery('');
+    }
+  }, [categoryParam]);
 
   const activeCategoryMeta = lightchainCategories.find((category) => category.id === activeCategory) ?? lightchainCategories[0];
 
@@ -84,6 +93,9 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
   const handleCategoryChange = (categoryId: LightchainCategoryId) => {
     setActiveCategory(categoryId);
     setQuery('');
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('category', categoryId);
+    setSearchParams(nextParams, { replace: true });
   };
 
   return (
@@ -115,13 +127,14 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
             const active = category.id === activeCategory;
 
             return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => handleCategoryChange(category.id)}
-                className={`shrink-0 rounded-xl px-5 py-3 text-sm font-semibold transition ${
-                  active
-                    ? 'bg-cyan-300 text-neutral-950 shadow-[0_0_24px_rgba(103,232,249,0.22)]'
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => handleCategoryChange(category.id)}
+                  aria-pressed={active}
+                  className={`shrink-0 rounded-xl px-5 py-3 text-sm font-semibold transition ${
+                    active
+                      ? 'bg-cyan-300 text-neutral-950 shadow-[0_0_24px_rgba(103,232,249,0.22)]'
                     : 'text-neutral-400 hover:bg-white/[0.06] hover:text-white'
                 }`}
               >

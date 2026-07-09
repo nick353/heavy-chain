@@ -88,7 +88,7 @@ const findFeatureFromPrompt = (prompt: string) => {
 };
 
 export function GenerateLightchainEntry() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeCategory, setActiveCategory] = useState<LightchainCategoryId>('recommended');
   const [query, setQuery] = useState('');
   const [command, setCommand] = useState('');
@@ -133,6 +133,9 @@ export function GenerateLightchainEntry() {
   const handleCategoryChange = (categoryId: LightchainCategoryId) => {
     setActiveCategory(categoryId);
     setQuery('');
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('category', categoryId);
+    setSearchParams(nextParams, { replace: true });
   };
 
   return (
@@ -179,13 +182,14 @@ export function GenerateLightchainEntry() {
           {lightchainCategories.map((category) => {
             const active = category.id === activeCategory;
             return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => handleCategoryChange(category.id)}
-                className={`shrink-0 rounded-lg border px-5 py-2.5 text-sm font-semibold transition ${
-                  active
-                    ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => handleCategoryChange(category.id)}
+                  aria-pressed={active}
+                  className={`shrink-0 rounded-lg border px-5 py-2.5 text-sm font-semibold transition ${
+                    active
+                      ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
                     : 'border-transparent bg-transparent text-neutral-400 hover:text-white'
                 }`}
               >

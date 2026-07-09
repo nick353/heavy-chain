@@ -134,7 +134,7 @@ export function SharedImagePage() {
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Link
-                to="/generate"
+                to="/lightchain"
                 className="inline-flex flex-1 items-center justify-center rounded-lg bg-primary-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-primary-300"
               >
                 Lightchainで生成する

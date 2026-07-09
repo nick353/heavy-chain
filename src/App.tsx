@@ -310,7 +310,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Public Route wrapper (redirects to dashboard if already logged in)
+// Public Route wrapper (redirects to lightchain if already logged in)
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isInitialized, authRecoveryRequired, clearAuthRecoveryRequired } = useAuthStore();
 
@@ -330,6 +330,10 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  if (user) {
+    return <Navigate to="/lightchain" replace />;
   }
 
   return <>{children}</>;
