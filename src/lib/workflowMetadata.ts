@@ -56,10 +56,11 @@ export interface WorkflowMetadata {
 
 const buildWorkflowDirectGenerateHref = (
   feature: WorkflowPrimaryFeature,
+  workflowId: WorkflowId,
   prefill: WorkflowPrefill,
   ratio: string,
 ) => {
-  const params = new URLSearchParams({ feature });
+  const params = new URLSearchParams({ feature, workflow: workflowId });
   const prompt = [
     prefill.prompt,
     prefill.productDescription,
@@ -94,7 +95,7 @@ export const workflowMetadata: WorkflowMetadata[] = [
     ctas: [
       {
         label: '企画を作る',
-        href: buildWorkflowDirectGenerateHref('product-shots', {
+        href: buildWorkflowDirectGenerateHref('product-shots', 'ec-product-set', {
           productDescription: '上質なヘビーウェイトTシャツ、ボックスシルエット、厚みのある生地、EC商品ページ用の白背景撮影',
         }, '1:1'),
         variant: 'primary',
@@ -130,7 +131,7 @@ export const workflowMetadata: WorkflowMetadata[] = [
     ctas: [
       {
         label: '企画を作る',
-        href: buildWorkflowDirectGenerateHref('campaign-image', {
+        href: buildWorkflowDirectGenerateHref('campaign-image', 'sns-campaign', {
           prompt: '新作アパレルのローンチ告知。都会的でクリーン、スマートフォンで目に留まるSNSキャンペーン画像',
           campaignTitle: 'NEW DROP',
           campaignSubheadline: 'Heavy essentials for everyday wear',
@@ -172,7 +173,7 @@ export const workflowMetadata: WorkflowMetadata[] = [
     ctas: [
       {
         label: '企画を作る',
-        href: buildWorkflowDirectGenerateHref('design-gacha', {
+        href: buildWorkflowDirectGenerateHref('design-gacha', 'design-exploration', {
           prompt: '20代から30代向けのミニマルなストリートウェア。厚手素材、控えめなロゴ、日常使いしやすい新作デザイン案',
         }, '1:1'),
         variant: 'primary',
@@ -208,7 +209,7 @@ export const workflowMetadata: WorkflowMetadata[] = [
     ctas: [
       {
         label: '企画を作る',
-        href: buildWorkflowDirectGenerateHref('multilingual-banner', {
+        href: buildWorkflowDirectGenerateHref('multilingual-banner', 'global-expansion', {
           headline: 'NEW SEASON ESSENTIALS',
           subheadline: 'Premium heavy cotton basics for everyday style',
         }, '16:9'),
