@@ -612,16 +612,27 @@ export function CanvasEditorPage() {
 
   const addImageToCanvas = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string, preloadedImage?: HTMLImageElement | null) => {
     const usablePreloadedImage = isUsableLoadedImage(preloadedImage) ? preloadedImage : null;
-    const img = usablePreloadedImage || await loadCanvasImage(imageUrl);
-    if (!isMountedRef.current) {
-      throw new Error('Canvas画面が閉じられたため配置を中止しました');
-    }
     const isGalleryImport = metadata?.source === 'gallery-selector';
-    const imageWidth = Math.max(1, img.naturalWidth || img.width || 1);
-    const imageHeight = Math.max(1, img.naturalHeight || img.height || 1);
     const canvasImageSource = isGalleryImport && metadata?.galleryStoragePath
       ? metadata.galleryStoragePath
       : imageUrl;
+    const fallbackImageSource = isGalleryImport && metadata?.galleryImageUrl && metadata.galleryImageUrl !== canvasImageSource
+      ? metadata.galleryImageUrl
+      : null;
+    const img = usablePreloadedImage || await loadCanvasImage(canvasImageSource).catch((error) => {
+      if (!fallbackImageSource) throw error;
+      console.warn('Canvas gallery storage path load failed, trying signed URL fallback', {
+        canvasImageSource,
+        fallbackImageSource,
+        error: String(error),
+      });
+      return loadCanvasImage(fallbackImageSource);
+    });
+    if (!isMountedRef.current) {
+      throw new Error('Canvas画面が閉じられたため配置を中止しました');
+    }
+    const imageWidth = Math.max(1, img.naturalWidth || img.width || 1);
+    const imageHeight = Math.max(1, img.naturalHeight || img.height || 1);
     const newId = addObject({
       type: 'image',
       x: isGalleryImport ? Math.max(24, canvasSize.width / 2 - Math.min(imageWidth, 300) / 2) : 100 + Math.random() * 300,

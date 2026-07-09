@@ -5,11 +5,38 @@ const SIGNED_URL_TTL_SECONDS = 60 * 60;
 const SIGNED_URL_BATCH_SIZE = 50;
 
 const isDirectImageUrl = (path: string) => /^(https?:|data:)/i.test(path);
+const SUPABASE_SIGNED_IMAGE_PATH = /\/storage\/v1\/object\/sign\/generated-images\/([^?]+)/i;
+
+export const extractGeneratedImageStoragePath = (source: string) => {
+  const trimmed = source.trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    const match = url.pathname.match(SUPABASE_SIGNED_IMAGE_PATH);
+    if (!match?.[1]) return null;
+    return decodeURIComponent(match[1]);
+  } catch {
+    const match = trimmed.match(SUPABASE_SIGNED_IMAGE_PATH);
+    return match?.[1] ? decodeURIComponent(match[1]) : null;
+  }
+};
 
 export async function resolveGeneratedImageUrl(source: string) {
   const trimmed = source.trim();
   if (!trimmed) {
     throw new Error('画像URLが空です');
+  }
+
+  const storagePath = extractGeneratedImageStoragePath(trimmed);
+  if (storagePath) {
+    const { data, error } = await supabase.storage
+      .from('generated-images')
+      .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS);
+
+    if (!error && data?.signedUrl) {
+      return data.signedUrl;
+    }
   }
 
   if (isDirectImageUrl(trimmed) || trimmed.startsWith('blob:')) {

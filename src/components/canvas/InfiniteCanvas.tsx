@@ -181,9 +181,11 @@ export function InfiniteCanvas({
         startedLoadingIds.push(obj.id);
         const preloadedImageKey = obj.metadata?.galleryImageUrl || obj.src;
         const galleryStorageKey = obj.metadata?.galleryStoragePath;
-        const preloadedImage = preloadedImages?.get(galleryStorageKey || preloadedImageKey);
+        const preloadedImage = (galleryStorageKey && preloadedImages?.get(galleryStorageKey)) || preloadedImages?.get(preloadedImageKey);
         if (preloadedImage) {
           loadedImageSourcesRef.current.set(obj.src, preloadedImage);
+          if (galleryStorageKey) loadedImageSourcesRef.current.set(galleryStorageKey, preloadedImage);
+          if (obj.metadata?.galleryImageUrl) loadedImageSourcesRef.current.set(obj.metadata.galleryImageUrl, preloadedImage);
           setLoadedImages((prev) => {
             const next = new Map(prev);
             next.set(obj.id, preloadedImage);
@@ -191,24 +193,38 @@ export function InfiniteCanvas({
           });
           return;
         }
-        const source = obj.metadata?.galleryStoragePath || (
-          /^https?:|^data:|^blob:/i.test(obj.src)
-            ? obj.src
-            : obj.metadata?.galleryImageUrl || obj.src
-        );
-        const cachedImage = loadedImageSourcesRef.current.get(source);
+        const sourceCandidates = Array.from(new Set([
+          obj.metadata?.galleryStoragePath,
+          obj.metadata?.galleryImageUrl,
+          obj.src,
+        ].filter((source): source is string => Boolean(source))));
+        const cachedSource = sourceCandidates.find((source) => loadedImageSourcesRef.current.has(source));
+        const cachedImage = cachedSource ? loadedImageSourcesRef.current.get(cachedSource) : undefined;
         const imagePromise = cachedImage
           ? Promise.resolve(cachedImage)
-          : loadingImageSourcesRef.current.get(source) || loadImage(source)
-            .then((img) => {
-              loadedImageSourcesRef.current.set(source, img);
-              return img;
-            })
-            .finally(() => {
-              loadingImageSourcesRef.current.delete(source);
-            });
-        if (!cachedImage && !loadingImageSourcesRef.current.has(source)) {
-          loadingImageSourcesRef.current.set(source, imagePromise);
+          : (async () => {
+            let lastError: unknown;
+            for (const source of sourceCandidates) {
+              try {
+                const existingLoad = source === sourceCandidates[0]
+                  ? loadingImageSourcesRef.current.get(source)
+                  : undefined;
+                const img = await (existingLoad || loadImage(source).finally(() => {
+                  loadingImageSourcesRef.current.delete(source);
+                }));
+                sourceCandidates.forEach((candidate) => loadedImageSourcesRef.current.set(candidate, img));
+                return img;
+              } catch (error) {
+                lastError = error;
+              }
+            }
+            throw lastError || new Error('Canvas image failed to load');
+          })();
+        if (!cachedImage) {
+          const primarySource = sourceCandidates[0];
+          if (primarySource && !loadingImageSourcesRef.current.has(primarySource)) {
+            loadingImageSourcesRef.current.set(primarySource, imagePromise);
+          }
         }
         imagePromise
           .then((img) => {
