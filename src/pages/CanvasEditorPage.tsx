@@ -1935,6 +1935,19 @@ export function CanvasEditorPage() {
               {!selectedObject && (
                 <p className="mt-2 px-1 text-xs text-neutral-500">画像を選択すると、背景削除・色変更・派生などを直接かけられます。</p>
               )}
+              <label className="mt-3 flex items-start gap-3 rounded-xl border border-cyan-300/30 bg-cyan-300/[0.08] p-3 text-xs text-cyan-100">
+                <input
+                  type="checkbox"
+                  checked={rightsConfirmed}
+                  onChange={(event) => setRightsConfirmed(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-cyan-300 text-cyan-300 focus:ring-cyan-300"
+                  disabled={isGenerating}
+                />
+                <span>
+                  <span className="block font-semibold">{UPLOAD_RIGHTS_CONFIRMATION_LABEL}</span>
+                  <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
+                </span>
+              </label>
             </div>
 
             <div className="absolute bottom-2 left-2 right-2 z-10 grid grid-cols-2 gap-2 sm:bottom-4 sm:left-4 sm:right-auto sm:w-[560px] sm:grid-cols-4">
