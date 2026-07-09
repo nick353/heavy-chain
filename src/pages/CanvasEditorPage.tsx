@@ -676,8 +676,12 @@ export function CanvasEditorPage() {
       });
     }
     selectObject(newId);
+    if (isGalleryImport) {
+      setZoom(1);
+      setPan(0, 0);
+    }
     return newId;
-  }, [addObject, loadCanvasImage, selectObject]);
+  }, [addObject, loadCanvasImage, selectObject, setPan, setZoom]);
 
   const addImageToCanvasSafely = useCallback((imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
     void addImageToCanvas(imageUrl, label, metadata, parentId).catch((error: any) => {
