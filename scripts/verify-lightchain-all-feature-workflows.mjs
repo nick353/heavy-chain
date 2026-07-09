@@ -187,7 +187,7 @@ async function verifyFeatureWorkflow(page, tool) {
     url: page.url(),
     bodyExcerpt: body.slice(0, 600),
   });
-  recordFeatureAssertion(result, 'heavy_shell_or_lightchain_reference_visible', body.includes('HEAVYCHAIN'), {
+  recordFeatureAssertion(result, 'heavy_shell_or_lightchain_reference_visible', body.includes('HEAVY CHAIN') || body.includes('HEAVYCHAIN'), {
     bodyExcerpt: body.slice(0, 300),
   });
   recordFeatureAssertion(result, 'lightchain_screen_signature_visible', matchesLightchainSignature(tool, body), {
