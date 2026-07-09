@@ -113,7 +113,26 @@ export function InfiniteCanvas({
       pendingImageFlushRef.current = window.requestAnimationFrame(flushLoadedImages);
     };
     const loadImage = (source: string, useCors: boolean) =>
-      new Promise<HTMLImageElement>((resolve, reject) => {
+      resolveGeneratedImageUrl(source).then((resolvedSource) => {
+        const loadSource = async () => {
+          if (!/^https?:/i.test(resolvedSource)) {
+            return { src: resolvedSource, cleanup: () => {} };
+          }
+
+          const response = await fetch(resolvedSource);
+          if (!response.ok) {
+            throw new Error('Canvas image failed to load');
+          }
+
+          const blob = await response.blob();
+          const objectUrl = window.URL.createObjectURL(blob);
+          return {
+            src: objectUrl,
+            cleanup: () => window.URL.revokeObjectURL(objectUrl),
+          };
+        };
+
+        return loadSource().then(({ src, cleanup: revoke }) => new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new window.Image();
         let settled = false;
         const timeoutId = window.setTimeout(() => {
@@ -122,6 +141,7 @@ export function InfiniteCanvas({
           img.onload = null;
           img.onerror = null;
           img.src = '';
+          revoke();
           reject(new Error('Canvas image load timed out'));
         }, 8000);
         const cleanup = () => {
@@ -133,6 +153,7 @@ export function InfiniteCanvas({
           if (settled) return;
           settled = true;
           cleanup();
+          revoke();
           callback();
         };
         if (useCors && /^https?:/i.test(source)) {
@@ -140,9 +161,9 @@ export function InfiniteCanvas({
         }
         img.onload = () => finish(() => resolve(img));
         img.onerror = () => finish(() => reject(new Error('Canvas image failed to load')));
-        img.src = source;
+        img.src = src;
+      }));
       });
-    const resolveSource = async (source: string) => resolveGeneratedImageUrl(source);
 
     renderedObjects.forEach((obj) => {
       if (
@@ -157,9 +178,7 @@ export function InfiniteCanvas({
         const cachedImage = loadedImageSourcesRef.current.get(source);
         const imagePromise = cachedImage
           ? Promise.resolve(cachedImage)
-          : loadingImageSourcesRef.current.get(source) || resolveSource(source).then((resolvedSource) => (
-              loadImage(resolvedSource, true).catch(() => loadImage(resolvedSource, false))
-            ))
+          : loadingImageSourcesRef.current.get(source) || loadImage(source, true).catch(() => loadImage(source, false))
             .then((img) => {
               loadedImageSourcesRef.current.set(source, img);
               return img;

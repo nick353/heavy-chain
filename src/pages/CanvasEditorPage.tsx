@@ -533,9 +533,26 @@ export function CanvasEditorPage() {
     }
 
     const resolvedSource = await resolveGeneratedImageUrl(source);
+    const loadSource = async () => {
+      if (!/^https?:/i.test(resolvedSource)) {
+        return { src: resolvedSource, cleanup: () => {} };
+      }
+
+      const response = await fetch(resolvedSource);
+      if (!response.ok) {
+        throw new Error('画像を読み込めませんでした');
+      }
+
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      return {
+        src: objectUrl,
+        cleanup: () => window.URL.revokeObjectURL(objectUrl),
+      };
+    };
 
     const createLoader = (useCors: boolean) =>
-      new Promise<HTMLImageElement>((resolve, reject) => {
+      loadSource().then(({ src, cleanup }) => new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new window.Image();
         let settled = false;
         const timeoutId = window.setTimeout(() => {
@@ -544,12 +561,14 @@ export function CanvasEditorPage() {
           img.onload = null;
           img.onerror = null;
           img.src = '';
+          cleanup();
           reject(new Error('画像の読み込みがタイムアウトしました'));
         }, 8000);
         const finish = (callback: () => void) => {
           if (settled) return;
           settled = true;
           window.clearTimeout(timeoutId);
+          cleanup();
           callback();
         };
         if (useCors && /^https?:/i.test(source)) {
@@ -557,8 +576,8 @@ export function CanvasEditorPage() {
         }
         img.onload = () => finish(() => resolve(img));
         img.onerror = () => finish(() => reject(new Error('画像を読み込めませんでした')));
-        img.src = resolvedSource;
-      });
+        img.src = src;
+      }));
 
     return createLoader(true).catch(() => createLoader(false));
   }, []);
