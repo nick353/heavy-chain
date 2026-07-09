@@ -549,7 +549,7 @@ export function CanvasEditorPage() {
           window.clearTimeout(timeoutId);
           callback();
         };
-        if (useCors && !source.startsWith('data:')) {
+        if (useCors && /^https?:/i.test(source)) {
           img.crossOrigin = 'anonymous';
         }
         img.onload = () => finish(() => resolve(img));
@@ -604,8 +604,18 @@ export function CanvasEditorPage() {
         const response = await fetch(imageUrl);
         if (response.ok) {
           const blob = await response.blob();
-          canvasSource = URL.createObjectURL(blob);
-          window.setTimeout(() => URL.revokeObjectURL(canvasSource), 60_000);
+          canvasSource = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              if (typeof reader.result === 'string') {
+                resolve(reader.result);
+                return;
+              }
+              reject(new Error('Gallery画像の変換に失敗しました'));
+            };
+            reader.onerror = () => reject(new Error('Gallery画像の変換に失敗しました'));
+            reader.readAsDataURL(blob);
+          });
         }
       } catch {
         // Fall back to the original URL below.

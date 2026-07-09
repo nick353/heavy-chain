@@ -134,7 +134,7 @@ export function InfiniteCanvas({
           cleanup();
           callback();
         };
-        if (useCors && !source.startsWith('data:')) {
+        if (useCors && /^https?:/i.test(source)) {
           img.crossOrigin = 'anonymous';
         }
         img.onload = () => finish(() => resolve(img));
