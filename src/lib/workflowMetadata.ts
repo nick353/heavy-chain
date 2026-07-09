@@ -54,6 +54,29 @@ export interface WorkflowMetadata {
   iconKey: WorkflowIconKey;
 }
 
+const buildWorkflowDirectGenerateHref = (
+  feature: WorkflowPrimaryFeature,
+  prefill: WorkflowPrefill,
+  ratio: string,
+) => {
+  const params = new URLSearchParams({ feature });
+  const prompt = [
+    prefill.prompt,
+    prefill.productDescription,
+    prefill.campaignTitle,
+    prefill.campaignSubheadline,
+    prefill.campaignCTA,
+    prefill.headline,
+    prefill.subheadline,
+  ]
+    .filter((value): value is string => Boolean(value && value.trim()))
+    .join('\n');
+
+  if (prompt) params.set('prompt', prompt);
+  if (ratio) params.set('ratio', ratio);
+  return `/generate?${params.toString()}`;
+};
+
 export const workflowMetadata: WorkflowMetadata[] = [
   {
     id: 'ec-product-set',
@@ -69,7 +92,13 @@ export const workflowMetadata: WorkflowMetadata[] = [
       { title: 'EC 掲載候補セット', description: 'Gallery/History で比較しやすい候補群として扱います。' },
     ],
     ctas: [
-      { label: '企画を作る', href: '/generate?workflow=ec-product-set', variant: 'primary' },
+      {
+        label: '企画を作る',
+        href: buildWorkflowDirectGenerateHref('product-shots', {
+          productDescription: '上質なヘビーウェイトTシャツ、ボックスシルエット、厚みのある生地、EC商品ページ用の白背景撮影',
+        }, '1:1'),
+        variant: 'primary',
+      },
       { label: 'Fitting workspace', href: '/fitting', variant: 'secondary' },
       { label: 'Canvasで編集', href: '/canvas/new', variant: 'secondary' },
     ],
@@ -99,7 +128,16 @@ export const workflowMetadata: WorkflowMetadata[] = [
       { title: '動画化の素材メモ', description: 'Video workspace で短尺構成に展開しやすい構成を作ります。' },
     ],
     ctas: [
-      { label: '企画を作る', href: '/generate?workflow=sns-campaign', variant: 'primary' },
+      {
+        label: '企画を作る',
+        href: buildWorkflowDirectGenerateHref('campaign-image', {
+          prompt: '新作アパレルのローンチ告知。都会的でクリーン、スマートフォンで目に留まるSNSキャンペーン画像',
+          campaignTitle: 'NEW DROP',
+          campaignSubheadline: 'Heavy essentials for everyday wear',
+          campaignCTA: '今すぐ見る',
+        }, '4:5'),
+        variant: 'primary',
+      },
       { label: 'Marketing workspace', href: '/marketing', variant: 'secondary' },
       { label: 'Canvasで編集', href: '/canvas/new', variant: 'secondary' },
     ],
@@ -132,7 +170,13 @@ export const workflowMetadata: WorkflowMetadata[] = [
       { title: 'ベクター化メモ', description: '刺繍、プリント、タグ展開に使う線数や色数の意図を残します。' },
     ],
     ctas: [
-      { label: '企画を作る', href: '/generate?workflow=design-exploration', variant: 'primary' },
+      {
+        label: '企画を作る',
+        href: buildWorkflowDirectGenerateHref('design-gacha', {
+          prompt: '20代から30代向けのミニマルなストリートウェア。厚手素材、控えめなロゴ、日常使いしやすい新作デザイン案',
+        }, '1:1'),
+        variant: 'primary',
+      },
       { label: 'Pattern workspace', href: '/patterns/workbench', variant: 'secondary' },
       { label: 'Canvasで編集', href: '/canvas/new', variant: 'secondary' },
     ],
@@ -162,7 +206,14 @@ export const workflowMetadata: WorkflowMetadata[] = [
       { title: 'グローバル販促ボード', description: 'Studio や Canvas で見せ方を整えるための初期セットにします。' },
     ],
     ctas: [
-      { label: '企画を作る', href: '/generate?workflow=global-expansion', variant: 'primary' },
+      {
+        label: '企画を作る',
+        href: buildWorkflowDirectGenerateHref('multilingual-banner', {
+          headline: 'NEW SEASON ESSENTIALS',
+          subheadline: 'Premium heavy cotton basics for everyday style',
+        }, '16:9'),
+        variant: 'primary',
+      },
       { label: 'Studio workspace', href: '/studio', variant: 'secondary' },
       { label: 'Canvasで編集', href: '/canvas/new', variant: 'secondary' },
     ],

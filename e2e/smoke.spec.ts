@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { workflowMetadataById } from '../src/lib/workflowMetadata';
 
 const mockUser = {
   id: '00000000-0000-4000-8000-000000000001',
@@ -1005,6 +1006,10 @@ test('landing shell renders with mocked Supabase requests', async ({ page }) => 
 test.describe('workflow query prefill', () => {
   for (const scenario of workflowQueryScenarios) {
     test(`${scenario.id} selects feature and prefills editor without writes`, async ({ page }) => {
+      const workflowCtaHref = workflowMetadataById[scenario.id]?.ctas.find((cta) => cta.variant === 'primary')?.href;
+      if (!workflowCtaHref) {
+        throw new Error(`Missing workflow CTA href for ${scenario.id}`);
+      }
       const functionRequests: string[] = [];
       const storageRequests: string[] = [];
       const storageRemoveRequests: string[] = [];
@@ -1019,9 +1024,9 @@ test.describe('workflow query prefill', () => {
       });
       await completeOnboardingForMockUser(page);
 
-      await page.goto(`/generate?workflow=${scenario.id}`);
+      await page.goto(workflowCtaHref);
 
-      await expect(page).toHaveURL(new RegExp(`workflow=${scenario.id}`));
+      await expect(page).toHaveURL(new RegExp(`feature=${workflowMetadataById[scenario.id].primaryFeature}`));
       await expect(page.getByText('読み込み中...')).toBeHidden({ timeout: 15000 });
       await expect(page.getByRole('heading', { name: scenario.featureHeading })).toBeVisible();
       await expect(page.getByRole('heading', { name: scenario.workflowTitle })).toBeVisible();
@@ -1041,6 +1046,10 @@ test.describe('workflow query prefill', () => {
 test.describe('workflow boards', () => {
   for (const scenario of workflowQueryScenarios) {
     test(`${scenario.id} renders local board and advances to existing generator without writes`, async ({ page }) => {
+      const workflowCtaHref = workflowMetadataById[scenario.id]?.ctas.find((cta) => cta.variant === 'primary')?.href;
+      if (!workflowCtaHref) {
+        throw new Error(`Missing workflow CTA href for ${scenario.id}`);
+      }
       const functionRequests: string[] = [];
       const storageRequests: string[] = [];
       const storageRemoveRequests: string[] = [];
@@ -1063,13 +1072,13 @@ test.describe('workflow boards', () => {
       await expect(page.getByRole('heading', { name: scenario.workflowTitle })).toBeVisible();
       await expect(page.getByText('業務ワークフロー')).toBeVisible();
       await expect(page.getByText('成果物候補')).toBeVisible();
-      await expect(page.getByRole('link', { name: /生成へ進む/ }).first()).toHaveAttribute('href', `/generate?workflow=${scenario.id}`);
+      await expect(page.getByRole('link', { name: /生成へ進む|企画を作る/ }).first()).toHaveAttribute('href', workflowCtaHref);
       await expect(page.locator(`a[href="${scenario.relatedWorkspaceHref}"]`).first()).toBeVisible();
       await expect(page.locator('a[href="/canvas/new"]').first()).toBeVisible();
 
-      await page.getByRole('link', { name: /生成へ進む/ }).first().click();
+      await page.getByRole('link', { name: /生成へ進む|企画を作る/ }).first().click();
 
-      await expect(page).toHaveURL(new RegExp(`/generate\\?workflow=${scenario.id}`));
+      await expect(page).toHaveURL(new RegExp(`feature=${workflowMetadataById[scenario.id].primaryFeature}`));
       await expect(page.getByRole('heading', { name: scenario.featureHeading })).toBeVisible();
       await expect(page.getByRole('heading', { name: scenario.workflowTitle })).toBeVisible();
 
