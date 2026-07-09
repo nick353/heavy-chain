@@ -524,7 +524,7 @@ export function AdminDashboard() {
   const feedbackOpenCount = feedbackItems.filter((item) => item.status !== 'done').length;
 
   const StatCard = ({ icon: Icon, label, value, trend, color }: any) => (
-    <div className="glass-card p-6 hover:shadow-elegant transition-all duration-300">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-soft backdrop-blur-sm hover:shadow-elegant transition-all duration-300">
       <div className="flex items-center justify-between mb-4">
         <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md ${color}`}>
           <Icon className="w-6 h-6 text-white" />
@@ -554,13 +554,13 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
+    <div className="min-h-screen bg-[#050607] text-neutral-100">
       {/* Header */}
       <header className="glass-nav px-6 py-4 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-neutral-800 dark:text-white">管理者ダッシュボード</h1>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">Lightchain システム管理</p>
+            <h1 className="text-2xl font-bold text-white">管理者ダッシュボード</h1>
+            <p className="text-sm text-neutral-400">Lightchain システム管理</p>
           </div>
           <Button
             leftIcon={<Bell className="w-4 h-4" />}
@@ -574,7 +574,7 @@ export function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl mb-8 w-fit shadow-inner">
+        <div className="flex gap-1 p-1 rounded-xl mb-8 w-fit border border-white/10 bg-white/[0.04] shadow-none backdrop-blur-sm">
           {[
             { id: 'overview', label: '概要' },
             { id: 'users', label: 'ユーザー' },
@@ -596,8 +596,8 @@ export function AdminDashboard() {
               className={`
                 px-4 py-2 text-sm font-medium rounded-lg transition-all
                 ${activeTab === tab.id
-                  ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
-                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
+                  ? 'bg-cyan-300 text-neutral-950 shadow-none'
+                  : 'text-neutral-400 hover:text-white'
                 }
               `}
             >
@@ -664,10 +664,10 @@ export function AdminDashboard() {
             </div>
 
             {/* Usage chart placeholder */}
-            <div className="glass-panel rounded-2xl p-8 shadow-soft">
-              <h2 className="text-lg font-semibold text-neutral-800 dark:text-white mb-4">利用状況</h2>
-              <div className="h-64 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800/50 rounded-xl border border-neutral-100 dark:border-neutral-700/50">
-                <p className="text-neutral-500 dark:text-neutral-400">
+            <div className="rounded-2xl border border-white/10 bg-neutral-950 p-8 shadow-soft">
+              <h2 className="mb-4 text-lg font-semibold text-white">利用状況</h2>
+              <div className="flex h-64 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
+                <p className="text-neutral-400">
                   平均 Edge 実行時間: {stats.averageDurationMs.toLocaleString()}ms
                 </p>
               </div>
@@ -680,9 +680,9 @@ export function AdminDashboard() {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="glass-panel rounded-2xl overflow-hidden"
+            className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-soft"
           >
-            <div className="p-6 border-b border-neutral-100 dark:border-neutral-700">
+            <div className="border-b border-white/10 p-6">
               <div className="flex items-center gap-4">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
@@ -691,7 +691,7 @@ export function AdminDashboard() {
                     placeholder="ユーザーを検索..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-4 text-sm text-white transition-all focus:outline-none focus:ring-2 focus:ring-cyan-300/20"
                   />
                 </div>
                 <Button variant="secondary" size="sm" leftIcon={<Filter className="w-4 h-4" />}>
@@ -702,37 +702,37 @@ export function AdminDashboard() {
 
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-left">
+                <thead className="bg-white/[0.04] text-left">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">ユーザー</th>
-                    <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">登録日</th>
-                    <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">権限</th>
-                    <th className="px-6 py-4 text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">アクション</th>
+                    <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-400">ユーザー</th>
+                    <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-400">登録日</th>
+                    <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-400">権限</th>
+                    <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-400">アクション</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                <tbody className="divide-y divide-white/10">
                   {filteredUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 transition-colors">
+                    <tr key={user.id} className="transition-colors hover:bg-white/[0.04]">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 flex items-center justify-center text-primary-700 dark:text-primary-300 font-medium">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-300/15 font-medium text-cyan-100">
                             {user.name?.charAt(0) || user.email?.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-neutral-800 dark:text-white">{user.name || 'Unknown'}</p>
-                            <p className="text-xs text-neutral-500 dark:text-neutral-400">{user.email}</p>
+                            <p className="text-sm font-medium text-white">{user.name || 'Unknown'}</p>
+                            <p className="text-xs text-neutral-400">{user.email}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">
+                      <td className="px-6 py-4 text-sm text-neutral-300">
                         {new Date(user.created_at).toLocaleDateString('ja-JP')}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`
-                          inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
+                          inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
                           ${user.is_admin
-                            ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            ? 'bg-cyan-300/10 text-cyan-100'
+                            : 'bg-emerald-300/10 text-emerald-100'
                           }
                         `}>
                           <CheckCircle className="w-3.5 h-3.5" />
@@ -741,7 +741,7 @@ export function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <button className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition-colors text-neutral-500 dark:text-neutral-400">
+                          <button className="rounded-lg p-2 text-neutral-400 transition-colors hover:bg-white/[0.06] hover:text-white">
                             <Eye className="w-4 h-4" />
                           </button>
                         </div>
@@ -762,19 +762,19 @@ export function AdminDashboard() {
               animate={{ opacity: 1, y: 0 }}
               className="grid gap-4 md:grid-cols-4"
             >
-              <div className="glass-card p-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-soft backdrop-blur-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">承認済み</p>
                 <p className="mt-2 text-2xl font-semibold text-neutral-900 dark:text-white">{runwayApprovedCount}</p>
               </div>
-              <div className="glass-card p-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-soft backdrop-blur-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">承認待ち</p>
                 <p className="mt-2 text-2xl font-semibold text-neutral-900 dark:text-white">{runwayPendingCount}</p>
               </div>
-              <div className="glass-card p-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-soft backdrop-blur-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">生成承認OK</p>
                 <p className="mt-2 text-2xl font-semibold text-green-700 dark:text-green-300">{runwayReadyCount}</p>
               </div>
-              <div className="glass-card p-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-soft backdrop-blur-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">承認待ち/停止</p>
                 <p className="mt-2 text-2xl font-semibold text-amber-700 dark:text-amber-300">{runwayBlockedCount}</p>
               </div>
@@ -802,7 +802,7 @@ export function AdminDashboard() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass-panel rounded-2xl overflow-hidden"
+              className="rounded-2xl overflow-hidden border border-white/10 bg-white/[0.04] shadow-soft backdrop-blur-sm"
             >
               <div className="p-6 border-b border-neutral-100 dark:border-neutral-700">
               <div className="flex items-center justify-between gap-4">
@@ -934,15 +934,15 @@ export function AdminDashboard() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="glass-panel rounded-2xl overflow-hidden"
+              className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-950 shadow-soft"
             >
-              <div className="flex items-center justify-between gap-4 border-b border-neutral-100 p-6 dark:border-neutral-700">
+              <div className="flex items-center justify-between gap-4 border-b border-white/10 p-6">
                 <div>
-                  <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
+                  <h2 className="text-lg font-semibold text-white">
                     <MessageSquare className="mr-2 inline-block h-5 w-5" />
                     社内betaフィードバック
                   </h2>
-                  <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                  <p className="mt-1 text-sm text-neutral-400">
                     右下ボタンから送られたコメントと画面スクショを確認します。
                   </p>
                 </div>
@@ -952,31 +952,31 @@ export function AdminDashboard() {
               </div>
 
               {feedbackItems.length === 0 ? (
-                <div className="p-12 text-center text-neutral-500 dark:text-neutral-400">
+                <div className="p-12 text-center text-neutral-400">
                   フィードバックはまだありません
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-neutral-50 text-left dark:bg-neutral-800/50">
+                    <thead className="bg-white/[0.04] text-left">
                       <tr>
-                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">状態</th>
-                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">内容</th>
-                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">ページ</th>
-                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">投稿者</th>
-                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">日時</th>
-                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-500 dark:text-neutral-400">詳細</th>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-400">状態</th>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-400">内容</th>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-400">ページ</th>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-400">投稿者</th>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-400">日時</th>
+                        <th className="px-6 py-4 text-xs font-medium uppercase tracking-wider text-neutral-400">詳細</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-100 dark:divide-neutral-700">
+                    <tbody className="divide-y divide-white/10">
                       {feedbackItems.map((item) => (
-                        <tr key={item.id} className="transition-colors hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50">
+                        <tr key={item.id} className="transition-colors hover:bg-white/[0.04]">
                           <td className="px-6 py-4">
                             <select
                               value={item.status}
                               disabled={updatingFeedbackId === item.id}
                               onChange={(event) => updateFeedback(item, { status: event.target.value as FeedbackStatus })}
-                              className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-800 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
+                              className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/20"
                             >
                               {(['new', 'in_progress', 'done'] as FeedbackStatus[]).map((status) => (
                                 <option key={status} value={status}>{FEEDBACK_STATUS_LABELS[status]}</option>
@@ -990,17 +990,17 @@ export function AdminDashboard() {
                               </span>
                               {item.screenshot_path && <Camera className="h-4 w-4 text-neutral-400" />}
                             </div>
-                            <p className="mt-2 truncate text-sm text-neutral-700 dark:text-neutral-200">
+                            <p className="mt-2 truncate text-sm text-neutral-200">
                               {item.message}
                             </p>
                           </td>
-                          <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">
+                          <td className="px-6 py-4 text-sm text-neutral-300">
                             {getSafeFeedbackUrl(item.page_url) ? (
                               <a
                                 href={getSafeFeedbackUrl(item.page_url) || undefined}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex max-w-[220px] items-center gap-1 truncate text-primary-600 hover:underline dark:text-primary-300"
+                                className="inline-flex max-w-[220px] items-center gap-1 truncate text-cyan-300 hover:underline"
                               >
                                 {item.pathname}
                                 <ExternalLink className="h-3.5 w-3.5 shrink-0" />
@@ -1009,13 +1009,13 @@ export function AdminDashboard() {
                               <span className="inline-flex max-w-[220px] truncate">{item.pathname || '不明なページ'}</span>
                             )}
                           </td>
-                          <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">
+                          <td className="px-6 py-4 text-sm text-neutral-300">
                             <p>{item.email || item.user?.email || '未入力'}</p>
                             {item.brand?.name && (
                               <p className="text-xs text-neutral-400">{item.brand.name}</p>
                             )}
                           </td>
-                          <td className="px-6 py-4 text-sm text-neutral-600 dark:text-neutral-300">
+                          <td className="px-6 py-4 text-sm text-neutral-300">
                             {new Date(item.created_at).toLocaleString('ja-JP')}
                           </td>
                           <td className="px-6 py-4">
@@ -1038,15 +1038,15 @@ export function AdminDashboard() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass-panel rounded-2xl p-12 text-center"
+            className="rounded-2xl border border-white/10 bg-neutral-950 p-12 text-center shadow-soft"
           >
-            <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-white/[0.04]">
               <AlertTriangle className="w-10 h-10 text-neutral-400" />
             </div>
-            <h3 className="text-xl font-medium text-neutral-700 dark:text-white mb-2">
+            <h3 className="mb-2 text-xl font-medium text-white">
               レビュー待ちのコンテンツはありません
             </h3>
-            <p className="text-neutral-500 dark:text-neutral-400">
+            <p className="text-neutral-400">
               不適切なコンテンツが報告されると、ここに表示されます
             </p>
           </motion.div>
@@ -1057,18 +1057,18 @@ export function AdminDashboard() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass-panel rounded-2xl p-12 text-center"
+            className="rounded-2xl border border-white/10 bg-neutral-950 p-12 text-center shadow-soft"
           >
-            <div className="w-20 h-20 bg-primary-50 dark:bg-primary-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Bell className="w-10 h-10 text-primary-500" />
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-cyan-300/10">
+              <Bell className="w-10 h-10 text-cyan-300" />
             </div>
-            <h3 className="text-xl font-medium text-neutral-700 dark:text-white mb-2">
+            <h3 className="mb-2 text-xl font-medium text-white">
               お知らせ履歴
             </h3>
-            <p className="text-neutral-500 dark:text-neutral-400 mb-8">
+            <p className="mb-8 text-neutral-400">
               過去に配信したお知らせが表示されます
             </p>
-            <Button onClick={() => setShowAnnouncementModal(true)} className="shadow-glow">
+            <Button onClick={() => setShowAnnouncementModal(true)} className="border-none bg-cyan-300 text-neutral-950">
               新規お知らせを作成
             </Button>
           </motion.div>
@@ -1092,7 +1092,7 @@ export function AdminDashboard() {
               <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${FEEDBACK_STATUS_STYLES[selectedFeedback.status]}`}>
                 {FEEDBACK_STATUS_LABELS[selectedFeedback.status]}
               </span>
-              <span className="inline-flex rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200">
+              <span className="inline-flex rounded-full bg-white/[0.05] px-2.5 py-1 text-xs font-medium text-neutral-200">
                 {FEEDBACK_TYPE_LABELS[selectedFeedback.type]}
               </span>
               <span className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -1100,44 +1100,44 @@ export function AdminDashboard() {
               </span>
             </div>
 
-            <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-900">
+            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">コメント</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-neutral-800 dark:text-neutral-100">
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-neutral-100">
                 {selectedFeedback.message}
               </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-700">
+              <div className="rounded-xl border border-white/10 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">ページ</p>
                 {getSafeFeedbackUrl(selectedFeedback.page_url) ? (
                   <a
                     href={getSafeFeedbackUrl(selectedFeedback.page_url) || undefined}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-2 inline-flex items-center gap-1 break-all text-sm text-primary-600 hover:underline dark:text-primary-300"
+                    className="mt-2 inline-flex items-center gap-1 break-all text-sm text-cyan-300 hover:underline"
                   >
                     {selectedFeedback.page_url}
                     <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                   </a>
                 ) : (
-                  <p className="mt-2 break-all text-sm text-neutral-600 dark:text-neutral-300">
+                  <p className="mt-2 break-all text-sm text-neutral-300">
                     {selectedFeedback.page_url || '不明なページ'}
                   </p>
                 )}
               </div>
-              <div className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-700">
+              <div className="rounded-xl border border-white/10 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">投稿者 / 環境</p>
-                <p className="mt-2 text-sm text-neutral-800 dark:text-neutral-100">
+                <p className="mt-2 text-sm text-neutral-100">
                   {selectedFeedback.email || selectedFeedback.user?.email || '未入力'}
                 </p>
-                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                <p className="mt-1 text-xs text-neutral-400">
                   {selectedFeedback.viewport?.width || '?'} x {selectedFeedback.viewport?.height || '?'} / {selectedFeedback.screenshot_capture_status}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-neutral-200 p-4 dark:border-neutral-700">
+            <div className="rounded-xl border border-white/10 p-4">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">スクショ</p>
               {feedbackScreenshotUrl ? (
                 <img
@@ -1146,26 +1146,26 @@ export function AdminDashboard() {
                   className="max-h-[420px] w-full rounded-lg object-contain object-top"
                 />
               ) : (
-                <div className="flex h-40 items-center justify-center rounded-lg bg-neutral-100 text-sm text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
+                <div className="flex h-40 items-center justify-center rounded-lg bg-white/[0.04] text-sm text-neutral-400">
                   スクショはありません
                 </div>
               )}
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <label className="mb-2 block text-sm font-medium text-neutral-300">
                 管理メモ
               </label>
               <textarea
                 value={feedbackNoteDraft}
                 onChange={(event) => setFeedbackNoteDraft(event.target.value)}
                 rows={4}
-                className="w-full resize-none rounded-xl border border-neutral-200 bg-white px-4 py-3 text-neutral-900 transition-all focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
+                className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white transition-all focus:outline-none focus:ring-2 focus:ring-cyan-300/20"
                 placeholder="対応内容や次のアクションを記録"
               />
             </div>
 
-            <div className="flex flex-wrap justify-between gap-3 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+            <div className="flex flex-wrap justify-between gap-3 border-t border-white/10 pt-4">
               <div className="flex flex-wrap gap-2">
                 {(['new', 'in_progress', 'done'] as FeedbackStatus[]).map((status) => (
                   <Button
@@ -1206,20 +1206,20 @@ export function AdminDashboard() {
           />
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">
+            <label className="mb-1.5 block text-sm font-medium text-neutral-300">
               内容
             </label>
             <textarea
               value={announcementForm.content}
               onChange={(e) => setAnnouncementForm({ ...announcementForm, content: e.target.value })}
-              className="w-full px-4 py-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-neutral-900 dark:text-white transition-all resize-none"
+              className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white transition-all focus:outline-none focus:ring-2 focus:ring-cyan-300/20"
               rows={4}
               placeholder="お知らせの内容を入力..."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+            <label className="mb-2 block text-sm font-medium text-neutral-300">
               種類
             </label>
             <div className="flex gap-2">
@@ -1234,8 +1234,8 @@ export function AdminDashboard() {
                   className={`
                     px-4 py-2 rounded-lg text-sm font-medium transition-all
                     ${announcementForm.type === type.id
-                      ? 'bg-primary-500 text-white shadow-md'
-                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                      ? 'bg-cyan-300 text-neutral-950 shadow-md'
+                      : 'bg-white/[0.04] text-neutral-400 hover:bg-white/[0.07]'
                     }
                   `}
                 >
@@ -1245,11 +1245,11 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+          <div className="flex justify-end gap-3 border-t border-white/10 pt-4">
             <Button variant="ghost" onClick={() => setShowAnnouncementModal(false)}>
               キャンセル
             </Button>
-            <Button onClick={handlePublishAnnouncement} className="shadow-glow">
+            <Button onClick={handlePublishAnnouncement} className="border-none bg-cyan-300 text-neutral-950">
               配信
             </Button>
           </div>

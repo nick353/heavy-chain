@@ -256,7 +256,7 @@ export function BrandSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-8 text-white sm:px-6 lg:px-8">
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
@@ -265,7 +265,7 @@ export function BrandSettingsPage() {
       >
         <button
           onClick={() => navigate('/dashboard')}
-          className="rounded-full border border-white/10 bg-white/[0.06] p-3 text-neutral-300 transition-colors hover:bg-white/[0.1] hover:text-white"
+          className="rounded-full border border-white/10 bg-white/[0.06] p-3 text-neutral-300 transition-colors hover:bg-cyan-300/10 hover:text-white"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -286,18 +286,18 @@ export function BrandSettingsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="glass-panel rounded-2xl p-8"
+          className="rounded-[28px] border border-white/10 bg-neutral-950 p-8 shadow-soft"
         >
-          <h2 className="text-lg font-semibold text-neutral-800 dark:text-white mb-6">
+          <h2 className="mb-6 text-lg font-semibold text-white">
             ブランド情報
           </h2>
-          <p className="mb-6 text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="mb-6 text-sm text-neutral-400">
             Lightchain側の月間 quota は通常アカウントの生成条件に含まれ、Apple sandbox tester は実請求なしの検証アカウントとして扱われます。
           </p>
 
           {/* Logo */}
           <div className="flex items-center gap-6 mb-8">
-            <div className="w-24 h-24 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center overflow-hidden shadow-inner">
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-white/[0.04] shadow-inner">
               {currentBrand.logo_url && !logoLoadFailed ? (
                 <img 
                   src={currentBrand.logo_url} 
@@ -308,7 +308,7 @@ export function BrandSettingsPage() {
               ) : (
                 <span
                   data-testid="brand-logo-fallback"
-                  className="text-3xl font-bold text-neutral-400 dark:text-neutral-600 font-display"
+                  className="font-display text-3xl font-bold text-neutral-400"
                 >
                   {form.name.charAt(0).toUpperCase()}
                 </span>
@@ -326,12 +326,12 @@ export function BrandSettingsPage() {
                 variant="secondary"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
-                className="shadow-sm"
+                className="border border-white/10 bg-white/[0.05] text-neutral-200 shadow-sm hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white"
               >
                 <Upload className="w-4 h-4 mr-2" />
                 ロゴをアップロード
               </Button>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
+              <p className="mt-2 text-xs text-neutral-400">
                 推奨: 512x512px, PNG/JPG
               </p>
             </div>
@@ -361,7 +361,7 @@ export function BrandSettingsPage() {
 
             {/* Brand Colors */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+              <label className="mb-2 block text-sm font-medium text-neutral-300">
                 <Palette className="w-4 h-4 inline-block mr-1.5" />
                 ブランドカラー
               </label>
@@ -375,11 +375,11 @@ export function BrandSettingsPage() {
                       className="w-12 h-12 rounded-xl cursor-pointer border-0 p-0 opacity-0 absolute inset-0"
                     />
                     <div 
-                      className="w-12 h-12 rounded-xl border-2 border-white dark:border-neutral-700 shadow-sm"
+                      className="h-12 w-12 rounded-xl border-2 border-white/10 shadow-sm"
                       style={{ backgroundColor: form.primaryColor }}
                     />
                   </div>
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400">プライマリ</span>
+                  <span className="text-sm text-neutral-400">プライマリ</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="relative">
@@ -390,18 +390,18 @@ export function BrandSettingsPage() {
                       className="w-12 h-12 rounded-xl cursor-pointer border-0 p-0 opacity-0 absolute inset-0"
                     />
                     <div 
-                      className="w-12 h-12 rounded-xl border-2 border-white dark:border-neutral-700 shadow-sm"
+                      className="h-12 w-12 rounded-xl border-2 border-white/10 shadow-sm"
                       style={{ backgroundColor: form.secondaryColor }}
                     />
                   </div>
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400">セカンダリ</span>
+                  <span className="text-sm text-neutral-400">セカンダリ</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end mt-8 pt-6 border-t border-neutral-100 dark:border-neutral-800">
-            <Button onClick={handleSave} isLoading={isSaving} className="shadow-glow hover:shadow-glow-lg transition-all">
+          <div className="mt-8 flex justify-end border-t border-white/10 pt-6">
+            <Button onClick={handleSave} isLoading={isSaving} className="border-none bg-cyan-300 text-neutral-950 shadow-[0_14px_40px_rgba(34,211,238,0.18)] transition-all hover:bg-cyan-200 hover:shadow-glow-lg">
               <Save className="w-4 h-4 mr-2" />
               保存
             </Button>
@@ -413,14 +413,14 @@ export function BrandSettingsPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="glass-panel rounded-2xl p-8"
+          className="rounded-[28px] border border-white/10 bg-neutral-950 p-8 shadow-soft"
         >
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-neutral-800 dark:text-white">
+            <h2 className="text-lg font-semibold text-white">
               <Users className="w-5 h-5 inline-block mr-2" />
               チームメンバー
             </h2>
-            <Button size="sm" onClick={() => setShowInviteModal(true)} className="shadow-sm">
+            <Button size="sm" onClick={() => setShowInviteModal(true)} className="border-none bg-cyan-300 text-neutral-950 shadow-[0_14px_40px_rgba(34,211,238,0.18)]">
               <Plus className="w-4 h-4 mr-1" />
               招待
             </Button>
@@ -431,7 +431,7 @@ export function BrandSettingsPage() {
               <div className="spinner mx-auto" />
             </div>
           ) : members.length === 0 ? (
-            <div className="py-12 text-center text-neutral-500 dark:text-neutral-400 border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl">
+            <div className="rounded-xl border-2 border-dashed border-white/10 py-12 text-center text-neutral-400">
               チームメンバーはまだいません
             </div>
           ) : (
@@ -439,10 +439,10 @@ export function BrandSettingsPage() {
               {members.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between p-4 bg-white/50 dark:bg-neutral-800/50 rounded-xl border border-neutral-100 dark:border-neutral-700/50 transition-all hover:bg-white/80 dark:hover:bg-neutral-800"
+                  className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] p-4 transition-all hover:bg-white/[0.07]"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-300/15">
                       {member.user?.avatar_url ? (
                         <img 
                           src={member.user.avatar_url} 
@@ -450,25 +450,25 @@ export function BrandSettingsPage() {
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
-                        <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
+                        <span className="text-sm font-medium text-cyan-200">
                           {member.user?.name?.charAt(0) || '?'}
                         </span>
                       )}
                     </div>
                     <div>
-                      <p className="font-medium text-neutral-800 dark:text-white">
+                      <p className="font-medium text-white">
                         {member.user?.name || 'Unknown'}
                         {member.user_id === user?.id && (
-                          <span className="ml-2 text-xs text-neutral-500 dark:text-neutral-400">(あなた)</span>
+                          <span className="ml-2 text-xs text-neutral-400">(あなた)</span>
                         )}
                       </p>
-                      <p className="text-sm text-neutral-500 dark:text-neutral-400">{member.user?.email}</p>
+                      <p className="text-sm text-neutral-400">{member.user?.email}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     {member.role === 'owner' ? (
-                      <span className="px-3 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-sm font-medium rounded-full border border-primary-200 dark:border-primary-800">
+                      <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1 text-sm font-medium text-cyan-100">
                         {ROLE_LABELS[member.role]}
                       </span>
                     ) : member.user_id !== user?.id ? (
@@ -476,7 +476,7 @@ export function BrandSettingsPage() {
                         <select
                           value={member.role}
                           onChange={(e) => handleRoleChange(member.id, e.target.value)}
-                          className="px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm text-neutral-200 focus:outline-none focus:ring-2 focus:ring-cyan-300/20"
                         >
                           <option value="admin">管理者</option>
                           <option value="editor">編集者</option>
@@ -484,13 +484,13 @@ export function BrandSettingsPage() {
                         </select>
                         <button
                           onClick={() => handleRemoveMember(member.id)}
-                          className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          className="rounded-lg p-2 text-red-400 transition-colors hover:bg-red-300/10"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </>
                     ) : (
-                      <span className="px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 text-sm rounded-full border border-neutral-200 dark:border-neutral-700">
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-sm text-neutral-400">
                         {ROLE_LABELS[member.role]}
                       </span>
                     )}
@@ -519,26 +519,26 @@ export function BrandSettingsPage() {
               animate={{ opacity: 1, scale: 1 }}
               className="space-y-6"
             >
-              <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-6 text-center border border-green-100 dark:border-green-800">
-                <div className="w-12 h-12 bg-green-100 dark:bg-green-800/50 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Check className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <div className="rounded-xl border border-green-300/20 bg-green-300/[0.08] p-6 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-300/15">
+                  <Check className="w-6 h-6 text-green-300" />
                 </div>
-                <p className="text-green-800 dark:text-green-200 font-medium mb-1">招待を作成しました</p>
-                <p className="text-sm text-green-600 dark:text-green-300">
+                <p className="mb-1 font-medium text-green-100">招待を作成しました</p>
+                <p className="text-sm text-green-200">
                   以下の招待コードを{inviteEmail}に共有してください
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex-1 px-4 py-3 bg-neutral-100 dark:bg-neutral-800 rounded-xl font-mono text-lg text-center tracking-wider border border-neutral-200 dark:border-neutral-700">
+                <div className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 font-mono text-center text-lg tracking-wider text-white">
                   {inviteCode}
                 </div>
                 <Button onClick={handleCopyCode} variant="secondary" className="h-full aspect-square p-0 w-12 flex items-center justify-center">
-                  {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
+                  {copied ? <Check className="w-5 h-5 text-green-300" /> : <Copy className="w-5 h-5" />}
                 </Button>
               </div>
 
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center">
+              <p className="text-center text-xs text-neutral-400">
                 この招待コードは7日間有効です
               </p>
 
@@ -565,13 +565,13 @@ export function BrandSettingsPage() {
               />
 
               <div>
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                <label className="mb-2 block text-sm font-medium text-neutral-300">
                   権限
                 </label>
                 <select
                   value={inviteRole}
                   onChange={(e) => setInviteRole(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-neutral-900 dark:text-white"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/20"
                 >
                   <option value="admin">管理者 - 全機能利用可能</option>
                   <option value="editor">編集者 - 画像生成・編集可能</option>

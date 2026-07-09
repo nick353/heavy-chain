@@ -757,40 +757,43 @@ export function FittingPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-white">
       <section className="grid gap-5">
-        <div className="glass-panel rounded-2xl p-5 sm:p-7">
+        <div className="overflow-hidden rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft sm:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h1 className="font-display text-3xl font-semibold text-neutral-950 dark:text-white">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">
+                LIGHTCHAIN / FITTING
+              </p>
+              <h1 className="mt-2 font-display text-3xl font-semibold text-white">
                 AIフィッティング
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">
                 衣服画像と商品説明から、体型・年齢別のモデルセット写真を生成します。
               </p>
             </div>
             <button
               type="button"
               onClick={scrollToMaterialWorkbench}
-              className="btn-primary inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
             >
               <Sparkles className="h-4 w-4" />
               画像を入れて作る
             </button>
           </div>
 
-          <details className="mt-6 rounded-2xl border border-neutral-200 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/40">
-            <summary className="cursor-pointer text-base font-semibold text-neutral-950 dark:text-white">
+          <details className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <summary className="cursor-pointer text-base font-semibold text-white">
               用途を変える
             </summary>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-base font-semibold text-neutral-950 dark:text-white">着用ワークフローを選ぶ</h2>
-                <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                <h2 className="text-base font-semibold text-white">着用ワークフローを選ぶ</h2>
+                <p className="mt-1 text-sm leading-6 text-neutral-400">
                   用途、モデル条件、出力目的を先に決めて、迷わず着用画像を作れます。
                 </p>
               </div>
-              <span className="w-fit whitespace-nowrap rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-950/50 dark:text-primary-200">
+              <span className="w-fit whitespace-nowrap rounded-full bg-cyan-300/15 px-3 py-1 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-300/30">
                 {selectedBodyTypes.length * selectedAgeGroups.length} パターン
               </span>
             </div>
@@ -807,23 +810,23 @@ export function FittingPage() {
                     onClick={() => applyWorkflow(workflow)}
                     className={`rounded-2xl border p-4 text-left transition ${
                       selected
-                        ? 'border-primary-400 bg-primary-50/70 ring-2 ring-primary-100 dark:border-primary-300 dark:bg-primary-400/10 dark:ring-primary-400/20'
-                        : 'border-neutral-200 bg-white/75 hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-surface-950/50 dark:hover:border-primary-500/70'
+                      ? 'border-cyan-300 bg-cyan-300 text-neutral-950 ring-2 ring-cyan-300/20'
+                        : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                     }`}
                     aria-pressed={selected}
                   >
                     <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${
                       selected
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-surface-100 text-neutral-600 dark:bg-surface-800 dark:text-neutral-300'
+                        ? 'bg-cyan-300 text-neutral-950'
+                        : 'bg-white/[0.06] text-neutral-300'
                     }`}>
                       <Icon className="h-5 w-5" />
                     </span>
-                    <span className="mt-3 block text-sm font-semibold text-neutral-950 dark:text-white">{workflow.title}</span>
-                    <span className="mt-1 block text-sm leading-6 text-neutral-500 dark:text-neutral-400">{workflow.description}</span>
+                    <span className="mt-3 block text-sm font-semibold text-white">{workflow.title}</span>
+                    <span className="mt-1 block text-sm leading-6 text-neutral-400">{workflow.description}</span>
                     <span className="mt-3 flex flex-wrap gap-1.5">
                       {workflow.outputs.map((output) => (
-                        <span key={output} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-neutral-500 ring-1 ring-neutral-200 dark:bg-surface-900 dark:text-neutral-300 dark:ring-white/10">
+                        <span key={output} className="rounded-full bg-white/10 px-2 py-1 text-[11px] font-medium text-neutral-200 ring-1 ring-white/10">
                           {output}
                         </span>
                       ))}
@@ -836,13 +839,13 @@ export function FittingPage() {
 
           <section
             data-testid="fitting-action-panel"
-            className="mt-6 rounded-2xl border border-sky-200 bg-sky-50/80 p-5 dark:border-sky-900/60 dark:bg-sky-950/20"
+            className="mt-6 rounded-[28px] border border-cyan-300/25 bg-cyan-300/[0.08] p-5"
           >
             <div>
-              <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
+              <h2 className="mt-2 text-lg font-semibold text-white">
                 1. 衣服画像を入れる → 2. 背景を抜く → 3. AI生成
               </h2>
-              <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+              <p className="mt-2 text-sm leading-6 text-neutral-400">
                 まず服の写真を入れてください。細かい設定は必要になった時だけ開けます。
               </p>
             </div>
@@ -853,18 +856,18 @@ export function FittingPage() {
               <button
                 type="button"
                 onClick={scrollToMaterialWorkbench}
-                className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
               >
                 <Sparkles className="h-4 w-4" />
                 画像を入れる
               </button>
-              <Link to="/gallery" className="btn-secondary inline-flex items-center justify-center gap-2 text-sm">
+              <Link to="/gallery" className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white">
                 <Images className="h-4 w-4" />
                 過去の画像を見る
               </Link>
               <Link
                 to="/generate?feature=model-matrix"
-                className="btn-secondary inline-flex items-center justify-center gap-2 text-sm"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white"
               >
                 <ArrowRight className="h-4 w-4" />
                 生成条件へ送る
@@ -879,13 +882,13 @@ export function FittingPage() {
                 <div
                   key={step}
                   data-testid="fitting-readiness-item"
-                  className="rounded-xl border border-white/70 bg-white/75 p-3 dark:border-white/10 dark:bg-surface-950/50"
+                  className="rounded-xl border border-white/10 bg-white/[0.04] p-3"
                 >
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-cyan-300 text-xs font-bold text-neutral-950">
                     {step}
                   </span>
-                  <p className="mt-2 text-sm font-semibold text-neutral-950 dark:text-white">{title}</p>
-                  <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{description}</p>
+                  <p className="mt-2 text-sm font-semibold text-white">{title}</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-400">{description}</p>
                 </div>
               ))}
             </div>
@@ -905,27 +908,27 @@ export function FittingPage() {
               simpleMode
             />
 
-            <div className="rounded-2xl border border-white/60 bg-white/50 p-4 dark:border-white/10 dark:bg-surface-900/40">
-              <h2 className="text-base font-semibold text-neutral-950 dark:text-white">生成する</h2>
-              <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <h2 className="text-base font-semibold text-white">生成する</h2>
+              <p className="mt-1 text-sm leading-6 text-neutral-400">
                 服の画像を入れて切り抜いたら、権利確認にチェックして生成します。
               </p>
-              <div className="mt-4 rounded-xl bg-white/75 p-3 dark:bg-surface-950/60">
+              <div className="mt-4 rounded-xl bg-white/[0.04] p-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">現在の設定</p>
-	                <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+	                <p className="mt-1 text-sm font-semibold text-white">
 	                  {activeWorkflow.title} / {selectedBodyTypeLabels.join(' / ')} / {selectedAgeGroupLabels.join(' / ')}
 	                </p>
 	                {materialReference.extractedLayerReady && !materialReference.nextStepReady && (
-	                  <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+	                  <p className="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2 py-1.5 text-xs font-semibold leading-5 text-amber-100">
 	                    切り抜きは確認用です。袖や薄い部分を守る高精度AI切り抜きが必要です。
 	                  </p>
 	                )}
 	              </div>
-              <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50/80 p-3 dark:border-cyan-400/20 dark:bg-cyan-400/10">
+              <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.08] p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-neutral-950 dark:text-white">モデル画像</p>
-                    <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
+                    <p className="text-sm font-semibold text-white">モデル画像</p>
+                    <p className="mt-1 text-xs leading-5 text-neutral-400">
                       指定した人物・ポーズに服を着せたい場合は、ここにモデル画像を入れてください。
                     </p>
                   </div>
@@ -933,65 +936,65 @@ export function FittingPage() {
                     <button
                       type="button"
                       onClick={() => setModelReference({ imageUrl: '', fileName: '' })}
-                      className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-700 ring-1 ring-neutral-200 dark:bg-neutral-950 dark:text-neutral-200 dark:ring-white/10"
+                      className="rounded-full bg-white/[0.05] px-3 py-1 text-xs font-semibold text-neutral-200 ring-1 ring-white/10"
                     >
                       解除
                     </button>
                   )}
                 </div>
-                <label className="mt-3 flex min-h-32 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-cyan-300 bg-white/75 p-3 transition hover:border-cyan-500 dark:border-cyan-400/30 dark:bg-surface-950/60">
+                <label className="mt-3 flex min-h-32 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-cyan-300 bg-white/[0.04] p-3 transition hover:border-cyan-200">
                   <input type="file" accept="image/*" className="sr-only" onChange={handleModelReferenceUpload} />
                   {modelReference.imageUrl ? (
                     <>
                       <img src={modelReference.imageUrl} alt="モデル参照" className="h-24 w-20 rounded-lg object-cover" />
-                      <span className="min-w-0 text-sm font-semibold text-neutral-900 dark:text-white">
+                      <span className="min-w-0 text-sm font-semibold text-white">
                         <span className="block truncate">{modelReference.fileName}</span>
-                        <span className="mt-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">このモデルに服を着せる参照として使います</span>
+                        <span className="mt-1 block text-xs font-medium text-neutral-400">このモデルに服を着せる参照として使います</span>
                       </span>
                     </>
                   ) : (
                     <>
                       <Camera className="h-6 w-6 text-cyan-700 dark:text-cyan-200" />
-                      <span className="text-sm font-semibold text-neutral-900 dark:text-white">モデル画像を追加</span>
+                      <span className="text-sm font-semibold text-white">モデル画像を追加</span>
                     </>
                   )}
                 </label>
               </div>
-              <details className="mt-4 rounded-xl border border-neutral-200 bg-white/70 p-3 dark:border-white/10 dark:bg-surface-950/50">
-                <summary className="cursor-pointer text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+              <details className="mt-4 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                <summary className="cursor-pointer text-sm font-semibold text-neutral-200">
                   詳細条件
                 </summary>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl bg-white/75 p-3 dark:bg-surface-950/60">
+                <div className="rounded-xl bg-white/[0.04] p-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">体型</p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">{selectedBodyTypeLabels.join(' / ')}</p>
+                  <p className="mt-1 text-sm font-semibold text-white">{selectedBodyTypeLabels.join(' / ')}</p>
                 </div>
-                <div className="rounded-xl bg-white/75 p-3 dark:bg-surface-950/60">
+                <div className="rounded-xl bg-white/[0.04] p-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">年代</p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">{selectedAgeGroupLabels.join(' / ')}</p>
+                  <p className="mt-1 text-sm font-semibold text-white">{selectedAgeGroupLabels.join(' / ')}</p>
                 </div>
-                <div className="rounded-xl bg-white/75 p-3 dark:bg-surface-950/60 sm:col-span-2">
+                <div className="rounded-xl bg-white/[0.04] p-3 sm:col-span-2">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">用途</p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">{activeWorkflow.title}</p>
+                  <p className="mt-1 text-sm font-semibold text-white">{activeWorkflow.title}</p>
                 </div>
-                <div className="rounded-xl bg-white/75 p-3 dark:bg-surface-950/60 sm:col-span-2">
+                <div className="rounded-xl bg-white/[0.04] p-3 sm:col-span-2">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">素材</p>
-                  <p className="mt-1 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+                  <p className="mt-1 text-sm font-semibold text-white">
                     {garmentFileName || '素材追加前'} / {materialReference.activeLayer} / {materialReference.placement}
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-2xl bg-gradient-to-br from-surface-50 to-white p-4 dark:from-surface-950 dark:to-surface-900">
-                <label htmlFor="fitting-description" className="text-sm font-semibold text-neutral-900 dark:text-white">
+              <div className="rounded-2xl bg-white/[0.04] p-4">
+                <label htmlFor="fitting-description" className="text-sm font-semibold text-white">
                   生成brief
                 </label>
-                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                <p className="mt-1 text-xs text-neutral-400">
                   ワークフローを選ぶと自動で整います。必要なときだけ細部を追記してください。
                 </p>
                 <textarea
                   id="fitting-description"
-                  className="mt-3 min-h-32 w-full rounded-xl border border-neutral-200 bg-white/80 p-4 text-sm leading-6 text-neutral-800 outline-none transition focus:border-primary-400 dark:border-surface-700 dark:bg-surface-950/70 dark:text-neutral-100"
+                  className="mt-3 min-h-32 w-full rounded-xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-white outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
                   value={productDescription}
                   onChange={(event) => setProductDescription(event.target.value)}
                 />
@@ -999,34 +1002,34 @@ export function FittingPage() {
               <figure className="mt-4">
                 <div
                   data-testid="fitting-preview-image"
-                  className="grid min-h-60 gap-3 rounded-2xl border border-neutral-200 bg-white p-3 dark:border-white/10 dark:bg-surface-900 sm:grid-cols-2"
+                  className="grid min-h-60 gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:grid-cols-2"
                 >
-                  <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-950">
+                  <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-xl bg-neutral-950">
                     {modelReference.imageUrl ? (
                       <img src={modelReference.imageUrl} alt="使用するモデル" className="h-full max-h-72 w-full object-contain" />
                     ) : (
                       <img src={fittingPreviewImageUrl} alt="モデル条件プレビュー" className="h-full max-h-72 w-full object-cover" />
                     )}
                   </div>
-                  <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-xl bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%),linear-gradient(-45deg,#f4f4f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#f4f4f5_75%),linear-gradient(-45deg,transparent_75%,#f4f4f5_75%)] bg-[length:22px_22px] bg-[position:0_0,0_11px,11px_-11px,-11px_0] dark:bg-neutral-950">
+                  <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-xl bg-neutral-950">
                     {extractedGarmentImageUrl ? (
                       <img src={extractedGarmentImageUrl} alt="着せる服" className="h-full max-h-72 w-full object-contain drop-shadow-xl" />
                     ) : garmentImageUrl ? (
                       <img src={garmentImageUrl} alt="切り抜き前の服" className="h-full max-h-72 w-full object-contain opacity-75" />
                     ) : (
-                      <span className="px-4 text-center text-sm font-semibold text-neutral-500 dark:text-neutral-400">服画像を入れるとここに表示されます</span>
+                      <span className="px-4 text-center text-sm font-semibold text-neutral-400">服画像を入れるとここに表示されます</span>
                     )}
                   </div>
                 </div>
-                <figcaption className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
+                <figcaption className="mt-3 text-sm text-neutral-400">
                   左のモデル画像と右の服画像を組み合わせて、モデル着用画像を生成します。モデル未指定時は条件からモデルを作ります。
                 </figcaption>
               </figure>
 
               <div className="mt-4 space-y-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Body types</p>
-                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <p className="text-xs font-semibold uppercase text-neutral-400">Body types</p>
+                    <div className="mt-2 grid grid-cols-3 gap-2">
                     {bodyTypeOptions.map((option) => {
                       const selected = selectedBodyTypes.includes(option.id);
                       return (
@@ -1036,8 +1039,8 @@ export function FittingPage() {
                           onClick={() => toggleBodyType(option.id)}
                           className={`inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
                             selected
-                              ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
-                              : 'bg-surface-100 text-neutral-600 hover:bg-primary-50 hover:text-primary-700 dark:bg-surface-800 dark:text-neutral-300'
+                              ? 'bg-cyan-300 text-neutral-950'
+                              : 'bg-white/[0.06] text-neutral-200 hover:bg-white/[0.1]'
                           }`}
                           aria-pressed={selected}
                         >
@@ -1050,7 +1053,7 @@ export function FittingPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs font-semibold uppercase text-neutral-500 dark:text-neutral-400">Age groups</p>
+                    <p className="text-xs font-semibold uppercase text-neutral-400">Age groups</p>
                   <div className="mt-2 grid grid-cols-3 gap-2">
                     {ageGroupOptions.map((option) => {
                       const selected = selectedAgeGroups.includes(option.id);
@@ -1061,8 +1064,8 @@ export function FittingPage() {
                           onClick={() => toggleAgeGroup(option.id)}
                           className={`inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold transition ${
                             selected
-                              ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
-                              : 'bg-surface-100 text-neutral-600 hover:bg-primary-50 hover:text-primary-700 dark:bg-surface-800 dark:text-neutral-300'
+                              ? 'bg-cyan-300 text-neutral-950'
+                              : 'bg-white/[0.06] text-neutral-200 hover:bg-white/[0.1]'
                           }`}
                           aria-pressed={selected}
                         >
@@ -1077,7 +1080,7 @@ export function FittingPage() {
               </details>
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="inline-flex rounded-xl bg-surface-100 p-1 dark:bg-surface-950/70">
+                  <div className="inline-flex rounded-xl bg-white/[0.04] p-1">
                     {genderOptions.map((option) => (
                       <button
                         key={option.id}
@@ -1085,15 +1088,15 @@ export function FittingPage() {
                         onClick={() => setGender(option.id)}
                         className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                           gender === option.id
-                            ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
-                            : 'text-neutral-500 dark:text-neutral-400'
+                            ? 'bg-cyan-300 text-neutral-950'
+                            : 'text-neutral-400'
                         }`}
                       >
                         {option.label}
                       </button>
                     ))}
                   </div>
-                  <label className="flex max-w-xl items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100">
+                  <label className="flex max-w-xl items-start gap-3 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3 text-xs text-amber-100">
                     <input
                       type="checkbox"
                       checked={rightsConfirmed}
@@ -1113,14 +1116,14 @@ export function FittingPage() {
                     type="button"
                     onClick={handleGenerate}
                     disabled={!canGenerate}
-                    className="btn-primary inline-flex w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                   >
                     {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     {isGenerating ? '生成中' : 'AI生成'}
                   </button>
                 </div>
                 {!canGenerate && generationBlockers.length > 0 && (
-                  <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                  <p className="mt-3 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs font-semibold leading-5 text-amber-100">
                     AI生成までに必要なもの: {generationBlockers.join(' / ')}
                   </p>
                 )}
@@ -1128,20 +1131,20 @@ export function FittingPage() {
           </div>
 
           {errorMessage && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 rounded-2xl border border-red-200 bg-red-50/80 p-4 dark:border-red-900/60 dark:bg-red-950/30">
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 rounded-2xl border border-red-400/30 bg-red-400/10 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
                   <div>
-                    <h2 className="text-sm font-semibold text-red-900 dark:text-red-100">生成に失敗しました</h2>
-                    <p className="mt-1 text-sm text-red-700 dark:text-red-200">{errorMessage}</p>
+                    <h2 className="text-sm font-semibold text-red-100">生成に失敗しました</h2>
+                    <p className="mt-1 text-sm text-red-200">{errorMessage}</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={handleRetry}
                   disabled={!lastRequest || isGenerating}
-                  className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <RefreshCw className="h-4 w-4" />
                   再試行
@@ -1151,12 +1154,12 @@ export function FittingPage() {
           )}
 
           {isGenerating && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 rounded-2xl border border-primary-200 bg-primary-50/70 p-4 dark:border-primary-900/60 dark:bg-primary-950/30">
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 rounded-2xl border border-cyan-300/25 bg-cyan-300/[0.08] p-4">
               <div className="flex items-center gap-3">
                 <RefreshCw className="h-5 w-5 animate-spin text-primary-600" />
                 <div>
-                  <p className="text-sm font-semibold text-primary-900 dark:text-primary-100">モデルセット写真を生成中</p>
-                  <p className="text-xs text-primary-700/80 dark:text-primary-200/80">選択した体型と年齢グループの組み合わせを処理しています。</p>
+                  <p className="text-sm font-semibold text-white">モデルセット写真を生成中</p>
+                  <p className="text-xs text-neutral-300">選択した体型と年齢グループの組み合わせを処理しています。</p>
                 </div>
               </div>
             </motion.div>
@@ -1165,16 +1168,16 @@ export function FittingPage() {
           {resultMatrix.length > 0 && (
             <section className="mt-6">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">生成結果プレビュー</h2>
-                <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-950/40 dark:text-primary-200">
+                <h2 className="text-lg font-semibold text-white">生成結果プレビュー</h2>
+                <span className="rounded-full bg-cyan-300/15 px-3 py-1 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-300/30">
                   {resultMatrix.length}枚
                 </span>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {resultMatrix.map((item, index) => (
-                  <figure key={item.storagePath || item.imageUrl || `${item.bodyType}-${item.ageGroup}-${index}`} className="overflow-hidden rounded-2xl border border-white/60 bg-white/60 dark:border-white/10 dark:bg-surface-900/50">
+                  <figure key={item.storagePath || item.imageUrl || `${item.bodyType}-${item.ageGroup}-${index}`} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
                     <img src={item.imageUrl} alt={`${item.bodyTypeName} ${item.ageGroupName} のモデル写真`} className="aspect-[4/5] w-full object-cover" />
-                    <figcaption className="p-3 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+                    <figcaption className="p-3 text-sm font-semibold text-white">
                       {item.bodyTypeName} × {item.ageGroupName}
                     </figcaption>
                   </figure>
@@ -1183,15 +1186,15 @@ export function FittingPage() {
             </section>
           )}
         </div>
-        <details className="glass-panel rounded-2xl p-5 sm:p-6">
-          <summary className="cursor-pointer text-lg font-semibold text-neutral-950 dark:text-white">
+        <details className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft sm:p-6">
+          <summary className="cursor-pointer text-lg font-semibold text-white">
             生成履歴
           </summary>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {history.map((item) => (
-              <div key={item.id} className="rounded-2xl border border-white/60 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/50">
+              <div key={item.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                 <div className="flex min-w-0 items-start gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-100 text-primary-600 dark:bg-surface-800 dark:text-primary-300">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/[0.06] text-cyan-200">
                     {item.previewUrl ? (
                       <img src={item.previewUrl} alt="" className="h-full w-full object-cover" />
                     ) : (
@@ -1199,16 +1202,16 @@ export function FittingPage() {
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{item.title}</p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">{item.status} / {item.time} / {item.count}枚</p>
+                    <p className="truncate text-sm font-semibold text-white">{item.title}</p>
+                    <p className="text-xs text-neutral-400">{item.status} / {item.time} / {item.count}枚</p>
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => handleEditHistory(item)} disabled={!item.previewUrl} className="btn-secondary inline-flex items-center justify-center gap-1 text-xs disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" onClick={() => handleEditHistory(item)} disabled={!item.previewUrl} className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-50">
                     <Pencil className="h-3.5 w-3.5" />
                     編集
                   </button>
-                  <button type="button" onClick={() => setHistory((items) => items.filter((historyItem) => historyItem.id !== item.id))} className="btn-secondary inline-flex items-center justify-center gap-1 text-xs">
+                  <button type="button" onClick={() => setHistory((items) => items.filter((historyItem) => historyItem.id !== item.id))} className="inline-flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white">
                     <Trash2 className="h-3.5 w-3.5" />
                     削除
                   </button>

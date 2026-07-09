@@ -536,14 +536,17 @@ export function PatternWorkspacePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="glass-panel rounded-2xl p-5 sm:p-7">
+    <div className="space-y-6 text-white">
+      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="font-display text-3xl font-semibold text-neutral-950 dark:text-white">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
+              LIGHTCHAIN / PATTERNS
+            </p>
+            <h1 className="mt-2 font-display text-3xl font-semibold text-white">
               柄・グラフィック作業台
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">
               グラフィック、総柄、ベクター化のインテークを、Gallery/History と Canvas に渡せるローカルワークスペースです。
             </p>
           </div>
@@ -551,7 +554,7 @@ export function PatternWorkspacePage() {
             type="button"
             onClick={handoffToCanvas}
             disabled={!currentBrand}
-            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 backdrop-blur-sm"
           >
             <Save className="h-4 w-4" />
             保存してCanvasへ
@@ -564,10 +567,10 @@ export function PatternWorkspacePage() {
               key={mode}
               type="button"
               onClick={() => recordProgress(mode)}
-              className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
+              className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition backdrop-blur-sm ${
                 activeMode === mode
-                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
-                  : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
+                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                  : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
               }`}
             >
               {mode}
@@ -578,14 +581,14 @@ export function PatternWorkspacePage() {
 
       <section
         data-testid="pattern-action-panel"
-        className="glass-panel rounded-2xl border dark:border-cyan-300/30 border-cyan-300/35 bg-cyan-300/[0.08] p-5 dark:border-cyan-300/30 dark:bg-cyan-300/[0.08]"
+        className="rounded-[28px] border border-cyan-300/25 bg-cyan-300/[0.08] p-5 shadow-soft backdrop-blur-sm"
       >
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300 dark:text-cyan-300">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
               Pattern flow
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-neutral-950 dark:text-white">
+            <h2 className="mt-2 text-xl font-semibold text-white">
               モチーフ、配置、版下を決めて、生成かCanvas仕上げへ進む
             </h2>
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
@@ -597,10 +600,10 @@ export function PatternWorkspacePage() {
                 <div
                   key={item.label}
                   data-testid="pattern-readiness-item"
-                  className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm"
+                  className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm backdrop-blur-sm"
                 >
-                  <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{item.label}</p>
-                  <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{item.value}</p>
+                  <p className="text-xs font-semibold text-neutral-400">{item.label}</p>
+                  <p className="mt-1 font-semibold text-white">{item.value}</p>
                 </div>
               ))}
             </div>
@@ -608,7 +611,7 @@ export function PatternWorkspacePage() {
           <div data-testid="pattern-next-actions" className="grid gap-2">
             <Link
               to={directPatternGenerationHref}
-              className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200 backdrop-blur-sm"
             >
               <WandSparkles className="h-4 w-4" />
               デザインガチャで生成
@@ -618,14 +621,14 @@ export function PatternWorkspacePage() {
               type="button"
               onClick={handoffToCanvas}
               disabled={!currentBrand}
-              className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 backdrop-blur-sm"
             >
               <Save className="h-4 w-4" />
               Canvasへ保存して重ねる
             </button>
             <Link
               to="/gallery"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white/80 px-4 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-white dark:border-white/10 dark:bg-surface-900/70 dark:text-neutral-100"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white backdrop-blur-sm"
             >
               Galleryで結果を見る
             </Link>
@@ -634,11 +637,11 @@ export function PatternWorkspacePage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
-        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
+          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm lg:col-span-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">制作ボード</h2>
-              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+              <h2 className="text-lg font-semibold text-white">制作ボード</h2>
+              <p className="mt-1 text-sm text-neutral-400">
                 素材・柄・配置・色・版下の順に、生成と入稿へ使う条件を組み立てます。
               </p>
             </div>
@@ -661,10 +664,10 @@ export function PatternWorkspacePage() {
 	                placementOptions={['胸中央', '背面大判', '袖', '全面総柄', '小物ワンポイント']}
 	              />
 
-              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
                 <div className="flex items-center gap-2">
                   <Upload className="h-4 w-4 text-cyan-300" />
-                  <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">素材スロット</h3>
+                  <h3 className="text-sm font-semibold text-white">素材スロット</h3>
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   {referenceSlots.map((slot) => {
@@ -676,8 +679,8 @@ export function PatternWorkspacePage() {
                         onClick={() => toggleReferenceAsset(slot.value)}
                         className={`rounded-xl border px-3 py-3 text-left transition ${
                           active
-                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
-                            : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
+                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                            : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                         }`}
                       >
                         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.08] text-cyan-200">
@@ -692,10 +695,10 @@ export function PatternWorkspacePage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
                   <div className="flex items-center gap-2">
                     <Shapes className="h-4 w-4 text-cyan-300" />
-                  <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">モチーフ</h3>
+                  <h3 className="text-sm font-semibold text-white">モチーフ</h3>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                     {motifPresets.map((preset) => (
@@ -703,10 +706,10 @@ export function PatternWorkspacePage() {
                         key={preset.label}
                         type="button"
                         onClick={() => setMotifPrompt(preset.value)}
-                        className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                        className={`rounded-full px-3 py-2 text-xs font-semibold transition backdrop-blur-sm ${
                           motifPrompt === preset.value
                             ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
-                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-surface-800 dark:text-neutral-300'
+                            : 'bg-white/[0.06] text-neutral-200 hover:bg-white/[0.1]'
                         }`}
                       >
                         {preset.label}
@@ -715,10 +718,10 @@ export function PatternWorkspacePage() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
                   <div className="flex items-center gap-2">
                     <Repeat2 className="h-4 w-4 text-cyan-300" />
-                  <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">配置</h3>
+                  <h3 className="text-sm font-semibold text-white">配置</h3>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                     {repeatPresets.map((preset) => (
@@ -726,10 +729,10 @@ export function PatternWorkspacePage() {
                         key={preset.label}
                         type="button"
                         onClick={() => setRepeatStyle(preset.value)}
-                        className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                        className={`rounded-full px-3 py-2 text-xs font-semibold transition backdrop-blur-sm ${
                           repeatStyle === preset.value
                             ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
-                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-surface-800 dark:text-neutral-300'
+                            : 'bg-white/[0.06] text-neutral-200 hover:bg-white/[0.1]'
                         }`}
                       >
                         {preset.label}
@@ -738,10 +741,10 @@ export function PatternWorkspacePage() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
                   <div className="flex items-center gap-2">
                     <Shirt className="h-4 w-4 text-cyan-300" />
-                  <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">対象アイテム</h3>
+                  <h3 className="text-sm font-semibold text-white">対象アイテム</h3>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                     {targetPresets.map((preset) => (
@@ -749,10 +752,10 @@ export function PatternWorkspacePage() {
                         key={preset.label}
                         type="button"
                         onClick={() => setGarmentTarget(preset.value)}
-                        className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                        className={`rounded-full px-3 py-2 text-xs font-semibold transition backdrop-blur-sm ${
                           garmentTarget === preset.value
                             ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
-                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-surface-800 dark:text-neutral-300'
+                            : 'bg-white/[0.06] text-neutral-200 hover:bg-white/[0.1]'
                         }`}
                       >
                         {preset.label}
@@ -761,10 +764,10 @@ export function PatternWorkspacePage() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
                   <div className="flex items-center gap-2">
                     <Palette className="h-4 w-4 text-cyan-300" />
-                  <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">配色</h3>
+                  <h3 className="text-sm font-semibold text-white">配色</h3>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                     {palettePresets.map((preset) => (
@@ -772,10 +775,10 @@ export function PatternWorkspacePage() {
                         key={preset.label}
                         type="button"
                         onClick={() => setPaletteNotes(preset.value)}
-                        className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
+                        className={`rounded-full px-3 py-2 text-xs font-semibold transition backdrop-blur-sm ${
                           paletteNotes === preset.value
                             ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
-                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-surface-800 dark:text-neutral-300'
+                            : 'bg-white/[0.06] text-neutral-200 hover:bg-white/[0.1]'
                         }`}
                       >
                         {preset.label}
@@ -786,10 +789,10 @@ export function PatternWorkspacePage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-900/50">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
               <div className="flex items-center gap-2">
                 <WandSparkles className="h-4 w-4 text-cyan-300" />
-                <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">現在の制作Brief</h3>
+                <h3 className="text-sm font-semibold text-white">現在の制作Brief</h3>
               </div>
               <div className="mt-4 space-y-3">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400">
@@ -797,7 +800,7 @@ export function PatternWorkspacePage() {
                   <select
                     value={vectorIntent}
                     onChange={(event) => setVectorIntent(event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
                   >
                     {vectorPresets.map((preset) => (
                       <option key={preset.label} value={preset.value}>{preset.label}</option>
@@ -811,19 +814,19 @@ export function PatternWorkspacePage() {
                   ['配色', paletteNotes],
                   ['素材', referenceAssets],
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-xl bg-neutral-50 p-3 dark:bg-surface-950/50">
+                  <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
                     <p className="text-xs font-semibold text-neutral-400">{label}</p>
-                    <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{value}</p>
+                    <p className="mt-1 text-sm leading-6 text-neutral-200">{value}</p>
                   </div>
                 ))}
               </div>
             </div>
           </div>
         </div>
-        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
+        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft lg:col-span-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">プレビュー候補</h2>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">{selectedPreview.label} / {selectedPreview.repeatSignature}</p>
+            <h2 className="text-lg font-semibold text-white">プレビュー候補</h2>
+            <p className="text-sm text-neutral-400">{selectedPreview.label} / {selectedPreview.repeatSignature}</p>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3" data-testid="pattern-preview-candidates">
             {previewCandidates.map((candidate) => {
@@ -839,8 +842,8 @@ export function PatternWorkspacePage() {
                   aria-pressed={selected}
                   className={`group rounded-xl border p-3 text-left transition ${
                     selected
-                      ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
-                      : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
+                      ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                      : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                   }`}
                 >
                   <span className="flex items-center justify-between gap-3 text-sm font-semibold">
@@ -851,9 +854,9 @@ export function PatternWorkspacePage() {
                     src={candidate.imageUrl}
                     alt={`${candidate.label} preview`}
                     data-testid="pattern-preview-image"
-                    className="mt-3 aspect-[3/2] w-full rounded-lg border border-black/5 object-cover dark:border-white/10"
+                    className="mt-3 aspect-[3/2] w-full rounded-lg border border-white/10 object-cover"
                   />
-                  <span className="mt-3 block text-xs text-neutral-500 dark:text-neutral-400">
+                  <span className="mt-3 block text-xs text-neutral-400">
                     {candidate.mode} / {candidate.vectorSignature}
                   </span>
                 </button>
@@ -861,18 +864,18 @@ export function PatternWorkspacePage() {
             })}
           </div>
         </div>
-        <div className="glass-panel rounded-2xl p-5">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">ローカル進捗</h2>
-          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{activeMode} / {progress}%</p>
-          <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
+        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
+          <h2 className="text-lg font-semibold text-white">ローカル進捗</h2>
+          <p className="mt-2 text-sm text-neutral-400">{activeMode} / {progress}%</p>
+          <div className="mt-4 h-2 rounded-full bg-white/10">
             <div className="h-full rounded-full bg-cyan-300" style={{ width: `${progress}%` }} />
           </div>
         </div>
-        <div className="glass-panel rounded-2xl p-5">
-          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">履歴</h2>
+        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
+          <h2 className="text-lg font-semibold text-white">履歴</h2>
           <div className="mt-4 space-y-3">
             {history.map((item) => (
-              <div key={item.id} className="rounded-xl bg-white/60 p-3 text-sm text-neutral-700 dark:bg-surface-900/50 dark:text-neutral-300">
+              <div key={item.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm text-neutral-200">
                 {item.label}
               </div>
             ))}
