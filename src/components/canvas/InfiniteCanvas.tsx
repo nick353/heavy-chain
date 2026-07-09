@@ -179,7 +179,8 @@ export function InfiniteCanvas({
       ) {
         loadingImageIds.add(obj.id);
         startedLoadingIds.push(obj.id);
-        const preloadedImage = preloadedImages?.get(obj.id);
+        const preloadedImageKey = obj.metadata?.galleryImageUrl || obj.src;
+        const preloadedImage = preloadedImages?.get(preloadedImageKey);
         if (preloadedImage) {
           loadedImageSourcesRef.current.set(obj.src, preloadedImage);
           queueLoadedImage(obj.id, preloadedImage);

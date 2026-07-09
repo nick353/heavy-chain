@@ -644,7 +644,10 @@ export function CanvasEditorPage() {
 
   const handleSelectGalleryImage = useCallback(async (imageUrl: string, imageId: string, storagePath?: string, imageElement?: HTMLImageElement | null) => {
     try {
-      const newId = await addImageToCanvas(imageUrl, 'Gallery素材', {
+      if (imageElement) {
+        preloadedGalleryImagesRef.current.set(imageUrl, imageElement);
+      }
+      await addImageToCanvas(imageUrl, 'Gallery素材', {
         feature: 'gallery-import',
         generation: 0,
         source: 'gallery-selector',
@@ -652,9 +655,6 @@ export function CanvasEditorPage() {
         galleryStoragePath: storagePath,
         galleryImageUrl: imageUrl,
       }, undefined, imageElement);
-      if (imageElement) {
-        preloadedGalleryImagesRef.current.set(newId, imageElement);
-      }
       setShowGallerySelector(false);
       toast.success('Gallery画像をCanvasへ配置しました');
     } catch (error: any) {
