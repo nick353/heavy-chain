@@ -651,21 +651,6 @@ export function GalleryPage() {
           </div>
         ) : null}
 
-        {!isLoading && failedImageIds.size > 0 ? (
-          <div className="mb-6 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-4 text-sm text-amber-100">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p>{failedImageIds.size}件の画像プレビューを確認中です。読込に失敗した画像は一覧から外しています。</p>
-              <button
-                type="button"
-                onClick={fetchImages}
-                className="inline-flex w-fit items-center rounded-lg border border-amber-300/30 px-3 py-1.5 text-xs font-semibold transition hover:bg-amber-300/10"
-              >
-                再読み込み
-              </button>
-            </div>
-          </div>
-        ) : null}
-
         {/* Select Mode Actions */}
         <AnimatePresence>
           {selectMode && (
