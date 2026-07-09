@@ -177,7 +177,11 @@ export function InfiniteCanvas({
       ) {
         loadingImageIds.add(obj.id);
         startedLoadingIds.push(obj.id);
-        const source = obj.metadata?.galleryStoragePath || obj.src;
+        const source = (
+          /^https?:|^data:|^blob:/i.test(obj.src)
+            ? obj.src
+            : obj.metadata?.galleryImageUrl || obj.metadata?.galleryStoragePath || obj.src
+        );
         const cachedImage = loadedImageSourcesRef.current.get(source);
         const imagePromise = cachedImage
           ? Promise.resolve(cachedImage)

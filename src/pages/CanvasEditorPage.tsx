@@ -626,7 +626,7 @@ export function CanvasEditorPage() {
 
   const handleSelectGalleryImage = useCallback(async (imageUrl: string, imageId: string, storagePath?: string) => {
     try {
-      await addImageToCanvas(storagePath || imageUrl, 'Gallery素材', {
+      await addImageToCanvas(imageUrl, 'Gallery素材', {
         feature: 'gallery-import',
         generation: 0,
         source: 'gallery-selector',
