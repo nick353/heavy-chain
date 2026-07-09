@@ -460,8 +460,9 @@ export function CanvasEditorPage() {
       const obj = objects.find((o) => o.id === id);
       if (obj) {
         const { zoom, panX, panY } = useCanvasStore.getState();
-        const x = obj.x * zoom + panX + (obj.width * zoom) / 2;
-        const y = obj.y * zoom + panY;
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = rect.left + obj.x * zoom + panX + (obj.width * zoom) / 2;
+        const y = rect.top + obj.y * zoom + panY;
         setSelectedPosition({ x, y });
       }
     }
@@ -1025,33 +1026,33 @@ export function CanvasEditorPage() {
       case 'duplicate':
         useCanvasStore.getState().duplicateSelected();
         toast.success('複製しました');
-        break;
+        return;
       case 'delete':
         useCanvasStore.getState().deleteObject(objectId);
         toast.success('削除しました');
-        break;
+        return;
       case 'bringToFront':
         useCanvasStore.getState().bringToFront(objectId);
-        break;
+        return;
       case 'sendToBack':
         useCanvasStore.getState().sendToBack(objectId);
-        break;
+        return;
       case 'lock':
         updateObject(objectId, { locked: true });
         toast.success('ロックしました');
-        break;
+        return;
       case 'unlock':
         updateObject(objectId, { locked: false });
         toast.success('ロック解除しました');
-        break;
+        return;
       case 'hide':
         updateObject(objectId, { visible: false });
         toast.success('非表示にしました');
-        break;
+        return;
       case 'show':
         updateObject(objectId, { visible: true });
         toast.success('表示しました');
-        break;
+        return;
       case 'download':
         if (obj.type === 'image' && obj.src) {
           try {
@@ -1071,7 +1072,7 @@ export function CanvasEditorPage() {
             toast.error('ダウンロードに失敗しました');
           }
         }
-        break;
+        return;
     }
 
     // Handle AI actions for images
@@ -2055,51 +2056,51 @@ export function CanvasEditorPage() {
               </div>
             )}
 
-            <div className="absolute left-2 right-2 top-16 z-10 mx-auto max-w-5xl rounded-2xl border border-white/10 bg-[#0f1212]/95 p-2 shadow-[0_18px_70px_rgba(0,0,0,0.4)] backdrop-blur sm:left-20 sm:right-auto sm:w-[720px]">
-              <div className="grid gap-2 sm:grid-cols-6">
-                {canvasImageActions.map((action) => {
-                  const Icon = action.icon;
-                  const disabled = action.requiresSelection && (!selectedObject || selectedObject.type !== 'image');
-                  return (
-                    <button
-                      key={action.id}
-                      type="button"
-                      onClick={() => {
-                        if (action.id === 'generate') {
-                          setShowGenerateModal(true);
-                          return;
-                        }
-                        void handleFloatingAction(action.id);
-                      }}
-                      disabled={disabled}
-                      className="group flex min-h-16 flex-col justify-center rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-left transition hover:border-cyan-300/50 hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-45"
-                    >
-                      <span className="flex items-center gap-2 text-xs font-semibold text-white">
-                        <Icon className="h-4 w-4 text-cyan-300" />
-                        {action.label}
-                      </span>
-                      <span className="mt-1 text-[11px] leading-4 text-neutral-400">{action.description}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {!selectedObject && (
+            {!selectedObject && (
+              <div className="absolute left-2 right-2 top-16 z-10 mx-auto max-w-5xl rounded-2xl border border-white/10 bg-[#0f1212]/95 p-2 shadow-[0_18px_70px_rgba(0,0,0,0.4)] backdrop-blur sm:left-20 sm:right-auto sm:w-[720px]">
+                <div className="grid gap-2 sm:grid-cols-6">
+                  {canvasImageActions.map((action) => {
+                    const Icon = action.icon;
+                    const disabled = action.requiresSelection;
+                    return (
+                      <button
+                        key={action.id}
+                        type="button"
+                        onClick={() => {
+                          if (action.id === 'generate') {
+                            setShowGenerateModal(true);
+                            return;
+                          }
+                          void handleFloatingAction(action.id);
+                        }}
+                        disabled={disabled}
+                        className="group flex min-h-16 flex-col justify-center rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2 text-left transition hover:border-cyan-300/50 hover:bg-cyan-300/10 disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        <span className="flex items-center gap-2 text-xs font-semibold text-white">
+                          <Icon className="h-4 w-4 text-cyan-300" />
+                          {action.label}
+                        </span>
+                        <span className="mt-1 text-[11px] leading-4 text-neutral-400">{action.description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
                 <p className="mt-2 px-1 text-xs text-neutral-500">画像を選択すると、背景削除・色変更・派生などを直接かけられます。</p>
-              )}
-              <label className="mt-3 flex items-start gap-3 rounded-xl border border-cyan-300/30 bg-cyan-300/[0.08] p-3 text-xs text-cyan-100">
-                <input
-                  type="checkbox"
-                  checked={rightsConfirmed}
-                  onChange={(event) => setRightsConfirmed(event.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border-cyan-300 text-cyan-300 focus:ring-cyan-300"
-                  disabled={isGenerating}
-                />
-                <span>
-                  <span className="block font-semibold">{UPLOAD_RIGHTS_CONFIRMATION_LABEL}</span>
-                  <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
-                </span>
-              </label>
-            </div>
+                <label className="mt-3 flex items-start gap-3 rounded-xl border border-cyan-300/30 bg-cyan-300/[0.08] p-3 text-xs text-cyan-100">
+                  <input
+                    type="checkbox"
+                    checked={rightsConfirmed}
+                    onChange={(event) => setRightsConfirmed(event.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-cyan-300 text-cyan-300 focus:ring-cyan-300"
+                    disabled={isGenerating}
+                  />
+                  <span>
+                    <span className="block font-semibold">{UPLOAD_RIGHTS_CONFIRMATION_LABEL}</span>
+                    <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
+                  </span>
+                </label>
+              </div>
+            )}
 
             <div className="absolute bottom-2 left-2 right-2 z-10 grid grid-cols-2 gap-2 sm:bottom-4 sm:left-4 sm:right-auto sm:w-[560px] sm:grid-cols-4">
               <label
