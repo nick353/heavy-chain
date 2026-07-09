@@ -3812,7 +3812,7 @@ export function GeneratePage() {
               { title: 'マーケティングワークスペース', to: '/marketing', desc: '販促画像、コピー、売場素材をすぐ作る' },
               { title: 'AIフィッティング', to: '/fitting', desc: '衣服画像から着用画像へ直行する' },
               { title: 'ファッションスタジオ', to: '/studio', desc: 'モデル、背景、小物を組んで撮影条件へ進む' },
-              { title: 'モデル企画ライブラリ', to: '/models', desc: 'モデル条件をすぐ詰める' },
+              { title: 'モデル企画ライブラリ', to: '/generate?feature=model-matrix', desc: 'モデル条件をすぐ生成画面へ渡す' },
               { title: '柄・グラフィック作業台', to: '/patterns/workbench', desc: '柄、総柄、ベクター化をすぐ開く' },
               { title: '動画ワークステーション', to: '/video', desc: 'ショット構成とCTAをすぐ作る' },
             ].map((item) => (

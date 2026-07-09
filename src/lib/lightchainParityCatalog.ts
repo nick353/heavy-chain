@@ -1,3 +1,5 @@
+import { buildGenerationIntentHref, workspaceSourceConfig } from './workspaceHandoff';
+
 export type LightchainCategoryId = 'recommended' | 'planning' | 'fitting' | 'graphics';
 
 export interface LightchainFeature {
@@ -57,6 +59,29 @@ export const lightchainCategories: LightchainCategory[] = [
   },
 ];
 
+const modelLibraryDirectGenerateRoute = buildGenerationIntentHref({
+  feature: 'model-matrix',
+  prompt: [
+    'Face: 柔らかい卵型の顔、自然な微笑み、黒髪のショートボブ',
+    'Pose: 正面立ち、肩線をまっすぐ見せる、両腕は自然に下ろす',
+    'Body type: 標準体型 / 162cm / S-Mサイズの着用確認',
+    'Skin tone: ウォームライト',
+    'Age group: 20代',
+    'Usage: EC標準',
+    'Product description: Lightchain シアージャケット、軽い透け感、ミニマルなEC商品画像',
+  ].join('\n'),
+  bodyTypes: ['regular'],
+  ageGroups: ['20s'],
+  skinTone: 'light',
+  hairStyle: 'short',
+  modelCandidateLabel: 'Clean EC 20s',
+  sourceWorkspace: 'models',
+  workflowVersion: 'model-library-local-v1',
+  sourceLabel: workspaceSourceConfig.models.label,
+  sourceResumePath: workspaceSourceConfig.models.resumePath,
+  sourceMode: 'local-workflow-intake',
+});
+
 export const lightchainFeatureCatalog: LightchainFeature[] = [
   {
     id: 'marketing-workspace',
@@ -111,7 +136,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: 'モデル企画ライブラリ',
     lightchainName: 'FittingModelCustomize / ChangePosture / ChangeBackground',
     description: '顔、ポーズ、体型、肌色、年齢層を選び、モデル条件を生成に渡します。',
-    route: '/models',
+    route: modelLibraryDirectGenerateRoute,
     category: 'recommended',
     status: 'production',
     capability: 'モデル候補選択、model-matrix query、生成条件 readback',
