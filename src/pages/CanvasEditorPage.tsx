@@ -634,6 +634,14 @@ export function CanvasEditorPage() {
         parentId: parentId || undefined,
       } : undefined,
     });
+    console.log('Canvas gallery image added', {
+      newId,
+      imageUrl,
+      width: imageWidth,
+      height: imageHeight,
+      preloaded: Boolean(preloadedImage),
+      galleryImport: isGalleryImport,
+    });
     selectObject(newId);
     return newId;
   }, [addObject, loadCanvasImage, selectObject]);
@@ -650,6 +658,14 @@ export function CanvasEditorPage() {
       if (imageElement) {
         preloadedGalleryImagesRef.current.set(imageUrl, imageElement);
       }
+      console.log('Canvas gallery selection', {
+        imageId,
+        imageUrl,
+        storagePath,
+        hasImageElement: Boolean(imageElement),
+        naturalWidth: imageElement?.naturalWidth || null,
+        naturalHeight: imageElement?.naturalHeight || null,
+      });
       await addImageToCanvas(imageUrl, 'Gallery素材', {
         feature: 'gallery-import',
         generation: 0,
@@ -2051,10 +2067,11 @@ export function CanvasEditorPage() {
 											preloadedImages={preloadedGalleryImagesRef.current}
 											renderAllObjects={isExportRenderingAll}
 											exportMode={isExportRenderingAll}
-											onRenderStateChange={(state) => {
-												canvasRenderStateRef.current = state;
-										}}
-	                />
+                  onRenderStateChange={(state) => {
+                    canvasRenderStateRef.current = state;
+                    console.log('Canvas render state', state);
+                  }}
+                />
 
                 {selectedObject && (
                   <FloatingToolbar
