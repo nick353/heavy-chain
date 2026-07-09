@@ -512,9 +512,9 @@ export function MarketingWorkspacePage() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[0.85fr_1.25fr_0.9fr]">
-        <aside className="rounded-2xl border border-white/10 bg-neutral-950 p-5 shadow-soft">
-          <h2 className="text-lg font-semibold text-white">テンプレート</h2>
-          <p className="mt-1 text-xs text-neutral-400">{activeLabel} 用の制作プリセット</p>
+        <aside className="glass-panel rounded-2xl p-5">
+          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">テンプレート</h2>
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{activeLabel} 用の制作プリセット</p>
           <div className="mt-4 space-y-2">
             {templateOptions.map((template) => (
               <button
@@ -586,7 +586,7 @@ export function MarketingWorkspacePage() {
           </div>
         </aside>
 
-        <main className="rounded-2xl border border-white/10 bg-neutral-950 p-5 shadow-soft">
+        <main className="glass-panel rounded-2xl p-5">
           <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -657,8 +657,8 @@ export function MarketingWorkspacePage() {
         </main>
 
         <aside className="space-y-5">
-          <section className="rounded-2xl border border-white/10 bg-neutral-950 p-5 shadow-soft">
-            <h2 className="text-lg font-semibold text-white">マイプロジェクト</h2>
+          <section className="glass-panel rounded-2xl p-5">
+            <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">マイプロジェクト</h2>
             <div className="mt-4 space-y-3">
               {projects.map((project) => (
                 <button key={project.name} type="button" className="w-full rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-cyan-300/50 hover:bg-white/[0.07]">
@@ -669,8 +669,8 @@ export function MarketingWorkspacePage() {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-white/10 bg-neutral-950 p-5 shadow-soft">
-            <h2 className="text-lg font-semibold text-white">制作アシスタント</h2>
+          <section className="glass-panel rounded-2xl p-5">
+            <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">制作アシスタント</h2>
             <div className="mt-4 space-y-3">
               {[
                 { icon: CheckCircle2, label: '入力チェック', text: productImageUrl ? '商品画像を確認済み' : '商品画像を追加してください' },

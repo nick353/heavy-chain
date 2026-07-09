@@ -435,19 +435,19 @@ export function DashboardPage() {
           {isActivityLoading ? (
             <div className="grid gap-4 lg:grid-cols-4">
               {[1, 2, 3, 4].map((item) => (
-                <div key={item} className="h-52 animate-pulse rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm" />
+                <div key={item} className="h-52 animate-pulse rounded-2xl bg-neutral-100 dark:bg-surface-900" />
               ))}
             </div>
           ) : activityError ? (
-            <div className="rounded-2xl border border-red-300/20 bg-red-300/[0.08] p-5">
-              <h3 className="text-base font-semibold text-red-200">読み込み失敗</h3>
-              <p className="mt-2 text-sm text-red-300">
+            <div className="rounded-2xl border border-red-200 bg-red-50/70 p-5 dark:border-red-900/60 dark:bg-red-950/25">
+              <h3 className="text-base font-semibold text-red-800 dark:text-red-200">読み込み失敗</h3>
+              <p className="mt-2 text-sm text-red-700 dark:text-red-300">
                 作業状況を取得できませんでした。接続状態を確認して再読み込みしてください。
               </p>
               <button
                 type="button"
                 onClick={() => void fetchActivity()}
-                className="mt-4 rounded-lg bg-red-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-400 disabled:opacity-60"
+                className="mt-4 rounded-lg bg-red-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-800 disabled:opacity-60"
                 disabled={isActivityLoading}
               >
                 再読み込み
@@ -462,21 +462,21 @@ export function DashboardPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <Link
                     to="/jobs"
-                    className="rounded-2xl border border-white/10 bg-white/[0.06] p-3 backdrop-blur-sm"
+                    className="rounded-2xl border border-white/10 bg-white/[0.06] p-3"
                   >
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">進行中</p>
                     <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.activeJobs.length}</p>
                   </Link>
                   <Link
                     to="/jobs"
-                    className="rounded-2xl border border-white/10 bg-white/[0.06] p-3 backdrop-blur-sm"
+                    className="rounded-2xl border border-white/10 bg-white/[0.06] p-3"
                   >
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">失敗</p>
                     <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.failedJobs.length}</p>
                   </Link>
                   <Link
                     to="/credits"
-                    className="rounded-2xl border border-white/10 bg-white/[0.06] p-3 backdrop-blur-sm"
+                    className="rounded-2xl border border-white/10 bg-white/[0.06] p-3"
                   >
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">残り</p>
                     <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.creditSummary.remainingUnits.toLocaleString()}</p>
@@ -484,7 +484,7 @@ export function DashboardPage() {
                 </div>
                 <Link
                   to="/jobs"
-                className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white/70 px-4 py-3 text-sm font-semibold text-neutral-700 shadow-soft backdrop-blur-sm dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200"
+                  className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white/70 px-4 py-3 text-sm font-semibold text-neutral-700 shadow-soft dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200"
                   data-testid="mobile-dashboard-activity-detail-link"
                 >
                   詳細なジョブ状況を見る
@@ -512,19 +512,19 @@ export function DashboardPage() {
         >
           <Link
             to="/history"
-            className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-center text-xs font-semibold text-neutral-800 backdrop-blur-sm dark:text-neutral-100"
+            className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-center text-xs font-semibold text-neutral-800 dark:text-neutral-100"
           >
             履歴
           </Link>
           <Link
             to="/canvas"
-            className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-center text-xs font-semibold text-neutral-800 backdrop-blur-sm dark:text-neutral-100"
+            className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-center text-xs font-semibold text-neutral-800 dark:text-neutral-100"
           >
             Canvas
           </Link>
           <Link
             to="/credits"
-            className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-center text-xs font-semibold text-neutral-800 backdrop-blur-sm dark:text-neutral-100"
+            className="rounded-2xl border border-white/10 bg-white/[0.06] px-3 py-3 text-center text-xs font-semibold text-neutral-800 dark:text-neutral-100"
           >
             利用状況
           </Link>
@@ -680,7 +680,7 @@ export function DashboardPage() {
               ))}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-neutral-200 bg-white/70 p-6 text-center backdrop-blur-sm dark:border-neutral-800 dark:bg-white/5">
+                <div className="rounded-2xl border border-neutral-200 bg-white/70 p-6 text-center dark:border-neutral-800 dark:bg-white/5">
                   <h3 className="text-base font-semibold text-neutral-900 dark:text-white">一致するプロジェクトがありません</h3>
                   <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
                     別の名前、日付、画像・テキストなどの素材種別で検索してください。

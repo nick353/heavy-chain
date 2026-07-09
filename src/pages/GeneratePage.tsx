@@ -942,7 +942,7 @@ function ImageModal({
           <div className="flex items-center gap-2">
             <button
               onClick={() => onDownload(image.imageUrl, `${image.label || 'planning-brief'}.${getDataUrlExtension(image.imageUrl, image.artifactKind === 'planning_brief' ? 'svg' : 'png')}`)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-800/90 text-neutral-100 border border-white/10 hover:bg-surface-700 transition-colors font-medium"
+              className="flex items-center gap-2 px-4 py-2 bg-white text-neutral-900 rounded-lg hover:bg-neutral-100 transition-colors font-medium"
             >
               <Download className="w-4 h-4" />
               ダウンロード
@@ -3827,43 +3827,43 @@ export function GeneratePage() {
 
         <details className={`mt-5 rounded-2xl border p-4 shadow-soft ${
           generationReadyInApp
-            ? 'border-green-300/20 bg-green-300/[0.08]'
-            : 'border-amber-300/20 bg-amber-300/[0.08]'
+              ? 'border-green-200 bg-green-50/80 dark:border-green-800 dark:bg-green-950/20'
+            : 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
         }`}>
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-sm font-semibold text-white">
-              {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-300" /> : <AlertCircle className="h-4 w-4 text-amber-300" />}
+            <span className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+                {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
               運用状態
             </span>
-            <span className={`text-xs ${generationReadyInApp ? 'text-green-100' : 'text-amber-100'}`}>
+            <span className={`text-xs ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
               {runwayReadinessText}
             </span>
           </summary>
           <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-              <div className="flex items-center gap-2 font-semibold text-white">
+            <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+              <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
                 <KeyRound className="h-4 w-4" />
                 接続承認
               </div>
-              <p className="mt-1 text-neutral-400">
+              <p className="mt-1 text-neutral-500 dark:text-neutral-400">
                 {RUNWAY_APPROVAL_LABELS[runwayStatus]}
               </p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-              <div className="flex items-center gap-2 font-semibold text-white">
+            <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+              <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
                 <CreditCard className="h-4 w-4" />
                 利用量管理
               </div>
-              <p className="mt-1 text-neutral-400">
+              <p className="mt-1 text-neutral-500 dark:text-neutral-400">
                 {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
               </p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-              <div className="flex items-center gap-2 font-semibold text-white">
-                {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-300" /> : <AlertCircle className="h-4 w-4 text-amber-300" />}
+            <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+              <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
+                {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
                 最終接続
               </div>
-              <p className="mt-1 text-neutral-400">
+              <p className="mt-1 text-neutral-500 dark:text-neutral-400">
                 {noImageGenerationMode ? '不要' : 'Hosted bridge'}
               </p>
             </div>
@@ -3872,7 +3872,7 @@ export function GeneratePage() {
           <div className="mt-3 flex justify-end">
             <Link
               to="/brand/settings"
-              className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white"
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/70 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-primary-300 hover:text-primary-700 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
             >
               ブランド設定を開く
               <ExternalLink className="h-3.5 w-3.5" />
@@ -3921,7 +3921,7 @@ export function GeneratePage() {
           </div>
 
           <div
-            className="hidden min-h-[44px] w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 sm:flex lg:max-w-xl"
+            className="hidden min-h-[44px] w-full items-center gap-3 rounded-xl border border-white/10 bg-neutral-900 px-3 sm:flex lg:max-w-xl"
             data-testid="mobile-generate-assistant-prompt-bar"
           >
             <Search className="h-4 w-4 shrink-0 text-cyan-300" />
@@ -4059,7 +4059,7 @@ export function GeneratePage() {
               <div className="flex justify-end mb-4">
                 <button
                   onClick={() => setShowPromptHistory(true)}
-                  className="flex items-center gap-2 text-sm text-neutral-400 transition-colors hover:text-white"
+                  className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 transition-colors"
                 >
                   <History className="w-4 h-4" />
                   履歴から選ぶ
@@ -4070,13 +4070,13 @@ export function GeneratePage() {
             {selectedGenerateWorkbench && (
               <div className="mb-5">
                 <div className="mb-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
                     入力素材
                   </p>
-                  <p className="mt-1 text-sm text-neutral-300">
+                  <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
                     先に画像や素材を入れてから、必要な生成条件だけを調整します。
                   </p>
-                  <p className="mt-1 text-xs font-semibold text-cyan-200">
+                  <p className="mt-1 text-xs font-semibold text-cyan-700 dark:text-cyan-200">
                     素材を置くと編集を始められます。
                   </p>
                 </div>
@@ -4129,13 +4129,13 @@ export function GeneratePage() {
                           {assistantPlanConfirmed ? '確認済み' : '未確認'}
                         </span>
                       </div>
-                      <div className="mt-3 grid gap-2 text-sm text-neutral-300 md:grid-cols-3">
+                      <div className="mt-3 grid gap-2 text-sm text-neutral-700 dark:text-neutral-300 md:grid-cols-3">
                         {assistantPlanItems.map((item, index) => (
-                          <div key={`${item.title}-${index}`} className="rounded-lg bg-white/[0.05] p-3">
+                          <div key={`${item.title}-${index}`} className="rounded-lg bg-white/5 p-3">
                             <p className="font-semibold text-white">
                               {index + 1}. {item.title}
                             </p>
-                            <p className="mt-1 text-xs leading-5 text-neutral-400">{item.description}</p>
+                            <p className="mt-1 text-xs leading-5">{item.description}</p>
                           </div>
                         ))}
                       </div>
@@ -4169,15 +4169,15 @@ export function GeneratePage() {
             {renderFeatureForm()}
 
             {geminiGenerationMode && selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && (
-              <details className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <details className="mt-5 rounded-2xl border border-neutral-200 bg-white/85 p-4 dark:border-neutral-800 dark:bg-neutral-900/70">
                 <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-white">生成モデル</p>
-                    <p className="mt-1 text-xs text-neutral-400">
+                    <p className="text-sm font-semibold text-neutral-900 dark:text-white">生成モデル</p>
+                    <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                       現在: {selectedGenerationModelOption.title} / {selectedGenerationModelOption.cost}
                     </p>
                   </div>
-                  <span className="rounded-full bg-white/[0.05] px-2 py-1 text-xs font-semibold text-neutral-300">
+                  <span className="rounded-full bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
                     必要な時だけ変更
                   </span>
                 </summary>
@@ -4193,14 +4193,14 @@ export function GeneratePage() {
                         onClick={() => setSelectedGenerationModel(option.id)}
                         className={`min-h-[86px] rounded-xl border p-3 text-left transition ${
                           selected
-                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950 shadow-sm'
-                            : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
+                            ? 'border-neutral-900 bg-neutral-900 text-white shadow-sm dark:border-white dark:bg-white dark:text-neutral-950'
+                            : 'border-neutral-200 bg-white text-neutral-800 hover:border-neutral-400 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:border-neutral-500'
                         }`}
                       >
-                        <span className={`text-[11px] font-semibold ${selected ? 'text-neutral-950/70' : 'text-neutral-400'}`}>{option.label}</span>
+                        <span className={`text-[11px] font-semibold ${selected ? 'text-white/75 dark:text-neutral-700' : 'text-neutral-500 dark:text-neutral-400'}`}>{option.label}</span>
                         <span className="mt-1 block text-sm font-semibold">{option.title}</span>
-                        <span className={`mt-1 block text-xs font-semibold ${selected ? 'text-neutral-950' : 'text-neutral-200'}`}>{option.cost}</span>
-                        <span className={`mt-1 block text-xs ${selected ? 'text-neutral-950/75' : 'text-neutral-400'}`}>{option.description}</span>
+                        <span className={`mt-1 block text-xs font-semibold ${selected ? 'text-white dark:text-neutral-900' : 'text-neutral-800 dark:text-neutral-200'}`}>{option.cost}</span>
+                        <span className={`mt-1 block text-xs ${selected ? 'text-white/75 dark:text-neutral-700' : 'text-neutral-500 dark:text-neutral-400'}`}>{option.description}</span>
                       </button>
                     );
                   })}
@@ -4209,19 +4209,19 @@ export function GeneratePage() {
             )}
 
             {selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && (
-              <div className="mt-5 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-4 text-sm">
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm dark:border-amber-800 dark:bg-amber-950/20">
                 <label className="flex items-start gap-3">
                   <input
                     type="checkbox"
                     checked={rightsConfirmed}
                     onChange={(event) => setRightsConfirmed(event.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-amber-300 text-amber-300 focus:ring-amber-300/20"
+                    className="mt-1 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
                   />
                   <span>
-                    <span className="block font-semibold text-amber-100">
+                    <span className="block font-semibold text-amber-900 dark:text-amber-100">
                       {UPLOAD_RIGHTS_CONFIRMATION_LABEL}
                     </span>
-                    <span className="mt-1 block text-xs leading-5 text-amber-200">
+                    <span className="mt-1 block text-xs leading-5 text-amber-800 dark:text-amber-200">
                       {GENERATION_LEGAL_COPY}
                     </span>
                   </span>
@@ -4234,7 +4234,7 @@ export function GeneratePage() {
                 onClick={handleGenerate}
                 isLoading={isGenerating}
                 disabled={isGenerateDisabled}
-                className="mt-6 w-full border-none bg-cyan-300 text-neutral-950 transition-all duration-300 hover:bg-cyan-200"
+                className="w-full mt-6 shadow-glow hover:shadow-glow-lg transition-all duration-300"
                 size="lg"
                 leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
               >
@@ -4245,63 +4245,63 @@ export function GeneratePage() {
 
           <details className={`rounded-2xl border p-4 ${
             generationReadyInApp
-              ? 'border-green-300/20 bg-green-300/[0.08]'
-              : 'border-amber-300/20 bg-amber-300/[0.08]'
+              ? 'border-green-200 bg-green-50/80 dark:border-green-800 dark:bg-green-950/20'
+              : 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
           }`}>
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-white">詳細情報</span>
-              <span className={`text-xs ${generationReadyInApp ? 'text-green-100' : 'text-amber-100'}`}>
+              <span className="text-sm font-semibold text-neutral-900 dark:text-white">詳細情報</span>
+              <span className={`text-xs ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
                 {runwayReadinessText}
               </span>
             </summary>
             <div className="mt-4 grid gap-3 text-xs md:grid-cols-3">
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                <div className="flex items-center gap-2 font-semibold text-white">
+              <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+                <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
                   <KeyRound className="h-4 w-4" />
                   接続承認
                 </div>
-                <p className="mt-1 text-neutral-400">{RUNWAY_APPROVAL_LABELS[runwayStatus]}</p>
+                <p className="mt-1 text-neutral-500 dark:text-neutral-400">{RUNWAY_APPROVAL_LABELS[runwayStatus]}</p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                <div className="flex items-center gap-2 font-semibold text-white">
+              <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+                <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
                   <CreditCard className="h-4 w-4" />
                   利用量管理
                 </div>
-                <p className="mt-1 text-neutral-400">
+                <p className="mt-1 text-neutral-500 dark:text-neutral-400">
                   {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
                 </p>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                <div className="flex items-center gap-2 font-semibold text-white">
-                  {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-300" /> : <AlertCircle className="h-4 w-4 text-amber-300" />}
+              <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
+                <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
+                  {generationReadyInApp ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
                   最終接続
                 </div>
-                <p className="mt-1 text-neutral-400">
+                <p className="mt-1 text-neutral-500 dark:text-neutral-400">
                   {noImageGenerationMode ? '不要' : 'Hosted bridge'}
                 </p>
               </div>
             </div>
             <div className="mt-4 space-y-3">
               {sourceReadback && (
-                <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.08] p-3">
-                  <p className="text-xs font-semibold text-cyan-100">ワークスペース再開</p>
-                  <p className="mt-1 text-xs leading-5 text-neutral-300">
+                <div className="rounded-xl border border-primary-200 bg-primary-50/80 p-3 dark:border-primary-800 dark:bg-primary-950/30">
+                  <p className="text-xs font-semibold text-primary-700 dark:text-primary-300">ワークスペース再開</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
                     {sourceReadback.sourceLabel} / {sourceReadback.workflowVersion}
                   </p>
                 </div>
               )}
               {lightchainCompat && (
-                <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.08] p-3">
-                  <p className="text-xs font-semibold text-cyan-100">素材ワークベンチ連携</p>
-                  <p className="mt-1 text-xs leading-5 text-neutral-300">
+                <div className="rounded-xl border border-teal-200 bg-teal-50/80 p-3 dark:border-teal-800 dark:bg-teal-950/30">
+                  <p className="text-xs font-semibold text-teal-700 dark:text-teal-300">素材ワークベンチ連携</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
                     {lightchainCompat.lightchainFeatureTitle} / {lightchainCompat.lightchainTaskCodes.join(' / ')}
                   </p>
                 </div>
               )}
               {activeWorkflow && (
-                <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-                  <p className="text-xs font-semibold text-white">{activeWorkflow.title}</p>
-                  <p className="mt-1 text-xs leading-5 text-neutral-400">{activeWorkflow.description}</p>
+                <div className="rounded-xl border border-neutral-200 bg-white/70 p-3 dark:border-neutral-700 dark:bg-neutral-900/60">
+                  <p className="text-xs font-semibold text-neutral-800 dark:text-white">{activeWorkflow.title}</p>
+                  <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">{activeWorkflow.description}</p>
                 </div>
               )}
               <UsageStats />
@@ -4357,7 +4357,7 @@ export function GeneratePage() {
           </div>
 
           {isGenerating && (
-            <div className="rounded-2xl p-12 text-center shadow-soft min-h-[400px] flex flex-col items-center justify-center bg-surface-50/90 dark:bg-surface-950/70 border border-surface-200 dark:border-surface-800 backdrop-blur-sm">
+            <div className="glass-panel rounded-2xl p-12 text-center shadow-soft min-h-[400px] flex flex-col items-center justify-center">
               <div className="w-20 h-20 bg-gradient-to-br from-primary-100 to-accent-100 dark:from-primary-900/50 dark:to-accent-900/50 rounded-2xl flex items-center justify-center mb-6 relative">
                 <Loader2 className="w-10 h-10 text-primary-600 animate-spin relative z-10" />
                 <div className="absolute inset-0 bg-primary-400/20 blur-xl animate-pulse-slow" />
@@ -4380,7 +4380,7 @@ export function GeneratePage() {
           )}
 
           {!isGenerating && generationError && (
-            <div className="rounded-2xl p-6 shadow-soft min-h-[220px] border border-red-200/70 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/20 backdrop-blur-sm">
+            <div className="glass-panel rounded-2xl p-6 shadow-soft min-h-[220px] border border-red-200/70 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/20">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-red-100 dark:bg-red-900/50 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-red-600 dark:text-red-300 font-semibold">!</span>
@@ -4392,7 +4392,7 @@ export function GeneratePage() {
                   <p className="mt-2 text-sm leading-7 text-red-700 dark:text-red-300">
                     {generationRecoveryGuidance.userMessage}
                   </p>
-                  <div className="mt-4 rounded-xl border border-red-200 bg-surface-50/90 p-3 text-sm leading-6 text-red-800 dark:border-red-900/60 dark:bg-surface-950/30 dark:text-red-200">
+                  <div className="mt-4 rounded-xl border border-red-200 bg-white/60 p-3 text-sm leading-6 text-red-800 dark:border-red-900/60 dark:bg-surface-950/30 dark:text-red-200">
                     <p className="font-semibold">次にやること</p>
                     <p className="mt-1">{generationRecoveryGuidance.nextAction}</p>
                     <p className="mt-2 text-xs text-red-700/80 dark:text-red-300/80">詳細: {generationError}</p>
@@ -4403,7 +4403,7 @@ export function GeneratePage() {
           )}
 
           {!isGenerating && selectedFeature.id === 'optimize-prompt' && optimizedPromptResult && (
-            <div className="rounded-2xl p-6 shadow-soft min-h-[400px] bg-surface-50/90 dark:bg-surface-950/70 border border-surface-200 dark:border-surface-800 backdrop-blur-sm">
+            <div className="glass-panel rounded-2xl p-6 shadow-soft min-h-[400px]">
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-full flex items-center justify-center flex-shrink-0">
                   <Sparkles className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -4460,7 +4460,7 @@ export function GeneratePage() {
                         <Button 
                           size="sm" 
                           variant="secondary" 
-                          className="bg-surface-50/80 dark:bg-black/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 hover:bg-surface-100 dark:hover:bg-green-900/30"
+                          className="bg-white/50 dark:bg-black/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 hover:bg-white/80"
                           onClick={() => navigate('/gallery')}
                         >
                           <FolderOpen className="w-4 h-4 mr-1.5" />
@@ -4498,10 +4498,10 @@ export function GeneratePage() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.1 }}
                     key={getGeneratedImageKey(image, index)}
-                    className="group relative overflow-hidden rounded-2xl border border-surface-200/70 dark:border-surface-800 bg-surface-50/90 dark:bg-surface-950/60 shadow-soft hover:shadow-elegant transition-all duration-500 hover:-translate-y-1 backdrop-blur-sm"
+                    className="group relative glass-card overflow-hidden hover:shadow-elegant transition-all duration-500 hover:-translate-y-1"
                   >
                     {image.label && (
-                      <div className="absolute top-3 left-3 z-10 px-3 py-1 bg-black/55 backdrop-blur-md rounded-full text-white text-xs font-medium border border-white/10">
+                      <div className="absolute top-3 left-3 z-10 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-white text-xs font-medium border border-white/10">
                         {image.label}
                       </div>
                     )}
@@ -4519,14 +4519,14 @@ export function GeneratePage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleDownload(image.imageUrl, `${image.label || 'planning-brief'}.${getDataUrlExtension(image.imageUrl, image.artifactKind === 'planning_brief' ? 'svg' : 'png')}`)}
-                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-neutral-100 bg-surface-800/90 hover:bg-surface-700 transition-colors border border-white/10"
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white rounded-lg text-sm font-medium text-neutral-900 hover:bg-neutral-100 transition-colors"
                           >
                             <Download className="w-4 h-4" />
                             保存
                           </button>
                           <button
                             onClick={() => !isGenerating && handleGenerate()}
-                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-neutral-100 bg-surface-700/90 hover:bg-surface-600 transition-colors border border-white/10"
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white/80 rounded-lg text-sm font-medium text-neutral-900 hover:bg-white transition-colors border border-neutral-200"
                             disabled={isGenerating}
                           >
                             <RefreshCw className="w-4 h-4" />
@@ -4549,8 +4549,8 @@ export function GeneratePage() {
                             }}
                             className={`p-2 backdrop-blur-sm border rounded-lg transition-colors ${
                               favoriteIds.includes(image.id)
-                                ? 'bg-surface-50 text-rose-500 border-rose-200 dark:bg-surface-900 dark:border-rose-900/60'
-                                : 'bg-black/20 border-white/10 text-white hover:bg-black/35'
+                                ? 'bg-white text-rose-500 border-rose-100'
+                                : 'bg-white/20 border-white/30 text-white hover:bg-white/30'
                             }`}
                           >
                             <Heart className="w-4 h-4" fill={favoriteIds.includes(image.id) ? 'currentColor' : 'none'} />

@@ -438,17 +438,14 @@ export function VideoWorkstationPage() {
   };
 
   return (
-    <div className="space-y-6 text-white">
-      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm sm:p-7">
+    <div className="space-y-6">
+      <section className="glass-panel rounded-2xl p-5 sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">
-              LIGHTCHAIN / VIDEO
-            </p>
-            <h1 className="mt-2 font-display text-3xl font-semibold text-white">
+            <h1 className="font-display text-3xl font-semibold text-neutral-950 dark:text-white">
               Video Workstation
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
               商品動画の構成、編集、書き出し状態を、Gallery/History と Canvas に渡せる動画ワークスペースです。
             </p>
           </div>
@@ -456,7 +453,7 @@ export function VideoWorkstationPage() {
             type="button"
             onClick={handoffToCanvas}
             disabled={!currentBrand}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 backdrop-blur-sm"
+            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             保存してCanvasへ
@@ -469,9 +466,9 @@ export function VideoWorkstationPage() {
               key={choice}
               type="button"
               onClick={() => recordProgress(choice)}
-              className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition backdrop-blur-sm ${
+              className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
                 activeChoice === choice
-                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
                   : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
               }`}
             >
@@ -480,11 +477,11 @@ export function VideoWorkstationPage() {
           ))}
         </div>
 
-        <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
+        <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-white">動画レーンを選ぶ</h2>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-400">
+              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">動画レーンを選ぶ</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
                 尺・比率・ショット順・CTAをまとめて決め、動画生成に使う構成を整えます。
               </p>
             </div>
@@ -506,7 +503,7 @@ export function VideoWorkstationPage() {
                   aria-pressed={selected}
                   className={`rounded-2xl border p-4 text-left transition ${
                     selected
-                      ? 'border-cyan-300 bg-cyan-300 text-neutral-950 ring-2 ring-cyan-300/20'
+                      ? 'border-cyan-300 bg-cyan-300 text-neutral-950 ring-2 ring-cyan-300/20 dark:border-cyan-300 dark:bg-cyan-300 dark:ring-cyan-300/20'
                       : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                   }`}
                 >
@@ -517,18 +514,18 @@ export function VideoWorkstationPage() {
                   }`}>
                     <Icon className="h-5 w-5" />
                   </span>
-                  <span className="mt-3 flex items-center justify-between gap-3 text-sm font-semibold text-white">
+                  <span className="mt-3 flex items-center justify-between gap-3 text-sm font-semibold text-neutral-950 dark:text-white">
                     {candidate.label}
                     {selected && <Check className="h-4 w-4 text-cyan-300 dark:text-cyan-300" />}
                   </span>
-                  <span className="mt-2 block text-sm leading-6 text-neutral-400">
+                  <span className="mt-2 block text-sm leading-6 text-neutral-500 dark:text-neutral-400">
                     {candidate.duration} / {candidate.aspectRatio} / {candidate.workflowMode}
                   </span>
                   <span className="mt-3 flex flex-wrap gap-1.5">
                     {(storyboardOutputLabels[candidate.id] ?? []).map((output) => (
-                    <span key={output} className="rounded-full bg-white/10 px-2 py-1 text-[11px] font-medium text-neutral-200 ring-1 ring-white/10">
-                      {output}
-                    </span>
+                      <span key={output} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-neutral-500 ring-1 ring-neutral-200 dark:bg-surface-900 dark:text-neutral-300 dark:ring-white/10">
+                        {output}
+                      </span>
                     ))}
                   </span>
                 </button>
@@ -540,14 +537,14 @@ export function VideoWorkstationPage() {
 
       <section
         data-testid="video-action-panel"
-        className="rounded-[28px] border border-cyan-300/25 bg-cyan-300/[0.08] p-5"
+        className="glass-panel rounded-2xl border dark:border-cyan-300/30 border-cyan-300/35 bg-cyan-300/[0.08] p-5 dark:border-cyan-300/30 dark:bg-cyan-300/[0.08]"
       >
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300 dark:text-cyan-300">
               Video flow
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-white">
+            <h2 className="mt-2 text-xl font-semibold text-neutral-950 dark:text-white">
               ショット順、尺、CTAを決めて、生成指示かCanvas仕上げへ進む
             </h2>
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
@@ -556,9 +553,13 @@ export function VideoWorkstationPage() {
                 { label: '比率', value: aspectRatio },
                 { label: '素材', value: materialReference.imageUrl ? '参照あり' : '参照なしでも開始可' },
               ].map((item) => (
-                  <div key={item.label} data-testid="video-readiness-item" className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm backdrop-blur-sm">
-                  <p className="text-xs font-semibold text-neutral-400">{item.label}</p>
-                  <p className="mt-1 font-semibold text-white">{item.value}</p>
+                <div
+                  key={item.label}
+                  data-testid="video-readiness-item"
+                  className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm"
+                >
+                  <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{item.label}</p>
+                  <p className="mt-1 font-semibold text-neutral-900 dark:text-white">{item.value}</p>
                 </div>
               ))}
             </div>
@@ -566,7 +567,7 @@ export function VideoWorkstationPage() {
           <div data-testid="video-next-actions" className="grid gap-2">
             <Link
               to={directVideoGenerationHref}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200 backdrop-blur-sm"
+              className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
             >
               <Film className="h-4 w-4" />
               生成指示へ送る
@@ -576,14 +577,14 @@ export function VideoWorkstationPage() {
               type="button"
               onClick={handoffToCanvas}
               disabled={!currentBrand}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 backdrop-blur-sm"
+              className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               Canvasへ保存して構成する
             </button>
             <Link
               to="/gallery"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white backdrop-blur-sm"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white/80 px-4 py-2.5 text-sm font-semibold text-neutral-800 transition hover:bg-white dark:border-white/10 dark:bg-surface-900/70 dark:text-neutral-100"
             >
               Galleryで素材を見る
             </Link>
@@ -592,7 +593,7 @@ export function VideoWorkstationPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm lg:col-span-2">
+        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <MaterialWorkbench
             title="動画素材作業台"
             description="商品カット、モデル動画の静止画、ロゴ、字幕カードを置き、どのショットレイヤーへ使うかを先に決めます。"
@@ -605,67 +606,67 @@ export function VideoWorkstationPage() {
             placementOptions={['1カット目', '2カット目', '3カット目', 'エンドカード', '全ショット共通']}
           />
         </div>
-        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm lg:col-span-2">
-          <h2 className="text-lg font-semibold text-white">素材と尺を整える</h2>
-          <p className="mt-1 text-sm leading-6 text-neutral-400">
+        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
+          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">素材と尺を整える</h2>
+          <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
             選んだ動画レーンをもとに、素材ファイル、字幕CTA、ショット順だけを調整します。
           </p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <label className="text-sm font-semibold text-white">
+            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               尺
               <input value={duration} onChange={(event) => setDuration(event.target.value)} className={fieldClass} />
             </label>
-              <label className="text-sm font-semibold text-white">
+            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               比率
               <input value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value)} className={fieldClass} />
             </label>
-              <label className="text-sm font-semibold text-white md:col-span-2">
+            <label className="text-sm font-semibold text-neutral-900 dark:text-white md:col-span-2">
               ショット構成
               <textarea value={shotPlan} onChange={(event) => setShotPlan(event.target.value)} rows={3} className={fieldClass} />
             </label>
-              <label className="text-sm font-semibold text-white">
+            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               字幕CTA
               <input value={subtitleCta} onChange={(event) => setSubtitleCta(event.target.value)} className={fieldClass} />
             </label>
-              <label className="text-sm font-semibold text-white">
+            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               素材
               <input value={materials} onChange={(event) => setMaterials(event.target.value)} className={fieldClass} />
             </label>
           </div>
         </div>
-        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm lg:col-span-2">
+        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="text-lg font-semibold text-white">Storyboardプレビュー</h2>
-            <p className="text-sm text-neutral-400">{selectedStoryboard.label} / {selectedStoryboard.motionSignature}</p>
+            <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">Storyboardプレビュー</h2>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">{selectedStoryboard.label} / {selectedStoryboard.motionSignature}</p>
           </div>
           <div className="mt-4 grid gap-4 xl:grid-cols-[420px_1fr]">
             <img
               src={previewImageUrl}
               alt="Video storyboard preview"
               data-testid="video-storyboard-preview-image"
-              className="aspect-[3/2] w-full rounded-2xl border border-white/10 bg-neutral-900 object-cover"
+              className="aspect-[3/2] w-full rounded-2xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
             />
             <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1">
-              <div className="rounded-xl bg-white/[0.04] p-3 backdrop-blur-sm">
+              <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Motion</p>
-                <p className="mt-1 text-sm leading-6 text-white">{selectedStoryboard.motion}</p>
+                <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{selectedStoryboard.motion}</p>
               </div>
-              <div className="rounded-xl bg-white/[0.04] p-3 backdrop-blur-sm">
+              <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Framing</p>
-                <p className="mt-1 text-sm leading-6 text-white">{selectedStoryboard.framing}</p>
+                <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{selectedStoryboard.framing}</p>
               </div>
-              <div className="rounded-xl bg-white/[0.04] p-3 backdrop-blur-sm">
+              <div className="rounded-xl bg-white/60 p-3 dark:bg-surface-900/50">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Output</p>
-                <p className="mt-1 text-sm leading-6 text-white">{(storyboardOutputLabels[selectedStoryboard.id] ?? []).join(' / ')}</p>
+                <p className="mt-1 text-sm leading-6 text-neutral-700 dark:text-neutral-200">{(storyboardOutputLabels[selectedStoryboard.id] ?? []).join(' / ')}</p>
               </div>
             </div>
           </div>
-          <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
+          <div className="mt-4 rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40">
             <div className="grid gap-3 md:grid-cols-4">
               {shotSteps.slice(0, 4).map((step, index) => {
                 const shotVisual = getShotVisual(step, index);
                 return (
-                  <div key={`${step}-${index}`} className="rounded-xl border border-white/10 bg-neutral-950 p-4 backdrop-blur-sm">
+                  <div key={`${step}-${index}`} className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-white/10 dark:bg-surface-900/70">
                     <div
                       data-testid="video-shot-preview-card"
                       data-shot-tone={shotVisual.tone}
@@ -678,11 +679,11 @@ export function VideoWorkstationPage() {
                               ? 'bg-emerald-50 text-emerald-950 dark:bg-emerald-950/35 dark:text-emerald-100'
                               : shotVisual.tone === 'dark'
                                 ? 'bg-neutral-950 text-white dark:bg-black'
-                                : 'bg-neutral-800 text-neutral-100'
+                                : 'bg-surface-100 text-neutral-800 dark:bg-surface-800 dark:text-neutral-100'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-neutral-200">
+                        <span className="rounded-full bg-white/75 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-neutral-700 dark:bg-white/15 dark:text-white">
                           {String(index + 1).padStart(2, '0')}
                         </span>
                         <Film className="h-4 w-4 opacity-75" />
@@ -697,39 +698,39 @@ export function VideoWorkstationPage() {
                       </div>
                     </div>
                     <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-neutral-400">Shot {index + 1}</p>
-                    <p className="mt-1 text-sm font-semibold leading-6 text-white">{step}</p>
+                    <p className="mt-1 text-sm font-semibold leading-6 text-neutral-800 dark:text-neutral-100">{step}</p>
                   </div>
                 );
               })}
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <div className="rounded-xl bg-white/[0.04] p-3 backdrop-blur-sm">
+              <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-900/60">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">字幕CTA</p>
-                <p className="mt-1 text-sm text-white">{subtitleCta}</p>
+                <p className="mt-1 text-sm text-neutral-700 dark:text-neutral-200">{subtitleCta}</p>
               </div>
-              <div className="rounded-xl bg-white/[0.04] p-3 backdrop-blur-sm">
+              <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-900/60">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">素材</p>
-                <p className="mt-1 text-sm text-white">{materials}</p>
+                <p className="mt-1 text-sm text-neutral-700 dark:text-neutral-200">{materials}</p>
               </div>
-              <div className="rounded-xl bg-white/[0.04] p-3 backdrop-blur-sm">
+              <div className="rounded-xl bg-surface-50 p-3 dark:bg-surface-900/60">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">次に行く場所</p>
-                <p className="mt-1 text-sm text-white">Canvas / 生成指示へ handoff</p>
+                <p className="mt-1 text-sm text-neutral-700 dark:text-neutral-200">Canvas / 生成指示へ handoff</p>
               </div>
             </div>
           </div>
         </div>
-        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm">
-          <h2 className="text-lg font-semibold text-white">ローカル進捗</h2>
-          <p className="mt-2 text-sm text-neutral-400">{activeChoice} / {progress}%</p>
-          <div className="mt-4 h-2 rounded-full bg-white/10">
+        <div className="glass-panel rounded-2xl p-5">
+          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">ローカル進捗</h2>
+          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{activeChoice} / {progress}%</p>
+          <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
             <div className="h-full rounded-full bg-cyan-300" style={{ width: `${progress}%` }} />
           </div>
         </div>
-        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm">
-          <h2 className="text-lg font-semibold text-white">履歴</h2>
+        <div className="glass-panel rounded-2xl p-5">
+          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">履歴</h2>
           <div className="mt-4 space-y-3">
             {history.map((item) => (
-              <div key={item.id} className="rounded-xl bg-white/[0.04] p-3 text-sm text-neutral-200">
+              <div key={item.id} className="rounded-xl bg-white/60 p-3 text-sm text-neutral-700 dark:bg-surface-900/50 dark:text-neutral-300">
                 {item.label}
               </div>
             ))}

@@ -555,10 +555,10 @@ export function GalleryPage() {
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
         >
           <div>
-            <h1 className="mb-1 text-2xl font-display font-semibold text-white">
+            <h1 className="text-2xl font-display font-semibold text-neutral-900 dark:text-white mb-1">
               ギャラリー
             </h1>
-            <p className="text-neutral-400">
+            <p className="text-neutral-600 dark:text-neutral-400">
               {images.length}枚の画像
             </p>
           </div>
@@ -577,16 +577,16 @@ export function GalleryPage() {
             />
 
             {/* Grid Size Toggle */}
-            <div className="flex items-center rounded-lg border border-white/10 bg-white/[0.04] p-1 backdrop-blur-sm">
+            <div className="flex items-center bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200 dark:border-neutral-700 rounded-lg p-1">
               <button
                 onClick={() => setGridSize('large')}
-                className={`rounded p-1.5 transition-colors ${gridSize === 'large' ? 'bg-cyan-300 text-neutral-950' : 'text-neutral-400 hover:text-white'}`}
+                className={`p-1.5 rounded transition-colors ${gridSize === 'large' ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300' : 'text-neutral-400 hover:text-neutral-600'}`}
               >
                 <Grid className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setGridSize('small')}
-                className={`rounded p-1.5 transition-colors ${gridSize === 'small' ? 'bg-cyan-300 text-neutral-950' : 'text-neutral-400 hover:text-white'}`}
+                className={`p-1.5 rounded transition-colors ${gridSize === 'small' ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300' : 'text-neutral-400 hover:text-neutral-600'}`}
               >
                 <LayoutGrid className="w-4 h-4" />
               </button>
@@ -600,8 +600,8 @@ export function GalleryPage() {
               }}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectMode
-                ? 'bg-cyan-300 text-neutral-950'
-                  : 'border border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/40 hover:bg-white/[0.07]'
+                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300'
+                  : 'glass-panel text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800'
               }`}
             >
               {selectMode ? '選択解除' : '選択'}
@@ -610,11 +610,11 @@ export function GalleryPage() {
         </motion.div>
 
         {isLoading ? (
-          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-neutral-200 backdrop-blur-sm">
+          <div className="glass-panel mb-6 flex items-center gap-3 rounded-2xl p-5 text-neutral-700 dark:text-neutral-200">
             <div className="spinner h-5 w-5" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold">ギャラリーを読み込み中</p>
-              <p className="mt-1 text-xs text-neutral-400">
+              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                 {isLoadingStalled
                   ? '画像の読み込みに時間がかかっています。待ちながら次の作業へ進めます。'
                   : '保存済み画像とローカル成果物を確認しています。'}
@@ -624,13 +624,13 @@ export function GalleryPage() {
               <button
                 type="button"
                 onClick={fetchImages}
-                className="inline-flex rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10"
+                className="inline-flex rounded-lg border border-primary-300 px-3 py-1.5 text-xs font-semibold text-primary-700 transition hover:bg-primary-50 dark:border-primary-400/40 dark:text-primary-100 dark:hover:bg-primary-400/10"
               >
                 再読み込み
               </button>
               <Link
                 to="/generate"
-                className="inline-flex rounded-lg bg-cyan-300 px-3 py-1.5 text-xs font-semibold text-neutral-950 transition hover:bg-cyan-200"
+                className="inline-flex rounded-lg bg-primary-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-400"
               >
                 新しく生成
               </Link>
@@ -639,13 +639,13 @@ export function GalleryPage() {
         ) : null}
 
         {loadWarning && !isLoading ? (
-          <div className="mb-6 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-4 text-sm text-amber-100">
+          <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p>{loadWarning}</p>
               <button
                 type="button"
                 onClick={fetchImages}
-                className="inline-flex w-fit items-center rounded-lg border border-amber-300/30 px-3 py-1.5 text-xs font-semibold transition hover:bg-amber-300/10"
+                className="inline-flex w-fit items-center rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold transition hover:bg-amber-100 dark:border-amber-400/40 dark:hover:bg-amber-400/10"
               >
                 再読み込み
               </button>
@@ -660,32 +660,32 @@ export function GalleryPage() {
               setSelectMode(true);
               setSelectedIds(new Set());
             }}
-            className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left shadow-sm transition hover:border-cyan-300/40 hover:bg-white/[0.07] backdrop-blur-sm"
+            className="rounded-2xl border border-neutral-200 bg-white/70 p-4 text-left shadow-sm transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-neutral-900/55 dark:hover:border-primary-500/70"
           >
-            <span className="flex items-center gap-2 text-sm font-semibold text-white">
-              <CheckSquare className="h-4 w-4 text-cyan-300" />
+            <span className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+              <CheckSquare className="h-4 w-4 text-primary-500" />
               成果物を選ぶ
             </span>
-            <p className="mt-2 text-xs leading-5 text-neutral-400">
+            <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
               複数画像を選択して、一括ダウンロードや整理に進みます。
             </p>
-            <span className="mt-3 inline-flex rounded-full bg-cyan-300/10 px-2.5 py-1 text-xs font-semibold text-cyan-100">
+            <span className="mt-3 inline-flex rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-400/10 dark:text-primary-200">
               {selectedIds.size}枚選択中
             </span>
           </button>
 
           <Link
             to="/canvas/new"
-            className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left shadow-sm transition hover:border-cyan-300/40 hover:bg-white/[0.07] backdrop-blur-sm"
+            className="rounded-2xl border border-neutral-200 bg-white/70 p-4 text-left shadow-sm transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-neutral-900/55 dark:hover:border-primary-500/70"
           >
-            <span className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Sparkles className="h-4 w-4 text-cyan-300" />
+            <span className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+              <Sparkles className="h-4 w-4 text-primary-500" />
               Canvasで再編集
             </span>
-            <p className="mt-2 text-xs leading-5 text-neutral-400">
+            <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
               保存済み画像を開いて、背景削除、色変更、派生生成へつなげます。
             </p>
-            <span className="mt-3 inline-flex rounded-full bg-white/[0.05] px-2.5 py-1 text-xs font-semibold text-neutral-300">
+            <span className="mt-3 inline-flex rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300">
               ローカル成果物 {localWorkspaceCount}件
             </span>
           </Link>
@@ -693,16 +693,16 @@ export function GalleryPage() {
           <button
             type="button"
             onClick={() => setFilter('favorites')}
-            className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left shadow-sm transition hover:border-cyan-300/40 hover:bg-white/[0.07] backdrop-blur-sm"
+            className="rounded-2xl border border-neutral-200 bg-white/70 p-4 text-left shadow-sm transition hover:border-primary-300 hover:bg-white dark:border-white/10 dark:bg-neutral-900/55 dark:hover:border-primary-500/70"
           >
-            <span className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Heart className="h-4 w-4 text-cyan-300" />
+            <span className="flex items-center gap-2 text-sm font-semibold text-neutral-900 dark:text-white">
+              <Heart className="h-4 w-4 text-primary-500" />
               採用候補を見る
             </span>
-            <p className="mt-2 text-xs leading-5 text-neutral-400">
+            <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
               お気に入りにした画像だけを絞り込み、共有やダウンロードへ進みます。
             </p>
-            <span className="mt-3 inline-flex rounded-full bg-cyan-300/10 px-2.5 py-1 text-xs font-semibold text-cyan-100">
+            <span className="mt-3 inline-flex rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-400/10 dark:text-primary-200">
               お気に入り {favoriteCount}件
             </span>
           </button>
@@ -717,14 +717,20 @@ export function GalleryPage() {
               exit={{ opacity: 0, height: 0 }}
               className="mb-6 overflow-hidden"
             >
-              <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
-                <span className="text-sm text-cyan-100">
+              <div className="flex items-center gap-3 p-4 bg-primary-50/50 dark:bg-primary-900/20 backdrop-blur-sm border border-primary-100 dark:border-primary-800/30 rounded-xl">
+                <span className="text-sm text-primary-700 dark:text-primary-300">
                   {selectedIds.size}枚選択中
                 </span>
-                <button onClick={selectAll} className="text-sm text-cyan-300 hover:text-cyan-200">
+                <button
+                  onClick={selectAll}
+                  className="text-sm text-primary-600 hover:text-primary-700"
+                >
                   すべて選択
                 </button>
-                <button onClick={deselectAll} className="text-sm text-cyan-300 hover:text-cyan-200">
+                <button
+                  onClick={deselectAll}
+                  className="text-sm text-primary-600 hover:text-primary-700"
+                >
                   選択解除
                 </button>
                 <div className="flex-1" />
@@ -759,8 +765,8 @@ export function GalleryPage() {
               onClick={() => setFilter('all')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 filter === 'all'
-                  ? 'bg-cyan-300 text-neutral-950 shadow-sm'
-                  : 'hover:bg-white/[0.06] text-neutral-400'
+                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 shadow-sm'
+                  : 'hover:bg-white/50 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-400'
               }`}
             >
               すべて
@@ -769,8 +775,8 @@ export function GalleryPage() {
               onClick={() => setFilter('favorites')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
                 filter === 'favorites'
-                  ? 'bg-cyan-300 text-neutral-950 shadow-sm'
-                  : 'hover:bg-white/[0.06] text-neutral-400'
+                  ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 shadow-sm'
+                  : 'hover:bg-white/50 dark:hover:bg-white/5 text-neutral-600 dark:text-neutral-400'
               }`}
             >
               <Heart className="w-4 h-4" />
@@ -781,7 +787,7 @@ export function GalleryPage() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortType)}
-            className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-200 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-cyan-300/20"
+            className="px-3 py-2 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-600 dark:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="newest">新しい順</option>
             <option value="oldest">古い順</option>
@@ -808,8 +814,8 @@ export function GalleryPage() {
                     exit={{ opacity: 0, scale: 0.8 }}
                     transition={{ duration: 0.3 }}
                     key={image.id}
-                    className={`group relative aspect-square overflow-hidden rounded-xl bg-white/[0.04] cursor-pointer transition-all shadow-sm hover:shadow-lg backdrop-blur-sm ${
-                      selectMode && selectedIds.has(image.id) ? 'ring-2 ring-cyan-300 ring-offset-2 ring-offset-[#050607]' : 'hover:ring-2 hover:ring-cyan-300'
+                    className={`group relative aspect-square rounded-xl overflow-hidden bg-white dark:bg-neutral-800 cursor-pointer transition-all shadow-sm hover:shadow-lg ${
+                      selectMode && selectedIds.has(image.id) ? 'ring-2 ring-primary-500 ring-offset-2' : 'hover:ring-2 hover:ring-primary-500'
                     }`}
                     onClick={() => selectMode ? toggleSelectImage(image.id) : setSelectedImage(image)}
                   >
@@ -824,14 +830,14 @@ export function GalleryPage() {
                           const parent = e.currentTarget.parentElement;
                           if (parent) {
                             const errorDiv = document.createElement('div');
-                            errorDiv.className = 'w-full h-full flex items-center justify-center bg-neutral-950/70';
+                            errorDiv.className = 'w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700';
                             errorDiv.innerHTML = '<span class="text-neutral-400 text-sm">読込失敗</span>';
                             parent.appendChild(errorDiv);
                           }
                         }}
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-neutral-950/70">
+                      <div className="w-full h-full flex items-center justify-center bg-neutral-200 dark:bg-neutral-700">
                         <span className="text-neutral-400 text-sm">プレビュー準備中</span>
                       </div>
                     )}
@@ -849,7 +855,7 @@ export function GalleryPage() {
 
                     {/* Favorite Badge */}
                     {image.is_favorite && !selectMode && (
-                      <div className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-950/80 backdrop-blur-sm shadow-sm">
+                      <div className="absolute top-2 right-2 w-7 h-7 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm">
                         <Heart className="w-4 h-4 text-red-500 fill-current" />
                       </div>
                     )}
@@ -879,13 +885,13 @@ export function GalleryPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="rounded-2xl border border-white/10 bg-white/[0.04] p-12 text-center backdrop-blur-sm"
+            className="glass-panel rounded-2xl p-12 text-center"
           >
             <Image className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-neutral-700 dark:text-neutral-200 mb-2">
               {filter === 'favorites' ? 'お気に入りはまだありません' : 'まだ画像はありません'}
             </h3>
-            <p className="mb-6 text-neutral-400">
+            <p className="text-neutral-500 dark:text-neutral-400 mb-6">
               {filter === 'favorites'
                 ? 'ハートアイコンをクリックしてお気に入りに追加しましょう'
                 : '画像を生成すると、ここに表示されます'
@@ -1052,7 +1058,7 @@ export function GalleryPage() {
                     <div className="grid grid-cols-3 gap-2">
                       <button
                         onClick={() => handleDownload(selectedImage, 'png')}
-                        className="rounded-lg bg-cyan-300 px-3 py-2 text-xs font-medium text-neutral-950 transition-colors hover:bg-cyan-200"
+                        className="px-3 py-2 bg-primary-500 text-white rounded-lg text-xs font-medium hover:bg-primary-600 transition-colors"
                       >
                         PNG
                       </button>
@@ -1093,7 +1099,7 @@ export function GalleryPage() {
                     {selectedGenerationIntent?.href && (
                       <Link
                         to={selectedGenerationIntent.href}
-                        className="flex w-full items-center gap-3 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition-all hover:bg-cyan-200"
+                        className="w-full flex items-center gap-3 px-4 py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-sm font-semibold transition-all"
                       >
                         <Sparkles className="w-4 h-4" />
                         この内容で生成

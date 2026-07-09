@@ -390,17 +390,14 @@ export function LabPage() {
   };
 
   return (
-    <div className="space-y-6 text-white">
-      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft sm:p-7">
+    <div className="space-y-6">
+      <section className="glass-panel rounded-2xl p-5 sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">
-              LIGHTCHAIN / LAB
-            </p>
-            <h1 className="mt-2 font-display text-3xl font-semibold text-white">
+            <h1 className="font-display text-3xl font-semibold text-neutral-950 dark:text-white">
               ウェアデザインラボ
             </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
               服の方向性、素材感、採用候補を比べて、生成指示かCanvasへそのまま渡す場所です。
             </p>
           </div>
@@ -408,7 +405,7 @@ export function LabPage() {
             type="button"
             onClick={handoffToCanvas}
             disabled={!currentBrand}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             保存してCanvasへ
@@ -423,7 +420,7 @@ export function LabPage() {
               onClick={() => recordProgress(choice)}
               className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
                 activeChoice === choice
-                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
                   : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
               }`}
             >
@@ -435,8 +432,8 @@ export function LabPage() {
         <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-white">実験レーンを選ぶ</h2>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-400">
+              <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">実験レーンを選ぶ</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
                 候補を見比べながら、仮説・評価軸・採用判断を先に選びます。
               </p>
             </div>
@@ -458,7 +455,7 @@ export function LabPage() {
                   aria-pressed={isSelected}
                   className={`rounded-2xl border p-4 text-left transition ${
                     isSelected
-                      ? 'border-cyan-300 bg-cyan-300 text-neutral-950 ring-2 ring-cyan-300/20'
+                      ? 'border-cyan-300 bg-cyan-300 text-neutral-950 ring-2 ring-cyan-300/20 dark:border-cyan-300 dark:bg-cyan-300 dark:ring-cyan-300/20'
                       : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
                   }`}
                 >
@@ -469,16 +466,16 @@ export function LabPage() {
                   }`}>
                     <Icon className="h-5 w-5" />
                   </span>
-                    <span className="mt-3 flex items-center justify-between gap-3 text-sm font-semibold text-white">
+                  <span className="mt-3 flex items-center justify-between gap-3 text-sm font-semibold text-neutral-950 dark:text-white">
                     {experiment.label}
                     {isSelected && <Check className="h-4 w-4 text-cyan-300 dark:text-cyan-300" />}
                   </span>
-                    <span className="mt-2 block text-sm leading-6 text-neutral-400">
+                  <span className="mt-2 block text-sm leading-6 text-neutral-500 dark:text-neutral-400">
                     {experiment.decision}
                   </span>
                   <span className="mt-3 flex flex-wrap gap-1.5">
                     {(experimentOutputLabels[experiment.id] ?? []).map((output) => (
-                      <span key={output} className="rounded-full bg-white/10 px-2 py-1 text-[11px] font-medium text-neutral-200 ring-1 ring-white/10">
+                      <span key={output} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-neutral-500 ring-1 ring-neutral-200 dark:bg-surface-900 dark:text-neutral-300 dark:ring-white/10">
                         {output}
                       </span>
                     ))}
@@ -492,13 +489,13 @@ export function LabPage() {
 
       <section
         data-testid="lab-action-panel"
-        className="grid gap-4 rounded-[28px] border border-cyan-300/25 bg-cyan-300/[0.08] p-5 lg:grid-cols-[minmax(0,1fr)_auto]"
+        className="grid gap-4 rounded-2xl border border-cyan-300/35 bg-cyan-300/[0.08] p-5 dark:border-cyan-300/30 dark:bg-cyan-300/[0.08] lg:grid-cols-[minmax(0,1fr)_auto]"
       >
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300 dark:text-cyan-300">
             Wear Design Lab
           </p>
-          <h2 className="mt-2 text-lg font-semibold text-white">
+          <h2 className="mt-2 text-lg font-semibold text-neutral-950 dark:text-white">
             まず素材や候補を置き、良い方向だけを生成へ進める
           </h2>
           <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -506,10 +503,10 @@ export function LabPage() {
               <div
                 key={item.label}
                 data-testid="lab-readiness-item"
-                className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm"
+                className="rounded-xl border border-white/70 bg-white/70 p-3 text-sm dark:border-white/10 dark:bg-surface-900/60"
               >
-                <p className="font-semibold text-white">{item.label}</p>
-                <p className="mt-1 leading-5 text-neutral-300">{item.detail}</p>
+                <p className="font-semibold text-neutral-950 dark:text-white">{item.label}</p>
+                <p className="mt-1 leading-5 text-neutral-600 dark:text-neutral-300">{item.detail}</p>
               </div>
             ))}
           </div>
@@ -528,7 +525,7 @@ export function LabPage() {
               sourceResumePath: workspaceSourceConfig.lab.resumePath,
               sourceMode: 'local-workflow-intake',
             })}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
+            className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
           >
             <Sparkles className="h-4 w-4" />
             ラボで試す
@@ -537,7 +534,7 @@ export function LabPage() {
             type="button"
             onClick={handoffToCanvas}
             disabled={!currentBrand}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Layers3 className="h-4 w-4" />
             Canvasへ保存
@@ -550,7 +547,7 @@ export function LabPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft lg:col-span-2">
+        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <MaterialWorkbench
             title="実験素材作業台"
             description="生成候補、物撮り素材、参考LOOKを置き、評価対象と比較レイヤーを視覚的に決めます。"
@@ -563,46 +560,46 @@ export function LabPage() {
             placementOptions={['評価左', '評価右', '中央比較', '採用枠', '再実験枠']}
           />
         </div>
-        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft lg:col-span-2">
-          <h2 className="text-lg font-semibold text-white">仮説と評価条件を整える</h2>
-          <p className="mt-1 text-sm leading-6 text-neutral-400">
+        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
+          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">仮説と評価条件を整える</h2>
+          <p className="mt-1 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
             選んだ実験レーンをもとに、仮説・プロンプト案・評価軸・採用候補だけを調整します。
           </p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <label className="text-sm font-semibold text-white">
+            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               仮説
               <textarea value={hypothesis} onChange={(event) => setHypothesis(event.target.value)} rows={3} className={fieldClass} />
             </label>
-            <label className="text-sm font-semibold text-white">
+            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               プロンプト案
               <textarea value={promptDraft} onChange={(event) => setPromptDraft(event.target.value)} rows={3} className={fieldClass} />
             </label>
-            <label className="text-sm font-semibold text-white">
+            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               評価軸
               <textarea value={evaluationAxis} onChange={(event) => setEvaluationAxis(event.target.value)} rows={3} className={fieldClass} />
             </label>
-            <label className="text-sm font-semibold text-white">
+            <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               採用候補
               <textarea value={candidate} onChange={(event) => setCandidate(event.target.value)} rows={3} className={fieldClass} />
             </label>
           </div>
         </div>
-        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
-          <h2 className="text-lg font-semibold text-white">ローカル進捗</h2>
-          <p className="mt-2 text-sm text-neutral-400">{activeChoice} / {progress}%</p>
-          <div className="mt-4 h-2 rounded-full bg-white/10">
+        <div className="glass-panel rounded-2xl p-5">
+          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">ローカル進捗</h2>
+          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{activeChoice} / {progress}%</p>
+          <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
             <div className="h-full rounded-full bg-cyan-300" style={{ width: `${progress}%` }} />
           </div>
-          <p className="mt-4 text-sm font-semibold text-white">
+          <p className="mt-4 text-sm font-semibold text-neutral-900 dark:text-white">
             決定的スコア {selectedExperiment.score}
           </p>
-          <p className="mt-1 text-xs text-neutral-400">{selectedExperiment.scoreSignature}</p>
+          <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{selectedExperiment.scoreSignature}</p>
         </div>
-        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
-          <h2 className="text-lg font-semibold text-white">履歴</h2>
+        <div className="glass-panel rounded-2xl p-5">
+          <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">履歴</h2>
           <div className="mt-4 space-y-3">
             {history.map((item) => (
-              <div key={item.id} className="rounded-xl bg-white/[0.04] p-3 text-sm text-neutral-200">
+              <div key={item.id} className="rounded-xl bg-white/60 p-3 text-sm text-neutral-700 dark:bg-surface-900/50 dark:text-neutral-300">
                 {item.label}
               </div>
             ))}
@@ -611,10 +608,10 @@ export function LabPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft lg:col-span-2">
+        <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <div className="flex flex-col gap-1">
-            <h2 className="text-lg font-semibold text-white">評価プレビュー</h2>
-            <p className="text-sm text-neutral-400">{selectedExperiment.label} / score {selectedExperiment.score}</p>
+            <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">評価プレビュー</h2>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">{selectedExperiment.label} / score {selectedExperiment.score}</p>
           </div>
           <div className="mt-4 grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
             <figure className="lg:row-span-2">
@@ -622,38 +619,38 @@ export function LabPage() {
                 data-testid="lab-preview-image"
                 src={previewImageUrl}
                 alt="Lab evaluation preview"
-                className="aspect-[3/2] w-full rounded-2xl border border-white/10 bg-neutral-900 object-cover"
+                className="aspect-[3/2] w-full rounded-2xl border border-neutral-200 bg-white object-cover dark:border-white/10 dark:bg-surface-900"
               />
-              <figcaption className="mt-3 text-sm text-neutral-400">
+              <figcaption className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">
                 仮説、評価軸、採用候補、次アクションを生成前に確認するローカル評価プレビューです。
               </figcaption>
             </figure>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40">
               <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">決定的スコア</p>
               <div className="mt-3 flex items-end gap-2">
-                <span className="text-5xl font-semibold text-white">{selectedExperiment.score}</span>
+                <span className="text-5xl font-semibold text-neutral-950 dark:text-white">{selectedExperiment.score}</span>
                 <span className="pb-1 text-sm font-semibold text-neutral-400">/ 100</span>
               </div>
-              <div className="mt-4 h-2 rounded-full bg-white/10">
+              <div className="mt-4 h-2 rounded-full bg-surface-200 dark:bg-surface-800">
                 <div className="h-full rounded-full bg-cyan-300" style={{ width: `${selectedExperiment.score}%` }} />
               </div>
-              <p className="mt-3 text-xs text-neutral-400">{selectedExperiment.scoreSignature}</p>
+              <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">{selectedExperiment.scoreSignature}</p>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">採用判断</p>
-                <p className="mt-2 text-sm leading-6 text-white">{selectedExperiment.decision}</p>
+                <p className="mt-2 text-sm leading-6 text-neutral-800 dark:text-neutral-100">{selectedExperiment.decision}</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">注意点</p>
-                <p className="mt-2 text-sm leading-6 text-white">{selectedExperiment.risk}</p>
+                <p className="mt-2 text-sm leading-6 text-neutral-800 dark:text-neutral-100">{selectedExperiment.risk}</p>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 md:col-span-2">
+              <div className="rounded-2xl border border-neutral-200 bg-white/70 p-4 dark:border-white/10 dark:bg-surface-950/40 md:col-span-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">評価軸</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {axisItems.map((axis) => (
-                    <span key={axis} className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-neutral-200">
+                    <span key={axis} className="rounded-full bg-surface-100 px-3 py-1 text-xs font-medium text-neutral-600 dark:bg-surface-800 dark:text-neutral-300">
                       {axis}
                     </span>
                   ))}

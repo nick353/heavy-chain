@@ -30,7 +30,7 @@ export function Header() {
     <header className="w-full transition-all duration-500">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-12">
         <div className="flex h-16 items-center justify-between sm:h-24">
-          <Link to="/dashboard" className="group flex items-center gap-3 transition-transform duration-300 hover:scale-[1.02]">
+          <Link to="/" className="group flex items-center gap-3 transition-transform duration-300 hover:scale-[1.02]">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-300/10 text-xs font-semibold tracking-[0.28em] text-cyan-200">
               HC
             </span>

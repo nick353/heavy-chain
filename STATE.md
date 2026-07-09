@@ -1,19 +1,10 @@
 # Heavy Chain Current State
 
-Updated: 2026-07-09
+Updated: 2026-07-07
 
 g835_current_readback_refresh_g618_g620_h602_g619_20260708: 2026-07-08 の最新再実行で `G618/G620` は再び readback fail。`H602/G619` は未完了のまま。`release/10M` は fail クローズ状態として再反映。
 browser_group_hygiene_20260708: 今後の web 操作では、役目が終わったブラウザグループ/タブは必ず閉じてから終える。残グループを放置しない。
 browser_group_hygiene_exception_20260708: ただし、ユーザーが「そのタブは残しておいて」「最後に自分で進める」と明示したものだけは残す。他の終わったタブは閉じる。
-chrome_profile2_claim_recovery_20260709: 2026-07-09 の確認では、Chrome extension ブラウザは Profile 2 (Nicky) にあり、`openTabs()` に Heavy Chain の `/generate` タブが出た一方、`tabs.list()` は未 claim で空だった。今後は `tabs.list()` が空でも `browser.user.openTabs()` -> `browser.user.claimTab(tab.id)` -> `tabs.list()`/`tabs.get()` の順で復旧し、claim できる open tab があるのに browser unavailable と結論しない。
-chrome_profile2_live_readback_20260709: 実地確認で `openTabs()` から `1980889070` を claim し、`https://heavy-chain.zeabur.app/admin` と `https://heavy-chain.zeabur.app/generate` の両方を read-only で再読込できた。`/admin` では管理者ダッシュボードの本文が表示され、`/generate` では生成画面の準備メッセージが表示された。Profile2 の接続は「見えない」ではなく「未 claim の tab を回収すれば使える」状態だった。
-chrome_profile2_closed_tab_autorecover_20260709: その後、Profile2 を開き直した直後の about:blank から新しいタブを回収し、`https://heavy-chain.zeabur.app/generate` へ自動復旧できることも確認した。`/generate` へ戻れれば、そのまま `claimTab()` 後に `/admin` まで再接続できたため、閉じた状態も recoverable と判断する。
-chrome_profile2_recovery_checklist_20260709:
-- 1. まず `browser.user.openTabs()` を見る。
-- 2. Heavy Chain の tab があれば `browser.user.claimTab(tab)` する。
-- 3. tab が空でも `about:blank` から `https://heavy-chain.zeabur.app/generate` を開く。
-- 4. `/generate` が読めたら `claim/recover` を続けて `/admin` を確認する。
-- 5. `tabs.list()` が空だけでは unavailable と決めない。
 g835_current_continuation_refresh_20260708: 既存 artifact の再読込では `production monitor` は `Invalid Refresh Token: Already Used` と login redirect のまま、`G619` は consent/duration/evidence/scaffold 未達、`H602` は no-real-charge / transaction_or_entitlement_readback 未達。`release/10M` の残りは fail-close を維持し、次の安全な一手は read-only 監視復帰か G619/H602 の証跡補強に限定される。
 g835_current_readback_refresh_20260708_r2: 直近の再読込でも `g835-10m-completion-current-clean-r2/release-gate-summary.json` は `ok=false`、failed は `production monitor` / `production mass-market QA current` / `production Lightchain all-feature order previews` / `G618 scale ops baseline` / `G620 security operations` / `production H602 billing completion readback` / `git_dirty`。`git_dirty` の detail は `M STATE.md` と `?? recover_profile2_auth_tmp.mjs` のままで、`G619` は `g776-g619-beta-readiness-current-r2` で 3 セッションとも未達、`H602` は `g831-h602-production-completion-current-r1` で `transactionOrEntitlementReadback=null` / `verifiedNoRealChargeProofCount=null` / `liveProductionReadbackPerformed=false`。ここから閉じられる blocker は増えていない。
 git_dirty_current_classification_20260708: 直近の `git status --short` では worktree は clean で、`git_dirty` は現行ブロッカーではない。`STATE.md` の旧記述は履歴として残しつつ、今の停止点は readback fail 側にある。

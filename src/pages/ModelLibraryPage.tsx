@@ -488,7 +488,7 @@ export function ModelLibraryPage() {
             type="button"
             onClick={handoffToCanvas}
             disabled={!currentBrand}
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 backdrop-blur-sm"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             Canvasへ保存
@@ -501,7 +501,7 @@ export function ModelLibraryPage() {
               key={intent}
               type="button"
               onClick={() => recordProgress(intent)}
-              className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition backdrop-blur-sm ${
+              className={`rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
                 activeIntent === intent
                   ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
                   : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
@@ -516,7 +516,7 @@ export function ModelLibraryPage() {
               </span>
               <span className="mt-3 flex flex-wrap gap-1.5">
                 {intentMeta[intent].outputs.map((output) => (
-                  <span key={output} className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-neutral-200 backdrop-blur-sm">
+                  <span key={output} className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-neutral-200">
                     {output}
                   </span>
                 ))}
@@ -528,7 +528,7 @@ export function ModelLibraryPage() {
 
       <section
         data-testid="model-library-action-panel"
-        className="rounded-[28px] border border-cyan-300/25 bg-cyan-300/[0.08] p-5 shadow-soft backdrop-blur-sm"
+        className="rounded-[28px] border border-cyan-300/25 bg-cyan-300/[0.08] p-5 shadow-soft"
       >
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
           <div>
@@ -547,9 +547,9 @@ export function ModelLibraryPage() {
                 <div
                   key={item.label}
                   data-testid="model-library-readiness-item"
-                  className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm backdrop-blur-sm"
+                  className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm"
                 >
-                  <p className="text-xs font-semibold text-neutral-400">{item.label}</p>
+                  <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">{item.label}</p>
                   <p className="mt-1 font-semibold text-white">{item.value}</p>
                 </div>
               ))}
@@ -558,7 +558,7 @@ export function ModelLibraryPage() {
           <div data-testid="model-library-next-actions" className="grid gap-2">
             <Link
               to={directModelMatrixHref}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200 backdrop-blur-sm"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
             >
               <Sparkles className="h-4 w-4" />
               モデルマトリクスで生成
@@ -568,14 +568,14 @@ export function ModelLibraryPage() {
               type="button"
               onClick={handoffToCanvas}
               disabled={!currentBrand}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 backdrop-blur-sm"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               Canvasへ保存して重ねる
             </button>
             <Link
               to="/gallery"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white backdrop-blur-sm"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white"
             >
               Galleryで結果を見る
             </Link>
@@ -585,7 +585,7 @@ export function ModelLibraryPage() {
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-5">
-          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm">
+          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
             <div>
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -607,7 +607,7 @@ export function ModelLibraryPage() {
                       type="button"
                       aria-pressed={selected}
                       onClick={() => selectCandidate(candidate)}
-                      className={`rounded-xl border p-4 text-left text-sm transition backdrop-blur-sm ${
+                      className={`rounded-xl border p-4 text-left text-sm transition ${
                         selected
                           ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
                           : 'border-white/10 bg-white/[0.04] text-neutral-200 hover:border-cyan-300/50 hover:bg-white/[0.07]'
@@ -619,7 +619,7 @@ export function ModelLibraryPage() {
                       </span>
                       <span className="mt-3 flex flex-wrap gap-1.5">
                         {[candidate.ageGroup, candidate.skinTone, candidate.usage].map((item) => (
-                          <span key={item} className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-neutral-200 backdrop-blur-sm">
+                          <span key={item} className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-neutral-200">
                             {item}
                           </span>
                         ))}
@@ -633,7 +633,7 @@ export function ModelLibraryPage() {
             </div>
           </div>
 
-	          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm">
+	          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
 	            <div className="flex items-center gap-2">
 	              <SlidersHorizontal className="h-5 w-5 text-cyan-300" />
 	              <h2 className="text-lg font-semibold text-white">細部を調整</h2>
@@ -673,7 +673,7 @@ export function ModelLibraryPage() {
         </div>
 
         <aside className="space-y-5">
-          <figure className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm">
+          <figure className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
             <img
               src={previewImageUrl}
               alt="Model library candidate preview"
@@ -688,14 +688,14 @@ export function ModelLibraryPage() {
             </p>
           </figure>
 
-          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm">
+          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
               <Shirt className="h-5 w-5 text-cyan-300" />
               条件プレビュー
             </h2>
             <div className="mt-4 space-y-3">
               {selectedProfileRows.map((row) => (
-                <div key={row.label} className="rounded-xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur-sm">
+                <div key={row.label} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                   <p className="text-xs font-semibold text-neutral-400">{row.label}</p>
                   <p className="mt-1 text-sm leading-5 text-neutral-200">{row.value}</p>
                 </div>
@@ -703,7 +703,7 @@ export function ModelLibraryPage() {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {selectedCandidate.modelMatrixBodyTypes.map((item) => (
-                <span key={item} className="rounded-full bg-cyan-300/15 px-2.5 py-1 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-300/30 backdrop-blur-sm">
+                <span key={item} className="rounded-full bg-cyan-300/15 px-2.5 py-1 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-300/30">
                   {item}
                 </span>
               ))}
@@ -715,7 +715,7 @@ export function ModelLibraryPage() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft backdrop-blur-sm">
+          <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
             <h2 className="text-lg font-semibold text-white">保存状態</h2>
             <p className="mt-2 text-sm text-neutral-400">{activeIntent} / {progress}%</p>
             <div className="mt-4 h-2 rounded-full bg-white/10">
@@ -723,7 +723,7 @@ export function ModelLibraryPage() {
             </div>
             <div className="mt-4 space-y-2">
               {history.map((item) => (
-                <div key={item.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm text-neutral-200 backdrop-blur-sm">
+                <div key={item.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm text-neutral-200">
                   {item.label}
                 </div>
               ))}
