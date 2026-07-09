@@ -180,12 +180,9 @@ export function InfiniteCanvas({
         loadingImageIds.add(obj.id);
         startedLoadingIds.push(obj.id);
         const preloadedImageKey = obj.metadata?.galleryImageUrl || obj.src;
-        const galleryStorageKey = obj.metadata?.galleryStoragePath;
-        const preloadedImage = (galleryStorageKey && preloadedImages?.get(galleryStorageKey)) || preloadedImages?.get(preloadedImageKey);
+        const preloadedImage = preloadedImages?.get(preloadedImageKey);
         if (preloadedImage) {
-          loadedImageSourcesRef.current.set(obj.src, preloadedImage);
-          if (galleryStorageKey) loadedImageSourcesRef.current.set(galleryStorageKey, preloadedImage);
-          if (obj.metadata?.galleryImageUrl) loadedImageSourcesRef.current.set(obj.metadata.galleryImageUrl, preloadedImage);
+          loadedImageSourcesRef.current.set(preloadedImageKey, preloadedImage);
           setLoadedImages((prev) => {
             const next = new Map(prev);
             next.set(obj.id, preloadedImage);
@@ -198,7 +195,10 @@ export function InfiniteCanvas({
           obj.metadata?.galleryImageUrl,
           obj.src,
         ].filter((source): source is string => Boolean(source))));
-        const cachedSource = sourceCandidates.find((source) => loadedImageSourcesRef.current.has(source));
+        const primarySource = sourceCandidates[0];
+        const cachedSource = primarySource
+          ? (loadedImageSourcesRef.current.has(primarySource) ? primarySource : undefined)
+          : sourceCandidates.find((source) => loadedImageSourcesRef.current.has(source));
         const cachedImage = cachedSource ? loadedImageSourcesRef.current.get(cachedSource) : undefined;
         const imagePromise = cachedImage
           ? Promise.resolve(cachedImage)
@@ -212,7 +212,7 @@ export function InfiniteCanvas({
                 const img = await (existingLoad || loadImage(source).finally(() => {
                   loadingImageSourcesRef.current.delete(source);
                 }));
-                sourceCandidates.forEach((candidate) => loadedImageSourcesRef.current.set(candidate, img));
+                loadedImageSourcesRef.current.set(source, img);
                 return img;
               } catch (error) {
                 lastError = error;
@@ -221,7 +221,6 @@ export function InfiniteCanvas({
             throw lastError || new Error('Canvas image failed to load');
           })();
         if (!cachedImage) {
-          const primarySource = sourceCandidates[0];
           if (primarySource && !loadingImageSourcesRef.current.has(primarySource)) {
             loadingImageSourcesRef.current.set(primarySource, imagePromise);
           }
