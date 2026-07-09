@@ -611,12 +611,14 @@ export function CanvasEditorPage() {
       throw new Error('Canvas画面が閉じられたため配置を中止しました');
     }
     const isGalleryImport = metadata?.source === 'gallery-selector';
+    const imageWidth = Math.max(1, img.naturalWidth || img.width || 1);
+    const imageHeight = Math.max(1, img.naturalHeight || img.height || 1);
     const newId = addObject({
       type: 'image',
-      x: isGalleryImport ? Math.max(24, canvasSize.width / 2 - Math.min(img.width, 300) / 2) : 100 + Math.random() * 300,
-      y: isGalleryImport ? Math.max(24, canvasSize.height / 2 - Math.min(img.height, 300) / 2) : 100 + Math.random() * 200,
-      width: Math.min(img.width, 300),
-      height: Math.min(img.height, 300),
+      x: isGalleryImport ? Math.max(24, canvasSize.width / 2 - Math.min(imageWidth, 300) / 2) : 100 + Math.random() * 300,
+      y: isGalleryImport ? Math.max(24, canvasSize.height / 2 - Math.min(imageHeight, 300) / 2) : 100 + Math.random() * 200,
+      width: Math.min(imageWidth, 300),
+      height: Math.min(imageHeight, 300),
       rotation: 0,
       scaleX: 1,
       scaleY: 1,
