@@ -560,6 +560,38 @@ export function CanvasEditorPage() {
     return createLoader(true).catch(() => createLoader(false));
   }, []);
 
+  const convertImageUrlToDataUrl = useCallback((imageUrl: string) => {
+    const source = imageUrl.trim();
+    if (!source || source.startsWith('data:')) {
+      return Promise.resolve(source);
+    }
+
+    return new Promise<string>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', source, true);
+      xhr.responseType = 'blob';
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300 || !xhr.response) {
+          reject(new Error('Gallery画像の取得に失敗しました'));
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string' && reader.result) {
+            resolve(reader.result);
+            return;
+          }
+          reject(new Error('Gallery画像の変換に失敗しました'));
+        };
+        reader.onerror = () => reject(new Error('Gallery画像の変換に失敗しました'));
+        reader.readAsDataURL(xhr.response);
+      };
+      xhr.onerror = () => reject(new Error('Gallery画像の取得に失敗しました'));
+      xhr.send();
+    });
+  }, []);
+
   const addImageToCanvas = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
     const img = await loadCanvasImage(imageUrl);
     if (!isMountedRef.current) {
@@ -597,26 +629,11 @@ export function CanvasEditorPage() {
     });
   }, [addImageToCanvas]);
 
-  const handleSelectGalleryImage = async (imageUrl: string, imageId: string) => {
+  const handleSelectGalleryImage = useCallback(async (imageUrl: string, imageId: string) => {
     try {
       let canvasSource = imageUrl;
       try {
-        const response = await fetch(imageUrl);
-        if (response.ok) {
-          const blob = await response.blob();
-          canvasSource = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              if (typeof reader.result === 'string') {
-                resolve(reader.result);
-                return;
-              }
-              reject(new Error('Gallery画像の変換に失敗しました'));
-            };
-            reader.onerror = () => reject(new Error('Gallery画像の変換に失敗しました'));
-            reader.readAsDataURL(blob);
-          });
-        }
+        canvasSource = await convertImageUrlToDataUrl(imageUrl);
       } catch {
         // Fall back to the original URL below.
       }
@@ -633,7 +650,7 @@ export function CanvasEditorPage() {
       console.error('Canvas gallery image load error:', error);
       toast.error(error?.message || 'Gallery画像をCanvasへ配置できませんでした');
     }
-  };
+  }, [addImageToCanvas, convertImageUrlToDataUrl]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
