@@ -599,7 +599,19 @@ export function CanvasEditorPage() {
 
   const handleSelectGalleryImage = async (imageUrl: string, imageId: string) => {
     try {
-      await addImageToCanvas(imageUrl, 'Gallery素材', {
+      let canvasSource = imageUrl;
+      try {
+        const response = await fetch(imageUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          canvasSource = URL.createObjectURL(blob);
+          window.setTimeout(() => URL.revokeObjectURL(canvasSource), 60_000);
+        }
+      } catch {
+        // Fall back to the original URL below.
+      }
+
+      await addImageToCanvas(canvasSource, 'Gallery素材', {
         feature: 'gallery-import',
         generation: 0,
         source: 'gallery-selector',
