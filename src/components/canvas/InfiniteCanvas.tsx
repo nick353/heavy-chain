@@ -183,7 +183,11 @@ export function InfiniteCanvas({
         const preloadedImage = preloadedImages?.get(preloadedImageKey);
         if (preloadedImage) {
           loadedImageSourcesRef.current.set(obj.src, preloadedImage);
-          queueLoadedImage(obj.id, preloadedImage);
+          setLoadedImages((prev) => {
+            const next = new Map(prev);
+            next.set(obj.id, preloadedImage);
+            return next;
+          });
           return;
         }
         const source = (
