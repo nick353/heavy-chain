@@ -535,6 +535,7 @@ export function CanvasEditorPage() {
     const resolvedSource = await resolveGeneratedImageUrl(source);
     const loadDirect = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new window.Image();
+      console.debug('Canvas image direct load start', { source, resolvedSource: src });
       let settled = false;
       const timeoutId = window.setTimeout(() => {
         if (settled) return;
@@ -542,6 +543,7 @@ export function CanvasEditorPage() {
         img.onload = null;
         img.onerror = null;
         img.src = '';
+        console.warn('Canvas image direct load timeout', { source, resolvedSource: src });
         reject(new Error('画像の読み込みがタイムアウトしました'));
       }, 8000);
       const cleanup = () => {
@@ -555,8 +557,14 @@ export function CanvasEditorPage() {
         cleanup();
         callback();
       };
-      img.onload = () => finish(() => resolve(img));
-      img.onerror = () => finish(() => reject(new Error('画像を読み込めませんでした')));
+      img.onload = () => {
+        console.debug('Canvas image direct load success', { source, resolvedSource: src, width: img.naturalWidth, height: img.naturalHeight });
+        finish(() => resolve(img));
+      };
+      img.onerror = () => {
+        console.warn('Canvas image direct load error', { source, resolvedSource: src });
+        finish(() => reject(new Error('画像を読み込めませんでした')));
+      };
       img.src = src;
     });
 
@@ -565,8 +573,10 @@ export function CanvasEditorPage() {
         return loadDirect(resolvedSource);
       }
 
+      console.debug('Canvas image blob fallback start', { source, resolvedSource });
       const response = await fetch(resolvedSource);
       if (!response.ok) {
+        console.warn('Canvas image blob fallback fetch failed', { source, resolvedSource, status: response.status });
         throw new Error('画像を読み込めませんでした');
       }
 
@@ -574,6 +584,7 @@ export function CanvasEditorPage() {
       const objectUrl = window.URL.createObjectURL(blob);
 
       try {
+        console.debug('Canvas image blob fallback object URL', { source, resolvedSource, objectUrl });
         return await loadDirect(objectUrl);
       } finally {
         window.URL.revokeObjectURL(objectUrl);
@@ -584,7 +595,13 @@ export function CanvasEditorPage() {
       return loadDirect(resolvedSource);
     }
 
-    return loadDirect(resolvedSource).catch(() => loadViaBlob());
+    return loadDirect(resolvedSource).catch((error) => {
+      console.warn('Canvas image direct path failed, trying blob fallback', { source, resolvedSource, error: String(error) });
+      return loadViaBlob();
+    }).catch((error) => {
+      console.error('Canvas image load final failure', { source, resolvedSource, error: String(error) });
+      throw error;
+    });
   }, []);
 
   const addImageToCanvas = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
