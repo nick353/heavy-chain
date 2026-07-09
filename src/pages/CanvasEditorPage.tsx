@@ -533,9 +533,36 @@ export function CanvasEditorPage() {
     }
 
     const resolvedSource = await resolveGeneratedImageUrl(source);
-    const loadSource = async () => {
+    const loadDirect = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new window.Image();
+      let settled = false;
+      const timeoutId = window.setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        img.onload = null;
+        img.onerror = null;
+        img.src = '';
+        reject(new Error('画像の読み込みがタイムアウトしました'));
+      }, 8000);
+      const cleanup = () => {
+        window.clearTimeout(timeoutId);
+        img.onload = null;
+        img.onerror = null;
+      };
+      const finish = (callback: () => void) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        callback();
+      };
+      img.onload = () => finish(() => resolve(img));
+      img.onerror = () => finish(() => reject(new Error('画像を読み込めませんでした')));
+      img.src = src;
+    });
+
+    const loadViaBlob = async () => {
       if (!/^https?:/i.test(resolvedSource)) {
-        return { src: resolvedSource, cleanup: () => {} };
+        return loadDirect(resolvedSource);
       }
 
       const response = await fetch(resolvedSource);
@@ -545,41 +572,19 @@ export function CanvasEditorPage() {
 
       const blob = await response.blob();
       const objectUrl = window.URL.createObjectURL(blob);
-      return {
-        src: objectUrl,
-        cleanup: () => window.URL.revokeObjectURL(objectUrl),
-      };
+
+      try {
+        return await loadDirect(objectUrl);
+      } finally {
+        window.URL.revokeObjectURL(objectUrl);
+      }
     };
 
-    const createLoader = (useCors: boolean) =>
-      loadSource().then(({ src, cleanup }) => new Promise<HTMLImageElement>((resolve, reject) => {
-        const img = new window.Image();
-        let settled = false;
-        const timeoutId = window.setTimeout(() => {
-          if (settled) return;
-          settled = true;
-          img.onload = null;
-          img.onerror = null;
-          img.src = '';
-          cleanup();
-          reject(new Error('画像の読み込みがタイムアウトしました'));
-        }, 8000);
-        const finish = (callback: () => void) => {
-          if (settled) return;
-          settled = true;
-          window.clearTimeout(timeoutId);
-          cleanup();
-          callback();
-        };
-        if (useCors && /^https?:/i.test(source)) {
-          img.crossOrigin = 'anonymous';
-        }
-        img.onload = () => finish(() => resolve(img));
-        img.onerror = () => finish(() => reject(new Error('画像を読み込めませんでした')));
-        img.src = src;
-      }));
+    if (!/^https?:/i.test(resolvedSource)) {
+      return loadDirect(resolvedSource);
+    }
 
-    return createLoader(true).catch(() => createLoader(false));
+    return loadDirect(resolvedSource).catch(() => loadViaBlob());
   }, []);
 
   const addImageToCanvas = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
