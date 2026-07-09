@@ -642,6 +642,16 @@ export function CanvasEditorPage() {
       preloaded: Boolean(preloadedImage),
       galleryImport: isGalleryImport,
     });
+    if (typeof document !== 'undefined') {
+      document.body.dataset.canvasLastAdded = JSON.stringify({
+        newId,
+        imageUrl,
+        width: imageWidth,
+        height: imageHeight,
+        preloaded: Boolean(preloadedImage),
+        galleryImport: isGalleryImport,
+      });
+    }
     selectObject(newId);
     return newId;
   }, [addObject, loadCanvasImage, selectObject]);
@@ -666,6 +676,16 @@ export function CanvasEditorPage() {
         naturalWidth: imageElement?.naturalWidth || null,
         naturalHeight: imageElement?.naturalHeight || null,
       });
+      if (typeof document !== 'undefined') {
+        document.body.dataset.canvasGallerySelection = JSON.stringify({
+          imageId,
+          imageUrl,
+          storagePath,
+          hasImageElement: Boolean(imageElement),
+          naturalWidth: imageElement?.naturalWidth || null,
+          naturalHeight: imageElement?.naturalHeight || null,
+        });
+      }
       await addImageToCanvas(imageUrl, 'Gallery素材', {
         feature: 'gallery-import',
         generation: 0,
@@ -2070,6 +2090,9 @@ export function CanvasEditorPage() {
                   onRenderStateChange={(state) => {
                     canvasRenderStateRef.current = state;
                     console.warn('Canvas render state', state);
+                    if (typeof document !== 'undefined') {
+                      document.body.dataset.canvasRenderState = JSON.stringify(state);
+                    }
                   }}
                 />
 
