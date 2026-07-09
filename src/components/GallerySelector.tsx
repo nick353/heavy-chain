@@ -9,7 +9,7 @@ import type { GeneratedImage } from '../types/database';
 interface GallerySelectorProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (imageUrl: string, imageId: string, storagePath?: string) => void;
+  onSelect: (imageUrl: string, imageId: string, storagePath?: string, imageElement?: HTMLImageElement | null) => void;
   multiple?: boolean;
   maxSelect?: number;
   onMultipleSelect?: (images: { url: string; id: string }[]) => void;
@@ -105,7 +105,7 @@ export function GallerySelector({
     return '';
   };
 
-  const handleImageClick = (image: GeneratedImage) => {
+  const handleImageClick = (image: GeneratedImage, event: React.MouseEvent<HTMLButtonElement>) => {
     if (multiple) {
       const newSelected = new Set(selectedImages);
       
@@ -118,7 +118,8 @@ export function GallerySelector({
       setSelectedImages(newSelected);
     } else {
       const imageUrl = getImageUrl(image);
-      onSelect(imageUrl, image.id, image.storage_path);
+      const imageElement = event.currentTarget.querySelector('img') as HTMLImageElement | null;
+      onSelect(imageUrl, image.id, image.storage_path, imageElement);
     }
   };
 
@@ -227,7 +228,7 @@ export function GallerySelector({
                 return (
                   <button
                     key={image.id}
-                    onClick={() => handleImageClick(image)}
+                  onClick={(event) => handleImageClick(image, event)}
                     className={`relative aspect-square rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 transition-all ${
                       isSelected
                         ? 'ring-2 ring-primary-500 ring-offset-2'

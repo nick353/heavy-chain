@@ -11,6 +11,7 @@ interface InfiniteCanvasProps {
   onObjectSelect?: (id: string | null) => void;
   onContextAction?: (action: string, objectId: string | null) => void;
   onStageReady?: (stage: Konva.Stage | null) => void;
+  preloadedImages?: Map<string, HTMLImageElement>;
   renderAllObjects?: boolean;
   exportMode?: boolean;
   onRenderStateChange?: (state: { totalImageObjects: number; loadedImageObjects: number; renderAllObjects: boolean }) => void;
@@ -22,6 +23,7 @@ export function InfiniteCanvas({
   onObjectSelect,
   onContextAction,
   onStageReady,
+  preloadedImages,
   renderAllObjects = false,
   exportMode = false,
   onRenderStateChange,
@@ -177,6 +179,12 @@ export function InfiniteCanvas({
       ) {
         loadingImageIds.add(obj.id);
         startedLoadingIds.push(obj.id);
+        const preloadedImage = preloadedImages?.get(obj.id);
+        if (preloadedImage) {
+          loadedImageSourcesRef.current.set(obj.src, preloadedImage);
+          queueLoadedImage(obj.id, preloadedImage);
+          return;
+        }
         const source = (
           /^https?:|^data:|^blob:/i.test(obj.src)
             ? obj.src

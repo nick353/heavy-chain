@@ -156,7 +156,7 @@ export function ImageSelector({
     }
   };
 
-  const handleGallerySelect = (imageUrl: string, imageId: string) => {
+  const handleGallerySelect = (imageUrl: string, imageId: string, _storagePath?: string, _imageElement?: HTMLImageElement | null) => {
     if (multiple && onMultipleChange) {
       if (multipleValue.length < maxImages) {
         onMultipleChange([...multipleValue, {
@@ -396,6 +396,5 @@ export function ImageSelector({
     </div>
   );
 }
-
 
 

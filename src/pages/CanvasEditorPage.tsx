@@ -118,6 +118,7 @@ export function CanvasEditorPage() {
   const [selectedPosition, setSelectedPosition] = useState({ x: 0, y: 0 });
   const [isEditingName, setIsEditingName] = useState(false);
   const [isExportRenderingAll, setIsExportRenderingAll] = useState(false);
+  const preloadedGalleryImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Generate modal states
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -604,8 +605,8 @@ export function CanvasEditorPage() {
     });
   }, []);
 
-  const addImageToCanvas = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
-    const img = await loadCanvasImage(imageUrl);
+  const addImageToCanvas = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string, preloadedImage?: HTMLImageElement | null) => {
+    const img = preloadedImage || await loadCanvasImage(imageUrl);
     if (!isMountedRef.current) {
       throw new Error('Canvas画面が閉じられたため配置を中止しました');
     }
@@ -641,16 +642,19 @@ export function CanvasEditorPage() {
     });
   }, [addImageToCanvas]);
 
-  const handleSelectGalleryImage = useCallback(async (imageUrl: string, imageId: string, storagePath?: string) => {
+  const handleSelectGalleryImage = useCallback(async (imageUrl: string, imageId: string, storagePath?: string, imageElement?: HTMLImageElement | null) => {
     try {
-      await addImageToCanvas(imageUrl, 'Gallery素材', {
+      const newId = await addImageToCanvas(imageUrl, 'Gallery素材', {
         feature: 'gallery-import',
         generation: 0,
         source: 'gallery-selector',
         imageId,
         galleryStoragePath: storagePath,
         galleryImageUrl: imageUrl,
-      });
+      }, undefined, imageElement);
+      if (imageElement) {
+        preloadedGalleryImagesRef.current.set(newId, imageElement);
+      }
       setShowGallerySelector(false);
       toast.success('Gallery画像をCanvasへ配置しました');
     } catch (error: any) {
@@ -2038,13 +2042,14 @@ export function CanvasEditorPage() {
                   height={canvasSize.height}
                   onObjectSelect={handleObjectSelect}
                   onContextAction={handleContextAction}
-										onStageReady={(stage) => {
-											canvasStageRef.current = stage;
-										}}
-										renderAllObjects={isExportRenderingAll}
-										exportMode={isExportRenderingAll}
-										onRenderStateChange={(state) => {
-											canvasRenderStateRef.current = state;
+											onStageReady={(stage) => {
+												canvasStageRef.current = stage;
+											}}
+											preloadedImages={preloadedGalleryImagesRef.current}
+											renderAllObjects={isExportRenderingAll}
+											exportMode={isExportRenderingAll}
+											onRenderStateChange={(state) => {
+												canvasRenderStateRef.current = state;
 										}}
 	                />
 
