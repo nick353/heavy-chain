@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
 import { Stage, Layer, Rect, Image as KonvaImage, Text, Transformer, Line, Circle } from 'react-konva';
 import type Konva from 'konva';
 import { useCanvasStore, type CanvasObject } from '../../stores/canvasStore';
+import { resolveGeneratedImageUrl } from '../../lib/storage';
 import { ContextMenu } from './ContextMenu';
 
 interface InfiniteCanvasProps {
@@ -141,6 +142,7 @@ export function InfiniteCanvas({
         img.onerror = () => finish(() => reject(new Error('Canvas image failed to load')));
         img.src = source;
       });
+    const resolveSource = async (source: string) => resolveGeneratedImageUrl(source);
 
     renderedObjects.forEach((obj) => {
       if (
@@ -151,12 +153,13 @@ export function InfiniteCanvas({
       ) {
         loadingImageIds.add(obj.id);
         startedLoadingIds.push(obj.id);
-        const source = obj.src;
+        const source = obj.metadata?.galleryStoragePath || obj.src;
         const cachedImage = loadedImageSourcesRef.current.get(source);
         const imagePromise = cachedImage
           ? Promise.resolve(cachedImage)
-          : loadingImageSourcesRef.current.get(source) || loadImage(source, true)
-            .catch(() => loadImage(source, false))
+          : loadingImageSourcesRef.current.get(source) || resolveSource(source).then((resolvedSource) => (
+              loadImage(resolvedSource, true).catch(() => loadImage(resolvedSource, false))
+            ))
             .then((img) => {
               loadedImageSourcesRef.current.set(source, img);
               return img;

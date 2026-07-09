@@ -9,7 +9,7 @@ import type { GeneratedImage } from '../types/database';
 interface GallerySelectorProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (imageUrl: string, imageId: string) => void;
+  onSelect: (imageUrl: string, imageId: string, storagePath?: string) => void;
   multiple?: boolean;
   maxSelect?: number;
   onMultipleSelect?: (images: { url: string; id: string }[]) => void;
@@ -118,7 +118,7 @@ export function GallerySelector({
       setSelectedImages(newSelected);
     } else {
       const imageUrl = getImageUrl(image);
-      onSelect(imageUrl, image.id);
+      onSelect(imageUrl, image.id, image.storage_path);
     }
   };
 

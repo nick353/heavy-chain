@@ -37,6 +37,9 @@ export interface CanvasObject {
     generation: number;     // 世代数 (0=最初の生成, 1=1回派生...)
     parameters?: any;       // 使用したパラメータ
     lightchainCompat?: any;  // Lightchain互換の機能/タスク状態
+    galleryStoragePath?: string;
+    galleryImageId?: string;
+    galleryImageUrl?: string;
     lightchainEditStages?: Array<{
       stageId: string;
       action: string;

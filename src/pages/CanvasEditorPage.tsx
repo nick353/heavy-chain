@@ -35,6 +35,7 @@ import { TemplateSelector, type DesignTemplate, type SizeTemplate } from '../com
 import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { supabase } from '../lib/supabase';
+import { resolveGeneratedImageUrl } from '../lib/storage';
 import { editImageWithPrompt } from '../lib/imageApi';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
@@ -524,12 +525,14 @@ export function CanvasEditorPage() {
     });
   };
 
-  const loadCanvasImage = useCallback((imageUrl: string) => {
+  const loadCanvasImage = useCallback(async (imageUrl: string) => {
     const source = imageUrl.trim();
 
     if (!source) {
       return Promise.reject(new Error('画像URLが空です'));
     }
+
+    const resolvedSource = await resolveGeneratedImageUrl(source);
 
     const createLoader = (useCors: boolean) =>
       new Promise<HTMLImageElement>((resolve, reject) => {
@@ -554,42 +557,10 @@ export function CanvasEditorPage() {
         }
         img.onload = () => finish(() => resolve(img));
         img.onerror = () => finish(() => reject(new Error('画像を読み込めませんでした')));
-        img.src = source;
+        img.src = resolvedSource;
       });
 
     return createLoader(true).catch(() => createLoader(false));
-  }, []);
-
-  const convertImageUrlToDataUrl = useCallback((imageUrl: string) => {
-    const source = imageUrl.trim();
-    if (!source || source.startsWith('data:')) {
-      return Promise.resolve(source);
-    }
-
-    return new Promise<string>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', source, true);
-      xhr.responseType = 'blob';
-      xhr.onload = () => {
-        if (xhr.status < 200 || xhr.status >= 300 || !xhr.response) {
-          reject(new Error('Gallery画像の取得に失敗しました'));
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (typeof reader.result === 'string' && reader.result) {
-            resolve(reader.result);
-            return;
-          }
-          reject(new Error('Gallery画像の変換に失敗しました'));
-        };
-        reader.onerror = () => reject(new Error('Gallery画像の変換に失敗しました'));
-        reader.readAsDataURL(xhr.response);
-      };
-      xhr.onerror = () => reject(new Error('Gallery画像の取得に失敗しました'));
-      xhr.send();
-    });
   }, []);
 
   const addImageToCanvas = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
@@ -629,20 +600,15 @@ export function CanvasEditorPage() {
     });
   }, [addImageToCanvas]);
 
-  const handleSelectGalleryImage = useCallback(async (imageUrl: string, imageId: string) => {
+  const handleSelectGalleryImage = useCallback(async (imageUrl: string, imageId: string, storagePath?: string) => {
     try {
-      let canvasSource = imageUrl;
-      try {
-        canvasSource = await convertImageUrlToDataUrl(imageUrl);
-      } catch {
-        // Fall back to the original URL below.
-      }
-
-      await addImageToCanvas(canvasSource, 'Gallery素材', {
+      await addImageToCanvas(storagePath || imageUrl, 'Gallery素材', {
         feature: 'gallery-import',
         generation: 0,
         source: 'gallery-selector',
         imageId,
+        galleryStoragePath: storagePath,
+        galleryImageUrl: imageUrl,
       });
       setShowGallerySelector(false);
       toast.success('Gallery画像をCanvasへ配置しました');
@@ -650,7 +616,7 @@ export function CanvasEditorPage() {
       console.error('Canvas gallery image load error:', error);
       toast.error(error?.message || 'Gallery画像をCanvasへ配置できませんでした');
     }
-  }, [addImageToCanvas, convertImageUrlToDataUrl]);
+  }, [addImageToCanvas]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -944,7 +910,8 @@ export function CanvasEditorPage() {
       case 'download':
         if (obj.type === 'image' && obj.src) {
           try {
-            const response = await fetch(obj.src);
+            const resolvedSrc = await resolveGeneratedImageUrl(obj.metadata?.galleryStoragePath || obj.src);
+            const response = await fetch(resolvedSrc);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');

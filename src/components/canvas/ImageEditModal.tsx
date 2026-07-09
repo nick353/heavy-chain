@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Scissors, 
   Palette, 
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Modal, Button, Textarea } from '../ui';
 import toast from 'react-hot-toast';
+import { resolveGeneratedImageUrl } from '../../lib/storage';
 
 interface ImageEditModalProps {
   isOpen: boolean;
@@ -22,6 +23,28 @@ export function ImageEditModal({ isOpen, onClose, imageUrl, onEdit }: ImageEditM
   const [mode, setMode] = useState<EditMode>('prompt');
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(imageUrl);
+
+  useEffect(() => {
+    let cancelled = false;
+    const resolvePreview = async () => {
+      try {
+        const resolved = await resolveGeneratedImageUrl(imageUrl);
+        if (!cancelled) {
+          setPreviewUrl(resolved);
+        }
+      } catch {
+        if (!cancelled) {
+          setPreviewUrl(imageUrl);
+        }
+      }
+    };
+
+    void resolvePreview();
+    return () => {
+      cancelled = true;
+    };
+  }, [imageUrl]);
 
   const editModes = [
     { id: 'prompt', icon: Wand2, label: 'プロンプト編集', description: 'テキストで画像を編集' },
@@ -56,7 +79,7 @@ export function ImageEditModal({ isOpen, onClose, imageUrl, onEdit }: ImageEditM
         <div className="w-64 flex-shrink-0">
           <div className="aspect-square rounded-xl overflow-hidden bg-neutral-100 mb-4">
             <img
-              src={imageUrl}
+              src={previewUrl}
               alt="編集対象"
               className="w-full h-full object-cover"
             />

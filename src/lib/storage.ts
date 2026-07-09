@@ -6,6 +6,27 @@ const SIGNED_URL_BATCH_SIZE = 50;
 
 const isDirectImageUrl = (path: string) => /^(https?:|data:)/i.test(path);
 
+export async function resolveGeneratedImageUrl(source: string) {
+  const trimmed = source.trim();
+  if (!trimmed) {
+    throw new Error('画像URLが空です');
+  }
+
+  if (isDirectImageUrl(trimmed) || trimmed.startsWith('blob:')) {
+    return trimmed;
+  }
+
+  const { data, error } = await supabase.storage
+    .from('generated-images')
+    .createSignedUrl(trimmed, SIGNED_URL_TTL_SECONDS);
+
+  if (error || !data?.signedUrl) {
+    throw new Error('画像URLの解決に失敗しました');
+  }
+
+  return data.signedUrl;
+}
+
 export async function withSignedImageUrls<T extends Pick<GeneratedImage, 'storage_path' | 'image_url'>>(images: T[]) {
   const signedUrlByPath = new Map<string, string>();
   const paths = Array.from(new Set(
