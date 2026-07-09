@@ -68,7 +68,6 @@ export function GalleryPage() {
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingStalled, setIsLoadingStalled] = useState(false);
-  const [loadWarning, setLoadWarning] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortType>('newest');
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,7 +147,6 @@ export function GalleryPage() {
     );
     setIsLoading(true);
     setIsLoadingStalled(false);
-    setLoadWarning(null);
     setFailedImageIds(new Set());
     try {
       const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(brandId);
@@ -176,7 +174,6 @@ export function GalleryPage() {
       let remoteImages: GeneratedImage[] = [];
       if (error) {
         if (!isCurrentRequest()) return;
-        setLoadWarning('保存済み画像の取得に失敗しました。ローカル成果物だけを表示しています。');
       } else {
         const remoteRows = data || [];
         try {
@@ -188,7 +185,6 @@ export function GalleryPage() {
         } catch {
           if (!isCurrentRequest()) return;
           remoteImages = remoteRows;
-          setLoadWarning('画像プレビューURLの取得に時間がかかっています。成果物一覧は表示しています。');
         }
       }
 
@@ -204,7 +200,6 @@ export function GalleryPage() {
     } catch {
       const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(brandId);
       if (!isCurrentRequest()) return;
-      setLoadWarning('保存済み画像の取得に時間がかかっています。ローカル成果物だけを表示しています。');
       setImages(localImages);
     } finally {
       if (isCurrentRequest()) {
@@ -512,8 +507,6 @@ export function GalleryPage() {
     () => galleryImages.slice(0, visibleImageCount),
     [galleryImages, visibleImageCount]
   );
-  const favoriteCount = images.filter((image) => image.is_favorite).length;
-  const localWorkspaceCount = images.filter(isLocalWorkspaceImage).length;
 
   useEffect(() => {
     setVisibleImageCount(INITIAL_VISIBLE_IMAGE_COUNT);
@@ -658,21 +651,6 @@ export function GalleryPage() {
           </div>
         ) : null}
 
-        {loadWarning && !isLoading ? (
-          <div className="mb-6 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-4 text-sm text-amber-100">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p>{loadWarning}</p>
-              <button
-                type="button"
-                onClick={fetchImages}
-                className="inline-flex w-fit items-center rounded-lg border border-amber-300/30 px-3 py-1.5 text-xs font-semibold transition hover:bg-amber-300/10"
-              >
-                再読み込み
-              </button>
-            </div>
-          </div>
-        ) : null}
-
         {!isLoading && failedImageIds.size > 0 ? (
           <div className="mb-6 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-4 text-sm text-amber-100">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -687,61 +665,6 @@ export function GalleryPage() {
             </div>
           </div>
         ) : null}
-
-        <section className="mb-6 grid gap-3 lg:grid-cols-3">
-          <button
-            type="button"
-            onClick={() => {
-              setSelectMode(true);
-              setSelectedIds(new Set());
-            }}
-            className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left shadow-sm transition hover:border-cyan-300/40 hover:bg-white/[0.07] backdrop-blur-sm"
-          >
-            <span className="flex items-center gap-2 text-sm font-semibold text-white">
-              <CheckSquare className="h-4 w-4 text-cyan-300" />
-              成果物を選ぶ
-            </span>
-            <p className="mt-2 text-xs leading-5 text-neutral-400">
-              複数画像を選択して、一括ダウンロードや整理に進みます。
-            </p>
-            <span className="mt-3 inline-flex rounded-full bg-cyan-300/10 px-2.5 py-1 text-xs font-semibold text-cyan-100">
-              {selectedIds.size}枚選択中
-            </span>
-          </button>
-
-          <Link
-            to="/canvas/new"
-            className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left shadow-sm transition hover:border-cyan-300/40 hover:bg-white/[0.07] backdrop-blur-sm"
-          >
-            <span className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Sparkles className="h-4 w-4 text-cyan-300" />
-              Canvasで再編集
-            </span>
-            <p className="mt-2 text-xs leading-5 text-neutral-400">
-              保存済み画像を開いて、背景削除、色変更、派生生成へつなげます。
-            </p>
-            <span className="mt-3 inline-flex rounded-full bg-white/[0.05] px-2.5 py-1 text-xs font-semibold text-neutral-300">
-              ローカル成果物 {localWorkspaceCount}件
-            </span>
-          </Link>
-
-          <button
-            type="button"
-            onClick={() => setFilter('favorites')}
-            className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left shadow-sm transition hover:border-cyan-300/40 hover:bg-white/[0.07] backdrop-blur-sm"
-          >
-            <span className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Heart className="h-4 w-4 text-cyan-300" />
-              採用候補を見る
-            </span>
-            <p className="mt-2 text-xs leading-5 text-neutral-400">
-              お気に入りにした画像だけを絞り込み、共有やダウンロードへ進みます。
-            </p>
-            <span className="mt-3 inline-flex rounded-full bg-cyan-300/10 px-2.5 py-1 text-xs font-semibold text-cyan-100">
-              お気に入り {favoriteCount}件
-            </span>
-          </button>
-        </section>
 
         {/* Select Mode Actions */}
         <AnimatePresence>
