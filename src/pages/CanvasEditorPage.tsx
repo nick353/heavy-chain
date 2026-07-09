@@ -813,6 +813,7 @@ export function CanvasEditorPage() {
               prompt: generatePrompt,
               width: 1024,
               height: 1024,
+              generationProvider: 'openai',
             }
           }));
           if (data?.images && data.images.length > 0) {

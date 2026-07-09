@@ -7,7 +7,7 @@ import { sanitizeMaterialGenerationMetadata, sanitizeMetadataWithoutImageUrls } 
 import { generateRunwayImage, runwayImageArtifact } from '../_shared/runway.ts';
 import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
-import { generateGeminiImage, geminiImageArtifact, geminiProviderName } from '../_shared/geminiImage.ts';
+import { generateGeminiImage, geminiImageArtifact } from '../_shared/geminiImage.ts';
 import { generateOpenAiImage, openAiImageArtifact } from '../_shared/openaiImage.ts';
 import { generateMockImage, mockImageArtifact } from '../_shared/mockImage.ts';
 
@@ -218,7 +218,7 @@ const sanitizeGenerationProvider = (value: unknown) => {
   if (requested === 'gemini' || requested === 'gemini_image') return 'gemini'
   if (requested === 'openai' || requested === 'openai_image' || requested === 'gpt_image') return 'openai'
   if (requested === 'mock' || requested === 'mock_image') return 'mock'
-  return geminiProviderName()
+  return 'openai'
 }
 
 const sanitizeGenerationModel = (value: unknown) => {

@@ -1,3 +1,5 @@
+import { editOpenAiImage, generateOpenAiImage } from './openaiImage.ts';
+
 export type RunwayImageResult = {
   base64: string;
   mimeType: string;
@@ -261,6 +263,38 @@ async function callBridge(path: '/text-to-image' | '/image-upscale', payload: Re
   throw new Error('runway_mcp_empty_image_response');
 }
 
+async function fallbackOpenAiTextToImage(params: {
+  prompt: string;
+  negativePrompt?: string | null;
+  width?: number;
+  height?: number;
+  referenceImages?: RunwayReferenceImage[];
+}) {
+  if (params.referenceImages?.length) {
+    const result = await editOpenAiImage({
+      prompt: params.prompt,
+      images: params.referenceImages.map((image) => ({ imageUrl: image.uri })),
+      model: Deno.env.get('OPENAI_IMAGE_EDIT_MODEL')?.trim() || Deno.env.get('OPENAI_IMAGE_MODEL')?.trim() || 'gpt-image-1-mini',
+      background: 'auto',
+    });
+    return {
+      ...result,
+      outputUrl: '',
+    };
+  }
+
+  return await generateOpenAiImage({
+    prompt: params.prompt,
+    negativePrompt: params.negativePrompt,
+    width: params.width,
+    height: params.height,
+    model: Deno.env.get('OPENAI_IMAGE_MODEL')?.trim() || null,
+  }).then((result) => ({
+    ...result,
+    outputUrl: '',
+  }));
+}
+
 export async function generateRunwayImage(params: {
   brandId: string;
   prompt: string;
@@ -283,7 +317,18 @@ export async function generateRunwayImage(params: {
     }, runwayModel());
     return result;
   } catch (error) {
-    throw new Error(sanitizeRunwayError(error));
+    try {
+      const fallback = await fallbackOpenAiTextToImage({
+        prompt: params.prompt,
+        negativePrompt: params.negativePrompt,
+        width: params.width,
+        height: params.height,
+        referenceImages: params.referenceImages,
+      });
+      return fallback;
+    } catch {
+      throw new Error(sanitizeRunwayError(error));
+    }
   }
 }
 
@@ -308,7 +353,20 @@ export async function upscaleRunwayImage(params: {
       model: result.model || RUNWAY_UPSCALE_MODEL,
     };
   } catch (error) {
-    throw new Error(sanitizeRunwayError(error));
+    try {
+      const fallback = await editOpenAiImage({
+        prompt: 'Upscale and restore this image while preserving the same product identity, composition, and details. Improve resolution, sharpness, texture clarity, and edge definition without changing the original content.',
+        images: [{ imageUrl: runwayImageDataUri(params.base64, params.mimeType) }],
+        model: Deno.env.get('OPENAI_IMAGE_EDIT_MODEL')?.trim() || Deno.env.get('OPENAI_IMAGE_MODEL')?.trim() || 'gpt-image-1-mini',
+        background: 'auto',
+      });
+      return {
+        ...fallback,
+        outputUrl: '',
+      };
+    } catch {
+      throw new Error(sanitizeRunwayError(error));
+    }
   }
 }
 
