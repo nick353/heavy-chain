@@ -180,7 +180,8 @@ export function InfiniteCanvas({
         loadingImageIds.add(obj.id);
         startedLoadingIds.push(obj.id);
         const preloadedImageKey = obj.metadata?.galleryImageUrl || obj.src;
-        const preloadedImage = preloadedImages?.get(preloadedImageKey);
+        const galleryStorageKey = obj.metadata?.galleryStoragePath;
+        const preloadedImage = preloadedImages?.get(galleryStorageKey || preloadedImageKey);
         if (preloadedImage) {
           loadedImageSourcesRef.current.set(obj.src, preloadedImage);
           setLoadedImages((prev) => {
@@ -190,10 +191,10 @@ export function InfiniteCanvas({
           });
           return;
         }
-        const source = (
+        const source = obj.metadata?.galleryStoragePath || (
           /^https?:|^data:|^blob:/i.test(obj.src)
             ? obj.src
-            : obj.metadata?.galleryImageUrl || obj.metadata?.galleryStoragePath || obj.src
+            : obj.metadata?.galleryImageUrl || obj.src
         );
         const cachedImage = loadedImageSourcesRef.current.get(source);
         const imagePromise = cachedImage

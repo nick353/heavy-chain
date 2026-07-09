@@ -91,6 +91,11 @@ const canvasImageActions: Array<{
   { id: 'generate', label: '新しく生成', description: 'Lightchain生成', icon: Sparkles, requiresSelection: false },
 ];
 
+const isUsableLoadedImage = (image?: HTMLImageElement | null) => (
+  Boolean(image?.complete) &&
+  Boolean(image?.naturalWidth && image?.naturalHeight)
+);
+
 export function CanvasEditorPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -606,13 +611,17 @@ export function CanvasEditorPage() {
   }, []);
 
   const addImageToCanvas = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string, preloadedImage?: HTMLImageElement | null) => {
-    const img = preloadedImage || await loadCanvasImage(imageUrl);
+    const usablePreloadedImage = isUsableLoadedImage(preloadedImage) ? preloadedImage : null;
+    const img = usablePreloadedImage || await loadCanvasImage(imageUrl);
     if (!isMountedRef.current) {
       throw new Error('Canvas画面が閉じられたため配置を中止しました');
     }
     const isGalleryImport = metadata?.source === 'gallery-selector';
     const imageWidth = Math.max(1, img.naturalWidth || img.width || 1);
     const imageHeight = Math.max(1, img.naturalHeight || img.height || 1);
+    const canvasImageSource = isGalleryImport && metadata?.galleryStoragePath
+      ? metadata.galleryStoragePath
+      : imageUrl;
     const newId = addObject({
       type: 'image',
       x: isGalleryImport ? Math.max(24, canvasSize.width / 2 - Math.min(imageWidth, 300) / 2) : 100 + Math.random() * 300,
@@ -625,7 +634,7 @@ export function CanvasEditorPage() {
       opacity: 1,
       locked: false,
       visible: true,
-      src: imageUrl,
+      src: canvasImageSource,
       label,
       derivedFrom: parentId || null,
       metadata: metadata ? {
@@ -637,18 +646,21 @@ export function CanvasEditorPage() {
     console.warn('Canvas gallery image added', {
       newId,
       imageUrl,
+      canvasImageSource,
       width: imageWidth,
       height: imageHeight,
-      preloaded: Boolean(preloadedImage),
+      preloaded: Boolean(usablePreloadedImage),
       galleryImport: isGalleryImport,
     });
     if (typeof document !== 'undefined') {
       document.body.dataset.canvasLastAdded = JSON.stringify({
         newId,
         imageUrl,
+        canvasImageSource,
         width: imageWidth,
         height: imageHeight,
-        preloaded: Boolean(preloadedImage),
+        preloaded: Boolean(usablePreloadedImage),
+        ignoredPreload: Boolean(preloadedImage && !usablePreloadedImage),
         galleryImport: isGalleryImport,
       });
     }
@@ -665,14 +677,21 @@ export function CanvasEditorPage() {
 
   const handleSelectGalleryImage = useCallback(async (imageUrl: string, imageId: string, storagePath?: string, imageElement?: HTMLImageElement | null) => {
     try {
-      if (imageElement) {
-        preloadedGalleryImagesRef.current.set(imageUrl, imageElement);
+      const usableImageElement = isUsableLoadedImage(imageElement) ? imageElement : null;
+      if (usableImageElement) {
+        preloadedGalleryImagesRef.current.set(imageUrl, usableImageElement);
+        if (storagePath) {
+          preloadedGalleryImagesRef.current.set(storagePath, usableImageElement);
+        }
       }
+      const canvasSource = storagePath || imageUrl;
       console.warn('Canvas gallery selection', {
         imageId,
         imageUrl,
         storagePath,
-        hasImageElement: Boolean(imageElement),
+        canvasSource,
+        hasImageElement: Boolean(usableImageElement),
+        ignoredImageElement: Boolean(imageElement && !usableImageElement),
         naturalWidth: imageElement?.naturalWidth || null,
         naturalHeight: imageElement?.naturalHeight || null,
       });
@@ -681,19 +700,22 @@ export function CanvasEditorPage() {
           imageId,
           imageUrl,
           storagePath,
-          hasImageElement: Boolean(imageElement),
+          canvasSource,
+          hasImageElement: Boolean(usableImageElement),
+          ignoredImageElement: Boolean(imageElement && !usableImageElement),
           naturalWidth: imageElement?.naturalWidth || null,
           naturalHeight: imageElement?.naturalHeight || null,
         });
       }
-      await addImageToCanvas(imageUrl, 'Gallery素材', {
+      await addImageToCanvas(canvasSource, 'Gallery素材', {
         feature: 'gallery-import',
         generation: 0,
         source: 'gallery-selector',
         imageId,
+        galleryImageId: imageId,
         galleryStoragePath: storagePath,
         galleryImageUrl: imageUrl,
-      }, undefined, imageElement);
+      }, undefined, usableImageElement);
       setShowGallerySelector(false);
       toast.success('Gallery画像をCanvasへ配置しました');
     } catch (error: any) {
