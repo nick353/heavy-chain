@@ -132,6 +132,34 @@ export interface CanvasState {
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
+const sanitizePersistedObject = (obj: CanvasObject): CanvasObject => {
+  if (obj.type !== 'image' || typeof obj.src !== 'string' || !obj.src.startsWith('data:')) {
+    return obj;
+  }
+
+  const galleryStoragePath = obj.metadata?.galleryStoragePath;
+  if (galleryStoragePath) {
+    return {
+      ...obj,
+      src: galleryStoragePath,
+    };
+  }
+
+  if (obj.metadata?.feature === 'gallery-import') {
+    return {
+      ...obj,
+      src: '',
+    };
+  }
+
+  return obj;
+};
+
+const sanitizePersistedProject = (project: CanvasProject): CanvasProject => ({
+  ...project,
+  objects: project.objects.map(sanitizePersistedObject).filter((obj) => obj.src !== ''),
+});
+
 export const useCanvasStore = create<CanvasState>()(
   persist(
     (set, get) => ({
@@ -498,6 +526,23 @@ export const useCanvasStore = create<CanvasState>()(
     }),
     {
       name: 'heavy-chain-canvas',
+      version: 1,
+      migrate: (persistedState: any) => {
+        const state = persistedState?.state ?? persistedState;
+        if (!state || typeof state !== 'object') {
+          return persistedState;
+        }
+
+        return {
+          ...state,
+          objects: Array.isArray(state.objects)
+            ? state.objects.map(sanitizePersistedObject).filter((obj: CanvasObject) => obj.src !== '')
+            : [],
+          projects: Array.isArray(state.projects)
+            ? state.projects.map(sanitizePersistedProject)
+            : [],
+        };
+      },
       partialize: (state) => ({
         projects: state.projects,
         currentProjectId: state.currentProjectId,
