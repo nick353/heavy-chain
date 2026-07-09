@@ -634,7 +634,7 @@ export function CanvasEditorPage() {
         parentId: parentId || undefined,
       } : undefined,
     });
-    console.log('Canvas gallery image added', {
+    console.warn('Canvas gallery image added', {
       newId,
       imageUrl,
       width: imageWidth,
@@ -658,7 +658,7 @@ export function CanvasEditorPage() {
       if (imageElement) {
         preloadedGalleryImagesRef.current.set(imageUrl, imageElement);
       }
-      console.log('Canvas gallery selection', {
+      console.warn('Canvas gallery selection', {
         imageId,
         imageUrl,
         storagePath,
@@ -2069,7 +2069,7 @@ export function CanvasEditorPage() {
 											exportMode={isExportRenderingAll}
                   onRenderStateChange={(state) => {
                     canvasRenderStateRef.current = state;
-                    console.log('Canvas render state', state);
+                    console.warn('Canvas render state', state);
                   }}
                 />
 
