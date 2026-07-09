@@ -28,7 +28,7 @@ import { Minimap } from '../components/canvas/Minimap';
 import { PropertiesPanel } from '../components/canvas/PropertiesPanel';
 import { ImageEditModal } from '../components/canvas/ImageEditModal';
 import { CanvasGuide, useCanvasGuide } from '../components/canvas/CanvasGuide';
-import { useCanvasStore } from '../stores/canvasStore';
+import { useCanvasStore, type CanvasObject } from '../stores/canvasStore';
 import { ChatEditor } from '../components/ChatEditor';
 import { GallerySelector } from '../components/GallerySelector';
 import { TemplateSelector, type DesignTemplate, type SizeTemplate } from '../components/TemplateSelector';
@@ -105,6 +105,7 @@ export function CanvasEditorPage() {
   const canvasStageRef = useRef<Konva.Stage | null>(null);
   const canvasRenderStateRef = useRef<CanvasRenderState>({ totalImageObjects: 0, loadedImageObjects: 0, renderAllObjects: false });
   const lastMobileFitKeyRef = useRef<string | null>(null);
+  const pendingMobileGalleryFocusRef = useRef<string | null>(null);
   const { currentBrand, user, profile } = useAuthStore();
   const { showGuide, completeGuide, resetGuide } = useCanvasGuide(user?.id);
 
@@ -184,13 +185,16 @@ export function CanvasEditorPage() {
   useLayoutEffect(() => {
     if (canvasSize.width >= 640 || canvasSize.width <= 0 || canvasSize.height <= 0 || objects.length === 0) return;
 
-    const fitKey = `${currentProjectId || 'draft'}:${objects.map((obj) => `${obj.id}:${Math.round(obj.x)},${Math.round(obj.y)},${Math.round(obj.width * (obj.scaleX || 1))},${Math.round(obj.height * (obj.scaleY || 1))}`).join('|')}`;
+    const focusObjectId = pendingMobileGalleryFocusRef.current;
+    const fitObjects = focusObjectId
+      ? objects.filter((obj) => obj.visible !== false && obj.id === focusObjectId)
+      : objects.filter((obj) => obj.visible !== false);
+    if (fitObjects.length === 0) return;
+
+    const fitKey = `${currentProjectId || 'draft'}:${focusObjectId || 'all'}:${fitObjects.map((obj) => `${obj.id}:${Math.round(obj.x)},${Math.round(obj.y)},${Math.round(obj.width * (obj.scaleX || 1))},${Math.round(obj.height * (obj.scaleY || 1))}`).join('|')}`;
     if (lastMobileFitKeyRef.current === fitKey) return;
 
-    const visibleObjects = objects.filter((obj) => obj.visible !== false);
-    if (visibleObjects.length === 0) return;
-
-    const bounds = visibleObjects.reduce(
+    const bounds = fitObjects.reduce(
       (acc, obj) => {
         const objectWidth = Math.max(1, obj.width * (obj.scaleX || 1));
         const objectHeight = Math.max(1, obj.height * (obj.scaleY || 1));
@@ -218,6 +222,9 @@ export function CanvasEditorPage() {
     setZoom(nextZoom);
     setPan(nextPanX, nextPanY);
     lastMobileFitKeyRef.current = fitKey;
+    if (focusObjectId) {
+      pendingMobileGalleryFocusRef.current = null;
+    }
   }, [canvasSize.height, canvasSize.width, currentProjectId, objects, setPan, setZoom]);
 
   // Load project when projectId changes
@@ -286,6 +293,25 @@ export function CanvasEditorPage() {
     const lightchainCompat = getLightchainCompatForObject(objectId);
     return lightchainCompat ? { lightchainCompat } : {};
   };
+
+  const resolveCanvasObjectImageUrl = useCallback(async (object: CanvasObject) => {
+    const candidates = Array.from(new Set([
+      object.metadata?.galleryStoragePath,
+      object.src,
+      object.metadata?.galleryImageUrl,
+    ].filter((source): source is string => Boolean(source))));
+    let lastError: unknown;
+
+    for (const source of candidates) {
+      try {
+        return await resolveGeneratedImageUrl(source);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw lastError || new Error('画像URLの解決に失敗しました');
+  }, []);
 
   const buildDerivedLightchainMetadata = (
     sourceObject: typeof selectedObject,
@@ -677,6 +703,7 @@ export function CanvasEditorPage() {
     }
     selectObject(newId);
     if (isGalleryImport) {
+      pendingMobileGalleryFocusRef.current = newId;
       setZoom(1);
       setPan(0, 0);
     }
@@ -695,9 +722,6 @@ export function CanvasEditorPage() {
       const usableImageElement = isUsableLoadedImage(imageElement) ? imageElement : null;
       if (usableImageElement) {
         preloadedGalleryImagesRef.current.set(imageUrl, usableImageElement);
-        if (storagePath) {
-          preloadedGalleryImagesRef.current.set(storagePath, usableImageElement);
-        }
       }
       const canvasSource = storagePath || imageUrl;
       console.warn('Canvas gallery selection', {
@@ -1031,7 +1055,7 @@ export function CanvasEditorPage() {
       case 'download':
         if (obj.type === 'image' && obj.src) {
           try {
-            const resolvedSrc = await resolveGeneratedImageUrl(obj.metadata?.galleryStoragePath || obj.src);
+            const resolvedSrc = await resolveCanvasObjectImageUrl(obj);
             const response = await fetch(resolvedSrc);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -1058,7 +1082,7 @@ export function CanvasEditorPage() {
       return;
     }
 
-    const imageSrc = obj.src;
+    const imageSrc = await resolveCanvasObjectImageUrl(obj);
     const lightchainEditMetadata = buildLightchainEditMetadata(objectId);
     if (!currentBrand?.id) {
       toast.error('ブランドを選択してから実行してください');
