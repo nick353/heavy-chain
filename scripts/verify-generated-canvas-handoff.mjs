@@ -71,7 +71,7 @@ await page.evaluate((key) => window.localStorage.removeItem(key), canvasStoreKey
 
 const materialInput = page
   .locator('section')
-  .filter({ hasText: '販促素材ワークベンチ' })
+  .filter({ hasText: '販促素材作業台' })
   .locator('input[type="file"]')
   .first();
 await materialInput.setInputFiles(uploadPath);

@@ -167,9 +167,9 @@ const buildLightchainRows = (metadata: JsonRecord, intent: JsonRecord | null) =>
       .filter((step): step is string => Boolean(step))
     : [];
 
-  pushIfValue(rows, 'Lightchain機能', readNonEmptyString(lightchainCompat, 'lightchainFeatureTitle'));
-  if (taskCodes) rows.push({ label: 'Lightchain task', value: taskCodes.join(' / ') });
-  if (taskSteps.length) rows.push({ label: 'Lightchain steps', value: taskSteps.join(' / ') });
+  pushIfValue(rows, 'Heavy Chain機能', readNonEmptyString(lightchainCompat, 'lightchainFeatureTitle'));
+  if (taskCodes) rows.push({ label: 'Heavy Chain task', value: taskCodes.join(' / ') });
+  if (taskSteps.length) rows.push({ label: 'Heavy Chain steps', value: taskSteps.join(' / ') });
 
   return rows;
 };

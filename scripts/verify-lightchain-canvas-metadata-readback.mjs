@@ -571,7 +571,7 @@ async function verifyWorkspaceStyleCanvasReadbacks(browserContext) {
       toolId: 'print-design-project',
       assertionPrefix: 'print_design_project',
       mode: 'projectHome',
-      expectedTitle: 'プリントデザインプレビュー',
+      expectedTitle: '柄・グラフィックプレビュー',
       expectedSummary: 'アパレル向けプリント柄',
     },
     {
