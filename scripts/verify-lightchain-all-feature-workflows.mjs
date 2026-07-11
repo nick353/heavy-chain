@@ -815,11 +815,11 @@ async function waitForSettledRoute(page, toolId) {
     const text = document.body.innerText.trim();
     if (currentToolId === 'fashion-studio' && text.includes('ファッションスタジオ') && text.includes('生成履歴')) return true;
     if (['ai-fitting', 'ai-fitting-reference', 'fitting-clothing-reference', 'fitting-background-reference'].includes(currentToolId)) {
-      return text.includes('AIフィッティング') && text.includes('シングルタスク') && text.includes('生成履歴') && !text.includes('素材ワークベンチを準備しています') && !text.includes('ログイン');
+      return text.includes('AIフィッティング') && text.includes('シングルタスク') && text.includes('生成履歴') && !text.includes('素材作業台を準備しています') && !text.includes('ログイン');
     }
     return text.length > 0
       && !text.includes('MATERIAL WORKBENCH')
-      && !text.includes('素材ワークベンチを準備しています');
+      && !text.includes('素材作業台を準備しています');
   }, toolId, { timeout: 20_000 });
 }
 

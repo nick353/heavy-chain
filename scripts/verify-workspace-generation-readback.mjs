@@ -234,11 +234,11 @@ function validateReadback(file, json) {
   for (const taskCode of expectedLightchainTaskCodes) {
     const hitRows = lightchainHitsByTaskCode.get(taskCode);
     if (!hitRows?.size) {
-      addFailure(file, `missing Lightchain task code readback: ${taskCode}`);
+      addFailure(file, `missing Heavy Chain task code readback: ${taskCode}`);
     }
     const durableStepRows = durableStepHitsByTaskCode.get(taskCode);
     if (!durableStepRows?.size) {
-      addFailure(file, `missing durable Lightchain task step row: ${taskCode}`);
+      addFailure(file, `missing durable Heavy Chain task step row: ${taskCode}`);
     }
   }
 }

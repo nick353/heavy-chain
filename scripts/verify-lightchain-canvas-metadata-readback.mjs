@@ -427,7 +427,7 @@ async function verifyCustomStyleCanvasReadback(browserContext) {
   const flow = await runDirectPreviewCanvasFlow(browserContext, {
     toolId: 'custom-style',
     beforeGenerate: async (page) => {
-      await page.getByPlaceholder('名前を入力してください').fill('Lightchain風ブランド学習');
+      await page.getByPlaceholder('名前を入力してください').fill('Heavy Chain風ブランド学習');
       await page.getByRole('button', { name: 'チームスペース' }).click();
     },
     generate: async (page) => page.getByRole('button', { name: 'カスタマイズについて連絡する' }).last().click(),
@@ -1076,7 +1076,7 @@ async function installLocalSupabaseMocks(browserContext) {
     name: 'Heavy Chain Local Proof',
     slug: 'heavy-chain-local-proof',
     logo_url: null,
-    tone_description: 'Lightchain parity proof brand',
+    tone_description: 'Heavy Chain parity proof brand',
     target_audience: 'Proof users',
     brand_colors: { primary: '#65d3cf', secondary: '#111719' },
     created_at: now,

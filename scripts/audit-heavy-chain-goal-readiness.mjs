@@ -104,7 +104,7 @@ const stateMentionsLocalWorkerPath = /local-worker jobs/i.test(stateText)
 const requirements = [
   requirement({
     id: 'logged_in_production_ui',
-    title: 'Logged-in production UI proves Lightchain-style surfaces',
+    title: 'Logged-in production UI proves Heavy Chain-style surfaces',
     status: currentProductionUiPassed() ? 'passed' : 'failed',
     evidence: [paths.massMarketQa, paths.launchOps],
     details: currentProductionUiDetails(),
@@ -189,7 +189,7 @@ const requirements = [
   }),
   requirement({
     id: 'workspace_readback_expected_task_codes',
-    title: 'Workspace and generation matrix cover the current Lightchain-style product flows',
+    title: 'Workspace and generation matrix cover the current Heavy Chain-style product flows',
     status: workspaceMatrixPassed() ? 'passed' : 'failed',
     evidence: [paths.generationWorkbench, paths.massMarketQa],
     details: workspaceMatrixDetails(),

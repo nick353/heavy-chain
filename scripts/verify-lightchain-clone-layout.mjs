@@ -174,7 +174,7 @@ async function verifyPublicRoute(context, viewport, spec) {
     await captureBaseState(page, routeEvidence, { expected: spec.expected, allowLoginRoute: spec.route === '/login' });
     const body = await bodyText(page);
     addAssertion(routeEvidence, 'lightchain_public_shell_visible', body.includes('HEAVYCHAIN') || body.includes('HEAVY CHAIN AI'));
-    addAssertion(routeEvidence, 'legacy_light_shell_absent', !/Lightchain互換\s+履歴\s+ジョブ\s+チーム/.test(body));
+    addAssertion(routeEvidence, 'legacy_light_shell_absent', !/Heavy Chain互換\s+履歴\s+ジョブ\s+チーム/.test(body));
     routeEvidence.screenshot = await screenshot(page, `${spec.key}.png`);
   } catch (error) {
     markException(routeEvidence, error);
@@ -355,7 +355,7 @@ async function assertHomeLayout(page, routeEvidence) {
   const cardCount = await page.locator('a[href]').filter({ hasText: /マーケティング|AIフィッティング|ウェア|動画|モデル|ファッション|デザイン|Heavy Chain Lab/ }).count();
   addAssertion(routeEvidence, 'lightchain_like_workspace_cards_present', cardCount >= 4, { cardCount });
   const nestedSidebarText = await page.locator('body').innerText();
-  addAssertion(routeEvidence, 'no_duplicate_vertical_sidebar_labels', !/動画\s+ラボ\s+Lightchain互換\s+履歴\s+ジョブ\s+チーム/.test(nestedSidebarText));
+  addAssertion(routeEvidence, 'no_duplicate_vertical_sidebar_labels', !/動画\s+ラボ\s+Heavy Chain互換\s+履歴\s+ジョブ\s+チーム/.test(nestedSidebarText));
 }
 
 async function clickCategories(page, routeEvidence) {
@@ -722,7 +722,7 @@ function buildComparisonLedger(result) {
           'planning_preview_scoped_to_design_panel',
         ])) ? 'matched' : 'missing-proof',
       intentionalHeavyChainAddition: 'Operations details disclose local Runway worker and Canvas/Gallery continuity.',
-      remainingMismatch: 'assistant plan is deterministic local planning, not Lightchain live LLM response.',
+      remainingMismatch: 'assistant plan is deterministic local planning, not Heavy Chain live LLM response.',
     },
     {
       area: 'history',

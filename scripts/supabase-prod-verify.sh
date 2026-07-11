@@ -300,9 +300,9 @@ grep -q "ALTER TABLE public.lightchain_task_steps ENABLE ROW LEVEL SECURITY" sup
 grep -q "REVOKE ALL ON TABLE public.lightchain_task_steps FROM PUBLIC, anon, authenticated" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
 grep -q "GRANT SELECT, INSERT, UPDATE ON TABLE public.lightchain_task_steps TO authenticated" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
 grep -q "GRANT ALL ON TABLE public.lightchain_task_steps TO service_role" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
-grep -q "Brand viewers can view Lightchain task steps" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
-grep -q "Brand editors can create Lightchain task steps" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
-grep -q "Brand editors can update Lightchain task steps" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "Brand viewers can view Heavy Chain task steps" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "Brand editors can create Heavy Chain task steps" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
+grep -q "Brand editors can update Heavy Chain task steps" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
 grep -q "idx_lightchain_task_steps_job" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
 grep -q "idx_lightchain_task_steps_task_code" supabase/migrations/20260622123000_create_lightchain_task_steps.sql
 grep -q "idx_lightchain_task_steps_status" supabase/migrations/20260622123000_create_lightchain_task_steps.sql

@@ -59,7 +59,7 @@ addCheck('generate_primary_action_is_provider_neutral', (
 ), {});
 
 addCheck('lightchain_surface_uses_material_workbench_language', (
-  lightchain.includes('素材ワークベンチ')
+  lightchain.includes('素材作業台')
   && lightchain.includes('素材を入れる')
   && lightchain.includes('調整する')
   && lightchain.includes('Canvasへ保存')
@@ -113,9 +113,9 @@ addCheck('admin_dashboard_reviews_beta_feedback', (
 ), {});
 
 addCheck('navigation_uses_material_workbench_label', (
-  nav.includes("label: '素材ワークベンチ'")
+  nav.includes("label: '素材作業台'")
   && nav.includes("mobileLabel: '素材'")
-  && !nav.includes("label: 'Lightchain互換'")
+  && !nav.includes("label: 'Heavy Chain互換'")
 ), {});
 
 const summary = {

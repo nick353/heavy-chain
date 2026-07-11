@@ -313,11 +313,11 @@ const summary = {
 writeFileSync(path.join(outDir, 'summary.json'), JSON.stringify(summary, null, 2));
 
 if (failures.length > 0) {
-  console.error('Lightchain production UI verification failed. Secret values were not printed.');
+  console.error('Heavy Chain production UI verification failed. Secret values were not printed.');
   for (const failure of failures) {
     console.error(`- ${failure.viewport}/${failure.page}: missing=${failure.missingText.join('|') || 'none'} login=${failure.redirectedToLogin} consoleErrors=${failure.consoleErrorCount} pageErrors=${failure.pageErrorCount}`);
   }
   process.exit(1);
 }
 
-console.log(`Lightchain production UI verification passed. Proof: ${path.join(outDir, 'summary.json')}`);
+console.log(`Heavy Chain production UI verification passed. Proof: ${path.join(outDir, 'summary.json')}`);

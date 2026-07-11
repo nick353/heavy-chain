@@ -170,7 +170,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
   {
     id: 'heavychain-lab',
     title: 'Heavy Chain Lab',
-    lightchainName: 'Lightchain Lab',
+    lightchainName: 'Heavy Chain Lab',
     description: '仮説を生成前に検証します。',
     route: '/lab',
     category: 'recommended',
@@ -470,7 +470,7 @@ export const lightchainParityGoals: LightchainParityGoal[] = [
     heavyTarget: 'clarify the save flow and keep catalog vs workbench intent obvious',
     priority: 'P1',
     rationale: 'useful parity, but not required for first generation',
-    owningSurface: 'GeneratePage / Lightchain parity catalog',
+    owningSurface: 'GeneratePage / Heavy Chain parity catalog',
     acceptanceEvidence: 'feature entry text makes the save flow and catalog split obvious without hiding advanced actions',
     status: 'queued',
   },

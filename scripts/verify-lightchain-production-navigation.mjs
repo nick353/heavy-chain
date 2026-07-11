@@ -208,11 +208,11 @@ const summary = {
 writeFileSync(path.join(outDir, 'summary.json'), JSON.stringify(summary, null, 2));
 
 if (failures.length > 0) {
-  console.error('Lightchain production navigation verification failed. Secret values were not printed.');
+  console.error('Heavy Chain production navigation verification failed. Secret values were not printed.');
   for (const failure of failures) {
     console.error(`- ${failure.viewport}/${failure.flow}: finalPath=${failure.finalPath} expectedPath=${failure.expectedPath} text=${failure.expectedTextFound} consoleErrors=${failure.consoleErrorCount} pageErrors=${failure.pageErrorCount}`);
   }
   process.exit(1);
 }
 
-console.log(`Lightchain production navigation verification passed. Proof: ${path.join(outDir, 'summary.json')}`);
+console.log(`Heavy Chain production navigation verification passed. Proof: ${path.join(outDir, 'summary.json')}`);

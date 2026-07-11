@@ -364,18 +364,18 @@ const buildSourceSummaryRows = (
 ) => {
   const rows = buildSourceContextSummaryRows(metadata);
   if (!status || !hasLightchainCompat(metadata)) return rows;
-  const hasStepRow = rows.some((row) => row.label === 'Lightchain steps');
+  const hasStepRow = rows.some((row) => row.label === 'Heavy Chain steps');
   const taskCodes = getLightchainTaskCodes(metadata);
   const durableStepValue = buildDurableLightchainStepValue(durableLightchainTaskSteps);
-  const baseRows = durableStepValue ? rows.filter((row) => row.label !== 'Lightchain steps') : rows;
+  const baseRows = durableStepValue ? rows.filter((row) => row.label !== 'Heavy Chain steps') : rows;
   return [
     ...baseRows,
     ...(durableStepValue
-      ? [{ label: 'Lightchain steps', value: durableStepValue }]
+      ? [{ label: 'Heavy Chain steps', value: durableStepValue }]
       : !hasStepRow && taskCodes.length
-        ? [{ label: 'Lightchain steps', value: taskCodes.map((taskCode) => `${taskCode}=${lightchainStatusLabel[status]}`).join(' / ') }]
+        ? [{ label: 'Heavy Chain steps', value: taskCodes.map((taskCode) => `${taskCode}=${lightchainStatusLabel[status]}`).join(' / ') }]
         : []),
-    { label: 'Lightchain状態', value: lightchainStatusLabel[status] },
+    { label: 'Heavy Chain状態', value: lightchainStatusLabel[status] },
   ];
 };
 
@@ -526,7 +526,7 @@ const fetchLightchainTaskSteps = async (brandId: string): Promise<LightchainTask
 
     return data ?? [];
   } catch (error) {
-    logWorkspaceActivityFetchError('Failed to fetch Lightchain task steps:', error);
+    logWorkspaceActivityFetchError('Failed to fetch Heavy Chain task steps:', error);
     return [];
   }
 };
