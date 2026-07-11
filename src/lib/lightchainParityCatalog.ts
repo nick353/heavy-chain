@@ -325,7 +325,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
   },
   {
     id: 'print-design',
-    title: 'プリントデザイン',
+    title: '柄・グラフィック',
     lightchainName: 'AddPrinting_Position / AddPrinting_Full',
     description: '新規ファイル、最近の案件、事例から入って、定位プリントや総柄に進みます。',
     route: '/patterns/workbench',

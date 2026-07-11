@@ -673,7 +673,7 @@ function matchesLightchainSignature(tool, body) {
   if (tool.id === 'lab') return body.includes('Lightchain Lab') && body.includes('参考事例');
   if (tool.id === 'wear-design-lab') return body.includes('新規ファイル') && body.includes('参考事例');
   if (tool.id === 'wear-design-detail') return body.includes('ガイドを見る') && body.includes('ガイドを表示しない');
-  if (tool.id === 'print-design-project') return body.includes('プリントデザイン') && body.includes('新規ファイル');
+  if (tool.id === 'print-design-project') return body.includes('柄・グラフィック') && body.includes('新規ファイル');
   if (tool.id === 'print-design-detail') return body.includes('ガイドを見る') && body.includes('ガイドを表示しない');
   if (tool.id === 'custom-style') return body.includes('カスタムスタイル') && body.includes('ラーニング素材');
   if (tool.id === 'marketing-detail') return body.includes('マーケティングワークスペース') && body.includes('AIアシスタント');

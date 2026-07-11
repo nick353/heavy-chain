@@ -390,13 +390,13 @@ async function verifyPrintDesignDetailCanvasReadback(browserContext) {
       await page.locator('#print-design-prompt').fill('花柄の密度を上げ、ワンピース向けにリピートしやすく整える');
     },
     generate: async (page) => page.getByRole('button', { name: /AI生成/ }).click(),
-    waitFor: async (page) => page.getByAltText('プリントデザインプレビュー').waitFor({ state: 'visible', timeout: 10_000 }),
-    expectedTitle: 'プリントデザインプレビュー',
+    waitFor: async (page) => page.getByAltText('柄・グラフィックプレビュー').waitFor({ state: 'visible', timeout: 10_000 }),
+    expectedTitle: '柄・グラフィックプレビュー',
   });
   assertDirectPreviewCanvasFlow(flow, {
     compatId: 'print-design-detail',
     assertionPrefix: 'print_design_detail',
-    expectedTitle: 'プリントデザインプレビュー',
+    expectedTitle: '柄・グラフィックプレビュー',
     expectedSummaryIncludes: '花柄の密度',
   });
   await flow.page.close();
