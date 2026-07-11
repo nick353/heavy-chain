@@ -88,7 +88,7 @@ const canvasImageActions: Array<{
   { id: 'upscale', label: '高解像度', description: '掲載用に拡大', icon: Maximize2, requiresSelection: true },
   { id: 'variations', label: '派生させる', description: '近い案を4つ作る', icon: CopyPlus, requiresSelection: true },
   { id: 'edit', label: '指示で編集', description: '文章で直す', icon: MessageSquare, requiresSelection: true },
-  { id: 'generate', label: '新しく生成', description: 'Lightchain生成', icon: Sparkles, requiresSelection: false },
+  { id: 'generate', label: '新しく生成', description: '生成', icon: Sparkles, requiresSelection: false },
 ];
 
 const isUsableLoadedImage = (image?: HTMLImageElement | null) => (

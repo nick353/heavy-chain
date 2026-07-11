@@ -64,7 +64,7 @@ interface OnboardingStep {
 const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'welcome',
-    title: 'Lightchainへようこそ',
+    title: 'Heavy Chainへようこそ',
     description: '服や商品画像を置いて、生成、確認、Canvas再編集まで進めるアパレル制作ワークスペースです。',
     icon: Sparkles,
     tips: [
@@ -75,7 +75,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: 'material-workbench',
-    title: '素材ワークベンチ',
+    title: '素材作業台',
     description: '衣服参考、商品素材、背景、ロゴを読み込み、どのレイヤーに使うかを先に決めます。',
     icon: Wand2,
     tips: [

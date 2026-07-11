@@ -2,6 +2,15 @@
 
 Updated: 2026-07-07
 
+2026-07-11 parity slice:
+- matrix conversion: added `lightchainParityGoals` metadata for all 13 supplied comparison rows with explicit `P0/P1` priorities and Heavy target outcomes.
+- implemented IDs: `P0-01` simplified first-run onboarding, `P0-02` canonical readiness/generating/success/failure/retry state, `P0-03` duplicate-submit prevention, `P0-04` output/handoff preservation; `P0-05` remains evidence-only because the browser session stopped at auth.
+- changes: `GeneratePage` now derives the primary action label and visible stage banner from canonical state, uses a synchronous duplicate-submit lock, and keeps readiness UI outside the results-only hidden panel; `MaterialWorkbench` now exposes the condensed summary only for the intended P0 `GeneratePage` usage and keeps prior default behavior elsewhere.
+- commands: `git diff --check`; `npm run typecheck`; `npm run verify:api-less-generation`; `node scripts/verify-internal-ux-consistency.mjs --out output/playwright/internal-ux-consistency-check-4`; `npm run build`; `npm run lint -- --max-warnings=0` still reports pre-existing warnings in untouched files.
+- browser evidence: Chrome Extension session `🧵 Heavy Chain Light寄せQA` on `http://127.0.0.1:4174/` reached the modern login/auth gate on `/generate?feature=model-matrix`; the generation surface itself was not reached.
+- blocker: no behavioral harness/test diff exists; current check-4 fails on pre-existing/scope-out `LightchainWorkbenchPage.tsx` legacy wording; browser QA remains auth-gated and actual generation remains unverified.
+- next P1 action: apply the same first-run summary strip and stage-copy treatment to `/studio`, `/video`, `/lab`, and `/patterns/workbench`.
+
 g835_current_readback_refresh_g618_g620_h602_g619_20260708: 2026-07-08 の最新再実行で `G618/G620` は再び readback fail。`H602/G619` は未完了のまま。`release/10M` は fail クローズ状態として再反映。
 browser_group_hygiene_20260708: 今後の web 操作では、役目が終わったブラウザグループ/タブは必ず閉じてから終える。残グループを放置しない。
 browser_group_hygiene_exception_20260708: ただし、ユーザーが「そのタブは残しておいて」「最後に自分で進める」と明示したものだけは残す。他の終わったタブは閉じる。

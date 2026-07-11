@@ -49,8 +49,8 @@ const loadingRouteCopy: Record<string, { eyebrow: string; title: string; descrip
   '/dashboard': {
     eyebrow: 'Home',
     title: '制作ワークフローを準備しています',
-    description: '商品画像、素材ワークベンチ、Canvas、ジョブ状況へすぐ戻れるようにワークスペースを準備しています。',
-    actions: ['商品画像から始める', '素材ワークベンチを開く', 'ジョブ状況を見る'],
+    description: '商品画像、素材作業台、Canvas、ジョブ状況へすぐ戻れるようにワークスペースを準備しています。',
+    actions: ['商品画像から始める', '素材作業台を開く', 'ジョブ状況を見る'],
   },
   '/jobs': {
     eyebrow: 'Production Queue',
@@ -144,9 +144,9 @@ function getLoadingCopy(pathname: string) {
   if (pathname.startsWith('/lightchain')) {
     return {
       eyebrow: 'Material Workbench',
-      title: '素材ワークベンチを準備しています',
-      description: 'アップロード、AIマスク認識、抽出、Canvas保存の導線を準備しています。',
-      actions: ['画像をアップロード', 'AIマスク認識', 'Canvasに保存'],
+      title: '素材作業台を準備しています',
+    description: 'アップロード、マスク確認、抽出、Canvas保存の導線を準備しています。',
+    actions: ['画像をアップロード', 'マスクを確認', 'Canvasに保存'],
     };
   }
   return loadingRouteCopy[pathname] ?? {
@@ -355,7 +355,7 @@ function StaticInfoPage({
           href="/"
           className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
         >
-          Lightchainへ戻る
+          ホームへ戻る
         </a>
         <div className="mt-8 glass-panel rounded-2xl p-6 sm:p-8">
           <h1 className="text-2xl font-display font-semibold text-neutral-900 dark:text-white">

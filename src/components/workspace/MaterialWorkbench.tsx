@@ -20,6 +20,7 @@ type MaterialWorkbenchProps = {
   placementOptions: string[];
   maxFileSizeMb?: number;
   simpleMode?: boolean;
+  compactSummary?: boolean;
 };
 
 const maskModes: Array<{ id: MaterialReferenceState['maskMode']; label: string }> = [
@@ -65,6 +66,7 @@ export function MaterialWorkbench({
   placementOptions,
   maxFileSizeMb = 5,
   simpleMode = false,
+  compactSummary = false,
 }: MaterialWorkbenchProps) {
   const [cutoutError, setCutoutError] = useState('');
   const [isCutoutProcessing, setIsCutoutProcessing] = useState(false);
@@ -116,7 +118,7 @@ export function MaterialWorkbench({
         maskEngine: null,
         nextStepReady: false,
       });
-      toast.success('素材画像を読み込み、レイヤー編集を準備しました');
+      toast.success('素材画像を読み込みました');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '画像を読み込めませんでした');
     }
@@ -133,7 +135,7 @@ export function MaterialWorkbench({
       selectedMaskCandidate: 'トップス',
       activeLayer: 'トップス',
     });
-    toast.success('AIマスク認識で候補を検出しました');
+      toast.success('候補を見つけました');
   };
 
   const selectMaskCandidate = (candidate: string) => {
@@ -165,7 +167,7 @@ export function MaterialWorkbench({
         maskEngine: cutout.engine,
         nextStepReady: false,
       });
-      toast.success(`${state.selectedMaskCandidate}を透明PNGで抽出しました`);
+      toast.success(`${state.selectedMaskCandidate}を抽出しました`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '抽出に失敗しました');
     }
@@ -243,6 +245,39 @@ export function MaterialWorkbench({
           {hasImage ? '素材あり' : '素材を追加'}
         </span>
       </div>
+
+      {compactSummary && (
+        <>
+          <p className="mt-3 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
+            重要な選択だけ先に見せ、細かい設定は下の詳細から開けます。
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+            {[
+              { label: '素材タイプ', value: state.materialKind || materialKinds[0] || '未設定' },
+              { label: 'レイヤー', value: state.activeLayer || '未設定' },
+              { label: '配置', value: state.placement || placementOptions[0] || '未設定' },
+              { label: '切り抜き', value: maskModeLabel[state.maskMode] },
+              {
+                label: '次の一手',
+                value: state.nextStepReady
+                  ? 'AI生成へ'
+                  : state.extractedLayerReady
+                    ? '権利確認 / 次へ'
+                    : '切り抜き / 抽出',
+              },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                  {item.label}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-white">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="mt-4 grid min-w-0 gap-4 2xl:grid-cols-[minmax(280px,1fr)_minmax(300px,0.86fr)]">
         <div className="min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-[#050707]">
@@ -365,7 +400,7 @@ export function MaterialWorkbench({
             )}
           </div>
 
-          <details className="rounded-2xl border border-white/10 bg-white/[0.04] p-3" open={!simpleMode}>
+          <details className="rounded-2xl border border-white/10 bg-white/[0.04] p-3" open={compactSummary ? false : !simpleMode}>
             <summary className="cursor-pointer text-sm font-semibold text-neutral-700 dark:text-neutral-200">
               詳細設定
             </summary>

@@ -433,7 +433,7 @@ export function VideoWorkstationPage() {
       },
     });
 
-    toast.success('Video WorkstationをGallery/Historyに保存し、Canvasへ渡しました');
+    toast.success('Video Workstationを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
   };
 
@@ -446,7 +446,7 @@ export function VideoWorkstationPage() {
               Video Workstation
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-              商品動画の構成、編集、書き出し状態を、Gallery/History と Canvas に渡せる動画ワークスペースです。
+              商品動画の構成、編集、書き出し状態を、Canvas に渡せる動画ワークスペースです。
             </p>
           </div>
           <button

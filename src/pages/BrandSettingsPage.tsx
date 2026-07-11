@@ -292,7 +292,7 @@ export function BrandSettingsPage() {
             ブランド情報
           </h2>
           <p className="mb-6 text-sm text-neutral-500 dark:text-neutral-400">
-            Lightchain側の月間 quota は通常アカウントの生成条件に含まれ、Apple sandbox tester は実請求なしの検証アカウントとして扱われます。
+            Heavy Chain側の月間 quota は通常アカウントの生成条件に含まれ、Apple sandbox tester は実請求なしの検証アカウントとして扱われます。
           </p>
 
           {/* Logo */}

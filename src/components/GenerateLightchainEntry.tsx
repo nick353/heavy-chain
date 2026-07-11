@@ -145,7 +145,7 @@ export function GenerateLightchainEntry() {
           <div>
             <h2 className="text-4xl font-semibold tracking-normal text-white sm:text-5xl">HEAVY CHAIN AI</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
-              アパレル特化のAIデザインワークスペース。指示を入力するか、目的別の4カテゴリから開始します。
+              目的別の4カテゴリから始めます。
             </p>
           </div>
           <Link
@@ -160,13 +160,13 @@ export function GenerateLightchainEntry() {
         <div className="mt-7 flex flex-col gap-3 rounded-full border border-cyan-300/60 bg-neutral-900/80 p-2 shadow-[0_0_28px_rgba(34,211,238,0.12)] sm:flex-row sm:items-center">
           <label className="flex min-h-[54px] flex-1 items-center gap-3 px-3">
             <Search className="h-5 w-5 shrink-0 text-cyan-300" />
-            <input
-              value={command}
-              onChange={(event) => setCommand(event.target.value)}
-              className="min-w-0 flex-1 border-0 bg-transparent text-sm text-white outline-none placeholder:text-neutral-500"
-              placeholder="指示を入力してください... 例: モデルの着せ替え、夏のSNSバナー、背景削除"
-            />
-          </label>
+              <input
+                value={command}
+                onChange={(event) => setCommand(event.target.value)}
+                className="min-w-0 flex-1 border-0 bg-transparent text-sm text-white outline-none placeholder:text-neutral-500"
+              placeholder="例: モデルの着せ替え、背景削除"
+              />
+            </label>
           <Link
             to={commandHrefWithPrompt}
             className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-full bg-cyan-300 px-6 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"

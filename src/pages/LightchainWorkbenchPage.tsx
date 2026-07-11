@@ -114,7 +114,7 @@ const tools: CompatTool[] = [
     status: 'ready',
     description: '衣服画像0/4、シングル/マルチタスク、説明生成、参考画像、モデルセット写真、1K品質を持つ着用生成。',
     inputs: ['衣服画像', '説明文', 'モデル画像', 'ポーズ', '背景'],
-    outputs: ['モデル着用画像', 'EC素材', '生成履歴'],
+    outputs: ['モデル着用画像', 'EC素材', '履歴'],
     heavyChainHref: '/fitting',
     runLabel: '着用画像を作る',
     promptTemplate: '平置き商品画像を、自然なモデル着用EC画像に変換してください。',
@@ -264,11 +264,11 @@ const tools: CompatTool[] = [
   },
   {
     id: 'print-design-project',
-    title: 'プリントデザイン',
+    title: '柄・グラフィック',
     lightchainRoute: '/editor/patternDesign',
     category: 'graphics',
     status: 'workspace',
-    description: 'プリントデザインの新規ファイル、過去プロジェクト、ファッション/ホームテキスタイル事例。',
+    description: '柄・グラフィックの新規ファイル、過去プロジェクト、ファッション/ホームテキスタイル事例。',
     inputs: ['柄画像', '用途', 'リピート条件'],
     outputs: ['プリント案', '柄プロジェクト'],
     heavyChainHref: '/patterns/workbench',
@@ -277,7 +277,7 @@ const tools: CompatTool[] = [
   },
   {
     id: 'print-design-detail',
-    title: 'プリントデザイン詳細',
+    title: '柄・グラフィック詳細',
     lightchainRoute: '/editor/patternDesign/detail',
     category: 'graphics',
     status: 'needs-image',
@@ -642,7 +642,7 @@ const buildOrderSheetPreview = ({
       <rect width="1200" height="900" fill="#f8fafc"/>
       <rect x="70" y="64" width="1060" height="772" rx="34" fill="#ffffff" stroke="#d4d4d8" stroke-width="3"/>
       <rect x="70" y="64" width="1060" height="156" rx="34" fill="#0f172a"/>
-      <text x="112" y="126" fill="#67e8f9" font-family="Arial, sans-serif" font-size="28" font-weight="700">LIGHTCHAIN ORDER SHEET</text>
+      <text x="112" y="126" fill="#67e8f9" font-family="Arial, sans-serif" font-size="28" font-weight="700">HEAVY CHAIN ORDER SHEET</text>
       <text x="112" y="178" fill="#ffffff" font-family="Arial, sans-serif" font-size="48" font-weight="800">${title}</text>
       <text x="112" y="276" fill="#0f172a" font-family="Arial, sans-serif" font-size="28" font-weight="700">Selected tool</text>
       <text x="112" y="316" fill="#334155" font-family="Arial, sans-serif" font-size="26">${escapeSvgText(tool.id)} / ${escapeSvgText(tool.lightchainRoute)}</text>
@@ -657,7 +657,7 @@ const buildOrderSheetPreview = ({
       <text x="660" y="612" fill="#0f172a" font-family="Arial, sans-serif" font-size="26" font-weight="700">Output / Next step</text>
       <text x="660" y="658" fill="#166534" font-family="Arial, sans-serif" font-size="24">${outputText}</text>
       <text x="660" y="704" fill="#15803d" font-family="Arial, sans-serif" font-size="22">${nextStep}</text>
-      <text x="112" y="794" fill="#94a3b8" font-family="Arial, sans-serif" font-size="22">lightchain-order-sheet-v1 / selected-tool-preview / Canvas handoff</text>
+      <text x="112" y="794" fill="#94a3b8" font-family="Arial, sans-serif" font-size="22">selected-tool-preview / 保存用シート</text>
     </svg>
   `);
 };
@@ -691,10 +691,10 @@ const defaultMaskCandidates: MaskCandidate[] = ['トップス', '無地部分', 
 
 const materialTabs: Array<{ id: MaterialTab; label: string; description: string }> = [
   { id: 'upload-history', label: '履歴アップロード', description: '直近で使ったアップロード素材を再利用します。' },
-  { id: 'generation-history', label: '生成履歴', description: '過去14日間の生成結果を素材として使います。' },
+  { id: 'generation-history', label: '履歴', description: '過去14日間の生成結果を素材として使います。' },
   { id: 'my-library', label: 'マイライブラリー', description: '個人で保存した商品、柄、モデル参照を選びます。' },
   { id: 'team-library', label: 'チームライブラリー', description: 'チーム共有の素材を制作に使います。' },
-  { id: 'platform-assets', label: 'プラットフォームアセット', description: 'Lightchain型のサンプル素材から開始します。' },
+  { id: 'platform-assets', label: 'プラットフォームアセット', description: 'サンプル素材から開始します。' },
 ];
 
 const materialTabItems: Record<MaterialTab, Array<{ title: string; kind: string; note: string }>> = {
@@ -848,7 +848,7 @@ const workspaceStyleConfig: Record<string, {
   },
   lab: {
     kind: 'lab',
-    title: 'Lightchain Lab',
+    title: 'Heavy Chain Lab',
     subtitle: '参考事例',
     prompt: '物マーケティング画像への変換',
   },
@@ -1008,7 +1008,7 @@ export function LightchainWorkbenchPage() {
   const flowTabs =
     selectedTool.id === 'image-repair'
         ? ['手足の変形を修正', 'マスクツール']
-        : ['素材を入れる', '調整する', 'Canvasへ保存'];
+        : ['素材を入れる', '調整する', '保存'];
   const primaryUploadLabel =
     selectedTool.id === 'printing-image'
       ? '参考画像をアップロードしてください'
@@ -1415,7 +1415,7 @@ export function LightchainWorkbenchPage() {
       summary: modelSummary,
       imageUrl: preview,
     });
-    toast.success('生成履歴にプレビューを追加しました');
+    toast.success('履歴にプレビューを追加しました');
   };
 
   const handleWorkspaceStyleGenerate = () => {
@@ -1440,7 +1440,7 @@ export function LightchainWorkbenchPage() {
       summary: request,
       imageUrl: preview,
     });
-    toast.success('生成履歴にプレビューを追加しました');
+    toast.success('履歴にプレビューを追加しました');
   };
 
   const handleProjectHomeGenerate = () => {
@@ -1471,7 +1471,7 @@ export function LightchainWorkbenchPage() {
       summary,
       imageUrl: preview,
     });
-    toast.success('生成履歴にプレビューを追加しました');
+    toast.success('履歴にプレビューを追加しました');
   };
 
   const handleCustomStyleSave = () => {
@@ -1560,13 +1560,13 @@ export function LightchainWorkbenchPage() {
         <rect x="462" y="242" width="250" height="22" rx="11" fill="#ffffff" opacity="0.12"/>
         <rect x="462" y="320" width="158" height="46" rx="23" fill="#65d3cf"/>
         <text x="541" y="350" text-anchor="middle" fill="#062c2b" font-family="Arial, sans-serif" font-size="20" font-weight="800">AI生成</text>
-        <text x="118" y="472" fill="#65d3cf" font-family="Arial, sans-serif" font-size="28" font-weight="800">プリントデザイン詳細</text>
+        <text x="118" y="472" fill="#65d3cf" font-family="Arial, sans-serif" font-size="28" font-weight="800">柄・グラフィック詳細</text>
         <text x="462" y="428" fill="#a3a3a3" font-family="Arial, sans-serif" font-size="18">${escapeSvgText(truncateSvgText(summary, 50))}</text>
       </svg>
     `);
     setLightchainResult({
       toolId: 'print-design-detail',
-      title: 'プリントデザインプレビュー',
+      title: '柄・グラフィックプレビュー',
       summary,
       imageUrl: preview,
     });
@@ -1600,7 +1600,7 @@ export function LightchainWorkbenchPage() {
       summary,
       imageUrl: preview,
     });
-    toast.success('生成履歴にプレビューを追加しました');
+    toast.success('履歴にプレビューを追加しました');
   };
 
   const handleOpenMaskAdjustment = () => {
@@ -1770,7 +1770,7 @@ export function LightchainWorkbenchPage() {
       const finalCutoutMaxDataUrlBytes = cutoutMaxDataUrlBytes || (ensuredCutout ? 750_000 : null);
       const finalCutoutStoragePolicy = cutoutStoragePolicy || ensuredCutout?.storagePolicy || null;
       const finalMaskEngine = maskEngine || ensuredCutout?.engine || null;
-      const projectId = createProject(`素材ワークベンチ: ${selectedTool.title}`, currentBrand.id);
+      const projectId = createProject(`素材作業台: ${selectedTool.title}`, currentBrand.id);
       const lightchainWorkbenchState = workbenchEnabled ? {
         toolId: selectedTool.id,
         toolCategory: selectedTool.category,
@@ -2098,7 +2098,7 @@ export function LightchainWorkbenchPage() {
         selectObject((overlayObjectId ?? materialObjectId) as string);
       }
       saveCurrentProject();
-      toast.success('素材ワークベンチの内容をCanvasへ保存しました');
+      toast.success('素材作業台の内容を保存しました');
       navigate(`/canvas/${projectId}`);
     } catch (error) {
       console.error('Failed to save Lightchain workbench artifact:', error);
@@ -2194,7 +2194,7 @@ export function LightchainWorkbenchPage() {
               />
               <div className="rounded-2xl border border-white/5 bg-[#181d1f] px-4 py-3 text-left text-xs leading-5 text-neutral-400">
                 {activeFittingTaskTab === 'マルチタスク'
-                  ? 'マルチタスクでは複数コーディネートを同時に管理し、各参考条件を生成履歴へまとめます。'
+                  ? 'マルチタスクでは複数コーディネートを同時に管理し、各参考条件を履歴にまとめます。'
                   : 'シングルタスクでは1つの衣服画像から最短で着用イメージを作ります。'}
                 <span className="mt-1 block text-[#65d3cf]">{activeFittingInputTab}</span>
               </div>
@@ -2219,7 +2219,7 @@ export function LightchainWorkbenchPage() {
               type="button"
               className="absolute right-4 top-4 rounded-xl border border-white/15 bg-[#181b1d] px-4 py-2 text-sm font-semibold text-white"
             >
-              生成履歴
+              履歴
             </button>
             <div className="text-center">
               <h2 className="text-xl font-semibold text-[#6ee7df]">AIフィッティング</h2>
@@ -2239,7 +2239,7 @@ export function LightchainWorkbenchPage() {
                         disabled={isSaving}
                         className="shrink-0 rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                       >
-                        Canvasへ保存
+                        保存
                       </button>
                     </div>
                   </div>
@@ -2256,7 +2256,7 @@ export function LightchainWorkbenchPage() {
               <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
                 <div>
                   <h2 className="text-base font-semibold text-neutral-900 dark:text-white">素材選択</h2>
-                  <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">Lightchainと同じ素材導線で選びます。</p>
+                  <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">素材から選びます。</p>
                 </div>
                 <button
                   type="button"
@@ -2372,7 +2372,7 @@ export function LightchainWorkbenchPage() {
                       disabled={isSaving}
                       className="shrink-0 rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                     >
-                      Canvasへ保存
+                      保存
                     </button>
                   </div>
                 </div>
@@ -2438,7 +2438,7 @@ export function LightchainWorkbenchPage() {
     const currentWorkspaceCopy = workspaceTabCopy[currentWorkspaceTab] ?? {
       helper: workspaceStyle.subtitle,
       prompt: workspaceStyle.prompt,
-      historyLabel: workspaceStyle.kind === 'marketing' ? 'マイプロジェクト' : '生成履歴',
+      historyLabel: workspaceStyle.kind === 'marketing' ? 'マイプロジェクト' : '履歴',
       examples: workspaceStyle.examples,
     };
     const visibleExamples = currentWorkspaceCopy.examples ?? workspaceStyle.examples;
@@ -2595,7 +2595,7 @@ export function LightchainWorkbenchPage() {
                   disabled={isSaving}
                   className="rounded-xl border border-white/10 bg-[#20272a] px-4 py-2 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                 >
-                  Canvasへ保存
+                  保存
                 </button>
               )}
             </div>
@@ -2755,8 +2755,8 @@ export function LightchainWorkbenchPage() {
             )}
             <section className="max-h-[42%] shrink-0 overflow-y-auto border-t border-white/10 bg-[#0f1416] p-3" data-testid="lightchain-marketing-detail-readback" data-preview-title="マーケティング詳細プレビュー">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-white">生成履歴</p>
-                <button type="button" onClick={handleSaveToCanvas} disabled={isSaving || !lightchainResult} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-60">Canvasへ保存</button>
+                <p className="text-sm font-semibold text-white">履歴</p>
+                <button type="button" onClick={handleSaveToCanvas} disabled={isSaving || !lightchainResult} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-60">保存</button>
               </div>
               <p className="mt-3 text-sm font-semibold text-white">マーケティング詳細プレビュー</p>
               {lightchainResult ? (
@@ -2777,35 +2777,28 @@ export function LightchainWorkbenchPage() {
   if (selectedTool.id === 'print-design-project') {
     const printProjectCards = [
       { title: '新規ファイル', age: '', tone: 'bg-[#171c1f]', isNew: true },
-      { title: 'Untitled', age: '10 天前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc,#facc15_38%,#111827_39%,#111827_72%,#f8fafc_73%)]' },
-      { title: 'Untitled', age: '1 个月前 修正', tone: 'bg-[linear-gradient(135deg,#dbeafe,#f8fafc_45%,#0f172a_46%,#f472b6_78%)]' },
-      { title: 'Untitled', age: '2 个月前 修正', tone: 'bg-[radial-gradient(circle_at_30%_24%,#fb7185,#111827_34%,#e5e7eb_35%,#e5e7eb_52%,#65d3cf_53%)]' },
-      { title: 'Untitled', age: '4 个月前 修正', tone: 'bg-[linear-gradient(135deg,#1f2937,#1f2937_48%,#f8fafc_49%,#f8fafc_66%,#111827_67%)]' },
-      { title: 'Untitled', age: '4 个月前 修正', tone: 'bg-[linear-gradient(135deg,#fef3c7,#fef3c7_42%,#0f172a_43%,#0f172a_62%,#fb7185_63%)]' },
-      { title: 'Untitled', age: '5 个月前 修正', tone: 'bg-[radial-gradient(circle_at_50%_34%,#65d3cf,#111827_32%,#f8fafc_33%,#f8fafc_64%,#111827_65%)]' },
-      { title: 'Untitled', age: '6 个月前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc,#f8fafc_28%,#111827_29%,#111827_58%,#fbbf24_59%)]' },
-      { title: 'Untitled', age: '7 个月前 修正', tone: 'bg-[linear-gradient(135deg,#111827,#111827_36%,#e5e7eb_37%,#e5e7eb_70%,#65d3cf_71%)]' },
-      { title: 'Untitled', age: '7 个月前 修正', tone: 'bg-[radial-gradient(circle_at_28%_28%,#f8fafc,#f8fafc_18%,#111827_19%,#111827_50%,#fb7185_51%)]' },
-      { title: 'Untitled', age: '7 个月前 修正', tone: 'bg-[linear-gradient(135deg,#0f172a,#f8fafc_42%,#0f172a_43%,#65d3cf_76%)]' },
-      { title: 'Untitled', age: '8 个月前 修正', tone: 'bg-[radial-gradient(circle_at_70%_26%,#fbbf24,#111827_30%,#e5e7eb_31%,#e5e7eb_66%,#111827_67%)]' },
-      { title: 'Untitled', age: '8 个月前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc,#65d3cf_36%,#111827_37%,#111827_68%,#f8fafc_69%)]' },
+      { title: 'Untitled', age: '10日前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc,#facc15_38%,#111827_39%,#111827_72%,#f8fafc_73%)]' },
+      { title: 'Untitled', age: '1か月前 修正', tone: 'bg-[linear-gradient(135deg,#dbeafe,#f8fafc_45%,#0f172a_46%,#f472b6_78%)]' },
+      { title: 'Untitled', age: '2か月前 修正', tone: 'bg-[radial-gradient(circle_at_30%_24%,#fb7185,#111827_34%,#e5e7eb_35%,#e5e7eb_52%,#65d3cf_53%)]' },
+      { title: 'Untitled', age: '4か月前 修正', tone: 'bg-[linear-gradient(135deg,#1f2937,#1f2937_48%,#f8fafc_49%,#f8fafc_66%,#111827_67%)]' },
+      { title: 'Untitled', age: '5か月前 修正', tone: 'bg-[linear-gradient(135deg,#fef3c7,#fef3c7_42%,#0f172a_43%,#0f172a_62%,#fb7185_63%)]' },
     ];
     const exampleCards = [
-      { title: 'ファッションアプリケーション', age: '8 个月前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc,#111827_42%,#65d3cf_43%,#f8fafc_72%)]' },
-      { title: 'ホームテキスタイル用途', age: '8 个月前 修正', tone: 'bg-[radial-gradient(circle_at_35%_26%,#fef3c7,#111827_28%,#f8fafc_29%,#f8fafc_64%,#fb7185_65%)]' },
+      { title: 'ファッション用途', age: '8か月前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc,#111827_42%,#65d3cf_43%,#f8fafc_72%)]' },
+      { title: 'ホームテキスタイル', age: '8か月前 修正', tone: 'bg-[radial-gradient(circle_at_35%_26%,#fef3c7,#111827_28%,#f8fafc_29%,#f8fafc_64%,#fb7185_65%)]' },
     ];
 
     return (
       <main className="dark min-h-screen bg-[#101010] px-4 py-4 text-white sm:px-6" data-testid="lightchain-print-design-project-page">
         <section className="mx-auto max-w-[1180px]">
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-base font-semibold text-white">プリントデザイン</h1>
+            <h1 className="text-base font-semibold text-white">柄・グラフィック</h1>
             <button
               type="button"
               onClick={handleProjectHomeGenerate}
               className="rounded-xl bg-[#65d3cf] px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc]"
             >
-              AI生成
+              生成へ
             </button>
           </div>
           {lightchainResult && (
@@ -2821,11 +2814,11 @@ export function LightchainWorkbenchPage() {
                 disabled={isSaving}
                 className="self-start rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
               >
-                Canvasへ保存
+                保存
               </button>
             </div>
           )}
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {printProjectCards.map((card, index) => (
               <button
                 key={`${card.title}-${index}`}
@@ -2857,7 +2850,7 @@ export function LightchainWorkbenchPage() {
           </div>
 
           <h2 className="mt-6 text-base font-semibold text-white">参考事例</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
             {exampleCards.map((card) => (
               <button key={card.title} type="button" onClick={() => navigate('/lightchain/print-design-detail')} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
                 <div className={`h-40 ${card.tone}`} />
@@ -2879,9 +2872,9 @@ export function LightchainWorkbenchPage() {
         {!printDesignDetailStarted ? (
           <section className="mx-auto flex min-h-[calc(100vh-112px)] max-w-[780px] items-center justify-center">
             <div className="grid w-full gap-8 md:grid-cols-2">
-              {[
-                { mode: 'guide' as const, title: 'ガイドを見る', subtitle: 'ガイドを表示する', tone: 'bg-[#111719]' },
-                { mode: 'no-guide' as const, title: 'ガイドを表示しない', subtitle: 'ガイド無しで開始します', tone: 'bg-[linear-gradient(135deg,#20282b,#30383b)]' },
+                {[
+                { mode: 'guide' as const, title: 'ガイドあり', subtitle: 'まずはガイドを表示', tone: 'bg-[#111719]' },
+                { mode: 'no-guide' as const, title: 'ガイドなし', subtitle: 'そのまま開始', tone: 'bg-[linear-gradient(135deg,#20282b,#30383b)]' },
               ].map((item) => (
                 <button
                   key={item.mode}
@@ -2915,7 +2908,7 @@ export function LightchainWorkbenchPage() {
                 </div>
                 <button type="button" className="flex w-full flex-col items-center gap-2 rounded-xl bg-cyan-400/15 px-2 py-3 text-[11px] font-semibold leading-4 text-cyan-200">
                   <WandSparkles className="h-5 w-5" />
-                  <span>プリントデザイン</span>
+                  <span>柄・グラフィック</span>
                 </button>
               </div>
             </aside>
@@ -2923,11 +2916,11 @@ export function LightchainWorkbenchPage() {
             <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#171c1f]" data-testid="lightchain-print-design-input-panel">
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
                 <div>
-                  <h1 className="text-base font-semibold text-white">プリントデザイン</h1>
-                  <p className="mt-1 text-xs font-semibold text-neutral-500">Untitled / {printDesignMode === 'guide' ? 'ガイドを表示する' : 'ガイド無しで開始します'}</p>
+                  <h1 className="text-base font-semibold text-white">柄・グラフィック</h1>
+                  <p className="mt-1 text-xs font-semibold text-neutral-500">Untitled / {printDesignMode === 'guide' ? 'ガイドあり' : 'ガイドなし'}</p>
                 </div>
                 <button type="button" onClick={() => setPrintDesignDetailStarted(false)} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-300 transition hover:text-white">
-                  ガイドを見る
+                  戻る
                 </button>
               </div>
               <div className="p-4">
@@ -2949,9 +2942,9 @@ export function LightchainWorkbenchPage() {
 
                 <div className="mt-5 grid gap-3">
                   <div className="rounded-xl border border-white/10 bg-[#111719] p-4">
-                    <p className="text-sm font-semibold text-neutral-200">プリント用途</p>
+                    <p className="text-sm font-semibold text-neutral-200">用途</p>
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                      {['ファッション', 'ホームテキスタイル', '総柄', 'ワンポイント'].map((item, index) => (
+                      {['ファッション', 'ホーム', '総柄', 'ワンポイント'].map((item, index) => (
                         <button key={item} type="button" className={`rounded-lg px-3 py-2 text-sm font-semibold ${index === 0 ? 'bg-[#737d84] text-white' : 'bg-[#20272a] text-neutral-400'}`}>
                           {item}
                         </button>
@@ -2959,12 +2952,12 @@ export function LightchainWorkbenchPage() {
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="print-design-prompt" className="text-sm font-semibold text-neutral-200">編集指示</label>
+                    <label htmlFor="print-design-prompt" className="text-sm font-semibold text-neutral-200">指示</label>
                     <textarea
                       id="print-design-prompt"
                       value={printDesignPrompt}
                       onChange={(event) => setPrintDesignPrompt(event.target.value.slice(0, 200))}
-                      placeholder="例：花柄の密度を上げ、ワンピース向けにリピートしやすい配色へ整えてください。"
+                      placeholder="例：花柄を少し整理して、ワンピース向けの配色にしてください。"
                       className="mt-3 min-h-[92px] w-full resize-none rounded-xl border border-white/10 bg-[#111719] px-4 py-3 text-sm leading-6 text-neutral-100 outline-none placeholder:text-neutral-500 focus:border-cyan-300/60"
                     />
                     <div className="mt-2 flex items-center justify-between text-xs text-neutral-500">
@@ -2975,23 +2968,23 @@ export function LightchainWorkbenchPage() {
                 </div>
 
                 <button type="button" onClick={() => handlePrintDesignStart(printDesignMode)} className="mt-4 flex w-full items-center justify-center rounded-xl bg-[#65d3cf] px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc]">
-                  AI生成 <Sparkles className="ml-2 h-4 w-4" />
+                  つくる <Sparkles className="ml-2 h-4 w-4" />
                 </button>
               </div>
             </section>
 
             <aside className="rounded-2xl border border-white/10 bg-[#141717] p-4" data-testid="lightchain-print-design-history">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">生成履歴</h2>
+                <h2 className="text-sm font-semibold text-white">履歴</h2>
                 {lightchainResult && (
                   <button type="button" onClick={handleSaveToCanvas} disabled={isSaving} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
-                    Canvasへ保存
+                    保存
                   </button>
                 )}
               </div>
               {lightchainResult ? (
                 <div className="mt-4 overflow-hidden rounded-xl bg-[#0f1416]" data-testid="lightchain-print-design-readback">
-                  <img src={lightchainResult.imageUrl} alt="プリントデザインプレビュー" className="h-56 w-full object-cover" />
+                  <img src={lightchainResult.imageUrl} alt="柄・グラフィックプレビュー" className="h-56 w-full object-cover" />
                   <div className="p-4">
                     <p className="text-sm font-semibold text-white">{lightchainResult.title}</p>
                     <p className="mt-2 text-xs leading-6 text-neutral-400">{lightchainResult.summary}</p>
@@ -3052,7 +3045,7 @@ export function LightchainWorkbenchPage() {
                 disabled={isSaving}
                 className="self-start rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
               >
-                Canvasへ保存
+                保存
               </button>
             </div>
           )}
@@ -3213,10 +3206,10 @@ export function LightchainWorkbenchPage() {
 
             <aside className="rounded-2xl border border-white/10 bg-[#141717] p-4" data-testid="lightchain-wear-design-history">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">生成履歴</h2>
+                <h2 className="text-sm font-semibold text-white">履歴</h2>
                 {lightchainResult && (
                   <button type="button" onClick={handleSaveToCanvas} disabled={isSaving} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
-                    Canvasへ保存
+                    保存
                   </button>
                 )}
               </div>
@@ -3346,14 +3339,14 @@ export function LightchainWorkbenchPage() {
             {lightchainResult && (
               <section className="mt-6 rounded-xl border border-white/10 bg-[#111719] p-4" data-testid="lightchain-custom-style-readback">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-white">生成履歴</h2>
+                <h2 className="text-sm font-semibold text-white">履歴</h2>
                   <button
                     type="button"
                     onClick={handleSaveToCanvas}
                     disabled={isSaving}
                     className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                   >
-                    Canvasへ保存
+                    保存
                   </button>
                 </div>
                 <div className="mt-3 grid gap-4 md:grid-cols-[260px_1fr]">
@@ -3373,7 +3366,7 @@ export function LightchainWorkbenchPage() {
               <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
                 <div>
                   <h2 className="text-base font-semibold text-neutral-900 dark:text-white">素材選択</h2>
-                  <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">Lightchainと同じ素材導線で選びます。</p>
+                  <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">素材から選びます。</p>
                 </div>
                 <button type="button" onClick={() => setMaterialModalOpen(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-500 transition hover:bg-neutral-100 dark:hover:bg-neutral-800">閉じる</button>
               </div>
@@ -3423,7 +3416,7 @@ export function LightchainWorkbenchPage() {
             <div className="min-w-0">
               <p className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 ring-1 ring-primary-100 dark:bg-primary-400/10 dark:text-primary-300 dark:ring-primary-400/20">
                 <Sparkles className="h-3.5 w-3.5" />
-                {isFeatureDetail ? selectedTool.lightchainRoute : `素材ワークベンチ / ${totalToolCount}機能`}
+                {isFeatureDetail ? selectedTool.lightchainRoute : `素材作業台 / ${totalToolCount}機能`}
               </p>
               <h1 className={`${isFeatureDetail ? 'mt-2 text-xl sm:text-2xl' : 'mt-4 text-2xl sm:text-3xl'} font-semibold tracking-tight text-neutral-950 dark:text-white`}>
                 {isFeatureDetail ? selectedTool.title : '用途を選んで、そのまま制作へ進む'}
@@ -3502,7 +3495,7 @@ export function LightchainWorkbenchPage() {
                 </div>
                 {!lightchainToolPanelConfig && selectedTool.id !== 'printing-image' && (
                 <p className="hidden text-sm font-medium text-neutral-400 lg:block">
-                  素材を入れて、必要な調整をして、Canvasへ保存します。
+                  素材を入れて、調整して、保存します。
                 </p>
                 )}
               </div>
@@ -3652,7 +3645,7 @@ export function LightchainWorkbenchPage() {
                 {isFeatureDetail && currentModelPanel ? (
 	                  <section className="flex h-[calc(100vh-104px)] min-h-[520px] flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,17,19,0.98),rgba(9,13,15,0.96))]" data-testid="lightchain-model-panel">
 	                    <div className="px-4 pb-3 pt-5">
-	                      <p className="text-xs font-semibold uppercase tracking-[0.26em] text-cyan-300">Lightchain / Heavy Chain</p>
+	                      <p className="text-xs font-semibold uppercase tracking-[0.26em] text-cyan-300">Heavy Chain</p>
 	                      <h1 className="mt-2 text-base font-semibold text-white">{currentModelPanel.title}</h1>
                         {currentModelPanel.subtitle && (
                           <p className="mt-2 text-xs font-semibold text-neutral-400">{currentModelPanel.subtitle}</p>
@@ -4023,7 +4016,7 @@ export function LightchainWorkbenchPage() {
                               </svg>
                             `),
                           });
-                          toast.success('生成履歴にプレビューを追加しました');
+                          toast.success('履歴にプレビューを追加しました');
                         }}
                         className="mt-4 flex w-full items-center justify-center rounded-xl bg-[#65d3cf] px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc] disabled:bg-[#3a484b] disabled:text-neutral-500"
                       >
@@ -4549,7 +4542,7 @@ export function LightchainWorkbenchPage() {
                             toast.error('先に素材画像を選択してください');
                             return;
                           }
-                          toast.success('Lightchain型の生成前状態を確認しました');
+                          toast.success('生成前の状態を確認しました');
                         }}
                         className="w-full rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary-500 disabled:bg-neutral-300 disabled:text-neutral-500 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-500"
                       >
@@ -4729,7 +4722,7 @@ export function LightchainWorkbenchPage() {
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 transition hover:border-primary-300 hover:text-primary-700 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
                   >
                     <Layers3 className="h-4 w-4" />
-                    Canvasに注文票を保存
+                    保存
                   </button>
                 </div>
                 )}
@@ -4743,7 +4736,7 @@ export function LightchainWorkbenchPage() {
                   type="button"
                   className="absolute right-0 top-0 z-10 rounded-full border border-white/15 bg-white/[0.05] px-4 py-2 text-sm font-semibold text-white"
                 >
-                  生成履歴
+                  履歴
                 </button>
                 <section className="flex min-h-[560px] items-center justify-center">
                   <div className="w-full pt-16 text-center">
@@ -4770,7 +4763,7 @@ export function LightchainWorkbenchPage() {
                         <div className="w-full rounded-2xl border border-white/10 bg-[#101719] p-4 text-left">
                           <div className="mb-4 flex items-center justify-between">
                             <div>
-                              <p className="text-sm font-semibold text-white">生成履歴</p>
+                              <p className="text-sm font-semibold text-white">履歴</p>
                               <p className="mt-1 text-xs text-neutral-500">{selectedTool.title}</p>
                             </div>
                               <div className="flex items-center gap-2">
@@ -4786,7 +4779,7 @@ export function LightchainWorkbenchPage() {
                                   disabled={isSaving}
                                   className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                                 >
-                                  Canvasへ保存
+                                  保存
                                 </button>
                               </div>
 	                          </div>
@@ -4815,7 +4808,7 @@ export function LightchainWorkbenchPage() {
 	                                disabled={isSaving}
 	                                className="mt-3 w-full rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
 	                              >
-	                                Canvasへ保存
+	                                保存
 	                              </button>
 	                          </div>
 	                        </div>
@@ -4852,9 +4845,9 @@ export function LightchainWorkbenchPage() {
           <div className="max-h-[88vh] w-full overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(13,17,20,0.98),rgba(9,12,14,0.96))] shadow-2xl sm:max-w-4xl">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Lightchain</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Heavy Chain</p>
                 <h2 className="mt-1 text-base font-semibold text-white">素材選択</h2>
-                <p className="mt-0.5 text-xs text-neutral-400">Lightchainと同じ素材導線で選びます。</p>
+                <p className="mt-0.5 text-xs text-neutral-400">素材から選びます。</p>
               </div>
               <button
                 type="button"

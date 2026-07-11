@@ -362,10 +362,10 @@ export function DashboardPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-300">
-                  HEAVY CHAIN / LIGHTCHAIN VISUALS
+                  HEAVY CHAIN / LIGHT UI
                 </p>
                 <h1 className="mt-3 text-4xl font-semibold tracking-normal text-white sm:text-5xl lg:text-6xl">
-                  Lightchain寄りの見た目に切り替えました
+                  見た目を軽くしました
                 </h1>
                 <p className="mt-4 max-w-4xl text-sm leading-6 text-neutral-300 sm:text-base">
                   背景、カード、CTA、入力の密度を変えて、ブランド名はHeavy Chainのままでも見た目だけ別の体験に寄せています。
@@ -858,8 +858,8 @@ export function DashboardPage() {
                 <IconSparkles className="w-5 h-5 text-primary-600 dark:text-primary-400" size={20} />
               </div>
               <p className="text-sm text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                <span className="font-semibold text-primary-700 dark:text-primary-300 block mb-1">ようこそ、Lightchainへ！</span>
-                まずはあなたのブランドを作成しましょう。Lightchainがブランドの世界観を整理し、最適な制作導線を案内します。
+                <span className="font-semibold text-primary-700 dark:text-primary-300 block mb-1">ようこそ、Heavy Chainへ！</span>
+                まずはあなたのブランドを作成しましょう。Heavy Chainがブランドの世界観を整理し、最適な制作導線を案内します。
               </p>
             </div>
           </div>

@@ -5,17 +5,17 @@ import { lightchainCategories, lightchainFeatureCatalog } from '../lib/lightchai
 const heroCards = [
   {
     title: 'マーケティングワークスペース',
-    description: '商品画像からEC、SNS、バナー、コピーまでまとめて制作。',
+    description: '商品画像から販促までまとめて作成。',
     image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=640&q=80',
   },
   {
     title: 'AIフィッティング',
-    description: '服、モデル、体型、背景を選んで着用画像を作成。',
+    description: '服、モデル、背景を選んで着用画像を作成。',
     image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=640&q=80',
   },
   {
     title: 'グラフィックツール',
-    description: '柄、ロゴ、プリント配置、背景削除、Canvas編集まで接続。',
+    description: '柄、ロゴ、配置、編集までまとめる。',
     image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=640&q=80',
   },
 ];
@@ -55,7 +55,7 @@ export function LandingPage() {
             HEAVY CHAIN AI
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-400">
-            生成、フィッティング、柄、Canvas編集まで進めるアパレル特化AIワークスペース。
+            生成、着用、柄、編集をまとめるアパレル向けワークスペース。
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link

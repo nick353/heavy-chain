@@ -95,7 +95,7 @@ export function LoginPage() {
           <div className="hidden lg:block">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">APPAREL AI WORKSPACE</p>
             <h1 className="mt-5 max-w-3xl text-6xl font-semibold leading-none tracking-normal">
-              Heavy Chainを、もっとLightchainらしく。
+              Heavy Chainを、もっと軽く。
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-400">
               背景、カード、入力、CTAの見た目を刷新して、すぐに別物だと分かるワークスペースへ寄せています。
@@ -104,7 +104,7 @@ export function LoginPage() {
 
           <div className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(8,12,13,0.96),rgba(11,15,18,0.92))] p-7 shadow-[0_28px_90px_rgba(0,0,0,0.5)] sm:p-10">
             <div className="mb-8">
-              <p className="text-sm font-semibold tracking-[0.26em] text-cyan-300">HEAVY CHAIN / LIGHTCHAIN UI</p>
+              <p className="text-sm font-semibold tracking-[0.26em] text-cyan-300">HEAVY CHAIN / LIGHT UI</p>
               <h2 className="mt-6 text-2xl font-semibold">新しい見た目のログイン画面です。</h2>
             </div>
 

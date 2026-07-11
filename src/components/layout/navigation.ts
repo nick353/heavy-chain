@@ -30,7 +30,7 @@ export const workspaceNavItems: WorkspaceNavItem[] = [
   { icon: Palette, label: '柄・グラフィック', mobileLabel: '柄', path: '/patterns/workbench', group: 'main' },
   { icon: Video, label: '動画', mobileLabel: '動画', path: '/video', group: 'main' },
   { icon: FlaskConical, label: 'ラボ', mobileLabel: 'ラボ', path: '/lab', group: 'main' },
-  { icon: LayoutGrid, label: '素材ワークベンチ', mobileLabel: '素材', path: '/lightchain', group: 'main' },
+  { icon: LayoutGrid, label: '素材作業台', mobileLabel: '素材', path: '/lightchain', group: 'main' },
   { icon: IconClock, label: '履歴', mobileLabel: '履歴', path: '/history', group: 'main', showInMobileNav: true },
   { icon: BriefcaseBusiness, label: 'ジョブ', mobileLabel: 'ジョブ', path: '/jobs', group: 'main' },
   { icon: CreditCard, label: 'クレジット', mobileLabel: 'クレジット', path: '/credits', group: 'main' },
@@ -48,5 +48,5 @@ export const isWorkspacePathActive = (pathname: string, path: string) => {
 
 export const getWorkspacePageTitle = (pathname: string) => {
   const item = workspaceNavItems.find((navItem) => isWorkspacePathActive(pathname, navItem.path));
-  return item?.label ?? 'Lightchain';
+  return item?.label ?? 'Heavy Chain';
 };

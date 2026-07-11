@@ -65,6 +65,7 @@ import {
   buildLightchainFeatureHref,
   getLightchainFeature,
   getLightchainTaskCodes,
+  lightchainParityGoals,
   lightchainCategories,
   lightchainFeatureCatalog,
   type LightchainCategoryId,
@@ -402,7 +403,7 @@ const generateWorkbenchByFeature: Record<string, {
   placementOptions: string[];
 }> = {
   'campaign-image': {
-    title: '販促素材ワークベンチ',
+    title: '販促素材作業台',
     description: '商品、ロゴ、背景を置いてから、広告レイヤーとコピー位置を決めます。',
     uploadLabel: '商品・ロゴ・背景をアップロード',
     emptyLabel: '素材を置くとキャンペーン画像の主役として反映できます',
@@ -450,7 +451,7 @@ const generateWorkbenchByFeature: Record<string, {
     title: 'カラー編集ワークベンチ',
     description: '対象範囲を見ながら、残す色・変える色・柄の重ね方を決めます。',
     uploadLabel: '色変更する衣服・素材をアップロード',
-    emptyLabel: '対象画像を置くと色変更範囲とレイヤーを先に整理できます',
+    emptyLabel: '対象画像を置くと色変更範囲を先に整理できます',
     materialKinds: ['衣服', '生地', '柄', '小物'],
     layerOptions: ['元色', '変更範囲', '新色', '柄レイヤー'],
     placementOptions: ['中央', '上半身', '袖', '全面'],
@@ -533,7 +534,7 @@ const FEATURE_CONFIG: Record<string, {
     allowedReferenceTypes: ['base', 'pattern'],
     defaultReferenceType: 'base',
     referenceLabel: '対象画像',
-    referenceHint: 'カラバリや柄を変更する画像',
+    referenceHint: '色変更したい服や素材の画像。先に対象を決めると流れが軽くなります。',
   },
   'design-gacha': {
     requiresImage: false,
@@ -973,6 +974,7 @@ export function GeneratePage() {
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [selectedRatio, setSelectedRatio] = useState('1:1');
   const [isGenerating, setIsGenerating] = useState(false);
+  const generationSubmitLockRef = useRef(false);
   const [isImportingLocalRunway, setIsImportingLocalRunway] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedResult[]>([]);
   const localRunwayImportInputRef = useRef<HTMLInputElement | null>(null);
@@ -1495,72 +1497,83 @@ export function GeneratePage() {
   }, [materialReference]);
 
   const handleGenerate = async () => {
-    debugLog('Generation requested', {
-      isGenerating,
-      selectedFeature: selectedFeature?.id,
-      hasBrand: !!currentBrand,
-      hasReferenceImage: !!referenceImage,
-      selectedBackground,
-    });
-    
-    if (!currentBrand) {
-      toast.error('ブランドを選択してください');
+    if (generationSubmitLockRef.current) {
       return;
     }
-
-    if (overlayEnabled && !overlayText.trim()) {
-      toast.error('画像内テキストを入力してください');
-      return;
-    }
-
-    // Validate required image
-    if (featureConfig?.requiresImage && !referenceImage) {
-      toast.error('画像をアップロードしてください');
-      return;
-    }
-
-    if (selectedFeature?.id === 'model-matrix' && selectedBodyTypes.length * selectedAgeGroups.length > MAX_MODEL_MATRIX_PATTERNS) {
-      toast.error(`一度に生成できる着用画像は${MAX_MODEL_MATRIX_PATTERNS}パターンまでです。体型または年代を減らしてください。`);
-      return;
-    }
-
-    if (selectedFeatureUsesRunwayMcp && !rightsConfirmed) {
-      toast.error('素材と生成指示の権利確認にチェックしてください');
-      return;
-    }
-
-    const legalSafetyAssessment = validateLegalSafetyInput([
-      prompt,
-      productDescription,
-      headline,
-      subheadline,
-      campaignTitle,
-      campaignSubheadline,
-      campaignCTA,
-      overlayText,
-      assistantPrompt,
-      materialReference.note,
-    ]);
-    if (selectedFeatureUsesRunwayMcp && legalSafetyAssessment.blocked) {
-      setGenerationError(BRAND_LIKENESS_BLOCK_COPY);
-      toast.error(BRAND_LIKENESS_BLOCK_COPY);
-      return;
-    }
-
-    if (!noImageGenerationMode && selectedFeatureUsesRunwayMcp && !runwayReadyInApp) {
-      const message = runwayReadinessIssues.length
-        ? runwayReadinessIssues.join(' / ')
-        : 'Runway MCP生成条件を確認できません。ブランド設定を確認してください';
-      setGenerationError(message);
-      toast.error(message);
-      return;
-    }
-
-    setGenerationError('');
-    setIsGenerating(true);
-    debugLog('Generation started', { selectedFeature: selectedFeature?.id });
-    
+    generationSubmitLockRef.current = true;
     try {
+      debugLog('Generation requested', {
+        isGenerating,
+        selectedFeature: selectedFeature?.id,
+        hasBrand: !!currentBrand,
+        hasReferenceImage: !!referenceImage,
+        selectedBackground,
+      });
+
+      if (isGenerating) {
+        return;
+      }
+
+      if (!currentBrand) {
+        toast.error('ブランドを選択してください');
+        return;
+      }
+
+      if (overlayEnabled && !overlayText.trim()) {
+        toast.error('画像内テキストを入力してください');
+        return;
+      }
+
+      // Validate required image
+      if (featureConfig?.requiresImage && !referenceImage) {
+        toast.error('画像をアップロードしてください');
+        return;
+      }
+
+      if (selectedFeature?.id === 'model-matrix' && selectedBodyTypes.length * selectedAgeGroups.length > MAX_MODEL_MATRIX_PATTERNS) {
+        toast.error(`一度に生成できる着用画像は${MAX_MODEL_MATRIX_PATTERNS}パターンまでです。体型または年代を減らしてください。`);
+        return;
+      }
+
+      if (selectedFeatureUsesRunwayMcp && !rightsConfirmed) {
+        toast.error('素材と生成指示の権利確認にチェックしてください');
+        return;
+      }
+
+      const legalSafetyAssessment = validateLegalSafetyInput([
+        prompt,
+        productDescription,
+        headline,
+        subheadline,
+        campaignTitle,
+        campaignSubheadline,
+        campaignCTA,
+        overlayText,
+        assistantPrompt,
+        materialReference.note,
+      ]);
+      if (selectedFeatureUsesRunwayMcp && legalSafetyAssessment.blocked) {
+        setGenerationError(BRAND_LIKENESS_BLOCK_COPY);
+        toast.error(BRAND_LIKENESS_BLOCK_COPY);
+        return;
+      }
+
+      if (!noImageGenerationMode && selectedFeatureUsesRunwayMcp && !runwayReadyInApp) {
+        const message = runwayReadinessIssues.length
+          ? runwayReadinessIssues.join(' / ')
+          : 'Runway MCP生成条件を確認できません。ブランド設定を確認してください';
+        setGenerationError(message);
+        toast.error(message);
+        return;
+      }
+
+      setGenerationError('');
+      setShowSuccessCard(false);
+      setSelectedImageIndex(null);
+      setIsGenerating(true);
+      debugLog('Generation started', { selectedFeature: selectedFeature?.id });
+
+      try {
       const effectiveReferenceImageUrl = referenceImage?.url || materialReference.imageUrl || null;
       const effectiveReferenceType = referenceImage?.referenceType ?? featureConfig?.defaultReferenceType ?? 'base';
 
@@ -2419,9 +2432,12 @@ export function GeneratePage() {
       const friendlyMessage = getErrorMessage({ ...error, message: errorMessage });
       setGenerationError(friendlyMessage);
       toast.error(friendlyMessage);
+      } finally {
+        debugLog('Generation finished');
+        setIsGenerating(false);
+      }
     } finally {
-      debugLog('Generation finished');
-      setIsGenerating(false);
+      generationSubmitLockRef.current = false;
     }
   };
 
@@ -2803,6 +2819,32 @@ export function GeneratePage() {
       case 'colorize':
         return (
           <div className="space-y-4">
+            <section className="rounded-2xl border border-cyan-300/20 bg-cyan-300/8 p-4 shadow-[0_0_24px_rgba(34,211,238,0.08)]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
+                    COLORIZE / ENTRY
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold text-white">
+                    色変更
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-neutral-300">
+                    まず対象画像を1枚置いて、どの色を変えるかだけ先に決めます。
+                  </p>
+                </div>
+                <span className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-neutral-300">
+                  {selectedColors.length > 0 ? `${selectedColors.length}色選択中` : '色は後で選べます'}
+                </span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {['対象画像', '色変更', '柄', '保存'].map((item) => (
+                  <span key={item} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-neutral-300">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </section>
+
             <ImageSelector
               label={config?.referenceLabel || '対象画像'}
               required
@@ -2812,100 +2854,106 @@ export function GeneratePage() {
               defaultReferenceType="base"
               hint={config?.referenceHint}
             />
-            
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                生成するカラー（複数選択可）
-              </label>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                {colorOptions.map((color) => (
-                  <button
-                    key={color.id}
-                    onClick={() => {
-                      setSelectedColors(prev => 
-                        prev.includes(color.id)
-                          ? prev.filter(c => c !== color.id)
-                          : [...prev, color.id]
-                      );
-                    }}
-                    className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
-                      selectedColors.includes(color.id)
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
-                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
-                    }`}
-                  >
-                    <div 
-                      className="w-8 h-8 rounded-full border border-neutral-200"
-                      style={{ backgroundColor: color.color }}
-                    />
-                    <span className="text-xs text-neutral-600 dark:text-neutral-400">{color.name}</span>
-                  </button>
-                ))}
-                {/* Custom color */}
-                <button
-                  onClick={() => {
-                    setSelectedColors(prev => 
-                      prev.includes('custom')
-                        ? prev.filter(c => c !== 'custom')
-                        : [...prev, 'custom']
-                    );
-                  }}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
-                    selectedColors.includes('custom')
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
-                      : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
-                  }`}
-                >
-                  <input
-                    type="color"
-                    value={customColor}
-                    onChange={(e) => setCustomColor(e.target.value)}
-                    className="w-8 h-8 rounded-full cursor-pointer"
-                  />
-                  <span className="text-xs text-neutral-600 dark:text-neutral-400">カスタム</span>
-                </button>
-              </div>
-              <p className="text-xs text-neutral-500 mt-2">
-                {selectedColors.length}色選択中
-              </p>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                パターン/柄
-              </label>
-              <div className="grid grid-cols-5 gap-2">
-                {patternOptions.map((pattern) => (
-                  <button
-                    key={pattern.id}
-                    onClick={() => setSelectedPattern(pattern.id)}
-                    className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
-                      selectedPattern === pattern.id
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30'
-                        : 'border-neutral-200 dark:border-neutral-600 hover:border-neutral-300'
-                    }`}
-                  >
-                    <span className="text-xl">{pattern.icon}</span>
-                    <span className="text-xs text-neutral-600 dark:text-neutral-400">{pattern.name}</span>
-                  </button>
-                ))}
-              </div>
-
-              {selectedPattern === 'custom' && (
-                <div className="mt-3">
-                  <ImageSelector
-                    label="パターン参考画像"
-                    value={patternReferenceImage}
-                    onChange={setPatternReferenceImage}
-                    allowedReferenceTypes={['pattern']}
-                    defaultReferenceType="pattern"
-                    hint="この柄・テクスチャを適用します"
-                  />
+            <details className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-white">
+                色と柄の詳細設定
+              </summary>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                    生成するカラー（複数選択可）
+                  </label>
+                  <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                    {colorOptions.map((color) => (
+                      <button
+                        key={color.id}
+                        onClick={() => {
+                          setSelectedColors(prev =>
+                            prev.includes(color.id)
+                              ? prev.filter(c => c !== color.id)
+                              : [...prev, color.id]
+                          );
+                        }}
+                        className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2 transition-all ${
+                          selectedColors.includes(color.id)
+                            ? 'border-cyan-300/70 bg-cyan-300/10'
+                            : 'border-white/10 bg-white/[0.03] hover:border-cyan-300/30'
+                        }`}
+                      >
+                        <div
+                          className="h-8 w-8 rounded-full border border-white/10"
+                          style={{ backgroundColor: color.color }}
+                        />
+                        <span className="text-[11px] text-neutral-300">{color.name}</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        setSelectedColors(prev =>
+                          prev.includes('custom')
+                            ? prev.filter(c => c !== 'custom')
+                            : [...prev, 'custom']
+                        );
+                      }}
+                      className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2 transition-all ${
+                        selectedColors.includes('custom')
+                          ? 'border-cyan-300/70 bg-cyan-300/10'
+                          : 'border-white/10 bg-white/[0.03] hover:border-cyan-300/30'
+                      }`}
+                    >
+                      <input
+                        type="color"
+                        value={customColor}
+                        onChange={(e) => setCustomColor(e.target.value)}
+                        className="h-8 w-8 cursor-pointer rounded-full border border-white/10"
+                      />
+                      <span className="text-[11px] text-neutral-300">カスタム</span>
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    {selectedColors.length}色選択中
+                  </p>
                 </div>
-              )}
-            </div>
 
-            {renderCountSelector('生成数', 1, 12)}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                    パターン/柄
+                  </label>
+                  <div className="mt-2 grid grid-cols-5 gap-2">
+                    {patternOptions.map((pattern) => (
+                      <button
+                        key={pattern.id}
+                        onClick={() => setSelectedPattern(pattern.id)}
+                        className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2 transition-all ${
+                          selectedPattern === pattern.id
+                            ? 'border-cyan-300/70 bg-cyan-300/10'
+                            : 'border-white/10 bg-white/[0.03] hover:border-cyan-300/30'
+                        }`}
+                      >
+                        <span className="text-xl">{pattern.icon}</span>
+                        <span className="text-[11px] text-neutral-300">{pattern.name}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {selectedPattern === 'custom' && (
+                    <div className="mt-3">
+                      <ImageSelector
+                        label="パターン参考画像"
+                        value={patternReferenceImage}
+                        onChange={setPatternReferenceImage}
+                        allowedReferenceTypes={['pattern']}
+                        defaultReferenceType="pattern"
+                        hint="この柄・テクスチャを適用します"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {renderCountSelector('生成数', 1, 12)}
+              </div>
+            </details>
           </div>
         );
 
@@ -3570,21 +3618,43 @@ export function GeneratePage() {
       case 'chat-edit':
         return (
           <div className="space-y-4">
-            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-6 text-center">
-              <Wand2 className="w-12 h-12 text-purple-500 mx-auto mb-3" />
-              <h3 className="font-semibold text-neutral-800 dark:text-white mb-2">
-                チャットベース編集
-              </h3>
-              <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-4">
-                対話形式で画像を編集できます。キャンバスエディターでお使いください。
-              </p>
-              <Link to="/canvas">
-                <Button>
-                  キャンバスを開く
-                  <ExternalLink className="w-4 h-4 ml-2" />
-                </Button>
-              </Link>
-            </div>
+            <section className="rounded-2xl border border-violet-400/20 bg-violet-400/10 p-5 shadow-[0_0_24px_rgba(168,85,247,0.1)]">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-400/20 text-violet-200">
+                  <Wand2 className="h-6 w-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-200/90">
+                    CHAT EDIT / ENTRY
+                  </p>
+                  <h3 className="mt-2 text-lg font-semibold text-white">
+                    対話編集
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-neutral-300">
+                    まずはキャンバスへ送って、対象を1つに絞ってから進めます。
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {['部分修正', '消去', '細部補正', '保存'].map((item) => (
+                      <span key={item} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-neutral-300">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Link to="/canvas" className="inline-flex">
+                  <Button>
+                    キャンバスを開く
+                    <ExternalLink className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <p className="text-xs leading-5 text-neutral-400">
+                  重い設定はここに置かず、編集後のキャンバス側に寄せます。
+                </p>
+              </div>
+            </section>
           </div>
         );
 
@@ -3706,6 +3776,44 @@ export function GeneratePage() {
         return false;
     }
   })();
+  const generationFlowStage = isGenerating
+    ? 'generating'
+    : generationError
+      ? 'failed'
+      : generatedImages.length > 0 || Boolean(optimizedPromptResult)
+        ? 'complete'
+        : isGenerateDisabled
+          ? 'blocked'
+          : 'ready';
+  const generationFlowCopy = {
+    ready: {
+      label: '準備完了',
+      description: '必要な入力をそろえたら、ここで1回だけ送信します。',
+    },
+    blocked: {
+      label: '入力不足',
+      description: 'まだ送信できません。必要な入力がそろったら準備完了になります。',
+    },
+    generating: {
+      label: '生成中',
+      description: '今の入力で実行中です。重複送信は止めています。',
+    },
+    complete: {
+      label: '完了',
+      description: '結果は下に残ります。Canvas へ送れます。',
+    },
+    failed: {
+      label: '再試行',
+      description: 'エラー内容を直して、同じ入力からもう一度送れます。',
+    },
+  }[generationFlowStage];
+  const primaryActionLabel = isGenerating
+    ? '生成中...'
+    : generationFlowStage === 'failed'
+      ? '再試行'
+      : selectedFeature?.id === 'optimize-prompt'
+        ? '最適化'
+        : noImageGenerationMode ? '生成する' : '企画書を保存';
 
   const renderLocalRunwayImportControl = () => (
     <div className="mt-4 flex flex-col gap-2 rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70 sm:flex-row sm:items-center sm:justify-between">
@@ -3759,6 +3867,10 @@ export function GeneratePage() {
         return getCatalogFeatureGenerateId(feature.route) === selectedFeature.id;
       }) ?? null
     : null;
+  const selectedParityGoal = selectedCatalogFeature
+    ? lightchainParityGoals.find((goal) => goal.title === selectedCatalogFeature.title) ?? null
+    : null;
+  const visibleParityGoals = lightchainParityGoals.filter((goal) => goal.priority === 'P0');
 
   if (!selectedFeature) {
     const nextPath = categoryParam
@@ -3791,11 +3903,11 @@ export function GeneratePage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-                  LIGHTCHAIN / ENTRY
+              HEAVY CHAIN / ENTRY
                 </p>
                 <h2 className="mt-2 text-3xl font-semibold tracking-normal text-white sm:text-4xl">生成ワークスペース</h2>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
-                  目的別の入口だけを並べています。押したら各作業台へそのまま入れます。
+                  目的別の入口だけを並べています。押したら各画面へそのまま入れます。
                 </p>
               </div>
               <Link
@@ -3809,12 +3921,12 @@ export function GeneratePage() {
           </div>
           <div className="grid gap-4 p-4 sm:p-6 lg:grid-cols-2 xl:grid-cols-3">
             {[
-              { title: 'マーケティングワークスペース', to: '/marketing', desc: '販促画像、コピー、売場素材をすぐ作る' },
-              { title: 'AIフィッティング', to: '/fitting', desc: '衣服画像から着用画像へ直行する' },
-              { title: 'ファッションスタジオ', to: '/studio', desc: 'モデル、背景、小物を組んで撮影条件へ進む' },
-              { title: 'モデル企画ライブラリ', to: '/generate?feature=model-matrix', desc: 'モデル条件をすぐ生成画面へ渡す' },
-              { title: '柄・グラフィック作業台', to: '/patterns/workbench', desc: '柄、総柄、ベクター化をすぐ開く' },
-              { title: '動画ワークステーション', to: '/video', desc: 'ショット構成とCTAをすぐ作る' },
+              { title: 'マーケティングワークスペース', to: '/marketing', desc: '販促画像とコピーを作る' },
+              { title: 'AIフィッティング', to: '/fitting', desc: '衣服画像から着用画像へ進む' },
+              { title: 'ファッションスタジオ', to: '/studio', desc: 'モデル、背景、小物を組む' },
+              { title: 'モデル企画ライブラリ', to: '/generate?feature=model-matrix', desc: 'モデル条件を渡す' },
+              { title: '柄・グラフィック', to: '/patterns/workbench', desc: '新規や事例から開く' },
+              { title: '動画ワークステーション', to: '/video', desc: 'ショット構成を作る' },
             ].map((item) => (
               <Link
                 key={item.to}
@@ -3953,6 +4065,45 @@ export function GeneratePage() {
         </div>
       </div>
 
+      <section className="mb-4 rounded-3xl border border-cyan-300/20 bg-cyan-300/8 p-5 shadow-[0_0_30px_rgba(34,211,238,0.08)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
+              P0 IMPLEMENTATION
+            </p>
+            <h3 className="mt-2 text-lg font-semibold text-white">
+              まず直す3つの軸
+            </h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-300">
+              入口、生成状態、編集の3点から先に整えると迷いが減ります。
+            </p>
+          </div>
+          <span className="inline-flex w-fit items-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1.5 text-xs font-semibold text-cyan-100">
+            {visibleParityGoals.length} goals
+          </span>
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          {visibleParityGoals.map((goal) => (
+            <article key={goal.matrixId} className="rounded-2xl border border-white/10 bg-white/[0.05] p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-200">
+                  {goal.matrixId}
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-neutral-300">
+                  {goal.priority}
+                </span>
+                <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-100">
+                  {goal.status === 'done' ? '完了' : goal.status === 'in_progress' ? '進行中' : '待機'}
+                </span>
+              </div>
+              <h4 className="mt-3 text-sm font-semibold text-white">{goal.title}</h4>
+              <p className="mt-2 text-xs leading-5 text-neutral-400">{goal.rationale}</p>
+              <p className="mt-3 text-xs leading-5 text-neutral-300">{goal.owningSurface}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(760px,1fr)_minmax(360px,0.7fr)]">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -4030,6 +4181,37 @@ export function GeneratePage() {
           transition={{ duration: 0.45 }}
           className="space-y-4"
         >
+          {selectedParityGoal && (
+            <section className="rounded-2xl border border-cyan-300/20 bg-cyan-300/8 p-4 shadow-soft">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-300">
+                    実装優先度 {selectedParityGoal.priority}
+                  </p>
+                  <h3 className="mt-2 text-sm font-semibold text-white">
+                    {selectedParityGoal.title} を先に Light 寄せする
+                  </h3>
+                  <p className="mt-2 text-xs leading-5 text-neutral-300">
+                    {selectedParityGoal.heavyTarget}
+                  </p>
+                </div>
+                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-neutral-200">
+                  {selectedParityGoal.status === 'in_progress' ? '進行中' : '待機'}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">Light の見え方</p>
+                  <p className="mt-2 text-sm leading-6 text-white">{selectedParityGoal.lightBehavior}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400">完了条件</p>
+                  <p className="mt-2 text-sm leading-6 text-white">{selectedParityGoal.acceptanceEvidence}</p>
+                </div>
+              </div>
+            </section>
+          )}
+
           <details
             className="mx-auto hidden w-fit overflow-hidden rounded-xl border border-white/10 bg-neutral-950 shadow-2xl sm:block"
             data-testid="lightchain-canvas-toolbar"
@@ -4170,11 +4352,44 @@ export function GeneratePage() {
                   materialKinds={selectedGenerateWorkbench.materialKinds}
                   layerOptions={selectedGenerateWorkbench.layerOptions}
                   placementOptions={selectedGenerateWorkbench.placementOptions}
+                  compactSummary
                 />
               </div>
             )}
 
             {renderFeatureForm()}
+
+            {!isGenerating && !generationError && (
+              <div className={`mt-5 rounded-2xl border p-4 shadow-soft ${
+                generationFlowStage === 'blocked'
+                  ? 'border-amber-200 bg-amber-50/80 dark:border-amber-800 dark:bg-amber-950/20'
+                  : 'border-white/10 bg-white/[0.04]'
+              }`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">
+                      {generationFlowCopy.label}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-neutral-300">
+                      {generationFlowCopy.description}
+                    </p>
+                  </div>
+                  <div className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                    generationFlowStage === 'blocked'
+                      ? 'border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
+                      : 'border-white/10 bg-white/[0.06] text-neutral-200'
+                  }`}>
+                    {generationFlowStage === 'blocked'
+                      ? '入力待ち'
+                      : generationFlowStage === 'ready'
+                        ? 'Ready'
+                        : generationFlowStage === 'complete'
+                          ? '保存済み'
+                          : 'Check status'}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {geminiGenerationMode && selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && (
               <details className="mt-5 rounded-2xl border border-neutral-200 bg-white/85 p-4 dark:border-neutral-800 dark:bg-neutral-900/70">
@@ -4246,7 +4461,7 @@ export function GeneratePage() {
                 size="lg"
                 leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
               >
-                {isGenerating ? '生成中...' : selectedFeature.id === 'optimize-prompt' ? '最適化' : noImageGenerationMode ? '生成する' : '企画書を保存'}
+                {primaryActionLabel}
               </Button>
             )}
           </section>
@@ -4300,7 +4515,7 @@ export function GeneratePage() {
               )}
               {lightchainCompat && (
                 <div className="rounded-xl border border-teal-200 bg-teal-50/80 p-3 dark:border-teal-800 dark:bg-teal-950/30">
-                  <p className="text-xs font-semibold text-teal-700 dark:text-teal-300">素材ワークベンチ連携</p>
+                  <p className="text-xs font-semibold text-teal-700 dark:text-teal-300">素材作業台連携</p>
                   <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
                     {lightchainCompat.lightchainFeatureTitle} / {lightchainCompat.lightchainTaskCodes.join(' / ')}
                   </p>

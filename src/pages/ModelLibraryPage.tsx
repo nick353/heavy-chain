@@ -68,7 +68,7 @@ const modelCandidates: ModelCandidate[] = [
     skinTone: 'ウォームライト',
     ageGroup: '20代',
     usage: 'EC標準',
-    productDescription: 'Lightchain シアージャケット、軽い透け感、ミニマルなEC商品画像',
+    productDescription: 'シアージャケット、軽い透け感、ミニマルなEC商品画像',
     accent: '#14b8a6',
     modelMatrixBodyTypes: ['regular'],
     modelMatrixAgeGroups: ['20s'],
@@ -84,7 +84,7 @@ const modelCandidates: ModelCandidate[] = [
     skinTone: 'ニュートラルミディアム',
     ageGroup: '30代',
     usage: 'LOOK確認',
-    productDescription: 'Lightchain ロングトレンチ、都市的なストリートLOOK、SNS転用しやすい着用画像',
+    productDescription: 'ロングトレンチ、都市的なストリートLOOK、SNS転用しやすい着用画像',
     accent: '#111827',
     modelMatrixBodyTypes: ['regular'],
     modelMatrixAgeGroups: ['30s'],
@@ -100,7 +100,7 @@ const modelCandidates: ModelCandidate[] = [
     skinTone: 'ディープブラウン',
     ageGroup: '40代',
     usage: '広告検証',
-    productDescription: 'Lightchain プレミアムニット、素材感と購買信頼を強調する広告検証画像',
+    productDescription: 'プレミアムニット、素材感と購買信頼を強調する広告検証画像',
     accent: '#7c3aed',
     modelMatrixBodyTypes: ['regular'],
     modelMatrixAgeGroups: ['40s'],
@@ -465,7 +465,7 @@ export function ModelLibraryPage() {
       },
     });
 
-    toast.success('モデルライブラリをGallery/Historyに保存し、Canvasへ渡しました');
+    toast.success('モデルライブラリを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
   };
 
@@ -475,7 +475,7 @@ export function ModelLibraryPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-              LIGHTCHAIN / MODELS
+              HEAVY CHAIN / MODELS
             </p>
             <h1 className="mt-2 font-display text-3xl font-semibold text-white">
               モデルライブラリ
@@ -491,7 +491,7 @@ export function ModelLibraryPage() {
             className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            Canvasへ保存
+            保存
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -571,7 +571,7 @@ export function ModelLibraryPage() {
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
-              Canvasへ保存して重ねる
+              保存して重ねる
             </button>
             <Link
               to="/gallery"

@@ -49,7 +49,7 @@ export function ImageEditModal({ isOpen, onClose, imageUrl, onEdit }: ImageEditM
   const editModes = [
     { id: 'prompt', icon: Wand2, label: 'プロンプト編集', description: 'テキストで画像を編集' },
     { id: 'remove-bg', icon: Scissors, label: '背景削除', description: '背景を透明に' },
-    { id: 'colorize', icon: Palette, label: 'カラバリ', description: '色違いを生成' },
+    { id: 'colorize', icon: Palette, label: '色変更', description: '色違いを作成' },
     { id: 'upscale', icon: Maximize2, label: 'アップスケール', description: '高解像度化' },
     { id: 'variations', icon: RefreshCw, label: 'バリエーション', description: '類似画像を生成' },
   ] as const;
@@ -176,7 +176,7 @@ export function ImageEditModal({ isOpen, onClose, imageUrl, onEdit }: ImageEditM
             >
               {mode === 'remove-bg' ? '背景を削除' :
                mode === 'upscale' ? 'アップスケール' :
-               mode === 'colorize' ? 'カラバリを生成' :
+               mode === 'colorize' ? '色変更を作成' :
                mode === 'variations' ? 'バリエーションを生成' :
                '編集を適用'}
             </Button>

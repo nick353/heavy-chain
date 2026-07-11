@@ -313,9 +313,9 @@ export function MarketingWorkspacePage() {
         },
       });
       if (result.remote) {
-        toast.success('Canvasへ渡し、生成履歴にも保存しました');
+        toast.success('Canvasへ保存しました');
       } else {
-        toast.success('Canvasへ渡しました。Gallery/Historyはローカル保存です');
+        toast.success('Canvasへ保存しました');
       }
     } finally {
       setIsHandingOff(false);

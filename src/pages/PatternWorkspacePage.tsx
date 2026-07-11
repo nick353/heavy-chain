@@ -435,8 +435,8 @@ export function PatternWorkspacePage() {
     const { projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
       featureType: 'graphic-pattern-workspace',
-      projectName: `柄・グラフィック作業台: ${activeMode}`,
-      title: `柄・グラフィック作業台: ${activeMode}`,
+      projectName: `パターン作業台: ${activeMode}`,
+      title: `パターン作業台: ${activeMode}`,
 	      prompt,
 	      imageUrl: materialReference.imageUrl || selectedPreview.imageUrl,
       summary: `${activeMode}の進捗 ${progress}%`,
@@ -531,7 +531,7 @@ export function PatternWorkspacePage() {
 	      },
 	    });
 
-    toast.success('柄・グラフィックをGallery/Historyに保存し、Canvasへ渡しました');
+    toast.success('柄・グラフィックを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
   };
 
@@ -541,10 +541,10 @@ export function PatternWorkspacePage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="font-display text-3xl font-semibold text-neutral-950 dark:text-white">
-              柄・グラフィック作業台
+              パターン作業台
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-              グラフィック、総柄、ベクター化のインテークを、Gallery/History と Canvas に渡せるローカルワークスペースです。
+              グラフィック、総柄、ベクター化の入口を、Canvas に渡せるローカルワークスペースです。
             </p>
           </div>
           <button
@@ -583,10 +583,10 @@ export function PatternWorkspacePage() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300 dark:text-cyan-300">
-              Pattern flow
+              Print flow
             </p>
             <h2 className="mt-2 text-xl font-semibold text-neutral-950 dark:text-white">
-              モチーフ、配置、版下を決めて、生成かCanvas仕上げへ進む
+              新規ファイル、最近の案件、事例から入って、生成かCanvasへ進む
             </h2>
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
               {[
@@ -611,7 +611,7 @@ export function PatternWorkspacePage() {
               className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
             >
               <WandSparkles className="h-4 w-4" />
-              デザインガチャで生成
+              生成へ
               <ChevronRight className="h-4 w-4" />
             </Link>
             <button
@@ -621,7 +621,7 @@ export function PatternWorkspacePage() {
               className="btn-secondary inline-flex items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
-              Canvasへ保存して重ねる
+              保存して重ねる
             </button>
             <Link
               to="/gallery"

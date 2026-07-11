@@ -59,8 +59,8 @@ export const FEATURES: Feature[] = [
   // Design
   {
     id: 'colorize',
-    name: 'カラバリ・柄モックアップ',
-    description: '色違い・柄違いバリエーション生成',
+    name: '色変更・柄モック',
+    description: '色違いと柄違いをまとめて作成',
     icon: IconPalette,
     category: 'design',
     apiEndpoint: 'colorize',
@@ -242,7 +242,7 @@ export function FeatureSelector({ onSelectFeature, selectedFeatureId }: FeatureS
                 🚀 まずはこれから
               </h3>
               <p className="text-white/80 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">
-                「デザインガチャ」で4つのスタイルを一気に生成
+                「デザインガチャ」で4案を一気に生成
               </p>
               <span
                 className="relative z-20 inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-white text-primary-700 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl shadow-lg"

@@ -560,7 +560,7 @@ export function AdminDashboard() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-neutral-800 dark:text-white">管理者ダッシュボード</h1>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">Lightchain システム管理</p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">Heavy Chain システム管理</p>
           </div>
           <Button
             leftIcon={<Bell className="w-4 h-4" />}

@@ -15,11 +15,11 @@ const formatTime = (dateString: string) => {
 };
 
 const getLightchainTaskRow = (job: WorkspaceJob) => {
-  return job.sourceSummaryRows.find((row) => row.label === 'Lightchain task');
+  return job.sourceSummaryRows.find((row) => row.label === 'Heavy Chain task');
 };
 
 const getLightchainStepsRow = (job: WorkspaceJob) => {
-  return job.sourceSummaryRows.find((row) => row.label === 'Lightchain steps');
+  return job.sourceSummaryRows.find((row) => row.label === 'Heavy Chain steps');
 };
 
 export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }: JobQueuePanelProps) {
@@ -59,7 +59,7 @@ export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }
                 <span className="block truncate text-xs text-neutral-500 dark:text-neutral-400">{job.prompt || job.featureType}</span>
                 {lightchainTask && (
                   <span className="mt-1 block truncate text-[11px] font-medium text-teal-700 dark:text-teal-300">
-                    素材ワークベンチ: {lightchainTask.value}
+                    素材作業台: {lightchainTask.value}
                   </span>
                 )}
                 {lightchainSteps && (
@@ -86,7 +86,7 @@ export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }
                 <span className="block text-xs text-neutral-500 dark:text-neutral-400">{job.outputCount} outputs</span>
                 {lightchainTask && (
                   <span className="mt-1 block truncate text-[11px] font-medium text-teal-700 dark:text-teal-300">
-                    素材ワークベンチ: {lightchainTask.value}
+                    素材作業台: {lightchainTask.value}
                   </span>
                 )}
                 {lightchainSteps && (

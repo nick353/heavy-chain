@@ -46,7 +46,7 @@ const modelOptions: StudioOption[] = [
     id: 'street-neutral-30s',
     label: 'Street 30s',
     value: '30代ユニセックス / 175cm / 都市的なストリートモデル',
-    supportingText: 'Lightchain の日常着トーン',
+    supportingText: '日常着の落ち着いたトーン',
   },
   {
     id: 'mature-premium-40s',
@@ -219,7 +219,7 @@ export function FashionStudioPage() {
   const [pose, setPose] = useState('正面立ち、片手をポケット、自然な肩線');
   const [background, setBackground] = useState('白背景の自然光スタジオ、薄い影');
   const [props, setProps] = useState('シルバーアクセサリー、ミニバッグ');
-  const [productLine, setProductLine] = useState('Lightchain 2026 SS シアージャケット');
+  const [productLine, setProductLine] = useState('Heavy Chain 2026 SS シアージャケット');
   const [referenceImage, setReferenceImage] = useState('参照画像: lookbook_ref_01.jpg / fabric_ref_02.png');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialStudioMaterial);
   const nextHistoryId = useRef(3);
@@ -418,7 +418,7 @@ export function FashionStudioPage() {
       },
     });
 
-    toast.success('Fashion StudioをGallery/Historyに保存し、Canvasへ渡しました');
+    toast.success('Fashion Studioを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
   };
 
@@ -428,13 +428,13 @@ export function FashionStudioPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-              LIGHTCHAIN / STUDIO
+              HEAVY CHAIN / STUDIO
             </p>
             <h1 className="mt-2 font-display text-3xl font-semibold text-white">
               Fashion Studio
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">
-              商品企画の切り口と進捗メモを、Gallery/History と Canvas に渡せるスタジオワークスペースです。
+              商品企画の切り口と進捗メモを、Canvas に渡せるスタジオワークスペースです。
             </p>
           </div>
           <button
