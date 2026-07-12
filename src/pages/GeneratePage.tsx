@@ -70,6 +70,7 @@ import {
   lightchainFeatureCatalog,
   type LightchainCategoryId,
 } from '../lib/lightchainParityCatalog';
+import { normalizeModelMatrixSemanticVerification, type ModelMatrixSemanticVerification } from '../lib/modelMatrixVerification';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -607,6 +608,12 @@ interface GeneratedResult {
   layerPlan?: unknown;
   maskPlan?: unknown;
   compositionPreview?: unknown;
+  semanticVerification?: unknown;
+  verifier?: unknown;
+  verification?: unknown;
+  referenceSummary?: string | null;
+  modelUsed?: string | null;
+  checkedAt?: string | null;
 }
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
@@ -860,6 +867,71 @@ const buildGenerationIntentHref = (
   }
   return `/generate?${params.toString()}`;
 };
+function getModelMatrixVerificationState(image: GeneratedResult) {
+  const semanticVerification = normalizeModelMatrixSemanticVerification(image);
+  const referenceSummary = image.referenceSummary ?? image.prompt ?? null;
+
+  if (semanticVerification) {
+    return {
+      semanticVerification,
+      referenceSummary,
+      statusLabel: semanticVerification.verdict === 'yes' ? '検証済み' : '未検証',
+      reason: semanticVerification.reason,
+      model: semanticVerification.model,
+      checkedAt: semanticVerification.checkedAt,
+      warning: semanticVerification.verdict === 'yes' ? null : semanticVerification.reason,
+      canUseActions: semanticVerification.verdict === 'yes',
+    };
+  }
+
+  return {
+    semanticVerification: null as ModelMatrixSemanticVerification | null,
+    referenceSummary,
+    statusLabel: referenceSummary ? '参考あり' : '未確認',
+    reason: referenceSummary
+      ? '検証メタデータがありません。保存前に生成条件を見直してください。'
+      : '検証情報がありません。',
+    model: image.modelUsed ?? 'unknown',
+    checkedAt: image.checkedAt ?? null,
+    warning: 'この結果には検証メタデータがありません。',
+    canUseActions: false,
+  };
+}
+
+function ModelMatrixVerificationDetails({ image }: { image: GeneratedResult }) {
+  const state = getModelMatrixVerificationState(image);
+
+  return (
+    <div className="mt-3 rounded-xl border border-neutral-200/70 dark:border-neutral-700/70 bg-white/70 dark:bg-neutral-900/50 p-3 text-xs text-neutral-600 dark:text-neutral-300 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-medium text-neutral-800 dark:text-neutral-100">検証情報</span>
+        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+          state.canUseActions
+            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+        }`}>
+          {state.statusLabel}
+        </span>
+      </div>
+      <div className="grid gap-1.5">
+        <p><span className="font-medium text-neutral-800 dark:text-neutral-100">Reason:</span> {state.reason}</p>
+        <p><span className="font-medium text-neutral-800 dark:text-neutral-100">Model:</span> {state.model}</p>
+        {state.checkedAt && (
+          <p><span className="font-medium text-neutral-800 dark:text-neutral-100">Checked at:</span> {new Date(state.checkedAt).toLocaleString('ja-JP')}</p>
+        )}
+        <p><span className="font-medium text-neutral-800 dark:text-neutral-100">Prompt:</span> {image.prompt}</p>
+        {state.referenceSummary && (
+          <p><span className="font-medium text-neutral-800 dark:text-neutral-100">Reference summary:</span> {state.referenceSummary}</p>
+        )}
+      </div>
+      {state.warning && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+          {state.warning}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Image Modal Component
 function ImageModal({ 
@@ -950,6 +1022,11 @@ function ImageModal({
             </button>
           </div>
         </div>
+        {normalizeModelMatrixSemanticVerification(image) && (
+          <div className="mt-4 w-full max-w-[90vw]">
+            <ModelMatrixVerificationDetails image={image} />
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -2161,7 +2238,13 @@ export function GeneratePage() {
               id: m.storagePath,
               imageUrl: m.imageUrl,
               prompt: productDescription,
-              label: `${m.bodyTypeName} × ${m.ageGroupName}`
+              label: `${m.bodyTypeName} × ${m.ageGroupName}`,
+              semanticVerification: m.semanticVerification ?? m.verifier ?? m.verification,
+              verifier: m.verifier ?? m.semanticVerification,
+              verification: m.verification ?? m.semanticVerification,
+              referenceSummary: m.referenceSummary ?? data?.productDescription ?? productDescription,
+              modelUsed: m.modelUsed ?? m.model_used ?? null,
+              checkedAt: m.checkedAt ?? m.checked_at ?? null,
             })));
           }
           break;
@@ -4734,6 +4817,11 @@ export function GeneratePage() {
                       onClick={() => setSelectedImageIndex(index)}
                       className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-105 cursor-pointer"
                     />
+                    {selectedFeature.id === 'model-matrix' && (
+                      <div className="px-4 pb-4">
+                        <ModelMatrixVerificationDetails image={image} />
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
                       <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
                         <p className="text-white text-sm line-clamp-2 mb-3 opacity-90">

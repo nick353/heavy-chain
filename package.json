@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test:model-matrix-verification": "node --experimental-strip-types --test scripts/verify-model-matrix-verification.test.ts",
     "verify": "npm run env:check && npm run security:audit && npm run smoke:edge && npm run typecheck",
     "verify:full": "npm run verify && npm run build && npm run e2e && npm run supabase:verify",
     "verify:readback": "node scripts/verify-release-readback.mjs",

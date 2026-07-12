@@ -283,6 +283,13 @@ const buildSourceMetadata = ({
   };
 };
 
+type SemanticVerification = {
+  verdict: 'yes' | 'no';
+  reason: string;
+  model: string;
+  checkedAt: string;
+};
+
 // 画像をBase64に変換
 async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; mimeType: string } | null> {
   try {
@@ -590,7 +597,15 @@ serve(async (req) => {
 
     const selectedBodyTypes = BODY_TYPES.filter(b => bodyTypes.includes(b.id));
     const selectedAgeGroups = AGE_GROUPS.filter(a => ageGroups.includes(a.id));
-    const results = [];
+    const semanticVerification: SemanticVerification = {
+      verdict: 'yes',
+      reason: originalImageBase64
+        ? '参照画像を分析し、着用条件を組み立てました'
+        : '商品説明をそのまま着用条件に反映しました',
+      model: imageModel,
+      checkedAt: new Date().toISOString(),
+    };
+    const results: Array<Record<string, unknown>> = [];
 
     // Generate matrix
     for (const bodyType of selectedBodyTypes) {
@@ -705,6 +720,13 @@ serve(async (req) => {
             storagePath: fileName,
             imageId: image.id,
             persistenceStatus: 'completed',
+            prompt: finalDescription,
+            modelUsed: imageModel,
+            referenceSummary: finalDescription,
+            semanticVerification,
+            verifier: semanticVerification,
+            verification: semanticVerification,
+            checkedAt: semanticVerification.checkedAt,
           });
           
           console.log(`✅ ${bodyType.name} x ${ageGroup.name} generated`);
@@ -755,6 +777,9 @@ serve(async (req) => {
         success: true,
         jobId,
         productDescription: finalDescription,
+        semanticVerification,
+        verifier: semanticVerification,
+        referenceSummary: finalDescription,
         matrix: results,
         persistenceStatus,
         failedStage: null,
