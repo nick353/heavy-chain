@@ -2234,15 +2234,18 @@ export function GeneratePage() {
             }
           }));
           if (data?.matrix) {
+            const topLevelSemanticVerification =
+              data.semanticVerification ?? data.verifier ?? data.verification ?? null;
+            const topLevelReferenceSummary = data.referenceSummary ?? data.productDescription ?? productDescription;
             replaceGeneratedImages(data.matrix.map((m: any) => ({
               id: m.storagePath,
               imageUrl: m.imageUrl,
               prompt: productDescription,
               label: `${m.bodyTypeName} × ${m.ageGroupName}`,
-              semanticVerification: m.semanticVerification ?? m.verifier ?? m.verification,
-              verifier: m.verifier ?? m.semanticVerification,
-              verification: m.verification ?? m.semanticVerification,
-              referenceSummary: m.referenceSummary ?? data?.productDescription ?? productDescription,
+              semanticVerification: m.semanticVerification ?? m.verifier ?? m.verification ?? topLevelSemanticVerification,
+              verifier: m.verifier ?? m.semanticVerification ?? topLevelSemanticVerification,
+              verification: m.verification ?? m.semanticVerification ?? topLevelSemanticVerification,
+              referenceSummary: m.referenceSummary ?? topLevelReferenceSummary,
               modelUsed: m.modelUsed ?? m.model_used ?? null,
               checkedAt: m.checkedAt ?? m.checked_at ?? null,
             })));
