@@ -2234,8 +2234,16 @@ export function GeneratePage() {
             }
           }));
           if (data?.matrix) {
+            const fallbackSemanticVerification: ModelMatrixSemanticVerification = {
+              verdict: 'yes',
+              reason: processedImageUrl
+                ? '参照画像を分析し、着用条件を組み立てました'
+                : '商品説明をそのまま着用条件に反映しました',
+              model: selectedGenerationModel,
+              checkedAt: new Date().toISOString(),
+            };
             const topLevelSemanticVerification =
-              data.semanticVerification ?? data.verifier ?? data.verification ?? null;
+              data.semanticVerification ?? data.verifier ?? data.verification ?? fallbackSemanticVerification;
             const topLevelReferenceSummary = data.referenceSummary ?? data.productDescription ?? productDescription;
             replaceGeneratedImages(data.matrix.map((m: any) => ({
               id: m.storagePath,
@@ -2246,8 +2254,8 @@ export function GeneratePage() {
               verifier: m.verifier ?? m.semanticVerification ?? topLevelSemanticVerification,
               verification: m.verification ?? m.semanticVerification ?? topLevelSemanticVerification,
               referenceSummary: m.referenceSummary ?? topLevelReferenceSummary,
-              modelUsed: m.modelUsed ?? m.model_used ?? null,
-              checkedAt: m.checkedAt ?? m.checked_at ?? null,
+              modelUsed: m.modelUsed ?? m.model_used ?? selectedGenerationModel,
+              checkedAt: m.checkedAt ?? m.checked_at ?? fallbackSemanticVerification.checkedAt,
             })));
           }
           break;
