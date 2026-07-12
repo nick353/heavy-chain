@@ -989,7 +989,7 @@ export function CanvasEditorPage() {
       setReferenceImage(null);
     } catch (error: any) {
       console.error('Generation error:', error);
-      toast.error(await edgeFunctionErrorMessage(error) || '画像生成に失敗しました');
+          toast.error(await edgeFunctionErrorMessage(error) || '画像生成に失敗しました');
     } finally {
       setIsGenerating(false);
     }

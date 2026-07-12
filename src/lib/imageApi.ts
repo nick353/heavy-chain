@@ -25,8 +25,8 @@ type LegalSafetyOptions = {
   rightsConfirmed?: boolean;
 };
 
-export async function edgeFunctionErrorMessage(error: any) {
-  const context = error?.context;
+export async function edgeFunctionErrorMessage(error: any, response?: Response | null) {
+  const context = response ?? error?.context;
   if (context && typeof context.json === 'function') {
     try {
       const body = await context.clone?.().json?.() ?? await context.json();
@@ -133,7 +133,7 @@ export async function removeBackground(
     return data as ImageEditResult;
   } catch (error: any) {
     console.error('Remove background error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
@@ -157,7 +157,7 @@ export async function generateColorVariations(
     return data as ColorVariationResult;
   } catch (error: any) {
     console.error('Colorize error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
@@ -180,7 +180,7 @@ export async function upscaleImage(
     return data as ImageEditResult;
   } catch (error: any) {
     console.error('Upscale error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
@@ -215,7 +215,7 @@ export async function generateVariations(
     return data as VariationsResult;
   } catch (error: any) {
     console.error('Generate variations error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
@@ -270,7 +270,7 @@ export async function generateImage(
     };
   } catch (error: any) {
     console.error('Generate image error:', error);
-    return { success: false, error: await edgeFunctionErrorMessage(error) };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
@@ -292,7 +292,7 @@ export async function editImageWithPrompt(
     return data as ImageEditResult;
   } catch (error: any) {
     console.error('Edit image error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
@@ -357,7 +357,7 @@ export async function designGacha(
     return data;
   } catch (error: any) {
     console.error('Design gacha error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
@@ -392,7 +392,7 @@ export async function generateProductShots(
     return data;
   } catch (error: any) {
     console.error('Product shots error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
@@ -443,7 +443,7 @@ export async function generateModelMatrix(
     if (error) throw error;
     return data;
   } catch (error: any) {
-    return { success: false, error: await edgeFunctionErrorMessage(error) };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
@@ -480,7 +480,7 @@ export async function generateMultilingualBanners(
     return data;
   } catch (error: any) {
     console.error('Multilingual banner error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
@@ -508,7 +508,7 @@ export async function bulkDownload(
     return data;
   } catch (error: any) {
     console.error('Bulk download error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
@@ -534,7 +534,7 @@ export async function createShareLink(
     return data;
   } catch (error: any) {
     console.error('Create share link error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
 }
 
