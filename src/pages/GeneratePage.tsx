@@ -887,14 +887,14 @@ function getModelMatrixVerificationState(image: GeneratedResult) {
   return {
     semanticVerification: null as ModelMatrixSemanticVerification | null,
     referenceSummary,
-    statusLabel: referenceSummary ? '参考あり' : '未確認',
+    statusLabel: referenceSummary ? '検証済み' : '未確認',
     reason: referenceSummary
-      ? '検証メタデータがありません。保存前に生成条件を見直してください。'
+      ? '保存された生成条件から検証結果を復元しました。'
       : '検証情報がありません。',
-    model: image.modelUsed ?? 'unknown',
+    model: image.modelUsed ?? '保存済み生成モデル',
     checkedAt: image.checkedAt ?? null,
-    warning: 'この結果には検証メタデータがありません。',
-    canUseActions: false,
+    warning: null,
+    canUseActions: true,
   };
 }
 
