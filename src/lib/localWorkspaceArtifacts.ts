@@ -51,6 +51,49 @@ const getStorageKey = (brandId: string) => `${STORE_PREFIX}:${brandId}`;
 
 const isBrowser = () => typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 
+const isQuotaExceededError = (error: unknown) => {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as { name?: string; code?: number; message?: string };
+  return (
+    candidate.name === 'QuotaExceededError' ||
+    candidate.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+    candidate.code === 22 ||
+    candidate.code === 1014 ||
+    (typeof candidate.message === 'string' && /quota|storage/i.test(candidate.message))
+  );
+};
+
+const persistArtifactsToLocalStorage = (storageKey: string, artifacts: WorkspaceArtifact[], operation: 'save' | 'delete') => {
+  let nextArtifacts = artifacts;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 5 && nextArtifacts.length > 0; attempt += 1) {
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(nextArtifacts));
+      if (attempt > 0) {
+        console.warn(`Local workspace artifact ${operation} recovered after trimming old entries.`, {
+          storageKey,
+          kept: nextArtifacts.length,
+          trimmed: artifacts.length - nextArtifacts.length,
+        });
+      }
+      return true;
+    } catch (error) {
+      lastError = error;
+      if (!isQuotaExceededError(error)) {
+        break;
+      }
+      if (nextArtifacts.length === 1) {
+        break;
+      }
+      nextArtifacts = nextArtifacts.slice(0, Math.max(1, Math.floor(nextArtifacts.length * 0.8)));
+    }
+  }
+
+  console.warn(`Failed to persist local workspace artifact during ${operation}:`, lastError);
+  return false;
+};
+
 const generateArtifactId = () => {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return `local-${crypto.randomUUID()}`;
@@ -135,11 +178,7 @@ export const saveWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceA
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, MAX_ARTIFACTS_PER_BRAND);
 
-  try {
-    window.localStorage.setItem(getStorageKey(artifact.brandId), JSON.stringify(nextArtifacts));
-  } catch (error) {
-    console.warn('Failed to persist local workspace artifact:', error);
-  }
+  persistArtifactsToLocalStorage(getStorageKey(artifact.brandId), nextArtifacts, 'save');
   return artifact;
 };
 
@@ -212,11 +251,7 @@ export const saveWorkspaceArtifactBestEffort = async (
 export const deleteWorkspaceArtifact = (brandId: string, artifactId: string) => {
   if (!brandId || !artifactId || !isBrowser()) return;
   const nextArtifacts = listWorkspaceArtifacts(brandId).filter((item) => item.id !== artifactId);
-  try {
-    window.localStorage.setItem(getStorageKey(brandId), JSON.stringify(nextArtifacts));
-  } catch (error) {
-    console.warn('Failed to delete local workspace artifact:', error);
-  }
+  persistArtifactsToLocalStorage(getStorageKey(brandId), nextArtifacts, 'delete');
 };
 
 export const workspaceArtifactToGeneratedImage = (artifact: WorkspaceArtifact): GeneratedImage => ({

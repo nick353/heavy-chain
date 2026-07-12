@@ -25,14 +25,26 @@ type LegalSafetyOptions = {
   rightsConfirmed?: boolean;
 };
 
-async function edgeFunctionErrorMessage(error: any) {
+export async function edgeFunctionErrorMessage(error: any) {
   const context = error?.context;
   if (context && typeof context.json === 'function') {
     try {
       const body = await context.clone?.().json?.() ?? await context.json();
-      if (typeof body?.error === 'string' && body.error.trim()) return body.error.trim();
+      const messageFields = ['error', 'message', 'details', 'hint'] as const;
+      for (const field of messageFields) {
+        if (typeof body?.[field] === 'string' && body[field].trim()) {
+          return body[field].trim();
+        }
+      }
     } catch {
-      // Fall through to the SDK message below.
+      try {
+        const text = await context.clone?.().text?.() ?? await context.text?.();
+        if (typeof text === 'string' && text.trim()) {
+          return text.trim();
+        }
+      } catch {
+        // Fall through to the SDK message below.
+      }
     }
   }
   if (typeof error?.message === 'string' && error.message.trim()) return error.message.trim();
