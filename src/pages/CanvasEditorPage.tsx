@@ -718,6 +718,19 @@ export function CanvasEditorPage() {
     });
   }, [addImageToCanvas]);
 
+  const assertDerivedImageResult = useCallback((result: any, action: 'removeBackground' | 'colorize' | 'upscale' | 'variations') => {
+    if (action === 'removeBackground' || action === 'upscale') {
+      if (!result?.resultUrl) {
+        throw new Error('派生結果が返りませんでした');
+      }
+      return;
+    }
+
+    if (!Array.isArray(result?.variations) || result.variations.length === 0) {
+      throw new Error('派生結果が返りませんでした');
+    }
+  }, []);
+
   const handleSelectGalleryImage = useCallback(async (imageUrl: string, imageId: string, storagePath?: string, imageElement?: HTMLImageElement | null) => {
     try {
       const usableImageElement = isUsableLoadedImage(imageElement) ? imageElement : null;
@@ -1103,15 +1116,14 @@ export function CanvasEditorPage() {
             body: { imageUrl: imageSrc, brandId: currentBrand.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
-          if (data?.resultUrl) {
-            addImageToCanvasSafely(data.resultUrl, '背景削除', {
-              feature: 'remove-background',
-              parentId: objectId,
-              generation: (obj.metadata?.generation || 0) + 1,
-              ...buildDerivedLightchainMetadata(obj, 'remove-background'),
-            }, objectId);
-            toast.success('背景を削除しました', { id: 'remove-bg' });
-          }
+          assertDerivedImageResult(data, 'removeBackground');
+          addImageToCanvasSafely(data.resultUrl, '背景削除', {
+            feature: 'remove-background',
+            parentId: objectId,
+            generation: (obj.metadata?.generation || 0) + 1,
+            ...buildDerivedLightchainMetadata(obj, 'remove-background'),
+          }, objectId);
+          toast.success('背景を削除しました', { id: 'remove-bg' });
         } catch (err: any) {
           toast.error(await edgeFunctionErrorMessage(err) || '背景削除に失敗しました', { id: 'remove-bg' });
         }
@@ -1125,19 +1137,18 @@ export function CanvasEditorPage() {
             body: { imageUrl: imageSrc, brandId: currentBrand.id, colors: ['red', 'blue', 'green', 'yellow'], legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
-          if (data?.variations) {
-            data.variations.forEach((v: any) => {
-              const parameters = { color: v.colorName };
-              addImageToCanvasSafely(v.imageUrl, v.colorName, {
-                feature: 'colorize',
-                parentId: objectId,
-                generation: (obj.metadata?.generation || 0) + 1,
-                parameters,
-                ...buildDerivedLightchainMetadata(obj, 'colorize', { parameters }),
-              }, objectId);
-            });
-            toast.success('カラバリを生成しました', { id: 'colorize' });
-          }
+          assertDerivedImageResult(data, 'colorize');
+          data.variations.forEach((v: any) => {
+            const parameters = { color: v.colorName };
+            addImageToCanvasSafely(v.imageUrl, v.colorName, {
+              feature: 'colorize',
+              parentId: objectId,
+              generation: (obj.metadata?.generation || 0) + 1,
+              parameters,
+              ...buildDerivedLightchainMetadata(obj, 'colorize', { parameters }),
+            }, objectId);
+          });
+          toast.success('カラバリを生成しました', { id: 'colorize' });
         } catch (err: any) {
           toast.error(await edgeFunctionErrorMessage(err) || 'カラバリ生成に失敗しました', { id: 'colorize' });
         }
@@ -1150,15 +1161,14 @@ export function CanvasEditorPage() {
             body: { imageUrl: imageSrc, brandId: currentBrand.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
-          if (data?.resultUrl) {
-            addImageToCanvasSafely(data.resultUrl, '高解像度', {
-              feature: 'upscale',
-              parentId: objectId,
-              generation: (obj.metadata?.generation || 0) + 1,
-              ...buildDerivedLightchainMetadata(obj, 'upscale', { parameters: { scale: 2 } }),
-            }, objectId);
-            toast.success('アップスケールしました', { id: 'upscale' });
-          }
+          assertDerivedImageResult(data, 'upscale');
+          addImageToCanvasSafely(data.resultUrl, '高解像度', {
+            feature: 'upscale',
+            parentId: objectId,
+            generation: (obj.metadata?.generation || 0) + 1,
+            ...buildDerivedLightchainMetadata(obj, 'upscale', { parameters: { scale: 2 } }),
+          }, objectId);
+          toast.success('アップスケールしました', { id: 'upscale' });
         } catch (err: any) {
           toast.error(await edgeFunctionErrorMessage(err) || 'アップスケールに失敗しました', { id: 'upscale' });
         }
@@ -1171,17 +1181,16 @@ export function CanvasEditorPage() {
             body: { imageUrl: imageSrc, brandId: currentBrand.id, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
-          if (data?.variations) {
-            data.variations.forEach((v: any, i: number) => {
-              addImageToCanvasSafely(v.imageUrl, `バリエーション ${i + 1}`, {
-                feature: 'generate-variations',
-                parentId: objectId,
-                generation: (obj.metadata?.generation || 0) + 1,
-                ...buildDerivedLightchainMetadata(obj, 'generate-variations', { parameters: { index: i + 1 } }),
-              }, objectId);
-            });
-            toast.success('バリエーションを生成しました', { id: 'variations' });
-          }
+          assertDerivedImageResult(data, 'variations');
+          data.variations.forEach((v: any, i: number) => {
+            addImageToCanvasSafely(v.imageUrl, `バリエーション ${i + 1}`, {
+              feature: 'generate-variations',
+              parentId: objectId,
+              generation: (obj.metadata?.generation || 0) + 1,
+              ...buildDerivedLightchainMetadata(obj, 'generate-variations', { parameters: { index: i + 1 } }),
+            }, objectId);
+          });
+          toast.success('バリエーションを生成しました', { id: 'variations' });
         } catch (err: any) {
           toast.error(await edgeFunctionErrorMessage(err) || 'バリエーション生成に失敗しました', { id: 'variations' });
         }
@@ -1576,13 +1585,12 @@ export function CanvasEditorPage() {
           body: { imageUrl: editingImage, brandId: currentBrand.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
-        if (data?.resultUrl) {
-          addImageToCanvasSafely(data.resultUrl, '背景削除', {
-            ...baseMetadata,
-            feature: 'remove-background',
-            ...buildDerivedLightchainMetadata(sourceObject, 'remove-background'),
-          }, editingObjectId ?? undefined);
-        }
+        assertDerivedImageResult(data, 'removeBackground');
+        addImageToCanvasSafely(data.resultUrl, '背景削除', {
+          ...baseMetadata,
+          feature: 'remove-background',
+          ...buildDerivedLightchainMetadata(sourceObject, 'remove-background'),
+        }, editingObjectId ?? undefined);
         return;
       }
 
@@ -1596,6 +1604,7 @@ export function CanvasEditorPage() {
           body: { imageUrl: editingImage, brandId: currentBrand.id, colors: colors?.length ? colors : undefined, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
+        assertDerivedImageResult(data, 'colorize');
         data?.variations?.forEach((variation: any) => {
           const parameters = { color: variation.colorName || variation.color };
           addImageToCanvasSafely(variation.imageUrl, variation.colorName || variation.color || 'カラバリ', {
@@ -1613,13 +1622,12 @@ export function CanvasEditorPage() {
           body: { imageUrl: editingImage, brandId: currentBrand.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
-        if (data?.resultUrl) {
-          addImageToCanvasSafely(data.resultUrl, '高解像度', {
-            ...baseMetadata,
-            feature: 'upscale',
-            ...buildDerivedLightchainMetadata(sourceObject, 'upscale', { parameters: { scale: 2 } }),
-          }, editingObjectId ?? undefined);
-        }
+        assertDerivedImageResult(data, 'upscale');
+        addImageToCanvasSafely(data.resultUrl, '高解像度', {
+          ...baseMetadata,
+          feature: 'upscale',
+          ...buildDerivedLightchainMetadata(sourceObject, 'upscale', { parameters: { scale: 2 } }),
+        }, editingObjectId ?? undefined);
         return;
       }
 
@@ -1632,6 +1640,7 @@ export function CanvasEditorPage() {
           body: { imageUrl: editingImage, brandId: currentBrand.id, prompt: params.prompt || undefined, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
+        assertDerivedImageResult(data, 'variations');
         data?.variations?.forEach((variation: any, index: number) => {
           addImageToCanvasSafely(variation.imageUrl, `バリエーション ${index + 1}`, {
             ...baseMetadata,
