@@ -1,0 +1,21 @@
+# G741 Current Blockers Handoff
+
+- Status: public/10M readiness is not accepted.
+- Latest clean audit: `output/playwright/g740-10m-completion-post-g740-release-clean-r1/summary.json` is `ok=false` with 13 blockers.
+- Latest clean release gate: `output/playwright/g740-10m-completion-post-g740-release-clean-r1/release-gate-summary.json` is `ok=false`.
+- Release gate failed readbacks: production monitor, G618 scale ops baseline, G620 security operations, production H602 billing completion.
+- G617 remains blocked: strict same-run fresh all-10 generation proof is incomplete.
+- G619 remains blocked: real consented beta evidence is incomplete; verifier failed.
+- G669 remains blocked: Gemini image-generation quota `limit: 0` provider blocker.
+- G670 remains blocked: Runway workspace `workspace_limit` provider/workspace blocker.
+- H601 remains human-needed: final legal/material/brand/person/public-use policy decision is open.
+- H602 remains human-needed: billing/checkout/quota/refund/support/public-release decision and production completion readback are open.
+- G618/G620 remain incomplete because current 96h production monitor readbacks are `ok=false`.
+- G740 24h production monitor remains red because the pre-fix `model-matrix` failed job from `2026-07-03T17:37:53Z` is still in the window.
+- Earliest useful 24h monitor rerun: after `2026-07-04T17:38Z`.
+- If waiting for the later usage-rate-limit Edge warning too: rerun after `2026-07-04T18:28Z`.
+- Earliest useful G618/G620 96h rerun for the failed generation job: after `2026-07-07T17:38Z`.
+- If waiting for the later Edge/usage warning in the 96h window too: rerun after `2026-07-07T18:28Z`.
+- Do not call this ready, almost ready, release clear, or time-only blocked.
+- Do not perform billing, purchase, payment, checkout, CAPTCHA/OTP/security code/identity verification, external publish, destructive cleanup, quota bypass, deploy, or generation submit.
+- Next safe action before the 24h window clears: collect real G619 beta evidence with consent, or prepare H601/H602 operator decisions without executing checkout/payment.

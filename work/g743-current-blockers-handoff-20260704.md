@@ -1,0 +1,25 @@
+# G743 Current Blockers Handoff
+
+- Status: public/10M readiness is not accepted.
+- Current UTC at last check: `2026-07-04T13:42:52Z`; still before the useful 24h production monitor rerun window.
+- Latest clean audit before G742/G743: `output/playwright/g740-10m-completion-post-g740-release-clean-r1/summary.json` is `ok=false` with 13 blockers.
+- Latest G619-current proof: `output/playwright/g743-g619-beta-evidence-docs-current-r1/summary.json` is `ok=false` with 30 blockers.
+- Latest G619/10M hard-stop proof: `output/playwright/g742-10m-completion-g619-hard-stop-linkage-r1/summary.json` is `ok=false` with the same 13 public-readiness blockers.
+- Release gate failed readbacks remain: production monitor, G618 scale ops baseline, G620 security operations, production H602 billing completion.
+- G617 remains blocked: strict same-run fresh all-10 generation proof is incomplete.
+- G619 remains blocked: real consented beta evidence is incomplete; old scaffold sessions lack real consent/evidence and G742 H601/H602 linkage fields.
+- New G619 sessions must use current `npm run create:g619-beta-session` and preserve `h601H602DecisionStatus: open_not_closed_by_g619`.
+- G619 sessions must link `docs/h601-h602-operator-decision-checklist-2026-07-04.md`.
+- G619 operator-only hard stops must remain `not_touched`: Apple login, real/sandbox purchase, checkout confirmation, legal-policy finalization.
+- H601 remains human-needed: final legal/material/brand/person/public-use policy decision is open.
+- H602 remains human-needed: billing/checkout/quota/refund/support/public-release decision and production completion readback are open.
+- G669 remains blocked: Gemini image-generation quota `limit: 0` provider blocker.
+- G670 remains blocked: Runway workspace `workspace_limit` provider/workspace blocker.
+- G618/G620 remain incomplete because current 96h production monitor readbacks are `ok=false`.
+- Earliest useful 24h monitor rerun: after `2026-07-04T17:38Z`.
+- If waiting for later usage-rate-limit Edge warning too: rerun after `2026-07-04T18:28Z`.
+- Earliest useful G618/G620 96h rerun for failed generation job: after `2026-07-07T17:38Z`.
+- If waiting for later Edge/usage warning in the 96h window too: rerun after `2026-07-07T18:28Z`.
+- Do not call this ready, almost ready, release clear, or time-only blocked.
+- Do not perform billing, purchase, payment, checkout, CAPTCHA/OTP/security code/identity verification, external publish, destructive cleanup, quota bypass, deploy, or generation submit.
+- Next safe action before the 24h window clears: collect real G619 beta evidence using current scaffold, or prepare H601/H602 operator decisions without executing checkout/payment.

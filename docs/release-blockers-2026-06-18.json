@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "release_date": "2026-06-18",
+  "secret_policy": "Do not store secret values in this manifest.",
+  "blockers": [
+    {
+      "id": "signup_owned_test_email_required",
+      "status": "resolved",
+      "blocks_release": false,
+      "accepted_risk": false,
+      "doctor_stop": false,
+      "doctor_stop_note": "Resolved after the user disabled email confirmation, approved admin-confirming the existing owned Auth user, and parent verification reran login -> brand -> generate -> gallery proof.",
+      "exact_blocker": null,
+      "auth_user_email_confirmed_at": "2026-06-18T14:36:59.10971Z",
+      "login_error_code": null,
+      "evidence": [
+        "output/release-prep/next-phase-20260618-parent/signup-api-readback.json",
+        "output/release-prep/next-phase-20260618-parent2/signup-api-readback.json",
+        "output/release-prep/next-phase-20260618-parent2/browser/signup-ui-429-summary.json",
+        "output/release-prep/closeout-20260618-parent/signup-api-readback.json",
+        "output/release-prep/final-closeout-20260618-parent/signup/signup-owned-test-email-summary.json",
+        "output/release-prep/full-scope-20260618-parent/summary/items-1-30-execution-summary.json",
+        "output/release-prep/parent-goal-20260618-current-head/signup/signup-owned-test-email-summary.json",
+        "output/release-prep/parent-goal-20260618-current-head/signup/full-user-journey-summary.json",
+        "output/release-prep/signup-owned-20260618-parent/signup-email-confirmation-summary.json",
+        "output/release-prep/signup-owned-20260618-parent/login-email-not-confirmed.png",
+        "output/release-prep/signup-owned-20260618-parent/admin-confirm-existing-user-summary.json",
+        "output/release-prep/signup-owned-20260618-parent/api-login-after-admin-confirm-summary.json",
+        "output/release-prep/signup-owned-20260618-parent/api-create-brand-rpc-after-migration-summary.json",
+        "output/release-prep/signup-owned-20260618-parent/ui-login-dashboard-after-rpc-fix.png",
+        "output/release-prep/signup-owned-20260618-parent/ui-generate-after-submit-rpc-fix.png",
+        "output/release-prep/signup-owned-20260618-parent/ui-gallery-after-generate-rpc-fix.png",
+        "output/release-prep/signup-owned-20260618-parent/owned-user-generate-gallery-readback-after-rpc-fix.json"
+      ],
+      "note": "Resolved on 2026-06-18 after the user disabled email confirmation and explicitly approved admin-confirming the existing owned Auth user. API login then succeeded, Browser Use login reached the dashboard with the owned brand, the create_brand RPC migration was applied remotely after the old first-brand flow hit brands RLS 42501, and Browser Use generated one campaign image that appeared in gallery. DB readback confirms the brand, owner membership, generated_images row, and storage_path-backed image. Secret values are not stored in this manifest."
+    },
+    {
+      "id": "cleanup_delete_not_run",
+      "status": "resolved",
+      "blocks_release": false,
+      "evidence": [
+        "output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json"
+      ],
+      "note": "Resolved by historical proof from output/release-prep/next-phase-20260618-parent2/cleanup-delete-readback.json, not by the current parent-goal run. The current parent-goal run did not run cleanup/delete; it only carries this historical resolved status forward."
+    },
+    {
+      "id": "local_db_reset_recreate_incomplete",
+      "status": "resolved",
+      "blocks_release": false,
+      "evidence": [
+        "output/release-prep/next-phase-20260618-parent2/local-db/reset-recreate-summary.json",
+        "output/release-prep/closeout-20260618-parent/local-db/reset-recreate-summary.json",
+        "output/release-prep/full-closeout-20260618-parent/local-db/reset-recreate-summary.json",
+        "output/release-prep/final-closeout-20260618-parent/local-db/local-db-reset-recreate-summary.json",
+        "output/release-prep/full-scope-20260618-parent/local-db/supabase-migration-list-local.txt",
+        "output/release-prep/full-scope-20260618-parent/local-db/supabase-verify-db-2.txt",
+        "output/release-prep/full-scope-20260618-parent/summary/items-1-30-execution-summary.json",
+        "output/release-prep/parent-goal-20260618-current-head/local-db/local-db-reset-recreate-summary.json"
+      ],
+      "note": "Resolved by the current-HEAD parent run on 2026-06-18 after initial reset/start attempts failed. The successful retry used the Colima Docker socket, restarted the local DB with valid --exclude names, passed `supabase migration list --local`, completed `supabase db reset --local --no-seed`, passed `SUPABASE_VERIFY_MODE=db bash scripts/supabase-prod-verify.sh`, stopped Supabase, attempted Colima cleanup, and recorded `reset_recreate_ok=true`, `db_verify_ok=true`, and `exact_blocker=null`."
+    },
+    {
+      "id": "browser_use_daemon_timeout_on_current_head_smoke",
+      "status": "resolved",
+      "blocks_release": false,
+      "evidence": [
+        "output/release-prep/full-closeout-20260618-parent/browser-use-current/browser-use-current-summary.json",
+        "output/release-prep/final-closeout-20260618-parent/browser-use-current/",
+        "output/release-prep/parent-goal-20260618-current-head/browser-use-current/"
+      ],
+      "note": "Resolved for current HEAD by the parent-goal run. Browser Use proof was recaptured under output/release-prep/parent-goal-20260618-current-head/browser-use-current/ with release_date 2026-06-18, environment staging, git_commit c80e209f1483dd42dafc43e15bab06346a0b46a0, nonblank home/login pages, visible auth controls, and view-only metadata. `verify:browser-use` passes for that proof, and `release:doctor` has no STOP on current HEAD."
+    }
+  ]
+}

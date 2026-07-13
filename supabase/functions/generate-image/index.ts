@@ -1,0 +1,791 @@
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { clientError, createServiceClient, createUserClient, requireBrandRole, requireUser } from '../_shared/auth.ts'
+import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
+import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
+import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
+import { sanitizeMaterialGenerationMetadata, sanitizeMetadataWithoutImageUrls } from '../_shared/materialMetadata.ts';
+import { generateRunwayImage, runwayImageArtifact } from '../_shared/runway.ts';
+import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
+import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
+import { generateGeminiImage, geminiImageArtifact } from '../_shared/geminiImage.ts';
+import { generateOpenAiImage, openAiImageArtifact } from '../_shared/openaiImage.ts';
+import { generateMockImage, mockImageArtifact } from '../_shared/mockImage.ts';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface GenerateRequest {
+  prompt: string
+  negativePrompt?: string
+  width?: number
+  height?: number
+  brandId: string
+  featureType?: string
+  sourceReadback?: unknown
+  generationIntent?: unknown
+  lightchainCompat?: unknown
+  materialReferences?: unknown
+  layerPlan?: unknown
+  maskPlan?: unknown
+  compositionPreview?: unknown
+  campaignMeta?: unknown
+  textOverlay?: unknown
+  localRunwayWorker?: unknown
+  generationProvider?: unknown
+  generationModel?: unknown
+  legalSafety?: unknown
+}
+
+const SOURCE_CONFIG = {
+  studio: { label: 'Fashion Studio', resumePath: '/studio', versions: ['studio-selection-local-v1'] },
+  models: { label: 'モデルライブラリ', resumePath: '/models', versions: ['model-library-local-v1'] },
+  patterns: { label: '柄・グラフィック', resumePath: '/patterns', versions: ['pattern-preview-local-v1'] },
+  video: { label: 'Video Workstation', resumePath: '/video', versions: ['video-storyboard-local-v1'] },
+  lab: { label: 'Lab', resumePath: '/lab', versions: ['lab-evaluation-local-v1'] },
+} as const
+
+type SourceWorkspace = keyof typeof SOURCE_CONFIG
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+const readString = (record: Record<string, unknown>, key: string) => {
+  const value = record[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+const ALLOWED_LOCAL_WORKER_FEATURES = new Set([
+  'campaign-image',
+  'design-gacha',
+  'product-shots',
+  'model-matrix',
+  'multilingual-banner',
+  'scene-coordinate',
+  'remove-bg',
+  'remove-background',
+  'colorize',
+  'upscale',
+  'variations',
+  'generate-variations',
+])
+
+const sanitizePositiveInteger = (value: unknown, fallback: number, min: number, max: number) => {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return fallback
+  return Math.max(min, Math.min(max, Math.round(numeric)))
+}
+
+const normalizeImageMimeType = (mimeType: string | null | undefined) => {
+  const clean = String(mimeType || '').split(';')[0].trim().toLowerCase()
+  return clean.startsWith('image/') ? clean : 'image/png'
+}
+
+const extensionFromMimeType = (mimeType: string) => {
+  switch (normalizeImageMimeType(mimeType)) {
+    case 'image/jpeg':
+    case 'image/jpg':
+      return 'jpg'
+    case 'image/webp':
+      return 'webp'
+    case 'image/png':
+    default:
+      return 'png'
+  }
+}
+
+const bytesToHex = (bytes: Uint8Array) => Array.from(bytes)
+  .map((byte) => byte.toString(16).padStart(2, '0'))
+  .join('')
+
+const sha256Hex = async (bytes: Uint8Array) => {
+  const buffer = new Uint8Array(bytes).buffer
+  const digest = await crypto.subtle.digest('SHA-256', buffer)
+  return bytesToHex(new Uint8Array(digest))
+}
+
+const parseDataImage = (value: string) => {
+  const match = value.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,([A-Za-z0-9+/=]+)$/i)
+  if (!match) return null
+  const [, mimeType, payload] = match
+  const binary = atob(payload)
+  const bytes = new Uint8Array(binary.length)
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index)
+  }
+  return { bytes, mimeType: normalizeImageMimeType(mimeType) }
+}
+
+const fetchReferenceImageBytes = async (referenceImage: string) => {
+  const dataImage = parseDataImage(referenceImage)
+  if (dataImage) return dataImage
+
+  const response = await fetch(referenceImage)
+  if (!response.ok) {
+    throw new Error(`local_runway_worker_reference_image_fetch_failed:${response.status}`)
+  }
+  const mimeType = normalizeImageMimeType(response.headers.get('content-type'))
+  if (!mimeType.startsWith('image/')) {
+    throw new Error('local_runway_worker_reference_image_fetch_not_image')
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer())
+  if (bytes.byteLength > 1_500_000) {
+    throw new Error('local_runway_worker_reference_image_too_large')
+  }
+  return { bytes, mimeType }
+}
+
+const createLocalWorkerReferenceImageHandoff = async ({
+  supabaseClient,
+  referenceImage,
+  userId,
+  brandId,
+  requestId,
+}: {
+  supabaseClient: ReturnType<typeof createServiceClient>
+  referenceImage: string | null
+  userId: string
+  brandId: string
+  requestId: string
+}) => {
+  if (!referenceImage) return null
+  const { bytes, mimeType } = await fetchReferenceImageBytes(referenceImage)
+  const sha256 = await sha256Hex(bytes)
+  const extension = extensionFromMimeType(mimeType)
+  const storagePath = `${userId}/${brandId}/local-runway-reference-handoffs/${requestId}-${crypto.randomUUID()}.${extension}`
+  const { error } = await supabaseClient.storage
+    .from('generated-images')
+    .upload(storagePath, bytes, {
+      contentType: mimeType,
+      upsert: false,
+      cacheControl: '60',
+    })
+  if (error) throw error
+  return {
+    bucket: 'generated-images',
+    storagePath,
+    mimeType,
+    bytes: bytes.byteLength,
+    sha256,
+    createdAt: new Date().toISOString(),
+  }
+}
+
+const sanitizeLocalRunwayWorkerRequest = (value: unknown, persistedFeatureType: string) => {
+  if (!isRecord(value) || value.enabled !== true) return null
+  if (!ALLOWED_LOCAL_WORKER_FEATURES.has(persistedFeatureType)) {
+    throw new Error('local_runway_worker_feature_not_allowed')
+  }
+
+  const provider = readString(value, 'provider') || 'runway_mcp_local_worker'
+  if (provider !== 'runway_mcp_local_worker') {
+    throw new Error('local_runway_worker_provider_invalid')
+  }
+
+  const workerContractVersion = readString(value, 'workerContractVersion') || 'heavy-chain.local-runway-worker.v1'
+  if (workerContractVersion !== 'heavy-chain.local-runway-worker.v1') {
+    throw new Error('local_runway_worker_contract_invalid')
+  }
+
+  const referenceImage = readString(value, 'referenceImage')
+  if (referenceImage) {
+    const isDataImage = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/i.test(referenceImage)
+    const isHttpsImage = /^https:\/\/[^\s]+$/i.test(referenceImage)
+    if (!isDataImage && !isHttpsImage) {
+      throw new Error('local_runway_worker_reference_image_invalid')
+    }
+    if (referenceImage.length > 1_500_000) {
+      throw new Error('local_runway_worker_reference_image_too_large')
+    }
+  }
+
+  const metadata = sanitizeMetadataWithoutImageUrls(value.metadata)
+  return {
+    provider,
+    workerContractVersion,
+    count: sanitizePositiveInteger(value.count, 1, 1, 4),
+    referenceImage: referenceImage ?? null,
+    referenceType: readString(value, 'referenceType'),
+    metadata,
+  }
+}
+
+const sanitizeGenerationProvider = (value: unknown) => {
+  const requested = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (requested === 'runway' || requested === 'runway_mcp') return 'runway'
+  if (requested === 'gemini' || requested === 'gemini_image') return 'gemini'
+  if (requested === 'openai' || requested === 'openai_image' || requested === 'gpt_image') return 'openai'
+  if (requested === 'mock' || requested === 'mock_image') return 'mock'
+  return 'openai'
+}
+
+const sanitizeGenerationModel = (value: unknown) => {
+  const requested = typeof value === 'string' ? value.trim() : ''
+  return requested || null
+}
+
+const sanitizeSourceReadback = (value: unknown) => {
+  if (!isRecord(value)) return null
+
+  const sourceWorkspace = readString(value, 'sourceWorkspace')
+  if (!sourceWorkspace || !(sourceWorkspace in SOURCE_CONFIG)) return null
+
+  const config = SOURCE_CONFIG[sourceWorkspace as SourceWorkspace]
+  const workflowVersion = readString(value, 'workflowVersion')
+  const sourceLabel = readString(value, 'sourceLabel')
+  const sourceResumePath = readString(value, 'sourceResumePath')
+  const sourceMode = readString(value, 'sourceMode')
+
+  if (!workflowVersion || !(config.versions as readonly string[]).includes(workflowVersion)) return null
+  if (sourceLabel !== config.label) return null
+  if (sourceResumePath !== config.resumePath) return null
+  if (sourceMode !== 'local-workflow-intake') return null
+
+  return {
+    sourceWorkspace: sourceWorkspace as SourceWorkspace,
+    workflowVersion,
+    sourceLabel,
+    sourceResumePath,
+    sourceMode: 'local-workflow-intake' as const,
+  }
+}
+
+const sanitizeGenerationIntent = (value: unknown, source: ReturnType<typeof sanitizeSourceReadback>) => {
+  if (!source || !isRecord(value)) return null
+  const feature = readString(value, 'feature')
+  const prompt = readString(value, 'prompt')
+  const href = readString(value, 'href')
+  const label = readString(value, 'label')
+  if (!feature || !prompt || !href || !label) return null
+  if (readString(value, 'sourceWorkspace') !== source.sourceWorkspace) return null
+  if (readString(value, 'workflowVersion') !== source.workflowVersion) return null
+  if (readString(value, 'sourceLabel') !== source.sourceLabel) return null
+  if (readString(value, 'sourceResumePath') !== source.sourceResumePath) return null
+  if (readString(value, 'sourceMode') !== source.sourceMode) return null
+
+  return {
+    feature,
+    prompt,
+    href,
+    label,
+    ...source,
+    ...(readString(value, 'aspectRatio') ? { aspectRatio: readString(value, 'aspectRatio') } : {}),
+  }
+}
+
+const buildSourceMetadata = (sourceReadback: unknown, generationIntent: unknown) => {
+  const source = sanitizeSourceReadback(sourceReadback)
+  if (!source) return null
+  return {
+    ...source,
+    ...(sanitizeGenerationIntent(generationIntent, source)
+      ? { generationIntent: sanitizeGenerationIntent(generationIntent, source) }
+      : {}),
+  }
+}
+
+serve(async (req) => {
+  let usageReservation: UsageReservation | null = null;
+  let observedBrandId: string | null = null;
+  let observedUserId: string | null = null;
+  let observedLightchainMetadata: LightchainCompatMetadata | null = null;
+  let observedSourceMetadata: Record<string, unknown> | null = null;
+  let telemetryClient: any = null;
+  let persistenceStatus: 'not_started' | 'processing' | 'completed' | 'failed' = 'not_started';
+  let failedStage: string | null = null;
+  let cleanupStatus: 'none' | 'attempted' | 'failed' = 'none';
+  let jobId: string | null = null;
+  let storagePath: string | null = null;
+  const uploadedStoragePaths: string[] = [];
+  const insertedImageIds: string[] = [];
+  const functionName = 'generate-image';
+  const requestId = requestIdFrom(req);
+  const startedAt = Date.now();
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const supabaseAuth = createUserClient(req)
+    const user = await requireUser(supabaseAuth)
+    console.log('User authenticated:', user.id)
+
+    // Parse request body
+    const {
+      prompt,
+      negativePrompt,
+      width = 1024,
+      height = 1024,
+      brandId,
+      featureType,
+      sourceReadback,
+      generationIntent,
+      lightchainCompat,
+      materialReferences,
+      layerPlan,
+      maskPlan,
+      compositionPreview,
+      campaignMeta,
+      textOverlay,
+      localRunwayWorker,
+      generationProvider,
+      generationModel,
+      legalSafety,
+    }: GenerateRequest = await req.json()
+
+    if (!prompt || prompt.length > 8000) {
+      throw new Error('Prompt is required')
+    }
+
+    if (!brandId) {
+      throw new Error('Brand ID is required')
+    }
+
+    await requireBrandRole(supabaseAuth, brandId, user.id, 'editor')
+
+    const supabaseClient = createServiceClient()
+    telemetryClient = supabaseClient
+    const persistedFeatureType = typeof featureType === 'string' && featureType.trim()
+      ? featureType.trim()
+      : 'text-to-image'
+    const localWorkerRequest = sanitizeLocalRunwayWorkerRequest(localRunwayWorker, persistedFeatureType)
+    const selectedProvider = localWorkerRequest ? localWorkerRequest.provider : sanitizeGenerationProvider(generationProvider)
+    const selectedGenerationModel = selectedProvider === 'gemini' || selectedProvider === 'openai' || selectedProvider === 'mock'
+      ? sanitizeGenerationModel(generationModel)
+      : null
+    if (selectedProvider === 'runway' || localWorkerRequest) {
+      await requireRunwayMcpConnectionApproval(supabaseClient, brandId);
+    }
+    requireLegalSafetyApproval(legalSafety, [
+      prompt,
+      negativePrompt,
+      campaignMeta,
+      textOverlay,
+      materialReferences,
+      layerPlan,
+      maskPlan,
+      compositionPreview,
+    ])
+    const sourceMetadata = buildSourceMetadata(sourceReadback, generationIntent)
+    const materialMetadata = sanitizeMaterialGenerationMetadata({
+      materialReferences,
+      layerPlan,
+      maskPlan,
+      compositionPreview,
+    })
+    const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat)
+    const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed')
+    observedSourceMetadata = sourceMetadata
+    observedLightchainMetadata = lightchainMetadata
+    observedBrandId = brandId;
+    observedUserId = user.id;
+    usageReservation = await reserveBrandUsage(telemetryClient, {
+      brandId,
+      userId: user.id,
+      functionName,
+      units: 1,
+      requestId,
+      idempotencyKey: req.headers.get('idempotency-key'),
+      metadata: { provider: selectedProvider, queued: Boolean(localWorkerRequest) },
+    });
+    const referenceImageHandoff = localWorkerRequest
+      ? await createLocalWorkerReferenceImageHandoff({
+        supabaseClient,
+        referenceImage: localWorkerRequest.referenceImage,
+        userId: user.id,
+        brandId,
+        requestId,
+      })
+      : null
+    if (referenceImageHandoff?.storagePath) {
+      uploadedStoragePaths.push(referenceImageHandoff.storagePath)
+    }
+    const inputParams = {
+      prompt,
+      negativePrompt,
+      width,
+      height,
+      featureType: persistedFeatureType,
+      provider: selectedProvider,
+      ...(selectedGenerationModel ? { generationModel: selectedGenerationModel } : {}),
+      requestId,
+      ...(isRecord(campaignMeta) ? { campaignMeta } : {}),
+      ...(isRecord(textOverlay) ? { textOverlay } : {}),
+      ...(sourceMetadata ?? {}),
+      ...(materialMetadata ?? {}),
+      ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
+      ...(localWorkerRequest ? {
+        ...localWorkerRequest.metadata,
+        provider: localWorkerRequest.provider,
+        workerContractVersion: localWorkerRequest.workerContractVersion,
+        count: localWorkerRequest.count,
+        hasReferenceImage: Boolean(localWorkerRequest.referenceImage),
+        ...(referenceImageHandoff ? { referenceImageHandoff } : {}),
+        referenceType: localWorkerRequest.referenceType,
+        usageEventId: usageReservation?.usageEventId ?? null,
+        requestedAt: new Date().toISOString(),
+      } : {}),
+    }
+
+    await recordEdgeFunctionRun(telemetryClient, {
+      reservation: usageReservation,
+      brandId,
+      userId: user.id,
+      functionName,
+      status: 'started',
+      requestId,
+    });
+
+    let optimizedPrompt = prompt
+
+    // Create generation job
+    failedStage = 'job'
+    const { data: job, error: jobError } = await supabaseClient
+      .from('generation_jobs')
+      .insert({
+        brand_id: brandId,
+        user_id: user.id,
+        feature_type: persistedFeatureType,
+        input_params: inputParams as any,
+        optimized_prompt: optimizedPrompt,
+        status: 'processing'
+      })
+      .select()
+      .single()
+
+    if (jobError) {
+      console.error('Job creation error:', jobError)
+      throw new Error('Failed to create generation job')
+    }
+    jobId = job.id
+    persistenceStatus = 'processing'
+    await persistLightchainTaskSteps({
+      supabaseClient,
+      lightchainMetadata,
+      jobId,
+      brandId,
+      userId: user.id,
+      status: 'processing',
+      sourceMetadata,
+      requestId,
+    })
+    console.log('Job created:', job.id)
+
+    if (localWorkerRequest) {
+      failedStage = 'queued'
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'succeeded',
+        requestId,
+        durationMs: durationSince(startedAt),
+      });
+      failedStage = null
+      persistenceStatus = 'processing'
+      const { data: queuedJob, error: queueError } = await supabaseClient
+        .from('generation_jobs')
+        .update({ status: 'pending', error_message: null })
+        .eq('id', job.id)
+        .select('*')
+        .single()
+      if (queueError || !queuedJob) {
+        throw queueError ?? new Error('local_runway_worker_queue_update_failed')
+      }
+      return new Response(
+        JSON.stringify({
+          success: true,
+          queued: true,
+          provider: localWorkerRequest.provider,
+          workerContractVersion: localWorkerRequest.workerContractVersion,
+          job: queuedJob,
+          jobId: job.id,
+          persistenceStatus: 'pending',
+          cleanupStatus: 'none',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 202,
+        },
+      )
+    }
+
+    failedStage = 'generation'
+    const productionPrompt = `Generate a high-quality professional fashion/apparel image: ${optimizedPrompt}. Style: Professional fashion photography, studio lighting, high resolution, commercial quality.`
+    const generatedResult = selectedProvider === 'runway'
+      ? await generateRunwayImage({
+        brandId,
+        prompt: productionPrompt,
+        negativePrompt,
+        width,
+        height,
+      })
+      : selectedProvider === 'openai'
+        ? await generateOpenAiImage({
+          prompt: productionPrompt,
+          negativePrompt,
+          width,
+          height,
+          model: selectedGenerationModel,
+        })
+        : selectedProvider === 'mock'
+          ? await generateMockImage({
+            prompt: productionPrompt,
+            width,
+            height,
+            model: selectedGenerationModel,
+          })
+        : await generateGeminiImage({
+          prompt: productionPrompt,
+          negativePrompt,
+          width,
+          height,
+          model: selectedGenerationModel,
+        })
+    const imageBase64 = generatedResult.base64
+    const usedModel = generatedResult.model
+    const imageAsset = selectedProvider === 'runway'
+      ? runwayImageArtifact(generatedResult)
+      : selectedProvider === 'openai'
+        ? openAiImageArtifact(generatedResult)
+        : selectedProvider === 'mock'
+          ? mockImageArtifact(generatedResult)
+        : geminiImageArtifact(generatedResult)
+    console.log(`Image generated with model: ${usedModel}`)
+
+    // Convert base64 to Uint8Array for storage
+    const imageBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0))
+
+    const fileName = `${user.id}/${brandId}/${job.id}.${imageAsset.extension}`
+    storagePath = fileName
+    failedStage = 'storage'
+    const { error: uploadError } = await supabaseClient
+      .storage
+        .from('generated-images')
+        .upload(fileName, imageBuffer, {
+        contentType: imageAsset.contentType,
+        upsert: false
+      })
+
+    if (uploadError) {
+      throw new Error('Storage upload failed')
+    }
+    uploadedStoragePaths.push(fileName)
+
+    const { data: signedUrlData, error: signedUrlError } = await supabaseClient
+      .storage
+      .from('generated-images')
+      .createSignedUrl(fileName, 60 * 60)
+
+    if (signedUrlError || !signedUrlData?.signedUrl) {
+      throw signedUrlError ?? new Error('Storage signed URL failed')
+    }
+
+    // Calculate expiry (30 days)
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 30)
+    let imageId: string | null = null
+
+    try {
+      failedStage = 'image'
+      const { data: image, error: imageInsertError } = await supabaseClient
+        .from('generated_images')
+        .insert({
+          job_id: job.id,
+          brand_id: brandId,
+          user_id: user.id,
+          storage_path: fileName,
+          image_url: null,
+          prompt: optimizedPrompt,
+          negative_prompt: negativePrompt || null,
+          feature_type: persistedFeatureType,
+          model_used: usedModel,
+          generation_params: { width, height, provider: selectedProvider, ...(selectedGenerationModel ? { generationModel: selectedGenerationModel } : {}) },
+          metadata: {
+            remoteSaveStatus: 'succeeded',
+            source: 'generate-image',
+            provider: selectedProvider,
+            ...(selectedGenerationModel ? { generationModel: selectedGenerationModel } : {}),
+            providerTaskId: generatedResult.taskId,
+            requestId,
+            ...(sourceMetadata ?? {}),
+            ...(materialMetadata ?? {}),
+            ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
+          } as any,
+          expires_at: expiresAt.toISOString()
+        })
+        .select('id')
+        .single()
+      if (imageInsertError || !image?.id) {
+        throw imageInsertError ?? new Error('Generated image insert did not return an id')
+      }
+      imageId = image?.id ?? null
+      if (imageId) {
+        insertedImageIds.push(imageId)
+        await persistLightchainTaskSteps({
+          supabaseClient,
+          lightchainMetadata: completedLightchainMetadata,
+          jobId,
+          imageId,
+          brandId,
+          userId: user.id,
+          status: 'completed',
+          sourceMetadata,
+          requestId,
+          artifactUri: fileName,
+        })
+      }
+      console.log('✅ Image record saved to database')
+
+      // Update job status to completed
+      failedStage = 'job_complete'
+      const { error: completeJobError } = await supabaseClient
+        .from('generation_jobs')
+        .update({ status: 'completed', error_message: null, completed_at: new Date().toISOString() })
+        .eq('id', job.id)
+      if (completeJobError) {
+        throw completeJobError
+      }
+      persistenceStatus = 'completed'
+      failedStage = null
+    } catch (dbError) {
+      console.error('Database save failed:', dbError)
+      throw new Error('Failed to save generated image')
+    }
+
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'succeeded');
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'succeeded',
+        requestId,
+        durationMs: durationSince(startedAt),
+      });
+    }
+
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        jobId: job.id,
+        imageId,
+        storagePath: fileName,
+        provider: selectedProvider,
+        persistenceStatus: 'completed',
+        cleanupStatus: 'none',
+        images: [{
+          id: imageId ?? job.id,
+          imageUrl: signedUrlData.signedUrl,
+          prompt: optimizedPrompt,
+          jobId: job.id,
+          imageId,
+          storagePath: fileName,
+          persistenceStatus: 'completed'
+        }]
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    )
+
+  } catch (error) {
+    const cleanupErrors: string[] = [];
+    persistenceStatus = jobId ? 'failed' : persistenceStatus;
+    if (!failedStage) failedStage = 'unknown';
+
+    if (telemetryClient && uploadedStoragePaths.length > 0) {
+      cleanupStatus = 'attempted';
+      try {
+        const { error: removeStorageError } = await telemetryClient
+          .storage
+          .from('generated-images')
+          .remove(uploadedStoragePaths);
+        if (removeStorageError) throw removeStorageError;
+      } catch (cleanupError) {
+        cleanupErrors.push(clientError(cleanupError));
+      }
+    }
+
+    if (telemetryClient && jobId) {
+      cleanupStatus = 'attempted';
+      if (insertedImageIds.length > 0) {
+        try {
+          const { error: deleteImagesError } = await telemetryClient
+            .from('generated_images')
+            .delete()
+            .in('id', insertedImageIds);
+          if (deleteImagesError) throw deleteImagesError;
+        } catch (cleanupError) {
+          cleanupErrors.push(clientError(cleanupError));
+        }
+      }
+
+      try {
+        const { error: failJobError } = await telemetryClient
+          .from('generation_jobs')
+          .update({
+            status: 'failed',
+            error_message: sanitizeError(error),
+            completed_at: new Date().toISOString(),
+          })
+          .eq('id', jobId);
+        if (failJobError) throw failJobError;
+        await persistLightchainTaskSteps({
+          supabaseClient: telemetryClient,
+          lightchainMetadata: observedLightchainMetadata,
+          jobId,
+          brandId: observedBrandId ?? '',
+          userId: observedUserId ?? '',
+          status: 'retryable',
+          sourceMetadata: observedSourceMetadata,
+          requestId,
+          errorMessage: sanitizeError(error),
+        });
+      } catch (cleanupError) {
+        cleanupErrors.push(clientError(cleanupError));
+      }
+
+      cleanupStatus = cleanupErrors.length ? 'failed' : 'attempted';
+    }
+
+    if (telemetryClient) {
+      await completeBrandUsage(telemetryClient, usageReservation, 'failed', { error: sanitizeError(error) });
+      await recordEdgeFunctionRun(telemetryClient, {
+        reservation: usageReservation,
+        brandId: observedBrandId,
+        userId: observedUserId,
+        functionName,
+        status: 'failed',
+        requestId,
+        durationMs: durationSince(startedAt),
+        errorMessage: sanitizeError(error),
+      });
+    }
+
+    console.error('Error:', error)
+    return new Response(
+      JSON.stringify({ 
+        success: false,
+        error: clientError(error),
+        jobId,
+        storagePath,
+        persistenceStatus,
+        failedStage,
+        cleanupStatus,
+        cleanupErrors,
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      }
+    )
+  }
+})
