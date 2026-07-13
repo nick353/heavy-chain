@@ -32,6 +32,7 @@ const JobsPage = lazy(() => import('./pages/JobsPage').then((module) => ({ defau
 const CreditsPage = lazy(() => import('./pages/CreditsPage').then((module) => ({ default: module.CreditsPage })));
 const GalleryPage = lazy(() => import('./pages/GalleryPage').then((module) => ({ default: module.GalleryPage })));
 const CanvasEditorPage = lazy(() => import('./pages/CanvasEditorPage').then((module) => ({ default: module.CanvasEditorPage })));
+const LightchainMaterialWorkbenchPage = lazy(() => import('./pages/LightchainMaterialWorkbenchPage').then((module) => ({ default: module.LightchainMaterialWorkbenchPage })));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })));
 const BrandSettingsPage = lazy(() => import('./pages/BrandSettingsPage').then((module) => ({ default: module.BrandSettingsPage })));
@@ -700,6 +701,26 @@ function AppRoutes() {
             <ProtectedRoute>
               <ErrorBoundary>
                 {lazyPage(<CreditsPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lightchain/fabric-image"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<LightchainMaterialWorkbenchPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/lightchain/printing-image"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<LightchainMaterialWorkbenchPage />)}
               </ErrorBoundary>
             </ProtectedRoute>
           }

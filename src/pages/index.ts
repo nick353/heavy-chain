@@ -17,6 +17,7 @@ export { JobsPage } from './JobsPage';
 export { CreditsPage } from './CreditsPage';
 export { GalleryPage } from './GalleryPage';
 export { CanvasEditorPage } from './CanvasEditorPage';
+export { LightchainMaterialWorkbenchPage } from './LightchainMaterialWorkbenchPage';
 export { AdminDashboard } from './AdminDashboard';
 export { ForgotPasswordPage } from './ForgotPasswordPage';
 export { BrandSettingsPage } from './BrandSettingsPage';
