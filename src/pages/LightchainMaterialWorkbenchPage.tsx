@@ -264,7 +264,9 @@ export function LightchainMaterialWorkbenchPage() {
   const mode: WorkbenchMode = location.pathname.includes('printing') ? 'printing' : 'fabric';
   const isPrinting = mode === 'printing';
   const stageRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  const userClearedSelectionRef = useRef(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const backgroundColor = '#121619';
   const [fabricBase, setFabricBase] = useState<SelectedImage | null>(null);
@@ -299,6 +301,9 @@ export function LightchainMaterialWorkbenchPage() {
   }, [fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentCutting, printGarmentProcessed]);
 
   useEffect(() => {
+    if (userClearedSelectionRef.current) {
+      return;
+    }
     if (!selectedLayerId && activeLayers.length > 0) {
       setSelectedLayerId(activeLayers[activeLayers.length - 1].id);
     }
@@ -313,6 +318,16 @@ export function LightchainMaterialWorkbenchPage() {
   }, []);
 
   const selectedLayer = activeLayers.find((layer) => layer.id === selectedLayerId) || null;
+
+  const selectLayer = (layerId: string) => {
+    userClearedSelectionRef.current = false;
+    setSelectedLayerId(layerId);
+  };
+
+  const clearSelectedLayer = () => {
+    userClearedSelectionRef.current = true;
+    setSelectedLayerId(null);
+  };
 
   useEffect(() => {
     if (!fabricBase || !fabricDesign) {
@@ -423,6 +438,9 @@ export function LightchainMaterialWorkbenchPage() {
   }, [printDesigns, printGarmentCutting, currentBrand?.id]);
 
   useEffect(() => {
+    if (userClearedSelectionRef.current) {
+      return;
+    }
     if (fabricBase || fabricDesign || printGarment || printDesigns.length > 0) {
       const firstLayer =
         (isPrinting ? printDesignLayers[0]?.id : fabricLayer?.id) ||
@@ -452,13 +470,19 @@ export function LightchainMaterialWorkbenchPage() {
 
   useEffect(() => {
     if (isPrinting) {
-      if (printGarmentProcessed && !printGarmentCutting && !selectedLayerId) {
+      if (printGarmentProcessed && !printGarmentCutting && !selectedLayerId && !userClearedSelectionRef.current) {
         setSelectedLayerId('print-garment');
       }
-    } else if (fabricLayer && !selectedLayerId) {
+    } else if (fabricLayer && !selectedLayerId && !userClearedSelectionRef.current) {
       setSelectedLayerId(fabricLayer.id);
     }
   }, [fabricLayer, isPrinting, printGarmentCutting, printGarmentProcessed, selectedLayerId]);
+
+  useEffect(() => {
+    if (fabricResults.length > 0 || printResults.length > 0) {
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [fabricResults.length, printResults.length]);
 
   useEffect(() => {
     if (!fabricBase || !fabricDesign) {
@@ -822,7 +846,7 @@ export function LightchainMaterialWorkbenchPage() {
             </div>
             <div
               ref={stageRef}
-              onPointerDown={() => setSelectedLayerId(null)}
+              onPointerDown={clearSelectedLayer}
               className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-white/10 bg-neutral-900"
               style={{
                 background: isPrinting ? printStageBackground : fabricStageBackground,
@@ -842,7 +866,7 @@ export function LightchainMaterialWorkbenchPage() {
                     cutoutState: 'idle' | 'processing' | 'done' | 'error';
                   }>}
                   selectedLayerId={selectedLayerId}
-                  onSelectLayer={setSelectedLayerId}
+                  onSelectLayer={selectLayer}
                   onCommitLayer={({ id, transform }) => {
                     setPrintDesignLayers((prev) => prev.map((layer) => (layer.id === id ? { ...layer, transform } : layer)));
                   }}
@@ -863,7 +887,7 @@ export function LightchainMaterialWorkbenchPage() {
                       key={layer.id}
                       layer={layer}
                       selected={selectedLayerId === layer.id}
-                      onSelect={() => setSelectedLayerId(layer.id)}
+                      onSelect={() => selectLayer(layer.id)}
                       onMove={(x, y) => {
                         if (layer.id === 'fabric-design' && fabricLayer) {
                           setFabricLayer({ ...fabricLayer, transform: { ...fabricLayer.transform, x, y } });
@@ -911,6 +935,7 @@ export function LightchainMaterialWorkbenchPage() {
           <AnimatePresence>
             {(fabricResults.length > 0 || printResults.length > 0) && (
               <motion.div
+                ref={resultsRef}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
