@@ -722,12 +722,13 @@ function buildCutoutFromImage({
   const candidateBackgroundMask = mode === 'auto' || candidate?.includes('無地') || candidate?.includes('トップス') || candidate?.includes('garment')
     ? buildEdgeConnectedBackgroundMask(data, width, height, background)
     : null;
+  const garmentCandidate = Boolean(candidate?.includes('無地') || candidate?.includes('トップス') || candidate?.includes('garment') || candidate?.includes('服'));
   const backgroundMask = candidateBackgroundMask && shouldUseBackgroundMask({
     mask: candidateBackgroundMask,
     background,
     width,
     height,
-  })
+  }) || (candidateBackgroundMask && garmentCandidate && background.sampleSpread <= 96)
     ? candidateBackgroundMask
     : null;
   let minX = width;
