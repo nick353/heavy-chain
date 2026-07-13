@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
+import { PrintingCompositionStage } from '../components/workspace/PrintingCompositionStage';
 import { useAuthStore } from '../stores/authStore';
 import { removeBackground } from '../lib/imageApi';
 
@@ -449,25 +450,6 @@ export function LightchainMaterialWorkbenchPage() {
     }));
   }, [fabricBase, fabricDesign]);
 
-  const updateSelectedLayer = (patch: Partial<Transform>) => {
-    if (!selectedLayer) return;
-    if (selectedLayer.id === 'fabric-design' && fabricLayer) {
-      setFabricLayer({ ...fabricLayer, transform: { ...fabricLayer.transform, ...patch } });
-      return;
-    }
-    if (selectedLayer.id === 'print-garment' && printGarmentProcessed) {
-      setPrintGarmentProcessed(printGarmentProcessed);
-      return;
-    }
-    setPrintDesignLayers((prev) =>
-      prev.map((layer) =>
-        layer.id === selectedLayer.id
-          ? { ...layer, transform: { ...layer.transform, ...patch } }
-          : layer
-      )
-    );
-  };
-
   const handleGenerate = async () => {
     if (!stageRef.current) return;
     if (!currentBrand?.id) {
@@ -740,7 +722,7 @@ export function LightchainMaterialWorkbenchPage() {
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">選択中レイヤー</p>
-                <p className="text-xs text-white/50">ドラッグで位置、スライダーでサイズ調整。</p>
+                <p className="text-xs text-white/50">ドラッグ・拡大・回転を直接キャンバスで操作します。</p>
               </div>
               <SquareStack className="h-4 w-4 text-primary-200" />
             </div>
@@ -758,68 +740,17 @@ export function LightchainMaterialWorkbenchPage() {
                           : 'そのまま使用'}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="text-xs text-white/60">
-                    X
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={selectedLayer.transform.x}
-                      onChange={(e) => updateSelectedLayer({ x: Number(e.target.value) })}
-                      className="mt-1 w-full"
-                    />
-                  </label>
-                  <label className="text-xs text-white/60">
-                    Y
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={selectedLayer.transform.y}
-                      onChange={(e) => updateSelectedLayer({ y: Number(e.target.value) })}
-                      className="mt-1 w-full"
-                    />
-                  </label>
-                  <label className="text-xs text-white/60">
-                    拡大
-                    <input
-                      type="range"
-                      min={0.2}
-                      max={1.8}
-                      step={0.05}
-                      value={selectedLayer.transform.scale}
-                      onChange={(e) => updateSelectedLayer({ scale: Number(e.target.value) })}
-                      className="mt-1 w-full"
-                    />
-                  </label>
-                  <label className="text-xs text-white/60">
-                    回転
-                    <input
-                      type="range"
-                      min={-45}
-                      max={45}
-                      value={selectedLayer.transform.rotation}
-                      onChange={(e) => updateSelectedLayer({ rotation: Number(e.target.value) })}
-                      className="mt-1 w-full"
-                    />
-                  </label>
+                <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-xs leading-relaxed text-white/70">
+                  <div className="mb-2 font-medium text-white">操作方法</div>
+                  <ul className="space-y-1.5 text-neutral-300">
+                    <li>・画像を直接ドラッグして移動</li>
+                    <li>・右下ハンドルで拡大縮小</li>
+                    <li>・上の丸ハンドルで回転</li>
+                  </ul>
                 </div>
-                <label className="text-xs text-white/60 block">
-                  不透明度
-                  <input
-                    type="range"
-                    min={0.2}
-                    max={1}
-                    step={0.05}
-                    value={selectedLayer.transform.opacity}
-                    onChange={(e) => updateSelectedLayer({ opacity: Number(e.target.value) })}
-                    className="mt-1 w-full"
-                  />
-                </label>
               </div>
             ) : (
-              <p className="text-sm text-white/50">レイヤーを選ぶと編集できます。</p>
+              <p className="text-sm text-white/50">レイヤーを選ぶと直接編集できます。</p>
             )}
           </div>
 
@@ -867,45 +798,50 @@ export function LightchainMaterialWorkbenchPage() {
                 backgroundPosition: 'center',
               }}
             >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_55%)]" />
-              {isPrinting && !printGarmentProcessed && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-center text-white/70 backdrop-blur">
-                    <Upload className="mx-auto mb-2 h-5 w-5" />
-                    <p className="text-sm">参考画像をアップロードしてください</p>
-                  </div>
-                </div>
-              )}
-              {!isPrinting && !fabricBase && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-center text-white/70 backdrop-blur">
-                    <Upload className="mx-auto mb-2 h-5 w-5" />
-                    <p className="text-sm">生地画像をアップロードしてください</p>
-                  </div>
-                </div>
-              )}
-              {stageLayers.map((layer) => (
-                <LayerPreview
-                  key={layer.id}
-                  layer={layer}
-                  selected={selectedLayerId === layer.id}
-                  onSelect={() => setSelectedLayerId(layer.id)}
-                  onMove={(x, y) => {
-                    if (layer.id === 'fabric-design' && fabricLayer) {
-                      setFabricLayer({ ...fabricLayer, transform: { ...fabricLayer.transform, x, y } });
-                      return;
-                    }
-                    setPrintDesignLayers((prev) =>
-                      prev.map((current) =>
-                        current.id === layer.id
-                          ? { ...current, transform: { ...current.transform, x, y } }
-                          : current
-                      )
-                    );
+              {isPrinting ? (
+                <PrintingCompositionStage
+                  garmentUrl={printGarment?.url || null}
+                  garmentMaskUrl={printGarmentProcessed}
+                  layers={stageLayers as Array<{
+                    id: string;
+                    label: string;
+                    displayUrl: string;
+                    transform: Transform;
+                    cutoutState: 'idle' | 'processing' | 'done' | 'error';
+                  }>}
+                  selectedLayerId={selectedLayerId}
+                  onSelectLayer={setSelectedLayerId}
+                  onCommitLayer={({ id, transform }) => {
+                    setPrintDesignLayers((prev) => prev.map((layer) => (layer.id === id ? { ...layer, transform } : layer)));
                   }}
-                  mode={mode}
                 />
-              ))}
+              ) : (
+                <>
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_55%)]" />
+                  {!fabricBase && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-center text-white/70 backdrop-blur">
+                        <Upload className="mx-auto mb-2 h-5 w-5" />
+                        <p className="text-sm">生地画像をアップロードしてください</p>
+                      </div>
+                    </div>
+                  )}
+                  {stageLayers.map((layer) => (
+                    <LayerPreview
+                      key={layer.id}
+                      layer={layer}
+                      selected={selectedLayerId === layer.id}
+                      onSelect={() => setSelectedLayerId(layer.id)}
+                      onMove={(x, y) => {
+                        if (layer.id === 'fabric-design' && fabricLayer) {
+                          setFabricLayer({ ...fabricLayer, transform: { ...fabricLayer.transform, x, y } });
+                        }
+                      }}
+                      mode={mode}
+                    />
+                  ))}
+                </>
+              )}
             </div>
           </div>
 
