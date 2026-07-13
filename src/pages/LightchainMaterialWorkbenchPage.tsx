@@ -4,17 +4,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Check,
-  Download,
   Layers3,
-  Move3D,
-  RefreshCw,
   Scissors,
   Sparkles,
-  SquareStack,
   Upload,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { PrintingCompositionStage } from '../components/workspace/PrintingCompositionStage';
@@ -236,15 +232,14 @@ export function LightchainMaterialWorkbenchPage() {
   const mode: WorkbenchMode = location.pathname.includes('printing') ? 'printing' : 'fabric';
   const isPrinting = mode === 'printing';
   const stageRef = useRef<HTMLDivElement>(null);
-  const resultsRef = useRef<HTMLDivElement>(null);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const userClearedSelectionRef = useRef(false);
+  const [activePrintLayoutPresetId, setActivePrintLayoutPresetId] = useState<string>('center');
   const [isGenerating, setIsGenerating] = useState(false);
   const backgroundColor = '#121619';
   const [fabricBase, setFabricBase] = useState<SelectedImage | null>(null);
   const [fabricDesign, setFabricDesign] = useState<SelectedImage | null>(null);
   const [fabricLayer, setFabricLayer] = useState<AssetLayer | null>(null);
-  const [fabricResults, setFabricResults] = useState<WorkbenchResult[]>([]);
   const [fabricPresetIds, setFabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentProcessed, setPrintGarmentProcessed] = useState<string | null>(null);
@@ -252,7 +247,6 @@ export function LightchainMaterialWorkbenchPage() {
   const [printGarmentCutting, setPrintGarmentCutting] = useState(true);
   const [printDesigns, setPrintDesigns] = useState<SelectedImage[]>([]);
   const [printDesignLayers, setPrintDesignLayers] = useState<AssetLayer[]>([]);
-  const [printResults, setPrintResults] = useState<WorkbenchResult[]>([]);
 
   const activeLayers = useMemo(() => {
     if (isPrinting) {
@@ -288,8 +282,6 @@ export function LightchainMaterialWorkbenchPage() {
     window.addEventListener('pointerup', onPointerUp);
     return () => window.removeEventListener('pointerup', onPointerUp);
   }, []);
-
-  const selectedLayer = activeLayers.find((layer) => layer.id === selectedLayerId) || null;
 
   const selectLayer = (layerId: string) => {
     userClearedSelectionRef.current = false;
@@ -454,12 +446,6 @@ export function LightchainMaterialWorkbenchPage() {
   }, [fabricLayer, isPrinting, printGarmentCutting, printGarmentProcessed, selectedLayerId]);
 
   useEffect(() => {
-    if (fabricResults.length > 0 || printResults.length > 0) {
-      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }, [fabricResults.length, printResults.length]);
-
-  useEffect(() => {
     if (!fabricBase || !fabricDesign) {
       setFabricLayer(null);
       return;
@@ -526,7 +512,6 @@ export function LightchainMaterialWorkbenchPage() {
             imageUrl,
           });
         }
-        setFabricResults(variantResults);
         toast.success('生地バリエーションを生成しました');
         return;
       }
@@ -560,7 +545,6 @@ export function LightchainMaterialWorkbenchPage() {
           imageUrl,
         });
       }
-      setPrintResults(generated);
       toast.success('プリント配置を生成しました');
     } catch (error: any) {
       console.error('Workbench generation failed', error);
@@ -575,6 +559,30 @@ export function LightchainMaterialWorkbenchPage() {
       prev.includes(presetId)
         ? prev.filter((id) => id !== presetId)
         : [...prev, presetId]
+    );
+  };
+
+  const applyPrintLayoutPreset = (presetId: string) => {
+    const preset = printLayoutPresets.find((item) => item.id === presetId);
+    if (!preset) return;
+
+    setActivePrintLayoutPresetId(presetId);
+    setPrintDesignLayers((prev) =>
+      prev.map((layer, index) => {
+        const spread = index % 2 === 0 ? -11 : 11;
+        const stackOffset = Math.floor(index / 2) * 8;
+        return {
+          ...layer,
+          transform: {
+            ...layer.transform,
+            x: clamp(preset.x + spread + stackOffset * 0.15, 0, 100),
+            y: clamp(preset.y + stackOffset, 0, 100),
+            scale: index === 0 ? preset.scale : preset.scale * 0.9,
+            rotation: index % 2 === 0 ? -6 : 6,
+            opacity: layer.transform.opacity,
+          },
+        };
+      }),
     );
   };
 
@@ -730,60 +738,8 @@ export function LightchainMaterialWorkbenchPage() {
                 hideSelectedPreviewWhileProcessing
                 processingLabel="デザインを切り抜き中"
               />
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">配置プリセット</p>
-                    <p className="text-xs text-white/50">生成時に少しずつ異なる重ね方を出します。</p>
-                  </div>
-                  <Move3D className="h-4 w-4 text-primary-200" />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {printLayoutPresets.map((preset) => (
-                    <span key={preset.id} className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs text-white/70">
-                      {preset.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
-
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">選択中レイヤー</p>
-                <p className="text-xs text-white/50">ドラッグ・拡大・回転を直接キャンバスで操作します。</p>
-              </div>
-              <SquareStack className="h-4 w-4 text-primary-200" />
-            </div>
-            {selectedLayer ? (
-              <div className="space-y-4">
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                  <p className="text-sm font-medium">{selectedLayer.label}</p>
-                  <p className="text-xs text-white/50">
-                    {selectedLayer.cutoutState === 'processing'
-                      ? '切り抜き処理中'
-                      : selectedLayer.cutoutState === 'done'
-                        ? '切り抜き済み'
-                        : selectedLayer.cutoutState === 'error'
-                          ? '切り抜き失敗'
-                          : 'そのまま使用'}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-xs leading-relaxed text-white/70">
-                  <div className="mb-2 font-medium text-white">操作方法</div>
-                  <ul className="space-y-1.5 text-neutral-300">
-                    <li>・画像を直接ドラッグして移動</li>
-                    <li>・右下ハンドルで拡大縮小</li>
-                    <li>・上の丸ハンドルで回転</li>
-                  </ul>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-white/50">レイヤーを選ぶと直接編集できます。</p>
-            )}
-          </div>
 
           <Button
             onClick={handleGenerate}
@@ -809,14 +765,30 @@ export function LightchainMaterialWorkbenchPage() {
           className="space-y-5"
         >
           <div className="rounded-3xl border border-white/10 bg-neutral-950/80 p-4 shadow-2xl shadow-black/20">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-sm text-white/60">ライブプレビュー</p>
                 <h3 className="text-lg font-semibold text-white">{isPrinting ? 'プリント重ねの調整' : '生地とデザインの重なり'}</h3>
               </div>
-              <div className="flex items-center gap-2 text-xs text-white/50">
-                <Check className="h-4 w-4 text-emerald-300" />
-                {currentBrand ? 'ブランド選択済み' : 'ブランド未選択'}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {isPrinting && (
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {printLayoutPresets.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => applyPrintLayoutPreset(preset.id)}
+                        className={`rounded-full border px-3 py-1.5 text-xs transition-all ${activePrintLayoutPresetId === preset.id ? 'border-primary-400 bg-primary-500/20 text-white' : 'border-white/10 bg-black/20 text-white/70 hover:text-white'}`}
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-xs text-white/50">
+                  <Check className="h-4 w-4 text-emerald-300" />
+                  {currentBrand ? 'ブランド選択済み' : 'ブランド未選択'}
+                </div>
               </div>
             </div>
             <div
@@ -875,80 +847,6 @@ export function LightchainMaterialWorkbenchPage() {
               )}
             </div>
           </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-white">操作メモ</p>
-                  <p className="text-xs text-white/50">この画面でやってほしいことをそのまま反映しています。</p>
-                </div>
-                <RefreshCw className="h-4 w-4 text-white/40" />
-              </div>
-              <ul className="space-y-2 text-sm text-white/70">
-                <li>・画像は切り抜いて、自由に配置できます。</li>
-                <li>・サイズと回転を調整して、見え方を詰められます。</li>
-                <li>・生成結果は複数カードで比較できます。</li>
-              </ul>
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-white">出力</p>
-                  <p className="text-xs text-white/50">生成後にダウンロードできます。</p>
-                </div>
-                <Download className="h-4 w-4 text-white/40" />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/70">PNG</span>
-                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/70">切り抜き済み</span>
-                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-white/70">自由配置</span>
-              </div>
-            </div>
-          </div>
-
-          <AnimatePresence>
-            {(fabricResults.length > 0 || printResults.length > 0) && (
-              <motion.div
-                ref={resultsRef}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                className="rounded-3xl border border-white/10 bg-neutral-950/70 p-5 shadow-2xl shadow-black/20 backdrop-blur-xl"
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-white/60">生成結果</p>
-                    <h3 className="text-lg font-semibold text-white">
-                      {isPrinting ? 'プリント配置の比較' : '生地バリエーションの比較'}
-                    </h3>
-                  </div>
-                  <Layers3 className="h-4 w-4 text-primary-200" />
-                </div>
-                <div className={`grid gap-4 ${isPrinting ? 'md:grid-cols-3' : 'md:grid-cols-3'}`}>
-                  {(isPrinting ? printResults : fabricResults).map((result) => (
-                    <div key={result.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-                      <img src={result.imageUrl} alt={result.title} className="aspect-square w-full object-cover" />
-                      <div className="space-y-1 p-4">
-                        <p className="text-sm font-semibold text-white">{result.title}</p>
-                        <p className="text-xs text-white/50">{result.note}</p>
-                        <div className="flex items-center gap-2 pt-2">
-                          <a
-                            href={result.imageUrl}
-                            download={`${result.title}.png`}
-                            className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/15"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                            保存
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </motion.div>
       </div>
     </div>
