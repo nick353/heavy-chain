@@ -234,7 +234,7 @@ export function PrintingCompositionStage({
       className="relative aspect-[4/5] overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,10,11,1),rgba(17,23,25,1))]"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_55%)]" />
-      <div className="absolute left-1/2 top-[52%] h-[82%] w-[92%] -translate-x-1/2 -translate-y-1/2 rounded-[34px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_55%)] blur-[1px]" />
+      <div className="absolute left-1/2 top-[52%] h-[82%] w-[92%] -translate-x-1/2 -translate-y-1/2 rounded-[34px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.96),rgba(244,246,248,0.95) 60%,rgba(232,236,240,0.88))] shadow-[0_26px_70px_rgba(0,0,0,0.16)] ring-1 ring-black/5" />
 
       {garmentUrl && (
         <img
@@ -244,8 +244,8 @@ export function PrintingCompositionStage({
           style={{
             ...garmentStyle,
             mixBlendMode: 'normal',
-            opacity: 0.94,
-            filter: 'brightness(1.08) contrast(1.04) saturate(0.96) drop-shadow(0 10px 30px rgba(0,0,0,0.28))',
+            opacity: 1,
+            filter: 'brightness(1.12) contrast(1.08) saturate(0.98) drop-shadow(0 10px 30px rgba(0,0,0,0.22))',
           }}
           draggable={false}
         />
