@@ -341,7 +341,10 @@ export function LightchainMaterialWorkbenchPage() {
       }
       setPrintGarmentProcessed(null);
       try {
-        const cutout = await buildHighPrecisionMaterialCutoutDataUrl({ imageUrl: printGarment.url });
+        const cutout = await buildHighPrecisionMaterialCutoutDataUrl({
+          imageUrl: printGarment.url,
+          modelName: 'u2net_cloth_seg',
+        });
         setPrintGarmentProcessed(cutout.dataUrl);
         return;
       } catch {
