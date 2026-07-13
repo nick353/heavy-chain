@@ -819,7 +819,7 @@ export function LightchainMaterialWorkbenchPage() {
             >
               {isPrinting ? (
                 <PrintingCompositionStage
-                  garmentUrl={printGarment?.url || null}
+                  garmentUrl={printGarmentProcessed || printGarment?.url || null}
                   garmentMaskUrl={printGarmentProcessed}
                   layers={stageLayers as Array<{
                     id: string;
