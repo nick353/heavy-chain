@@ -264,7 +264,7 @@ export function PrintingCompositionStage({
                   type="button"
                   onPointerDown={(event) => beginDrag(layer, 'move', event)}
                   onClick={() => onSelectLayer(layer.id)}
-                  className={`absolute cursor-grab select-none border transition-[box-shadow,border-color,transform] duration-150 active:cursor-grabbing ${selected ? 'border-[#6d8784] shadow-[0_0_0_1px_rgba(109,135,132,0.35),0_0_26px_rgba(109,135,132,0.1)]' : 'border-white/15 shadow-[0_10px_30px_rgba(0,0,0,0.2)]'}`}
+                  className={`absolute cursor-grab select-none border transition-[border-color,transform] duration-150 active:cursor-grabbing ${selected ? 'border-[#6d8784]' : 'border-white/15 shadow-[0_10px_30px_rgba(0,0,0,0.2)]'}`}
                   style={{
                     left: `${center.x}px`,
                     top: `${center.y}px`,
@@ -274,7 +274,7 @@ export function PrintingCompositionStage({
                     transform,
                     willChange: 'transform',
                     touchAction: 'none',
-                    background: selected ? 'rgba(7,10,11,0.12)' : 'transparent',
+                    background: 'transparent',
                     borderRadius: 0,
                   }}
                   >
