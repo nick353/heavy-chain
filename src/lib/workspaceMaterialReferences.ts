@@ -635,6 +635,12 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   if (modelName === 'isnet-general-use' && rembgIsnetGeneralUseModelUrl) {
     rembgConfig.setCustomModelPath('isnet-general-use', rembgIsnetGeneralUseModelUrl);
   }
+  if (modelName === 'u2net_cloth_seg') {
+    rembgConfig.setCustomModelPath(
+      'u2net_cloth_seg',
+      'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_cloth_seg.onnx',
+    );
+  }
   const image = await loadImageElement(imageUrl);
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
