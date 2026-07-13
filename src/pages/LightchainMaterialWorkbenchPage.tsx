@@ -165,34 +165,6 @@ async function renderComposition(
     }
   }
 
-  if (mode === 'printing' && layers[0]) {
-    try {
-      const baseLayer = layers[0];
-      const image = await loadImage(baseLayer.displayUrl);
-      const transform = baseLayer.transform;
-      const drawWidth = stageWidth * 0.84;
-      const drawHeight = drawWidth * (image.height / image.width);
-      const centerX = stageWidth * (transform.x / 100);
-      const centerY = stageHeight * (transform.y / 100);
-
-      ctx.save();
-      ctx.globalCompositeOperation = 'destination-in';
-      ctx.translate(centerX, centerY);
-      ctx.rotate((transform.rotation * Math.PI) / 180);
-      ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-      ctx.restore();
-
-      ctx.save();
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.translate(centerX, centerY);
-      ctx.rotate((transform.rotation * Math.PI) / 180);
-      ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-      ctx.restore();
-    } catch {
-      // best effort clipping
-    }
-  }
-
   return canvas.toDataURL('image/png');
 }
 
@@ -392,8 +364,11 @@ export function LightchainMaterialWorkbenchPage() {
         setPrintDesignLayers([]);
         return;
       }
+      const previousLayers = printDesignLayers;
       const nextLayers: AssetLayer[] = [];
       for (const [index, design] of printDesigns.entries()) {
+        const layerId = `print-design-${index}`;
+        const previousLayer = previousLayers.find((layer) => layer.id === layerId);
         let displayUrl = design.url;
         let cutoutState: AssetLayer['cutoutState'] = 'idle';
         if (printGarmentCutting) {
@@ -417,16 +392,16 @@ export function LightchainMaterialWorkbenchPage() {
           }
         }
         nextLayers.push({
-          id: `print-design-${index}`,
+          id: layerId,
           label: `デザイン ${index + 1}`,
           originalUrl: design.url,
           displayUrl,
           transform: defaultTransform({
-            x: 50 + ((index % 3) - 1) * 8,
-            y: 44 + Math.floor(index / 3) * 14,
-            scale: index === 0 ? 1 : 0.88,
-            rotation: (index % 2 === 0 ? -6 : 6) * (index % 3),
-            opacity: 1,
+            x: previousLayer?.transform.x ?? 50 + ((index % 3) - 1) * 8,
+            y: previousLayer?.transform.y ?? 44 + Math.floor(index / 3) * 14,
+            scale: previousLayer?.transform.scale ?? (index === 0 ? 1 : 0.88),
+            rotation: previousLayer?.transform.rotation ?? (index % 2 === 0 ? -6 : 6) * (index % 3),
+            opacity: previousLayer?.transform.opacity ?? 1,
           }),
           autoCutout: printGarmentCutting,
           cutoutState,
