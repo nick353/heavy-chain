@@ -239,7 +239,7 @@ export function PrintingCompositionStage({
 
       {garmentMaskUrl ? (
         <div className="absolute inset-0 z-10" style={getFrameMaskStyle(garmentMaskUrl)}>
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_58%)]" />
           {draftLayers
             .filter((layer) => layer.id !== 'print-garment')
             .map((layer) => {
