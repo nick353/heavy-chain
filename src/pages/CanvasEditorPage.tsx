@@ -1010,6 +1010,13 @@ export function CanvasEditorPage() {
 
   // Context menu and floating toolbar action handler - now with real API calls
   const handleContextAction = async (action: string, objectId: string | null) => {
+    console.warn('Canvas context action invoked', {
+      action,
+      objectId,
+      selectedId: selectedObject?.id ?? null,
+      currentBrandId: currentBrand?.id ?? null,
+      rightsConfirmed,
+    });
     // Handle canvas-level actions
     if (!objectId) {
       switch (action) {
@@ -1098,6 +1105,15 @@ export function CanvasEditorPage() {
 
     const imageSrc = await resolveCanvasObjectImageUrl(obj);
     const lightchainEditMetadata = buildLightchainEditMetadata(objectId);
+    console.warn('Canvas image action preflight', {
+      action,
+      objectId,
+      type: obj.type,
+      hasSrc: Boolean(obj.src),
+      currentBrandId: currentBrand?.id ?? null,
+      rightsConfirmed,
+      imageSrc,
+    });
     if (!currentBrand?.id) {
       toast.error('ブランドを選択してから実行してください');
       return;
@@ -1227,6 +1243,11 @@ export function CanvasEditorPage() {
 
   // Keep compatibility with FloatingToolbar actions
   const handleFloatingAction = (action: string) => {
+    console.warn('Canvas floating action invoked', {
+      action,
+      selectedId: selectedObject?.id ?? null,
+      selectedType: selectedObject?.type ?? null,
+    });
     if (selectedObject) {
       handleContextAction(action, selectedObject.id);
     } else {
