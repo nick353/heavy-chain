@@ -46,6 +46,11 @@ from social_flow.local_queue import LocalQueueRepository
 from social_flow.models import ENGAGEMENT_RELATIONSHIP_COLUMNS, QueueRow
 from social_flow.publishers import LinkedInPublisher, XPublisher
 from social_flow.research_plan import build_research_plan, format_research_plan_markdown
+from social_flow.route_contract import (
+    RouteAxisState,
+    build_route_contract_v1,
+    route_contract_to_dict,
+)
 from social_flow.sheets import SheetsRepository, create_spreadsheet
 from social_flow.sources import SourceDocument
 from social_flow.sources import (
@@ -109,6 +114,8 @@ REDACTED_AUTH = "[REDACTED_AUTH]"
 REDACTED_QUERY_VALUE = "[REDACTED_QUERY_VALUE]"
 SECRET_KEY_PARTS = ("authorization", "bearer", "token", "password", "passwd", "pwd", "secret", "api_key", "apikey", "x-api-key", "email")
 REGISTERED_CHILD_RESULT_SCHEMA = "registered-child-result.v1"
+OWNED_PROCESS_MANIFEST_SCHEMA = "scheduler_control_owned_process_manifest.v1"
+OWNED_PROCESS_MANIFEST_ENV = "SOCIAL_FLOW_TRUSTED_PROCESS_MANIFEST_PATH"
 
 RUN_MODE_CONFIGS = {
     "daily_normal": {
@@ -579,6 +586,32 @@ def _automation_lane_status_payload(
         busy_sources.append("busy_marker")
     busy = bool(busy_sources)
     publish_ready = (not busy) and cdp_ok and bool(chrome_processes)
+    route_contract = route_contract_to_dict(
+        build_route_contract_v1(
+            required_surface="chrome_plugin",
+            fallback_allowed=True,
+            subject=purpose or "generic",
+            identity_hint="Chrome Extension Profile 2",
+            resource_scope=f"purpose:{purpose or 'generic'};port:{port}",
+            decision_state=RouteAxisState(
+                configured=True,
+                enabled=not busy,
+                verified=bool(chrome_processes),
+                connected=cdp_ok and bool(chrome_processes) and not busy,
+            ),
+            readback_state=RouteAxisState(
+                configured=bool(chrome_processes),
+                enabled=not busy,
+                verified=cdp_ok,
+                connected=cdp_ok and bool(chrome_processes),
+            ),
+            observed_surface="chrome_plugin" if cdp_ok else "",
+            observed_identity="Chrome Extension Profile 2" if chrome_processes else "",
+            evidence_ref=str(_automation_lane_busy_marker_path()) if busy_marker else f"cdp:/json/version:{port}",
+            proof_ref="",
+            required_proof=False,
+        )
+    )
     return {
         "ok": not busy,
         "busy_ok": not busy,
@@ -600,6 +633,8 @@ def _automation_lane_status_payload(
         "conflicting_targets": conflicting_targets,
         "stop_reason": "local_automation_profile_busy" if busy else "",
         "fallback_allowed": True,
+        "route_contract": route_contract,
+        "route_blockers": route_contract["blockers"],
         "next_action": (
             "Use the Chrome plugin registered runner for Daily AI authenticated browser work. "
             "If it cannot verify account/body/submit/capture plus tab/window recording and local proof gates, stop before live send."
@@ -630,12 +665,40 @@ def _browser_lane_resolution_payload(
         "remote_debugging_port": port,
         "lane_status": status,
     }
+    route_contract = route_contract_to_dict(
+        build_route_contract_v1(
+            required_surface="chrome_plugin",
+            fallback_allowed=True,
+            subject=purpose,
+            identity_hint="Chrome Extension Profile 2",
+            resource_scope=f"purpose:{purpose};port:{port}",
+            decision_state=RouteAxisState(
+                configured=True,
+                enabled=not bool(status["busy"]),
+                verified=bool(status["chrome_process_count"]),
+                connected=bool(status["cdp_ok"]) and bool(status["chrome_process_count"]) and not bool(status["busy"]),
+            ),
+            readback_state=RouteAxisState(
+                configured=bool(status["chrome_process_count"]),
+                enabled=not bool(status["busy"]),
+                verified=bool(status["cdp_ok"]),
+                connected=bool(status["cdp_ok"]) and bool(status["chrome_process_count"]),
+            ),
+            observed_surface="chrome_plugin" if bool(status["cdp_ok"]) else "",
+            observed_identity="Chrome Extension Profile 2" if bool(status["chrome_process_count"]) else "",
+            evidence_ref=str(status["busy_marker_path"]) if status["busy_marker_path"] else f"cdp:/json/version:{port}",
+            proof_ref="",
+            required_proof=False,
+        )
+    )
     return {
         **base,
         "lane": "chrome_extension_profile2_fallback",
         "browser_lane_used": "chrome_extension_profile2_fallback",
         "fallback_allowed": True,
         "stop_reason": "",
+        "route_contract": route_contract,
+        "route_blockers": route_contract["blockers"],
         "must_run": [
             "Use the Chrome plugin registered runner as the only production browser lane.",
             "Pass this resolve-browser-lane payload as diagnostic context only; do not start Chrome Extension/Profile 2 sender from it.",
@@ -766,7 +829,12 @@ def _attach_trusted_wrapper_receipt_to_launch_packet(
     ):
         raise RuntimeError("trusted_wrapper_receipt_scheduler_run_binding_invalid")
     browser_metadata = receipt.get("browser_metadata")
+    # Start with ambient control bindings for diagnostic metadata, then write
+    # all receipt-owned identity fields explicitly.  Environment values may be
+    # stale or inherited from another run; the consumed receipt is the sole
+    # authority for this launch packet.
     current_probe = {
+        **bridge_binding_from_env(),
         "bridge_run_id": str(receipt.get("receipt_id") or ""),
         "bridge_receipt_path": receipt_path,
         "backend": str(receipt.get("backend") or "chrome_extension_trusted_bridge"),
@@ -777,17 +845,33 @@ def _attach_trusted_wrapper_receipt_to_launch_packet(
         "scheduler_run_id": expected_scheduler_run_id,
         "scheduler_run_dir": str(expected_scheduler_run_dir.resolve()),
         "launch_dir": str(expected_launch_dir.resolve()),
+        "automation_id": str(receipt.get("automation_id") or ""),
+        "control_run_id": str(receipt.get("control_run_id") or ""),
+        "origin_thread_id": str(receipt.get("origin_thread_id") or ""),
+        "origin_session_id": str(receipt.get("origin_session_id") or ""),
+        "origin_turn_id": str(receipt.get("origin_turn_id") or ""),
+        "execution_thread_id": str(receipt.get("execution_thread_id") or ""),
+        "execution_turn_id": str(receipt.get("execution_turn_id") or ""),
+        "run_nonce": str(receipt.get("run_nonce") or ""),
+        "registered_prompt_sha256": str(receipt.get("registered_prompt_sha256") or ""),
+        "launch_message_sha256": str(receipt.get("launch_message_sha256") or ""),
+        "registered_cwd": str(receipt.get("registered_cwd") or ""),
+        "control_stage": str(receipt.get("stage") or ""),
+        "issued_at": str(receipt.get("issued_at") or ""),
+        "expires_at": str(receipt.get("expires_at") or ""),
         "codex_thread_id": str(receipt.get("execution_thread_id") or ""),
         "codex_turn_id": str(receipt.get("execution_turn_id") or ""),
         "codex_session_id": str(receipt.get("execution_session_id") or ""),
         "bridge_instance_id": bridge_instance_id,
+        "bridge_url": str(receipt.get("bridge_url") or ""),
         "owner_id": owner_id,
         "owner_heartbeat_path": str(receipt.get("owner_heartbeat_path") or ""),
+        "process_manifest_path": str(receipt.get("process_manifest_path") or ""),
+        "owned_process_manifest_path": str(receipt.get("owned_process_manifest_path") or ""),
         "trusted_wrapper_receipt_verified": True,
         "ok": True,
         "ready": True,
         "stage": "job_manager_bridge_readiness_probe",
-        **bridge_binding_from_env(),
     }
     proof_section = (
         "\n\nCurrent outer trusted-wrapper browser proof (machine-selected):\n"
@@ -908,7 +992,7 @@ def _job_manager_path_within_run(path_value: object, run_dir: Path, *, blocker: 
     return resolved
 
 
-def _job_manager_validate_registered_child_result(
+def _job_manager_load_registered_child_result(
     *,
     run_dir: Path,
     scheduler_run_id: str,
@@ -941,6 +1025,9 @@ def _job_manager_validate_registered_child_result(
         raise RuntimeError("registered_child_result_binding_mismatch")
     status_value = result.get("status")
     exact_blocker = str(result.get("exact_blocker") or "").strip()
+    action_count = result.get("external_action_count")
+    required_artifacts = result.get("required_artifact_paths")
+    action_artifacts = result.get("external_action_artifact_paths")
     if status_value not in {"completed", "blocked"}:
         raise RuntimeError("registered_child_result_status_invalid")
     action_count = result.get("external_action_count")
@@ -956,15 +1043,37 @@ def _job_manager_validate_registered_child_result(
         or not all(isinstance(item, str) for item in action_artifacts)
     ):
         raise RuntimeError("registered_child_result_types_invalid")
+    return result
+
+
+def _job_manager_validate_registered_child_result(
+    *,
+    run_dir: Path,
+    scheduler_run_id: str,
+    control_run_id: str,
+    result_override: dict[str, object] | None = None,
+    claim_result: bool = True,
+) -> dict[str, object]:
+    result = result_override or _job_manager_load_registered_child_result(
+        run_dir=run_dir,
+        scheduler_run_id=scheduler_run_id,
+        control_run_id=control_run_id,
+    )
+    status_value = result.get("status")
+    exact_blocker = str(result.get("exact_blocker") or "").strip()
+    action_count = result.get("external_action_count")
+    required_artifacts = result.get("required_artifact_paths")
+    action_artifacts = result.get("external_action_artifact_paths")
     if status_value == "blocked":
         if not exact_blocker:
             raise RuntimeError("registered_child_blocked_exact_blocker_missing")
-        _job_manager_claim_registered_child_result(
-            run_dir=run_dir,
-            result=result,
-            scheduler_run_id=scheduler_run_id,
-            control_run_id=control_run_id,
-        )
+        if claim_result:
+            _job_manager_claim_registered_child_result(
+                run_dir=run_dir,
+                result=result,
+                scheduler_run_id=scheduler_run_id,
+                control_run_id=control_run_id,
+            )
         raise RuntimeError(exact_blocker)
     resolved_actions = [
         _job_manager_path_within_run(item, run_dir, blocker="registered_child_action_artifact_missing_or_outside")
@@ -1006,12 +1115,13 @@ def _job_manager_validate_registered_child_result(
     }
     if not mandatory.issubset(resolved_required):
         raise RuntimeError("registered_child_required_artifact_set_incomplete")
-    _job_manager_claim_registered_child_result(
-        run_dir=run_dir,
-        result=result,
-        scheduler_run_id=scheduler_run_id,
-        control_run_id=control_run_id,
-    )
+    if claim_result:
+        _job_manager_claim_registered_child_result(
+            run_dir=run_dir,
+            result=result,
+            scheduler_run_id=scheduler_run_id,
+            control_run_id=control_run_id,
+        )
     return result
 
 
@@ -1082,6 +1192,56 @@ def _job_manager_validate_trusted_owner_heartbeat(
     age = (datetime.now(timezone.utc) - updated_at).total_seconds()
     if updated_at.tzinfo is None or age < -1 or age > stale_seconds:
         raise RuntimeError("trusted_wrapper_owner_heartbeat_stale")
+    # A trusted owner heartbeat is not sufficient by itself.  Every watchdog
+    # poll must ask the receipt-bound bridge URL and verify the receipt-bound
+    # instance, with no ambient environment fallback.
+    bridge_url = str(receipt.get("bridge_url") or "").strip()
+    bridge_instance_id = str(receipt.get("bridge_instance_id") or "").strip()
+    _job_manager_validate_trusted_bridge_health(
+        bridge_url=bridge_url,
+        bridge_instance_id=bridge_instance_id,
+        token=str(os.environ.get("SOCIAL_FLOW_CHROME_EXTENSION_BRIDGE_TOKEN") or ""),
+        timeout_seconds=min(2.0, max(0.1, stale_seconds)),
+    )
+    return payload
+
+
+def _job_manager_validate_trusted_bridge_health(
+    *,
+    bridge_url: str,
+    bridge_instance_id: str,
+    token: str = "",
+    timeout_seconds: float = 2.0,
+) -> dict[str, object]:
+    """Validate the live watchdog endpoint and its run-bound identity."""
+    expected_url = bridge_url.rstrip("/")
+    if not expected_url.startswith(("http://", "https://")):
+        raise RuntimeError("trusted_wrapper_bridge_health_url_invalid")
+    headers = {"x-social-flow-bridge-token": token} if token else {}
+    try:
+        request = Request(f"{expected_url}/health", headers=headers)
+        with urlopen(request, timeout=max(0.1, float(timeout_seconds))) as response:
+            text = response.read().decode("utf-8")
+            status = int(getattr(response, "status", 200) or 200)
+    except Exception as exc:
+        raise RuntimeError("trusted_wrapper_bridge_health_unavailable") from exc
+    try:
+        payload = json.loads(text or "{}")
+    except Exception as exc:
+        raise RuntimeError("trusted_wrapper_bridge_health_invalid_json") from exc
+    if (
+        status != 200
+        or not isinstance(payload, dict)
+        or payload.get("ok") is not True
+        or payload.get("backend") != "chrome_extension_trusted_bridge"
+    ):
+        raise RuntimeError("trusted_wrapper_bridge_health_contract_invalid")
+    observed_instance = str(payload.get("bridge_instance_id") or "").strip()
+    observed_url = str(payload.get("url") or "").rstrip("/")
+    if observed_instance != bridge_instance_id:
+        raise RuntimeError("trusted_wrapper_bridge_health_bridge_instance_mismatch")
+    if observed_url != expected_url:
+        raise RuntimeError("trusted_wrapper_bridge_health_url_mismatch")
     return payload
 
 
@@ -1105,20 +1265,33 @@ def _job_manager_communicate_with_owner_watchdog(
                 _job_manager_validate_trusted_owner_heartbeat(receipt, stale_seconds=stale_seconds)
             except Exception as exc:
                 exact_blocker = f"trusted_wrapper_owner_lost:{str(exc).splitlines()[0]}"
-                termination_signal = "SIGTERM"
-                try:
-                    os.killpg(proc.pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
+                termination_signal = "SIGTERM_THEN_SIGKILL"
+                remaining_processes = _job_manager_terminate_owned_processes(
+                    receipt=receipt,
+                    workflow_proc=proc,
+                    term_grace_seconds=term_grace_seconds,
+                    kill_grace_seconds=term_grace_seconds,
+                )
                 try:
                     stdout, stderr = proc.communicate(timeout=max(0.01, term_grace_seconds))
                 except subprocess.TimeoutExpired:
-                    termination_signal = "SIGKILL"
-                    try:
-                        os.killpg(proc.pid, signal.SIGKILL)
-                    except ProcessLookupError:
-                        pass
+                    workflow_pid = _job_manager_positive_process_pid(proc)
+                    if workflow_pid is not None:
+                        try:
+                            os.killpg(workflow_pid, signal.SIGKILL)
+                        except (ProcessLookupError, PermissionError):
+                            pass
                     stdout, stderr = proc.communicate()
+                if not remaining_processes:
+                    remaining_processes = _job_manager_process_manifest_remaining(
+                        receipt=receipt,
+                        workflow_proc=proc,
+                        # This watchdog is entered only after the workflow
+                        # Popen has succeeded, so child binding is mandatory;
+                        # do not infer lifecycle state from manifest-path
+                        # presence.
+                        require_child=True,
+                    )
                 run_dir = Path(str(receipt["scheduler_run_dir"])).resolve()
                 _job_manager_atomic_write_json(
                     run_dir / "trusted-owner-watchdog-cleanup.json",
@@ -1130,7 +1303,7 @@ def _job_manager_communicate_with_owner_watchdog(
                         "bridge_instance_id": str(receipt.get("bridge_instance_id") or ""),
                         "termination_signal": termination_signal,
                         "external_action_count": 0,
-                        "owned_processes_remaining": [],
+                        "owned_processes_remaining": remaining_processes,
                         "finished_at": datetime.now(timezone.utc).isoformat(),
                     },
                 )
@@ -1171,12 +1344,33 @@ def _job_manager_evaluate_child_transport(
     scheduler_run_id: str,
     control_run_id: str,
 ) -> dict[str, object]:
+    # Read and validate the result contract before looking at the process exit
+    # code.  A child can report a truthful candidate-local blocker while still
+    # exiting non-zero; that exact blocker is the authoritative outcome and is
+    # consumed exactly once.  A completed result remains process-success only.
+    result = _job_manager_load_registered_child_result(
+        run_dir=run_dir,
+        scheduler_run_id=scheduler_run_id,
+        control_run_id=control_run_id,
+    )
+    if result.get("status") == "blocked":
+        exact_blocker = str(result.get("exact_blocker") or "").strip()
+        if not exact_blocker:
+            raise RuntimeError("registered_child_blocked_exact_blocker_missing")
+        _job_manager_claim_registered_child_result(
+            run_dir=run_dir,
+            result=result,
+            scheduler_run_id=scheduler_run_id,
+            control_run_id=control_run_id,
+        )
+        raise RuntimeError(exact_blocker)
     if returncode != 0:
         raise RuntimeError(f"job_manager_child_returned_nonzero:{returncode}")
     return _job_manager_validate_registered_child_result(
         run_dir=run_dir,
         scheduler_run_id=scheduler_run_id,
         control_run_id=control_run_id,
+        result_override=result,
     )
 
 
@@ -1420,8 +1614,395 @@ def _job_manager_atomic_write_json(path: Path, payload: dict[str, object]) -> Pa
     path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     temp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # The temp file is private state as well.  Set its mode before publication
+    # and re-assert the final mode after replace so an existing permissive
+    # artifact cannot leak through an atomic update.
+    temp_path.chmod(0o600)
     temp_path.replace(path)
+    path.chmod(0o600)
     return path
+
+
+def _job_manager_cleanup_observation(run_dir: Path) -> tuple[str, list[str]]:
+    """Read the final child cleanup state for scheduler-control propagation."""
+    state_path = run_dir / "job-manager-cleanup.json"
+    try:
+        payload = json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception:
+        payload = None
+    if not isinstance(payload, dict):
+        # Keep compatibility with older child artifacts while still parsing
+        # the actual persisted remaining list rather than assuming `[]`.
+        try:
+            cleanup_text = (run_dir / "cleanup-proof.txt").read_text(encoding="utf-8")
+            marker = "owned_processes_remaining="
+            start = cleanup_text.index(marker) + len(marker)
+            parsed, _end = json.JSONDecoder().raw_decode(cleanup_text[start:].lstrip())
+            text_blocker = (
+                cleanup_text.split("exact_blocker=", 1)[1].splitlines()[0].strip()
+                if "exact_blocker=" in cleanup_text
+                else ""
+            )
+            payload = {
+                "owned_processes_remaining": parsed,
+                "exact_blocker": "" if text_blocker in {"", "none"} else text_blocker,
+            }
+        except Exception:
+            return "", []
+    remaining_value = payload.get("owned_processes_remaining")
+    remaining = (
+        [str(item) for item in remaining_value if str(item).strip()]
+        if isinstance(remaining_value, list)
+        else []
+    )
+    blocker = str(payload.get("exact_blocker") or "").strip()
+    if blocker == "none":
+        blocker = ""
+    if str(payload.get("status") or "") in {"blocked", "failed"} and not blocker:
+        blocker = "job_manager_cleanup_blocked"
+    return blocker, list(dict.fromkeys(remaining))
+
+
+def _job_manager_receipt_requires_process_manifest(receipt: dict[str, object]) -> bool:
+    """Return whether cleanup must prove the trusted run-owned manifest.
+
+    Older diagnostic-only unit callers pass a small bridge receipt without a
+    trusted-wrapper schema or process binding.  Keep those callers compatible,
+    while any actual v2 receipt (or explicit runtime binding) fails closed.
+    """
+    return bool(
+        os.environ.get("SOCIAL_FLOW_TRUSTED_BROWSER_WRAPPER_V2") == "1"
+        or str(receipt.get("schema") or "") == "scheduler_control_trusted_wrapper_receipt.v2"
+        or str(receipt.get("process_manifest_path") or "").strip()
+        or str(receipt.get("owned_process_manifest_path") or "").strip()
+        # Presence of a legacy env binding is itself evidence that cleanup was
+        # attempted in a trusted context; the value is intentionally never
+        # consumed as a fallback path.
+        or bool(os.environ.get(OWNED_PROCESS_MANIFEST_ENV) or os.environ.get("SOCIAL_FLOW_OWNED_PROCESS_MANIFEST_PATH"))
+    )
+
+
+def _job_manager_process_manifest_path(
+    *,
+    run_dir: Path | None = None,
+    receipt: dict[str, object] | None = None,
+    required: bool = False,
+) -> Path | None:
+    """Resolve the run-owned controller/workflow process manifest binding.
+
+    The trusted wrapper allocates the path before spawning the detached
+    controller.  A missing path is deliberately distinguishable from an
+    unreadable manifest so cleanup can fail closed after a child has started.
+    """
+    primary_text = str((receipt or {}).get("process_manifest_path") or "").strip()
+    alias_text = str((receipt or {}).get("owned_process_manifest_path") or "").strip()
+    if primary_text and alias_text and primary_text != alias_text:
+        raise RuntimeError("trusted_wrapper_process_manifest_alias_mismatch")
+    text = (primary_text or alias_text).strip()
+    if not text:
+        if required:
+            raise RuntimeError("trusted_wrapper_process_manifest_missing_after_child_started")
+        return None
+    candidate = Path(text).expanduser().absolute()
+    expected_run_dir = (run_dir or Path(str((receipt or {}).get("scheduler_run_dir") or ""))).expanduser().resolve()
+    if not expected_run_dir or candidate.parent != expected_run_dir or candidate.name != "trusted-wrapper-process-manifest.json":
+        raise RuntimeError("trusted_wrapper_process_manifest_path_invalid")
+    return candidate
+
+
+def _job_manager_process_group_alive(*, pid: int = 0, pgid: int = 0) -> bool:
+    """Return whether a PID or process group is still present.
+
+    `kill(..., 0)` is used only for ownership verification; no signal is sent
+    by this helper.  Invalid/non-positive identifiers are never probed.
+    """
+    for value, group in ((pgid, True), (pid, False)):
+        try:
+            numeric = int(value or 0)
+        except (TypeError, ValueError):
+            numeric = 0
+        if numeric <= 0:
+            continue
+        try:
+            if group:
+                os.killpg(numeric, 0)
+            else:
+                os.kill(numeric, 0)
+            return True
+        except ProcessLookupError:
+            continue
+        except PermissionError:
+            return True
+        except OSError:
+            continue
+    return False
+
+
+def _job_manager_positive_process_pid(proc: subprocess.Popen | None) -> int | None:
+    """Return a safe positive Popen PID for direct-group cleanup."""
+    if proc is None:
+        return None
+    try:
+        value = int(proc.pid)
+    except (AttributeError, TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
+
+def _job_manager_read_process_manifest(
+    *,
+    receipt: dict[str, object],
+    run_dir: Path | None = None,
+    require_child: bool = False,
+) -> tuple[Path | None, dict[str, object] | None, list[str]]:
+    """Read and validate the immutable run binding for owned process groups."""
+    try:
+        manifest_path = _job_manager_process_manifest_path(
+            run_dir=run_dir,
+            receipt=receipt,
+            required=require_child or _job_manager_receipt_requires_process_manifest(receipt),
+        )
+    except RuntimeError as exc:
+        return None, None, [str(exc)]
+    if manifest_path is None:
+        return None, None, []
+    try:
+        metadata = manifest_path.lstat()
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or manifest_path.is_symlink()
+            or metadata.st_uid != os.getuid()
+            or metadata.st_mode & 0o777 != 0o600
+            or metadata.st_nlink != 1
+        ):
+            return manifest_path, None, ["trusted_wrapper_process_manifest_invalid"]
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return manifest_path, None, [
+            "trusted_wrapper_process_manifest_missing_after_child_started"
+            if require_child
+            else "trusted_wrapper_process_manifest_missing_before_child_start"
+        ]
+    except Exception:
+        return manifest_path, None, ["trusted_wrapper_process_manifest_unreadable"]
+    if not isinstance(payload, dict) or payload.get("schema") != OWNED_PROCESS_MANIFEST_SCHEMA:
+        return manifest_path, None, ["trusted_wrapper_process_manifest_schema_invalid"]
+    expected = {
+        "scheduler_run_id": str(receipt.get("scheduler_run_id") or ""),
+        "scheduler_run_dir": str(receipt.get("scheduler_run_dir") or ""),
+        "control_run_id": str(receipt.get("control_run_id") or ""),
+        "owner_id": str(receipt.get("owner_id") or ""),
+        "bridge_instance_id": str(receipt.get("bridge_instance_id") or ""),
+        "bridge_url": str(receipt.get("bridge_url") or ""),
+    }
+    mismatches = [
+        key
+        for key, value in expected.items()
+        if value and str(payload.get(key) or "") != value
+    ]
+    if mismatches:
+        return manifest_path, payload, ["trusted_wrapper_process_manifest_binding_mismatch:" + ",".join(mismatches)]
+    # The wrapper writes a controller-only manifest before the Python runner
+    # spawns its workflow child.  Validate the controller binding for every
+    # trusted read, while allowing `child_started=false` during preflight.
+    # Once a workflow child has actually been spawned, all child PID/PGID
+    # aliases must be present, positive integers, and agree with one another.
+    def _positive_pid(field: str) -> int | None:
+        value = payload.get(field)
+        if isinstance(value, bool) or value is None:
+            return None
+        if isinstance(value, int):
+            numeric = value
+        elif isinstance(value, str) and value.strip().isdigit():
+            numeric = int(value.strip())
+        else:
+            return None
+        # Keep the Python validator aligned with the Node trusted wrapper's
+        # positive safe-integer contract; never pass an unsafe value to a
+        # process/group signal path.
+        return numeric if 0 < numeric <= (2**53 - 1) else None
+
+    controller_pid = _positive_pid("controller_pid")
+    controller_pgid = _positive_pid("controller_pgid")
+    if controller_pid is None or controller_pgid is None:
+        return manifest_path, payload, ["trusted_wrapper_process_manifest_controller_binding_invalid"]
+
+    child_started = payload.get("child_started")
+    if require_child:
+        if child_started is not True:
+            return manifest_path, payload, ["trusted_wrapper_process_manifest_child_binding_missing"]
+    if child_started is not True and child_started is not False:
+        return manifest_path, payload, ["trusted_wrapper_process_manifest_child_binding_invalid"]
+    if child_started is True:
+        child_fields = ("workflow_child_pid", "workflow_child_pgid", "child_pid", "child_pgid")
+        child_values = {field: _positive_pid(field) for field in child_fields}
+        if any(value is None for value in child_values.values()):
+            return manifest_path, payload, ["trusted_wrapper_process_manifest_child_binding_invalid"]
+        if (
+            child_values["workflow_child_pid"] != child_values["child_pid"]
+            or child_values["workflow_child_pgid"] != child_values["child_pgid"]
+        ):
+            return manifest_path, payload, ["trusted_wrapper_process_manifest_child_binding_invalid"]
+    return manifest_path, payload, []
+
+
+def _job_manager_process_manifest_remaining(
+    *,
+    receipt: dict[str, object],
+    workflow_proc: subprocess.Popen | None = None,
+    require_child: bool = False,
+) -> list[str]:
+    manifest_path, payload, errors = _job_manager_read_process_manifest(
+        receipt=receipt,
+        require_child=require_child,
+    )
+    if errors:
+        # Preserve the legacy diagnostic helper's empty result, but never do
+        # so for a trusted v2 receipt or an explicit process binding.  Missing,
+        # malformed, and mismatched run-owned manifests are cleanup blockers.
+        if not _job_manager_receipt_requires_process_manifest(receipt):
+            return []
+        return errors
+    if payload is None:
+        return []
+    remaining: list[str] = []
+    groups = (
+        ("controller", payload.get("controller_pid"), payload.get("controller_pgid")),
+        ("workflow_child", payload.get("workflow_child_pid"), payload.get("workflow_child_pgid")),
+    )
+    for label, pid_value, pgid_value in groups:
+        try:
+            pid = int(pid_value or 0)
+            pgid = int(pgid_value or 0)
+        except (TypeError, ValueError):
+            pid = pgid = 0
+        # The controller is the process executing this Python cleanup path;
+        # its detached group is reaped by the outer trusted owner after the
+        # controller closes.  Never self-signal or report that group here.
+        if label == "controller" and pgid == os.getpgrp():
+            continue
+        if _job_manager_process_group_alive(pid=pid, pgid=pgid):
+            remaining.append(f"{label}:pid={pid or 'missing'}:pgid={pgid or 'missing'}")
+    if workflow_proc is not None and workflow_proc.poll() is None:
+        remaining.append(f"workflow_child:pid={workflow_proc.pid}:pgid={workflow_proc.pid}")
+    return list(dict.fromkeys(remaining))
+
+
+def _job_manager_update_process_manifest(
+    *,
+    receipt: dict[str, object],
+    workflow_proc: subprocess.Popen | None = None,
+    status: str = "child_started",
+) -> Path | None:
+    manifest_path, payload, errors = _job_manager_read_process_manifest(receipt=receipt, require_child=False)
+    if errors or manifest_path is None or payload is None:
+        if errors:
+            raise RuntimeError(errors[0])
+        return manifest_path
+    if workflow_proc is not None:
+        try:
+            workflow_pid = int(workflow_proc.pid)
+        except (AttributeError, TypeError, ValueError) as exc:
+            raise RuntimeError("trusted_wrapper_process_manifest_child_binding_invalid") from exc
+        if workflow_pid <= 0:
+            raise RuntimeError("trusted_wrapper_process_manifest_child_binding_invalid")
+        payload.update(
+            {
+                "workflow_child_pid": workflow_pid,
+                "workflow_child_pgid": workflow_pid,
+                "child_pid": workflow_pid,
+                "child_pgid": workflow_pid,
+                "child_started": True,
+            }
+        )
+    payload["status"] = status
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    _job_manager_atomic_write_json(manifest_path, payload)
+    return manifest_path
+
+
+def _job_manager_terminate_owned_processes(
+    *,
+    receipt: dict[str, object],
+    workflow_proc: subprocess.Popen | None = None,
+    term_grace_seconds: float = 5.0,
+    kill_grace_seconds: float = 5.0,
+) -> list[str]:
+    """TERM then KILL every bound group and verify both groups are gone."""
+    manifest_path, payload, errors = _job_manager_read_process_manifest(receipt=receipt, require_child=True)
+    if errors:
+        # Even when the manifest is unavailable, kill the directly-held
+        # workflow Popen group.  The non-empty error remains the cleanup proof
+        # so callers cannot claim a clean run without the run-owned binding.
+        workflow_pid = _job_manager_positive_process_pid(workflow_proc)
+        if workflow_pid is not None and workflow_proc is not None and workflow_proc.poll() is None:
+            try:
+                os.killpg(workflow_pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+            try:
+                workflow_proc.wait(timeout=max(0.01, term_grace_seconds))
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(workflow_pid, signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
+                try:
+                    workflow_proc.wait(timeout=max(0.01, kill_grace_seconds))
+                except subprocess.TimeoutExpired:
+                    pass
+        if not _job_manager_receipt_requires_process_manifest(receipt):
+            return _job_manager_process_manifest_remaining(receipt=receipt, workflow_proc=workflow_proc, require_child=False)
+        return errors + _job_manager_process_manifest_remaining(receipt=receipt, workflow_proc=workflow_proc, require_child=False)
+    if payload is None:
+        return ["trusted_wrapper_process_manifest_missing_after_child_started"]
+    groups: list[tuple[str, int, int]] = []
+    for label, pid_value, pgid_value in (
+        ("controller", payload.get("controller_pid"), payload.get("controller_pgid")),
+        ("workflow_child", payload.get("workflow_child_pid"), payload.get("workflow_child_pgid")),
+    ):
+        try:
+            pid = int(pid_value or 0)
+            pgid = int(pgid_value or 0)
+        except (TypeError, ValueError):
+            pid = pgid = 0
+        if pgid > 0:
+            groups.append((label, pid, pgid))
+    remaining = []
+    for label, _pid, pgid in groups:
+        if label == "controller" and pgid == os.getpgrp():
+            continue
+        if _job_manager_process_group_alive(pgid=pgid):
+            try:
+                os.killpg(pgid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
+    deadline = time.monotonic() + max(0.01, term_grace_seconds)
+    while time.monotonic() < deadline:
+        if not any(_job_manager_process_group_alive(pgid=pgid) for _label, _pid, pgid in groups):
+            break
+        time.sleep(0.02)
+    for label, _pid, pgid in groups:
+        if label == "controller" and pgid == os.getpgrp():
+            continue
+        if _job_manager_process_group_alive(pgid=pgid):
+            try:
+                os.killpg(pgid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+    deadline = time.monotonic() + max(0.01, kill_grace_seconds)
+    while time.monotonic() < deadline:
+        if not any(_job_manager_process_group_alive(pgid=pgid) for _label, _pid, pgid in groups):
+            break
+        time.sleep(0.02)
+    for label, pid, pgid in groups:
+        if label == "controller" and pgid == os.getpgrp():
+            continue
+        if _job_manager_process_group_alive(pid=pid, pgid=pgid):
+            remaining.append(f"{label}:pid={pid or 'missing'}:pgid={pgid or 'missing'}")
+    if workflow_proc is not None and workflow_proc.poll() is None:
+        remaining.append(f"workflow_child:pid={workflow_proc.pid}:pgid={workflow_proc.pid}")
+    return list(dict.fromkeys(remaining))
 
 
 def _job_manager_lease_path() -> Path:
@@ -1638,6 +2219,7 @@ def _job_manager_release_lease(
     status: str,
     exact_blocker: str = "",
     cleanup_proof: str = "",
+    owned_processes_remaining: list[str] | None = None,
 ) -> Path:
     lease_path = _job_manager_lease_path()
     lock_path = _job_manager_acquire_lease_lock(action="release", run_id=run_id, owner_token=owner_token)
@@ -1656,6 +2238,7 @@ def _job_manager_release_lease(
                     ensure_ascii=False,
                 )
             )
+        remaining = list(owned_processes_remaining or [])
         payload = {
             "workflow": "job-applications",
             "automation_id": "job-application-manager",
@@ -1667,7 +2250,9 @@ def _job_manager_release_lease(
             "exact_blocker": exact_blocker,
             "cleanup_proof": cleanup_proof,
             "released_at": datetime.now(timezone.utc).isoformat(),
-            "owned_processes_remaining": [],
+            # This field is populated only from post-termination verification;
+            # callers must not claim an empty set before polling both groups.
+            "owned_processes_remaining": remaining,
         }
         _job_manager_atomic_write_json(lease_path, payload)
         written_lease = _job_manager_load_active_lease()
@@ -1959,6 +2544,7 @@ def _codex_exec_registered_child_env(
     reasoning_effort: str | None = None,
     current_bridge_probe: dict[str, object] | None = None,
     registered_child_result_path: Path | None = None,
+    process_manifest_path: Path | None = None,
     control_state_pointer: Path | None = None,
     scheduler_run_id: str = "",
     control_run_id: str = "",
@@ -1978,6 +2564,11 @@ def _codex_exec_registered_child_env(
         env["SOCIAL_FLOW_CONTROL_STATE_POINTER"] = str(control_state_pointer or "")
         env["SOCIAL_FLOW_CONTROL_SCHEDULER_RUN_ID"] = scheduler_run_id
         env["SOCIAL_FLOW_CONTROL_RUN_ID"] = control_run_id
+    if process_manifest_path is not None:
+        env[OWNED_PROCESS_MANIFEST_ENV] = str(process_manifest_path)
+        # Keep an explicit alias for shell/Node wrappers that use the
+        # human-readable owned-process terminology.
+        env["SOCIAL_FLOW_OWNED_PROCESS_MANIFEST_PATH"] = str(process_manifest_path)
     if current_bridge_probe:
         env["SOCIAL_FLOW_CURRENT_BRIDGE_PROBE_RUN_ID"] = str(current_bridge_probe.get("bridge_run_id") or "")
         env["SOCIAL_FLOW_CURRENT_BRIDGE_PROBE_RECEIPT"] = str(current_bridge_probe.get("bridge_receipt_path") or "")
@@ -2226,7 +2817,15 @@ def _job_manager_bridge_probe_is_auto_startable(error: str) -> bool:
     return "bridge_endpoint_not_listening" in lowered
 
 
-def _wait_for_job_manager_bridge_health(*, host: str = "127.0.0.1", port: int = 58737, token: str = "", timeout_seconds: int = 180) -> dict[str, object]:
+def _wait_for_job_manager_bridge_health(
+    *,
+    host: str = "127.0.0.1",
+    port: int = 58737,
+    token: str = "",
+    timeout_seconds: int = 180,
+    expected_bridge_instance_id: str = "",
+    expected_bridge_url: str = "",
+) -> dict[str, object]:
     health_url = f"http://{host}:{port}/health"
     deadline = time.monotonic() + max(5, timeout_seconds)
     headers = {"x-social-flow-bridge-token": token} if token else {}
@@ -2238,7 +2837,23 @@ def _wait_for_job_manager_bridge_health(*, host: str = "127.0.0.1", port: int = 
                 text = response.read().decode("utf-8")
             payload = json.loads(text or "{}")
             if isinstance(payload, dict) and payload.get("ok") is True and payload.get("backend") == "chrome_extension_trusted_bridge":
-                return payload
+                observed_instance = str(payload.get("bridge_instance_id") or "").strip()
+                observed_url = str(payload.get("url") or "").rstrip("/")
+                if expected_bridge_instance_id and observed_instance != expected_bridge_instance_id:
+                    last_error = "bridge_instance_id_mismatch"
+                    # Keep the identity mismatch visible in the terminal
+                    # blocker; do not replace it with the generic payload
+                    # diagnostic below.
+                    if time.monotonic() < deadline:
+                        time.sleep(1)
+                    continue
+                elif expected_bridge_url and observed_url != expected_bridge_url.rstrip("/"):
+                    last_error = "bridge_url_mismatch"
+                    if time.monotonic() < deadline:
+                        time.sleep(1)
+                    continue
+                else:
+                    return payload
             last_error = f"invalid_health_payload:{(text or '')[:240]}"
         except Exception as exc:
             last_error = " ".join(str(exc).split())[:240]
@@ -2402,6 +3017,8 @@ def _run_job_manager_bridge_probe(
                 "registeredCwd": control_binding["registered_cwd"],
                 "controlStage": control_binding["control_stage"],
                 "bridgeInstanceId": control_binding["bridge_instance_id"],
+                "bridgeUrl": control_binding.get("bridge_url", ""),
+                "processManifestPath": control_binding.get("process_manifest_path", ""),
                 "controlIssuedAt": control_binding["issued_at"],
                 "controlExpiresAt": control_binding["expires_at"],
             }
@@ -16581,6 +17198,7 @@ def run_job_manager_now(
     trusted_wrapper_v2 = os.environ.get("SOCIAL_FLOW_TRUSTED_BROWSER_WRAPPER_V2") == "1"
     trusted_wrapper_receipt: dict[str, object] | None = None
     trusted_request: dict[str, object] | None = None
+    process_manifest_path: Path | None = None
     if trusted_wrapper_v2:
         request_path_text = str(os.environ.get("SOCIAL_FLOW_CONTROL_REQUEST_PATH") or "").strip()
         control_stage = str(os.environ.get("SOCIAL_FLOW_CONTROL_STAGE") or "").strip()
@@ -16593,6 +17211,17 @@ def run_job_manager_now(
             stage=control_stage,
         )
         trusted_wrapper_receipt = load_and_consume_trusted_wrapper_receipt(trusted_request)
+        process_manifest_text = str(
+            trusted_wrapper_receipt.get("process_manifest_path")
+            or trusted_wrapper_receipt.get("owned_process_manifest_path")
+            or ""
+        ).strip()
+        if process_manifest_text:
+            process_manifest_path = _job_manager_process_manifest_path(
+                run_dir=Path(str(trusted_wrapper_receipt["scheduler_run_dir"])).resolve(),
+                receipt={**trusted_wrapper_receipt, "process_manifest_path": process_manifest_text},
+                required=True,
+            )
 
     launch_model = _registered_automation_model(JOB_MANAGER_AUTOMATION_TOML)
     launch_reasoning_effort = _job_manager_registered_reasoning_effort(JOB_MANAGER_AUTOMATION_TOML) or "high"
@@ -16616,6 +17245,11 @@ def run_job_manager_now(
     release_status = "released"
     exact_blocker = ""
     cleanup_proof = ""
+    owned_processes_remaining: list[str] = []
+    # This is the lifecycle authority for the run.  A trusted receipt may
+    # carry a process-manifest path before any workflow child exists; that
+    # must not make cleanup require child bindings during preflight.
+    workflow_child_started = False
     heartbeat_stop = threading.Event()
     heartbeat_thread: threading.Thread | None = None
     bridge_probe: dict[str, object] | None = None
@@ -16721,6 +17355,18 @@ def run_job_manager_now(
         _job_manager_atomic_write_json(run_dir / "launch-packet.json", launch_packet)
         payload_path.write_text(json.dumps(launch_packet, ensure_ascii=False, indent=2), encoding="utf-8")
         if live_preflight_only:
+            if process_manifest_path is not None:
+                # The trusted wrapper publishes a controller-only manifest
+                # before this preflight runner starts.  Validate its receipt
+                # binding and controller PID/PGID, but explicitly allow
+                # child_started=false because no workflow child is permitted
+                # in the preflight stage.
+                _manifest_path, _manifest_payload, manifest_errors = _job_manager_read_process_manifest(
+                    receipt=trusted_wrapper_receipt or {},
+                    require_child=False,
+                )
+                if manifest_errors:
+                    raise RuntimeError(manifest_errors[0])
             cleanup_proof = f"cleanup proof: live preflight only; owned_processes_remaining=[]; bridge_run_id={bridge_probe.get('bridge_run_id') if bridge_probe else ''}"
             (run_dir / "cleanup-proof.txt").write_text(cleanup_proof + "\n", encoding="utf-8")
             release_status = "preflight_complete"
@@ -16737,6 +17383,13 @@ def run_job_manager_now(
         payload_path.write_text(json.dumps(launch_packet, ensure_ascii=False, indent=2), encoding="utf-8")
         transition_control_to_running(trusted_request)
         _codex_exec_session_healthcheck(codex_home=codex_home, launch_dir=launch_dir, launch_model=launch_model or None)
+        if process_manifest_path is not None:
+            _manifest_path, _manifest_payload, manifest_errors = _job_manager_read_process_manifest(
+                receipt=trusted_wrapper_receipt or {},
+                require_child=False,
+            )
+            if manifest_errors:
+                raise RuntimeError(manifest_errors[0])
         cmd = [
             "codex",
             "exec",
@@ -16777,6 +17430,7 @@ def run_job_manager_now(
                 reasoning_effort=launch_reasoning_effort,
                 current_bridge_probe=bridge_probe,
                 registered_child_result_path=run_dir / "registered-child-result.json",
+                process_manifest_path=process_manifest_path,
                 control_state_pointer=Path(str(trusted_request["control_run_dir"])) / "control-state-current.json",
                 scheduler_run_id=run_id,
                 control_run_id=str(trusted_request["control_run_id"]),
@@ -16784,6 +17438,52 @@ def run_job_manager_now(
             cwd=str(launch_dir),
             start_new_session=True,
         )
+        # Set this immediately after the successful Popen.  From this point
+        # onward cleanup must require a valid workflow-child binding even if
+        # manifest publication or the child transport fails.
+        workflow_child_started = True
+        if process_manifest_path is not None:
+            try:
+                _job_manager_update_process_manifest(
+                    receipt=trusted_wrapper_receipt or {},
+                    workflow_proc=proc,
+                    status="child_started",
+                )
+                _manifest_path, _manifest_payload, manifest_errors = _job_manager_read_process_manifest(
+                    receipt=trusted_wrapper_receipt or {},
+                    require_child=True,
+                )
+                if manifest_errors:
+                    raise RuntimeError(manifest_errors[0])
+            except Exception:
+                # A child exists now, so a missing/malformed binding must not
+                # leave it orphaned while the outer controller reports a
+                # pre-spawn failure.  The helper kills the directly-held
+                # group even when the manifest itself cannot be trusted.
+                try:
+                    owned_processes_remaining = list(
+                        dict.fromkeys(
+                            [
+                                *owned_processes_remaining,
+                                *_job_manager_terminate_owned_processes(
+                                    receipt=trusted_wrapper_receipt or {},
+                                    workflow_proc=proc,
+                                    term_grace_seconds=5.0,
+                                    kill_grace_seconds=5.0,
+                                ),
+                            ]
+                        )
+                    )
+                except Exception as cleanup_exc:
+                    owned_processes_remaining = list(
+                        dict.fromkeys(
+                            [
+                                *owned_processes_remaining,
+                                f"workflow_child_cleanup:{str(cleanup_exc).splitlines()[0]}",
+                            ]
+                        )
+                    )
+                raise
         canonical_timeout_seconds = int(
             (trusted_wrapper_receipt or {}).get("owner_timeout_seconds")
             or (trusted_request or {}).get("run_timeout_seconds")
@@ -16803,18 +17503,29 @@ def run_job_manager_now(
         except subprocess.TimeoutExpired:
             exact_blocker = "whole_run_deadline_exceeded"
             release_status = "blocked"
-            cleanup_proof = f"cleanup proof: owned process group terminated; exact_blocker={exact_blocker}; owned_processes_remaining=[]"
-            try:
-                os.killpg(proc.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
+            owned_processes_remaining = (
+                _job_manager_terminate_owned_processes(
+                    receipt=trusted_wrapper_receipt or {},
+                    workflow_proc=proc,
+                    term_grace_seconds=5.0,
+                    kill_grace_seconds=5.0,
+                )
+                if trusted_wrapper_receipt is not None
+                else []
+            )
+            cleanup_proof = (
+                f"cleanup proof: owned process groups terminated; exact_blocker={exact_blocker}; "
+                f"owned_processes_remaining={json.dumps(owned_processes_remaining, ensure_ascii=False)}"
+            )
             try:
                 stdout, stderr = proc.communicate(timeout=30)
             except subprocess.TimeoutExpired:
-                try:
-                    os.killpg(proc.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
+                workflow_pid = _job_manager_positive_process_pid(proc)
+                if workflow_pid is not None:
+                    try:
+                        os.killpg(workflow_pid, signal.SIGKILL)
+                    except (ProcessLookupError, PermissionError):
+                        pass
                 stdout, stderr = proc.communicate()
             (run_dir / "child-stdout-tail.txt").write_text(
                 _redacted_text_tail(stdout or "", max_chars=12000) + "\n",
@@ -16847,6 +17558,12 @@ def run_job_manager_now(
             scheduler_run_id=run_id,
             control_run_id=str(trusted_request["control_run_id"]),
         )
+        if process_manifest_path is not None:
+            _job_manager_update_process_manifest(
+                receipt=trusted_wrapper_receipt or {},
+                workflow_proc=proc,
+                status="child_exited",
+            )
         _job_manager_write_terminal_state(
             run_dir=run_dir,
             run_id=run_id,
@@ -16860,6 +17577,34 @@ def run_job_manager_now(
         if not exact_blocker:
             exact_blocker = str(exc).strip().splitlines()[0][:1000] or type(exc).__name__
         release_status = "blocked"
+        if workflow_child_started and trusted_wrapper_receipt is not None and locals().get("proc") is not None:
+            # Any exception after Popen (including transport/contract
+            # validation failures) must reap the directly-held workflow group
+            # before the controller records its blocker.  The helper remains
+            # owner/manifest-bound and never signals the controller group.
+            try:
+                owned_processes_remaining = list(
+                    dict.fromkeys(
+                        [
+                            *owned_processes_remaining,
+                            *_job_manager_terminate_owned_processes(
+                                receipt=trusted_wrapper_receipt,
+                                workflow_proc=locals().get("proc"),
+                                term_grace_seconds=5.0,
+                                kill_grace_seconds=5.0,
+                            ),
+                        ]
+                    )
+                )
+            except Exception as cleanup_exc:
+                owned_processes_remaining = list(
+                    dict.fromkeys(
+                        [
+                            *owned_processes_remaining,
+                            f"workflow_child_cleanup:{str(cleanup_exc).splitlines()[0]}",
+                        ]
+                    )
+                )
         _job_manager_atomic_write_json(
             run_dir / "terminal-blocker.json",
             {
@@ -16887,9 +17632,65 @@ def run_job_manager_now(
         heartbeat_stop.set()
         if heartbeat_thread is not None:
             heartbeat_thread.join(timeout=2)
-        if not cleanup_proof:
-            cleanup_proof = f"cleanup proof: owned_processes_remaining=[]; exact_blocker={exact_blocker or 'none'}"
+        if trusted_wrapper_receipt is not None:
+            try:
+                verified_remaining = _job_manager_process_manifest_remaining(
+                    receipt=trusted_wrapper_receipt,
+                    workflow_proc=locals().get("proc"),
+                    require_child=workflow_child_started,
+                )
+            except Exception as exc:
+                verified_remaining = [
+                    f"cleanup_verification:{str(exc).splitlines()[0] or type(exc).__name__}"
+                ]
+                if not exact_blocker:
+                    exact_blocker = "trusted_wrapper_process_cleanup_verification_failed"
+                release_status = "blocked"
+            # Always merge the verified readback, including non-empty
+            # blockers.  Reusing a timeout/preflight string with a stale
+            # `owned_processes_remaining=[]` would make cleanup look clean.
+            owned_processes_remaining = list(
+                dict.fromkeys([*owned_processes_remaining, *verified_remaining])
+            )
+        if owned_processes_remaining and not exact_blocker:
+            exact_blocker = "owned_processes_remaining_after_cleanup"
+            release_status = "blocked"
+        if release_status == "blocked":
+            if not exact_blocker:
+                exact_blocker = "job_manager_cleanup_blocked"
+            # A child may have reported success before final cleanup
+            # verification discovers a residual process or manifest error.
+            # Rewrite the run terminal state so it cannot retain a stale
+            # completed/preflight status beside the non-clean proof.
+            try:
+                _job_manager_write_terminal_state(
+                    run_dir=run_dir,
+                    run_id=run_id,
+                    control_run_id=str(trusted_request.get("control_run_id") if trusted_request else ""),
+                    status="blocked",
+                    exact_blocker=exact_blocker,
+                )
+            except Exception:
+                pass
+        # Rewrite the proof after the final manifest readback so the persisted
+        # artifact always carries the actual remaining set and blocker.
+        cleanup_proof = (
+            f"cleanup proof: owned_processes_remaining={json.dumps(owned_processes_remaining, ensure_ascii=False)}; "
+            f"exact_blocker={exact_blocker or 'none'}"
+        )
         (run_dir / "cleanup-proof.txt").write_text(cleanup_proof + "\n", encoding="utf-8")
+        _job_manager_atomic_write_json(
+            run_dir / "job-manager-cleanup.json",
+            {
+                "schema": "job_manager_cleanup.v1",
+                "run_id": run_id,
+                "status": release_status,
+                "exact_blocker": exact_blocker,
+                "workflow_child_started": workflow_child_started,
+                "owned_processes_remaining": owned_processes_remaining,
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
         try:
             _job_manager_release_lease(
                 run_id,
@@ -16898,6 +17699,7 @@ def run_job_manager_now(
                 status=release_status,
                 exact_blocker=exact_blocker,
                 cleanup_proof=cleanup_proof,
+                owned_processes_remaining=owned_processes_remaining,
             )
         except Exception as exc:
             typer.echo(f"Skipped job-manager lease release: {exc}", err=True)
@@ -17247,15 +18049,40 @@ def run_codex_automation(
         )
     except BaseException as exc:
         exact_blocker = str(exc).strip().splitlines()[0][:1000] or type(exc).__name__
+        cleanup_blocker, owned_processes_remaining = _job_manager_cleanup_observation(
+            Path(str(request.get("scheduler_run_dir") or ""))
+        )
+        if cleanup_blocker and not exact_blocker:
+            exact_blocker = cleanup_blocker
         finalize_control_state(request, status="blocked", exact_blocker=exact_blocker)
         write_control_blocker(request, exact_blocker)
-        write_control_cleanup(request, status="blocked", exact_blocker=exact_blocker)
+        write_control_cleanup(
+            request,
+            status="blocked",
+            exact_blocker=exact_blocker,
+            owned_processes_remaining=owned_processes_remaining,
+        )
         raise
     final_status = "preflight_complete" if stage == "preflight" else "completed"
+    cleanup_blocker, owned_processes_remaining = _job_manager_cleanup_observation(
+        Path(str(request.get("scheduler_run_dir") or ""))
+    )
+    if cleanup_blocker or owned_processes_remaining:
+        exact_blocker = cleanup_blocker or "owned_processes_remaining_after_cleanup"
+        finalize_control_state(request, status="blocked", exact_blocker=exact_blocker)
+        write_control_blocker(request, exact_blocker)
+        write_control_cleanup(
+            request,
+            status="blocked",
+            exact_blocker=exact_blocker,
+            owned_processes_remaining=owned_processes_remaining,
+        )
+        raise RuntimeError(exact_blocker)
     finalize_control_state(request, status=final_status)
     write_control_cleanup(
         request,
         status=final_status,
+        owned_processes_remaining=owned_processes_remaining,
     )
     typer.echo(
         json.dumps(
