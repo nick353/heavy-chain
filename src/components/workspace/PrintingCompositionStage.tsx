@@ -72,11 +72,11 @@ function designBaseWidth(size: StageSize) {
 }
 
 function garmentWidth(size: StageSize) {
-  return clamp(size.width * 0.86, 280, 640);
+  return clamp(size.width * 0.92, 300, 680);
 }
 
 function garmentCenterY(size: StageSize) {
-  return size.height * 0.54;
+  return size.height * 0.52;
 }
 
 function designBoxSize(size: StageSize, scale: number) {
@@ -234,10 +234,26 @@ export function PrintingCompositionStage({
       className="relative aspect-[4/5] overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,10,11,1),rgba(17,23,25,1))]"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_55%)]" />
-      <div className="absolute left-1/2 top-[54%] h-[78%] w-[90%] -translate-x-1/2 -translate-y-1/2 rounded-[34px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.045),transparent_50%)] blur-[1px]" />
+      <div className="absolute left-1/2 top-[52%] h-[82%] w-[92%] -translate-x-1/2 -translate-y-1/2 rounded-[34px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_55%)] blur-[1px]" />
+
+      {garmentUrl && (
+        <img
+          src={garmentUrl}
+          alt="参考画像"
+          className="pointer-events-none absolute left-1/2 top-[54%] z-0 max-w-none select-none"
+          style={{
+            ...garmentStyle,
+            mixBlendMode: 'normal',
+            opacity: 0.94,
+            filter: 'brightness(1.08) contrast(1.04) saturate(0.96) drop-shadow(0 10px 30px rgba(0,0,0,0.28))',
+          }}
+          draggable={false}
+        />
+      )}
 
       {garmentMaskUrl ? (
-        <div className="absolute inset-0" style={getFrameMaskStyle(garmentMaskUrl, size)}>
+        <div className="absolute inset-0 z-10" style={getFrameMaskStyle(garmentMaskUrl, size)}>
+          <div className="absolute inset-[4.5%] rounded-[32px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.98),rgba(244,246,248,0.96) 58%,rgba(232,236,240,0.9))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]" />
           {draftLayers
             .filter((layer) => layer.id !== 'print-garment')
             .map((layer) => {
@@ -263,12 +279,12 @@ export function PrintingCompositionStage({
                     touchAction: 'none',
                     background: selected ? 'rgba(7,10,11,0.12)' : 'transparent',
                   }}
-                >
+                  >
                   <img
                     src={layer.displayUrl}
                     alt={layer.label}
                     className="h-full w-full rounded-[22px] object-contain pointer-events-none select-none"
-                    style={{ mixBlendMode: 'multiply', opacity: 0.98 }}
+                    style={{ mixBlendMode: 'normal', opacity: 0.98 }}
                     draggable={false}
                   />
                   {selected && (
@@ -305,16 +321,6 @@ export function PrintingCompositionStage({
             })}
         </div>
       ) : null}
-
-      {garmentUrl && (
-        <img
-          src={garmentUrl}
-          alt="参考画像"
-          className="pointer-events-none absolute left-1/2 top-[54%] max-w-none select-none"
-          style={{ ...garmentStyle, mixBlendMode: 'multiply', opacity: 0.96 }}
-          draggable={false}
-        />
-      )}
 
       <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-[11px] font-medium tracking-[0.22em] text-neutral-300 backdrop-blur-md">
         Canva-style direct edit
