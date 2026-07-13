@@ -219,7 +219,7 @@ export function PrintingCompositionStage({
       className="relative aspect-[4/5] overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,10,11,1),rgba(17,23,25,1))]"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_55%)]" />
-      <div className="absolute inset-x-[6%] top-[10%] h-[78%] rounded-[36px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),rgba(255,255,255,0.03) 55%,rgba(255,255,255,0.01))] blur-[1px]" />
+      <div className="absolute inset-x-[6%] top-[10%] h-[78%] rounded-[36px] border border-white/10 bg-transparent" />
 
       {garmentUrl && (
         <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
@@ -239,7 +239,9 @@ export function PrintingCompositionStage({
 
       {garmentMaskUrl ? (
         <div className="absolute inset-0 z-10" style={getFrameMaskStyle(garmentMaskUrl)}>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_58%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-transparent" />
+          <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),inset_0_0_0_10px_rgba(255,255,255,0.03)]" />
+          <div className="pointer-events-none absolute inset-[2%] rounded-[30px] border border-white/14 border-dashed" />
           {draftLayers
             .filter((layer) => layer.id !== 'print-garment')
             .map((layer) => {
