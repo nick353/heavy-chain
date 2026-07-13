@@ -223,6 +223,15 @@ export function PrintingCompositionStage({
 
       {garmentUrl && (
         <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
+          <div
+            className="absolute inset-[10%] rounded-[28px] opacity-60"
+            style={{
+              backgroundImage:
+                'linear-gradient(45deg, rgba(255,255,255,0.08) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.08) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.08) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.08) 75%)',
+              backgroundSize: '20px 20px',
+              backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
+            }}
+          />
           <img
             src={garmentUrl}
             alt="参考画像"
