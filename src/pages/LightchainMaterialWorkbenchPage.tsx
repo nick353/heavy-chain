@@ -19,7 +19,10 @@ import { Button } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { PrintingCompositionStage } from '../components/workspace/PrintingCompositionStage';
 import { useAuthStore } from '../stores/authStore';
-import { removeBackground } from '../lib/imageApi';
+import {
+  buildHighPrecisionMaterialCutoutDataUrl,
+  buildMaterialCutoutDataUrl,
+} from '../lib/workspaceMaterialReferences';
 
 type WorkbenchMode = 'fabric' | 'printing';
 
@@ -332,24 +335,31 @@ export function LightchainMaterialWorkbenchPage() {
         setPrintGarmentProcessed(null);
         return;
       }
-      if (!printGarmentCutting || !currentBrand?.id) {
+      if (!printGarmentCutting) {
         setPrintGarmentProcessed(printGarment.url);
         return;
       }
       setPrintGarmentProcessed(null);
       try {
-        const result = await removeBackground(printGarment.url, currentBrand.id);
-        if (result.success && result.imageUrl) {
-          setPrintGarmentProcessed(result.imageUrl);
-          return;
-        }
+        const cutout = await buildHighPrecisionMaterialCutoutDataUrl({ imageUrl: printGarment.url });
+        setPrintGarmentProcessed(cutout.dataUrl);
+        return;
       } catch {
-        // fall back to original
+        try {
+          const cutout = await buildMaterialCutoutDataUrl({
+            imageUrl: printGarment.url,
+            mode: 'auto',
+            candidate: 'トップス',
+          });
+          setPrintGarmentProcessed(cutout.dataUrl);
+          return;
+        } catch {
+          setPrintGarmentProcessed(null);
+        }
       }
-      setPrintGarmentProcessed(printGarment.url);
     };
     processPrintGarment();
-  }, [printGarment, printGarmentCutting, currentBrand?.id]);
+  }, [printGarment, printGarmentCutting]);
 
   useEffect(() => {
     const processPrintDesigns = async () => {
@@ -361,18 +371,24 @@ export function LightchainMaterialWorkbenchPage() {
       for (const [index, design] of printDesigns.entries()) {
         let displayUrl = design.url;
         let cutoutState: AssetLayer['cutoutState'] = 'idle';
-        if (currentBrand?.id && printGarmentCutting) {
+        if (printGarmentCutting) {
           cutoutState = 'processing';
           try {
-            const result = await removeBackground(design.url, currentBrand.id);
-            if (result.success && result.imageUrl) {
-              displayUrl = result.imageUrl;
+            const cutout = await buildHighPrecisionMaterialCutoutDataUrl({ imageUrl: design.url });
+            displayUrl = cutout.dataUrl;
+            cutoutState = 'done';
+          } catch {
+            try {
+              const cutout = await buildMaterialCutoutDataUrl({
+                imageUrl: design.url,
+                mode: 'auto',
+                candidate: '柄',
+              });
+              displayUrl = cutout.dataUrl;
               cutoutState = 'done';
-            } else {
+            } catch {
               cutoutState = 'error';
             }
-          } catch {
-            cutoutState = 'error';
           }
         }
         nextLayers.push({
@@ -695,9 +711,9 @@ export function LightchainMaterialWorkbenchPage() {
                 multipleValue={printDesigns}
                 onMultipleChange={addDesigns}
                 maxImages={6}
-                allowedReferenceTypes={['base', 'pattern']}
-                defaultReferenceType="base"
-                hint="自分たちのデザインを6つまで追加できます"
+                allowedReferenceTypes={['pattern']}
+                defaultReferenceType="pattern"
+                hint="柄・ロゴ・図案を6つまで追加できます"
               />
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="mb-3 flex items-center justify-between">
