@@ -71,14 +71,6 @@ function designBaseWidth(size: StageSize) {
   return clamp(size.width * 0.38, 140, 320);
 }
 
-function garmentWidth(size: StageSize) {
-  return clamp(size.width * 0.92, 300, 680);
-}
-
-function garmentCenterY(size: StageSize) {
-  return size.height * 0.52;
-}
-
 function designBoxSize(size: StageSize, scale: number) {
   const width = designBaseWidth(size) * scale;
   return { width, height: width };
@@ -91,7 +83,7 @@ function getLayerCenterPx(size: StageSize, transform: PrintingTransform) {
   };
 }
 
-function getFrameMaskStyle(maskUrl: string | null, size: StageSize): CSSProperties {
+function getFrameMaskStyle(maskUrl: string | null): CSSProperties {
   return {
     WebkitMaskImage: maskUrl ? `url(${maskUrl})` : undefined,
     maskImage: maskUrl ? `url(${maskUrl})` : undefined,
@@ -99,8 +91,8 @@ function getFrameMaskStyle(maskUrl: string | null, size: StageSize): CSSProperti
     maskRepeat: 'no-repeat',
     WebkitMaskPosition: 'center',
     maskPosition: 'center',
-    WebkitMaskSize: `${garmentWidth(size)}px auto`,
-    maskSize: `${garmentWidth(size)}px auto`,
+    WebkitMaskSize: 'contain',
+    maskSize: 'contain',
   };
 }
 
@@ -221,39 +213,33 @@ export function PrintingCompositionStage({
     (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
   };
 
-  const garmentStyle: CSSProperties = {
-    width: `${garmentWidth(size)}px`,
-    left: '50%',
-    top: `${garmentCenterY(size)}px`,
-    transform: 'translate(-50%, -50%)',
-  };
-
   return (
     <div
       ref={stageRef}
       className="relative aspect-[4/5] overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(7,10,11,1),rgba(17,23,25,1))]"
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_55%)]" />
-      <div className="absolute left-1/2 top-[52%] h-[82%] w-[92%] -translate-x-1/2 -translate-y-1/2 rounded-[34px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.96),rgba(244,246,248,0.95) 60%,rgba(232,236,240,0.88))] shadow-[0_26px_70px_rgba(0,0,0,0.16)] ring-1 ring-black/5" />
+      <div className="absolute inset-x-[6%] top-[10%] h-[78%] rounded-[36px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.16),rgba(255,255,255,0.03) 55%,rgba(255,255,255,0.01))] blur-[1px]" />
 
       {garmentUrl && (
-        <img
-          src={garmentUrl}
-          alt="参考画像"
-          className="pointer-events-none absolute left-1/2 top-[54%] z-0 max-w-none select-none"
-          style={{
-            ...garmentStyle,
-            mixBlendMode: 'normal',
-            opacity: 1,
-            filter: 'brightness(1.12) contrast(1.08) saturate(0.98) drop-shadow(0 10px 30px rgba(0,0,0,0.22))',
-          }}
-          draggable={false}
-        />
+        <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
+          <img
+            src={garmentUrl}
+            alt="参考画像"
+            className="max-h-[88%] w-full max-w-none select-none object-contain object-center"
+            style={{
+              mixBlendMode: 'normal',
+              opacity: 1,
+              filter: 'brightness(1.14) contrast(1.1) saturate(0.98) drop-shadow(0 14px 36px rgba(0,0,0,0.22))',
+            }}
+            draggable={false}
+          />
+        </div>
       )}
 
       {garmentMaskUrl ? (
-        <div className="absolute inset-0 z-10" style={getFrameMaskStyle(garmentMaskUrl, size)}>
-          <div className="absolute inset-[4.5%] rounded-[32px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.98),rgba(244,246,248,0.96) 58%,rgba(232,236,240,0.9))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.28)]" />
+        <div className="absolute inset-0 z-10" style={getFrameMaskStyle(garmentMaskUrl)}>
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]" />
           {draftLayers
             .filter((layer) => layer.id !== 'print-garment')
             .map((layer) => {
