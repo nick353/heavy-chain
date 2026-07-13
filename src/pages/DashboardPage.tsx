@@ -362,13 +362,13 @@ export function DashboardPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-300">
-                  HEAVY CHAIN / LIGHT UI
+                  HEAVY CHAIN / WORKSPACE
                 </p>
                 <h1 className="mt-3 text-4xl font-semibold tracking-normal text-white sm:text-5xl lg:text-6xl">
-                  見た目を軽くしました
+                  制作の入口をひとまとめにしました
                 </h1>
                 <p className="mt-4 max-w-4xl text-sm leading-6 text-neutral-300 sm:text-base">
-                  背景、カード、CTA、入力の密度を変えて、ブランド名はHeavy Chainのままでも見た目だけ別の体験に寄せています。
+                  画像生成、フィッティング、グラフィック、動画までを Heavy Chain の導線として整理し、迷わず開ける入口にしています。
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -376,7 +376,7 @@ export function DashboardPage() {
                   href="#dashboard-workflow"
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 text-sm font-semibold text-white transition hover:border-cyan-300/40 hover:bg-cyan-300/15"
                 >
-                  制作ワークフロー
+                  入口一覧
                   <IconArrowRight className="h-4 w-4" size={16} />
                 </a>
               </div>
@@ -819,7 +819,7 @@ export function DashboardPage() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/lightchain">
                   <Button size="lg" className="rounded-full shadow-glow hover:shadow-glow-lg" leftIcon={<IconSparkles className="w-5 h-5" size={20} />}>
-                    画像を生成する
+                    制作入口を見る
                   </Button>
                 </Link>
               </div>

@@ -152,7 +152,7 @@ export function GenerateLightchainEntry() {
             to="/dashboard"
             className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/15"
           >
-            制作ワークフロー
+            入口一覧
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>

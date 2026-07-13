@@ -22,7 +22,7 @@ export interface WorkspaceNavItem {
 
 export const workspaceNavItems: WorkspaceNavItem[] = [
   { icon: IconHome, label: 'ホーム', mobileLabel: 'ホーム', path: '/dashboard', group: 'main', showInMobileNav: true },
-  { icon: IconSparkles, label: '画像生成', mobileLabel: '生成', path: '/lightchain', group: 'main', showInMobileNav: true },
+  { icon: IconSparkles, label: '制作ワークスペース', mobileLabel: '制作', path: '/lightchain', group: 'main', showInMobileNav: true },
   { icon: IconUsers, label: 'AIフィッティング', mobileLabel: 'フィット', path: '/fitting', group: 'main', showInMobileNav: true },
   { icon: IconShoppingBag, label: 'マーケティング', mobileLabel: '販促', path: '/marketing', group: 'main', showInMobileNav: true },
   { icon: Shirt, label: 'スタジオ', mobileLabel: 'スタジオ', path: '/studio', group: 'main' },
@@ -30,7 +30,7 @@ export const workspaceNavItems: WorkspaceNavItem[] = [
   { icon: Palette, label: '柄・グラフィック', mobileLabel: '柄', path: '/patterns/workbench', group: 'main' },
   { icon: Video, label: '動画', mobileLabel: '動画', path: '/video', group: 'main' },
   { icon: FlaskConical, label: 'ラボ', mobileLabel: 'ラボ', path: '/lab', group: 'main' },
-  { icon: LayoutGrid, label: '素材作業台', mobileLabel: '素材', path: '/lightchain', group: 'main' },
+  { icon: LayoutGrid, label: 'グラフィック作業台', mobileLabel: '素材', path: '/lightchain', group: 'main' },
   { icon: IconClock, label: '履歴', mobileLabel: '履歴', path: '/history', group: 'main', showInMobileNav: true },
   { icon: BriefcaseBusiness, label: 'ジョブ', mobileLabel: 'ジョブ', path: '/jobs', group: 'main' },
   { icon: CreditCard, label: 'クレジット', mobileLabel: 'クレジット', path: '/credits', group: 'main' },

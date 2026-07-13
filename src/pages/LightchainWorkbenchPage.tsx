@@ -23,6 +23,14 @@ import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
 import { buildMaterialCutoutDataUrl, type MaterialCutoutBounds } from '../lib/workspaceMaterialReferences';
 import { saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
+import {
+  buildPrintingImagePreviewDataUrl,
+  defaultPrintArtworkTransform,
+  describePrintPlacement,
+  describePrintScale,
+  type PrintArtworkTransform,
+  PrintingImageComposer,
+} from '../components/lightchain/PrintingImageComposer';
 
 type ToolCategory = 'home' | 'marketing' | 'fitting' | 'planning' | 'graphics' | 'model' | 'video' | 'lab';
 type ToolStatus = 'ready' | 'workspace' | 'needs-image' | 'coming-soon';
@@ -890,6 +898,7 @@ export function LightchainWorkbenchPage() {
   const [activeLayer, setActiveLayer] = useState('print');
   const [printPlacement, setPrintPlacement] = useState('胸中央');
   const [printScale, setPrintScale] = useState(46);
+  const [printArtworkTransform, setPrintArtworkTransform] = useState<PrintArtworkTransform>(defaultPrintArtworkTransform);
   const [analysisStatus, setAnalysisStatus] = useState<'empty' | 'ready'>('empty');
   const [workbenchStep, setWorkbenchStep] = useState<WorkbenchStep>('asset');
   const [maskCandidates, setMaskCandidates] = useState<MaskCandidate[]>([]);
@@ -1164,6 +1173,9 @@ export function LightchainWorkbenchPage() {
       setGarmentCategory(item.kind);
       setAnalysisStatus('ready');
       setImageRepairGenerating(false);
+      if (selectedTool.id === 'printing-image') {
+        setPrintArtworkTransform(defaultPrintArtworkTransform);
+      }
       resetWorkbenchMaskState();
     }
   };
@@ -1178,6 +1190,7 @@ export function LightchainWorkbenchPage() {
     setGarmentCategory(defaults.materialKinds[0] ?? '素材');
     setActiveLayer(defaults.layers[0]?.[0] ?? 'base');
     setPrintPlacement(defaults.placements[0] ?? '中央');
+    setPrintArtworkTransform(defaultPrintArtworkTransform);
     setSelectedToolId(selectedTool.id);
     setActiveCategory(selectedTool.category);
     setActiveMaterialSlot('primary');
@@ -1214,6 +1227,12 @@ export function LightchainWorkbenchPage() {
     setWorkspaceText(nextWorkspaceText);
     resetWorkbenchMaskState();
   }, [selectedTool.category, selectedTool.id]);
+
+  useEffect(() => {
+    if (selectedTool.id !== 'printing-image') return;
+    setPrintPlacement(describePrintPlacement(printArtworkTransform));
+    setPrintScale(describePrintScale(printArtworkTransform));
+  }, [printArtworkTransform, selectedTool.id]);
 
   const handleCategoryChange = (categoryId: ToolCategory) => {
     setActiveCategory(categoryId);
@@ -1770,7 +1789,7 @@ export function LightchainWorkbenchPage() {
       const finalCutoutMaxDataUrlBytes = cutoutMaxDataUrlBytes || (ensuredCutout ? 750_000 : null);
       const finalCutoutStoragePolicy = cutoutStoragePolicy || ensuredCutout?.storagePolicy || null;
       const finalMaskEngine = maskEngine || ensuredCutout?.engine || null;
-      const projectId = createProject(`素材作業台: ${selectedTool.title}`, currentBrand.id);
+      const projectId = createProject(`制作: ${selectedTool.title}`, currentBrand.id);
       const lightchainWorkbenchState = workbenchEnabled ? {
         toolId: selectedTool.id,
         toolCategory: selectedTool.category,
@@ -1785,7 +1804,8 @@ export function LightchainWorkbenchPage() {
             lineGenerationOutputType: selectedTool.id === 'line-generation' ? '線画' : null,
             patternVectorLayers: isPatternVectorProFlow ? patternVectorLayers : null,
             patternVectorUsage: isPatternVectorProFlow ? '6/30' : null,
-            patternVectorGenerationCost: isPatternVectorProFlow ? 1 : null,
+        patternVectorGenerationCost: isPatternVectorProFlow ? 1 : null,
+        printArtworkTransform: selectedTool.id === 'printing-image' ? printArtworkTransform : null,
 		        materialSlots: materialSlots.map((slot) => ({
 	          key: slot.key,
 	          label: slot.label,
@@ -1912,6 +1932,7 @@ export function LightchainWorkbenchPage() {
             patternVectorLayers: lightchainWorkbenchState.patternVectorLayers,
             patternVectorUsage: lightchainWorkbenchState.patternVectorUsage,
             patternVectorGenerationCost: lightchainWorkbenchState.patternVectorGenerationCost,
+            printArtworkTransform: lightchainWorkbenchState.printArtworkTransform,
 		        materialReference,
 	        materialReferences: [
 	          ...(materialReference ? [materialReference] : []),
@@ -1957,10 +1978,17 @@ export function LightchainWorkbenchPage() {
       let overlayObjectId: string | null = null;
 
       if (shouldSaveWorkbenchAsset) {
-        const processedMaterialImageUrl = finalExtractedImageUrl || garmentImageUrl;
-        const overlayPosition = getOverlayPosition(printPlacement, printScale);
-        if (extractedLayerReady) {
-          addObject({
+        if (selectedTool.id === 'printing-image') {
+          const composedPreview = buildPrintingImagePreviewDataUrl({
+            garmentImageUrl: finalExtractedImageUrl || garmentImageUrl,
+            garmentMaskUrl: finalExtractedImageUrl,
+            printImageUrl: materialSlotFiles.secondary?.imageUrl ?? null,
+            garmentCategory,
+            printMode: printingMode,
+            printLabel: materialSlotFiles.secondary?.name ?? 'プリント画像',
+            transform: printArtworkTransform,
+          });
+          materialObjectId = addObject({
             type: 'image',
             x: 120,
             y: 100,
@@ -1969,97 +1997,133 @@ export function LightchainWorkbenchPage() {
             rotation: 0,
             scaleX: 1,
             scaleY: 1,
-            opacity: 0.46,
+            opacity: 1,
             locked: false,
             visible: true,
-            src: garmentImageUrl,
-            label: `${garmentFileName || selectedTool.title} 元画像ベース`,
+            src: composedPreview,
+            label: garmentFileName || `${selectedTool.title} 合成プレビュー`,
             metadata: {
-              feature: `lightchain-${selectedTool.id}-original-base-layer`,
+              feature: `lightchain-${selectedTool.id}-composited-print-preview`,
               prompt: selectedTool.promptTemplate,
               generation: 0,
               lightchainCompat,
               parameters: {
                 toolId: selectedTool.id,
                 artifactId: artifact.artifact.id,
-                layerRole: 'original-base',
+                printMode: printingMode,
+                garmentCategory,
+                printArtworkTransform,
+                printPlacement,
+                printScale,
+                ...workbenchParameters,
+              },
+            },
+          });
+        } else {
+          const processedMaterialImageUrl = finalExtractedImageUrl || garmentImageUrl;
+          const overlayPosition = getOverlayPosition(printPlacement, printScale);
+          if (extractedLayerReady) {
+            addObject({
+              type: 'image',
+              x: 120,
+              y: 100,
+              width: 360,
+              height: 360,
+              rotation: 0,
+              scaleX: 1,
+              scaleY: 1,
+              opacity: 0.46,
+              locked: false,
+              visible: true,
+              src: garmentImageUrl,
+              label: `${garmentFileName || selectedTool.title} 元画像ベース`,
+              metadata: {
+                feature: `lightchain-${selectedTool.id}-original-base-layer`,
+                prompt: selectedTool.promptTemplate,
+                generation: 0,
+                lightchainCompat,
+                parameters: {
+                  toolId: selectedTool.id,
+                  artifactId: artifact.artifact.id,
+                  layerRole: 'original-base',
+                  ...workbenchParameters,
+                },
+              },
+            });
+          }
+          materialObjectId = addObject({
+            type: 'image',
+            x: 120,
+            y: 100,
+            width: 360,
+            height: 360,
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1,
+            opacity: 1,
+            locked: false,
+            visible: true,
+            src: processedMaterialImageUrl,
+            label: extractedLayerReady
+              ? `${selectedMaskCandidate ?? '抽出'} カットレイヤー`
+              : garmentFileName || `${selectedTool.title} 素材画像`,
+            metadata: {
+              feature: `lightchain-${selectedTool.id}-material-reference`,
+              prompt: selectedTool.promptTemplate,
+              generation: 0,
+              lightchainCompat,
+              parameters: {
+                toolId: selectedTool.id,
+                artifactId: artifact.artifact.id,
+                processedImageKind: cutMode === 'keep' ? 'original' : 'masked-transparent-png',
+                layerRole: extractedLayerReady ? 'extracted-cutout' : 'material-reference',
+                cutoutBounds: finalCutoutBounds,
+                cutoutOutputSize: finalCutoutOutputSize,
+                cutoutDataUrlBytes: finalCutoutDataUrlBytes,
+                cutoutMaxDataUrlBytes: finalCutoutMaxDataUrlBytes,
+                cutoutStoragePolicy: finalCutoutStoragePolicy,
+                maskEngine: finalMaskEngine,
+                hasTransparentCutout: Boolean(extractedLayerReady && processedMaterialImageUrl.startsWith('data:image/png')),
+                ...workbenchParameters,
+              },
+            },
+          });
+
+          overlayObjectId = addObject({
+            type: 'text',
+            x: overlayPosition.x,
+            y: overlayPosition.y,
+            width: 150,
+            height: 58,
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1,
+            opacity: 1,
+            locked: false,
+            visible: true,
+            text: 'HC',
+            fontSize: Math.max(24, Math.round(printScale * 0.9)),
+            fontFamily: 'Inter',
+            fill: '#0f172a',
+            label: `レイヤー: ${activeLayer} / ${printPlacement}`,
+            parentId: materialObjectId,
+            derivedFrom: materialObjectId,
+            metadata: {
+              feature: `lightchain-${selectedTool.id}-overlay-layer`,
+              prompt: `${printPlacement}に${activeLayer}レイヤーを配置`,
+              parentId: materialObjectId,
+              generation: 0,
+              lightchainCompat,
+              parameters: {
+                toolId: selectedTool.id,
+                printPlacement,
+                printScale,
+                activeLayer,
                 ...workbenchParameters,
               },
             },
           });
         }
-        materialObjectId = addObject({
-          type: 'image',
-          x: 120,
-          y: 100,
-          width: 360,
-          height: 360,
-          rotation: 0,
-          scaleX: 1,
-          scaleY: 1,
-          opacity: 1,
-          locked: false,
-          visible: true,
-          src: processedMaterialImageUrl,
-          label: extractedLayerReady
-            ? `${selectedMaskCandidate ?? '抽出'} カットレイヤー`
-            : garmentFileName || `${selectedTool.title} 素材画像`,
-          metadata: {
-            feature: `lightchain-${selectedTool.id}-material-reference`,
-            prompt: selectedTool.promptTemplate,
-            generation: 0,
-            lightchainCompat,
-            parameters: {
-              toolId: selectedTool.id,
-              artifactId: artifact.artifact.id,
-              processedImageKind: cutMode === 'keep' ? 'original' : 'masked-transparent-png',
-              layerRole: extractedLayerReady ? 'extracted-cutout' : 'material-reference',
-              cutoutBounds: finalCutoutBounds,
-              cutoutOutputSize: finalCutoutOutputSize,
-              cutoutDataUrlBytes: finalCutoutDataUrlBytes,
-              cutoutMaxDataUrlBytes: finalCutoutMaxDataUrlBytes,
-              cutoutStoragePolicy: finalCutoutStoragePolicy,
-              maskEngine: finalMaskEngine,
-              hasTransparentCutout: Boolean(extractedLayerReady && processedMaterialImageUrl.startsWith('data:image/png')),
-              ...workbenchParameters,
-            },
-          },
-        });
-
-        overlayObjectId = addObject({
-          type: 'text',
-          x: overlayPosition.x,
-          y: overlayPosition.y,
-          width: 150,
-          height: 58,
-          rotation: 0,
-          scaleX: 1,
-          scaleY: 1,
-          opacity: 1,
-          locked: false,
-          visible: true,
-          text: 'HC',
-          fontSize: Math.max(24, Math.round(printScale * 0.9)),
-          fontFamily: 'Inter',
-          fill: '#0f172a',
-          label: `レイヤー: ${activeLayer} / ${printPlacement}`,
-          parentId: materialObjectId,
-          derivedFrom: materialObjectId,
-          metadata: {
-            feature: `lightchain-${selectedTool.id}-overlay-layer`,
-            prompt: `${printPlacement}に${activeLayer}レイヤーを配置`,
-            parentId: materialObjectId,
-            generation: 0,
-            lightchainCompat,
-            parameters: {
-              toolId: selectedTool.id,
-              printPlacement,
-              printScale,
-              activeLayer,
-              ...workbenchParameters,
-            },
-          },
-        });
       }
 
       addObject({
@@ -2098,7 +2162,7 @@ export function LightchainWorkbenchPage() {
         selectObject((overlayObjectId ?? materialObjectId) as string);
       }
       saveCurrentProject();
-      toast.success('素材作業台の内容を保存しました');
+      toast.success('制作内容を保存しました');
       navigate(`/canvas/${projectId}`);
     } catch (error) {
       console.error('Failed to save Lightchain workbench artifact:', error);
@@ -3416,7 +3480,7 @@ export function LightchainWorkbenchPage() {
             <div className="min-w-0">
               <p className="inline-flex items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 ring-1 ring-primary-100 dark:bg-primary-400/10 dark:text-primary-300 dark:ring-primary-400/20">
                 <Sparkles className="h-3.5 w-3.5" />
-                {isFeatureDetail ? selectedTool.lightchainRoute : `素材作業台 / ${totalToolCount}機能`}
+                {isFeatureDetail ? selectedTool.lightchainRoute : `制作 / ${totalToolCount}機能`}
               </p>
               <h1 className={`${isFeatureDetail ? 'mt-2 text-xl sm:text-2xl' : 'mt-4 text-2xl sm:text-3xl'} font-semibold tracking-tight text-neutral-950 dark:text-white`}>
                 {isFeatureDetail ? selectedTool.title : '用途を選んで、そのまま制作へ進む'}
@@ -3909,124 +3973,159 @@ export function LightchainWorkbenchPage() {
                     </div>
                   </section>
                 ) : isFeatureDetail && selectedTool.id === 'printing-image' ? (
-                  <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#171c1e]" data-testid="lightchain-input-material-panel">
-                    <div className="bg-[#1d4d49] px-4 py-3 text-sm leading-6 text-cyan-50">
-                      <span>この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください </span>
-                      <span className="underline">今すぐ体験</span>
-                    </div>
-	                    <div className="p-4">
-	                      <div className="mb-3 flex justify-end">
-	                        <button
-	                          type="button"
-	                          onClick={() => openMaterialModalForSlot('primary')}
-	                          className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 hover:text-white"
-	                        >
-	                          素材を選択
-	                        </button>
-	                      </div>
-	                      <label
-	                        className="flex min-h-[280px] cursor-pointer flex-col items-center justify-center rounded-xl bg-[#121719] p-5 text-center transition hover:bg-[#151c1f]"
-	                        onClick={() => setActiveMaterialSlot('primary')}
-                      >
-                        <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
-                        {materialSlotFiles.primary ? (
-                          <>
-                            <img src={materialSlotFiles.primary.imageUrl} alt="参考画像" className="max-h-52 rounded-lg object-contain" />
-                            <span className="mt-3 text-sm font-semibold text-white">{materialSlotFiles.primary.name}</span>
-                          </>
-                        ) : (
-                          <>
-                            <ImagePlus className="h-7 w-7 text-neutral-300" />
-                            <span className="mt-5 text-sm font-semibold text-neutral-200">参考画像をアップロードしてください</span>
-                            <span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span>
-                          </>
-                        )}
-                      </label>
-	                      <div className="mt-5 flex items-center justify-between">
-	                        <p className="text-sm font-semibold text-neutral-200">プリントをアップロード</p>
-	                        <div className="flex items-center gap-3">
-	                          <button
-	                            type="button"
-	                            onClick={() => openMaterialModalForSlot('secondary')}
-	                            className="text-xs font-semibold text-neutral-300 transition hover:text-white"
-	                          >
-	                            素材を選択
-	                          </button>
-	                          <button
-	                            type="button"
-	                            onClick={() => {
-	                              setMaterialSlotFiles((current) => ({ ...current, secondary: null }));
-	                              setSecondaryUploadResetKey((key) => key + 1);
-	                            }}
-	                            className="text-xs font-semibold text-neutral-400 transition hover:text-white"
-	                          >
-	                            リセット
-	                          </button>
-	                        </div>
-	                      </div>
-                      <label
-                        className="mt-3 flex min-h-[92px] cursor-pointer items-center justify-center rounded-xl border border-white/5 bg-[#111719] p-4 text-center transition hover:border-cyan-300/40"
-                        onClick={() => setActiveMaterialSlot('secondary')}
-                      >
-                        <input key={secondaryUploadResetKey} type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('secondary', event)} />
-                        {materialSlotFiles.secondary ? (
-                          <div className="flex items-center gap-3">
-                            <img src={materialSlotFiles.secondary.imageUrl} alt="プリント" className="h-14 w-14 rounded-lg object-contain" />
-                            <span className="text-sm font-semibold text-white">{materialSlotFiles.secondary.name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-sm font-semibold text-neutral-300">プリント画像を追加</span>
-                        )}
-                      </label>
-                      <p className="mt-2 text-center text-xs text-neutral-500">画像をアップロード</p>
-                      <p className="mt-1 text-center text-xs text-neutral-500">20MB以下の画像アップロードしてください</p>
-                      <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-xl bg-[#20272a] p-1">
-                        {(['スポット', '全体'] as const).map((mode) => (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() => setPrintingMode(mode)}
-                            className={`rounded-lg px-4 py-2 text-sm font-semibold ${printingMode === mode ? 'bg-[#737d84] text-white' : 'text-neutral-400'}`}
-                          >
-                            {mode}
-                          </button>
-                        ))}
+                  <section className="overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,#0b1012,#070b0d)] shadow-[0_22px_80px_rgba(0,0,0,0.3)]" data-testid="lightchain-input-material-panel">
+                    <div className="border-b border-white/10 bg-[#0f171a] px-4 py-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200/80">printing-image</p>
+                          <h3 className="mt-1 text-lg font-semibold text-white">プリントイメージ</h3>
+                          <p className="mt-1 text-sm leading-6 text-neutral-400">Canva のように、キャンバス上で直接配置を触れます。右のプレビューが実際の作業面です。</p>
+                        </div>
+                        <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold text-cyan-100">
+                          {printingMode}
+                        </span>
                       </div>
-                      <button
-                        type="button"
-                        disabled={aiGenerateDisabled}
-                        onClick={() => {
-                          if (aiGenerateDisabled) {
-                            toast.error('先に素材画像を選択してください');
-                            return;
-                          }
-                          setPrintingNotice('まずマスクを塗るか生成してください');
-                          setLightchainResult({
-                            toolId: selectedTool.id,
-                            title: selectedTool.title,
-                            summary: `${printingMode} / ${materialSlotFiles.primary?.name ?? '参考画像'} / ${materialSlotFiles.secondary?.name ?? 'プリント画像'}`,
-                            imageUrl: encodeSvgDataUrl(`
-                              <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
-                                <rect width="900" height="560" fill="#050909"/>
-                                <rect x="90" y="70" width="720" height="420" rx="24" fill="#141b1d" stroke="#243236" stroke-width="3"/>
-                                <path d="M350 156h200l70 124-64 174H344l-64-174z" fill="#f2f2ee"/>
-                                <rect x="374" y="254" width="152" height="88" rx="22" fill="#65d3cf" opacity="0.9"/>
-                                <text x="450" y="310" text-anchor="middle" fill="#051315" font-family="Arial, sans-serif" font-size="30" font-weight="800">PRINT</text>
-                                <text x="450" y="438" text-anchor="middle" fill="#65d3cf" font-family="Arial, sans-serif" font-size="28" font-weight="800">${escapeSvgText(selectedTool.title)}</text>
-                              </svg>
-                            `),
-                          });
-                          toast.success('履歴にプレビューを追加しました');
-                        }}
-                        className="mt-4 flex w-full items-center justify-center rounded-xl bg-[#65d3cf] px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc] disabled:bg-[#3a484b] disabled:text-neutral-500"
-                      >
-                        AI生成 <Sparkles className="ml-2 h-4 w-4" />
-                      </button>
-                      {printingNotice && (
-                        <p className="mt-3 rounded-xl bg-[#101719] px-3 py-2 text-center text-sm font-semibold text-[#65d3cf]">
-                          {printingNotice}
-                        </p>
-                      )}
+                    </div>
+                    <div className="grid gap-4 p-4 xl:grid-cols-[340px_minmax(0,1fr)]">
+                      <div className="space-y-4">
+                        <div className="rounded-[26px] border border-white/10 bg-white/[0.025] p-4">
+                          <div className="mb-3 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-white">参考画像</p>
+                            <button
+                              type="button"
+                              onClick={() => openMaterialModalForSlot('primary')}
+                              className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:text-white"
+                            >
+                              素材を選択
+                            </button>
+                          </div>
+                          <label
+                            className="flex min-h-[270px] cursor-pointer flex-col items-center justify-center rounded-[22px] border border-white/10 bg-[#101719] p-5 text-center transition hover:border-cyan-300/35 hover:bg-[#121b1e]"
+                            onClick={() => setActiveMaterialSlot('primary')}
+                          >
+                            <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
+                            {materialSlotFiles.primary ? (
+                              <>
+                                <img src={materialSlotFiles.primary.imageUrl} alt="参考画像" className="max-h-52 rounded-xl object-contain" />
+                                <span className="mt-3 text-sm font-semibold text-white">{materialSlotFiles.primary.name}</span>
+                              </>
+                            ) : (
+                              <>
+                                <ImagePlus className="h-7 w-7 text-cyan-200/70" />
+                                <span className="mt-5 text-sm font-semibold text-neutral-200">参考画像をアップロードしてください</span>
+                                <span className="mt-2 text-xs text-neutral-500">20MB以下の画像アップロードしてください</span>
+                              </>
+                            )}
+                          </label>
+                        </div>
+
+                        <div className="rounded-[26px] border border-white/10 bg-white/[0.025] p-4">
+                          <div className="mb-3 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-white">プリント画像</p>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => openMaterialModalForSlot('secondary')}
+                                className="text-xs font-semibold text-neutral-300 transition hover:text-white"
+                              >
+                                素材を選択
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMaterialSlotFiles((current) => ({ ...current, secondary: null }));
+                                  setSecondaryUploadResetKey((key) => key + 1);
+                                }}
+                                className="text-xs font-semibold text-neutral-400 transition hover:text-white"
+                              >
+                                リセット
+                              </button>
+                            </div>
+                          </div>
+                          <label
+                            className="flex min-h-[112px] cursor-pointer items-center justify-center rounded-[22px] border border-white/10 bg-[#101719] p-4 text-center transition hover:border-cyan-300/35 hover:bg-[#121b1e]"
+                            onClick={() => setActiveMaterialSlot('secondary')}
+                          >
+                            <input key={secondaryUploadResetKey} type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('secondary', event)} />
+                            {materialSlotFiles.secondary ? (
+                              <div className="flex items-center gap-3">
+                                <img src={materialSlotFiles.secondary.imageUrl} alt="プリント" className="h-14 w-14 rounded-lg object-contain" />
+                                <span className="text-sm font-semibold text-white">{materialSlotFiles.secondary.name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm font-semibold text-neutral-300">プリント画像を追加</span>
+                            )}
+                          </label>
+                          <p className="mt-2 text-center text-xs text-neutral-500">画像をアップロード</p>
+                          <p className="mt-1 text-center text-xs text-neutral-500">20MB以下の画像アップロードしてください</p>
+                        </div>
+
+                        <div className="rounded-[26px] border border-white/10 bg-white/[0.025] p-4">
+                          <p className="text-sm font-semibold text-white">プリントモード</p>
+                          <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-2xl border border-white/10 bg-[#101719] p-1">
+                            {(['スポット', '全体'] as const).map((mode) => (
+                              <button
+                                key={mode}
+                                type="button"
+                                onClick={() => setPrintingMode(mode)}
+                                className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${printingMode === mode ? 'bg-[#172326] text-cyan-100 ring-1 ring-cyan-300/25' : 'text-neutral-400 hover:text-white'}`}
+                              >
+                                {mode}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="mt-3 text-xs leading-5 text-neutral-400">移動はドラッグ、拡大縮小は角、回転は上のハンドルで直接操作します。</p>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={aiGenerateDisabled}
+                          onClick={() => {
+                            if (aiGenerateDisabled) {
+                              toast.error('先に素材画像を選択してください');
+                              return;
+                            }
+                            const composedPreview = buildPrintingImagePreviewDataUrl({
+                              garmentImageUrl: extractedLayerReady ? extractedGarmentImageUrl || garmentImageUrl : garmentImageUrl,
+                              garmentMaskUrl: extractedLayerReady ? extractedGarmentImageUrl : null,
+                              printImageUrl: materialSlotFiles.secondary?.imageUrl ?? null,
+                              garmentCategory,
+                              printMode: printingMode,
+                              printLabel: materialSlotFiles.secondary?.name ?? 'プリント画像',
+                              transform: printArtworkTransform,
+                            });
+                            const summary = `${printingMode} / ${materialSlotFiles.primary?.name ?? '参考画像'} / ${materialSlotFiles.secondary?.name ?? 'プリント画像'} / ${describePrintPlacement(printArtworkTransform)} / ${describePrintScale(printArtworkTransform)}%`;
+                            setPrintingNotice('キャンバスの内容をそのまま生成履歴に反映しました');
+                            setLightchainResult({
+                              toolId: selectedTool.id,
+                              title: selectedTool.title,
+                              summary,
+                              imageUrl: composedPreview,
+                            });
+                            toast.success('履歴に合成プレビューを追加しました');
+                          }}
+                          className="inline-flex w-full items-center justify-center rounded-2xl bg-[#65d3cf] px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc] disabled:bg-[#243236] disabled:text-neutral-500"
+                        >
+                          AI生成 <Sparkles className="ml-2 h-4 w-4" />
+                        </button>
+                        {printingNotice && (
+                          <p className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.08] px-3 py-2 text-center text-sm font-semibold text-cyan-100">
+                            {printingNotice}
+                          </p>
+                        )}
+                      </div>
+
+                      <PrintingImageComposer
+                        garmentImageUrl={extractedLayerReady ? extractedGarmentImageUrl || garmentImageUrl : garmentImageUrl}
+                        garmentMaskUrl={extractedLayerReady ? extractedGarmentImageUrl : null}
+                        printImageUrl={materialSlotFiles.secondary?.imageUrl ?? null}
+                        garmentCategory={garmentCategory}
+                        printMode={printingMode}
+                        printLabel={materialSlotFiles.secondary?.name ?? 'プリント画像'}
+                        transform={printArtworkTransform}
+                        onTransformChange={setPrintArtworkTransform}
+                        onResetTransform={() => setPrintArtworkTransform(defaultPrintArtworkTransform)}
+                      />
                     </div>
                   </section>
                 ) : isFeatureDetail && lightchainToolPanelConfig ? (
@@ -4690,7 +4789,7 @@ export function LightchainWorkbenchPage() {
                 </div>
                   {isFittingDetail && (
                     <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-800 dark:bg-amber-400/10 dark:text-amber-100">
-                      着用画像を作る時は、この素材作業台ではなくAIフィッティング画面で「画像を入れて作る」から進みます。
+                      着用画像を作る時は、この画面ではなくAIフィッティング画面で「画像を入れて作る」から進みます。
                     </p>
                   )}
                   <Link

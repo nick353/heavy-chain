@@ -549,7 +549,7 @@ export function LabPage() {
       <section className="grid gap-5 lg:grid-cols-2">
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <MaterialWorkbench
-            title="実験素材作業台"
+            title="実験ワークベンチ"
             description="生成候補、物撮り素材、参考LOOKを置き、評価対象と比較レイヤーを視覚的に決めます。"
             uploadLabel="実験素材・生成候補をアップロード"
             emptyLabel="素材を置くと、Canvasへ評価対象の実画像レイヤーとして渡せます"

@@ -595,7 +595,7 @@ export function VideoWorkstationPage() {
       <section className="grid gap-5 lg:grid-cols-2">
         <div className="glass-panel rounded-2xl p-5 lg:col-span-2">
           <MaterialWorkbench
-            title="動画素材作業台"
+            title="動画ワークベンチ"
             description="商品カット、モデル動画の静止画、ロゴ、字幕カードを置き、どのショットレイヤーへ使うかを先に決めます。"
             uploadLabel="商品・モデル・ロゴ素材をアップロード"
             emptyLabel="素材を置くと、Canvasへ動画ショット用の実画像レイヤーとして渡せます"

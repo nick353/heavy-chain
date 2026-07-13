@@ -650,7 +650,7 @@ export function PatternWorkspacePage() {
           <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
 	              <div className="space-y-4">
 	              <MaterialWorkbench
-	                title="素材作業台"
+	                title="制作ワークベンチ"
 	                description="柄画像、ロゴ、服モックをアップロードし、カット、レイヤー、配置を先に決めます。"
 	                uploadLabel="柄・ロゴ・服モックをアップロード"
 	                emptyLabel="素材を置くと、保存時にCanvasへ実画像レイヤーとして渡せます"

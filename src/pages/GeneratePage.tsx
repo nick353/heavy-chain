@@ -404,7 +404,7 @@ const generateWorkbenchByFeature: Record<string, {
   placementOptions: string[];
 }> = {
   'campaign-image': {
-    title: '販促素材作業台',
+    title: '販促ワークベンチ',
     description: '商品、ロゴ、背景を置いてから、広告レイヤーとコピー位置を決めます。',
     uploadLabel: '商品・ロゴ・背景をアップロード',
     emptyLabel: '素材を置くとキャンペーン画像の主役として反映できます',
@@ -4008,7 +4008,7 @@ export function GeneratePage() {
                 to="/dashboard"
                 className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white"
               >
-                制作ワークフロー
+                入口一覧
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -4226,7 +4226,7 @@ export function GeneratePage() {
               className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-neutral-300 transition hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
-              新しい制作
+              入口一覧へ戻る
             </Link>
           </section>
 
@@ -4609,7 +4609,7 @@ export function GeneratePage() {
               )}
               {lightchainCompat && (
                 <div className="rounded-xl border border-teal-200 bg-teal-50/80 p-3 dark:border-teal-800 dark:bg-teal-950/30">
-                  <p className="text-xs font-semibold text-teal-700 dark:text-teal-300">素材作業台連携</p>
+                  <p className="text-xs font-semibold text-teal-700 dark:text-teal-300">制作連携</p>
                   <p className="mt-1 text-xs leading-5 text-neutral-600 dark:text-neutral-300">
                     {lightchainCompat.lightchainFeatureTitle} / {lightchainCompat.lightchainTaskCodes.join(' / ')}
                   </p>

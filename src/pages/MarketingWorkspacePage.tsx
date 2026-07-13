@@ -609,7 +609,7 @@ export function MarketingWorkspacePage() {
             <div className="mt-5 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
               <div className="space-y-3">
                 <MaterialWorkbench
-                  title="販促素材作業台"
+                  title="販促ワークベンチ"
                   description="商品画像、ロゴ、背景、小物を置き、販促物のどのレイヤーへ使うかを先に決めます。"
                   uploadLabel="商品・ロゴ・背景素材をアップロード"
                   emptyLabel="素材を置くと、Canvasへ販促レイヤーとして渡せます"

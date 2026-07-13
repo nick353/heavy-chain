@@ -103,10 +103,10 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-white sm:text-3xl">
-            制作ワークフロー
+            制作入口
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-400 sm:text-base">
-            商品素材から、販促、着用画像、柄、編集、動画までを目的別に選んで始めます。
+            商品素材から、販促、着用画像、柄、編集、動画までを目的別に選んで始められます。
           </p>
         </div>
 

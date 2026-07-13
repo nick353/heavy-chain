@@ -9,7 +9,7 @@ interface FailureRetryCardProps {
 
 export function FailureRetryCard({ failedJobs, className = '' }: FailureRetryCardProps) {
   const topFailure = failedJobs[0];
-  const lightchainRows = topFailure?.sourceSummaryRows.filter((row) => row.label.startsWith('Lightchain')) ?? [];
+  const lightchainRows = topFailure?.sourceSummaryRows.filter((row) => row.label.startsWith('Heavy Chain') || row.label.startsWith('Lightchain')) ?? [];
 
   return (
     <section className={`glass-panel rounded-2xl p-5 ${className}`}>

@@ -75,7 +75,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: 'material-workbench',
-    title: '素材作業台',
+    title: '制作ワークベンチ',
     description: '衣服参考、商品素材、背景、ロゴを読み込み、どのレイヤーに使うかを先に決めます。',
     icon: Wand2,
     tips: [

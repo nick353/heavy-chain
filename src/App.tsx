@@ -49,9 +49,9 @@ const queryClient = new QueryClient({
 const loadingRouteCopy: Record<string, { eyebrow: string; title: string; description: string; actions: string[] }> = {
   '/dashboard': {
     eyebrow: 'Home',
-    title: '制作ワークフローを準備しています',
-    description: '商品画像、素材作業台、Canvas、ジョブ状況へすぐ戻れるようにワークスペースを準備しています。',
-    actions: ['商品画像から始める', '素材作業台を開く', 'ジョブ状況を見る'],
+    title: '制作入口を準備しています',
+    description: '商品画像、グラフィック作業台、Canvas、ジョブ状況へすぐ戻れるようにワークスペースを準備しています。',
+    actions: ['商品画像から始める', 'グラフィック作業台を開く', 'ジョブ状況を見る'],
   },
   '/jobs': {
     eyebrow: 'Production Queue',
@@ -144,8 +144,8 @@ function getLoadingCopy(pathname: string) {
   }
   if (pathname.startsWith('/lightchain')) {
     return {
-      eyebrow: 'Material Workbench',
-      title: '素材作業台を準備しています',
+      eyebrow: 'Heavy Chain',
+      title: '制作入口を準備しています',
     description: 'アップロード、マスク確認、抽出、Canvas保存の導線を準備しています。',
     actions: ['画像をアップロード', 'マスクを確認', 'Canvasに保存'],
     };
