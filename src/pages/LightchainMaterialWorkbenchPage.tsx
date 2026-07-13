@@ -236,6 +236,7 @@ export function LightchainMaterialWorkbenchPage() {
   const userClearedSelectionRef = useRef(false);
   const [activePrintLayoutPresetId, setActivePrintLayoutPresetId] = useState<string>('center');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
   const backgroundColor = '#121619';
   const [fabricBase, setFabricBase] = useState<SelectedImage | null>(null);
   const [fabricDesign, setFabricDesign] = useState<SelectedImage | null>(null);
@@ -512,6 +513,7 @@ export function LightchainMaterialWorkbenchPage() {
             imageUrl,
           });
         }
+        setGeneratedResults(variantResults);
         toast.success('生地バリエーションを生成しました');
         return;
       }
@@ -545,6 +547,7 @@ export function LightchainMaterialWorkbenchPage() {
           imageUrl,
         });
       }
+      setGeneratedResults(generated);
       toast.success('プリント配置を生成しました');
     } catch (error: any) {
       console.error('Workbench generation failed', error);
@@ -847,6 +850,39 @@ export function LightchainMaterialWorkbenchPage() {
               )}
             </div>
           </div>
+          {generatedResults.length > 0 && (
+            <div className="rounded-3xl border border-white/10 bg-neutral-950/80 p-4 shadow-2xl shadow-black/20">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm text-white/60">生成結果</p>
+                  <h3 className="text-lg font-semibold text-white">
+                    {isPrinting ? 'プリント配置の比較' : '生地バリエーション'}
+                  </h3>
+                </div>
+                <Layers3 className="h-5 w-5 text-primary-200" />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {generatedResults.map((result) => (
+                  <div key={result.id} className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+                    <div className="aspect-[4/5] bg-neutral-900">
+                      <img
+                        src={result.imageUrl}
+                        alt={result.title}
+                        className="h-full w-full object-contain"
+                        draggable={false}
+                      />
+                    </div>
+                    <div className="space-y-2 p-4">
+                      <div>
+                        <p className="font-semibold text-white">{result.title}</p>
+                        <p className="mt-1 text-sm text-white/55">{result.note}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

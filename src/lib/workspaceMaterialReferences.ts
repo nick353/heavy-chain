@@ -759,7 +759,7 @@ function buildCutoutFromImage({
       const backgroundAlpha = backgroundPixel
         ? 0
         : nearBackgroundEdge && backgroundDistance < 66
-          ? Math.max(0, Math.min(210, Math.round((backgroundDistance - 34) * 8)))
+          ? 0
           : 255;
       const alpha = Math.min(
         data[index + 3],
