@@ -47,6 +47,9 @@ interface ImageSelectorProps {
   maxImages?: number;
   multipleValue?: SelectedImage[];
   onMultipleChange?: (images: SelectedImage[]) => void;
+  processing?: boolean;
+  hideSelectedPreviewWhileProcessing?: boolean;
+  processingLabel?: string;
 }
 
 export function ImageSelector({
@@ -61,6 +64,9 @@ export function ImageSelector({
   maxImages = 5,
   multipleValue = [],
   onMultipleChange,
+  processing = false,
+  hideSelectedPreviewWhileProcessing = false,
+  processingLabel = '切り抜き処理中',
 }: ImageSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -228,6 +234,13 @@ export function ImageSelector({
           {multipleValue.map((img, index) => (
             <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
               <img src={img.url} alt="" className="w-full h-full object-cover" />
+              {processing && hideSelectedPreviewWhileProcessing && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/35 backdrop-blur-[1px]">
+                  <div className="rounded-full bg-black/60 px-2 py-1 text-[10px] text-white/90">
+                    {processingLabel}
+                  </div>
+                </div>
+              )}
               <button
                 onClick={() => removeMultipleImage(index)}
                 className="absolute top-1 right-1 p-1 bg-black/50 rounded-full text-white hover:bg-black/70"
@@ -362,11 +375,20 @@ export function ImageSelector({
       ) : (
         <div className="relative">
           <div className="rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-            <img
-              src={value.url}
-              alt="Selected"
-              className="w-full max-h-48 object-contain"
-            />
+            {processing && hideSelectedPreviewWhileProcessing ? (
+              <div className="flex min-h-48 items-center justify-center bg-neutral-100/90 dark:bg-neutral-800/90">
+                <div className="text-center">
+                  <div className="spinner mx-auto mb-3" />
+                  <p className="text-sm text-neutral-500 dark:text-neutral-300">{processingLabel}</p>
+                </div>
+              </div>
+            ) : (
+              <img
+                src={value.url}
+                alt="Selected"
+                className="w-full max-h-48 object-contain"
+              />
+            )}
           </div>
           <button
             onClick={removeImage}
@@ -396,5 +418,4 @@ export function ImageSelector({
     </div>
   );
 }
-
 

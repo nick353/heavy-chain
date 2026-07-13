@@ -289,10 +289,34 @@ export function PrintingCompositionStage({
                       <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-full rounded-full border border-[#6d8784]/45 bg-[#0f1718]/90 px-2 py-0.5 text-[10px] font-semibold tracking-[0.18em] text-[#d9e2e0] backdrop-blur-sm">
                         移動中
                       </div>
-                      <span className="absolute -left-2 -top-2 h-4 w-4 rounded-full border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]" />
-                      <span className="absolute -right-2 -top-2 h-4 w-4 rounded-full border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]" />
-                      <span className="absolute -left-2 -bottom-2 h-4 w-4 rounded-full border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]" />
-                      <span className="absolute -right-2 -bottom-2 h-4 w-4 rounded-full border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]" />
+                      <div
+                        role="presentation"
+                        onPointerDown={(event) => beginDrag(layer, 'resize', event)}
+                        className="absolute -left-2 -top-2 h-4 w-4 cursor-nwse-resize rounded-full border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]"
+                        style={{ touchAction: 'none' }}
+                        title="サイズ変更"
+                      />
+                      <div
+                        role="presentation"
+                        onPointerDown={(event) => beginDrag(layer, 'resize', event)}
+                        className="absolute -right-2 -top-2 h-4 w-4 cursor-nesw-resize rounded-full border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]"
+                        style={{ touchAction: 'none' }}
+                        title="サイズ変更"
+                      />
+                      <div
+                        role="presentation"
+                        onPointerDown={(event) => beginDrag(layer, 'resize', event)}
+                        className="absolute -left-2 -bottom-2 h-4 w-4 cursor-nesw-resize rounded-full border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]"
+                        style={{ touchAction: 'none' }}
+                        title="サイズ変更"
+                      />
+                      <div
+                        role="presentation"
+                        onPointerDown={(event) => beginDrag(layer, 'resize', event)}
+                        className="absolute -right-2 -bottom-2 h-4 w-4 cursor-nwse-resize rounded-full border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]"
+                        style={{ touchAction: 'none' }}
+                        title="サイズ変更"
+                      />
                       <div
                         role="presentation"
                         onPointerDown={(event) => beginDrag(layer, 'resize', event)}

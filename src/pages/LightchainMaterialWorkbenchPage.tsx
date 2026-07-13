@@ -692,6 +692,9 @@ export function LightchainMaterialWorkbenchPage() {
                 allowedReferenceTypes={['base']}
                 defaultReferenceType="base"
                 hint="服・Tシャツ・パーカーなどの参考画像を入れます"
+                processing={isPrinting && printGarmentCutting && Boolean(printGarment) && !printGarmentProcessed}
+                hideSelectedPreviewWhileProcessing
+                processingLabel="服を切り抜き中"
               />
               <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                 <input
@@ -717,6 +720,9 @@ export function LightchainMaterialWorkbenchPage() {
                 allowedReferenceTypes={['pattern']}
                 defaultReferenceType="pattern"
                 hint="柄・ロゴ・図案を6つまで追加できます"
+                processing={isPrinting && printGarmentCutting && printDesigns.length > printDesignLayers.length}
+                hideSelectedPreviewWhileProcessing
+                processingLabel="デザインを切り抜き中"
               />
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="mb-3 flex items-center justify-between">
@@ -809,7 +815,7 @@ export function LightchainMaterialWorkbenchPage() {
             </div>
             <div
               ref={stageRef}
-              onPointerDown={() => setSelectedLayerId(activeLayers[activeLayers.length - 1]?.id || null)}
+              onPointerDown={() => setSelectedLayerId(null)}
               className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-white/10 bg-neutral-900"
               style={{
                 background: isPrinting ? printStageBackground : fabricStageBackground,
@@ -818,8 +824,8 @@ export function LightchainMaterialWorkbenchPage() {
               }}
             >
               {isPrinting ? (
-                <PrintingCompositionStage
-                  garmentUrl={printGarmentProcessed || printGarment?.url || null}
+              <PrintingCompositionStage
+                  garmentUrl={printGarmentProcessed || (printGarmentCutting ? null : printGarment?.url || null)}
                   garmentMaskUrl={printGarmentProcessed}
                   layers={stageLayers as Array<{
                     id: string;
