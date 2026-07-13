@@ -97,14 +97,12 @@ function getFrameMaskStyle(maskUrl: string | null): CSSProperties {
 }
 
 export function PrintingCompositionStage({
-  garmentUrl,
   garmentMaskUrl,
   layers,
   selectedLayerId,
   onSelectLayer,
   onCommitLayer,
 }: {
-  garmentUrl: string | null;
   garmentMaskUrl: string | null;
   layers: PrintingLayer[];
   selectedLayerId: string | null;
@@ -221,27 +219,24 @@ export function PrintingCompositionStage({
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_55%)]" />
       <div className="absolute inset-x-[6%] top-[10%] h-[78%] rounded-[36px] border border-white/10 bg-transparent" />
 
-      {garmentUrl && (
-        <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
-          <img
-            src={garmentUrl}
-            alt="参考画像"
-            className="max-h-[88%] w-full max-w-none select-none object-contain object-center"
-            style={{
-              mixBlendMode: 'normal',
-              opacity: 0.99,
-              filter: 'brightness(1) contrast(1) saturate(1) drop-shadow(0 14px 36px rgba(0,0,0,0.22))',
-            }}
-            draggable={false}
-          />
-        </div>
-      )}
-
       {garmentMaskUrl ? (
         <div className="absolute inset-0 z-10" style={getFrameMaskStyle(garmentMaskUrl)}>
           <div className="pointer-events-none absolute inset-0 bg-transparent" />
-          <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16),inset_0_0_0_10px_rgba(255,255,255,0.03)]" />
-          <div className="pointer-events-none absolute inset-[2%] rounded-[30px] border border-white/14 border-dashed" />
+          <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]" />
+          <div className="pointer-events-none absolute inset-[2%] rounded-[30px] border border-white/10 border-dashed opacity-70" />
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <img
+              src={garmentMaskUrl}
+              alt="参考画像の切り抜き"
+              className="max-h-[92%] w-full max-w-none select-none object-contain object-center"
+              style={{
+                mixBlendMode: 'normal',
+                opacity: 1,
+                filter: 'drop-shadow(0 14px 28px rgba(0,0,0,0.18))',
+              }}
+              draggable={false}
+            />
+          </div>
           {draftLayers
             .filter((layer) => layer.id !== 'print-garment')
             .map((layer) => {
