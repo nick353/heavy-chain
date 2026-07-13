@@ -229,8 +229,8 @@ export function PrintingCompositionStage({
             className="max-h-[88%] w-full max-w-none select-none object-contain object-center"
             style={{
               mixBlendMode: 'normal',
-              opacity: 1,
-              filter: 'brightness(1.14) contrast(1.1) saturate(0.98) drop-shadow(0 14px 36px rgba(0,0,0,0.22))',
+              opacity: 0.99,
+              filter: 'brightness(1) contrast(1) saturate(1) drop-shadow(0 14px 36px rgba(0,0,0,0.22))',
             }}
             draggable={false}
           />
