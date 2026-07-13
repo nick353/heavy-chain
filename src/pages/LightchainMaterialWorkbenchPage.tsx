@@ -274,6 +274,7 @@ export function LightchainMaterialWorkbenchPage() {
   const [fabricPresetIds, setFabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentProcessed, setPrintGarmentProcessed] = useState<string | null>(null);
+  const [printGarmentCutoutState, setPrintGarmentCutoutState] = useState<'idle' | 'processing' | 'done' | 'error'>('idle');
   const [printGarmentCutting, setPrintGarmentCutting] = useState(true);
   const [printDesigns, setPrintDesigns] = useState<SelectedImage[]>([]);
   const [printDesignLayers, setPrintDesignLayers] = useState<AssetLayer[]>([]);
@@ -333,12 +334,15 @@ export function LightchainMaterialWorkbenchPage() {
     const processPrintGarment = async () => {
       if (!printGarment) {
         setPrintGarmentProcessed(null);
+        setPrintGarmentCutoutState('idle');
         return;
       }
       if (!printGarmentCutting) {
         setPrintGarmentProcessed(printGarment.url);
+        setPrintGarmentCutoutState('done');
         return;
       }
+      setPrintGarmentCutoutState('processing');
       setPrintGarmentProcessed(null);
       try {
         const cutout = await buildHighPrecisionMaterialCutoutDataUrl({
@@ -346,6 +350,7 @@ export function LightchainMaterialWorkbenchPage() {
           modelName: 'silueta',
         });
         setPrintGarmentProcessed(cutout.dataUrl);
+        setPrintGarmentCutoutState('done');
         return;
       } catch {
         try {
@@ -355,9 +360,11 @@ export function LightchainMaterialWorkbenchPage() {
             candidate: 'トップス',
           });
           setPrintGarmentProcessed(cutout.dataUrl);
+          setPrintGarmentCutoutState('done');
           return;
         } catch {
           setPrintGarmentProcessed(null);
+          setPrintGarmentCutoutState('error');
         }
       }
     };
@@ -692,7 +699,7 @@ export function LightchainMaterialWorkbenchPage() {
                 allowedReferenceTypes={['base']}
                 defaultReferenceType="base"
                 hint="服・Tシャツ・パーカーなどの参考画像を入れます"
-                processing={isPrinting && printGarmentCutting && Boolean(printGarment) && !printGarmentProcessed}
+                processing={isPrinting && printGarmentCutoutState === 'processing'}
                 hideSelectedPreviewWhileProcessing
                 processingLabel="服を切り抜き中"
               />
