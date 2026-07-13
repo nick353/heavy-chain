@@ -123,6 +123,7 @@ export function PrintingCompositionStage({
   }, [draftLayers]);
 
   useEffect(() => {
+    if (dragRef.current) return;
     setDraftLayers(layers);
   }, [layers]);
 
@@ -239,7 +240,7 @@ export function PrintingCompositionStage({
             style={{
               mixBlendMode: 'multiply',
               opacity: 0.95,
-              filter: 'brightness(0.98) contrast(1.04) saturate(0.98) drop-shadow(0 14px 36px rgba(0,0,0,0.22))',
+              filter: 'brightness(0.98) contrast(1.04) saturate(0.98)',
             }}
             draggable={false}
           />
@@ -264,7 +265,7 @@ export function PrintingCompositionStage({
                   type="button"
                   onPointerDown={(event) => beginDrag(layer, 'move', event)}
                   onClick={() => onSelectLayer(layer.id)}
-                  className={`absolute cursor-grab select-none border transition-[border-color,transform] duration-150 active:cursor-grabbing ${selected ? 'border-[#6d8784]' : 'border-white/15 shadow-[0_10px_30px_rgba(0,0,0,0.2)]'}`}
+                  className={`absolute cursor-grab select-none border transition-[border-color,transform] duration-150 active:cursor-grabbing ${selected ? 'border-[#6d8784]' : 'border-white/15'}`}
                   style={{
                     left: `${center.x}px`,
                     top: `${center.y}px`,
@@ -276,6 +277,7 @@ export function PrintingCompositionStage({
                     touchAction: 'none',
                     background: 'transparent',
                     borderRadius: 0,
+                    boxShadow: 'none',
                   }}
                   >
                   <img
@@ -293,35 +295,35 @@ export function PrintingCompositionStage({
                       <div
                         role="presentation"
                         onPointerDown={(event) => beginDrag(layer, 'resize', event)}
-                        className="absolute -left-2 -top-2 h-4 w-4 cursor-nwse-resize border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]"
+                        className="absolute -left-2 -top-2 h-4 w-4 cursor-nwse-resize border border-[#6d8784] bg-[#0f1718]"
                         style={{ touchAction: 'none' }}
                         title="サイズ変更"
                       />
                       <div
                         role="presentation"
                         onPointerDown={(event) => beginDrag(layer, 'resize', event)}
-                        className="absolute -right-2 -top-2 h-4 w-4 cursor-nesw-resize border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]"
+                        className="absolute -right-2 -top-2 h-4 w-4 cursor-nesw-resize border border-[#6d8784] bg-[#0f1718]"
                         style={{ touchAction: 'none' }}
                         title="サイズ変更"
                       />
                       <div
                         role="presentation"
                         onPointerDown={(event) => beginDrag(layer, 'resize', event)}
-                        className="absolute -left-2 -bottom-2 h-4 w-4 cursor-nesw-resize border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]"
+                        className="absolute -left-2 -bottom-2 h-4 w-4 cursor-nesw-resize border border-[#6d8784] bg-[#0f1718]"
                         style={{ touchAction: 'none' }}
                         title="サイズ変更"
                       />
                       <div
                         role="presentation"
                         onPointerDown={(event) => beginDrag(layer, 'resize', event)}
-                        className="absolute -right-2 -bottom-2 h-4 w-4 cursor-nwse-resize border border-[#6d8784] bg-[#0f1718] shadow-[0_0_0_4px_rgba(109,135,132,0.08)]"
+                        className="absolute -right-2 -bottom-2 h-4 w-4 cursor-nwse-resize border border-[#6d8784] bg-[#0f1718]"
                         style={{ touchAction: 'none' }}
                         title="サイズ変更"
                       />
                       <div
                         role="presentation"
                         onPointerDown={(event) => beginDrag(layer, 'resize', event)}
-                        className="absolute -right-5 -bottom-5 grid h-8 w-8 place-items-center border border-[#6d8784]/40 bg-[#0d1314]/90 text-[#d9e2e0] shadow-[0_12px_30px_rgba(0,0,0,0.35)] transition-transform hover:scale-105"
+                        className="absolute -right-5 -bottom-5 grid h-8 w-8 place-items-center border border-[#6d8784]/40 bg-[#0d1314]/90 text-[#d9e2e0] transition-transform hover:scale-105"
                         style={{ touchAction: 'none' }}
                         title="サイズ変更"
                       >
@@ -330,7 +332,7 @@ export function PrintingCompositionStage({
                       <div
                         role="presentation"
                         onPointerDown={(event) => beginDrag(layer, 'rotate', event)}
-                        className="absolute left-1/2 top-[-3.2rem] grid h-8 w-8 -translate-x-1/2 place-items-center rounded-full border border-[#6d8784]/40 bg-[#0d1314]/90 text-[#d9e2e0] shadow-[0_12px_30px_rgba(0,0,0,0.35)] transition-transform hover:scale-105"
+                        className="absolute left-1/2 top-[-3.2rem] grid h-8 w-8 -translate-x-1/2 place-items-center rounded-full border border-[#6d8784]/40 bg-[#0d1314]/90 text-[#d9e2e0] transition-transform hover:scale-105"
                         style={{ touchAction: 'none' }}
                         title="回転"
                       >
