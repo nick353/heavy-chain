@@ -19,7 +19,8 @@ import { PrintMaskCandidatePicker } from '../components/workspace/PrintMaskCandi
 import { PrintMaskEditor } from '../components/workspace/PrintMaskEditor';
 import { useAuthStore } from '../stores/authStore';
 import {
-  buildPrintGarmentMaskCandidates,
+  buildDerivedPrintGarmentMaskCandidates,
+  buildPrintGarmentCutoutDataUrl,
   buildPrintDesignCutoutDataUrl,
   buildPrintRequestSignature,
   buildPrintRequestSnapshot,
@@ -493,17 +494,30 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintGarmentMaskCandidates([]);
     setSelectedPrintGarmentMaskCandidateId('auto');
     void withTimeout(
-      buildPrintGarmentMaskCandidates({ imageUrl: printGarment.url }),
+      buildPrintGarmentCutoutDataUrl({ imageUrl: printGarment.url }),
       CUTOUT_TIMEOUT_MS,
       '参考画像の透明化がタイムアウトしました。元画像を確認して再試行してください',
     )
-      .then((candidates) => {
+      .then((automaticResult) => {
         if (cancelled || printGarmentCutoutRequestRef.current !== requestId) return;
-        const selection = selectPrintGarmentMaskCandidateValue(candidates, 'auto');
-        setPrintGarmentMaskCandidates(candidates);
-        setSelectedPrintGarmentMaskCandidateId(selection.candidateId);
-        setPrintGarmentProcessed(selection.dataUrl);
+        const automaticCandidate: PrintGarmentMaskCandidate = {
+          candidateId: 'auto',
+          label: '自動（推奨）',
+          description: '高精度の自動切り抜きです',
+          result: automaticResult,
+        };
+        setPrintGarmentMaskCandidates([automaticCandidate]);
+        setSelectedPrintGarmentMaskCandidateId('auto');
+        setPrintGarmentProcessed(automaticResult.dataUrl);
         setPrintGarmentCutoutState('done');
+        void buildDerivedPrintGarmentMaskCandidates({ baseResult: automaticResult })
+          .then((candidates) => {
+            if (cancelled || printGarmentCutoutRequestRef.current !== requestId) return;
+            setPrintGarmentMaskCandidates(candidates);
+          })
+          .catch((candidateError) => {
+            console.warn('Optional garment mask candidates could not be prepared.', candidateError);
+          });
       })
       .catch((error) => {
         if (cancelled || printGarmentCutoutRequestRef.current !== requestId) return;

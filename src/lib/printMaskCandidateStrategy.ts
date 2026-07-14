@@ -296,17 +296,20 @@ export const buildPrintMaskCandidateRgba = ({
 
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
-      const alphaValues: number[] = [];
+      let neighborhoodAlpha = candidateId === 'detail' ? 0 : 255;
       for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
         for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
           const alpha = readAlpha(rgba, width, height, x + offsetX, y + offsetY);
-          if (alpha !== null) alphaValues.push(alpha);
+          if (alpha === null) continue;
+          neighborhoodAlpha = candidateId === 'detail'
+            ? Math.max(neighborhoodAlpha, alpha)
+            : Math.min(neighborhoodAlpha, alpha);
         }
       }
       const currentAlpha = rgba[((y * width) + x) * 4 + 3];
       const alpha = candidateId === 'detail'
-        ? (currentAlpha === 0 ? 0 : Math.max(...alphaValues))
-        : Math.min(...alphaValues);
+        ? (currentAlpha === 0 ? 0 : neighborhoodAlpha)
+        : neighborhoodAlpha;
       output[((y * width) + x) * 4 + 3] = alpha;
     }
   }

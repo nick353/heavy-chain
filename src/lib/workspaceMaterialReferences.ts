@@ -991,6 +991,7 @@ const buildWhiteBackgroundFallbackCutout = async ({
 
 const REMBG_OPERATION_TIMEOUT_MS = 30_000;
 const PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD = 36;
+const PRINT_CUTOUT_MAX_OUTPUT_DIMENSION = 1_400;
 
 const withRembgOperationTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => {
   let timeoutId: number | undefined;
@@ -1141,6 +1142,31 @@ export async function buildPrintGarmentCutoutDataUrl({
   imageUrl: string;
   maxDataUrlBytes?: number;
 }): Promise<MaterialCutoutResult> {
+  const finalizeResult = async (result: MaterialCutoutResult) => {
+    const verified = await assertPrintCutoutQuality(result, '参考画像');
+    const image = await loadImageElement(verified.dataUrl);
+    const width = image.naturalWidth || image.width;
+    const height = image.naturalHeight || image.height;
+    const ratio = Math.min(1, PRINT_CUTOUT_MAX_OUTPUT_DIMENSION / Math.max(width, height));
+    if (ratio >= 1) return verified;
+    const outputWidth = Math.max(1, Math.round(width * ratio));
+    const outputHeight = Math.max(1, Math.round(height * ratio));
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = outputWidth;
+    outputCanvas.height = outputHeight;
+    const outputContext = outputCanvas.getContext('2d');
+    if (!outputContext) throw new Error('Canvasを初期化できませんでした');
+    outputContext.imageSmoothingEnabled = true;
+    outputContext.imageSmoothingQuality = 'high';
+    outputContext.drawImage(image, 0, 0, width, height, 0, 0, outputWidth, outputHeight);
+    const dataUrl = canvasToPngDataUrl(outputCanvas);
+    return {
+      ...verified,
+      dataUrl,
+      outputSize: { width: outputWidth, height: outputHeight },
+      dataUrlBytes: estimateDataUrlBytes(dataUrl),
+    };
+  };
   const image = await loadImageElement(imageUrl);
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
@@ -1154,7 +1180,7 @@ export async function buildPrintGarmentCutoutDataUrl({
   const alphaBounds = getAlphaBounds(sourceData);
 
   if (alphaBounds?.hasTransparentPixels) {
-    return await assertPrintCutoutQuality(buildBoundedPngFromCanvas({
+    return finalizeResult(buildBoundedPngFromCanvas({
       canvas,
       sourceWidth,
       sourceHeight,
@@ -1162,14 +1188,14 @@ export async function buildPrintGarmentCutoutDataUrl({
       storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
       engine: 'browser-existing-transparent-garment-v1',
       validateSubjectShape: true,
-    }), '参考画像');
+    }));
   }
 
   const sourceBackground = estimateBackgroundColor(sourceData.data, sourceWidth, sourceHeight);
   if (sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD) {
     try {
       const fastResult = await buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
-      return await assertPrintCutoutQuality(fastResult, '参考画像');
+      return await finalizeResult(fastResult);
     } catch (fastCutoutError) {
       console.warn('Fast uniform-background garment cutout was not usable; trying AI cutout.', {
         sourceBackground,
@@ -1185,11 +1211,11 @@ export async function buildPrintGarmentCutoutDataUrl({
       modelName: 'isnet-general-use',
       postProcessMask: false,
     });
-      return await assertPrintCutoutQuality(result, '参考画像');
+      return await finalizeResult(result);
   } catch (highPrecisionError) {
     try {
       const fallback = await buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
-      return await assertPrintCutoutQuality(fallback, '参考画像');
+      return await finalizeResult(fallback);
     } catch (fallbackError) {
       const detail = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
       console.warn('Print garment cutout failed', { highPrecisionError, fallbackError });
@@ -1238,6 +1264,23 @@ const buildDerivedPrintGarmentMaskCandidate = async ({
   };
 };
 
+export async function buildDerivedPrintGarmentMaskCandidates({
+  baseResult,
+  maxDataUrlBytes = 750_000,
+}: {
+  baseResult: MaterialCutoutResult;
+  maxDataUrlBytes?: number;
+}): Promise<PrintGarmentMaskCandidate[]> {
+  return assemblePrintGarmentMaskCandidates({
+    automaticResult: baseResult,
+    deriveResult: (candidateId) => buildDerivedPrintGarmentMaskCandidate({
+      baseResult,
+      candidateId,
+      maxDataUrlBytes,
+    }),
+  });
+}
+
 export async function buildPrintGarmentMaskCandidates({
   imageUrl,
   maxDataUrlBytes = 750_000,
@@ -1246,14 +1289,7 @@ export async function buildPrintGarmentMaskCandidates({
   maxDataUrlBytes?: number;
 }): Promise<PrintGarmentMaskCandidate[]> {
   const automaticResult = await buildPrintGarmentCutoutDataUrl({ imageUrl, maxDataUrlBytes });
-  return assemblePrintGarmentMaskCandidates({
-    automaticResult,
-    deriveResult: (candidateId) => buildDerivedPrintGarmentMaskCandidate({
-      baseResult: automaticResult,
-      candidateId,
-      maxDataUrlBytes,
-    }),
-  });
+  return buildDerivedPrintGarmentMaskCandidates({ baseResult: automaticResult, maxDataUrlBytes });
 }
 
 /**

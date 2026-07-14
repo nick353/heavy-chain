@@ -10,7 +10,9 @@ const editor = fs.readFileSync('src/components/workspace/PrintMaskEditor.tsx', '
 const artworkStrategy = fs.readFileSync('src/lib/printArtworkMaskStrategy.ts', 'utf8');
 
 const checks = {
-  candidate_builder_used: page.includes('buildPrintGarmentMaskCandidates') && library.includes('buildPrintGarmentMaskCandidates'),
+  candidate_builder_used: page.includes('buildPrintGarmentCutoutDataUrl')
+    && page.includes('buildDerivedPrintGarmentMaskCandidates')
+    && library.includes('buildDerivedPrintGarmentMaskCandidates'),
   stable_candidate_id_state: page.includes('selectedPrintGarmentMaskCandidateId'),
   selection_updates_stage_url: page.includes('setPrintGarmentProcessed(selection.dataUrl)'),
   selection_enters_generation_signature: page.includes('printGarmentMaskCandidateId: selectedPrintGarmentMaskCandidateId'),
@@ -55,6 +57,10 @@ const checks = {
       < library.indexOf("modelName: 'isnet-general-use',\n      postProcessMask: false"),
   cutout_timeout_allows_ai_fallback_to_finish: page.includes('const CUTOUT_TIMEOUT_MS = 75_000')
     && library.includes('const REMBG_OPERATION_TIMEOUT_MS = 30_000'),
+  automatic_garment_result_is_shown_before_optional_candidates: page.indexOf("setPrintGarmentCutoutState('done')")
+    < page.indexOf('buildDerivedPrintGarmentMaskCandidates({ baseResult: automaticResult })'),
+  garment_candidate_work_is_dimension_bounded: library.includes('PRINT_CUTOUT_MAX_OUTPUT_DIMENSION = 1_400')
+    && library.includes('PRINT_CUTOUT_MAX_OUTPUT_DIMENSION / Math.max(width, height)'),
 };
 
 const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);
