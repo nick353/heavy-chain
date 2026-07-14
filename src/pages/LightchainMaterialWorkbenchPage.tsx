@@ -107,7 +107,8 @@ const fabricVariants = [
 ];
 
 const printStageSize = { width: 720, height: 900 };
-const CUTOUT_TIMEOUT_MS = 30_000;
+const IMAGE_LOAD_TIMEOUT_MS = 30_000;
+const CUTOUT_TIMEOUT_MS = 75_000;
 const COMPOSITION_TIMEOUT_MS = 30_000;
 
 function clamp(value: number, min: number, max: number) {
@@ -125,7 +126,7 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
       img.onerror = null;
       img.src = '';
       reject(new Error('画像の読み込みがタイムアウトしました'));
-    }, CUTOUT_TIMEOUT_MS);
+    }, IMAGE_LOAD_TIMEOUT_MS);
     const settle = (callback: () => void) => {
       if (settled) return;
       settled = true;

@@ -990,6 +990,7 @@ const buildWhiteBackgroundFallbackCutout = async ({
 };
 
 const REMBG_OPERATION_TIMEOUT_MS = 30_000;
+const PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD = 36;
 
 const withRembgOperationTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => {
   let timeoutId: number | undefined;
@@ -1149,7 +1150,8 @@ export async function buildPrintGarmentCutoutDataUrl({
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Canvasを初期化できませんでした');
   context.drawImage(image, 0, 0, sourceWidth, sourceHeight);
-  const alphaBounds = getAlphaBounds(context.getImageData(0, 0, sourceWidth, sourceHeight));
+  const sourceData = context.getImageData(0, 0, sourceWidth, sourceHeight);
+  const alphaBounds = getAlphaBounds(sourceData);
 
   if (alphaBounds?.hasTransparentPixels) {
     return await assertPrintCutoutQuality(buildBoundedPngFromCanvas({
@@ -1161,6 +1163,19 @@ export async function buildPrintGarmentCutoutDataUrl({
       engine: 'browser-existing-transparent-garment-v1',
       validateSubjectShape: true,
     }), '参考画像');
+  }
+
+  const sourceBackground = estimateBackgroundColor(sourceData.data, sourceWidth, sourceHeight);
+  if (sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD) {
+    try {
+      const fastResult = await buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
+      return await assertPrintCutoutQuality(fastResult, '参考画像');
+    } catch (fastCutoutError) {
+      console.warn('Fast uniform-background garment cutout was not usable; trying AI cutout.', {
+        sourceBackground,
+        fastCutoutError,
+      });
+    }
   }
 
   try {

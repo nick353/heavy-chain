@@ -50,6 +50,11 @@ const checks = {
   print_ai_edges_are_decontaminated_without_blur: library.includes('decontaminateBoundaryRgb')
     && library.includes('if (!postProcessMask)')
     && library.includes('background.sampleSpread <= 72'),
+  uniform_garment_background_avoids_model_timeout: library.includes('PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD = 36')
+    && library.indexOf('sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD')
+      < library.indexOf("modelName: 'isnet-general-use',\n      postProcessMask: false"),
+  cutout_timeout_allows_ai_fallback_to_finish: page.includes('const CUTOUT_TIMEOUT_MS = 75_000')
+    && library.includes('const REMBG_OPERATION_TIMEOUT_MS = 30_000'),
 };
 
 const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);
