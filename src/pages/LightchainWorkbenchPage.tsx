@@ -1,4 +1,4 @@
-import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowRight,
@@ -44,6 +44,7 @@ type WorkbenchStep = 'asset' | 'mask' | 'extracted' | 'next';
 type MaterialTab = 'upload-history' | 'generation-history' | 'my-library' | 'team-library' | 'platform-assets';
 type MaterialSlotKey = 'primary' | 'secondary';
 type ModelPanelVariant = 'uploadPair' | 'body' | 'size' | 'angle' | 'custom';
+type PrintingGenerationStatus = 'idle' | 'pending' | 'processing' | 'success' | 'error';
 
 type ModelFormState = {
   customMode: string;
@@ -936,6 +937,8 @@ export function LightchainWorkbenchPage() {
   const [activeFittingInputTab, setActiveFittingInputTab] = useState('説明生成');
   const [printingMode, setPrintingMode] = useState<'スポット' | '全体'>('スポット');
   const [printingNotice, setPrintingNotice] = useState('');
+  const [printingGenerationStatus, setPrintingGenerationStatus] = useState<PrintingGenerationStatus>('idle');
+  const [printingGenerationError, setPrintingGenerationError] = useState<string | null>(null);
   const [fabricPrompt, setFabricPrompt] = useState('');
   const [fabricNotice, setFabricNotice] = useState('');
   const [lineDraftType, setLineDraftType] = useState<'カラー線画' | 'モノクロ線画'>('カラー線画');
@@ -954,26 +957,11 @@ export function LightchainWorkbenchPage() {
   const [printDesignPrompt, setPrintDesignPrompt] = useState('');
   const [marketingDetailTab, setMarketingDetailTab] = useState<'assistant' | 'layers'>('assistant');
   const [marketingDetailPrompt, setMarketingDetailPrompt] = useState('');
+  const printingGenerationRequestRef = useRef<number | null>(null);
+  const printingGenerationSequenceRef = useRef(0);
 
   const renderLightchainResultPreviewImage = (className: string, alt: string) => {
     if (!lightchainResult) return null;
-    const previewable = lightchainResult?.toolId === 'printing-image';
-    const imageClassName = previewable
-      ? `${className} cursor-zoom-in transition duration-300 group-hover:scale-[1.01] group-hover:brightness-105`
-      : className;
-
-    const image = (
-      <img
-        src={lightchainResult.imageUrl}
-        alt={alt}
-        className={imageClassName}
-      />
-    );
-
-    if (!previewable) {
-      return image;
-    }
-
     return (
       <button
         type="button"
@@ -982,7 +970,11 @@ export function LightchainWorkbenchPage() {
         aria-label={`${lightchainResult.title}を拡大表示`}
       >
         <span className="relative block overflow-hidden">
-          {image}
+          <img
+            src={lightchainResult.imageUrl}
+            alt={alt}
+            className={`${className} cursor-zoom-in transition duration-300 group-hover:scale-[1.01] group-hover:brightness-105`}
+          />
           <span className="pointer-events-none absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-lg transition group-hover:opacity-100">
             <Maximize2 className="h-3 w-3" />
             拡大
@@ -991,6 +983,30 @@ export function LightchainWorkbenchPage() {
       </button>
     );
   };
+
+  const lightchainResultModal = lightchainResult ? (
+    <Modal
+      isOpen={lightchainResultPreviewOpen && Boolean(lightchainResult)}
+      onClose={() => setLightchainResultPreviewOpen(false)}
+      title={lightchainResult?.title ?? '結果を拡大表示'}
+      size="xl"
+    >
+      {lightchainResult && (
+        <div className="space-y-4">
+          <div className="overflow-hidden rounded-2xl bg-black/30">
+            <img
+              src={lightchainResult.imageUrl}
+              alt={lightchainResult.title}
+              className="max-h-[72vh] w-full object-contain"
+            />
+          </div>
+          <p className="text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+            {lightchainResult.summary}
+          </p>
+        </div>
+      )}
+    </Modal>
+  ) : null;
 
   const filteredTools = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -1011,6 +1027,8 @@ export function LightchainWorkbenchPage() {
   const routeTool = toolId ? tools.find((tool) => tool.id === toolId) ?? null : null;
   const isFeatureDetail = Boolean(toolId);
   const selectedTool = routeTool ?? tools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? tools[0];
+  const isPrintingImageGenerationRunning = printingGenerationStatus === 'pending' || printingGenerationStatus === 'processing';
+  const isPrintingImageGenerationLocked = isPrintingImageGenerationRunning || printingGenerationRequestRef.current !== null;
   const selectedCategory = categories.find((category) => category.id === (isFeatureDetail ? selectedTool.category : activeCategory)) ?? categories[0];
   const isPatternVectorProFlow = selectedTool.id === 'pattern-vector' || selectedTool.id === 'pattern-vector-pro';
   const isFittingDetail = [
@@ -1270,7 +1288,10 @@ export function LightchainWorkbenchPage() {
     setMaterialSlotFiles({ primary: null, secondary: null });
     setLightchainResultPreviewOpen(false);
     setModelFormState(defaultModelFormState);
-    setLightchainResult(null);
+    setPrintingGenerationStatus('idle');
+    setPrintingGenerationError(null);
+    printingGenerationSequenceRef.current += 1;
+    printingGenerationRequestRef.current = null;
     setPrintingMode('スポット');
     setPrintingNotice('');
     setFabricPrompt('');
@@ -1303,6 +1324,13 @@ export function LightchainWorkbenchPage() {
   }, [selectedTool.category, selectedTool.id]);
 
   useEffect(() => {
+    return () => {
+      printingGenerationSequenceRef.current += 1;
+      printingGenerationRequestRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     if (selectedTool.id !== 'printing-image') return;
     setPrintPlacement(describePrintPlacement(printArtworkTransform));
     setPrintScale(describePrintScale(printArtworkTransform));
@@ -1313,6 +1341,73 @@ export function LightchainWorkbenchPage() {
     setQuery('');
     setMobileToolsExpanded(false);
     setSelectedToolId(tools.find((tool) => tool.category === categoryId)?.id ?? tools[0].id);
+  };
+
+  const yieldNextTick = () => new Promise<void>((resolve) => {
+    window.setTimeout(resolve, 48);
+  });
+
+  const resetPrintingImageGeneration = () => {
+    printingGenerationRequestRef.current = null;
+    setPrintingGenerationStatus('idle');
+    setPrintingGenerationError(null);
+  };
+
+  const handlePrintingImageGenerate = async () => {
+    if (isPrintingImageGenerationLocked) return;
+    if (aiGenerateDisabled) {
+      toast.error('先に素材画像を選択してください');
+      return;
+    }
+
+    const requestId = ++printingGenerationSequenceRef.current;
+    printingGenerationRequestRef.current = requestId;
+    setPrintingGenerationError(null);
+    setPrintingGenerationStatus('pending');
+    setPrintingNotice('');
+    setLightchainResultPreviewOpen(false);
+
+    try {
+      await yieldNextTick();
+      if (printingGenerationRequestRef.current !== requestId) return;
+
+      setPrintingGenerationStatus('processing');
+      await yieldNextTick();
+      if (printingGenerationRequestRef.current !== requestId) return;
+
+      const composedPreview = buildPrintingImagePreviewDataUrl({
+        garmentImageUrl: extractedLayerReady ? extractedGarmentImageUrl || garmentImageUrl : garmentImageUrl,
+        garmentMaskUrl: extractedLayerReady ? extractedGarmentImageUrl : null,
+        printImageUrl: materialSlotFiles.secondary?.imageUrl ?? null,
+        garmentCategory,
+        printMode: printingMode,
+        printLabel: materialSlotFiles.secondary?.name ?? 'プリント画像',
+        transform: printArtworkTransform,
+      });
+
+      if (printingGenerationRequestRef.current !== requestId) return;
+
+      setLightchainResult({
+        toolId: selectedTool.id,
+        title: selectedTool.title,
+        summary: `${printingMode} / ${materialSlotFiles.primary?.name ?? '参考画像'} / ${materialSlotFiles.secondary?.name ?? 'プリント画像'} / ${describePrintPlacement(printArtworkTransform)} / ${describePrintScale(printArtworkTransform)}%`,
+        imageUrl: composedPreview,
+      });
+      setPrintingNotice('キャンバスの内容をそのまま生成履歴に反映しました');
+      setPrintingGenerationStatus('success');
+      toast.success('履歴に合成プレビューを追加しました');
+
+      await yieldNextTick();
+      if (printingGenerationRequestRef.current !== requestId) return;
+
+      resetPrintingImageGeneration();
+    } catch (error) {
+      if (printingGenerationRequestRef.current !== requestId) return;
+      setPrintingGenerationError(error instanceof Error ? error.message : '生成に失敗しました');
+      setPrintingGenerationStatus('error');
+      toast.error(error instanceof Error ? error.message : '生成に失敗しました');
+      printingGenerationRequestRef.current = null;
+    }
   };
 
   if (toolId && !routeTool) {
@@ -3544,27 +3639,7 @@ export function LightchainWorkbenchPage() {
             </div>
           </div>
         )}
-        <Modal
-          isOpen={lightchainResultPreviewOpen && Boolean(lightchainResult)}
-          onClose={() => setLightchainResultPreviewOpen(false)}
-          title={lightchainResult?.title ?? '結果を拡大表示'}
-          size="xl"
-        >
-          {lightchainResult && (
-            <div className="space-y-4">
-              <div className="overflow-hidden rounded-2xl bg-black/30">
-                <img
-                  src={lightchainResult.imageUrl}
-                  alt={lightchainResult.title}
-                  className="max-h-[72vh] w-full object-contain"
-                />
-              </div>
-              <p className="text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-                {lightchainResult.summary}
-              </p>
-            </div>
-          )}
-        </Modal>
+        {lightchainResultModal}
       </main>
     );
   }
@@ -4176,35 +4251,22 @@ export function LightchainWorkbenchPage() {
 
                         <button
                           type="button"
-                          disabled={aiGenerateDisabled}
-                          onClick={() => {
-                            if (aiGenerateDisabled) {
-                              toast.error('先に素材画像を選択してください');
-                              return;
-                            }
-                            const composedPreview = buildPrintingImagePreviewDataUrl({
-                              garmentImageUrl: extractedLayerReady ? extractedGarmentImageUrl || garmentImageUrl : garmentImageUrl,
-                              garmentMaskUrl: extractedLayerReady ? extractedGarmentImageUrl : null,
-                              printImageUrl: materialSlotFiles.secondary?.imageUrl ?? null,
-                              garmentCategory,
-                              printMode: printingMode,
-                              printLabel: materialSlotFiles.secondary?.name ?? 'プリント画像',
-                              transform: printArtworkTransform,
-                            });
-                            const summary = `${printingMode} / ${materialSlotFiles.primary?.name ?? '参考画像'} / ${materialSlotFiles.secondary?.name ?? 'プリント画像'} / ${describePrintPlacement(printArtworkTransform)} / ${describePrintScale(printArtworkTransform)}%`;
-                            setPrintingNotice('キャンバスの内容をそのまま生成履歴に反映しました');
-                            setLightchainResult({
-                              toolId: selectedTool.id,
-                              title: selectedTool.title,
-                              summary,
-                              imageUrl: composedPreview,
-                            });
-                            toast.success('履歴に合成プレビューを追加しました');
-                          }}
+                          disabled={aiGenerateDisabled || isPrintingImageGenerationLocked}
+                          onClick={handlePrintingImageGenerate}
                           className="inline-flex w-full items-center justify-center rounded-2xl bg-[#65d3cf] px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc] disabled:bg-[#243236] disabled:text-neutral-500"
                         >
-                          AI生成 <Sparkles className="ml-2 h-4 w-4" />
+                          {printingGenerationStatus === 'error'
+                            ? '再生成'
+                            : isPrintingImageGenerationRunning
+                              ? '生成中...'
+                              : 'AI生成'}
+                          <Sparkles className={`ml-2 h-4 w-4 ${isPrintingImageGenerationRunning ? 'animate-pulse' : ''}`} />
                         </button>
+                        {printingGenerationStatus === 'error' && printingGenerationError && (
+                          <p className="rounded-2xl border border-rose-300/20 bg-rose-300/[0.08] px-3 py-2 text-center text-sm font-semibold text-rose-100">
+                            {printingGenerationError}
+                          </p>
+                        )}
                         {printingNotice && (
                           <p className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.08] px-3 py-2 text-center text-sm font-semibold text-cyan-100">
                             {printingNotice}
@@ -4220,6 +4282,7 @@ export function LightchainWorkbenchPage() {
                         printMode={printingMode}
                         printLabel={materialSlotFiles.secondary?.name ?? 'プリント画像'}
                         transform={printArtworkTransform}
+                        isProcessing={isPrintingImageGenerationRunning}
                         onTransformChange={setPrintArtworkTransform}
                         onResetTransform={() => setPrintArtworkTransform(defaultPrintArtworkTransform)}
                       />
@@ -5106,6 +5169,7 @@ export function LightchainWorkbenchPage() {
           </div>
         </div>
       )}
+      {lightchainResultModal}
     </main>
   );
 }

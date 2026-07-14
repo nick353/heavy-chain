@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from 'react';
-import { Move3D, RotateCw, Square } from 'lucide-react';
+import { Move3D, RefreshCw, RotateCw, Square } from 'lucide-react';
 
 export type PrintingTransform = {
   x: number;
@@ -26,8 +26,9 @@ type DragSession = {
   mode: DragMode;
   pointerId: number;
   startTransform: PrintingTransform;
-  startDistance: number;
   startAngle: number;
+  resizeVector: { x: number; y: number };
+  startProjection: number;
 };
 
 const defaultStageSize: StageSize = { width: 0, height: 0 };
@@ -40,6 +41,13 @@ function clamp(value: number, min: number, max: number) {
 
 function getAngleDegrees(centerX: number, centerY: number, clientX: number, clientY: number) {
   return (Math.atan2(clientY - centerY, clientX - centerX) * 180) / Math.PI;
+}
+
+function normalizeAngleDelta(delta: number) {
+  let next = delta % 360;
+  if (next > 180) next -= 360;
+  if (next < -180) next += 360;
+  return next;
 }
 
 function getDistance(centerX: number, centerY: number, clientX: number, clientY: number) {
@@ -160,14 +168,17 @@ export function PrintingCompositionStage({
           const nextY = clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100);
           return { ...layer, transform: { ...layer.transform, x: nextX, y: nextY } };
         }
-        if (session.mode === 'resize') {
-          const currentDistance = Math.max(20, getDistance(center.x, center.y, event.clientX, event.clientY));
-          const ratio = currentDistance / Math.max(20, session.startDistance);
-          const nextScale = clamp(session.startTransform.scale * ratio, minScale, maxScale);
-          return { ...layer, transform: { ...layer.transform, scale: nextScale } };
-        }
+      if (session.mode === 'resize') {
+        const currentProjection = Math.max(
+          20,
+          ((event.clientX - center.x) * session.resizeVector.x) + ((event.clientY - center.y) * session.resizeVector.y),
+        );
+        const ratio = currentProjection / Math.max(20, session.startProjection);
+        const nextScale = clamp(session.startTransform.scale * ratio, minScale, maxScale);
+        return { ...layer, transform: { ...layer.transform, scale: nextScale } };
+      }
         const nextAngle = getAngleDegrees(center.x, center.y, event.clientX, event.clientY);
-        const delta = nextAngle - session.startAngle;
+        const delta = normalizeAngleDelta(nextAngle - session.startAngle);
         return { ...layer, transform: { ...layer.transform, rotation: clamp(session.startTransform.rotation + delta, -72, 72) } };
       });
       draftLayersRef.current = nextLayers;
@@ -203,16 +214,29 @@ export function PrintingCompositionStage({
     event.stopPropagation();
     onSelectLayer(layer.id);
     const center = getLayerCenterPx(size, layer.transform);
+    const resizeMagnitude = Math.max(20, getDistance(center.x, center.y, event.clientX, event.clientY));
+    const resizeVector = {
+      x: (event.clientX - center.x) / resizeMagnitude,
+      y: (event.clientY - center.y) / resizeMagnitude,
+    };
     dragRef.current = {
       id: layer.id,
       mode,
       pointerId: event.pointerId,
       startTransform: layer.transform,
-      startDistance: getDistance(center.x, center.y, event.clientX, event.clientY),
       startAngle: getAngleDegrees(center.x, center.y, event.clientX, event.clientY),
+      resizeVector,
+      startProjection: resizeMagnitude,
     };
     (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
   };
+
+  const processingLayer = useMemo(
+    () => draftLayers.find((layer) => layer.cutoutState === 'processing') || null,
+    [draftLayers],
+  );
+  const isProcessing = Boolean(processingLayer);
+  const statusLayer = processingLayer || selectedLayer;
 
   return (
     <div
@@ -346,6 +370,16 @@ export function PrintingCompositionStage({
         </div>
       ) : null}
 
+      {isProcessing && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="rounded-[24px] border border-cyan-300/20 bg-[#0d1314]/92 px-5 py-4 text-center shadow-[0_18px_40px_rgba(0,0,0,0.35)]">
+            <RefreshCw className="mx-auto h-5 w-5 animate-spin text-cyan-100" />
+            <p className="mt-2 text-sm font-semibold text-white">{processingLayer ? `${processingLayer.label} をプロセス中` : 'プロセス中'}</p>
+            <p className="mt-1 text-xs text-neutral-400">完了するまでこの画面をそのまま待ってください</p>
+          </div>
+        </div>
+      )}
+
       <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-[11px] font-medium tracking-[0.22em] text-neutral-300 backdrop-blur-md">
         Canva-style direct edit
       </div>
@@ -355,7 +389,7 @@ export function PrintingCompositionStage({
         <div className="flex items-center gap-2"><RotateCw className="h-3.5 w-3.5 text-[#a1b9b5]" /> 回転</div>
       </div>
 
-      {!garmentMaskUrl && (
+      {!garmentMaskUrl && !isProcessing && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-center text-white/70 backdrop-blur">
             <p className="text-sm">参考画像をアップロードしてください</p>
@@ -363,15 +397,15 @@ export function PrintingCompositionStage({
         </div>
       )}
 
-      {selectedLayer && (
+      {statusLayer && (
         <div className="absolute left-4 top-4 hidden md:block rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-white/70 backdrop-blur-md">
-          <div className="font-semibold text-white">{selectedLayer.label}</div>
+          <div className="font-semibold text-white">{statusLayer.label}</div>
           <div className="mt-1 text-neutral-400">
-            {selectedLayer.cutoutState === 'processing'
-              ? '切り抜き処理中'
-              : selectedLayer.cutoutState === 'done'
+            {statusLayer.cutoutState === 'processing'
+              ? 'プロセス中'
+              : statusLayer.cutoutState === 'done'
                 ? '切り抜き済み'
-                : selectedLayer.cutoutState === 'error'
+                : statusLayer.cutoutState === 'error'
                   ? '切り抜き失敗'
                   : 'そのまま使用'}
           </div>

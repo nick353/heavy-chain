@@ -12,6 +12,7 @@ import {
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui';
+import { Modal } from '../components/ui/Modal';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { PrintingCompositionStage } from '../components/workspace/PrintingCompositionStage';
 import { useAuthStore } from '../stores/authStore';
@@ -236,6 +237,7 @@ export function LightchainMaterialWorkbenchPage() {
   const userClearedSelectionRef = useRef(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
+  const [selectedResult, setSelectedResult] = useState<WorkbenchResult | null>(null);
   const [fabricBase, setFabricBase] = useState<SelectedImage | null>(null);
   const [fabricDesign, setFabricDesign] = useState<SelectedImage | null>(null);
   const [fabricLayer, setFabricLayer] = useState<AssetLayer | null>(null);
@@ -278,20 +280,20 @@ export function LightchainMaterialWorkbenchPage() {
   const activeLayers = useMemo(() => {
     if (isPrinting) {
       return [
-        ...(printGarmentProcessed ? [{
+        ...((printGarment || printGarmentProcessed || printGarmentCutoutState === 'processing' || printGarmentCutoutState === 'error') ? [{
           id: 'print-garment',
           label: '参考画像',
-          originalUrl: printGarment?.url || printGarmentProcessed,
-          displayUrl: printGarmentProcessed,
+          originalUrl: printGarment?.url || printGarmentProcessed || '',
+          displayUrl: printGarmentProcessed || printGarment?.url || '',
           transform: defaultTransform({ x: 50, y: 52, scale: 1, opacity: 1 }),
           autoCutout: true,
-          cutoutState: 'done' as const,
-        }] : []),
+          cutoutState: printGarmentCutoutState,
+        } as const] : []),
         ...printDesignLayers,
       ];
     }
     return fabricLayer ? [fabricLayer] : [];
-  }, [fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentProcessed]);
+  }, [fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentCutoutState, printGarmentProcessed]);
 
   useEffect(() => {
     if (userClearedSelectionRef.current) {
@@ -403,22 +405,22 @@ export function LightchainMaterialWorkbenchPage() {
 
   const stageLayers = useMemo(() => {
     if (isPrinting) {
-      const garments = printGarmentProcessed
+      const garments = (printGarment || printGarmentProcessed || printGarmentCutoutState === 'processing' || printGarmentCutoutState === 'error')
         ? [{
             id: 'print-garment',
             label: '参考画像',
-            originalUrl: printGarment?.url || printGarmentProcessed,
-            displayUrl: printGarmentProcessed,
+            originalUrl: printGarment?.url || printGarmentProcessed || '',
+            displayUrl: printGarmentProcessed || printGarment?.url || '',
             transform: defaultTransform({ x: 50, y: 52, scale: 1, opacity: 1 }),
             autoCutout: true,
-            cutoutState: 'done' as const,
-          }]
+            cutoutState: printGarmentCutoutState,
+          } as const]
         : [];
       return [...garments, ...printDesignLayers];
     }
 
     return fabricLayer ? [fabricLayer] : [];
-  }, [fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentProcessed]);
+  }, [fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentCutoutState, printGarmentProcessed]);
 
   useEffect(() => {
     if (isPrinting) {
@@ -789,7 +791,7 @@ export function LightchainMaterialWorkbenchPage() {
             >
               {isPrinting ? (
               <PrintingCompositionStage
-                  garmentUrl={printGarmentProcessed}
+                  garmentUrl={printGarment?.url || printGarmentProcessed}
                   garmentMaskUrl={printGarmentProcessed}
                   layers={stageLayers as Array<{
                     id: string;
@@ -847,14 +849,19 @@ export function LightchainMaterialWorkbenchPage() {
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {generatedResults.map((result) => (
                   <div key={result.id} className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                    <div className="aspect-[4/5] bg-neutral-900">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedResult(result)}
+                      className="block aspect-[4/5] w-full cursor-zoom-in bg-neutral-900 text-left transition hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-primary-400/60"
+                      aria-label={`${result.title} を拡大`}
+                    >
                       <img
                         src={result.imageUrl}
                         alt={result.title}
                         className="h-full w-full object-contain"
                         draggable={false}
                       />
-                    </div>
+                    </button>
                     <div className="space-y-2 p-4">
                       <div>
                         <p className="font-semibold text-white">{result.title}</p>
@@ -868,6 +875,28 @@ export function LightchainMaterialWorkbenchPage() {
           )}
         </motion.div>
       </div>
+
+      <Modal
+        isOpen={selectedResult !== null}
+        onClose={() => setSelectedResult(null)}
+        title={selectedResult?.title || '生成結果'}
+        size="xl"
+      >
+        {selectedResult && (
+          <div className="space-y-4">
+            <div className="flex justify-center rounded-2xl bg-black/50 p-4">
+              <img
+                src={selectedResult.imageUrl}
+                alt={selectedResult.title}
+                className="max-h-[75vh] w-full rounded-xl object-contain"
+              />
+            </div>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              {selectedResult.note}
+            </p>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -27,6 +27,8 @@ type PrintingImageComposerProps = {
   transform: PrintArtworkTransform;
   onTransformChange: (next: PrintArtworkTransform) => void;
   onResetTransform: () => void;
+  isProcessing?: boolean;
+  processingLabel?: string;
 };
 
 type InteractionMode = 'move' | 'resize' | 'rotate';
@@ -39,14 +41,22 @@ type ActiveInteraction = {
   start: PrintArtworkTransform;
   centerX: number;
   centerY: number;
-  startRadius: number;
   startAngle: number;
+  resizeVector: { x: number; y: number };
+  startProjection: number;
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const normalizeRotation = (rotation: number) => {
   let next = rotation % 360;
+  if (next > 180) next -= 360;
+  if (next < -180) next += 360;
+  return next;
+};
+
+const normalizeAngleDelta = (delta: number) => {
+  let next = delta % 360;
   if (next > 180) next -= 360;
   if (next < -180) next += 360;
   return next;
@@ -185,6 +195,8 @@ export function PrintingImageComposer({
   transform,
   onTransformChange,
   onResetTransform,
+  isProcessing = false,
+  processingLabel = '生成中...',
 }: PrintingImageComposerProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const interactionRef = useRef<ActiveInteraction | null>(null);
@@ -241,8 +253,11 @@ export function PrintingImageComposer({
       }
 
       if (interaction.mode === 'resize') {
-        const radius = Math.max(0.0001, Math.hypot(pointerX - interaction.centerX, pointerY - interaction.centerY));
-        const scale = clamp(radius / interaction.startRadius, 0.45, 2.25);
+        const currentProjection = Math.max(
+          0.0001,
+          (pointerX - interaction.centerX) * interaction.resizeVector.x + (pointerY - interaction.centerY) * interaction.resizeVector.y,
+        );
+        const scale = clamp(currentProjection / interaction.startProjection, 0.45, 2.25);
         scheduleTransform({
           ...interaction.start,
           width: clamp(interaction.start.width * scale, 0.16, 0.78),
@@ -252,7 +267,7 @@ export function PrintingImageComposer({
       }
 
       const angle = Math.atan2(pointerY - interaction.centerY, pointerX - interaction.centerX);
-      const delta = ((angle - interaction.startAngle) * 180) / Math.PI;
+      const delta = normalizeAngleDelta(((angle - interaction.startAngle) * 180) / Math.PI);
       scheduleTransform({
         ...interaction.start,
         rotation: normalizeRotation(interaction.start.rotation + delta),
@@ -276,7 +291,7 @@ export function PrintingImageComposer({
   }, [scheduleTransform]);
 
   const startInteraction = (mode: InteractionMode) => (event: ReactPointerEvent<HTMLButtonElement | HTMLDivElement>) => {
-    if (!printImageUrl) return;
+    if (!printImageUrl || isProcessing) return;
     event.preventDefault();
     event.stopPropagation();
 
@@ -287,8 +302,12 @@ export function PrintingImageComposer({
     const pointerY = clamp((event.clientY - rect.top) / rect.height, 0, 1);
     const centerX = transform.x;
     const centerY = transform.y;
-    const startRadius = Math.max(0.0001, Math.hypot(pointerX - centerX, pointerY - centerY));
+    const resizeMagnitude = Math.max(0.0001, Math.hypot(pointerX - centerX, pointerY - centerY));
     const startAngle = Math.atan2(pointerY - centerY, pointerX - centerX);
+    const resizeVector = {
+      x: (pointerX - centerX) / resizeMagnitude,
+      y: (pointerY - centerY) / resizeMagnitude,
+    };
 
     interactionRef.current = {
       mode,
@@ -298,8 +317,9 @@ export function PrintingImageComposer({
       start: transform,
       centerX,
       centerY,
-      startRadius,
       startAngle,
+      resizeVector,
+      startProjection: resizeMagnitude,
     };
     setInteractionMode(mode);
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -457,6 +477,16 @@ export function PrintingImageComposer({
                       MOVE
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {isProcessing && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-neutral-950/60 backdrop-blur-sm">
+                <div className="rounded-[24px] border border-cyan-300/20 bg-[#071114]/92 px-5 py-4 text-center shadow-[0_18px_40px_rgba(0,0,0,0.35)]">
+                  <RefreshCw className="mx-auto h-5 w-5 animate-spin text-cyan-100" />
+                  <p className="mt-2 text-sm font-semibold text-white">{processingLabel}</p>
+                  <p className="mt-1 text-xs text-neutral-400">完了まで操作を止めています</p>
                 </div>
               </div>
             )}
