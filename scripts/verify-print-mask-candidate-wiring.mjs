@@ -1,0 +1,57 @@
+#!/usr/bin/env node
+import fs from 'node:fs';
+
+const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+const library = fs.readFileSync('src/lib/workspaceMaterialReferences.ts', 'utf8');
+const picker = fs.readFileSync('src/components/workspace/PrintMaskCandidatePicker.tsx', 'utf8');
+const strategy = fs.readFileSync('src/lib/printMaskCandidateStrategy.ts', 'utf8');
+const stage = fs.readFileSync('src/components/workspace/PrintingCompositionStage.tsx', 'utf8');
+const editor = fs.readFileSync('src/components/workspace/PrintMaskEditor.tsx', 'utf8');
+const artworkStrategy = fs.readFileSync('src/lib/printArtworkMaskStrategy.ts', 'utf8');
+
+const checks = {
+  candidate_builder_used: page.includes('buildPrintGarmentMaskCandidates') && library.includes('buildPrintGarmentMaskCandidates'),
+  stable_candidate_id_state: page.includes('selectedPrintGarmentMaskCandidateId'),
+  selection_updates_stage_url: page.includes('setPrintGarmentProcessed(selection.dataUrl)'),
+  selection_enters_generation_signature: page.includes('printGarmentMaskCandidateId: selectedPrintGarmentMaskCandidateId'),
+  selection_enters_snapshot_signature: strategy.includes('maskCandidateId: input.garment.maskCandidateId') && page.includes('garmentMaskCandidateId: selectedPrintGarmentMaskCandidateId'),
+  stale_request_guard_preserved: page.includes('printGarmentCutoutRequestRef.current !== requestId'),
+  picker_is_accessible: picker.includes('role="radiogroup"') && picker.includes('aria-checked={selected}'),
+  print_cutout_disables_blur: library.includes('postProcessMask = true')
+    && (library.match(/postProcessMask: false/g) || []).length >= 2,
+  print_garment_uses_high_resolution_model: library.includes("modelName: 'isnet-general-use',\n      postProcessMask: false"),
+  garment_preview_has_no_blend_halo: stage.includes("mixBlendMode: 'normal'")
+    && stage.includes("opacity: 1")
+    && stage.includes("filter: 'none'"),
+  artwork_uses_conservative_source_mask: library.includes('buildPrintArtworkBackgroundCutoutRgba')
+    && artworkStrategy.includes('PRINT_ARTWORK_BACKGROUND_COLOR_DISTANCE = 34')
+    && artworkStrategy.includes('enqueue(x + 1, y)')
+    && artworkStrategy.includes('enqueue(x, y - 1)'),
+  mask_editor_supports_keep_remove_undo_reset_zoom: editor.includes("type PrintMaskBrushMode")
+    && editor.includes("setMode('keep')")
+    && editor.includes("setMode('remove')")
+    && editor.includes('undoRef.current')
+    && editor.includes('setZoom'),
+  garment_and_design_editor_wired: page.includes('openGarmentMaskEditor')
+    && page.includes('openDesignMaskEditor')
+    && page.includes('<PrintMaskEditor'),
+  mask_revision_enters_signature: strategy.includes('maskRevision: input.garment.maskRevision')
+    && strategy.includes('maskRevision: design.maskRevision')
+    && page.includes('garmentMaskRevision: printGarmentMaskRevision'),
+  exact_and_fabric_compositors_are_wired: page.includes("renderPrintRequestComposition(nextSnapshot, 'exact')")
+    && page.includes("renderPrintRequestComposition(nextSnapshot, 'fabric')")
+    && library.includes("if (mode === 'fabric')")
+    && library.includes('applyFabricLuminanceModulation'),
+  result_compare_and_bounded_history_are_wired: page.includes('<ImageCompare')
+    && page.includes('mergePrintResultHistory(')
+    && strategy.includes('maxResults = 8'),
+  mask_editor_undo_is_bounded_to_twelve: editor.includes('MAX_MASK_UNDO_STEPS = 12')
+    && editor.includes('MAX_MASK_UNDO_STEPS - 1'),
+  print_ai_edges_are_decontaminated_without_blur: library.includes('decontaminateBoundaryRgb')
+    && library.includes('if (!postProcessMask)')
+    && library.includes('background.sampleSpread <= 72'),
+};
+
+const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);
+console.log(JSON.stringify({ ok: failed.length === 0, checks, failed }, null, 2));
+process.exit(failed.length === 0 ? 0 : 1);

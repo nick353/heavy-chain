@@ -1,6 +1,16 @@
 import type { Json } from '../types/database';
 
 import { newSession, remove, rembgConfig } from '@bunnio/rembg-web';
+import {
+  applyFabricLuminanceModulation,
+  assemblePrintGarmentMaskCandidates,
+  buildPrintRequestSignatureValue,
+  buildPrintMaskCandidateRgba,
+  decontaminateBoundaryRgb,
+  type PrintRequestSignatureValueInput,
+  type PrintGarmentMaskCandidateId,
+} from './printMaskCandidateStrategy';
+import { buildPrintArtworkBackgroundCutoutRgba } from './printArtworkMaskStrategy';
 
 export type MaterialReferenceState = {
   imageUrl: string;
@@ -43,8 +53,16 @@ export type MaterialCutoutResult = {
     | 'browser-canvas-background-flood-cutout-v2'
     | 'browser-ai-isnet-general-use-v1'
     | 'browser-existing-transparent-garment-v1'
-    | 'browser-local-white-background-garment-cutout-v1';
+    | 'browser-local-white-background-garment-cutout-v1'
+    | 'browser-canvas-artwork-background-cutout-v1';
   hasTransparentPixels: boolean;
+};
+
+export type PrintGarmentMaskCandidate = {
+  candidateId: PrintGarmentMaskCandidateId;
+  label: string;
+  description: string;
+  result: MaterialCutoutResult;
 };
 
 export type MaterialReferenceMetadata = Record<string, Json | undefined> & {
@@ -78,6 +96,7 @@ export type PrintStageSize = {
 export type PrintDesignSnapshotLayer = {
   id: string;
   sourceUrl: string;
+  maskRevision: number;
   sourceSize: { width: number; height: number };
   transform: {
     x: number;
@@ -104,6 +123,8 @@ export type PrintRequestSnapshot = {
   stageSize: PrintStageSize;
   garment: {
     sourceUrl: string;
+    maskCandidateId: PrintGarmentMaskCandidateId;
+    maskRevision: number;
     sourceSize: { width: number; height: number };
     outputSize: { width: number; height: number };
     bounds: MaterialCutoutBounds;
@@ -116,20 +137,7 @@ export type PrintRequestSnapshot = {
   designs: PrintDesignSnapshotLayer[];
 };
 
-export type PrintRequestSignatureInput = {
-  brandId: string;
-  brandName: string;
-  stageSize: PrintStageSize;
-  garment: {
-    sourceUrl: string;
-    referenceType: string | null;
-  };
-  designs: Array<{
-    id: string;
-    sourceUrl: string;
-    transform: PrintDesignSnapshotLayer['transform'];
-  }>;
-};
+export type PrintRequestSignatureInput = PrintRequestSignatureValueInput;
 
 export const readWorkspaceImageAsDataUrl = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -173,22 +181,7 @@ export const stageContainBounds = (stageSize: PrintStageSize, sourceSize: { widt
 
 const designBaseWidth = (stageSize: PrintStageSize) => Math.min(320, Math.max(140, stageSize.width * 0.38));
 
-export const buildPrintRequestSignature = (input: PrintRequestSignatureInput) => {
-  return JSON.stringify({
-    brandId: input.brandId,
-    brandName: input.brandName,
-    stageSize: input.stageSize,
-    garment: {
-      sourceUrl: input.garment.sourceUrl,
-      referenceType: input.garment.referenceType,
-    },
-    designs: input.designs.map((design) => ({
-      id: design.id,
-      sourceUrl: design.sourceUrl,
-      transform: design.transform,
-    })),
-  });
-};
+export const buildPrintRequestSignature = buildPrintRequestSignatureValue;
 
 const imageSizeFromUrl = async (imageUrl: string) => {
   const image = await loadImageElement(imageUrl);
@@ -256,6 +249,8 @@ export async function buildPrintRequestSnapshot({
   brandName,
   garmentUrl,
   garmentReferenceType,
+  garmentMaskCandidateId,
+  garmentMaskRevision,
   designs,
   stageSize = { width: 720, height: 900 },
 }: {
@@ -264,7 +259,9 @@ export async function buildPrintRequestSnapshot({
   brandName: string;
   garmentUrl: string;
   garmentReferenceType: string | null;
-  designs: Array<{ id: string; sourceUrl: string; transform: PrintDesignSnapshotLayer['transform'] }>;
+  garmentMaskCandidateId: PrintGarmentMaskCandidateId;
+  garmentMaskRevision: number;
+  designs: Array<{ id: string; sourceUrl: string; maskRevision: number; transform: PrintDesignSnapshotLayer['transform'] }>;
   stageSize?: PrintStageSize;
 }): Promise<PrintRequestSnapshot> {
   const garmentSize = await imageSizeFromUrl(garmentUrl);
@@ -276,15 +273,20 @@ export async function buildPrintRequestSnapshot({
     garment: {
       sourceUrl: garmentUrl,
       referenceType: garmentReferenceType,
+      maskCandidateId: garmentMaskCandidateId,
+      maskRevision: garmentMaskRevision,
     },
     designs: designs.map((design) => ({
       id: design.id,
       sourceUrl: design.sourceUrl,
+      maskRevision: design.maskRevision,
       transform: design.transform,
     })),
   });
   const garmentSnapshot = {
     sourceUrl: garmentUrl,
+    maskCandidateId: garmentMaskCandidateId,
+    maskRevision: garmentMaskRevision,
     sourceSize: garmentSize,
     outputSize: garmentSize,
     bounds: { x: 0, y: 0, width: stageSize.width, height: stageSize.height },
@@ -304,6 +306,7 @@ export async function buildPrintRequestSnapshot({
     designSnapshots.push({
       id: design.id,
       sourceUrl: design.sourceUrl,
+      maskRevision: design.maskRevision,
       sourceSize,
       transform: { ...design.transform },
       box: {
@@ -338,7 +341,12 @@ const applyMaskToCanvas = async (canvas: HTMLCanvasElement, maskUrl: string) => 
   context.restore();
 };
 
-export async function renderPrintRequestComposition(snapshot: PrintRequestSnapshot) {
+export type PrintCompositionMode = 'exact' | 'fabric';
+
+export async function renderPrintRequestComposition(
+  snapshot: PrintRequestSnapshot,
+  mode: PrintCompositionMode = 'exact',
+) {
   const canvas = document.createElement('canvas');
   canvas.width = snapshot.stageSize.width;
   canvas.height = snapshot.stageSize.height;
@@ -358,7 +366,7 @@ export async function renderPrintRequestComposition(snapshot: PrintRequestSnapsh
   const clippedDesignCanvas = document.createElement('canvas');
   clippedDesignCanvas.width = canvas.width;
   clippedDesignCanvas.height = canvas.height;
-  const clippedDesignContext = clippedDesignCanvas.getContext('2d');
+  const clippedDesignContext = clippedDesignCanvas.getContext('2d', { willReadFrequently: true });
   if (!clippedDesignContext) throw new Error('Canvasを初期化できませんでした');
   for (const design of snapshot.designs) {
     const designImage = await loadImageElement(design.sourceUrl);
@@ -380,6 +388,15 @@ export async function renderPrintRequestComposition(snapshot: PrintRequestSnapsh
     clippedDesignContext.restore();
   }
   await applyMaskToCanvas(clippedDesignCanvas, snapshot.garment.mask.url);
+  if (mode === 'fabric') {
+    const designData = clippedDesignContext.getImageData(0, 0, clippedDesignCanvas.width, clippedDesignCanvas.height);
+    const garmentData = context.getImageData(0, 0, canvas.width, canvas.height);
+    designData.data.set(applyFabricLuminanceModulation({
+      designRgba: designData.data,
+      garmentRgba: garmentData.data,
+    }));
+    clippedDesignContext.putImageData(designData, 0, 0);
+  }
   context.drawImage(clippedDesignCanvas, 0, 0);
   return canvas.toDataURL('image/png');
 }
@@ -1019,10 +1036,12 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   imageUrl,
   maxDataUrlBytes = 750_000,
   modelName = 'isnet-general-use',
+  postProcessMask = true,
 }: {
   imageUrl: string;
   maxDataUrlBytes?: number;
   modelName?: 'isnet-general-use' | 'u2net_cloth_seg' | 'u2net_human_seg' | 'u2net' | 'u2netp' | 'isnet-anime' | 'silueta';
+  postProcessMask?: boolean;
 }): Promise<MaterialCutoutResult> {
   if (!canUseBrowserWebGlBackend()) {
     console.warn('Falling back to local white-background garment cutout because WebGL is unavailable.');
@@ -1062,7 +1081,7 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
     outputBlob = await withRembgOperationTimeout(
       remove(inputBlob, {
         session: aiGarmentCutoutSession,
-        postProcessMask: true,
+        postProcessMask,
       }),
       'remove',
     );
@@ -1084,6 +1103,25 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Canvasを初期化できませんでした');
   context.drawImage(outputImage, 0, 0, canvas.width, canvas.height);
+
+  if (!postProcessMask) {
+    const sourceCanvas = document.createElement('canvas');
+    sourceCanvas.width = canvas.width;
+    sourceCanvas.height = canvas.height;
+    const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true });
+    if (!sourceContext) throw new Error('Canvasを初期化できませんでした');
+    sourceContext.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const sourceData = sourceContext.getImageData(0, 0, canvas.width, canvas.height);
+    const background = estimateBackgroundColor(sourceData.data, canvas.width, canvas.height);
+    if (background.sampleSpread <= 72) {
+      const outputData = context.getImageData(0, 0, canvas.width, canvas.height);
+      outputData.data.set(decontaminateBoundaryRgb({
+        rgba: outputData.data,
+        background,
+      }));
+      context.putImageData(outputData, 0, 0);
+    }
+  }
 
   return buildBoundedPngFromCanvas({
     canvas,
@@ -1129,7 +1167,8 @@ export async function buildPrintGarmentCutoutDataUrl({
     const result = await buildHighPrecisionMaterialCutoutDataUrl({
       imageUrl,
       maxDataUrlBytes,
-      modelName: 'silueta',
+      modelName: 'isnet-general-use',
+      postProcessMask: false,
     });
       return await assertPrintCutoutQuality(result, '参考画像');
   } catch (highPrecisionError) {
@@ -1144,10 +1183,69 @@ export async function buildPrintGarmentCutoutDataUrl({
   }
 }
 
+const buildDerivedPrintGarmentMaskCandidate = async ({
+  baseResult,
+  candidateId,
+  maxDataUrlBytes,
+}: {
+  baseResult: MaterialCutoutResult;
+  candidateId: Exclude<PrintGarmentMaskCandidateId, 'auto'>;
+  maxDataUrlBytes: number;
+}): Promise<MaterialCutoutResult> => {
+  const image = await loadImageElement(baseResult.dataUrl);
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Canvasを初期化できませんでした');
+  context.drawImage(image, 0, 0, width, height);
+  const imageData = context.getImageData(0, 0, width, height);
+  const candidateRgba = buildPrintMaskCandidateRgba({
+    rgba: imageData.data,
+    width,
+    height,
+    candidateId,
+  });
+  imageData.data.set(candidateRgba);
+  context.putImageData(imageData, 0, 0);
+  const dataUrl = canvasToPngDataUrl(canvas);
+  const dataUrlBytes = estimateDataUrlBytes(dataUrl);
+  if (dataUrlBytes > maxDataUrlBytes) {
+    throw new Error(`マスク候補が保存上限を超えています。画像を小さくして再試行してください。${dataUrlBytes}/${maxDataUrlBytes} bytes`);
+  }
+  return {
+    ...baseResult,
+    dataUrl,
+    dataUrlBytes,
+    outputSize: { width, height },
+  };
+};
+
+export async function buildPrintGarmentMaskCandidates({
+  imageUrl,
+  maxDataUrlBytes = 750_000,
+}: {
+  imageUrl: string;
+  maxDataUrlBytes?: number;
+}): Promise<PrintGarmentMaskCandidate[]> {
+  const automaticResult = await buildPrintGarmentCutoutDataUrl({ imageUrl, maxDataUrlBytes });
+  return assemblePrintGarmentMaskCandidates({
+    automaticResult,
+    deriveResult: (candidateId) => buildDerivedPrintGarmentMaskCandidate({
+      baseResult: automaticResult,
+      candidateId,
+      maxDataUrlBytes,
+    }),
+  });
+}
+
 /**
  * Build a transparent print-artwork asset. Print artwork is often a logo or
- * illustration rather than a garment, so use the general segmentation model
- * first and only fall back to the deterministic edge-connected canvas mask.
+ * illustration rather than a garment, so first remove only a uniform
+ * edge-connected background. Fall back to general segmentation when the
+ * deterministic result is low-confidence.
  * Never return the original image: callers can then safely gate generation on
  * a successful transparent result instead of silently reintroducing a box.
  */
@@ -1182,26 +1280,50 @@ export async function buildPrintDesignCutoutDataUrl({
   }
 
   try {
-    const highPrecisionResult = await buildHighPrecisionMaterialCutoutDataUrl({
-      imageUrl,
-      maxDataUrlBytes,
-      modelName: 'isnet-general-use',
+    const imageData = context.getImageData(0, 0, sourceWidth, sourceHeight);
+    const deterministicCutout = buildPrintArtworkBackgroundCutoutRgba({
+      rgba: imageData.data,
+      width: sourceWidth,
+      height: sourceHeight,
     });
-    return await assertPrintCutoutQuality(highPrecisionResult, 'プリント画像');
-  } catch (highPrecisionError) {
+    if (!deterministicCutout.accepted) {
+      throw new Error(`artwork_background_cutout_rejected:${deterministicCutout.estimate?.sampleSpread ?? 'no_estimate'}:${deterministicCutout.removedRatio}`);
+    }
+    imageData.data.set(deterministicCutout.rgba);
+    context.putImageData(imageData, 0, 0);
+    return await assertPrintCutoutQuality(buildBoundedPngFromCanvas({
+      canvas,
+      sourceWidth,
+      sourceHeight,
+      maxDataUrlBytes,
+      storagePolicy: 'bounded-local-canvas-data-url-v1',
+      engine: 'browser-canvas-artwork-background-cutout-v1',
+      validateSubjectShape: true,
+    }), 'プリント画像');
+  } catch (deterministicError) {
     try {
-      const fallback = await buildMaterialCutoutDataUrl({
+      const highPrecisionResult = await buildHighPrecisionMaterialCutoutDataUrl({
         imageUrl,
-        mode: 'auto',
-        candidate: '柄',
-        maxSize: 840,
         maxDataUrlBytes,
+        modelName: 'isnet-general-use',
+        postProcessMask: false,
       });
-      return await assertPrintCutoutQuality(fallback, 'プリント画像');
-    } catch (fallbackError) {
-      const detail = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-      console.warn('Print design cutout failed', { highPrecisionError, fallbackError });
-      throw new Error(`プリント画像の背景を透明化できませんでした。${detail}`);
+      return await assertPrintCutoutQuality(highPrecisionResult, 'プリント画像');
+    } catch (highPrecisionError) {
+      try {
+        const fallback = await buildMaterialCutoutDataUrl({
+          imageUrl,
+          mode: 'auto',
+          candidate: '柄',
+          maxSize: 840,
+          maxDataUrlBytes,
+        });
+        return await assertPrintCutoutQuality(fallback, 'プリント画像');
+      } catch (fallbackError) {
+        const detail = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+        console.warn('Print design cutout failed', { deterministicError, highPrecisionError, fallbackError });
+        throw new Error(`プリント画像の背景を透明化できませんでした。${detail}`);
+      }
     }
   }
 }

@@ -263,9 +263,9 @@ export function PrintingCompositionStage({
             alt="参考画像"
             className="max-h-[92%] w-full max-w-none select-none object-contain object-center"
             style={{
-              mixBlendMode: 'multiply',
-              opacity: 0.95,
-              filter: 'brightness(0.98) contrast(1.04) saturate(0.98)',
+              mixBlendMode: 'normal',
+              opacity: 1,
+              filter: 'none',
             }}
             draggable={false}
           />
