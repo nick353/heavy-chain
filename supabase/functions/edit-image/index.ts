@@ -47,7 +47,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { imageUrl, prompt, brandId, lightchainCompat } = body;
+    const { imageUrl, prompt, brandId, lightchainCompat, outputBackground } = body;
 
     if (!imageUrl || !prompt || !brandId) {
       throw new Error('Missing required parameters');
@@ -123,7 +123,7 @@ serve(async (req) => {
       prompt,
       images: [{ imageUrl }],
       model: Deno.env.get('OPENAI_IMAGE_EDIT_MODEL')?.trim() || Deno.env.get('OPENAI_IMAGE_MODEL')?.trim() || 'gpt-image-1-mini',
-      background: 'auto',
+      background: outputBackground === 'transparent' ? 'transparent' : 'auto',
     });
     const imageAsset = openAiImageArtifact(result);
     const fileName = `${user.id}/${brandId}/${Date.now()}_edited.${imageAsset.extension}`;

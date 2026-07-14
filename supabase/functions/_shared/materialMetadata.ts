@@ -4,10 +4,21 @@ const isRecord = (value: unknown): value is JsonRecord => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
 
+const isMediaLocatorKey = (key: string) => {
+  const normalizedKey = key.replace(/[^a-z0-9]/gi, '').toLowerCase();
+  return normalizedKey === 'src'
+    || normalizedKey === 'blob'
+    || normalizedKey === 'referenceimage'
+    || normalizedKey === 'referenceimagehandoff'
+    || normalizedKey.endsWith('url')
+    || normalizedKey.endsWith('uri');
+};
+
 const sanitizeString = (value: string, key: string) => {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  if (key === 'imageUrl' || key === 'referenceImage') return null;
+  if (isMediaLocatorKey(key)) return null;
+  if (/^(https?|data|blob):/i.test(trimmed) || /^(?:\/\/|https?:\/\/)/i.test(trimmed) || trimmed.includes('://')) return null;
   const maxLength = 4000;
   return trimmed.length <= maxLength ? trimmed : trimmed.slice(0, maxLength);
 };
@@ -26,13 +37,11 @@ const sanitizeJsonValue = (value: unknown, key = '', depth = 0): unknown => {
   }
   if (isRecord(value)) {
     if (depth > 4) return {};
-    const sanitizedRecord = Object.fromEntries(
-      Object.entries(value)
-        .filter(([entryKey]) => !['imageUrl', 'referenceImage', 'referenceImageHandoff'].includes(entryKey))
-        .slice(0, 40)
-        .map(([entryKey, entryValue]) => [entryKey, sanitizeJsonValue(entryValue, entryKey, depth + 1)])
-        .filter(([, entryValue]) => entryValue !== null && entryValue !== undefined),
-    );
+    const sanitizedEntries = Object.entries(value)
+      .slice(0, 40)
+      .map(([entryKey, entryValue]) => [entryKey, sanitizeJsonValue(entryValue, entryKey, depth + 1)] as const)
+      .filter(([, entryValue]) => entryValue !== null && entryValue !== undefined);
+    const sanitizedRecord = Object.fromEntries(sanitizedEntries);
     if (typeof value.imageUrl === 'string' && value.imageUrl.trim()) {
       sanitizedRecord.hasImage = true;
     }

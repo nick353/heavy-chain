@@ -16,9 +16,13 @@ import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { PrintingCompositionStage } from '../components/workspace/PrintingCompositionStage';
 import { useAuthStore } from '../stores/authStore';
 import {
-  buildHighPrecisionMaterialCutoutDataUrl,
-  buildMaterialCutoutDataUrl,
+  buildPrintGarmentCutoutDataUrl,
+  buildPrintRequestSignature,
+  buildPrintRequestSnapshot,
+  renderPrintRequestComposition,
+  restorePrintResultToStageDataUrl,
 } from '../lib/workspaceMaterialReferences';
+import { editImageWithPrompt } from '../lib/imageApi';
 
 type WorkbenchMode = 'fabric' | 'printing';
 
@@ -82,11 +86,7 @@ const fabricVariants = [
   },
 ];
 
-const printLayoutPresets = [
-  { id: 'center', name: '中央', x: 50, y: 50, scale: 1 },
-  { id: 'chest', name: '胸元', x: 46, y: 38, scale: 0.88 },
-  { id: 'large', name: '大きめ', x: 50, y: 48, scale: 1.18 },
-];
+const printStageSize = { width: 720, height: 900 };
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -234,10 +234,8 @@ export function LightchainMaterialWorkbenchPage() {
   const stageRef = useRef<HTMLDivElement>(null);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const userClearedSelectionRef = useRef(false);
-  const [activePrintLayoutPresetId, setActivePrintLayoutPresetId] = useState<string>('center');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
-  const backgroundColor = '#121619';
   const [fabricBase, setFabricBase] = useState<SelectedImage | null>(null);
   const [fabricDesign, setFabricDesign] = useState<SelectedImage | null>(null);
   const [fabricLayer, setFabricLayer] = useState<AssetLayer | null>(null);
@@ -245,9 +243,37 @@ export function LightchainMaterialWorkbenchPage() {
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentProcessed, setPrintGarmentProcessed] = useState<string | null>(null);
   const [printGarmentCutoutState, setPrintGarmentCutoutState] = useState<'idle' | 'processing' | 'done' | 'error'>('idle');
-  const [printGarmentCutting, setPrintGarmentCutting] = useState(true);
   const [printDesigns, setPrintDesigns] = useState<SelectedImage[]>([]);
   const [printDesignLayers, setPrintDesignLayers] = useState<AssetLayer[]>([]);
+  const printRequestRevisionRef = useRef(0);
+
+  const printSnapshotSignature = useMemo(() => {
+    if (!currentBrand?.id || !printGarmentProcessed) return '';
+    return buildPrintRequestSignature({
+      brandId: currentBrand.id,
+      brandName: currentBrand.name || 'brand',
+      stageSize: printStageSize,
+      garment: {
+        sourceUrl: printGarmentProcessed,
+        referenceType: printGarment?.referenceType ?? null,
+      },
+      designs: printDesignLayers.map((layer) => ({
+        id: layer.id,
+        sourceUrl: layer.originalUrl,
+        transform: layer.transform,
+      })),
+    });
+  }, [currentBrand?.id, currentBrand?.name, printGarment?.referenceType, printGarmentProcessed, printDesignLayers]);
+
+  const currentPrintStateRef = useRef<{ revision: number; signature: string }>({ revision: 0, signature: printSnapshotSignature });
+
+  if (currentPrintStateRef.current.signature !== printSnapshotSignature) {
+    printRequestRevisionRef.current += 1;
+    currentPrintStateRef.current = {
+      revision: printRequestRevisionRef.current,
+      signature: printSnapshotSignature,
+    };
+  }
 
   const activeLayers = useMemo(() => {
     if (isPrinting) {
@@ -258,14 +284,14 @@ export function LightchainMaterialWorkbenchPage() {
           originalUrl: printGarment?.url || printGarmentProcessed,
           displayUrl: printGarmentProcessed,
           transform: defaultTransform({ x: 50, y: 52, scale: 1, opacity: 1 }),
-          autoCutout: printGarmentCutting,
+          autoCutout: true,
           cutoutState: 'done' as const,
         }] : []),
         ...printDesignLayers,
       ];
     }
     return fabricLayer ? [fabricLayer] : [];
-  }, [fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentCutting, printGarmentProcessed]);
+  }, [fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentProcessed]);
 
   useEffect(() => {
     if (userClearedSelectionRef.current) {
@@ -311,99 +337,57 @@ export function LightchainMaterialWorkbenchPage() {
   }, [fabricBase, fabricDesign]);
 
   useEffect(() => {
-    const processPrintGarment = async () => {
-      if (!printGarment) {
-        setPrintGarmentProcessed(null);
-        setPrintGarmentCutoutState('idle');
-        return;
-      }
-      if (!printGarmentCutting) {
-        setPrintGarmentProcessed(printGarment.url);
-        setPrintGarmentCutoutState('done');
-        return;
-      }
-      setPrintGarmentCutoutState('processing');
+    if (!printGarment) {
       setPrintGarmentProcessed(null);
-      try {
-        const cutout = await buildHighPrecisionMaterialCutoutDataUrl({
-          imageUrl: printGarment.url,
-          modelName: 'silueta',
-        });
-        setPrintGarmentProcessed(cutout.dataUrl);
+      setPrintGarmentCutoutState('idle');
+      return;
+    }
+    let cancelled = false;
+    setPrintGarmentCutoutState('processing');
+    setPrintGarmentProcessed(null);
+    void buildPrintGarmentCutoutDataUrl({ imageUrl: printGarment.url })
+      .then((result) => {
+        if (cancelled) return;
+        setPrintGarmentProcessed(result.dataUrl);
         setPrintGarmentCutoutState('done');
-        return;
-      } catch {
-        try {
-          const cutout = await buildMaterialCutoutDataUrl({
-            imageUrl: printGarment.url,
-            mode: 'auto',
-            candidate: 'トップス',
-          });
-          setPrintGarmentProcessed(cutout.dataUrl);
-          setPrintGarmentCutoutState('done');
-          return;
-        } catch {
-          setPrintGarmentProcessed(null);
-          setPrintGarmentCutoutState('error');
-        }
-      }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error('Print garment cutout failed', error);
+        setPrintGarmentProcessed(null);
+        setPrintGarmentCutoutState('error');
+      });
+    return () => {
+      cancelled = true;
     };
-    processPrintGarment();
-  }, [printGarment, printGarmentCutting]);
+  }, [printGarment]);
 
   useEffect(() => {
-    const processPrintDesigns = async () => {
-      if (!printDesigns.length) {
-        setPrintDesignLayers([]);
-        return;
-      }
-      const previousLayers = printDesignLayers;
-      const nextLayers: AssetLayer[] = [];
-      for (const [index, design] of printDesigns.entries()) {
-        const layerId = `print-design-${index}`;
-        const previousLayer = previousLayers.find((layer) => layer.id === layerId);
-        let displayUrl = design.url;
-        let cutoutState: AssetLayer['cutoutState'] = 'idle';
-        if (printGarmentCutting) {
-          cutoutState = 'processing';
-          try {
-            const cutout = await buildHighPrecisionMaterialCutoutDataUrl({ imageUrl: design.url });
-            displayUrl = cutout.dataUrl;
-            cutoutState = 'done';
-          } catch {
-            try {
-              const cutout = await buildMaterialCutoutDataUrl({
-                imageUrl: design.url,
-                mode: 'auto',
-                candidate: '柄',
-              });
-              displayUrl = cutout.dataUrl;
-              cutoutState = 'done';
-            } catch {
-              cutoutState = 'error';
-            }
-          }
-        }
-        nextLayers.push({
-          id: layerId,
-          label: `デザイン ${index + 1}`,
-          originalUrl: design.url,
-          displayUrl,
-          transform: defaultTransform({
-            x: previousLayer?.transform.x ?? 50 + ((index % 3) - 1) * 8,
-            y: previousLayer?.transform.y ?? 44 + Math.floor(index / 3) * 14,
-            scale: previousLayer?.transform.scale ?? (index === 0 ? 1 : 0.88),
-            rotation: previousLayer?.transform.rotation ?? (index % 2 === 0 ? -6 : 6) * (index % 3),
-            opacity: previousLayer?.transform.opacity ?? 1,
-          }),
-          autoCutout: printGarmentCutting,
-          cutoutState,
-        });
-      }
-      setPrintDesignLayers(nextLayers);
-    };
-    processPrintDesigns();
-  }, [printDesigns, printGarmentCutting, currentBrand?.id]);
+    if (!printDesigns.length) {
+      setPrintDesignLayers([]);
+      return;
+    }
+    const previousLayers = printDesignLayers;
+    setPrintDesignLayers(printDesigns.map((design, index) => {
+      const layerId = `print-design-${index}`;
+      const previousLayer = previousLayers.find((layer) => layer.id === layerId);
+      return {
+        id: layerId,
+        label: `デザイン ${index + 1}`,
+        originalUrl: design.url,
+        displayUrl: design.url,
+        transform: defaultTransform({
+          x: previousLayer?.transform.x ?? 50 + ((index % 3) - 1) * 8,
+          y: previousLayer?.transform.y ?? 44 + Math.floor(index / 3) * 14,
+          scale: previousLayer?.transform.scale ?? (index === 0 ? 1 : 0.88),
+          rotation: previousLayer?.transform.rotation ?? (index % 2 === 0 ? -6 : 6) * (index % 3),
+          opacity: previousLayer?.transform.opacity ?? 1,
+        }),
+        autoCutout: false,
+        cutoutState: 'done',
+      };
+    }));
+  }, [printDesigns]);
 
   useEffect(() => {
     if (userClearedSelectionRef.current) {
@@ -426,7 +410,7 @@ export function LightchainMaterialWorkbenchPage() {
             originalUrl: printGarment?.url || printGarmentProcessed,
             displayUrl: printGarmentProcessed,
             transform: defaultTransform({ x: 50, y: 52, scale: 1, opacity: 1 }),
-            autoCutout: printGarmentCutting,
+            autoCutout: true,
             cutoutState: 'done' as const,
           }]
         : [];
@@ -434,17 +418,17 @@ export function LightchainMaterialWorkbenchPage() {
     }
 
     return fabricLayer ? [fabricLayer] : [];
-  }, [fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentCutting, printGarmentProcessed]);
+  }, [fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentProcessed]);
 
   useEffect(() => {
     if (isPrinting) {
-      if (printGarmentProcessed && !printGarmentCutting && !selectedLayerId && !userClearedSelectionRef.current) {
+      if (printGarmentProcessed && !selectedLayerId && !userClearedSelectionRef.current) {
         setSelectedLayerId('print-garment');
       }
     } else if (fabricLayer && !selectedLayerId && !userClearedSelectionRef.current) {
       setSelectedLayerId(fabricLayer.id);
     }
-  }, [fabricLayer, isPrinting, printGarmentCutting, printGarmentProcessed, selectedLayerId]);
+  }, [fabricLayer, isPrinting, printGarmentProcessed, selectedLayerId]);
 
   useEffect(() => {
     if (!fabricBase || !fabricDesign) {
@@ -518,37 +502,83 @@ export function LightchainMaterialWorkbenchPage() {
         return;
       }
 
-      const printBase: AssetLayer = {
-        id: 'print-garment',
-        label: '参考画像',
-        originalUrl: printGarment!.url,
-        displayUrl: printGarmentProcessed || printGarment!.url,
-        transform: defaultTransform({ x: 50, y: 52, scale: 1, opacity: 1 }),
-        autoCutout: printGarmentCutting,
-        cutoutState: printGarmentCutting ? 'done' : 'idle',
-      };
-
-      const generated: WorkbenchResult[] = [];
-      for (const [index, preset] of printLayoutPresets.entries()) {
-        const presetLayers = printDesignLayers.map((layer, layerIndex) => ({
-          ...layer,
+      const requestState = { ...currentPrintStateRef.current };
+      const nextRevision = requestState.revision;
+      const nextSnapshot = await buildPrintRequestSnapshot({
+        revision: nextRevision,
+        brandId: currentBrand.id,
+        brandName: currentBrand.name || 'brand',
+        garmentUrl: printGarmentProcessed!,
+        garmentReferenceType: printGarment?.referenceType ?? null,
+        designs: printDesignLayers.map((layer) => ({
+          id: layer.id,
+          sourceUrl: layer.originalUrl,
           transform: {
-            ...layer.transform,
-            x: clamp(layerIndex === 0 ? preset.x : layer.transform.x + index * 4, 0, 100),
-            y: clamp(layerIndex === 0 ? preset.y : layer.transform.y + index * 2, 0, 100),
-            scale: layerIndex === 0 ? preset.scale : layer.transform.scale,
+            x: layer.transform.x,
+            y: layer.transform.y,
+            scale: layer.transform.scale,
+            rotation: layer.transform.rotation,
+            opacity: layer.transform.opacity,
           },
-        }));
-        const imageUrl = await renderComposition(width, height, printBase.displayUrl, backgroundColor, [printBase, ...presetLayers], 'printing', index);
-        generated.push({
-          id: `${preset.id}-${Date.now()}`,
-          title: `プリント配置: ${preset.name}`,
-          note: `${printDesignLayers.length} 枚のプリントを${preset.name}寄りに配置`,
-          imageUrl,
-        });
+        })),
+        stageSize: printStageSize,
+      });
+      if (
+        currentPrintStateRef.current.revision !== requestState.revision
+        || currentPrintStateRef.current.signature !== requestState.signature
+        || requestState.signature !== nextSnapshot.signature
+      ) {
+        return;
       }
-      setGeneratedResults(generated);
-      toast.success('プリント配置を生成しました');
+
+      const composedInput = await renderPrintRequestComposition(nextSnapshot);
+      if (
+        currentPrintStateRef.current.revision !== requestState.revision
+        || currentPrintStateRef.current.signature !== requestState.signature
+      ) {
+        return;
+      }
+
+      const editPrompt = [
+        'Preserve the placed graphic exactly as captured.',
+        'Keep the same position, scale, rotation, and opacity.',
+        'Keep the result in the same 720x900 coordinate system.',
+        'Keep the background transparent.',
+        'Return one result only.',
+      ].join(' ');
+
+      const editResult = await editImageWithPrompt(composedInput, editPrompt, currentBrand.id, {
+        rightsConfirmed: true,
+        outputBackground: 'transparent',
+      });
+      if (
+        currentPrintStateRef.current.revision !== requestState.revision
+        || currentPrintStateRef.current.signature !== requestState.signature
+      ) {
+        return;
+      }
+      if (!editResult.success || !editResult.imageUrl) {
+        throw new Error(editResult.error || '画像編集に失敗しました');
+      }
+
+      const normalizedResultUrl = await restorePrintResultToStageDataUrl({
+        imageUrl: editResult.imageUrl,
+        snapshot: nextSnapshot,
+      });
+      if (
+        currentPrintStateRef.current.revision !== requestState.revision
+        || currentPrintStateRef.current.signature !== requestState.signature
+      ) {
+        return;
+      }
+
+      setGeneratedResults([{
+        id: `print-${nextRevision}`,
+        title: 'プリント結果',
+        note: '透明背景 / 1件のみ',
+        imageUrl: normalizedResultUrl,
+      }]);
+      toast.success('プリント結果を生成しました');
     } catch (error: any) {
       console.error('Workbench generation failed', error);
       toast.error(error?.message || '生成に失敗しました');
@@ -562,30 +592,6 @@ export function LightchainMaterialWorkbenchPage() {
       prev.includes(presetId)
         ? prev.filter((id) => id !== presetId)
         : [...prev, presetId]
-    );
-  };
-
-  const applyPrintLayoutPreset = (presetId: string) => {
-    const preset = printLayoutPresets.find((item) => item.id === presetId);
-    if (!preset) return;
-
-    setActivePrintLayoutPresetId(presetId);
-    setPrintDesignLayers((prev) =>
-      prev.map((layer, index) => {
-        const spread = index % 2 === 0 ? -11 : 11;
-        const stackOffset = Math.floor(index / 2) * 8;
-        return {
-          ...layer,
-          transform: {
-            ...layer.transform,
-            x: clamp(preset.x + spread + stackOffset * 0.15, 0, 100),
-            y: clamp(preset.y + stackOffset, 0, 100),
-            scale: index === 0 ? preset.scale : preset.scale * 0.9,
-            rotation: index % 2 === 0 ? -6 : 6,
-            opacity: layer.transform.opacity,
-          },
-        };
-      }),
     );
   };
 
@@ -619,7 +625,7 @@ export function LightchainMaterialWorkbenchPage() {
           </h1>
           <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
             {isPrinting
-              ? '参考画像を自動切り抜きして、6つまでのプリントを自由配置できます。'
+              ? '参考画像とデザインを透明合成して、同じ配置のままAIで微調整します。'
               : '生地画像にデザインを重ね、色味の違う複数生地をまとめて確認できます。'}
           </p>
         </div>
@@ -709,22 +715,13 @@ export function LightchainMaterialWorkbenchPage() {
                 allowedReferenceTypes={['base']}
                 defaultReferenceType="base"
                 hint="服・Tシャツ・パーカーなどの参考画像を入れます"
-                processing={isPrinting && printGarmentCutoutState === 'processing'}
-                hideSelectedPreviewWhileProcessing
+                processing={printGarmentCutoutState === 'processing'}
+                hideSelectedPreviewWhileProcessing={false}
                 processingLabel="服を切り抜き中"
               />
-              <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <input
-                  type="checkbox"
-                  checked={printGarmentCutting}
-                  onChange={(e) => setPrintGarmentCutting(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/20 bg-white/10 text-primary-500"
-                />
-                <span>
-                  <span className="block text-sm font-medium">自動切り抜きを有効にする</span>
-                  <span className="block text-xs text-white/50">参考画像と追加デザインを自動で切り抜いて重ねます。</span>
-                </span>
-              </label>
+              {printGarmentCutoutState === 'error' && (
+                <p className="text-xs text-red-300">背景を分離できませんでした。透明背景または白背景の服画像で再試行してください。</p>
+              )}
               <ImageSelector
                 label="プリント画像を追加"
                 multiple
@@ -737,9 +734,9 @@ export function LightchainMaterialWorkbenchPage() {
                 allowedReferenceTypes={['pattern']}
                 defaultReferenceType="pattern"
                 hint="柄・ロゴ・図案を6つまで追加できます"
-                processing={isPrinting && printGarmentCutting && printDesigns.length > printDesignLayers.length}
-                hideSelectedPreviewWhileProcessing
-                processingLabel="デザインを切り抜き中"
+                processing={false}
+                hideSelectedPreviewWhileProcessing={false}
+                processingLabel="読み込み中"
               />
             </div>
           )}
@@ -757,7 +754,7 @@ export function LightchainMaterialWorkbenchPage() {
 
           <p className="text-xs leading-relaxed text-white/45">
             {isPrinting
-              ? '参考画像は自動切り抜きを適用し、デザインは最大6つまで追加できます。'
+              ? '透明合成した1枚だけをAIに送り、生成結果は同じ座標系で1件だけ返します。'
               : '生地画像にデザインを重ね、複数の生地質感バリエーションを一度に確認できます。'}
           </p>
         </motion.div>
@@ -768,26 +765,12 @@ export function LightchainMaterialWorkbenchPage() {
           className="space-y-5"
         >
           <div className="rounded-3xl border border-white/10 bg-neutral-950/80 p-4 shadow-2xl shadow-black/20">
-            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-sm text-white/60">ライブプレビュー</p>
-                <h3 className="text-lg font-semibold text-white">{isPrinting ? 'プリント重ねの調整' : '生地とデザインの重なり'}</h3>
-              </div>
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                {isPrinting && (
-                  <div className="flex flex-wrap justify-end gap-2">
-                    {printLayoutPresets.map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => applyPrintLayoutPreset(preset.id)}
-                        className={`rounded-full border px-3 py-1.5 text-xs transition-all ${activePrintLayoutPresetId === preset.id ? 'border-primary-400 bg-primary-500/20 text-white' : 'border-white/10 bg-black/20 text-white/70 hover:text-white'}`}
-                      >
-                        {preset.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm text-white/60">ライブプレビュー</p>
+                  <h3 className="text-lg font-semibold text-white">{isPrinting ? 'プリント重ねの調整' : '生地とデザインの重なり'}</h3>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
                 <div className="flex items-center gap-2 text-xs text-white/50">
                   <Check className="h-4 w-4 text-emerald-300" />
                   {currentBrand ? 'ブランド選択済み' : 'ブランド未選択'}
@@ -806,7 +789,7 @@ export function LightchainMaterialWorkbenchPage() {
             >
               {isPrinting ? (
               <PrintingCompositionStage
-                  garmentUrl={printGarmentProcessed || (printGarmentCutting ? null : printGarment?.url || null)}
+                  garmentUrl={printGarmentProcessed}
                   garmentMaskUrl={printGarmentProcessed}
                   layers={stageLayers as Array<{
                     id: string;
@@ -856,7 +839,7 @@ export function LightchainMaterialWorkbenchPage() {
                 <div>
                   <p className="text-sm text-white/60">生成結果</p>
                   <h3 className="text-lg font-semibold text-white">
-                    {isPrinting ? 'プリント配置の比較' : '生地バリエーション'}
+                    {isPrinting ? 'プリント結果' : '生地バリエーション'}
                   </h3>
                 </div>
                 <Layers3 className="h-5 w-5 text-primary-200" />

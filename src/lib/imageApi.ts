@@ -281,11 +281,19 @@ export async function editImageWithPrompt(
   imageUrl: string,
   prompt: string,
   brandId: string,
-  options?: LegalSafetyOptions,
+  options?: LegalSafetyOptions & {
+    outputBackground?: 'auto' | 'transparent';
+  },
 ): Promise<ImageEditResult> {
   try {
     const { data, error } = await supabase.functions.invoke('edit-image', {
-      body: { imageUrl, prompt, brandId, legalSafety: { rightsConfirmed: options?.rightsConfirmed === true } },
+      body: {
+        imageUrl,
+        prompt,
+        brandId,
+        outputBackground: options?.outputBackground === 'transparent' ? 'transparent' : 'auto',
+        legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
+      },
     });
 
     if (error) throw error;

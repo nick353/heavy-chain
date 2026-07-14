@@ -116,6 +116,17 @@ const mockGeneratedImages = [
   },
 ];
 
+const transparentGarmentSvg = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500">
+    <path fill="#f4f4f4" d="M105 42 165 18h70l60 24 82 92-61 60-36-40v314H120V154l-36 40-61-60z"/>
+  </svg>
+`;
+const nonSquareDesignSvg = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="240" height="100" viewBox="0 0 240 100">
+    <rect width="240" height="100" rx="12" fill="#ef233c"/>
+  </svg>
+`;
+
 const mockLightchainTaskSteps = [
   {
     id: '00000000-0000-4000-8000-000000000401',
@@ -226,6 +237,10 @@ async function mockSupabase(page: Page, options: {
   modelMatrixFails?: boolean;
   modelMatrixDelayMs?: number;
   modelMatrixRequests?: unknown[];
+  editImageRequests?: unknown[];
+  editImageDelayMs?: number;
+  editImageReturnsSignedUrl?: boolean;
+  editImageResultUrls?: string[];
   generateImageRequests?: unknown[];
   designGachaRequests?: unknown[];
   removeBackgroundRequests?: unknown[];
@@ -251,10 +266,26 @@ async function mockSupabase(page: Page, options: {
 } = {}) {
   const dynamicJobs = [...mockJobs];
   const dynamicGeneratedImages = [...mockGeneratedImages];
+  let signedEditImageDataUrl: string | null = null;
 
   await page.addInitScript(({ keys, token }) => {
     keys.forEach((key) => localStorage.setItem(key, JSON.stringify(token)));
   }, { keys: authStorageKeys, token: authToken });
+
+  await page.route('https://signed-assets.example.test/**', async (route) => {
+    const dataUrl = signedEditImageDataUrl;
+    const separatorIndex = dataUrl?.indexOf(',') ?? -1;
+    if (!dataUrl?.startsWith('data:image/png;base64,') || separatorIndex < 0) {
+      await route.fulfill({ status: 404, body: 'missing signed edit image' });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      headers: { 'Access-Control-Allow-Origin': '*' },
+      body: Buffer.from(dataUrl.slice(separatorIndex + 1), 'base64'),
+    });
+  });
 
   await page.route('**/auth/v1/**', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: mockUser }) });
@@ -302,6 +333,13 @@ async function mockSupabase(page: Page, options: {
       }
 
       body = [mockBrand];
+    } else if (pathname.endsWith('/rest/v1/brand_members')) {
+      if (method !== 'GET') {
+        await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method Not Allowed' }) });
+        return;
+      }
+
+      body = [];
     } else if (pathname.endsWith('/rest/v1/generation_jobs')) {
       if (method === 'POST') {
         const requestBody = route.request().postDataJSON();
@@ -714,6 +752,45 @@ async function mockSupabase(page: Page, options: {
               directionName: 'Pattern Direction B',
             },
           ],
+        }),
+      });
+      return;
+    }
+
+    if (pathname === '/functions/v1/edit-image') {
+      const requestBody = route.request().postDataJSON();
+      options.editImageRequests?.push(requestBody);
+      if (options.editImageDelayMs) {
+        await new Promise((resolve) => setTimeout(resolve, options.editImageDelayMs));
+      }
+      const echoedImageUrl = typeof requestBody.imageUrl === 'string' ? requestBody.imageUrl : '';
+      const resultImageUrl = options.editImageReturnsSignedUrl
+        ? 'https://signed-assets.example.test/print-result.png?token=smoke'
+        : echoedImageUrl;
+      if (options.editImageReturnsSignedUrl) {
+        signedEditImageDataUrl = echoedImageUrl;
+      }
+      options.editImageResultUrls?.push(resultImageUrl);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          jobId: 'mock-edit-job',
+          imageId: 'mock-edit-image',
+          storagePath: 'mock-edit-image.png',
+          imageUrl: resultImageUrl,
+          provider: 'openai',
+          persistenceStatus: 'completed',
+          cleanupStatus: 'none',
+          images: [{
+            id: 'mock-edit-image',
+            imageUrl: resultImageUrl,
+            prompt: requestBody.prompt,
+            jobId: 'mock-edit-job',
+            imageId: 'mock-edit-image',
+            storagePath: 'mock-edit-image.png',
+          }],
         }),
       });
       return;
@@ -1224,6 +1301,163 @@ test.describe('workspace activity pages', () => {
         ],
       },
     });
+  });
+
+  test('printing image composes one transparent edit request and one transparent result', async ({ page }) => {
+    const functionRequests: string[] = [];
+    const removeBackgroundRequests: unknown[] = [];
+    const modelMatrixRequests: unknown[] = [];
+    const editImageRequests: unknown[] = [];
+    const editImageResultUrls: string[] = [];
+    await mockSupabase(page, {
+      functionRequests,
+      removeBackgroundRequests,
+      modelMatrixRequests,
+      editImageRequests,
+      editImageReturnsSignedUrl: true,
+      editImageResultUrls,
+    });
+    await completeOnboardingForMockUser(page);
+
+    await page.goto('/lightchain/printing-image');
+    await expect(page.getByRole('heading', { name: 'プリントイメージ' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /center|chest|large/i })).toHaveCount(0);
+
+    const fileInputs = page.locator('input[type="file"]');
+    await fileInputs.nth(0).setInputFiles({
+      name: 'garment.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(transparentGarmentSvg),
+    });
+    await fileInputs.nth(1).setInputFiles({
+      name: 'design.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(nonSquareDesignSvg),
+    });
+
+    await expect(page.getByRole('button', { name: '生成して結果を出す' })).toBeEnabled();
+    await page.getByRole('button', { name: '生成して結果を出す' }).click();
+    await expect(page.getByRole('heading', { name: 'プリント結果' })).toBeVisible();
+    await expect(page.locator('img[alt="プリント結果"]')).toHaveCount(1);
+    await expect.poll(() => editImageRequests.length).toBe(1);
+    expect(editImageResultUrls).toEqual(['https://signed-assets.example.test/print-result.png?token=smoke']);
+
+    expect(functionRequests).toEqual(['/functions/v1/edit-image']);
+    expect(removeBackgroundRequests).toEqual([]);
+    expect(modelMatrixRequests).toEqual([]);
+
+    const editImageRequest = editImageRequests[0] as Record<string, unknown>;
+    expect(Object.keys(editImageRequest).sort()).toEqual([
+      'brandId',
+      'imageUrl',
+      'legalSafety',
+      'outputBackground',
+      'prompt',
+    ]);
+    expect(editImageRequest).toMatchObject({
+      brandId: mockBrand.id,
+      imageUrl: expect.stringMatching(/^data:image\/png;base64,/),
+      outputBackground: 'transparent',
+      legalSafety: { rightsConfirmed: true },
+    });
+    expect(String(editImageRequest.prompt)).toContain('Preserve the placed graphic exactly as captured.');
+
+    const requestSrc = String(editImageRequest.imageUrl);
+    const resultSrc = await page.locator('img[alt="プリント結果"]').getAttribute('src');
+    expect(requestSrc).toMatch(/^data:image\/png;base64,/);
+    expect(resultSrc).toMatch(/^data:image\/png;base64,/);
+    const analyzeImage = async (src: string | null) => page.evaluate(async (imageSource) => {
+      if (!imageSource) {
+        throw new Error('missing image src');
+      }
+      const image = new Image();
+      image.src = imageSource;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) {
+        throw new Error('missing canvas context');
+      }
+      context.drawImage(image, 0, 0);
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      let redMinX = canvas.width;
+      let redMinY = canvas.height;
+      let redMaxX = -1;
+      let redMaxY = -1;
+      for (let y = 0; y < canvas.height; y += 1) {
+        for (let x = 0; x < canvas.width; x += 1) {
+          const index = (y * canvas.width + x) * 4;
+          if (pixels[index] > 200 && pixels[index + 1] < 90 && pixels[index + 2] < 110 && pixels[index + 3] > 200) {
+            redMinX = Math.min(redMinX, x);
+            redMinY = Math.min(redMinY, y);
+            redMaxX = Math.max(redMaxX, x);
+            redMaxY = Math.max(redMaxY, y);
+          }
+        }
+      }
+      const sampleAlpha = (x: number, y: number) => pixels[(y * canvas.width + x) * 4 + 3];
+      return {
+        width: canvas.width,
+        height: canvas.height,
+        alphaTL: sampleAlpha(0, 0),
+        alphaTR: sampleAlpha(canvas.width - 1, 0),
+        alphaBL: sampleAlpha(0, canvas.height - 1),
+        alphaBR: sampleAlpha(canvas.width - 1, canvas.height - 1),
+        redBounds: redMaxX >= redMinX ? {
+          x: redMinX,
+          y: redMinY,
+          width: redMaxX - redMinX + 1,
+          height: redMaxY - redMinY + 1,
+        } : null,
+      };
+    }, src);
+    const requestInfo = await analyzeImage(requestSrc);
+    const resultInfo = await analyzeImage(resultSrc);
+    expect(resultInfo).toMatchObject({
+      width: 720,
+      height: 900,
+      alphaTL: 0,
+      alphaTR: 0,
+      alphaBL: 0,
+      alphaBR: 0,
+    });
+    expect(requestInfo).toEqual(resultInfo);
+    expect(requestInfo.redBounds).not.toBeNull();
+    expect(requestInfo.redBounds!.width / requestInfo.redBounds!.height).toBeGreaterThan(2);
+    expect(requestInfo.redBounds!.x + requestInfo.redBounds!.width / 2).toBeCloseTo(720 * 0.42, -1);
+    expect(requestInfo.redBounds!.y + requestInfo.redBounds!.height / 2).toBeCloseTo(900 * 0.44, -1);
+  });
+
+  test('printing image discards a stale edit response after the design changes', async ({ page }) => {
+    const editImageRequests: unknown[] = [];
+    await mockSupabase(page, { editImageRequests, editImageDelayMs: 250 });
+    await completeOnboardingForMockUser(page);
+    await page.goto('/lightchain/printing-image');
+
+    const fileInputs = page.locator('input[type="file"]');
+    await fileInputs.nth(0).setInputFiles({
+      name: 'garment.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(transparentGarmentSvg),
+    });
+    await fileInputs.nth(1).setInputFiles({
+      name: 'design.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(nonSquareDesignSvg),
+    });
+    await expect(page.getByRole('button', { name: '生成して結果を出す' })).toBeEnabled();
+    await page.getByRole('button', { name: '生成して結果を出す' }).click();
+    await expect.poll(() => editImageRequests.length).toBe(1);
+
+    await fileInputs.nth(1).setInputFiles({
+      name: 'replacement-design.svg',
+      mimeType: 'image/svg+xml',
+      buffer: Buffer.from(nonSquareDesignSvg.replace('#ef233c', '#1769aa')),
+    });
+    await page.waitForTimeout(350);
+    await expect(page.locator('img[alt="プリント結果"]')).toHaveCount(0);
   });
 
   test('canvas image edits preserve Lightchain stage history locally', async ({ page }) => {
