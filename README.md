@@ -137,7 +137,9 @@ npm install
 # Supabase
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_REMBG_MODEL_BASE_URL=https://your-cors-enabled-model-host.example.com/models
+# 任意: 既定では同一originの /models/silueta.onnx を使います
+# VITE_REMBG_MODEL_BASE_URL=https://your-cors-enabled-model-host.example.com/models
+# VITE_REMBG_SILUETA_MODEL_URL=https://your-cors-enabled-model-host.example.com/models/silueta.onnx
 
 # Stripe (将来用)
 VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
@@ -174,7 +176,9 @@ Edge Functions用の環境変数をSupabase Dashboardで設定：
 - `GEMINI_API_KEY` - Google AI Studio APIキー
 - `GEMINI_IMAGE_MODEL` - 使用する画像生成モデル名（既定: `gemini-2.5-flash-image`）
 - `VITE_GENERATION_PROVIDER` - 通常は `gemini`。Runway workerを明示的に使う場合だけ `local-runway`
-- `VITE_REMBG_MODEL_BASE_URL` - ブラウザAI切り抜き用の `isnet-general-use.onnx` を配信するCORS対応URL。末尾は `/models` にしてください。
+- `VITE_REMBG_MODEL_BASE_URL` - 任意のモデル配信元override。silueta以外のモデルで使います。
+- `VITE_REMBG_SILUETA_MODEL_URL` - 任意。未設定時は同梱の `/models/silueta.onnx` を同一originから読み込みます。
+- `VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL` - 任意。管理下CDNに置いたISNetモデルを明示利用する場合だけ設定します。Hugging Face直取得にはfallbackしません。
 - `OPENAI_IMAGE_API_KEY` - OpenAI Images APIキー（未設定時は `OPENAI_API_KEY` を使用）
 - `OPENAI_IMAGE_MODEL` - 使用するOpenAI画像生成モデル名（既定: `gpt-image-2`）
 

@@ -51,7 +51,7 @@ export type MaterialCutoutResult = {
   engine:
     | 'browser-canvas-geometric-mask-v1'
     | 'browser-canvas-background-flood-cutout-v2'
-    | 'browser-ai-isnet-general-use-v1'
+    | `browser-ai-${string}-v1`
     | 'browser-existing-transparent-garment-v1'
     | 'browser-local-white-background-garment-cutout-v1'
     | 'browser-canvas-artwork-background-cutout-v1';
@@ -973,7 +973,7 @@ const buildWhiteBackgroundFallbackCutout = async ({
     imageUrl,
     mode: 'auto',
     candidate: 'トップス',
-    maxSize: 840,
+    maxSize: 1_400,
     maxDataUrlBytes,
   });
   const sourceArea = result.sourceSize.width * result.sourceSize.height;
@@ -1029,15 +1029,19 @@ const canUseBrowserWebGlBackend = () => {
 const aiGarmentCutoutSessions = new Map<string, Awaited<ReturnType<typeof newSession>> | null>();
 
 const rembgModelBaseUrl = String(import.meta.env.VITE_REMBG_MODEL_BASE_URL || '/models').replace(/\/$/, '');
+const rembgSiluetaModelUrl = String(
+  import.meta.env.VITE_REMBG_SILUETA_MODEL_URL
+  || '/models/silueta.onnx',
+).trim();
 const rembgIsnetGeneralUseModelUrl = String(
   import.meta.env.VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL
-  || 'https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx',
+  || '',
 ).trim();
 
 export async function buildHighPrecisionMaterialCutoutDataUrl({
   imageUrl,
   maxDataUrlBytes = 750_000,
-  modelName = 'isnet-general-use',
+  modelName = 'silueta',
   postProcessMask = true,
 }: {
   imageUrl: string;
@@ -1051,6 +1055,9 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   }
 
   rembgConfig.setBaseUrl(rembgModelBaseUrl);
+  if (modelName === 'silueta') {
+    rembgConfig.setCustomModelPath('silueta', rembgSiluetaModelUrl);
+  }
   if (modelName === 'isnet-general-use' && rembgIsnetGeneralUseModelUrl) {
     rembgConfig.setCustomModelPath('isnet-general-use', rembgIsnetGeneralUseModelUrl);
   }
@@ -1131,7 +1138,7 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
     sourceHeight,
     maxDataUrlBytes,
     storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
-    engine: 'browser-ai-isnet-general-use-v1',
+    engine: `browser-ai-${modelName}-v1`,
   });
 }
 
@@ -1208,7 +1215,7 @@ export async function buildPrintGarmentCutoutDataUrl({
     const result = await buildHighPrecisionMaterialCutoutDataUrl({
       imageUrl,
       maxDataUrlBytes,
-      modelName: 'isnet-general-use',
+      modelName: 'silueta',
       postProcessMask: false,
     });
       return await finalizeResult(result);
@@ -1356,7 +1363,7 @@ export async function buildPrintDesignCutoutDataUrl({
       const highPrecisionResult = await buildHighPrecisionMaterialCutoutDataUrl({
         imageUrl,
         maxDataUrlBytes,
-        modelName: 'isnet-general-use',
+        modelName: 'silueta',
         postProcessMask: false,
       });
       return await assertPrintCutoutQuality(highPrecisionResult, 'プリント画像');

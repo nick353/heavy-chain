@@ -164,7 +164,8 @@ vercel --prod
 4. 環境変数を設定
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_REMBG_MODEL_BASE_URL`（CORS対応の `/models/isnet-general-use.onnx` 配信元）
+   - `VITE_REMBG_MODEL_BASE_URL`（任意。silueta以外のモデル配信元）
+   - `VITE_REMBG_SILUETA_MODEL_URL`（任意。未設定時は同梱の `/models/silueta.onnx`）
 5. Deploy
 
 ### 6. デプロイ後の設定
@@ -172,7 +173,9 @@ vercel --prod
 - [ ] デプロイURLをREADME.mdに追加
 - [ ] デプロイURLをGitHub About欄に追加
 - [ ] デプロイされたアプリをテスト
-- [ ] `VITE_REMBG_MODEL_BASE_URL` から `isnet-general-use.onnx` をブラウザ取得できることを確認
+- [ ] 公開URLの `/models/silueta.onnx` が200で取得できることを確認
+- [ ] `VITE_REMBG_SILUETA_MODEL_URL` を設定した場合は、その完全URLが200かつCORS対応であることを確認
+- [ ] ISNetを明示利用する場合のみ、`VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL` がCORS対応の管理下CDNを指すことを確認
 
 ---
 

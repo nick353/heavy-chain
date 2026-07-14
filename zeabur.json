@@ -20,8 +20,12 @@
       "required": true
     },
     "VITE_REMBG_MODEL_BASE_URL": {
-      "description": "Public CORS-enabled base URL that serves isnet-general-use.onnx for browser AI cutout",
-      "required": true
+      "description": "Optional model base URL override. The bundled same-origin silueta model is used by default.",
+      "required": false
+    },
+    "VITE_REMBG_SILUETA_MODEL_URL": {
+      "description": "Optional explicit silueta model URL. Defaults to same-origin /models/silueta.onnx.",
+      "required": false
     },
     "VITE_STRIPE_PUBLISHABLE_KEY": {
       "description": "Stripe publishable key (optional, for future payment features)",

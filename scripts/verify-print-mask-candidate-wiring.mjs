@@ -21,7 +21,9 @@ const checks = {
   picker_is_accessible: picker.includes('role="radiogroup"') && picker.includes('aria-checked={selected}'),
   print_cutout_disables_blur: library.includes('postProcessMask = true')
     && (library.match(/postProcessMask: false/g) || []).length >= 2,
-  print_garment_uses_high_resolution_model: library.includes("modelName: 'isnet-general-use',\n      postProcessMask: false"),
+  print_garment_uses_same_origin_model: library.includes("modelName: 'silueta',\n      postProcessMask: false")
+    && (library.match(/modelName: 'silueta'/g) || []).length >= 2
+    && library.includes("modelName = 'silueta'"),
   garment_preview_has_no_blend_halo: stage.includes("mixBlendMode: 'normal'")
     && stage.includes("opacity: 1")
     && stage.includes("filter: 'none'"),
@@ -54,7 +56,11 @@ const checks = {
     && library.includes('background.sampleSpread <= 72'),
   uniform_garment_background_avoids_model_timeout: library.includes('PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD = 36')
     && library.indexOf('sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD')
-      < library.indexOf("modelName: 'isnet-general-use',\n      postProcessMask: false"),
+      < library.indexOf("modelName: 'silueta',\n      postProcessMask: false"),
+  production_model_does_not_silently_fall_back_to_huggingface: library.includes("VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL\n  || ''")
+    && library.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/models/silueta.onnx'")
+    && !library.includes('https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx'),
+  ai_result_records_actual_model_engine: library.includes('engine: `browser-ai-${modelName}-v1`'),
   cutout_timeout_allows_ai_fallback_to_finish: page.includes('const CUTOUT_TIMEOUT_MS = 75_000')
     && library.includes('const REMBG_OPERATION_TIMEOUT_MS = 30_000'),
   automatic_garment_result_is_shown_before_optional_candidates: page.indexOf("setPrintGarmentCutoutState('done')")
