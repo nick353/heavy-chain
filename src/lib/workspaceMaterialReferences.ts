@@ -435,14 +435,31 @@ export const buildMaterialReferenceMetadata = (
   nextStepReady: Boolean(state.nextStepReady),
 });
 
+const IMAGE_LOAD_TIMEOUT_MS = 20_000;
+
 const loadImageElement = (imageUrl: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const image = new Image();
+    let settled = false;
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      image.onload = null;
+      image.onerror = null;
+      image.src = '';
+      reject(new Error('画像の読み込みがタイムアウトしました。画像を確認して再試行してください'));
+    }, IMAGE_LOAD_TIMEOUT_MS);
+    const settle = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      callback();
+    };
     if (/^https?:\/\//i.test(imageUrl)) {
       image.crossOrigin = 'anonymous';
     }
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('カット用の画像処理に失敗しました'));
+    image.onload = () => settle(() => resolve(image));
+    image.onerror = () => settle(() => reject(new Error('カット用の画像処理に失敗しました')));
     image.src = imageUrl;
   });
 };
@@ -549,6 +566,31 @@ const calculateNeutralBackgroundRisk = (imageData: ImageData) => {
   return opaquePixels > 0 ? flatNeutralPixels / opaquePixels : 0;
 };
 
+/**
+ * A single transparent pixel is not evidence that an image was actually cut
+ * out. Require a meaningful transparent area and a subject that does not
+ * occupy the entire source frame before a print asset is allowed through.
+ */
+const hasMeaningfulTransparentSubject = (imageData: ImageData, bounds: MaterialCutoutBounds) => {
+  const { data, width, height } = imageData;
+  const totalPixels = width * height;
+  if (totalPixels <= 0) return false;
+
+  let transparentPixels = 0;
+  for (let index = 3; index < data.length; index += 4) {
+    if (data[index] < 250) transparentPixels += 1;
+  }
+  const transparentRatio = transparentPixels / totalPixels;
+  const boundsRatio = (bounds.width * bounds.height) / totalPixels;
+  const opaqueBorderRatio = calculateOpaqueBorderRatio(imageData, bounds);
+  const neutralBackgroundRisk = calculateNeutralBackgroundRisk(imageData);
+
+  if (transparentRatio < 0.01 || boundsRatio > 0.985) return false;
+  if (opaqueBorderRatio > 0.92) return false;
+  if (opaqueBorderRatio > 0.22 && neutralBackgroundRisk > 0.55) return false;
+  return true;
+};
+
 const canvasToPngDataUrl = (canvas: HTMLCanvasElement) => canvas.toDataURL('image/png');
 
 const buildBoundedPngFromCanvas = ({
@@ -577,9 +619,7 @@ const buildBoundedPngFromCanvas = ({
     throw new Error('背景を十分に分離できませんでした。白い背景や平置き写真で再試行してください。');
   }
   if (validateSubjectShape) {
-    const opaqueBorderRatio = calculateOpaqueBorderRatio(imageData, alphaBounds.bounds);
-    const neutralBackgroundRisk = calculateNeutralBackgroundRisk(imageData);
-    if (opaqueBorderRatio > 0.58 || (opaqueBorderRatio > 0.22 && neutralBackgroundRisk > 0.55)) {
+    if (!hasMeaningfulTransparentSubject(imageData, alphaBounds.bounds)) {
       throw new Error('背景の四角い範囲が残っています。服だけを分離できる写真で再試行してください。');
     }
   }
@@ -626,6 +666,31 @@ const buildBoundedPngFromCanvas = ({
   cropWidth = Math.max(1, cropWidth);
   cropHeight = Math.max(1, cropHeight);
   throw new Error(`透明PNGが保存上限を超えています。画像を小さくして再試行してください。${estimateDataUrlBytes(lastDataUrl)}/${maxDataUrlBytes} bytes`);
+};
+
+const assertPrintCutoutQuality = async (result: MaterialCutoutResult, label: string) => {
+  const sourceArea = result.sourceSize.width * result.sourceSize.height;
+  const boundsArea = result.bounds.width * result.bounds.height;
+  const boundsRatio = sourceArea > 0 ? boundsArea / sourceArea : 1;
+  if (
+    result.engine === 'browser-canvas-geometric-mask-v1'
+    || !result.hasTransparentPixels
+    || boundsRatio > 0.985
+  ) {
+    throw new Error(`${label}の背景を十分に分離できませんでした。元画像の背景が単色で、被写体の外周が写っている画像で再試行してください。`);
+  }
+  const outputImage = await loadImageElement(result.dataUrl);
+  const outputCanvas = document.createElement('canvas');
+  outputCanvas.width = outputImage.naturalWidth || outputImage.width;
+  outputCanvas.height = outputImage.naturalHeight || outputImage.height;
+  const outputContext = outputCanvas.getContext('2d', { willReadFrequently: true });
+  if (!outputContext) throw new Error('Canvasを初期化できませんでした');
+  outputContext.drawImage(outputImage, 0, 0, outputCanvas.width, outputCanvas.height);
+  const outputAlphaBounds = getAlphaBounds(outputContext.getImageData(0, 0, outputCanvas.width, outputCanvas.height));
+  if (!outputAlphaBounds?.hasTransparentPixels || !hasMeaningfulTransparentSubject(outputContext.getImageData(0, 0, outputCanvas.width, outputCanvas.height), outputAlphaBounds.bounds)) {
+    throw new Error(`${label}の透明領域を確認できませんでした。背景が残っている画像は使用できません。`);
+  }
+  return result;
 };
 
 type Rgb = { r: number; g: number; b: number };
@@ -1049,22 +1114,96 @@ export async function buildPrintGarmentCutoutDataUrl({
   const alphaBounds = getAlphaBounds(context.getImageData(0, 0, sourceWidth, sourceHeight));
 
   if (alphaBounds?.hasTransparentPixels) {
-    return buildBoundedPngFromCanvas({
+    return await assertPrintCutoutQuality(buildBoundedPngFromCanvas({
       canvas,
       sourceWidth,
       sourceHeight,
       maxDataUrlBytes,
       storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
       engine: 'browser-existing-transparent-garment-v1',
-      validateSubjectShape: false,
-    });
+      validateSubjectShape: true,
+    }), '参考画像');
   }
 
-  return buildHighPrecisionMaterialCutoutDataUrl({
-    imageUrl,
-    maxDataUrlBytes,
-    modelName: 'silueta',
-  });
+  try {
+    const result = await buildHighPrecisionMaterialCutoutDataUrl({
+      imageUrl,
+      maxDataUrlBytes,
+      modelName: 'silueta',
+    });
+      return await assertPrintCutoutQuality(result, '参考画像');
+  } catch (highPrecisionError) {
+    try {
+      const fallback = await buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
+      return await assertPrintCutoutQuality(fallback, '参考画像');
+    } catch (fallbackError) {
+      const detail = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+      console.warn('Print garment cutout failed', { highPrecisionError, fallbackError });
+      throw new Error(`参考画像の背景を透明化できませんでした。${detail}`);
+    }
+  }
+}
+
+/**
+ * Build a transparent print-artwork asset. Print artwork is often a logo or
+ * illustration rather than a garment, so use the general segmentation model
+ * first and only fall back to the deterministic edge-connected canvas mask.
+ * Never return the original image: callers can then safely gate generation on
+ * a successful transparent result instead of silently reintroducing a box.
+ */
+export async function buildPrintDesignCutoutDataUrl({
+  imageUrl,
+  maxDataUrlBytes = 750_000,
+}: {
+  imageUrl: string;
+  maxDataUrlBytes?: number;
+}): Promise<MaterialCutoutResult> {
+  const image = await loadImageElement(imageUrl);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Canvasを初期化できませんでした');
+  context.drawImage(image, 0, 0, sourceWidth, sourceHeight);
+  const alphaBounds = getAlphaBounds(context.getImageData(0, 0, sourceWidth, sourceHeight));
+
+  if (alphaBounds?.hasTransparentPixels) {
+    return await assertPrintCutoutQuality(buildBoundedPngFromCanvas({
+      canvas,
+      sourceWidth,
+      sourceHeight,
+      maxDataUrlBytes,
+      storagePolicy: 'bounded-local-canvas-data-url-v1',
+      engine: 'browser-existing-transparent-garment-v1',
+      validateSubjectShape: true,
+    }), 'プリント画像');
+  }
+
+  try {
+    const highPrecisionResult = await buildHighPrecisionMaterialCutoutDataUrl({
+      imageUrl,
+      maxDataUrlBytes,
+      modelName: 'isnet-general-use',
+    });
+    return await assertPrintCutoutQuality(highPrecisionResult, 'プリント画像');
+  } catch (highPrecisionError) {
+    try {
+      const fallback = await buildMaterialCutoutDataUrl({
+        imageUrl,
+        mode: 'auto',
+        candidate: '柄',
+        maxSize: 840,
+        maxDataUrlBytes,
+      });
+      return await assertPrintCutoutQuality(fallback, 'プリント画像');
+    } catch (fallbackError) {
+      const detail = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+      console.warn('Print design cutout failed', { highPrecisionError, fallbackError });
+      throw new Error(`プリント画像の背景を透明化できませんでした。${detail}`);
+    }
+  }
 }
 
 function buildCutoutFromImage({

@@ -18,6 +18,7 @@ import { PrintingCompositionStage } from '../components/workspace/PrintingCompos
 import { useAuthStore } from '../stores/authStore';
 import {
   buildPrintGarmentCutoutDataUrl,
+  buildPrintDesignCutoutDataUrl,
   buildPrintRequestSignature,
   buildPrintRequestSnapshot,
   renderPrintRequestComposition,
@@ -26,6 +27,7 @@ import {
 import { editImageWithPrompt } from '../lib/imageApi';
 
 type WorkbenchMode = 'fabric' | 'printing';
+type CutoutState = 'idle' | 'processing' | 'done' | 'error';
 
 type Transform = {
   x: number;
@@ -42,7 +44,7 @@ type AssetLayer = {
   displayUrl: string;
   transform: Transform;
   autoCutout: boolean;
-  cutoutState: 'idle' | 'processing' | 'done' | 'error';
+  cutoutState: CutoutState;
 };
 
 type WorkbenchResult = {
@@ -88,6 +90,8 @@ const fabricVariants = [
 ];
 
 const printStageSize = { width: 720, height: 900 };
+const CUTOUT_TIMEOUT_MS = 30_000;
+const COMPOSITION_TIMEOUT_MS = 30_000;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -96,11 +100,38 @@ function clamp(value: number, min: number, max: number) {
 async function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    let settled = false;
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      img.onload = null;
+      img.onerror = null;
+      img.src = '';
+      reject(new Error('画像の読み込みがタイムアウトしました'));
+    }, CUTOUT_TIMEOUT_MS);
+    const settle = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      callback();
+    };
     img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('image load failed'));
+    img.onload = () => settle(() => resolve(img));
+    img.onerror = () => settle(() => reject(new Error('image load failed')));
     img.src = url;
   });
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  }
 }
 
 async function renderComposition(
@@ -237,6 +268,8 @@ export function LightchainMaterialWorkbenchPage() {
   const userClearedSelectionRef = useRef(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [generatedResultsStale, setGeneratedResultsStale] = useState(false);
   const [selectedResult, setSelectedResult] = useState<WorkbenchResult | null>(null);
   const [fabricBase, setFabricBase] = useState<SelectedImage | null>(null);
   const [fabricDesign, setFabricDesign] = useState<SelectedImage | null>(null);
@@ -244,10 +277,71 @@ export function LightchainMaterialWorkbenchPage() {
   const [fabricPresetIds, setFabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentProcessed, setPrintGarmentProcessed] = useState<string | null>(null);
-  const [printGarmentCutoutState, setPrintGarmentCutoutState] = useState<'idle' | 'processing' | 'done' | 'error'>('idle');
+  const [printGarmentCutoutState, setPrintGarmentCutoutState] = useState<CutoutState>('idle');
+  const [printGarmentCutoutError, setPrintGarmentCutoutError] = useState<string | null>(null);
   const [printDesigns, setPrintDesigns] = useState<SelectedImage[]>([]);
   const [printDesignLayers, setPrintDesignLayers] = useState<AssetLayer[]>([]);
+  const [printDesignProcessedUrls, setPrintDesignProcessedUrls] = useState<Record<number, string>>({});
+  const [printDesignCutoutStates, setPrintDesignCutoutStates] = useState<Record<number, CutoutState>>({});
+  const [printDesignCutoutErrors, setPrintDesignCutoutErrors] = useState<Record<number, string>>({});
+  const printGarmentCutoutRequestRef = useRef(0);
+  const printDesignCutoutRequestRef = useRef(0);
   const printRequestRevisionRef = useRef(0);
+  const generationSequenceRef = useRef(0);
+  const generationRequestRef = useRef<number | null>(null);
+  const generationRequestSignatureRef = useRef<string | null>(null);
+
+  const generationInputSignature = useMemo(() => JSON.stringify({
+    mode,
+    brandId: currentBrand?.id ?? null,
+    fabricBaseUrl: fabricBase?.url ?? null,
+    fabricDesignUrl: fabricDesign?.url ?? null,
+    fabricPresetIds,
+    printGarmentUrl: printGarment?.url ?? null,
+    printGarmentProcessed,
+    printGarmentCutoutState,
+    printDesigns: printDesigns.map((design) => design.url),
+    printDesignProcessedUrls,
+    printDesignCutoutStates,
+    printDesignLayers: printDesignLayers.map((layer) => ({
+      id: layer.id,
+      sourceUrl: layer.originalUrl,
+      displayUrl: layer.displayUrl,
+      transform: layer.transform,
+      cutoutState: layer.cutoutState,
+    })),
+  }), [
+    currentBrand?.id,
+    fabricBase?.url,
+    fabricDesign?.url,
+    fabricPresetIds,
+    mode,
+    printDesignCutoutStates,
+    printDesignLayers,
+    printDesignProcessedUrls,
+    printDesigns,
+    printGarment?.url,
+    printGarmentCutoutState,
+    printGarmentProcessed,
+  ]);
+  const generationInputSignatureRef = useRef(generationInputSignature);
+  if (generationInputSignatureRef.current !== generationInputSignature) {
+    generationInputSignatureRef.current = generationInputSignature;
+    generationSequenceRef.current += 1;
+  }
+  const generationInputEffectSignatureRef = useRef(generationInputSignature);
+
+  useEffect(() => {
+    if (generationInputEffectSignatureRef.current === generationInputSignature) return;
+    generationInputEffectSignatureRef.current = generationInputSignature;
+    if (generatedResults.length > 0) setGeneratedResultsStale(true);
+    const activeRequest = generationRequestRef.current;
+    if (activeRequest === null || generationRequestSignatureRef.current === generationInputSignature) return;
+    generationRequestRef.current = null;
+    generationRequestSignatureRef.current = null;
+    setIsGenerating(false);
+    setGenerationError('素材が変更されたため、進行中の生成結果を無効化しました。内容を確認して再生成してください。');
+  }, [generatedResults.length, generationInputSignature]);
 
   const printSnapshotSignature = useMemo(() => {
     if (!currentBrand?.id || !printGarmentProcessed) return '';
@@ -283,8 +377,8 @@ export function LightchainMaterialWorkbenchPage() {
         ...((printGarment || printGarmentProcessed || printGarmentCutoutState === 'processing' || printGarmentCutoutState === 'error') ? [{
           id: 'print-garment',
           label: '参考画像',
-          originalUrl: printGarment?.url || printGarmentProcessed || '',
-          displayUrl: printGarmentProcessed || printGarment?.url || '',
+          originalUrl: printGarmentCutoutState === 'done' ? (printGarmentProcessed || '') : '',
+          displayUrl: printGarmentCutoutState === 'done' ? (printGarmentProcessed || '') : '',
           transform: defaultTransform({ x: 50, y: 52, scale: 1, opacity: 1 }),
           autoCutout: true,
           cutoutState: printGarmentCutoutState,
@@ -339,28 +433,39 @@ export function LightchainMaterialWorkbenchPage() {
   }, [fabricBase, fabricDesign]);
 
   useEffect(() => {
+    const requestId = ++printGarmentCutoutRequestRef.current;
     if (!printGarment) {
       setPrintGarmentProcessed(null);
       setPrintGarmentCutoutState('idle');
+      setPrintGarmentCutoutError(null);
       return;
     }
     let cancelled = false;
     setPrintGarmentCutoutState('processing');
+    setPrintGarmentCutoutError(null);
     setPrintGarmentProcessed(null);
-    void buildPrintGarmentCutoutDataUrl({ imageUrl: printGarment.url })
+    void withTimeout(
+      buildPrintGarmentCutoutDataUrl({ imageUrl: printGarment.url }),
+      CUTOUT_TIMEOUT_MS,
+      '参考画像の透明化がタイムアウトしました。元画像を確認して再試行してください',
+    )
       .then((result) => {
-        if (cancelled) return;
+        if (cancelled || printGarmentCutoutRequestRef.current !== requestId) return;
         setPrintGarmentProcessed(result.dataUrl);
         setPrintGarmentCutoutState('done');
       })
       .catch((error) => {
-        if (cancelled) return;
+        if (cancelled || printGarmentCutoutRequestRef.current !== requestId) return;
         console.error('Print garment cutout failed', error);
         setPrintGarmentProcessed(null);
         setPrintGarmentCutoutState('error');
+        setPrintGarmentCutoutError(error instanceof Error ? error.message : '参考画像の背景を透明化できませんでした');
       });
     return () => {
       cancelled = true;
+      if (printGarmentCutoutRequestRef.current === requestId) {
+        printGarmentCutoutRequestRef.current += 1;
+      }
     };
   }, [printGarment]);
 
@@ -369,15 +474,16 @@ export function LightchainMaterialWorkbenchPage() {
       setPrintDesignLayers([]);
       return;
     }
-    const previousLayers = printDesignLayers;
-    setPrintDesignLayers(printDesigns.map((design, index) => {
+    setPrintDesignLayers((previousLayers) => printDesigns.map((_, index) => {
       const layerId = `print-design-${index}`;
       const previousLayer = previousLayers.find((layer) => layer.id === layerId);
+      const cutoutState = printDesignCutoutStates[index] ?? 'processing';
+      const processedUrl = cutoutState === 'done' ? (printDesignProcessedUrls[index] || '') : '';
       return {
         id: layerId,
         label: `デザイン ${index + 1}`,
-        originalUrl: design.url,
-        displayUrl: design.url,
+        originalUrl: processedUrl,
+        displayUrl: processedUrl,
         transform: defaultTransform({
           x: previousLayer?.transform.x ?? 50 + ((index % 3) - 1) * 8,
           y: previousLayer?.transform.y ?? 44 + Math.floor(index / 3) * 14,
@@ -385,11 +491,11 @@ export function LightchainMaterialWorkbenchPage() {
           rotation: previousLayer?.transform.rotation ?? (index % 2 === 0 ? -6 : 6) * (index % 3),
           opacity: previousLayer?.transform.opacity ?? 1,
         }),
-        autoCutout: false,
-        cutoutState: 'done',
+        autoCutout: true,
+        cutoutState,
       };
     }));
-  }, [printDesigns]);
+  }, [printDesignCutoutStates, printDesignProcessedUrls, printDesigns]);
 
   useEffect(() => {
     if (userClearedSelectionRef.current) {
@@ -409,8 +515,8 @@ export function LightchainMaterialWorkbenchPage() {
         ? [{
             id: 'print-garment',
             label: '参考画像',
-            originalUrl: printGarment?.url || printGarmentProcessed || '',
-            displayUrl: printGarmentProcessed || printGarment?.url || '',
+            originalUrl: printGarmentCutoutState === 'done' ? (printGarmentProcessed || '') : '',
+            displayUrl: printGarmentCutoutState === 'done' ? (printGarmentProcessed || '') : '',
             transform: defaultTransform({ x: 50, y: 52, scale: 1, opacity: 1 }),
             autoCutout: true,
             cutoutState: printGarmentCutoutState,
@@ -459,12 +565,30 @@ export function LightchainMaterialWorkbenchPage() {
       toast.error('生地画像とデザイン画像を入れてください');
       return;
     }
-    if (isPrinting && (!printGarmentProcessed || !printDesignLayers.length)) {
-      toast.error('参考画像とプリント画像を入れてください');
+    if (isPrinting && (
+      !printGarmentProcessed
+      || printGarmentCutoutState !== 'done'
+      || !printDesignLayers.length
+      || printDesignLayers.some((layer) => layer.cutoutState !== 'done' || !layer.displayUrl)
+    )) {
+      toast.error(printGarmentCutoutState === 'processing' || printDesignLayers.some((layer) => layer.cutoutState === 'processing')
+        ? '背景の透明化が完了するまでお待ちください'
+        : '参考画像とプリント画像の透明化を完了してください');
       return;
     }
 
+    const requestId = ++generationSequenceRef.current;
+    const requestSignature = generationInputSignatureRef.current;
+    generationRequestRef.current = requestId;
+    generationRequestSignatureRef.current = requestSignature;
     setIsGenerating(true);
+    setGenerationError(null);
+    if (generatedResults.length > 0) setGeneratedResultsStale(true);
+    const isCurrentRequest = () => (
+      generationRequestRef.current === requestId
+      && generationSequenceRef.current === requestId
+      && generationInputSignatureRef.current === requestSignature
+    );
     try {
       const rect = stageRef.current.getBoundingClientRect();
       const width = Math.max(720, Math.round(rect.width || 960));
@@ -491,7 +615,12 @@ export function LightchainMaterialWorkbenchPage() {
 
         const variantResults: WorkbenchResult[] = [];
         for (const preset of fabricVariants.filter((variant) => fabricPresetIds.includes(variant.id))) {
-          const imageUrl = await renderComposition(width, height, fabricBase?.url || null, preset.tint, baseLayers, 'fabric');
+          const imageUrl = await withTimeout(
+            renderComposition(width, height, fabricBase?.url || null, preset.tint, baseLayers, 'fabric'),
+            COMPOSITION_TIMEOUT_MS,
+            '生地プレビューの描画がタイムアウトしました。素材を確認して再試行してください',
+          );
+          if (!isCurrentRequest()) return;
           variantResults.push({
             id: `${preset.id}-${Date.now()}`,
             title: `生地バリエーション: ${preset.name}`,
@@ -499,42 +628,59 @@ export function LightchainMaterialWorkbenchPage() {
             imageUrl,
           });
         }
+        if (!variantResults.length) {
+          throw new Error('生地バリエーションを1つ以上選択してください');
+        }
+        if (!isCurrentRequest()) return;
         setGeneratedResults(variantResults);
+        setGeneratedResultsStale(false);
+        setGenerationError(null);
         toast.success('生地バリエーションを生成しました');
         return;
       }
 
       const requestState = { ...currentPrintStateRef.current };
       const nextRevision = requestState.revision;
-      const nextSnapshot = await buildPrintRequestSnapshot({
-        revision: nextRevision,
-        brandId: currentBrand.id,
-        brandName: currentBrand.name || 'brand',
-        garmentUrl: printGarmentProcessed!,
-        garmentReferenceType: printGarment?.referenceType ?? null,
-        designs: printDesignLayers.map((layer) => ({
-          id: layer.id,
-          sourceUrl: layer.originalUrl,
-          transform: {
-            x: layer.transform.x,
-            y: layer.transform.y,
-            scale: layer.transform.scale,
-            rotation: layer.transform.rotation,
-            opacity: layer.transform.opacity,
-          },
-        })),
-        stageSize: printStageSize,
-      });
+      const nextSnapshot = await withTimeout(
+        buildPrintRequestSnapshot({
+          revision: nextRevision,
+          brandId: currentBrand.id,
+          brandName: currentBrand.name || 'brand',
+          garmentUrl: printGarmentProcessed!,
+          garmentReferenceType: printGarment?.referenceType ?? null,
+          designs: printDesignLayers.map((layer) => ({
+            id: layer.id,
+            sourceUrl: layer.originalUrl,
+            transform: {
+              x: layer.transform.x,
+              y: layer.transform.y,
+              scale: layer.transform.scale,
+              rotation: layer.transform.rotation,
+              opacity: layer.transform.opacity,
+            },
+          })),
+          stageSize: printStageSize,
+        }),
+        COMPOSITION_TIMEOUT_MS,
+        'プリント構成の準備がタイムアウトしました。素材を確認して再試行してください',
+      );
       if (
-        currentPrintStateRef.current.revision !== requestState.revision
+        !isCurrentRequest()
+        || currentPrintStateRef.current.revision !== requestState.revision
         || currentPrintStateRef.current.signature !== requestState.signature
         || requestState.signature !== nextSnapshot.signature
       ) {
         return;
       }
 
-      const composedInput = await renderPrintRequestComposition(nextSnapshot);
+      const composedInput = await withTimeout(
+        renderPrintRequestComposition(nextSnapshot),
+        COMPOSITION_TIMEOUT_MS,
+        'プリント構成の描画がタイムアウトしました。素材を確認して再試行してください',
+      );
       if (
+        !isCurrentRequest()
+        ||
         currentPrintStateRef.current.revision !== requestState.revision
         || currentPrintStateRef.current.signature !== requestState.signature
       ) {
@@ -549,11 +695,17 @@ export function LightchainMaterialWorkbenchPage() {
         'Return one result only.',
       ].join(' ');
 
-      const editResult = await editImageWithPrompt(composedInput, editPrompt, currentBrand.id, {
-        rightsConfirmed: true,
-        outputBackground: 'transparent',
-      });
+      const editResult = await withTimeout(
+        editImageWithPrompt(composedInput, editPrompt, currentBrand.id, {
+          rightsConfirmed: true,
+          outputBackground: 'transparent',
+        }),
+        90_000,
+        '生成処理がタイムアウトしました。しばらく待ってから再試行してください',
+      );
       if (
+        !isCurrentRequest()
+        ||
         currentPrintStateRef.current.revision !== requestState.revision
         || currentPrintStateRef.current.signature !== requestState.signature
       ) {
@@ -563,11 +715,20 @@ export function LightchainMaterialWorkbenchPage() {
         throw new Error(editResult.error || '画像編集に失敗しました');
       }
 
-      const normalizedResultUrl = await restorePrintResultToStageDataUrl({
-        imageUrl: editResult.imageUrl,
-        snapshot: nextSnapshot,
-      });
+      const normalizedResultUrl = await withTimeout(
+        restorePrintResultToStageDataUrl({
+          imageUrl: editResult.imageUrl,
+          snapshot: nextSnapshot,
+        }),
+        COMPOSITION_TIMEOUT_MS,
+        '生成結果の復元がタイムアウトしました。再試行してください',
+      );
+      if (!normalizedResultUrl) {
+        throw new Error('生成結果を読み込めませんでした。再試行してください');
+      }
       if (
+        !isCurrentRequest()
+        ||
         currentPrintStateRef.current.revision !== requestState.revision
         || currentPrintStateRef.current.signature !== requestState.signature
       ) {
@@ -580,12 +741,23 @@ export function LightchainMaterialWorkbenchPage() {
         note: '透明背景 / 1件のみ',
         imageUrl: normalizedResultUrl,
       }]);
+      setGeneratedResultsStale(false);
+      setGenerationError(null);
       toast.success('プリント結果を生成しました');
     } catch (error: any) {
       console.error('Workbench generation failed', error);
-      toast.error(error?.message || '生成に失敗しました');
+      if (isCurrentRequest()) {
+        const message = error?.message || '生成に失敗しました';
+        setGenerationError(message);
+        if (generatedResults.length > 0) setGeneratedResultsStale(true);
+        toast.error(message);
+      }
     } finally {
-      setIsGenerating(false);
+      if (generationRequestRef.current === requestId) {
+        generationRequestRef.current = null;
+        generationRequestSignatureRef.current = null;
+        setIsGenerating(false);
+      }
     }
   };
 
@@ -603,6 +775,32 @@ export function LightchainMaterialWorkbenchPage() {
       return;
     }
     setPrintDesigns(images);
+    const requestId = ++printDesignCutoutRequestRef.current;
+    const initialStates = Object.fromEntries(images.map((_, index) => [index, 'processing' as CutoutState]));
+    setPrintDesignProcessedUrls({});
+    setPrintDesignCutoutStates(initialStates);
+    setPrintDesignCutoutErrors({});
+
+    const processedUrls: Record<number, string> = {};
+    for (const [index, design] of images.entries()) {
+      try {
+        const result = await withTimeout(
+          buildPrintDesignCutoutDataUrl({ imageUrl: design.url }),
+          CUTOUT_TIMEOUT_MS,
+          `デザイン${index + 1}の透明化がタイムアウトしました。元画像を確認して再試行してください`,
+        );
+        if (printDesignCutoutRequestRef.current !== requestId) return;
+        processedUrls[index] = result.dataUrl;
+        setPrintDesignProcessedUrls({ ...processedUrls });
+        setPrintDesignCutoutStates((current) => ({ ...current, [index]: 'done' }));
+      } catch (error) {
+        if (printDesignCutoutRequestRef.current !== requestId) return;
+        const message = error instanceof Error ? error.message : 'プリント画像の背景を透明化できませんでした';
+        setPrintDesignCutoutStates((current) => ({ ...current, [index]: 'error' }));
+        setPrintDesignCutoutErrors((current) => ({ ...current, [index]: message }));
+        console.error('Print design cutout failed', { index, error });
+      }
+    }
   };
 
   const fabricStageBackground = fabricBase?.url
@@ -718,11 +916,12 @@ export function LightchainMaterialWorkbenchPage() {
                 defaultReferenceType="base"
                 hint="服・Tシャツ・パーカーなどの参考画像を入れます"
                 processing={printGarmentCutoutState === 'processing'}
-                hideSelectedPreviewWhileProcessing={false}
+                hideSelectedPreviewWhileProcessing
+                previewUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
                 processingLabel="服を切り抜き中"
               />
               {printGarmentCutoutState === 'error' && (
-                <p className="text-xs text-red-300">背景を分離できませんでした。透明背景または白背景の服画像で再試行してください。</p>
+                <p className="text-xs text-red-300">{printGarmentCutoutError || '背景を分離できませんでした。透明背景または白背景の服画像で再試行してください。'}</p>
               )}
               <ImageSelector
                 label="プリント画像を追加"
@@ -736,23 +935,59 @@ export function LightchainMaterialWorkbenchPage() {
                 allowedReferenceTypes={['pattern']}
                 defaultReferenceType="pattern"
                 hint="柄・ロゴ・図案を6つまで追加できます"
-                processing={false}
-                hideSelectedPreviewWhileProcessing={false}
-                processingLabel="読み込み中"
+                processing={printDesigns.some((_, index) => (printDesignCutoutStates[index] ?? 'processing') === 'processing')}
+                hideSelectedPreviewWhileProcessing
+                multiplePreviewUrls={printDesigns.map((_, index) => (
+                  (printDesignCutoutStates[index] ?? 'processing') === 'done'
+                    ? printDesignProcessedUrls[index] ?? null
+                    : null
+                ))}
+                processingLabel="プリント画像を透明化中"
               />
+              {printDesigns.length > 0 && (
+                <div className="space-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
+                  {printDesigns.map((design, index) => {
+                    const state = printDesignCutoutStates[index] ?? 'processing';
+                    return (
+                      <div key={`${design.url}-${index}`} className="flex items-center justify-between gap-3">
+                        <span className="min-w-0 truncate text-white/70">デザイン {index + 1}</span>
+                        <span className={state === 'error' ? 'text-red-300' : state === 'done' ? 'text-emerald-300' : 'text-cyan-200'}>
+                          {state === 'processing' ? '背景を透明化中…' : state === 'done' ? '透明化済み' : state === 'error' ? (printDesignCutoutErrors[index] || '透明化失敗') : '待機中'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
           <Button
             onClick={handleGenerate}
             isLoading={isGenerating}
-            disabled={isGenerating || (!isPrinting ? !(fabricBase && fabricDesign) : !(printGarmentProcessed && printDesignLayers.length))}
+            disabled={isGenerating || (!isPrinting
+              ? !(fabricBase && fabricDesign)
+              : !(printGarmentProcessed
+                && printGarmentCutoutState === 'done'
+                && printDesignLayers.length
+                && printDesignLayers.every((layer) => layer.cutoutState === 'done' && Boolean(layer.displayUrl))))}
             className="w-full"
             size="lg"
             leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
           >
             {isGenerating ? '生成中...' : '生成して結果を出す'}
           </Button>
+
+          {generationError && (
+            <p className="rounded-xl border border-rose-300/20 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-200">
+              {generationError}
+            </p>
+          )}
+          {generatedResultsStale && generatedResults.length > 0 && (
+            <p className="rounded-xl border border-amber-300/20 bg-amber-950/25 px-3 py-2 text-xs leading-relaxed text-amber-100">
+              以下は素材変更前または直前の生成結果です。新しい結果としては扱わず、生成を再実行してください。
+            </p>
+          )}
 
           <p className="text-xs leading-relaxed text-white/45">
             {isPrinting
@@ -791,8 +1026,8 @@ export function LightchainMaterialWorkbenchPage() {
             >
               {isPrinting ? (
               <PrintingCompositionStage
-                  garmentUrl={printGarment?.url || printGarmentProcessed}
-                  garmentMaskUrl={printGarmentProcessed}
+                  garmentUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
+                  garmentMaskUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
                   layers={stageLayers as Array<{
                     id: string;
                     label: string;
@@ -843,6 +1078,9 @@ export function LightchainMaterialWorkbenchPage() {
                   <h3 className="text-lg font-semibold text-white">
                     {isPrinting ? 'プリント結果' : '生地バリエーション'}
                   </h3>
+                  {generatedResultsStale && (
+                    <p className="mt-1 text-xs text-amber-200">前回結果（未更新）</p>
+                  )}
                 </div>
                 <Layers3 className="h-5 w-5 text-primary-200" />
               </div>

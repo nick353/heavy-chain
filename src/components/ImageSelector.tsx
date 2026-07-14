@@ -50,6 +50,8 @@ interface ImageSelectorProps {
   processing?: boolean;
   hideSelectedPreviewWhileProcessing?: boolean;
   processingLabel?: string;
+  previewUrl?: string | null;
+  multiplePreviewUrls?: Array<string | null>;
 }
 
 export function ImageSelector({
@@ -67,6 +69,8 @@ export function ImageSelector({
   processing = false,
   hideSelectedPreviewWhileProcessing = false,
   processingLabel = '切り抜き処理中',
+  previewUrl,
+  multiplePreviewUrls,
 }: ImageSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -233,7 +237,16 @@ export function ImageSelector({
         <div className="grid grid-cols-3 gap-2">
           {multipleValue.map((img, index) => (
             <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-              <img src={img.url} alt="" className="w-full h-full object-cover" />
+              {(() => {
+                const displayUrl = multiplePreviewUrls ? multiplePreviewUrls[index] : img.url;
+                return displayUrl ? (
+                  <img src={displayUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex h-full items-center justify-center px-2 text-center text-[10px] text-neutral-500 dark:text-neutral-300">
+                    {processing ? processingLabel : '透明化結果を表示できません'}
+                  </div>
+                );
+              })()}
               {processing && hideSelectedPreviewWhileProcessing && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/35 backdrop-blur-[1px]">
                   <div className="rounded-full bg-black/60 px-2 py-1 text-[10px] text-white/90">
@@ -375,16 +388,16 @@ export function ImageSelector({
       ) : (
         <div className="relative">
           <div className="rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-            {processing && hideSelectedPreviewWhileProcessing ? (
+            {processing && hideSelectedPreviewWhileProcessing || previewUrl === null ? (
               <div className="flex min-h-48 items-center justify-center bg-neutral-100/90 dark:bg-neutral-800/90">
                 <div className="text-center">
-                  <div className="spinner mx-auto mb-3" />
-                  <p className="text-sm text-neutral-500 dark:text-neutral-300">{processingLabel}</p>
+                  {processing && <div className="spinner mx-auto mb-3" />}
+                  <p className="text-sm text-neutral-500 dark:text-neutral-300">{processing ? processingLabel : '透明化結果を表示できません'}</p>
                 </div>
               </div>
             ) : (
               <img
-                src={value.url}
+                src={previewUrl ?? value.url}
                 alt="Selected"
                 className="w-full max-h-48 object-contain"
               />
@@ -418,4 +431,3 @@ export function ImageSelector({
     </div>
   );
 }
-

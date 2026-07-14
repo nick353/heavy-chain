@@ -23,8 +23,9 @@ import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
 import { Modal } from '../components/ui';
 import {
-  buildHighPrecisionMaterialCutoutDataUrl,
   buildMaterialCutoutDataUrl,
+  buildPrintDesignCutoutDataUrl,
+  buildPrintGarmentCutoutDataUrl,
   type MaterialCutoutBounds,
 } from '../lib/workspaceMaterialReferences';
 import { saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
@@ -45,6 +46,21 @@ type MaterialTab = 'upload-history' | 'generation-history' | 'my-library' | 'tea
 type MaterialSlotKey = 'primary' | 'secondary';
 type ModelPanelVariant = 'uploadPair' | 'body' | 'size' | 'angle' | 'custom';
 type PrintingGenerationStatus = 'idle' | 'pending' | 'processing' | 'success' | 'error';
+type PrintingCutoutStatus = 'idle' | 'processing' | 'done' | 'error';
+
+const PRINTING_CUTOUT_TIMEOUT_MS = 30_000;
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  }
+}
 
 type ModelFormState = {
   customMode: string;
@@ -929,6 +945,8 @@ export function LightchainWorkbenchPage() {
   });
   const [modelFormState, setModelFormState] = useState<ModelFormState>(defaultModelFormState);
   const [lightchainResult, setLightchainResult] = useState<{ toolId: string; title: string; summary: string; imageUrl: string } | null>(null);
+  const lightchainResultRef = useRef<typeof lightchainResult>(null);
+  lightchainResultRef.current = lightchainResult;
   const [lightchainResultPreviewOpen, setLightchainResultPreviewOpen] = useState(false);
   const [workspaceText, setWorkspaceText] = useState('');
   const [workspaceTextDrafts, setWorkspaceTextDrafts] = useState<Record<string, string>>({});
@@ -939,6 +957,14 @@ export function LightchainWorkbenchPage() {
   const [printingNotice, setPrintingNotice] = useState('');
   const [printingGenerationStatus, setPrintingGenerationStatus] = useState<PrintingGenerationStatus>('idle');
   const [printingGenerationError, setPrintingGenerationError] = useState<string | null>(null);
+  const [printingCutoutStatus, setPrintingCutoutStatus] = useState<Record<MaterialSlotKey, PrintingCutoutStatus>>({
+    primary: 'idle',
+    secondary: 'idle',
+  });
+  const [printingCutoutErrors, setPrintingCutoutErrors] = useState<Record<MaterialSlotKey, string | null>>({
+    primary: null,
+    secondary: null,
+  });
   const [fabricPrompt, setFabricPrompt] = useState('');
   const [fabricNotice, setFabricNotice] = useState('');
   const [lineDraftType, setLineDraftType] = useState<'カラー線画' | 'モノクロ線画'>('カラー線画');
@@ -959,6 +985,7 @@ export function LightchainWorkbenchPage() {
   const [marketingDetailPrompt, setMarketingDetailPrompt] = useState('');
   const printingGenerationRequestRef = useRef<number | null>(null);
   const printingGenerationSequenceRef = useRef(0);
+  const printingCutoutRequestRef = useRef<Record<MaterialSlotKey, number>>({ primary: 0, secondary: 0 });
 
   const renderLightchainResultPreviewImage = (className: string, alt: string) => {
     if (!lightchainResult) return null;
@@ -1029,6 +1056,8 @@ export function LightchainWorkbenchPage() {
   const selectedTool = routeTool ?? tools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? tools[0];
   const isPrintingImageGenerationRunning = printingGenerationStatus === 'pending' || printingGenerationStatus === 'processing';
   const isPrintingImageGenerationLocked = isPrintingImageGenerationRunning || printingGenerationRequestRef.current !== null;
+  const isPrintingCutoutProcessing = selectedTool.id === 'printing-image'
+    && (printingCutoutStatus.primary === 'processing' || printingCutoutStatus.secondary === 'processing');
   const selectedCategory = categories.find((category) => category.id === (isFeatureDetail ? selectedTool.category : activeCategory)) ?? categories[0];
   const isPatternVectorProFlow = selectedTool.id === 'pattern-vector' || selectedTool.id === 'pattern-vector-pro';
   const isFittingDetail = [
@@ -1119,7 +1148,15 @@ export function LightchainWorkbenchPage() {
           { key: 'primary', label: primaryUploadLabel, helper: workbenchLabels.emptyLabel, required: true },
         ];
   const materialRequirementsMissing = materialSlots.some((slot) => slot.required && !materialSlotFiles[slot.key]);
-  const aiGenerateDisabled = ['fabric-image', 'line-to-real', 'line-generation', 'pattern-vector', 'pattern-vector-pro', 'image-repair'].includes(selectedTool.id) || selectedTool.category === 'model' ? false : materialRequirementsMissing;
+  const printingCutoutBlocked = selectedTool.id === 'printing-image'
+    && (materialRequirementsMissing
+      || printingCutoutStatus.primary !== 'done'
+      || printingCutoutStatus.secondary !== 'done');
+  const aiGenerateDisabled = selectedTool.id === 'printing-image'
+    ? printingCutoutBlocked
+    : ['fabric-image', 'line-to-real', 'line-generation', 'pattern-vector', 'pattern-vector-pro', 'image-repair'].includes(selectedTool.id) || selectedTool.category === 'model'
+      ? false
+      : materialRequirementsMissing;
   const lightchainToolPanelConfig = useMemo(() => {
     const sharedNotice = 'この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください';
     const base = {
@@ -1226,36 +1263,52 @@ export function LightchainWorkbenchPage() {
     setNextStepConfirmed(false);
   };
 
-  const buildSecondaryPrintingCutoutImageUrl = async (imageUrl: string) => {
-    try {
-      const cutout = await buildHighPrecisionMaterialCutoutDataUrl({ imageUrl });
-      return cutout.dataUrl;
-    } catch (highPrecisionError) {
-      try {
-        const cutout = await buildMaterialCutoutDataUrl({
-          imageUrl,
-          mode: 'auto',
-          candidate: '柄',
-        });
-        return cutout.dataUrl;
-      } catch (fallbackError) {
-        console.warn('Failed to auto-cutout printing design image, using original image instead.', {
-          highPrecisionError,
-          fallbackError,
-        });
-        return imageUrl;
-      }
-    }
-  };
-
   const applyMaterialToSlot = async (slot: MaterialSlotKey, item: { name: string; kind: string; imageUrl: string }) => {
-    const nextItem =
-      slot === 'secondary' && selectedTool.id === 'printing-image'
-        ? {
-          ...item,
-          imageUrl: await buildSecondaryPrintingCutoutImageUrl(item.imageUrl),
-        }
-        : item;
+    const shouldCutoutForPrinting = selectedTool.id === 'printing-image';
+    const requestId = shouldCutoutForPrinting ? printingCutoutRequestRef.current[slot] + 1 : 0;
+    if (shouldCutoutForPrinting) {
+      printingCutoutRequestRef.current[slot] = requestId;
+      printingGenerationSequenceRef.current += 1;
+      printingGenerationRequestRef.current = null;
+      setPrintingGenerationStatus('idle');
+      setPrintingGenerationError(null);
+      setLightchainResult(null);
+      setLightchainResultPreviewOpen(false);
+    }
+    if (shouldCutoutForPrinting) {
+      setPrintingCutoutStatus((current) => ({ ...current, [slot]: 'processing' }));
+      setPrintingCutoutErrors((current) => ({ ...current, [slot]: null }));
+      setMaterialSlotFiles((current) => ({ ...current, [slot]: null }));
+      if (slot === 'primary') setGarmentImageUrl('');
+    }
+
+    let nextItem = item;
+    try {
+      if (shouldCutoutForPrinting) {
+        const cutout = slot === 'primary'
+          ? await withTimeout(
+            buildPrintGarmentCutoutDataUrl({ imageUrl: item.imageUrl }),
+            PRINTING_CUTOUT_TIMEOUT_MS,
+            '参考画像の透明化がタイムアウトしました。元画像を確認して再試行してください',
+          )
+          : await withTimeout(
+            buildPrintDesignCutoutDataUrl({ imageUrl: item.imageUrl }),
+            PRINTING_CUTOUT_TIMEOUT_MS,
+            'プリント画像の透明化がタイムアウトしました。元画像を確認して再試行してください',
+          );
+        if (printingCutoutRequestRef.current[slot] !== requestId) return false;
+        nextItem = { ...item, imageUrl: cutout.dataUrl };
+        setPrintingCutoutStatus((current) => ({ ...current, [slot]: 'done' }));
+      }
+    } catch (error) {
+      if (shouldCutoutForPrinting && printingCutoutRequestRef.current[slot] !== requestId) return false;
+      if (shouldCutoutForPrinting) {
+        const message = error instanceof Error ? error.message : '背景を透明化できませんでした。別の画像で再試行してください';
+        setPrintingCutoutStatus((current) => ({ ...current, [slot]: 'error' }));
+        setPrintingCutoutErrors((current) => ({ ...current, [slot]: message }));
+      }
+      throw error;
+    }
 
     setMaterialSlotFiles((current) => ({ ...current, [slot]: nextItem }));
     if (slot === 'primary') {
@@ -1269,6 +1322,7 @@ export function LightchainWorkbenchPage() {
       }
       resetWorkbenchMaskState();
     }
+    return true;
   };
 
   const openMaterialModalForSlot = (slot: MaterialSlotKey) => {
@@ -1286,6 +1340,11 @@ export function LightchainWorkbenchPage() {
     setActiveCategory(selectedTool.category);
     setActiveMaterialSlot('primary');
     setMaterialSlotFiles({ primary: null, secondary: null });
+    printingCutoutRequestRef.current.primary += 1;
+    printingCutoutRequestRef.current.secondary += 1;
+    setPrintingCutoutStatus({ primary: 'idle', secondary: 'idle' });
+    setPrintingCutoutErrors({ primary: null, secondary: null });
+    setLightchainResult(null);
     setLightchainResultPreviewOpen(false);
     setModelFormState(defaultModelFormState);
     setPrintingGenerationStatus('idle');
@@ -1336,6 +1395,20 @@ export function LightchainWorkbenchPage() {
     setPrintScale(describePrintScale(printArtworkTransform));
   }, [printArtworkTransform, selectedTool.id]);
 
+  useEffect(() => {
+    if (selectedTool.id !== 'printing-image') return;
+    if (printingGenerationRequestRef.current !== null) {
+      printingGenerationSequenceRef.current += 1;
+      printingGenerationRequestRef.current = null;
+      setPrintingGenerationStatus('idle');
+      setPrintingGenerationError('プリント設定が変更されたため、進行中の生成結果を無効化しました。再生成してください。');
+    }
+    if (lightchainResultRef.current) {
+      setLightchainResult(null);
+      setLightchainResultPreviewOpen(false);
+    }
+  }, [garmentCategory, printArtworkTransform, printingMode, selectedTool.id]);
+
   const handleCategoryChange = (categoryId: ToolCategory) => {
     setActiveCategory(categoryId);
     setQuery('');
@@ -1347,16 +1420,14 @@ export function LightchainWorkbenchPage() {
     window.setTimeout(resolve, 48);
   });
 
-  const resetPrintingImageGeneration = () => {
-    printingGenerationRequestRef.current = null;
-    setPrintingGenerationStatus('idle');
-    setPrintingGenerationError(null);
-  };
-
   const handlePrintingImageGenerate = async () => {
     if (isPrintingImageGenerationLocked) return;
     if (aiGenerateDisabled) {
-      toast.error('先に素材画像を選択してください');
+      toast.error(isPrintingCutoutProcessing ? '背景の透明化が完了するまでお待ちください' : '先に素材画像を選択してください');
+      return;
+    }
+    if (!materialSlotFiles.primary || !materialSlotFiles.secondary) {
+      toast.error('参考画像とプリント画像を選択してください');
       return;
     }
 
@@ -1365,7 +1436,10 @@ export function LightchainWorkbenchPage() {
     setPrintingGenerationError(null);
     setPrintingGenerationStatus('pending');
     setPrintingNotice('');
+    setLightchainResult(null);
     setLightchainResultPreviewOpen(false);
+    let committed = false;
+    let failed = false;
 
     try {
       await yieldNextTick();
@@ -1376,9 +1450,9 @@ export function LightchainWorkbenchPage() {
       if (printingGenerationRequestRef.current !== requestId) return;
 
       const composedPreview = buildPrintingImagePreviewDataUrl({
-        garmentImageUrl: extractedLayerReady ? extractedGarmentImageUrl || garmentImageUrl : garmentImageUrl,
-        garmentMaskUrl: extractedLayerReady ? extractedGarmentImageUrl : null,
-        printImageUrl: materialSlotFiles.secondary?.imageUrl ?? null,
+        garmentImageUrl: materialSlotFiles.primary.imageUrl,
+        garmentMaskUrl: materialSlotFiles.primary.imageUrl,
+        printImageUrl: materialSlotFiles.secondary.imageUrl,
         garmentCategory,
         printMode: printingMode,
         printLabel: materialSlotFiles.secondary?.name ?? 'プリント画像',
@@ -1386,6 +1460,7 @@ export function LightchainWorkbenchPage() {
       });
 
       if (printingGenerationRequestRef.current !== requestId) return;
+      if (!composedPreview) throw new Error('合成プレビューを作成できませんでした');
 
       setLightchainResult({
         toolId: selectedTool.id,
@@ -1396,17 +1471,26 @@ export function LightchainWorkbenchPage() {
       setPrintingNotice('キャンバスの内容をそのまま生成履歴に反映しました');
       setPrintingGenerationStatus('success');
       toast.success('履歴に合成プレビューを追加しました');
-
-      await yieldNextTick();
-      if (printingGenerationRequestRef.current !== requestId) return;
-
-      resetPrintingImageGeneration();
+      committed = true;
     } catch (error) {
-      if (printingGenerationRequestRef.current !== requestId) return;
-      setPrintingGenerationError(error instanceof Error ? error.message : '生成に失敗しました');
-      setPrintingGenerationStatus('error');
-      toast.error(error instanceof Error ? error.message : '生成に失敗しました');
-      printingGenerationRequestRef.current = null;
+      if (printingGenerationRequestRef.current === requestId) {
+        const message = error instanceof Error ? error.message : '生成に失敗しました';
+        failed = true;
+        setPrintingGenerationError(message);
+        setPrintingGenerationStatus('error');
+        setLightchainResult(null);
+        setLightchainResultPreviewOpen(false);
+        toast.error(message);
+      }
+    } finally {
+      if (printingGenerationRequestRef.current === requestId) {
+        printingGenerationRequestRef.current = null;
+        // Keep the success state visible while allowing another generation;
+        // failures retain the previous result and expose the retry action.
+        if (!committed && !failed) {
+          setPrintingGenerationStatus('error');
+        }
+      }
     }
   };
 
@@ -1427,14 +1511,14 @@ export function LightchainWorkbenchPage() {
     try {
       const imageUrl = await readFileAsDataUrl(file);
       const slotConfig = materialSlots.find((materialSlot) => materialSlot.key === slot);
-      await applyMaterialToSlot(slot, {
+      const applied = await applyMaterialToSlot(slot, {
         name: file.name,
         kind: slot === 'secondary' || selectedTool.id === 'fitting-background-reference'
           ? slotConfig?.label ?? '追加素材'
           : garmentCategory,
         imageUrl,
       });
-      toast.success('素材画像を読み込み、編集レイヤーを準備しました');
+      if (applied) toast.success('素材画像を読み込み、編集レイヤーを準備しました');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '画像を読み込めませんでした');
     } finally {
@@ -1454,9 +1538,15 @@ export function LightchainWorkbenchPage() {
         <text x="450" y="704" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="28">${escapeSvgText(item.kind)} / ${escapeSvgText(item.note)}</text>
       </svg>
     `);
-    await applyMaterialToSlot(activeMaterialSlot, { name: item.title, kind: item.kind, imageUrl: preview });
-    setMaterialModalOpen(false);
-    toast.success(`${item.title}を使用しました`);
+    try {
+      const applied = await applyMaterialToSlot(activeMaterialSlot, { name: item.title, kind: item.kind, imageUrl: preview });
+      if (applied) {
+        setMaterialModalOpen(false);
+        toast.success(`${item.title}を使用しました`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '素材画像の背景を透明化できませんでした');
+    }
   };
 
   const updateModelFormState = <Key extends keyof ModelFormState>(key: Key, value: ModelFormState[Key]) => {
@@ -1942,11 +2032,27 @@ export function LightchainWorkbenchPage() {
       if (!currentBrand) toast.error('ブランドを選択してください');
       return;
     }
+    if (selectedTool.id === 'printing-image' && (
+      printingCutoutStatus.primary !== 'done'
+      || printingCutoutStatus.secondary !== 'done'
+      || !materialSlotFiles.primary?.imageUrl
+      || !materialSlotFiles.secondary?.imageUrl
+    )) {
+      toast.error('参考画像とプリント画像の透明化が完了するまで保存できません');
+      return;
+    }
+    if (selectedTool.id === 'printing-image' && printingGenerationStatus === 'error' && !lightchainResult) {
+      toast.error('生成に失敗しています。再生成してから保存してください');
+      return;
+    }
 
     setIsSaving(true);
     try {
       const shouldSaveWorkbenchAsset = workbenchEnabled && Boolean(garmentImageUrl);
-      const ensuredCutout = shouldSaveWorkbenchAsset && extractedLayerReady && !extractedGarmentImageUrl
+      const ensuredCutout = selectedTool.id !== 'printing-image'
+        && shouldSaveWorkbenchAsset
+        && extractedLayerReady
+        && !extractedGarmentImageUrl
         ? await buildMaterialCutoutDataUrl({
           imageUrl: garmentImageUrl,
           mode: cutMode === 'keep' ? 'auto' : cutMode,
@@ -2151,9 +2257,9 @@ export function LightchainWorkbenchPage() {
       if (shouldSaveWorkbenchAsset) {
         if (selectedTool.id === 'printing-image') {
           const composedPreview = buildPrintingImagePreviewDataUrl({
-            garmentImageUrl: finalExtractedImageUrl || garmentImageUrl,
-            garmentMaskUrl: finalExtractedImageUrl,
-            printImageUrl: materialSlotFiles.secondary?.imageUrl ?? null,
+            garmentImageUrl: materialSlotFiles.primary!.imageUrl,
+            garmentMaskUrl: materialSlotFiles.primary!.imageUrl,
+            printImageUrl: materialSlotFiles.secondary!.imageUrl,
             garmentCategory,
             printMode: printingMode,
             printLabel: materialSlotFiles.secondary?.name ?? 'プリント画像',
@@ -4178,8 +4284,16 @@ export function LightchainWorkbenchPage() {
                             <input type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('primary', event)} />
                             {materialSlotFiles.primary ? (
                               <>
-                                <img src={materialSlotFiles.primary.imageUrl} alt="参考画像" className="max-h-52 rounded-xl object-contain" />
+                                <div className="relative">
+                                  <img src={materialSlotFiles.primary.imageUrl} alt="参考画像" className="max-h-52 rounded-xl object-contain" />
+                                  {printingCutoutStatus.primary === 'processing' && (
+                                    <span className="absolute inset-x-2 bottom-2 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-cyan-100">背景を透明化中…</span>
+                                  )}
+                                </div>
                                 <span className="mt-3 text-sm font-semibold text-white">{materialSlotFiles.primary.name}</span>
+                                <span className={`mt-1 text-xs ${printingCutoutStatus.primary === 'error' ? 'text-rose-300' : printingCutoutStatus.primary === 'done' ? 'text-emerald-300' : 'text-cyan-200'}`}>
+                                  {printingCutoutStatus.primary === 'done' ? '透明化済み' : printingCutoutStatus.primary === 'processing' ? '服の背景を分離しています' : printingCutoutStatus.primary === 'error' ? (printingCutoutErrors.primary || '透明化失敗') : '処理待ち'}
+                                </span>
                               </>
                             ) : (
                               <>
@@ -4189,6 +4303,12 @@ export function LightchainWorkbenchPage() {
                               </>
                             )}
                           </label>
+                          {printingCutoutStatus.primary === 'processing' && !materialSlotFiles.primary && (
+                            <p className="mt-2 text-center text-xs text-cyan-200">参考画像の背景を透明化しています…</p>
+                          )}
+                          {printingCutoutStatus.primary === 'error' && printingCutoutErrors.primary && (
+                            <p className="mt-2 text-center text-xs text-rose-300">{printingCutoutErrors.primary}</p>
+                          )}
                         </div>
 
                         <div className="rounded-[26px] border border-white/10 bg-white/[0.025] p-4">
@@ -4205,7 +4325,14 @@ export function LightchainWorkbenchPage() {
                               <button
                                 type="button"
                                 onClick={() => {
+                                  printingGenerationSequenceRef.current += 1;
+                                  printingGenerationRequestRef.current = null;
+                                  setPrintingGenerationStatus('idle');
+                                  setPrintingGenerationError(null);
+                                  printingCutoutRequestRef.current.secondary += 1;
                                   setMaterialSlotFiles((current) => ({ ...current, secondary: null }));
+                                  setPrintingCutoutStatus((current) => ({ ...current, secondary: 'idle' }));
+                                  setPrintingCutoutErrors((current) => ({ ...current, secondary: null }));
                                   setSecondaryUploadResetKey((key) => key + 1);
                                 }}
                                 className="text-xs font-semibold text-neutral-400 transition hover:text-white"
@@ -4221,13 +4348,29 @@ export function LightchainWorkbenchPage() {
                             <input key={secondaryUploadResetKey} type="file" accept="image/*" className="hidden" onChange={(event) => handleMaterialSlotUpload('secondary', event)} />
                             {materialSlotFiles.secondary ? (
                               <div className="flex items-center gap-3">
-                                <img src={materialSlotFiles.secondary.imageUrl} alt="プリント" className="h-14 w-14 rounded-lg object-contain" />
-                                <span className="text-sm font-semibold text-white">{materialSlotFiles.secondary.name}</span>
+                                <div className="relative shrink-0">
+                                  <img src={materialSlotFiles.secondary.imageUrl} alt="プリント" className="h-14 w-14 rounded-lg object-contain" />
+                                  {printingCutoutStatus.secondary === 'processing' && (
+                                    <span className="absolute inset-0 grid place-items-center rounded-lg bg-black/65 text-[9px] font-semibold text-cyan-100">処理中</span>
+                                  )}
+                                </div>
+                                <span className="min-w-0 text-left">
+                                  <span className="block truncate text-sm font-semibold text-white">{materialSlotFiles.secondary.name}</span>
+                                  <span className={`mt-1 block text-xs ${printingCutoutStatus.secondary === 'error' ? 'text-rose-300' : printingCutoutStatus.secondary === 'done' ? 'text-emerald-300' : 'text-cyan-200'}`}>
+                                    {printingCutoutStatus.secondary === 'done' ? '透明化済み' : printingCutoutStatus.secondary === 'processing' ? '背景を分離しています' : printingCutoutStatus.secondary === 'error' ? (printingCutoutErrors.secondary || '透明化失敗') : '処理待ち'}
+                                  </span>
+                                </span>
                               </div>
                             ) : (
                               <span className="text-sm font-semibold text-neutral-300">プリント画像を追加</span>
                             )}
                           </label>
+                          {printingCutoutStatus.secondary === 'processing' && !materialSlotFiles.secondary && (
+                            <p className="mt-2 text-center text-xs text-cyan-200">プリント画像の背景を透明化しています…</p>
+                          )}
+                          {printingCutoutStatus.secondary === 'error' && printingCutoutErrors.secondary && (
+                            <p className="mt-2 text-center text-xs text-rose-300">{printingCutoutErrors.secondary}</p>
+                          )}
                           <p className="mt-2 text-center text-xs text-neutral-500">画像をアップロード</p>
                           <p className="mt-1 text-center text-xs text-neutral-500">20MB以下の画像アップロードしてください</p>
                         </div>
@@ -4275,14 +4418,23 @@ export function LightchainWorkbenchPage() {
                       </div>
 
                       <PrintingImageComposer
-                        garmentImageUrl={extractedLayerReady ? extractedGarmentImageUrl || garmentImageUrl : garmentImageUrl}
-                        garmentMaskUrl={extractedLayerReady ? extractedGarmentImageUrl : null}
-                        printImageUrl={materialSlotFiles.secondary?.imageUrl ?? null}
+                        garmentImageUrl={selectedTool.id === 'printing-image'
+                          ? printingCutoutStatus.primary === 'done' ? materialSlotFiles.primary?.imageUrl ?? null : null
+                          : (extractedLayerReady ? extractedGarmentImageUrl || garmentImageUrl : garmentImageUrl)}
+                        garmentMaskUrl={selectedTool.id === 'printing-image'
+                          ? printingCutoutStatus.primary === 'done' ? materialSlotFiles.primary?.imageUrl ?? null : null
+                          : (extractedLayerReady ? extractedGarmentImageUrl : null)}
+                        printImageUrl={selectedTool.id === 'printing-image'
+                          ? printingCutoutStatus.secondary === 'done' ? materialSlotFiles.secondary?.imageUrl ?? null : null
+                          : materialSlotFiles.secondary?.imageUrl ?? null}
                         garmentCategory={garmentCategory}
                         printMode={printingMode}
                         printLabel={materialSlotFiles.secondary?.name ?? 'プリント画像'}
                         transform={printArtworkTransform}
-                        isProcessing={isPrintingImageGenerationRunning}
+                        isProcessing={isPrintingImageGenerationRunning || isPrintingCutoutProcessing}
+                        processingLabel={isPrintingCutoutProcessing
+                          ? printingCutoutStatus.primary === 'processing' ? '参考画像の背景を透明化中…' : 'プリント画像の背景を透明化中…'
+                          : '生成中…'}
                         onTransformChange={setPrintArtworkTransform}
                         onResetTransform={() => setPrintArtworkTransform(defaultPrintArtworkTransform)}
                       />

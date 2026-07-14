@@ -236,7 +236,8 @@ export function PrintingCompositionStage({
     [draftLayers],
   );
   const isProcessing = Boolean(processingLayer);
-  const statusLayer = processingLayer || selectedLayer;
+  const statusLayer = processingLayer || draftLayers.find((layer) => layer.cutoutState === 'error') || selectedLayer;
+  const hasRenderableGarment = Boolean(garmentUrl && garmentMaskUrl);
 
   return (
     <div
@@ -246,7 +247,7 @@ export function PrintingCompositionStage({
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_55%)]" />
       <div className="absolute inset-x-[6%] top-[10%] h-[78%] rounded-[36px] border border-white/10 bg-transparent" />
 
-      {garmentUrl && (
+      {hasRenderableGarment && (
         <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
           <div
             className="absolute inset-[10%] rounded-[28px] opacity-60"
@@ -258,7 +259,7 @@ export function PrintingCompositionStage({
             }}
           />
           <img
-            src={garmentUrl}
+            src={garmentUrl || undefined}
             alt="参考画像"
             className="max-h-[92%] w-full max-w-none select-none object-contain object-center"
             style={{
@@ -304,13 +305,23 @@ export function PrintingCompositionStage({
                     boxShadow: 'none',
                   }}
                   >
-                  <img
-                    src={layer.displayUrl}
-                    alt={layer.label}
-                    className="h-full w-full object-contain pointer-events-none select-none"
-                    style={{ mixBlendMode: 'normal', opacity: 0.98 }}
-                    draggable={false}
-                  />
+                  {layer.displayUrl ? (
+                    <img
+                      src={layer.displayUrl}
+                      alt={layer.label}
+                      className="h-full w-full object-contain pointer-events-none select-none"
+                      style={{ mixBlendMode: 'normal', opacity: 0.98 }}
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-white/[0.03] px-3 text-center text-[11px] text-neutral-400">
+                      {layer.cutoutState === 'processing'
+                        ? '透明化中…'
+                        : layer.cutoutState === 'error'
+                          ? '透明化に失敗しました'
+                          : '透明化待ち'}
+                    </div>
+                  )}
                   {selected && (
                     <>
                       <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-full border border-[#6d8784]/45 bg-[#0f1718]/90 px-2 py-0.5 text-[10px] font-semibold tracking-[0.18em] text-[#d9e2e0] backdrop-blur-sm">
@@ -392,7 +403,7 @@ export function PrintingCompositionStage({
       {!garmentMaskUrl && !isProcessing && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-center text-white/70 backdrop-blur">
-            <p className="text-sm">参考画像をアップロードしてください</p>
+            <p className="text-sm">{statusLayer?.cutoutState === 'error' ? '透明化に失敗しました。元画像を確認して再試行してください' : '参考画像をアップロードしてください'}</p>
           </div>
         </div>
       )}
