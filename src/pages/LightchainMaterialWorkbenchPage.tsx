@@ -22,9 +22,7 @@ import {
   buildPrintRequestSignature,
   buildPrintRequestSnapshot,
   renderPrintRequestComposition,
-  restorePrintResultToStageDataUrl,
 } from '../lib/workspaceMaterialReferences';
-import { editImageWithPrompt } from '../lib/imageApi';
 
 type WorkbenchMode = 'fabric' | 'printing';
 type CutoutState = 'idle' | 'processing' | 'done' | 'error';
@@ -687,63 +685,15 @@ export function LightchainMaterialWorkbenchPage() {
         return;
       }
 
-      const editPrompt = [
-        'Preserve the placed graphic exactly as captured.',
-        'Keep the same position, scale, rotation, and opacity.',
-        'Keep the result in the same 720x900 coordinate system.',
-        'Keep the background transparent.',
-        'Return one result only.',
-      ].join(' ');
-
-      const editResult = await withTimeout(
-        editImageWithPrompt(composedInput, editPrompt, currentBrand.id, {
-          rightsConfirmed: true,
-          outputBackground: 'transparent',
-        }),
-        90_000,
-        '生成処理がタイムアウトしました。しばらく待ってから再試行してください',
-      );
-      if (
-        !isCurrentRequest()
-        ||
-        currentPrintStateRef.current.revision !== requestState.revision
-        || currentPrintStateRef.current.signature !== requestState.signature
-      ) {
-        return;
-      }
-      if (!editResult.success || !editResult.imageUrl) {
-        throw new Error(editResult.error || '画像編集に失敗しました');
-      }
-
-      const normalizedResultUrl = await withTimeout(
-        restorePrintResultToStageDataUrl({
-          imageUrl: editResult.imageUrl,
-          snapshot: nextSnapshot,
-        }),
-        COMPOSITION_TIMEOUT_MS,
-        '生成結果の復元がタイムアウトしました。再試行してください',
-      );
-      if (!normalizedResultUrl) {
-        throw new Error('生成結果を読み込めませんでした。再試行してください');
-      }
-      if (
-        !isCurrentRequest()
-        ||
-        currentPrintStateRef.current.revision !== requestState.revision
-        || currentPrintStateRef.current.signature !== requestState.signature
-      ) {
-        return;
-      }
-
       setGeneratedResults([{
         id: `print-${nextRevision}`,
-        title: 'プリント結果',
-        note: '透明背景 / 1件のみ',
-        imageUrl: normalizedResultUrl,
+        title: 'プリント結果（配置そのまま）',
+        note: 'AI再描画なし / 透明背景 / 配置・色・形を保持',
+        imageUrl: composedInput,
       }]);
       setGeneratedResultsStale(false);
       setGenerationError(null);
-      toast.success('プリント結果を生成しました');
+      toast.success('配置そのままのプリント結果を作成しました');
     } catch (error: any) {
       console.error('Workbench generation failed', error);
       if (isCurrentRequest()) {
