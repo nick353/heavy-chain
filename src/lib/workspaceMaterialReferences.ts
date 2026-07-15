@@ -1577,7 +1577,17 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
     let session = aiGarmentCutoutSessions.get(sessionKey) ?? null;
     if (!session) {
       session = await withRembgOperationTimeout(
-        newSession(modelName, undefined, { numThreads: 1 }),
+        newSession(modelName, undefined, {
+          numThreads: 1,
+          // A browser can expose a WebGL canvas while ONNX Runtime's WebGL
+          // backend is unavailable. The default rembg provider order then
+          // spends time failing WebGL before reaching the existing CPU path,
+          // and some Chrome/Profile 2 environments leave that attempt stuck.
+          // WASM is shipped with the app and is the deterministic local lane;
+          // model/fallback quality gates below still decide whether a result
+          // is usable.
+          executionProviders: ['wasm'],
+        }),
         'new_session',
       );
       aiGarmentCutoutSessions.set(sessionKey, session);

@@ -33,6 +33,8 @@ const checks = {
   print_garment_uses_same_origin_model: library.includes("modelName = 'silueta'")
     && library.includes('modelName,\n      postProcessMask: false')
     && library.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/models/silueta.onnx'"),
+  rembg_avoids_unreliable_webgl_provider: library.includes("executionProviders: ['wasm']")
+    && library.includes('A browser can expose a WebGL canvas while ONNX Runtime\'s WebGL'),
   garment_preview_has_no_blend_halo: stage.includes("mixBlendMode: 'normal'")
     && stage.includes("opacity: 1")
     && stage.includes("filter: 'none'"),
