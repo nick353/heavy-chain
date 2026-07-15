@@ -76,54 +76,59 @@ export function ImageSelector({
   const [isDragging, setIsDragging] = useState(false);
   const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [selectedReferenceType, setSelectedReferenceType] = useState<ReferenceType>(defaultReferenceType);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const availableTypes = REFERENCE_TYPES.filter(t => allowedReferenceTypes.includes(t.id));
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      if (multiple && onMultipleChange) {
-        const newImages: SelectedImage[] = [];
-        Array.from(files).slice(0, maxImages - multipleValue.length).forEach(file => {
-          if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-              newImages.push({
-                url: ev.target?.result as string,
-                file,
-                referenceType: selectedReferenceType,
-              });
-              if (newImages.length === Math.min(files.length, maxImages - multipleValue.length)) {
-                onMultipleChange([...multipleValue, ...newImages]);
-              }
-            };
-            reader.readAsDataURL(file);
-          }
-        });
-      } else {
-        processFile(files[0]);
-      }
+  const readSelectedImage = (file: File): Promise<SelectedImage | null> => new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const url = event.target?.result;
+      resolve(typeof url === 'string' ? {
+        url,
+        file,
+        referenceType: selectedReferenceType,
+      } : null);
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+
+  const processFiles = async (fileList: FileList | File[]) => {
+    const files = Array.from(fileList);
+    const remainingSlots = multiple ? maxImages - multipleValue.length : 1;
+    if (files.length === 0 || remainingSlots <= 0) return;
+
+    const acceptedFiles = files
+      .filter(file => file.type.startsWith('image/') && file.size <= 10 * 1024 * 1024)
+      .slice(0, remainingSlots);
+
+    if (acceptedFiles.length === 0) {
+      setFileError('画像ファイル（PNG / JPG / WebP、10MB以下）を選択してください。');
+      return;
+    }
+
+    const images = (await Promise.all(acceptedFiles.map(readSelectedImage)))
+      .filter((image): image is SelectedImage => image !== null);
+
+    if (images.length === 0) {
+      setFileError('画像を読み込めませんでした。別のファイルをお試しください。');
+      return;
+    }
+
+    setFileError(null);
+    if (multiple && onMultipleChange) {
+      onMultipleChange([...multipleValue, ...images]);
+    } else {
+      onChange(images[0]);
     }
   };
 
-  const processFile = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      onChange({
-        url: e.target?.result as string,
-        file,
-        referenceType: selectedReferenceType,
-      });
-    };
-    reader.readAsDataURL(file);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    // Allow selecting the same file again after a failed or replaced upload.
+    e.target.value = '';
+    void processFiles(files);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -139,31 +144,7 @@ export function ImageSelector({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      if (multiple && onMultipleChange) {
-        // Handle multiple files
-        const newImages: SelectedImage[] = [];
-        Array.from(files).slice(0, maxImages - multipleValue.length).forEach(file => {
-          if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-              newImages.push({
-                url: ev.target?.result as string,
-                file,
-                referenceType: selectedReferenceType,
-              });
-              if (newImages.length === Math.min(files.length, maxImages - multipleValue.length)) {
-                onMultipleChange([...multipleValue, ...newImages]);
-              }
-            };
-            reader.readAsDataURL(file);
-          }
-        });
-      } else {
-        processFile(files[0]);
-      }
-    }
+    void processFiles(e.dataTransfer.files);
   };
 
   const handleGallerySelect = (imageUrl: string, imageId: string, _storagePath?: string, _imageElement?: HTMLImageElement | null) => {
@@ -184,11 +165,13 @@ export function ImageSelector({
         galleryImageId: imageId,
       });
     }
+    setFileError(null);
     setShowGalleryModal(false);
   };
 
   const removeImage = () => {
     onChange(null);
+    setFileError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -218,6 +201,7 @@ export function ImageSelector({
           <div className="flex gap-2 flex-wrap">
             {availableTypes.map(type => (
               <button
+                type="button"
                 key={type.id}
                 onClick={() => setSelectedReferenceType(type.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-all ${
@@ -255,6 +239,7 @@ export function ImageSelector({
                 </div>
               )}
               <button
+                type="button"
                 onClick={() => removeMultipleImage(index)}
                 className="absolute top-1 right-1 p-1 bg-black/50 rounded-full text-white hover:bg-black/70"
               >
@@ -271,6 +256,7 @@ export function ImageSelector({
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
+              aria-label={isDragging ? 'ここにドロップして追加' : 'ドラッグ&ドロップで追加'}
               className={`aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all ${
                 isDragging
                   ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
@@ -287,22 +273,28 @@ export function ImageSelector({
               />
               <div className="flex flex-col items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2 bg-neutral-100 dark:bg-neutral-700 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600"
                 >
                   <Upload className="w-4 h-4 text-neutral-500" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowGalleryModal(true)}
                   className="p-2 bg-neutral-100 dark:bg-neutral-700 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600"
                 >
                   <FolderOpen className="w-4 h-4 text-neutral-500" />
                 </button>
               </div>
+              <p className="mt-2 px-2 text-center text-[11px] leading-tight text-neutral-500 dark:text-neutral-400">
+                {isDragging ? 'ここにドロップして追加' : 'ドラッグ&ドロップで追加'}
+              </p>
             </div>
           )}
         </div>
 
+        {fileError && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{fileError}</p>}
         {hint && <p className="text-xs text-neutral-500 dark:text-neutral-400">{hint}</p>}
 
         <GallerySelector
@@ -338,6 +330,7 @@ export function ImageSelector({
             <div className="flex gap-2 flex-wrap">
               {availableTypes.map(type => (
                 <button
+                  type="button"
                   key={type.id}
                   onClick={() => setSelectedReferenceType(type.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-all ${
@@ -366,6 +359,7 @@ export function ImageSelector({
           >
             <div className="flex justify-center gap-3 mb-3">
               <button
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
               >
@@ -373,6 +367,7 @@ export function ImageSelector({
                 アップロード
               </button>
               <button
+                type="button"
                 onClick={() => setShowGalleryModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
               >
@@ -386,7 +381,17 @@ export function ImageSelector({
           </div>
         </div>
       ) : (
-        <div className="relative">
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          aria-label={isDragging ? 'ここにドロップして差し替え' : 'ドラッグ&ドロップで差し替え'}
+          className={`relative rounded-xl border-2 p-1 transition-colors ${
+            isDragging
+              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+              : 'border-transparent'
+          }`}
+        >
           <div className="rounded-xl overflow-hidden bg-neutral-100 dark:bg-neutral-800">
             {processing && hideSelectedPreviewWhileProcessing || previewUrl === null ? (
               <div className="flex min-h-48 items-center justify-center bg-neutral-100/90 dark:bg-neutral-800/90">
@@ -403,7 +408,13 @@ export function ImageSelector({
               />
             )}
           </div>
+          {isDragging && (
+            <div className="pointer-events-none absolute inset-1 z-10 flex items-center justify-center rounded-xl bg-primary-600/80 text-sm font-medium text-white">
+              ここにドロップして差し替え
+            </div>
+          )}
           <button
+            type="button"
             onClick={removeImage}
             className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-black/70 rounded-lg text-white transition-colors"
           >
@@ -418,9 +429,13 @@ export function ImageSelector({
               {REFERENCE_TYPES.find(t => t.id === value.referenceType)?.name}
             </span>
           </div>
+          <p className="mt-2 text-center text-xs text-neutral-500 dark:text-neutral-400">
+            別の画像をここへドラッグ&ドロップで差し替え
+          </p>
         </div>
       )}
 
+      {fileError && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{fileError}</p>}
       {hint && <p className="text-xs text-neutral-500 dark:text-neutral-400">{hint}</p>}
 
       <GallerySelector
