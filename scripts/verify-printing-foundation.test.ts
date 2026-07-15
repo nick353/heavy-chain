@@ -103,8 +103,13 @@ test('surface identity changes signature while omitted identity preserves legacy
     ...base,
     surfaceIdentity: { version: 'garment-surface-map-v1', sourceHash: 'sha256:a', contentHash: 'sha256:c', manualRevision: 1, status: 'semantic-ready' },
   });
+  const withOccluder = buildPrintRequestSignatureValue({
+    ...base,
+    surfaceOccluderContentHash: 'sha256:occluder',
+  });
   assert.notEqual(first, legacy);
   assert.notEqual(revised, first);
+  assert.notEqual(withOccluder, legacy);
 });
 
 test('edge refinement is deterministic and leaves RGB, transparent exterior, and opaque interior exact', () => {

@@ -39,6 +39,7 @@ const cropInput = (
     design: { width: number; height: number; rgba: Uint8ClampedArray };
     garment: { width: number; height: number; alpha: Uint8ClampedArray };
     clip: { width: number; height: number; alpha: Uint8ClampedArray };
+    occluder?: { width: number; height: number; alpha: Uint8ClampedArray };
     sourceReferenceSize?: { width: number; height: number };
     deadlineAtMs?: number;
   },
@@ -64,6 +65,13 @@ const cropInput = (
     height: roi.height,
     alpha: cropAlpha(input.clip.alpha, input.clip.width, roi),
   },
+  ...(input.occluder ? {
+    occluder: {
+      width: roi.width,
+      height: roi.height,
+      alpha: cropAlpha(input.occluder.alpha, input.occluder.width, roi),
+    },
+  } : {}),
   sourceReferenceSize: input.sourceReferenceSize,
   deadlineAtMs: input.deadlineAtMs,
 });
@@ -144,6 +152,32 @@ test('forced ROI matches direct conformSurface byte-for-byte on an under-budget 
   assert.equal(forced.diagnostics.fullStageSize.width, width);
   assert.equal(forced.diagnostics.visibleBounds.alphaGt0?.width, 248);
   assert.equal(forced.diagnostics.visibleBounds.alphaGte8?.width, 248);
+});
+
+test('forced ROI forwards an optional occluder byte-for-byte', () => {
+  const width = 480;
+  const height = 240;
+  const occluder = alphaPlane(width, height, 0);
+  for (let y = 96; y < 144; y += 1) {
+    for (let x = 220; x < 260; x += 1) occluder.alpha[(y * width) + x] = x < 240 ? 255 : 128;
+  }
+  const input = {
+    source: gradientSource(width, height),
+    design: gradientDesign(width, height),
+    garment: alphaPlane(width, height, 255),
+    clip: profileClip(width, height, (y) => y >= 40 && y <= 199 ? [[120, 359, 255]] : []),
+    occluder,
+    sourceReferenceSize: { width: 1200, height: 1200 },
+  };
+  const direct = conformSurface(input);
+  const forced = conformBoundedSurfaceRoi({ ...input, forceRoi: true });
+  assert.equal(direct.kind, 'success');
+  assert.equal(forced.kind, 'success');
+  assert.ok(byteIdentical(direct.rgba, forced.rgba));
+  const hiddenIndex = ((120 * width) + 225) * 4;
+  const partialIndex = ((120 * width) + 245) * 4;
+  assert.equal(direct.rgba[hiddenIndex + 3], 0);
+  assert.equal(direct.rgba[partialIndex + 3], 127);
 });
 
 test('ROI output stays transparent outside the crop and preserves halo alpha on 1440x1800', () => {

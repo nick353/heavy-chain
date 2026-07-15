@@ -176,6 +176,10 @@ const checks = {
     && garmentSelectionEditor.includes('onApply(output.toDataURL(\'image/png\'), selectionSource)'),
   high_confidence_tap_auto_applies_but_low_confidence_stays_explicit: garmentSelectionEditor.includes('shouldAutoApplyPointGuidedSelection(proposal)')
     && garmentSelectionEditor.includes('低信頼の候補だけ確認してから適用します'),
+  experimental_occluder_wiring_is_explicit_and_optional: library.includes('surfaceOccluderContentHash')
+    && library.includes('occluderStageMask')
+    && library.includes('occluder: {')
+    && surfaceConformer.includes('occluderAlpha'),
 };
 
 const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);

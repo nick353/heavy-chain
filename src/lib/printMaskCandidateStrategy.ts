@@ -582,6 +582,7 @@ export type PrintRequestSignatureValueInput = {
     manualRevision: number;
     status: string;
   };
+  surfaceOccluderContentHash?: string;
   designs: Array<{
     id: string;
     sourceUrl: string;
@@ -607,6 +608,7 @@ export const buildPrintRequestSignatureValue = (input: PrintRequestSignatureValu
     maskRevision: input.garment.maskRevision,
   },
   ...(input.surfaceIdentity ? { surfaceIdentity: input.surfaceIdentity } : {}),
+  ...(input.surfaceOccluderContentHash ? { surfaceOccluderContentHash: input.surfaceOccluderContentHash } : {}),
   designs: input.designs.map((design) => ({
     id: design.id,
     sourceUrl: design.sourceUrl,

@@ -126,6 +126,8 @@ export type PrintStageSize = {
 export type EncodedManualPrintableSurface = {
   provenance: 'manual-printable-area';
   plane: EncodedAlphaPlane;
+  /** Optional semantic occluder plane. Omitted for the existing manual lane. */
+  occluder?: EncodedAlphaPlane;
   identity: ManualPrintableSurfaceIdentity;
 };
 
@@ -135,7 +137,11 @@ export type PrintableSurfaceErrorCode =
   | 'PRINTABLE_SURFACE_HASH_MISMATCH'
   | 'PRINTABLE_SURFACE_MISSING'
   | 'PRINTABLE_SURFACE_RGB_INVALID'
-  | 'PRINTABLE_SURFACE_SOURCE_HASH_MISMATCH';
+  | 'PRINTABLE_SURFACE_SOURCE_HASH_MISMATCH'
+  | 'PRINTABLE_SURFACE_OCCLUDER_CAPACITY_EXCEEDED'
+  | 'PRINTABLE_SURFACE_OCCLUDER_DIMENSION_MISMATCH'
+  | 'PRINTABLE_SURFACE_OCCLUDER_HASH_MISMATCH'
+  | 'PRINTABLE_SURFACE_OCCLUDER_RGB_INVALID';
 
 export class PrintableSurfaceError extends Error {
   readonly code: PrintableSurfaceErrorCode;
@@ -192,6 +198,10 @@ export type PrintRequestSnapshot = {
   printableSurface?: EncodedManualPrintableSurface & {
     stageMask: {
       kind: 'printable';
+      url: string;
+    };
+    occluderStageMask?: {
+      kind: 'occluder';
       url: string;
     };
   };
@@ -366,15 +376,24 @@ export async function suggestPrintableSurfaceDataUrl({
 export async function buildEncodedManualPrintableSurface({
   garmentUrl,
   editedMaskUrl,
+  occluderMaskUrl,
   manualRevision,
 }: {
   garmentUrl: string;
   editedMaskUrl: string;
+  occluderMaskUrl?: string;
   manualRevision: number;
 }): Promise<EncodedManualPrintableSurface> {
-  const [garment, edited] = await Promise.all([readImageRgba(garmentUrl), readImageRgba(editedMaskUrl)]);
+  const [garment, edited, occluder] = await Promise.all([
+    readImageRgba(garmentUrl),
+    readImageRgba(editedMaskUrl),
+    occluderMaskUrl ? readImageRgba(occluderMaskUrl) : Promise.resolve(null),
+  ]);
   if (garment.width !== edited.width || garment.height !== edited.height) {
     throw new PrintableSurfaceError('PRINTABLE_SURFACE_DIMENSION_MISMATCH');
+  }
+  if (occluder && (garment.width !== occluder.width || garment.height !== occluder.height)) {
+    throw new PrintableSurfaceError('PRINTABLE_SURFACE_OCCLUDER_DIMENSION_MISMATCH');
   }
   const runtimeSurface = await buildManualPrintableSurface({
     garment,
@@ -385,6 +404,29 @@ export async function buildEncodedManualPrintableSurface({
   if (estimatePrintMaskDataUrlBytes(dataUrl) > PRINT_CUTOUT_MAX_DATA_URL_BYTES) {
     throw new PrintableSurfaceError('PRINTABLE_SURFACE_CAPACITY_EXCEEDED');
   }
+  let encodedOccluder: EncodedAlphaPlane | undefined;
+  if (occluder) {
+    const occluderSurface = await buildManualPrintableSurface({
+      garment,
+      editedAlpha: readAlpha(occluder.rgba),
+      manualRevision,
+    });
+    const occluderDataUrl = rgbaToPngDataUrl(
+      occluderSurface.plane.width,
+      occluderSurface.plane.height,
+      occluderSurface.plane.rgba,
+    );
+    if (estimatePrintMaskDataUrlBytes(occluderDataUrl) > PRINT_CUTOUT_MAX_DATA_URL_BYTES) {
+      throw new PrintableSurfaceError('PRINTABLE_SURFACE_OCCLUDER_CAPACITY_EXCEEDED');
+    }
+    encodedOccluder = {
+      encoding: 'png-alpha-v1',
+      width: occluderSurface.plane.width,
+      height: occluderSurface.plane.height,
+      dataUrl: occluderDataUrl,
+      contentHash: occluderSurface.plane.contentHash,
+    };
+  }
   return {
     provenance: runtimeSurface.provenance,
     plane: {
@@ -394,6 +436,7 @@ export async function buildEncodedManualPrintableSurface({
       dataUrl,
       contentHash: runtimeSurface.plane.contentHash,
     },
+    ...(encodedOccluder ? { occluder: encodedOccluder } : {}),
     identity: runtimeSurface.identity,
   };
 }
@@ -436,6 +479,36 @@ export async function validateEncodedManualPrintableSurface(
   if (recalculated.identity.sourceHash !== surface.identity.sourceHash) {
     throw new PrintableSurfaceError('PRINTABLE_SURFACE_SOURCE_HASH_MISMATCH');
   }
+  if (surface.occluder) {
+    const encodedOccluder = await readImageRgba(surface.occluder.dataUrl);
+    if (
+      encodedOccluder.width !== garment.width
+      || encodedOccluder.height !== garment.height
+      || surface.occluder.width !== garment.width
+      || surface.occluder.height !== garment.height
+    ) {
+      throw new PrintableSurfaceError('PRINTABLE_SURFACE_OCCLUDER_DIMENSION_MISMATCH');
+    }
+    if (estimatePrintMaskDataUrlBytes(surface.occluder.dataUrl) > PRINT_CUTOUT_MAX_DATA_URL_BYTES) {
+      throw new PrintableSurfaceError('PRINTABLE_SURFACE_OCCLUDER_CAPACITY_EXCEEDED');
+    }
+    for (let index = 0; index < encodedOccluder.rgba.length; index += 4) {
+      if (
+        encodedOccluder.rgba[index + 3] > 0
+        && (encodedOccluder.rgba[index] !== 255 || encodedOccluder.rgba[index + 1] !== 255 || encodedOccluder.rgba[index + 2] !== 255)
+      ) {
+        throw new PrintableSurfaceError('PRINTABLE_SURFACE_OCCLUDER_RGB_INVALID');
+      }
+    }
+    const recalculatedOccluder = await buildManualPrintableSurface({
+      garment,
+      editedAlpha: readAlpha(encodedOccluder.rgba),
+      manualRevision: surface.identity.manualRevision,
+    });
+    if (recalculatedOccluder.plane.contentHash !== surface.occluder.contentHash) {
+      throw new PrintableSurfaceError('PRINTABLE_SURFACE_OCCLUDER_HASH_MISMATCH');
+    }
+  }
   return surface;
 }
 
@@ -453,6 +526,27 @@ export async function buildPrintableSurfaceStageMaskDataUrl({
   return buildStageAlphaMaskDataUrl(
     stageSize,
     validated.plane.dataUrl,
+    sourceSize,
+    stageContainBounds(stageSize, sourceSize),
+    true,
+  );
+}
+
+export async function buildPrintableSurfaceOccluderStageMaskDataUrl({
+  surface,
+  garmentUrl,
+  stageSize,
+}: {
+  surface: EncodedManualPrintableSurface;
+  garmentUrl: string;
+  stageSize: PrintStageSize;
+}) {
+  const validated = await validateEncodedManualPrintableSurface(surface, garmentUrl);
+  if (!validated.occluder) return null;
+  const sourceSize = { width: validated.occluder.width, height: validated.occluder.height };
+  return buildStageAlphaMaskDataUrl(
+    stageSize,
+    validated.occluder.dataUrl,
     sourceSize,
     stageContainBounds(stageSize, sourceSize),
     true,
@@ -512,6 +606,7 @@ export async function buildPrintRequestSnapshot({
       maskRevision: garmentMaskRevision,
     },
     surfaceIdentity: effectiveSurfaceIdentity,
+    surfaceOccluderContentHash: validatedPrintableSurface?.occluder?.contentHash,
     designs: designs.map((design) => ({
       id: design.id,
       sourceUrl: design.sourceUrl,
@@ -579,6 +674,16 @@ export async function buildPrintRequestSnapshot({
             true,
           ),
         },
+        ...(validatedPrintableSurface.occluder ? {
+          occluderStageMask: {
+            kind: 'occluder' as const,
+            url: await buildPrintableSurfaceOccluderStageMaskDataUrl({
+              surface: validatedPrintableSurface,
+              garmentUrl,
+              stageSize,
+            }) as string,
+          },
+        } : {}),
       },
     } : {}),
     designs: designSnapshots,
@@ -732,6 +837,9 @@ export async function renderExperimentalSurfaceComposition(
   }
 
   const clipImage = await loadImageElement(snapshot.printableSurface.stageMask.url);
+  const occluderImage = snapshot.printableSurface.occluderStageMask
+    ? await loadImageElement(snapshot.printableSurface.occluderStageMask.url)
+    : null;
   const clipCanvas = document.createElement('canvas');
   clipCanvas.width = snapshot.stageSize.width;
   clipCanvas.height = snapshot.stageSize.height;
@@ -739,15 +847,35 @@ export async function renderExperimentalSurfaceComposition(
   if (!clipContext) throw new Error('Canvasを初期化できませんでした');
   clipContext.drawImage(clipImage, 0, 0, clipCanvas.width, clipCanvas.height);
 
+  const occluderCanvas = occluderImage ? document.createElement('canvas') : null;
+  const occluderContext = occluderCanvas
+    ? (() => {
+      occluderCanvas.width = snapshot.stageSize.width;
+      occluderCanvas.height = snapshot.stageSize.height;
+      return occluderCanvas.getContext('2d', { willReadFrequently: true });
+    })()
+    : null;
+  if (occluderContext && occluderImage) {
+    occluderContext.drawImage(occluderImage, 0, 0, snapshot.stageSize.width, snapshot.stageSize.height);
+  }
+
   const garmentData = garmentContext.getImageData(0, 0, garmentCanvas.width, garmentCanvas.height);
   const designData = designContext.getImageData(0, 0, designCanvas.width, designCanvas.height);
   const clipData = clipContext.getImageData(0, 0, clipCanvas.width, clipCanvas.height);
+  const occluderData = occluderContext?.getImageData(0, 0, clipCanvas.width, clipCanvas.height);
   const conformed: BoundedSurfaceConformerRoiResult = conformBoundedSurfaceRoi({
     source: { width: garmentCanvas.width, height: garmentCanvas.height, rgba: garmentData.data },
     sourceReferenceSize: snapshot.garment.sourceSize,
     design: { width: designCanvas.width, height: designCanvas.height, rgba: designData.data },
     garment: { width: garmentCanvas.width, height: garmentCanvas.height, alpha: readAlpha(garmentData.data) },
     clip: { width: clipCanvas.width, height: clipCanvas.height, alpha: readAlpha(clipData.data) },
+    ...(occluderData ? {
+      occluder: {
+        width: clipCanvas.width,
+        height: clipCanvas.height,
+        alpha: readAlpha(occluderData.data),
+      },
+    } : {}),
     deadlineAtMs,
   });
   if (conformed.kind === 'ood') return conformed;
