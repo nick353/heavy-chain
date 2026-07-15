@@ -1578,7 +1578,17 @@ export async function buildPrintGarmentCutoutDataUrl({
   }
 
   const sourceBackground = estimateBackgroundColor(sourceData.data, sourceWidth, sourceHeight);
-  if (sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD) {
+  // A tap is an explicit garment-selection intent. When the optional cloth
+  // model is configured, do not let the fast uniform-background path silently
+  // bypass it; the model must get the crop so it can distinguish garment
+  // regions from head/hands and nearby objects. If the model cannot load or
+  // run, buildHighPrecisionMaterialCutoutDataUrl still returns the existing
+  // bounded fallback.
+  const shouldPreferConfiguredClothModel = modelName === 'u2net_cloth_seg' && Boolean(rembgClothSegModelUrl);
+  if (
+    sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD
+    && !shouldPreferConfiguredClothModel
+  ) {
     try {
       const fastResult = await buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
       return await finalizeResult(fastResult);

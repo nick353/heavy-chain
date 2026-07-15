@@ -26,7 +26,7 @@ The production UI exposes `高精度エッジ（試験）` as an optional candid
 
 ### Stage 1b tap-to-garment model boundary
 
-The `服をタップしてAIマスク` flow records the operator's tap intent and forwards the bounded crop to the cutout pipeline. A tap selects `u2net_cloth_seg` only when the build explicitly provides `VITE_REMBG_CLOTH_SEG_MODEL_URL`; the default production build remains `silueta` until that approximately 176 MB clothing model is deployed and independently checked. Automatic selection and rectangle/range selection never switch models implicitly. When the cloth model is absent, unavailable, times out, or produces an unsafe result, the flow returns to the existing cutout candidate picker and manual keep/remove editor. The tap crop is a selection proposal, not proof of garment-part recognition, and the UI must not label the fallback as semantic success.
+The `服をタップしてAIマスク` flow records the operator's tap intent and forwards the bounded crop to the cutout pipeline. A tap selects `u2net_cloth_seg` only when the build explicitly provides `VITE_REMBG_CLOTH_SEG_MODEL_URL`; the default production build remains `silueta` until that approximately 176 MB clothing model is deployed and independently checked. Automatic selection and rectangle/range selection never switch models implicitly. When the cloth model is configured, the uniform-background fast path is skipped for tap crops so it cannot silently bypass the requested model; model load/inference failure still returns to the existing bounded cutout candidate picker and manual keep/remove editor. The tap crop is a selection proposal, not proof of garment-part recognition, and the UI must not label the fallback as semantic success.
 
 ## Surface-map contract
 

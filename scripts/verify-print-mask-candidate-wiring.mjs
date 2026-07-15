@@ -66,6 +66,9 @@ const checks = {
   uniform_garment_background_avoids_model_timeout: library.includes('PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD = 36')
     && library.indexOf('sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD')
       < library.indexOf('modelName,\n      postProcessMask: false'),
+  configured_cloth_model_is_not_bypassed_by_uniform_fast_path: library.includes('shouldPreferConfiguredClothModel')
+    && library.includes("modelName === 'u2net_cloth_seg' && Boolean(rembgClothSegModelUrl)")
+    && library.includes('&& !shouldPreferConfiguredClothModel'),
   production_model_does_not_silently_fall_back_to_huggingface: library.includes("VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL\n  || ''")
     && library.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/models/silueta.onnx'")
     && !library.includes('https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx'),
