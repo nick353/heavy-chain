@@ -139,6 +139,8 @@ const printableSuggestionStatusMessage = (reason: string) => {
     PROFILE_UNSTABLE: '服の形が複雑なため、安全な候補を作れませんでした。手動指定を使ってください。',
     PRINTABLE_AREA_TOO_SMALL: '安全に提案できる印刷面が小さすぎるため、手動指定を使ってください。',
     DIMENSION_MISMATCH: '服画像の寸法が切り抜き結果と一致しません。候補を選び直してください。',
+    INVALID_RGBA: '服画像のピクセルデータが不正なため、手動指定を使ってください。',
+    PIXEL_LIMIT_EXCEEDED: '服画像が安全な画素上限を超えたため、手動指定を使ってください。',
     CAPACITY_EXCEEDED: '提案マスクが保存上限を超えました。手動指定を使ってください。',
   };
   return messages[reason] ?? `印刷面の候補を作れませんでした: ${reason}`;
@@ -1219,6 +1221,7 @@ export function LightchainMaterialWorkbenchPage() {
         garmentUrl: captured.garmentUrl,
         expectedSize: capturedSize,
         maxDataUrlBytes: PRINT_CUTOUT_MAX_DATA_URL_BYTES,
+        sourceAlphaAlreadyRefined: captured.candidateId === 'refined',
       });
       if (
         !canCommitPrintableSuggestion(captured, currentToken())

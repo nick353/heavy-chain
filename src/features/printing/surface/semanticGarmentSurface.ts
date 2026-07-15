@@ -56,14 +56,17 @@ const emptyPlane = (width: number, height: number): RuntimeAlphaPlane => ({
 });
 
 /**
- * Turns a stable garment alpha into an explicit, conservative surface map.
+ * Turns a stable garment alpha into an explicit, conservative surface proposal.
  *
  * This is intentionally deterministic and alpha-only: it is a bounded
  * printable-area proposal, not a claim that a full semantic segmentation
  * model ran. The central torso is printable; the remaining garment pixels are
  * classified into collar, hem, and left/right peripheral regions so the UI
- * can show why those areas are excluded. Any uncertain input is delegated to
- * the existing manual/whole-garment fallback by returning `fallback-required`.
+ * can show why those areas are excluded. This alpha-only proposal is not a
+ * model-backed garment-part segmentation result; it is deliberately marked
+ * manual-ready until the user reviews it in the existing editor. Any
+ * uncertain input is delegated to the existing manual/whole-garment fallback
+ * by returning `fallback-required`.
  */
 export const buildSemanticGarmentSurface = ({
   width,
@@ -137,6 +140,10 @@ export const buildSemanticGarmentSurface = ({
     },
     confidence: suggestion.diagnostics.confidence,
   });
+  // The geometry is a deterministic prefill for the manual editor, not a
+  // parser/model result. Keep the honesty boundary explicit in the surface
+  // status so downstream approval code cannot treat it as semantic-ready.
+  surface.status = 'manual-ready';
   return {
     kind: 'success',
     provenance: 'deterministic-alpha-structure-v1',

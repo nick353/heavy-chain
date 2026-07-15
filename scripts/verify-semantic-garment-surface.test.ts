@@ -16,7 +16,7 @@ const shape = (width: number, height: number) => {
   return { alpha, fill };
 };
 
-test('builds a semantic-ready garment surface with explicit torso and peripheral regions', () => {
+test('builds a manual-ready deterministic surface proposal with explicit torso and peripheral regions', () => {
   const width = 160;
   const height = 180;
   const { alpha, fill } = shape(width, height);
@@ -29,7 +29,7 @@ test('builds a semantic-ready garment surface with explicit torso and peripheral
   if (result.kind !== 'success') return;
 
   assert.equal(result.provenance, 'deterministic-alpha-structure-v1');
-  assert.equal(result.surface.status, 'semantic-ready');
+  assert.equal(result.surface.status, 'manual-ready');
   assert.ok(result.surface.confidence >= 0.55);
   assert.ok(result.regions.torso.alpha[(100 * width) + 80] > 0);
   assert.equal(result.surface.printableAlpha[(60 * width) + 25], 0, 'left sleeve is excluded');

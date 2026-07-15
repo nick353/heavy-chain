@@ -202,6 +202,7 @@ export type PrintableSurfaceDataUrlSuggestion =
       height: number;
       dataUrl: string;
       diagnostics: import('../features/printing/surface/suggestPrintableSurface').PrintableSurfaceSuggestionDiagnostics;
+      provenance: 'deterministic-alpha-structure-v1';
     }
   | {
       kind: 'fallback-required';
@@ -334,13 +335,19 @@ export async function suggestPrintableSurfaceDataUrl({
   garmentUrl,
   expectedSize,
   maxDataUrlBytes,
+  sourceAlphaAlreadyRefined = false,
 }: {
   garmentUrl: string;
   expectedSize: { width: number; height: number };
   maxDataUrlBytes: number;
+  sourceAlphaAlreadyRefined?: boolean;
 }): Promise<PrintableSurfaceDataUrlSuggestion> {
   const decoded = await readImageRgba(garmentUrl);
-  const prepared = preparePrintableSurfaceSuggestion({ expectedSize, decoded });
+  const prepared = preparePrintableSurfaceSuggestion({
+    expectedSize,
+    decoded,
+    sourceAlphaAlreadyRefined,
+  });
   if (prepared.kind === 'fallback-required') return prepared;
   const dataUrl = rgbaToPngDataUrl(prepared.width, prepared.height, prepared.rgba);
   return enforcePrintableSuggestionCapacity({

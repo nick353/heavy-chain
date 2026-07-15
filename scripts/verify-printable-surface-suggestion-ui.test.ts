@@ -10,6 +10,7 @@ import {
   enforcePrintableSuggestionCapacity,
   preparePrintableSurfaceSuggestion,
 } from '../src/features/printing/surface/printableSurfaceSuggestionAdapter.ts';
+import { buildSemanticGarmentSurface } from '../src/features/printing/surface/semanticGarmentSurface.ts';
 
 const token: PrintableSuggestionCommitToken = {
   requestId: 7,
@@ -99,6 +100,83 @@ test('adapter creates a bounded white-alpha editor mask for a stable garment', (
     if (result.rgba[offset + 3] > 0) printablePixels += 1;
   }
   assert.ok(printablePixels > 256);
+});
+
+test('adapter never lets edge refinement expand the selected cutout alpha', () => {
+  const width = 100;
+  const height = 120;
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  for (let y = 8; y <= 111; y += 1) {
+    for (let x = 18; x <= 81; x += 1) {
+      const offset = ((y * width) + x) * 4;
+      rgba[offset] = 40;
+      rgba[offset + 1] = 80;
+      rgba[offset + 2] = 120;
+      rgba[offset + 3] = 255;
+    }
+  }
+  // A low-alpha boundary sample with opaque, same-RGB neighbours is exactly
+  // the case where smoothing could otherwise borrow alpha from the interior.
+  const partialIndex = ((54 * width) + 45) * 4;
+  rgba[partialIndex + 3] = 32;
+  const result = preparePrintableSurfaceSuggestion({
+    expectedSize: { width, height },
+    decoded: { width, height, rgba },
+  });
+  assert.equal(result.kind, 'success');
+  if (result.kind !== 'success') return;
+  assert.ok(result.rgba[partialIndex + 3] <= 32);
+  for (let index = 0; index < width * height; index += 1) {
+    assert.ok(result.rgba[(index * 4) + 3] <= rgba[(index * 4) + 3]);
+    assert.equal(result.rgba[index * 4], 255);
+    assert.equal(result.rgba[(index * 4) + 1], 255);
+    assert.equal(result.rgba[(index * 4) + 2], 255);
+  }
+});
+
+test('already-refined candidate skips a second edge pass and matches the direct surface proposal', () => {
+  const width = 100;
+  const height = 120;
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  for (let y = 8; y <= 111; y += 1) {
+    for (let x = 18; x <= 81; x += 1) {
+      const offset = ((y * width) + x) * 4;
+      rgba[offset] = 40;
+      rgba[offset + 1] = 80;
+      rgba[offset + 2] = 120;
+      rgba[offset + 3] = 255;
+    }
+  }
+  rgba[((54 * width) + 45) * 4 + 3] = 96;
+  const sourceAlpha = new Uint8ClampedArray(width * height);
+  for (let index = 0; index < sourceAlpha.length; index += 1) sourceAlpha[index] = rgba[(index * 4) + 3];
+  const direct = buildSemanticGarmentSurface({ width, height, garmentAlpha: sourceAlpha });
+  const prepared = preparePrintableSurfaceSuggestion({
+    expectedSize: { width, height },
+    decoded: { width, height, rgba },
+    sourceAlphaAlreadyRefined: true,
+  });
+  assert.equal(direct.kind, 'success');
+  assert.equal(prepared.kind, 'success');
+  if (direct.kind !== 'success' || prepared.kind !== 'success') return;
+  const preparedAlpha = new Uint8ClampedArray(width * height);
+  for (let index = 0; index < preparedAlpha.length; index += 1) {
+    preparedAlpha[index] = prepared.rgba[(index * 4) + 3];
+  }
+  assert.deepEqual(preparedAlpha, direct.surface.printableAlpha);
+});
+
+test('adapter returns a typed fallback for malformed decoded pixel buffers', () => {
+  const result = preparePrintableSurfaceSuggestion({
+    expectedSize: { width: 20, height: 20 },
+    decoded: { width: 20, height: 20, rgba: new Uint8ClampedArray(20 * 20 * 4 - 1) },
+  });
+  assert.deepEqual(result, {
+    kind: 'fallback-required',
+    reason: 'INVALID_RGBA',
+    width: 20,
+    height: 20,
+  });
 });
 
 test('adapter enforces the exact data-url byte capacity before opening the editor', () => {
