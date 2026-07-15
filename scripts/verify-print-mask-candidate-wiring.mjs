@@ -176,6 +176,8 @@ const checks = {
     && garmentSelectionEditor.includes('onApply(output.toDataURL(\'image/png\'), selectionSource)'),
   high_confidence_tap_auto_applies_but_low_confidence_stays_explicit: garmentSelectionEditor.includes('shouldAutoApplyPointGuidedSelection(proposal)')
     && garmentSelectionEditor.includes('低信頼の候補だけ確認してから適用します'),
+  crop_handles_have_touch_friendly_hit_area: garmentSelectionEditor.includes('h-7 w-7')
+    && garmentSelectionEditor.includes('touch-none select-none'),
   experimental_occluder_wiring_is_explicit_and_optional: library.includes('surfaceOccluderContentHash')
     && library.includes('occluderStageMask')
     && library.includes('occluder: {')

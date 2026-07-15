@@ -486,7 +486,7 @@ export function PrintGarmentSelectionEditor({
                       key={handle.id}
                       type="button"
                       aria-label={`選択範囲の${handle.label}を調整`}
-                      className="pointer-events-auto absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-cyan-400 shadow-lg shadow-cyan-950/50"
+                      className="pointer-events-auto absolute z-10 h-7 w-7 touch-none select-none -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-cyan-400 shadow-lg shadow-cyan-950/50"
                       style={{ left: `${handle.left}%`, top: `${handle.top}%`, cursor: handle.cursor }}
                       onPointerDown={(event) => beginResize(event, handle.id)}
                     />
