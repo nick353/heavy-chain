@@ -151,7 +151,7 @@ export function GallerySelector({
     >
       <div className="space-y-4">
         {/* Search and Filter */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
             <input
@@ -162,10 +162,11 @@ export function GallerySelector({
               className="w-full pl-10 pr-4 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
-          <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
+          <div className="flex shrink-0 items-center gap-1 overflow-x-auto bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
             <button
+              type="button"
               onClick={() => setFilter('recent')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs rounded-md transition-colors ${
                 filter === 'recent'
                   ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
                   : 'text-neutral-500 hover:text-neutral-700'
@@ -175,8 +176,9 @@ export function GallerySelector({
               最近
             </button>
             <button
+              type="button"
               onClick={() => setFilter('favorites')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs rounded-md transition-colors ${
                 filter === 'favorites'
                   ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
                   : 'text-neutral-500 hover:text-neutral-700'
@@ -186,8 +188,9 @@ export function GallerySelector({
               お気に入り
             </button>
             <button
+              type="button"
               onClick={() => setFilter('all')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs rounded-md transition-colors ${
                 filter === 'all'
                   ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
                   : 'text-neutral-500 hover:text-neutral-700'
@@ -216,19 +219,23 @@ export function GallerySelector({
         )}
 
         {/* Image Grid */}
-        <div className="max-h-[400px] overflow-y-auto">
+        <div className="min-h-32 max-h-[min(400px,calc(100dvh-16rem))] overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="spinner" />
             </div>
           ) : filteredImages.length > 0 ? (
             <div className="grid grid-cols-4 gap-3">
-              {filteredImages.map((image) => {
+              {filteredImages.map((image, index) => {
                 const isSelected = selectedImages.has(image.id);
+                const imageLabel = image.feature_type || image.prompt?.trim().slice(0, 48) || `ギャラリー画像 ${index + 1}`;
                 return (
                   <button
                     key={image.id}
-                  onClick={(event) => handleImageClick(image, event)}
+                    type="button"
+                    onClick={(event) => handleImageClick(image, event)}
+                    aria-label={`${imageLabel}を選択`}
+                    title={imageLabel}
                     className={`relative aspect-square rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 transition-all ${
                       isSelected
                         ? 'ring-2 ring-primary-500 ring-offset-2'
@@ -237,7 +244,7 @@ export function GallerySelector({
                   >
                     <img
                       src={getImageUrl(image)}
-                      alt=""
+                      alt={imageLabel}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />

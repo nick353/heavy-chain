@@ -275,6 +275,8 @@ export function ImageSelector({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
+                  aria-label="画像ファイルをアップロード"
+                  title="画像ファイルをアップロード"
                   className="p-2 bg-neutral-100 dark:bg-neutral-700 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600"
                 >
                   <Upload className="w-4 h-4 text-neutral-500" />
@@ -282,6 +284,8 @@ export function ImageSelector({
                 <button
                   type="button"
                   onClick={() => setShowGalleryModal(true)}
+                  aria-label="ギャラリーから画像を選択"
+                  title="ギャラリーから画像を選択"
                   className="p-2 bg-neutral-100 dark:bg-neutral-700 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600"
                 >
                   <FolderOpen className="w-4 h-4 text-neutral-500" />
@@ -361,7 +365,8 @@ export function ImageSelector({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                aria-label="画像ファイルをアップロード"
+                className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
               >
                 <Upload className="w-4 h-4" />
                 アップロード
@@ -369,7 +374,8 @@ export function ImageSelector({
               <button
                 type="button"
                 onClick={() => setShowGalleryModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
+                aria-label="ギャラリーから画像を選択"
+                className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
               >
                 <FolderOpen className="w-4 h-4" />
                 ギャラリーから
