@@ -178,6 +178,9 @@ const checks = {
     && garmentSelectionEditor.includes('低信頼の候補だけ確認してから適用します'),
   crop_handles_have_touch_friendly_hit_area: garmentSelectionEditor.includes('h-7 w-7')
     && garmentSelectionEditor.includes('touch-none select-none'),
+  ai_failure_keeps_manual_editor_available: page.includes('buildManualMaskSourceResult')
+    && page.includes('AI失敗時に手動マスクを使う')
+    && page.includes("printGarmentCutoutState !== 'error'"),
   experimental_occluder_wiring_is_explicit_and_optional: library.includes('surfaceOccluderContentHash')
     && library.includes('occluderStageMask')
     && library.includes('occluder: {')

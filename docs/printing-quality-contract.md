@@ -6,7 +6,7 @@ Status: Stages 2–4 have local implementation and code-review evidence. The Sta
 
 The first supported domain is one clearly visible garment, front or three-quarter view, with a visible print surface and source imagery of at least roughly 1024 px on the long edge. Exact placement and the current manual garment-mask editor remain available after a usable garment cutout has been obtained.
 
-Low-confidence, cropped, multi-person, multi-garment, highly reflective, sheer, heavily occluded, or otherwise out-of-domain inputs must not silently report a semantic surface success. They must return an explicit reason. Exact rendering and manual editing remain available after at least one usable garment cutout exists; entering manual correction directly from a total automatic-cutout failure is a known pending gap. “Works on every image” is not a valid release claim.
+Low-confidence, cropped, multi-person, multi-garment, highly reflective, sheer, heavily occluded, or otherwise out-of-domain inputs must not silently report a semantic surface success. They must return an explicit reason. Exact rendering and manual editing remain available after at least one usable garment cutout exists; if automatic cutout fails completely, the UI now exposes the original source as an explicitly labelled full-alpha manual-mask fallback rather than claiming an automatic result. “Works on every image” is not a valid release claim.
 
 ## Pipeline and immutable fallbacks
 

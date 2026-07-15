@@ -99,6 +99,27 @@ type WorkbenchResult = {
   outputSize?: { width: number; height: number };
 };
 
+const buildManualMaskSourceResult = (sourceUrl: string): Promise<MaterialCutoutResult> => new Promise((resolve, reject) => {
+  const image = new Image();
+  image.crossOrigin = 'anonymous';
+  image.onload = () => {
+    const width = Math.max(1, image.naturalWidth || image.width);
+    const height = Math.max(1, image.naturalHeight || image.height);
+    resolve({
+      dataUrl: sourceUrl,
+      bounds: { x: 0, y: 0, width, height },
+      sourceSize: { width, height },
+      outputSize: { width, height },
+      dataUrlBytes: sourceUrl.length,
+      storagePolicy: 'bounded-local-canvas-data-url-v1',
+      engine: 'browser-canvas-geometric-mask-v1',
+      hasTransparentPixels: false,
+    });
+  };
+  image.onerror = () => reject(new Error('manual_mask_source_image_load_failed'));
+  image.src = sourceUrl;
+});
+
 type PendingSurfaceJob = {
   id: number;
   snapshot: PrintRequestSnapshot;
@@ -1113,16 +1134,37 @@ export function LightchainMaterialWorkbenchPage() {
     }
   };
 
-  const openGarmentMaskEditor = () => {
-    if (!printGarment || !printGarmentProcessed) return;
+  const openGarmentMaskEditor = async () => {
+    if (!printGarment) return;
     invalidatePrintableSuggestion();
     const selectedCandidate = printGarmentMaskCandidates.find((candidate) => candidate.candidateId === selectedPrintGarmentMaskCandidateId);
-    if (!selectedCandidate) return;
+    const sourceUrl = printGarmentCutoutSourceUrl ?? printGarment.url;
+    if (!selectedCandidate) {
+      if (printGarmentCutoutState !== 'error') return;
+      try {
+        const fallbackResult = await buildManualMaskSourceResult(sourceUrl);
+        setPrintMaskEditorError(null);
+        setPrintMaskEditorTarget({
+          kind: 'garment',
+          title: 'AI失敗後の手動マスク',
+          description: 'AI透明化に失敗したため、元画像を全体マスクとして開いています。「消す」で背景や人物部分を除去し、「残す」で衣服を戻してから適用してください。',
+          sourceUrl,
+          maskUrl: sourceUrl,
+          result: fallbackResult,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '元画像を手動マスクへ読み込めませんでした';
+        setPrintMaskEditorError(message);
+        toast.error('元画像を手動マスクへ読み込めませんでした');
+      }
+      return;
+    }
+    if (!printGarmentProcessed) return;
     setPrintMaskEditorError(null);
     setPrintMaskEditorTarget({
       kind: 'garment',
       title: '服の切り抜きマスクを調整',
-      sourceUrl: printGarmentCutoutSourceUrl ?? printGarment.url,
+      sourceUrl,
       maskUrl: printGarmentProcessed,
       result: selectedCandidate.result,
     });
@@ -1549,7 +1591,16 @@ export function LightchainMaterialWorkbenchPage() {
                 </div>
               )}
               {printGarmentCutoutState === 'error' && (
-                <p className="text-xs text-red-300">{printGarmentCutoutError || '背景を分離できませんでした。透明背景または白背景の服画像で再試行してください。'}</p>
+                <div className="space-y-2">
+                  <p className="text-xs text-red-300">{printGarmentCutoutError || '背景を分離できませんでした。透明背景または白背景の服画像で再試行してください。'}</p>
+                  <button
+                    type="button"
+                    onClick={() => { void openGarmentMaskEditor(); }}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-amber-200/30 bg-amber-200/10 px-3 py-2 text-xs font-semibold text-amber-100 transition hover:bg-amber-200/15"
+                  >
+                    AI失敗時に手動マスクを使う
+                  </button>
+                </div>
               )}
               {printGarmentCutoutState === 'done' && (
                 <div className="space-y-2">
