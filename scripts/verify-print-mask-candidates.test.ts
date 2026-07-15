@@ -328,6 +328,29 @@ test('fabric modulation preserves alpha and geometry and only applies bounded RG
   );
 });
 
+test('fabric modulation can add bounded local fold contrast when stage dimensions are known', () => {
+  const design = new Uint8ClampedArray(3 * 3 * 4).fill(0);
+  const garment = new Uint8ClampedArray(3 * 3 * 4).fill(0);
+  for (let index = 0; index < 9; index += 1) {
+    const offset = index * 4;
+    design[offset] = 100;
+    design[offset + 1] = 100;
+    design[offset + 2] = 100;
+    design[offset + 3] = 255;
+    garment[offset] = 120;
+    garment[offset + 1] = 120;
+    garment[offset + 2] = 120;
+    garment[offset + 3] = 255;
+  }
+  garment[4 * 4] = 180;
+  garment[(4 * 4) + 1] = 180;
+  garment[(4 * 4) + 2] = 180;
+  const output = applyFabricLuminanceModulation({ designRgba: design, garmentRgba: garment, width: 3, height: 3 });
+  assert.ok(output[4 * 4] > output[0]);
+  assert.ok(output[4 * 4] <= 108);
+  assert.deepEqual(Array.from(output, (_, index) => index % 4 === 3 ? output[index] : undefined).filter((value) => value !== undefined), Array(9).fill(255));
+});
+
 test('source-over helper matches the expected half-alpha exact composite', () => {
   const output = sourceOverRgbaPixel([200, 0, 0, 128], [100, 100, 100, 255]);
   assert.deepEqual(output, [150, 50, 50, 255]);

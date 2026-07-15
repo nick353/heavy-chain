@@ -660,6 +660,8 @@ export async function renderPrintRequestComposition(
     designData.data.set(applyFabricLuminanceModulation({
       designRgba: designData.data,
       garmentRgba: garmentData.data,
+      width: canvas.width,
+      height: canvas.height,
     }));
     clippedDesignContext.putImageData(designData, 0, 0);
   }

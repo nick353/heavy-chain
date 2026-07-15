@@ -26,7 +26,7 @@ The production UI exposes `高精度エッジ（試験）` as an optional candid
 
 ### Stage 1b tap-to-garment model boundary
 
-The `服をタップしてAIマスク` flow records the operator's tap intent and forwards the bounded crop to the cutout pipeline. A tap selects `u2net_cloth_seg` only when the build explicitly provides `VITE_REMBG_CLOTH_SEG_MODEL_URL`; the default production build remains `silueta` until that approximately 176 MB clothing model is deployed and independently checked. Automatic selection and rectangle/range selection never switch models implicitly. When the cloth model is configured, the uniform-background fast path is skipped for tap crops so it cannot silently bypass the requested model; model load/inference failure still returns to the existing bounded cutout candidate picker and manual keep/remove editor. The tap crop is a selection proposal, not proof of garment-part recognition, and the UI must not label the fallback as semantic success.
+The `服をタップしてAIマスク` flow records the operator's tap intent and forwards the bounded crop to the cutout pipeline. A high-confidence colour-region proposal can be forwarded immediately after the tap; a low-confidence neighbourhood fallback remains an explicit Apply step. A tap selects `u2net_cloth_seg` only when the build explicitly provides `VITE_REMBG_CLOTH_SEG_MODEL_URL`; the default production build remains `silueta` until that approximately 176 MB clothing model is deployed and independently checked. Automatic selection and rectangle/range selection never switch models implicitly. When the cloth model is configured, the uniform-background fast path is skipped for tap crops so it cannot silently bypass the requested model; model load/inference failure still returns to the existing bounded cutout candidate picker and manual keep/remove editor. The tap crop is a selection proposal, not proof of garment-part recognition, and the UI must not label the fallback as semantic success.
 
 ## Surface-map contract
 
@@ -51,7 +51,7 @@ Manual planes use `manual-ready`, not `semantic-ready`. Their source hash is com
 
 ### Stage 3 experimental 2D surface conform
 
-When a `manual-ready` printable surface is explicitly enabled, the app may add a third result labelled `布面追従（試験）`. It uses bounded 2D luminance gradients, premultiplied-alpha resampling, and restrained fold shading. It is not automatic surface recognition, a 3D simulation, or a realism guarantee.
+When a `manual-ready` printable surface is explicitly enabled, the app may add a third result labelled `布面追従（試験）`. It uses bounded 2D luminance gradients, premultiplied-alpha resampling, and restrained fold shading. The regular fabric result also accepts optional stage dimensions so it can add a bounded local fold-contrast term without changing geometry or alpha. It is not automatic surface recognition, a 3D simulation, or a realism guarantee.
 
 The exact and fabric results are committed first and remain available when the experimental pass is out of domain, exceeds its deadline, or fails. The experimental pass rejects insufficient source resolution, invisible design/surface intersections, small or frame-cropped surfaces, clipped luminance, excessive high-frequency detail, malformed dimensions, and over-budget inputs. It never substitutes a whole-garment surface for a missing manual plane.
 

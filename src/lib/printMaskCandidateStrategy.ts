@@ -300,16 +300,49 @@ export const applyManualMaskBrushStroke = ({
 export const applyFabricLuminanceModulation = ({
   designRgba,
   garmentRgba,
+  width,
+  height,
 }: {
   designRgba: Uint8ClampedArray;
   garmentRgba: Uint8ClampedArray;
+  /** Optional stage dimensions for bounded local fold shading. */
+  width?: number;
+  height?: number;
 }) => {
   if (designRgba.length !== garmentRgba.length) throw new Error('invalid_fabric_modulation_input');
+  const hasGrid = Number.isSafeInteger(width)
+    && Number.isSafeInteger(height)
+    && (width as number) > 0
+    && (height as number) > 0
+    && (width as number) * (height as number) * 4 === garmentRgba.length;
   const output = new Uint8ClampedArray(designRgba);
   for (let index = 0; index < output.length; index += 4) {
     if (output[index + 3] === 0) continue;
     const luminance = (0.2126 * garmentRgba[index]) + (0.7152 * garmentRgba[index + 1]) + (0.0722 * garmentRgba[index + 2]);
-    const factor = Math.min(1.08, Math.max(0.82, 0.82 + ((luminance / 255) * 0.26)));
+    let foldContrast = 0;
+    if (hasGrid) {
+      const pixel = index / 4;
+      const x = pixel % (width as number);
+      const y = Math.floor(pixel / (width as number));
+      let neighbourSum = 0;
+      let neighbourWeight = 0;
+      for (const [offsetX, offsetY] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+        const nextX = x + offsetX;
+        const nextY = y + offsetY;
+        if (nextX < 0 || nextX >= (width as number) || nextY < 0 || nextY >= (height as number)) continue;
+        const neighbourIndex = ((nextY * (width as number)) + nextX) * 4;
+        const neighbourAlpha = garmentRgba[neighbourIndex + 3];
+        if (neighbourAlpha === 0) continue;
+        neighbourSum += ((0.2126 * garmentRgba[neighbourIndex])
+          + (0.7152 * garmentRgba[neighbourIndex + 1])
+          + (0.0722 * garmentRgba[neighbourIndex + 2])) * (neighbourAlpha / 255);
+        neighbourWeight += neighbourAlpha / 255;
+      }
+      if (neighbourWeight > 0) {
+        foldContrast = Math.max(-1, Math.min(1, (luminance - (neighbourSum / neighbourWeight)) / 48));
+      }
+    }
+    const factor = Math.min(1.08, Math.max(0.82, 0.82 + ((luminance / 255) * 0.26) + (foldContrast * 0.05)));
     output[index] = clampByte(output[index] * factor);
     output[index + 1] = clampByte(output[index + 1] * factor);
     output[index + 2] = clampByte(output[index + 2] * factor);

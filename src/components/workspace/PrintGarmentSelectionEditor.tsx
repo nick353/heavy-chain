@@ -2,7 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button } from '../ui';
 import { Modal } from '../ui/Modal';
-import { buildPointGuidedSelection, type PointGuidedSelection } from '../../features/printing/selection/pointGuidedSelection';
+import {
+  buildPointGuidedSelection,
+  shouldAutoApplyPointGuidedSelection,
+  type PointGuidedSelection,
+} from '../../features/printing/selection/pointGuidedSelection';
 import type { GarmentSelectionSource } from '../../features/printing/selection/garmentSegmentationPolicy';
 
 type SelectionRect = {
@@ -259,6 +263,41 @@ export function PrintGarmentSelectionEditor({
     capturePointer(event);
   };
 
+  const exportSelection = (selectedSelection: SelectionRect, selectionSource: SelectionSource) => {
+    const image = imageRef.current;
+    if (
+      !image
+      || selectedSelection.width < MIN_SELECTION_EDGE
+      || selectedSelection.height < MIN_SELECTION_EDGE
+    ) {
+      throw new Error('garment_selection_bounds_invalid');
+    }
+    const scale = scaleRef.current;
+    const sourceX = selectedSelection.x / scale;
+    const sourceY = selectedSelection.y / scale;
+    const sourceWidth = selectedSelection.width / scale;
+    const sourceHeight = selectedSelection.height / scale;
+    const imageWidth = image.naturalWidth || image.width;
+    const imageHeight = image.naturalHeight || image.height;
+    const paddingX = Math.max(AI_CONTEXT_MIN_PADDING, sourceWidth * AI_CONTEXT_PADDING_RATIO);
+    const paddingY = Math.max(AI_CONTEXT_MIN_PADDING, sourceHeight * AI_CONTEXT_PADDING_RATIO);
+    const contextX = Math.max(0, sourceX - paddingX);
+    const contextY = Math.max(0, sourceY - paddingY);
+    const contextRight = Math.min(imageWidth, sourceX + sourceWidth + paddingX);
+    const contextBottom = Math.min(imageHeight, sourceY + sourceHeight + paddingY);
+    const contextWidth = Math.max(1, contextRight - contextX);
+    const contextHeight = Math.max(1, contextBottom - contextY);
+    const output = document.createElement('canvas');
+    output.width = Math.max(1, Math.round(contextWidth));
+    output.height = Math.max(1, Math.round(contextHeight));
+    const context = output.getContext('2d');
+    if (!context) throw new Error('garment_selection_output_context_missing');
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(image, contextX, contextY, contextWidth, contextHeight, 0, 0, output.width, output.height);
+    onApply(output.toDataURL('image/png'), selectionSource);
+  };
+
   const recognizeTap = (point: { x: number; y: number }) => {
     const image = imageRef.current;
     const canvas = canvasRef.current;
@@ -286,6 +325,14 @@ export function PrintGarmentSelectionEditor({
         width: proposal.width,
         height: proposal.height,
       }, 'tap');
+      if (shouldAutoApplyPointGuidedSelection(proposal)) {
+        exportSelection({
+          x: proposal.x,
+          y: proposal.y,
+          width: proposal.width,
+          height: proposal.height,
+        }, 'tap');
+      }
     } catch (analysisError) {
       console.warn('Point-guided garment selection failed; keeping the current range.', analysisError);
       setGuidedResult(null);
@@ -357,30 +404,7 @@ export function PrintGarmentSelectionEditor({
       return;
     }
     try {
-      const scale = scaleRef.current;
-      const sourceX = currentSelection.x / scale;
-      const sourceY = currentSelection.y / scale;
-      const sourceWidth = currentSelection.width / scale;
-      const sourceHeight = currentSelection.height / scale;
-      const imageWidth = image.naturalWidth || image.width;
-      const imageHeight = image.naturalHeight || image.height;
-      const paddingX = Math.max(AI_CONTEXT_MIN_PADDING, sourceWidth * AI_CONTEXT_PADDING_RATIO);
-      const paddingY = Math.max(AI_CONTEXT_MIN_PADDING, sourceHeight * AI_CONTEXT_PADDING_RATIO);
-      const contextX = Math.max(0, sourceX - paddingX);
-      const contextY = Math.max(0, sourceY - paddingY);
-      const contextRight = Math.min(imageWidth, sourceX + sourceWidth + paddingX);
-      const contextBottom = Math.min(imageHeight, sourceY + sourceHeight + paddingY);
-      const contextWidth = Math.max(1, contextRight - contextX);
-      const contextHeight = Math.max(1, contextBottom - contextY);
-      const output = document.createElement('canvas');
-      output.width = Math.max(1, Math.round(contextWidth));
-      output.height = Math.max(1, Math.round(contextHeight));
-      const context = output.getContext('2d');
-      if (!context) throw new Error('garment_selection_output_context_missing');
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = 'high';
-      context.drawImage(image, contextX, contextY, contextWidth, contextHeight, 0, 0, output.width, output.height);
-      onApply(output.toDataURL('image/png'), selectionSource);
+      exportSelection(currentSelection, selectionSource);
     } catch (applyError) {
       console.error('Garment selection export failed', applyError);
       setError('選択範囲をAIマスクへ渡せませんでした。別の範囲で再試行してください。');
@@ -402,7 +426,7 @@ export function PrintGarmentSelectionEditor({
     >
       <div className="space-y-4">
         <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-300">
-          「服をタップ（推奨）」で服の位置を1回押すと、候補範囲を自動認識してAIマスクへ渡せます。細かく指定するときは「範囲を調整」に切り替え、四隅・四辺の丸いハンドルと中央ドラッグを使ってください。
+          「服をタップ（推奨）」で服の位置を1回押すと候補範囲を自動認識します。高信頼の候補はそのままAIマスクへ渡し、低信頼の候補だけ確認してから適用します。細かく指定するときは「範囲を調整」に切り替え、四隅・四辺の丸いハンドルと中央ドラッグを使ってください。
         </p>
         {error && <p role="alert" className="text-sm text-rose-500">{error}</p>}
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="服の選択方法">

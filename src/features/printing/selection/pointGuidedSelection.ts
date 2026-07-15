@@ -16,6 +16,21 @@ export type PointGuidedSelection = {
   touchesFrame: boolean;
 };
 
+/**
+ * A tap is allowed to skip the extra confirmation only when the bounded
+ * colour-region proposal is strong enough to be useful on its own. The
+ * neighbourhood fallback remains explicit so a poor tap never silently
+ * becomes a destructive mask request.
+ */
+export const POINT_GUIDED_AUTO_APPLY_MIN_CONFIDENCE = 0.72;
+
+export const shouldAutoApplyPointGuidedSelection = (selection: PointGuidedSelection) => (
+  selection.source === 'color-region'
+  && selection.confidence >= POINT_GUIDED_AUTO_APPLY_MIN_CONFIDENCE
+  && selection.selectedPixels > 0
+  && !selection.touchesFrame
+);
+
 const MAX_ANALYSIS_EDGE = 280;
 const MIN_REGION_RATIO = 0.0025;
 const MAX_REGION_RATIO = 0.9;

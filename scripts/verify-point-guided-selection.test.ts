@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPointGuidedSelection } from '../src/features/printing/selection/pointGuidedSelection.ts';
+import {
+  buildPointGuidedSelection,
+  shouldAutoApplyPointGuidedSelection,
+} from '../src/features/printing/selection/pointGuidedSelection.ts';
 
 const makeImage = (width: number, height: number, paint: (x: number, y: number) => [number, number, number]) => {
   const data = new Uint8ClampedArray(width * height * 4);
@@ -59,4 +62,37 @@ test('point-guided selection rejects malformed pixel buffers', () => {
     () => buildPointGuidedSelection({ width: 10, height: 10, data: new Uint8ClampedArray(3), point: { x: 5, y: 5 } }),
     /POINT_GUIDED_SELECTION_IMAGE_INVALID/,
   );
+});
+
+test('high-confidence colour-region taps can flow directly to the AI mask', () => {
+  assert.equal(shouldAutoApplyPointGuidedSelection({
+    x: 10,
+    y: 12,
+    width: 80,
+    height: 96,
+    confidence: 0.8,
+    source: 'color-region',
+    selectedPixels: 1_000,
+    touchesFrame: false,
+  }), true);
+  assert.equal(shouldAutoApplyPointGuidedSelection({
+    x: 10,
+    y: 12,
+    width: 80,
+    height: 96,
+    confidence: 0.71,
+    source: 'color-region',
+    selectedPixels: 1_000,
+    touchesFrame: false,
+  }), false);
+  assert.equal(shouldAutoApplyPointGuidedSelection({
+    x: 10,
+    y: 12,
+    width: 80,
+    height: 96,
+    confidence: 0.95,
+    source: 'tap-neighborhood',
+    selectedPixels: 1_000,
+    touchesFrame: false,
+  }), false);
 });
