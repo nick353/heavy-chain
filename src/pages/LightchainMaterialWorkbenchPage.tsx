@@ -1521,7 +1521,9 @@ export function LightchainMaterialWorkbenchPage() {
                     {printGarmentCutoutSourceUrl
                       ? printGarmentCutoutState === 'processing'
                         ? '選択範囲からAIマスクを作成中です。自動候補へ戻すには別の画像を選び直してください。'
-                        : '選択範囲からAIマスクを作成しました。自動候補へ戻すには別の画像を選び直してください。'
+                        : printGarmentCutoutState === 'error'
+                          ? '選択範囲のAIマスクに失敗しました。範囲を少し広げるか、範囲調整へ切り替えて再試行してください。'
+                          : '選択範囲からAIマスクを作成しました。自動候補へ戻すには別の画像を選び直してください。'
                       : '服をタップすると、その服の候補範囲だけをAI切り抜きへ渡せます。細かい指定は範囲調整へ切り替えます。'}
                   </p>
                 </div>

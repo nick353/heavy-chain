@@ -24,6 +24,10 @@ type SelectionSource = 'tap' | 'range';
 
 const MAX_CANVAS_EDGE = 1600;
 const MIN_SELECTION_EDGE = 16;
+// Keep a small amount of the original background around a guided crop so the
+// segmentation model can distinguish the garment boundary from the image edge.
+const AI_CONTEXT_PADDING_RATIO = 0.12;
+const AI_CONTEXT_MIN_PADDING = 24;
 
 const resizeHandleDetails: Array<{ id: ResizeHandle; left: number; top: number; cursor: string; label: string }> = [
   { id: 'nw', left: 0, top: 0, cursor: 'nwse-resize', label: '左上' },
@@ -357,14 +361,24 @@ export function PrintGarmentSelectionEditor({
       const sourceY = currentSelection.y / scale;
       const sourceWidth = currentSelection.width / scale;
       const sourceHeight = currentSelection.height / scale;
+      const imageWidth = image.naturalWidth || image.width;
+      const imageHeight = image.naturalHeight || image.height;
+      const paddingX = Math.max(AI_CONTEXT_MIN_PADDING, sourceWidth * AI_CONTEXT_PADDING_RATIO);
+      const paddingY = Math.max(AI_CONTEXT_MIN_PADDING, sourceHeight * AI_CONTEXT_PADDING_RATIO);
+      const contextX = Math.max(0, sourceX - paddingX);
+      const contextY = Math.max(0, sourceY - paddingY);
+      const contextRight = Math.min(imageWidth, sourceX + sourceWidth + paddingX);
+      const contextBottom = Math.min(imageHeight, sourceY + sourceHeight + paddingY);
+      const contextWidth = Math.max(1, contextRight - contextX);
+      const contextHeight = Math.max(1, contextBottom - contextY);
       const output = document.createElement('canvas');
-      output.width = Math.max(1, Math.round(sourceWidth));
-      output.height = Math.max(1, Math.round(sourceHeight));
+      output.width = Math.max(1, Math.round(contextWidth));
+      output.height = Math.max(1, Math.round(contextHeight));
       const context = output.getContext('2d');
       if (!context) throw new Error('garment_selection_output_context_missing');
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = 'high';
-      context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, output.width, output.height);
+      context.drawImage(image, contextX, contextY, contextWidth, contextHeight, 0, 0, output.width, output.height);
       onApply(output.toDataURL('image/png'));
     } catch (applyError) {
       console.error('Garment selection export failed', applyError);
