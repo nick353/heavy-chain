@@ -1515,12 +1515,14 @@ export function LightchainMaterialWorkbenchPage() {
                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-200/30 bg-cyan-200/15 px-3 py-2 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-200/20"
                   >
                     <Scissors className="h-4 w-4" />
-                    {printGarmentCutoutSourceUrl ? '選択範囲を変更してAIマスクを再実行' : '範囲を選んでAIマスク'}
+                    {printGarmentCutoutSourceUrl ? '服の選択をやり直してAIマスク' : '服をタップしてAIマスク'}
                   </button>
                   <p className="mt-2 text-[11px] leading-relaxed text-cyan-100/65">
                     {printGarmentCutoutSourceUrl
-                      ? '選択範囲からAIマスクを作成中です。自動候補へ戻すには別の画像を選び直してください。'
-                      : '服全体を囲うと、その範囲だけをAI切り抜きへ渡せます。'}
+                      ? printGarmentCutoutState === 'processing'
+                        ? '選択範囲からAIマスクを作成中です。自動候補へ戻すには別の画像を選び直してください。'
+                        : '選択範囲からAIマスクを作成しました。自動候補へ戻すには別の画像を選び直してください。'
+                      : '服をタップすると、その服の候補範囲だけをAI切り抜きへ渡せます。細かい指定は範囲調整へ切り替えます。'}
                   </p>
                 </div>
               )}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button } from '../ui';
 import { Modal } from '../ui/Modal';
+import { buildPointGuidedSelection, type PointGuidedSelection } from '../../features/printing/selection/pointGuidedSelection';
 
 type SelectionRect = {
   x: number;
@@ -13,9 +14,13 @@ type SelectionRect = {
 type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
 type SelectionInteraction =
+  | { mode: 'tap'; start: { x: number; y: number } }
   | { mode: 'create'; start: { x: number; y: number } }
   | { mode: 'move'; start: { x: number; y: number }; origin: SelectionRect }
   | { mode: 'resize'; start: { x: number; y: number }; origin: SelectionRect; handle: ResizeHandle };
+
+type SelectionMode = 'tap' | 'range';
+type SelectionSource = 'tap' | 'range';
 
 const MAX_CANVAS_EDGE = 1600;
 const MIN_SELECTION_EDGE = 16;
@@ -91,6 +96,10 @@ export function PrintGarmentSelectionEditor({
   const scaleRef = useRef(1);
   const interactionRef = useRef<SelectionInteraction | null>(null);
   const [selection, setSelection] = useState<SelectionRect | null>(null);
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>('tap');
+  const [selectionSource, setSelectionSource] = useState<SelectionSource | null>(null);
+  const [guidedResult, setGuidedResult] = useState<PointGuidedSelection | null>(null);
+  const [tapProcessing, setTapProcessing] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +136,10 @@ export function PrintGarmentSelectionEditor({
     let cancelled = false;
     setReady(false);
     setSelection(null);
+    setSelectionMode('tap');
+    setSelectionSource(null);
+    setGuidedResult(null);
+    setTapProcessing(false);
     setCanvasSize({ width: 0, height: 0 });
     setError(null);
     void loadImage(sourceUrl)
@@ -167,8 +180,9 @@ export function PrintGarmentSelectionEditor({
     };
   };
 
-  const setNextSelection = (nextSelection: SelectionRect) => {
+  const setNextSelection = (nextSelection: SelectionRect, source?: SelectionSource) => {
     setSelection(nextSelection);
+    if (source) setSelectionSource(source);
     render(nextSelection);
   };
 
@@ -176,6 +190,7 @@ export function PrintGarmentSelectionEditor({
     const interaction = interactionRef.current;
     const point = pointFromEvent(event);
     if (!interaction || !point || !canvasSize.width || !canvasSize.height) return;
+    if (interaction.mode === 'tap') return;
     let nextSelection: SelectionRect;
     if (interaction.mode === 'create') {
       nextSelection = normalizeRect(interaction.start, point);
@@ -194,7 +209,7 @@ export function PrintGarmentSelectionEditor({
         canvasHeight: canvasSize.height,
       });
     }
-    setNextSelection(nextSelection);
+    setNextSelection(nextSelection, 'range');
   };
 
   const capturePointer = (event: React.PointerEvent<HTMLElement>) => {
@@ -203,11 +218,14 @@ export function PrintGarmentSelectionEditor({
 
   const beginCreate = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!ready || event.button !== 0) return;
+    setSelectionMode('range');
+    setSelectionSource('range');
+    setGuidedResult(null);
     const start = pointFromEvent(event);
     if (!start) return;
     interactionRef.current = { mode: 'create', start };
     capturePointer(event);
-    setNextSelection({ x: start.x, y: start.y, width: 1, height: 1 });
+    setNextSelection({ x: start.x, y: start.y, width: 1, height: 1 }, 'range');
   };
 
   const beginMove = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -216,6 +234,9 @@ export function PrintGarmentSelectionEditor({
     event.stopPropagation();
     const start = pointFromEvent(event);
     if (!start) return;
+    setSelectionMode('range');
+    setSelectionSource('range');
+    setGuidedResult(null);
     interactionRef.current = { mode: 'move', start, origin: selection };
     capturePointer(event);
   };
@@ -226,31 +247,108 @@ export function PrintGarmentSelectionEditor({
     event.stopPropagation();
     const start = pointFromEvent(event);
     if (!start) return;
+    setSelectionMode('range');
+    setSelectionSource('range');
+    setGuidedResult(null);
     interactionRef.current = { mode: 'resize', start, origin: selection, handle };
     capturePointer(event);
   };
 
+  const recognizeTap = (point: { x: number; y: number }) => {
+    const image = imageRef.current;
+    const canvas = canvasRef.current;
+    if (!image || !canvas) return;
+    setTapProcessing(true);
+    try {
+      const analysisCanvas = document.createElement('canvas');
+      analysisCanvas.width = canvas.width;
+      analysisCanvas.height = canvas.height;
+      const context = analysisCanvas.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('garment_selection_analysis_context_missing');
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const proposal = buildPointGuidedSelection({
+        width: canvas.width,
+        height: canvas.height,
+        data: imageData.data,
+        point,
+      });
+      setGuidedResult(proposal);
+      setSelectionSource('tap');
+      setNextSelection({
+        x: proposal.x,
+        y: proposal.y,
+        width: proposal.width,
+        height: proposal.height,
+      }, 'tap');
+    } catch (analysisError) {
+      console.warn('Point-guided garment selection failed; keeping the current range.', analysisError);
+      setGuidedResult(null);
+      setSelectionSource(null);
+      setError('タップ認識に失敗しました。範囲を調整モードで服全体を囲んでください。');
+    } finally {
+      setTapProcessing(false);
+    }
+  };
+
+  const beginTap = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!ready || event.button !== 0 || tapProcessing) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const start = pointFromEvent(event);
+    if (!start) return;
+    interactionRef.current = { mode: 'tap', start };
+    capturePointer(event);
+  };
+
   const endInteraction = (event: React.PointerEvent<HTMLDivElement>) => {
+    const interaction = interactionRef.current;
     interactionRef.current = null;
     canvasWrapRef.current?.releasePointerCapture?.(event.pointerId);
+    if (!interaction || interaction.mode !== 'tap' || tapProcessing) return;
+    const point = pointFromEvent(event);
+    if (!point) return;
+    const distance = Math.hypot(point.x - interaction.start.x, point.y - interaction.start.y);
+    if (distance <= Math.max(12, canvasSize.width * 0.015)) recognizeTap(point);
   };
 
   const selectWholeCanvas = () => {
     if (!ready || !canvasSize.width || !canvasSize.height) return;
-    setNextSelection({ x: 0, y: 0, width: canvasSize.width, height: canvasSize.height });
+    setSelectionMode('range');
+    setGuidedResult(null);
+    setNextSelection({ x: 0, y: 0, width: canvasSize.width, height: canvasSize.height }, 'range');
   };
 
   const clearSelection = () => {
     interactionRef.current = null;
     setSelection(null);
+    setSelectionSource(null);
+    setGuidedResult(null);
+    setSelectionMode('range');
     render(null);
+  };
+
+  const chooseTapMode = () => {
+    setSelectionMode('tap');
+    setError(null);
+  };
+
+  const chooseRangeMode = () => {
+    setSelectionMode('range');
+    setError(null);
   };
 
   const apply = () => {
     const image = imageRef.current;
     const currentSelection = selection;
-    if (!image || !currentSelection || currentSelection.width < MIN_SELECTION_EDGE || currentSelection.height < MIN_SELECTION_EDGE) {
-      setError('服全体が入るように、16px以上の範囲をドラッグで選択してください。');
+    if (
+      !image
+      || !currentSelection
+      || !selectionSource
+      || currentSelection.width < MIN_SELECTION_EDGE
+      || currentSelection.height < MIN_SELECTION_EDGE
+    ) {
+      setError('服をタップして認識するか、「範囲を調整」で服全体を16px以上の範囲にしてください。');
       return;
     }
     try {
@@ -278,7 +376,7 @@ export function PrintGarmentSelectionEditor({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="範囲を選んでAIマスク"
+      title="服をタップしてAIマスク"
       size="xl"
       footer={(
         <div className="flex flex-wrap justify-end gap-2">
@@ -289,14 +387,38 @@ export function PrintGarmentSelectionEditor({
     >
       <div className="space-y-4">
         <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-300">
-          初期範囲は画像全体です。四隅・四辺の丸いハンドルで調整し、選択枠の中央をドラッグして移動できます。外側をドラッグすると範囲を作り直せます。
+          「服をタップ（推奨）」で服の位置を1回押すと、候補範囲を自動認識してAIマスクへ渡せます。細かく指定するときは「範囲を調整」に切り替え、四隅・四辺の丸いハンドルと中央ドラッグを使ってください。
         </p>
         {error && <p role="alert" className="text-sm text-rose-500">{error}</p>}
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="服の選択方法">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectionMode === 'tap'}
+            onClick={chooseTapMode}
+            className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${selectionMode === 'tap'
+              ? 'border-cyan-300 bg-cyan-300/20 text-cyan-50'
+              : 'border-white/10 bg-white/5 text-white/65 hover:bg-white/10'}`}
+          >
+            服をタップ（推奨）
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectionMode === 'range'}
+            onClick={chooseRangeMode}
+            className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${selectionMode === 'range'
+              ? 'border-cyan-300 bg-cyan-300/20 text-cyan-50'
+              : 'border-white/10 bg-white/5 text-white/65 hover:bg-white/10'}`}
+          >
+            範囲を調整
+          </button>
+        </div>
         <div className="overflow-auto rounded-2xl border border-cyan-300/20 bg-neutral-950 p-3">
           <div
             ref={canvasWrapRef}
-            className={`relative mx-auto w-fit max-w-full ${ready ? 'cursor-crosshair' : 'opacity-50'}`}
-            onPointerDown={beginCreate}
+            className={`relative mx-auto w-fit max-w-full ${ready ? (selectionMode === 'tap' ? 'cursor-pointer' : 'cursor-crosshair') : 'opacity-50'}`}
+            onPointerDown={selectionMode === 'tap' ? beginTap : beginCreate}
             onPointerMove={updateSelection}
             onPointerUp={endInteraction}
             onPointerCancel={() => { interactionRef.current = null; }}
@@ -315,7 +437,7 @@ export function PrintGarmentSelectionEditor({
                     width: `${(selection.width / canvasSize.width) * 100}%`,
                     height: `${(selection.height / canvasSize.height) * 100}%`,
                   }}
-                  onPointerDown={beginMove}
+                  onPointerDown={selectionMode === 'tap' ? beginTap : beginMove}
                 >
                   <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-black/65 px-2 py-1 text-[10px] font-medium text-white">
                     中央をドラッグして移動
@@ -354,7 +476,13 @@ export function PrintGarmentSelectionEditor({
           </button>
         </div>
         <p role="status" aria-live="polite" className="text-xs text-neutral-500 dark:text-neutral-400">
-          {selection ? `選択中: ${Math.round(selection.width / scaleRef.current)} × ${Math.round(selection.height / scaleRef.current)}px` : '選択範囲がありません。画像上をドラッグして選択してください。'}
+          {tapProcessing
+            ? 'タップ位置から服を認識しています…'
+            : selectionSource === 'tap' && guidedResult
+              ? `タップ認識: ${Math.round(guidedResult.confidence * 100)}% / ${Math.round(selection?.width ? selection.width / scaleRef.current : 0)} × ${Math.round(selection?.height ? selection.height / scaleRef.current : 0)}px`
+              : selectionSource === 'range' && selection
+                ? `範囲指定: ${Math.round(selection.width / scaleRef.current)} × ${Math.round(selection.height / scaleRef.current)}px`
+                : '服をタップすると、そこにある服の候補範囲を自動認識します。'}
         </p>
       </div>
     </Modal>
