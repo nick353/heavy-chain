@@ -109,8 +109,8 @@ const checks = {
   printable_surface_commit_checks_exact_garment_request: page.includes('capturedGarmentCutoutRequestId')
     && page.includes('printGarmentProcessedRef.current !== currentGarmentUrl'),
   same_candidate_reselection_is_a_noop: page.includes('if (candidateId === selectedPrintGarmentMaskCandidateId) return;'),
-  experimental_surface_result_is_manual_only_and_non_semantic: page.includes("title: '布面追従（試験）'")
-    && page.includes('3D・自動面認識ではありません')
+  experimental_surface_result_is_manual_only_and_non_semantic: (page.includes("title: '布面追従（試験）'") || page.includes("title: '布面メッシュ追従（試験）'"))
+    && (page.includes('3D・自動面認識ではありません') || page.includes('3D・自動衣服認識ではありません'))
     && page.includes('!printableSurfaceEnabled || !manualPrintableSurface'),
   exact_and_fabric_commit_before_surface_attempt: page.indexOf("toast.success('2種類のプリント結果を作成しました')")
     < page.indexOf('setPendingSurfaceJob({')
@@ -133,6 +133,10 @@ const checks = {
     && surfaceConformer.includes('MAX_DISPLACEMENT') === false
     && !surfaceConformer.includes('document.')
     && surfaceConformer.includes('vectorLength > 2'),
+  adaptive_mesh_warp_is_explicit_and_bounded: surfaceConformer.includes("SurfaceWarpMode = 'legacy' | 'adaptive'")
+    && surfaceConformer.includes("surfaceWarpMode === 'adaptive'")
+    && surfaceConformer.includes('panelVerticalDisplacement')
+    && library.includes("surfaceWarpMode: 'adaptive'"),
   delayed_surface_preserves_result_order: strategy.includes('mergeDelayedSurfaceResult')
     && page.includes('exactId: nextResults[0].id')
     && page.includes('fabricId: nextResults[1].id'),

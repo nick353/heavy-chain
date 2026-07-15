@@ -596,8 +596,8 @@ export function LightchainMaterialWorkbenchPage() {
         }
         const surfaceResult: WorkbenchResult = {
           id: `print-${job.revision}-${job.generatedAt}-surface`,
-          title: '布面追従（試験）',
-          note: '手動指定面のみ / 2D明暗ベース / 3D・自動面認識ではありません',
+          title: '布面メッシュ追従（試験）',
+          note: '手動指定面 / 適応行メッシュ＋局所シェーディング / 3D・自動衣服認識ではありません',
           imageUrl: surfaceComposition.dataUrl,
           outputSize: { ...job.snapshot.stageSize },
         };
@@ -607,7 +607,7 @@ export function LightchainMaterialWorkbenchPage() {
           fabricId: job.fabricId,
           surfaceResult,
         }));
-        setSurfaceConformStatus('布面追従（試験）を追加しました。2D明暗ベースの試験結果です。');
+        setSurfaceConformStatus('布面メッシュ追従（試験）を追加しました。印刷面の形状・折り目を2D画像から安全範囲で反映しています。');
       } catch (surfaceError) {
         if (!isCurrentSurfaceJob()) return;
         const reason = surfaceError instanceof Error ? surfaceError.message : 'SURFACE_CONFORM_FAILED';

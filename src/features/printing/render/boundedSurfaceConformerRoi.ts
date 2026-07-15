@@ -437,6 +437,7 @@ export const conformBoundedSurfaceRoi = (
         alpha: cropAlphaPlane(input.occluder.alpha, validated.fullStageSize.width, roiBounds, input.deadlineAtMs),
       },
     } : {}),
+    ...(input.surfaceWarpMode ? { surfaceWarpMode: input.surfaceWarpMode } : {}),
     frameContactReference: {
       fullStageSize: validated.fullStageSize,
       edgeCounts: visibleBounds.edgeCounts,

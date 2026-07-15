@@ -384,6 +384,41 @@ test('holes, left-right splits, and missing rows disable panel warp and stay byt
   }
 });
 
+test('adaptive mesh mode tolerates short occlusions and follows the dominant printable panel', () => {
+  const width = 192;
+  const height = 192;
+  const clip = profileClip(width, height, (y) => {
+    if (y < 28 || y > 163) return [];
+    if (y >= 82 && y <= 84) return [];
+    const t = (y - 28) / 135;
+    const center = 96 + Math.round((t - 0.5) * 24);
+    const rowWidth = 122 + Math.round(10 * Math.sin(t * Math.PI));
+    const left = Math.round(center - (rowWidth / 2));
+    if (y === 72) return [[left - 42, left - 8], [left, left + rowWidth - 1]];
+    return [[left, left + rowWidth - 1]];
+  });
+  const base = {
+    source: largeSource(),
+    design: gradientDesign(256, height),
+    garment: alphaPlane(width, height, 255),
+    clip,
+  };
+  const legacy = conformSurface(base);
+  const adaptive = conformSurface({ ...base, surfaceWarpMode: 'adaptive' });
+  const disabled = conformSurfaceWithoutPanelProfileWarp(base);
+
+  assert.equal(legacy.kind, 'success');
+  assert.equal(adaptive.kind, 'success');
+  assert.equal(disabled.kind, 'success');
+  assert.equal(legacy.diagnostics.panelWarpApplied, false);
+  assert.equal(adaptive.diagnostics.surfaceWarpMode, 'adaptive');
+  assert.equal(adaptive.diagnostics.panelWarpApplied, true);
+  assert.ok(adaptive.diagnostics.panelProfileCoverage >= 0.72);
+  assert.ok(adaptive.diagnostics.maxPanelDisplacement > 0);
+  assert.ok(adaptive.diagnostics.panelVerticalDisplacement > 0);
+  assert.ok(!byteIdentical(adaptive.rgba, disabled.rgba));
+});
+
 test('returns a freeze-safe success result for a centered visible design', () => {
   const input = conformerInput({
     design: rgbaPlane(DESIGN.width, DESIGN.height, [220, 110, 50, 0]),

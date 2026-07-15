@@ -876,6 +876,7 @@ export async function renderExperimentalSurfaceComposition(
         alpha: readAlpha(occluderData.data),
       },
     } : {}),
+    surfaceWarpMode: 'adaptive',
     deadlineAtMs,
   });
   if (conformed.kind === 'ood') return conformed;

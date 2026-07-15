@@ -47,6 +47,14 @@ export type SurfaceConformerAlphaPlane = {
   alpha: Uint8ClampedArray;
 };
 
+/**
+ * `legacy` is the original conservative single-run row warp. `adaptive` is
+ * reserved for the explicitly labelled surface-preview lane: it tolerates a
+ * small number of occluded/multi-run rows and interpolates the printable
+ * panel profile instead of disabling the whole preview.
+ */
+export type SurfaceWarpMode = 'legacy' | 'adaptive';
+
 export type SurfaceConformerFrameContactReference = Readonly<{
   fullStageSize: Readonly<{ width: number; height: number }>;
   edgeCounts: Readonly<{ top: number; bottom: number; left: number; right: number }>;
@@ -62,6 +70,7 @@ export type SurfaceConformerInput = {
    * garment surface for a later occluder re-composition pass. */
   occluder?: SurfaceConformerAlphaPlane;
   frameContactReference?: SurfaceConformerFrameContactReference;
+  surfaceWarpMode?: SurfaceWarpMode;
   deadlineAtMs?: number;
 };
 
@@ -86,6 +95,8 @@ export type SurfaceConformerDiagnostics = Readonly<{
   panelProfileCoverage: number;
   panelWidthVariation: number;
   maxPanelDisplacement: number;
+  panelVerticalDisplacement: number;
+  surfaceWarpMode: SurfaceWarpMode;
   shadeMin: number;
   shadeMax: number;
 }>;
@@ -582,6 +593,177 @@ const buildPanelProfileWarpState = (
   };
 };
 
+const adaptivePanelRow = (
+  clipAlpha: Uint8ClampedArray,
+  width: number,
+  y: number,
+) => {
+  const runs: Array<{ left: number; right: number; width: number; center: number }> = [];
+  let start = -1;
+  const centerX = (width - 1) / 2;
+  const finishRun = (right: number) => {
+    if (start < 0) return;
+    const rowWidth = right - start + 1;
+    runs.push({
+      left: start,
+      right,
+      width: rowWidth,
+      center: (start + right) / 2,
+    });
+    start = -1;
+  };
+  const rowOffset = y * width;
+  for (let x = 0; x < width; x += 1) {
+    if (clipAlpha[rowOffset + x] >= PANEL_PROFILE_ALPHA_THRESHOLD) {
+      if (start < 0) start = x;
+      continue;
+    }
+    finishRun(x - 1);
+  }
+  finishRun(width - 1);
+  if (runs.length === 0) {
+    return Object.freeze({ hasActive: false, runCount: 0, left: -1, right: -1, width: 0, center: 0 });
+  }
+  // A semantic printable-panel mask can be interrupted by a collar, fold, or
+  // a narrow transparent gap. Prefer the widest run, then the one nearest
+  // the image center so a sleeve does not steal the torso profile.
+  runs.sort((left, right) => (
+    right.width - left.width
+    || Math.abs(left.center - centerX) - Math.abs(right.center - centerX)
+  ));
+  const selected = runs[0];
+  return Object.freeze({
+    hasActive: true,
+    runCount: 1,
+    left: selected.left,
+    right: selected.right,
+    width: selected.width,
+    center: selected.center,
+  });
+};
+
+const buildAdaptivePanelProfileWarpState = (
+  clipAlpha: Uint8ClampedArray,
+  width: number,
+  height: number,
+  deadlineAtMs?: number,
+): PanelProfileWarpState => {
+  if (width < 96 || height < 96) {
+    return {
+      enabled: false,
+      refCenter: 0,
+      refWidth: 0,
+      coverage: 0,
+      widthVariation: 0,
+      rowsByY: [],
+    };
+  }
+
+  const rowsByY: PanelProfileRow[] = new Array(height);
+  let firstActiveRow = -1;
+  let lastActiveRow = -1;
+  for (let y = 0; y < height; y += 1) {
+    if ((y & 31) === 0) throwIfDeadlineExceeded(deadlineAtMs);
+    const row = adaptivePanelRow(clipAlpha, width, y);
+    rowsByY[y] = row;
+    if (row.runCount === 1) {
+      if (firstActiveRow === -1) firstActiveRow = y;
+      lastActiveRow = y;
+    }
+  }
+  if (firstActiveRow === -1 || lastActiveRow === -1) {
+    return {
+      enabled: false,
+      refCenter: 0,
+      refWidth: 0,
+      coverage: 0,
+      widthVariation: 0,
+      rowsByY,
+    };
+  }
+
+  const spanRows = lastActiveRow - firstActiveRow + 1;
+  const activeRows = rowsByY.slice(firstActiveRow, lastActiveRow + 1).filter((row) => row.runCount === 1);
+  const coverage = activeRows.length / Math.max(1, spanRows);
+  let longestGap = 0;
+  let gap = 0;
+  for (let y = firstActiveRow; y <= lastActiveRow; y += 1) {
+    if (rowsByY[y].runCount === 1) gap = 0;
+    else {
+      gap += 1;
+      longestGap = Math.max(longestGap, gap);
+    }
+  }
+  // Large holes are more likely to be a real split garment than a small
+  // occlusion; fail closed and keep the manual editor as the recovery path.
+  if (coverage < 0.72 || longestGap > Math.max(12, Math.round(spanRows * 0.18))) {
+    return {
+      enabled: false,
+      refCenter: 0,
+      refWidth: 0,
+      coverage,
+      widthVariation: 0,
+      rowsByY,
+    };
+  }
+
+  const smoothedRows = rowsByY.map((row, index) => {
+    throwIfDeadlineExceeded(deadlineAtMs);
+    if (row.runCount !== 1) {
+      let previous = index - 1;
+      while (previous >= firstActiveRow && rowsByY[previous].runCount !== 1) previous -= 1;
+      let next = index + 1;
+      while (next <= lastActiveRow && rowsByY[next].runCount !== 1) next += 1;
+      if (previous < firstActiveRow && next > lastActiveRow) return row;
+      if (previous < firstActiveRow) return rowsByY[next];
+      if (next > lastActiveRow) return rowsByY[previous];
+      const previousRow = rowsByY[previous];
+      const nextRow = rowsByY[next];
+      const fraction = (index - previous) / Math.max(1, next - previous);
+      return Object.freeze({
+        hasActive: true,
+        runCount: 1,
+        left: previousRow.left + ((nextRow.left - previousRow.left) * fraction),
+        right: previousRow.right + ((nextRow.right - previousRow.right) * fraction),
+        width: previousRow.width + ((nextRow.width - previousRow.width) * fraction),
+        center: previousRow.center + ((nextRow.center - previousRow.center) * fraction),
+      });
+    }
+    const start = Math.max(firstActiveRow, index - 3);
+    const end = Math.min(lastActiveRow, index + 3);
+    const windowRows = rowsByY.slice(start, end + 1).filter((windowRow) => windowRow.runCount === 1);
+    if (windowRows.length === 0) return row;
+    return Object.freeze({
+      hasActive: true,
+      runCount: 1,
+      left: computeMedian(windowRows.map((windowRow) => windowRow.left), deadlineAtMs),
+      right: computeMedian(windowRows.map((windowRow) => windowRow.right), deadlineAtMs),
+      width: computeMedian(windowRows.map((windowRow) => windowRow.width), deadlineAtMs),
+      center: computeMedian(windowRows.map((windowRow) => windowRow.center), deadlineAtMs),
+    });
+  });
+  const smoothedActiveRows = smoothedRows.slice(firstActiveRow, lastActiveRow + 1).filter((row) => row.runCount === 1);
+  const middleStart = Math.floor(smoothedActiveRows.length * 0.2);
+  const middleEnd = Math.ceil(smoothedActiveRows.length * 0.8);
+  const middleRows = smoothedActiveRows.slice(middleStart, Math.max(middleStart + 1, middleEnd));
+  const rowsForReference = middleRows.length > 0 ? middleRows : smoothedActiveRows;
+  const refCenter = computeMedian(rowsForReference.map((row) => row.center), deadlineAtMs);
+  const refWidth = computeMedian(rowsForReference.map((row) => row.width), deadlineAtMs);
+  const widths = smoothedActiveRows.map((row) => row.width);
+  const widthVariation = refWidth > 0
+    ? (computePercentile(widths, 0.9, deadlineAtMs) - computePercentile(widths, 0.1, deadlineAtMs)) / refWidth
+    : Number.POSITIVE_INFINITY;
+  const enabled = coverage >= 0.72 && refWidth >= 64 && widthVariation <= 0.42;
+  return {
+    enabled,
+    refCenter,
+    refWidth,
+    coverage,
+    widthVariation,
+    rowsByY: smoothedRows,
+  };
+};
+
 const evaluateDomain = (diagnostics: SurfaceConformerDiagnostics) => {
   if (diagnostics.sourceTooSmall) return 'SOURCE_TOO_SMALL' as const;
   if (diagnostics.designVisiblePixels < 256) {
@@ -656,13 +838,21 @@ const conformSurfaceInternal = (
     sourceHigh[index] = sourceLuma[index] - sourceLow[index];
   }
 
-  const panelProfileWarp = buildPanelProfileWarpState(
-    input.clip.alpha,
-    garmentSize.width,
-    garmentSize.height,
-    enablePanelProfileWarp,
-    input.deadlineAtMs,
-  );
+  const surfaceWarpMode = input.surfaceWarpMode ?? 'legacy';
+  const panelProfileWarp = enablePanelProfileWarp && surfaceWarpMode === 'adaptive'
+    ? buildAdaptivePanelProfileWarpState(
+      input.clip.alpha,
+      garmentSize.width,
+      garmentSize.height,
+      input.deadlineAtMs,
+    )
+    : buildPanelProfileWarpState(
+      input.clip.alpha,
+      garmentSize.width,
+      garmentSize.height,
+      enablePanelProfileWarp,
+      input.deadlineAtMs,
+    );
 
   let surfaceMuWeighted = 0;
   let surfaceMuWeight = 0;
@@ -702,6 +892,7 @@ const conformSurfaceInternal = (
   let boundsBottom = Number.NEGATIVE_INFINITY;
   let maxDisplacement = 0;
   let maxPanelDisplacement = 0;
+  let panelVerticalDisplacement = 0;
   let shadeMin = Number.POSITIVE_INFINITY;
   let shadeMax = Number.NEGATIVE_INFINITY;
 
@@ -744,13 +935,27 @@ const conformSurfaceInternal = (
 
       const panelRow = panelProfileWarp.enabled ? panelProfileWarp.rowsByY[y] : undefined;
       let panelStageDx = 0;
+      let panelStageDy = 0;
       if (panelProfileWarp.enabled && panelRow && panelRow.runCount === 1 && panelProfileWarp.refWidth > 0) {
         const rowScale = panelRow.width / panelProfileWarp.refWidth;
         const clampedRowScale = clampRange(rowScale, PANEL_PROFILE_ROW_SCALE_MIN, PANEL_PROFILE_ROW_SCALE_MAX);
         const sourceStageX = panelProfileWarp.refCenter + ((x - panelRow.center) / clampedRowScale);
-        const panelLimit = Math.min(12, garmentSize.width * 0.02);
+        const panelLimit = surfaceWarpMode === 'adaptive'
+          ? Math.min(18, garmentSize.width * 0.03)
+          : Math.min(12, garmentSize.width * 0.02);
         panelStageDx = clampRange(sourceStageX - x, -panelLimit, panelLimit);
         maxPanelDisplacement = Math.max(maxPanelDisplacement, Math.abs(panelStageDx));
+        if (surfaceWarpMode === 'adaptive') {
+          const normalizedPanelX = clampSigned((x - panelRow.center) / Math.max(1, panelProfileWarp.refWidth));
+          const centerOffset = panelRow.center - panelProfileWarp.refCenter;
+          const widthTaper = (panelRow.width - panelProfileWarp.refWidth) / Math.max(1, panelProfileWarp.refWidth);
+          panelStageDy = clampRange(
+            (-centerOffset * normalizedPanelX * 0.08) - (widthTaper * normalizedPanelX * 5),
+            -12,
+            12,
+          );
+          panelVerticalDisplacement = Math.max(panelVerticalDisplacement, Math.abs(panelStageDy));
+        }
       }
       const panelDesignX = mapToPlaneCoordinate(x + panelStageDx, input.design.width, garmentSize.width);
 
@@ -759,7 +964,7 @@ const conformSurfaceInternal = (
         input.design.width,
         input.design.height,
         panelDesignX - vx,
-        designY - vy,
+        designY - vy - panelStageDy,
       );
       const garmentAlpha = sampleAlphaBilinear(input.garment.alpha, input.garment.width, input.garment.height, x, y);
       const clipAlpha = sampleAlphaBilinear(input.clip.alpha, input.clip.width, input.clip.height, x, y);
@@ -771,9 +976,11 @@ const conformSurfaceInternal = (
       const designAlpha = clampByte((designSample.a * clipAlpha) / 255);
       const outputAlpha = clampByte((designSample.a * effectiveClip) / 255);
       const shade = 1
-        + (0.08 * clampSigned((sourceLowValue - surfaceMu) / 64))
-        + (0.04 * clampSigned(sourceHighValue / 32));
-      const shadeClamped = Math.min(1.12, Math.max(0.88, shade));
+        + ((surfaceWarpMode === 'adaptive' ? 0.11 : 0.08) * clampSigned((sourceLowValue - surfaceMu) / 64))
+        + ((surfaceWarpMode === 'adaptive' ? 0.065 : 0.04) * clampSigned(sourceHighValue / 32));
+      const shadeClamped = surfaceWarpMode === 'adaptive'
+        ? Math.min(1.16, Math.max(0.86, shade))
+        : Math.min(1.12, Math.max(0.88, shade));
       shadeMin = Math.min(shadeMin, shadeClamped);
       shadeMax = Math.max(shadeMax, shadeClamped);
 
@@ -869,6 +1076,8 @@ const conformSurfaceInternal = (
     panelProfileCoverage: panelProfileWarp.coverage,
     panelWidthVariation: panelProfileWarp.widthVariation,
     maxPanelDisplacement,
+    panelVerticalDisplacement,
+    surfaceWarpMode,
     shadeMin: Number.isFinite(shadeMin) ? shadeMin : 1,
     shadeMax: Number.isFinite(shadeMax) ? shadeMax : 1,
   });

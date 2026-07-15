@@ -180,6 +180,23 @@ test('forced ROI forwards an optional occluder byte-for-byte', () => {
   assert.equal(direct.rgba[partialIndex + 3], 127);
 });
 
+test('forced ROI preserves the adaptive mesh mode for the inner conformer', () => {
+  const width = 480;
+  const height = 240;
+  const input = {
+    source: gradientSource(width, height),
+    design: gradientDesign(width, height),
+    garment: alphaPlane(width, height, 255),
+    clip: profileClip(width, height, (y) => y >= 40 && y <= 199 ? [[120, 359, 255]] : []),
+    sourceReferenceSize: { width: 1200, height: 1200 },
+    surfaceWarpMode: 'adaptive' as const,
+  };
+  const result = conformBoundedSurfaceRoi({ ...input, forceRoi: true });
+  assert.equal(result.kind, 'success');
+  assert.equal(result.diagnostics.inner.surfaceWarpMode, 'adaptive');
+  assert.equal(result.diagnostics.inner.panelWarpApplied, true);
+});
+
 test('ROI output stays transparent outside the crop and preserves halo alpha on 1440x1800', () => {
   const width = 1440;
   const height = 1800;
