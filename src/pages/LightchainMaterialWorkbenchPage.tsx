@@ -1420,6 +1420,7 @@ export function LightchainMaterialWorkbenchPage() {
       }
       const manualResult = withManualPrintMaskResult(target.result, dataUrl, outputSize);
       setPrintGarmentProcessed(dataUrl);
+      setPrintGarmentCutoutState('done');
       setPrintGarmentMaskCandidates((current) => [
         ...current.filter((candidate) => candidate.candidateId !== 'manual'),
         {

@@ -180,7 +180,8 @@ const checks = {
     && garmentSelectionEditor.includes('touch-none select-none'),
   ai_failure_keeps_manual_editor_available: page.includes('buildManualMaskSourceResult')
     && page.includes('AI失敗時に手動マスクを使う')
-    && page.includes("printGarmentCutoutState !== 'error'"),
+    && page.includes("printGarmentCutoutState !== 'error'")
+    && page.includes("setPrintGarmentCutoutState('done')"),
   experimental_occluder_wiring_is_explicit_and_optional: library.includes('surfaceOccluderContentHash')
     && library.includes('occluderStageMask')
     && library.includes('occluder: {')
