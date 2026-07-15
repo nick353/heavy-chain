@@ -35,6 +35,11 @@ import {
 } from './printMaskCandidateStrategy';
 import { buildPrintArtworkBackgroundCutoutRgba } from './printArtworkMaskStrategy';
 import { getContainedStageBounds, getInnerContainedBounds, getIntegerStageScale, scaleStageBounds } from './printingStageGeometry';
+import {
+  resolveGarmentCutoutModel,
+  type GarmentCutoutModel,
+  type GarmentSelectionSource,
+} from '../features/printing/selection/garmentSegmentationPolicy';
 
 export type MaterialReferenceState = {
   imageUrl: string;
@@ -1391,6 +1396,21 @@ const rembgIsnetGeneralUseModelUrl = String(
   import.meta.env.VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL
   || '',
 ).trim();
+const rembgClothSegModelUrl = String(
+  import.meta.env.VITE_REMBG_CLOTH_SEG_MODEL_URL
+  || '',
+).trim();
+
+export const isPrintGarmentClothModelConfigured = () => Boolean(rembgClothSegModelUrl);
+
+export const resolvePrintGarmentCutoutModel = ({
+  selectionSource,
+}: {
+  selectionSource: GarmentSelectionSource;
+}): GarmentCutoutModel => resolveGarmentCutoutModel({
+  selectionSource,
+  clothModelConfigured: isPrintGarmentClothModelConfigured(),
+});
 
 export async function buildHighPrecisionMaterialCutoutDataUrl({
   imageUrl,
@@ -1411,6 +1431,9 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   rembgConfig.setBaseUrl(rembgModelBaseUrl);
   if (modelName === 'silueta') {
     rembgConfig.setCustomModelPath('silueta', rembgSiluetaModelUrl);
+  }
+  if (modelName === 'u2net_cloth_seg' && rembgClothSegModelUrl) {
+    rembgConfig.setCustomModelPath('u2net_cloth_seg', rembgClothSegModelUrl);
   }
   if (modelName === 'isnet-general-use' && rembgIsnetGeneralUseModelUrl) {
     rembgConfig.setCustomModelPath('isnet-general-use', rembgIsnetGeneralUseModelUrl);
@@ -1499,9 +1522,11 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
 export async function buildPrintGarmentCutoutDataUrl({
   imageUrl,
   maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
+  modelName = 'silueta',
 }: {
   imageUrl: string;
   maxDataUrlBytes?: number;
+  modelName?: GarmentCutoutModel;
 }): Promise<MaterialCutoutResult> {
   const finalizeResult = async (result: MaterialCutoutResult) => {
     const verified = await assertPrintCutoutQuality(result, '参考画像');
@@ -1569,7 +1594,7 @@ export async function buildPrintGarmentCutoutDataUrl({
     const result = await buildHighPrecisionMaterialCutoutDataUrl({
       imageUrl,
       maxDataUrlBytes,
-      modelName: 'silueta',
+      modelName,
       postProcessMask: false,
     });
       return await finalizeResult(result);

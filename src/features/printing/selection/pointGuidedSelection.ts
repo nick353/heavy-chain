@@ -149,9 +149,12 @@ const fallbackSelection = ({ width, height, point }: Pick<PointGuidedSelectionIn
   // Keep the low-confidence fallback focused on the tapped garment area. A
   // large centered crop tends to reintroduce the model's head/hands and makes
   // the following segmentation look like a person cutout instead of clothing.
-  const selectionWidth = Math.max(MIN_SELECTION_EDGE, width * 0.6);
-  const selectionHeight = Math.max(MIN_SELECTION_EDGE, height * 0.48);
-  const centerY = clamp(point.y + selectionHeight * 0.22, selectionHeight / 2, height - selectionHeight / 2);
+  const selectionWidth = Math.max(MIN_SELECTION_EDGE, width * 0.58);
+  // A failed flood often means the photo has a textured background. Keep the
+  // fallback narrow and torso-biased so the next AI pass does not receive a
+  // head-and-hands person crop while still leaving context around the tap.
+  const selectionHeight = Math.max(MIN_SELECTION_EDGE, height * 0.36);
+  const centerY = clamp(point.y + selectionHeight * 0.34, selectionHeight / 2, height - selectionHeight / 2);
   return {
     x: clamp(point.x - selectionWidth / 2, 0, Math.max(0, width - selectionWidth)),
     y: clamp(centerY - selectionHeight / 2, 0, Math.max(0, height - selectionHeight)),

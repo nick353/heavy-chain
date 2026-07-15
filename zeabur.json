@@ -27,6 +27,10 @@
       "description": "Optional explicit silueta model URL. Defaults to same-origin /models/silueta.onnx.",
       "required": false
     },
+    "VITE_REMBG_CLOTH_SEG_MODEL_URL": {
+      "description": "Optional explicit u2net_cloth_seg model URL for tap-to-garment segmentation. Leave unset to keep the existing silueta/manual fallback.",
+      "required": false
+    },
     "VITE_STRIPE_PUBLISHABLE_KEY": {
       "description": "Stripe publishable key (optional, for future payment features)",
       "required": false

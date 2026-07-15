@@ -15,6 +15,8 @@ const boundedSurfaceConformerRoi = fs.readFileSync('src/features/printing/render
 const printableSuggestionRequest = fs.readFileSync('src/features/printing/surface/printableSuggestionRequest.ts', 'utf8');
 const printableSuggestionAdapter = fs.readFileSync('src/features/printing/surface/printableSurfaceSuggestionAdapter.ts', 'utf8');
 const semanticSurface = fs.readFileSync('src/features/printing/surface/semanticGarmentSurface.ts', 'utf8');
+const garmentSegmentationPolicy = fs.readFileSync('src/features/printing/selection/garmentSegmentationPolicy.ts', 'utf8');
+const garmentSelectionEditor = fs.readFileSync('src/components/workspace/PrintGarmentSelectionEditor.tsx', 'utf8');
 
 const checks = {
   candidate_builder_used: page.includes('buildPrintGarmentCutoutDataUrl')
@@ -28,9 +30,9 @@ const checks = {
   picker_is_accessible: picker.includes('role="radiogroup"') && picker.includes('aria-checked={selected}'),
   print_cutout_disables_blur: library.includes('postProcessMask = true')
     && (library.match(/postProcessMask: false/g) || []).length >= 2,
-  print_garment_uses_same_origin_model: library.includes("modelName: 'silueta',\n      postProcessMask: false")
-    && (library.match(/modelName: 'silueta'/g) || []).length >= 2
-    && library.includes("modelName = 'silueta'"),
+  print_garment_uses_same_origin_model: library.includes("modelName = 'silueta'")
+    && library.includes('modelName,\n      postProcessMask: false')
+    && library.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/models/silueta.onnx'"),
   garment_preview_has_no_blend_halo: stage.includes("mixBlendMode: 'normal'")
     && stage.includes("opacity: 1")
     && stage.includes("filter: 'none'"),
@@ -63,7 +65,7 @@ const checks = {
     && library.includes('background.sampleSpread <= 72'),
   uniform_garment_background_avoids_model_timeout: library.includes('PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD = 36')
     && library.indexOf('sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD')
-      < library.indexOf("modelName: 'silueta',\n      postProcessMask: false"),
+      < library.indexOf('modelName,\n      postProcessMask: false'),
   production_model_does_not_silently_fall_back_to_huggingface: library.includes("VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL\n  || ''")
     && library.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/models/silueta.onnx'")
     && !library.includes('https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx'),
@@ -162,6 +164,11 @@ const checks = {
   semantic_suggestion_refines_source_alpha_before_surface_map: printableSuggestionAdapter.includes('refineAlphaEdge({')
     && printableSuggestionAdapter.includes('const refinedRgba')
     && printableSuggestionAdapter.includes('suggestion.surface.printableAlpha'),
+  tap_garment_model_is_explicit_and_fail_closed: garmentSegmentationPolicy.includes("selectionSource === 'tap' && clothModelConfigured")
+    && library.includes('VITE_REMBG_CLOTH_SEG_MODEL_URL')
+    && library.includes("modelName === 'u2net_cloth_seg'")
+    && page.includes('resolvePrintGarmentCutoutModel({ selectionSource: printGarmentSelectionSource })')
+    && garmentSelectionEditor.includes('onApply(output.toDataURL(\'image/png\'), selectionSource)'),
 };
 
 const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);

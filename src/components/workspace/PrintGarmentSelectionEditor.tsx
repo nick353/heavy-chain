@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui';
 import { Modal } from '../ui/Modal';
 import { buildPointGuidedSelection, type PointGuidedSelection } from '../../features/printing/selection/pointGuidedSelection';
+import type { GarmentSelectionSource } from '../../features/printing/selection/garmentSegmentationPolicy';
 
 type SelectionRect = {
   x: number;
@@ -92,7 +93,7 @@ export function PrintGarmentSelectionEditor({
   isOpen: boolean;
   sourceUrl: string;
   onClose: () => void;
-  onApply: (selectedImageUrl: string) => void;
+  onApply: (selectedImageUrl: string, selectionSource: Exclude<GarmentSelectionSource, 'automatic'>) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
@@ -379,7 +380,7 @@ export function PrintGarmentSelectionEditor({
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = 'high';
       context.drawImage(image, contextX, contextY, contextWidth, contextHeight, 0, 0, output.width, output.height);
-      onApply(output.toDataURL('image/png'));
+      onApply(output.toDataURL('image/png'), selectionSource);
     } catch (applyError) {
       console.error('Garment selection export failed', applyError);
       setError('選択範囲をAIマスクへ渡せませんでした。別の範囲で再試行してください。');

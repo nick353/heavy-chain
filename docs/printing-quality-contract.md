@@ -24,6 +24,10 @@ The production UI exposes `高精度エッジ（試験）` as an optional candid
 
 `auto`, `detail`, `strict`, and `manual` remain available. Optional candidate failures are isolated; a failed or oversized refined candidate cannot remove the required auto result, successful legacy candidates, or a selected manual result. Manual editing removes stale refinement metrics because the edited alpha is a new mask revision.
 
+### Stage 1b tap-to-garment model boundary
+
+The `服をタップしてAIマスク` flow records the operator's tap intent and forwards the bounded crop to the cutout pipeline. A tap selects `u2net_cloth_seg` only when the build explicitly provides `VITE_REMBG_CLOTH_SEG_MODEL_URL`; the default production build remains `silueta` until that approximately 176 MB clothing model is deployed and independently checked. Automatic selection and rectangle/range selection never switch models implicitly. When the cloth model is absent, unavailable, times out, or produces an unsafe result, the flow returns to the existing cutout candidate picker and manual keep/remove editor. The tap crop is a selection proposal, not proof of garment-part recognition, and the UI must not label the fallback as semantic success.
+
 ## Surface-map contract
 
 - All planes use source-image pixel coordinates and have identical dimensions.

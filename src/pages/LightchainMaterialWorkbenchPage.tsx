@@ -29,6 +29,8 @@ import {
   buildPrintRequestSnapshot,
   renderExperimentalSurfaceComposition,
   renderPrintRequestComposition,
+  isPrintGarmentClothModelConfigured,
+  resolvePrintGarmentCutoutModel,
   suggestPrintableSurfaceDataUrl,
   type MaterialCutoutResult,
   type EncodedManualPrintableSurface,
@@ -51,6 +53,7 @@ import {
   canCommitPrintableSuggestion,
   type PrintableSuggestionCommitToken,
 } from '../features/printing/surface/printableSuggestionRequest';
+import type { GarmentSelectionSource } from '../features/printing/selection/garmentSegmentationPolicy';
 
 type WorkbenchMode = 'fabric' | 'printing';
 type CutoutState = 'idle' | 'processing' | 'done' | 'error';
@@ -378,6 +381,7 @@ export function LightchainMaterialWorkbenchPage() {
   const [fabricPresetIds, setFabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentCutoutSourceUrl, setPrintGarmentCutoutSourceUrl] = useState<string | null>(null);
+  const [printGarmentSelectionSource, setPrintGarmentSelectionSource] = useState<GarmentSelectionSource>('automatic');
   const [printGarmentProcessed, setPrintGarmentProcessed] = useState<string | null>(null);
   const [printGarmentMaskCandidates, setPrintGarmentMaskCandidates] = useState<PrintGarmentMaskCandidate[]>([]);
   const [selectedPrintGarmentMaskCandidateId, setSelectedPrintGarmentMaskCandidateId] = useState<PrintGarmentMaskCandidateId>('auto');
@@ -430,6 +434,7 @@ export function LightchainMaterialWorkbenchPage() {
     fabricDesignUrl: fabricDesign?.url ?? null,
     fabricPresetIds,
     printGarmentUrl: printGarment?.url ?? null,
+    printGarmentSelectionSource,
     printGarmentProcessed,
     printGarmentMaskCandidateId: selectedPrintGarmentMaskCandidateId,
     printGarmentMaskRevision,
@@ -460,6 +465,7 @@ export function LightchainMaterialWorkbenchPage() {
     printDesignMaskRevisions,
     printDesigns,
     printGarment?.url,
+    printGarmentSelectionSource,
     printGarmentCutoutState,
     printGarmentProcessed,
     printGarmentMaskRevision,
@@ -677,6 +683,7 @@ export function LightchainMaterialWorkbenchPage() {
     clearManualPrintableSurface();
     if (!printGarment) {
       setPrintGarmentCutoutSourceUrl(null);
+      setPrintGarmentSelectionSource('automatic');
       setPrintGarmentProcessed(null);
       setPrintGarmentMaskCandidates([]);
       setSelectedPrintGarmentMaskCandidateId('auto');
@@ -691,8 +698,9 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintGarmentMaskCandidates([]);
     setSelectedPrintGarmentMaskCandidateId('auto');
     const cutoutSourceUrl = printGarmentCutoutSourceUrl ?? printGarment.url;
+    const cutoutModel = resolvePrintGarmentCutoutModel({ selectionSource: printGarmentSelectionSource });
     void withTimeout(
-      buildPrintGarmentCutoutDataUrl({ imageUrl: cutoutSourceUrl }),
+      buildPrintGarmentCutoutDataUrl({ imageUrl: cutoutSourceUrl, modelName: cutoutModel }),
       CUTOUT_TIMEOUT_MS,
       '参考画像の透明化がタイムアウトしました。元画像を確認して再試行してください',
     )
@@ -743,7 +751,7 @@ export function LightchainMaterialWorkbenchPage() {
         printGarmentCutoutRequestRef.current += 1;
       }
     };
-  }, [clearManualPrintableSurface, invalidatePrintableSuggestion, printGarment, printGarmentCutoutSourceUrl]);
+  }, [clearManualPrintableSurface, invalidatePrintableSuggestion, printGarment, printGarmentCutoutSourceUrl, printGarmentSelectionSource]);
 
   const selectPrintGarmentMaskCandidate = (candidateId: PrintGarmentMaskCandidateId) => {
     if (candidateId === selectedPrintGarmentMaskCandidateId) return;
@@ -1120,15 +1128,23 @@ export function LightchainMaterialWorkbenchPage() {
     });
   };
 
-  const applyGarmentSelection = (selectedImageUrl: string) => {
+  const applyGarmentSelection = (
+    selectedImageUrl: string,
+    selectionSource: Exclude<GarmentSelectionSource, 'automatic'>,
+  ) => {
     invalidatePrintableSuggestion();
     setPrintGarmentSelectionOpen(false);
     setPrintGarmentCutoutSourceUrl(selectedImageUrl);
+    setPrintGarmentSelectionSource(selectionSource);
     setPrintGarmentCutoutState('processing');
     setPrintGarmentCutoutError(null);
     setPrintGarmentProcessed(null);
     setPrintMaskEditorTarget(null);
-    toast.success('選択範囲をAIマスクへ渡しました');
+    toast.success(selectionSource === 'tap'
+      ? (isPrintGarmentClothModelConfigured()
+        ? 'タップ位置を衣服専用AIマスクへ渡しました'
+        : 'タップ候補を既存AIマスクへ渡しました。服専用モデル未配置のため、手動修正も確認してください')
+      : '選択範囲をAIマスクへ渡しました');
   };
 
   const openPrintableSurfaceEditor = async () => {
@@ -1500,6 +1516,7 @@ export function LightchainMaterialWorkbenchPage() {
                 onChange={(image) => {
                   invalidatePrintableSuggestion();
                   setPrintGarmentCutoutSourceUrl(null);
+                  setPrintGarmentSelectionSource('automatic');
                   setPrintGarment(image);
                 }}
                 allowedReferenceTypes={['base']}

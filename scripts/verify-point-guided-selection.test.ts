@@ -43,6 +43,17 @@ test('point-guided selection falls back to a bounded neighborhood when the tap m
   assert.ok(result.height < height);
 });
 
+test('low-confidence fallback biases the crop below the tap toward the garment torso', () => {
+  const width = 200;
+  const height = 300;
+  const data = makeImage(width, height, () => [248, 248, 248]);
+  const result = buildPointGuidedSelection({ width, height, data, point: { x: 100, y: 150 } });
+  assert.equal(result.source, 'tap-neighborhood');
+  assert.ok(result.y > 100);
+  assert.ok(result.y + result.height < 280);
+  assert.ok(result.width <= width * 0.6);
+});
+
 test('point-guided selection rejects malformed pixel buffers', () => {
   assert.throws(
     () => buildPointGuidedSelection({ width: 10, height: 10, data: new Uint8ClampedArray(3), point: { x: 5, y: 5 } }),
