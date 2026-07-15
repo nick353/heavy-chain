@@ -376,7 +376,10 @@ export function PrintGarmentSelectionEditor({
     setSelection(null);
     setSelectionSource(null);
     setGuidedResult(null);
-    setSelectionMode('range');
+    // A retry should return to the recommended tap lane. Keeping range mode
+    // here makes the next click create a transient 1x1 range, which is easy
+    // to mistake for a failed tap recognition in the public UI.
+    setSelectionMode('tap');
     render(null);
   };
 
