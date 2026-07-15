@@ -35,6 +35,7 @@ The `服をタップしてAIマスク` flow records the operator's tap intent an
 - Priority is `occluder > forbidden > conditional > printable > garment`.
 - Conditional pixels are printable only under an explicit policy.
 - Occluders are removed from printable alpha and retained for later re-composition.
+- The surface conformer accepts an optional source-grid occluder plane. It attenuates print alpha by `(255 - occluderAlpha) / 255` without replacing the garment source, so future seam/arm/overlap re-composition can restore the occluding pixels. The plane is dimension- and buffer-validated, and omitted occluders preserve the existing bytes.
 - Runtime typed arrays are function-local and never stored in recursively frozen snapshots.
 - Snapshot-safe planes use `png-alpha-v1` plus declared dimensions and a content hash.
 - Canonical hashing is SHA-256 over length-prefixed encoding version, width, height, and decoded PNG RGBA bytes. The Stage 2 manual plane implements generation plus decoded-PNG dimension, source, and content validation; future semantic plane encodings must use the same contract.

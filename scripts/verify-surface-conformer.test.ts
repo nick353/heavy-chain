@@ -507,6 +507,26 @@ test('honours partial alpha as round(designAlpha * clipAlpha / 255)', () => {
   assert.equal(result.rgba[centerIndex + 3], 128);
 });
 
+test('occluder alpha removes the print while keeping the surrounding conformer output', () => {
+  const occluder = alphaPlane(GARMENT.width, GARMENT.height, 0);
+  const centerIndex = (64 * GARMENT.width) + 64;
+  const partialIndex = (64 * GARMENT.width) + 65;
+  occluder.alpha[centerIndex] = 255;
+  occluder.alpha[partialIndex] = 128;
+  const result = conformSurface({
+    source: largeSource(),
+    design: rgbaPlane(DESIGN.width, DESIGN.height, [120, 80, 40, 255]),
+    garment: alphaPlane(GARMENT.width, GARMENT.height, 255),
+    clip: insetAlpha(GARMENT.width, GARMENT.height, 16, 255),
+    occluder,
+  });
+  assert.equal(result.kind, 'success');
+  assert.equal(result.rgba[centerIndex * 4 + 3], 0);
+  assert.equal(result.rgba[partialIndex * 4 + 3], 127);
+  const visibleIndex = (64 * GARMENT.width) + 66;
+  assert.equal(result.rgba[visibleIndex * 4 + 3], 255);
+});
+
 test('keeps identity inside an inset clip and zeroes outside the clip', () => {
   const result = conformSurface({
     source: largeSource(),

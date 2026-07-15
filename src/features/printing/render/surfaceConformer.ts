@@ -20,6 +20,7 @@ export type SurfaceConformerErrorCode =
   | 'SURFACE_CONFORMER_DESIGN_LENGTH_INVALID'
   | 'SURFACE_CONFORMER_GARMENT_LENGTH_INVALID'
   | 'SURFACE_CONFORMER_CLIP_LENGTH_INVALID'
+  | 'SURFACE_CONFORMER_OCCLUDER_LENGTH_INVALID'
   | 'SURFACE_CONFORMER_FRAME_CONTACT_REFERENCE_INVALID'
   | 'SURFACE_CONFORMER_DEADLINE_INVALID'
   | 'SURFACE_CONFORMER_DEADLINE_EXCEEDED';
@@ -57,6 +58,9 @@ export type SurfaceConformerInput = {
   design: SurfaceConformerRgbaPlane;
   garment: SurfaceConformerAlphaPlane;
   clip: SurfaceConformerAlphaPlane;
+  /** Optional occluder plane. 255 removes the print while preserving the
+   * garment surface for a later occluder re-composition pass. */
+  occluder?: SurfaceConformerAlphaPlane;
   frameContactReference?: SurfaceConformerFrameContactReference;
   deadlineAtMs?: number;
 };
@@ -138,7 +142,13 @@ const validatePlane = (
   return pixels;
 };
 
-const validateSurfaceDimensions = (source: SurfaceConformerRgbaPlane, design: SurfaceConformerRgbaPlane, garment: SurfaceConformerAlphaPlane, clip: SurfaceConformerAlphaPlane) => {
+const validateSurfaceDimensions = (
+  source: SurfaceConformerRgbaPlane,
+  design: SurfaceConformerRgbaPlane,
+  garment: SurfaceConformerAlphaPlane,
+  clip: SurfaceConformerAlphaPlane,
+  occluder?: SurfaceConformerAlphaPlane,
+) => {
   if (source.rgba.length % 4 !== 0) {
     throw new SurfaceConformerValidationError('SURFACE_CONFORMER_SOURCE_LENGTH_INVALID');
   }
@@ -149,10 +159,17 @@ const validateSurfaceDimensions = (source: SurfaceConformerRgbaPlane, design: Su
   const designPixels = validatePlane(design.width, design.height, design.rgba.length / 4, 'SURFACE_CONFORMER_DESIGN_LENGTH_INVALID');
   const garmentPixels = validatePlane(garment.width, garment.height, garment.alpha.length, 'SURFACE_CONFORMER_GARMENT_LENGTH_INVALID');
   const clipPixels = validatePlane(clip.width, clip.height, clip.alpha.length, 'SURFACE_CONFORMER_CLIP_LENGTH_INVALID');
-  if (garment.width !== clip.width || garment.height !== clip.height) {
+  const occluderPixels = occluder
+    ? validatePlane(occluder.width, occluder.height, occluder.alpha.length, 'SURFACE_CONFORMER_OCCLUDER_LENGTH_INVALID')
+    : undefined;
+  if (
+    garment.width !== clip.width
+    || garment.height !== clip.height
+    || (occluder && (garment.width !== occluder.width || garment.height !== occluder.height))
+  ) {
     throw new SurfaceConformerValidationError('SURFACE_CONFORMER_DIMENSION_INVALID');
   }
-  return { sourcePixels, designPixels, garmentPixels, clipPixels };
+  return { sourcePixels, designPixels, garmentPixels, clipPixels, occluderPixels };
 };
 
 const validateFrameContactReference = (reference?: SurfaceConformerFrameContactReference) => {
@@ -606,7 +623,13 @@ const conformSurfaceInternal = (
   ) {
     throw new SurfaceConformerValidationError('SURFACE_CONFORMER_DIMENSION_INVALID');
   }
-  const { sourcePixels, designPixels, garmentPixels, clipPixels } = validateSurfaceDimensions(input.source, input.design, input.garment, input.clip);
+  const { sourcePixels, designPixels, garmentPixels, clipPixels } = validateSurfaceDimensions(
+    input.source,
+    input.design,
+    input.garment,
+    input.clip,
+    input.occluder,
+  );
   const frameContactReference = validateFrameContactReference(input.frameContactReference);
 
   const sourceSize = { width: input.source.width, height: input.source.height, pixels: sourcePixels };
@@ -740,7 +763,11 @@ const conformSurfaceInternal = (
       );
       const garmentAlpha = sampleAlphaBilinear(input.garment.alpha, input.garment.width, input.garment.height, x, y);
       const clipAlpha = sampleAlphaBilinear(input.clip.alpha, input.clip.width, input.clip.height, x, y);
-      const effectiveClip = clampByte((garmentAlpha * clipAlpha) / 255);
+      const occluderAlpha = input.occluder
+        ? sampleAlphaBilinear(input.occluder.alpha, input.occluder.width, input.occluder.height, x, y)
+        : 0;
+      const garmentClip = clampByte((garmentAlpha * clipAlpha) / 255);
+      const effectiveClip = clampByte((garmentClip * (255 - occluderAlpha)) / 255);
       const designAlpha = clampByte((designSample.a * clipAlpha) / 255);
       const outputAlpha = clampByte((designSample.a * effectiveClip) / 255);
       const shade = 1

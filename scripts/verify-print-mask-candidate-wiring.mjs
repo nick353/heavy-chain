@@ -127,6 +127,8 @@ const checks = {
     && page.includes('setPendingSurfaceJob({'),
   surface_conformer_is_pure_and_bounded: surfaceConformer.includes('SURFACE_CONFORMER_MAX_PIXELS = 1_000_000')
     && surfaceConformer.includes('SURFACE_CONFORMER_FRAME_CONTACT_REFERENCE_INVALID')
+    && surfaceConformer.includes('SURFACE_CONFORMER_OCCLUDER_LENGTH_INVALID')
+    && surfaceConformer.includes('occluderAlpha')
     && surfaceConformer.includes('frameContactReference')
     && surfaceConformer.includes('MAX_DISPLACEMENT') === false
     && !surfaceConformer.includes('document.')

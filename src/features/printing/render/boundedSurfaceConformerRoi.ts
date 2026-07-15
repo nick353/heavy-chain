@@ -17,6 +17,7 @@ export type BoundedSurfaceConformerRoiErrorCode =
   | 'BOUNDED_SURFACE_CONFORMER_DESIGN_LENGTH_INVALID'
   | 'BOUNDED_SURFACE_CONFORMER_GARMENT_LENGTH_INVALID'
   | 'BOUNDED_SURFACE_CONFORMER_CLIP_LENGTH_INVALID'
+  | 'BOUNDED_SURFACE_CONFORMER_OCCLUDER_LENGTH_INVALID'
   | 'BOUNDED_SURFACE_CONFORMER_ROI_TOO_LARGE'
   | 'BOUNDED_SURFACE_CONFORMER_DEADLINE_INVALID'
   | 'BOUNDED_SURFACE_CONFORMER_DEADLINE_EXCEEDED';
@@ -154,6 +155,14 @@ const validateInput = (input: BoundedSurfaceConformerRoiInput) => {
     input.clip.alpha.length,
     'BOUNDED_SURFACE_CONFORMER_CLIP_LENGTH_INVALID',
   );
+  const occluderPixels = input.occluder
+    ? validatePlane(
+      input.occluder.width,
+      input.occluder.height,
+      input.occluder.alpha.length,
+      'BOUNDED_SURFACE_CONFORMER_OCCLUDER_LENGTH_INVALID',
+    )
+    : undefined;
 
   if (
     input.source.width !== input.design.width
@@ -162,6 +171,10 @@ const validateInput = (input: BoundedSurfaceConformerRoiInput) => {
     || input.source.height !== input.garment.height
     || input.source.width !== input.clip.width
     || input.source.height !== input.clip.height
+    || (input.occluder && (
+      input.source.width !== input.occluder.width
+      || input.source.height !== input.occluder.height
+    ))
   ) {
     throwRoiValidationError('BOUNDED_SURFACE_CONFORMER_DIMENSION_INVALID');
   }
@@ -176,6 +189,7 @@ const validateInput = (input: BoundedSurfaceConformerRoiInput) => {
     designPixels,
     garmentPixels,
     clipPixels,
+    occluderPixels,
   };
 };
 
@@ -416,6 +430,13 @@ export const conformBoundedSurfaceRoi = (
       height: roiBounds.height,
       alpha: cropAlphaPlane(input.clip.alpha, validated.fullStageSize.width, roiBounds, input.deadlineAtMs),
     },
+    ...(input.occluder ? {
+      occluder: {
+        width: roiBounds.width,
+        height: roiBounds.height,
+        alpha: cropAlphaPlane(input.occluder.alpha, validated.fullStageSize.width, roiBounds, input.deadlineAtMs),
+      },
+    } : {}),
     frameContactReference: {
       fullStageSize: validated.fullStageSize,
       edgeCounts: visibleBounds.edgeCounts,
