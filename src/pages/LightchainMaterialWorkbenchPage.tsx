@@ -1242,7 +1242,7 @@ export function LightchainMaterialWorkbenchPage() {
       setPrintMaskEditorTarget({
         kind: 'printable-area',
         title: '印刷可能面の候補を確認・修正',
-        description: '中央の前身頃から作った試験候補です。自動認識の確定結果ではありません。右側の「残す」「消す」ブラシで必ず確認・修正してから保存してください。',
+        description: '元画像の解像度で輪郭を再計算し、襟・袖・裾を避けた中央前身頃の服表面マップ候補です。AI分割モデルの確定結果ではないため、右側の「残す」「消す」ブラシで必ず確認・修正してから保存してください。',
         sourceUrl: captured.garmentUrl,
         maskUrl: suggestion.dataUrl,
         result: {
@@ -1256,7 +1256,7 @@ export function LightchainMaterialWorkbenchPage() {
         capturedSourceHash: identityProbe.identity.sourceHash,
         capturedGarmentCutoutRequestId: captured.cutoutRequestId,
       });
-      setPrintableSuggestionStatus('候補を作成しました。ブラシで確認・修正し、「印刷可能面を保存」を押すまで反映されません。');
+      setPrintableSuggestionStatus(`服表面マップ候補を作成しました（信頼度 ${Math.round(suggestion.diagnostics.confidence * 100)}%）。ブラシで確認・修正し、「印刷可能面を保存」を押すまで反映されません。`);
     } catch (error) {
       if (
         !canCommitPrintableSuggestion(captured, currentToken())

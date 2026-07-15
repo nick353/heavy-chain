@@ -1,8 +1,9 @@
-import {
-  suggestPrintableSurface,
-  type PrintableSurfaceSuggestionDiagnostics,
-  type PrintableSurfaceSuggestionFallbackReason,
+import type {
+  PrintableSurfaceSuggestionDiagnostics,
+  PrintableSurfaceSuggestionFallbackReason,
 } from './suggestPrintableSurface.ts';
+import { refineAlphaEdge } from '../matte/refineAlphaEdge.ts';
+import { buildSemanticGarmentSurface } from './semanticGarmentSurface.ts';
 
 export type PrintableSurfaceAdapterFallbackReason =
   | PrintableSurfaceSuggestionFallbackReason
@@ -16,6 +17,7 @@ export type PreparedPrintableSurfaceSuggestion =
       height: number;
       rgba: Uint8ClampedArray;
       diagnostics: PrintableSurfaceSuggestionDiagnostics;
+      provenance: 'deterministic-alpha-structure-v1';
     }
   | {
       kind: 'fallback-required';
@@ -40,31 +42,48 @@ export const preparePrintableSurfaceSuggestion = ({
       height: decoded.height,
     };
   }
+  // Refine at the decoded cutout's source resolution before deriving the
+  // printable surface. The exact/manual garment paths remain unchanged; this
+  // only improves the optional surface proposal's partial-alpha boundary.
+  const refinedRgba = refineAlphaEdge({
+    rgba: decoded.rgba,
+    width: decoded.width,
+    height: decoded.height,
+  });
   const garmentAlpha = new Uint8ClampedArray(decoded.width * decoded.height);
   for (let index = 0; index < garmentAlpha.length; index += 1) {
-    garmentAlpha[index] = decoded.rgba[(index * 4) + 3];
+    garmentAlpha[index] = refinedRgba[(index * 4) + 3];
   }
-  const suggestion = suggestPrintableSurface({
+  const suggestion = buildSemanticGarmentSurface({
     width: decoded.width,
     height: decoded.height,
     garmentAlpha,
   });
-  if (suggestion.kind === 'fallback-required') return suggestion;
+  if (suggestion.kind === 'fallback-required') {
+    return {
+      kind: 'fallback-required',
+      reason: suggestion.reason,
+      width: decoded.width,
+      height: decoded.height,
+      diagnostics: suggestion.diagnostics,
+    };
+  }
 
   const rgba = new Uint8ClampedArray(decoded.width * decoded.height * 4);
-  for (let index = 0; index < suggestion.alpha.length; index += 1) {
+  for (let index = 0; index < suggestion.surface.printableAlpha.length; index += 1) {
     const offset = index * 4;
     rgba[offset] = 255;
     rgba[offset + 1] = 255;
     rgba[offset + 2] = 255;
-    rgba[offset + 3] = suggestion.alpha[index];
+    rgba[offset + 3] = suggestion.surface.printableAlpha[index];
   }
   return {
     kind: 'success',
-    width: suggestion.width,
-    height: suggestion.height,
+    width: suggestion.surface.width,
+    height: suggestion.surface.height,
     rgba,
     diagnostics: suggestion.diagnostics,
+    provenance: suggestion.provenance,
   };
 };
 

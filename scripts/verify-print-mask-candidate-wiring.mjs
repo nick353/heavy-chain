@@ -14,6 +14,7 @@ const surfaceConformer = fs.readFileSync('src/features/printing/render/surfaceCo
 const boundedSurfaceConformerRoi = fs.readFileSync('src/features/printing/render/boundedSurfaceConformerRoi.ts', 'utf8');
 const printableSuggestionRequest = fs.readFileSync('src/features/printing/surface/printableSuggestionRequest.ts', 'utf8');
 const printableSuggestionAdapter = fs.readFileSync('src/features/printing/surface/printableSurfaceSuggestionAdapter.ts', 'utf8');
+const semanticSurface = fs.readFileSync('src/features/printing/surface/semanticGarmentSurface.ts', 'utf8');
 
 const checks = {
   candidate_builder_used: page.includes('buildPrintGarmentCutoutDataUrl')
@@ -150,11 +151,17 @@ const checks = {
     && page.includes('const applyOperationId = ++printableSurfaceEditorOperationRef.current')
     && page.includes('canCommitPrintableSurfaceEditorOperation(applyOperationId, printableSurfaceEditorOperationRef.current)')
     && page.includes('const editorOperationId = ++printableSurfaceEditorOperationRef.current'),
-  garment_change_invalidates_suggestion_synchronously: page.includes('onChange={(image) => {\n                  invalidatePrintableSuggestion();\n                  setPrintGarment(image);'),
+  garment_change_invalidates_suggestion_synchronously: /onChange=\{\(image\) => \{[\s\S]{0,240}invalidatePrintableSuggestion\(\);[\s\S]{0,240}setPrintGarment\(image\);/.test(page),
   printable_suggestion_adapter_checks_dimensions_and_capacity: printableSuggestionAdapter.includes("reason: 'DIMENSION_MISMATCH'")
     && printableSuggestionAdapter.includes("reason: 'CAPACITY_EXCEEDED'")
     && page.includes('expectedSize: capturedSize')
     && library.includes('estimatePrintMaskDataUrlBytes(dataUrl)'),
+  semantic_surface_proposal_is_explicit_and_bounded: semanticSurface.includes("provenance: 'deterministic-alpha-structure-v1'")
+    && semanticSurface.includes('composePrintableSurface')
+    && printableSuggestionAdapter.includes('buildSemanticGarmentSurface'),
+  semantic_suggestion_refines_source_alpha_before_surface_map: printableSuggestionAdapter.includes('refineAlphaEdge({')
+    && printableSuggestionAdapter.includes('const refinedRgba')
+    && printableSuggestionAdapter.includes('suggestion.surface.printableAlpha'),
 };
 
 const failed = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);
