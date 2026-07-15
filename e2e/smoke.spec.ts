@@ -1303,7 +1303,7 @@ test.describe('workspace activity pages', () => {
     });
   });
 
-  test('printing image composes one transparent edit request and one transparent result', async ({ page }) => {
+  test('printing image composes exact and fabric results locally without edit-image', async ({ page }) => {
     const functionRequests: string[] = [];
     const removeBackgroundRequests: unknown[] = [];
     const modelMatrixRequests: unknown[] = [];
@@ -1338,34 +1338,18 @@ test.describe('workspace activity pages', () => {
     await expect(page.getByRole('button', { name: '生成して結果を出す' })).toBeEnabled();
     await page.getByRole('button', { name: '生成して結果を出す' }).click();
     await expect(page.getByRole('heading', { name: 'プリント結果' })).toBeVisible();
-    await expect(page.locator('img[alt="プリント結果"]')).toHaveCount(1);
-    await expect.poll(() => editImageRequests.length).toBe(1);
-    expect(editImageResultUrls).toEqual(['https://signed-assets.example.test/print-result.png?token=smoke']);
-
-    expect(functionRequests).toEqual(['/functions/v1/edit-image']);
+    await expect(page.locator('img[alt="配置そのまま"]')).toHaveCount(1);
+    await expect(page.locator('img[alt="布になじませる"]')).toHaveCount(1);
+    expect(editImageRequests).toHaveLength(0);
+    expect(editImageResultUrls).toEqual([]);
+    expect(functionRequests).toEqual([]);
     expect(removeBackgroundRequests).toEqual([]);
     expect(modelMatrixRequests).toEqual([]);
 
-    const editImageRequest = editImageRequests[0] as Record<string, unknown>;
-    expect(Object.keys(editImageRequest).sort()).toEqual([
-      'brandId',
-      'imageUrl',
-      'legalSafety',
-      'outputBackground',
-      'prompt',
-    ]);
-    expect(editImageRequest).toMatchObject({
-      brandId: mockBrand.id,
-      imageUrl: expect.stringMatching(/^data:image\/png;base64,/),
-      outputBackground: 'transparent',
-      legalSafety: { rightsConfirmed: true },
-    });
-    expect(String(editImageRequest.prompt)).toContain('Preserve the placed graphic exactly as captured.');
-
-    const requestSrc = String(editImageRequest.imageUrl);
-    const resultSrc = await page.locator('img[alt="プリント結果"]').getAttribute('src');
-    expect(requestSrc).toMatch(/^data:image\/png;base64,/);
-    expect(resultSrc).toMatch(/^data:image\/png;base64,/);
+    const exactSrc = await page.locator('img[alt="配置そのまま"]').getAttribute('src');
+    const fabricSrc = await page.locator('img[alt="布になじませる"]').getAttribute('src');
+    expect(exactSrc).toMatch(/^data:image\/png;base64,/);
+    expect(fabricSrc).toMatch(/^data:image\/png;base64,/);
     const analyzeImage = async (src: string | null) => page.evaluate(async (imageSource) => {
       if (!imageSource) {
         throw new Error('missing image src');
@@ -1413,9 +1397,39 @@ test.describe('workspace activity pages', () => {
         } : null,
       };
     }, src);
-    const requestInfo = await analyzeImage(requestSrc);
-    const resultInfo = await analyzeImage(resultSrc);
-    expect(resultInfo).toMatchObject({
+    const exactInfo = await analyzeImage(exactSrc);
+    const fabricInfo = await analyzeImage(fabricSrc);
+    const modeComparison = await page.evaluate(async ({ exactSource, fabricSource }) => {
+      const read = async (source: string) => {
+        const image = new Image();
+        image.src = source;
+        await image.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        if (!context) throw new Error('missing canvas context');
+        context.drawImage(image, 0, 0);
+        return context.getImageData(0, 0, canvas.width, canvas.height).data;
+      };
+      const exact = await read(exactSource);
+      const fabric = await read(fabricSource);
+      let alphaMismatchPixels = 0;
+      let rgbDifferencePixels = 0;
+      let maxRgbChannelDelta = 0;
+      for (let index = 0; index < exact.length; index += 4) {
+        if (exact[index + 3] !== fabric[index + 3]) alphaMismatchPixels += 1;
+        let pixelDiffers = false;
+        for (let channel = 0; channel < 3; channel += 1) {
+          const delta = Math.abs(exact[index + channel] - fabric[index + channel]);
+          maxRgbChannelDelta = Math.max(maxRgbChannelDelta, delta);
+          if (delta > 0) pixelDiffers = true;
+        }
+        if (pixelDiffers) rgbDifferencePixels += 1;
+      }
+      return { alphaMismatchPixels, rgbDifferencePixels, maxRgbChannelDelta };
+    }, { exactSource: exactSrc!, fabricSource: fabricSrc! });
+    expect(exactInfo).toMatchObject({
       width: 720,
       height: 900,
       alphaTL: 0,
@@ -1423,14 +1437,18 @@ test.describe('workspace activity pages', () => {
       alphaBL: 0,
       alphaBR: 0,
     });
-    expect(requestInfo).toEqual(resultInfo);
-    expect(requestInfo.redBounds).not.toBeNull();
-    expect(requestInfo.redBounds!.width / requestInfo.redBounds!.height).toBeGreaterThan(2);
-    expect(requestInfo.redBounds!.x + requestInfo.redBounds!.width / 2).toBeCloseTo(720 * 0.42, -1);
-    expect(requestInfo.redBounds!.y + requestInfo.redBounds!.height / 2).toBeCloseTo(900 * 0.44, -1);
+    expect(fabricInfo).toMatchObject({ width: 720, height: 900, alphaTL: 0, alphaTR: 0, alphaBL: 0, alphaBR: 0 });
+    expect(modeComparison.alphaMismatchPixels).toBe(0);
+    expect(modeComparison.rgbDifferencePixels).toBeGreaterThan(0);
+    expect(modeComparison.maxRgbChannelDelta).toBeLessThanOrEqual(46);
+    expect(exactInfo.redBounds).not.toBeNull();
+    expect(fabricInfo.redBounds).toEqual(exactInfo.redBounds);
+    expect(exactInfo.redBounds!.width / exactInfo.redBounds!.height).toBeGreaterThan(2);
+    expect(exactInfo.redBounds!.x + exactInfo.redBounds!.width / 2).toBeCloseTo(720 * 0.42, -1);
+    expect(exactInfo.redBounds!.y + exactInfo.redBounds!.height / 2).toBeCloseTo(900 * 0.44, -1);
   });
 
-  test('printing image discards a stale edit response after the design changes', async ({ page }) => {
+  test('printing image marks local results stale after the design changes', async ({ page }) => {
     const editImageRequests: unknown[] = [];
     await mockSupabase(page, { editImageRequests, editImageDelayMs: 250 });
     await completeOnboardingForMockUser(page);
@@ -1449,15 +1467,15 @@ test.describe('workspace activity pages', () => {
     });
     await expect(page.getByRole('button', { name: '生成して結果を出す' })).toBeEnabled();
     await page.getByRole('button', { name: '生成して結果を出す' }).click();
-    await expect.poll(() => editImageRequests.length).toBe(1);
-
     await fileInputs.nth(1).setInputFiles({
       name: 'replacement-design.svg',
       mimeType: 'image/svg+xml',
       buffer: Buffer.from(nonSquareDesignSvg.replace('#ef233c', '#1769aa')),
     });
     await page.waitForTimeout(350);
-    await expect(page.locator('img[alt="プリント結果"]')).toHaveCount(0);
+    await expect(page.locator('img[alt="配置そのまま"]')).toHaveCount(0);
+    await expect(page.locator('img[alt="布になじませる"]')).toHaveCount(0);
+    expect(editImageRequests).toHaveLength(0);
   });
 
   test('canvas image edits preserve Lightchain stage history locally', async ({ page }) => {

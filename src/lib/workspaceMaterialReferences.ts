@@ -1,16 +1,40 @@
 import type { Json } from '../types/database';
+import type { EncodedAlphaPlane, SurfaceMapIdentity } from '../features/printing/domain/types';
+import {
+  buildManualPrintableSurface,
+  type ManualPrintableSurfaceIdentity,
+} from '../features/printing/surface/manualPrintableSurface';
+import {
+  type SurfaceConformerDomain,
+} from '../features/printing/render/surfaceConformer';
+import {
+  conformBoundedSurfaceRoi,
+  type BoundedSurfaceConformerRoiDiagnostics,
+  type BoundedSurfaceConformerRoiResult,
+} from '../features/printing/render/boundedSurfaceConformerRoi';
+import {
+  enforcePrintableSuggestionCapacity,
+  preparePrintableSurfaceSuggestion,
+  type PrintableSurfaceAdapterFallbackReason,
+} from '../features/printing/surface/printableSurfaceSuggestionAdapter';
 
 import { newSession, remove, rembgConfig } from '@bunnio/rembg-web';
 import {
   applyFabricLuminanceModulation,
   assemblePrintGarmentMaskCandidates,
   buildPrintRequestSignatureValue,
+  buildRefinedPrintMaskCandidateRgba,
   buildPrintMaskCandidateRgba,
   decontaminateBoundaryRgb,
+  estimatePrintMaskDataUrlBytes,
+  PRINT_CUTOUT_MAX_DATA_URL_BYTES,
+  summarizePrintEdgeRefinement,
+  type PrintEdgeRefinementMetadata,
   type PrintRequestSignatureValueInput,
   type PrintGarmentMaskCandidateId,
 } from './printMaskCandidateStrategy';
 import { buildPrintArtworkBackgroundCutoutRgba } from './printArtworkMaskStrategy';
+import { getContainedStageBounds, getInnerContainedBounds, getIntegerStageScale, scaleStageBounds } from './printingStageGeometry';
 
 export type MaterialReferenceState = {
   imageUrl: string;
@@ -56,6 +80,7 @@ export type MaterialCutoutResult = {
     | 'browser-local-white-background-garment-cutout-v1'
     | 'browser-canvas-artwork-background-cutout-v1';
   hasTransparentPixels: boolean;
+  refinement?: PrintEdgeRefinementMetadata;
 };
 
 export type PrintGarmentMaskCandidate = {
@@ -92,6 +117,30 @@ export type PrintStageSize = {
   width: number;
   height: number;
 };
+
+export type EncodedManualPrintableSurface = {
+  provenance: 'manual-printable-area';
+  plane: EncodedAlphaPlane;
+  identity: ManualPrintableSurfaceIdentity;
+};
+
+export type PrintableSurfaceErrorCode =
+  | 'PRINTABLE_SURFACE_CAPACITY_EXCEEDED'
+  | 'PRINTABLE_SURFACE_DIMENSION_MISMATCH'
+  | 'PRINTABLE_SURFACE_HASH_MISMATCH'
+  | 'PRINTABLE_SURFACE_MISSING'
+  | 'PRINTABLE_SURFACE_RGB_INVALID'
+  | 'PRINTABLE_SURFACE_SOURCE_HASH_MISMATCH';
+
+export class PrintableSurfaceError extends Error {
+  readonly code: PrintableSurfaceErrorCode;
+
+  constructor(code: PrintableSurfaceErrorCode) {
+    super(code);
+    this.name = 'PrintableSurfaceError';
+    this.code = code;
+  }
+}
 
 export type PrintDesignSnapshotLayer = {
   id: string;
@@ -134,10 +183,33 @@ export type PrintRequestSnapshot = {
       url: string;
     };
   };
+  surfaceIdentity?: SurfaceMapIdentity;
+  printableSurface?: EncodedManualPrintableSurface & {
+    stageMask: {
+      kind: 'printable';
+      url: string;
+    };
+  };
   designs: PrintDesignSnapshotLayer[];
 };
 
 export type PrintRequestSignatureInput = PrintRequestSignatureValueInput;
+
+export type PrintableSurfaceDataUrlSuggestion =
+  | {
+      kind: 'success';
+      width: number;
+      height: number;
+      dataUrl: string;
+      diagnostics: import('../features/printing/surface/suggestPrintableSurface').PrintableSurfaceSuggestionDiagnostics;
+    }
+  | {
+      kind: 'fallback-required';
+      reason: PrintableSurfaceAdapterFallbackReason;
+      width: number;
+      height: number;
+      diagnostics?: import('../features/printing/surface/suggestPrintableSurface').PrintableSurfaceSuggestionDiagnostics;
+    };
 
 export const readWorkspaceImageAsDataUrl = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -165,21 +237,10 @@ const createDeepReadonlySnapshot = <T,>(value: T): T => {
   return value;
 };
 
-export const stageContainBounds = (stageSize: PrintStageSize, sourceSize: { width: number; height: number }) => {
-  const maxWidth = stageSize.width;
-  const maxHeight = Math.round(stageSize.height * 0.92);
-  const ratio = Math.min(maxWidth / sourceSize.width, maxHeight / sourceSize.height);
-  const width = Math.max(1, Math.round(sourceSize.width * ratio));
-  const height = Math.max(1, Math.round(sourceSize.height * ratio));
-  return {
-    x: Math.round((stageSize.width - width) / 2),
-    y: Math.round((stageSize.height - height) / 2),
-    width,
-    height,
-  };
-};
+export const stageContainBounds = getContainedStageBounds;
 
 const designBaseWidth = (stageSize: PrintStageSize) => Math.min(320, Math.max(140, stageSize.width * 0.38));
+const PRINT_BASE_STAGE_SIZE = { width: 720, height: 900 } as const;
 
 export const buildPrintRequestSignature = buildPrintRequestSignatureValue;
 
@@ -197,23 +258,12 @@ const drawContainedImage = (
   bounds: MaterialCutoutBounds,
   sourceSize: { width: number; height: number },
   opacity = 1,
+  geometryScale = 1,
 ) => {
-  const sourceRatio = sourceSize.width / Math.max(1, sourceSize.height);
-  const boundsRatio = bounds.width / Math.max(1, bounds.height);
-  let drawWidth = bounds.width;
-  let drawHeight = bounds.height;
-  let drawX = bounds.x;
-  let drawY = bounds.y;
-  if (sourceRatio > boundsRatio) {
-    drawHeight = Math.max(1, Math.round(bounds.width / sourceRatio));
-    drawY = bounds.y + Math.round((bounds.height - drawHeight) / 2);
-  } else {
-    drawWidth = Math.max(1, Math.round(bounds.height * sourceRatio));
-    drawX = bounds.x + Math.round((bounds.width - drawWidth) / 2);
-  }
+  const innerBounds = getInnerContainedBounds(bounds, sourceSize, geometryScale);
   context.save();
   context.globalAlpha = opacity;
-  context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+  context.drawImage(image, innerBounds.x, innerBounds.y, innerBounds.width, innerBounds.height);
   context.restore();
 };
 
@@ -222,6 +272,7 @@ const buildStageAlphaMaskDataUrl = async (
   sourceUrl: string,
   sourceSize: { width: number; height: number },
   containBounds: MaterialCutoutBounds,
+  preserveAlpha = false,
 ) => {
   const image = await loadImageElement(sourceUrl);
   const canvas = document.createElement('canvas');
@@ -230,18 +281,171 @@ const buildStageAlphaMaskDataUrl = async (
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Canvasを初期化できませんでした');
   context.clearRect(0, 0, canvas.width, canvas.height);
-  drawContainedImage(context, image, containBounds, sourceSize, 1);
+  drawContainedImage(
+    context,
+    image,
+    containBounds,
+    sourceSize,
+    1,
+    getIntegerStageScale(stageSize, PRINT_BASE_STAGE_SIZE),
+  );
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
   for (let index = 0; index < imageData.data.length; index += 4) {
-    const occupied = imageData.data[index + 3] > 4;
+    const sourceAlpha = imageData.data[index + 3];
     imageData.data[index] = 255;
     imageData.data[index + 1] = 255;
     imageData.data[index + 2] = 255;
-    imageData.data[index + 3] = occupied ? 255 : 0;
+    imageData.data[index + 3] = preserveAlpha ? sourceAlpha : sourceAlpha > 4 ? 255 : 0;
   }
   context.putImageData(imageData, 0, 0);
   return canvas.toDataURL('image/png');
 };
+
+const readImageRgba = async (imageUrl: string) => {
+  const image = await loadImageElement(imageUrl);
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Canvasを初期化できませんでした');
+  context.drawImage(image, 0, 0, width, height);
+  return { width, height, rgba: context.getImageData(0, 0, width, height).data };
+};
+
+const rgbaToPngDataUrl = (width: number, height: number, rgba: Uint8ClampedArray) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Canvasを初期化できませんでした');
+  context.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
+  return canvas.toDataURL('image/png');
+};
+
+const readAlpha = (rgba: Uint8ClampedArray) => {
+  const alpha = new Uint8ClampedArray(rgba.length / 4);
+  for (let index = 0; index < alpha.length; index += 1) alpha[index] = rgba[(index * 4) + 3];
+  return alpha;
+};
+
+export async function suggestPrintableSurfaceDataUrl({
+  garmentUrl,
+  expectedSize,
+  maxDataUrlBytes,
+}: {
+  garmentUrl: string;
+  expectedSize: { width: number; height: number };
+  maxDataUrlBytes: number;
+}): Promise<PrintableSurfaceDataUrlSuggestion> {
+  const decoded = await readImageRgba(garmentUrl);
+  const prepared = preparePrintableSurfaceSuggestion({ expectedSize, decoded });
+  if (prepared.kind === 'fallback-required') return prepared;
+  const dataUrl = rgbaToPngDataUrl(prepared.width, prepared.height, prepared.rgba);
+  return enforcePrintableSuggestionCapacity({
+    dataUrl,
+    dataUrlBytes: estimatePrintMaskDataUrlBytes(dataUrl),
+    maxDataUrlBytes,
+    suggestion: prepared,
+  });
+}
+
+export async function buildEncodedManualPrintableSurface({
+  garmentUrl,
+  editedMaskUrl,
+  manualRevision,
+}: {
+  garmentUrl: string;
+  editedMaskUrl: string;
+  manualRevision: number;
+}): Promise<EncodedManualPrintableSurface> {
+  const [garment, edited] = await Promise.all([readImageRgba(garmentUrl), readImageRgba(editedMaskUrl)]);
+  if (garment.width !== edited.width || garment.height !== edited.height) {
+    throw new PrintableSurfaceError('PRINTABLE_SURFACE_DIMENSION_MISMATCH');
+  }
+  const runtimeSurface = await buildManualPrintableSurface({
+    garment,
+    editedAlpha: readAlpha(edited.rgba),
+    manualRevision,
+  });
+  const dataUrl = rgbaToPngDataUrl(runtimeSurface.plane.width, runtimeSurface.plane.height, runtimeSurface.plane.rgba);
+  if (estimatePrintMaskDataUrlBytes(dataUrl) > PRINT_CUTOUT_MAX_DATA_URL_BYTES) {
+    throw new PrintableSurfaceError('PRINTABLE_SURFACE_CAPACITY_EXCEEDED');
+  }
+  return {
+    provenance: runtimeSurface.provenance,
+    plane: {
+      encoding: 'png-alpha-v1',
+      width: runtimeSurface.plane.width,
+      height: runtimeSurface.plane.height,
+      dataUrl,
+      contentHash: runtimeSurface.plane.contentHash,
+    },
+    identity: runtimeSurface.identity,
+  };
+}
+
+export async function validateEncodedManualPrintableSurface(
+  surface: EncodedManualPrintableSurface,
+  garmentUrl: string,
+) {
+  const [garment, encodedPlane] = await Promise.all([
+    readImageRgba(garmentUrl),
+    readImageRgba(surface.plane.dataUrl),
+  ]);
+  if (
+    garment.width !== surface.plane.width
+    || garment.height !== surface.plane.height
+    || encodedPlane.width !== surface.plane.width
+    || encodedPlane.height !== surface.plane.height
+  ) {
+    throw new PrintableSurfaceError('PRINTABLE_SURFACE_DIMENSION_MISMATCH');
+  }
+  for (let index = 0; index < encodedPlane.rgba.length; index += 4) {
+    if (
+      encodedPlane.rgba[index + 3] > 0
+      && (encodedPlane.rgba[index] !== 255 || encodedPlane.rgba[index + 1] !== 255 || encodedPlane.rgba[index + 2] !== 255)
+    ) {
+      throw new PrintableSurfaceError('PRINTABLE_SURFACE_RGB_INVALID');
+    }
+  }
+  const recalculated = await buildManualPrintableSurface({
+    garment,
+    editedAlpha: readAlpha(encodedPlane.rgba),
+    manualRevision: surface.identity.manualRevision,
+  });
+  if (
+    recalculated.plane.contentHash !== surface.plane.contentHash
+    || recalculated.identity.contentHash !== surface.identity.contentHash
+  ) {
+    throw new PrintableSurfaceError('PRINTABLE_SURFACE_HASH_MISMATCH');
+  }
+  if (recalculated.identity.sourceHash !== surface.identity.sourceHash) {
+    throw new PrintableSurfaceError('PRINTABLE_SURFACE_SOURCE_HASH_MISMATCH');
+  }
+  return surface;
+}
+
+export async function buildPrintableSurfaceStageMaskDataUrl({
+  surface,
+  garmentUrl,
+  stageSize,
+}: {
+  surface: EncodedManualPrintableSurface;
+  garmentUrl: string;
+  stageSize: PrintStageSize;
+}) {
+  const validated = await validateEncodedManualPrintableSurface(surface, garmentUrl);
+  const sourceSize = { width: validated.plane.width, height: validated.plane.height };
+  return buildStageAlphaMaskDataUrl(
+    stageSize,
+    validated.plane.dataUrl,
+    sourceSize,
+    stageContainBounds(stageSize, sourceSize),
+    true,
+  );
+}
 
 export async function buildPrintRequestSnapshot({
   revision,
@@ -251,6 +455,8 @@ export async function buildPrintRequestSnapshot({
   garmentReferenceType,
   garmentMaskCandidateId,
   garmentMaskRevision,
+  surfaceIdentity,
+  printableSurface,
   designs,
   stageSize = { width: 720, height: 900 },
 }: {
@@ -261,11 +467,28 @@ export async function buildPrintRequestSnapshot({
   garmentReferenceType: string | null;
   garmentMaskCandidateId: PrintGarmentMaskCandidateId;
   garmentMaskRevision: number;
+  surfaceIdentity?: SurfaceMapIdentity;
+  printableSurface?: EncodedManualPrintableSurface;
   designs: Array<{ id: string; sourceUrl: string; maskRevision: number; transform: PrintDesignSnapshotLayer['transform'] }>;
   stageSize?: PrintStageSize;
 }): Promise<PrintRequestSnapshot> {
+  if (
+    (surfaceIdentity?.status === 'manual-ready' || surfaceIdentity?.status === 'semantic-ready')
+    && !printableSurface
+  ) {
+    throw new PrintableSurfaceError('PRINTABLE_SURFACE_MISSING');
+  }
   const garmentSize = await imageSizeFromUrl(garmentUrl);
-  const containBounds = stageContainBounds(stageSize, garmentSize);
+  const geometryScale = getIntegerStageScale(stageSize, PRINT_BASE_STAGE_SIZE);
+  const geometryStageSize = geometryScale > 1 ? PRINT_BASE_STAGE_SIZE : stageSize;
+  const containBounds = scaleStageBounds(
+    stageContainBounds(geometryStageSize, garmentSize),
+    geometryScale,
+  );
+  const validatedPrintableSurface = printableSurface
+    ? await validateEncodedManualPrintableSurface(printableSurface, garmentUrl)
+    : undefined;
+  const effectiveSurfaceIdentity = validatedPrintableSurface?.identity ?? surfaceIdentity;
   const signature = buildPrintRequestSignature({
     brandId,
     brandName,
@@ -276,6 +499,7 @@ export async function buildPrintRequestSnapshot({
       maskCandidateId: garmentMaskCandidateId,
       maskRevision: garmentMaskRevision,
     },
+    surfaceIdentity: effectiveSurfaceIdentity,
     designs: designs.map((design) => ({
       id: design.id,
       sourceUrl: design.sourceUrl,
@@ -300,8 +524,8 @@ export async function buildPrintRequestSnapshot({
   const designSnapshots: PrintDesignSnapshotLayer[] = [];
   for (const design of designs) {
     const sourceSize = await imageSizeFromUrl(design.sourceUrl);
-    const baseWidth = designBaseWidth(stageSize);
-    const width = Math.max(1, Math.round(baseWidth * design.transform.scale));
+    const baseWidth = designBaseWidth(geometryStageSize);
+    const width = Math.max(1, Math.round(baseWidth * design.transform.scale)) * geometryScale;
     const height = width;
     designSnapshots.push({
       id: design.id,
@@ -310,8 +534,8 @@ export async function buildPrintRequestSnapshot({
       sourceSize,
       transform: { ...design.transform },
       box: {
-        x: Math.round((design.transform.x / 100) * stageSize.width),
-        y: Math.round((design.transform.y / 100) * stageSize.height),
+        x: Math.round((design.transform.x / 100) * geometryStageSize.width) * geometryScale,
+        y: Math.round((design.transform.y / 100) * geometryStageSize.height) * geometryScale,
         width,
         height,
         rotation: design.transform.rotation,
@@ -327,6 +551,24 @@ export async function buildPrintRequestSnapshot({
     brandName,
     stageSize,
     garment: garmentSnapshot,
+    ...(effectiveSurfaceIdentity ? { surfaceIdentity: { ...effectiveSurfaceIdentity } } : {}),
+    ...(validatedPrintableSurface ? {
+      printableSurface: {
+        provenance: validatedPrintableSurface.provenance,
+        plane: { ...validatedPrintableSurface.plane },
+        identity: { ...validatedPrintableSurface.identity },
+        stageMask: {
+          kind: 'printable' as const,
+          url: await buildStageAlphaMaskDataUrl(
+            stageSize,
+            validatedPrintableSurface.plane.dataUrl,
+            garmentSize,
+            containBounds,
+            true,
+          ),
+        },
+      },
+    } : {}),
     designs: designSnapshots,
   });
 }
@@ -347,12 +589,19 @@ export async function renderPrintRequestComposition(
   snapshot: PrintRequestSnapshot,
   mode: PrintCompositionMode = 'exact',
 ) {
+  if (
+    (snapshot.surfaceIdentity?.status === 'manual-ready' || snapshot.surfaceIdentity?.status === 'semantic-ready')
+    && !snapshot.printableSurface
+  ) {
+    throw new PrintableSurfaceError('PRINTABLE_SURFACE_MISSING');
+  }
   const canvas = document.createElement('canvas');
   canvas.width = snapshot.stageSize.width;
   canvas.height = snapshot.stageSize.height;
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Canvasを初期化できませんでした');
   context.clearRect(0, 0, canvas.width, canvas.height);
+  const geometryScale = getIntegerStageScale(snapshot.stageSize, PRINT_BASE_STAGE_SIZE);
 
   const garmentImage = await loadImageElement(snapshot.garment.sourceUrl);
   drawContainedImage(
@@ -361,6 +610,7 @@ export async function renderPrintRequestComposition(
     snapshot.garment.containBounds,
     snapshot.garment.sourceSize,
     1,
+    geometryScale,
   );
 
   const clippedDesignCanvas = document.createElement('canvas');
@@ -384,10 +634,14 @@ export async function renderPrintRequestComposition(
       },
       design.sourceSize,
       design.box.opacity,
+      geometryScale,
     );
     clippedDesignContext.restore();
   }
-  await applyMaskToCanvas(clippedDesignCanvas, snapshot.garment.mask.url);
+  await applyMaskToCanvas(
+    clippedDesignCanvas,
+    snapshot.printableSurface?.stageMask.url ?? snapshot.garment.mask.url,
+  );
   if (mode === 'fabric') {
     const designData = clippedDesignContext.getImageData(0, 0, clippedDesignCanvas.width, clippedDesignCanvas.height);
     const garmentData = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -399,6 +653,99 @@ export async function renderPrintRequestComposition(
   }
   context.drawImage(clippedDesignCanvas, 0, 0);
   return canvas.toDataURL('image/png');
+}
+
+export type ExperimentalSurfaceCompositionResult =
+  | {
+      kind: 'success';
+      dataUrl: string;
+      diagnostics: BoundedSurfaceConformerRoiDiagnostics;
+    }
+  | {
+      kind: 'ood';
+      domain: SurfaceConformerDomain;
+      diagnostics: BoundedSurfaceConformerRoiDiagnostics;
+    };
+
+export async function renderExperimentalSurfaceComposition(
+  snapshot: PrintRequestSnapshot,
+  { deadlineAtMs = Date.now() + 10_000 }: { deadlineAtMs?: number } = {},
+): Promise<ExperimentalSurfaceCompositionResult> {
+  if (!snapshot.printableSurface || snapshot.surfaceIdentity?.status !== 'manual-ready') {
+    throw new PrintableSurfaceError('PRINTABLE_SURFACE_MISSING');
+  }
+
+  const garmentCanvas = document.createElement('canvas');
+  garmentCanvas.width = snapshot.stageSize.width;
+  garmentCanvas.height = snapshot.stageSize.height;
+  const garmentContext = garmentCanvas.getContext('2d', { willReadFrequently: true });
+  if (!garmentContext) throw new Error('Canvasを初期化できませんでした');
+  const geometryScale = getIntegerStageScale(snapshot.stageSize, PRINT_BASE_STAGE_SIZE);
+  const garmentImage = await loadImageElement(snapshot.garment.sourceUrl);
+  drawContainedImage(
+    garmentContext,
+    garmentImage,
+    snapshot.garment.containBounds,
+    snapshot.garment.sourceSize,
+    1,
+    geometryScale,
+  );
+
+  const designCanvas = document.createElement('canvas');
+  designCanvas.width = snapshot.stageSize.width;
+  designCanvas.height = snapshot.stageSize.height;
+  const designContext = designCanvas.getContext('2d', { willReadFrequently: true });
+  if (!designContext) throw new Error('Canvasを初期化できませんでした');
+  for (const design of snapshot.designs) {
+    const designImage = await loadImageElement(design.sourceUrl);
+    designContext.save();
+    designContext.translate(design.box.x, design.box.y);
+    designContext.rotate((design.box.rotation * Math.PI) / 180);
+    drawContainedImage(
+      designContext,
+      designImage,
+      {
+        x: -design.box.width / 2,
+        y: -design.box.height / 2,
+        width: design.box.width,
+        height: design.box.height,
+      },
+      design.sourceSize,
+      design.box.opacity,
+      geometryScale,
+    );
+    designContext.restore();
+  }
+
+  const clipImage = await loadImageElement(snapshot.printableSurface.stageMask.url);
+  const clipCanvas = document.createElement('canvas');
+  clipCanvas.width = snapshot.stageSize.width;
+  clipCanvas.height = snapshot.stageSize.height;
+  const clipContext = clipCanvas.getContext('2d', { willReadFrequently: true });
+  if (!clipContext) throw new Error('Canvasを初期化できませんでした');
+  clipContext.drawImage(clipImage, 0, 0, clipCanvas.width, clipCanvas.height);
+
+  const garmentData = garmentContext.getImageData(0, 0, garmentCanvas.width, garmentCanvas.height);
+  const designData = designContext.getImageData(0, 0, designCanvas.width, designCanvas.height);
+  const clipData = clipContext.getImageData(0, 0, clipCanvas.width, clipCanvas.height);
+  const conformed: BoundedSurfaceConformerRoiResult = conformBoundedSurfaceRoi({
+    source: { width: garmentCanvas.width, height: garmentCanvas.height, rgba: garmentData.data },
+    sourceReferenceSize: snapshot.garment.sourceSize,
+    design: { width: designCanvas.width, height: designCanvas.height, rgba: designData.data },
+    garment: { width: garmentCanvas.width, height: garmentCanvas.height, alpha: readAlpha(garmentData.data) },
+    clip: { width: clipCanvas.width, height: clipCanvas.height, alpha: readAlpha(clipData.data) },
+    deadlineAtMs,
+  });
+  if (conformed.kind === 'ood') return conformed;
+
+  designData.data.set(conformed.rgba);
+  designContext.putImageData(designData, 0, 0);
+  garmentContext.drawImage(designCanvas, 0, 0);
+  return {
+    kind: 'success',
+    dataUrl: garmentCanvas.toDataURL('image/png'),
+    diagnostics: conformed.diagnostics,
+  };
 }
 
 export async function restorePrintResultToStageDataUrl({
@@ -906,7 +1253,7 @@ export async function buildMaterialCutoutDataUrl({
   mode,
   candidate,
   maxSize = 720,
-  maxDataUrlBytes = 750_000,
+  maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
 }: {
   imageUrl: string;
   mode: MaterialReferenceState['maskMode'];
@@ -1040,7 +1387,7 @@ const rembgIsnetGeneralUseModelUrl = String(
 
 export async function buildHighPrecisionMaterialCutoutDataUrl({
   imageUrl,
-  maxDataUrlBytes = 750_000,
+  maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
   modelName = 'silueta',
   postProcessMask = true,
 }: {
@@ -1144,7 +1491,7 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
 
 export async function buildPrintGarmentCutoutDataUrl({
   imageUrl,
-  maxDataUrlBytes = 750_000,
+  maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
 }: {
   imageUrl: string;
   maxDataUrlBytes?: number;
@@ -1237,7 +1584,7 @@ const buildDerivedPrintGarmentMaskCandidate = async ({
   maxDataUrlBytes,
 }: {
   baseResult: MaterialCutoutResult;
-  candidateId: Exclude<PrintGarmentMaskCandidateId, 'auto'>;
+  candidateId: Exclude<PrintGarmentMaskCandidateId, 'auto' | 'manual'>;
   maxDataUrlBytes: number;
 }): Promise<MaterialCutoutResult> => {
   const image = await loadImageElement(baseResult.dataUrl);
@@ -1250,12 +1597,22 @@ const buildDerivedPrintGarmentMaskCandidate = async ({
   if (!context) throw new Error('Canvasを初期化できませんでした');
   context.drawImage(image, 0, 0, width, height);
   const imageData = context.getImageData(0, 0, width, height);
-  const candidateRgba = buildPrintMaskCandidateRgba({
-    rgba: imageData.data,
-    width,
-    height,
-    candidateId,
-  });
+  const candidateRgba = candidateId === 'refined'
+    ? buildRefinedPrintMaskCandidateRgba({ rgba: imageData.data, width, height })
+    : buildPrintMaskCandidateRgba({
+      rgba: imageData.data,
+      width,
+      height,
+      candidateId,
+    });
+  const refinement = candidateId === 'refined'
+    ? summarizePrintEdgeRefinement({
+      inputRgba: imageData.data,
+      outputRgba: candidateRgba,
+      width,
+      height,
+    })
+    : undefined;
   imageData.data.set(candidateRgba);
   context.putImageData(imageData, 0, 0);
   const dataUrl = canvasToPngDataUrl(canvas);
@@ -1268,12 +1625,13 @@ const buildDerivedPrintGarmentMaskCandidate = async ({
     dataUrl,
     dataUrlBytes,
     outputSize: { width, height },
+    ...(refinement ? { refinement } : {}),
   };
 };
 
 export async function buildDerivedPrintGarmentMaskCandidates({
   baseResult,
-  maxDataUrlBytes = 750_000,
+  maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
 }: {
   baseResult: MaterialCutoutResult;
   maxDataUrlBytes?: number;
@@ -1285,12 +1643,15 @@ export async function buildDerivedPrintGarmentMaskCandidates({
       candidateId,
       maxDataUrlBytes,
     }),
+    onOptionalFailure: (candidateId, error) => {
+      console.warn(`Optional garment mask candidate failed: ${candidateId}`, error);
+    },
   });
 }
 
 export async function buildPrintGarmentMaskCandidates({
   imageUrl,
-  maxDataUrlBytes = 750_000,
+  maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
 }: {
   imageUrl: string;
   maxDataUrlBytes?: number;
@@ -1309,7 +1670,7 @@ export async function buildPrintGarmentMaskCandidates({
  */
 export async function buildPrintDesignCutoutDataUrl({
   imageUrl,
-  maxDataUrlBytes = 750_000,
+  maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
 }: {
   imageUrl: string;
   maxDataUrlBytes?: number;

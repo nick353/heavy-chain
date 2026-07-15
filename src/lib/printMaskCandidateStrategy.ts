@@ -1,7 +1,86 @@
-export type PrintGarmentMaskCandidateId = 'auto' | 'detail' | 'strict' | 'manual';
+import { refineAlphaEdge } from '../features/printing/matte/refineAlphaEdge.ts';
+
+export type PrintGarmentMaskCandidateId = 'auto' | 'refined' | 'detail' | 'strict' | 'manual';
 export type AutomaticPrintGarmentMaskCandidateId = Exclude<PrintGarmentMaskCandidateId, 'manual'>;
 
 export type RgbColor = { r: number; g: number; b: number };
+
+export const PRINT_CUTOUT_MAX_DATA_URL_BYTES = 750_000;
+
+export const estimatePrintMaskDataUrlBytes = (dataUrl: string) => {
+  const base64 = dataUrl.split(',', 2)[1] ?? '';
+  return Math.max(0, Math.floor((base64.length * 3) / 4));
+};
+
+export const isOversizedManualPrintMask = (dataUrl: string) => (
+  estimatePrintMaskDataUrlBytes(dataUrl) > PRINT_CUTOUT_MAX_DATA_URL_BYTES
+);
+
+export const nextPrintMaskDownscaleSize = ({ width, height }: { width: number; height: number }) => {
+  if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height) || width <= 0 || height <= 0) {
+    throw new Error('invalid_print_mask_downscale_size');
+  }
+  return {
+    width: Math.max(1, Math.floor(width * 0.85)),
+    height: Math.max(1, Math.floor(height * 0.85)),
+  };
+};
+
+export const withManualPrintMaskResult = <T extends {
+  dataUrl: string;
+  dataUrlBytes: number;
+  outputSize: { width: number; height: number };
+  refinement?: unknown;
+}>(
+  result: T,
+  dataUrl: string,
+  outputSize: { width: number; height: number },
+): T => {
+  const { refinement: _removedRefinement, ...resultWithoutRefinement } = result;
+  return {
+    ...resultWithoutRefinement,
+    dataUrl,
+    dataUrlBytes: estimatePrintMaskDataUrlBytes(dataUrl),
+    outputSize,
+  } as T;
+};
+
+export const PRINT_GARMENT_MASK_CANDIDATE_ORDER: readonly PrintGarmentMaskCandidateId[] = [
+  'auto',
+  'refined',
+  'detail',
+  'strict',
+  'manual',
+] as const;
+
+export const mergePrintMaskCandidatesById = <T extends { candidateId: string }>(
+  currentCandidates: readonly T[],
+  derivedCandidates: readonly T[],
+) => {
+  const mergedCandidates = [...currentCandidates];
+  const seenCandidateIds = new Set(currentCandidates.map((candidate) => candidate.candidateId));
+  for (const candidate of derivedCandidates) {
+    if (seenCandidateIds.has(candidate.candidateId)) continue;
+    seenCandidateIds.add(candidate.candidateId);
+    mergedCandidates.push(candidate);
+  }
+  const order = new Map(PRINT_GARMENT_MASK_CANDIDATE_ORDER.map((id, index) => [id, index]));
+  return mergedCandidates
+    .map((candidate, index) => ({ candidate, index }))
+    .sort((left, right) => (
+      (order.get(left.candidate.candidateId as PrintGarmentMaskCandidateId) ?? Number.MAX_SAFE_INTEGER)
+      - (order.get(right.candidate.candidateId as PrintGarmentMaskCandidateId) ?? Number.MAX_SAFE_INTEGER)
+      || left.index - right.index
+    ))
+    .map(({ candidate }) => candidate);
+};
+
+export const resolvePrintMaskCandidateId = <T extends { candidateId: string }>(
+  candidates: readonly T[],
+  selectedCandidateId: string,
+) => candidates.some((candidate) => candidate.candidateId === selectedCandidateId)
+  ? selectedCandidateId
+  : candidates[0]?.candidateId ?? selectedCandidateId;
 
 export type PrintGarmentMaskCandidateDefinition = {
   id: AutomaticPrintGarmentMaskCandidateId;
@@ -14,6 +93,11 @@ export const PRINT_GARMENT_MASK_CANDIDATES: readonly PrintGarmentMaskCandidateDe
     id: 'auto',
     label: '自動（推奨）',
     description: 'AIの切り抜きをそのまま使います',
+  },
+  {
+    id: 'refined',
+    label: '高精度エッジ（試験）',
+    description: '元の大きさで半透明の輪郭だけを再計算します',
   },
   {
     id: 'detail',
@@ -260,6 +344,33 @@ export const mergePrintResultHistory = <T>(
   return [...nextResults, ...previousResults].slice(0, maxResults);
 };
 
+export const mergeDelayedSurfaceResult = <T extends { id: string }>({
+  currentResults,
+  exactId,
+  fabricId,
+  surfaceResult,
+  maxResults = 8,
+}: {
+  currentResults: readonly T[];
+  exactId: string;
+  fabricId: string;
+  surfaceResult: T;
+  maxResults?: number;
+}) => {
+  if (!Number.isInteger(maxResults) || maxResults < 3) {
+    throw new Error('invalid_delayed_surface_result_history_limit');
+  }
+  if (currentResults[0]?.id !== exactId || currentResults[1]?.id !== fabricId) {
+    return [...currentResults];
+  }
+  return [
+    currentResults[0],
+    currentResults[1],
+    surfaceResult,
+    ...currentResults.slice(2).filter((result) => result.id !== surfaceResult.id),
+  ].slice(0, maxResults);
+};
+
 const readAlpha = (
   rgba: Uint8ClampedArray,
   width: number,
@@ -293,6 +404,7 @@ export const buildPrintMaskCandidateRgba = ({
 
   const output = new Uint8ClampedArray(rgba);
   if (candidateId === 'auto' || candidateId === 'manual') return output;
+  if (candidateId === 'refined') throw new Error('refined_candidate_requires_edge_refinement');
 
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
@@ -317,25 +429,94 @@ export const buildPrintMaskCandidateRgba = ({
   return output;
 };
 
+export const buildRefinedPrintMaskCandidateRgba = ({
+  rgba,
+  width,
+  height,
+}: {
+  rgba: Uint8ClampedArray;
+  width: number;
+  height: number;
+}) => refineAlphaEdge({ rgba, width, height });
+
+export type PrintEdgeRefinementMetadata = {
+  version: 'source-edge-refinement-v1';
+  source: 'base-mask-alpha';
+  inputSize: { width: number; height: number };
+  partialAlphaPixels: number;
+  changedAlphaPixels: number;
+  maxAlphaDelta: number;
+};
+
+export const summarizePrintEdgeRefinement = ({
+  inputRgba,
+  outputRgba,
+  width,
+  height,
+}: {
+  inputRgba: Uint8ClampedArray;
+  outputRgba: Uint8ClampedArray;
+  width: number;
+  height: number;
+}): PrintEdgeRefinementMetadata => {
+  if (inputRgba.length !== outputRgba.length || inputRgba.length !== width * height * 4) {
+    throw new Error('invalid_print_edge_refinement_summary');
+  }
+  let partialAlphaPixels = 0;
+  let changedAlphaPixels = 0;
+  let maxAlphaDelta = 0;
+  for (let index = 3; index < inputRgba.length; index += 4) {
+    const inputAlpha = inputRgba[index];
+    const outputAlpha = outputRgba[index];
+    if (inputAlpha >= 8 && inputAlpha <= 247) partialAlphaPixels += 1;
+    const delta = Math.abs(inputAlpha - outputAlpha);
+    if (delta > 0) changedAlphaPixels += 1;
+    maxAlphaDelta = Math.max(maxAlphaDelta, delta);
+  }
+  return {
+    version: 'source-edge-refinement-v1',
+    source: 'base-mask-alpha',
+    inputSize: { width, height },
+    partialAlphaPixels,
+    changedAlphaPixels,
+    maxAlphaDelta,
+  };
+};
+
 export const assemblePrintGarmentMaskCandidates = async <T,>({
   automaticResult,
   deriveResult,
+  onOptionalFailure,
 }: {
   automaticResult: T;
   deriveResult: (candidateId: Exclude<AutomaticPrintGarmentMaskCandidateId, 'auto'>) => Promise<T>;
+  onOptionalFailure?: (candidateId: Exclude<AutomaticPrintGarmentMaskCandidateId, 'auto'>, error: unknown) => void;
 }) => {
-  const results: Record<AutomaticPrintGarmentMaskCandidateId, T> = {
-    auto: automaticResult,
-    detail: await deriveResult('detail'),
-    strict: await deriveResult('strict'),
-  };
-
-  return PRINT_GARMENT_MASK_CANDIDATES.map((candidate) => ({
-    candidateId: candidate.id,
-    label: candidate.label,
-    description: candidate.description,
-    result: results[candidate.id],
+  const results = new Map<AutomaticPrintGarmentMaskCandidateId, T>([['auto', automaticResult]]);
+  const optionalCandidateIds = PRINT_GARMENT_MASK_CANDIDATES
+    .map((candidate) => candidate.id)
+    .filter((candidateId): candidateId is Exclude<AutomaticPrintGarmentMaskCandidateId, 'auto'> => candidateId !== 'auto');
+  const settled = await Promise.all(optionalCandidateIds.map(async (candidateId) => {
+    try {
+      return { candidateId, result: await deriveResult(candidateId) } as const;
+    } catch (error) {
+      onOptionalFailure?.(candidateId, error);
+      return null;
+    }
   }));
+  for (const item of settled) {
+    if (item) results.set(item.candidateId, item.result);
+  }
+
+  return PRINT_GARMENT_MASK_CANDIDATES.flatMap((candidate) => {
+    const result = results.get(candidate.id);
+    return result ? [{
+      candidateId: candidate.id,
+      label: candidate.label,
+      description: candidate.description,
+      result,
+    }] : [];
+  });
 };
 
 export const selectPrintGarmentMaskCandidateValue = <T extends { candidateId: PrintGarmentMaskCandidateId; result: { dataUrl: string } }>(
@@ -361,6 +542,13 @@ export type PrintRequestSignatureValueInput = {
     maskCandidateId: PrintGarmentMaskCandidateId;
     maskRevision: number;
   };
+  surfaceIdentity?: {
+    version: string;
+    sourceHash: string;
+    contentHash: string;
+    manualRevision: number;
+    status: string;
+  };
   designs: Array<{
     id: string;
     sourceUrl: string;
@@ -385,6 +573,7 @@ export const buildPrintRequestSignatureValue = (input: PrintRequestSignatureValu
     maskCandidateId: input.garment.maskCandidateId,
     maskRevision: input.garment.maskRevision,
   },
+  ...(input.surfaceIdentity ? { surfaceIdentity: input.surfaceIdentity } : {}),
   designs: input.designs.map((design) => ({
     id: design.id,
     sourceUrl: design.sourceUrl,

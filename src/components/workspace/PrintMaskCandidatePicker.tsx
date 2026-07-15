@@ -31,7 +31,7 @@ export function PrintMaskCandidatePicker({
       <div
         role="radiogroup"
         aria-label="切り抜きマスク候補"
-        className="grid gap-2 sm:grid-cols-3"
+        className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
       >
         {candidates.map((candidate) => {
           const selected = candidate.candidateId === selectedCandidateId;

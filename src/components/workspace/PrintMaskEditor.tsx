@@ -3,6 +3,11 @@ import { Eraser, Redo2, RotateCcw, Undo2 } from 'lucide-react';
 
 import type { MaterialCutoutBounds } from '../../lib/workspaceMaterialReferences';
 import {
+  estimatePrintMaskDataUrlBytes,
+  nextPrintMaskDownscaleSize,
+  PRINT_CUTOUT_MAX_DATA_URL_BYTES,
+} from '../../lib/printMaskCandidateStrategy';
+import {
   mapPrintMaskPointerToImage,
   mergePrintMaskAlpha,
   paintPrintMaskAlpha,
@@ -34,6 +39,11 @@ export function PrintMaskEditor({
   maskUrl,
   sourceBounds,
   outputSize,
+  description,
+  applyLabel,
+  preserveOutputSize = false,
+  noticeMessage,
+  onClearNotice,
   onClose,
   onApply,
 }: {
@@ -43,8 +53,13 @@ export function PrintMaskEditor({
   maskUrl: string;
   sourceBounds: MaterialCutoutBounds;
   outputSize: { width: number; height: number };
+  description?: string;
+  applyLabel?: string;
+  preserveOutputSize?: boolean;
+  noticeMessage?: string | null;
+  onClearNotice?: () => void;
   onClose: () => void;
-  onApply: (dataUrl: string) => void;
+  onApply: (dataUrl: string, outputSize: { width: number; height: number }) => void;
 }) {
   const sourceCanvasRef = useRef<HTMLCanvasElement>(null);
   const editorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -190,13 +205,43 @@ export function PrintMaskEditor({
     pushUndo();
     alphaRef.current = new Uint8ClampedArray(baseAlphaRef.current);
     renderEditor();
+    onClearNotice?.();
   };
 
   const apply = () => {
     const canvas = editorCanvasRef.current;
     if (!canvas || !ready) return;
     renderEditor();
-    onApply(canvas.toDataURL('image/png'));
+    let outputCanvas = canvas;
+    let dataUrl = outputCanvas.toDataURL('image/png');
+    while (
+      !preserveOutputSize
+      &&
+      estimatePrintMaskDataUrlBytes(dataUrl) > PRINT_CUTOUT_MAX_DATA_URL_BYTES
+      && (outputCanvas.width > 1 || outputCanvas.height > 1)
+    ) {
+      const resized = document.createElement('canvas');
+      const nextSize = nextPrintMaskDownscaleSize(outputCanvas);
+      resized.width = nextSize.width;
+      resized.height = nextSize.height;
+      const context = resized.getContext('2d');
+      if (!context) {
+        setError('手動補正データを保存用に縮小できませんでした。');
+        return;
+      }
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(outputCanvas, 0, 0, resized.width, resized.height);
+      outputCanvas = resized;
+      dataUrl = outputCanvas.toDataURL('image/png');
+    }
+    if (estimatePrintMaskDataUrlBytes(dataUrl) > PRINT_CUTOUT_MAX_DATA_URL_BYTES) {
+      setError(preserveOutputSize
+        ? '印刷可能面は元画像と同じ解像度で保存する必要があります。範囲を単純にして再試行してください。'
+        : '手動補正データを保存上限内にできませんでした。');
+      return;
+    }
+    onApply(dataUrl, { width: outputCanvas.width, height: outputCanvas.height });
   };
 
   return (
@@ -208,14 +253,19 @@ export function PrintMaskEditor({
       footer={(
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>キャンセル</Button>
-          <Button onClick={apply} disabled={!ready}>マスクを適用</Button>
+          <Button onClick={apply} disabled={!ready}>{applyLabel ?? 'マスクを適用'}</Button>
         </div>
       )}
     >
       <div className="space-y-4">
         <p className="text-sm text-neutral-500 dark:text-neutral-300">
-          左の元画像と見比べながら、右のマスクを「残す」「消す」ブラシで補正します。
+          {description ?? '左の元画像と見比べながら、右のマスクを「残す」「消す」ブラシで補正します。'}
         </p>
+        {noticeMessage ? (
+          <div role="alert" className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            {noticeMessage}
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 p-2 dark:border-white/10">
           <button type="button" onClick={() => setMode('keep')} aria-pressed={mode === 'keep'} className={`rounded-lg px-3 py-2 text-sm ${mode === 'keep' ? 'bg-cyan-500 text-white' : 'bg-neutral-100 dark:bg-white/5'}`}>
             <Redo2 className="mr-1 inline h-4 w-4" />残す

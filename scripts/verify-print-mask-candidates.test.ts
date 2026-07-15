@@ -3,16 +3,20 @@ import test from 'node:test';
 
 import {
   applyFabricLuminanceModulation,
+  mergeDelayedSurfaceResult,
   applyManualMaskBrushStroke,
   assemblePrintGarmentMaskCandidates,
   buildEdgeConnectedSoftAlphaMatte,
   buildPrintMaskCandidateRgba,
+  buildRefinedPrintMaskCandidateRgba,
   buildPrintRequestSignatureValue,
   decontaminateBoundaryRgb,
   mergePrintResultHistory,
   selectPrintGarmentMaskCandidateValue,
   sourceOverRgbaPixel,
+  summarizePrintEdgeRefinement,
 } from '../src/lib/printMaskCandidateStrategy.ts';
+import { refineAlphaEdge } from '../src/features/printing/matte/refineAlphaEdge.ts';
 import {
   buildPrintArtworkBackgroundCutoutRgba,
   isPrintArtworkBackgroundCutoutAcceptable,
@@ -74,7 +78,7 @@ test('one-pixel detail is retained without a black halo and removed by strict', 
   assert.deepEqual(Array.from({ length: 9 }, (_, index) => strict[index * 4 + 3]), Array(9).fill(0));
 });
 
-test('candidate assembly has stable IDs, keeps the automatic data URL, and derives exactly twice', async () => {
+test('candidate assembly has canonical IDs, keeps automatic data, and derives every optional candidate', async () => {
   const derivedIds: string[] = [];
   const candidates = await assemblePrintGarmentMaskCandidates({
     automaticResult: { dataUrl: 'data:image/png;base64,AUTO' },
@@ -84,10 +88,59 @@ test('candidate assembly has stable IDs, keeps the automatic data URL, and deriv
     },
   });
 
-  assert.deepEqual(candidates.map((candidate) => candidate.candidateId), ['auto', 'detail', 'strict']);
-  assert.deepEqual(derivedIds, ['detail', 'strict']);
+  assert.deepEqual(candidates.map((candidate) => candidate.candidateId), ['auto', 'refined', 'detail', 'strict']);
+  assert.deepEqual(derivedIds, ['refined', 'detail', 'strict']);
   assert.equal(candidates[0].result.dataUrl, 'data:image/png;base64,AUTO');
   assert.ok(candidates.every((candidate) => candidate.result.dataUrl.startsWith('data:image/png;base64,')));
+});
+
+test('refined candidate is directly identical to the source-resolution edge refinement helper', () => {
+  const input = new Uint8ClampedArray([
+    20, 30, 40, 0,
+    20, 30, 40, 80,
+    20, 30, 40, 180,
+    20, 30, 40, 255,
+  ]);
+  const refined = buildRefinedPrintMaskCandidateRgba({ rgba: input, width: 4, height: 1 });
+  const direct = refineAlphaEdge({ rgba: input, width: 4, height: 1 });
+  assert.deepEqual([...refined], [...direct]);
+  for (let index = 0; index < input.length; index += 4) {
+    assert.deepEqual([...refined.slice(index, index + 3)], [...input.slice(index, index + 3)]);
+  }
+  assert.equal(refined[3], 0);
+  assert.equal(refined[15], 255);
+});
+
+test('refined metadata counts partial and changed alpha and contains only freeze-safe values', () => {
+  const input = new Uint8ClampedArray([
+    10, 20, 30, 0,
+    10, 20, 30, 80,
+    10, 20, 30, 180,
+    10, 20, 30, 255,
+  ]);
+  const output = buildRefinedPrintMaskCandidateRgba({ rgba: input, width: 4, height: 1 });
+  const metadata = summarizePrintEdgeRefinement({ inputRgba: input, outputRgba: output, width: 4, height: 1 });
+  assert.equal(metadata.version, 'source-edge-refinement-v1');
+  assert.equal(metadata.source, 'base-mask-alpha');
+  assert.deepEqual(metadata.inputSize, { width: 4, height: 1 });
+  assert.equal(metadata.partialAlphaPixels, 2);
+  assert.ok(metadata.changedAlphaPixels >= 1);
+  assert.ok(metadata.maxAlphaDelta >= 1);
+  assert.doesNotThrow(() => Object.freeze(JSON.parse(JSON.stringify(metadata))));
+});
+
+test('one optional candidate failure does not remove successful candidates or required auto', async () => {
+  const failures: string[] = [];
+  const candidates = await assemblePrintGarmentMaskCandidates({
+    automaticResult: { dataUrl: 'AUTO' },
+    deriveResult: async (candidateId) => {
+      if (candidateId === 'refined') throw new Error('over-limit');
+      return { dataUrl: candidateId.toUpperCase() };
+    },
+    onOptionalFailure: (candidateId) => failures.push(candidateId),
+  });
+  assert.deepEqual(candidates.map((candidate) => candidate.candidateId), ['auto', 'detail', 'strict']);
+  assert.deepEqual(failures, ['refined']);
 });
 
 test('selected candidate ID and data URL enter the request signature together', async () => {
@@ -287,6 +340,30 @@ test('print result history keeps newest results first and is bounded to eight', 
   assert.equal(history.length, 8);
   assert.deepEqual(history.slice(0, 2), next);
   assert.equal(history.at(-1)?.id, 'old-5');
+});
+
+test('delayed surface result keeps exact and fabric first and rejects an old run', () => {
+  const exact = { id: 'run-2-exact' };
+  const fabric = { id: 'run-2-fabric' };
+  const history = [exact, fabric, { id: 'run-1-exact' }, { id: 'run-1-fabric' }];
+  assert.deepEqual(
+    mergeDelayedSurfaceResult({
+      currentResults: history,
+      exactId: exact.id,
+      fabricId: fabric.id,
+      surfaceResult: { id: 'run-2-surface' },
+    }).map((result) => result.id),
+    ['run-2-exact', 'run-2-fabric', 'run-2-surface', 'run-1-exact', 'run-1-fabric'],
+  );
+  assert.deepEqual(
+    mergeDelayedSurfaceResult({
+      currentResults: history,
+      exactId: 'run-1-exact',
+      fabricId: 'run-1-fabric',
+      surfaceResult: { id: 'run-1-surface' },
+    }),
+    history,
+  );
 });
 
 test('manual candidate can be selected and is represented in request identity', () => {

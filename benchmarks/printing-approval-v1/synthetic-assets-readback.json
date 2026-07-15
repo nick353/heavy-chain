@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "printing-synthetic-assets-v1",
+  "generatedAt": "2026-07-15T09:16:52.239Z",
+  "prepared": [
+    "S1-01-white-tee-front",
+    "S1-02-black-tee-front",
+    "S1-03-hoodie-flat",
+    "S1-04-sweatshirt-hanger",
+    "S1-05-tote-catalog",
+    "S1-06-polo-mannequin",
+    "S2-01-tee-model-front",
+    "S2-02-tee-model-three-quarter",
+    "S2-03-hoodie-crossed-arms",
+    "S2-04-jacket-open-front",
+    "S2-05-dress-side-pose",
+    "S2-06-tote-carried",
+    "S3-01-denim-seams",
+    "S3-02-knit-texture",
+    "S3-03-satin-highlight",
+    "S3-04-pleated-skirt",
+    "S3-05-zip-pocket",
+    "S3-06-ribbed-tank",
+    "S4-01-multiple-garments",
+    "S4-02-severe-crop",
+    "S4-03-sheer-garment",
+    "S4-04-reflective-garment",
+    "S4-05-heavy-occlusion",
+    "S4-06-low-resolution-blur"
+  ],
+  "missing": [],
+  "contactSheetPath": "/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/benchmarks/printing-approval-v1/synthetic-input-contact-sheet.jpg",
+  "note": "Synthetic imagegen inputs are development fixtures and do not replace real-photo or user quality approval."
+}

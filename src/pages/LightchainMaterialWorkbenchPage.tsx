@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -21,18 +21,35 @@ import { useAuthStore } from '../stores/authStore';
 import {
   buildDerivedPrintGarmentMaskCandidates,
   buildPrintGarmentCutoutDataUrl,
+  buildEncodedManualPrintableSurface,
+  buildPrintableSurfaceStageMaskDataUrl,
   buildPrintDesignCutoutDataUrl,
   buildPrintRequestSignature,
   buildPrintRequestSnapshot,
+  renderExperimentalSurfaceComposition,
   renderPrintRequestComposition,
+  suggestPrintableSurfaceDataUrl,
   type MaterialCutoutResult,
+  type EncodedManualPrintableSurface,
   type PrintGarmentMaskCandidate,
+  type PrintRequestSnapshot,
 } from '../lib/workspaceMaterialReferences';
 import {
+  isOversizedManualPrintMask,
+  mergeDelayedSurfaceResult,
+  mergePrintMaskCandidatesById,
   mergePrintResultHistory,
+  resolvePrintMaskCandidateId,
   selectPrintGarmentMaskCandidateValue,
+  withManualPrintMaskResult,
+  PRINT_CUTOUT_MAX_DATA_URL_BYTES,
   type PrintGarmentMaskCandidateId,
 } from '../lib/printMaskCandidateStrategy';
+import {
+  canCommitPrintableSurfaceEditorOperation,
+  canCommitPrintableSuggestion,
+  type PrintableSuggestionCommitToken,
+} from '../features/printing/surface/printableSuggestionRequest';
 
 type WorkbenchMode = 'fabric' | 'printing';
 type CutoutState = 'idle' | 'processing' | 'done' | 'error';
@@ -57,12 +74,17 @@ type AssetLayer = {
 };
 
 type PrintMaskEditorTarget = {
-  kind: 'garment' | 'design';
+  kind: 'garment' | 'design' | 'printable-area';
   index?: number;
   title: string;
+  description?: string;
   sourceUrl: string;
   maskUrl: string;
   result: MaterialCutoutResult;
+  capturedCandidateId?: PrintGarmentMaskCandidateId;
+  capturedGarmentMaskRevision?: number;
+  capturedSourceHash?: `sha256:${string}`;
+  capturedGarmentCutoutRequestId?: number;
 };
 
 type WorkbenchResult = {
@@ -70,6 +92,55 @@ type WorkbenchResult = {
   title: string;
   note: string;
   imageUrl: string;
+  outputSize?: { width: number; height: number };
+};
+
+type PendingSurfaceJob = {
+  id: number;
+  snapshot: PrintRequestSnapshot;
+  revision: number;
+  signature: string;
+  inputSignature: string;
+  exactId: string;
+  fabricId: string;
+  generatedAt: number;
+};
+
+const surfaceConformStatusMessage = (reason: string) => {
+  const messages: Record<string, string> = {
+    SOURCE_TOO_SMALL: '布面追従（試験）は元画像の解像度が不足しているため省略しました。',
+    DESIGN_NOT_VISIBLE: '布面追従（試験）は、デザインと手動印刷面の重なりが小さいため省略しました。',
+    SURFACE_TOO_SMALL: '布面追従（試験）は、手動印刷面が小さいため省略しました。',
+    SURFACE_TOUCHES_FRAME: '布面追従（試験）は、印刷面が画像端に接しているため省略しました。',
+    LUMINANCE_CLIPPING_EXCESS: '布面追従（試験）は、白飛びまたは黒つぶれが多いため省略しました。',
+    HIGH_FREQUENCY_EXCESS: '布面追従（試験）は、細かなノイズが多いため省略しました。',
+    SURFACE_CONFORMER_DEADLINE_EXCEEDED: '布面追従（試験）は10秒の処理上限を超えたため省略しました。',
+    BOUNDED_SURFACE_CONFORMER_DIMENSION_INVALID: '布面追従（試験）は、高解像度用の範囲寸法が不正なため省略しました。',
+    BOUNDED_SURFACE_CONFORMER_PIXEL_LIMIT_EXCEEDED: '布面追従（試験）は、入力が安全な画素上限を超えたため省略しました。',
+    BOUNDED_SURFACE_CONFORMER_SOURCE_LENGTH_INVALID: '布面追従（試験）は、元画像データの長さが不正なため省略しました。',
+    BOUNDED_SURFACE_CONFORMER_DESIGN_LENGTH_INVALID: '布面追従（試験）は、デザイン画像データの長さが不正なため省略しました。',
+    BOUNDED_SURFACE_CONFORMER_GARMENT_LENGTH_INVALID: '布面追従（試験）は、服マスクデータの長さが不正なため省略しました。',
+    BOUNDED_SURFACE_CONFORMER_CLIP_LENGTH_INVALID: '布面追従（試験）は、印刷面マスクデータの長さが不正なため省略しました。',
+    BOUNDED_SURFACE_CONFORMER_ROI_TOO_LARGE: '布面追従（試験）は、高解像度の切り出し範囲が大きすぎるため省略しました。',
+    BOUNDED_SURFACE_CONFORMER_DEADLINE_INVALID: '布面追従（試験）は、処理期限が不正なため省略しました。',
+    BOUNDED_SURFACE_CONFORMER_DEADLINE_EXCEEDED: '布面追従（試験）は10秒の高解像度ROI処理上限を超えたため省略しました。',
+    BOUNDED_SURFACE_CONFORMER_FRAME_CONTACT_REFERENCE_INVALID: '布面追従（試験）は、フレーム接触参照が不正なため省略しました。',
+  };
+  return messages[reason] ?? `布面追従（試験）を省略しました: ${reason}`;
+};
+
+const printableSuggestionStatusMessage = (reason: string) => {
+  const messages: Record<string, string> = {
+    EMPTY_GARMENT: '服の領域を確認できなかったため、手動指定を使ってください。',
+    FRAME_CROPPED: '服が画像端で切れているため、安全な候補を作れませんでした。手動指定を使ってください。',
+    MULTIPLE_COMPONENTS: '服以外の大きな領域が含まれるため、安全な候補を作れませんでした。手動指定を使ってください。',
+    CENTERLINE_GAP: '前身頃の中央が連続していないため、手動指定を使ってください。',
+    PROFILE_UNSTABLE: '服の形が複雑なため、安全な候補を作れませんでした。手動指定を使ってください。',
+    PRINTABLE_AREA_TOO_SMALL: '安全に提案できる印刷面が小さすぎるため、手動指定を使ってください。',
+    DIMENSION_MISMATCH: '服画像の寸法が切り抜き結果と一致しません。候補を選び直してください。',
+    CAPACITY_EXCEEDED: '提案マスクが保存上限を超えました。手動指定を使ってください。',
+  };
+  return messages[reason] ?? `印刷面の候補を作れませんでした: ${reason}`;
 };
 
 const defaultTransform = (overrides: Partial<Transform> = {}): Transform => ({
@@ -107,7 +178,7 @@ const fabricVariants = [
   },
 ];
 
-const printStageSize = { width: 720, height: 900 };
+const printPreviewStageSize = { width: 720, height: 900 };
 const IMAGE_LOAD_TIMEOUT_MS = 30_000;
 const CUTOUT_TIMEOUT_MS = 75_000;
 const COMPOSITION_TIMEOUT_MS = 30_000;
@@ -152,11 +223,6 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: s
     if (timeoutId !== undefined) window.clearTimeout(timeoutId);
   }
 }
-
-const estimateDataUrlBytes = (dataUrl: string) => {
-  const base64 = dataUrl.split(',', 2)[1] ?? '';
-  return Math.max(0, Math.floor((base64.length * 3) / 4));
-};
 
 async function renderComposition(
   stageWidth: number,
@@ -287,12 +353,19 @@ export function LightchainMaterialWorkbenchPage() {
   const { currentBrand } = useAuthStore();
   const mode: WorkbenchMode = location.pathname.includes('printing') ? 'printing' : 'fabric';
   const isPrinting = mode === 'printing';
+  const [printOutputScale, setPrintOutputScale] = useState<1 | 2>(1);
+  const printOutputStageSize = useMemo(() => ({
+    width: printPreviewStageSize.width * printOutputScale,
+    height: printPreviewStageSize.height * printOutputScale,
+  }), [printOutputScale]);
   const stageRef = useRef<HTMLDivElement>(null);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const userClearedSelectionRef = useRef(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [surfaceConformStatus, setSurfaceConformStatus] = useState<string | null>(null);
+  const [pendingSurfaceJob, setPendingSurfaceJob] = useState<PendingSurfaceJob | null>(null);
   const [generatedResultsStale, setGeneratedResultsStale] = useState(false);
   const [selectedResult, setSelectedResult] = useState<WorkbenchResult | null>(null);
   const [showResultComparison, setShowResultComparison] = useState(false);
@@ -315,12 +388,35 @@ export function LightchainMaterialWorkbenchPage() {
   const [printDesignCutoutStates, setPrintDesignCutoutStates] = useState<Record<number, CutoutState>>({});
   const [printDesignCutoutErrors, setPrintDesignCutoutErrors] = useState<Record<number, string>>({});
   const [printMaskEditorTarget, setPrintMaskEditorTarget] = useState<PrintMaskEditorTarget | null>(null);
+  const [printMaskEditorError, setPrintMaskEditorError] = useState<string | null>(null);
+  const [manualPrintableSurface, setManualPrintableSurface] = useState<EncodedManualPrintableSurface | null>(null);
+  const [printableSurfaceEnabled, setPrintableSurfaceEnabled] = useState(false);
+  const [printableSurfaceStageMaskUrl, setPrintableSurfaceStageMaskUrl] = useState<string | null>(null);
+  const [printableSurfaceResetNotice, setPrintableSurfaceResetNotice] = useState<string | null>(null);
+  const [printableSuggestionPending, setPrintableSuggestionPending] = useState(false);
+  const [printableSuggestionStatus, setPrintableSuggestionStatus] = useState<string | null>(null);
+  const printableSurfaceRevisionRef = useRef(0);
+  const manualPrintableSurfaceRef = useRef<EncodedManualPrintableSurface | null>(null);
+  const printableSuggestionRequestRef = useRef(0);
+  const printableSurfaceEditorOperationRef = useRef(0);
   const printGarmentCutoutRequestRef = useRef(0);
   const printDesignCutoutRequestRef = useRef(0);
   const printRequestRevisionRef = useRef(0);
   const generationSequenceRef = useRef(0);
+  const surfaceJobSequenceRef = useRef(0);
   const generationRequestRef = useRef<number | null>(null);
   const generationRequestSignatureRef = useRef<string | null>(null);
+  const selectedPrintGarmentMaskCandidateIdRef = useRef(selectedPrintGarmentMaskCandidateId);
+  const printGarmentMaskRevisionRef = useRef(printGarmentMaskRevision);
+  const printGarmentProcessedRef = useRef(printGarmentProcessed);
+  const selectedPrintGarmentOutputSizeRef = useRef<{ width: number; height: number } | null>(null);
+
+  const invalidatePrintableSuggestion = useCallback(() => {
+    printableSuggestionRequestRef.current += 1;
+    printableSurfaceEditorOperationRef.current += 1;
+    setPrintableSuggestionPending(false);
+    setPrintableSuggestionStatus(null);
+  }, []);
 
   const generationInputSignature = useMemo(() => JSON.stringify({
     mode,
@@ -333,6 +429,8 @@ export function LightchainMaterialWorkbenchPage() {
     printGarmentMaskCandidateId: selectedPrintGarmentMaskCandidateId,
     printGarmentMaskRevision,
     printGarmentCutoutState,
+    printOutputScale,
+    printableSurfaceIdentity: printableSurfaceEnabled ? manualPrintableSurface?.identity : undefined,
     printDesigns: printDesigns.map((design) => design.url),
     printDesignProcessedUrls,
     printDesignMaskRevisions,
@@ -360,6 +458,9 @@ export function LightchainMaterialWorkbenchPage() {
     printGarmentCutoutState,
     printGarmentProcessed,
     printGarmentMaskRevision,
+    printOutputScale,
+    manualPrintableSurface?.identity,
+    printableSurfaceEnabled,
     selectedPrintGarmentMaskCandidateId,
   ]);
   const generationInputSignatureRef = useRef(generationInputSignature);
@@ -370,6 +471,26 @@ export function LightchainMaterialWorkbenchPage() {
   const generationInputEffectSignatureRef = useRef(generationInputSignature);
 
   useEffect(() => {
+    selectedPrintGarmentMaskCandidateIdRef.current = selectedPrintGarmentMaskCandidateId;
+  }, [selectedPrintGarmentMaskCandidateId]);
+
+  useEffect(() => {
+    printGarmentMaskRevisionRef.current = printGarmentMaskRevision;
+    printGarmentProcessedRef.current = printGarmentProcessed;
+  }, [printGarmentMaskRevision, printGarmentProcessed]);
+
+  useEffect(() => {
+    selectedPrintGarmentOutputSizeRef.current = printGarmentMaskCandidates.find(
+      (candidate) => candidate.candidateId === selectedPrintGarmentMaskCandidateId,
+    )?.result.outputSize ?? null;
+  }, [printGarmentMaskCandidates, selectedPrintGarmentMaskCandidateId]);
+
+  useEffect(() => () => {
+    printableSuggestionRequestRef.current += 1;
+    printableSurfaceEditorOperationRef.current += 1;
+  }, []);
+
+  useEffect(() => {
     if (generationInputEffectSignatureRef.current === generationInputSignature) return;
     generationInputEffectSignatureRef.current = generationInputSignature;
     if (generatedResults.length > 0) setGeneratedResultsStale(true);
@@ -377,6 +498,7 @@ export function LightchainMaterialWorkbenchPage() {
     if (activeRequest === null || generationRequestSignatureRef.current === generationInputSignature) return;
     generationRequestRef.current = null;
     generationRequestSignatureRef.current = null;
+    setPendingSurfaceJob(null);
     setIsGenerating(false);
     setGenerationError('素材が変更されたため、進行中の生成結果を無効化しました。内容を確認して再生成してください。');
   }, [generatedResults.length, generationInputSignature]);
@@ -386,13 +508,16 @@ export function LightchainMaterialWorkbenchPage() {
     return buildPrintRequestSignature({
       brandId: currentBrand.id,
       brandName: currentBrand.name || 'brand',
-      stageSize: printStageSize,
+      stageSize: printOutputStageSize,
       garment: {
         sourceUrl: printGarmentProcessed,
         referenceType: printGarment?.referenceType ?? null,
         maskCandidateId: selectedPrintGarmentMaskCandidateId,
         maskRevision: printGarmentMaskRevision,
       },
+      ...(printableSurfaceEnabled && manualPrintableSurface
+        ? { surfaceIdentity: manualPrintableSurface.identity }
+        : {}),
       designs: printDesignLayers.map((layer) => ({
         id: layer.id,
         sourceUrl: layer.originalUrl,
@@ -400,7 +525,7 @@ export function LightchainMaterialWorkbenchPage() {
         transform: layer.transform,
       })),
     });
-  }, [currentBrand?.id, currentBrand?.name, printGarment?.referenceType, printGarmentProcessed, printDesignLayers, printGarmentMaskRevision, selectedPrintGarmentMaskCandidateId]);
+  }, [currentBrand?.id, currentBrand?.name, manualPrintableSurface, printableSurfaceEnabled, printGarment?.referenceType, printGarmentProcessed, printDesignLayers, printGarmentMaskRevision, printOutputStageSize, selectedPrintGarmentMaskCandidateId]);
 
   const currentPrintStateRef = useRef<{ revision: number; signature: string }>({ revision: 0, signature: printSnapshotSignature });
 
@@ -411,6 +536,62 @@ export function LightchainMaterialWorkbenchPage() {
       signature: printSnapshotSignature,
     };
   }
+
+  useEffect(() => {
+    const job = pendingSurfaceJob;
+    if (!job) return;
+    let cancelled = false;
+    const isCurrentSurfaceJob = () => (
+      !cancelled
+      && surfaceJobSequenceRef.current === job.id
+      && generationInputSignatureRef.current === job.inputSignature
+      && currentPrintStateRef.current.revision === job.revision
+      && currentPrintStateRef.current.signature === job.signature
+    );
+    const run = async () => {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => window.setTimeout(resolve, 0));
+      });
+      if (!isCurrentSurfaceJob()) return;
+      try {
+        const surfaceComposition = await renderExperimentalSurfaceComposition(job.snapshot, {
+          deadlineAtMs: Date.now() + 10_000,
+        });
+        if (!isCurrentSurfaceJob()) return;
+        if (surfaceComposition.kind === 'ood') {
+          setSurfaceConformStatus(surfaceConformStatusMessage(surfaceComposition.domain));
+          return;
+        }
+        const surfaceResult: WorkbenchResult = {
+          id: `print-${job.revision}-${job.generatedAt}-surface`,
+          title: '布面追従（試験）',
+          note: '手動指定面のみ / 2D明暗ベース / 3D・自動面認識ではありません',
+          imageUrl: surfaceComposition.dataUrl,
+          outputSize: { ...job.snapshot.stageSize },
+        };
+        setGeneratedResults((current) => mergeDelayedSurfaceResult({
+          currentResults: current,
+          exactId: job.exactId,
+          fabricId: job.fabricId,
+          surfaceResult,
+        }));
+        setSurfaceConformStatus('布面追従（試験）を追加しました。2D明暗ベースの試験結果です。');
+      } catch (surfaceError) {
+        if (!isCurrentSurfaceJob()) return;
+        const reason = surfaceError instanceof Error ? surfaceError.message : 'SURFACE_CONFORM_FAILED';
+        console.warn('Experimental surface composition skipped.', surfaceError);
+        setSurfaceConformStatus(surfaceConformStatusMessage(reason));
+      } finally {
+        if (!cancelled) {
+          setPendingSurfaceJob((current) => current?.id === job.id ? null : current);
+        }
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingSurfaceJob]);
 
   const activeLayers = useMemo(() => {
     if (isPrinting) {
@@ -475,10 +656,20 @@ export function LightchainMaterialWorkbenchPage() {
     }));
   }, [fabricBase, fabricDesign]);
 
+  const clearManualPrintableSurface = useCallback((reason?: string) => {
+    manualPrintableSurfaceRef.current = null;
+    setManualPrintableSurface(null);
+    setPrintableSurfaceEnabled(false);
+    setPrintableSurfaceStageMaskUrl(null);
+    setPrintableSurfaceResetNotice(reason ?? null);
+  }, []);
+
   useEffect(() => {
+    invalidatePrintableSuggestion();
     const requestId = ++printGarmentCutoutRequestRef.current;
     setPrintMaskEditorTarget(null);
     setPrintGarmentMaskRevision(0);
+    clearManualPrintableSurface();
     if (!printGarment) {
       setPrintGarmentProcessed(null);
       setPrintGarmentMaskCandidates([]);
@@ -513,7 +704,20 @@ export function LightchainMaterialWorkbenchPage() {
         void buildDerivedPrintGarmentMaskCandidates({ baseResult: automaticResult })
           .then((candidates) => {
             if (cancelled || printGarmentCutoutRequestRef.current !== requestId) return;
-            setPrintGarmentMaskCandidates(candidates);
+            setPrintGarmentMaskCandidates((currentCandidates) => {
+              const mergedCandidates = mergePrintMaskCandidatesById(currentCandidates, candidates);
+              const currentSelectedCandidateId = selectedPrintGarmentMaskCandidateIdRef.current;
+              const nextSelectedCandidateId = resolvePrintMaskCandidateId(mergedCandidates, currentSelectedCandidateId) as PrintGarmentMaskCandidateId;
+              if (nextSelectedCandidateId !== currentSelectedCandidateId) {
+                const nextSelection = selectPrintGarmentMaskCandidateValue(mergedCandidates, nextSelectedCandidateId);
+                if (manualPrintableSurfaceRef.current) {
+                  clearManualPrintableSurface('服の切り抜き候補が変わったため、手動の印刷可能面をリセットしました。');
+                }
+                setSelectedPrintGarmentMaskCandidateId(nextSelection.candidateId);
+                setPrintGarmentProcessed(nextSelection.dataUrl);
+              }
+              return mergedCandidates;
+            });
           })
           .catch((candidateError) => {
             console.warn('Optional garment mask candidates could not be prepared.', candidateError);
@@ -532,10 +736,15 @@ export function LightchainMaterialWorkbenchPage() {
         printGarmentCutoutRequestRef.current += 1;
       }
     };
-  }, [printGarment]);
+  }, [clearManualPrintableSurface, invalidatePrintableSuggestion, printGarment]);
 
   const selectPrintGarmentMaskCandidate = (candidateId: PrintGarmentMaskCandidateId) => {
+    if (candidateId === selectedPrintGarmentMaskCandidateId) return;
+    invalidatePrintableSuggestion();
     const selection = selectPrintGarmentMaskCandidateValue(printGarmentMaskCandidates, candidateId);
+    if (manualPrintableSurfaceRef.current) {
+      clearManualPrintableSurface('服の切り抜き候補が変わったため、手動の印刷可能面をリセットしました。');
+    }
     setSelectedPrintGarmentMaskCandidateId(selection.candidateId);
     setPrintGarmentProcessed(selection.dataUrl);
     setPrintGarmentMaskRevision((current) => current + 1);
@@ -632,6 +841,7 @@ export function LightchainMaterialWorkbenchPage() {
   }, [fabricBase, fabricDesign]);
 
   const handleGenerate = async () => {
+    if (isPrinting) invalidatePrintableSuggestion();
     if (!stageRef.current) return;
     if (!currentBrand?.id) {
       toast.error('ブランドを選択してください');
@@ -653,6 +863,10 @@ export function LightchainMaterialWorkbenchPage() {
         : '参考画像とプリント画像の透明化を完了してください');
       return;
     }
+    if (isPrinting && printableSurfaceEnabled && !manualPrintableSurface) {
+      toast.error('印刷可能面が見つかりません。手動で指定し直してください');
+      return;
+    }
 
     const requestId = ++generationSequenceRef.current;
     const requestSignature = generationInputSignatureRef.current;
@@ -660,6 +874,8 @@ export function LightchainMaterialWorkbenchPage() {
     generationRequestSignatureRef.current = requestSignature;
     setIsGenerating(true);
     setGenerationError(null);
+    setSurfaceConformStatus(null);
+    setPendingSurfaceJob(null);
     if (generatedResults.length > 0) setGeneratedResultsStale(true);
     const isCurrentRequest = () => (
       generationRequestRef.current === requestId
@@ -729,6 +945,9 @@ export function LightchainMaterialWorkbenchPage() {
           garmentReferenceType: printGarment?.referenceType ?? null,
           garmentMaskCandidateId: selectedPrintGarmentMaskCandidateId,
           garmentMaskRevision: printGarmentMaskRevision,
+          ...(printableSurfaceEnabled && manualPrintableSurface
+            ? { printableSurface: manualPrintableSurface }
+            : {}),
           designs: printDesignLayers.map((layer) => ({
             id: layer.id,
             sourceUrl: layer.originalUrl,
@@ -741,7 +960,7 @@ export function LightchainMaterialWorkbenchPage() {
               opacity: layer.transform.opacity,
             },
           })),
-          stageSize: printStageSize,
+          stageSize: printOutputStageSize,
         }),
         COMPOSITION_TIMEOUT_MS,
         'プリント構成の準備がタイムアウトしました。素材を確認して再試行してください',
@@ -782,11 +1001,13 @@ export function LightchainMaterialWorkbenchPage() {
         title: '配置そのまま',
         note: 'AI再描画なし / 元デザインの色・形・透明度を保持',
         imageUrl: exactComposition,
+        outputSize: { ...printOutputStageSize },
       }, {
         id: `print-${nextRevision}-${generatedAt}-fabric`,
         title: '布になじませる',
         note: '輪郭と透明度は固定 / Tシャツの明暗だけをデザインのRGBへ反映',
         imageUrl: fabricComposition,
+        outputSize: { ...printOutputStageSize },
       }];
       setGeneratedResults((previous) => mergePrintResultHistory(
         nextResults,
@@ -795,6 +1016,23 @@ export function LightchainMaterialWorkbenchPage() {
       setGeneratedResultsStale(false);
       setGenerationError(null);
       toast.success('2種類のプリント結果を作成しました');
+
+      if (!printableSurfaceEnabled || !manualPrintableSurface) {
+        setSurfaceConformStatus('手動の印刷可能面を有効にすると「布面追従（試験）」を追加できます。');
+        return;
+      }
+      const surfaceJobId = surfaceJobSequenceRef.current + 1;
+      surfaceJobSequenceRef.current = surfaceJobId;
+      setPendingSurfaceJob({
+        id: surfaceJobId,
+        snapshot: nextSnapshot,
+        revision: requestState.revision,
+        signature: requestState.signature,
+        inputSignature: requestSignature,
+        exactId: nextResults[0].id,
+        fabricId: nextResults[1].id,
+        generatedAt,
+      });
     } catch (error: any) {
       console.error('Workbench generation failed', error);
       if (isCurrentRequest()) {
@@ -862,8 +1100,10 @@ export function LightchainMaterialWorkbenchPage() {
 
   const openGarmentMaskEditor = () => {
     if (!printGarment || !printGarmentProcessed) return;
+    invalidatePrintableSuggestion();
     const selectedCandidate = printGarmentMaskCandidates.find((candidate) => candidate.candidateId === selectedPrintGarmentMaskCandidateId);
     if (!selectedCandidate) return;
+    setPrintMaskEditorError(null);
     setPrintMaskEditorTarget({
       kind: 'garment',
       title: '服の切り抜きマスクを調整',
@@ -873,11 +1113,156 @@ export function LightchainMaterialWorkbenchPage() {
     });
   };
 
+  const openPrintableSurfaceEditor = async () => {
+    if (!printGarmentProcessed) return;
+    invalidatePrintableSuggestion();
+    const editorRequestId = printableSuggestionRequestRef.current;
+    const editorOperationId = printableSurfaceEditorOperationRef.current;
+    const selectedCandidate = printGarmentMaskCandidates.find((candidate) => candidate.candidateId === selectedPrintGarmentMaskCandidateId);
+    if (!selectedCandidate) return;
+    setPrintMaskEditorError(null);
+    const capturedCandidateId = selectedPrintGarmentMaskCandidateId;
+    const capturedGarmentMaskRevision = printGarmentMaskRevision;
+    const capturedGarmentUrl = printGarmentProcessed;
+    try {
+      const identityProbe = await buildEncodedManualPrintableSurface({
+        garmentUrl: capturedGarmentUrl,
+        editedMaskUrl: capturedGarmentUrl,
+        manualRevision: printableSurfaceRevisionRef.current,
+      });
+      if (
+        printableSuggestionRequestRef.current !== editorRequestId
+        || !canCommitPrintableSurfaceEditorOperation(editorOperationId, printableSurfaceEditorOperationRef.current)
+        ||
+        printGarmentProcessedRef.current !== capturedGarmentUrl
+        || selectedPrintGarmentMaskCandidateIdRef.current !== capturedCandidateId
+        || printGarmentMaskRevisionRef.current !== capturedGarmentMaskRevision
+      ) {
+        throw new Error('PRINTABLE_SURFACE_STALE_TARGET');
+      }
+      const outputSize = selectedCandidate.result.outputSize;
+      setPrintMaskEditorTarget({
+        kind: 'printable-area',
+        title: '印刷可能面を手動で指定',
+        sourceUrl: capturedGarmentUrl,
+        maskUrl: manualPrintableSurface?.plane.dataUrl ?? capturedGarmentUrl,
+        result: {
+          ...selectedCandidate.result,
+          bounds: { x: 0, y: 0, width: outputSize.width, height: outputSize.height },
+          sourceSize: outputSize,
+          outputSize,
+        },
+        capturedCandidateId,
+        capturedGarmentMaskRevision,
+        capturedSourceHash: identityProbe.identity.sourceHash,
+        capturedGarmentCutoutRequestId: printGarmentCutoutRequestRef.current,
+      });
+    } catch (error) {
+      if (
+        printableSuggestionRequestRef.current !== editorRequestId
+        || !canCommitPrintableSurfaceEditorOperation(editorOperationId, printableSurfaceEditorOperationRef.current)
+      ) return;
+      const message = error instanceof Error ? error.message : '印刷可能面の編集を開始できませんでした';
+      setPrintMaskEditorError(message);
+      toast.error(message);
+    }
+  };
+
+  const openSuggestedPrintableSurfaceEditor = async () => {
+    if (!printGarmentProcessed) return;
+    const selectedCandidate = printGarmentMaskCandidates.find((candidate) => candidate.candidateId === selectedPrintGarmentMaskCandidateId);
+    if (!selectedCandidate) return;
+
+    const requestId = ++printableSuggestionRequestRef.current;
+    const editorOperationId = ++printableSurfaceEditorOperationRef.current;
+    const capturedSize = { ...selectedCandidate.result.outputSize };
+    const captured: PrintableSuggestionCommitToken = {
+      requestId,
+      garmentUrl: printGarmentProcessed,
+      candidateId: selectedPrintGarmentMaskCandidateId,
+      garmentMaskRevision: printGarmentMaskRevision,
+      cutoutRequestId: printGarmentCutoutRequestRef.current,
+      outputWidth: capturedSize.width,
+      outputHeight: capturedSize.height,
+    };
+    const currentToken = (): PrintableSuggestionCommitToken => ({
+      requestId: printableSuggestionRequestRef.current,
+      garmentUrl: printGarmentProcessedRef.current ?? '',
+      candidateId: selectedPrintGarmentMaskCandidateIdRef.current,
+      garmentMaskRevision: printGarmentMaskRevisionRef.current,
+      cutoutRequestId: printGarmentCutoutRequestRef.current,
+      outputWidth: selectedPrintGarmentOutputSizeRef.current?.width ?? 0,
+      outputHeight: selectedPrintGarmentOutputSizeRef.current?.height ?? 0,
+    });
+
+    setPrintableSuggestionPending(true);
+    setPrintableSuggestionStatus(null);
+    setPrintMaskEditorError(null);
+    try {
+      const suggestion = await suggestPrintableSurfaceDataUrl({
+        garmentUrl: captured.garmentUrl,
+        expectedSize: capturedSize,
+        maxDataUrlBytes: PRINT_CUTOUT_MAX_DATA_URL_BYTES,
+      });
+      if (
+        !canCommitPrintableSuggestion(captured, currentToken())
+        || !canCommitPrintableSurfaceEditorOperation(editorOperationId, printableSurfaceEditorOperationRef.current)
+      ) return;
+      if (suggestion.kind === 'fallback-required') {
+        const message = printableSuggestionStatusMessage(suggestion.reason);
+        setPrintableSuggestionStatus(message);
+        toast.error(message);
+        return;
+      }
+      const identityProbe = await buildEncodedManualPrintableSurface({
+        garmentUrl: captured.garmentUrl,
+        editedMaskUrl: suggestion.dataUrl,
+        manualRevision: printableSurfaceRevisionRef.current,
+      });
+      if (
+        !canCommitPrintableSuggestion(captured, currentToken())
+        || !canCommitPrintableSurfaceEditorOperation(editorOperationId, printableSurfaceEditorOperationRef.current)
+      ) return;
+      setPrintMaskEditorTarget({
+        kind: 'printable-area',
+        title: '印刷可能面の候補を確認・修正',
+        description: '中央の前身頃から作った試験候補です。自動認識の確定結果ではありません。右側の「残す」「消す」ブラシで必ず確認・修正してから保存してください。',
+        sourceUrl: captured.garmentUrl,
+        maskUrl: suggestion.dataUrl,
+        result: {
+          ...selectedCandidate.result,
+          bounds: { x: 0, y: 0, width: suggestion.width, height: suggestion.height },
+          sourceSize: capturedSize,
+          outputSize: capturedSize,
+        },
+        capturedCandidateId: captured.candidateId as PrintGarmentMaskCandidateId,
+        capturedGarmentMaskRevision: captured.garmentMaskRevision,
+        capturedSourceHash: identityProbe.identity.sourceHash,
+        capturedGarmentCutoutRequestId: captured.cutoutRequestId,
+      });
+      setPrintableSuggestionStatus('候補を作成しました。ブラシで確認・修正し、「印刷可能面を保存」を押すまで反映されません。');
+    } catch (error) {
+      if (
+        !canCommitPrintableSuggestion(captured, currentToken())
+        || !canCommitPrintableSurfaceEditorOperation(editorOperationId, printableSurfaceEditorOperationRef.current)
+      ) return;
+      const message = error instanceof Error ? error.message : '印刷面の候補を作成できませんでした';
+      setPrintableSuggestionStatus(message);
+      toast.error(message);
+    } finally {
+      if (printableSuggestionRequestRef.current === requestId) {
+        setPrintableSuggestionPending(false);
+      }
+    }
+  };
+
   const openDesignMaskEditor = (index: number) => {
     const design = printDesigns[index];
     const result = printDesignCutoutResults[index];
     const maskUrl = printDesignProcessedUrls[index];
     if (!design || !result || !maskUrl) return;
+    invalidatePrintableSuggestion();
+    setPrintMaskEditorError(null);
     setPrintMaskEditorTarget({
       kind: 'design',
       index,
@@ -888,15 +1273,75 @@ export function LightchainMaterialWorkbenchPage() {
     });
   };
 
-  const applyEditedPrintMask = (dataUrl: string) => {
+  const applyEditedPrintMask = async (dataUrl: string, outputSize: { width: number; height: number }) => {
     const target = printMaskEditorTarget;
     if (!target) return;
+    if (target.kind === 'printable-area') {
+      const applyOperationId = ++printableSurfaceEditorOperationRef.current;
+      const currentGarmentUrl = printGarmentProcessedRef.current;
+      if (
+        !currentGarmentUrl
+        || target.capturedCandidateId !== selectedPrintGarmentMaskCandidateIdRef.current
+        || target.capturedGarmentMaskRevision !== printGarmentMaskRevisionRef.current
+        || outputSize.width !== target.result.outputSize.width
+        || outputSize.height !== target.result.outputSize.height
+      ) {
+        setPrintMaskEditorError('PRINTABLE_SURFACE_STALE_TARGET');
+        toast.error('服の状態が変わったため、印刷可能面をもう一度開いてください');
+        return;
+      }
+      try {
+        const nextRevision = printableSurfaceRevisionRef.current + 1;
+        const surface = await buildEncodedManualPrintableSurface({
+          garmentUrl: currentGarmentUrl,
+          editedMaskUrl: dataUrl,
+          manualRevision: nextRevision,
+        });
+        if (!canCommitPrintableSurfaceEditorOperation(applyOperationId, printableSurfaceEditorOperationRef.current)) return;
+        if (surface.identity.sourceHash !== target.capturedSourceHash) {
+          throw new Error('PRINTABLE_SURFACE_STALE_TARGET');
+        }
+        const stageMaskUrl = await buildPrintableSurfaceStageMaskDataUrl({
+          surface,
+          garmentUrl: currentGarmentUrl,
+          stageSize: printPreviewStageSize,
+        });
+        if (
+          !canCommitPrintableSurfaceEditorOperation(applyOperationId, printableSurfaceEditorOperationRef.current)
+          ||
+          printGarmentProcessedRef.current !== currentGarmentUrl
+          || target.capturedGarmentCutoutRequestId !== printGarmentCutoutRequestRef.current
+          || target.capturedCandidateId !== selectedPrintGarmentMaskCandidateIdRef.current
+          || target.capturedGarmentMaskRevision !== printGarmentMaskRevisionRef.current
+        ) {
+          throw new Error('PRINTABLE_SURFACE_STALE_TARGET');
+        }
+        printableSurfaceRevisionRef.current = nextRevision;
+        manualPrintableSurfaceRef.current = surface;
+        setManualPrintableSurface(surface);
+        setPrintableSurfaceStageMaskUrl(stageMaskUrl);
+        setPrintableSurfaceEnabled(false);
+        setPrintableSurfaceResetNotice(null);
+        setPrintMaskEditorTarget(null);
+        setPrintMaskEditorError(null);
+        printableSurfaceEditorOperationRef.current += 1;
+        toast.success('手動の印刷可能面を保存しました。使用するには切り抜きを有効にしてください');
+      } catch (error) {
+        if (!canCommitPrintableSurfaceEditorOperation(applyOperationId, printableSurfaceEditorOperationRef.current)) return;
+        const message = error instanceof Error ? error.message : '印刷可能面を保存できませんでした';
+        setPrintMaskEditorError(message);
+        toast.error(message);
+      }
+      return;
+    }
     if (target.kind === 'garment') {
-      const manualResult: MaterialCutoutResult = {
-        ...target.result,
-        dataUrl,
-        dataUrlBytes: estimateDataUrlBytes(dataUrl),
-      };
+      invalidatePrintableSuggestion();
+      if (isOversizedManualPrintMask(dataUrl)) {
+        setPrintMaskEditorError('手動補正データが保存上限を超えました。自動縮小して再適用してください。');
+        toast.error('手動補正データが保存上限を超えました');
+        return;
+      }
+      const manualResult = withManualPrintMaskResult(target.result, dataUrl, outputSize);
       setPrintGarmentProcessed(dataUrl);
       setPrintGarmentMaskCandidates((current) => [
         ...current.filter((candidate) => candidate.candidateId !== 'manual'),
@@ -909,20 +1354,19 @@ export function LightchainMaterialWorkbenchPage() {
       ]);
       setSelectedPrintGarmentMaskCandidateId('manual');
       setPrintGarmentMaskRevision((current) => current + 1);
+      clearManualPrintableSurface('服の輪郭を補正したため、手動の印刷可能面をリセットしました。');
+      setPrintMaskEditorError(null);
     } else if (target.index !== undefined) {
       const index = target.index;
       setPrintDesignProcessedUrls((current) => ({ ...current, [index]: dataUrl }));
       setPrintDesignCutoutResults((current) => ({
         ...current,
-        [index]: {
-          ...target.result,
-          dataUrl,
-          dataUrlBytes: estimateDataUrlBytes(dataUrl),
-        },
+        [index]: withManualPrintMaskResult(target.result, dataUrl, outputSize),
       }));
       setPrintDesignMaskRevisions((current) => ({ ...current, [index]: (current[index] ?? 0) + 1 }));
     }
     setPrintMaskEditorTarget(null);
+    setPrintMaskEditorError(null);
     toast.success('マスク補正をステージへ反映しました');
   };
 
@@ -1034,7 +1478,10 @@ export function LightchainMaterialWorkbenchPage() {
                 label="参考画像をアップロードしてください"
                 required
                 value={printGarment}
-                onChange={setPrintGarment}
+                onChange={(image) => {
+                  invalidatePrintableSuggestion();
+                  setPrintGarment(image);
+                }}
                 allowedReferenceTypes={['base']}
                 defaultReferenceType="base"
                 hint="服・Tシャツ・パーカーなどの参考画像を入れます"
@@ -1061,6 +1508,60 @@ export function LightchainMaterialWorkbenchPage() {
                     <Scissors className="h-4 w-4" />
                     服の輪郭を手動で調整
                   </button>
+                  <div className="space-y-2 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-3">
+                    <button
+                      type="button"
+                      disabled={printableSuggestionPending}
+                      onClick={() => { void openSuggestedPrintableSurfaceEditor(); }}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200/30 bg-emerald-200/15 px-3 py-2 text-xs font-semibold text-emerald-50 transition hover:bg-emerald-200/20 disabled:cursor-wait disabled:opacity-50"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      {printableSuggestionPending ? '印刷面の候補を作成中…' : '印刷面の候補を作る（試験）'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { void openPrintableSurfaceEditor(); }}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/25 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-300/15"
+                    >
+                      <Scissors className="h-4 w-4" />
+                      {manualPrintableSurface ? '印刷可能面を再調整' : '印刷可能面を手動で指定'}
+                    </button>
+                    <label className="flex items-center justify-between gap-3 text-xs text-white/75">
+                      <span>
+                        この面でデザインを切り抜く
+                        <span className="mt-0.5 block text-[10px] text-white/45">自動認識ではなく、ブラシで指定した範囲です。</span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={printableSurfaceEnabled}
+                        disabled={!manualPrintableSurface || !printableSurfaceStageMaskUrl}
+                        onChange={(event) => {
+                          setPrintableSurfaceEnabled(event.target.checked);
+                          setPrintableSurfaceResetNotice(null);
+                        }}
+                        aria-label="手動の印刷可能面でデザインを切り抜く"
+                        className="h-4 w-4 accent-emerald-400 disabled:opacity-40"
+                      />
+                    </label>
+                    {manualPrintableSurface ? (
+                      <div className="flex items-center justify-between gap-3 text-[11px]">
+                        <span className="text-emerald-200">手動指定済み / revision {manualPrintableSurface.identity.manualRevision}</span>
+                        <button
+                          type="button"
+                          onClick={() => clearManualPrintableSurface('服全体を印刷範囲として使います。')}
+                          className="text-white/55 underline decoration-white/20 underline-offset-2 hover:text-white"
+                        >
+                          服全体に戻す
+                        </button>
+                      </div>
+                    ) : null}
+                    {printableSurfaceResetNotice ? (
+                      <p role="status" className="text-[11px] leading-relaxed text-amber-200">{printableSurfaceResetNotice}</p>
+                    ) : null}
+                    {printableSuggestionStatus ? (
+                      <p role="status" className="text-[11px] leading-relaxed text-emerald-100/80">{printableSuggestionStatus}</p>
+                    ) : null}
+                  </div>
                 </div>
               )}
               <ImageSelector
@@ -1113,6 +1614,22 @@ export function LightchainMaterialWorkbenchPage() {
             </div>
           )}
 
+          {isPrinting && (
+            <label className="block rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/70">
+              <span className="mb-2 block font-semibold text-white">出力解像度</span>
+              <select
+                value={printOutputScale}
+                disabled={isGenerating}
+                onChange={(event) => setPrintOutputScale(Number(event.target.value) === 2 ? 2 : 1)}
+                className="w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-white disabled:opacity-50"
+                aria-label="プリント結果の出力解像度"
+              >
+                <option value={1}>720 × 900（標準）</option>
+                <option value={2}>1440 × 1800（高解像度）</option>
+              </select>
+            </label>
+          )}
+
           <Button
             onClick={handleGenerate}
             isLoading={isGenerating}
@@ -1132,6 +1649,11 @@ export function LightchainMaterialWorkbenchPage() {
           {generationError && (
             <p className="rounded-xl border border-rose-300/20 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-200">
               {generationError}
+            </p>
+          )}
+          {surfaceConformStatus && (
+            <p role="status" className="rounded-xl border border-cyan-300/20 bg-cyan-950/25 px-3 py-2 text-xs leading-relaxed text-cyan-100">
+              {surfaceConformStatus}
             </p>
           )}
           {generatedResultsStale && generatedResults.length > 0 && (
@@ -1179,6 +1701,7 @@ export function LightchainMaterialWorkbenchPage() {
               <PrintingCompositionStage
                   garmentUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
                   garmentMaskUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
+                  designClipMaskUrl={printableSurfaceEnabled ? printableSurfaceStageMaskUrl : null}
                   layers={stageLayers as Array<{
                     id: string;
                     label: string;
@@ -1269,7 +1792,19 @@ export function LightchainMaterialWorkbenchPage() {
                       <div>
                         <p className="font-semibold text-white">{result.title}</p>
                         <p className="mt-1 text-sm text-white/55">{result.note}</p>
+                        {result.outputSize && (
+                          <p className="mt-1 text-xs text-cyan-200">{result.outputSize.width} × {result.outputSize.height}px</p>
+                        )}
                       </div>
+                      {result.outputSize && (
+                        <a
+                          href={result.imageUrl}
+                          download={`heavy-chain-${result.id}-${result.outputSize.width}x${result.outputSize.height}.png`}
+                          className="inline-flex rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 transition hover:border-cyan-300/40 hover:text-cyan-100"
+                        >
+                          PNGをダウンロード
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1297,6 +1832,15 @@ export function LightchainMaterialWorkbenchPage() {
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
               {selectedResult.note}
             </p>
+            {selectedResult.outputSize && (
+              <a
+                href={selectedResult.imageUrl}
+                download={`heavy-chain-${selectedResult.id}-${selectedResult.outputSize.width}x${selectedResult.outputSize.height}.png`}
+                className="inline-flex rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 dark:border-white/15 dark:text-white"
+              >
+                {selectedResult.outputSize.width} × {selectedResult.outputSize.height}px PNGをダウンロード
+              </a>
+            )}
           </div>
         )}
       </Modal>
@@ -1318,7 +1862,18 @@ export function LightchainMaterialWorkbenchPage() {
           maskUrl={printMaskEditorTarget.maskUrl}
           sourceBounds={printMaskEditorTarget.result.bounds}
           outputSize={printMaskEditorTarget.result.outputSize}
-          onClose={() => setPrintMaskEditorTarget(null)}
+          description={printMaskEditorTarget.description ?? (printMaskEditorTarget.kind === 'printable-area'
+            ? '右側で、印刷する範囲を「残す」、印刷しない範囲を「消す」ブラシで指定してください。服の外側は自動的に除外されます。'
+            : undefined)}
+          applyLabel={printMaskEditorTarget.kind === 'printable-area' ? '印刷可能面を保存' : undefined}
+          preserveOutputSize={printMaskEditorTarget.kind === 'printable-area'}
+          noticeMessage={printMaskEditorError}
+          onClearNotice={() => setPrintMaskEditorError(null)}
+          onClose={() => {
+            invalidatePrintableSuggestion();
+            setPrintMaskEditorError(null);
+            setPrintMaskEditorTarget(null);
+          }}
           onApply={applyEditedPrintMask}
         />
       )}

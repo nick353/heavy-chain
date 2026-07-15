@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from 'react';
 import { Move3D, RefreshCw, RotateCw, Square } from 'lucide-react';
+import { getStageLocalPoint } from '../../lib/printingStageGeometry';
 
 export type PrintingTransform = {
   x: number;
@@ -91,7 +92,7 @@ function getLayerCenterPx(size: StageSize, transform: PrintingTransform) {
   };
 }
 
-function getFrameMaskStyle(maskUrl: string | null): CSSProperties {
+function getFrameMaskStyle(maskUrl: string | null, stageSpace = false): CSSProperties {
   return {
     WebkitMaskImage: maskUrl ? `url(${maskUrl})` : undefined,
     maskImage: maskUrl ? `url(${maskUrl})` : undefined,
@@ -99,14 +100,15 @@ function getFrameMaskStyle(maskUrl: string | null): CSSProperties {
     maskRepeat: 'no-repeat',
     WebkitMaskPosition: 'center',
     maskPosition: 'center',
-    WebkitMaskSize: 'contain',
-    maskSize: 'contain',
+    WebkitMaskSize: stageSpace ? '100% 100%' : 'contain',
+    maskSize: stageSpace ? '100% 100%' : 'contain',
   };
 }
 
 export function PrintingCompositionStage({
   garmentUrl,
   garmentMaskUrl,
+  designClipMaskUrl,
   layers,
   selectedLayerId,
   onSelectLayer,
@@ -114,6 +116,7 @@ export function PrintingCompositionStage({
 }: {
   garmentUrl: string | null;
   garmentMaskUrl: string | null;
+  designClipMaskUrl?: string | null;
   layers: PrintingLayer[];
   selectedLayerId: string | null;
   onSelectLayer: (id: string) => void;
@@ -160,24 +163,25 @@ export function PrintingCompositionStage({
       if (!session || !stageRef.current) return;
       event.preventDefault();
       const rect = stageRef.current.getBoundingClientRect();
+      const pointer = getStageLocalPoint(rect, event.clientX, event.clientY);
       const center = getLayerCenterPx(size, session.startTransform);
       const nextLayers = draftLayersRef.current.map((layer) => {
         if (layer.id !== session.id) return layer;
         if (session.mode === 'move') {
-          const nextX = clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100);
-          const nextY = clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100);
+          const nextX = clamp((pointer.x / rect.width) * 100, 0, 100);
+          const nextY = clamp((pointer.y / rect.height) * 100, 0, 100);
           return { ...layer, transform: { ...layer.transform, x: nextX, y: nextY } };
         }
       if (session.mode === 'resize') {
         const currentProjection = Math.max(
           20,
-          ((event.clientX - center.x) * session.resizeVector.x) + ((event.clientY - center.y) * session.resizeVector.y),
+          ((pointer.x - center.x) * session.resizeVector.x) + ((pointer.y - center.y) * session.resizeVector.y),
         );
         const ratio = currentProjection / Math.max(20, session.startProjection);
         const nextScale = clamp(session.startTransform.scale * ratio, minScale, maxScale);
         return { ...layer, transform: { ...layer.transform, scale: nextScale } };
       }
-        const nextAngle = getAngleDegrees(center.x, center.y, event.clientX, event.clientY);
+        const nextAngle = getAngleDegrees(center.x, center.y, pointer.x, pointer.y);
         const delta = normalizeAngleDelta(nextAngle - session.startAngle);
         return { ...layer, transform: { ...layer.transform, rotation: clamp(session.startTransform.rotation + delta, -72, 72) } };
       });
@@ -213,18 +217,21 @@ export function PrintingCompositionStage({
     event.preventDefault();
     event.stopPropagation();
     onSelectLayer(layer.id);
+    const rect = stageRef.current?.getBoundingClientRect();
+    if (!rect) return;
     const center = getLayerCenterPx(size, layer.transform);
-    const resizeMagnitude = Math.max(20, getDistance(center.x, center.y, event.clientX, event.clientY));
+    const pointer = getStageLocalPoint(rect, event.clientX, event.clientY);
+    const resizeMagnitude = Math.max(20, getDistance(center.x, center.y, pointer.x, pointer.y));
     const resizeVector = {
-      x: (event.clientX - center.x) / resizeMagnitude,
-      y: (event.clientY - center.y) / resizeMagnitude,
+      x: (pointer.x - center.x) / resizeMagnitude,
+      y: (pointer.y - center.y) / resizeMagnitude,
     };
     dragRef.current = {
       id: layer.id,
       mode,
       pointerId: event.pointerId,
       startTransform: layer.transform,
-      startAngle: getAngleDegrees(center.x, center.y, event.clientX, event.clientY),
+      startAngle: getAngleDegrees(center.x, center.y, pointer.x, pointer.y),
       resizeVector,
       startProjection: resizeMagnitude,
     };
@@ -273,7 +280,10 @@ export function PrintingCompositionStage({
       )}
 
       {garmentMaskUrl ? (
-        <div className="absolute inset-0 z-10" style={getFrameMaskStyle(garmentMaskUrl)}>
+        <div
+          className="absolute inset-0 z-10"
+          style={getFrameMaskStyle(designClipMaskUrl ?? garmentMaskUrl, Boolean(designClipMaskUrl))}
+        >
           <div className="pointer-events-none absolute inset-0 bg-transparent" />
           <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]" />
           <div className="pointer-events-none absolute inset-[2%] rounded-[30px] border border-white/10 border-dashed opacity-70" />
