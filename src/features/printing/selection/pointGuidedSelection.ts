@@ -146,11 +146,15 @@ const floodRegion = ({
 };
 
 const fallbackSelection = ({ width, height, point }: Pick<PointGuidedSelectionInput, 'width' | 'height' | 'point'>): PointGuidedSelection => {
-  const selectionWidth = Math.max(MIN_SELECTION_EDGE, width * 0.66);
-  const selectionHeight = Math.max(MIN_SELECTION_EDGE, height * 0.66);
+  // Keep the low-confidence fallback focused on the tapped garment area. A
+  // large centered crop tends to reintroduce the model's head/hands and makes
+  // the following segmentation look like a person cutout instead of clothing.
+  const selectionWidth = Math.max(MIN_SELECTION_EDGE, width * 0.56);
+  const selectionHeight = Math.max(MIN_SELECTION_EDGE, height * 0.58);
+  const centerY = clamp(point.y + selectionHeight * 0.12, selectionHeight / 2, height - selectionHeight / 2);
   return {
     x: clamp(point.x - selectionWidth / 2, 0, Math.max(0, width - selectionWidth)),
-    y: clamp(point.y - selectionHeight / 2, 0, Math.max(0, height - selectionHeight)),
+    y: clamp(centerY - selectionHeight / 2, 0, Math.max(0, height - selectionHeight)),
     width: selectionWidth,
     height: selectionHeight,
     confidence: 0.28,
