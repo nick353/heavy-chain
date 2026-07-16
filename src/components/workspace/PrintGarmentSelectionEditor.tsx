@@ -178,17 +178,37 @@ export function PrintGarmentSelectionEditor({
         for (let x = 0; x < canvas.width; x += 1) {
           const maskX = Math.min(displayMask.width - 1, Math.floor((x / canvas.width) * displayMask.width));
           const isSelected = displayMask.data[(maskY * displayMask.width) + maskX] === 1;
+          const isMaskBoundary = isSelected && (
+            maskX === 0
+            || maskY === 0
+            || maskX === displayMask.width - 1
+            || maskY === displayMask.height - 1
+            || displayMask.data[(maskY * displayMask.width) + Math.max(0, maskX - 1)] !== 1
+            || displayMask.data[(maskY * displayMask.width) + Math.min(displayMask.width - 1, maskX + 1)] !== 1
+            || displayMask.data[(Math.max(0, maskY - 1) * displayMask.width) + maskX] !== 1
+            || displayMask.data[(Math.min(displayMask.height - 1, maskY + 1) * displayMask.width) + maskX] !== 1
+          );
           const offset = ((y * canvas.width) + x) * 4;
-          if (isSelected) {
-            overlay.data[offset] = 45;
-            overlay.data[offset + 1] = 224;
-            overlay.data[offset + 2] = 207;
-            overlay.data[offset + 3] = 170;
+          if (isMaskBoundary) {
+            // The reference flow makes the recognition boundary legible at a
+            // glance. A bright cyan edge keeps the exact pixel boundary
+            // visible even when the source garment has a similar color.
+            overlay.data[offset] = 186;
+            overlay.data[offset + 1] = 239;
+            overlay.data[offset + 2] = 255;
+            overlay.data[offset + 3] = 245;
+          } else if (isSelected) {
+            // Use a stronger blue fill than the source image so the user can
+            // verify the proposed mask before the explicit confirmation.
+            overlay.data[offset] = 37;
+            overlay.data[offset + 1] = 128;
+            overlay.data[offset + 2] = 255;
+            overlay.data[offset + 3] = 205;
           } else {
-            overlay.data[offset] = 0;
-            overlay.data[offset + 1] = 0;
-            overlay.data[offset + 2] = 0;
-            overlay.data[offset + 3] = 34;
+            overlay.data[offset] = 2;
+            overlay.data[offset + 1] = 6;
+            overlay.data[offset + 2] = 23;
+            overlay.data[offset + 3] = 104;
           }
         }
       }
@@ -626,6 +646,15 @@ export function PrintGarmentSelectionEditor({
             )}
           </div>
         </div>
+        {selectionSource === 'tap' && guidedResult?.mask && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-400/30 bg-blue-950/35 px-3 py-2 text-xs text-blue-50" role="status">
+            <span className="inline-flex items-center gap-2">
+              <span aria-hidden="true" className="h-3 w-3 rounded-sm border border-cyan-100 bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.75)]" />
+              青色の塗りつぶしが今回のタップ認識範囲です
+            </span>
+            <span className="text-cyan-100/80">境界を確認してから確定</span>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
