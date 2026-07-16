@@ -196,19 +196,19 @@ export function PrintGarmentSelectionEditor({
             overlay.data[offset] = 186;
             overlay.data[offset + 1] = 239;
             overlay.data[offset + 2] = 255;
-            overlay.data[offset + 3] = 245;
+            overlay.data[offset + 3] = 255;
           } else if (isSelected) {
             // Use a stronger blue fill than the source image so the user can
             // verify the proposed mask before the explicit confirmation.
             overlay.data[offset] = 37;
             overlay.data[offset + 1] = 128;
             overlay.data[offset + 2] = 255;
-            overlay.data[offset + 3] = 205;
+            overlay.data[offset + 3] = 224;
           } else {
             overlay.data[offset] = 2;
             overlay.data[offset + 1] = 6;
             overlay.data[offset + 2] = 23;
-            overlay.data[offset + 3] = 104;
+            overlay.data[offset + 3] = 120;
           }
         }
       }
