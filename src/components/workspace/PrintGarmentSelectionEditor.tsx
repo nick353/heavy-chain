@@ -4,7 +4,6 @@ import { Button } from '../ui';
 import { Modal } from '../ui/Modal';
 import {
   buildPointGuidedSelection,
-  shouldAutoApplyPointGuidedSelection,
   type PointGuidedSelection,
 } from '../../features/printing/selection/pointGuidedSelection';
 import type { GarmentSelectionSource } from '../../features/printing/selection/garmentSegmentationPolicy';
@@ -29,10 +28,58 @@ type SelectionSource = 'tap' | 'range';
 
 const MAX_CANVAS_EDGE = 1600;
 const MIN_SELECTION_EDGE = 16;
+const PREVIEW_MASK_CLOSE_RADIUS = 3;
 // Keep a small amount of the original background around a guided crop so the
 // segmentation model can distinguish the garment boundary from the image edge.
 const AI_CONTEXT_PADDING_RATIO = 0.12;
 const AI_CONTEXT_MIN_PADDING = 24;
+
+const closePreviewMask = (mask: NonNullable<PointGuidedSelection['mask']>) => {
+  const { width, height, data } = mask;
+  const dilated = new Uint8Array(data.length);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (data[(y * width) + x] !== 1) continue;
+      for (let offsetY = -PREVIEW_MASK_CLOSE_RADIUS; offsetY <= PREVIEW_MASK_CLOSE_RADIUS; offsetY += 1) {
+        for (let offsetX = -PREVIEW_MASK_CLOSE_RADIUS; offsetX <= PREVIEW_MASK_CLOSE_RADIUS; offsetX += 1) {
+          const nextX = x + offsetX;
+          const nextY = y + offsetY;
+          if (nextX < 0 || nextY < 0 || nextX >= width || nextY >= height) continue;
+          dilated[(nextY * width) + nextX] = 1;
+        }
+      }
+    }
+  }
+
+  const closed = new Uint8Array(data.length);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let isClosed = true;
+      for (let offsetY = -PREVIEW_MASK_CLOSE_RADIUS; offsetY <= PREVIEW_MASK_CLOSE_RADIUS && isClosed; offsetY += 1) {
+        for (let offsetX = -PREVIEW_MASK_CLOSE_RADIUS; offsetX <= PREVIEW_MASK_CLOSE_RADIUS; offsetX += 1) {
+          const nextX = x + offsetX;
+          const nextY = y + offsetY;
+          if (
+            nextX < 0
+            || nextY < 0
+            || nextX >= width
+            || nextY >= height
+            || dilated[(nextY * width) + nextX] !== 1
+          ) {
+            isClosed = false;
+            break;
+          }
+        }
+      }
+      const index = (y * width) + x;
+      // Keep every pixel that the guided proposal already selected. The
+      // closing pass only fills small gaps; it must not erase legitimate
+      // disconnected garment texture such as a printed flower or logo.
+      if (data[index] === 1 || isClosed) closed[index] = 1;
+    }
+  }
+  return { ...mask, data: closed };
+};
 
 const resizeHandleDetails: Array<{ id: ResizeHandle; left: number; top: number; cursor: string; label: string }> = [
   { id: 'nw', left: 0, top: 0, cursor: 'nwse-resize', label: '左上' },
@@ -113,7 +160,7 @@ export function PrintGarmentSelectionEditor({
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const render = useCallback((nextSelection: SelectionRect | null) => {
+  const render = useCallback((nextSelection: SelectionRect | null, previewMask?: PointGuidedSelection['mask']) => {
     const canvas = canvasRef.current;
     const image = imageRef.current;
     if (!canvas || !image) return;
@@ -123,14 +170,49 @@ export function PrintGarmentSelectionEditor({
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     if (!nextSelection) return;
 
-    context.save();
-    context.fillStyle = 'rgba(0, 0, 0, 0.48)';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.beginPath();
-    context.rect(nextSelection.x, nextSelection.y, nextSelection.width, nextSelection.height);
-    context.clip();
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    context.restore();
+    if (previewMask && previewMask.data.length === previewMask.width * previewMask.height) {
+      const displayMask = closePreviewMask(previewMask);
+      const overlay = context.createImageData(canvas.width, canvas.height);
+      for (let y = 0; y < canvas.height; y += 1) {
+        const maskY = Math.min(displayMask.height - 1, Math.floor((y / canvas.height) * displayMask.height));
+        for (let x = 0; x < canvas.width; x += 1) {
+          const maskX = Math.min(displayMask.width - 1, Math.floor((x / canvas.width) * displayMask.width));
+          const isSelected = displayMask.data[(maskY * displayMask.width) + maskX] === 1;
+          const offset = ((y * canvas.width) + x) * 4;
+          if (isSelected) {
+            overlay.data[offset] = 45;
+            overlay.data[offset + 1] = 224;
+            overlay.data[offset + 2] = 207;
+            overlay.data[offset + 3] = 170;
+          } else {
+            overlay.data[offset] = 0;
+            overlay.data[offset + 1] = 0;
+            overlay.data[offset + 2] = 0;
+            overlay.data[offset + 3] = 34;
+          }
+        }
+      }
+      // Draw the translucent mask over the source image instead of replacing
+      // the source pixels. This keeps the garment details readable while the
+      // selected boundary remains visibly blue.
+      const overlayCanvas = document.createElement('canvas');
+      overlayCanvas.width = canvas.width;
+      overlayCanvas.height = canvas.height;
+      const overlayContext = overlayCanvas.getContext('2d');
+      if (overlayContext) {
+        overlayContext.putImageData(overlay, 0, 0);
+        context.drawImage(overlayCanvas, 0, 0);
+      }
+    } else {
+      context.save();
+      context.fillStyle = 'rgba(0, 0, 0, 0.48)';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.beginPath();
+      context.rect(nextSelection.x, nextSelection.y, nextSelection.width, nextSelection.height);
+      context.clip();
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      context.restore();
+    }
 
     context.save();
     context.strokeStyle = '#67e8f9';
@@ -189,10 +271,14 @@ export function PrintGarmentSelectionEditor({
     };
   };
 
-  const setNextSelection = (nextSelection: SelectionRect, source?: SelectionSource) => {
+  const setNextSelection = (
+    nextSelection: SelectionRect,
+    source?: SelectionSource,
+    previewMask?: PointGuidedSelection['mask'],
+  ) => {
     setSelection(nextSelection);
     if (source) setSelectionSource(source);
-    render(nextSelection);
+    render(nextSelection, previewMask);
   };
 
   const updateSelection = (event: React.PointerEvent<HTMLElement>) => {
@@ -265,8 +351,10 @@ export function PrintGarmentSelectionEditor({
 
   const exportSelection = (selectedSelection: SelectionRect, selectionSource: SelectionSource) => {
     const image = imageRef.current;
+    const editorCanvas = canvasRef.current;
     if (
       !image
+      || !editorCanvas
       || selectedSelection.width < MIN_SELECTION_EDGE
       || selectedSelection.height < MIN_SELECTION_EDGE
     ) {
@@ -295,6 +383,46 @@ export function PrintGarmentSelectionEditor({
     context.imageSmoothingEnabled = true;
     context.imageSmoothingQuality = 'high';
     context.drawImage(image, contextX, contextY, contextWidth, contextHeight, 0, 0, output.width, output.height);
+
+    if (selectionSource === 'tap' && guidedResult?.mask) {
+      // The preview and the confirmed PNG must use the same closed mask. The
+      // mask is low-resolution by design, so sample it in the original-image
+      // coordinate system while preserving the surrounding AI context crop.
+      const displayMask = closePreviewMask(guidedResult.mask);
+      const maskCanvas = document.createElement('canvas');
+      maskCanvas.width = output.width;
+      maskCanvas.height = output.height;
+      const maskContext = maskCanvas.getContext('2d');
+      if (!maskContext) throw new Error('garment_selection_mask_context_missing');
+      const maskImageData = maskContext.createImageData(output.width, output.height);
+      for (let y = 0; y < output.height; y += 1) {
+        const sourceY = contextY + ((y + 0.5) / output.height) * contextHeight;
+        const canvasY = sourceY * scale;
+        const maskY = Math.max(
+          0,
+          Math.min(displayMask.height - 1, Math.floor((canvasY / editorCanvas.height) * displayMask.height)),
+        );
+        for (let x = 0; x < output.width; x += 1) {
+          const sourceX = contextX + ((x + 0.5) / output.width) * contextWidth;
+          const canvasX = sourceX * scale;
+          const maskX = Math.max(
+            0,
+            Math.min(displayMask.width - 1, Math.floor((canvasX / editorCanvas.width) * displayMask.width)),
+          );
+          const selected = displayMask.data[(maskY * displayMask.width) + maskX] === 1;
+          const offset = ((y * output.width) + x) * 4;
+          maskImageData.data[offset] = 255;
+          maskImageData.data[offset + 1] = 255;
+          maskImageData.data[offset + 2] = 255;
+          maskImageData.data[offset + 3] = selected ? 255 : 0;
+        }
+      }
+      maskContext.putImageData(maskImageData, 0, 0);
+      context.save();
+      context.globalCompositeOperation = 'destination-in';
+      context.drawImage(maskCanvas, 0, 0);
+      context.restore();
+    }
     onApply(output.toDataURL('image/png'), selectionSource);
   };
 
@@ -324,15 +452,7 @@ export function PrintGarmentSelectionEditor({
         y: proposal.y,
         width: proposal.width,
         height: proposal.height,
-      }, 'tap');
-      if (shouldAutoApplyPointGuidedSelection(proposal)) {
-        exportSelection({
-          x: proposal.x,
-          y: proposal.y,
-          width: proposal.width,
-          height: proposal.height,
-        }, 'tap');
-      }
+      }, 'tap', proposal.mask);
     } catch (analysisError) {
       console.warn('Point-guided garment selection failed; keeping the current range.', analysisError);
       setGuidedResult(null);
@@ -391,6 +511,11 @@ export function PrintGarmentSelectionEditor({
   const chooseRangeMode = () => {
     setSelectionMode('range');
     setError(null);
+    if (selectionSource === 'tap' && selection) {
+      setGuidedResult(null);
+      setSelectionSource('range');
+      render(selection);
+    }
   };
 
   const apply = () => {
@@ -423,13 +548,15 @@ export function PrintGarmentSelectionEditor({
       footer={(
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>キャンセル</Button>
-          <Button onClick={apply} disabled={!ready || !selection}>選択範囲をAIマスクへ渡す</Button>
+          <Button onClick={apply} disabled={!ready || !selection || !selectionSource || tapProcessing}>
+            {selectionSource === 'tap' && guidedResult ? 'このマスクで確定' : '選択範囲をAIマスクへ渡す'}
+          </Button>
         </div>
       )}
     >
       <div className="space-y-4">
         <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-300">
-          「服をタップ（推奨）」で服の位置を1回押すと候補範囲を自動認識します。高信頼の候補はそのままAIマスクへ渡し、低信頼の候補だけ確認してから適用します。細かく指定するときは「範囲を調整」に切り替え、四隅・四辺の丸いハンドルと中央ドラッグを使ってください。
+          「服をタップ（推奨）」で服の位置を1回押すと候補範囲を認識します。青色の範囲が今回のタップから作った確認用プレビューです。内容を確認して「このマスクで確定」を押すと、既存のAIマスク処理へ渡します。細かく指定するときは「範囲を調整」に切り替えます。
         </p>
         {error && <p role="alert" className="text-sm text-rose-500">{error}</p>}
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="服の選択方法">
@@ -469,7 +596,7 @@ export function PrintGarmentSelectionEditor({
               ref={canvasRef}
               className="block h-auto max-h-[62vh] max-w-full touch-none object-contain"
             />
-            {ready && selection && canvasSize.width > 0 && canvasSize.height > 0 && (
+            {ready && selection && canvasSize.width > 0 && canvasSize.height > 0 && !(selectionSource === 'tap' && guidedResult?.mask) && (
               <div className="pointer-events-none absolute inset-0">
                 <div
                   className="pointer-events-auto absolute border-2 border-cyan-300 bg-cyan-300/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.16)]"
@@ -521,7 +648,9 @@ export function PrintGarmentSelectionEditor({
           {tapProcessing
             ? 'タップ位置から服を認識しています…'
             : selectionSource === 'tap' && guidedResult
-              ? `タップ認識: ${Math.round(guidedResult.confidence * 100)}% / ${Math.round(selection?.width ? selection.width / scaleRef.current : 0)} × ${Math.round(selection?.height ? selection.height / scaleRef.current : 0)}px`
+              ? guidedResult.mask
+                ? `青色マスクを確認してください。タップ認識: ${Math.round(guidedResult.confidence * 100)}% / ${Math.round(selection?.width ? selection.width / scaleRef.current : 0)} × ${Math.round(selection?.height ? selection.height / scaleRef.current : 0)}px`
+                : `低信頼の候補です。範囲を確認してから確定してください。タップ認識: ${Math.round(guidedResult.confidence * 100)}% / ${Math.round(selection?.width ? selection.width / scaleRef.current : 0)} × ${Math.round(selection?.height ? selection.height / scaleRef.current : 0)}px`
               : selectionSource === 'range' && selection
                 ? `範囲指定: ${Math.round(selection.width / scaleRef.current)} × ${Math.round(selection.height / scaleRef.current)}px`
                 : '服をタップすると、そこにある服の候補範囲を自動認識します。'}

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 
 import {
   buildPointGuidedSelection,
-  shouldAutoApplyPointGuidedSelection,
 } from '../src/features/printing/selection/pointGuidedSelection.ts';
 
 const makeImage = (width: number, height: number, paint: (x: number, y: number) => [number, number, number]) => {
@@ -33,6 +32,11 @@ test('point-guided selection finds a bounded garment-colored component', () => {
   assert.ok(result.confidence >= 0.64);
   assert.ok(result.x < 34 && result.y < 16);
   assert.ok(result.x + result.width > 86 && result.y + result.height > 84);
+  assert.ok(result.mask);
+  assert.equal(result.mask?.width, width);
+  assert.equal(result.mask?.height, height);
+  assert.equal(result.mask?.data[(50 * width) + 60], 1);
+  assert.equal(result.mask?.data[0], 0);
 });
 
 test('point-guided selection falls back to a bounded neighborhood when the tap matches the frame', () => {
@@ -64,35 +68,113 @@ test('point-guided selection rejects malformed pixel buffers', () => {
   );
 });
 
-test('high-confidence colour-region taps can flow directly to the AI mask', () => {
-  assert.equal(shouldAutoApplyPointGuidedSelection({
-    x: 10,
-    y: 12,
-    width: 80,
-    height: 96,
-    confidence: 0.8,
-    source: 'color-region',
-    selectedPixels: 1_000,
-    touchesFrame: false,
-  }), true);
-  assert.equal(shouldAutoApplyPointGuidedSelection({
-    x: 10,
-    y: 12,
-    width: 80,
-    height: 96,
-    confidence: 0.71,
-    source: 'color-region',
-    selectedPixels: 1_000,
-    touchesFrame: false,
-  }), false);
-  assert.equal(shouldAutoApplyPointGuidedSelection({
-    x: 10,
-    y: 12,
-    width: 80,
-    height: 96,
-    confidence: 0.95,
-    source: 'tap-neighborhood',
-    selectedPixels: 1_000,
-    touchesFrame: false,
-  }), false);
+test('point-guided selection exposes a preview and leaves application to explicit confirmation', () => {
+  const result = buildPointGuidedSelection({
+    width: 120,
+    height: 100,
+    data: makeImage(120, 100, (x, y) => (
+      x >= 34 && x < 86 && y >= 16 && y < 84 ? [24, 110, 180] : [248, 248, 248]
+    )),
+    point: { x: 60, y: 50 },
+  });
+  assert.equal(result.source, 'color-region');
+  assert.ok(result.mask);
+  assert.ok(result.selectedPixels > 0);
+});
+
+test('point-guided selection preserves garment texture while excluding uniform background', () => {
+  const width = 160;
+  const height = 120;
+  const background: [number, number, number] = [44, 44, 44];
+  const result = buildPointGuidedSelection({
+    width,
+    height,
+    data: makeImage(width, height, (x, y) => {
+      const inShirt = x >= 38 && x < 122 && y >= 20 && y < 106;
+      if (!inShirt) return background;
+      const inPrint = x >= 78 && x < 94 && y >= 42 && y < 58;
+      const inCollarHole = x >= 68 && x < 92 && y >= 20 && y < 32;
+      if (inCollarHole) return background;
+      if (inPrint) return [4, 4, 4];
+      return [232, 220, 196];
+    }),
+    point: { x: 58, y: 70 },
+  });
+  assert.equal(result.source, 'color-region');
+  assert.ok(result.mask);
+  assert.equal(result.mask?.data[(50 * width) + 84], 1);
+  assert.equal(result.mask?.data[(27 * width) + 80], 0);
+  assert.equal(result.mask?.data[0], 0);
+});
+
+test('point-guided selection can start on garment texture when the outer background is uniform', () => {
+  const width = 160;
+  const height = 120;
+  const background: [number, number, number] = [40, 40, 40];
+  const result = buildPointGuidedSelection({
+    width,
+    height,
+    data: makeImage(width, height, (x, y) => {
+      const inShirt = x >= 38 && x < 122 && y >= 20 && y < 106;
+      if (!inShirt) return background;
+      const inPrint = x >= 78 && x < 94 && y >= 42 && y < 58;
+      if (inPrint) return [8, 8, 8];
+      return [232, 220, 196];
+    }),
+    point: { x: 84, y: 50 },
+  });
+  assert.equal(result.source, 'color-region');
+  assert.ok(result.mask);
+  assert.equal(result.mask?.data[(50 * width) + 84], 1);
+  assert.equal(result.mask?.data[(70 * width) + 60], 1);
+  assert.equal(result.mask?.data[0], 0);
+});
+
+test('point-guided selection keeps enclosed texture even when it matches the background', () => {
+  const width = 160;
+  const height = 120;
+  const background: [number, number, number] = [40, 40, 40];
+  const result = buildPointGuidedSelection({
+    width,
+    height,
+    data: makeImage(width, height, (x, y) => {
+      const inShirt = x >= 38 && x < 122 && y >= 20 && y < 106;
+      if (!inShirt) return background;
+      const inPrint = x >= 78 && x < 94 && y >= 42 && y < 58;
+      const inCollarHole = x >= 68 && x < 92 && y >= 20 && y < 32;
+      if (inPrint || inCollarHole) return background;
+      return [232, 220, 196];
+    }),
+    point: { x: 58, y: 70 },
+  });
+  assert.equal(result.source, 'color-region');
+  assert.ok(result.mask);
+  assert.equal(result.mask?.data[(50 * width) + 84], 1);
+  assert.equal(result.mask?.data[(25 * width) + 80], 0);
+  assert.equal(result.mask?.data[0], 0);
+});
+
+test('point-guided selection fills enclosed texture holes on a non-uniform background', () => {
+  const width = 180;
+  const height = 140;
+  const result = buildPointGuidedSelection({
+    width,
+    height,
+    data: makeImage(width, height, (x, y) => {
+      const backgroundLevel = 20 + Math.round((x / width) * 80) + Math.round((y / height) * 24);
+      const background: [number, number, number] = [backgroundLevel, backgroundLevel, backgroundLevel];
+      const inShirt = x >= 42 && x < 138 && y >= 24 && y < 124;
+      if (!inShirt) return background;
+      const inPrint = x >= 82 && x < 102 && y >= 52 && y < 72;
+      const inCollarHole = x >= 78 && x < 106 && y >= 24 && y < 38;
+      if (inPrint || inCollarHole) return background;
+      return [232, 220, 196];
+    }),
+    point: { x: 60, y: 80 },
+  });
+  assert.equal(result.source, 'color-region');
+  assert.ok(result.mask);
+  assert.equal(result.mask?.data[(60 * width) + 92], 1);
+  assert.equal(result.mask?.data[(30 * width) + 92], 0);
+  assert.equal(result.mask?.data[0], 0);
 });
