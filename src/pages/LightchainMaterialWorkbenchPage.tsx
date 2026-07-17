@@ -1797,7 +1797,143 @@ export function LightchainMaterialWorkbenchPage() {
           animate={{ opacity: 1, x: 0 }}
           className="space-y-5"
         >
-          <div className="rounded-3xl border border-white/10 bg-neutral-950/80 p-4 shadow-2xl shadow-black/20">
+          {isPrinting && (
+            <div
+              data-testid="print-focused-workspace"
+              className="rounded-3xl border border-cyan-300/20 bg-neutral-950/85 p-4 shadow-2xl shadow-black/20"
+            >
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200/70">集中編集</p>
+                  <h3 className="mt-1 text-lg font-semibold text-white">服の認識範囲とデザイン配置</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-white/50">
+                    左で確定面を確認し、右でデザインをそのまま移動・拡大・回転できます。
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-white/50">
+                  <Check className="h-4 w-4 text-emerald-300" />
+                  {currentBrand ? 'ブランド選択済み' : 'ブランド未選択'}
+                </div>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+                <section
+                  data-testid="confirmed-garment-mask-pane"
+                  aria-label="確定した服の認識範囲"
+                  className="rounded-2xl border border-cyan-300/20 bg-[#07131e] p-3"
+                >
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs text-white/50">ステップ1</p>
+                      <h4 className="mt-1 font-semibold text-white">確定した服の面</h4>
+                    </div>
+                    <span className="rounded-full border border-cyan-200/30 bg-cyan-300/10 px-2 py-1 text-[10px] font-semibold text-cyan-100">
+                      {printGarmentSelectionSource === 'automatic' ? '自動候補' : 'タップ確定'}
+                    </span>
+                  </div>
+                  <div className="relative flex min-h-[18rem] items-center justify-center overflow-hidden rounded-xl border border-cyan-300/20 bg-neutral-950/80 p-3">
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-3 opacity-50"
+                      style={{
+                        backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.07) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.07) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.07) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.07) 75%)',
+                        backgroundSize: '18px 18px',
+                        backgroundPosition: '0 0, 0 9px, 9px -9px, -9px 0px',
+                      }}
+                    />
+                    {printGarmentCutoutState === 'done' && printGarmentProcessed ? (
+                      <div className="relative z-10 flex h-full w-full items-center justify-center">
+                        <img
+                          src={printGarmentProcessed}
+                          alt="確定した服の青い認識範囲"
+                          className="max-h-[17rem] w-full object-contain"
+                          style={{
+                            filter: 'brightness(0) saturate(100%) invert(68%) sepia(86%) saturate(1800%) hue-rotate(167deg) brightness(101%) contrast(98%)',
+                            opacity: 0.9,
+                          }}
+                          draggable={false}
+                        />
+                        <img
+                          src={printGarmentProcessed}
+                          alt=""
+                          className="pointer-events-none absolute inset-0 h-full w-full object-contain opacity-25"
+                          draggable={false}
+                        />
+                        <div className="pointer-events-none absolute inset-4 rounded-xl border border-cyan-100/80 shadow-[0_0_24px_rgba(34,211,238,0.22)]" />
+                      </div>
+                    ) : (
+                      <div className="relative z-10 rounded-xl border border-white/10 bg-black/30 px-4 py-5 text-center text-xs text-white/55">
+                        服を選択すると、確定面がここに表示されます。
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    role="status"
+                    data-testid="confirmed-garment-mask-status"
+                    className="mt-3 rounded-xl border border-blue-300/25 bg-blue-950/35 px-3 py-2 text-[11px] leading-relaxed text-blue-50"
+                  >
+                    <div className="flex items-center gap-2 font-semibold">
+                      <span aria-hidden="true" className="h-2.5 w-2.5 rounded-sm border border-cyan-100 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.75)]" />
+                      {printGarmentSelectionSource === 'automatic' ? '服の候補を確認してください' : '認識範囲を確認済み'}
+                    </div>
+                    <p className="mt-1 text-blue-100/75">
+                      {printGarmentSelectionSource === 'automatic'
+                        ? '服をタップして候補を確認すると、ここに青い確定面が残ります。'
+                        : 'デザインは確定した服の内側だけに適用されます。'}
+                    </p>
+                  </div>
+                </section>
+
+                <section
+                  data-testid="design-placement-pane"
+                  aria-label="デザイン配置"
+                  className="rounded-2xl border border-white/10 bg-[#0b1114] p-3"
+                >
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs text-white/50">ステップ2</p>
+                      <h4 className="mt-1 font-semibold text-white">デザインの配置と調整</h4>
+                    </div>
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-white/60">
+                      {printDesignLayers.length ? `${printDesignLayers.length}件選択中` : 'デザイン未選択'}
+                    </span>
+                  </div>
+                  <div
+                    ref={stageRef}
+                    onPointerDown={clearSelectedLayer}
+                    className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-neutral-900"
+                    style={{
+                      background: printStageBackground,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  >
+                    <PrintingCompositionStage
+                      garmentUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
+                      garmentMaskUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
+                      garmentSelectionSource={printGarmentSelectionSource}
+                      designClipMaskUrl={printableSurfaceEnabled ? printableSurfaceStageMaskUrl : null}
+                      layers={stageLayers as Array<{
+                        id: string;
+                        label: string;
+                        displayUrl: string;
+                        transform: Transform;
+                        cutoutState: 'idle' | 'processing' | 'done' | 'error';
+                      }>}
+                      selectedLayerId={selectedLayerId}
+                      onSelectLayer={selectLayer}
+                      onCommitLayer={({ id, transform }) => {
+                        setPrintDesignLayers((prev) => prev.map((layer) => (layer.id === id ? { ...layer, transform } : layer)));
+                      }}
+                    />
+                  </div>
+                  <p className="mt-3 text-[11px] leading-relaxed text-white/50">
+                    デザインを選択後、表示された枠をドラッグ、角のハンドルで拡大、上のハンドルで回転できます。
+                  </p>
+                </section>
+              </div>
+            </div>
+          )}
+          <div className={`rounded-3xl border border-white/10 bg-neutral-950/80 p-4 shadow-2xl shadow-black/20 ${isPrinting ? 'hidden' : ''}`}>
               <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-sm text-white/60">ライブプレビュー</p>
@@ -1811,35 +1947,16 @@ export function LightchainMaterialWorkbenchPage() {
               </div>
             </div>
             <div
-              ref={stageRef}
+              ref={isPrinting ? undefined : stageRef}
               onPointerDown={clearSelectedLayer}
-              className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-white/10 bg-neutral-900"
+              className={`relative aspect-[4/5] overflow-hidden rounded-3xl border border-white/10 bg-neutral-900 ${isPrinting ? 'hidden' : ''}`}
               style={{
                 background: isPrinting ? printStageBackground : fabricStageBackground,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
             >
-              {isPrinting ? (
-              <PrintingCompositionStage
-                  garmentUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
-                  garmentMaskUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
-                  garmentSelectionSource={printGarmentSelectionSource}
-                  designClipMaskUrl={printableSurfaceEnabled ? printableSurfaceStageMaskUrl : null}
-                  layers={stageLayers as Array<{
-                    id: string;
-                    label: string;
-                    displayUrl: string;
-                    transform: Transform;
-                    cutoutState: 'idle' | 'processing' | 'done' | 'error';
-                  }>}
-                  selectedLayerId={selectedLayerId}
-                  onSelectLayer={selectLayer}
-                  onCommitLayer={({ id, transform }) => {
-                    setPrintDesignLayers((prev) => prev.map((layer) => (layer.id === id ? { ...layer, transform } : layer)));
-                  }}
-                />
-              ) : (
+              {!isPrinting && (
                 <>
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),transparent_55%)]" />
                   {!fabricBase && (
