@@ -52,6 +52,8 @@ interface ImageSelectorProps {
   processingLabel?: string;
   previewUrl?: string | null;
   multiplePreviewUrls?: Array<string | null>;
+  galleryTitle?: string;
+  selectionTestId?: string;
 }
 
 export function ImageSelector({
@@ -71,6 +73,8 @@ export function ImageSelector({
   processingLabel = '切り抜き処理中',
   previewUrl,
   multiplePreviewUrls,
+  galleryTitle = 'ギャラリーから画像を選択',
+  selectionTestId,
 }: ImageSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -186,12 +190,17 @@ export function ImageSelector({
   // Multiple images view
   if (multiple) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3" data-testid={selectionTestId}>
         <div className="flex items-center justify-between">
           <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
             {label} {required && <span className="text-red-500">*</span>}
           </label>
-          <span className="text-xs text-neutral-500">
+          <span
+            className="text-xs text-neutral-500"
+            role="status"
+            aria-live="polite"
+            data-testid={selectionTestId ? `${selectionTestId}-status` : undefined}
+          >
             {multipleValue.length}/{maxImages}枚
           </span>
         </div>
@@ -305,6 +314,7 @@ export function ImageSelector({
           isOpen={showGalleryModal}
           onClose={() => setShowGalleryModal(false)}
           onSelect={handleGallerySelect}
+          title={galleryTitle}
         />
       </div>
     );
@@ -312,7 +322,7 @@ export function ImageSelector({
 
   // Single image view
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-testid={selectionTestId}>
       <div className="flex items-center justify-between">
         <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
           {label} {required && <span className="text-red-500">*</span>}
@@ -448,6 +458,7 @@ export function ImageSelector({
         isOpen={showGalleryModal}
         onClose={() => setShowGalleryModal(false)}
         onSelect={handleGallerySelect}
+        title={galleryTitle}
       />
     </div>
   );

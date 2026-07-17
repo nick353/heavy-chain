@@ -1556,6 +1556,8 @@ export function LightchainMaterialWorkbenchPage() {
                 label="参考画像をアップロードしてください"
                 required
                 value={printGarment}
+                galleryTitle="参考画像を選択"
+                selectionTestId="print-garment-selector"
                 onChange={(image) => {
                   invalidatePrintableSuggestion();
                   setPrintGarmentCutoutSourceUrl(null);
@@ -1688,6 +1690,8 @@ export function LightchainMaterialWorkbenchPage() {
                 multiple
                 required
                 value={null}
+                galleryTitle="プリントデザインを選択"
+                selectionTestId="print-design-selector"
                 onChange={() => {}}
                 multipleValue={printDesigns}
                 onMultipleChange={addDesigns}

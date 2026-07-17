@@ -10,6 +10,7 @@ interface GallerySelectorProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (imageUrl: string, imageId: string, storagePath?: string, imageElement?: HTMLImageElement | null) => void;
+  title?: string;
   multiple?: boolean;
   maxSelect?: number;
   onMultipleSelect?: (images: { url: string; id: string }[]) => void;
@@ -42,6 +43,7 @@ export function GallerySelector({
   isOpen,
   onClose,
   onSelect,
+  title = 'ギャラリーから画像を選択',
   multiple = false,
   maxSelect = 5,
   onMultipleSelect,
@@ -146,7 +148,7 @@ export function GallerySelector({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="ギャラリーから画像を選択"
+      title={title}
       size="xl"
     >
       <div className="space-y-4">
