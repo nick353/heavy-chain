@@ -147,6 +147,7 @@ export function PrintGarmentSelectionEditor({
   onApply: (selectedImageUrl: string, selectionSource: Exclude<GarmentSelectionSource, 'automatic'>) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const maskPreviewCanvasRef = useRef<HTMLCanvasElement>(null);
   const canvasWrapRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const scaleRef = useRef(1);
@@ -160,6 +161,22 @@ export function PrintGarmentSelectionEditor({
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const syncMaskPreview = useCallback(() => {
+    const sourceCanvas = canvasRef.current;
+    const previewCanvas = maskPreviewCanvasRef.current;
+    if (!sourceCanvas || !previewCanvas || !sourceCanvas.width || !sourceCanvas.height) return;
+    const previewWidth = Math.min(420, sourceCanvas.width);
+    const previewHeight = Math.max(1, Math.round(previewWidth * (sourceCanvas.height / sourceCanvas.width)));
+    if (previewCanvas.width !== previewWidth) previewCanvas.width = previewWidth;
+    if (previewCanvas.height !== previewHeight) previewCanvas.height = previewHeight;
+    const previewContext = previewCanvas.getContext('2d');
+    if (!previewContext) return;
+    previewContext.clearRect(0, 0, previewWidth, previewHeight);
+    previewContext.imageSmoothingEnabled = true;
+    previewContext.imageSmoothingQuality = 'high';
+    previewContext.drawImage(sourceCanvas, 0, 0, previewWidth, previewHeight);
+  }, []);
+
   const render = useCallback((nextSelection: SelectionRect | null, previewMask?: PointGuidedSelection['mask']) => {
     const canvas = canvasRef.current;
     const image = imageRef.current;
@@ -168,7 +185,10 @@ export function PrintGarmentSelectionEditor({
     if (!context) return;
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    if (!nextSelection) return;
+    if (!nextSelection) {
+      syncMaskPreview();
+      return;
+    }
 
     if (previewMask && previewMask.data.length === previewMask.width * previewMask.height) {
       const displayMask = closePreviewMask(previewMask);
@@ -240,7 +260,12 @@ export function PrintGarmentSelectionEditor({
     context.setLineDash([10, 8]);
     context.strokeRect(nextSelection.x, nextSelection.y, nextSelection.width, nextSelection.height);
     context.restore();
-  }, []);
+    syncMaskPreview();
+  }, [syncMaskPreview]);
+
+  useEffect(() => {
+    if (ready) syncMaskPreview();
+  }, [guidedResult, ready, selection, selectionMode, syncMaskPreview]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -568,7 +593,11 @@ export function PrintGarmentSelectionEditor({
       footer={(
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>キャンセル</Button>
-          <Button onClick={apply} disabled={!ready || !selection || !selectionSource || tapProcessing}>
+          <Button
+            onClick={apply}
+            disabled={!ready || !selection || !selectionSource || tapProcessing}
+            data-testid="garment-mask-confirm"
+          >
             {selectionSource === 'tap' && guidedResult ? 'このマスクで確定' : '選択範囲をAIマスクへ渡す'}
           </Button>
         </div>
@@ -603,51 +632,84 @@ export function PrintGarmentSelectionEditor({
             範囲を調整
           </button>
         </div>
-        <div className="overflow-auto rounded-2xl border border-cyan-300/20 bg-neutral-950 p-3">
-          <div
-            ref={canvasWrapRef}
-            className={`relative mx-auto w-fit max-w-full ${ready ? (selectionMode === 'tap' ? 'cursor-pointer' : 'cursor-crosshair') : 'opacity-50'}`}
-            onPointerDown={selectionMode === 'tap' ? beginTap : beginCreate}
-            onPointerMove={updateSelection}
-            onPointerUp={endInteraction}
-            onPointerCancel={() => { interactionRef.current = null; }}
-          >
-            <canvas
-              ref={canvasRef}
-              className="block h-auto max-h-[min(50vh,32rem)] max-w-full touch-none object-contain"
-            />
-            {ready && selection && canvasSize.width > 0 && canvasSize.height > 0 && !(selectionSource === 'tap' && guidedResult?.mask) && (
-              <div className="pointer-events-none absolute inset-0">
-                <div
-                  className="pointer-events-auto absolute border-2 border-cyan-300 bg-cyan-300/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.16)]"
-                  style={{
-                    left: `${(selection.x / canvasSize.width) * 100}%`,
-                    top: `${(selection.y / canvasSize.height) * 100}%`,
-                    width: `${(selection.width / canvasSize.width) * 100}%`,
-                    height: `${(selection.height / canvasSize.height) * 100}%`,
-                  }}
-                  onPointerDown={selectionMode === 'tap' ? beginTap : beginMove}
-                >
-                  <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-black/65 px-2 py-1 text-[10px] font-medium text-white">
-                    中央をドラッグして移動
-                  </span>
-                  {resizeHandleDetails.map((handle) => (
-                    <button
-                      key={handle.id}
-                      type="button"
-                      aria-label={`選択範囲の${handle.label}を調整`}
-                      className="pointer-events-auto absolute z-10 h-7 w-7 touch-none select-none -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-cyan-400 shadow-lg shadow-cyan-950/50"
-                      style={{ left: `${handle.left}%`, top: `${handle.top}%`, cursor: handle.cursor }}
-                      onPointerDown={(event) => beginResize(event, handle.id)}
-                    />
-                  ))}
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.8fr)] lg:items-start">
+          <div className="overflow-auto rounded-2xl border border-cyan-300/20 bg-neutral-950 p-3">
+            <div
+              ref={canvasWrapRef}
+              className={`relative mx-auto w-fit max-w-full ${ready ? (selectionMode === 'tap' ? 'cursor-pointer' : 'cursor-crosshair') : 'opacity-50'}`}
+              onPointerDown={selectionMode === 'tap' ? beginTap : beginCreate}
+              onPointerMove={updateSelection}
+              onPointerUp={endInteraction}
+              onPointerCancel={() => { interactionRef.current = null; }}
+            >
+              <canvas
+                ref={canvasRef}
+                data-testid="garment-source-canvas"
+                className="block h-auto max-h-[min(50vh,32rem)] max-w-full touch-none object-contain"
+              />
+              {ready && selection && canvasSize.width > 0 && canvasSize.height > 0 && !(selectionSource === 'tap' && guidedResult?.mask) && (
+                <div className="pointer-events-none absolute inset-0">
+                  <div
+                    className="pointer-events-auto absolute border-2 border-cyan-300 bg-cyan-300/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.16)]"
+                    style={{
+                      left: `${(selection.x / canvasSize.width) * 100}%`,
+                      top: `${(selection.y / canvasSize.height) * 100}%`,
+                      width: `${(selection.width / canvasSize.width) * 100}%`,
+                      height: `${(selection.height / canvasSize.height) * 100}%`,
+                    }}
+                    onPointerDown={selectionMode === 'tap' ? beginTap : beginMove}
+                  >
+                    <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-black/65 px-2 py-1 text-[10px] font-medium text-white">
+                      中央をドラッグして移動
+                    </span>
+                    {resizeHandleDetails.map((handle) => (
+                      <button
+                        key={handle.id}
+                        type="button"
+                        aria-label={`選択範囲の${handle.label}を調整`}
+                        className="pointer-events-auto absolute z-10 h-7 w-7 touch-none select-none -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-cyan-400 shadow-lg shadow-cyan-950/50"
+                        style={{ left: `${handle.left}%`, top: `${handle.top}%`, cursor: handle.cursor }}
+                        onPointerDown={(event) => beginResize(event, handle.id)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+          <aside
+            className="rounded-xl border border-blue-400/25 bg-blue-950/25 p-3"
+            aria-label="認識範囲プレビュー"
+            data-testid="garment-mask-preview-panel"
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold text-blue-50">認識範囲プレビュー</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-blue-100/65">
+                  青い面が、確定前に確認するデザイン適用範囲です。
+                </p>
+              </div>
+              <span className="rounded-full border border-cyan-200/25 bg-cyan-300/10 px-2 py-1 text-[10px] font-semibold text-cyan-100">
+                {selectionSource === 'tap' && guidedResult?.mask ? 'タップ認識済み' : '確定前'}
+              </span>
+            </div>
+            <div className="flex min-h-32 items-center justify-center overflow-auto rounded-lg border border-blue-300/20 bg-neutral-950/70 p-2">
+              <canvas
+                ref={maskPreviewCanvasRef}
+                data-testid="garment-mask-preview-canvas"
+                className="block h-auto max-h-80 max-w-full object-contain"
+              />
+              {!ready && <span className="text-xs text-white/45">画像を読み込んでいます…</span>}
+            </div>
+            {selectionSource === 'tap' && guidedResult?.mask && (
+              <p className="mt-2 text-[11px] leading-relaxed text-cyan-100/75" data-testid="garment-mask-preview-note">
+                このプレビューを確認してから「このマスクで確定」を押してください。確定後も既存のAI切り抜き・手動fallbackを保持します。
+              </p>
+            )}
+          </aside>
         </div>
         {selectionSource === 'tap' && guidedResult?.mask && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-400/30 bg-blue-950/35 px-3 py-2 text-xs text-blue-50" role="status">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-400/30 bg-blue-950/35 px-3 py-2 text-xs text-blue-50" role="status" data-testid="garment-mask-confirmation">
             <span className="inline-flex items-center gap-2">
               <span aria-hidden="true" className="h-3 w-3 rounded-sm border border-cyan-100 bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.75)]" />
               青色の塗りつぶしが今回のタップ認識範囲です
