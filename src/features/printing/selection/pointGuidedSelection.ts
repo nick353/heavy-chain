@@ -520,7 +520,6 @@ export const buildPointGuidedSelection = ({
   const analysisArea = analysis.width * analysis.height;
   const borderBackground = estimateBorderBackground(analysis);
   let accepted: ReturnType<typeof floodRegion> | null = null;
-  let acceptedFromBorderBackground = false;
   if (borderBackground && borderBackground.spread <= BORDER_BACKGROUND_MAX_SPREAD) {
     const foregroundCandidate = floodForegroundFromBorderBackground({
       width: analysis.width,
@@ -534,7 +533,6 @@ export const buildPointGuidedSelection = ({
       const ratio = foregroundCandidate.selectedPixels / analysisArea;
       if (ratio >= MIN_REGION_RATIO && ratio <= MAX_REGION_RATIO && !foregroundCandidate.touchesFrame) {
         accepted = foregroundCandidate;
-        acceptedFromBorderBackground = true;
       }
     }
   }
@@ -563,19 +561,17 @@ export const buildPointGuidedSelection = ({
   const textureAwareMask = fillEnclosedMaskHoles({
     width: analysis.width,
     height: analysis.height,
-    mask: acceptedFromBorderBackground
-      ? accepted.mask
-      : preserveGarmentTexture({
-        width: analysis.width,
-        height: analysis.height,
-        data: analysis.data,
-        mask: accepted.mask,
-        minX: accepted.minX,
-        minY: accepted.minY,
-        maxX: accepted.maxX,
-        maxY: accepted.maxY,
-        padding,
-      }),
+    mask: preserveGarmentTexture({
+      width: analysis.width,
+      height: analysis.height,
+      data: analysis.data,
+      mask: accepted.mask,
+      minX: accepted.minX,
+      minY: accepted.minY,
+      maxX: accepted.maxX,
+      maxY: accepted.maxY,
+      padding,
+    }),
     minX: accepted.minX,
     minY: accepted.minY,
     maxX: accepted.maxX,
