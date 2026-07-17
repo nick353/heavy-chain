@@ -1589,6 +1589,15 @@ export function LightchainMaterialWorkbenchPage() {
                           : '選択範囲からAIマスクを作成しました。自動候補へ戻すには別の画像を選び直してください。'
                       : '服をタップすると、その服の候補範囲だけをAI切り抜きへ渡せます。細かい指定は範囲調整へ切り替えます。'}
                   </p>
+                  {printGarmentCutoutState === 'done' && printGarmentSelectionSource !== 'automatic' && (
+                    <div role="status" className="mt-3 rounded-lg border border-blue-300/30 bg-blue-950/35 px-3 py-2 text-[11px] leading-relaxed text-blue-50">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-sm border border-cyan-100 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.75)]" />
+                        認識範囲を確定済み
+                      </div>
+                      <p className="mt-1 text-blue-100/75">確定した服の内側だけにデザインを適用します。必要なら「服の選択をやり直す」で再確認できます。</p>
+                    </div>
+                  )}
                 </div>
               )}
               {printGarmentCutoutState === 'error' && (
@@ -1811,6 +1820,7 @@ export function LightchainMaterialWorkbenchPage() {
               <PrintingCompositionStage
                   garmentUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
                   garmentMaskUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
+                  garmentSelectionSource={printGarmentSelectionSource}
                   designClipMaskUrl={printableSurfaceEnabled ? printableSurfaceStageMaskUrl : null}
                   layers={stageLayers as Array<{
                     id: string;

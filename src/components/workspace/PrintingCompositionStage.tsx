@@ -21,6 +21,7 @@ export type PrintingLayer = {
 
 type StageSize = { width: number; height: number };
 type DragMode = 'move' | 'resize' | 'rotate';
+type GarmentSelectionSource = 'automatic' | 'tap' | 'range';
 
 type DragSession = {
   id: string;
@@ -108,6 +109,7 @@ function getFrameMaskStyle(maskUrl: string | null, stageSpace = false): CSSPrope
 export function PrintingCompositionStage({
   garmentUrl,
   garmentMaskUrl,
+  garmentSelectionSource = 'automatic',
   designClipMaskUrl,
   layers,
   selectedLayerId,
@@ -116,6 +118,7 @@ export function PrintingCompositionStage({
 }: {
   garmentUrl: string | null;
   garmentMaskUrl: string | null;
+  garmentSelectionSource?: GarmentSelectionSource;
   designClipMaskUrl?: string | null;
   layers: PrintingLayer[];
   selectedLayerId: string | null;
@@ -245,6 +248,7 @@ export function PrintingCompositionStage({
   const isProcessing = Boolean(processingLayer);
   const statusLayer = processingLayer || draftLayers.find((layer) => layer.cutoutState === 'error') || selectedLayer;
   const hasRenderableGarment = Boolean(garmentUrl && garmentMaskUrl);
+  const hasConfirmedGarmentMask = hasRenderableGarment && garmentSelectionSource !== 'automatic';
 
   return (
     <div
@@ -277,6 +281,17 @@ export function PrintingCompositionStage({
             draggable={false}
           />
         </div>
+      )}
+
+      {hasConfirmedGarmentMask && garmentMaskUrl && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-[1] opacity-90 drop-shadow-[0_0_3px_rgba(103,232,249,0.95)]"
+          style={{
+            ...getFrameMaskStyle(garmentMaskUrl),
+            background: 'rgba(37,128,255,0.34)',
+          }}
+        />
       )}
 
       {garmentMaskUrl ? (
@@ -404,6 +419,18 @@ export function PrintingCompositionStage({
       <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-[11px] font-medium tracking-[0.22em] text-neutral-300 backdrop-blur-md">
         Canva-style direct edit
       </div>
+      {hasConfirmedGarmentMask && (
+        <div
+          role="status"
+          className="pointer-events-none absolute bottom-4 left-4 max-w-[72%] rounded-2xl border border-cyan-200/35 bg-[#071a2a]/88 px-3 py-2 text-[11px] leading-relaxed text-cyan-50 shadow-lg shadow-cyan-950/30 backdrop-blur-md"
+        >
+          <div className="flex items-center gap-2 font-semibold">
+            <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.95)]" />
+            認識範囲を確認済み
+          </div>
+          <div className="mt-1 text-cyan-100/75">デザインは確定した服の内側だけに適用されます</div>
+        </div>
+      )}
       <div className="pointer-events-none absolute bottom-4 right-4 rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-[11px] leading-relaxed text-neutral-300 backdrop-blur-md">
         <div className="flex items-center gap-2"><Move3D className="h-3.5 w-3.5 text-[#a1b9b5]" /> ドラッグ</div>
         <div className="flex items-center gap-2"><Square className="h-3.5 w-3.5 text-[#a1b9b5]" /> 拡大</div>
