@@ -614,7 +614,7 @@ export function PrintGarmentSelectionEditor({
           >
             <canvas
               ref={canvasRef}
-              className="block h-auto max-h-[62vh] max-w-full touch-none object-contain"
+              className="block h-auto max-h-[min(50vh,32rem)] max-w-full touch-none object-contain"
             />
             {ready && selection && canvasSize.width > 0 && canvasSize.height > 0 && !(selectionSource === 'tap' && guidedResult?.mask) && (
               <div className="pointer-events-none absolute inset-0">
