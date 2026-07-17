@@ -20,6 +20,25 @@ const makeImage = (width: number, height: number, paint: (x: number, y: number) 
   return data;
 };
 
+const makeTransparentImage = (
+  width: number,
+  height: number,
+  paint: (x: number, y: number) => [number, number, number, number],
+) => {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * 4;
+      const [r, g, b, a] = paint(x, y);
+      data[offset] = r;
+      data[offset + 1] = g;
+      data[offset + 2] = b;
+      data[offset + 3] = a;
+    }
+  }
+  return data;
+};
+
 test('point-guided selection finds a bounded garment-colored component', () => {
   const width = 120;
   const height = 100;
@@ -169,6 +188,31 @@ test('point-guided selection fills enclosed texture holes on a non-uniform backg
       const inCollarHole = x >= 78 && x < 106 && y >= 24 && y < 38;
       if (inPrint || inCollarHole) return background;
       return [232, 220, 196];
+    }),
+    point: { x: 60, y: 80 },
+  });
+  assert.equal(result.source, 'color-region');
+  assert.ok(result.mask);
+  assert.equal(result.mask?.data[(60 * width) + 92], 1);
+  assert.equal(result.mask?.data[(30 * width) + 92], 0);
+  assert.equal(result.mask?.data[0], 0);
+});
+
+test('point-guided selection keeps printed garment texture on a transparent gradient background', () => {
+  const width = 180;
+  const height = 140;
+  const result = buildPointGuidedSelection({
+    width,
+    height,
+    data: makeTransparentImage(width, height, (x, y) => {
+      const backgroundLevel = 20 + Math.round((x / width) * 80) + Math.round((y / height) * 24);
+      const inShirt = x >= 42 && x < 138 && y >= 24 && y < 124;
+      const inPrint = x >= 82 && x < 102 && y >= 52 && y < 72;
+      const inCollarHole = x >= 78 && x < 106 && y >= 24 && y < 38;
+      if (inCollarHole) return [backgroundLevel, backgroundLevel, backgroundLevel, 0];
+      if (inPrint) return [8, 36, 180, 255];
+      if (inShirt) return [232, 220, 196, 255];
+      return [backgroundLevel, backgroundLevel, backgroundLevel, 0];
     }),
     point: { x: 60, y: 80 },
   });

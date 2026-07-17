@@ -33,12 +33,17 @@ const UNIFORM_BACKGROUND_MAX_SPREAD = 36;
 const BACKGROUND_DISTANCE_THRESHOLD = 22;
 const BORDER_BACKGROUND_MAX_SPREAD = 42;
 const BACKGROUND_FLOOD_MAX_DISTANCE = 48;
+const TRANSPARENT_BACKGROUND_MAX_ALPHA = 16;
 
 type Rgb = { r: number; g: number; b: number };
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 const pixelOffset = (x: number, y: number, width: number) => (y * width + x) * 4;
+
+const isTransparentPixel = (data: Uint8ClampedArray, width: number, x: number, y: number) => (
+  data[pixelOffset(x, y, width) + 3] <= TRANSPARENT_BACKGROUND_MAX_ALPHA
+);
 
 const readRgb = (data: Uint8ClampedArray, width: number, x: number, y: number): Rgb => {
   const offset = pixelOffset(x, y, width);
@@ -103,7 +108,8 @@ const floodForegroundFromBorderBackground = ({
     Math.min(BACKGROUND_FLOOD_MAX_DISTANCE, background.spread + 8),
   );
   const isBackground = (x: number, y: number) => (
-    colorDistance(readRgb(data, width, x, y), background.color) <= backgroundDistance
+    isTransparentPixel(data, width, x, y)
+    || colorDistance(readRgb(data, width, x, y), background.color) <= backgroundDistance
   );
 
   const backgroundVisited = new Uint8Array(width * height);
@@ -208,6 +214,28 @@ const floodForegroundFromBorderBackground = ({
     touchesFrame,
     mask: boundedForeground,
   };
+};
+
+const hasTransparentBorder = ({
+  width,
+  height,
+  data,
+}: {
+  width: number;
+  height: number;
+  data: Uint8ClampedArray;
+}) => {
+  const border = Math.max(1, Math.round(Math.min(width, height) * 0.04));
+  let transparent = 0;
+  let total = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (x >= border && x < width - border && y >= border && y < height - border) continue;
+      total += 1;
+      if (isTransparentPixel(data, width, x, y)) transparent += 1;
+    }
+  }
+  return total > 0 && transparent / total >= 0.6;
 };
 
 const averageSeedColor = (data: Uint8ClampedArray, width: number, height: number, x: number, y: number): Rgb => {
@@ -519,8 +547,9 @@ export const buildPointGuidedSelection = ({
   const seedColor = averageSeedColor(analysis.data, analysis.width, analysis.height, seedX, seedY);
   const analysisArea = analysis.width * analysis.height;
   const borderBackground = estimateBorderBackground(analysis);
+  const transparentBorder = hasTransparentBorder(analysis);
   let accepted: ReturnType<typeof floodRegion> | null = null;
-  if (borderBackground && borderBackground.spread <= BORDER_BACKGROUND_MAX_SPREAD) {
+  if (borderBackground && (borderBackground.spread <= BORDER_BACKGROUND_MAX_SPREAD || transparentBorder)) {
     const foregroundCandidate = floodForegroundFromBorderBackground({
       width: analysis.width,
       height: analysis.height,
@@ -558,25 +587,28 @@ export const buildPointGuidedSelection = ({
   if (!accepted) return fallbackSelection({ width, height, point });
 
   const padding = Math.max(2, Math.round(Math.min(analysis.width, analysis.height) * 0.035));
-  const textureAwareMask = fillEnclosedMaskHoles({
+  const preservedMask = preserveGarmentTexture({
     width: analysis.width,
     height: analysis.height,
-    mask: preserveGarmentTexture({
-      width: analysis.width,
-      height: analysis.height,
-      data: analysis.data,
-      mask: accepted.mask,
-      minX: accepted.minX,
-      minY: accepted.minY,
-      maxX: accepted.maxX,
-      maxY: accepted.maxY,
-      padding,
-    }),
+    data: analysis.data,
+    mask: accepted.mask,
     minX: accepted.minX,
     minY: accepted.minY,
     maxX: accepted.maxX,
     maxY: accepted.maxY,
+    padding,
   });
+  const textureAwareMask = transparentBorder
+    ? preservedMask
+    : fillEnclosedMaskHoles({
+      width: analysis.width,
+      height: analysis.height,
+      mask: preservedMask,
+      minX: accepted.minX,
+      minY: accepted.minY,
+      maxX: accepted.maxX,
+      maxY: accepted.maxY,
+    });
   const x = Math.max(0, accepted.minX - padding) / analysis.scale;
   const y = Math.max(0, accepted.minY - padding) / analysis.scale;
   const right = Math.min(analysis.width - 1, accepted.maxX + padding + 1) / analysis.scale;
