@@ -385,8 +385,25 @@ test('fabric modulation can add bounded local fold contrast when stage dimension
   garment[(4 * 4) + 2] = 180;
   const output = applyFabricLuminanceModulation({ designRgba: design, garmentRgba: garment, width: 3, height: 3 });
   assert.ok(output[4 * 4] > output[0]);
-  assert.ok(output[4 * 4] <= 132);
+  assert.ok(output[4 * 4] <= 148);
   assert.deepEqual(Array.from(output, (_, index) => index % 4 === 3 ? output[index] : undefined).filter((value) => value !== undefined), Array(9).fill(255));
+});
+
+test('fabric fold sampling scales with output size without changing alpha', () => {
+  const width = 720;
+  const height = 720;
+  const design = new Uint8ClampedArray(width * height * 4);
+  const garment = new Uint8ClampedArray(width * height * 4);
+  for (let pixel = 0; pixel < width * height; pixel += 1) {
+    const offset = pixel * 4;
+    design.set([80, 80, 80, 255], offset);
+    garment.set([120, 120, 120, 255], offset);
+  }
+  const centerPixel = (360 * width) + 360;
+  garment.set([20, 20, 20, 255], (centerPixel + 4) * 4);
+  const output = applyFabricLuminanceModulation({ designRgba: design, garmentRgba: garment, width, height });
+  assert.ok(output[centerPixel * 4] > output[((centerPixel - 40) * 4)]);
+  assert.equal(output[(centerPixel * 4) + 3], 255);
 });
 
 test('fabric modulation reveals garment shading through black artwork', () => {
@@ -401,8 +418,30 @@ test('fabric modulation reveals garment shading through black artwork', () => {
   const output = applyFabricLuminanceModulation({ designRgba: design, garmentRgba: garment });
   assert.ok(output[0] > 0);
   assert.ok(output[4] > output[0]);
+  assert.ok(output[4] - output[0] >= 20, 'fabric lighting should remain visible at result-card scale');
   assert.equal(output[3], 255);
   assert.equal(output[7], 255);
+});
+
+test('fabric modulation produces a visible bounded difference from exact on a plain light garment', () => {
+  const design = new Uint8ClampedArray([
+    16, 24, 32, 255,
+    180, 64, 48, 255,
+  ]);
+  const garment = new Uint8ClampedArray([
+    214, 214, 214, 255,
+    246, 246, 246, 255,
+  ]);
+  const output = applyFabricLuminanceModulation({ designRgba: design, garmentRgba: garment });
+  assert.ok(output[0] - design[0] >= 20, 'dark artwork must visibly inherit light cloth shading');
+  assert.ok(output[4] - design[4] >= 10, 'coloured artwork must visibly inherit light cloth shading');
+  assert.deepEqual([output[3], output[7]], [255, 255]);
+  for (let index = 0; index < output.length; index += 4) {
+    for (let channel = 0; channel < 3; channel += 1) {
+      assert.ok(Math.abs(output[index + channel] - design[index + channel]) <= 48);
+    }
+  }
+  for (const value of output) assert.ok(value >= 0 && value <= 255);
 });
 
 test('source-over helper matches the expected half-alpha exact composite', () => {

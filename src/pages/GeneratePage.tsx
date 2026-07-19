@@ -71,6 +71,13 @@ import {
   type LightchainCategoryId,
 } from '../lib/lightchainParityCatalog';
 import { normalizeModelMatrixSemanticVerification, type ModelMatrixSemanticVerification } from '../lib/modelMatrixVerification';
+import {
+  createTrustedPatternsResultProvenance,
+  isTrustedPatternsResultProvenance,
+  resolveCompletedPatternsResultProvenance,
+  type TrustedPatternsResultProvenance,
+  writePrintDesignHandoff,
+} from '../features/printing/selection/printDesignHandoff';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -614,7 +621,16 @@ interface GeneratedResult {
   referenceSummary?: string | null;
   modelUsed?: string | null;
   checkedAt?: string | null;
+  printDesignProvenance?: TrustedPatternsResultProvenance;
 }
+
+const isPrintEligibleDesignGachaResult = (image: GeneratedResult) => (
+  isTrustedPatternsResultProvenance(image.printDesignProvenance)
+  && image.artifactKind !== 'planning_brief'
+  && Boolean(image.jobId)
+  && Boolean(image.imageId || image.storagePath)
+  && image.imageUrl.startsWith('https://')
+);
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
 const generationProvider = String(import.meta.env.VITE_GENERATION_PROVIDER || 'gemini').toLowerCase();
@@ -1128,6 +1144,21 @@ export function GeneratePage() {
     ? generateWorkbenchByFeature[selectedFeature.id] ?? null
     : null;
   const sourceReadback = hydrateGenerationIntentSource(searchParams);
+  const currentGenerationContextRef = useRef<{
+    featureId: string | undefined;
+    sourceReadback: unknown;
+  }>({
+    featureId: selectedFeature?.id,
+    sourceReadback,
+  });
+  const routeFeatureParam = searchParams.get('feature');
+  const renderedFeatureId = routeFeatureParam
+    ? findFeatureFromQuery(routeFeatureParam)?.id
+    : selectedFeature?.id;
+  currentGenerationContextRef.current = {
+    featureId: renderedFeatureId,
+    sourceReadback,
+  };
   const lightchainCompat = hydrateLightchainCompatContext(searchParams);
   const patternContext = sourceReadback?.sourceWorkspace === 'patterns'
     ? hydratePatternGenerationContext(searchParams)
@@ -1482,7 +1513,11 @@ export function GeneratePage() {
     };
   };
 
-  const designGachaVariationToResult = async (variation: any, index: number, jobId?: string | null): Promise<GeneratedResult> => {
+  const designGachaVariationToResult = async (
+    variation: any,
+    index: number,
+    jobId?: string | null,
+  ): Promise<GeneratedResult> => {
     let imageUrl = variation.imageUrl || '';
     if (!imageUrl && variation.storagePath) {
       const { data, error } = await supabase.storage
@@ -1649,6 +1684,16 @@ export function GeneratePage() {
       setSelectedImageIndex(null);
       setIsGenerating(true);
       debugLog('Generation started', { selectedFeature: selectedFeature?.id });
+      const startedPrintDesignProvenance = createTrustedPatternsResultProvenance({
+        featureId: selectedFeature?.id,
+        sourceReadback,
+        generationStartedAt: Date.now(),
+        generationLane: geminiGenerationMode
+          ? 'hosted-gemini'
+          : localRunwayWorkerMode || generationProvider === 'planning'
+            ? undefined
+            : 'edge-design-gacha',
+      });
 
       try {
       const effectiveReferenceImageUrl = referenceImage?.url || materialReference.imageUrl || null;
@@ -1665,13 +1710,27 @@ export function GeneratePage() {
       let data: any;
       let error: any;
       let newGeneratedImages: GeneratedResult[] = [];
+      const stampGeneratedImagesForCurrentContext = (images: GeneratedResult[]): GeneratedResult[] => {
+        const provenance = resolveCompletedPatternsResultProvenance({
+          startedProvenance: startedPrintDesignProvenance,
+          currentFeatureId: currentGenerationContextRef.current.featureId,
+          currentSourceReadback: currentGenerationContextRef.current.sourceReadback,
+        });
+        return images.map((image) => {
+          const { printDesignProvenance: _untrustedProvenance, ...unstampedImage } = image;
+          if (!provenance || image.artifactKind === 'planning_brief') return unstampedImage;
+          return { ...unstampedImage, printDesignProvenance: provenance };
+        });
+      };
       const replaceGeneratedImages = (images: GeneratedResult[]) => {
-        newGeneratedImages = images;
-        setGeneratedImages(images);
+        const stampedImages = stampGeneratedImagesForCurrentContext(images);
+        newGeneratedImages = stampedImages;
+        setGeneratedImages(stampedImages);
       };
       const prependGeneratedImages = (images: GeneratedResult[]) => {
-        newGeneratedImages = images;
-        setGeneratedImages(prev => [...images, ...prev]);
+        const stampedImages = stampGeneratedImagesForCurrentContext(images);
+        newGeneratedImages = stampedImages;
+        setGeneratedImages(prev => [...stampedImages, ...prev]);
       };
       const textOverlay = overlayEnabled && overlayText.trim() ? {
         text: overlayText.trim(),
@@ -2129,11 +2188,16 @@ export function GeneratePage() {
             }
           }));
           if (data?.variations) {
-            replaceGeneratedImages(await Promise.all(
+            const materializedDesignGachaResults = await Promise.all(
               data.variations.map((variation: any, index: number) =>
-                designGachaVariationToResult(variation, index, data.jobId)
+                designGachaVariationToResult(
+                  variation,
+                  index,
+                  data.jobId,
+                )
               )
-            ));
+            );
+            replaceGeneratedImages(materializedDesignGachaResults);
           }
           break;
 
@@ -2680,6 +2744,26 @@ export function GeneratePage() {
     };
     sessionStorage.setItem(GENERATED_CANVAS_HANDOFF_KEY, JSON.stringify(payload));
     navigate('/canvas/new?handoff=generated');
+  };
+
+  const handleSendDesignGachaResultToPrinting = (image: GeneratedResult) => {
+    const result = writePrintDesignHandoff(window.sessionStorage, {
+      brandId: currentBrand?.id || '',
+      resultProvenance: image.printDesignProvenance,
+      artifactKind: image.artifactKind,
+      imageUrl: image.imageUrl,
+      label: image.label,
+      prompt: image.prompt,
+      resultId: image.id,
+      jobId: image.jobId,
+      imageId: image.imageId,
+      storagePath: image.storagePath,
+    });
+    if (!result.ok) {
+      toast.error('この結果はプリント素材として引き継げません。Patternsで生成した保存済み画像を選んでください。');
+      return;
+    }
+    navigate('/lightchain/printing-image?handoff=patterns');
   };
 
   // Render generation count selector
@@ -4833,12 +4917,24 @@ export function GeneratePage() {
                         <ModelMatrixVerificationDetails image={image} />
                       </div>
                     )}
+                    {isPrintEligibleDesignGachaResult(image) && (
+                      <div className="relative z-20 border-t border-cyan-200/20 bg-cyan-950/90 p-3">
+                        <button
+                          onClick={() => handleSendDesignGachaResultToPrinting(image)}
+                          className="flex w-full items-center justify-center gap-2 rounded-lg border border-cyan-400/50 bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-cyan-500"
+                          data-testid="design-gacha-use-in-print"
+                        >
+                          <ArrowRight className="w-4 h-4" />
+                          プリントで使う
+                        </button>
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
                       <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
                         <p className="text-white text-sm line-clamp-2 mb-3 opacity-90">
                           {image.prompt}
                         </p>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <button
                             onClick={() => handleDownload(image.imageUrl, `${image.label || 'planning-brief'}.${getDataUrlExtension(image.imageUrl, image.artifactKind === 'planning_brief' ? 'svg' : 'png')}`)}
                             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white rounded-lg text-sm font-medium text-neutral-900 hover:bg-neutral-100 transition-colors"

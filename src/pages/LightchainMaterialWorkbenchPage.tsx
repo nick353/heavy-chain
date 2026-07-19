@@ -49,6 +49,10 @@ import {
   type PrintDesignLayerOrderAction,
 } from '../features/printing/selection/designLayerSelection';
 import {
+  consumePrintDesignHandoff,
+  createTrustedBlankGarmentSelection,
+} from '../features/printing/selection/printDesignHandoff';
+import {
   settleComposition,
   waitForDisplayableImage,
 } from '../features/printing/history/progressivePrintGeneration';
@@ -693,6 +697,7 @@ export function LightchainMaterialWorkbenchPage() {
   const [printDesignMaskRevisions, setPrintDesignMaskRevisions] = useState<Record<number, number>>({});
   const [printDesignCutoutStates, setPrintDesignCutoutStates] = useState<Record<number, CutoutState>>({});
   const [printDesignCutoutErrors, setPrintDesignCutoutErrors] = useState<Record<number, string>>({});
+  const printDesignHandoffConsumedRef = useRef(false);
   const [printGarmentSelectionOpen, setPrintGarmentSelectionOpen] = useState(false);
   const [printMaskEditorTarget, setPrintMaskEditorTarget] = useState<PrintMaskEditorTarget | null>(null);
   const [printMaskEditorError, setPrintMaskEditorError] = useState<string | null>(null);
@@ -1920,6 +1925,34 @@ export function LightchainMaterialWorkbenchPage() {
     }
   };
 
+  useEffect(() => {
+    if (!isPrinting || !currentBrand?.id || printDesignHandoffConsumedRef.current) return;
+    printDesignHandoffConsumedRef.current = true;
+    const handoff = consumePrintDesignHandoff(window.sessionStorage, currentBrand.id);
+    if (handoff.status !== 'accepted') return;
+    const importedDesign: SelectedImage = {
+      url: handoff.design.imageUrl,
+      referenceType: 'pattern',
+    };
+    void addDesigns([...printDesigns, importedDesign]);
+    toast.success('Patternsの生成結果をプリント画像に追加しました');
+    // Consume is intentionally one-shot for the current brand and route entry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBrand?.id, isPrinting]);
+
+  const selectPrintGarment = (image: SelectedImage | null) => {
+    cancelScheduledPrintDesignReturn();
+    printDesignReturnIntentRef.current = null;
+    invalidatePrintableSuggestion();
+    setPrintPlacementConfirmed(false);
+    if (placedPrintDesignLayers.length > 0) openPrintPlacementSession();
+    setPrintGarmentCutoutSourceUrl(null);
+    setPrintGarmentSelectionSource('automatic');
+    setPrintGarmentMaskExplicitlyConfirmed(false);
+    setPrintGarmentSegmentationTarget(DEFAULT_GARMENT_SEGMENTATION_TARGET);
+    setPrintGarment(image);
+  };
+
   const openGarmentMaskEditor = async () => {
     if (!printGarment) return;
     invalidatePrintableSuggestion();
@@ -2526,6 +2559,22 @@ export function LightchainMaterialWorkbenchPage() {
             </div>
           ) : (
             <div className="space-y-4">
+              <button
+                type="button"
+                onClick={() => selectPrintGarment(createTrustedBlankGarmentSelection())}
+                className="flex w-full items-center gap-3 rounded-2xl border border-cyan-300/35 bg-gradient-to-r from-cyan-300/15 to-blue-400/10 p-3 text-left text-cyan-50 transition hover:border-cyan-200/60 hover:from-cyan-300/20 hover:to-blue-400/15"
+                data-testid="use-trusted-blank-garment"
+              >
+                <img
+                  src="/assets/printing/blank-white-tshirt.svg"
+                  alt="無地の白いTシャツ"
+                  className="h-16 w-14 rounded-lg border border-white/15 bg-slate-200 object-cover"
+                />
+                <span>
+                  <span className="block text-sm font-semibold">無地Tシャツを使う（推奨）</span>
+                  <span className="mt-1 block text-[11px] leading-relaxed text-cyan-100/65">装飾のない同梱素材です。ギャラリーやアップロードも引き続き選べます。</span>
+                </span>
+              </button>
               <ImageSelector
                 label="参考画像をアップロードしてください"
                 required
@@ -2534,18 +2583,7 @@ export function LightchainMaterialWorkbenchPage() {
                 confirmGallerySelection
                 galleryConfirmLabel="素材を追加"
                 selectionTestId="print-garment-selector"
-                onChange={(image) => {
-                  cancelScheduledPrintDesignReturn();
-                  printDesignReturnIntentRef.current = null;
-                  invalidatePrintableSuggestion();
-                  setPrintPlacementConfirmed(false);
-                  if (placedPrintDesignLayers.length > 0) openPrintPlacementSession();
-                  setPrintGarmentCutoutSourceUrl(null);
-                  setPrintGarmentSelectionSource('automatic');
-                  setPrintGarmentMaskExplicitlyConfirmed(false);
-                  setPrintGarmentSegmentationTarget(DEFAULT_GARMENT_SEGMENTATION_TARGET);
-                  setPrintGarment(image);
-                }}
+                onChange={selectPrintGarment}
                 allowedReferenceTypes={['base']}
                 defaultReferenceType="base"
                 hint="服・Tシャツ・パーカーなどの参考画像を入れます"

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100" role="img" aria-labelledby="title desc">
+  <title id="title">無地の白いTシャツ</title>
+  <desc id="desc">印刷位置を試すための、正面向きで装飾のない白いTシャツ</desc>
+  <defs>
+    <linearGradient id="shirt" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.48" stop-color="#f8fafc"/>
+      <stop offset="1" stop-color="#e5e7eb"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#0f172a" flood-opacity=".23"/>
+    </filter>
+  </defs>
+  <rect width="900" height="1100" fill="#d9dee7"/>
+  <ellipse cx="450" cy="1000" rx="300" ry="45" fill="#64748b" opacity=".22"/>
+  <path filter="url(#shadow)" fill="url(#shirt)" stroke="#cbd5e1" stroke-width="5" stroke-linejoin="round"
+    d="M318 166c35 45 76 67 132 67s97-22 132-67l159 70 105 228-136 68-51-101v531c-126 39-252 39-378 0V431l-51 101-136-68 105-228 159-70z"/>
+  <path d="M318 166c27 80 237 97 264 0" fill="none" stroke="#d1d5db" stroke-width="12"/>
+  <path d="M360 184c19 43 48 64 90 64s71-21 90-64" fill="#cbd5e1" opacity=".55"/>
+  <path d="M281 431v531M619 431v531" stroke="#cbd5e1" stroke-width="3" opacity=".7"/>
+  <path d="M112 459l117 55M788 459l-117 55" stroke="#cbd5e1" stroke-width="4" opacity=".75"/>
+  <path d="M281 950c112 27 226 27 338 0" fill="none" stroke="#cbd5e1" stroke-width="5" opacity=".8"/>
+</svg>

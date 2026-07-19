@@ -315,6 +315,13 @@ export const applyFabricLuminanceModulation = ({
     && (width as number) > 0
     && (height as number) > 0
     && (width as number) * (height as number) * 4 === garmentRgba.length;
+  const foldSampleRadius = hasGrid
+    ? Math.max(1, Math.round(Math.min(width as number, height as number) / 180))
+    : 1;
+  const modulateChannel = (channel: number, factor: number, highlight: number) => clampByte(Math.max(
+    channel - 48,
+    Math.min(channel + 48, (channel * factor) + highlight),
+  ));
   const output = new Uint8ClampedArray(designRgba);
   for (let index = 0; index < output.length; index += 4) {
     if (output[index + 3] === 0) continue;
@@ -326,7 +333,12 @@ export const applyFabricLuminanceModulation = ({
       const y = Math.floor(pixel / (width as number));
       let neighbourSum = 0;
       let neighbourWeight = 0;
-      for (const [offsetX, offsetY] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+      for (const [offsetX, offsetY] of [
+        [-foldSampleRadius, 0],
+        [foldSampleRadius, 0],
+        [0, -foldSampleRadius],
+        [0, foldSampleRadius],
+      ] as const) {
         const nextX = x + offsetX;
         const nextY = y + offsetY;
         if (nextX < 0 || nextX >= (width as number) || nextY < 0 || nextY >= (height as number)) continue;
@@ -346,11 +358,16 @@ export const applyFabricLuminanceModulation = ({
     // folds to remain visible. A pure multiply leaves black designs unchanged,
     // making the fabric result indistinguishable from exact placement.
     const normalizedLuminance = luminance / 255;
-    const factor = Math.min(1.14, Math.max(0.72, 0.72 + (normalizedLuminance * 0.34) + (foldContrast * 0.1)));
-    const fabricHighlight = (normalizedLuminance * 20) + (Math.max(0, foldContrast) * 8);
-    output[index] = clampByte((output[index] * factor) + fabricHighlight);
-    output[index + 1] = clampByte((output[index + 1] * factor) + fabricHighlight);
-    output[index + 2] = clampByte((output[index + 2] * factor) + fabricHighlight);
+    // Keep the artwork recognisable while making the cloth result legible at
+    // result-card scale. The wider bounded range carries both broad garment
+    // lighting and local folds into saturated artwork, and the additive carry
+    // lets those folds remain visible in black ink without changing alpha or
+    // geometry. Exact mode deliberately bypasses this path.
+    const factor = Math.min(1.18, Math.max(0.62, 0.62 + (normalizedLuminance * 0.42) + (foldContrast * 0.16)));
+    const fabricHighlight = (normalizedLuminance * 34) + (Math.max(0, foldContrast) * 12);
+    output[index] = modulateChannel(output[index], factor, fabricHighlight);
+    output[index + 1] = modulateChannel(output[index + 1], factor, fabricHighlight);
+    output[index + 2] = modulateChannel(output[index + 2], factor, fabricHighlight);
   }
   return output;
 };
