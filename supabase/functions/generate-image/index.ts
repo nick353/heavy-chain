@@ -10,6 +10,7 @@ import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 import { generateGeminiImage, geminiImageArtifact } from '../_shared/geminiImage.ts';
 import { generateOpenAiImage, openAiImageArtifact } from '../_shared/openaiImage.ts';
 import { generateMockImage, mockImageArtifact } from '../_shared/mockImage.ts';
+import { sanitizePrintDesignAssetPurpose } from '../_shared/printDesignAssetPurpose.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,7 +42,7 @@ interface GenerateRequest {
 const SOURCE_CONFIG = {
   studio: { label: 'Fashion Studio', resumePath: '/studio', versions: ['studio-selection-local-v1'] },
   models: { label: 'モデルライブラリ', resumePath: '/models', versions: ['model-library-local-v1'] },
-  patterns: { label: '柄・グラフィック', resumePath: '/patterns', versions: ['pattern-preview-local-v1'] },
+  patterns: { label: '柄・グラフィック', resumePath: '/patterns/workbench', versions: ['pattern-preview-local-v1'] },
   video: { label: 'Video Workstation', resumePath: '/video', versions: ['video-storyboard-local-v1'] },
   lab: { label: 'Lab', resumePath: '/lab', versions: ['lab-evaluation-local-v1'] },
 } as const
@@ -370,6 +371,7 @@ serve(async (req) => {
       compositionPreview,
     ])
     const sourceMetadata = buildSourceMetadata(sourceReadback, generationIntent)
+    const printDesignPurpose = sanitizePrintDesignAssetPurpose(sourceMetadata)
     const materialMetadata = sanitizeMaterialGenerationMetadata({
       materialReferences,
       layerPlan,
@@ -415,6 +417,7 @@ serve(async (req) => {
       ...(isRecord(campaignMeta) ? { campaignMeta } : {}),
       ...(isRecord(textOverlay) ? { textOverlay } : {}),
       ...(sourceMetadata ?? {}),
+      ...(printDesignPurpose ?? {}),
       ...(materialMetadata ?? {}),
       ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
       ...(localWorkerRequest ? {
@@ -613,6 +616,7 @@ serve(async (req) => {
             providerTaskId: generatedResult.taskId,
             requestId,
             ...(sourceMetadata ?? {}),
+            ...(printDesignPurpose ?? {}),
             ...(materialMetadata ?? {}),
             ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
           } as any,

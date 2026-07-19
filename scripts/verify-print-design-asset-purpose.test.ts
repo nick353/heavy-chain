@@ -12,6 +12,7 @@ const gallerySelector = fs.readFileSync('src/components/GallerySelector.tsx', 'u
 const imageSelector = fs.readFileSync('src/components/ImageSelector.tsx', 'utf8');
 const printingPage = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
 const designGacha = fs.readFileSync('supabase/functions/design-gacha/index.ts', 'utf8');
+const generateImage = fs.readFileSync('supabase/functions/generate-image/index.ts', 'utf8');
 const migration = fs.readFileSync(
   'supabase/migrations/20260719190000_backfill_explicit_pattern_print_design_purpose.sql',
   'utf8',
@@ -78,6 +79,13 @@ test('producer sanitizer tags only a validated Patterns-origin design-gacha inte
   assert.match(designGacha, /sanitizePrintDesignAssetPurpose\(finalSourceMetadata\)/);
   assert.match(designGacha, /patterns: \{ label: '柄・グラフィック', resumePath: '\/patterns\/workbench'/);
   assert.doesNotMatch(designGacha, /assetPurpose:\s*['"]print-design['"]/);
+});
+
+test('the active unified generate-image producer preserves the same strict purpose contract', () => {
+  assert.match(generateImage, /sanitizePrintDesignAssetPurpose\(sourceMetadata\)/);
+  assert.match(generateImage, /patterns: \{ label: '柄・グラフィック', resumePath: '\/patterns\/workbench'/);
+  assert.ok((generateImage.match(/\.\.\.\(printDesignPurpose \?\? \{\}\)/g) ?? []).length >= 2);
+  assert.doesNotMatch(generateImage, /assetPurpose:\s*['"]print-design['"]/);
 });
 
 test('migration is idempotent, high-confidence, and carries an exact rollback marker', () => {
