@@ -198,7 +198,11 @@ export function PrintGarmentSelectionEditor({
     previewContext.drawImage(sourceCanvas, 0, 0, previewWidth, previewHeight);
   }, []);
 
-  const render = useCallback((nextSelection: SelectionRect | null, previewMask?: PointGuidedSelection['mask']) => {
+  const render = useCallback((
+    nextSelection: SelectionRect | null,
+    previewMask?: PointGuidedSelection['mask'],
+    renderMode: SelectionMode = 'tap',
+  ) => {
     const canvas = canvasRef.current;
     const image = imageRef.current;
     if (!canvas || !image) return;
@@ -286,12 +290,14 @@ export function PrintGarmentSelectionEditor({
       context.restore();
     }
 
-    context.save();
-    context.strokeStyle = '#67e8f9';
-    context.lineWidth = Math.max(2, canvas.width / 500);
-    context.setLineDash([10, 8]);
-    context.strokeRect(nextSelection.x, nextSelection.y, nextSelection.width, nextSelection.height);
-    context.restore();
+    if (renderMode === 'range') {
+      context.save();
+      context.strokeStyle = '#67e8f9';
+      context.lineWidth = Math.max(2, canvas.width / 500);
+      context.setLineDash([10, 8]);
+      context.strokeRect(nextSelection.x, nextSelection.y, nextSelection.width, nextSelection.height);
+      context.restore();
+    }
     syncMaskPreview();
   }, [syncMaskPreview]);
 
@@ -358,7 +364,7 @@ export function PrintGarmentSelectionEditor({
   ) => {
     setSelection(nextSelection);
     if (source) setSelectionSource(source);
-    render(nextSelection, previewMask);
+    render(nextSelection, previewMask, source === 'range' ? 'range' : 'tap');
   };
 
   const updateSelection = (event: React.PointerEvent<HTMLElement>) => {
@@ -586,6 +592,12 @@ export function PrintGarmentSelectionEditor({
   const chooseTapMode = () => {
     setSelectionMode('tap');
     setError(null);
+    if (selectionSource === 'range') {
+      setSelection(null);
+      setSelectionSource(null);
+      setGuidedResult(null);
+      render(null);
+    }
   };
 
   const chooseRangeMode = () => {
@@ -594,14 +606,14 @@ export function PrintGarmentSelectionEditor({
     if (selectionSource === 'tap' && selection) {
       setGuidedResult(null);
       setSelectionSource('range');
-      render(selection);
+      render(selection, undefined, 'range');
     }
   };
 
   const chooseMaskDisplayMode = (nextMode: MaskDisplayMode) => {
     maskDisplayModeRef.current = nextMode;
     setMaskDisplayMode(nextMode);
-    render(selection, guidedResult?.mask);
+    render(selection, guidedResult?.mask, selectionMode);
   };
 
   const apply = () => {
@@ -652,8 +664,8 @@ export function PrintGarmentSelectionEditor({
             }
             data-testid="garment-mask-confirm"
           >
-            {selectionSource === 'tap'
-              ? guidedResult?.mask ? 'このマスクで確定' : '範囲を調整してください'
+            {selectionMode === 'tap'
+              ? selectionSource === 'tap' && guidedResult?.mask ? '決定' : '服をタップしてください'
               : '選択範囲をAIマスクへ渡す'}
           </Button>
         </div>
@@ -661,7 +673,7 @@ export function PrintGarmentSelectionEditor({
     >
       <div className="space-y-4">
         <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-300">
-          「服をタップ（推奨）」で服の位置を1回押すと候補範囲を認識します。青色の範囲が今回のタップから作った確認用プレビューです。内容を確認して「このマスクで確定」を押すと、既存のAIマスク処理へ渡します。細かく指定するときは「範囲を調整」に切り替えます。
+          「服をタップ（推奨）」で服の位置を1回押すと候補範囲を認識します。青色の範囲が今回のタップから作った確認用プレビューです。内容を確認して「決定」を押すと、既存のAIマスク処理へ渡します。細かく指定するときは「範囲を調整」に切り替えます。
         </p>
         {error && <p role="alert" className="text-sm text-rose-500">{error}</p>}
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="服の選択方法">
@@ -726,7 +738,7 @@ export function PrintGarmentSelectionEditor({
                 data-testid="garment-source-canvas"
                 className="block h-auto max-h-[min(50vh,32rem)] max-w-full touch-none object-contain"
               />
-              {ready && selection && canvasSize.width > 0 && canvasSize.height > 0 && !(selectionSource === 'tap' && guidedResult?.mask) && (
+              {selectionMode === 'range' && ready && selection && canvasSize.width > 0 && canvasSize.height > 0 && (
                 <div className="pointer-events-none absolute inset-0">
                   <div
                     className="pointer-events-auto absolute border-2 border-cyan-300 bg-cyan-300/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.16)]"
@@ -736,7 +748,7 @@ export function PrintGarmentSelectionEditor({
                       width: `${(selection.width / canvasSize.width) * 100}%`,
                       height: `${(selection.height / canvasSize.height) * 100}%`,
                     }}
-                    onPointerDown={selectionMode === 'tap' ? beginTap : beginMove}
+                    onPointerDown={beginMove}
                   >
                     <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-black/65 px-2 py-1 text-[10px] font-medium text-white">
                       中央をドラッグして移動
@@ -811,7 +823,7 @@ export function PrintGarmentSelectionEditor({
             )}
             {selectionSource === 'tap' && guidedResult?.mask && (
               <p className="mt-2 text-[11px] leading-relaxed text-cyan-100/75" data-testid="garment-mask-preview-note">
-                このプレビューを確認してから「このマスクで確定」を押してください。確定後も既存のAI切り抜き・手動fallbackを保持します。
+                このプレビューを確認してから「決定」を押してください。確定後も既存のAI切り抜き・手動fallbackを保持します。
               </p>
             )}
           </aside>

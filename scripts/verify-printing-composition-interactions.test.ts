@@ -260,6 +260,8 @@ test('read-only composition keeps artwork but omits every placement mutator and 
 });
 
 test('desktop printing keeps the primary composition and generate action pinned beside scrolling history', () => {
+  assert.match(page, /className=\{`\$\{isPrinting \? 'max-w-\[1600px\]' : 'max-w-7xl'\} mx-auto/);
+  assert.match(page, /className=\{`grid gap-6 \$\{isPrinting\s+\? 'xl:grid-cols-\[360px_minmax\(0,1fr\)\]'\s+: 'xl:grid-cols-\[420px_1fr\]'\}`\}/);
   assert.match(page, /data-testid=\{isPrinting \? 'printing-control-rail' : undefined\}/);
   assert.match(page, /xl:sticky xl:top-\[86px\] xl:flex xl:max-h-\[calc\(100dvh-102px\)\] xl:self-start xl:flex-col xl:overflow-hidden/);
   assert.match(layout, /overflow-x-clip/);
@@ -272,12 +274,15 @@ test('desktop printing keeps the primary composition and generate action pinned 
   assert.match(page, /data-testid="confirmed-print-composition-canvas"/);
   assert.match(page, /maxWidth: 'clamp\(96px, calc\(\(100dvh - 520px\) \* 0\.8\), 220px\)'/);
 
+  const outerLayout = page.indexOf("isPrinting ? 'max-w-[1600px]' : 'max-w-7xl'");
+  const desktopGrid = page.indexOf("? 'xl:grid-cols-[360px_minmax(0,1fr)]'");
   const details = page.indexOf("'printing-control-rail-details'");
   const primary = page.indexOf("'printing-control-rail-primary'");
   const outputResolution = page.indexOf('aria-label="プリント結果の出力解像度"');
   const preview = page.indexOf('data-testid="confirmed-print-composition-preview"');
   const generate = page.indexOf('onClick={handleGenerate}');
   const results = page.indexOf('data-testid="print-result-run-history"');
+  assert.ok(outerLayout >= 0 && desktopGrid > outerLayout, 'print-only width and grid must wrap the existing rail and workspace ordering');
   assert.ok(details >= 0 && primary > details, 'primary controls must follow the internally scrollable details');
   assert.ok(outputResolution > details && outputResolution < primary, 'output settings must stay in the internally scrollable details');
   assert.ok(preview > primary && generate > preview, 'confirmed composition and Generate must remain in the pinned primary region');
@@ -583,7 +588,9 @@ test('range AI output remains locked until its visible blue mask is explicitly c
   assert.match(page, /canExplicitlyConfirmProcessedGarmentMask\(\{/);
   assert.match(page, /setPrintGarmentMaskExplicitlyConfirmed\(true\)/);
   assert.match(page, /data-testid="confirm-processed-garment-mask"/);
-  assert.match(page, /このAIマスクで確定/);
+  assert.match(page, /青い認識範囲を確認し、「決定」を押してください/);
+  assert.match(page, /選択したAIマスクはまだ未確定です。[^']*「このAIマスクで確定」を押すまでデザインは適用されません/);
+  assert.match(page, /自動切り抜きはまだ未確定です。[^']*「決定」を押すまでデザインは適用されません/);
   assert.match(page, /isCurrentGarmentMaskEditorTarget\(\{/);
   assert.match(page, /GARMENT_MASK_EDITOR_STALE_TARGET/);
 });

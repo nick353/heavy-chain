@@ -1428,7 +1428,7 @@ export function LightchainMaterialWorkbenchPage() {
     }
     if (isPrinting && !hasConfirmedPrintGarmentMask) {
       setPrintGarmentSelectionOpen(true);
-      toast.error('青い認識範囲を確認し、「このマスクで確定」を押してください');
+      toast.error('青い認識範囲を確認し、「決定」を押してください');
       return;
     }
     if (isPrinting && (printPlacementSessionOpen || !printPlacementConfirmed)) {
@@ -2400,7 +2400,7 @@ export function LightchainMaterialWorkbenchPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+    <div className={`${isPrinting ? 'max-w-[1600px]' : 'max-w-7xl'} mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8`}>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <button
@@ -2435,7 +2435,9 @@ export function LightchainMaterialWorkbenchPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[420px,1fr]">
+      <div className={`grid gap-6 ${isPrinting
+        ? 'xl:grid-cols-[360px_minmax(0,1fr)]'
+        : 'xl:grid-cols-[420px_1fr]'}`}>
         <motion.div
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
@@ -2611,7 +2613,7 @@ export function LightchainMaterialWorkbenchPage() {
                     <div role="status" className="mt-3 rounded-lg border border-amber-300/30 bg-amber-950/30 px-3 py-2 text-[11px] leading-relaxed text-amber-100">
                       {printGarmentSelectionSource !== 'automatic'
                         ? '選択したAIマスクはまだ未確定です。下の青い認識範囲を確認し、「このAIマスクで確定」を押すまでデザインは適用されません。'
-                        : '自動切り抜きはまだ未確定です。服をタップして青い認識範囲を確認し、「このマスクで確定」を押すまでデザインは適用されません。'}
+                        : '自動切り抜きはまだ未確定です。服をタップして青い認識範囲を確認し、「決定」を押すまでデザインは適用されません。'}
                     </div>
                   )}
                 </div>
