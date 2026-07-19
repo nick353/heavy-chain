@@ -48,10 +48,15 @@ export interface AcceptedPrintDesignHandoff {
 }
 
 type WriteResult = { ok: true } | { ok: false; reason: string };
-export type ConsumePrintDesignHandoffResult =
+export type ReadPrintDesignHandoffResult =
   | { status: 'empty'; reason: 'missing' }
-  | { status: 'rejected'; reason: string }
-  | { status: 'accepted'; design: AcceptedPrintDesignHandoff };
+  | { status: 'deferred'; reason: 'brand_not_ready' | 'brand_mismatch' }
+  | { status: 'rejected'; reason: string; ackToken?: string }
+  | { status: 'accepted'; design: AcceptedPrintDesignHandoff; ackToken: string };
+
+export type AcknowledgePrintDesignHandoffResult =
+  | { ok: true }
+  | { ok: false; reason: 'ack_reason_missing' | 'missing' | 'payload_changed' | 'storage_unavailable' };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -227,28 +232,27 @@ export function writePrintDesignHandoff(
   }
 }
 
-export function consumePrintDesignHandoff(
+export function readPrintDesignHandoff(
   storage: StorageLike,
-  currentBrandId: string,
+  currentBrandId: string | null | undefined,
   now = Date.now(),
-): ConsumePrintDesignHandoffResult {
+): ReadPrintDesignHandoffResult {
   let raw: string | null = null;
   try {
     raw = storage.getItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY);
-    storage.removeItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY);
   } catch {
     return { status: 'rejected', reason: 'storage_unavailable' };
   }
   if (!raw) return { status: 'empty', reason: 'missing' };
   if (new TextEncoder().encode(raw).byteLength > PRINT_DESIGN_HANDOFF_MAX_BYTES) {
-    return { status: 'rejected', reason: 'payload_oversized' };
+    return { status: 'rejected', reason: 'payload_oversized', ackToken: raw };
   }
 
   let payload: unknown;
   try {
     payload = JSON.parse(raw);
   } catch {
-    return { status: 'rejected', reason: 'payload_invalid' };
+    return { status: 'rejected', reason: 'payload_invalid', ackToken: raw };
   }
   if (!isRecord(payload)
     || payload.schema !== PRINT_DESIGN_HANDOFF_SCHEMA
@@ -263,18 +267,23 @@ export function consumePrintDesignHandoff(
     || typeof payload.generationStartedAt !== 'number'
     || !Number.isFinite(payload.generationStartedAt)
     || payload.generationStartedAt <= 0) {
-    return { status: 'rejected', reason: 'origin_invalid' };
+    return { status: 'rejected', reason: 'origin_invalid', ackToken: raw };
   }
-  if (!isNonEmptyString(currentBrandId, 128) || payload.brandId !== currentBrandId) {
-    return { status: 'rejected', reason: 'brand_mismatch' };
+  if (!isNonEmptyString(currentBrandId, 128)) {
+    return { status: 'deferred', reason: 'brand_not_ready' };
+  }
+  if (payload.brandId !== currentBrandId) {
+    return { status: 'deferred', reason: 'brand_mismatch' };
   }
   if (typeof payload.createdAt !== 'number'
     || !Number.isFinite(payload.createdAt)
     || payload.createdAt > now + 60_000
     || now - payload.createdAt > PRINT_DESIGN_HANDOFF_MAX_AGE_MS) {
-    return { status: 'rejected', reason: 'stale' };
+    return { status: 'rejected', reason: 'stale', ackToken: raw };
   }
-  if (!isRecord(payload.design)) return { status: 'rejected', reason: 'design_invalid' };
+  if (!isRecord(payload.design)) {
+    return { status: 'rejected', reason: 'design_invalid', ackToken: raw };
+  }
   const design = payload.design;
   if (!isTrustedRemoteImageUrl(design.imageUrl)
     || !isNonEmptyString(design.label, 160)
@@ -282,10 +291,11 @@ export function consumePrintDesignHandoff(
     || !isNonEmptyString(design.resultId, 256)
     || !isNonEmptyString(design.jobId, 256)
     || (!isNonEmptyString(design.imageId, 256) && !isNonEmptyString(design.storagePath, 1_024))) {
-    return { status: 'rejected', reason: 'design_invalid' };
+    return { status: 'rejected', reason: 'design_invalid', ackToken: raw };
   }
   return {
     status: 'accepted',
+    ackToken: raw,
     design: {
       imageUrl: design.imageUrl,
       label: design.label,
@@ -297,3 +307,25 @@ export function consumePrintDesignHandoff(
     },
   };
 }
+
+export function acknowledgePrintDesignHandoff(
+  storage: StorageLike,
+  ackToken: string,
+  reason: string,
+): AcknowledgePrintDesignHandoffResult {
+  if (!isNonEmptyString(reason, 256)) return { ok: false, reason: 'ack_reason_missing' };
+  try {
+    const current = storage.getItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY);
+    if (!current) return { ok: false, reason: 'missing' };
+    if (current !== ackToken) return { ok: false, reason: 'payload_changed' };
+    storage.removeItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY);
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: 'storage_unavailable' };
+  }
+}
+
+export const isPrintDesignHandoffAlreadyImported = (
+  designs: Array<{ url: string }>,
+  handoff: Extract<ReadPrintDesignHandoffResult, { status: 'accepted' }>,
+) => designs.some((design) => design.url.trim() === handoff.design.imageUrl);

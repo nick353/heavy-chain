@@ -695,7 +695,7 @@ test('new and explicit design choices remain wired to one editing selection', ()
 
 test('repeat design changes reuse completed cutouts and prioritize the new active candidate', () => {
   assert.match(page, /inputPlan = planPrintDesignInputUpdate\(\{/);
-  assert.match(page, /if \(!inputPlan\.shouldRestartCutout\) \{[\s\S]*?prunePrintDesignIdentityMap\(printDesignLayerIdsRef\.current, nextImages\);[\s\S]*?currentPrintDesignLayerIdsRef\.current = nextImages\.map\(getPrintDesignLayerId\);[\s\S]*?setPrintDesigns\(nextImages\);\s*return;/);
+  assert.match(page, /if \(!inputPlan\.shouldRestartCutout\) \{[\s\S]*?prunePrintDesignIdentityMap\(printDesignLayerIdsRef\.current, nextImages\);[\s\S]*?currentPrintDesignLayerIdsRef\.current = nextImages\.map\(getPrintDesignLayerId\);[\s\S]*?setPrintDesigns\(nextImages\);\s*return \{ ok: true \};/);
   assert.match(page, /const printDesignLayerIdsRef = useRef\(new Map<string, string>\(\)\)/);
   assert.match(page, /const identity = printDesignIdentity\(design\)/);
   const reconcilePlan = page.indexOf('reconciliation = planPrintDesignCutoutReconciliation({');

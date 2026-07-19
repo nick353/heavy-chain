@@ -5,9 +5,11 @@ import {
   PRINT_DESIGN_HANDOFF_MAX_AGE_MS,
   PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH,
   PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH,
-  consumePrintDesignHandoff,
+  acknowledgePrintDesignHandoff,
   createTrustedPatternsResultProvenance,
   createTrustedBlankGarmentSelection,
+  isPrintDesignHandoffAlreadyImported,
+  readPrintDesignHandoff,
   resolveCompletedPatternsResultProvenance,
   normalizePrintDesignHandoffDisplayText,
   writePrintDesignHandoff,
@@ -57,20 +59,77 @@ test('trusted blank garment is an explicit bundled asset, not inferred gallery m
   });
 });
 
-test('a design-gacha image handoff is brand-bound and consumed only once', () => {
+test('a design-gacha image handoff is read non-destructively and removed only after explicit ack', () => {
   const storage = new MemoryStorage();
   const now = 1_800_000_000_000;
   assert.deepEqual(writePrintDesignHandoff(storage, validInput, now), { ok: true });
-  const accepted = consumePrintDesignHandoff(storage, 'brand-1', now + 1_000);
+  const accepted = readPrintDesignHandoff(storage, 'brand-1', now + 1_000);
   assert.equal(accepted.status, 'accepted');
   if (accepted.status === 'accepted') {
     assert.equal(accepted.design.imageUrl, validInput.imageUrl);
     assert.equal(accepted.design.jobId, 'job-1');
+    assert.ok(storage.getItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY));
+    assert.deepEqual(acknowledgePrintDesignHandoff(
+      storage,
+      accepted.ackToken,
+      'import_committed',
+    ), { ok: true });
   }
-  assert.deepEqual(consumePrintDesignHandoff(storage, 'brand-1', now + 2_000), {
+  assert.deepEqual(readPrintDesignHandoff(storage, 'brand-1', now + 2_000), {
     status: 'empty',
     reason: 'missing',
   });
+});
+
+test('brand readiness and mismatch defer without removing, then the matching brand succeeds', () => {
+  const storage = new MemoryStorage();
+  const now = 1_800_000_000_000;
+  assert.deepEqual(writePrintDesignHandoff(storage, validInput, now), { ok: true });
+  assert.deepEqual(readPrintDesignHandoff(storage, null, now + 1_000), {
+    status: 'deferred',
+    reason: 'brand_not_ready',
+  });
+  assert.deepEqual(readPrintDesignHandoff(storage, 'brand-2', now + 1_000), {
+    status: 'deferred',
+    reason: 'brand_mismatch',
+  });
+  assert.ok(storage.getItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY));
+  assert.equal(readPrintDesignHandoff(storage, 'brand-1', now + 1_000).status, 'accepted');
+});
+
+test('an import failure retains the accepted payload for retry', () => {
+  const storage = new MemoryStorage();
+  const now = 1_800_000_000_000;
+  assert.deepEqual(writePrintDesignHandoff(storage, validInput, now), { ok: true });
+  const accepted = readPrintDesignHandoff(storage, 'brand-1', now + 1_000);
+  assert.equal(accepted.status, 'accepted');
+  const simulatedImportResult = { ok: false, reason: 'design_limit_exceeded' };
+  assert.equal(simulatedImportResult.ok, false);
+  assert.ok(storage.getItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY));
+  assert.equal(readPrintDesignHandoff(storage, 'brand-1', now + 2_000).status, 'accepted');
+});
+
+test('duplicate detection uses the accepted handoff URL and ack cannot delete a replacement payload', () => {
+  const storage = new MemoryStorage();
+  const now = 1_800_000_000_000;
+  assert.deepEqual(writePrintDesignHandoff(storage, validInput, now), { ok: true });
+  const accepted = readPrintDesignHandoff(storage, 'brand-1', now + 1_000);
+  assert.equal(accepted.status, 'accepted');
+  if (accepted.status !== 'accepted') return;
+  assert.equal(isPrintDesignHandoffAlreadyImported([], accepted), false);
+  assert.equal(isPrintDesignHandoffAlreadyImported([{ url: validInput.imageUrl }], accepted), true);
+
+  assert.deepEqual(writePrintDesignHandoff(storage, {
+    ...validInput,
+    imageUrl: 'https://assets.example.com/generated/replacement.png?token=signed',
+    resultId: 'result-2',
+    imageId: 'image-2',
+  }, now + 2_000), { ok: true });
+  assert.deepEqual(acknowledgePrintDesignHandoff(storage, accepted.ackToken, 'import_committed'), {
+    ok: false,
+    reason: 'payload_changed',
+  });
+  assert.match(storage.getItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY) ?? '', /replacement\.png/);
 });
 
 test('Patterns bounds display-only text before the strict handoff validator', () => {
@@ -83,7 +142,7 @@ test('Patterns bounds display-only text before the strict handoff validator', ()
     label: normalizePrintDesignHandoffDisplayText(longLabel, PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH),
     prompt: normalizePrintDesignHandoffDisplayText(longPrompt, PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH),
   }, now), { ok: true });
-  const accepted = consumePrintDesignHandoff(storage, 'brand-1', now + 1_000);
+  const accepted = readPrintDesignHandoff(storage, 'brand-1', now + 1_000);
   assert.equal(accepted.status, 'accepted');
   if (accepted.status === 'accepted') {
     assert.equal(accepted.design.label.length, PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH);
@@ -225,10 +284,9 @@ test('navigation during signed URL materialization prevents the completed result
   }), undefined);
 });
 
-test('consumer rejects and removes brand mismatch, stale, tampered origin, and oversized payloads', () => {
+test('terminal rejected payloads require an explicit reason before removal', () => {
   const now = 1_800_000_000_000;
   for (const [name, mutate, expectedReason] of [
-    ['brand mismatch', (value: any) => value, 'brand_mismatch'],
     ['stale', (value: any) => ({ ...value, createdAt: now - PRINT_DESIGN_HANDOFF_MAX_AGE_MS - 1 }), 'stale'],
     ['origin', (value: any) => ({ ...value, workflowVersion: 'invented-v1' }), 'origin_invalid'],
   ] as const) {
@@ -237,19 +295,35 @@ test('consumer rejects and removes brand mismatch, stale, tampered origin, and o
     const raw = storage.getItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY);
     assert.ok(raw, name);
     storage.setItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY, JSON.stringify(mutate(JSON.parse(raw))));
-    const brand = name === 'brand mismatch' ? 'brand-2' : 'brand-1';
-    assert.deepEqual(consumePrintDesignHandoff(storage, brand, now), {
-      status: 'rejected',
-      reason: expectedReason,
+    const rejected = readPrintDesignHandoff(storage, 'brand-1', now);
+    assert.equal(rejected.status, 'rejected');
+    assert.equal(rejected.reason, expectedReason);
+    assert.ok(storage.getItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY));
+    if (rejected.status !== 'rejected' || !rejected.ackToken) continue;
+    assert.deepEqual(acknowledgePrintDesignHandoff(storage, rejected.ackToken, ''), {
+      ok: false,
+      reason: 'ack_reason_missing',
     });
+    assert.deepEqual(acknowledgePrintDesignHandoff(
+      storage,
+      rejected.ackToken,
+      `rejected:${expectedReason}`,
+    ), { ok: true });
     assert.equal(storage.getItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY), null);
   }
 
   const oversizedStorage = new MemoryStorage();
   oversizedStorage.setItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY, 'x'.repeat(20_000));
-  assert.deepEqual(consumePrintDesignHandoff(oversizedStorage, 'brand-1', now), {
-    status: 'rejected',
-    reason: 'payload_oversized',
-  });
+  const oversized = readPrintDesignHandoff(oversizedStorage, 'brand-1', now);
+  assert.equal(oversized.status, 'rejected');
+  assert.equal(oversized.reason, 'payload_oversized');
+  assert.ok(oversizedStorage.getItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY));
+  if (oversized.status === 'rejected' && oversized.ackToken) {
+    assert.deepEqual(acknowledgePrintDesignHandoff(
+      oversizedStorage,
+      oversized.ackToken,
+      'rejected:payload_oversized',
+    ), { ok: true });
+  }
   assert.equal(oversizedStorage.getItem(PRINT_DESIGN_HANDOFF_STORAGE_KEY), null);
 });

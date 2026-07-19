@@ -49,8 +49,10 @@ import {
   type PrintDesignLayerOrderAction,
 } from '../features/printing/selection/designLayerSelection';
 import {
-  consumePrintDesignHandoff,
+  acknowledgePrintDesignHandoff,
   createTrustedBlankGarmentSelection,
+  isPrintDesignHandoffAlreadyImported,
+  readPrintDesignHandoff,
 } from '../features/printing/selection/printDesignHandoff';
 import { PRINT_DESIGN_ASSET_PURPOSE } from '../features/printing/selection/printDesignAssetPurpose';
 import {
@@ -635,7 +637,7 @@ function LayerPreview({
 export function LightchainMaterialWorkbenchPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentBrand } = useAuthStore();
+  const { currentBrand, isInitialized: isAuthInitialized, isLoading: isAuthLoading } = useAuthStore();
   const mode: WorkbenchMode = location.pathname.includes('printing') ? 'printing' : 'fabric';
   const isPrinting = mode === 'printing';
   const [printOutputScale, setPrintOutputScale] = useState<1 | 2>(1);
@@ -699,6 +701,7 @@ export function LightchainMaterialWorkbenchPage() {
   const [printDesignCutoutStates, setPrintDesignCutoutStates] = useState<Record<number, CutoutState>>({});
   const [printDesignCutoutErrors, setPrintDesignCutoutErrors] = useState<Record<number, string>>({});
   const printDesignHandoffConsumedRef = useRef(false);
+  const printDesignHandoffImportingRef = useRef<string | null>(null);
   const [printGarmentSelectionOpen, setPrintGarmentSelectionOpen] = useState(false);
   const [printMaskEditorTarget, setPrintMaskEditorTarget] = useState<PrintMaskEditorTarget | null>(null);
   const [printMaskEditorError, setPrintMaskEditorError] = useState<string | null>(null);
@@ -1745,7 +1748,12 @@ export function LightchainMaterialWorkbenchPage() {
     );
   };
 
-  const addDesigns = async (images: SelectedImage[]) => {
+  const addDesigns = async (images: SelectedImage[]): Promise<{
+    ok: true;
+  } | {
+    ok: false;
+    reason: string;
+  }> => {
     let inputPlan: ReturnType<typeof planPrintDesignInputUpdate<SelectedImage>>;
     try {
       inputPlan = planPrintDesignInputUpdate({
@@ -1756,7 +1764,7 @@ export function LightchainMaterialWorkbenchPage() {
     } catch (error) {
       console.error('Print design input identity failed', error);
       toast.error('デザイン候補の識別に失敗しました。画像を選び直してください');
-      return;
+      return { ok: false, reason: 'input_identity_failed' };
     }
     const { nextImages } = inputPlan;
     const placementMembershipChanged = nextImages.length !== printDesigns.length
@@ -1772,7 +1780,7 @@ export function LightchainMaterialWorkbenchPage() {
     }
     if (nextImages.length > 6) {
       toast.error('デザインは6つまでです');
-      return;
+      return { ok: false, reason: 'design_limit_exceeded' };
     }
     const duplicateSelection = selectFreshDuplicatePrintDesign({
       previous: printDesigns,
@@ -1805,7 +1813,7 @@ export function LightchainMaterialWorkbenchPage() {
       currentPrintDesignLayerIdsRef.current = nextImages.map(getPrintDesignLayerId);
       if (duplicateTargetLayerId) scheduleDeferredPrintDesignReturn(duplicateTargetLayerId);
       setPrintDesigns(nextImages);
-      return;
+      return { ok: true };
     }
 
     const newlyAddedIdentitySet = new Set(inputPlan.newlyAddedIdentities);
@@ -1870,7 +1878,7 @@ export function LightchainMaterialWorkbenchPage() {
     } catch (error) {
       console.error('Print design identity reconciliation failed', error);
       toast.error('デザイン候補の識別に失敗しました。候補を選び直してください');
-      return;
+      return { ok: false, reason: 'identity_reconciliation_failed' };
     }
     prunePrintDesignIdentityMap(printDesignLayerIdsRef.current, nextImages);
     currentPrintDesignLayerIdsRef.current = nextLayerIds;
@@ -1917,35 +1925,90 @@ export function LightchainMaterialWorkbenchPage() {
           CUTOUT_TIMEOUT_MS,
           `デザイン${index + 1}の透明化がタイムアウトしました。元画像を確認して再試行してください`,
         );
-        if (!canCommitPrintDesignCutoutRequest(requestId, printDesignCutoutRequestRef.current)) return;
+        if (!canCommitPrintDesignCutoutRequest(requestId, printDesignCutoutRequestRef.current)) {
+          return { ok: true };
+        }
         setPrintDesignProcessedUrls((current) => ({ ...current, [index]: result.dataUrl }));
         setPrintDesignCutoutResults((current) => ({ ...current, [index]: result }));
         setPrintDesignCutoutStates((current) => ({ ...current, [index]: 'done' }));
       } catch (error) {
-        if (!canCommitPrintDesignCutoutRequest(requestId, printDesignCutoutRequestRef.current)) return;
+        if (!canCommitPrintDesignCutoutRequest(requestId, printDesignCutoutRequestRef.current)) {
+          return { ok: true };
+        }
         const message = error instanceof Error ? error.message : 'プリント画像の背景を透明化できませんでした';
         setPrintDesignCutoutStates((current) => ({ ...current, [index]: 'error' }));
         setPrintDesignCutoutErrors((current) => ({ ...current, [index]: message }));
         console.error('Print design cutout failed', { index, error });
       }
     }
+    return { ok: true };
   };
 
   useEffect(() => {
-    if (!isPrinting || !currentBrand?.id || printDesignHandoffConsumedRef.current) return;
-    printDesignHandoffConsumedRef.current = true;
-    const handoff = consumePrintDesignHandoff(window.sessionStorage, currentBrand.id);
+    if (
+      !isPrinting
+      || !isAuthInitialized
+      || isAuthLoading
+      || !currentBrand?.id
+      || printDesignHandoffConsumedRef.current
+    ) return;
+    const handoff = readPrintDesignHandoff(window.sessionStorage, currentBrand.id);
+    if (handoff.status === 'rejected') {
+      if (!handoff.ackToken) {
+        console.error(`print_design_handoff_read_failed:${handoff.reason}`);
+        return;
+      }
+      console.warn(`print_design_handoff_rejected:${handoff.reason}`);
+      const ack = acknowledgePrintDesignHandoff(
+        window.sessionStorage,
+        handoff.ackToken,
+        `rejected:${handoff.reason}`,
+      );
+      if (ack.ok) {
+        printDesignHandoffConsumedRef.current = true;
+      } else {
+        console.error(`print_design_handoff_reject_ack_failed:${ack.reason}`);
+      }
+      return;
+    }
     if (handoff.status !== 'accepted') return;
+    if (isPrintDesignHandoffAlreadyImported(printDesigns, handoff)) {
+      const ack = acknowledgePrintDesignHandoff(
+        window.sessionStorage,
+        handoff.ackToken,
+        'import_committed',
+      );
+      if (ack.ok) {
+        printDesignHandoffConsumedRef.current = true;
+        printDesignHandoffImportingRef.current = null;
+        toast.success('Patternsの生成結果をプリント画像に追加しました');
+      } else {
+        printDesignHandoffImportingRef.current = null;
+        console.error(`print_design_handoff_ack_failed:${ack.reason}`);
+        toast.error(`Patternsの引き継ぎ確認に失敗しました: ${ack.reason}`);
+      }
+      return;
+    }
+    if (printDesignHandoffImportingRef.current === handoff.ackToken) return;
+    printDesignHandoffImportingRef.current = handoff.ackToken;
     const importedDesign: SelectedImage = {
       url: handoff.design.imageUrl,
       referenceType: 'pattern',
       printDesignAssetPurpose: PRINT_DESIGN_ASSET_PURPOSE,
     };
-    void addDesigns([...printDesigns, importedDesign]);
-    toast.success('Patternsの生成結果をプリント画像に追加しました');
-    // Consume is intentionally one-shot for the current brand and route entry.
+    void addDesigns([...printDesigns, importedDesign]).then((result) => {
+      if (result.ok) return;
+      printDesignHandoffImportingRef.current = null;
+      console.error(`print_design_handoff_import_failed:${result.reason}`);
+      toast.error(`Patternsの引き継ぎに失敗しました: ${result.reason}`);
+    }).catch((error) => {
+      printDesignHandoffImportingRef.current = null;
+      const reason = error instanceof Error ? error.message : 'unknown_error';
+      console.error(`print_design_handoff_import_failed:${reason}`, error);
+      toast.error(`Patternsの引き継ぎに失敗しました: ${reason}`);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentBrand?.id, isPrinting]);
+  }, [currentBrand?.id, isAuthInitialized, isAuthLoading, isPrinting, printDesigns]);
 
   const selectPrintGarment = (image: SelectedImage | null) => {
     cancelScheduledPrintDesignReturn();

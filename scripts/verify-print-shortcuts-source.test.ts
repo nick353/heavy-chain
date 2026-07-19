@@ -49,7 +49,9 @@ test('Patterns result cards expose a guarded print handoff and the printing page
   assert.match(generateSource, /writePrintDesignHandoff\(window\.sessionStorage/);
   assert.match(generateSource, /label: normalizePrintDesignHandoffDisplayText\(image\.label, PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH\)/);
   assert.match(generateSource, /prompt: normalizePrintDesignHandoffDisplayText\(image\.prompt, PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH\)/);
-  assert.match(printSource, /consumePrintDesignHandoff\(window\.sessionStorage, currentBrand\.id\)/);
+  assert.match(printSource, /readPrintDesignHandoff\(window\.sessionStorage, currentBrand\.id\)/);
+  assert.match(printSource, /!isAuthInitialized[\s\S]*?isAuthLoading[\s\S]*?!currentBrand\?\.id/);
+  assert.match(printSource, /acknowledgePrintDesignHandoff\([\s\S]*?'import_committed'/);
   assert.match(printSource, /referenceType: 'pattern'/);
   assert.match(printSource, /void addDesigns\(\[\.\.\.printDesigns, importedDesign\]\)/);
 });

@@ -35,11 +35,13 @@ ${description}
 Style direction: ${directionPrompt}.
 
 STRICT OUTPUT CONTRACT:
-1. Output the graphic artwork only, centered and fully visible.
+1. Output exactly one self-contained compact motif or emblem, centered and fully visible.
 2. NO CLOTHING, T-shirt, hoodie, dress, fabric product, person, mannequin, product mockup, room, or scene.
 3. Use a flat, uniform pure white (#FFFFFF) background reaching every image edge and corner so it can be removed deterministically.
-4. Keep generous white margin around the artwork; nothing may touch the image border.
-5. Use crisp print-design edges and a compact composition suitable for placement on a garment.
-6. Do not add presentation shadows, frames, labels, watermarks, or explanatory text.${hasReference
-  ? '\n7. Use the reference only as visual motif inspiration. Do not preserve or reproduce any garment or product silhouette from it.'
+4. Do not create a repeating pattern, seamless tile, all-over print, tiled grid, or rows/columns of repeated elements.
+5. Keep every artwork pixel, shape, and stroke entirely inside the composition; no artwork may cross the composition boundary or be cropped, clipped, cut off, or bleed beyond it.
+6. Leave a generous, clearly visible pure-white margin between every artwork pixel and every one of the four image edges.
+7. Use crisp print-design edges and a compact composition suitable for placement on a garment.
+8. Do not add presentation shadows, frames, labels, watermarks, or explanatory text.${hasReference
+  ? '\n9. Use the reference only as visual motif inspiration. Do not preserve or reproduce any garment or product silhouette from it.'
   : ''}`;

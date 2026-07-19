@@ -96,9 +96,14 @@ test('Patterns-origin print assets use an artwork-only prompt without changing p
     hasReference: false,
   });
   assert.match(withoutReference, /blue botanical motif/);
+  assert.match(withoutReference, /exactly one self-contained compact motif or emblem/);
   assert.match(withoutReference, /NO CLOTHING, T-shirt, hoodie, dress, fabric product/);
+  assert.match(withoutReference, /person, mannequin, product mockup, room, or scene/);
   assert.match(withoutReference, /uniform pure white \(#FFFFFF\) background reaching every image edge and corner/);
-  assert.match(withoutReference, /nothing may touch the image border/);
+  assert.match(withoutReference, /Do not create a repeating pattern, seamless tile, all-over print, tiled grid, or rows\/columns of repeated elements/);
+  assert.match(withoutReference, /every artwork pixel, shape, and stroke entirely inside the composition/);
+  assert.match(withoutReference, /no artwork may cross the composition boundary or be cropped, clipped, cut off, or bleed beyond it/);
+  assert.match(withoutReference, /generous, clearly visible pure-white margin between every artwork pixel and every one of the four image edges/);
   assert.doesNotMatch(withoutReference, /Use the reference only/);
   const withReference = buildPrintDesignAssetPrompt({
     description: 'chain motif',
