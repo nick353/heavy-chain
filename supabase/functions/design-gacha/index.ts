@@ -8,6 +8,7 @@ import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
+import { sanitizePrintDesignAssetPurpose } from '../_shared/printDesignAssetPurpose.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -347,6 +348,7 @@ serve(async (req) => {
     });
 
     const requestSourceMetadata = buildSourceMetadata(sourceReadback, patternContext, productDescription);
+    const requestPrintDesignPurpose = sanitizePrintDesignAssetPurpose(requestSourceMetadata);
     const materialMetadata = sanitizeMaterialGenerationMetadata(body);
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
@@ -367,6 +369,7 @@ serve(async (req) => {
             randomizedElements,
             requestId,
             ...(requestSourceMetadata ?? {}),
+            ...(requestPrintDesignPurpose ?? {}),
             ...(materialMetadata ?? {}),
             ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
           } as any,
@@ -409,6 +412,7 @@ serve(async (req) => {
     }
     if (!productDescription) productDescription = 'Fashion product';
     const finalSourceMetadata = buildSourceMetadata(sourceReadback, patternContext, productDescription);
+    const finalPrintDesignPurpose = sanitizePrintDesignAssetPurpose(finalSourceMetadata);
 
     // 商品固定かどうか（fixedElementsに'product'が含まれるか、画像がある場合）
     const isProductFixed = fixedElements.includes('product') && originalImageBase64;
@@ -480,6 +484,7 @@ serve(async (req) => {
               source: 'design-gacha',
               requestId,
               ...(finalSourceMetadata ?? {}),
+              ...(finalPrintDesignPurpose ?? {}),
               ...(materialMetadata ?? {}),
               ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
             } as any,

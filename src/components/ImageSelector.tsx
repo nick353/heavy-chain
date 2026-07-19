@@ -10,6 +10,7 @@ import {
   Layers
 } from 'lucide-react';
 import { GallerySelector } from './GallerySelector';
+import type { PrintDesignAssetPurpose } from '../features/printing/selection/printDesignAssetPurpose';
 
 export type ReferenceType = 'style' | 'composition' | 'base' | 'pattern';
 
@@ -57,6 +58,7 @@ interface ImageSelectorProps {
   confirmGallerySelection?: boolean;
   galleryConfirmLabel?: string;
   selectionTestId?: string;
+  galleryAssetPurpose?: PrintDesignAssetPurpose;
 }
 
 export function ImageSelector({
@@ -81,6 +83,7 @@ export function ImageSelector({
   confirmGallerySelection = false,
   galleryConfirmLabel = '素材を追加',
   selectionTestId,
+  galleryAssetPurpose,
 }: ImageSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -329,6 +332,7 @@ export function ImageSelector({
           title={galleryTitle}
           confirmedSingle={confirmGallerySelection}
           confirmLabel={galleryConfirmLabel}
+          assetPurpose={galleryAssetPurpose}
         />
       </div>
     );
@@ -475,6 +479,7 @@ export function ImageSelector({
         title={galleryTitle}
         confirmedSingle={confirmGallerySelection}
         confirmLabel={galleryConfirmLabel}
+        assetPurpose={galleryAssetPurpose}
       />
     </div>
   );

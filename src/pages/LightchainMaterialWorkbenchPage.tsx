@@ -2706,6 +2706,7 @@ export function LightchainMaterialWorkbenchPage() {
                   required
                   value={null}
                   galleryTitle="プリントデザインを選択"
+                  galleryAssetPurpose="print-design"
                   selectionTestId="print-design-selector"
                   onChange={() => {}}
                   multipleValue={printDesigns}

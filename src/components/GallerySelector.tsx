@@ -15,6 +15,10 @@ import {
   getGalleryFolderPath,
   type GalleryFolderMembership,
 } from '../features/printing/selection/galleryFolderNavigation';
+import {
+  PRINT_DESIGN_ASSET_PURPOSE,
+  type PrintDesignAssetPurpose,
+} from '../features/printing/selection/printDesignAssetPurpose';
 
 interface GallerySelectorProps {
   isOpen: boolean;
@@ -26,6 +30,7 @@ interface GallerySelectorProps {
   confirmLabel?: string;
   maxSelect?: number;
   onMultipleSelect?: (images: { url: string; id: string }[]) => void;
+  assetPurpose?: PrintDesignAssetPurpose;
 }
 
 type FilterType = 'all' | 'recent' | 'favorites';
@@ -63,6 +68,7 @@ export function GallerySelector({
   confirmLabel = '素材を追加',
   maxSelect = 5,
   onMultipleSelect,
+  assetPurpose,
 }: GallerySelectorProps) {
   const { currentBrand } = useAuthStore();
   const [images, setImages] = useState<GeneratedImage[]>([]);
@@ -125,6 +131,10 @@ export function GallerySelector({
         .eq('brand_id', currentBrand.id)
         .order('created_at', { ascending: false });
 
+      if (assetPurpose === PRINT_DESIGN_ASSET_PURPOSE) {
+        imageQuery = imageQuery.contains('metadata', { assetPurpose: PRINT_DESIGN_ASSET_PURPOSE });
+      }
+
       if (filter === 'favorites') {
         imageQuery = imageQuery.eq('is_favorite', true);
       }
@@ -181,7 +191,7 @@ export function GallerySelector({
         setIsLoading(false);
       }
     }
-  }, [currentBrand, filter]);
+  }, [assetPurpose, currentBrand, filter]);
 
   useEffect(() => {
     if (isOpen) {
@@ -333,7 +343,9 @@ export function GallerySelector({
         ? 'このフォルダに画像はありません'
         : filter === 'favorites'
           ? 'お気に入りはまだありません'
-          : 'まだ画像はありません';
+          : assetPurpose === PRINT_DESIGN_ASSET_PURPOSE
+            ? 'プリントデザインはまだありません。ローカル画像は選択画面からアップロードできます'
+            : 'まだ画像はありません';
 
   return (
     <Modal
