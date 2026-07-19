@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
-import { validateClothModelBuildUrl } from './rembg-cloth-model-build-contract.mjs';
+import {
+  PINNED_EXTERNAL_CLOTH_MODEL_URL,
+  resolveClothModelBuildUrl,
+  validateClothModelBuildUrl,
+} from './rembg-cloth-model-build-contract.mjs';
 
 const runVerifier = ({ args = [], clothModelUrl } = {}) => {
   const env = { ...process.env };
@@ -20,15 +24,16 @@ const runVerifier = ({ args = [], clothModelUrl } = {}) => {
   };
 };
 
-test('default readiness preserves the unconfigured cloth fallback', () => {
+test('default production readiness configures the pinned cloth model URL', () => {
   const result = runVerifier();
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.summary.ok, true);
   assert.equal(result.summary.clothModel.required, false);
-  assert.equal(result.summary.clothModel.configured, false);
-  assert.equal(result.summary.clothModel.urlValid, false);
-  assert.equal(result.summary.clothModel.validationReason, 'not_configured');
-  assert.equal(result.summary.clothModel.delivery, null);
+  assert.equal(result.summary.clothModel.configured, true);
+  assert.equal(result.summary.clothModel.configuredBy, 'production_default');
+  assert.equal(result.summary.clothModel.urlValid, true);
+  assert.equal(result.summary.clothModel.validationReason, null);
+  assert.equal(result.summary.clothModel.delivery, 'cross_origin');
   assert.equal(result.summary.clothModel.stagedIdentityVerified, false);
   assert.equal(result.summary.clothModel.distIdentityVerified, false);
   assert.equal(
@@ -41,6 +46,20 @@ test('default readiness preserves the unconfigured cloth fallback', () => {
   );
 });
 
+test('development keeps the unconfigured fallback while production resolves the pinned URL', () => {
+  assert.equal(resolveClothModelBuildUrl({ configuredUrl: '', viteMode: 'development' }), '');
+  assert.equal(resolveClothModelBuildUrl({ configuredUrl: '', viteMode: 'production' }), PINNED_EXTERNAL_CLOTH_MODEL_URL);
+  assert.equal(
+    resolveClothModelBuildUrl({ configuredUrl: 'https://models.example.com/custom.onnx', viteMode: 'production' }),
+    'https://models.example.com/custom.onnx',
+  );
+  const result = runVerifier({ args: ['--mode=development'] });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.summary.clothModel.configured, false);
+  assert.equal(result.summary.clothModel.configuredBy, null);
+  assert.equal(result.summary.clothModel.validationReason, 'not_configured');
+});
+
 test('default readiness rejects a configured invalid cloth URL', () => {
   const result = runVerifier({
     clothModelUrl: 'http://models.example.com/u2net_cloth_seg.onnx',
@@ -51,7 +70,7 @@ test('default readiness rejects a configured invalid cloth URL', () => {
 });
 
 test('required cloth build fails closed when its URL is missing', () => {
-  const result = runVerifier({ args: ['--require-cloth'] });
+  const result = runVerifier({ args: ['--require-cloth', '--mode=development'] });
   assert.equal(result.status, 1);
   assert.equal(result.summary.clothModel.required, true);
   assert.match(result.summary.exactBlocker, /cloth_model_url_is_configured_for_required_build/);

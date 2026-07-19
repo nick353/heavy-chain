@@ -49,6 +49,11 @@ import {
   createClothModelWarmupController,
   type ClothModelWarmupProgress,
 } from '../features/printing/selection/clothModelWarmup';
+import {
+  isRembgClothSegModelConfigured,
+  REMBG_CLOTH_SEG_MODEL_SHA256,
+  resolveRembgClothSegModelUrl,
+} from '../features/printing/selection/clothModelRuntimeContract';
 
 export type MaterialReferenceState = {
   imageUrl: string;
@@ -1548,11 +1553,10 @@ const rembgIsnetGeneralUseModelUrl = String(
   import.meta.env.VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL
   || '',
 ).trim();
-const rembgClothSegModelUrl = String(
-  import.meta.env.VITE_REMBG_CLOTH_SEG_MODEL_URL
-  || '',
-).trim();
-const REMBG_CLOTH_SEG_MODEL_SHA256 = '6d2cbc27bfbdc989e1fd325656d65902ecc6a3ccbe94b2d3655ec114efcb128e';
+const rembgClothSegModelUrl = resolveRembgClothSegModelUrl({
+  configuredUrl: import.meta.env.VITE_REMBG_CLOTH_SEG_MODEL_URL,
+  isProduction: import.meta.env.PROD,
+});
 
 type RembgCutoutModel =
   | GarmentCutoutModel
@@ -1595,7 +1599,7 @@ const clothModelWarmupController = createClothModelWarmupController({
   initializeSession: (session) => session.initialize(),
 });
 
-export const isPrintGarmentClothModelConfigured = () => Boolean(rembgClothSegModelUrl);
+export const isPrintGarmentClothModelConfigured = () => isRembgClothSegModelConfigured(rembgClothSegModelUrl);
 
 export const preparePrintGarmentClothModel = async (
   onProgress?: (progress: ClothModelWarmupProgress) => void,

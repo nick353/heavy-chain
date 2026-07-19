@@ -179,7 +179,7 @@ supabase functions deploy upscale
 - `VITE_REMBG_MODEL_BASE_URL` - 任意のモデル配信元override。silueta以外のモデルで使います。
 - `VITE_REMBG_SILUETA_MODEL_URL` - 任意。未設定時は同梱の `/models/silueta.onnx` を同一originから読み込みます。
 - `VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL` - 任意。管理下CDNに置いたISNetモデルを明示利用する場合だけ設定します。Hugging Face直取得にはfallbackしません。
-- `VITE_REMBG_CLOTH_SEG_MODEL_URL` - 任意の手動build用外部host override。Zeaburの既定`build:deploy`はrevision固定のHugging Face URLを検証して直接埋め込みます。通常の`npm run build`では未設定なら既存のsilueta/手動マスクへ安全に戻ります。
+- `VITE_REMBG_CLOTH_SEG_MODEL_URL` - 任意の外部host override。productionの通常`npm run build`とZeaburの`build:deploy`は、未設定または空ならrevision固定のHugging Face URLを埋め込みます。developmentでは未設定のまま既存のsilueta/手動マスクへ安全に戻ります。
 
 Zeaburの既定buildは、176MBのML modelを静的deploy artifactへ同梱しません。[Zeaburのlarge-file guidance](https://zeabur.com/docs/en-US/deploy/large-files)に沿って、revision固定のHugging Face URLをHEADし、許可host内のredirect、最終CDNの`Access-Control-Allow-Origin: *`、176,194,565 bytes、`x-linked-etag`の固定SHA-256を照合してから、その完全URLをVite buildへ埋め込みます。これによりZeabur上の`/models/u2net_cloth_seg.onnx`配信容量に依存せず、外部object storage/CDNからbrowserへ配信します。
 

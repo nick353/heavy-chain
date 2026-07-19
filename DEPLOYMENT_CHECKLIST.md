@@ -178,6 +178,7 @@ vercel --prod
 - [ ] `VITE_REMBG_SILUETA_MODEL_URL` を設定した場合は、その完全URLが200かつCORS対応であることを確認
 - [ ] ISNetを明示利用する場合のみ、`VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL` がCORS対応の管理下CDNを指すことを確認
 - [ ] Zeabur build commandが`npm install && npm run build:deploy`で、固定Hugging Face URLのHEAD/CORS/size/hash検証・build・dist URL readbackを一つのcommandで行う
+- [ ] Zeaburが通常の`npm run build`を実行する構成でも、空のoverrideはproduction固定Hugging Face URLへ解決され、bundleにrevision URLが含まれる
 - [ ] `npm run build:deploy`後、`output/rembg-cloth-model-external-host-build.json`が`ok:true`で、revision `197561dc207c9b23e2739fb81645ef21b4e37d10`、176,194,565 bytes、固定SHA、最終CDN CORS `*`を記録していることを確認
 - [ ] 外部host overrideを使う場合のみ、`VITE_REMBG_CLOTH_SEG_MODEL_URL` がHTTPSの`u2net_cloth_seg.onnx`を指し、GET 200、CORS、約176MBの実寸、互換モデルのchecksumを確認してから再ビルド
 - [ ] 衣服モデル必須リリースでは同じ環境変数のまま `npm run build:rembg-cloth-model` を実行し、URL未設定・不正URL・生成物への未反映をfail-closedにする

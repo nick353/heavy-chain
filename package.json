@@ -85,6 +85,8 @@
     "test:rembg-cloth-model-host": "node --test scripts/verify-rembg-cloth-model-host.test.mjs",
     "test:rembg-cloth-model-same-origin": "node --test scripts/build-rembg-cloth-model-same-origin.test.mjs",
     "test:rembg-cloth-model-external-host": "node --test scripts/build-rembg-cloth-model-external-host.test.mjs",
+    "test:rembg-cloth-model-production-default": "node --test scripts/verify-rembg-cloth-model-production-default.test.mjs",
+    "test:rembg-cloth-model-runtime-contract": "node --experimental-strip-types --test scripts/verify-rembg-cloth-model-runtime-contract.test.ts",
     "verify:rembg-cloth-model-compatibility": "node scripts/verify-rembg-cloth-model-compatibility.mjs",
     "verify:rembg-cloth-model-host": "node scripts/verify-rembg-cloth-model-host.mjs",
     "verify:rembg-model-deploy": "npm run test:rembg-model-deploy && node scripts/verify-rembg-model-deploy-readiness.mjs",

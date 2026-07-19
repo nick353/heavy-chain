@@ -8,6 +8,11 @@ export const PINNED_EXTERNAL_CLOTH_MODEL_BYTES = 176194565;
 export const PINNED_EXTERNAL_CLOTH_MODEL_SHA256 =
   '6d2cbc27bfbdc989e1fd325656d65902ecc6a3ccbe94b2d3655ec114efcb128e';
 
+export const resolveClothModelBuildUrl = ({ configuredUrl, viteMode }) => {
+  const normalized = String(configuredUrl || '').trim();
+  return normalized || (viteMode === 'production' ? PINNED_EXTERNAL_CLOTH_MODEL_URL : '');
+};
+
 export const validateClothModelBuildUrl = (value) => {
   const normalized = String(value || '').trim();
   if (!normalized) return { configured: false, valid: false, reason: 'not_configured', delivery: null };

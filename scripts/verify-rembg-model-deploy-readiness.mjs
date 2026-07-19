@@ -4,7 +4,11 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { loadEnv } from 'vite';
 import { OFFICIAL_CLOTH_MODEL } from './verify-rembg-cloth-model-compatibility.mjs';
-import { validateClothModelBuildUrl } from './rembg-cloth-model-build-contract.mjs';
+import {
+  PINNED_EXTERNAL_CLOTH_MODEL_URL,
+  resolveClothModelBuildUrl,
+  validateClothModelBuildUrl,
+} from './rembg-cloth-model-build-contract.mjs';
 
 const checks = [];
 const requireClothModel = process.argv.includes('--require-cloth');
@@ -56,6 +60,7 @@ const modelIdentityMatches = (identity) => (
 
 const gitignore = read('.gitignore');
 const source = read('src/lib/workspaceMaterialReferences.ts');
+const runtimeContract = read('src/features/printing/selection/clothModelRuntimeContract.ts');
 const envExample = read('.env.example');
 const prodEnvExample = read('.env.production.example');
 const zeabur = read('zeabur.json');
@@ -63,11 +68,12 @@ const zeaburConfig = readJson('zeabur.json');
 const checkEnv = read('scripts/check-env.mjs');
 const readme = read('README.md');
 const checklist = read('DEPLOYMENT_CHECKLIST.md');
-const clothModelUrl = String(
+const configuredClothModelUrl = String(
   Object.hasOwn(process.env, 'VITE_REMBG_CLOTH_SEG_MODEL_URL')
     ? process.env.VITE_REMBG_CLOTH_SEG_MODEL_URL
     : loadedViteEnv.VITE_REMBG_CLOTH_SEG_MODEL_URL || '',
 ).trim();
+const clothModelUrl = resolveClothModelBuildUrl({ configuredUrl: configuredClothModelUrl, viteMode });
 const clothModelUrlValidation = validateClothModelBuildUrl(clothModelUrl);
 const stagedClothModelIdentity = clothModelUrlValidation.delivery === 'same_origin'
   ? readModelIdentity(stagedClothModelPath)
@@ -135,10 +141,17 @@ add('source_supports_explicit_cloth_model_url', (
 });
 add('runtime_cloth_model_integrity_uses_official_pinned_sha256', (
   source.includes("setModelHash('u2net_cloth_seg', REMBG_CLOTH_SEG_MODEL_SHA256)")
-  && source.includes(`REMBG_CLOTH_SEG_MODEL_SHA256 = '${OFFICIAL_CLOTH_MODEL.sha256}'`)
+  && runtimeContract.includes(`REMBG_CLOTH_SEG_MODEL_SHA256 = '${OFFICIAL_CLOTH_MODEL.sha256}'`)
+  && runtimeContract.includes(`REMBG_CLOTH_SEG_PRODUCTION_MODEL_URL = '${PINNED_EXTERNAL_CLOTH_MODEL_URL}'`)
+  && source.includes('resolveRembgClothSegModelUrl({')
+  && source.includes('isProduction: import.meta.env.PROD')
+  && source.includes('isRembgClothSegModelConfigured(rembgClothSegModelUrl)')
   && source.includes('bypassModelCache: true')
 ), {
-  file: 'src/lib/workspaceMaterialReferences.ts',
+  files: [
+    'src/lib/workspaceMaterialReferences.ts',
+    'src/features/printing/selection/clothModelRuntimeContract.ts',
+  ],
   expectedSha256: OFFICIAL_CLOTH_MODEL.sha256,
   cachePolicy: 'cloth_session_only_bypass',
 });
@@ -226,6 +239,7 @@ const summary = {
   clothModel: {
     required: requireClothModel,
     configured: clothModelUrlValidation.configured,
+    configuredBy: configuredClothModelUrl ? 'explicit_env' : (viteMode === 'production' ? 'production_default' : null),
     urlValid: clothModelUrlValidation.valid,
     validationReason: clothModelUrlValidation.reason,
     delivery: clothModelUrlValidation.delivery,
