@@ -41,6 +41,7 @@ import {
   resolveGarmentCutoutModel,
   resolveGarmentSegmentationMaskIndex,
   resolveTransparentGarmentCutoutRoute,
+  shouldRunConfiguredClothModelForGarmentInput,
   type GarmentCutoutModel,
   type GarmentSegmentationTarget,
   type GarmentSelectionSource,
@@ -1899,7 +1900,11 @@ export async function buildPrintGarmentCutoutDataUrl({
   // regions from head/hands and nearby objects. If the model cannot load or
   // run, buildHighPrecisionMaterialCutoutDataUrl still returns the existing
   // bounded fallback.
-  const shouldPreferConfiguredClothModel = transparentInputRoute === 'semantic-first';
+  const shouldPreferConfiguredClothModel = shouldRunConfiguredClothModelForGarmentInput({
+    hasTransparentPixels: Boolean(alphaBounds?.hasTransparentPixels),
+    modelName,
+    clothModelConfigured: Boolean(rembgClothSegModelUrl),
+  });
   if (
     sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD
     && !shouldPreferConfiguredClothModel

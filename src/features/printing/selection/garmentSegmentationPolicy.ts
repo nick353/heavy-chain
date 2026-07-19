@@ -123,21 +123,32 @@ export const resolveGarmentCutoutModel = ({
 );
 
 /**
- * A tap-confirmed preview is intentionally exported with transparency so the
- * downstream result cannot grow beyond the blue area the user approved. When
- * the optional cloth model is available, that transparency is a constraint,
- * not a reason to skip semantic inference altogether.
+ * A tap-confirmed preview is intentionally exported with transparency. That
+ * alpha channel is the exact blue area the user reviewed, so downstream
+ * processing must preserve it instead of segmenting the already-masked crop a
+ * second time. A second semantic pass can collapse a valid garment mask to a
+ * few disconnected pixels even while reporting the configured engine.
  */
 export const resolveTransparentGarmentCutoutRoute = ({
-  modelName,
-  clothModelConfigured,
+  modelName: _modelName,
+  clothModelConfigured: _clothModelConfigured,
 }: {
   modelName: GarmentCutoutModel;
   clothModelConfigured: boolean;
-}): TransparentGarmentCutoutRoute => (
-  modelName === 'u2net_cloth_seg' && clothModelConfigured
-    ? 'semantic-first'
-    : 'preserve-existing'
+}): TransparentGarmentCutoutRoute => 'preserve-existing';
+
+export const shouldRunConfiguredClothModelForGarmentInput = ({
+  hasTransparentPixels,
+  modelName,
+  clothModelConfigured,
+}: {
+  hasTransparentPixels: boolean;
+  modelName: GarmentCutoutModel;
+  clothModelConfigured: boolean;
+}) => (
+  !hasTransparentPixels
+  && modelName === 'u2net_cloth_seg'
+  && clothModelConfigured
 );
 
 export const garmentSelectionModelStatus = ({
@@ -171,6 +182,13 @@ export const garmentSelectionModelStatus = ({
       model: 'u2net_cloth_seg' as const,
       semantic: true,
       message: '衣服専用AIで服のカテゴリを認識し、切り抜きました。',
+    };
+  }
+  if (resultEngine === 'browser-existing-transparent-garment-v1') {
+    return {
+      model: 'confirmed-tap-mask' as const,
+      semantic: false,
+      message: '確認した青い認識範囲をそのまま切り抜きに使用しています。',
     };
   }
   if (clothModelConfigured) {

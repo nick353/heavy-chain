@@ -78,8 +78,9 @@ const checks = {
     && library.indexOf('sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD')
       < library.indexOf('modelName,\n      postProcessMask: false'),
   configured_cloth_model_is_not_bypassed_by_uniform_fast_path: library.includes('shouldPreferConfiguredClothModel')
-    && library.includes("transparentInputRoute === 'semantic-first'")
-    && garmentSegmentationPolicy.includes("modelName === 'u2net_cloth_seg' && clothModelConfigured")
+    && library.includes('shouldRunConfiguredClothModelForGarmentInput({')
+    && garmentSegmentationPolicy.includes("modelName === 'u2net_cloth_seg'")
+    && garmentSegmentationPolicy.includes('!hasTransparentPixels')
     && library.includes('&& !shouldPreferConfiguredClothModel'),
   production_model_does_not_silently_fall_back_to_huggingface: library.includes("VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL\n  || ''")
     && library.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/models/silueta.onnx'")
@@ -210,12 +211,9 @@ const checks = {
     && library.includes('? { ...result, segmentationTarget }')
     && page.includes('resultTarget: selectedPrintGarmentMaskCandidate?.result.segmentationTarget')
     && garmentSegmentationPolicy.includes('full: 2'),
-  confirmed_transparent_tap_mask_reaches_cloth_model_without_expanding: garmentSegmentationPolicy.includes("? 'semantic-first'")
-    && library.includes("transparentInputRoute === 'semantic-first'")
-    && library.includes('constrainToSourceAlpha: true')
-    && library.includes("context.globalCompositeOperation = 'destination-in'")
-    && library.includes('(sourceRgba.data[offset + 3] * maskRgba.data[offset]) / 255')
-    && library.includes('semanticResult.engine === GARMENT_SEMANTIC_SEGMENTATION_ENGINE')
+  confirmed_transparent_tap_mask_preserves_user_reviewed_alpha: garmentSegmentationPolicy.includes("=> 'preserve-existing'")
+    && library.indexOf("transparentInputRoute === 'preserve-existing'")
+      < library.indexOf("transparentInputRoute === 'semantic-first'")
     && library.includes('return finalizeResult(existingTransparentResult)'),
   explicit_confirmation_gates_stage_and_generation: page.includes('const hasConfirmedPrintGarmentMask = isGarmentMaskExplicitlyConfirmed({')
     && page.includes('explicitlyConfirmed: printGarmentMaskExplicitlyConfirmed')

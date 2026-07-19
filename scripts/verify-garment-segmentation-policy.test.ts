@@ -13,6 +13,7 @@ import {
   resolveGarmentCutoutModel,
   resolveGarmentSegmentationMaskIndex,
   resolveTransparentGarmentCutoutRoute,
+  shouldRunConfiguredClothModelForGarmentInput,
 } from '../src/features/printing/selection/garmentSegmentationPolicy.ts';
 
 test('only an explicit visible-mask confirmation or manual-mask apply unlocks downstream artwork', () => {
@@ -81,11 +82,11 @@ test('automatic and range paths never silently switch to the cloth model', () =>
   assert.equal(resolveGarmentCutoutModel({ selectionSource: 'range', clothModelConfigured: true }), 'silueta');
 });
 
-test('a confirmed transparent tap mask still reaches the configured cloth model', () => {
+test('a confirmed transparent tap mask is preserved as the user-reviewed blue area', () => {
   assert.equal(resolveTransparentGarmentCutoutRoute({
     modelName: 'u2net_cloth_seg',
     clothModelConfigured: true,
-  }), 'semantic-first');
+  }), 'preserve-existing');
   assert.equal(resolveTransparentGarmentCutoutRoute({
     modelName: 'u2net_cloth_seg',
     clothModelConfigured: false,
@@ -94,6 +95,24 @@ test('a confirmed transparent tap mask still reaches the configured cloth model'
     modelName: 'silueta',
     clothModelConfigured: true,
   }), 'preserve-existing');
+});
+
+test('transparent confirmed input skips cloth inference while opaque input still uses it', () => {
+  assert.equal(shouldRunConfiguredClothModelForGarmentInput({
+    hasTransparentPixels: true,
+    modelName: 'u2net_cloth_seg',
+    clothModelConfigured: true,
+  }), false);
+  assert.equal(shouldRunConfiguredClothModelForGarmentInput({
+    hasTransparentPixels: false,
+    modelName: 'u2net_cloth_seg',
+    clothModelConfigured: true,
+  }), true);
+  assert.equal(shouldRunConfiguredClothModelForGarmentInput({
+    hasTransparentPixels: false,
+    modelName: 'silueta',
+    clothModelConfigured: true,
+  }), false);
 });
 
 test('semantic success requires the exact cloth result engine on the tap path', () => {
@@ -146,6 +165,15 @@ test('status tells the operator whether the completed engine is cloth-specific o
   });
   assert.equal(configuredFallback.semantic, false);
   assert.match(configuredFallback.message, /既存AI/);
+  const confirmedMask = garmentSelectionModelStatus({
+    selectionSource: 'tap',
+    clothModelConfigured: true,
+    resultEngine: 'browser-existing-transparent-garment-v1',
+    requestedTarget: 'upper',
+    resultTarget: undefined,
+  });
+  assert.equal(confirmedMask.model, 'confirmed-tap-mask');
+  assert.match(confirmedMask.message, /確認した青い認識範囲/);
   assert.match(
     garmentSelectionModelStatus({
       selectionSource: 'tap',
