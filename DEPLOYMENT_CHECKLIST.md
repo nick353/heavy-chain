@@ -166,6 +166,7 @@ vercel --prod
    - `VITE_SUPABASE_ANON_KEY`
    - `VITE_REMBG_MODEL_BASE_URL`（任意。silueta以外のモデル配信元）
    - `VITE_REMBG_SILUETA_MODEL_URL`（任意。未設定時は同梱の `/models/silueta.onnx`）
+   - `VITE_REMBG_CLOTH_SEG_MODEL_URL`（任意の外部host override。既定のZeabur `build:deploy`は同一origin `/models/u2net_cloth_seg.onnx`を固定SHAでstage）
 5. Deploy
 
 ### 6. デプロイ後の設定
@@ -176,6 +177,13 @@ vercel --prod
 - [ ] 公開URLの `/models/silueta.onnx` が200で取得できることを確認
 - [ ] `VITE_REMBG_SILUETA_MODEL_URL` を設定した場合は、その完全URLが200かつCORS対応であることを確認
 - [ ] ISNetを明示利用する場合のみ、`VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL` がCORS対応の管理下CDNを指すことを確認
+- [ ] Zeabur build commandが`npm install && npm run build:deploy`で、同一origin衣服モデルのstage・build・dist identity検証を一つのcommandで行う
+- [ ] `npm run build:deploy`後、`output/rembg-cloth-model-same-origin-build.json`が`ok:true`、dist modelが176,194,565 bytes、固定SHA一致、`stagedPublicModelRemoved:true`であることを確認
+- [ ] 外部host overrideを使う場合のみ、`VITE_REMBG_CLOTH_SEG_MODEL_URL` がHTTPSの`u2net_cloth_seg.onnx`を指し、GET 200、CORS、約176MBの実寸、互換モデルのchecksumを確認してから再ビルド
+- [ ] 衣服モデル必須リリースでは同じ環境変数のまま `npm run build:rembg-cloth-model` を実行し、URL未設定・不正URL・生成物への未反映をfail-closedにする
+- [ ] `u2net_cloth_seg.onnx`の実体を176,194,565 bytes、SHA-256 `6d2cbc27bfbdc989e1fd325656d65902ecc6a3ccbe94b2d3655ec114efcb128e`と照合し、`VITE_*` URLに資格情報が含まれていないことを確認
+- [ ] `npm run build:rembg-cloth-model`で公開URLから全モデルを取得し、public DNS・redirectなし・HTTP 200・Heavy Chain origin向けCORS・Content-Type・実寸・SHA-256を確認してから、同じURLをbuild・dist readbackする
+- [ ] deploy後の`/models/u2net_cloth_seg.onnx`をGETし、HTTP 200、Content-Type、176,194,565 bytes、SHA-256をreadbackする（同一originなのでCORS headerは必須ではない）
 
 ---
 

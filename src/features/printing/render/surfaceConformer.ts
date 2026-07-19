@@ -1,4 +1,5 @@
 export const SURFACE_CONFORMER_MAX_PIXELS = 1_000_000;
+const MIN_SOURCE_LONG_EDGE = 1_000;
 const GAUSSIAN_KERNEL = [1, 4, 6, 4, 1] as const;
 const MAX_EDGE_RATIO = 0.02;
 const MAX_CLIPPED_LUMA_RATIO = 0.15;
@@ -1059,7 +1060,7 @@ const conformSurfaceInternal = (
     sourceTooSmall: Math.max(
       input.sourceReferenceSize?.width ?? input.source.width,
       input.sourceReferenceSize?.height ?? input.source.height,
-    ) < 1024 || Math.min(
+    ) < MIN_SOURCE_LONG_EDGE || Math.min(
       input.sourceReferenceSize?.width ?? input.source.width,
       input.sourceReferenceSize?.height ?? input.source.height,
     ) < 512,

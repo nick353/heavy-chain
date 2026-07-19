@@ -8,8 +8,8 @@ const bin = join(process.cwd(), 'node_modules', '.bin', process.platform === 'wi
 
 if (!existsSync(bin)) {
   console.log('Playwright is declared as a devDependency but is not installed in this environment.');
-  console.log('Skipping e2e run. Run npm install when registry access is available, then rerun npm run e2e.');
-  process.exit(0);
+  console.error('E2E was not executed. Run npm install when registry access is available, then rerun npm run e2e.');
+  process.exit(1);
 }
 
 const result = spawnSync(bin, ['test'], { stdio: 'inherit' });

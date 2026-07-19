@@ -4,10 +4,17 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Check,
+  FolderHeart,
+  Heart,
   Layers3,
+  Laptop,
+  Loader2,
+  Plus,
   Scissors,
   Sparkles,
+  Trash2,
   Upload,
+  Users,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
@@ -18,6 +25,37 @@ import { PrintingCompositionStage } from '../components/workspace/PrintingCompos
 import { PrintMaskCandidatePicker } from '../components/workspace/PrintMaskCandidatePicker';
 import { PrintMaskEditor } from '../components/workspace/PrintMaskEditor';
 import { PrintGarmentSelectionEditor } from '../components/workspace/PrintGarmentSelectionEditor';
+import {
+  armPrintDesignReturnIntent,
+  bindPrintDesignReturnIntent,
+  canCommitPrintDesignCutoutRequest,
+  deferPrintDesignReturnIntent,
+  isPendingPrintDesignLayerMaterialization,
+  planPrintDesignInputUpdate,
+  planPrintDesignCutoutReconciliation,
+  preservePrintDesignLayerOrder,
+  printDesignIdentity,
+  prunePrintDesignIdentityMap,
+  reorderPrintDesignLayers,
+  resolvePrintDesignMaskEditorIndex,
+  resolvePrintDesignReturnIntent,
+  releasePrintDesignReturnIntent,
+  resolvePrintPlacementSelection,
+  selectPlacedPrintDesignLayers,
+  selectFreshDuplicatePrintDesign,
+  selectLatestProcessingPrintDesignLayerId,
+  selectLatestReadyPrintDesignLayerId,
+  type PrintDesignReturnIntent,
+  type PrintDesignLayerOrderAction,
+} from '../features/printing/selection/designLayerSelection';
+import {
+  settleComposition,
+  waitForDisplayableImage,
+} from '../features/printing/history/progressivePrintGeneration';
+import {
+  listPrintResultFavoriteIds,
+  savePrintResultFavorite,
+} from '../features/printing/history/printResultFavorite';
 import { useAuthStore } from '../stores/authStore';
 import {
   buildDerivedPrintGarmentMaskCandidates,
@@ -30,6 +68,7 @@ import {
   renderExperimentalSurfaceComposition,
   renderPrintRequestComposition,
   isPrintGarmentClothModelConfigured,
+  preparePrintGarmentClothModel,
   resolvePrintGarmentCutoutModel,
   suggestPrintableSurfaceDataUrl,
   type MaterialCutoutResult,
@@ -39,13 +78,17 @@ import {
 } from '../lib/workspaceMaterialReferences';
 import {
   isOversizedManualPrintMask,
+  groupPrintResultHistory,
   mergeDelayedSurfaceResult,
   mergePrintMaskCandidatesById,
   mergePrintResultHistory,
+  removePrintResultRun,
+  removePrintResultRuns,
   resolvePrintMaskCandidateId,
   selectPrintGarmentMaskCandidateValue,
   withManualPrintMaskResult,
   PRINT_CUTOUT_MAX_DATA_URL_BYTES,
+  PRINT_RESULT_HISTORY_MAX_RUNS,
   type PrintGarmentMaskCandidateId,
 } from '../lib/printMaskCandidateStrategy';
 import {
@@ -53,10 +96,28 @@ import {
   canCommitPrintableSuggestion,
   type PrintableSuggestionCommitToken,
 } from '../features/printing/surface/printableSuggestionRequest';
-import type { GarmentSelectionSource } from '../features/printing/selection/garmentSegmentationPolicy';
+import {
+  canExplicitlyConfirmProcessedGarmentMask,
+  DEFAULT_GARMENT_SEGMENTATION_TARGET,
+  garmentSelectionModelStatus,
+  isCurrentGarmentMaskEditorTarget,
+  isGarmentMaskExplicitlyConfirmed,
+  type GarmentSegmentationTarget,
+  type GarmentSelectionSource,
+} from '../features/printing/selection/garmentSegmentationPolicy';
+import {
+  canConfirmPlacementEdit,
+  createPlacementEditBaseline,
+  restorePlacementEditBaseline,
+  type PlacementEditBaseline,
+} from '../features/printing/selection/placementEditSession';
 
 type WorkbenchMode = 'fabric' | 'printing';
 type CutoutState = 'idle' | 'processing' | 'done' | 'error';
+type ClothModelWarmupUiState = {
+  status: 'idle' | 'warming' | 'ready' | 'error' | 'unavailable';
+  progress: number;
+};
 
 type Transform = {
   x: number;
@@ -64,6 +125,8 @@ type Transform = {
   scale: number;
   rotation: number;
   opacity: number;
+  flipX: boolean;
+  flipY: boolean;
 };
 
 type AssetLayer = {
@@ -79,7 +142,7 @@ type AssetLayer = {
 
 type PrintMaskEditorTarget = {
   kind: 'garment' | 'design' | 'printable-area';
-  index?: number;
+  capturedDesignLayerId?: string;
   title: string;
   description?: string;
   sourceUrl: string;
@@ -93,11 +156,153 @@ type PrintMaskEditorTarget = {
 
 type WorkbenchResult = {
   id: string;
+  brandId: string;
+  runId?: string;
+  resultKind?: 'exact' | 'fabric' | 'surface';
+  generatedAt?: number;
   title: string;
   note: string;
   imageUrl: string;
   outputSize?: { width: number; height: number };
 };
+
+type ProgressivePrintSurface = {
+  status: 'rendering' | 'ready' | 'error';
+  result: WorkbenchResult | null;
+  error: string | null;
+};
+
+type ProgressivePrintRun = {
+  runId: string;
+  generatedAt: number;
+  exact: ProgressivePrintSurface;
+  fabric: ProgressivePrintSurface;
+};
+
+const preferredScrollBehavior = (): ScrollBehavior => (
+  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+);
+
+function WorkbenchResultCard({
+  result,
+  onOpen,
+  onFavorite,
+  onDeleteRun,
+  isFavorite = false,
+}: {
+  result: WorkbenchResult;
+  onOpen: (result: WorkbenchResult) => void;
+  onFavorite?: (result: WorkbenchResult) => void;
+  onDeleteRun?: (result: WorkbenchResult) => void;
+  isFavorite?: boolean;
+}) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+      <button
+        type="button"
+        onClick={() => onOpen(result)}
+        className="block aspect-[4/5] w-full cursor-zoom-in bg-neutral-900 text-left transition hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-primary-400/60"
+        aria-label={`${result.title} を拡大`}
+      >
+        <img
+          src={result.imageUrl}
+          alt={result.title}
+          className="h-full w-full object-contain"
+          draggable={false}
+        />
+      </button>
+      <div className="space-y-2 p-4">
+        <div>
+          <p className="font-semibold text-white">{result.title}</p>
+          <p className="mt-1 text-sm text-white/55">{result.note}</p>
+          {result.outputSize && (
+            <p className="mt-1 text-xs text-cyan-200">{result.outputSize.width} × {result.outputSize.height}px</p>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {onFavorite && (
+            <button
+              type="button"
+              onClick={() => onFavorite(result)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 transition hover:border-pink-300/40 hover:text-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-300/40"
+              aria-label={`${result.title} をお気に入りに追加`}
+            >
+              <Heart className={`h-3.5 w-3.5 ${isFavorite ? 'fill-current text-pink-200' : ''}`} aria-hidden="true" />
+              {isFavorite ? 'お気に入り追加済み' : 'お気に入りに追加'}
+            </button>
+          )}
+          {onDeleteRun && result.runId && (
+            <button
+              type="button"
+              onClick={() => onDeleteRun(result)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 transition hover:border-red-300/40 hover:text-red-100 focus:outline-none focus:ring-2 focus:ring-red-300/40"
+              aria-label={`${result.title} を含む生成履歴を削除`}
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              この生成を削除
+            </button>
+          )}
+          {result.outputSize && (
+            <a
+              href={result.imageUrl}
+              download={`heavy-chain-${result.id}-${result.outputSize.width}x${result.outputSize.height}.png`}
+              className="inline-flex rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 transition hover:border-cyan-300/40 hover:text-cyan-100"
+            >
+              PNGをダウンロード
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProgressivePrintSurfaceCard({
+  label,
+  surface,
+  onOpen,
+  onFavorite,
+  isFavorite,
+}: {
+  label: string;
+  surface: ProgressivePrintSurface;
+  onOpen: (result: WorkbenchResult) => void;
+  onFavorite: (result: WorkbenchResult) => void;
+  isFavorite?: boolean;
+}) {
+  if (surface.status === 'ready' && surface.result) {
+    return <WorkbenchResultCard result={surface.result} onOpen={onOpen} onFavorite={onFavorite} isFavorite={isFavorite} />;
+  }
+  const failed = surface.status === 'error';
+  return (
+    <div
+      data-testid={`progressive-print-${label}-card`}
+      className={`flex aspect-[4/5] items-center justify-center overflow-hidden rounded-2xl border ${failed
+        ? 'border-red-300/25 bg-red-950/25'
+        : 'border-cyan-300/20 bg-[linear-gradient(145deg,rgba(8,47,73,0.9),rgba(30,41,59,0.88),rgba(88,28,135,0.65))]'}`}
+      role="status"
+      aria-live="polite"
+      aria-busy={surface.status === 'rendering'}
+    >
+      <div className="max-w-[15rem] px-5 text-center">
+        {failed ? (
+          <>
+            <p className="text-sm font-semibold text-red-100">{label}の生成に失敗しました</p>
+            <p className="mt-2 text-xs leading-relaxed text-red-100/65">{surface.error}</p>
+          </>
+        ) : (
+          <>
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-cyan-200 motion-reduce:animate-none" aria-hidden="true" />
+            <p className="mt-3 text-sm font-semibold text-cyan-50">{label}を生成中…</p>
+            <div className="mx-auto mt-3 h-1.5 w-28 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+              <div className="h-full w-2/3 animate-pulse rounded-full bg-gradient-to-r from-cyan-300 to-violet-300 motion-reduce:animate-none" />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const buildManualMaskSourceResult = (sourceUrl: string): Promise<MaterialCutoutResult> => new Promise((resolve, reject) => {
   const image = new Image();
@@ -128,6 +333,8 @@ type PendingSurfaceJob = {
   inputSignature: string;
   exactId: string;
   fabricId: string;
+  runId: string;
+  brandId: string;
   generatedAt: number;
 };
 
@@ -154,6 +361,24 @@ const surfaceConformStatusMessage = (reason: string) => {
   return messages[reason] ?? `布面追従（試験）を省略しました: ${reason}`;
 };
 
+const waitForCommittedPaint = () => new Promise<void>((resolve) => {
+  let settled = false;
+  let firstFrame = 0;
+  let secondFrame = 0;
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    window.clearTimeout(fallbackTimer);
+    if (firstFrame) window.cancelAnimationFrame(firstFrame);
+    if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    resolve();
+  };
+  const fallbackTimer = window.setTimeout(finish, 250);
+  firstFrame = window.requestAnimationFrame(() => {
+    secondFrame = window.requestAnimationFrame(finish);
+  });
+});
+
 const printableSuggestionStatusMessage = (reason: string) => {
   const messages: Record<string, string> = {
     EMPTY_GARMENT: '服の領域を確認できなかったため、手動指定を使ってください。',
@@ -176,6 +401,8 @@ const defaultTransform = (overrides: Partial<Transform> = {}): Transform => ({
   scale: overrides.scale ?? 1,
   rotation: overrides.rotation ?? 0,
   opacity: overrides.opacity ?? 1,
+  flipX: overrides.flipX ?? false,
+  flipY: overrides.flipY ?? false,
 });
 
 const fabricVariants = [
@@ -208,6 +435,7 @@ const fabricVariants = [
 const printPreviewStageSize = { width: 720, height: 900 };
 const IMAGE_LOAD_TIMEOUT_MS = 30_000;
 const CUTOUT_TIMEOUT_MS = 75_000;
+const CLOTH_CUTOUT_TIMEOUT_MS = 105_000;
 const COMPOSITION_TIMEOUT_MS = 30_000;
 
 function clamp(value: number, min: number, max: number) {
@@ -303,6 +531,7 @@ async function renderComposition(
       ctx.globalAlpha = transform.opacity;
       ctx.translate(centerX, centerY);
       ctx.rotate((transform.rotation * Math.PI) / 180);
+      ctx.scale(transform.flipX ? -1 : 1, transform.flipY ? -1 : 1);
       ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
       ctx.restore();
     } catch {
@@ -331,7 +560,7 @@ function LayerPreview({
     left: `${layer.transform.x}%`,
     top: `${layer.transform.y}%`,
     opacity: layer.transform.opacity,
-    transform: `translate(-50%, -50%) rotate(${layer.transform.rotation}deg) scale(${layer.transform.scale})`,
+    transform: `translate(-50%, -50%) rotate(${layer.transform.rotation}deg) scale(${layer.transform.scale * (layer.transform.flipX ? -1 : 1)}, ${layer.transform.scale * (layer.transform.flipY ? -1 : 1)})`,
   } as CSSProperties;
 
   return (
@@ -386,15 +615,26 @@ export function LightchainMaterialWorkbenchPage() {
     height: printPreviewStageSize.height * printOutputScale,
   }), [printOutputScale]);
   const stageRef = useRef<HTMLDivElement>(null);
+  const printDesignSelectorRef = useRef<HTMLDivElement>(null);
+  const printPlacementPaneRef = useRef<HTMLElement>(null);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const userClearedSelectionRef = useRef(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
+  const [progressivePrintRun, setProgressivePrintRun] = useState<ProgressivePrintRun | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [surfaceConformStatus, setSurfaceConformStatus] = useState<string | null>(null);
   const [pendingSurfaceJob, setPendingSurfaceJob] = useState<PendingSurfaceJob | null>(null);
   const [generatedResultsStale, setGeneratedResultsStale] = useState(false);
   const [selectedResult, setSelectedResult] = useState<WorkbenchResult | null>(null);
+  const [favoriteTargetResult, setFavoriteTargetResult] = useState<WorkbenchResult | null>(null);
+  const [favoriteTargetBrandId, setFavoriteTargetBrandId] = useState<string | null>(null);
+  const [favoriteSpace, setFavoriteSpace] = useState<'personal' | 'team'>('personal');
+  const [favoriteDestination, setFavoriteDestination] = useState('パーソナルスペース');
+  const [isCreatingFavoriteGroup, setIsCreatingFavoriteGroup] = useState(false);
+  const [favoriteGroupName, setFavoriteGroupName] = useState('');
+  const [favoriteSaving, setFavoriteSaving] = useState(false);
+  const [favoriteRevision, setFavoriteRevision] = useState(0);
   const [showResultComparison, setShowResultComparison] = useState(false);
   const [fabricBase, setFabricBase] = useState<SelectedImage | null>(null);
   const [fabricDesign, setFabricDesign] = useState<SelectedImage | null>(null);
@@ -403,14 +643,27 @@ export function LightchainMaterialWorkbenchPage() {
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentCutoutSourceUrl, setPrintGarmentCutoutSourceUrl] = useState<string | null>(null);
   const [printGarmentSelectionSource, setPrintGarmentSelectionSource] = useState<GarmentSelectionSource>('automatic');
+  const [printGarmentSegmentationTarget, setPrintGarmentSegmentationTarget] = useState<GarmentSegmentationTarget>(
+    DEFAULT_GARMENT_SEGMENTATION_TARGET,
+  );
   const [printGarmentProcessed, setPrintGarmentProcessed] = useState<string | null>(null);
   const [printGarmentMaskCandidates, setPrintGarmentMaskCandidates] = useState<PrintGarmentMaskCandidate[]>([]);
   const [selectedPrintGarmentMaskCandidateId, setSelectedPrintGarmentMaskCandidateId] = useState<PrintGarmentMaskCandidateId>('auto');
   const [printGarmentMaskRevision, setPrintGarmentMaskRevision] = useState(0);
+  const [printGarmentMaskExplicitlyConfirmed, setPrintGarmentMaskExplicitlyConfirmed] = useState(false);
   const [printGarmentCutoutState, setPrintGarmentCutoutState] = useState<CutoutState>('idle');
   const [printGarmentCutoutError, setPrintGarmentCutoutError] = useState<string | null>(null);
+  const [clothModelWarmup, setClothModelWarmup] = useState<ClothModelWarmupUiState>({
+    status: 'idle',
+    progress: 0,
+  });
   const [printDesigns, setPrintDesigns] = useState<SelectedImage[]>([]);
   const [printDesignLayers, setPrintDesignLayers] = useState<AssetLayer[]>([]);
+  const [printPlacementSessionOpen, setPrintPlacementSessionOpen] = useState(true);
+  const [printPlacementConfirmed, setPrintPlacementConfirmed] = useState(false);
+  const [printPlacementSessionDirty, setPrintPlacementSessionDirty] = useState(false);
+  const [printPlacementSessionRevision, setPrintPlacementSessionRevision] = useState(0);
+  const [activePrintDesignLayerId, setActivePrintDesignLayerId] = useState<string | null>(null);
   const [printDesignProcessedUrls, setPrintDesignProcessedUrls] = useState<Record<number, string>>({});
   const [printDesignCutoutResults, setPrintDesignCutoutResults] = useState<Record<number, MaterialCutoutResult>>({});
   const [printDesignMaskRevisions, setPrintDesignMaskRevisions] = useState<Record<number, number>>({});
@@ -431,6 +684,14 @@ export function LightchainMaterialWorkbenchPage() {
   const printableSurfaceEditorOperationRef = useRef(0);
   const printGarmentCutoutRequestRef = useRef(0);
   const printDesignCutoutRequestRef = useRef(0);
+  const printDesignLayerIdsRef = useRef(new Map<string, string>());
+  const currentPrintDesignLayerIdsRef = useRef<string[]>([]);
+  const printDesignLayerSequenceRef = useRef(0);
+  const printPlacementBaselineRef = useRef<PlacementEditBaseline<Transform> | null>(null);
+  const printPlacementSessionOpenRef = useRef(true);
+  const pendingActivePrintDesignLayerIdRef = useRef<string | null>(null);
+  const printDesignReturnIntentRef = useRef<PrintDesignReturnIntent | null>(null);
+  const printDesignReturnFrameRef = useRef<number | null>(null);
   const printRequestRevisionRef = useRef(0);
   const generationSequenceRef = useRef(0);
   const surfaceJobSequenceRef = useRef(0);
@@ -440,6 +701,64 @@ export function LightchainMaterialWorkbenchPage() {
   const printGarmentMaskRevisionRef = useRef(printGarmentMaskRevision);
   const printGarmentProcessedRef = useRef(printGarmentProcessed);
   const selectedPrintGarmentOutputSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const selectedPrintGarmentMaskCandidate = useMemo(
+    () => printGarmentMaskCandidates.find(
+      (candidate) => candidate.candidateId === selectedPrintGarmentMaskCandidateId,
+    ) ?? null,
+    [printGarmentMaskCandidates, selectedPrintGarmentMaskCandidateId],
+  );
+  const clothModelConfigured = isPrintGarmentClothModelConfigured();
+  const printGarmentSegmentationStatus = useMemo(() => garmentSelectionModelStatus({
+    selectionSource: printGarmentSelectionSource,
+    clothModelConfigured,
+    resultEngine: selectedPrintGarmentMaskCandidate?.result.engine,
+    requestedTarget: printGarmentSegmentationTarget,
+    resultTarget: selectedPrintGarmentMaskCandidate?.result.segmentationTarget,
+  }), [clothModelConfigured, printGarmentSegmentationTarget, printGarmentSelectionSource, selectedPrintGarmentMaskCandidate]);
+  const hasConfirmedPrintGarmentMask = isGarmentMaskExplicitlyConfirmed({
+    selectionSource: printGarmentSelectionSource,
+    maskCandidateId: selectedPrintGarmentMaskCandidateId,
+    cutoutDone: printGarmentCutoutState === 'done',
+    hasProcessedMask: Boolean(printGarmentProcessed),
+    explicitlyConfirmed: printGarmentMaskExplicitlyConfirmed,
+  });
+  const visibleGeneratedResults = useMemo(
+    () => isPrinting
+      ? generatedResults.filter((result) => result.id.startsWith('print-'))
+      : generatedResults.filter((result) => !result.id.startsWith('print-')),
+    [generatedResults, isPrinting],
+  );
+  const printResultRuns = useMemo(
+    () => groupPrintResultHistory(visibleGeneratedResults),
+    [visibleGeneratedResults],
+  );
+  const placedPrintDesignLayers = useMemo(
+    () => selectPlacedPrintDesignLayers(printDesignLayers),
+    [printDesignLayers],
+  );
+  const canConfirmPrintPlacement = canConfirmPlacementEdit({
+    garmentMaskConfirmed: hasConfirmedPrintGarmentMask,
+    layers: placedPrintDesignLayers,
+  });
+  const printPlacementConfirmationStatus = !hasConfirmedPrintGarmentMask
+    ? '青い服の認識範囲を確定してください'
+    : placedPrintDesignLayers.length === 0
+      ? '配置するプリント画像を1つ以上選択してください'
+      : placedPrintDesignLayers.some((layer) => layer.cutoutState === 'processing')
+        ? 'デザインの透明化完了後に決定できます'
+        : placedPrintDesignLayers.some((layer) => layer.cutoutState === 'error')
+          ? '透明化に失敗したデザインを削除または再選択してください'
+          : 'すべてのデザイン表示が揃うまで決定できません';
+
+  const getPrintDesignLayerId = useCallback((design: SelectedImage) => {
+    const identity = printDesignIdentity(design);
+    const existing = printDesignLayerIdsRef.current.get(identity);
+    if (existing) return existing;
+    printDesignLayerSequenceRef.current += 1;
+    const layerId = `print-design-${printDesignLayerSequenceRef.current}`;
+    printDesignLayerIdsRef.current.set(identity, layerId);
+    return layerId;
+  }, []);
 
   const invalidatePrintableSuggestion = useCallback(() => {
     printableSuggestionRequestRef.current += 1;
@@ -456,17 +775,15 @@ export function LightchainMaterialWorkbenchPage() {
     fabricPresetIds,
     printGarmentUrl: printGarment?.url ?? null,
     printGarmentSelectionSource,
+    printGarmentSegmentationTarget,
     printGarmentProcessed,
     printGarmentMaskCandidateId: selectedPrintGarmentMaskCandidateId,
     printGarmentMaskRevision,
+    printGarmentMaskExplicitlyConfirmed,
     printGarmentCutoutState,
     printOutputScale,
     printableSurfaceIdentity: printableSurfaceEnabled ? manualPrintableSurface?.identity : undefined,
-    printDesigns: printDesigns.map((design) => design.url),
-    printDesignProcessedUrls,
-    printDesignMaskRevisions,
-    printDesignCutoutStates,
-    printDesignLayers: printDesignLayers.map((layer) => ({
+    printDesignLayers: placedPrintDesignLayers.map((layer) => ({
       id: layer.id,
       sourceUrl: layer.originalUrl,
       displayUrl: layer.displayUrl,
@@ -480,16 +797,14 @@ export function LightchainMaterialWorkbenchPage() {
     fabricDesign?.url,
     fabricPresetIds,
     mode,
-    printDesignCutoutStates,
-    printDesignLayers,
-    printDesignProcessedUrls,
-    printDesignMaskRevisions,
-    printDesigns,
+    placedPrintDesignLayers,
     printGarment?.url,
     printGarmentSelectionSource,
+    printGarmentSegmentationTarget,
     printGarmentCutoutState,
     printGarmentProcessed,
     printGarmentMaskRevision,
+    printGarmentMaskExplicitlyConfirmed,
     printOutputScale,
     manualPrintableSurface?.identity,
     printableSurfaceEnabled,
@@ -520,17 +835,25 @@ export function LightchainMaterialWorkbenchPage() {
   useEffect(() => () => {
     printableSuggestionRequestRef.current += 1;
     printableSurfaceEditorOperationRef.current += 1;
+    generationSequenceRef.current += 1;
+    generationRequestRef.current = null;
+    generationRequestSignatureRef.current = null;
+    if (printDesignReturnFrameRef.current !== null) {
+      cancelAnimationFrame(printDesignReturnFrameRef.current);
+      printDesignReturnFrameRef.current = null;
+    }
   }, []);
 
   useEffect(() => {
     if (generationInputEffectSignatureRef.current === generationInputSignature) return;
     generationInputEffectSignatureRef.current = generationInputSignature;
     if (generatedResults.length > 0) setGeneratedResultsStale(true);
+    setPendingSurfaceJob(null);
+    setProgressivePrintRun(null);
     const activeRequest = generationRequestRef.current;
     if (activeRequest === null || generationRequestSignatureRef.current === generationInputSignature) return;
     generationRequestRef.current = null;
     generationRequestSignatureRef.current = null;
-    setPendingSurfaceJob(null);
     setIsGenerating(false);
     setGenerationError('素材が変更されたため、進行中の生成結果を無効化しました。内容を確認して再生成してください。');
   }, [generatedResults.length, generationInputSignature]);
@@ -550,14 +873,14 @@ export function LightchainMaterialWorkbenchPage() {
       ...(printableSurfaceEnabled && manualPrintableSurface
         ? { surfaceIdentity: manualPrintableSurface.identity }
         : {}),
-      designs: printDesignLayers.map((layer) => ({
+      designs: placedPrintDesignLayers.map((layer) => ({
         id: layer.id,
         sourceUrl: layer.originalUrl,
         maskRevision: layer.maskRevision,
         transform: layer.transform,
       })),
     });
-  }, [currentBrand?.id, currentBrand?.name, manualPrintableSurface, printableSurfaceEnabled, printGarment?.referenceType, printGarmentProcessed, printDesignLayers, printGarmentMaskRevision, printOutputStageSize, selectedPrintGarmentMaskCandidateId]);
+  }, [placedPrintDesignLayers, currentBrand?.id, currentBrand?.name, manualPrintableSurface, printableSurfaceEnabled, printGarment?.referenceType, printGarmentProcessed, printGarmentMaskRevision, printOutputStageSize, selectedPrintGarmentMaskCandidateId]);
 
   const currentPrintStateRef = useRef<{ revision: number; signature: string }>({ revision: 0, signature: printSnapshotSignature });
 
@@ -596,6 +919,10 @@ export function LightchainMaterialWorkbenchPage() {
         }
         const surfaceResult: WorkbenchResult = {
           id: `print-${job.revision}-${job.generatedAt}-surface`,
+          brandId: job.brandId,
+          runId: job.runId,
+          resultKind: 'surface',
+          generatedAt: job.generatedAt,
           title: '布面メッシュ追従（試験）',
           note: '手動指定面 / 適応行メッシュ＋局所シェーディング / 3D・自動衣服認識ではありません',
           imageUrl: surfaceComposition.dataUrl,
@@ -644,14 +971,173 @@ export function LightchainMaterialWorkbenchPage() {
     return fabricLayer ? [fabricLayer] : [];
   }, [fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentCutoutState, printGarmentMaskRevision, printGarmentProcessed]);
 
-  useEffect(() => {
-    if (userClearedSelectionRef.current) {
+  const focusPrintPlacementPane = useCallback(() => {
+    const pane = printPlacementPaneRef.current;
+    if (!pane) return;
+    pane.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
+    pane.focus({ preventScroll: true });
+  }, []);
+
+  const openPrintPlacementSession = useCallback(() => {
+    if (printPlacementSessionOpenRef.current) {
+      requestAnimationFrame(() => focusPrintPlacementPane());
       return;
     }
-    if (!selectedLayerId && activeLayers.length > 0) {
-      setSelectedLayerId(activeLayers[activeLayers.length - 1].id);
+    printPlacementBaselineRef.current = null;
+    setPrintPlacementSessionDirty(false);
+    printPlacementSessionOpenRef.current = true;
+    setPrintPlacementSessionOpen(true);
+    setPrintPlacementSessionRevision((current) => current + 1);
+    requestAnimationFrame(() => focusPrintPlacementPane());
+  }, [focusPrintPlacementPane]);
+
+  const beginPrintPlacementSessionEdit = useCallback(() => {
+    if (!printPlacementBaselineRef.current) {
+      printPlacementBaselineRef.current = createPlacementEditBaseline(printDesignLayers);
     }
-  }, [activeLayers, selectedLayerId]);
+    setPrintPlacementSessionDirty(true);
+  }, [printDesignLayers]);
+
+  const confirmPrintPlacementSession = useCallback(() => {
+    if (!canConfirmPrintPlacement) {
+      toast.error(printPlacementConfirmationStatus);
+      focusPrintPlacementPane();
+      return;
+    }
+    printPlacementBaselineRef.current = null;
+    setPrintPlacementSessionDirty(false);
+    setPrintPlacementConfirmed(true);
+    printPlacementSessionOpenRef.current = false;
+    setPrintPlacementSessionOpen(false);
+    setPrintPlacementSessionRevision((current) => current + 1);
+    toast.success('デザイン配置を決定しました');
+  }, [canConfirmPrintPlacement, focusPrintPlacementPane, printPlacementConfirmationStatus]);
+
+  const cancelPrintPlacementSession = useCallback(() => {
+    const baseline = printPlacementBaselineRef.current;
+    if (baseline) {
+      setPrintDesignLayers((current) => restorePlacementEditBaseline({ baseline, currentLayers: current }));
+    }
+    printPlacementBaselineRef.current = null;
+    setPrintPlacementSessionDirty(false);
+    printPlacementSessionOpenRef.current = false;
+    setPrintPlacementSessionOpen(false);
+    setPrintPlacementSessionRevision((current) => current + 1);
+    userClearedSelectionRef.current = true;
+    setSelectedLayerId(null);
+    toast('配置の変更を取り消しました');
+  }, []);
+
+  const consumeReadyPrintDesignReturn = (targetLayerId: string) => {
+    const resolution = resolvePrintDesignReturnIntent({
+      intent: printDesignReturnIntentRef.current,
+      activeLayerId: targetLayerId,
+      expectedLayerIds: printDesigns.map(getPrintDesignLayerId),
+      layers: printDesignLayers.map((layer) => ({ id: layer.id, state: layer.cutoutState })),
+    });
+    printDesignReturnIntentRef.current = resolution.intent;
+    if (resolution.shouldReturn) openPrintPlacementSession();
+  };
+
+  const cancelScheduledPrintDesignReturn = () => {
+    if (printDesignReturnFrameRef.current === null) return;
+    cancelAnimationFrame(printDesignReturnFrameRef.current);
+    printDesignReturnFrameRef.current = null;
+  };
+
+  const scheduleDeferredPrintDesignReturn = (targetLayerId: string) => {
+    cancelScheduledPrintDesignReturn();
+    printDesignReturnFrameRef.current = requestAnimationFrame(() => {
+      printDesignReturnFrameRef.current = requestAnimationFrame(() => {
+        printDesignReturnFrameRef.current = null;
+        printDesignReturnIntentRef.current = releasePrintDesignReturnIntent(
+          printDesignReturnIntentRef.current,
+          targetLayerId,
+        );
+        consumeReadyPrintDesignReturn(targetLayerId);
+      });
+    });
+  };
+
+  useEffect(() => {
+    if (!isPrinting) {
+      if (!fabricLayer) {
+        if (selectedLayerId) setSelectedLayerId(null);
+        return;
+      }
+      if (selectedLayerId !== fabricLayer.id && !userClearedSelectionRef.current) {
+        setSelectedLayerId(fabricLayer.id);
+      }
+      return;
+    }
+    const next = resolvePrintPlacementSelection({
+      layers: activeLayers.map((layer) => ({
+        id: layer.id,
+        kind: layer.id === 'print-garment' ? 'garment' : 'design',
+        ready: layer.cutoutState === 'done',
+      })),
+      selectedLayerId,
+      pendingLayerId: pendingActivePrintDesignLayerIdRef.current,
+      pendingLayerExpected: Boolean(
+        pendingActivePrintDesignLayerIdRef.current
+        && printDesigns.some(
+          (design) => getPrintDesignLayerId(design) === pendingActivePrintDesignLayerIdRef.current,
+        )
+      ),
+      userClearedSelection: userClearedSelectionRef.current,
+    });
+    pendingActivePrintDesignLayerIdRef.current = next.pendingLayerId;
+    if (next.selectedLayerId !== selectedLayerId) {
+      setSelectedLayerId(next.selectedLayerId);
+    }
+  }, [activeLayers, fabricLayer, getPrintDesignLayerId, isPrinting, printDesigns, selectedLayerId]);
+
+  useEffect(() => {
+    if (!isPrinting || printDesignLayers.length === 0) return;
+    const activeLayer = activePrintDesignLayerId
+      ? printDesignLayers.find((layer) => layer.id === activePrintDesignLayerId)
+      : null;
+    const activeLayerExpected = isPendingPrintDesignLayerMaterialization({
+      activeLayerId: activePrintDesignLayerId,
+      pendingLayerId: pendingActivePrintDesignLayerIdRef.current,
+      expectedLayerIds: printDesigns.map(getPrintDesignLayerId),
+      materializedLayerIds: printDesignLayers.map((layer) => layer.id),
+    });
+    if (!activeLayer && activeLayerExpected) return;
+    if (activeLayer && activeLayer.cutoutState !== 'error') return;
+
+    const fallbackLayers = printDesignLayers.map((layer) => ({
+        id: layer.id,
+        kind: 'design' as const,
+        ready: layer.cutoutState === 'done',
+        processing: layer.cutoutState === 'processing',
+      }));
+    const readyFallbackLayerId = selectLatestReadyPrintDesignLayerId(fallbackLayers);
+    const processingFallbackLayerId = selectLatestProcessingPrintDesignLayerId(fallbackLayers);
+    const fallbackLayerId = readyFallbackLayerId ?? processingFallbackLayerId;
+    if (fallbackLayerId === activePrintDesignLayerId) return;
+    pendingActivePrintDesignLayerIdRef.current = readyFallbackLayerId
+      ? null
+      : processingFallbackLayerId;
+    setActivePrintDesignLayerId(fallbackLayerId);
+    if (!userClearedSelectionRef.current) {
+      setSelectedLayerId((current) => (
+        !current || current === activePrintDesignLayerId ? readyFallbackLayerId : current
+      ));
+    }
+  }, [activePrintDesignLayerId, getPrintDesignLayerId, isPrinting, printDesignLayers, printDesigns]);
+
+  useEffect(() => {
+    const resolution = resolvePrintDesignReturnIntent({
+      intent: printDesignReturnIntentRef.current,
+      activeLayerId: activePrintDesignLayerId,
+      expectedLayerIds: printDesigns.map(getPrintDesignLayerId),
+      layers: printDesignLayers.map((layer) => ({ id: layer.id, state: layer.cutoutState })),
+    });
+    printDesignReturnIntentRef.current = resolution.intent;
+    if (!resolution.shouldReturn) return;
+    openPrintPlacementSession();
+  }, [activePrintDesignLayerId, getPrintDesignLayerId, openPrintPlacementSession, printDesignLayers, printDesigns]);
 
   useEffect(() => {
     const onPointerUp = () => {
@@ -662,11 +1148,23 @@ export function LightchainMaterialWorkbenchPage() {
   }, []);
 
   const selectLayer = (layerId: string) => {
+    pendingActivePrintDesignLayerIdRef.current = null;
     userClearedSelectionRef.current = false;
+    if (layerId.startsWith('print-design-')) {
+      printDesignReturnIntentRef.current = bindPrintDesignReturnIntent(
+        printDesignReturnIntentRef.current,
+        layerId,
+      );
+      consumeReadyPrintDesignReturn(layerId);
+      setActivePrintDesignLayerId(layerId);
+    }
     setSelectedLayerId(layerId);
   };
 
   const clearSelectedLayer = () => {
+    cancelScheduledPrintDesignReturn();
+    printDesignReturnIntentRef.current = null;
+    pendingActivePrintDesignLayerIdRef.current = null;
     userClearedSelectionRef.current = true;
     setSelectedLayerId(null);
   };
@@ -697,6 +1195,35 @@ export function LightchainMaterialWorkbenchPage() {
   }, []);
 
   useEffect(() => {
+    if (!isPrinting || !printGarment || printGarmentCutoutState !== 'done' || !clothModelConfigured) {
+      setClothModelWarmup({ status: 'idle', progress: 0 });
+      return;
+    }
+    let cancelled = false;
+    setClothModelWarmup({ status: 'warming', progress: 0 });
+    void preparePrintGarmentClothModel((progress) => {
+      if (cancelled) return;
+      setClothModelWarmup({
+        status: 'warming',
+        progress: clamp(Math.round(progress.progress), 0, 100),
+      });
+    }).then((result) => {
+      if (cancelled) return;
+      setClothModelWarmup({
+        status: result.status === 'ready' ? 'ready' : 'unavailable',
+        progress: result.status === 'ready' ? 100 : 0,
+      });
+    }).catch((error) => {
+      if (cancelled) return;
+      console.warn('Cloth model prewarm failed; confirmed-mask fallback remains available.', error);
+      setClothModelWarmup({ status: 'error', progress: 0 });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [clothModelConfigured, isPrinting, printGarment, printGarmentCutoutState]);
+
+  useEffect(() => {
     invalidatePrintableSuggestion();
     const requestId = ++printGarmentCutoutRequestRef.current;
     setPrintMaskEditorTarget(null);
@@ -705,9 +1232,11 @@ export function LightchainMaterialWorkbenchPage() {
     if (!printGarment) {
       setPrintGarmentCutoutSourceUrl(null);
       setPrintGarmentSelectionSource('automatic');
+      setPrintGarmentSegmentationTarget(DEFAULT_GARMENT_SEGMENTATION_TARGET);
       setPrintGarmentProcessed(null);
       setPrintGarmentMaskCandidates([]);
       setSelectedPrintGarmentMaskCandidateId('auto');
+      setPrintGarmentMaskExplicitlyConfirmed(false);
       setPrintGarmentCutoutState('idle');
       setPrintGarmentCutoutError(null);
       return;
@@ -720,9 +1249,16 @@ export function LightchainMaterialWorkbenchPage() {
     setSelectedPrintGarmentMaskCandidateId('auto');
     const cutoutSourceUrl = printGarmentCutoutSourceUrl ?? printGarment.url;
     const cutoutModel = resolvePrintGarmentCutoutModel({ selectionSource: printGarmentSelectionSource });
+    const cutoutTimeoutMilliseconds = cutoutModel === 'u2net_cloth_seg'
+      ? CLOTH_CUTOUT_TIMEOUT_MS
+      : CUTOUT_TIMEOUT_MS;
     void withTimeout(
-      buildPrintGarmentCutoutDataUrl({ imageUrl: cutoutSourceUrl, modelName: cutoutModel }),
-      CUTOUT_TIMEOUT_MS,
+      buildPrintGarmentCutoutDataUrl({
+        imageUrl: cutoutSourceUrl,
+        modelName: cutoutModel,
+        segmentationTarget: printGarmentSegmentationTarget,
+      }),
+      cutoutTimeoutMilliseconds,
       '参考画像の透明化がタイムアウトしました。元画像を確認して再試行してください',
     )
       .then((automaticResult) => {
@@ -751,6 +1287,7 @@ export function LightchainMaterialWorkbenchPage() {
                 }
                 setSelectedPrintGarmentMaskCandidateId(nextSelection.candidateId);
                 setPrintGarmentProcessed(nextSelection.dataUrl);
+                setPrintGarmentMaskExplicitlyConfirmed(nextSelection.candidateId === 'manual');
               }
               return mergedCandidates;
             });
@@ -772,7 +1309,7 @@ export function LightchainMaterialWorkbenchPage() {
         printGarmentCutoutRequestRef.current += 1;
       }
     };
-  }, [clearManualPrintableSurface, invalidatePrintableSuggestion, printGarment, printGarmentCutoutSourceUrl, printGarmentSelectionSource]);
+  }, [clearManualPrintableSurface, invalidatePrintableSuggestion, printGarment, printGarmentCutoutSourceUrl, printGarmentSegmentationTarget, printGarmentSelectionSource]);
 
   const selectPrintGarmentMaskCandidate = (candidateId: PrintGarmentMaskCandidateId) => {
     if (candidateId === selectedPrintGarmentMaskCandidateId) return;
@@ -783,6 +1320,7 @@ export function LightchainMaterialWorkbenchPage() {
     }
     setSelectedPrintGarmentMaskCandidateId(selection.candidateId);
     setPrintGarmentProcessed(selection.dataUrl);
+    setPrintGarmentMaskExplicitlyConfirmed(selection.candidateId === 'manual');
     setPrintGarmentMaskRevision((current) => current + 1);
     setPrintMaskEditorTarget(null);
     toast.success(`${selection.candidate.label}をステージへ反映しました`);
@@ -791,43 +1329,39 @@ export function LightchainMaterialWorkbenchPage() {
   useEffect(() => {
     if (!printDesigns.length) {
       setPrintDesignLayers([]);
+      pendingActivePrintDesignLayerIdRef.current = null;
+      setActivePrintDesignLayerId(null);
       return;
     }
-    setPrintDesignLayers((previousLayers) => printDesigns.map((_, index) => {
-      const layerId = `print-design-${index}`;
-      const previousLayer = previousLayers.find((layer) => layer.id === layerId);
-      const cutoutState = printDesignCutoutStates[index] ?? 'processing';
-      const processedUrl = cutoutState === 'done' ? (printDesignProcessedUrls[index] || '') : '';
-      return {
-        id: layerId,
-        label: `デザイン ${index + 1}`,
-        originalUrl: processedUrl,
-        displayUrl: processedUrl,
-        transform: defaultTransform({
-          x: previousLayer?.transform.x ?? 50 + ((index % 3) - 1) * 8,
-          y: previousLayer?.transform.y ?? 44 + Math.floor(index / 3) * 14,
-          scale: previousLayer?.transform.scale ?? (index === 0 ? 1 : 0.88),
-          rotation: previousLayer?.transform.rotation ?? (index % 2 === 0 ? -6 : 6) * (index % 3),
-          opacity: previousLayer?.transform.opacity ?? 1,
-        }),
-        autoCutout: true,
-        cutoutState,
-        maskRevision: printDesignMaskRevisions[index] ?? 0,
-      };
-    }));
-  }, [printDesignCutoutStates, printDesignMaskRevisions, printDesignProcessedUrls, printDesigns]);
-
-  useEffect(() => {
-    if (userClearedSelectionRef.current) {
-      return;
-    }
-    if (fabricBase || fabricDesign || printGarment || printDesigns.length > 0) {
-      const firstLayer =
-        (isPrinting ? printDesignLayers[0]?.id : fabricLayer?.id) ||
-        (isPrinting ? (printGarmentProcessed ? 'print-garment' : null) : fabricLayer?.id);
-      setSelectedLayerId(firstLayer || null);
-    }
-  }, [fabricBase, fabricDesign, fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentProcessed, printDesigns.length]);
+    setPrintDesignLayers((previousLayers) => {
+      const materializedLayers = printDesigns.map((design, index) => {
+        const layerId = getPrintDesignLayerId(design);
+        const previousLayer = previousLayers.find((layer) => layer.id === layerId);
+        const cutoutState = printDesignCutoutStates[index] ?? 'processing';
+        const processedUrl = cutoutState === 'done' ? (printDesignProcessedUrls[index] || '') : '';
+        const displayUrl = processedUrl || design.url;
+        return {
+          id: layerId,
+          label: `デザイン ${index + 1}`,
+          originalUrl: processedUrl,
+          displayUrl,
+          transform: defaultTransform({
+            x: previousLayer?.transform.x ?? 50 + ((index % 3) - 1) * 8,
+            y: previousLayer?.transform.y ?? 44 + Math.floor(index / 3) * 14,
+            scale: previousLayer?.transform.scale ?? (index === 0 ? 1 : 0.88),
+            rotation: previousLayer?.transform.rotation ?? (index % 2 === 0 ? -6 : 6) * (index % 3),
+            opacity: previousLayer?.transform.opacity ?? 1,
+            flipX: previousLayer?.transform.flipX ?? false,
+            flipY: previousLayer?.transform.flipY ?? false,
+          }),
+          autoCutout: true,
+          cutoutState,
+          maskRevision: printDesignMaskRevisions[index] ?? 0,
+        };
+      });
+      return preservePrintDesignLayerOrder(previousLayers, materializedLayers);
+    });
+  }, [getPrintDesignLayerId, printDesignCutoutStates, printDesignMaskRevisions, printDesignProcessedUrls, printDesigns]);
 
   const stageLayers = useMemo(() => {
     if (isPrinting) {
@@ -843,21 +1377,11 @@ export function LightchainMaterialWorkbenchPage() {
             maskRevision: printGarmentMaskRevision,
           } as const]
         : [];
-      return [...garments, ...printDesignLayers];
+      return [...garments, ...placedPrintDesignLayers];
     }
 
     return fabricLayer ? [fabricLayer] : [];
-  }, [fabricLayer, isPrinting, printDesignLayers, printGarment, printGarmentCutoutState, printGarmentMaskRevision, printGarmentProcessed]);
-
-  useEffect(() => {
-    if (isPrinting) {
-      if (printGarmentProcessed && !selectedLayerId && !userClearedSelectionRef.current) {
-        setSelectedLayerId('print-garment');
-      }
-    } else if (fabricLayer && !selectedLayerId && !userClearedSelectionRef.current) {
-      setSelectedLayerId(fabricLayer.id);
-    }
-  }, [fabricLayer, isPrinting, printGarmentProcessed, selectedLayerId]);
+  }, [fabricLayer, isPrinting, placedPrintDesignLayers, printGarment, printGarmentCutoutState, printGarmentMaskRevision, printGarmentProcessed]);
 
   useEffect(() => {
     if (!fabricBase || !fabricDesign) {
@@ -878,7 +1402,7 @@ export function LightchainMaterialWorkbenchPage() {
 
   const handleGenerate = async () => {
     if (isPrinting) invalidatePrintableSuggestion();
-    if (!stageRef.current) return;
+    if (!stageRef.current && !isPrinting) return;
     if (!currentBrand?.id) {
       toast.error('ブランドを選択してください');
       return;
@@ -888,15 +1412,27 @@ export function LightchainMaterialWorkbenchPage() {
       toast.error('生地画像とデザイン画像を入れてください');
       return;
     }
-    if (isPrinting && (
-      !printGarmentProcessed
-      || printGarmentCutoutState !== 'done'
-      || !printDesignLayers.length
-      || printDesignLayers.some((layer) => layer.cutoutState !== 'done' || !layer.displayUrl)
-    )) {
-      toast.error(printGarmentCutoutState === 'processing' || printDesignLayers.some((layer) => layer.cutoutState === 'processing')
+    if (isPrinting && (!printGarmentProcessed || printGarmentCutoutState !== 'done')) {
+      toast.error(printGarmentCutoutState === 'processing'
         ? '背景の透明化が完了するまでお待ちください'
-        : '参考画像とプリント画像の透明化を完了してください');
+        : '参考画像の透明化を完了してください');
+      return;
+    }
+    if (isPrinting && !hasConfirmedPrintGarmentMask) {
+      setPrintGarmentSelectionOpen(true);
+      toast.error('青い認識範囲を確認し、「このマスクで確定」を押してください');
+      return;
+    }
+    if (isPrinting && (printPlacementSessionOpen || !printPlacementConfirmed)) {
+      toast.error('デザイン配置を「決定」してから生成してください');
+      if (printPlacementSessionOpen) focusPrintPlacementPane();
+      else openPrintPlacementSession();
+      return;
+    }
+    if (isPrinting && !canConfirmPrintPlacement) {
+      toast.error(placedPrintDesignLayers.some((layer) => layer.cutoutState === 'processing')
+        ? '配置中デザインの透明化が完了するまでお待ちください'
+        : printPlacementConfirmationStatus);
       return;
     }
     if (isPrinting && printableSurfaceEnabled && !manualPrintableSurface) {
@@ -912,6 +1448,7 @@ export function LightchainMaterialWorkbenchPage() {
     setGenerationError(null);
     setSurfaceConformStatus(null);
     setPendingSurfaceJob(null);
+    setProgressivePrintRun(null);
     if (generatedResults.length > 0) setGeneratedResultsStale(true);
     const isCurrentRequest = () => (
       generationRequestRef.current === requestId
@@ -919,9 +1456,9 @@ export function LightchainMaterialWorkbenchPage() {
       && generationInputSignatureRef.current === requestSignature
     );
     try {
-      const rect = stageRef.current.getBoundingClientRect();
-      const width = Math.max(720, Math.round(rect.width || 960));
-      const height = Math.max(720, Math.round(rect.height || 960));
+      const rect = stageRef.current?.getBoundingClientRect();
+      const width = Math.max(720, Math.round(rect?.width || 960));
+      const height = Math.max(720, Math.round(rect?.height || 960));
 
       if (!isPrinting) {
         const baseLayers: AssetLayer[] = [{
@@ -954,6 +1491,7 @@ export function LightchainMaterialWorkbenchPage() {
           if (!isCurrentRequest()) return;
           variantResults.push({
             id: `${preset.id}-${Date.now()}`,
+            brandId: currentBrand.id,
             title: `生地バリエーション: ${preset.name}`,
             note: `${preset.name} の質感で重ねた見本`,
             imageUrl,
@@ -984,7 +1522,7 @@ export function LightchainMaterialWorkbenchPage() {
           ...(printableSurfaceEnabled && manualPrintableSurface
             ? { printableSurface: manualPrintableSurface }
             : {}),
-          designs: printDesignLayers.map((layer) => ({
+          designs: placedPrintDesignLayers.map((layer) => ({
             id: layer.id,
             sourceUrl: layer.originalUrl,
             maskRevision: layer.maskRevision,
@@ -994,6 +1532,8 @@ export function LightchainMaterialWorkbenchPage() {
               scale: layer.transform.scale,
               rotation: layer.transform.rotation,
               opacity: layer.transform.opacity,
+              flipX: layer.transform.flipX,
+              flipY: layer.transform.flipY,
             },
           })),
           stageSize: printOutputStageSize,
@@ -1010,18 +1550,25 @@ export function LightchainMaterialWorkbenchPage() {
         return;
       }
 
-      const [exactComposition, fabricComposition] = await Promise.all([
-        withTimeout(
+      const generatedAt = Date.now();
+      const runId = `print-${nextRevision}-${generatedAt}`;
+      setProgressivePrintRun({
+        runId,
+        generatedAt,
+        exact: { status: 'rendering', result: null, error: null },
+        fabric: { status: 'rendering', result: null, error: null },
+      });
+      const exactCompositionPromise = settleComposition(withTimeout(
           renderPrintRequestComposition(nextSnapshot, 'exact'),
           COMPOSITION_TIMEOUT_MS,
           '配置そのままの描画がタイムアウトしました。素材を確認して再試行してください',
-        ),
-        withTimeout(
+      ));
+      const fabricCompositionPromise = settleComposition(withTimeout(
           renderPrintRequestComposition(nextSnapshot, 'fabric'),
           COMPOSITION_TIMEOUT_MS,
           '布になじませる描画がタイムアウトしました。素材を確認して再試行してください',
-        ),
-      ]);
+      ));
+      const exactComposition = await exactCompositionPromise;
       if (
         !isCurrentRequest()
         ||
@@ -1030,25 +1577,97 @@ export function LightchainMaterialWorkbenchPage() {
       ) {
         return;
       }
-
-      const generatedAt = Date.now();
-      const nextResults: WorkbenchResult[] = [{
-        id: `print-${nextRevision}-${generatedAt}-exact`,
+      if (!exactComposition.ok) {
+        setProgressivePrintRun((current) => current?.runId === runId
+          ? {
+            ...current,
+            exact: { status: 'error', result: null, error: exactComposition.error.message },
+            fabric: {
+              status: 'error',
+              result: null,
+              error: '配置そのままの生成に失敗したため、このペアは確定されませんでした。',
+            },
+          }
+          : current);
+        throw exactComposition.error;
+      }
+      try {
+        await waitForDisplayableImage(exactComposition.imageUrl);
+      } catch (decodeError) {
+        if (!isCurrentRequest()) return;
+        const error = decodeError instanceof Error ? decodeError : new Error(String(decodeError));
+        setProgressivePrintRun((current) => current?.runId === runId
+          ? {
+            ...current,
+            exact: { status: 'error', result: null, error: error.message },
+            fabric: {
+              status: 'error',
+              result: null,
+              error: '配置そのままを表示できないため、このペアは確定されませんでした。',
+            },
+          }
+          : current);
+        throw error;
+      }
+      if (!isCurrentRequest()) return;
+      const exactResult: WorkbenchResult = {
+        id: `${runId}-exact`,
+        brandId: currentBrand.id,
+        runId,
+        resultKind: 'exact',
+        generatedAt,
         title: '配置そのまま',
         note: 'AI再描画なし / 元デザインの色・形・透明度を保持',
-        imageUrl: exactComposition,
+        imageUrl: exactComposition.imageUrl,
         outputSize: { ...printOutputStageSize },
-      }, {
-        id: `print-${nextRevision}-${generatedAt}-fabric`,
+      };
+      setProgressivePrintRun((current) => current?.runId === runId
+        ? { ...current, exact: { status: 'ready', result: exactResult, error: null } }
+        : current);
+      await waitForCommittedPaint();
+      if (!isCurrentRequest()) return;
+      const fabricComposition = await fabricCompositionPromise;
+      if (!isCurrentRequest()) return;
+      if (!fabricComposition.ok) {
+        setProgressivePrintRun((current) => current?.runId === runId
+          ? {
+            ...current,
+            fabric: { status: 'error', result: null, error: fabricComposition.error.message },
+          }
+          : current);
+        throw fabricComposition.error;
+      }
+      try {
+        await waitForDisplayableImage(fabricComposition.imageUrl);
+      } catch (decodeError) {
+        if (!isCurrentRequest()) return;
+        const error = decodeError instanceof Error ? decodeError : new Error(String(decodeError));
+        setProgressivePrintRun((current) => current?.runId === runId
+          ? {
+            ...current,
+            fabric: { status: 'error', result: null, error: error.message },
+          }
+          : current);
+        throw error;
+      }
+      if (!isCurrentRequest()) return;
+      const fabricResult: WorkbenchResult = {
+        id: `${runId}-fabric`,
+        brandId: currentBrand.id,
+        runId,
+        resultKind: 'fabric',
+        generatedAt,
         title: '布になじませる',
         note: '輪郭と透明度は固定 / Tシャツの明暗だけをデザインのRGBへ反映',
-        imageUrl: fabricComposition,
+        imageUrl: fabricComposition.imageUrl,
         outputSize: { ...printOutputStageSize },
-      }];
+      };
+      const nextResults: WorkbenchResult[] = [exactResult, fabricResult];
       setGeneratedResults((previous) => mergePrintResultHistory(
         nextResults,
         previous.filter((result) => result.id.startsWith('print-')),
       ));
+      setProgressivePrintRun(null);
       setGeneratedResultsStale(false);
       setGenerationError(null);
       toast.success('2種類のプリント結果を作成しました');
@@ -1067,6 +1686,8 @@ export function LightchainMaterialWorkbenchPage() {
         inputSignature: requestSignature,
         exactId: nextResults[0].id,
         fabricId: nextResults[1].id,
+        runId,
+        brandId: currentBrand.id,
         generatedAt,
       });
     } catch (error: any) {
@@ -1095,37 +1716,178 @@ export function LightchainMaterialWorkbenchPage() {
   };
 
   const addDesigns = async (images: SelectedImage[]) => {
-    if (images.length > 6) {
+    let inputPlan: ReturnType<typeof planPrintDesignInputUpdate<SelectedImage>>;
+    try {
+      inputPlan = planPrintDesignInputUpdate({
+        previous: printDesigns,
+        incoming: images,
+        cutoutStates: printDesignCutoutStates,
+      });
+    } catch (error) {
+      console.error('Print design input identity failed', error);
+      toast.error('デザイン候補の識別に失敗しました。画像を選び直してください');
+      return;
+    }
+    const { nextImages } = inputPlan;
+    const placementMembershipChanged = nextImages.length !== printDesigns.length
+      || nextImages.some((design, index) => (
+        printDesignIdentity(design) !== printDesignIdentity(printDesigns[index])
+      ));
+    if (placementMembershipChanged) {
+      setPrintPlacementConfirmed(false);
+      openPrintPlacementSession();
+    }
+    if (inputPlan.duplicateCount > 0) {
+      toast(`同じデザインの重複を${inputPlan.duplicateCount}件まとめました`);
+    }
+    if (nextImages.length > 6) {
       toast.error('デザインは6つまでです');
       return;
     }
-    setPrintDesigns(images);
+    const duplicateSelection = selectFreshDuplicatePrintDesign({
+      previous: printDesigns,
+      incoming: images,
+    });
+    const duplicateTargetLayerId = duplicateSelection && printDesignReturnIntentRef.current
+      ? getPrintDesignLayerId(duplicateSelection)
+      : null;
+    if (duplicateTargetLayerId) {
+      printDesignReturnIntentRef.current = bindPrintDesignReturnIntent(
+        printDesignReturnIntentRef.current,
+        duplicateTargetLayerId,
+      );
+      printDesignReturnIntentRef.current = deferPrintDesignReturnIntent(
+        printDesignReturnIntentRef.current,
+        duplicateTargetLayerId,
+      );
+    } else if (images.length < printDesigns.length) {
+      cancelScheduledPrintDesignReturn();
+      printDesignReturnIntentRef.current = null;
+    }
+    if (!inputPlan.shouldRestartCutout) {
+      if (duplicateTargetLayerId) {
+        pendingActivePrintDesignLayerIdRef.current = null;
+        userClearedSelectionRef.current = false;
+        setActivePrintDesignLayerId(duplicateTargetLayerId);
+        setSelectedLayerId(duplicateTargetLayerId);
+      }
+      prunePrintDesignIdentityMap(printDesignLayerIdsRef.current, nextImages);
+      currentPrintDesignLayerIdsRef.current = nextImages.map(getPrintDesignLayerId);
+      if (duplicateTargetLayerId) scheduleDeferredPrintDesignReturn(duplicateTargetLayerId);
+      setPrintDesigns(nextImages);
+      return;
+    }
+
+    const newlyAddedIdentitySet = new Set(inputPlan.newlyAddedIdentities);
+    const newlyAddedDesigns = nextImages.filter(
+      (design) => newlyAddedIdentitySet.has(printDesignIdentity(design)),
+    );
+    const newlyAddedDesign = newlyAddedDesigns[newlyAddedDesigns.length - 1];
+    let preferredLayerId = activePrintDesignLayerId;
+    let nextActiveLayerId = activePrintDesignLayerId;
+    let nextPendingLayerId = pendingActivePrintDesignLayerIdRef.current;
+    let resetUserClearedSelection = false;
+    if (duplicateTargetLayerId) {
+      nextActiveLayerId = duplicateTargetLayerId;
+      preferredLayerId = duplicateTargetLayerId;
+      nextPendingLayerId = null;
+      resetUserClearedSelection = true;
+    } else if (newlyAddedDesign) {
+      nextActiveLayerId = getPrintDesignLayerId(newlyAddedDesign);
+      printDesignReturnIntentRef.current = bindPrintDesignReturnIntent(
+        printDesignReturnIntentRef.current,
+        nextActiveLayerId,
+      );
+      preferredLayerId = nextActiveLayerId;
+      nextPendingLayerId = nextActiveLayerId;
+      resetUserClearedSelection = true;
+    } else if (
+      !activePrintDesignLayerId
+      || !nextImages.some((design) => getPrintDesignLayerId(design) === activePrintDesignLayerId)
+    ) {
+      const survivingLayerIds = new Set(nextImages.map(getPrintDesignLayerId));
+      const survivingLayers = printDesignLayers
+        .filter((layer) => survivingLayerIds.has(layer.id))
+        .map((layer) => ({
+          id: layer.id,
+          kind: 'design' as const,
+          ready: layer.cutoutState === 'done',
+          processing: layer.cutoutState === 'processing',
+        }));
+      const readyFallbackLayerId = selectLatestReadyPrintDesignLayerId(survivingLayers);
+      const processingFallbackLayerId = selectLatestProcessingPrintDesignLayerId(survivingLayers);
+      const fallbackLayerId = readyFallbackLayerId ?? processingFallbackLayerId;
+      preferredLayerId = fallbackLayerId;
+      nextActiveLayerId = fallbackLayerId;
+      nextPendingLayerId = readyFallbackLayerId
+        ? null
+        : processingFallbackLayerId;
+      resetUserClearedSelection = true;
+    }
+    const nextLayerIds = nextImages.map(getPrintDesignLayerId);
+    let reconciliation: ReturnType<typeof planPrintDesignCutoutReconciliation>;
+    try {
+      reconciliation = planPrintDesignCutoutReconciliation({
+        previous: printDesigns.map((design, index) => ({
+          layerId: getPrintDesignLayerId(design),
+          state: printDesignCutoutStates[index] ?? 'processing',
+          hasProcessedUrl: Boolean(printDesignProcessedUrls[index]),
+          hasResult: Boolean(printDesignCutoutResults[index]),
+        })),
+        nextLayerIds,
+        preferredLayerId,
+      });
+    } catch (error) {
+      console.error('Print design identity reconciliation failed', error);
+      toast.error('デザイン候補の識別に失敗しました。候補を選び直してください');
+      return;
+    }
+    prunePrintDesignIdentityMap(printDesignLayerIdsRef.current, nextImages);
+    currentPrintDesignLayerIdsRef.current = nextLayerIds;
+    pendingActivePrintDesignLayerIdRef.current = nextPendingLayerId;
+    if (nextActiveLayerId !== activePrintDesignLayerId) {
+      setActivePrintDesignLayerId(nextActiveLayerId);
+    }
+    if (resetUserClearedSelection) userClearedSelectionRef.current = false;
+    setPrintDesigns(nextImages);
     setPrintMaskEditorTarget(null);
     const requestId = ++printDesignCutoutRequestRef.current;
-    const initialStates = Object.fromEntries(images.map((_, index) => [index, 'processing' as CutoutState]));
-    setPrintDesignProcessedUrls({});
-    setPrintDesignCutoutResults({});
-    setPrintDesignMaskRevisions(Object.fromEntries(images.map((_, index) => [index, 0])));
-    setPrintDesignCutoutStates(initialStates);
-    setPrintDesignCutoutErrors({});
-
+    const initialStates: Record<number, CutoutState> = {};
     const processedUrls: Record<number, string> = {};
     const processedResults: Record<number, MaterialCutoutResult> = {};
-    for (const [index, design] of images.entries()) {
+    const initialMaskRevisions: Record<number, number> = {};
+    reconciliation.reusablePreviousIndexByNextIndex.forEach((previousIndex, nextIndex) => {
+      if (previousIndex === null) {
+        initialStates[nextIndex] = 'processing';
+        initialMaskRevisions[nextIndex] = 0;
+        return;
+      }
+      initialStates[nextIndex] = 'done';
+      processedUrls[nextIndex] = printDesignProcessedUrls[previousIndex];
+      processedResults[nextIndex] = printDesignCutoutResults[previousIndex];
+      initialMaskRevisions[nextIndex] = printDesignMaskRevisions[previousIndex] ?? 0;
+    });
+    setPrintDesignProcessedUrls({ ...processedUrls });
+    setPrintDesignCutoutResults({ ...processedResults });
+    setPrintDesignMaskRevisions(initialMaskRevisions);
+    setPrintDesignCutoutStates(initialStates);
+    setPrintDesignCutoutErrors({});
+    if (duplicateTargetLayerId) scheduleDeferredPrintDesignReturn(duplicateTargetLayerId);
+
+    for (const index of reconciliation.processOrder) {
+      const design = nextImages[index];
       try {
         const result = await withTimeout(
           buildPrintDesignCutoutDataUrl({ imageUrl: design.url }),
           CUTOUT_TIMEOUT_MS,
           `デザイン${index + 1}の透明化がタイムアウトしました。元画像を確認して再試行してください`,
         );
-        if (printDesignCutoutRequestRef.current !== requestId) return;
-        processedUrls[index] = result.dataUrl;
-        processedResults[index] = result;
-        setPrintDesignProcessedUrls({ ...processedUrls });
-        setPrintDesignCutoutResults({ ...processedResults });
+        if (!canCommitPrintDesignCutoutRequest(requestId, printDesignCutoutRequestRef.current)) return;
+        setPrintDesignProcessedUrls((current) => ({ ...current, [index]: result.dataUrl }));
+        setPrintDesignCutoutResults((current) => ({ ...current, [index]: result }));
         setPrintDesignCutoutStates((current) => ({ ...current, [index]: 'done' }));
       } catch (error) {
-        if (printDesignCutoutRequestRef.current !== requestId) return;
+        if (!canCommitPrintDesignCutoutRequest(requestId, printDesignCutoutRequestRef.current)) return;
         const message = error instanceof Error ? error.message : 'プリント画像の背景を透明化できませんでした';
         setPrintDesignCutoutStates((current) => ({ ...current, [index]: 'error' }));
         setPrintDesignCutoutErrors((current) => ({ ...current, [index]: message }));
@@ -1137,12 +1899,23 @@ export function LightchainMaterialWorkbenchPage() {
   const openGarmentMaskEditor = async () => {
     if (!printGarment) return;
     invalidatePrintableSuggestion();
+    const capturedCandidateId = selectedPrintGarmentMaskCandidateIdRef.current;
+    const capturedMaskRevision = printGarmentMaskRevisionRef.current;
+    const capturedCutoutRequestId = printGarmentCutoutRequestRef.current;
     const selectedCandidate = printGarmentMaskCandidates.find((candidate) => candidate.candidateId === selectedPrintGarmentMaskCandidateId);
     const sourceUrl = printGarmentCutoutSourceUrl ?? printGarment.url;
     if (!selectedCandidate) {
       if (printGarmentCutoutState !== 'error') return;
       try {
         const fallbackResult = await buildManualMaskSourceResult(sourceUrl);
+        if (!isCurrentGarmentMaskEditorTarget({
+          capturedCandidateId,
+          currentCandidateId: selectedPrintGarmentMaskCandidateIdRef.current,
+          capturedMaskRevision,
+          currentMaskRevision: printGarmentMaskRevisionRef.current,
+          capturedCutoutRequestId,
+          currentCutoutRequestId: printGarmentCutoutRequestRef.current,
+        })) return;
         setPrintMaskEditorError(null);
         setPrintMaskEditorTarget({
           kind: 'garment',
@@ -1151,6 +1924,9 @@ export function LightchainMaterialWorkbenchPage() {
           sourceUrl,
           maskUrl: sourceUrl,
           result: fallbackResult,
+          capturedCandidateId,
+          capturedGarmentMaskRevision: capturedMaskRevision,
+          capturedGarmentCutoutRequestId: capturedCutoutRequestId,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : '元画像を手動マスクへ読み込めませんでした';
@@ -1167,17 +1943,23 @@ export function LightchainMaterialWorkbenchPage() {
       sourceUrl,
       maskUrl: printGarmentProcessed,
       result: selectedCandidate.result,
+      capturedCandidateId,
+      capturedGarmentMaskRevision: capturedMaskRevision,
+      capturedGarmentCutoutRequestId: capturedCutoutRequestId,
     });
   };
 
   const applyGarmentSelection = (
     selectedImageUrl: string,
     selectionSource: Exclude<GarmentSelectionSource, 'automatic'>,
+    segmentationTarget: GarmentSegmentationTarget,
   ) => {
     invalidatePrintableSuggestion();
     setPrintGarmentSelectionOpen(false);
     setPrintGarmentCutoutSourceUrl(selectedImageUrl);
     setPrintGarmentSelectionSource(selectionSource);
+    setPrintGarmentMaskExplicitlyConfirmed(selectionSource === 'tap');
+    setPrintGarmentSegmentationTarget(segmentationTarget);
     setPrintGarmentCutoutState('processing');
     setPrintGarmentCutoutError(null);
     setPrintGarmentProcessed(null);
@@ -1187,6 +1969,17 @@ export function LightchainMaterialWorkbenchPage() {
         ? 'タップ位置を衣服専用AIマスクへ渡しました'
         : 'タップ候補を既存AIマスクへ渡しました。服専用モデル未配置のため、手動修正も確認してください')
       : '選択範囲をAIマスクへ渡しました');
+  };
+
+  const confirmProcessedGarmentMask = () => {
+    if (!canExplicitlyConfirmProcessedGarmentMask({
+      selectionSource: printGarmentSelectionSource,
+      cutoutDone: printGarmentCutoutState === 'done',
+      hasProcessedMask: Boolean(printGarmentProcessed),
+    })) return;
+    invalidatePrintableSuggestion();
+    setPrintGarmentMaskExplicitlyConfirmed(true);
+    toast.success('青いAIマスクを確定しました');
   };
 
   const openPrintableSurfaceEditor = async () => {
@@ -1342,7 +2135,7 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintMaskEditorError(null);
     setPrintMaskEditorTarget({
       kind: 'design',
-      index,
+      capturedDesignLayerId: getPrintDesignLayerId(design),
       title: `デザイン ${index + 1} のマスクを調整`,
       sourceUrl: design.url,
       maskUrl,
@@ -1413,6 +2206,18 @@ export function LightchainMaterialWorkbenchPage() {
     }
     if (target.kind === 'garment') {
       invalidatePrintableSuggestion();
+      if (!isCurrentGarmentMaskEditorTarget({
+        capturedCandidateId: target.capturedCandidateId,
+        currentCandidateId: selectedPrintGarmentMaskCandidateIdRef.current,
+        capturedMaskRevision: target.capturedGarmentMaskRevision,
+        currentMaskRevision: printGarmentMaskRevisionRef.current,
+        capturedCutoutRequestId: target.capturedGarmentCutoutRequestId,
+        currentCutoutRequestId: printGarmentCutoutRequestRef.current,
+      })) {
+        setPrintMaskEditorError('GARMENT_MASK_EDITOR_STALE_TARGET');
+        toast.error('服の状態が変わったため、マスクをもう一度開いてください');
+        return;
+      }
       if (isOversizedManualPrintMask(dataUrl)) {
         setPrintMaskEditorError('手動補正データが保存上限を超えました。自動縮小して再適用してください。');
         toast.error('手動補正データが保存上限を超えました');
@@ -1431,11 +2236,26 @@ export function LightchainMaterialWorkbenchPage() {
         },
       ]);
       setSelectedPrintGarmentMaskCandidateId('manual');
+      setPrintGarmentMaskExplicitlyConfirmed(true);
       setPrintGarmentMaskRevision((current) => current + 1);
       clearManualPrintableSurface('服の輪郭を補正したため、手動の印刷可能面をリセットしました。');
       setPrintMaskEditorError(null);
-    } else if (target.index !== undefined) {
-      const index = target.index;
+    } else if (target.kind === 'design' && target.capturedDesignLayerId) {
+      let index: number | null;
+      try {
+        index = resolvePrintDesignMaskEditorIndex(
+          currentPrintDesignLayerIdsRef.current,
+          target.capturedDesignLayerId,
+        );
+      } catch (error) {
+        console.error('Print design mask editor identity failed', error);
+        index = null;
+      }
+      if (index === null) {
+        setPrintMaskEditorError('DESIGN_MASK_EDITOR_STALE_TARGET');
+        toast.error('デザイン候補が変わったため、マスクをもう一度開いてください');
+        return;
+      }
       setPrintDesignProcessedUrls((current) => ({ ...current, [index]: dataUrl }));
       setPrintDesignCutoutResults((current) => ({
         ...current,
@@ -1453,6 +2273,123 @@ export function LightchainMaterialWorkbenchPage() {
     : 'linear-gradient(135deg, rgba(34,197,94,0.18), rgba(59,130,246,0.15), rgba(15,23,42,0.8))';
 
   const printStageBackground = 'linear-gradient(180deg, rgba(248,250,252,0.08), rgba(148,163,184,0.10))';
+
+  const openFavoriteDialog = (result: WorkbenchResult) => {
+    if (!currentBrand?.id || result.brandId !== currentBrand.id) {
+      toast.error('素材またはブランド変更前の結果は保存できません。現在の内容で再生成してください');
+      return;
+    }
+    setFavoriteTargetResult(result);
+    setFavoriteTargetBrandId(result.brandId);
+    setFavoriteSpace('personal');
+    setFavoriteDestination('パーソナルスペース');
+    setIsCreatingFavoriteGroup(false);
+    setFavoriteGroupName('');
+  };
+
+  const closeFavoriteDialog = () => {
+    if (favoriteSaving) return;
+    setFavoriteTargetResult(null);
+    setFavoriteTargetBrandId(null);
+    setIsCreatingFavoriteGroup(false);
+    setFavoriteGroupName('');
+  };
+
+  const handleSaveFavorite = () => {
+    if (!favoriteTargetResult
+      || !favoriteTargetBrandId
+      || !currentBrand?.id
+      || favoriteTargetBrandId !== currentBrand.id
+      || favoriteTargetResult.brandId !== favoriteTargetBrandId
+      || favoriteSpace !== 'personal') return;
+    const destinationLabel = isCreatingFavoriteGroup
+      ? favoriteGroupName.trim()
+      : favoriteDestination;
+    if (!destinationLabel) return;
+
+    setFavoriteSaving(true);
+    const saved = savePrintResultFavorite({
+      brandId: favoriteTargetBrandId,
+      result: favoriteTargetResult,
+      destinationLabel,
+    });
+    setFavoriteSaving(false);
+
+    if (!saved.ok) {
+      toast.error('この端末に保存できませんでした。空き容量を確認して、もう一度お試しください');
+      return;
+    }
+    setFavoriteTargetResult(null);
+    setFavoriteTargetBrandId(null);
+    setIsCreatingFavoriteGroup(false);
+    setFavoriteGroupName('');
+    setFavoriteRevision((current) => current + 1);
+    toast.success(`「${destinationLabel}」へお気に入り保存しました`);
+  };
+
+  const favoriteResultIds = useMemo(
+    () => {
+      void favoriteRevision;
+      return new Set(currentBrand?.id ? listPrintResultFavoriteIds(currentBrand.id) : []);
+    },
+    [currentBrand?.id, favoriteRevision],
+  );
+
+  const closeDeletedResultSurfaces = (deletedIds: ReadonlySet<string>) => {
+    setSelectedResult((current) => current && deletedIds.has(current.id) ? null : current);
+    setFavoriteTargetResult((current) => current && deletedIds.has(current.id) ? null : current);
+    setFavoriteTargetBrandId((current) => favoriteTargetResult && deletedIds.has(favoriteTargetResult.id)
+      ? null
+      : current);
+    setShowResultComparison(false);
+  };
+
+  const deletePrintResultRun = (result: WorkbenchResult) => {
+    const runId = result.runId?.trim();
+    if (!runId) return;
+    const deletedIds = new Set(generatedResults
+      .filter((candidate) => candidate.runId?.trim() === runId)
+      .map((candidate) => candidate.id));
+    if (deletedIds.size === 0) return;
+    if (pendingSurfaceJob?.runId === runId) {
+      surfaceJobSequenceRef.current += 1;
+      setPendingSurfaceJob(null);
+      setSurfaceConformStatus(null);
+    }
+    setGeneratedResults((current) => removePrintResultRun(current, runId));
+    closeDeletedResultSurfaces(deletedIds);
+    if (printResultRuns.length <= 1) setGeneratedResultsStale(false);
+    toast.success('生成履歴を1件削除しました');
+  };
+
+  const clearPrintResultHistory = () => {
+    const completedRunIds = new Set(printResultRuns.map((run) => run.runId));
+    if (completedRunIds.size === 0) return;
+    const deletedIds = new Set(generatedResults
+      .filter((result) => result.runId && completedRunIds.has(result.runId.trim()))
+      .map((result) => result.id));
+    if (pendingSurfaceJob && completedRunIds.has(pendingSurfaceJob.runId)) {
+      surfaceJobSequenceRef.current += 1;
+      setPendingSurfaceJob(null);
+      setSurfaceConformStatus(null);
+    }
+    setGeneratedResults((current) => removePrintResultRuns(current, completedRunIds));
+    setGeneratedResultsStale(false);
+    closeDeletedResultSurfaces(deletedIds);
+    toast.success('プリント生成履歴をすべて削除しました');
+  };
+
+  const returnToPrintDesignSelection = () => {
+    const selector = printDesignSelectorRef.current;
+    if (!selector) return;
+    cancelScheduledPrintDesignReturn();
+    printDesignReturnIntentRef.current = armPrintDesignReturnIntent();
+    selector.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
+    const focusTarget = selector.querySelector<HTMLButtonElement>('button[aria-label="ギャラリーから画像を選択"]')
+      ?? selector.querySelector<HTMLButtonElement>('button[aria-label^="デザイン "]:not([disabled])')
+      ?? selector;
+    focusTarget.focus({ preventScroll: true });
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
@@ -1494,8 +2431,19 @@ export function LightchainMaterialWorkbenchPage() {
         <motion.div
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
-          className="space-y-5 rounded-3xl border border-white/10 bg-neutral-950/70 p-5 text-white shadow-2xl shadow-black/20 backdrop-blur-xl"
+          data-testid={isPrinting ? 'printing-control-rail' : undefined}
+          className={`space-y-5 rounded-3xl border border-white/10 bg-neutral-950/70 p-5 text-white shadow-2xl shadow-black/20 backdrop-blur-xl ${isPrinting
+            ? 'xl:sticky xl:top-[86px] xl:flex xl:max-h-[calc(100dvh-102px)] xl:self-start xl:flex-col xl:overflow-hidden'
+            : ''}`}
         >
+          <div
+            data-testid={isPrinting ? 'printing-control-rail-details' : undefined}
+            role={isPrinting ? 'region' : undefined}
+            aria-label={isPrinting ? 'プリント素材と詳細設定' : undefined}
+            className={`space-y-5 ${isPrinting
+              ? 'xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain xl:pr-1 xl:[scrollbar-gutter:stable]'
+              : ''}`}
+          >
           <div className="flex items-start gap-3">
             <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-500/20 text-primary-200">
               {isPrinting ? <Scissors className="h-5 w-5" /> : <Layers3 className="h-5 w-5" />}
@@ -1557,11 +2505,19 @@ export function LightchainMaterialWorkbenchPage() {
                 required
                 value={printGarment}
                 galleryTitle="参考画像を選択"
+                confirmGallerySelection
+                galleryConfirmLabel="素材を追加"
                 selectionTestId="print-garment-selector"
                 onChange={(image) => {
+                  cancelScheduledPrintDesignReturn();
+                  printDesignReturnIntentRef.current = null;
                   invalidatePrintableSuggestion();
+                  setPrintPlacementConfirmed(false);
+                  if (placedPrintDesignLayers.length > 0) openPrintPlacementSession();
                   setPrintGarmentCutoutSourceUrl(null);
                   setPrintGarmentSelectionSource('automatic');
+                  setPrintGarmentMaskExplicitlyConfirmed(false);
+                  setPrintGarmentSegmentationTarget(DEFAULT_GARMENT_SEGMENTATION_TARGET);
                   setPrintGarment(image);
                 }}
                 allowedReferenceTypes={['base']}
@@ -1591,13 +2547,63 @@ export function LightchainMaterialWorkbenchPage() {
                           : '選択範囲からAIマスクを作成しました。自動候補へ戻すには別の画像を選び直してください。'
                       : '服をタップすると、その服の候補範囲だけをAI切り抜きへ渡せます。細かい指定は範囲調整へ切り替えます。'}
                   </p>
-                  {printGarmentCutoutState === 'done' && printGarmentSelectionSource !== 'automatic' && (
+                  {clothModelConfigured && clothModelWarmup.status !== 'idle' && (
+                    <div
+                      className={`mt-3 rounded-lg border px-3 py-2 text-[11px] leading-relaxed ${clothModelWarmup.status === 'ready'
+                        ? 'border-emerald-300/30 bg-emerald-950/30 text-emerald-100'
+                        : clothModelWarmup.status === 'warming'
+                          ? 'border-cyan-300/30 bg-cyan-950/30 text-cyan-100'
+                          : 'border-amber-300/30 bg-amber-950/30 text-amber-100'}`}
+                      role="status"
+                      aria-live="polite"
+                      data-testid="cloth-model-warmup-status"
+                    >
+                      <div className="flex items-center justify-between gap-3 font-semibold">
+                        <span>
+                          {clothModelWarmup.status === 'ready'
+                            ? '衣服専用AIの準備完了'
+                            : clothModelWarmup.status === 'warming'
+                              ? '衣服専用AIを先に準備しています'
+                              : '衣服専用AIの事前準備を完了できませんでした'}
+                        </span>
+                        {clothModelWarmup.status === 'warming' && <span>{clothModelWarmup.progress}%</span>}
+                      </div>
+                      {clothModelWarmup.status === 'warming' && (
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-cyan-950/80" aria-hidden="true">
+                          <div
+                            className="h-full rounded-full bg-cyan-300 transition-[width] duration-300"
+                            style={{ width: `${clothModelWarmup.progress}%` }}
+                          />
+                        </div>
+                      )}
+                      <p className="mt-1 opacity-75">
+                        {clothModelWarmup.status === 'ready'
+                          ? '胸や袖のタップ確定後は、準備済みモデルを再利用します。'
+                          : clothModelWarmup.status === 'warming'
+                            ? '画像を確認している間に準備します。タップ範囲の選択は先に進められます。'
+                            : '確定した青いマスクと既存AI・手動補正はそのまま利用できます。'}
+                      </p>
+                    </div>
+                  )}
+                  {printGarmentCutoutState === 'done' && hasConfirmedPrintGarmentMask && (
                     <div role="status" className="mt-3 rounded-lg border border-blue-300/30 bg-blue-950/35 px-3 py-2 text-[11px] leading-relaxed text-blue-50">
                       <div className="flex items-center gap-2 font-semibold">
                         <span aria-hidden="true" className="h-2.5 w-2.5 rounded-sm border border-cyan-100 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.75)]" />
                         認識範囲を確定済み
                       </div>
                       <p className="mt-1 text-blue-100/75">確定した服の内側だけにデザインを適用します。必要なら「服の選択をやり直す」で再確認できます。</p>
+                      <p className="mt-1 text-blue-100/75">
+                        {selectedPrintGarmentMaskCandidateId === 'manual'
+                          ? '残す／消すブラシで補正した手動マスクを確定面として使用します。'
+                          : printGarmentSegmentationStatus.message}
+                      </p>
+                    </div>
+                  )}
+                  {printGarmentCutoutState === 'done' && !hasConfirmedPrintGarmentMask && (
+                    <div role="status" className="mt-3 rounded-lg border border-amber-300/30 bg-amber-950/30 px-3 py-2 text-[11px] leading-relaxed text-amber-100">
+                      {printGarmentSelectionSource !== 'automatic'
+                        ? '選択したAIマスクはまだ未確定です。下の青い認識範囲を確認し、「このAIマスクで確定」を押すまでデザインは適用されません。'
+                        : '自動切り抜きはまだ未確定です。服をタップして青い認識範囲を確認し、「このマスクで確定」を押すまでデザインは適用されません。'}
                     </div>
                   )}
                 </div>
@@ -1685,37 +2691,61 @@ export function LightchainMaterialWorkbenchPage() {
                   </div>
                 </div>
               )}
-              <ImageSelector
-                label="プリント画像を追加"
-                multiple
-                required
-                value={null}
-                galleryTitle="プリントデザインを選択"
-                selectionTestId="print-design-selector"
-                onChange={() => {}}
-                multipleValue={printDesigns}
-                onMultipleChange={addDesigns}
-                maxImages={6}
-                allowedReferenceTypes={['pattern']}
-                defaultReferenceType="pattern"
-                hint="柄・ロゴ・図案を6つまで追加できます"
-                processing={printDesigns.some((_, index) => (printDesignCutoutStates[index] ?? 'processing') === 'processing')}
-                hideSelectedPreviewWhileProcessing
-                multiplePreviewUrls={printDesigns.map((_, index) => (
-                  (printDesignCutoutStates[index] ?? 'processing') === 'done'
-                    ? printDesignProcessedUrls[index] ?? null
-                    : null
-                ))}
-                processingLabel="プリント画像を透明化中"
-              />
-              {printDesigns.length > 0 && (
-                <div className="space-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
-                  {printDesigns.map((design, index) => {
-                    const state = printDesignCutoutStates[index] ?? 'processing';
-                    return (
-                      <div key={`${design.url}-${index}`} className="flex items-center justify-between gap-3">
-                        <span className="min-w-0 truncate text-white/70">デザイン {index + 1}</span>
+              <div ref={printDesignSelectorRef} data-testid="print-design-selection-anchor" tabIndex={-1}>
+                <ImageSelector
+                  label="プリント画像を追加"
+                  multiple
+                  required
+                  value={null}
+                  galleryTitle="プリントデザインを選択"
+                  selectionTestId="print-design-selector"
+                  onChange={() => {}}
+                  multipleValue={printDesigns}
+                  onMultipleChange={addDesigns}
+                  maxImages={6}
+                  allowedReferenceTypes={['pattern']}
+                  defaultReferenceType="pattern"
+                  hint="柄・ロゴ・図案を6つまで追加できます"
+                  processing={printDesigns.some((_, index) => (printDesignCutoutStates[index] ?? 'processing') === 'processing')}
+                  hideSelectedPreviewWhileProcessing
+                  multiplePreviewUrls={printDesigns.map((_, index) => (
+                    (printDesignCutoutStates[index] ?? 'processing') === 'done'
+                      ? printDesignProcessedUrls[index] ?? null
+                      : null
+                  ))}
+                  multipleProcessingStates={printDesigns.map((_, index) => (
+                    (printDesignCutoutStates[index] ?? 'processing') === 'processing'
+                  ))}
+                  processingLabel="プリント画像を透明化中"
+                />
+                {printDesigns.length > 0 && (
+                  <div className="space-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
+                    {printDesigns.map((design, index) => {
+                      const state = printDesignCutoutStates[index] ?? 'processing';
+                      return (
+                      <div
+                        key={getPrintDesignLayerId(design)}
+                        data-testid="print-design-placement-row"
+                        className={`flex items-center justify-between gap-3 rounded-lg border px-2 py-1.5 ${activePrintDesignLayerId === getPrintDesignLayerId(design)
+                          ? 'border-cyan-300/35 bg-cyan-300/10'
+                          : 'border-transparent'}`}
+                      >
+                        <button
+                          type="button"
+                          disabled={state !== 'done'}
+                          aria-pressed={activePrintDesignLayerId === getPrintDesignLayerId(design)}
+                          aria-label={`デザイン ${index + 1} を配置`}
+                          onClick={() => selectLayer(getPrintDesignLayerId(design))}
+                          className="min-w-0 truncate text-left text-white/70 transition hover:text-cyan-100 disabled:cursor-wait disabled:opacity-60"
+                        >
+                          デザイン {index + 1}
+                        </button>
                         <div className="flex items-center gap-2">
+                          {state === 'done' && activePrintDesignLayerId === getPrintDesignLayerId(design) && (
+                            <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2 py-0.5 text-[10px] font-semibold text-cyan-100">
+                              選択中
+                            </span>
+                          )}
                           <span className={state === 'error' ? 'text-red-300' : state === 'done' ? 'text-emerald-300' : 'text-cyan-200'}>
                             {state === 'processing' ? '背景を透明化中…' : state === 'done' ? '透明化済み' : state === 'error' ? (printDesignCutoutErrors[index] || '透明化失敗') : '待機中'}
                           </span>
@@ -1730,10 +2760,11 @@ export function LightchainMaterialWorkbenchPage() {
                           )}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1752,16 +2783,73 @@ export function LightchainMaterialWorkbenchPage() {
               </select>
             </label>
           )}
+          </div>
+
+          <div
+            data-testid={isPrinting ? 'printing-control-rail-primary' : undefined}
+            className="space-y-5 xl:shrink-0"
+          >
+
+          {isPrinting && printPlacementConfirmed && placedPrintDesignLayers.length > 0 && (
+            <section
+              data-testid="confirmed-print-composition-preview"
+              aria-label="確定したプリント配置"
+              className="rounded-2xl border border-emerald-300/20 bg-white/[0.03] p-3"
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">現在のプリント配置</p>
+                  <p className="mt-0.5 text-[11px] text-white/50">生成前に服・重なり・位置を確認できます。</p>
+                </div>
+                <button
+                  type="button"
+                  data-testid="edit-confirmed-print-composition"
+                  onClick={openPrintPlacementSession}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-cyan-200/35 bg-cyan-300/10 px-3 py-2 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-300/15"
+                >
+                  <Scissors className="h-3.5 w-3.5" />
+                  配置を編集
+                </button>
+              </div>
+              <div
+                data-testid="confirmed-print-composition-canvas"
+                className="mx-auto w-full overflow-hidden rounded-2xl border border-white/10 bg-neutral-900"
+                style={{ maxWidth: 'clamp(96px, calc((100dvh - 520px) * 0.8), 220px)' }}
+              >
+                <PrintingCompositionStage
+                  key={`confirmed-print-composition-${printPlacementSessionRevision}`}
+                  garmentUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
+                  garmentMaskUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
+                  garmentMaskConfirmed={hasConfirmedPrintGarmentMask}
+                  designClipMaskUrl={printableSurfaceEnabled ? printableSurfaceStageMaskUrl : null}
+                  layers={stageLayers as Array<{
+                    id: string;
+                    label: string;
+                    displayUrl: string;
+                    transform: Transform;
+                    cutoutState: 'idle' | 'processing' | 'done' | 'error';
+                  }>}
+                  selectedLayerId={null}
+                  onSelectLayer={() => {}}
+                  onCommitLayer={() => {}}
+                  onReorderLayer={() => {}}
+                  interactive={false}
+                />
+              </div>
+            </section>
+          )}
 
           <Button
             onClick={handleGenerate}
             isLoading={isGenerating}
             disabled={isGenerating || (!isPrinting
               ? !(fabricBase && fabricDesign)
-              : !(printGarmentProcessed
+              : !(canConfirmPrintPlacement
+                && printGarmentProcessed
                 && printGarmentCutoutState === 'done'
-                && printDesignLayers.length
-                && printDesignLayers.every((layer) => layer.cutoutState === 'done' && Boolean(layer.displayUrl))))}
+                && !printPlacementSessionOpen
+                && printPlacementConfirmed
+                ))}
             className="w-full"
             size="lg"
             leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
@@ -1779,7 +2867,7 @@ export function LightchainMaterialWorkbenchPage() {
               {surfaceConformStatus}
             </p>
           )}
-          {generatedResultsStale && generatedResults.length > 0 && (
+          {generatedResultsStale && visibleGeneratedResults.length > 0 && (
             <p className="rounded-xl border border-amber-300/20 bg-amber-950/25 px-3 py-2 text-xs leading-relaxed text-amber-100">
               以下は素材変更前または直前の生成結果です。新しい結果としては扱わず、生成を再実行してください。
             </p>
@@ -1787,9 +2875,10 @@ export function LightchainMaterialWorkbenchPage() {
 
           <p className="text-xs leading-relaxed text-white/45">
             {isPrinting
-              ? 'AIで描き直さず、配置そのままと布になじませる結果を同じマスク・座標で作成します。履歴は最大8件です。'
+              ? 'AIで描き直さず、配置そのままと布になじませる結果を同じマスク・座標で作成します。履歴は最大4回分です。'
               : '生地画像にデザインを重ね、複数の生地質感バリエーションを一度に確認できます。'}
           </p>
+          </div>
         </motion.div>
 
         <motion.div
@@ -1797,7 +2886,7 @@ export function LightchainMaterialWorkbenchPage() {
           animate={{ opacity: 1, x: 0 }}
           className="space-y-5"
         >
-          {isPrinting && (
+          {isPrinting && printPlacementSessionOpen && (
             <div
               data-testid="print-focused-workspace"
               className="rounded-3xl border border-cyan-300/20 bg-neutral-950/85 p-4 shadow-2xl shadow-black/20"
@@ -1808,26 +2897,60 @@ export function LightchainMaterialWorkbenchPage() {
                   <h3 className="mt-1 text-lg font-semibold text-white">服の認識範囲とデザイン配置</h3>
                   <p className="mt-1 text-xs leading-relaxed text-white/50">
                     左で確定面を確認し、右でデザインをそのまま移動・拡大・回転できます。
+                    {printPlacementSessionDirty ? ' 変更があります。決定またはキャンセルしてください。' : ''}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-white/50">
-                  <Check className="h-4 w-4 text-emerald-300" />
-                  {currentBrand ? 'ブランド選択済み' : 'ブランド未選択'}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <div className="mr-1 flex items-center gap-2 text-xs text-white/50">
+                    <Check className="h-4 w-4 text-emerald-300" />
+                    {currentBrand ? 'ブランド選択済み' : 'ブランド未選択'}
+                  </div>
+                  <button
+                    type="button"
+                    data-testid="cancel-print-placement"
+                    onClick={cancelPrintPlacementSession}
+                    className="rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/70 transition hover:border-white/30 hover:text-white"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="confirm-print-placement"
+                    onClick={confirmPrintPlacementSession}
+                    disabled={!canConfirmPrintPlacement}
+                    aria-describedby={!canConfirmPrintPlacement ? 'print-placement-confirmation-status' : undefined}
+                    className="rounded-xl border border-cyan-200/40 bg-cyan-300/15 px-4 py-2 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-300/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    決定
+                  </button>
                 </div>
               </div>
+              {!canConfirmPrintPlacement && (
+                <p
+                  id="print-placement-confirmation-status"
+                  role="status"
+                  className="mb-4 rounded-xl border border-amber-300/25 bg-amber-950/25 px-3 py-2 text-xs leading-relaxed text-amber-100"
+                >
+                  {printPlacementConfirmationStatus}
+                </p>
+              )}
               <div className="grid gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
                 <section
                   data-testid="confirmed-garment-mask-pane"
-                  aria-label="確定した服の認識範囲"
+                  aria-label="服の認識範囲"
                   className="rounded-2xl border border-cyan-300/20 bg-[#07131e] p-3"
                 >
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs text-white/50">ステップ1</p>
-                      <h4 className="mt-1 font-semibold text-white">確定した服の面</h4>
+                      <h4 className="mt-1 font-semibold text-white">服の認識範囲</h4>
                     </div>
                     <span className="rounded-full border border-cyan-200/30 bg-cyan-300/10 px-2 py-1 text-[10px] font-semibold text-cyan-100">
-                      {printGarmentSelectionSource === 'automatic' ? '自動候補' : 'タップ確定'}
+                      {hasConfirmedPrintGarmentMask
+                        ? selectedPrintGarmentMaskCandidateId === 'manual'
+                          ? '手動確定'
+                          : printGarmentSelectionSource === 'range' ? '範囲確定' : 'タップ確定'
+                        : '未確定候補'}
                     </span>
                   </div>
                   <div className="relative flex min-h-[18rem] items-center justify-center overflow-hidden rounded-xl border border-cyan-300/20 bg-neutral-950/80 p-3">
@@ -1844,7 +2967,7 @@ export function LightchainMaterialWorkbenchPage() {
                       <div className="relative z-10 flex h-full w-full items-center justify-center">
                         <img
                           src={printGarmentProcessed}
-                          alt="確定した服の青い認識範囲"
+                          alt="服の青い認識範囲"
                           className="max-h-[17rem] w-full object-contain"
                           style={{
                             filter: 'brightness(0) saturate(100%) invert(68%) sepia(86%) saturate(1800%) hue-rotate(167deg) brightness(101%) contrast(98%)',
@@ -1873,17 +2996,35 @@ export function LightchainMaterialWorkbenchPage() {
                   >
                     <div className="flex items-center gap-2 font-semibold">
                       <span aria-hidden="true" className="h-2.5 w-2.5 rounded-sm border border-cyan-100 bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.75)]" />
-                      {printGarmentSelectionSource === 'automatic' ? '服の候補を確認してください' : '認識範囲を確認済み'}
+                      {hasConfirmedPrintGarmentMask ? '認識範囲を確認済み' : '服の候補を確認してください'}
                     </div>
                     <p className="mt-1 text-blue-100/75">
-                      {printGarmentSelectionSource === 'automatic'
-                        ? '服をタップして候補を確認すると、ここに青い確定面が残ります。'
-                        : 'デザインは確定した服の内側だけに適用されます。'}
+                      {hasConfirmedPrintGarmentMask
+                        ? 'デザインは確定した服の内側だけに適用されます。'
+                        : printGarmentSelectionSource !== 'automatic' && printGarmentCutoutState === 'done'
+                          ? 'この青いAIマスクを確認し、下のボタンで確定してください。'
+                          : '服をタップして候補を確認すると、ここに青い確定面が残ります。'}
                     </p>
+                    {!hasConfirmedPrintGarmentMask
+                      && printGarmentSelectionSource !== 'automatic'
+                      && printGarmentCutoutState === 'done'
+                      && printGarmentProcessed && (
+                        <button
+                          type="button"
+                          data-testid="confirm-processed-garment-mask"
+                          onClick={confirmProcessedGarmentMask}
+                          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-200/40 bg-cyan-300/15 px-3 py-2 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-300/20"
+                        >
+                          <Check className="h-4 w-4" />
+                          このAIマスクで確定
+                        </button>
+                      )}
                   </div>
                 </section>
 
                 <section
+                  ref={printPlacementPaneRef}
+                  tabIndex={-1}
                   data-testid="design-placement-pane"
                   aria-label="デザイン配置"
                   className="rounded-2xl border border-white/10 bg-[#0b1114] p-3"
@@ -1894,7 +3035,9 @@ export function LightchainMaterialWorkbenchPage() {
                       <h4 className="mt-1 font-semibold text-white">デザインの配置と調整</h4>
                     </div>
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-white/60">
-                      {printDesignLayers.length ? `${printDesignLayers.length}件選択中` : 'デザイン未選択'}
+                      {printDesignLayers.length
+                        ? `${placedPrintDesignLayers.length}件配置中`
+                        : 'デザイン未選択'}
                     </span>
                   </div>
                   <div
@@ -1908,9 +3051,10 @@ export function LightchainMaterialWorkbenchPage() {
                     }}
                   >
                     <PrintingCompositionStage
+                      key={`print-placement-${printPlacementSessionRevision}`}
                       garmentUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
                       garmentMaskUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
-                      garmentSelectionSource={printGarmentSelectionSource}
+                      garmentMaskConfirmed={hasConfirmedPrintGarmentMask}
                       designClipMaskUrl={printableSurfaceEnabled ? printableSurfaceStageMaskUrl : null}
                       layers={stageLayers as Array<{
                         id: string;
@@ -1922,7 +3066,12 @@ export function LightchainMaterialWorkbenchPage() {
                       selectedLayerId={selectedLayerId}
                       onSelectLayer={selectLayer}
                       onCommitLayer={({ id, transform }) => {
+                        beginPrintPlacementSessionEdit();
                         setPrintDesignLayers((prev) => prev.map((layer) => (layer.id === id ? { ...layer, transform } : layer)));
+                      }}
+                      onReorderLayer={({ id, action }: { id: string; action: PrintDesignLayerOrderAction }) => {
+                        beginPrintPlacementSessionEdit();
+                        setPrintDesignLayers((prev) => reorderPrintDesignLayers(prev, id, action));
                       }}
                     />
                   </div>
@@ -1930,6 +3079,36 @@ export function LightchainMaterialWorkbenchPage() {
                     デザインを選択後、表示された枠をドラッグ、角のハンドルで拡大、上のハンドルで回転できます。
                   </p>
                 </section>
+              </div>
+            </div>
+          )}
+          {isPrinting && !printPlacementSessionOpen && (
+            <div
+              data-testid="confirmed-print-placement-summary"
+              className="rounded-3xl border border-emerald-300/20 bg-neutral-950/85 p-4 shadow-2xl shadow-black/20"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/70">
+                    {printPlacementConfirmed ? '配置確定済み' : '配置未確定'}
+                  </p>
+                  <h3 className="mt-1 text-lg font-semibold text-white">
+                    {printPlacementConfirmed ? 'デザイン配置を決定しました' : 'デザイン配置を決定してください'}
+                  </h3>
+                  <p className="mt-1 text-xs text-white/50">
+                    {printPlacementConfirmed
+                      ? `${placedPrintDesignLayers.length}件のデザインを、確定した服の内側へ配置します。`
+                      : '配置を開き、「決定」を押すまで生成は開始できません。'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  data-testid="reopen-print-placement"
+                  onClick={openPrintPlacementSession}
+                  className="rounded-xl border border-cyan-200/35 bg-cyan-300/10 px-4 py-2 text-xs font-semibold text-cyan-50 transition hover:bg-cyan-300/15"
+                >
+                  配置を再調整
+                </button>
               </div>
             </div>
           )}
@@ -1985,7 +3164,7 @@ export function LightchainMaterialWorkbenchPage() {
               )}
             </div>
           </div>
-          {generatedResults.length > 0 && (
+          {(visibleGeneratedResults.length > 0 || (isPrinting && progressivePrintRun)) && (
             <div className="rounded-3xl border border-white/10 bg-neutral-950/80 p-4 shadow-2xl shadow-black/20">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -1994,14 +3173,38 @@ export function LightchainMaterialWorkbenchPage() {
                     {isPrinting ? 'プリント結果' : '生地バリエーション'}
                   </h3>
                   {isPrinting && (
-                    <p className="mt-1 text-xs text-white/45">比較・履歴 {generatedResults.length}/8</p>
+                    <p className="mt-1 text-xs text-white/45">
+                      生成履歴 {printResultRuns.length}/{PRINT_RESULT_HISTORY_MAX_RUNS}
+                    </p>
                   )}
                   {generatedResultsStale && (
                     <p className="mt-1 text-xs text-amber-200">前回結果（未更新）</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {isPrinting && generatedResults.length >= 2 && (
+                  {isPrinting && printResultRuns.length > 0 && (
+                    <button
+                      type="button"
+                      data-testid="clear-print-result-history"
+                      onClick={clearPrintResultHistory}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/65 transition hover:border-red-300/35 hover:text-red-100 focus:outline-none focus:ring-2 focus:ring-red-300/35"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      全削除
+                    </button>
+                  )}
+                  {isPrinting && !isGenerating && printResultRuns.length > 0 && (
+                    <button
+                      type="button"
+                      data-testid="try-next-print-design"
+                      onClick={returnToPrintDesignSelection}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-white/80 transition hover:border-cyan-300/35 hover:text-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-300/35"
+                    >
+                      <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                      次のデザインを試す
+                    </button>
+                  )}
+                  {isPrinting && visibleGeneratedResults.length >= 2 && (
                     <button
                       type="button"
                       onClick={() => setShowResultComparison(true)}
@@ -2013,47 +3216,222 @@ export function LightchainMaterialWorkbenchPage() {
                   <Layers3 className="h-5 w-5 text-primary-200" />
                 </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {generatedResults.map((result) => (
-                  <div key={result.id} className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedResult(result)}
-                      className="block aspect-[4/5] w-full cursor-zoom-in bg-neutral-900 text-left transition hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-primary-400/60"
-                      aria-label={`${result.title} を拡大`}
+              {isPrinting ? (
+                <div data-testid="print-result-run-history" className="space-y-4">
+                  {progressivePrintRun && (
+                    <section
+                      data-testid="progressive-print-run"
+                      className="rounded-2xl border border-cyan-300/25 bg-cyan-300/[0.035] p-3"
+                      aria-busy={progressivePrintRun.exact.status === 'rendering' || progressivePrintRun.fabric.status === 'rendering'}
                     >
-                      <img
-                        src={result.imageUrl}
-                        alt={result.title}
-                        className="h-full w-full object-contain"
-                        draggable={false}
-                      />
-                    </button>
-                    <div className="space-y-2 p-4">
-                      <div>
-                        <p className="font-semibold text-white">{result.title}</p>
-                        <p className="mt-1 text-sm text-white/55">{result.note}</p>
-                        {result.outputSize && (
-                          <p className="mt-1 text-xs text-cyan-200">{result.outputSize.width} × {result.outputSize.height}px</p>
-                        )}
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-semibold text-cyan-50">現在の生成（最新）</p>
+                          <p className="mt-1 text-[10px] text-cyan-100/55">
+                            配置そのままを先に表示し、布になじませる結果を続けて追加します。
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[10px] text-cyan-100">
+                          {progressivePrintRun.fabric.status === 'ready' ? '2/2' : progressivePrintRun.exact.status === 'ready' ? '1/2' : '0/2'}
+                        </span>
                       </div>
-                      {result.outputSize && (
-                        <a
-                          href={result.imageUrl}
-                          download={`heavy-chain-${result.id}-${result.outputSize.width}x${result.outputSize.height}.png`}
-                          className="inline-flex rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 transition hover:border-cyan-300/40 hover:text-cyan-100"
-                        >
-                          PNGをダウンロード
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <ProgressivePrintSurfaceCard
+                          label="配置そのまま"
+                          surface={progressivePrintRun.exact}
+                          onOpen={setSelectedResult}
+                          onFavorite={openFavoriteDialog}
+                          isFavorite={Boolean(progressivePrintRun.exact.result
+                            && favoriteResultIds.has(progressivePrintRun.exact.result.id))}
+                        />
+                        <ProgressivePrintSurfaceCard
+                          label="布になじませる"
+                          surface={progressivePrintRun.fabric}
+                          onOpen={setSelectedResult}
+                          onFavorite={openFavoriteDialog}
+                          isFavorite={Boolean(progressivePrintRun.fabric.result
+                            && favoriteResultIds.has(progressivePrintRun.fabric.result.id))}
+                        />
+                      </div>
+                    </section>
+                  )}
+                  {printResultRuns.map((run, runIndex) => (
+                    <section
+                      key={run.runId}
+                      data-testid="print-result-run"
+                      className="rounded-2xl border border-white/10 bg-white/[0.025] p-3"
+                    >
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-semibold text-white/80">
+                            生成履歴 {runIndex + 1}{runIndex === 0 && !progressivePrintRun ? '（最新）' : ''}
+                          </p>
+                          <p className="mt-1 text-[10px] text-white/40">
+                            exact / fabric{run.results.some((result) => result.resultKind === 'surface') ? ' / experimental' : ''}
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] text-white/45">
+                          {run.results.length}結果
+                        </span>
+                      </div>
+                      <div className={`grid gap-4 sm:grid-cols-2 ${run.results.length > 2 ? 'xl:grid-cols-3' : ''}`}>
+                        {run.results.map((result) => (
+                          <WorkbenchResultCard
+                            key={result.id}
+                            result={result}
+                            onOpen={setSelectedResult}
+                            onFavorite={openFavoriteDialog}
+                            onDeleteRun={deletePrintResultRun}
+                            isFavorite={favoriteResultIds.has(result.id)}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {visibleGeneratedResults.map((result) => (
+                    <WorkbenchResultCard
+                      key={result.id}
+                      result={result}
+                      onOpen={setSelectedResult}
+                      onFavorite={isPrinting ? openFavoriteDialog : undefined}
+                      isFavorite={Boolean(isPrinting && favoriteResultIds.has(result.id))}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </motion.div>
       </div>
+
+      <Modal
+        isOpen={favoriteTargetResult !== null}
+        onClose={closeFavoriteDialog}
+        title="お気に入りに追加"
+        size="lg"
+        footer={(
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <Button variant="ghost" onClick={closeFavoriteDialog} disabled={favoriteSaving}>
+              キャンセル
+            </Button>
+            <Button
+              onClick={handleSaveFavorite}
+              disabled={favoriteSaving
+                || favoriteSpace !== 'personal'
+                || !currentBrand?.id
+                || !favoriteTargetBrandId
+                || favoriteTargetBrandId !== currentBrand.id
+                || favoriteTargetResult?.brandId !== favoriteTargetBrandId
+                || (isCreatingFavoriteGroup && favoriteGroupName.trim().length === 0)}
+            >
+              {favoriteSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+              ) : (
+                <Heart className="mr-2 h-4 w-4" aria-hidden="true" />
+              )}
+              この端末に保存
+            </Button>
+          </div>
+        )}
+      >
+        <div className="space-y-5" data-testid="print-result-favorite-dialog">
+          <div className="grid grid-cols-2 gap-2 rounded-xl bg-neutral-100 p-1 dark:bg-white/5" role="tablist" aria-label="保存スペース">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={favoriteSpace === 'personal'}
+              onClick={() => setFavoriteSpace('personal')}
+              className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${favoriteSpace === 'personal'
+                ? 'bg-white text-neutral-900 shadow-sm dark:bg-white/10 dark:text-white'
+                : 'text-neutral-500 hover:text-neutral-800 dark:text-white/50 dark:hover:text-white/80'}`}
+            >
+              <Laptop className="h-4 w-4" aria-hidden="true" />
+              パーソナルスペース
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={favoriteSpace === 'team'}
+              onClick={() => setFavoriteSpace('team')}
+              className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${favoriteSpace === 'team'
+                ? 'bg-white text-neutral-900 shadow-sm dark:bg-white/10 dark:text-white'
+                : 'text-neutral-500 hover:text-neutral-800 dark:text-white/50 dark:hover:text-white/80'}`}
+            >
+              <Users className="h-4 w-4" aria-hidden="true" />
+              チームスペース
+            </button>
+          </div>
+
+          {favoriteSpace === 'personal' ? (
+            <div className="space-y-3">
+              <p className="text-sm leading-relaxed text-neutral-600 dark:text-white/60">
+                この端末のギャラリーへ保存します。保存後はギャラリーの「お気に入り」から確認できます。
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setFavoriteDestination('パーソナルスペース');
+                  setIsCreatingFavoriteGroup(false);
+                }}
+                aria-pressed={!isCreatingFavoriteGroup && favoriteDestination === 'パーソナルスペース'}
+                className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left transition ${!isCreatingFavoriteGroup && favoriteDestination === 'パーソナルスペース'
+                  ? 'border-pink-300/60 bg-pink-50 text-pink-950 dark:border-pink-300/30 dark:bg-pink-400/10 dark:text-pink-50'
+                  : 'border-neutral-200 hover:border-neutral-300 dark:border-white/10 dark:hover:border-white/20'}`}
+              >
+                <FolderHeart className="h-5 w-5 shrink-0" aria-hidden="true" />
+                <span>
+                  <span className="block text-sm font-semibold">パーソナルスペース</span>
+                  <span className="mt-0.5 block text-xs opacity-65">このブランドのローカルお気に入り</span>
+                </span>
+              </button>
+
+              {isCreatingFavoriteGroup ? (
+                <label className="block rounded-xl border border-neutral-200 p-4 dark:border-white/10">
+                  <span className="text-xs font-semibold text-neutral-500 dark:text-white/55">新しいグループ名</span>
+                  <input
+                    value={favoriteGroupName}
+                    onChange={(event) => setFavoriteGroupName(event.target.value)}
+                    autoFocus
+                    maxLength={60}
+                    placeholder="例：夏のTシャツ"
+                    className="mt-2 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none focus:border-pink-400 dark:border-white/10 dark:bg-black/20 dark:text-white"
+                  />
+                </label>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreatingFavoriteGroup(true);
+                    setFavoriteDestination('');
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-300 px-4 py-3 text-sm font-semibold text-neutral-600 transition hover:border-pink-300 hover:text-pink-600 dark:border-white/15 dark:text-white/60 dark:hover:text-pink-200"
+                >
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  新しいグループ
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-amber-300/30 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900 dark:bg-amber-400/10 dark:text-amber-100">
+              チーム共有用の保存先モデルはまだ接続されていません。この画面では共有済みと扱わず、パーソナルスペースだけを保存できます。
+            </div>
+          )}
+
+          {!currentBrand?.id && (
+            <p className="rounded-xl border border-red-300/30 bg-red-50 p-3 text-sm text-red-800 dark:bg-red-400/10 dark:text-red-100">
+              保存するにはブランドを選択してください。
+            </p>
+          )}
+          {favoriteTargetBrandId && currentBrand?.id && favoriteTargetBrandId !== currentBrand.id && (
+            <p className="rounded-xl border border-red-300/30 bg-red-50 p-3 text-sm text-red-800 dark:bg-red-400/10 dark:text-red-100">
+              ブランドが変更されたため、この結果は保存できません。現在のブランドで再生成してください。
+            </p>
+          )}
+        </div>
+      </Modal>
 
       <Modal
         isOpen={selectedResult !== null}
@@ -2085,9 +3463,9 @@ export function LightchainMaterialWorkbenchPage() {
           </div>
         )}
       </Modal>
-      {showResultComparison && generatedResults.length >= 2 && (
+      {showResultComparison && visibleGeneratedResults.length >= 2 && (
         <ImageCompare
-          images={generatedResults.map((result) => ({
+          images={visibleGeneratedResults.map((result) => ({
             url: result.imageUrl,
             label: result.title,
             prompt: result.note,

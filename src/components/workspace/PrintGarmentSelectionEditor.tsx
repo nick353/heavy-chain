@@ -6,7 +6,12 @@ import {
   buildPointGuidedSelection,
   type PointGuidedSelection,
 } from '../../features/printing/selection/pointGuidedSelection';
-import type { GarmentSelectionSource } from '../../features/printing/selection/garmentSegmentationPolicy';
+import {
+  canSubmitGarmentSelectionPreview,
+  DEFAULT_GARMENT_SEGMENTATION_TARGET,
+  type GarmentSegmentationTarget,
+  type GarmentSelectionSource,
+} from '../../features/printing/selection/garmentSegmentationPolicy';
 
 type SelectionRect = {
   x: number;
@@ -33,6 +38,12 @@ const PREVIEW_MASK_CLOSE_RADIUS = 3;
 // segmentation model can distinguish the garment boundary from the image edge.
 const AI_CONTEXT_PADDING_RATIO = 0.12;
 const AI_CONTEXT_MIN_PADDING = 24;
+
+const garmentTargetOptions: Array<{ value: GarmentSegmentationTarget; label: string }> = [
+  { value: 'upper', label: 'トップス' },
+  { value: 'lower', label: 'ボトムス' },
+  { value: 'full', label: '全身' },
+];
 
 const closePreviewMask = (mask: NonNullable<PointGuidedSelection['mask']>) => {
   const { width, height, data } = mask;
@@ -144,7 +155,11 @@ export function PrintGarmentSelectionEditor({
   isOpen: boolean;
   sourceUrl: string;
   onClose: () => void;
-  onApply: (selectedImageUrl: string, selectionSource: Exclude<GarmentSelectionSource, 'automatic'>) => void;
+  onApply: (
+    selectedImageUrl: string,
+    selectionSource: Exclude<GarmentSelectionSource, 'automatic'>,
+    segmentationTarget: GarmentSegmentationTarget,
+  ) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const maskPreviewCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -155,6 +170,9 @@ export function PrintGarmentSelectionEditor({
   const [selection, setSelection] = useState<SelectionRect | null>(null);
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('tap');
   const [selectionSource, setSelectionSource] = useState<SelectionSource | null>(null);
+  const [segmentationTarget, setSegmentationTarget] = useState<GarmentSegmentationTarget>(
+    DEFAULT_GARMENT_SEGMENTATION_TARGET,
+  );
   const [guidedResult, setGuidedResult] = useState<PointGuidedSelection | null>(null);
   const [tapProcessing, setTapProcessing] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -274,6 +292,7 @@ export function PrintGarmentSelectionEditor({
     setSelection(null);
     setSelectionMode('tap');
     setSelectionSource(null);
+    setSegmentationTarget(DEFAULT_GARMENT_SEGMENTATION_TARGET);
     setGuidedResult(null);
     setTapProcessing(false);
     setCanvasSize({ width: 0, height: 0 });
@@ -468,7 +487,7 @@ export function PrintGarmentSelectionEditor({
       context.drawImage(maskCanvas, 0, 0);
       context.restore();
     }
-    onApply(output.toDataURL('image/png'), selectionSource);
+    onApply(output.toDataURL('image/png'), selectionSource, segmentationTarget);
   };
 
   const recognizeTap = (point: { x: number; y: number }) => {
@@ -570,6 +589,10 @@ export function PrintGarmentSelectionEditor({
       !image
       || !currentSelection
       || !selectionSource
+      || !canSubmitGarmentSelectionPreview({
+        selectionSource,
+        hasGuidedMask: Boolean(guidedResult?.mask),
+      })
       || currentSelection.width < MIN_SELECTION_EDGE
       || currentSelection.height < MIN_SELECTION_EDGE
     ) {
@@ -595,10 +618,21 @@ export function PrintGarmentSelectionEditor({
           <Button variant="ghost" onClick={onClose}>キャンセル</Button>
           <Button
             onClick={apply}
-            disabled={!ready || !selection || !selectionSource || tapProcessing}
+            disabled={
+              !ready
+              || !selection
+              || !selectionSource
+              || tapProcessing
+              || !canSubmitGarmentSelectionPreview({
+                selectionSource,
+                hasGuidedMask: Boolean(guidedResult?.mask),
+              })
+            }
             data-testid="garment-mask-confirm"
           >
-            {selectionSource === 'tap' && guidedResult ? 'このマスクで確定' : '選択範囲をAIマスクへ渡す'}
+            {selectionSource === 'tap'
+              ? guidedResult?.mask ? 'このマスクで確定' : '範囲を調整してください'
+              : '選択範囲をAIマスクへ渡す'}
           </Button>
         </div>
       )}
@@ -632,6 +666,29 @@ export function PrintGarmentSelectionEditor({
             範囲を調整
           </button>
         </div>
+        <fieldset className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <legend className="px-1 text-xs font-semibold text-white">認識する服のカテゴリ</legend>
+          <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-label="認識する服のカテゴリ">
+            {garmentTargetOptions.map((option) => (
+              <label
+                key={option.value}
+                className={`cursor-pointer rounded-lg border px-3 py-2 text-xs font-semibold transition ${segmentationTarget === option.value
+                  ? 'border-cyan-300 bg-cyan-300/20 text-cyan-50'
+                  : 'border-white/10 bg-white/5 text-white/65 hover:bg-white/10'}`}
+              >
+                <input
+                  type="radio"
+                  name="garment-segmentation-target"
+                  value={option.value}
+                  checked={segmentationTarget === option.value}
+                  onChange={() => setSegmentationTarget(option.value)}
+                  className="sr-only"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(17rem,0.8fr)] lg:items-start">
           <div className="overflow-auto rounded-2xl border border-cyan-300/20 bg-neutral-950 p-3">
             <div

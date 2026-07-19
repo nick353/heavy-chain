@@ -1,7 +1,21 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from 'react';
-import { Move3D, RefreshCw, RotateCw, Square } from 'lucide-react';
-import { getStageLocalPoint } from '../../lib/printingStageGeometry';
+import { FlipHorizontal2, FlipVertical2, Layers3, Move3D, Redo2, RefreshCw, RotateCw, Square, Undo2 } from 'lucide-react';
+import type { PrintDesignLayerOrderAction } from '../../features/printing/selection/designLayerSelection';
+import {
+  createPrintingTransformHistory,
+  getStageDragPosition,
+  getStageLocalPoint,
+  hasPrintingTransformHistoryStep,
+  isOwnedPointerEvent,
+  prunePrintingTransformHistory,
+  reconcilePrintingLayersAfterDrag,
+  recordPrintingTransformHistory,
+  stepPrintingTransformHistory,
+  togglePrintingFlip,
+  type PrintingTransformHistoryDirection,
+  type PrintingFlipAxis,
+} from '../../lib/printingStageGeometry';
 
 export type PrintingTransform = {
   x: number;
@@ -9,6 +23,8 @@ export type PrintingTransform = {
   scale: number;
   rotation: number;
   opacity: number;
+  flipX: boolean;
+  flipY: boolean;
 };
 
 export type PrintingLayer = {
@@ -21,13 +37,13 @@ export type PrintingLayer = {
 
 type StageSize = { width: number; height: number };
 type DragMode = 'move' | 'resize' | 'rotate';
-type GarmentSelectionSource = 'automatic' | 'tap' | 'range';
 
 type DragSession = {
   id: string;
   mode: DragMode;
   pointerId: number;
   startTransform: PrintingTransform;
+  startPointer: { x: number; y: number };
   startAngle: number;
   resizeVector: { x: number; y: number };
   startProjection: number;
@@ -93,6 +109,19 @@ function getLayerCenterPx(size: StageSize, transform: PrintingTransform) {
   };
 }
 
+function getLayerFrameStyle(size: StageSize, transform: PrintingTransform): CSSProperties {
+  const center = getLayerCenterPx(size, transform);
+  const box = designBoxSize(size, transform.scale);
+  return {
+    left: `${center.x}px`,
+    top: `${center.y}px`,
+    width: `${box.width}px`,
+    height: `${box.height}px`,
+    transform: `translate(-50%, -50%) rotate(${transform.rotation}deg)`,
+    willChange: 'transform',
+  };
+}
+
 function getFrameMaskStyle(maskUrl: string | null, stageSpace = false): CSSProperties {
   return {
     WebkitMaskImage: maskUrl ? `url(${maskUrl})` : undefined,
@@ -109,26 +138,34 @@ function getFrameMaskStyle(maskUrl: string | null, stageSpace = false): CSSPrope
 export function PrintingCompositionStage({
   garmentUrl,
   garmentMaskUrl,
-  garmentSelectionSource = 'automatic',
+  garmentMaskConfirmed,
   designClipMaskUrl,
   layers,
   selectedLayerId,
   onSelectLayer,
   onCommitLayer,
+  onReorderLayer,
+  interactive = true,
 }: {
   garmentUrl: string | null;
   garmentMaskUrl: string | null;
-  garmentSelectionSource?: GarmentSelectionSource;
+  garmentMaskConfirmed: boolean;
   designClipMaskUrl?: string | null;
   layers: PrintingLayer[];
   selectedLayerId: string | null;
   onSelectLayer: (id: string) => void;
   onCommitLayer: (payload: { id: string; transform: PrintingTransform }) => void;
+  onReorderLayer: (payload: { id: string; action: PrintDesignLayerOrderAction }) => void;
+  interactive?: boolean;
 }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const size = useResizeObserverSize(stageRef);
   const [draftLayers, setDraftLayers] = useState<PrintingLayer[]>(layers);
   const draftLayersRef = useRef(draftLayers);
+  const [transformHistory, setTransformHistory] = useState(() => createPrintingTransformHistory<PrintingTransform>());
+  const [layerOrderMenuOpen, setLayerOrderMenuOpen] = useState(false);
+  const transformHistoryRef = useRef(transformHistory);
+  const pendingLayersRef = useRef<PrintingLayer[] | null>(null);
   const dragRef = useRef<DragSession | null>(null);
   const rafRef = useRef<number | null>(null);
 
@@ -136,17 +173,36 @@ export function PrintingCompositionStage({
     draftLayersRef.current = draftLayers;
   }, [draftLayers]);
 
+  const replaceTransformHistory = useCallback((nextHistory: typeof transformHistory) => {
+    transformHistoryRef.current = nextHistory;
+    setTransformHistory(nextHistory);
+  }, []);
+
   useEffect(() => {
-    if (dragRef.current) return;
+    if (dragRef.current) {
+      pendingLayersRef.current = layers;
+      return;
+    }
+    pendingLayersRef.current = null;
+    draftLayersRef.current = layers;
     setDraftLayers(layers);
-  }, [layers]);
+    const prunedHistory = prunePrintingTransformHistory(
+      transformHistoryRef.current,
+      layers.map((layer) => layer.id),
+    );
+    if (prunedHistory !== transformHistoryRef.current) replaceTransformHistory(prunedHistory);
+  }, [layers, replaceTransformHistory]);
 
   const selectedLayer = useMemo(
     () => draftLayers.find((layer) => layer.id === selectedLayerId) || null,
     [draftLayers, selectedLayerId],
   );
 
-  const finishDrag = () => {
+  useEffect(() => {
+    setLayerOrderMenuOpen(false);
+  }, [selectedLayerId]);
+
+  const finishDrag = useCallback((commit: boolean) => {
     const session = dragRef.current;
     dragRef.current = null;
     if (rafRef.current !== null) {
@@ -155,15 +211,36 @@ export function PrintingCompositionStage({
     }
     if (!session) return;
     const current = draftLayersRef.current.find((layer) => layer.id === session.id);
-    if (current) {
-      onCommitLayer({ id: current.id, transform: current.transform });
+    const transform = commit && current ? current.transform : session.startTransform;
+    const reconciledLayers = reconcilePrintingLayersAfterDrag({
+      currentLayers: draftLayersRef.current,
+      incomingLayers: pendingLayersRef.current,
+      layerId: session.id,
+      transform,
+    });
+    pendingLayersRef.current = null;
+    draftLayersRef.current = reconciledLayers;
+    setDraftLayers(reconciledLayers);
+    const reconciledLayer = reconciledLayers.find((layer) => layer.id === session.id);
+    let nextHistory = prunePrintingTransformHistory(
+      transformHistoryRef.current,
+      reconciledLayers.map((layer) => layer.id),
+    );
+    if (commit && current && reconciledLayer) {
+      nextHistory = recordPrintingTransformHistory(nextHistory, {
+        layerId: reconciledLayer.id,
+        before: session.startTransform,
+        after: transform,
+      });
+      onCommitLayer({ id: reconciledLayer.id, transform });
     }
-  };
+    if (nextHistory !== transformHistoryRef.current) replaceTransformHistory(nextHistory);
+  }, [onCommitLayer, replaceTransformHistory]);
 
   useEffect(() => {
     const onMove = (event: PointerEvent) => {
       const session = dragRef.current;
-      if (!session || !stageRef.current) return;
+      if (!session || !stageRef.current || !isOwnedPointerEvent(session.pointerId, event.pointerId)) return;
       event.preventDefault();
       const rect = stageRef.current.getBoundingClientRect();
       const pointer = getStageLocalPoint(rect, event.clientX, event.clientY);
@@ -171,19 +248,23 @@ export function PrintingCompositionStage({
       const nextLayers = draftLayersRef.current.map((layer) => {
         if (layer.id !== session.id) return layer;
         if (session.mode === 'move') {
-          const nextX = clamp((pointer.x / rect.width) * 100, 0, 100);
-          const nextY = clamp((pointer.y / rect.height) * 100, 0, 100);
-          return { ...layer, transform: { ...layer.transform, x: nextX, y: nextY } };
+          const nextPosition = getStageDragPosition({
+            startPosition: session.startTransform,
+            startPointer: session.startPointer,
+            currentPointer: pointer,
+            stageSize: rect,
+          });
+          return { ...layer, transform: { ...layer.transform, ...nextPosition } };
         }
-      if (session.mode === 'resize') {
-        const currentProjection = Math.max(
-          20,
-          ((pointer.x - center.x) * session.resizeVector.x) + ((pointer.y - center.y) * session.resizeVector.y),
-        );
-        const ratio = currentProjection / Math.max(20, session.startProjection);
-        const nextScale = clamp(session.startTransform.scale * ratio, minScale, maxScale);
-        return { ...layer, transform: { ...layer.transform, scale: nextScale } };
-      }
+        if (session.mode === 'resize') {
+          const currentProjection = Math.max(
+            20,
+            ((pointer.x - center.x) * session.resizeVector.x) + ((pointer.y - center.y) * session.resizeVector.y),
+          );
+          const ratio = currentProjection / Math.max(20, session.startProjection);
+          const nextScale = clamp(session.startTransform.scale * ratio, minScale, maxScale);
+          return { ...layer, transform: { ...layer.transform, scale: nextScale } };
+        }
         const nextAngle = getAngleDegrees(center.x, center.y, pointer.x, pointer.y);
         const delta = normalizeAngleDelta(nextAngle - session.startAngle);
         return { ...layer, transform: { ...layer.transform, rotation: clamp(session.startTransform.rotation + delta, -72, 72) } };
@@ -197,14 +278,21 @@ export function PrintingCompositionStage({
       }
     };
 
-    const onUp = () => {
-      if (!dragRef.current) return;
-      finishDrag();
+    const onUp = (event: PointerEvent) => {
+      const session = dragRef.current;
+      if (!session || !isOwnedPointerEvent(session.pointerId, event.pointerId)) return;
+      finishDrag(true);
+    };
+
+    const onCancel = (event: PointerEvent) => {
+      const session = dragRef.current;
+      if (!session || !isOwnedPointerEvent(session.pointerId, event.pointerId)) return;
+      finishDrag(false);
     };
 
     window.addEventListener('pointermove', onMove, { passive: false });
     window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', onUp);
+    window.addEventListener('pointercancel', onCancel);
     return () => {
       if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
@@ -212,13 +300,14 @@ export function PrintingCompositionStage({
       }
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
+      window.removeEventListener('pointercancel', onCancel);
     };
-  }, [size]);
+  }, [finishDrag, size]);
 
   const beginDrag = (layer: PrintingLayer, mode: DragMode, event: ReactPointerEvent) => {
     event.preventDefault();
     event.stopPropagation();
+    if (dragRef.current) return;
     onSelectLayer(layer.id);
     const rect = stageRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -234,6 +323,7 @@ export function PrintingCompositionStage({
       mode,
       pointerId: event.pointerId,
       startTransform: layer.transform,
+      startPointer: pointer,
       startAngle: getAngleDegrees(center.x, center.y, pointer.x, pointer.y),
       resizeVector,
       startProjection: resizeMagnitude,
@@ -245,10 +335,74 @@ export function PrintingCompositionStage({
     () => draftLayers.find((layer) => layer.cutoutState === 'processing') || null,
     [draftLayers],
   );
-  const isProcessing = Boolean(processingLayer);
+  const processingDesignLayers = useMemo(
+    () => draftLayers.filter((layer) => layer.id !== 'print-garment' && layer.cutoutState === 'processing'),
+    [draftLayers],
+  );
+  const isGarmentProcessing = draftLayers.some(
+    (layer) => layer.id === 'print-garment' && layer.cutoutState === 'processing',
+  );
   const statusLayer = processingLayer || draftLayers.find((layer) => layer.cutoutState === 'error') || selectedLayer;
   const hasRenderableGarment = Boolean(garmentUrl && garmentMaskUrl);
-  const hasConfirmedGarmentMask = hasRenderableGarment && garmentSelectionSource !== 'automatic';
+  const hasConfirmedGarmentMask = hasRenderableGarment && garmentMaskConfirmed;
+  const activeDesignLayerIds = useMemo(
+    () => draftLayers.filter((layer) => layer.id !== 'print-garment').map((layer) => layer.id),
+    [draftLayers],
+  );
+  const canUndoTransform = hasPrintingTransformHistoryStep(transformHistory, 'undo', activeDesignLayerIds);
+  const canRedoTransform = hasPrintingTransformHistoryStep(transformHistory, 'redo', activeDesignLayerIds);
+  const selectedDesignLayerIndex = selectedLayerId ? activeDesignLayerIds.indexOf(selectedLayerId) : -1;
+  const canReorderSelectedLayer = hasConfirmedGarmentMask
+    && selectedDesignLayerIndex >= 0
+    && activeDesignLayerIds.length > 1;
+  const isLayerOrderActionDisabled = (action: PrintDesignLayerOrderAction) => !canReorderSelectedLayer
+    || ((action === 'front' || action === 'forward') && selectedDesignLayerIndex === activeDesignLayerIds.length - 1)
+    || ((action === 'back' || action === 'backward') && selectedDesignLayerIndex === 0);
+  const applyLayerOrder = (action: PrintDesignLayerOrderAction) => {
+    if (!selectedLayerId || isLayerOrderActionDisabled(action) || dragRef.current) return;
+    onReorderLayer({ id: selectedLayerId, action });
+    onSelectLayer(selectedLayerId);
+    setLayerOrderMenuOpen(false);
+  };
+  const applyTransformHistory = useCallback((direction: PrintingTransformHistoryDirection) => {
+    if (!hasConfirmedGarmentMask || dragRef.current) return;
+    const currentLayers = draftLayersRef.current;
+    const result = stepPrintingTransformHistory(
+      transformHistoryRef.current,
+      direction,
+      currentLayers.filter((layer) => layer.id !== 'print-garment').map((layer) => layer.id),
+    );
+    replaceTransformHistory(result.state);
+    const command = result.command;
+    if (!command) return;
+    const current = currentLayers.find((layer) => layer.id === command.layerId);
+    if (!current) return;
+    const nextLayers = currentLayers.map((layer) => (
+      layer.id === command.layerId ? { ...layer, transform: command.transform } : layer
+    ));
+    draftLayersRef.current = nextLayers;
+    setDraftLayers(nextLayers);
+    onSelectLayer(command.layerId);
+    onCommitLayer({ id: command.layerId, transform: command.transform });
+  }, [hasConfirmedGarmentMask, onCommitLayer, onSelectLayer, replaceTransformHistory]);
+  const toggleLayerFlip = useCallback((layerId: string, axis: PrintingFlipAxis) => {
+    if (!hasConfirmedGarmentMask || dragRef.current) return;
+    const current = draftLayersRef.current.find((layer) => layer.id === layerId);
+    if (!current || current.cutoutState !== 'done') return;
+    const transform = togglePrintingFlip(current.transform, axis);
+    const nextLayers = draftLayersRef.current.map((layer) => (
+      layer.id === layerId ? { ...layer, transform } : layer
+    ));
+    draftLayersRef.current = nextLayers;
+    setDraftLayers(nextLayers);
+    replaceTransformHistory(recordPrintingTransformHistory(transformHistoryRef.current, {
+      layerId,
+      before: current.transform,
+      after: transform,
+    }));
+    onSelectLayer(layerId);
+    onCommitLayer({ id: layerId, transform });
+  }, [hasConfirmedGarmentMask, onCommitLayer, onSelectLayer, replaceTransformHistory]);
 
   return (
     <div
@@ -283,7 +437,7 @@ export function PrintingCompositionStage({
         </div>
       )}
 
-      {hasConfirmedGarmentMask && garmentMaskUrl && (
+      {interactive && hasConfirmedGarmentMask && garmentMaskUrl && (
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-[1] opacity-90 drop-shadow-[0_0_3px_rgba(103,232,249,0.95)]"
@@ -294,48 +448,159 @@ export function PrintingCompositionStage({
         />
       )}
 
-      {garmentMaskUrl ? (
-        <div
-          className="absolute inset-0 z-10"
-          style={getFrameMaskStyle(designClipMaskUrl ?? garmentMaskUrl, Boolean(designClipMaskUrl))}
-        >
-          <div className="pointer-events-none absolute inset-0 bg-transparent" />
-          <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]" />
-          <div className="pointer-events-none absolute inset-[2%] rounded-[30px] border border-white/10 border-dashed opacity-70" />
-          {draftLayers
-            .filter((layer) => layer.id !== 'print-garment')
-            .map((layer) => {
-              const center = getLayerCenterPx(size, layer.transform);
-              const box = designBoxSize(size, layer.transform.scale);
-              const selected = layer.id === selectedLayerId;
-              const transform = `translate(-50%, -50%) rotate(${layer.transform.rotation}deg)`;
-              return (
+      {hasConfirmedGarmentMask ? (
+        <>
+          {interactive && <div
+            data-printing-design-thumbnail-rail
+            aria-label="配置デザインを選択"
+            className="absolute left-4 top-1/2 z-40 flex max-h-[72%] w-12 -translate-y-1/2 flex-col gap-2 overflow-y-auto rounded-2xl border border-white/10 bg-[#0d1314]/88 p-1.5 shadow-xl backdrop-blur-md"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            {draftLayers
+              .filter((layer) => layer.id !== 'print-garment')
+              .map((layer) => (
                 <button
                   key={layer.id}
                   type="button"
-                  onPointerDown={(event) => beginDrag(layer, 'move', event)}
-                  onClick={() => onSelectLayer(layer.id)}
-                  className={`absolute cursor-grab select-none border transition-[border-color,transform] duration-150 active:cursor-grabbing ${selected ? 'border-[#6d8784]' : 'border-white/15'}`}
-                  style={{
-                    left: `${center.x}px`,
-                    top: `${center.y}px`,
-                    width: `${box.width}px`,
-                    height: `${box.height}px`,
-                    opacity: layer.transform.opacity,
-                    transform,
-                    willChange: 'transform',
-                    touchAction: 'none',
-                    background: 'transparent',
-                    borderRadius: 0,
-                    boxShadow: 'none',
+                  data-printing-design-thumbnail={layer.id}
+                  aria-label={`${layer.label}を編集`}
+                  aria-pressed={layer.id === selectedLayerId}
+                  aria-busy={layer.cutoutState === 'processing'}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelectLayer(layer.id);
                   }}
-                  >
+                  className="relative aspect-square w-full shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/35 transition-colors hover:border-white/40 aria-pressed:border-cyan-300 aria-pressed:ring-1 aria-pressed:ring-cyan-300/60"
+                  title={layer.label}
+                >
+                  {layer.displayUrl ? (
+                    <img
+                      src={layer.displayUrl}
+                      alt=""
+                      aria-hidden="true"
+                      className="h-full w-full object-contain"
+                      style={{
+                        opacity: layer.cutoutState === 'done' ? 1 : 0.45,
+                        filter: layer.cutoutState === 'done' ? 'none' : 'saturate(0.55) brightness(0.8)',
+                      }}
+                      draggable={false}
+                    />
+                  ) : (
+                    <span className="grid h-full w-full place-items-center text-[9px] text-white/45">待機</span>
+                  )}
+                  {layer.cutoutState === 'processing' && (
+                    <span className="pointer-events-none absolute inset-0 grid place-items-center bg-black/20">
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin text-cyan-100" />
+                    </span>
+                  )}
+                </button>
+              ))}
+          </div>}
+          {interactive && <div
+            data-printing-transform-history-controls
+            className="absolute right-4 top-4 z-40 flex gap-1.5 rounded-full border border-white/10 bg-[#0d1314]/92 p-1 shadow-lg backdrop-blur-md"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              aria-label="配置を元に戻す"
+              disabled={!canUndoTransform}
+              onClick={(event) => {
+                event.stopPropagation();
+                applyTransformHistory('undo');
+              }}
+              className="grid h-8 w-8 place-items-center rounded-full text-[#d9e2e0] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+              title="元に戻す"
+            >
+              <Undo2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              aria-label="配置をやり直す"
+              disabled={!canRedoTransform}
+              onClick={(event) => {
+                event.stopPropagation();
+                applyTransformHistory('redo');
+              }}
+              className="grid h-8 w-8 place-items-center rounded-full text-[#d9e2e0] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+              title="やり直す"
+            >
+              <Redo2 className="h-4 w-4" />
+            </button>
+            <div className="mx-0.5 w-px bg-white/10" />
+            <button
+              type="button"
+              aria-label="レイヤー順を変更"
+              aria-expanded={layerOrderMenuOpen}
+              disabled={!canReorderSelectedLayer}
+              onClick={(event) => {
+                event.stopPropagation();
+                setLayerOrderMenuOpen((open) => !open);
+              }}
+              className="grid h-8 w-8 place-items-center rounded-full text-[#d9e2e0] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+              title="レイヤー順"
+            >
+              <Layers3 className="h-4 w-4" />
+            </button>
+          </div>}
+          {interactive && layerOrderMenuOpen && selectedLayer && (
+            <div
+              role="menu"
+              aria-label={`${selectedLayer.label}のレイヤー順`}
+              data-printing-layer-order-menu={selectedLayer.id}
+              className="absolute right-4 top-16 z-50 w-40 overflow-hidden rounded-2xl border border-white/10 bg-[#0d1314]/96 p-1.5 text-xs text-[#d9e2e0] shadow-2xl backdrop-blur-md"
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              {([
+                ['front', '最上部へ移動'],
+                ['forward', '一段上へ移動'],
+                ['backward', '一段下へ移動'],
+                ['back', '最下部へ移動'],
+              ] as Array<[PrintDesignLayerOrderAction, string]>).map(([action, label]) => (
+                <button
+                  key={action}
+                  type="button"
+                  role="menuitem"
+                  disabled={isLayerOrderActionDisabled(action)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    applyLayerOrder(action);
+                  }}
+                  className="flex w-full items-center rounded-xl px-3 py-2 text-left transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          <div
+            data-printing-artwork-clip
+            className="pointer-events-none absolute inset-0 z-10"
+            style={getFrameMaskStyle(designClipMaskUrl ?? garmentMaskUrl, Boolean(designClipMaskUrl))}
+          >
+            {draftLayers
+              .filter((layer) => layer.id !== 'print-garment')
+              .map((layer) => (
+                <div
+                  key={layer.id}
+                  data-printing-artwork-layer={layer.id}
+                  className="absolute select-none"
+                  style={{
+                    ...getLayerFrameStyle(size, layer.transform),
+                    opacity: layer.transform.opacity,
+                  }}
+                >
                   {layer.displayUrl ? (
                     <img
                       src={layer.displayUrl}
                       alt={layer.label}
                       className="h-full w-full object-contain pointer-events-none select-none"
-                      style={{ mixBlendMode: 'normal', opacity: 0.98 }}
+                      style={{
+                        mixBlendMode: 'normal',
+                        opacity: layer.cutoutState === 'done' ? 0.98 : 0.42,
+                        filter: layer.cutoutState === 'done' ? 'none' : 'saturate(0.55) brightness(0.8)',
+                        transform: `scale(${layer.transform.flipX ? -1 : 1}, ${layer.transform.flipY ? -1 : 1})`,
+                      }}
                       draggable={false}
                     />
                   ) : (
@@ -347,6 +612,35 @@ export function PrintingCompositionStage({
                           : '透明化待ち'}
                     </div>
                   )}
+                </div>
+              ))}
+          </div>
+
+          {interactive && <div data-printing-editing-chrome className="absolute inset-0 z-20">
+            <div className="pointer-events-none absolute inset-0 bg-transparent" />
+            <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]" />
+            <div className="pointer-events-none absolute inset-[2%] rounded-[30px] border border-white/10 border-dashed opacity-70" />
+            {draftLayers
+              .filter((layer) => layer.id !== 'print-garment')
+              .map((layer) => {
+                const selected = layer.id === selectedLayerId;
+                return (
+                  <Fragment key={layer.id}>
+                    <button
+                    data-printing-layer-controls={layer.id}
+                    type="button"
+                    aria-label={`${layer.label}を選択・移動`}
+                    onPointerDown={(event) => beginDrag(layer, 'move', event)}
+                    onClick={() => onSelectLayer(layer.id)}
+                    className={`absolute cursor-grab select-none border transition-[border-color,transform] duration-150 active:cursor-grabbing ${selected ? 'border-[#6d8784]' : 'border-white/15'}`}
+                    style={{
+                      ...getLayerFrameStyle(size, layer.transform),
+                      touchAction: 'none',
+                      background: 'transparent',
+                      borderRadius: 0,
+                      boxShadow: 'none',
+                    }}
+                  >
                   {selected && (
                     <>
                       <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-full border border-[#6d8784]/45 bg-[#0f1718]/90 px-2 py-0.5 text-[10px] font-semibold tracking-[0.18em] text-[#d9e2e0] backdrop-blur-sm">
@@ -400,13 +694,54 @@ export function PrintingCompositionStage({
                       </div>
                     </>
                   )}
-                </button>
-              );
-            })}
-        </div>
+                    </button>
+                    {selected && layer.cutoutState === 'done' && hasConfirmedGarmentMask && (
+                      <div
+                        data-printing-flip-controls={layer.id}
+                        className="absolute z-30 flex -translate-x-1/2 gap-1.5"
+                        style={{
+                          left: `${getLayerCenterPx(size, layer.transform).x}px`,
+                          top: `${getLayerCenterPx(size, layer.transform).y + (designBoxSize(size, layer.transform.scale).height / 2) + 18}px`,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          aria-label={`${layer.label}を水平方向に反転`}
+                          aria-pressed={layer.transform.flipX}
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleLayerFlip(layer.id, 'horizontal');
+                          }}
+                          className="grid h-9 w-9 place-items-center rounded-full border border-[#6d8784]/50 bg-[#0d1314]/95 text-[#d9e2e0] shadow-lg transition-colors hover:border-cyan-200/70 hover:text-cyan-100 aria-pressed:border-cyan-300 aria-pressed:bg-cyan-950/80"
+                          title="水平方向に反転"
+                        >
+                          <FlipHorizontal2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`${layer.label}を垂直方向に反転`}
+                          aria-pressed={layer.transform.flipY}
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleLayerFlip(layer.id, 'vertical');
+                          }}
+                          className="grid h-9 w-9 place-items-center rounded-full border border-[#6d8784]/50 bg-[#0d1314]/95 text-[#d9e2e0] shadow-lg transition-colors hover:border-cyan-200/70 hover:text-cyan-100 aria-pressed:border-cyan-300 aria-pressed:bg-cyan-950/80"
+                          title="垂直方向に反転"
+                        >
+                          <FlipVertical2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </Fragment>
+                );
+              })}
+          </div>}
+        </>
       ) : null}
 
-      {isProcessing && (
+      {isGarmentProcessing && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="rounded-[24px] border border-cyan-300/20 bg-[#0d1314]/92 px-5 py-4 text-center shadow-[0_18px_40px_rgba(0,0,0,0.35)]">
             <RefreshCw className="mx-auto h-5 w-5 animate-spin text-cyan-100" />
@@ -416,10 +751,21 @@ export function PrintingCompositionStage({
         </div>
       )}
 
-      <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-[11px] font-medium tracking-[0.22em] text-neutral-300 backdrop-blur-md">
+      {hasConfirmedGarmentMask && processingDesignLayers.length > 0 && (
+        <div
+          role="status"
+          data-testid="printing-design-processing-status"
+          className="pointer-events-none absolute right-4 top-16 z-30 flex items-center gap-2 rounded-full border border-cyan-200/25 bg-[#071a2a]/88 px-3 py-1.5 text-[11px] font-medium text-cyan-50 shadow-lg backdrop-blur-md"
+        >
+          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+          {processingDesignLayers.length}件を透明化中（配置は維持）
+        </div>
+      )}
+
+      {interactive && <div className="pointer-events-none absolute bottom-4 left-4 rounded-full border border-white/10 bg-black/40 px-3 py-1.5 text-[11px] font-medium tracking-[0.22em] text-neutral-300 backdrop-blur-md">
         Canva-style direct edit
-      </div>
-      {hasConfirmedGarmentMask && (
+      </div>}
+      {interactive && hasConfirmedGarmentMask && (
         <div
           role="status"
           className="pointer-events-none absolute bottom-4 left-4 max-w-[72%] rounded-2xl border border-cyan-200/35 bg-[#071a2a]/88 px-3 py-2 text-[11px] leading-relaxed text-cyan-50 shadow-lg shadow-cyan-950/30 backdrop-blur-md"
@@ -431,13 +777,24 @@ export function PrintingCompositionStage({
           <div className="mt-1 text-cyan-100/75">デザインは確定した服の内側だけに適用されます</div>
         </div>
       )}
-      <div className="pointer-events-none absolute bottom-4 right-4 rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-[11px] leading-relaxed text-neutral-300 backdrop-blur-md">
-        <div className="flex items-center gap-2"><Move3D className="h-3.5 w-3.5 text-[#a1b9b5]" /> ドラッグ</div>
-        <div className="flex items-center gap-2"><Square className="h-3.5 w-3.5 text-[#a1b9b5]" /> 拡大</div>
-        <div className="flex items-center gap-2"><RotateCw className="h-3.5 w-3.5 text-[#a1b9b5]" /> 回転</div>
-      </div>
+      {interactive && hasConfirmedGarmentMask && (
+        <div className="pointer-events-none absolute bottom-4 right-4 rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-[11px] leading-relaxed text-neutral-300 backdrop-blur-md">
+          <div className="flex items-center gap-2"><Move3D className="h-3.5 w-3.5 text-[#a1b9b5]" /> ドラッグ</div>
+          <div className="flex items-center gap-2"><Square className="h-3.5 w-3.5 text-[#a1b9b5]" /> 拡大</div>
+          <div className="flex items-center gap-2"><RotateCw className="h-3.5 w-3.5 text-[#a1b9b5]" /> 回転</div>
+        </div>
+      )}
 
-      {!garmentMaskUrl && !isProcessing && (
+      {hasRenderableGarment && !hasConfirmedGarmentMask && !isGarmentProcessing && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/38 px-6 backdrop-blur-[1px]">
+          <div role="status" className="max-w-sm rounded-2xl border border-amber-200/30 bg-[#21180a]/92 px-5 py-4 text-center shadow-2xl shadow-black/30">
+            <p className="text-sm font-semibold text-amber-50">青い認識範囲を確定してください</p>
+            <p className="mt-1 text-xs leading-relaxed text-amber-100/75">確定するまでデザインの表示・移動・生成は行いません。</p>
+          </div>
+        </div>
+      )}
+
+      {!garmentMaskUrl && !isGarmentProcessing && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-center text-white/70 backdrop-blur">
             <p className="text-sm">{statusLayer?.cutoutState === 'error' ? '透明化に失敗しました。元画像を確認して再試行してください' : '参考画像をアップロードしてください'}</p>
@@ -445,7 +802,7 @@ export function PrintingCompositionStage({
         </div>
       )}
 
-      {statusLayer && (
+      {interactive && statusLayer && (
         <div className="absolute left-4 top-4 hidden md:block rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-white/70 backdrop-blur-md">
           <div className="font-semibold text-white">{statusLayer.label}</div>
           <div className="mt-1 text-neutral-400">

@@ -453,13 +453,32 @@ test('returns a freeze-safe success result for a centered visible design', () =>
   assert.deepEqual([...result.rgba.slice(edgeIndex, edgeIndex + 4)], [0, 0, 0, 0]);
 });
 
-test('rejects sources below the fixed long-edge or short-edge gate', () => {
-  const result = conformSurface({
-    source: rgbaPlane(800, 600, [128, 128, 128, 255]),
-    design: rgbaPlane(DESIGN.width, DESIGN.height, [220, 110, 50, 255]),
-    garment: alphaPlane(GARMENT.width, GARMENT.height, 255),
-    clip: alphaPlane(GARMENT.width, GARMENT.height, 255),
-  });
+test('rejects a source with a 999px long edge', () => {
+  const result = conformSurface(conformerInput({
+    sourceReferenceSize: { width: 999, height: 512 },
+  }));
+  assert.equal(result.kind, 'ood');
+  assert.equal(result.domain, 'SOURCE_TOO_SMALL');
+});
+
+test('accepts a source with a 1000px long edge through the source-size gate', () => {
+  const result = conformSurface(conformerInput({
+    sourceReferenceSize: { width: 1000, height: 512 },
+  }));
+  assert.notEqual(result.kind === 'ood' ? result.domain : undefined, 'SOURCE_TOO_SMALL');
+});
+
+test('accepts the 1020x976 experimental candidate through the source-size gate', () => {
+  const result = conformSurface(conformerInput({
+    sourceReferenceSize: { width: 1020, height: 976 },
+  }));
+  assert.notEqual(result.kind === 'ood' ? result.domain : undefined, 'SOURCE_TOO_SMALL');
+});
+
+test('rejects a source with a 511px short edge', () => {
+  const result = conformSurface(conformerInput({
+    sourceReferenceSize: { width: 1000, height: 511 },
+  }));
   assert.equal(result.kind, 'ood');
   assert.equal(result.domain, 'SOURCE_TOO_SMALL');
 });

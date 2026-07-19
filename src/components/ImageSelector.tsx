@@ -52,7 +52,10 @@ interface ImageSelectorProps {
   processingLabel?: string;
   previewUrl?: string | null;
   multiplePreviewUrls?: Array<string | null>;
+  multipleProcessingStates?: boolean[];
   galleryTitle?: string;
+  confirmGallerySelection?: boolean;
+  galleryConfirmLabel?: string;
   selectionTestId?: string;
 }
 
@@ -73,7 +76,10 @@ export function ImageSelector({
   processingLabel = '切り抜き処理中',
   previewUrl,
   multiplePreviewUrls,
+  multipleProcessingStates,
   galleryTitle = 'ギャラリーから画像を選択',
+  confirmGallerySelection = false,
+  galleryConfirmLabel = '素材を追加',
   selectionTestId,
 }: ImageSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -229,9 +235,15 @@ export function ImageSelector({
         {/* Image grid */}
         <div className="grid grid-cols-3 gap-2">
           {multipleValue.map((img, index) => (
-            <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+            <div
+              key={index}
+              className="relative aspect-square rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800"
+              aria-busy={multipleProcessingStates?.[index] ?? processing}
+            >
               {(() => {
-                const displayUrl = multiplePreviewUrls ? multiplePreviewUrls[index] : img.url;
+                const displayUrl = multiplePreviewUrls
+                  ? (multiplePreviewUrls[index] ?? img.url)
+                  : img.url;
                 return displayUrl ? (
                   <img src={displayUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -240,7 +252,7 @@ export function ImageSelector({
                   </div>
                 );
               })()}
-              {processing && hideSelectedPreviewWhileProcessing && (
+              {(multipleProcessingStates?.[index] ?? processing) && hideSelectedPreviewWhileProcessing && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/35 backdrop-blur-[1px]">
                   <div className="rounded-full bg-black/60 px-2 py-1 text-[10px] text-white/90">
                     {processingLabel}
@@ -315,6 +327,8 @@ export function ImageSelector({
           onClose={() => setShowGalleryModal(false)}
           onSelect={handleGallerySelect}
           title={galleryTitle}
+          confirmedSingle={confirmGallerySelection}
+          confirmLabel={galleryConfirmLabel}
         />
       </div>
     );
@@ -459,6 +473,8 @@ export function ImageSelector({
         onClose={() => setShowGalleryModal(false)}
         onSelect={handleGallerySelect}
         title={galleryTitle}
+        confirmedSingle={confirmGallerySelection}
+        confirmLabel={galleryConfirmLabel}
       />
     </div>
   );

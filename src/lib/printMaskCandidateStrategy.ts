@@ -366,42 +366,126 @@ export const sourceOverRgbaPixel = (
   ];
 };
 
-export const mergePrintResultHistory = <T>(
-  nextResults: readonly T[],
-  previousResults: readonly T[],
-  maxResults = 8,
-) => {
-  if (!Number.isInteger(maxResults) || maxResults < 1) {
-    throw new Error('invalid_print_result_history_limit');
-  }
-  return [...nextResults, ...previousResults].slice(0, maxResults);
+export type GroupedPrintResultRun<T> = {
+  runId: string;
+  results: T[];
 };
 
-export const mergeDelayedSurfaceResult = <T extends { id: string }>({
+export const PRINT_RESULT_HISTORY_MAX_RUNS = 4;
+
+type PrintResultHistoryEntry = {
+  id: string;
+  runId?: string;
+  resultKind?: 'exact' | 'fabric' | 'surface';
+};
+
+const isCompletePrintResultRun = <T extends PrintResultHistoryEntry>(results: readonly T[]) => {
+  const exactCount = results.filter((result) => result.resultKind === 'exact').length;
+  const fabricCount = results.filter((result) => result.resultKind === 'fabric').length;
+  const surfaceCount = results.filter((result) => result.resultKind === 'surface').length;
+  return exactCount === 1
+    && fabricCount === 1
+    && surfaceCount <= 1
+    && results.length === exactCount + fabricCount + surfaceCount;
+};
+
+export const groupPrintResultHistory = <T extends PrintResultHistoryEntry>(
+  results: readonly T[],
+): GroupedPrintResultRun<T>[] => {
+  const groups = new Map<string, T[]>();
+  for (const result of results) {
+    const runId = result.runId?.trim();
+    if (!runId) continue;
+    const current = groups.get(runId);
+    if (current) current.push(result);
+    else groups.set(runId, [result]);
+  }
+  return [...groups]
+    .filter(([, groupedResults]) => isCompletePrintResultRun(groupedResults))
+    .map(([runId, groupedResults]) => ({ runId, results: groupedResults }));
+};
+
+const boundPrintResultHistory = <T extends PrintResultHistoryEntry>(
+  results: readonly T[],
+  maxRuns: number,
+) => {
+  return groupPrintResultHistory(results)
+    .slice(0, maxRuns)
+    .flatMap((run) => run.results);
+};
+
+export const mergePrintResultHistory = <T extends PrintResultHistoryEntry>(
+  nextResults: readonly T[],
+  previousResults: readonly T[],
+  maxRuns = PRINT_RESULT_HISTORY_MAX_RUNS,
+) => {
+  if (!Number.isInteger(maxRuns) || maxRuns < 1) {
+    throw new Error('invalid_print_result_history_limit');
+  }
+  return boundPrintResultHistory([...nextResults, ...previousResults], maxRuns);
+};
+
+export const removePrintResultRun = <T extends PrintResultHistoryEntry>(
+  results: readonly T[],
+  runId: string,
+) => {
+  const normalizedRunId = runId.trim();
+  if (!normalizedRunId) throw new Error('invalid_print_result_run_id');
+  return removePrintResultRuns(results, new Set([normalizedRunId]));
+};
+
+export const removePrintResultRuns = <T extends PrintResultHistoryEntry>(
+  results: readonly T[],
+  runIds: ReadonlySet<string>,
+) => {
+  const normalizedRunIds = new Set<string>();
+  for (const runId of runIds) {
+    const normalizedRunId = runId.trim();
+    if (!normalizedRunId) throw new Error('invalid_print_result_run_id');
+    normalizedRunIds.add(normalizedRunId);
+  }
+  if (normalizedRunIds.size === 0) return [...results];
+  return results.filter((result) => !normalizedRunIds.has(result.runId?.trim() ?? ''));
+};
+
+export const mergeDelayedSurfaceResult = <T extends PrintResultHistoryEntry>({
   currentResults,
   exactId,
   fabricId,
   surfaceResult,
-  maxResults = 8,
+  maxRuns = PRINT_RESULT_HISTORY_MAX_RUNS,
 }: {
   currentResults: readonly T[];
   exactId: string;
   fabricId: string;
   surfaceResult: T;
-  maxResults?: number;
+  maxRuns?: number;
 }) => {
-  if (!Number.isInteger(maxResults) || maxResults < 3) {
+  if (!Number.isInteger(maxRuns) || maxRuns < 1) {
     throw new Error('invalid_delayed_surface_result_history_limit');
   }
   if (currentResults[0]?.id !== exactId || currentResults[1]?.id !== fabricId) {
     return [...currentResults];
   }
-  return [
+  const exactRunId = currentResults[0].runId?.trim() || null;
+  const fabricRunId = currentResults[1].runId?.trim() || null;
+  const surfaceRunId = surfaceResult.runId?.trim() || null;
+  if (
+    exactRunId === null
+    || exactRunId !== fabricRunId
+    || surfaceRunId !== exactRunId
+    || currentResults[0].resultKind !== 'exact'
+    || currentResults[1].resultKind !== 'fabric'
+    || surfaceResult.resultKind !== 'surface'
+  ) {
+    return [...currentResults];
+  }
+  return boundPrintResultHistory([
     currentResults[0],
     currentResults[1],
     surfaceResult,
     ...currentResults.slice(2).filter((result) => result.id !== surfaceResult.id),
-  ].slice(0, maxResults);
+  ], maxRuns);
 };
 
 const readAlpha = (
@@ -593,6 +677,8 @@ export type PrintRequestSignatureValueInput = {
       scale: number;
       rotation: number;
       opacity: number;
+      flipX: boolean;
+      flipY: boolean;
     };
   }>;
 };

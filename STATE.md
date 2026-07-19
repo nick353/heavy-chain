@@ -579,3 +579,218 @@ latest_g833_final_local_hardening_locator: src/pages/BrandSettingsPage.tsx; src/
 - production monitor の完全復帰。
 - `release/10M` の closure。
 - まだ残る UI/表記の候補: `LandingPage`, `LightchainWorkbenchPage` の一部, `App.tsx` の利用条件系文言, `public/og-image.svg`, `src/index.css` コメント, `src/components/icons/index.tsx` コメント。  
+
+## 2026-07-19 Heavy Chain cloth-model local compatibility
+
+- No Chrome or recording operation was performed; the user owns the current screen recording. The pinned official `u2net_cloth_seg.onnx` was inspected and run locally through `onnxruntime-web` WASM.
+- The model identity is 176,194,565 bytes with SHA-256 `6d2cbc27bfbdc989e1fd325656d65902ecc6a3ccbe94b2d3655ec114efcb128e`. Runtime metadata confirms input `[batch,3,768,768]` and output `[batch,4,768,768]`, representing background plus upper/lower/full garment classes.
+- A model-worn screenshot crop completed with 50,675 upper pixels, 0 lower pixels, and 19,448 full-body pixels. Raw `session.run()` varied from about 25.4 to 48.4 seconds across runs. A low-resolution reference-video dress crop returned `cloth_model_returned_no_garment_pixels` and is retained as failure evidence rather than quality proof.
+- The local diagnostic now creates category mask PNGs, rejects malformed crop input, invalidates stale success evidence before every run, and always writes structured failure JSON. Production cloth prediction has a dedicated 90-second `predict()` budget inside a cloth-only 105-second page budget, plus a single-flight guard so a non-cancellable timed-out ONNX run cannot overlap another cloth inference. Existing fallback returns to the confirmed tap mask/manual editor.
+- Verification passed: compatibility tests `5/5`, garment policy `7/7`, print-mask wiring, typecheck, production build, targeted ESLint, and `git diff --check`. Independent review verdict: APPROVE. Summary: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/cloth-model-local-compatibility.json`.
+- Remaining exact blocker is `managed_cors_cloth_model_url_not_configured`. Browser Canvas parity, production CORS, semantic quality acceptance, and 0713 video equivalence remain unproven.
+
+## 2026-07-19 Cloth-model host release gate
+
+- Added a fail-closed host verifier for the optional 176,194,565-byte `u2net_cloth_seg.onnx`. It rejects credentials/query/fragment, non-HTTPS or non-public literal/DNS addresses, redirects, non-200 responses, CORS/type/size/hash mismatches, and binds the TLS connection to the validated DNS address set.
+- `build:rembg-cloth-model` now recreates `output/rembg-cloth-model-host.json` first, then runs the required deployment preflight, build, and dist URL readback under the same environment. A stale standalone proof can no longer substitute for the release command.
+- Host tests pass 10/10, compatibility tests 5/5, deployment tests 6/6, candidate wiring/typecheck/build/targeted ESLint/diff checks pass, and independent review returned `APPROVE`. Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/cloth-model-host-release-gate.json`.
+- No managed public model URL exists yet, so no actual 176MB public GET was run. Exact blocker remains `managed_cors_cloth_model_url_not_configured`. This is local, uncommitted, and undeployed; semantic garment recognition, accepted experimental quality, and 0713 video equivalence remain unclaimed.
+
+## 2026-07-19 Explicit confirmed-mask downstream gate
+
+- Re-read `/Users/nichikatanaka/Downloads/0713.mp4` at 1 fps: 285 frames sampled and 28 retained. The reference keeps the turquoise mask visible while a right-side placement becomes active, then accumulates repeated result pairs. Timeline: `/Users/nichikatanaka/Documents/New project/work/0713-reference-reread-20260719/timeline.json`.
+- Fixed a correctness gap where the automatic cutout could previously display/edit/generate artwork before the user explicitly confirmed the blue range. One shared invariant now unlocks the right artwork pane, transform controls, and exact/fabric generation only after tap confirmation, range confirmation, or explicit manual-mask apply.
+- Unconfirmed automatic masks remain visible as candidates on the left but the right pane shows a confirmation requirement; the generate button and handler both fail closed. Manual fallback remains a valid explicit confirmation path, and tap/range/manual labels are distinct.
+- `test:printing-foundation` now includes the stage interaction regression and passes 117/117; point-guided selection passes 11/11; candidate wiring, typecheck, build, targeted ESLint, and diff checks pass; independent review returned `APPROVE`. Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/explicit-confirmation-gate.json`.
+- Chrome, recording, external hosting, commit/push, and deployment were not performed. `managed_cors_cloth_model_url_not_configured` and fresh public Chrome/user-owned recording remain pending; semantic recognition, accepted experimental quality, and 0713 video equivalence remain unclaimed.
+
+## 2026-07-19 Paired result-run history parity
+
+- The reference reread shows side-by-side result pairs accumulated vertically at 102s, 152s, 217s, and 227s. Printing results now carry an explicit run identity and render newest-first as vertical run sections containing exact/fabric together, with experimental added to that same run only when its existing safety gate succeeds.
+- The eight-result cap remains. Run-aware bounding drops an older whole run instead of leaving a lone exact/fabric card, and delayed experimental insertion cannot split an older exact/fabric pair. Fabric mode and generation semantics are unchanged.
+- Printing foundation passes 118/118, print-mask candidates 25/25, composition interactions 5/5, candidate wiring/typecheck/build/zero-warning targeted ESLint/diff checks pass, and independent review returned `APPROVE`. Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/paired-result-history.json`.
+- Chrome, recording, model hosting, commit/push, and deployment were not performed. The managed CORS cloth-model URL and fresh public readback/user-owned recording remain pending; semantic recognition, accepted experimental quality, and 0713 video equivalence remain unclaimed.
+
+## 2026-07-19 Same-origin cloth-model release path
+
+- Added a build-only same-origin release path for the pinned official `u2net_cloth_seg.onnx`. `build:deploy` downloads the fixed official release asset (or accepts an explicit local build input), verifies 176,194,565 bytes and SHA-256 `6d2cbc27bfbdc989e1fd325656d65902ecc6a3ccbe94b2d3655ec114efcb128e`, atomically stages it at ignored `public/models/u2net_cloth_seg.onnx`, builds with `/models/u2net_cloth_seg.onnx`, and verifies the same identity in `dist`.
+- The staged 176 MB file is removed in `finally` on success and failure. `.gitignore` now effectively ignores every generated model except the tracked bounded `silueta.onnx`, and the release verifier runs `git check-ignore` rather than trusting the pattern text. The existing managed external HTTPS/CORS build command and the ordinary silueta/manual fallback remain intact.
+- Zeabur config now uses `npm install && npm run build:deploy`. Same-origin tests pass 6/6, deployment tests 8/8, external-host tests 10/10, compatibility tests 5/5, typecheck/build/targeted ESLint/diff checks pass, the official download path and dist identity were exercised, cleanup is confirmed, and independent review returned `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/cloth-model-same-origin-release-path.json`. This remains local, uncommitted, unpushed, and undeployed. Production GET/browser inference and the user-owned recording are pending; semantic garment recognition, accepted experimental quality, and 0713 video equivalence remain unclaimed.
+
+## 2026-07-19 Cloth-model confirmation-time prewarm
+
+- The reference does not make model downloading a primary interaction, while the current library initializes the 176 MB cloth model on first prediction. The local print flow now starts one shared cloth-session initialization only after the baseline automatic cutout finishes, using the user's blue-mask review/confirmation time without competing with the baseline cutout.
+- The page shows non-blocking progress and reuses the exact initialized session for the confirmed chest/sleeve tap. Progress is multicast and replayed across effect re-entry. Warmup becomes an explicit timed-out state after 75 seconds; a tap joins an active initialization for at most 5 seconds, then returns through the existing confirmed-mask/manual fallback rather than stacking 90-second initialization and prediction waits inside the 105-second page budget.
+- Hung initialization retains ownership until the underlying operation settles, so retry cannot start an overlapping ONNX initialization. Initialization failure recreates the session on a later retry. Existing silueta, exact, fabric, manual, and explicit-confirmation gates remain intact.
+- Verification passed: warmup `5/5`, print-mask candidates `25/25`, printing foundation `123/123`, wiring checks, typecheck, production build, targeted ESLint, and `git diff --check`. Independent review found three timeout/progress issues, verified their fixes, and returned `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/cloth-model-confirmation-time-prewarm.json`. No Chrome, recording, navigation, generation, commit/push, or deploy was performed. Fresh public browser inference and the user-owned recording remain pending; semantic garment recognition, accepted experimental quality, and 0713 video equivalence remain unclaimed.
+
+## 2026-07-19 Repeat-design active placement parity
+
+- The 0713 reference repeatedly makes each newly chosen design active in the right placement pane at 77–80s, 167–168s, 219–220s, and 249–250s. Current-code inspection found that later design additions were reprocessed without an activation target and a layer-update effect could snap selection back to design 1.
+- Each selected image now receives a stable runtime layer ID. The last newly added design remains pending through asynchronous cutout and derived-layer materialization, then becomes the active right-pane placement layer exactly when ready. Every ready design row is directly selectable with `aria-pressed` and a visible `配置中` indicator.
+- Selection removal/reprocessing, pending removal, pre-materialization updates, explicit user deselection, duplicate URLs, and printing-to-fabric mode transitions are handled without index-based transform drift. Generation and history updates do not rewrite the active layer. Confirmed-mask, exact/fabric, manual fallback, and bounded history gates are unchanged.
+- Verification passed: focused selection/interaction `13/13`, print-mask candidates `25/25`, printing foundation `131/131`, wiring checks, typecheck, production build, targeted ESLint, and `git diff --check`. Independent review found and verified fixes for selected-design removal and pre-materialization races; final verdict `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/repeat-design-active-placement.json`. No Chrome, recording, navigation, generation, commit/push, or deploy was performed. Fresh public repeat-design QA and the user-owned recording remain pending; semantic garment recognition, accepted experimental quality, and 0713 video equivalence remain unclaimed.
+
+## 2026-07-19 Progressive inline exact/fabric generation
+
+- High-resolution 2272×1080 frames at 238–241s corrected the earlier 1 FPS interpretation: generation is not a blocking modal. The newest row shows exact on the left while fabric remains an inline generating card on the right; the later centered modal is an add-to-favorites picker. Evidence: `/Users/nichikatanaka/Documents/New project/work/0713-progress-refinement-20260719/`.
+- The blocking progress dialog was removed. Exact and fabric start concurrently; exact is decoded and receives a bounded paint opportunity before fabric is awaited, so it appears in the newest inline row while fabric remains visibly busy. Only a complete pair enters bounded history, while a fabric failure keeps the decoded exact result visible with a terminal error card.
+- Composition rejection, image decode failure, and decode timeout all end in explicit terminal states. Input changes and unmount invalidate requests before any late state update; changing inputs always clears partial/error rows even when the request ref has already been released. Existing completed history, exact/fabric/manual fallback, confirmed-mask gates, and safe experimental behavior remain intact.
+- The two local printing E2E cases now explicitly confirm a range mask before generation, and the exact/fabric case records the intermediate `exactReady && fabricPending` DOM with a MutationObserver. E2E execution was not attempted because Playwright is not the authorized browser lane for this task.
+- Verification passed: progressive helper/contract `7/7`, focused progress/history/modal `15/15`, print-mask candidates `25/25`, printing foundation `140/140`, wiring checks, typecheck, production build, targeted ESLint including the E2E source, and `git diff --check`. Independent review returned `APPROVE` after failure, decode, stale, unmount, and partial-row fixes.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/progressive-inline-exact-fabric-generation.json`. The superseded interpretation is explicitly marked in `retained-history-generation-progress-dialog.json`. No Chrome, recording, navigation, generation, commit/push, or deploy was performed. The user owns current recording; semantic garment recognition, accepted experimental quality, and 0713 video equivalence remain unclaimed.
+
+## 2026-07-19 Single-active design replacement parity
+
+- The candidate library still keeps up to six designs, but only one explicit active design now reaches the right placement stage, generation readiness, request signature, and print snapshot. Choosing a new design replaces the prior placement instead of silently stacking every candidate; completed exact/fabric results remain in bounded paired history.
+- The active identity is independent from editing chrome. Background deselection does not remove the active design, pending cutout cannot reopen editing after explicit deselection, active removal/error falls back only to the latest ready survivor, and a newly active pending design cannot be overwritten by the old active during the pre-materialization render.
+- Verification passed: focused selection/interaction/progressive `29/29`, print-mask candidates `25/25`, printing foundation `149/149`, typecheck, production build, targeted ESLint, and `git diff --check`. Independent review found three async/fallback issues, verified their fixes, and returned `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/single-active-design-replacement.json`. No Chrome, recording, commit/push, or deploy was performed; the user owns recording. Fresh public QA and production cloth-model inference remain pending, and semantic garment recognition, accepted experimental quality, and 0713 video equivalence remain unclaimed.
+
+## 2026-07-19 Processed-mask explicit confirmation parity
+
+- Range selection is now an input submission, not a final-mask confirmation. After AI processing, the actual result remains visibly blue in the focused mask pane and placement/generation stay locked until the user presses `このAIマスクで確定`.
+- Tap submission now requires a real guided mask. A low-confidence tap-neighborhood result without mask pixels cannot be confirmed and directs the user to range adjustment. Switching a tap/range result candidate clears confirmation but exposes the same processed-mask reconfirmation path; automatic output remains locked.
+- Manual mask apply remains explicitly confirmed, but its editor is now bound to the exact cutout request, candidate ID, and mask revision at open and apply time. A stale async editor cannot confirm a newer garment state.
+- Verification passed: focused transition/regression `52/52`, point-guided `11/11`, print-mask candidates `25/25`, printing foundation `153/153`, wiring, typecheck, production build, targeted ESLint, and `git diff --check`. Independent review found four confirmation/identity gaps, verified their fixes, and returned `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/range-processed-mask-explicit-confirmation.json`. Browser E2E source was updated but not executed because Chrome Extension/Profile 2 remains the authorized browser lane and the user owns recording. No Chrome, commit/push, or deploy was performed; semantic garment recognition, accepted experimental quality, and 0713 video equivalence remain unclaimed.
+
+## 2026-07-19 Incremental active-design cutout reuse
+
+- Repeated design selection no longer clears and reprocesses every completed candidate. Stable layer identity now carries each completed URL/result/manual revision across append, removal, and index movement; only missing, processing, failed, or incomplete records are processed again, with the newly selected active candidate first.
+- Async completion merges only its own index, so a concurrent manual design-mask correction cannot be rolled back by another candidate. Same-object duplicates are normalized, duplicate layer IDs fail closed, and planner failure commits no partial active/pending/request state.
+- Active deletion or failure prefers the latest ready survivor; if none is ready, the latest processing survivor remains active and pending and regains editing selection when ready. Existing confirmed garment mask, exact/fabric/manual, experimental safety, single-active placement, and bounded history behavior remain intact.
+- Verification passed: focused `36/36`, print-mask candidates `25/25`, printing foundation `159/159`, typecheck, production build, targeted ESLint, and `git diff --check`. Independent review found five async/identity/fallback gaps, verified all fixes, and returned `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/incremental-active-design-cutout-reuse.json`. No Chrome, recording, commit/push, or deploy was performed; the user owns recording. Fresh public repeated-flow QA and production cloth-model inference remain pending, and semantic recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Local favorite destination and Gallery parity
+
+- Completed printing result cards now expose a reference-style favorite destination flow. Pending surfaces and fabric-mode result cards do not expose this print-only action. Personal/local destinations and named groups are supported; Team Space remains visibly unavailable and cannot report success.
+- Favorite persistence is deterministic and brand-scoped, verifies localStorage write/readback, and fails without a success toast on quota, access, transient-read, or readback failure. Results carry their generation brand identity so retained history from another brand cannot be saved into the current brand.
+- Gallery Favorites includes local printing results, renders destination badges, and supports browsing named destination filters. Local toggle and single/bulk delete update UI only after verified persistence; stale group filters and deep-linked removal state are cleared safely. Other local artifact types remain outside this print-favorite mutation path.
+- Verification passed: favorite persistence `9/9`, favorite/UI contract `16/16`, printing foundation `164/164`, typecheck, production build, zero-warning targeted ESLint, and `git diff --check`. Independent review verdict: `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/local-favorite-destination-gallery.json`. No Chrome, recording, commit/push, or deploy was performed; the user owns recording. Team persistence, fresh public QA, semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Stable Gallery design identity
+
+- Re-selecting the same Gallery asset now uses its stable `galleryImageId`, not transient object identity or signed URL. A recreated selection therefore does not duplicate a candidate or restart a healthy cutout; the freshest signed URL is retained, and an errored cutout retries with that fresh URL.
+- Different Gallery IDs, uploads, and data URLs remain distinct. Empty identities fail closed, only the current async cutout request can commit, and removed upload identities are pruned after reconciliation so large data-URL keys do not accumulate for the page lifetime.
+- Verification passed: focused identity/UI `40/40`, printing foundation `170/170`, typecheck, production build, zero-warning targeted ESLint, and diff check. Independent review verdict: `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/stable-gallery-design-identity.json`. No Chrome, recording, commit/push, or deploy was performed; semantic recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Design mask editor stable target
+
+- The manual design-mask editor now captures a stable design layer ID instead of an array index. Reordering resolves the current index at Apply; removal, duplicate identity, or delete-and-readd with a new layer ID fails closed without changing any other candidate.
+- A synchronous current-layer-ID ref is updated before React candidate state commits, closing the old-modal Apply race. Same semantic Gallery URL refresh remains the same intended target.
+- Verification passed: focused identity/UI `43/43`, printing foundation `173/173`, typecheck, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/design-mask-editor-stable-target.json`. No Chrome, recording, commit/push, or deploy was performed; semantic recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Precise placement pointer semantics
+
+- Design placement now preserves the exact grab offset: an off-center pointer-down followed by movement applies the pointer delta to the starting transform instead of snapping the design center under the pointer. The placement center remains clamped to the stage.
+- Move, up, and cancel events are accepted only from the pointer that began the interaction. A foreign pointer cannot move or finish the active edit, and an owned `pointercancel` restores the starting transform without committing a partial placement.
+- Verification passed: focused geometry/UI `31/31`, printing foundation `175/175`, typecheck, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/precise-placement-pointer-semantics.json`. No Chrome, recording, commit/push, or deploy was performed; the user owns recording. Public interaction QA and semantic/quality/video-equivalence claims remain pending.
+
+## 2026-07-19 Next-design return CTA
+
+- Completed print history now exposes `次のデザインを試す` whenever generation is idle. It returns the operator to the design selector without clearing exact/fabric history, favorites, current candidates, active placement, or confirmed-mask state.
+- With capacity available, focus lands on the Gallery add button. At the six-design limit, the same CTA remains available and focuses a completed existing design choice; if none is ready, the focusable selector anchor is the safe fallback.
+- Verification passed: focused interaction `20/20`, printing foundation `176/176`, typecheck, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE` after two review-fix cycles.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/next-design-return-cta.json`. No Chrome, recording, commit/push, or deploy was performed; the user owns recording. Public repeated-flow QA and semantic/quality/video-equivalence claims remain pending.
+
+## 2026-07-19 Next-design placement round trip
+
+- The `次のデザインを試す` path now owns a one-shot return intent. After the operator chooses a design, the intent binds to that design's stable layer ID and returns to the right placement pane only when that exact design is active and cutout-ready. Ordinary design selection does not trigger an unsolicited scroll.
+- An already-ready active choice returns synchronously; a new async cutout returns when ready. Gallery duplicate reselect waits until modal focus restoration is complete, and mixed duplicate/new batches bind the actual latest selection rather than a global duplicate count.
+- Removed, failed, replaced, explicitly cleared, or garment-invalidated targets cancel safely. The scheduled return is canceled on rearm/unmount, consumes once, and honors reduced-motion. Existing confirmed-mask, exact/fabric/manual fallback, experimental gates, and bounded history remain intact.
+- Verification passed: focused `52/52`, printing foundation `182/182`, typecheck, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE` with no findings.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/next-design-placement-round-trip.json`. No Chrome, recording, commit/push, or deploy was performed; the user owns recording. Fresh public QA and production cloth-model inference remain pending, and semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Four-run result history parity
+
+- The 0713 timeline retains four vertically accumulated exact/fabric comparison rows at 102s, 152s, 217s, and 227s. Local retention is now bounded by four complete generation runs rather than eight individual result cards, so an optional experimental surface no longer causes an older pair to disappear early.
+- Each retained run must contain exactly one exact and one fabric result plus at most one surface. A fifth complete run removes only the oldest complete run; missing/blank IDs, mixed metadata, incomplete pairs, duplicate/unknown kinds, and invalid limits fail closed without consuming a slot or evicting a valid pair.
+- A delayed surface can attach only when the leading exact/fabric IDs, nonblank run ID, and result kinds all match the surface's run. The UI reports `生成履歴 n/4` instead of a card count.
+- Verification passed: focused `49/49`, printing foundation `182/182`, wiring verifier, typecheck, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE` after malformed-history fixes.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/four-run-result-history.json`. No Chrome, recording, commit/push, deploy, or external model hosting was performed; the user owns recording. Fresh public QA remains pending, and semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Atomic generated-history deletion parity
+
+- Full-resolution 0713 frames at 160–161s confirm header `全削除` plus card download/favorite/trash actions; 162–163s enter the already-implemented favorites destination dialog. Evidence bundle: `/Users/nichikatanaka/Documents/New project/work/0713-dialog-refinement-20260719/`.
+- Completed print cards now expose a trash action, and the history header exposes `全削除`. A card action removes its entire exact/fabric/optional-surface run so no incomplete pair is left. Persisted Gallery favorites are not removed.
+- Clear-all snapshots the completed run IDs visible at click time. A progressive run that commits before or after the queued state updater survives; only a pending surface belonging to a deleted completed run is canceled. Deleted result zoom/favorite/comparison surfaces close safely.
+- The reference does not show deletion being committed, so run-level atomicity is recorded as a safety-preserving inference, not claimed video evidence. Verification passed: focused `59/59`, printing foundation `183/183`, wiring, typecheck, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE` after the async clear race fix.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/result-history-atomic-delete.json`. No Chrome, recording, commit/push, or deploy was performed; the user owns recording. Fresh public QA remains pending, and semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Design placement flip controls
+
+- The 0713 reference at 134–139s exposes explicit horizontal and vertical flip actions while one design remains selected. Evidence: `/Users/nichikatanaka/Documents/New project/work/0713-flip-refinement-20260719/`.
+- The local placement stage now exposes accessible horizontal/vertical flip buttons only for the selected, cutout-ready design after explicit garment-mask confirmation. Only the artwork is mirrored; its center, frame, size, rotation, opacity, and pointer geometry remain unchanged. A second press on the same axis restores the original transform.
+- Flip state survives stable-layer rematerialization, enters request identity and immutable snapshots, and is applied consistently by legacy, exact, fabric, and safely gated experimental canvas renderers before the existing printable-mask clip.
+- Verification passed: focused `56/56`, printing foundation `186/186`, production build, targeted ESLint, diff check, and independent review `APPROVE` after fixing one rematerialization-state gap. Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/design-placement-flip-controls.json`.
+- No Chrome, recording, public QA, commit/push, or deploy was performed; the user owns recording. Semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Placement transform undo/redo
+
+- The focused placement pane now exposes labeled Undo and Redo controls matching the visible 0713 editor affordance. Completed move, resize, rotate, and flip edits are recorded against stable design-layer IDs in a bounded 20-entry history; a new edit clears redo.
+- Pointer cancellation, foreign pointer events, and no-op commits create no entry. History applies only a transform onto the newest live layer data, preserving asynchronous cutout/display updates. Removed IDs are pruned and cannot be resurrected.
+- Verification passed: focused `60/60`, printing foundation `190/190`, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE` with no findings.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/placement-transform-undo-redo.json`. Chrome/recording were not used because the user owns recording. Commit/push/deploy and fresh public QA remain pending; semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Design layer-order controls
+
+- The focused placement pane now exposes the four layer commands visible in the 0713 reference: move to top, move one step up, move one step down, and move to bottom. Only the selected stable layer ID moves; selection, transform, cutout/display data, and mask revision remain unchanged.
+- User z-order survives asynchronous cutout rematerialization. Removed IDs disappear, new IDs append, duplicates fail closed, and boundary no-ops are disabled. The same order drives the visible stage, generation signature, immutable snapshot, exact, fabric, and safely gated experimental renderer.
+- Verification passed: focused `63/63`, printing foundation `193/193`, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE` with no findings.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/design-layer-order-controls.json`. Chrome/recording were not used because the user owns recording. Commit/push/deploy and fresh public QA remain pending; semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Focused placement thumbnail rail
+
+- The right placement pane now contains the vertical design-thumbnail rail visible in the 0713 reference. Every non-garment placed layer is keyed by stable ID; the active editing target is exposed with `aria-pressed`.
+- Processing designs stay visible as muted, busy thumbnails without blocking ready layers. Clicking a thumbnail changes editing selection only: it does not commit a transform, change z-order, remove siblings, or alter generation identity. Raw-to-processed updates retain selection and removed identities disappear without resurrection.
+- Verification passed: focused `64/64`, printing foundation `194/194`, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE` with no findings.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/focused-placement-thumbnail-rail.json`. Chrome/recording were not used because the user owns recording. Commit/push/deploy and fresh public QA remain pending; semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Nonblocking per-design processing
+
+- New-design cutout progress is now tracked per card. A pending design remains visible as a muted provisional preview while the confirmed garment and ready artwork layers stay visible and interactive; only garment processing uses the full-stage blocking overlay.
+- Raw provisional image URLs are display-only. Generation requires every placed layer to be cutout-complete with both processed source and display URLs, so an unavailable cutout result cannot leak the raw image into exact/fabric/manual or safely gated experimental output.
+- If raw-to-processed props arrive during a drag, commit and cancel reconcile the newest layer data with the moved or starting transform. A layer removed during that interaction is not resurrected.
+- Verification passed: focused `57/57`, printing foundation `187/187`, production build, zero-warning targeted ESLint, and diff check. Independent review verified both fixes and returned `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/nonblocking-design-processing.json`. Chrome/recording were not used because the user owns recording. Commit/push/deploy and fresh public QA remain pending; semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Multi-design stacking and composition
+
+- Full-resolution 0713 frames at 120s and 134–135s correct the earlier single-active downstream interpretation: multiple artwork layers remain on the garment while only one receives the editing frame and flip action. Evidence: `/Users/nichikatanaka/Documents/New project/work/0713-multi-design-refinement-20260719/`.
+- The ordered placed-layer set is now independent from the single editing selection. Selecting, deselecting, moving, or flipping one layer does not remove its siblings, and selection alone does not stale generation identity.
+- Every retained layer reaches the stage, request signature, immutable snapshot, exact, fabric, and safely gated experimental renderer in candidate order. Generation waits for every placed layer to be ready; duplicate stable IDs fail closed, and candidate removal removes only its matching layer.
+- Verification passed: focused `86/86`, printing foundation `185/185`, production build, targeted ESLint, diff check, and independent review `APPROVE`. Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/multi-design-stacking-composition.json`.
+- No Chrome, recording, public QA, commit/push, or deploy was performed; the user owns recording. Semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Placement edit session boundary
+
+- The focused placement workspace now matches the reference's explicit `キャンセル` / `決定` boundary. Only `決定` marks placement confirmed and closes the editor; initial Cancel cannot unlock generation, and generation requires both a closed editor and explicit placement confirmation.
+- The first transform or z-order edit captures one stable-ID baseline. Cancel restores surviving transforms and original order while preserving the newest processed image/mask data, does not resurrect removed IDs, and retains IDs added during the session. A design membership change invalidates confirmation and reopens placement.
+- A delayed async design-ready return cannot clear an already-open baseline. Confirmed placement has a `配置を再調整` path, and closing/remounting the stage resets only stage-local undo history. Existing garment-mask confirmation and exact/fabric/manual/experimental safety behavior remain unchanged.
+- Verification passed: focused `36/36`, printing foundation `198/198`, typecheck, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE` after both initial findings were fixed.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/placement-edit-session-boundary.json`. Chrome and recording were not used because the user owns recording. Commit/push/deploy and fresh public QA remain pending; semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Persistent confirmed composition preview
+
+- The 0713 reference keeps the current garment-plus-artwork composition visible in the left control rail after `決定`, beside generation and accumulated result history. The printing control rail now keeps the same confirmed composition visible before and after generation instead of reducing it to a text-only count.
+- The preview reuses the exact ordered placement layers, transforms, rotations, flip state, garment alpha clip, and optional manual printable-surface clip. Its read-only mode hides the thumbnail rail, Undo/Redo, layer-order menu, drag/resize/rotate handles, flip controls, and editing overlays, so viewing cannot mutate generation state.
+- `配置を編集` reopens the existing placement session without arming a next-design intent, restarting cutout/generation, or clearing history, favorites, stable IDs, mask, or transforms. Replacing the garment invalidates prior placement confirmation and reopens placement when artwork remains.
+- Verification passed: focused `38/38`, printing foundation `200/200`, typecheck, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE`. The E2E source now requires explicit placement Decide and checks that the read-only composition has artwork but no editing chrome before generation; browser E2E itself was not run because the user owns recording and this stage did not use Chrome.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/persistent-confirmed-composition-preview.json`. Commit/push/deploy and fresh public QA remain pending; semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.
+
+## 2026-07-19 Placement ready decision gate
+
+- The 0713 reference shows a newly selected design muted at 79s, visibly ready at 80s, and only later committed with `決定`. Placement Decide now uses the same readiness invariant as Generate instead of allowing a provisional cutout to be approved.
+- Explicit Decide requires a confirmed garment mask, at least one placed design, and every placed design to be cutout-complete with both processed source and display URLs. Processing, failed, or incomplete layers leave the editor open, keep the provisional preview visible, and expose a specific status instead of silently closing into a disabled Generate state.
+- The shared pure predicate guards the Decide handler, Decide disabled state, Generate handler, and Generate disabled state, preventing these controls from drifting apart. Existing nonblocking per-design processing and exact/fabric/manual/experimental safety behavior remain unchanged.
+- Verification passed: focused `39/39`, printing foundation `201/201`, typecheck, production build, zero-warning targeted ESLint, diff check, and independent review `APPROVE`.
+- Proof: `/Users/nichikatanaka/Documents/New project/work/heavy-chain-visual-flow-20260717/implementation-20260719/placement-ready-decision-gate.json`. Chrome and recording were not used because the user owns recording. Commit/push/deploy and fresh public QA remain pending; semantic garment recognition, accepted experimental quality, and 0713 equivalence remain unclaimed.

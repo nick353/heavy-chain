@@ -35,6 +35,14 @@ const checks = {
     && library.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/models/silueta.onnx'"),
   rembg_avoids_unreliable_webgl_provider: library.includes("executionProviders: ['wasm']")
     && library.includes('A browser can expose a WebGL canvas while ONNX Runtime\'s WebGL'),
+  cloth_model_prewarms_after_baseline_cutout_and_reuses_session: library.includes('preparePrintGarmentClothModel')
+    && library.includes('clothModelWarmupController.getInitializationPromise()')
+    && library.includes('session = await clothModelWarmupController.getSession()')
+    && library.includes('REMBG_CLOTH_INITIALIZATION_JOIN_TIMEOUT_MS = 5_000')
+    && page.includes("printGarmentCutoutState !== 'done'")
+    && page.includes('preparePrintGarmentClothModel((progress) =>')
+    && page.includes('data-testid="cloth-model-warmup-status"')
+    && page.includes('confirmed-mask fallback remains available'),
   garment_preview_has_no_blend_halo: stage.includes("mixBlendMode: 'normal'")
     && stage.includes("opacity: 1")
     && stage.includes("filter: 'none'"),
@@ -59,7 +67,8 @@ const checks = {
     && library.includes('applyFabricLuminanceModulation'),
   result_compare_and_bounded_history_are_wired: page.includes('<ImageCompare')
     && page.includes('mergePrintResultHistory(')
-    && strategy.includes('maxResults = 8'),
+    && strategy.includes('PRINT_RESULT_HISTORY_MAX_RUNS = 4')
+    && strategy.includes('maxRuns = PRINT_RESULT_HISTORY_MAX_RUNS'),
   mask_editor_undo_is_bounded_to_twelve: editor.includes('MAX_MASK_UNDO_STEPS = 12')
     && editor.includes('MAX_MASK_UNDO_STEPS - 1'),
   print_ai_edges_are_decontaminated_without_blur: library.includes('decontaminateBoundaryRgb')
@@ -69,14 +78,22 @@ const checks = {
     && library.indexOf('sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD')
       < library.indexOf('modelName,\n      postProcessMask: false'),
   configured_cloth_model_is_not_bypassed_by_uniform_fast_path: library.includes('shouldPreferConfiguredClothModel')
-    && library.includes("modelName === 'u2net_cloth_seg' && Boolean(rembgClothSegModelUrl)")
+    && library.includes("transparentInputRoute === 'semantic-first'")
+    && garmentSegmentationPolicy.includes("modelName === 'u2net_cloth_seg' && clothModelConfigured")
     && library.includes('&& !shouldPreferConfiguredClothModel'),
   production_model_does_not_silently_fall_back_to_huggingface: library.includes("VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL\n  || ''")
     && library.includes("VITE_REMBG_SILUETA_MODEL_URL\n  || '/models/silueta.onnx'")
     && !library.includes('https://huggingface.co/briaai/RMBG-1.4/resolve/main/onnx/model.onnx'),
   ai_result_records_actual_model_engine: library.includes('engine: `browser-ai-${modelName}-v1`'),
   cutout_timeout_allows_ai_fallback_to_finish: page.includes('const CUTOUT_TIMEOUT_MS = 75_000')
-    && library.includes('const REMBG_OPERATION_TIMEOUT_MS = 30_000'),
+    && page.includes('const CLOTH_CUTOUT_TIMEOUT_MS = 105_000')
+    && page.includes("cutoutModel === 'u2net_cloth_seg'\n      ? CLOTH_CUTOUT_TIMEOUT_MS\n      : CUTOUT_TIMEOUT_MS")
+    && page.includes('cutoutTimeoutMilliseconds,')
+    && library.includes('const REMBG_OPERATION_TIMEOUT_MS = 30_000')
+    && library.includes('const REMBG_CLOTH_PREDICT_TIMEOUT_MS = 90_000')
+    && library.includes("'predict_cloth_masks',\n      REMBG_CLOTH_PREDICT_TIMEOUT_MS")
+    && library.includes("if (clothPredictionInFlight) throw new Error('cloth_segmentation_busy')")
+    && library.includes('if (clothPredictionInFlight === prediction) clothPredictionInFlight = null'),
   automatic_garment_result_is_shown_before_optional_candidates: page.indexOf("setPrintGarmentCutoutState('done')")
     < page.indexOf('buildDerivedPrintGarmentMaskCandidates({ baseResult: automaticResult })'),
   garment_candidate_work_is_dimension_bounded: library.includes('PRINT_CUTOUT_MAX_OUTPUT_DIMENSION = 1_400')
@@ -164,7 +181,7 @@ const checks = {
     && page.includes('const applyOperationId = ++printableSurfaceEditorOperationRef.current')
     && page.includes('canCommitPrintableSurfaceEditorOperation(applyOperationId, printableSurfaceEditorOperationRef.current)')
     && page.includes('const editorOperationId = ++printableSurfaceEditorOperationRef.current'),
-  garment_change_invalidates_suggestion_synchronously: /onChange=\{\(image\) => \{[\s\S]{0,240}invalidatePrintableSuggestion\(\);[\s\S]{0,240}setPrintGarment\(image\);/.test(page),
+  garment_change_invalidates_suggestion_synchronously: /onChange=\{\(image\) => \{[\s\S]{0,400}invalidatePrintableSuggestion\(\);[\s\S]{0,400}setPrintGarment\(image\);/.test(page),
   printable_suggestion_adapter_checks_dimensions_and_capacity: printableSuggestionAdapter.includes("reason: 'DIMENSION_MISMATCH'")
     && printableSuggestionAdapter.includes("reason: 'CAPACITY_EXCEEDED'")
     && page.includes('expectedSize: capturedSize')
@@ -179,9 +196,42 @@ const checks = {
     && library.includes('VITE_REMBG_CLOTH_SEG_MODEL_URL')
     && library.includes("modelName === 'u2net_cloth_seg'")
     && page.includes('resolvePrintGarmentCutoutModel({ selectionSource: printGarmentSelectionSource })')
-    && garmentSelectionEditor.includes('onApply(output.toDataURL(\'image/png\'), selectionSource)'),
-  high_confidence_tap_auto_applies_but_low_confidence_stays_explicit: garmentSelectionEditor.includes('shouldAutoApplyPointGuidedSelection(proposal)')
-    && garmentSelectionEditor.includes('低信頼の候補だけ確認してから適用します'),
+    && garmentSelectionEditor.includes("onApply(output.toDataURL('image/png'), selectionSource, segmentationTarget)"),
+  garment_category_selector_reaches_real_cloth_mask: garmentSelectionEditor.includes('トップス')
+    && garmentSelectionEditor.includes('ボトムス')
+    && garmentSelectionEditor.includes('全身')
+    && garmentSelectionEditor.includes('role="radiogroup"')
+    && page.includes('printGarmentSegmentationTarget')
+    && page.includes('printGarmentSegmentationTarget,')
+    && page.includes('segmentationTarget: printGarmentSegmentationTarget')
+    && library.includes('aiGarmentCutoutSession.predict(inputCanvas)')
+    && library.includes('resolveGarmentSegmentationMaskIndex(segmentationTarget)')
+    && library.includes('cloth_segmentation_mask_dimension_mismatch')
+    && library.includes('? { ...result, segmentationTarget }')
+    && page.includes('resultTarget: selectedPrintGarmentMaskCandidate?.result.segmentationTarget')
+    && garmentSegmentationPolicy.includes('full: 2'),
+  confirmed_transparent_tap_mask_reaches_cloth_model_without_expanding: garmentSegmentationPolicy.includes("? 'semantic-first'")
+    && library.includes("transparentInputRoute === 'semantic-first'")
+    && library.includes('constrainToSourceAlpha: true')
+    && library.includes("context.globalCompositeOperation = 'destination-in'")
+    && library.includes('(sourceRgba.data[offset + 3] * maskRgba.data[offset]) / 255')
+    && library.includes('semanticResult.engine === GARMENT_SEMANTIC_SEGMENTATION_ENGINE')
+    && library.includes('return finalizeResult(existingTransparentResult)'),
+  explicit_confirmation_gates_stage_and_generation: page.includes('const hasConfirmedPrintGarmentMask = isGarmentMaskExplicitlyConfirmed({')
+    && page.includes('explicitlyConfirmed: printGarmentMaskExplicitlyConfirmed')
+    && page.includes('data-testid="confirm-processed-garment-mask"')
+    && page.includes('if (isPrinting && !hasConfirmedPrintGarmentMask)')
+    && page.includes('garmentMaskConfirmed={hasConfirmedPrintGarmentMask}')
+    && page.includes(': !(hasConfirmedPrintGarmentMask')
+    && stage.includes('const hasConfirmedGarmentMask = hasRenderableGarment && garmentMaskConfirmed')
+    && stage.includes('{hasConfirmedGarmentMask ? ('),
+  tap_preview_requires_explicit_confirmation: garmentSelectionEditor.includes('このマスクで確定')
+    && garmentSelectionEditor.includes('青色の範囲が今回のタップから作った確認用プレビューです')
+    && garmentSelectionEditor.includes('canSubmitGarmentSelectionPreview({')
+    && garmentSelectionEditor.includes("guidedResult?.mask ? 'このマスクで確定' : '範囲を調整してください'")
+    && garmentSelectionEditor.includes("context.globalCompositeOperation = 'destination-in'")
+    && garmentSelectionEditor.includes('closePreviewMask(guidedResult.mask)')
+    && !garmentSelectionEditor.includes('shouldAutoApplyPointGuidedSelection(proposal)'),
   crop_handles_have_touch_friendly_hit_area: garmentSelectionEditor.includes('h-7 w-7')
     && garmentSelectionEditor.includes('touch-none select-none'),
   ai_failure_keeps_manual_editor_available: page.includes('buildManualMaskSourceResult')

@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   applyFabricLuminanceModulation,
   mergeDelayedSurfaceResult,
+  groupPrintResultHistory,
   applyManualMaskBrushStroke,
   assemblePrintGarmentMaskCandidates,
   buildEdgeConnectedSoftAlphaMatte,
@@ -12,6 +13,9 @@ import {
   buildPrintRequestSignatureValue,
   decontaminateBoundaryRgb,
   mergePrintResultHistory,
+  PRINT_RESULT_HISTORY_MAX_RUNS,
+  removePrintResultRun,
+  removePrintResultRuns,
   selectPrintGarmentMaskCandidateValue,
   sourceOverRgbaPixel,
   summarizePrintEdgeRefinement,
@@ -163,7 +167,7 @@ test('selected candidate ID and data URL enter the request signature together', 
       id: 'design-1',
       sourceUrl: 'data:image/png;base64,DESIGN',
       maskRevision: 3,
-      transform: { x: 50, y: 50, scale: 1, rotation: 0, opacity: 1 },
+      transform: { x: 50, y: 50, scale: 1, rotation: 0, opacity: 1, flipX: false, flipY: false },
     }],
   });
   const parsed = JSON.parse(signature);
@@ -172,6 +176,40 @@ test('selected candidate ID and data URL enter the request signature together', 
   assert.equal(parsed.garment.maskCandidateId, 'strict');
   assert.equal(parsed.garment.maskRevision, 2);
   assert.equal(parsed.designs[0].maskRevision, 3);
+  assert.equal(parsed.designs[0].transform.flipX, false);
+  assert.equal(parsed.designs[0].transform.flipY, false);
+});
+
+test('design flip state changes request identity independently on each axis', () => {
+  const base = {
+    brandId: 'brand-1',
+    brandName: 'Brand',
+    stageSize: { width: 720, height: 900 },
+    garment: {
+      sourceUrl: 'data:image/png;base64,GARMENT',
+      referenceType: 'base',
+      maskCandidateId: 'auto' as const,
+      maskRevision: 1,
+    },
+    designs: [{
+      id: 'design-1',
+      sourceUrl: 'data:image/png;base64,DESIGN',
+      maskRevision: 1,
+      transform: { x: 50, y: 50, scale: 1, rotation: 0, opacity: 1, flipX: false, flipY: false },
+    }],
+  };
+  const original = buildPrintRequestSignatureValue(base);
+  const horizontal = buildPrintRequestSignatureValue({
+    ...base,
+    designs: [{ ...base.designs[0], transform: { ...base.designs[0].transform, flipX: true } }],
+  });
+  const vertical = buildPrintRequestSignatureValue({
+    ...base,
+    designs: [{ ...base.designs[0], transform: { ...base.designs[0].transform, flipY: true } }],
+  });
+  assert.notEqual(horizontal, original);
+  assert.notEqual(vertical, original);
+  assert.notEqual(horizontal, vertical);
 });
 
 const artworkFixture = (width: number, height: number, color = [255, 255, 255, 255]) => new Uint8ClampedArray(
@@ -356,25 +394,76 @@ test('source-over helper matches the expected half-alpha exact composite', () =>
   assert.deepEqual(output, [150, 50, 50, 255]);
 });
 
-test('print result history keeps newest results first and is bounded to eight', () => {
-  const next = [{ id: 'new-exact' }, { id: 'new-fabric' }];
-  const previous = Array.from({ length: 8 }, (_, index) => ({ id: `old-${index}` }));
+test('print result history keeps newest runs first and is bounded to four runs', () => {
+  const next = [
+    { id: 'run-4-exact', runId: 'run-4', resultKind: 'exact' as const },
+    { id: 'run-4-fabric', runId: 'run-4', resultKind: 'fabric' as const },
+  ];
+  const previous = Array.from({ length: 4 }, (_, runIndex) => [
+    { id: `run-${3 - runIndex}-exact`, runId: `run-${3 - runIndex}`, resultKind: 'exact' as const },
+    { id: `run-${3 - runIndex}-fabric`, runId: `run-${3 - runIndex}`, resultKind: 'fabric' as const },
+  ]).flat();
   const history = mergePrintResultHistory(next, previous);
-  assert.equal(history.length, 8);
+  assert.equal(PRINT_RESULT_HISTORY_MAX_RUNS, 4);
+  assert.equal(groupPrintResultHistory(history).length, 4);
   assert.deepEqual(history.slice(0, 2), next);
-  assert.equal(history.at(-1)?.id, 'old-5');
+  assert.equal(history.at(-1)?.id, 'run-1-fabric');
+});
+
+test('optional surfaces do not reduce the four-run history capacity', () => {
+  const newest = [
+    { id: 'run-4-exact', runId: 'run-4', resultKind: 'exact' as const },
+    { id: 'run-4-fabric', runId: 'run-4', resultKind: 'fabric' as const },
+  ];
+  const previous = [
+    { id: 'run-3-exact', runId: 'run-3', resultKind: 'exact' as const },
+    { id: 'run-3-fabric', runId: 'run-3', resultKind: 'fabric' as const },
+    { id: 'run-3-surface', runId: 'run-3', resultKind: 'surface' as const },
+    { id: 'run-2-exact', runId: 'run-2', resultKind: 'exact' as const },
+    { id: 'run-2-fabric', runId: 'run-2', resultKind: 'fabric' as const },
+    { id: 'run-2-surface', runId: 'run-2', resultKind: 'surface' as const },
+    { id: 'run-1-exact', runId: 'run-1', resultKind: 'exact' as const },
+    { id: 'run-1-fabric', runId: 'run-1', resultKind: 'fabric' as const },
+  ];
+  const history = mergePrintResultHistory(newest, previous);
+  assert.deepEqual(history.map((result) => result.id), [
+    'run-4-exact',
+    'run-4-fabric',
+    'run-3-exact',
+    'run-3-fabric',
+    'run-3-surface',
+    'run-2-exact',
+    'run-2-fabric',
+    'run-2-surface',
+    'run-1-exact',
+    'run-1-fabric',
+  ]);
+  assert.deepEqual(groupPrintResultHistory(history).map((run) => ({
+    runId: run.runId,
+    ids: run.results.map((result) => result.id),
+  })), [
+    { runId: 'run-4', ids: ['run-4-exact', 'run-4-fabric'] },
+    { runId: 'run-3', ids: ['run-3-exact', 'run-3-fabric', 'run-3-surface'] },
+    { runId: 'run-2', ids: ['run-2-exact', 'run-2-fabric', 'run-2-surface'] },
+    { runId: 'run-1', ids: ['run-1-exact', 'run-1-fabric'] },
+  ]);
 });
 
 test('delayed surface result keeps exact and fabric first and rejects an old run', () => {
-  const exact = { id: 'run-2-exact' };
-  const fabric = { id: 'run-2-fabric' };
-  const history = [exact, fabric, { id: 'run-1-exact' }, { id: 'run-1-fabric' }];
+  const exact = { id: 'run-2-exact', runId: 'run-2', resultKind: 'exact' as const };
+  const fabric = { id: 'run-2-fabric', runId: 'run-2', resultKind: 'fabric' as const };
+  const history = [
+    exact,
+    fabric,
+    { id: 'run-1-exact', runId: 'run-1', resultKind: 'exact' as const },
+    { id: 'run-1-fabric', runId: 'run-1', resultKind: 'fabric' as const },
+  ];
   assert.deepEqual(
     mergeDelayedSurfaceResult({
       currentResults: history,
       exactId: exact.id,
       fabricId: fabric.id,
-      surfaceResult: { id: 'run-2-surface' },
+      surfaceResult: { id: 'run-2-surface', runId: 'run-2', resultKind: 'surface' as const },
     }).map((result) => result.id),
     ['run-2-exact', 'run-2-fabric', 'run-2-surface', 'run-1-exact', 'run-1-fabric'],
   );
@@ -383,9 +472,153 @@ test('delayed surface result keeps exact and fabric first and rejects an old run
       currentResults: history,
       exactId: 'run-1-exact',
       fabricId: 'run-1-fabric',
-      surfaceResult: { id: 'run-1-surface' },
+      surfaceResult: { id: 'run-1-surface', runId: 'run-1', resultKind: 'surface' as const },
     }),
     history,
+  );
+  assert.deepEqual(
+    mergeDelayedSurfaceResult({
+      currentResults: history,
+      exactId: exact.id,
+      fabricId: fabric.id,
+      surfaceResult: { id: 'wrong-run-surface', runId: 'run-1', resultKind: 'surface' as const },
+    }),
+    history,
+  );
+});
+
+test('delayed surface insertion keeps all four complete run groups', () => {
+  const currentResults = [
+    { id: 'run-3-exact', runId: 'run-3', resultKind: 'exact' as const },
+    { id: 'run-3-fabric', runId: 'run-3', resultKind: 'fabric' as const },
+    { id: 'run-2-exact', runId: 'run-2', resultKind: 'exact' as const },
+    { id: 'run-2-fabric', runId: 'run-2', resultKind: 'fabric' as const },
+    { id: 'run-2-surface', runId: 'run-2', resultKind: 'surface' as const },
+    { id: 'run-1-exact', runId: 'run-1', resultKind: 'exact' as const },
+    { id: 'run-1-fabric', runId: 'run-1', resultKind: 'fabric' as const },
+    { id: 'run-0-exact', runId: 'run-0', resultKind: 'exact' as const },
+    { id: 'run-0-fabric', runId: 'run-0', resultKind: 'fabric' as const },
+  ];
+  const next = mergeDelayedSurfaceResult({
+    currentResults,
+    exactId: 'run-3-exact',
+    fabricId: 'run-3-fabric',
+    surfaceResult: { id: 'run-3-surface', runId: 'run-3', resultKind: 'surface' as const },
+  });
+  assert.deepEqual(next.map((result) => result.id), [
+    'run-3-exact',
+    'run-3-fabric',
+    'run-3-surface',
+    'run-2-exact',
+    'run-2-fabric',
+    'run-2-surface',
+    'run-1-exact',
+    'run-1-fabric',
+    'run-0-exact',
+    'run-0-fabric',
+  ]);
+});
+
+test('malformed or incomplete run metadata cannot split or evict complete pairs', () => {
+  const completeRuns = Array.from({ length: 4 }, (_, runIndex) => [
+    { id: `run-${runIndex}-exact`, runId: `run-${runIndex}`, resultKind: 'exact' as const },
+    { id: `run-${runIndex}-fabric`, runId: `run-${runIndex}`, resultKind: 'fabric' as const },
+  ]).flat();
+  const malformedNewest = [
+    { id: 'missing-exact', resultKind: 'exact' as const },
+    { id: 'blank-fabric', runId: '   ', resultKind: 'fabric' as const },
+    { id: 'mixed-exact', runId: 'mixed-a', resultKind: 'exact' as const },
+    { id: 'mixed-fabric', runId: 'mixed-b', resultKind: 'fabric' as const },
+    { id: 'incomplete-exact', runId: 'incomplete', resultKind: 'exact' as const },
+  ];
+  const history = mergePrintResultHistory(malformedNewest, completeRuns);
+  assert.deepEqual(history, completeRuns);
+  assert.equal(groupPrintResultHistory(history).length, 4);
+});
+
+test('delayed surfaces reject ungrouped, mismatched-kind, and unverifiable leading pairs', () => {
+  const ungrouped = [
+    { id: 'legacy-exact', resultKind: 'exact' as const },
+    { id: 'legacy-fabric', resultKind: 'fabric' as const },
+  ];
+  assert.deepEqual(mergeDelayedSurfaceResult({
+    currentResults: ungrouped,
+    exactId: 'legacy-exact',
+    fabricId: 'legacy-fabric',
+    surfaceResult: { id: 'surface', runId: 'other', resultKind: 'surface' as const },
+  }), ungrouped);
+
+  const wrongKinds = [
+    { id: 'run-fabric', runId: 'run', resultKind: 'fabric' as const },
+    { id: 'run-exact', runId: 'run', resultKind: 'exact' as const },
+  ];
+  assert.deepEqual(mergeDelayedSurfaceResult({
+    currentResults: wrongKinds,
+    exactId: 'run-fabric',
+    fabricId: 'run-exact',
+    surfaceResult: { id: 'run-surface', runId: 'run', resultKind: 'surface' as const },
+  }), wrongKinds);
+});
+
+test('run history limits reject zero, fractional, and non-finite values', () => {
+  const completeRun = [
+    { id: 'run-exact', runId: 'run', resultKind: 'exact' as const },
+    { id: 'run-fabric', runId: 'run', resultKind: 'fabric' as const },
+  ];
+  for (const invalidLimit of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.throws(
+      () => mergePrintResultHistory(completeRun, [], invalidLimit),
+      /invalid_print_result_history_limit/,
+    );
+    assert.throws(
+      () => mergeDelayedSurfaceResult({
+        currentResults: completeRun,
+        exactId: 'run-exact',
+        fabricId: 'run-fabric',
+        surfaceResult: { id: 'run-surface', runId: 'run', resultKind: 'surface' as const },
+        maxRuns: invalidLimit,
+      }),
+      /invalid_delayed_surface_result_history_limit/,
+    );
+  }
+});
+
+test('deleting one result removes its complete run without splitting neighboring pairs', () => {
+  const history = [
+    { id: 'run-2-exact', runId: 'run-2', resultKind: 'exact' as const },
+    { id: 'run-2-fabric', runId: 'run-2', resultKind: 'fabric' as const },
+    { id: 'run-2-surface', runId: 'run-2', resultKind: 'surface' as const },
+    { id: 'run-1-exact', runId: 'run-1', resultKind: 'exact' as const },
+    { id: 'run-1-fabric', runId: 'run-1', resultKind: 'fabric' as const },
+  ];
+  assert.deepEqual(removePrintResultRun(history, ' run-2 '), history.slice(3));
+  assert.deepEqual(removePrintResultRun(history, 'missing'), history);
+  assert.throws(() => removePrintResultRun(history, '   '), /invalid_print_result_run_id/);
+});
+
+test('clear-all removes only the completed runs captured at click time across async commit orderings', () => {
+  const oldRun = [
+    { id: 'old-exact', runId: 'old', resultKind: 'exact' as const },
+    { id: 'old-fabric', runId: 'old', resultKind: 'fabric' as const },
+  ];
+  const progressiveRun = [
+    { id: 'new-exact', runId: 'new', resultKind: 'exact' as const },
+    { id: 'new-fabric', runId: 'new', resultKind: 'fabric' as const },
+  ];
+  const capturedCompletedRunIds = new Set(['old']);
+
+  const clearUpdaterAfterProgressiveCommit = removePrintResultRuns(
+    [...progressiveRun, ...oldRun],
+    capturedCompletedRunIds,
+  );
+  assert.deepEqual(clearUpdaterAfterProgressiveCommit, progressiveRun);
+
+  const clearedBeforeProgressiveCommit = removePrintResultRuns(oldRun, capturedCompletedRunIds);
+  const progressiveCommitAfterClear = mergePrintResultHistory(progressiveRun, clearedBeforeProgressiveCommit);
+  assert.deepEqual(progressiveCommitAfterClear, progressiveRun);
+  assert.throws(
+    () => removePrintResultRuns(oldRun, new Set([''])),
+    /invalid_print_result_run_id/,
   );
 });
 

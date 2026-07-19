@@ -222,3 +222,42 @@ test('point-guided selection keeps printed garment texture on a transparent grad
   assert.equal(result.mask?.data[(30 * width) + 92], 0);
   assert.equal(result.mask?.data[0], 0);
 });
+
+test('chest and sleeve taps resolve to the same connected T-shirt mask', () => {
+  const width = 180;
+  const height = 140;
+  const background: [number, number, number] = [246, 246, 246];
+  const garment: [number, number, number] = [42, 116, 188];
+  const data = makeImage(width, height, (x, y) => {
+    const inTorso = x >= 50 && x < 130 && y >= 30 && y < 130;
+    const inLeftSleeve = x >= 25 && x < 50 && y >= 42 && y < 78;
+    const inRightSleeve = x >= 130 && x < 155 && y >= 42 && y < 78;
+    const inCollar = x >= 78 && x < 102 && y >= 30 && y < 42;
+    return (inTorso || inLeftSleeve || inRightSleeve) && !inCollar ? garment : background;
+  });
+
+  const chest = buildPointGuidedSelection({
+    width,
+    height,
+    data,
+    point: { x: 90, y: 84 },
+  });
+  const sleeve = buildPointGuidedSelection({
+    width,
+    height,
+    data,
+    point: { x: 36, y: 58 },
+  });
+
+  assert.equal(chest.source, 'color-region');
+  assert.equal(sleeve.source, 'color-region');
+  assert.deepEqual(
+    { x: chest.x, y: chest.y, width: chest.width, height: chest.height },
+    { x: sleeve.x, y: sleeve.y, width: sleeve.width, height: sleeve.height },
+  );
+  assert.equal(chest.selectedPixels, sleeve.selectedPixels);
+  assert.deepEqual(chest.mask?.data, sleeve.mask?.data);
+  assert.equal(chest.mask?.data[(58 * width) + 36], 1);
+  assert.equal(chest.mask?.data[(84 * width) + 90], 1);
+  assert.equal(chest.mask?.data[0], 0);
+});

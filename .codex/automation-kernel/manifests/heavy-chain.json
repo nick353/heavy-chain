@@ -1,0 +1,258 @@
+{
+  "schema": "automation_kernel_manifest.v1",
+  "id": "heavy-chain",
+  "kind": "product_workflow",
+  "root": "/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain",
+  "registered_entrypoint": {
+    "path": "/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/scripts/heavy-chain-kernel-entrypoint.mjs",
+    "cwd": "/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain",
+    "command": "node scripts/heavy-chain-kernel-entrypoint.mjs"
+  },
+  "entrypoints": [
+    {
+      "id": "typecheck",
+      "command": "npm run typecheck"
+    },
+    {
+      "id": "build",
+      "command": "npm run build"
+    },
+    {
+      "id": "printing_foundation",
+      "command": "npm run test:printing-foundation"
+    },
+    {
+      "id": "repo_playwright_e2e",
+      "command": "npm run e2e",
+      "runner": "scripts/run-e2e.mjs"
+    },
+    {
+      "id": "release_gate",
+      "command": "npm run verify:release-gate",
+      "runner": "scripts/verify-release-gate-unified.mjs"
+    }
+  ],
+  "authority_paths": [
+    "STATE.md",
+    "PROJECT_DESIGN.md",
+    "package.json",
+    "playwright.config.ts",
+    "scripts/run-e2e.mjs",
+    "scripts/verify-release-gate-unified.mjs"
+  ],
+  "artifact_roots": [
+    "output/playwright",
+    "output/release-gate"
+  ],
+  "result_contract": {
+    "schema": "automation_kernel_result.v2",
+    "artifact": "output/automation-kernel/{run_id}/automation-kernel-result.v2.json",
+    "terminal_statuses": [
+      "succeeded",
+      "blocked",
+      "failed"
+    ],
+    "required_fields": [
+      "schema",
+      "workflow_id",
+      "run_id",
+      "terminal_status",
+      "selected_stages",
+      "stage_results",
+      "exact_blocker",
+      "restart_stage",
+      "artifact_uris",
+      "cleanup_proof"
+    ],
+    "success_requires": [
+      "all_selected_stages_terminal",
+      "repo_playwright_e2e_executed_when_selected",
+      "marker_scoped_cleanup_for_generation_probes",
+      "no_human_only_gate_crossed"
+    ],
+    "blocked_requires": [
+      "exact_blocker",
+      "restart_stage",
+      "cleanup_proof"
+    ]
+  },
+  "chrome_lease_contract": {
+    "schema": "automation_kernel_chrome_stage_lease.v1",
+    "mode": "jit_exclusive",
+    "scope": "stage",
+    "receipt_ttl_seconds": 300,
+    "receipt_scope": "current_session_turn_nonce",
+    "fresh_preflight": "required_before_each_stage_invocation",
+    "prior_receipt_reuse": "forbidden",
+    "acquire": "immediately_before_stage",
+    "release": "finally_after_terminal_receipt",
+    "no_cross_stage_hold": true,
+    "surface": "signed_chrome_extension_profile2",
+    "fallback": "forbidden"
+  },
+  "stages": [
+    {
+      "id": "local_static_checks",
+      "effect_class": "internal_idempotent",
+      "owner": "repo",
+      "lane": "local_node",
+      "entrypoints": [
+        "typecheck",
+        "build"
+      ],
+      "needs_chrome": false,
+      "chrome_lease": null,
+      "replay": "idempotent_local",
+      "required": true
+    },
+    {
+      "id": "printing_foundation",
+      "effect_class": "internal_idempotent",
+      "owner": "repo",
+      "lane": "local_node",
+      "entrypoints": [
+        "printing_foundation"
+      ],
+      "needs_chrome": false,
+      "chrome_lease": null,
+      "replay": "idempotent_local",
+      "required": true
+    },
+    {
+      "id": "repo_playwright_e2e",
+      "effect_class": "internal_idempotent",
+      "owner": "repo",
+      "lane": "repo_owned_playwright",
+      "entrypoints": [
+        "repo_playwright_e2e"
+      ],
+      "needs_chrome": false,
+      "chrome_lease": null,
+      "replay": "fresh_preview_and_artifacts",
+      "required": false
+    },
+    {
+      "id": "release_readback_gate",
+      "effect_class": "internal_idempotent",
+      "owner": "repo",
+      "lane": "local_readback",
+      "entrypoints": [
+        "release_gate"
+      ],
+      "needs_chrome": false,
+      "chrome_lease": null,
+      "replay": "read_only_gate",
+      "required": false
+    },
+    {
+      "id": "runway_mcp_generation",
+      "effect_class": "external_non_idempotent",
+      "owner": "repo_local_worker",
+      "lane": "runway_mcp",
+      "entrypoints": [],
+      "needs_chrome": false,
+      "chrome_lease": null,
+      "replay": "approved_marker_scoped_request_only",
+      "required": false
+    },
+    {
+      "id": "live_production_route_visual_qa",
+      "effect_class": "internal_idempotent",
+      "owner": "qa_orchestrator",
+      "lane": "signed_chrome_extension_profile2",
+      "entrypoints": [],
+      "needs_chrome": true,
+      "chrome_lease": {
+        "scope": "stage",
+        "mode": "jit_exclusive",
+        "max_wall_seconds": 300
+      },
+      "fan_out": {
+        "unit": "production_route_with_url_dom_or_readback_and_screenshot",
+        "max_units_per_invocation": 1
+      },
+      "continuation": {
+        "unit_id": "production_route_id",
+        "mode": "fresh_preflight_per_invocation",
+        "until": "all_selected_routes_terminal_or_exact_blocker",
+        "next": "same_stage_until_terminal_then_manifest_order",
+        "fresh_preflight_required": true,
+        "reuse_prior_receipt": false
+      },
+      "replay": "read_only_with_fresh_production_readback",
+      "required": false
+    },
+    {
+      "id": "live_production_cleanup_proof",
+      "effect_class": "internal_idempotent",
+      "owner": "qa_orchestrator",
+      "lane": "signed_chrome_extension_profile2",
+      "always_run": true,
+      "entrypoints": [],
+      "needs_chrome": true,
+      "chrome_lease": {
+        "scope": "stage",
+        "mode": "jit_exclusive",
+        "max_wall_seconds": 120
+      },
+      "fan_out": {
+        "unit": "run_owned_browser_cleanup",
+        "max_units_per_invocation": 1
+      },
+      "continuation": {
+        "unit_id": "cleanup_invocation_id",
+        "mode": "fresh_preflight_per_invocation",
+        "until": "cleanup_terminal_receipt",
+        "next": "manifest_order",
+        "fresh_preflight_required": true,
+        "reuse_prior_receipt": false
+      },
+      "replay": "run_owned_resources_only",
+      "required": false
+    },
+    {
+      "id": "deploy",
+      "effect_class": "external_non_idempotent",
+      "owner": "operator",
+      "lane": "production_deploy",
+      "entrypoints": [],
+      "needs_chrome": false,
+      "chrome_lease": null,
+      "replay": "explicit_approval_and_deploy_readback_required",
+      "required": false,
+      "approval_required": true
+    }
+  ],
+  "domain_gates": [
+    {
+      "id": "repo_owned_playwright",
+      "rule": "Local E2E remains the repository-owned Playwright Chromium lane and never acquires a Chrome Extension lease.",
+      "on_violation": "workflow_owned_playwright_lane_violation"
+    },
+    {
+      "id": "playwright_execution_proof",
+      "rule": "When repo_playwright_e2e is selected, a missing Playwright executable is a blocker even though scripts/run-e2e.mjs exits zero after printing a skip message.",
+      "on_violation": "repo_playwright_e2e_not_executed"
+    },
+    {
+      "id": "live_visual_surface",
+      "rule": "Only atomic live production route QA and run-owned browser cleanup use signed Chrome Extension/Profile 2 JIT stage leases; every route continues under a fresh preflight.",
+      "on_violation": "chrome_extension_required"
+    },
+    {
+      "id": "release_acceptance",
+      "rule": "A release-gate run with --allow-dirty is diagnostic and never acceptance proof.",
+      "on_violation": "allow_dirty_not_release_acceptance"
+    },
+    {
+      "id": "generation_architecture",
+      "rule": "Preserve the Runway local-worker path, Supabase redaction and RLS rules, and marker-scoped database and Storage cleanup.",
+      "on_violation": "generation_architecture_gate"
+    },
+    {
+      "id": "human_only",
+      "rule": "Billing, purchase, payment, checkout, identity verification, OTP, CAPTCHA, security prompts, secrets, and external public publishing remain human-only.",
+      "on_violation": "human_only_gate"
+    }
+  ]
+}

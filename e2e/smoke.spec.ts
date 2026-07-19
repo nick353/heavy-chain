@@ -227,6 +227,29 @@ async function completeOnboardingForMockUser(page: Page) {
   }, mockUser.id);
 }
 
+async function confirmPrintingGarmentMask(page: Page) {
+  await page.getByRole('button', { name: '服をタップしてAIマスク' }).click();
+  await expect(page.getByRole('heading', { name: '服をタップしてAIマスク' })).toBeVisible();
+  await page.getByRole('tab', { name: '範囲を調整' }).click();
+  await page.getByRole('button', { name: '画像全体を選択' }).click();
+  await page.getByTestId('garment-mask-confirm').click();
+  await expect(page.getByRole('heading', { name: '服をタップしてAIマスク' })).toHaveCount(0);
+  await expect(page.getByTestId('confirm-processed-garment-mask')).toBeVisible();
+  await page.getByTestId('confirm-processed-garment-mask').click();
+  await expect(page.getByTestId('confirmed-garment-mask-status')).toContainText('認識範囲を確認済み');
+}
+
+async function confirmPrintingPlacement(page: Page) {
+  const decide = page.getByTestId('confirm-print-placement');
+  await expect(decide).toBeEnabled();
+  await decide.click();
+  const preview = page.getByTestId('confirmed-print-composition-preview');
+  await expect(preview).toBeVisible();
+  await expect(preview.locator('[data-printing-artwork-layer]')).toHaveCount(1);
+  await expect(preview.locator('[data-printing-editing-chrome]')).toHaveCount(0);
+  await expect(preview.locator('[data-printing-transform-history-controls]')).toHaveCount(0);
+}
+
 type RestWriteRequest = { table: string; method: string; body: unknown };
 type RestDeleteRequest = { table: string; method: string; url: string };
 type RestMutationRequest = { table: string; method: string; url: string; body: unknown };
@@ -1335,11 +1358,41 @@ test.describe('workspace activity pages', () => {
       buffer: Buffer.from(nonSquareDesignSvg),
     });
 
+    await confirmPrintingGarmentMask(page);
+    await confirmPrintingPlacement(page);
     await expect(page.getByRole('button', { name: '生成して結果を出す' })).toBeEnabled();
+    await page.evaluate(() => {
+      type ProgressiveObservation = { exactReady: boolean; fabricPending: boolean };
+      const target = window as typeof window & {
+        __heavyChainProgressiveObservations?: ProgressiveObservation[];
+        __heavyChainProgressiveObserver?: MutationObserver;
+      };
+      target.__heavyChainProgressiveObservations = [];
+      const record = () => {
+        const run = document.querySelector('[data-testid="progressive-print-run"]');
+        if (!run) return;
+        target.__heavyChainProgressiveObservations?.push({
+          exactReady: Boolean(run.querySelector('img[alt="配置そのまま"]')),
+          fabricPending: run.querySelector('[data-testid="progressive-print-布になじませる-card"]')?.getAttribute('aria-busy') === 'true',
+        });
+      };
+      target.__heavyChainProgressiveObserver = new MutationObserver(record);
+      target.__heavyChainProgressiveObserver.observe(document.body, { childList: true, subtree: true, attributes: true });
+      record();
+    });
     await page.getByRole('button', { name: '生成して結果を出す' }).click();
     await expect(page.getByRole('heading', { name: 'プリント結果' })).toBeVisible();
     await expect(page.locator('img[alt="配置そのまま"]')).toHaveCount(1);
     await expect(page.locator('img[alt="布になじませる"]')).toHaveCount(1);
+    const progressiveObservations = await page.evaluate(() => {
+      const target = window as typeof window & {
+        __heavyChainProgressiveObservations?: Array<{ exactReady: boolean; fabricPending: boolean }>;
+        __heavyChainProgressiveObserver?: MutationObserver;
+      };
+      target.__heavyChainProgressiveObserver?.disconnect();
+      return target.__heavyChainProgressiveObservations ?? [];
+    });
+    expect(progressiveObservations.some((state) => state.exactReady && state.fabricPending)).toBe(true);
     expect(editImageRequests).toHaveLength(0);
     expect(editImageResultUrls).toEqual([]);
     expect(functionRequests).toEqual([]);
@@ -1465,6 +1518,8 @@ test.describe('workspace activity pages', () => {
       mimeType: 'image/svg+xml',
       buffer: Buffer.from(nonSquareDesignSvg),
     });
+    await confirmPrintingGarmentMask(page);
+    await confirmPrintingPlacement(page);
     await expect(page.getByRole('button', { name: '生成して結果を出す' })).toBeEnabled();
     await page.getByRole('button', { name: '生成して結果を出す' }).click();
     await fileInputs.nth(1).setInputFiles({

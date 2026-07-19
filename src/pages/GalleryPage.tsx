@@ -26,9 +26,16 @@ import { supabase } from '../lib/supabase';
 import { withSignedImageUrls } from '../lib/storage';
 import {
   deleteWorkspaceArtifact,
+  deleteWorkspaceArtifactsPersisted,
   isLocalWorkspaceImage,
   listWorkspaceGeneratedImages,
+  workspaceArtifactToGeneratedImage,
 } from '../lib/localWorkspaceArtifacts';
+import {
+  setPrintResultFavorite,
+  type PrintResultFavoriteValue,
+  type PrintResultKind,
+} from '../features/printing/history/printResultFavorite';
 import { buildSourceContextSummaryRows } from '../lib/sourceContextSummary';
 import { Button, SearchInput } from '../components/ui';
 import type { GeneratedImage } from '../types/database';
@@ -61,6 +68,39 @@ const getMetadataString = (image: GeneratedImage | null, key: string) => {
   return typeof value === 'string' && value.trim() ? value : null;
 };
 
+const getPrintResultKind = (image: GeneratedImage): PrintResultKind | undefined => {
+  const value = getMetadataString(image, 'printResultKind');
+  return value === 'exact' || value === 'fabric' || value === 'surface' ? value : undefined;
+};
+
+const getLocalPrintResult = (image: GeneratedImage): PrintResultFavoriteValue | null => {
+  const imageUrl = image.image_url;
+  if (!imageUrl) return null;
+  const metadata = image.metadata;
+  const outputSize = metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? metadata.printResultOutputSize
+    : null;
+  const validOutputSize = outputSize && typeof outputSize === 'object' && !Array.isArray(outputSize)
+    && typeof outputSize.width === 'number' && typeof outputSize.height === 'number'
+    ? { width: outputSize.width, height: outputSize.height }
+    : undefined;
+  const generatedAtValue = metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? metadata.printResultGeneratedAt
+    : null;
+
+  return {
+    id: image.id,
+    title: getMetadataString(image, 'title') ?? '印刷結果',
+    note: getMetadataString(image, 'printResultNote') ?? image.prompt ?? '',
+    imageUrl,
+    outputSize: validOutputSize,
+    generatedAt: typeof generatedAtValue === 'number'
+      ? generatedAtValue
+      : new Date(image.created_at).getTime(),
+    resultKind: getPrintResultKind(image),
+  };
+};
+
 export function GalleryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, currentBrand, refreshCurrentBrand } = useAuthStore();
@@ -69,6 +109,7 @@ export function GalleryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingStalled, setIsLoadingStalled] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [favoriteDestinationFilter, setFavoriteDestinationFilter] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortType>('newest');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
@@ -149,7 +190,8 @@ export function GalleryPage() {
     setIsLoadingStalled(false);
     setFailedImageIds(new Set());
     try {
-      const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(brandId);
+      const localImages = listWorkspaceGeneratedImages(brandId)
+        .filter((image) => filter !== 'favorites' || image.is_favorite);
       let query = supabase
         .from('generated_images')
         .select('*')
@@ -198,7 +240,8 @@ export function GalleryPage() {
       if (!isCurrentRequest()) return;
       setImages(mergedImages);
     } catch {
-      const localImages = filter === 'favorites' ? [] : listWorkspaceGeneratedImages(brandId);
+      const localImages = listWorkspaceGeneratedImages(brandId)
+        .filter((image) => filter !== 'favorites' || image.is_favorite);
       if (!isCurrentRequest()) return;
       setImages(localImages);
     } finally {
@@ -299,7 +342,38 @@ export function GalleryPage() {
 
   const handleToggleFavorite = useCallback(async (image: GeneratedImage) => {
     if (isLocalWorkspaceImage(image)) {
-      toast('ローカル成果物のお気に入りは次のスライスで対応します');
+      if (image.feature_type !== 'printing-result') {
+        toast('このローカル成果物は、現在の保存形式ではお気に入りを変更できません');
+        return;
+      }
+      const localResult = getLocalPrintResult(image);
+      if (!localResult) {
+        toast.error('お気に入りを保存できる画像URLがありません');
+        return;
+      }
+      const newValue = !image.is_favorite;
+      const result = setPrintResultFavorite({
+        brandId: image.brand_id,
+        result: localResult,
+        destinationLabel: getMetadataString(image, 'printResultDestinationLabel') ?? undefined,
+      }, newValue);
+      if (!result.ok) {
+        console.warn('Failed to persist local favorite:', result.error);
+        toast.error('ローカルのお気に入り保存に失敗しました');
+        return;
+      }
+
+      const updatedImage = workspaceArtifactToGeneratedImage(result.artifact);
+      setImages((previous) => (
+        filter === 'favorites' && !newValue
+          ? previous.filter((item) => item.id !== image.id)
+          : previous.map((item) => item.id === image.id ? updatedImage : item)
+      ));
+      if (selectedImage?.id === image.id) {
+        setSelectedImage(filter === 'favorites' && !newValue ? null : updatedImage);
+        if (filter === 'favorites' && !newValue) setSearchParams({});
+      }
+      toast.success(newValue ? 'お気に入りに追加しました' : 'お気に入りから削除しました');
       return;
     }
 
@@ -324,13 +398,18 @@ export function GalleryPage() {
     } catch {
       toast.error('操作に失敗しました');
     }
-  }, [selectedImage]);
+  }, [filter, selectedImage, setSearchParams]);
 
   const handleDelete = async (image: GeneratedImage) => {
     if (!confirm('この画像を削除しますか？')) return;
 
     if (isLocalWorkspaceImage(image)) {
-      deleteWorkspaceArtifact(image.brand_id, image.id);
+      const deleted = deleteWorkspaceArtifact(image.brand_id, image.id);
+      if (!deleted.ok) {
+        console.warn('Failed to persist local artifact deletion:', deleted.error);
+        toast.error('ローカル成果物を削除できませんでした');
+        return;
+      }
       setImages(prev => prev.filter(img => img.id !== image.id));
       setSelectedImage(null);
       toast.success('ローカル成果物を削除しました');
@@ -366,7 +445,14 @@ export function GalleryPage() {
       const remoteImagesToDelete = imagesToDelete.filter((image) => !isLocalWorkspaceImage(image));
       const localImagesToDelete = imagesToDelete.filter(isLocalWorkspaceImage);
 
-      localImagesToDelete.forEach((image) => deleteWorkspaceArtifact(image.brand_id, image.id));
+      const localIdsByBrand = new Map<string, string[]>();
+      localImagesToDelete.forEach((image) => {
+        localIdsByBrand.set(image.brand_id, [...(localIdsByBrand.get(image.brand_id) ?? []), image.id]);
+      });
+      for (const [brandId, artifactIds] of localIdsByBrand) {
+        const deleted = deleteWorkspaceArtifactsPersisted(brandId, artifactIds);
+        if (!deleted.ok) throw deleted.error;
+      }
 
       if (remoteImagesToDelete.length > 0) {
         const { error: storageError } = await supabase.storage
@@ -485,12 +571,29 @@ export function GalleryPage() {
     return index;
   }, [images]);
 
+  const favoriteDestinationLabels = useMemo(() => Array.from(new Set(
+    images
+      .filter((image) => image.is_favorite && isLocalWorkspaceImage(image))
+      .map((image) => getMetadataString(image, 'printResultDestinationLabel'))
+      .filter((value): value is string => Boolean(value)),
+  )).sort((left, right) => left.localeCompare(right, 'ja')), [images]);
+
+  useEffect(() => {
+    if (favoriteDestinationFilter !== null
+      && !favoriteDestinationLabels.includes(favoriteDestinationFilter)) {
+      setFavoriteDestinationFilter(null);
+    }
+  }, [favoriteDestinationFilter, favoriteDestinationLabels]);
+
   const filteredImages = useMemo(() => {
-    if (!searchQuery) return images;
+    const destinationFiltered = filter === 'favorites' && favoriteDestinationFilter !== null
+      ? images.filter((image) => getMetadataString(image, 'printResultDestinationLabel') === favoriteDestinationFilter)
+      : images;
+    if (!searchQuery) return destinationFiltered;
 
     const searchLower = searchQuery.toLowerCase();
-    return images.filter(image => imageSearchIndex.get(image.id)?.includes(searchLower));
-  }, [imageSearchIndex, images, searchQuery]);
+    return destinationFiltered.filter(image => imageSearchIndex.get(image.id)?.includes(searchLower));
+  }, [favoriteDestinationFilter, filter, imageSearchIndex, images, searchQuery]);
   const galleryImages = useMemo(
     () => filteredImages.filter((image) => !failedImageIds.has(image.id)),
     [failedImageIds, filteredImages]
@@ -510,7 +613,7 @@ export function GalleryPage() {
 
   useEffect(() => {
     setVisibleImageCount(INITIAL_VISIBLE_IMAGE_COUNT);
-  }, [filter, sortBy, searchQuery, gridSize]);
+  }, [favoriteDestinationFilter, filter, sortBy, searchQuery, gridSize]);
 
   const navigateImage = useCallback((direction: 'prev' | 'next') => {
     if (!selectedImage) return;
@@ -699,7 +802,10 @@ export function GalleryPage() {
         <div className="flex items-center justify-between gap-2 mb-6">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setFilter('all')}
+              onClick={() => {
+                setFilter('all');
+                setFavoriteDestinationFilter(null);
+              }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 filter === 'all'
                   ? 'bg-cyan-300 text-neutral-950 shadow-sm'
@@ -709,7 +815,10 @@ export function GalleryPage() {
               すべて
             </button>
             <button
-              onClick={() => setFilter('favorites')}
+              onClick={() => {
+                setFilter('favorites');
+                setFavoriteDestinationFilter(null);
+              }}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
                 filter === 'favorites'
                   ? 'bg-cyan-300 text-neutral-950 shadow-sm'
@@ -730,6 +839,35 @@ export function GalleryPage() {
             <option value="oldest">古い順</option>
           </select>
         </div>
+
+        {filter === 'favorites' && favoriteDestinationLabels.length > 0 && (
+          <div className="-mt-3 mb-6 flex flex-wrap items-center gap-2" aria-label="お気に入りグループ">
+            <span className="mr-1 text-xs font-semibold text-neutral-500">保存先</span>
+            <button
+              type="button"
+              onClick={() => setFavoriteDestinationFilter(null)}
+              aria-pressed={favoriteDestinationFilter === null}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${favoriteDestinationFilter === null
+                ? 'border-pink-300/50 bg-pink-300/15 text-pink-100'
+                : 'border-white/10 bg-white/[0.03] text-neutral-400 hover:border-white/20 hover:text-neutral-200'}`}
+            >
+              すべての保存先
+            </button>
+            {favoriteDestinationLabels.map((destination) => (
+              <button
+                key={destination}
+                type="button"
+                onClick={() => setFavoriteDestinationFilter(destination)}
+                aria-pressed={favoriteDestinationFilter === destination}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${favoriteDestinationFilter === destination
+                  ? 'border-pink-300/50 bg-pink-300/15 text-pink-100'
+                  : 'border-white/10 bg-white/[0.03] text-neutral-400 hover:border-white/20 hover:text-neutral-200'}`}
+              >
+                {destination}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Gallery Grid */}
         {isLoading ? null : galleryImages.length > 0 ? (
@@ -798,6 +936,12 @@ export function GalleryPage() {
                     {image.is_favorite && !selectMode && (
                       <div className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-950/80 backdrop-blur-sm shadow-sm">
                         <Heart className="w-4 h-4 text-red-500 fill-current" />
+                      </div>
+                    )}
+
+                    {image.is_favorite && !selectMode && getMetadataString(image, 'printResultDestinationLabel') && (
+                      <div className="absolute bottom-2 left-2 max-w-[calc(100%-1rem)] truncate rounded-full bg-neutral-950/80 px-2.5 py-1 text-[10px] font-semibold text-white/80 backdrop-blur-sm">
+                        {getMetadataString(image, 'printResultDestinationLabel')}
                       </div>
                     )}
 

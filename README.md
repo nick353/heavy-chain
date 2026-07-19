@@ -140,6 +140,8 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 # 任意: 既定では同一originの /models/silueta.onnx を使います
 # VITE_REMBG_MODEL_BASE_URL=https://your-cors-enabled-model-host.example.com/models
 # VITE_REMBG_SILUETA_MODEL_URL=https://your-cors-enabled-model-host.example.com/models/silueta.onnx
+# 任意: 外部host方式のoverride。Zeaburのbuild:deployは同一originへ固定モデルをstageします
+# VITE_REMBG_CLOTH_SEG_MODEL_URL=https://your-cors-enabled-model-host.example.com/models/u2net_cloth_seg.onnx
 
 # Stripe (将来用)
 VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
@@ -172,13 +174,48 @@ supabase functions deploy upscale
 # ... 他の関数も同様にデプロイ
 ```
 
-Edge Functions用の環境変数をSupabase Dashboardで設定：
-- `GEMINI_API_KEY` - Google AI Studio APIキー
-- `GEMINI_IMAGE_MODEL` - 使用する画像生成モデル名（既定: `gemini-2.5-flash-image`）
+フロントエンドのビルド時環境変数はZeabur（または利用するViteホスト）に設定：
 - `VITE_GENERATION_PROVIDER` - 通常は `gemini`。Runway workerを明示的に使う場合だけ `local-runway`
 - `VITE_REMBG_MODEL_BASE_URL` - 任意のモデル配信元override。silueta以外のモデルで使います。
 - `VITE_REMBG_SILUETA_MODEL_URL` - 任意。未設定時は同梱の `/models/silueta.onnx` を同一originから読み込みます。
 - `VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL` - 任意。管理下CDNに置いたISNetモデルを明示利用する場合だけ設定します。Hugging Face直取得にはfallbackしません。
+- `VITE_REMBG_CLOTH_SEG_MODEL_URL` - 任意の外部host override。管理下のHTTPS/CORS対応ホストを使う場合だけ指定します。Zeaburの既定`build:deploy`は公式配布物を固定SHA-256で検証して、同一originの`/models/u2net_cloth_seg.onnx`へbuild時だけstageします。通常の`npm run build`では未設定なら既存のsilueta/手動マスクへ安全に戻ります。
+
+Zeaburの既定buildは、公式rembg配布物をbuild時に取得し、176,194,565 bytesと固定SHA-256を照合してから、同一origin用の静的assetとしてVite buildへ入れます。`public/models/u2net_cloth_seg.onnx`はGit ignoreのままで、成功・失敗のどちらでもbuild後に削除されます。`dist/models/u2net_cloth_seg.onnx`の実寸とSHA-256まで一致しないbuildは失敗します。
+
+```bash
+npm run build:deploy
+```
+
+既に検証済みのlocal copyがある場合だけ、downloadの代わりにserver-onlyなbuild入力を指定できます。このpathはproofやfrontend bundleへ保存されません。
+
+```bash
+REMBG_CLOTH_MODEL_SOURCE_FILE=/absolute/path/u2net_cloth_seg.onnx npm run build:deploy
+```
+
+管理下の外部CORS host方式もfallbackとして保持します。同じ環境変数を保持した一つのコマンドでhost検証・build・生成物readbackまで行います。
+
+```bash
+VITE_REMBG_CLOTH_SEG_MODEL_URL=https://your-cors-enabled-model-host.example.com/models/u2net_cloth_seg.onnx npm run build:rembg-cloth-model
+```
+
+`build:rembg-cloth-model` は最初に公開hostを全量GETし、public DNS、redirectなし、HTTP 200、Heavy Chain origin向けCORS、実寸、固定SHA-256を検証します。検証proofは `output/rembg-cloth-model-host.json` へ毎回作り直され、同じ環境変数のURLをbuildしてdist readbackまで続けます。
+
+`build:deploy` / `build:rembg-cloth-model-same-origin` はruntime CORSを不要にする同一origin経路です。build sourceは固定の公式GitHub release URL（または上記local build input）に限定され、browser用URLは常に`/models/u2net_cloth_seg.onnx`です。
+
+公式`u2net_cloth_seg.onnx`（176,194,565 bytes）のSHA-256は `6d2cbc27bfbdc989e1fd325656d65902ecc6a3ccbe94b2d3655ec114efcb128e` です。管理下ホストへ配置した実体をこのdigestと照合し、CORS readbackと実ブラウザ推論を別途確認してください。
+
+配置後は、公開URL・CORS・全バイト取得・固定SHA-256をrelease前に検証します。URLや証跡ファイルへ資格情報を含めません。
+
+```bash
+VITE_REMBG_CLOTH_SEG_MODEL_URL=https://models.example.com/u2net_cloth_seg.onnx \
+  npm run verify:rembg-cloth-model-host -- \
+  --output=output/rembg-cloth-model-host.json
+```
+
+Edge Functions用の環境変数はSupabase Dashboardに設定：
+- `GEMINI_API_KEY` - Google AI Studio APIキー
+- `GEMINI_IMAGE_MODEL` - 使用する画像生成モデル名（既定: `gemini-2.5-flash-image`）
 - `OPENAI_IMAGE_API_KEY` - OpenAI Images APIキー（未設定時は `OPENAI_API_KEY` を使用）
 - `OPENAI_IMAGE_MODEL` - 使用するOpenAI画像生成モデル名（既定: `gpt-image-2`）
 

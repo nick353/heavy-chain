@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { modalBodyScrollLock } from './modalBodyScrollLock';
 
 interface ModalProps {
   isOpen: boolean;
@@ -43,29 +44,22 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.addEventListener('keydown', handleFocusTrap);
-      document.body.style.overflow = 'hidden';
-      const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      window.setTimeout(() => {
-        const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
-          'button:not([disabled]), a[href], textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        );
-        (firstFocusable ?? dialogRef.current)?.focus();
-      }, 0);
-      return () => {
-        document.removeEventListener('keydown', handleEscape);
-        document.removeEventListener('keydown', handleFocusTrap);
-        document.body.style.overflow = '';
-        previousActiveElement?.focus();
-      };
-    }
-
+    if (!isOpen) return undefined;
+    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleFocusTrap);
+    const releaseBodyScrollLock = modalBodyScrollLock.acquire(document.body);
+    const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    window.setTimeout(() => {
+      const firstFocusable = dialogRef.current?.querySelector<HTMLElement>(
+        'button:not([disabled]), a[href], textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      (firstFocusable ?? dialogRef.current)?.focus();
+    }, 0);
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.removeEventListener('keydown', handleFocusTrap);
-      document.body.style.overflow = '';
+      releaseBodyScrollLock();
+      previousActiveElement?.focus();
     };
   }, [isOpen, onClose]);
 

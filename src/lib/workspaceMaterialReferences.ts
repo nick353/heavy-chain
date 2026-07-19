@@ -36,10 +36,19 @@ import {
 import { buildPrintArtworkBackgroundCutoutRgba } from './printArtworkMaskStrategy';
 import { getContainedStageBounds, getInnerContainedBounds, getIntegerStageScale, scaleStageBounds } from './printingStageGeometry';
 import {
+  GARMENT_SEMANTIC_SEGMENTATION_ENGINE,
+  DEFAULT_GARMENT_SEGMENTATION_TARGET,
   resolveGarmentCutoutModel,
+  resolveGarmentSegmentationMaskIndex,
+  resolveTransparentGarmentCutoutRoute,
   type GarmentCutoutModel,
+  type GarmentSegmentationTarget,
   type GarmentSelectionSource,
 } from '../features/printing/selection/garmentSegmentationPolicy';
+import {
+  createClothModelWarmupController,
+  type ClothModelWarmupProgress,
+} from '../features/printing/selection/clothModelWarmup';
 
 export type MaterialReferenceState = {
   imageUrl: string;
@@ -85,6 +94,7 @@ export type MaterialCutoutResult = {
     | 'browser-local-white-background-garment-cutout-v1'
     | 'browser-canvas-artwork-background-cutout-v1';
   hasTransparentPixels: boolean;
+  segmentationTarget?: GarmentSegmentationTarget;
   refinement?: PrintEdgeRefinementMetadata;
 };
 
@@ -164,6 +174,8 @@ export type PrintDesignSnapshotLayer = {
     scale: number;
     rotation: number;
     opacity: number;
+    flipX: boolean;
+    flipY: boolean;
   };
   box: {
     x: number;
@@ -740,6 +752,7 @@ export async function renderPrintRequestComposition(
     clippedDesignContext.save();
     clippedDesignContext.translate(design.box.x, design.box.y);
     clippedDesignContext.rotate((design.box.rotation * Math.PI) / 180);
+    clippedDesignContext.scale(design.transform.flipX ? -1 : 1, design.transform.flipY ? -1 : 1);
     drawContainedImage(
       clippedDesignContext,
       designImage,
@@ -820,6 +833,7 @@ export async function renderExperimentalSurfaceComposition(
     designContext.save();
     designContext.translate(design.box.x, design.box.y);
     designContext.rotate((design.box.rotation * Math.PI) / 180);
+    designContext.scale(design.transform.flipX ? -1 : 1, design.transform.flipY ? -1 : 1);
     drawContainedImage(
       designContext,
       designImage,
@@ -1480,13 +1494,19 @@ const buildWhiteBackgroundFallbackCutout = async ({
 };
 
 const REMBG_OPERATION_TIMEOUT_MS = 30_000;
+const REMBG_CLOTH_PREDICT_TIMEOUT_MS = 90_000;
+const REMBG_CLOTH_INITIALIZATION_JOIN_TIMEOUT_MS = 5_000;
 const PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD = 36;
 const PRINT_CUTOUT_MAX_OUTPUT_DIMENSION = 1_400;
 
-const withRembgOperationTimeout = async <T>(promise: Promise<T>, label: string): Promise<T> => {
+const withRembgOperationTimeout = async <T>(
+  promise: Promise<T>,
+  label: string,
+  timeoutMilliseconds = REMBG_OPERATION_TIMEOUT_MS,
+): Promise<T> => {
   let timeoutId: number | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timeoutId = window.setTimeout(() => reject(new Error(`rembg_timeout:${label}`)), REMBG_OPERATION_TIMEOUT_MS);
+    timeoutId = window.setTimeout(() => reject(new Error(`rembg_timeout:${label}`)), timeoutMilliseconds);
   });
   try {
     return await Promise.race([promise, timeout]);
@@ -1517,6 +1537,7 @@ const canUseBrowserWebGlBackend = () => {
 };
 
 const aiGarmentCutoutSessions = new Map<string, Awaited<ReturnType<typeof newSession>> | null>();
+let clothPredictionInFlight: Promise<HTMLCanvasElement[]> | null = null;
 
 const rembgModelBaseUrl = String(import.meta.env.VITE_REMBG_MODEL_BASE_URL || '/models').replace(/\/$/, '');
 const rembgSiluetaModelUrl = String(
@@ -1532,7 +1553,52 @@ const rembgClothSegModelUrl = String(
   || '',
 ).trim();
 
+type RembgCutoutModel =
+  | GarmentCutoutModel
+  | 'isnet-general-use'
+  | 'u2net_human_seg'
+  | 'u2net'
+  | 'u2netp'
+  | 'isnet-anime';
+
+const configureRembgModelPath = (modelName: RembgCutoutModel) => {
+  rembgConfig.setBaseUrl(rembgModelBaseUrl);
+  if (modelName === 'silueta') {
+    rembgConfig.setCustomModelPath('silueta', rembgSiluetaModelUrl);
+  }
+  if (modelName === 'isnet-general-use' && rembgIsnetGeneralUseModelUrl) {
+    rembgConfig.setCustomModelPath('isnet-general-use', rembgIsnetGeneralUseModelUrl);
+  }
+  if (modelName === 'u2net_cloth_seg' && rembgClothSegModelUrl) {
+    rembgConfig.setCustomModelPath('u2net_cloth_seg', rembgClothSegModelUrl);
+  }
+};
+
+const clothModelWarmupController = createClothModelWarmupController({
+  createSession: async (onProgress?: (progress: ClothModelWarmupProgress) => void) => {
+    configureRembgModelPath('u2net_cloth_seg');
+    return newSession('u2net_cloth_seg', undefined, {
+      numThreads: 1,
+      executionProviders: ['wasm'],
+      onProgress,
+    });
+  },
+  initializeSession: (session) => session.initialize(),
+});
+
 export const isPrintGarmentClothModelConfigured = () => Boolean(rembgClothSegModelUrl);
+
+export const preparePrintGarmentClothModel = async (
+  onProgress?: (progress: ClothModelWarmupProgress) => void,
+): Promise<{ status: 'ready' | 'unconfigured' | 'unavailable'; reused: boolean }> => {
+  if (!isPrintGarmentClothModelConfigured()) {
+    return { status: 'unconfigured', reused: false };
+  }
+  if (!canUseBrowserWebGlBackend()) {
+    return { status: 'unavailable', reused: false };
+  }
+  return clothModelWarmupController.warmup(onProgress);
+};
 
 export const resolvePrintGarmentCutoutModel = ({
   selectionSource,
@@ -1548,27 +1614,22 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
   modelName = 'silueta',
   postProcessMask = true,
+  constrainToSourceAlpha = false,
+  segmentationTarget = DEFAULT_GARMENT_SEGMENTATION_TARGET,
 }: {
   imageUrl: string;
   maxDataUrlBytes?: number;
   modelName?: 'isnet-general-use' | 'u2net_cloth_seg' | 'u2net_human_seg' | 'u2net' | 'u2netp' | 'isnet-anime' | 'silueta';
   postProcessMask?: boolean;
+  constrainToSourceAlpha?: boolean;
+  segmentationTarget?: GarmentSegmentationTarget;
 }): Promise<MaterialCutoutResult> {
   if (!canUseBrowserWebGlBackend()) {
     console.warn('Falling back to local white-background garment cutout because WebGL is unavailable.');
     return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
   }
 
-  rembgConfig.setBaseUrl(rembgModelBaseUrl);
-  if (modelName === 'silueta') {
-    rembgConfig.setCustomModelPath('silueta', rembgSiluetaModelUrl);
-  }
-  if (modelName === 'u2net_cloth_seg' && rembgClothSegModelUrl) {
-    rembgConfig.setCustomModelPath('u2net_cloth_seg', rembgClothSegModelUrl);
-  }
-  if (modelName === 'isnet-general-use' && rembgIsnetGeneralUseModelUrl) {
-    rembgConfig.setCustomModelPath('isnet-general-use', rembgIsnetGeneralUseModelUrl);
-  }
+  configureRembgModelPath(modelName);
   const image = await loadImageElement(imageUrl);
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
@@ -1576,20 +1637,35 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
     const sessionKey = modelName;
     let session = aiGarmentCutoutSessions.get(sessionKey) ?? null;
     if (!session) {
-      session = await withRembgOperationTimeout(
-        newSession(modelName, undefined, {
-          numThreads: 1,
-          // A browser can expose a WebGL canvas while ONNX Runtime's WebGL
-          // backend is unavailable. The default rembg provider order then
-          // spends time failing WebGL before reaching the existing CPU path,
-          // and some Chrome/Profile 2 environments leave that attempt stuck.
-          // WASM is shipped with the app and is the deterministic local lane;
-          // model/fallback quality gates below still decide whether a result
-          // is usable.
-          executionProviders: ['wasm'],
-        }),
-        'new_session',
-      );
+      if (modelName === 'u2net_cloth_seg') {
+        if (clothModelWarmupController.getStatus() === 'timed-out') {
+          throw new Error('rembg_timeout:initialize_cloth_model_warmup');
+        }
+        const initialization = clothModelWarmupController.getInitializationPromise();
+        if (initialization && !clothModelWarmupController.isReady()) {
+          await withRembgOperationTimeout(
+            initialization,
+            'initialize_cloth_model',
+            REMBG_CLOTH_INITIALIZATION_JOIN_TIMEOUT_MS,
+          );
+        }
+        session = await clothModelWarmupController.getSession();
+      } else {
+        session = await withRembgOperationTimeout(
+          newSession(modelName, undefined, {
+            numThreads: 1,
+            // A browser can expose a WebGL canvas while ONNX Runtime's WebGL
+            // backend is unavailable. The default rembg provider order then
+            // spends time failing WebGL before reaching the existing CPU path,
+            // and some Chrome/Profile 2 environments leave that attempt stuck.
+            // WASM is shipped with the app and is the deterministic local lane;
+            // model/fallback quality gates below still decide whether a result
+            // is usable.
+            executionProviders: ['wasm'],
+          }),
+          'new_session',
+        );
+      }
       aiGarmentCutoutSessions.set(sessionKey, session);
     }
   } catch (error) {
@@ -1602,34 +1678,85 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
     return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
   }
   const aiGarmentCutoutSession = aiGarmentCutoutSessions.get(modelName) ?? undefined;
-  const inputBlob = await dataUrlToBlob(imageUrl);
-  let outputBlob: Blob;
-  try {
-    outputBlob = await withRembgOperationTimeout(
-      remove(inputBlob, {
-        session: aiGarmentCutoutSession,
-        postProcessMask,
-      }),
-      'remove',
-    );
-  } catch (error) {
-    if (!isRembgModelLoadError(error)) throw error;
-    console.warn('Falling back to local white-background garment cutout because rembg failed during cutout.', {
-      rembgModelBaseUrl,
-      modelName,
-      error,
-    });
-    aiGarmentCutoutSessions.set(modelName, null);
-    return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
-  }
-  const outputDataUrl = await blobToDataUrl(outputBlob);
-  const outputImage = await loadImageElement(outputDataUrl);
   const canvas = document.createElement('canvas');
-  canvas.width = outputImage.naturalWidth || outputImage.width;
-  canvas.height = outputImage.naturalHeight || outputImage.height;
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Canvasを初期化できませんでした');
-  context.drawImage(outputImage, 0, 0, canvas.width, canvas.height);
+
+  if (modelName === 'u2net_cloth_seg') {
+    if (!aiGarmentCutoutSession) throw new Error('cloth_segmentation_session_missing');
+    const inputCanvas = document.createElement('canvas');
+    inputCanvas.width = sourceWidth;
+    inputCanvas.height = sourceHeight;
+    const inputContext = inputCanvas.getContext('2d', { willReadFrequently: true });
+    if (!inputContext) throw new Error('Canvasを初期化できませんでした');
+    inputContext.drawImage(image, 0, 0, sourceWidth, sourceHeight);
+    if (clothPredictionInFlight) throw new Error('cloth_segmentation_busy');
+    const prediction = aiGarmentCutoutSession.predict(inputCanvas);
+    clothPredictionInFlight = prediction;
+    void prediction.finally(() => {
+      if (clothPredictionInFlight === prediction) clothPredictionInFlight = null;
+    }).catch(() => undefined);
+    const predictedMasks = await withRembgOperationTimeout(
+      prediction,
+      'predict_cloth_masks',
+      REMBG_CLOTH_PREDICT_TIMEOUT_MS,
+    );
+    const maskIndex = resolveGarmentSegmentationMaskIndex(segmentationTarget);
+    const selectedMask = predictedMasks[maskIndex];
+    if (!selectedMask) throw new Error(`cloth_segmentation_mask_missing:${maskIndex}`);
+    if (selectedMask.width !== sourceWidth || selectedMask.height !== sourceHeight) {
+      throw new Error(`cloth_segmentation_mask_dimension_mismatch:${selectedMask.width}x${selectedMask.height}:${sourceWidth}x${sourceHeight}`);
+    }
+    const selectedMaskContext = selectedMask.getContext('2d', { willReadFrequently: true });
+    if (!selectedMaskContext) throw new Error('cloth_segmentation_mask_context_missing');
+    const sourceRgba = inputContext.getImageData(0, 0, sourceWidth, sourceHeight);
+    const maskRgba = selectedMaskContext.getImageData(0, 0, selectedMask.width, selectedMask.height);
+    for (let offset = 0; offset < sourceRgba.data.length; offset += 4) {
+      // Multiplication makes the semantic prediction a strict subset of the
+      // confirmed source alpha. The selected class can remove pixels, never
+      // expand beyond the mask the user approved in the tap editor.
+      sourceRgba.data[offset + 3] = Math.round(
+        (sourceRgba.data[offset + 3] * maskRgba.data[offset]) / 255,
+      );
+    }
+    context.putImageData(sourceRgba, 0, 0);
+  } else {
+    const inputBlob = await dataUrlToBlob(imageUrl);
+    let outputBlob: Blob;
+    try {
+      outputBlob = await withRembgOperationTimeout(
+        remove(inputBlob, {
+          session: aiGarmentCutoutSession,
+          postProcessMask,
+        }),
+        'remove',
+      );
+    } catch (error) {
+      if (!isRembgModelLoadError(error)) throw error;
+      console.warn('Falling back to local white-background garment cutout because rembg failed during cutout.', {
+        rembgModelBaseUrl,
+        modelName,
+        error,
+      });
+      aiGarmentCutoutSessions.set(modelName, null);
+      return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
+    }
+    const outputDataUrl = await blobToDataUrl(outputBlob);
+    const outputImage = await loadImageElement(outputDataUrl);
+    context.drawImage(outputImage, 0, 0, canvas.width, canvas.height);
+  }
+
+  if (constrainToSourceAlpha) {
+    // The source alpha is the blue mask the user explicitly confirmed. Model
+    // inference may only remove pixels from that area; it must never make
+    // pixels outside the approved mask printable again.
+    context.save();
+    context.globalCompositeOperation = 'destination-in';
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    context.restore();
+  }
 
   if (!postProcessMask) {
     const sourceCanvas = document.createElement('canvas');
@@ -1650,7 +1777,7 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
     }
   }
 
-  return buildBoundedPngFromCanvas({
+  const result = buildBoundedPngFromCanvas({
     canvas,
     sourceWidth,
     sourceHeight,
@@ -1658,16 +1785,21 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
     storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
     engine: `browser-ai-${modelName}-v1`,
   });
+  return modelName === 'u2net_cloth_seg'
+    ? { ...result, segmentationTarget }
+    : result;
 }
 
 export async function buildPrintGarmentCutoutDataUrl({
   imageUrl,
   maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
   modelName = 'silueta',
+  segmentationTarget = DEFAULT_GARMENT_SEGMENTATION_TARGET,
 }: {
   imageUrl: string;
   maxDataUrlBytes?: number;
   modelName?: GarmentCutoutModel;
+  segmentationTarget?: GarmentSegmentationTarget;
 }): Promise<MaterialCutoutResult> {
   const finalizeResult = async (result: MaterialCutoutResult) => {
     const verified = await assertPrintCutoutQuality(result, '参考画像');
@@ -1705,17 +1837,46 @@ export async function buildPrintGarmentCutoutDataUrl({
   context.drawImage(image, 0, 0, sourceWidth, sourceHeight);
   const sourceData = context.getImageData(0, 0, sourceWidth, sourceHeight);
   const alphaBounds = getAlphaBounds(sourceData);
+  const transparentInputRoute = resolveTransparentGarmentCutoutRoute({
+    modelName,
+    clothModelConfigured: Boolean(rembgClothSegModelUrl),
+  });
+  const existingTransparentResult = alphaBounds?.hasTransparentPixels
+    ? buildBoundedPngFromCanvas({
+        canvas,
+        sourceWidth,
+        sourceHeight,
+        maxDataUrlBytes,
+        storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
+        engine: 'browser-existing-transparent-garment-v1',
+        validateSubjectShape: true,
+      })
+    : null;
 
-  if (alphaBounds?.hasTransparentPixels) {
-    return finalizeResult(buildBoundedPngFromCanvas({
-      canvas,
-      sourceWidth,
-      sourceHeight,
-      maxDataUrlBytes,
-      storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
-      engine: 'browser-existing-transparent-garment-v1',
-      validateSubjectShape: true,
-    }));
+  if (existingTransparentResult && transparentInputRoute === 'preserve-existing') {
+    return finalizeResult(existingTransparentResult);
+  }
+
+  if (existingTransparentResult && transparentInputRoute === 'semantic-first') {
+    try {
+      const semanticResult = await buildHighPrecisionMaterialCutoutDataUrl({
+        imageUrl,
+        maxDataUrlBytes,
+        modelName,
+        postProcessMask: false,
+        constrainToSourceAlpha: true,
+        segmentationTarget,
+      });
+      if (semanticResult.engine === GARMENT_SEMANTIC_SEGMENTATION_ENGINE) {
+        return await finalizeResult(semanticResult);
+      }
+      console.warn('Cloth segmentation did not complete with the configured engine; preserving the confirmed tap mask.', {
+        resultEngine: semanticResult.engine,
+      });
+    } catch (semanticError) {
+      console.warn('Cloth segmentation failed; preserving the confirmed tap mask.', semanticError);
+    }
+    return finalizeResult(existingTransparentResult);
   }
 
   const sourceBackground = estimateBackgroundColor(sourceData.data, sourceWidth, sourceHeight);
@@ -1725,7 +1886,7 @@ export async function buildPrintGarmentCutoutDataUrl({
   // regions from head/hands and nearby objects. If the model cannot load or
   // run, buildHighPrecisionMaterialCutoutDataUrl still returns the existing
   // bounded fallback.
-  const shouldPreferConfiguredClothModel = modelName === 'u2net_cloth_seg' && Boolean(rembgClothSegModelUrl);
+  const shouldPreferConfiguredClothModel = transparentInputRoute === 'semantic-first';
   if (
     sourceBackground.sampleSpread <= PRINT_FAST_UNIFORM_BACKGROUND_MAX_SPREAD
     && !shouldPreferConfiguredClothModel
@@ -1747,6 +1908,7 @@ export async function buildPrintGarmentCutoutDataUrl({
       maxDataUrlBytes,
       modelName,
       postProcessMask: false,
+      segmentationTarget,
     });
       return await finalizeResult(result);
   } catch (highPrecisionError) {

@@ -48,8 +48,7 @@ artifacts/
 
 # Large local AI model cache. Configure VITE_REMBG_MODEL_BASE_URL or provide
 # this directory at deploy time; do not commit ONNX/WASM model binaries.
-public/models/
-!public/models/
+public/models/*
 !public/models/silueta.onnx
 
 # TypeScript
@@ -58,4 +57,3 @@ public/models/
 # Supabase
 supabase/.branches
 supabase/.temp
-

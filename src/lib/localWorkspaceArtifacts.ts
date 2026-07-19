@@ -34,6 +34,14 @@ export interface WorkspaceArtifactBestEffortResult {
   cleanupError?: unknown;
 }
 
+export type WorkspaceArtifactPersistenceResult =
+  | { ok: true; artifact: WorkspaceArtifact }
+  | { ok: false; error: Error };
+
+export type WorkspaceArtifactDeleteResult =
+  | { ok: true }
+  | { ok: false; error: Error };
+
 type RemoteSaveStage = 'function' | 'auth' | 'prepare' | 'storage' | 'job' | 'image' | 'timeout' | 'completed';
 type RemoteCleanupStatus = 'none' | 'attempted' | 'failed';
 const REMOTE_WORKSPACE_ARTIFACT_TIMEOUT_MS = 8000;
@@ -49,7 +57,14 @@ interface RemoteSaveFunctionResult {
 
 const getStorageKey = (brandId: string) => `${STORE_PREFIX}:${brandId}`;
 
-const isBrowser = () => typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+const isBrowser = () => {
+  if (typeof window === 'undefined') return false;
+  try {
+    return typeof window.localStorage !== 'undefined';
+  } catch {
+    return false;
+  }
+};
 
 const isQuotaExceededError = (error: unknown) => {
   if (!error || typeof error !== 'object') return false;
@@ -67,7 +82,7 @@ const persistArtifactsToLocalStorage = (storageKey: string, artifacts: Workspace
   let nextArtifacts = artifacts;
   let lastError: unknown;
 
-  for (let attempt = 0; attempt < 5 && nextArtifacts.length > 0; attempt += 1) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
       window.localStorage.setItem(storageKey, JSON.stringify(nextArtifacts));
       if (attempt > 0) {
@@ -92,6 +107,11 @@ const persistArtifactsToLocalStorage = (storageKey: string, artifacts: Workspace
 
   console.warn(`Failed to persist local workspace artifact during ${operation}:`, lastError);
   return false;
+};
+
+const toPersistenceError = (operation: 'save' | 'delete', error?: unknown) => {
+  if (error instanceof Error) return error;
+  return new Error(`Local workspace artifact ${operation} failed.`);
 };
 
 const generateArtifactId = () => {
@@ -153,11 +173,90 @@ export const isLocalWorkspaceImage = (image: GeneratedImage) => {
   return image.storage_path.startsWith('local/') || image.user_id === LOCAL_USER_ID;
 };
 
+const readWorkspaceArtifacts = (brandId: string):
+  | { ok: true; artifacts: WorkspaceArtifact[] }
+  | { ok: false; error: Error } => {
+  if (!brandId || !isBrowser()) {
+    return { ok: false, error: new Error('Local workspace storage is unavailable.') };
+  }
+  try {
+    return {
+      ok: true,
+      artifacts: parseArtifacts(window.localStorage.getItem(getStorageKey(brandId)))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, MAX_ARTIFACTS_PER_BRAND),
+    };
+  } catch (error) {
+    return { ok: false, error: toPersistenceError('save', error) };
+  }
+};
+
 export const listWorkspaceArtifacts = (brandId: string): WorkspaceArtifact[] => {
-  if (!brandId || !isBrowser()) return [];
-  return parseArtifacts(window.localStorage.getItem(getStorageKey(brandId)))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, MAX_ARTIFACTS_PER_BRAND);
+  const result = readWorkspaceArtifacts(brandId);
+  if (result.ok) return result.artifacts;
+  console.warn('Failed to read local workspace artifacts:', result.error);
+  return [];
+};
+
+export const findWorkspaceArtifactPersisted = (
+  brandId: string,
+  artifactId: string,
+): { ok: true; artifact: WorkspaceArtifact | null } | { ok: false; error: Error } => {
+  const result = readWorkspaceArtifacts(brandId);
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    artifact: result.artifacts.find((artifact) => artifact.id === artifactId) ?? null,
+  };
+};
+
+export const findWorkspaceArtifact = (brandId: string, artifactId: string): WorkspaceArtifact | null => {
+  if (!brandId || !artifactId) return null;
+  return listWorkspaceArtifacts(brandId).find((artifact) => artifact.id === artifactId) ?? null;
+};
+
+export const saveWorkspaceArtifactPersisted = (
+  input: WorkspaceArtifactInput,
+): WorkspaceArtifactPersistenceResult => {
+  if (!isBrowser()) {
+    return { ok: false, error: new Error('Local workspace storage is unavailable.') };
+  }
+
+  try {
+    const current = readWorkspaceArtifacts(input.brandId);
+    if (!current.ok) return current;
+    const existingArtifact = input.id
+      ? current.artifacts.find((artifact) => artifact.id === input.id) ?? null
+      : null;
+    const artifact: WorkspaceArtifact = {
+      ...existingArtifact,
+      ...input,
+      id: input.id ?? generateArtifactId(),
+      createdAt: input.createdAt ?? existingArtifact?.createdAt ?? new Date().toISOString(),
+      prompt: input.prompt ?? existingArtifact?.prompt ?? null,
+      metadata: {
+        ...existingArtifact?.metadata,
+        ...input.metadata,
+      },
+    };
+    const nextArtifacts = [
+      artifact,
+      ...current.artifacts.filter((item) => item.id !== artifact.id),
+    ].slice(0, MAX_ARTIFACTS_PER_BRAND);
+    const persisted = persistArtifactsToLocalStorage(getStorageKey(artifact.brandId), nextArtifacts, 'save');
+    if (!persisted) {
+      return { ok: false, error: toPersistenceError('save') };
+    }
+    const readback = parseArtifacts(window.localStorage.getItem(getStorageKey(artifact.brandId)))
+      .find((item) => item.id === artifact.id);
+    const normalizedArtifact = JSON.parse(JSON.stringify(artifact)) as WorkspaceArtifact;
+    if (!readback || JSON.stringify(readback) !== JSON.stringify(normalizedArtifact)) {
+      return { ok: false, error: new Error('Local workspace artifact save could not be verified.') };
+    }
+    return { ok: true, artifact: readback };
+  } catch (error) {
+    return { ok: false, error: toPersistenceError('save', error) };
+  }
 };
 
 export const saveWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceArtifact => {
@@ -248,11 +347,36 @@ export const saveWorkspaceArtifactBestEffort = async (
   };
 };
 
-export const deleteWorkspaceArtifact = (brandId: string, artifactId: string) => {
-  if (!brandId || !artifactId || !isBrowser()) return;
-  const nextArtifacts = listWorkspaceArtifacts(brandId).filter((item) => item.id !== artifactId);
-  persistArtifactsToLocalStorage(getStorageKey(brandId), nextArtifacts, 'delete');
+export const deleteWorkspaceArtifactsPersisted = (
+  brandId: string,
+  artifactIds: Iterable<string>,
+): WorkspaceArtifactDeleteResult => {
+  if (!brandId || !isBrowser()) {
+    return { ok: false, error: new Error('Local workspace storage is unavailable.') };
+  }
+  const ids = new Set(Array.from(artifactIds).filter(Boolean));
+  if (ids.size === 0) return { ok: true };
+
+  try {
+    const current = readWorkspaceArtifacts(brandId);
+    if (!current.ok) return current;
+    const nextArtifacts = current.artifacts.filter((item) => !ids.has(item.id));
+    const persisted = persistArtifactsToLocalStorage(getStorageKey(brandId), nextArtifacts, 'delete');
+    if (!persisted) return { ok: false, error: toPersistenceError('delete') };
+    const remainingIds = new Set(parseArtifacts(window.localStorage.getItem(getStorageKey(brandId))).map((item) => item.id));
+    if (Array.from(ids).some((id) => remainingIds.has(id))) {
+      return { ok: false, error: new Error('Local workspace artifact delete could not be verified.') };
+    }
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: toPersistenceError('delete', error) };
+  }
 };
+
+export const deleteWorkspaceArtifact = (
+  brandId: string,
+  artifactId: string,
+): WorkspaceArtifactDeleteResult => deleteWorkspaceArtifactsPersisted(brandId, [artifactId]);
 
 export const workspaceArtifactToGeneratedImage = (artifact: WorkspaceArtifact): GeneratedImage => ({
   id: artifact.id,
@@ -264,7 +388,7 @@ export const workspaceArtifactToGeneratedImage = (artifact: WorkspaceArtifact): 
   thumbnail_path: null,
   version: 1,
   parent_image_id: null,
-  is_favorite: false,
+  is_favorite: artifact.metadata.printResultFavorite === true,
   created_at: artifact.createdAt,
   expires_at: null,
   prompt: artifact.prompt,

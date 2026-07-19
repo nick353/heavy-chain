@@ -5,7 +5,7 @@
   "icon": "⚡",
   "tags": ["react", "typescript", "ai", "image-generation", "fashion"],
   "build": {
-    "build_command": "npm install && npm run build",
+    "build_command": "npm install && npm run build:deploy",
     "output_dir": "dist",
     "install_command": "npm install",
     "framework": "vite"
@@ -28,7 +28,7 @@
       "required": false
     },
     "VITE_REMBG_CLOTH_SEG_MODEL_URL": {
-      "description": "Optional explicit u2net_cloth_seg model URL for tap-to-garment segmentation. Leave unset to keep the existing silueta/manual fallback.",
+      "description": "Optional external-host override for manual builds. The default build:deploy stages the pinned model at same-origin /models/u2net_cloth_seg.onnx.",
       "required": false
     },
     "VITE_STRIPE_PUBLISHABLE_KEY": {
