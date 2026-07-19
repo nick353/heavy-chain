@@ -159,6 +159,8 @@ test('Gallery loading preserves a fixed progressive grid without enabling select
   assert.match(gallerySelector, /motion-reduce:animate-none/);
   assert.doesNotMatch(gallerySelector, /<div className="spinner" \/>/);
   assert.match(gallerySelector, /data-testid="gallery-image-skeleton"/);
+  assert.match(gallerySelector, /data-testid="gallery-image-identity"/);
+  assert.match(gallerySelector, /\{imageLabel\}/);
   assert.match(gallerySelector, /onLoad=\{\(\) => handleImageLoad\(image\.id\)\}/);
   assert.match(gallerySelector, /onError=\{\(\) => handleImageError\(image\.id\)\}/);
   assert.match(gallerySelector, /disabled=\{!isImageLoaded \|\| hasImageLoadFailed\}/);
@@ -167,6 +169,12 @@ test('Gallery loading preserves a fixed progressive grid without enabling select
   assert.match(gallerySelector, /!failedImageIds\.has\(pendingSingleSelectionCandidate\.image\.id\)/);
   assert.match(gallerySelector, /画像を表示できません/);
   assert.match(gallerySelector, /disabled=\{displayLoading \|\| !pendingSingleSelection\}/);
+});
+
+test('print result cards expose visible exact and fabric identities over each image', () => {
+  assert.match(page, /data-testid=\{`print-result-mode-\$\{result\.resultKind\}`\}/);
+  assert.match(page, /eyebrow: 'EXACT', label: '配置そのまま'/);
+  assert.match(page, /eyebrow: 'FABRIC', label: '布になじませる'/);
 });
 
 test('placement session fails closed on duplicate layer identities', () => {

@@ -359,7 +359,7 @@ test('fabric modulation preserves alpha and geometry and only applies bounded RG
   assert.equal(output[3], 255);
   assert.equal(output[7], 0);
   assert.deepEqual([...output.slice(4, 7)], [50, 60, 70]);
-  assert.ok(output[0] >= 82 && output[0] <= 108);
+  assert.ok(output[0] >= 80 && output[0] <= 110);
   assert.deepEqual(
     Array.from({ length: 2 }, (_, index) => output[index * 4 + 3]),
     Array.from({ length: 2 }, (_, index) => design[index * 4 + 3]),
@@ -385,8 +385,24 @@ test('fabric modulation can add bounded local fold contrast when stage dimension
   garment[(4 * 4) + 2] = 180;
   const output = applyFabricLuminanceModulation({ designRgba: design, garmentRgba: garment, width: 3, height: 3 });
   assert.ok(output[4 * 4] > output[0]);
-  assert.ok(output[4 * 4] <= 108);
+  assert.ok(output[4 * 4] <= 132);
   assert.deepEqual(Array.from(output, (_, index) => index % 4 === 3 ? output[index] : undefined).filter((value) => value !== undefined), Array(9).fill(255));
+});
+
+test('fabric modulation reveals garment shading through black artwork', () => {
+  const design = new Uint8ClampedArray([
+    0, 0, 0, 255,
+    0, 0, 0, 255,
+  ]);
+  const garment = new Uint8ClampedArray([
+    32, 32, 32, 255,
+    224, 224, 224, 255,
+  ]);
+  const output = applyFabricLuminanceModulation({ designRgba: design, garmentRgba: garment });
+  assert.ok(output[0] > 0);
+  assert.ok(output[4] > output[0]);
+  assert.equal(output[3], 255);
+  assert.equal(output[7], 255);
 });
 
 test('source-over helper matches the expected half-alpha exact composite', () => {

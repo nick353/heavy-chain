@@ -558,6 +558,14 @@ export function GallerySelector({
                       onLoad={() => handleImageLoad(image.id)}
                       onError={() => handleImageError(image.id)}
                     />
+                    {isImageLoaded && !hasImageLoadFailed && (
+                      <span
+                        data-testid="gallery-image-identity"
+                        className="absolute inset-x-0 bottom-0 z-10 line-clamp-2 bg-gradient-to-t from-black/90 via-black/65 to-transparent px-2 pb-1.5 pt-5 text-left text-[11px] font-semibold leading-tight text-white drop-shadow"
+                      >
+                        {imageLabel}
+                      </span>
+                    )}
                     {hasImageLoadFailed && (
                       <span
                         role="alert"

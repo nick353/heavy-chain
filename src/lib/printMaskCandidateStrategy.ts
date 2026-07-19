@@ -342,10 +342,15 @@ export const applyFabricLuminanceModulation = ({
         foldContrast = Math.max(-1, Math.min(1, (luminance - (neighbourSum / neighbourWeight)) / 48));
       }
     }
-    const factor = Math.min(1.08, Math.max(0.82, 0.82 + ((luminance / 255) * 0.26) + (foldContrast * 0.05)));
-    output[index] = clampByte(output[index] * factor);
-    output[index + 1] = clampByte(output[index + 1] * factor);
-    output[index + 2] = clampByte(output[index + 2] * factor);
+    // Carry enough of the garment luminance into even very dark artwork for
+    // folds to remain visible. A pure multiply leaves black designs unchanged,
+    // making the fabric result indistinguishable from exact placement.
+    const normalizedLuminance = luminance / 255;
+    const factor = Math.min(1.14, Math.max(0.72, 0.72 + (normalizedLuminance * 0.34) + (foldContrast * 0.1)));
+    const fabricHighlight = (normalizedLuminance * 20) + (Math.max(0, foldContrast) * 8);
+    output[index] = clampByte((output[index] * factor) + fabricHighlight);
+    output[index + 1] = clampByte((output[index + 1] * factor) + fabricHighlight);
+    output[index + 2] = clampByte((output[index + 2] * factor) + fabricHighlight);
   }
   return output;
 };

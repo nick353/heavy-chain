@@ -196,12 +196,19 @@ function WorkbenchResultCard({
   onDeleteRun?: (result: WorkbenchResult) => void;
   isFavorite?: boolean;
 }) {
+  const surfaceBadge = result.resultKind === 'exact'
+    ? { eyebrow: 'EXACT', label: '配置そのまま', className: 'border-cyan-200/35 bg-cyan-950/85 text-cyan-50' }
+    : result.resultKind === 'fabric'
+      ? { eyebrow: 'FABRIC', label: '布になじませる', className: 'border-fuchsia-200/35 bg-fuchsia-950/85 text-fuchsia-50' }
+      : result.resultKind === 'surface'
+        ? { eyebrow: 'SURFACE', label: '布面追従（試験）', className: 'border-amber-200/35 bg-amber-950/85 text-amber-50' }
+        : null;
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
       <button
         type="button"
         onClick={() => onOpen(result)}
-        className="block aspect-[4/5] w-full cursor-zoom-in bg-neutral-900 text-left transition hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-primary-400/60"
+        className="relative block aspect-[4/5] w-full cursor-zoom-in bg-neutral-900 text-left transition hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-primary-400/60"
         aria-label={`${result.title} を拡大`}
       >
         <img
@@ -210,6 +217,15 @@ function WorkbenchResultCard({
           className="h-full w-full object-contain"
           draggable={false}
         />
+        {surfaceBadge && (
+          <span
+            data-testid={`print-result-mode-${result.resultKind}`}
+            className={`absolute left-3 top-3 rounded-xl border px-3 py-2 shadow-lg backdrop-blur-md ${surfaceBadge.className}`}
+          >
+            <span className="block text-[10px] font-bold tracking-[0.18em]">{surfaceBadge.eyebrow}</span>
+            <span className="mt-0.5 block text-xs font-semibold">{surfaceBadge.label}</span>
+          </span>
+        )}
       </button>
       <div className="min-h-[9rem] space-y-2 p-4">
         <div>
