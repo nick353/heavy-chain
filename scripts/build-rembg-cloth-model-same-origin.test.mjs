@@ -123,10 +123,10 @@ test('official download staging rejects an unexpected redirect host', async () =
   await fs.rm(directory, { recursive: true, force: true });
 });
 
-test('Zeabur deploy is wired to the same-origin build and the large asset is ignored', async () => {
+test('Zeabur deploy uses the pinned external host while the same-origin fallback and ignore remain', async () => {
   const packageJson = JSON.parse(await fs.readFile('package.json', 'utf8'));
   const zeabur = JSON.parse(await fs.readFile('zeabur.json', 'utf8'));
-  assert.equal(packageJson.scripts['build:deploy'], 'npm run build:rembg-cloth-model-same-origin');
+  assert.equal(packageJson.scripts['build:deploy'], 'node scripts/build-rembg-cloth-model-external-host.mjs');
   assert.equal(
     packageJson.scripts['build:rembg-cloth-model-same-origin'],
     'node scripts/build-rembg-cloth-model-same-origin.mjs',

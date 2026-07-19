@@ -1,6 +1,12 @@
 export const SAME_ORIGIN_CLOTH_MODEL_URL = '/models/u2net_cloth_seg.onnx';
 export const OFFICIAL_CLOTH_MODEL_SOURCE_URL =
   'https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net_cloth_seg.onnx';
+export const PINNED_EXTERNAL_CLOTH_MODEL_URL =
+  'https://huggingface.co/chwshuang/Stable_diffusion_remove_background_model/resolve/197561dc207c9b23e2739fb81645ef21b4e37d10/u2net_cloth_seg.onnx';
+export const PINNED_EXTERNAL_CLOTH_MODEL_REVISION = '197561dc207c9b23e2739fb81645ef21b4e37d10';
+export const PINNED_EXTERNAL_CLOTH_MODEL_BYTES = 176194565;
+export const PINNED_EXTERNAL_CLOTH_MODEL_SHA256 =
+  '6d2cbc27bfbdc989e1fd325656d65902ecc6a3ccbe94b2d3655ec114efcb128e';
 
 export const validateClothModelBuildUrl = (value) => {
   const normalized = String(value || '').trim();

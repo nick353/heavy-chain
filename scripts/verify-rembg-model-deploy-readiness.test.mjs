@@ -35,6 +35,10 @@ test('default readiness preserves the unconfigured cloth fallback', () => {
     result.summary.checks.find(({ name }) => name === 'cloth_model_asset_is_effectively_gitignored')?.ok,
     true,
   );
+  assert.equal(
+    result.summary.checks.find(({ name }) => name === 'runtime_cloth_model_integrity_uses_official_pinned_sha256')?.ok,
+    true,
+  );
 });
 
 test('default readiness rejects a configured invalid cloth URL', () => {

@@ -133,6 +133,15 @@ add('source_supports_explicit_cloth_model_url', (
 ), {
   file: 'src/lib/workspaceMaterialReferences.ts',
 });
+add('runtime_cloth_model_integrity_uses_official_pinned_sha256', (
+  source.includes("setModelHash('u2net_cloth_seg', REMBG_CLOTH_SEG_MODEL_SHA256)")
+  && source.includes(`REMBG_CLOTH_SEG_MODEL_SHA256 = '${OFFICIAL_CLOTH_MODEL.sha256}'`)
+  && source.includes('bypassModelCache: true')
+), {
+  file: 'src/lib/workspaceMaterialReferences.ts',
+  expectedSha256: OFFICIAL_CLOTH_MODEL.sha256,
+  cachePolicy: 'cloth_session_only_bypass',
+});
 add('cloth_model_url_is_optional_in_deployment_contract', (
   envExample.includes('VITE_REMBG_CLOTH_SEG_MODEL_URL')
   && prodEnvExample.includes('VITE_REMBG_CLOTH_SEG_MODEL_URL')

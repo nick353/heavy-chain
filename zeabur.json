@@ -28,7 +28,7 @@
       "required": false
     },
     "VITE_REMBG_CLOTH_SEG_MODEL_URL": {
-      "description": "Optional external-host override for manual builds. The default build:deploy stages the pinned model at same-origin /models/u2net_cloth_seg.onnx.",
+      "description": "Optional override for manual builds. The default build:deploy embeds a revision-pinned, CORS-enabled Hugging Face model URL after HEAD identity verification.",
       "required": false
     },
     "VITE_STRIPE_PUBLISHABLE_KEY": {

@@ -140,7 +140,7 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 # 任意: 既定では同一originの /models/silueta.onnx を使います
 # VITE_REMBG_MODEL_BASE_URL=https://your-cors-enabled-model-host.example.com/models
 # VITE_REMBG_SILUETA_MODEL_URL=https://your-cors-enabled-model-host.example.com/models/silueta.onnx
-# 任意: 外部host方式のoverride。Zeaburのbuild:deployは同一originへ固定モデルをstageします
+# 任意: 手動build用override。Zeaburのbuild:deployはrevision固定の外部model URLを埋め込みます
 # VITE_REMBG_CLOTH_SEG_MODEL_URL=https://your-cors-enabled-model-host.example.com/models/u2net_cloth_seg.onnx
 
 # Stripe (将来用)
@@ -179,18 +179,18 @@ supabase functions deploy upscale
 - `VITE_REMBG_MODEL_BASE_URL` - 任意のモデル配信元override。silueta以外のモデルで使います。
 - `VITE_REMBG_SILUETA_MODEL_URL` - 任意。未設定時は同梱の `/models/silueta.onnx` を同一originから読み込みます。
 - `VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL` - 任意。管理下CDNに置いたISNetモデルを明示利用する場合だけ設定します。Hugging Face直取得にはfallbackしません。
-- `VITE_REMBG_CLOTH_SEG_MODEL_URL` - 任意の外部host override。管理下のHTTPS/CORS対応ホストを使う場合だけ指定します。Zeaburの既定`build:deploy`は公式配布物を固定SHA-256で検証して、同一originの`/models/u2net_cloth_seg.onnx`へbuild時だけstageします。通常の`npm run build`では未設定なら既存のsilueta/手動マスクへ安全に戻ります。
+- `VITE_REMBG_CLOTH_SEG_MODEL_URL` - 任意の手動build用外部host override。Zeaburの既定`build:deploy`はrevision固定のHugging Face URLを検証して直接埋め込みます。通常の`npm run build`では未設定なら既存のsilueta/手動マスクへ安全に戻ります。
 
-Zeaburの既定buildは、公式rembg配布物をbuild時に取得し、176,194,565 bytesと固定SHA-256を照合してから、同一origin用の静的assetとしてVite buildへ入れます。`public/models/u2net_cloth_seg.onnx`はGit ignoreのままで、成功・失敗のどちらでもbuild後に削除されます。`dist/models/u2net_cloth_seg.onnx`の実寸とSHA-256まで一致しないbuildは失敗します。
+Zeaburの既定buildは、176MBのML modelを静的deploy artifactへ同梱しません。[Zeaburのlarge-file guidance](https://zeabur.com/docs/en-US/deploy/large-files)に沿って、revision固定のHugging Face URLをHEADし、許可host内のredirect、最終CDNの`Access-Control-Allow-Origin: *`、176,194,565 bytes、`x-linked-etag`の固定SHA-256を照合してから、その完全URLをVite buildへ埋め込みます。これによりZeabur上の`/models/u2net_cloth_seg.onnx`配信容量に依存せず、外部object storage/CDNからbrowserへ配信します。
 
 ```bash
 npm run build:deploy
 ```
 
-既に検証済みのlocal copyがある場合だけ、downloadの代わりにserver-onlyなbuild入力を指定できます。このpathはproofやfrontend bundleへ保存されません。
+既に検証済みのlocal copyを同一origin fallbackでbuildする場合だけ、server-onlyなbuild入力を指定できます。このpathはproofやfrontend bundleへ保存されません。
 
 ```bash
-REMBG_CLOTH_MODEL_SOURCE_FILE=/absolute/path/u2net_cloth_seg.onnx npm run build:deploy
+REMBG_CLOTH_MODEL_SOURCE_FILE=/absolute/path/u2net_cloth_seg.onnx npm run build:rembg-cloth-model-same-origin
 ```
 
 管理下の外部CORS host方式もfallbackとして保持します。同じ環境変数を保持した一つのコマンドでhost検証・build・生成物readbackまで行います。
@@ -201,7 +201,7 @@ VITE_REMBG_CLOTH_SEG_MODEL_URL=https://your-cors-enabled-model-host.example.com/
 
 `build:rembg-cloth-model` は最初に公開hostを全量GETし、public DNS、redirectなし、HTTP 200、Heavy Chain origin向けCORS、実寸、固定SHA-256を検証します。検証proofは `output/rembg-cloth-model-host.json` へ毎回作り直され、同じ環境変数のURLをbuildしてdist readbackまで続けます。
 
-`build:deploy` / `build:rembg-cloth-model-same-origin` はruntime CORSを不要にする同一origin経路です。build sourceは固定の公式GitHub release URL（または上記local build input）に限定され、browser用URLは常に`/models/u2net_cloth_seg.onnx`です。
+`build:deploy`は固定URL `https://huggingface.co/chwshuang/Stable_diffusion_remove_background_model/resolve/197561dc207c9b23e2739fb81645ef21b4e37d10/u2net_cloth_seg.onnx` を検証・埋め込みします。`build:rembg-cloth-model-same-origin`は既存fallbackで、固定の公式GitHub release（または上記local build input）を`/models/u2net_cloth_seg.onnx`へstageします。
 
 公式`u2net_cloth_seg.onnx`（176,194,565 bytes）のSHA-256は `6d2cbc27bfbdc989e1fd325656d65902ecc6a3ccbe94b2d3655ec114efcb128e` です。管理下ホストへ配置した実体をこのdigestと照合し、CORS readbackと実ブラウザ推論を別途確認してください。
 

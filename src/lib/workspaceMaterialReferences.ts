@@ -18,7 +18,7 @@ import {
   type PrintableSurfaceAdapterFallbackReason,
 } from '../features/printing/surface/printableSurfaceSuggestionAdapter';
 
-import { newSession, remove, rembgConfig } from '@bunnio/rembg-web';
+import { newSession, remove, rembgConfig, setModelHash } from '@bunnio/rembg-web';
 import {
   applyFabricLuminanceModulation,
   assemblePrintGarmentMaskCandidates,
@@ -1552,6 +1552,7 @@ const rembgClothSegModelUrl = String(
   import.meta.env.VITE_REMBG_CLOTH_SEG_MODEL_URL
   || '',
 ).trim();
+const REMBG_CLOTH_SEG_MODEL_SHA256 = '6d2cbc27bfbdc989e1fd325656d65902ecc6a3ccbe94b2d3655ec114efcb128e';
 
 type RembgCutoutModel =
   | GarmentCutoutModel
@@ -1570,6 +1571,10 @@ const configureRembgModelPath = (modelName: RembgCutoutModel) => {
     rembgConfig.setCustomModelPath('isnet-general-use', rembgIsnetGeneralUseModelUrl);
   }
   if (modelName === 'u2net_cloth_seg' && rembgClothSegModelUrl) {
+    // rembg-web 1.0.2 ships a placeholder hash and validates with the
+    // extensionless session model name. Keep validation enabled and align that
+    // exact key with the official asset pinned by the deploy pipeline.
+    setModelHash('u2net_cloth_seg', REMBG_CLOTH_SEG_MODEL_SHA256);
     rembgConfig.setCustomModelPath('u2net_cloth_seg', rembgClothSegModelUrl);
   }
 };
@@ -1580,6 +1585,10 @@ const clothModelWarmupController = createClothModelWarmupController({
     return newSession('u2net_cloth_seg', undefined, {
       numThreads: 1,
       executionProviders: ['wasm'],
+      // rembg-web returns IndexedDB entries before validateModel(). Until the
+      // dependency validates cache hits, only this cloth session must fetch and
+      // validate the revision-pinned model instead of trusting legacy bytes.
+      bypassModelCache: true,
       onProgress,
     });
   },
