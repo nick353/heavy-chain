@@ -40,7 +40,12 @@ test('Patterns result cards expose a guarded print handoff and the printing page
   assert.match(generateSource, /image\.imageUrl\.startsWith\('https:\/\/'\)/);
   assert.match(generateSource, /data-testid="design-gacha-use-in-print"/);
   assert.equal((generateSource.match(/data-testid="design-gacha-use-in-print"/g) || []).length, 1);
-  assert.match(generateSource, /relative z-20 border-t border-cyan-200\/20/);
+  assert.match(generateSource, /relative z-30 border-t border-cyan-200\/20/);
+  assert.match(generateSource, /type="button"\s*onClick=\{\(event\) => \{\s*event\.stopPropagation\(\);\s*handleUseDesignGachaResultInPrinting\(image\)/);
+  assert.match(generateSource, /if \(!prepareDesignGachaResultForPrinting\(image\)\) return;\s*navigate\('\/lightchain\/printing-image\?handoff=patterns'\)/);
+  assert.match(generateSource, /pointer-events-none absolute inset-0 z-10/);
+  assert.match(generateSource, /pointer-events-auto absolute bottom-0/);
+  assert.doesNotMatch(generateSource, /to="\/lightchain\/printing-image\?handoff=patterns"/);
   assert.match(generateSource, /writePrintDesignHandoff\(window\.sessionStorage/);
   assert.match(printSource, /consumePrintDesignHandoff\(window\.sessionStorage, currentBrand\.id\)/);
   assert.match(printSource, /referenceType: 'pattern'/);

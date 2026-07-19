@@ -327,6 +327,7 @@ export const applyFabricLuminanceModulation = ({
     if (output[index + 3] === 0) continue;
     const luminance = (0.2126 * garmentRgba[index]) + (0.7152 * garmentRgba[index + 1]) + (0.0722 * garmentRgba[index + 2]);
     let foldContrast = 0;
+    let drapeContrast = 0;
     if (hasGrid) {
       const pixel = index / 4;
       const x = pixel % (width as number);
@@ -353,6 +354,19 @@ export const applyFabricLuminanceModulation = ({
       if (neighbourWeight > 0) {
         foldContrast = Math.max(-1, Math.min(1, (luminance - (neighbourSum / neighbourWeight)) / 48));
       }
+      // A plain studio garment can be nearly uniform at source resolution,
+      // leaving no photographed folds for a thin artwork line to inherit.
+      // Add a deterministic, low-frequency drape response in normalized stage
+      // coordinates only where measured local contrast is weak. This changes
+      // RGB tone, never artwork alpha or placement geometry, and therefore
+      // remains resolution-independent at both 1x and 2x export sizes.
+      const normalizedX = (x + 0.5) / (width as number);
+      const normalizedY = (y + 0.5) / (height as number);
+      const broadVerticalFold = Math.sin(2 * Math.PI * ((normalizedX * 2.25) + (normalizedY * 0.22)));
+      const diagonalDrape = Math.sin((2 * Math.PI * ((normalizedX * 0.75) - (normalizedY * 1.4))) + 0.9);
+      const syntheticDrape = (broadVerticalFold * 0.68) + (diagonalDrape * 0.32);
+      const syntheticWeight = Math.max(0.25, 1 - (Math.abs(foldContrast) * 2.5));
+      drapeContrast = syntheticDrape * syntheticWeight;
     }
     // Carry enough of the garment luminance into even very dark artwork for
     // folds to remain visible. A pure multiply leaves black designs unchanged,
@@ -363,8 +377,13 @@ export const applyFabricLuminanceModulation = ({
     // lighting and local folds into saturated artwork, and the additive carry
     // lets those folds remain visible in black ink without changing alpha or
     // geometry. Exact mode deliberately bypasses this path.
-    const factor = Math.min(1.18, Math.max(0.62, 0.62 + (normalizedLuminance * 0.42) + (foldContrast * 0.16)));
-    const fabricHighlight = (normalizedLuminance * 34) + (Math.max(0, foldContrast) * 12);
+    const factor = Math.min(1.2, Math.max(
+      0.58,
+      0.62 + (normalizedLuminance * 0.42) + (foldContrast * 0.16) + (drapeContrast * 0.2),
+    ));
+    const fabricHighlight = (normalizedLuminance * 34)
+      + (Math.max(0, foldContrast) * 12)
+      + (drapeContrast * 24);
     output[index] = modulateChannel(output[index], factor, fabricHighlight);
     output[index + 1] = modulateChannel(output[index + 1], factor, fabricHighlight);
     output[index + 2] = modulateChannel(output[index + 2], factor, fabricHighlight);

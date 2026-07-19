@@ -2746,7 +2746,7 @@ export function GeneratePage() {
     navigate('/canvas/new?handoff=generated');
   };
 
-  const handleSendDesignGachaResultToPrinting = (image: GeneratedResult) => {
+  const prepareDesignGachaResultForPrinting = (image: GeneratedResult) => {
     const result = writePrintDesignHandoff(window.sessionStorage, {
       brandId: currentBrand?.id || '',
       resultProvenance: image.printDesignProvenance,
@@ -2761,8 +2761,13 @@ export function GeneratePage() {
     });
     if (!result.ok) {
       toast.error('この結果はプリント素材として引き継げません。Patternsで生成した保存済み画像を選んでください。');
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const handleUseDesignGachaResultInPrinting = (image: GeneratedResult) => {
+    if (!prepareDesignGachaResultForPrinting(image)) return;
     navigate('/lightchain/printing-image?handoff=patterns');
   };
 
@@ -4918,9 +4923,13 @@ export function GeneratePage() {
                       </div>
                     )}
                     {isPrintEligibleDesignGachaResult(image) && (
-                      <div className="relative z-20 border-t border-cyan-200/20 bg-cyan-950/90 p-3">
+                      <div className="relative z-30 border-t border-cyan-200/20 bg-cyan-950/90 p-3">
                         <button
-                          onClick={() => handleSendDesignGachaResultToPrinting(image)}
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleUseDesignGachaResultInPrinting(image);
+                          }}
                           className="flex w-full items-center justify-center gap-2 rounded-lg border border-cyan-400/50 bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-cyan-500"
                           data-testid="design-gacha-use-in-print"
                         >
@@ -4929,8 +4938,8 @@ export function GeneratePage() {
                         </button>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                    <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <div className="pointer-events-auto absolute bottom-0 left-0 right-0 p-4 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
                         <p className="text-white text-sm line-clamp-2 mb-3 opacity-90">
                           {image.prompt}
                         </p>

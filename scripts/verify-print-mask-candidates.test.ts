@@ -423,6 +423,83 @@ test('fabric modulation reveals garment shading through black artwork', () => {
   assert.equal(output[7], 255);
 });
 
+test('fabric modulation keeps sparse black line geometry while making cloth shading visible', () => {
+  const design = new Uint8ClampedArray([
+    77, 66, 55, 0,
+    0, 0, 0, 255,
+    0, 0, 0, 255,
+    0, 0, 0, 255,
+    33, 44, 55, 0,
+  ]);
+  const garment = new Uint8ClampedArray([
+    32, 32, 32, 255,
+    48, 48, 48, 255,
+    128, 128, 128, 255,
+    224, 224, 224, 255,
+    240, 240, 240, 255,
+  ]);
+  const output = applyFabricLuminanceModulation({
+    designRgba: design,
+    garmentRgba: garment,
+    width: 5,
+    height: 1,
+  });
+
+  assert.deepEqual([output[3], output[7], output[11], output[15], output[19]], [0, 255, 255, 255, 0]);
+  assert.deepEqual([...output.slice(0, 3)], [77, 66, 55]);
+  assert.deepEqual([...output.slice(16, 19)], [33, 44, 55]);
+  assert.ok(output[4] < output[8] && output[8] < output[12]);
+  assert.ok(output[12] - output[4] >= 24, 'a sparse black line must visibly carry the garment light gradient');
+  for (const offset of [4, 8, 12]) {
+    assert.deepEqual([...output.slice(offset, offset + 3)], [output[offset], output[offset], output[offset]]);
+    assert.ok(output[offset] <= 48);
+  }
+});
+
+test('fabric modulation adds scale-stable dark and light drape points along sparse artwork on a uniform garment', () => {
+  const renderSparseLine = (scale: number) => {
+    const width = 180 * scale;
+    const height = 225 * scale;
+    const lineY = Math.floor(height * 0.5);
+    const design = new Uint8ClampedArray(width * height * 4);
+    const garment = new Uint8ClampedArray(width * height * 4);
+    for (let pixel = 0; pixel < width * height; pixel += 1) {
+      const offset = pixel * 4;
+      design.set([19, 29, 39, 0], offset);
+      garment.set([224, 224, 224, 255], offset);
+    }
+    for (let x = Math.floor(width * 0.05); x < Math.floor(width * 0.95); x += 1) {
+      design.set([64, 64, 64, 255], ((lineY * width) + x) * 4);
+    }
+    const output = applyFabricLuminanceModulation({ designRgba: design, garmentRgba: garment, width, height });
+    for (let pixel = 0; pixel < width * height; pixel += 1) {
+      const offset = pixel * 4;
+      assert.equal(output[offset + 3], design[offset + 3]);
+      if (design[offset + 3] === 0) {
+        assert.equal(output[offset], 19);
+        assert.equal(output[offset + 1], 29);
+        assert.equal(output[offset + 2], 39);
+      } else {
+        for (let channel = 0; channel < 3; channel += 1) {
+          assert.ok(Math.abs(output[offset + channel] - design[offset + channel]) <= 48);
+        }
+      }
+    }
+    return [0.11, 0.28, 0.5, 0.67, 0.89].map((normalizedX) => {
+      const offset = ((lineY * width) + Math.floor(width * normalizedX)) * 4;
+      return output[offset] - design[offset];
+    });
+  };
+
+  const oneX = renderSparseLine(1);
+  const twoX = renderSparseLine(2);
+  assert.ok(oneX[0] >= 40 && oneX[2] >= 40 && oneX[4] >= 40, 'sparse line needs multiple visible highlights');
+  assert.ok(oneX[1] <= -4, 'sparse line needs a visible shadow, not a uniform brightness shift');
+  assert.ok(oneX.some((delta) => delta < 0) && oneX.some((delta) => delta > 0));
+  assert.deepEqual(oneX.map(Math.sign), twoX.map(Math.sign));
+  oneX.forEach((delta, index) => assert.ok(Math.abs(delta - twoX[index]) <= 2));
+});
+
 test('fabric modulation produces a visible bounded difference from exact on a plain light garment', () => {
   const design = new Uint8ClampedArray([
     16, 24, 32, 255,
