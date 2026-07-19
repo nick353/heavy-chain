@@ -65,16 +65,18 @@ test('producer sanitizer tags only a validated Patterns-origin design-gacha inte
     sourceWorkspace: 'patterns',
     workflowVersion: 'pattern-preview-local-v1',
     sourceLabel: '柄・グラフィック',
-    sourceResumePath: '/patterns',
+    sourceResumePath: '/patterns/workbench',
     sourceMode: 'local-workflow-intake',
     generationIntent: { feature: 'design-gacha' },
   };
   assert.deepEqual(sanitizePrintDesignAssetPurpose(valid), { assetPurpose: 'print-design' });
   assert.equal(sanitizePrintDesignAssetPurpose({ ...valid, sourceWorkspace: 'studio' }), null);
   assert.equal(sanitizePrintDesignAssetPurpose({ ...valid, workflowVersion: 'unknown' }), null);
+  assert.equal(sanitizePrintDesignAssetPurpose({ ...valid, sourceResumePath: '/patterns' }), null);
   assert.equal(sanitizePrintDesignAssetPurpose({ ...valid, generationIntent: { feature: 'prompt-edit' } }), null);
   assert.match(designGacha, /sanitizePrintDesignAssetPurpose\(requestSourceMetadata\)/);
   assert.match(designGacha, /sanitizePrintDesignAssetPurpose\(finalSourceMetadata\)/);
+  assert.match(designGacha, /patterns: \{ label: '柄・グラフィック', resumePath: '\/patterns\/workbench'/);
   assert.doesNotMatch(designGacha, /assetPurpose:\s*['"]print-design['"]/);
 });
 

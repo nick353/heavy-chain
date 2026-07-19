@@ -11,7 +11,7 @@ export const sanitizePrintDesignAssetPurpose = (sourceMetadata: unknown) => {
   if (sourceMetadata.sourceWorkspace !== 'patterns') return null;
   if (sourceMetadata.workflowVersion !== 'pattern-preview-local-v1') return null;
   if (sourceMetadata.sourceLabel !== '柄・グラフィック') return null;
-  if (sourceMetadata.sourceResumePath !== '/patterns') return null;
+  if (sourceMetadata.sourceResumePath !== '/patterns/workbench') return null;
   if (sourceMetadata.sourceMode !== 'local-workflow-intake') return null;
 
   const generationIntent = sourceMetadata.generationIntent;

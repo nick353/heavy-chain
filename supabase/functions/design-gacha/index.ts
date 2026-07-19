@@ -29,7 +29,7 @@ const DESIGN_DIRECTIONS = [
 const SOURCE_CONFIG = {
   studio: { label: 'Fashion Studio', resumePath: '/studio', versions: ['studio-selection-local-v1'] },
   models: { label: 'モデルライブラリ', resumePath: '/models', versions: ['model-library-local-v1'] },
-  patterns: { label: '柄・グラフィック', resumePath: '/patterns', versions: ['pattern-preview-local-v1'] },
+  patterns: { label: '柄・グラフィック', resumePath: '/patterns/workbench', versions: ['pattern-preview-local-v1'] },
   video: { label: 'Video Workstation', resumePath: '/video', versions: ['video-storyboard-local-v1'] },
   lab: { label: 'Lab', resumePath: '/lab', versions: ['lab-evaluation-local-v1'] },
 } as const;
