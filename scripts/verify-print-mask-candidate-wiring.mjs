@@ -226,9 +226,11 @@ const checks = {
     && stage.includes('const hasConfirmedGarmentMask = hasRenderableGarment && garmentMaskConfirmed')
     && stage.includes('{hasConfirmedGarmentMask ? ('),
   tap_preview_requires_explicit_confirmation: garmentSelectionEditor.includes('決定')
-    && garmentSelectionEditor.includes('青色の範囲が今回のタップから作った確認用プレビューです')
+    && garmentSelectionEditor.includes('青色の塗りつぶしが今回のタップ認識範囲です')
+    && garmentSelectionEditor.includes('青色の塗りつぶしがタップ位置から作った矩形候補です')
+    && garmentSelectionEditor.includes("guidedResult.source === 'tap-neighborhood' ? 'この候補で決定' : '決定'")
     && garmentSelectionEditor.includes('canSubmitGarmentSelectionPreview({')
-    && garmentSelectionEditor.includes("selectionSource === 'tap' && guidedResult?.mask ? '決定' : '服をタップしてください'")
+    && garmentSelectionEditor.includes("guidedResult.source === 'color-region'")
     && garmentSelectionEditor.includes("context.globalCompositeOperation = 'destination-in'")
     && garmentSelectionEditor.includes('closePreviewMask(guidedResult.mask)')
     && !garmentSelectionEditor.includes('shouldAutoApplyPointGuidedSelection(proposal)'),

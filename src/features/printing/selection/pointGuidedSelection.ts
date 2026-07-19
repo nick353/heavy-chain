@@ -15,8 +15,9 @@ export type PointGuidedSelection = {
   selectedPixels: number;
   touchesFrame: boolean;
   /**
-   * A low-resolution bounded alpha mask. It is shown as the blue preview and
-   * is applied to the exported PNG only after explicit user confirmation.
+   * A bounded alpha mask shown as the blue confirmation preview. Only a
+   * color-region mask is applied to the exported PNG; a tap-neighborhood mask
+   * remains a low-confidence preview/gate for the existing cutout flow.
    */
   mask?: {
     width: number;
@@ -507,21 +508,28 @@ const fallbackSelection = ({ width, height, point }: Pick<PointGuidedSelectionIn
   // Keep the low-confidence fallback focused on the tapped garment area. A
   // large centered crop tends to reintroduce the model's head/hands and makes
   // the following segmentation look like a person cutout instead of clothing.
-  const selectionWidth = Math.max(MIN_SELECTION_EDGE, width * 0.58);
+  const selectionWidth = Math.min(width, Math.max(MIN_SELECTION_EDGE, Math.round(width * 0.58)));
   // A failed flood often means the photo has a textured background. Keep the
   // fallback narrow and torso-biased so the next AI pass does not receive a
   // head-and-hands person crop while still leaving context around the tap.
-  const selectionHeight = Math.max(MIN_SELECTION_EDGE, height * 0.36);
+  const selectionHeight = Math.min(height, Math.max(MIN_SELECTION_EDGE, Math.round(height * 0.36)));
   const centerY = clamp(point.y + selectionHeight * 0.34, selectionHeight / 2, height - selectionHeight / 2);
+  const x = Math.round(clamp(point.x - selectionWidth / 2, 0, Math.max(0, width - selectionWidth)));
+  const y = Math.round(clamp(centerY - selectionHeight / 2, 0, Math.max(0, height - selectionHeight)));
+  const mask = new Uint8Array(width * height);
+  for (let maskY = y; maskY < y + selectionHeight; maskY += 1) {
+    mask.fill(1, (maskY * width) + x, (maskY * width) + x + selectionWidth);
+  }
   return {
-    x: clamp(point.x - selectionWidth / 2, 0, Math.max(0, width - selectionWidth)),
-    y: clamp(centerY - selectionHeight / 2, 0, Math.max(0, height - selectionHeight)),
+    x,
+    y,
     width: selectionWidth,
     height: selectionHeight,
     confidence: 0.28,
     source: 'tap-neighborhood',
-    selectedPixels: 0,
+    selectedPixels: selectionWidth * selectionHeight,
     touchesFrame: false,
+    mask: { width, height, data: mask },
   };
 };
 

@@ -20,12 +20,15 @@ test('crop frame and all eight resize handles are range-mode only', () => {
   );
 });
 
-test('tap confirmation is concise while pre-tap and range actions stay explicit', () => {
+test('tap confirmation distinguishes low-confidence neighborhood candidates from recognized masks', () => {
   assert.match(
     editor,
-    /selectionMode === 'tap'\s*\? selectionSource === 'tap' && guidedResult\?\.mask \? '\u6c7a定' : '\u670dをタップしてください'\s*: '\u9078択範囲をAIマスクへ渡す'/,
+    /guidedResult\.source === 'tap-neighborhood' \? 'この候補で決定' : '決定'/,
   );
-  assert.doesNotMatch(editor, /このマスクで確定/);
+  assert.match(editor, /guidedResult\.source === 'tap-neighborhood' \? '低信頼候補' : 'タップ認識済み'/);
+  assert.match(editor, /タップ位置から作った矩形候補です。内容を確認してから「この候補で決定」を押してください。/);
+  assert.match(editor, /guidedResult\.source === 'tap-neighborhood'[\s\S]*?低信頼候補です。タップ位置から作った矩形候補を確認してください。信頼度:/);
+  assert.match(editor, /: '服をタップしてください'\s*: '選択範囲をAIマスクへ渡す'/);
 });
 
 test('confirmation remains policy-gated and tap recognition does not auto-apply', () => {
@@ -38,6 +41,17 @@ test('confirmation remains policy-gated and tap recognition does not auto-apply'
   );
   assert.ok(recognizeTap.length > 0);
   assert.doesNotMatch(recognizeTap, /\b(?:apply|exportSelection|onApply)\s*\(/);
+});
+
+test('low-confidence neighborhood mask is preview-only and is not exported as a final transparent rectangle', () => {
+  assert.match(
+    editor,
+    /selectionSource === 'tap' && guidedResult\?\.mask && guidedResult\.source === 'color-region'/,
+  );
+  assert.doesNotMatch(
+    editor,
+    /if \(selectionSource === 'tap' && guidedResult\?\.mask\) \{/,
+  );
 });
 
 test('switching from range to tap invalidates the old range submission', () => {

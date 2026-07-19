@@ -470,7 +470,7 @@ export function PrintGarmentSelectionEditor({
     context.imageSmoothingQuality = 'high';
     context.drawImage(image, contextX, contextY, contextWidth, contextHeight, 0, 0, output.width, output.height);
 
-    if (selectionSource === 'tap' && guidedResult?.mask) {
+    if (selectionSource === 'tap' && guidedResult?.mask && guidedResult.source === 'color-region') {
       // The preview and the confirmed PNG must use the same closed mask. The
       // mask is low-resolution by design, so sample it in the original-image
       // coordinate system while preserving the surrounding AI context crop.
@@ -665,7 +665,9 @@ export function PrintGarmentSelectionEditor({
             data-testid="garment-mask-confirm"
           >
             {selectionMode === 'tap'
-              ? selectionSource === 'tap' && guidedResult?.mask ? '決定' : '服をタップしてください'
+              ? selectionSource === 'tap' && guidedResult?.mask
+                ? guidedResult.source === 'tap-neighborhood' ? 'この候補で決定' : '決定'
+                : '服をタップしてください'
               : '選択範囲をAIマスクへ渡す'}
           </Button>
         </div>
@@ -781,7 +783,9 @@ export function PrintGarmentSelectionEditor({
                 </p>
               </div>
               <span className="rounded-full border border-cyan-200/25 bg-cyan-300/10 px-2 py-1 text-[10px] font-semibold text-cyan-100">
-                {selectionSource === 'tap' && guidedResult?.mask ? 'タップ認識済み' : '確定前'}
+                {selectionSource === 'tap' && guidedResult?.mask
+                  ? guidedResult.source === 'tap-neighborhood' ? '低信頼候補' : 'タップ認識済み'
+                  : '確定前'}
               </span>
             </div>
             <div className="flex min-h-32 items-center justify-center overflow-auto rounded-lg border border-blue-300/20 bg-neutral-950/70 p-2">
@@ -823,7 +827,9 @@ export function PrintGarmentSelectionEditor({
             )}
             {selectionSource === 'tap' && guidedResult?.mask && (
               <p className="mt-2 text-[11px] leading-relaxed text-cyan-100/75" data-testid="garment-mask-preview-note">
-                このプレビューを確認してから「決定」を押してください。確定後も既存のAI切り抜き・手動fallbackを保持します。
+                {guidedResult.source === 'tap-neighborhood'
+                  ? 'タップ位置から作った矩形候補です。内容を確認してから「この候補で決定」を押してください。'
+                  : 'このプレビューを確認してから「決定」を押してください。確定後も既存のAI切り抜き・手動fallbackを保持します。'}
               </p>
             )}
           </aside>
@@ -832,7 +838,9 @@ export function PrintGarmentSelectionEditor({
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-400/30 bg-blue-950/35 px-3 py-2 text-xs text-blue-50" role="status" data-testid="garment-mask-confirmation">
             <span className="inline-flex items-center gap-2">
               <span aria-hidden="true" className="h-3 w-3 rounded-sm border border-cyan-100 bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.75)]" />
-              青色の塗りつぶしが今回のタップ認識範囲です
+              {guidedResult.source === 'tap-neighborhood'
+                ? '青色の塗りつぶしがタップ位置から作った矩形候補です'
+                : '青色の塗りつぶしが今回のタップ認識範囲です'}
             </span>
             <span className="text-cyan-100/80">境界を確認してから確定</span>
           </div>
@@ -859,9 +867,9 @@ export function PrintGarmentSelectionEditor({
           {tapProcessing
             ? 'タップ位置から服を認識しています…'
             : selectionSource === 'tap' && guidedResult
-              ? guidedResult.mask
-                ? `青色マスクを確認してください。タップ認識: ${Math.round(guidedResult.confidence * 100)}% / ${Math.round(selection?.width ? selection.width / scaleRef.current : 0)} × ${Math.round(selection?.height ? selection.height / scaleRef.current : 0)}px`
-                : `低信頼の候補です。範囲を確認してから確定してください。タップ認識: ${Math.round(guidedResult.confidence * 100)}% / ${Math.round(selection?.width ? selection.width / scaleRef.current : 0)} × ${Math.round(selection?.height ? selection.height / scaleRef.current : 0)}px`
+              ? guidedResult.source === 'tap-neighborhood'
+                ? `低信頼候補です。タップ位置から作った矩形候補を確認してください。信頼度: ${Math.round(guidedResult.confidence * 100)}% / ${Math.round(selection?.width ? selection.width / scaleRef.current : 0)} × ${Math.round(selection?.height ? selection.height / scaleRef.current : 0)}px`
+                : `青色マスクを確認してください。タップ認識: ${Math.round(guidedResult.confidence * 100)}% / ${Math.round(selection?.width ? selection.width / scaleRef.current : 0)} × ${Math.round(selection?.height ? selection.height / scaleRef.current : 0)}px`
               : selectionSource === 'range' && selection
                 ? `範囲指定: ${Math.round(selection.width / scaleRef.current)} × ${Math.round(selection.height / scaleRef.current)}px`
                 : '服をタップすると、そこにある服の候補範囲を自動認識します。'}

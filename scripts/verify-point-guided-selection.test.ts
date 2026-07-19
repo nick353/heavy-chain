@@ -64,7 +64,15 @@ test('point-guided selection falls back to a bounded neighborhood when the tap m
   const data = makeImage(width, height, () => [248, 248, 248]);
   const result = buildPointGuidedSelection({ width, height, data, point: { x: 50, y: 50 } });
   assert.equal(result.source, 'tap-neighborhood');
-  assert.equal(result.selectedPixels, 0);
+  assert.ok(result.mask);
+  assert.equal(result.mask?.width, width);
+  assert.equal(result.mask?.height, height);
+  assert.equal(result.mask?.data[(result.y * width) + result.x], 1);
+  assert.equal(result.mask?.data[((result.y + result.height - 1) * width) + result.x + result.width - 1], 1);
+  assert.equal(result.mask?.data[0], 0);
+  assert.equal(result.mask?.data[(result.y * width) + result.x - 1], 0);
+  assert.equal(result.selectedPixels, result.width * result.height);
+  assert.equal(result.mask?.data.reduce((sum, pixel) => sum + pixel, 0), result.selectedPixels);
   assert.ok(result.width < width);
   assert.ok(result.height < height);
 });
