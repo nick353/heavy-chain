@@ -30,6 +30,7 @@ type SelectionInteraction =
 
 type SelectionMode = 'tap' | 'range';
 type SelectionSource = 'tap' | 'range';
+type MaskDisplayMode = 'overlay' | 'source' | 'mask-only';
 
 const MAX_CANVAS_EDGE = 1600;
 const MIN_SELECTION_EDGE = 16;
@@ -167,6 +168,7 @@ export function PrintGarmentSelectionEditor({
   const imageRef = useRef<HTMLImageElement | null>(null);
   const scaleRef = useRef(1);
   const interactionRef = useRef<SelectionInteraction | null>(null);
+  const maskDisplayModeRef = useRef<MaskDisplayMode>('overlay');
   const [selection, setSelection] = useState<SelectionRect | null>(null);
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('tap');
   const [selectionSource, setSelectionSource] = useState<SelectionSource | null>(null);
@@ -174,6 +176,7 @@ export function PrintGarmentSelectionEditor({
     DEFAULT_GARMENT_SEGMENTATION_TARGET,
   );
   const [guidedResult, setGuidedResult] = useState<PointGuidedSelection | null>(null);
+  const [maskDisplayMode, setMaskDisplayMode] = useState<MaskDisplayMode>('overlay');
   const [tapProcessing, setTapProcessing] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [ready, setReady] = useState(false);
@@ -208,59 +211,70 @@ export function PrintGarmentSelectionEditor({
       return;
     }
 
+    // "Source" is a literal before-view: no mask fill, crop shade, or
+    // selection outline. This makes comparison with the annotated modes exact.
+    if (maskDisplayModeRef.current === 'source') {
+      syncMaskPreview();
+      return;
+    }
+
     if (previewMask && previewMask.data.length === previewMask.width * previewMask.height) {
       const displayMask = closePreviewMask(previewMask);
-      const overlay = context.createImageData(canvas.width, canvas.height);
-      for (let y = 0; y < canvas.height; y += 1) {
-        const maskY = Math.min(displayMask.height - 1, Math.floor((y / canvas.height) * displayMask.height));
-        for (let x = 0; x < canvas.width; x += 1) {
-          const maskX = Math.min(displayMask.width - 1, Math.floor((x / canvas.width) * displayMask.width));
-          const isSelected = displayMask.data[(maskY * displayMask.width) + maskX] === 1;
-          const isMaskBoundary = isSelected && (
-            maskX === 0
-            || maskY === 0
-            || maskX === displayMask.width - 1
-            || maskY === displayMask.height - 1
-            || displayMask.data[(maskY * displayMask.width) + Math.max(0, maskX - 1)] !== 1
-            || displayMask.data[(maskY * displayMask.width) + Math.min(displayMask.width - 1, maskX + 1)] !== 1
-            || displayMask.data[(Math.max(0, maskY - 1) * displayMask.width) + maskX] !== 1
-            || displayMask.data[(Math.min(displayMask.height - 1, maskY + 1) * displayMask.width) + maskX] !== 1
-          );
-          const offset = ((y * canvas.width) + x) * 4;
-          if (isMaskBoundary) {
-            // The reference flow makes the recognition boundary legible at a
-            // glance. A bright cyan edge keeps the exact pixel boundary
-            // visible even when the source garment has a similar color.
-            overlay.data[offset] = 186;
-            overlay.data[offset + 1] = 239;
-            overlay.data[offset + 2] = 255;
-            overlay.data[offset + 3] = 255;
-          } else if (isSelected) {
-            // Use a stronger blue fill than the source image so the user can
-            // verify the proposed mask before the explicit confirmation.
-            overlay.data[offset] = 37;
-            overlay.data[offset + 1] = 128;
-            overlay.data[offset + 2] = 255;
-            overlay.data[offset + 3] = 224;
-          } else {
-            overlay.data[offset] = 2;
-            overlay.data[offset + 1] = 6;
-            overlay.data[offset + 2] = 23;
-            overlay.data[offset + 3] = 120;
+      const maskOnly = maskDisplayModeRef.current === 'mask-only';
+      if (maskOnly) {
+          context.fillStyle = '#030712';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+        const overlay = context.createImageData(canvas.width, canvas.height);
+        for (let y = 0; y < canvas.height; y += 1) {
+          const maskY = Math.min(displayMask.height - 1, Math.floor((y / canvas.height) * displayMask.height));
+          for (let x = 0; x < canvas.width; x += 1) {
+            const maskX = Math.min(displayMask.width - 1, Math.floor((x / canvas.width) * displayMask.width));
+            const isSelected = displayMask.data[(maskY * displayMask.width) + maskX] === 1;
+            const isMaskBoundary = isSelected && (
+              maskX === 0
+              || maskY === 0
+              || maskX === displayMask.width - 1
+              || maskY === displayMask.height - 1
+              || displayMask.data[(maskY * displayMask.width) + Math.max(0, maskX - 1)] !== 1
+              || displayMask.data[(maskY * displayMask.width) + Math.min(displayMask.width - 1, maskX + 1)] !== 1
+              || displayMask.data[(Math.max(0, maskY - 1) * displayMask.width) + maskX] !== 1
+              || displayMask.data[(Math.min(displayMask.height - 1, maskY + 1) * displayMask.width) + maskX] !== 1
+            );
+            const offset = ((y * canvas.width) + x) * 4;
+            if (isMaskBoundary) {
+              // Keep the recognition boundary fully opaque so it remains clear
+              // over both the textured source and the isolated mask view.
+              overlay.data[offset] = 103;
+              overlay.data[offset + 1] = 232;
+              overlay.data[offset + 2] = 255;
+              overlay.data[offset + 3] = 255;
+            } else if (isSelected) {
+              // The default overlay deliberately stays translucent so garment
+              // texture, prints, seams, and folds remain available for review.
+              overlay.data[offset] = 34;
+              overlay.data[offset + 1] = 211;
+              overlay.data[offset + 2] = 238;
+              overlay.data[offset + 3] = maskOnly ? 210 : 72;
+            } else {
+              overlay.data[offset] = 3;
+              overlay.data[offset + 1] = 7;
+              overlay.data[offset + 2] = 18;
+              overlay.data[offset + 3] = maskOnly ? 236 : 0;
+            }
           }
         }
-      }
-      // Draw the translucent mask over the source image instead of replacing
-      // the source pixels. This keeps the garment details readable while the
-      // selected boundary remains visibly blue.
-      const overlayCanvas = document.createElement('canvas');
-      overlayCanvas.width = canvas.width;
-      overlayCanvas.height = canvas.height;
-      const overlayContext = overlayCanvas.getContext('2d');
-      if (overlayContext) {
-        overlayContext.putImageData(overlay, 0, 0);
-        context.drawImage(overlayCanvas, 0, 0);
-      }
+        // Draw the translucent mask over the source image instead of replacing
+        // the source pixels. This keeps the garment details readable while the
+        // selected boundary remains visibly blue.
+        const overlayCanvas = document.createElement('canvas');
+        overlayCanvas.width = canvas.width;
+        overlayCanvas.height = canvas.height;
+        const overlayContext = overlayCanvas.getContext('2d');
+        if (overlayContext) {
+          overlayContext.putImageData(overlay, 0, 0);
+          context.drawImage(overlayCanvas, 0, 0);
+        }
     } else {
       context.save();
       context.fillStyle = 'rgba(0, 0, 0, 0.48)';
@@ -294,6 +308,8 @@ export function PrintGarmentSelectionEditor({
     setSelectionSource(null);
     setSegmentationTarget(DEFAULT_GARMENT_SEGMENTATION_TARGET);
     setGuidedResult(null);
+    maskDisplayModeRef.current = 'overlay';
+    setMaskDisplayMode('overlay');
     setTapProcessing(false);
     setCanvasSize({ width: 0, height: 0 });
     setError(null);
@@ -582,6 +598,12 @@ export function PrintGarmentSelectionEditor({
     }
   };
 
+  const chooseMaskDisplayMode = (nextMode: MaskDisplayMode) => {
+    maskDisplayModeRef.current = nextMode;
+    setMaskDisplayMode(nextMode);
+    render(selection, guidedResult?.mask);
+  };
+
   const apply = () => {
     const image = imageRef.current;
     const currentSelection = selection;
@@ -758,6 +780,35 @@ export function PrintGarmentSelectionEditor({
               />
               {!ready && <span className="text-xs text-white/45">画像を読み込んでいます…</span>}
             </div>
+            {selectionSource === 'tap' && guidedResult?.mask && (
+            <fieldset className="mt-3" data-testid="garment-mask-display-controls">
+              <legend className="text-[11px] font-semibold text-blue-50">プレビュー表示</legend>
+              <div className="mt-2 grid grid-cols-3 gap-1" role="radiogroup" aria-label="マスクのプレビュー表示">
+                {([
+                  { value: 'overlay', label: '重ねて表示' },
+                  { value: 'source', label: '元画像' },
+                  { value: 'mask-only', label: 'マスクのみ' },
+                ] as const).map((option) => (
+                  <label
+                    key={option.value}
+                    className={`cursor-pointer rounded-lg border px-2 py-1.5 text-center text-[10px] font-semibold transition focus-within:outline-none focus-within:ring-2 focus-within:ring-cyan-200/80 focus-within:ring-offset-2 focus-within:ring-offset-blue-950 ${maskDisplayMode === option.value
+                      ? 'border-cyan-200 bg-cyan-300/15 text-cyan-50'
+                      : 'border-white/10 bg-white/[0.04] text-white/55 hover:text-white/80'}`}
+                  >
+                    <input
+                      type="radio"
+                      name="garment-mask-display-mode"
+                      value={option.value}
+                      checked={maskDisplayMode === option.value}
+                      onChange={() => chooseMaskDisplayMode(option.value)}
+                      className="sr-only"
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            )}
             {selectionSource === 'tap' && guidedResult?.mask && (
               <p className="mt-2 text-[11px] leading-relaxed text-cyan-100/75" data-testid="garment-mask-preview-note">
                 このプレビューを確認してから「このマスクで確定」を押してください。確定後も既存のAI切り抜き・手動fallbackを保持します。

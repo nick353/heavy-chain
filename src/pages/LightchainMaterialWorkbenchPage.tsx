@@ -211,7 +211,7 @@ function WorkbenchResultCard({
           draggable={false}
         />
       </button>
-      <div className="space-y-2 p-4">
+      <div className="min-h-[9rem] space-y-2 p-4">
         <div>
           <p className="font-semibold text-white">{result.title}</p>
           <p className="mt-1 text-sm text-white/55">{result.note}</p>
@@ -277,14 +277,15 @@ function ProgressivePrintSurfaceCard({
   return (
     <div
       data-testid={`progressive-print-${label}-card`}
-      className={`flex aspect-[4/5] items-center justify-center overflow-hidden rounded-2xl border ${failed
+      className={`overflow-hidden rounded-2xl border ${failed
         ? 'border-red-300/25 bg-red-950/25'
         : 'border-cyan-300/20 bg-[linear-gradient(145deg,rgba(8,47,73,0.9),rgba(30,41,59,0.88),rgba(88,28,135,0.65))]'}`}
       role="status"
       aria-live="polite"
       aria-busy={surface.status === 'rendering'}
     >
-      <div className="max-w-[15rem] px-5 text-center">
+      <div className="flex aspect-[4/5] items-center justify-center">
+        <div className="max-w-[15rem] px-5 text-center">
         {failed ? (
           <>
             <p className="text-sm font-semibold text-red-100">{label}の生成に失敗しました</p>
@@ -299,6 +300,13 @@ function ProgressivePrintSurfaceCard({
             </div>
           </>
         )}
+        </div>
+      </div>
+      <div className="min-h-[9rem] border-t border-white/10 p-4">
+        <p className={`font-semibold ${failed ? 'text-red-100' : 'text-white'}`}>{label}</p>
+        <p className={`mt-1 text-sm ${failed ? 'text-red-100/65' : 'text-white/55'}`}>
+          {failed ? '生成を完了できませんでした。' : '結果を準備しています。'}
+        </p>
       </div>
     </div>
   );
@@ -2934,7 +2942,7 @@ export function LightchainMaterialWorkbenchPage() {
                   {printPlacementConfirmationStatus}
                 </p>
               )}
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-start">
                 <section
                   data-testid="confirmed-garment-mask-pane"
                   aria-label="服の認識範囲"
