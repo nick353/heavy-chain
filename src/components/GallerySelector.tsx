@@ -21,6 +21,7 @@ import {
   type PrintDesignAssetPurpose,
 } from '../features/printing/selection/printDesignAssetPurpose';
 import { shouldShowPrintDesignCreationCta } from '../features/printing/selection/galleryPrintDesignCta';
+import { getGalleryImageLabel } from '../features/printing/selection/galleryImageLabel';
 
 interface GallerySelectorProps {
   isOpen: boolean;
@@ -524,7 +525,12 @@ export function GallerySelector({
                 const isSelected = selectedImages.has(image.id);
                 const isImageLoaded = loadedImageIds.has(image.id);
                 const hasImageLoadFailed = failedImageIds.has(image.id);
-                const imageLabel = image.feature_type || image.prompt?.trim().slice(0, 48) || `ギャラリー画像 ${index + 1}`;
+                const imageLabel = getGalleryImageLabel({
+                  prompt: image.prompt,
+                  featureType: image.feature_type,
+                  index,
+                  isPrintDesign: assetPurpose === PRINT_DESIGN_ASSET_PURPOSE,
+                });
                 return (
                   <button
                     key={image.id}

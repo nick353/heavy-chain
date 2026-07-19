@@ -19,3 +19,27 @@ export const sanitizePrintDesignAssetPurpose = (sourceMetadata: unknown) => {
 
   return { assetPurpose: PRINT_DESIGN_ASSET_PURPOSE } as const;
 };
+
+export const buildPrintDesignAssetPrompt = ({
+  description,
+  directionPrompt,
+  hasReference,
+}: {
+  description: string;
+  directionPrompt: string;
+  hasReference: boolean;
+}) => `Create one isolated print-ready graphic asset based on this brief:
+
+${description}
+
+Style direction: ${directionPrompt}.
+
+STRICT OUTPUT CONTRACT:
+1. Output the graphic artwork only, centered and fully visible.
+2. NO CLOTHING, T-shirt, hoodie, dress, fabric product, person, mannequin, product mockup, room, or scene.
+3. Use a flat, uniform pure white (#FFFFFF) background reaching every image edge and corner so it can be removed deterministically.
+4. Keep generous white margin around the artwork; nothing may touch the image border.
+5. Use crisp print-design edges and a compact composition suitable for placement on a garment.
+6. Do not add presentation shadows, frames, labels, watermarks, or explanatory text.${hasReference
+  ? '\n7. Use the reference only as visual motif inspiration. Do not preserve or reproduce any garment or product silhouette from it.'
+  : ''}`;

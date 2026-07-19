@@ -10,7 +10,7 @@ import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 import { generateGeminiImage, geminiImageArtifact } from '../_shared/geminiImage.ts';
 import { generateOpenAiImage, openAiImageArtifact } from '../_shared/openaiImage.ts';
 import { generateMockImage, mockImageArtifact } from '../_shared/mockImage.ts';
-import { sanitizePrintDesignAssetPurpose } from '../_shared/printDesignAssetPurpose.ts';
+import { buildPrintDesignAssetPrompt, sanitizePrintDesignAssetPurpose } from '../_shared/printDesignAssetPurpose.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -518,7 +518,13 @@ serve(async (req) => {
     }
 
     failedStage = 'generation'
-    const productionPrompt = `Generate a high-quality professional fashion/apparel image: ${optimizedPrompt}. Style: Professional fashion photography, studio lighting, high resolution, commercial quality.`
+    const productionPrompt = printDesignPurpose
+      ? buildPrintDesignAssetPrompt({
+        description: optimizedPrompt,
+        directionPrompt: 'high-quality commercial print graphic',
+        hasReference: false,
+      })
+      : `Generate a high-quality professional fashion/apparel image: ${optimizedPrompt}. Style: Professional fashion photography, studio lighting, high resolution, commercial quality.`
     const generatedResult = selectedProvider === 'runway'
       ? await generateRunwayImage({
         brandId,

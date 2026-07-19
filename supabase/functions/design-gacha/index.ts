@@ -8,7 +8,7 @@ import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
-import { sanitizePrintDesignAssetPurpose } from '../_shared/printDesignAssetPurpose.ts';
+import { buildPrintDesignAssetPrompt, sanitizePrintDesignAssetPurpose } from '../_shared/printDesignAssetPurpose.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -249,6 +249,33 @@ async function generateFromText(
   return await generateRunwayImage({ brandId, prompt: fullPrompt });
 }
 
+async function generatePrintDesignAsset({
+  brandId,
+  description,
+  direction,
+  referenceBase64,
+  referenceMimeType,
+}: {
+  brandId: string;
+  description: string;
+  direction: typeof DESIGN_DIRECTIONS[0];
+  referenceBase64?: string | null;
+  referenceMimeType?: string;
+}): Promise<RunwayImageResult | null> {
+  const prompt = buildPrintDesignAssetPrompt({
+    description,
+    directionPrompt: direction.prompt,
+    hasReference: Boolean(referenceBase64),
+  });
+  return await generateRunwayImage({
+    brandId,
+    prompt,
+    ...(referenceBase64
+      ? { referenceImages: [runwayReferenceImage(referenceBase64, referenceMimeType || 'image/jpeg', 'style')] }
+      : {}),
+  });
+}
+
 serve(async (req) => {
   let usageReservation: UsageReservation | null = null;
   let observedBrandId: string | null = null;
@@ -427,8 +454,16 @@ serve(async (req) => {
     for (const direction of selectedDirections) {
       let generatedImage: RunwayImageResult | null = null;
 
+      if (finalPrintDesignPurpose) {
+        generatedImage = await generatePrintDesignAsset({
+          brandId,
+          description: productDescription,
+          direction,
+          referenceBase64: originalImageBase64,
+          referenceMimeType: originalMimeType,
+        });
       // 商品固定の場合は参照画像を使って生成
-      if (isProductFixed && originalImageBase64) {
+      } else if (isProductFixed && originalImageBase64) {
         generatedImage = await generateWithReference(
           brandId,
           originalImageBase64,
@@ -440,7 +475,13 @@ serve(async (req) => {
       }
 
       // 参照生成が失敗した場合、または商品固定でない場合はテキストのみで生成
-      if (!generatedImage) {
+      if (!generatedImage && finalPrintDesignPurpose) {
+        generatedImage = await generatePrintDesignAsset({
+          brandId,
+          description: productDescription,
+          direction,
+        });
+      } else if (!generatedImage) {
         generatedImage = await generateFromText(
           brandId,
           productDescription,
@@ -478,7 +519,12 @@ serve(async (req) => {
             prompt: productDescription,
             feature_type: 'design-gacha',
             model_used: imageModel,
-            generation_params: { direction: direction.id, brief: productDescription, isProductFixed },
+            generation_params: {
+              direction: direction.id,
+              brief: productDescription,
+              isProductFixed: finalPrintDesignPurpose ? false : Boolean(isProductFixed),
+              generationMode: finalPrintDesignPurpose ? 'isolated-print-design' : 'fashion-product-photo',
+            },
             metadata: {
               remoteSaveStatus: 'succeeded',
               source: 'design-gacha',

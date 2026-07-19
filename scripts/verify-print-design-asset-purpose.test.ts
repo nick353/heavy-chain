@@ -6,7 +6,11 @@ import {
   PRINT_DESIGN_ASSET_PURPOSE,
 } from '../src/features/printing/selection/printDesignAssetPurpose.ts';
 import { shouldShowPrintDesignCreationCta } from '../src/features/printing/selection/galleryPrintDesignCta.ts';
-import { sanitizePrintDesignAssetPurpose } from '../supabase/functions/_shared/printDesignAssetPurpose.ts';
+import { getGalleryImageLabel } from '../src/features/printing/selection/galleryImageLabel.ts';
+import {
+  buildPrintDesignAssetPrompt,
+  sanitizePrintDesignAssetPurpose,
+} from '../supabase/functions/_shared/printDesignAssetPurpose.ts';
 
 const gallerySelector = fs.readFileSync('src/components/GallerySelector.tsx', 'utf8');
 const imageSelector = fs.readFileSync('src/components/ImageSelector.tsx', 'utf8');
@@ -81,8 +85,40 @@ test('producer sanitizer tags only a validated Patterns-origin design-gacha inte
   assert.doesNotMatch(designGacha, /assetPurpose:\s*['"]print-design['"]/);
 });
 
-test('the active unified generate-image producer preserves the same strict purpose contract', () => {
+test('Patterns-origin print assets use an artwork-only prompt without changing product-photo generation', () => {
+  const withoutReference = buildPrintDesignAssetPrompt({
+    description: 'blue botanical motif',
+    directionPrompt: 'minimalist',
+    hasReference: false,
+  });
+  assert.match(withoutReference, /blue botanical motif/);
+  assert.match(withoutReference, /NO CLOTHING, T-shirt, hoodie, dress, fabric product/);
+  assert.match(withoutReference, /uniform pure white \(#FFFFFF\) background reaching every image edge and corner/);
+  assert.match(withoutReference, /nothing may touch the image border/);
+  assert.doesNotMatch(withoutReference, /Use the reference only/);
+  const withReference = buildPrintDesignAssetPrompt({
+    description: 'chain motif',
+    directionPrompt: 'street',
+    hasReference: true,
+  });
+  assert.match(withReference, /Use the reference only as visual motif inspiration/);
+  assert.match(withReference, /Do not preserve or reproduce any garment or product silhouette/);
+  assert.match(designGacha, /if \(finalPrintDesignPurpose\) \{/);
+  assert.match(designGacha, /else if \(isProductFixed && originalImageBase64\)/);
+  assert.match(designGacha, /else if \(!generatedImage\) \{\s*generatedImage = await generateFromText/);
+  assert.match(designGacha, /generationMode: finalPrintDesignPurpose \? 'isolated-print-design' : 'fashion-product-photo'/);
+});
+
+test('Gallery labels distinguish print assets without changing other Gallery labels', () => {
+  assert.equal(getGalleryImageLabel({ prompt: 'blue flower', featureType: 'design-gacha', index: 0, isPrintDesign: true }), 'blue flower');
+  assert.equal(getGalleryImageLabel({ prompt: 'blue flower', featureType: 'design-gacha', index: 0, isPrintDesign: false }), 'design-gacha');
+  assert.equal(getGalleryImageLabel({ prompt: '  ', featureType: null, index: 2, isPrintDesign: true }), 'ギャラリー画像 3');
+  assert.match(gallerySelector, /isPrintDesign: assetPurpose === PRINT_DESIGN_ASSET_PURPOSE/);
+});
+
+test('the active unified generate-image producer preserves metadata and artwork-only prompt policy', () => {
   assert.match(generateImage, /sanitizePrintDesignAssetPurpose\(sourceMetadata\)/);
+  assert.match(generateImage, /const productionPrompt = printDesignPurpose\s*\? buildPrintDesignAssetPrompt/);
   assert.match(generateImage, /patterns: \{ label: '柄・グラフィック', resumePath: '\/patterns\/workbench'/);
   assert.ok((generateImage.match(/\.\.\.\(printDesignPurpose \?\? \{\}\)/g) ?? []).length >= 2);
   assert.doesNotMatch(generateImage, /assetPurpose:\s*['"]print-design['"]/);
