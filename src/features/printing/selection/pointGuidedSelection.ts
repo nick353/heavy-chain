@@ -11,7 +11,7 @@ export type PointGuidedSelection = {
   width: number;
   height: number;
   confidence: number;
-  source: 'color-region' | 'tap-neighborhood';
+  source: 'efficient-sam' | 'color-region' | 'tap-neighborhood';
   selectedPixels: number;
   touchesFrame: boolean;
   /**

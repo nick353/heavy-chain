@@ -41,16 +41,22 @@ test('confirmation remains policy-gated and tap recognition does not auto-apply'
   );
   assert.ok(recognizeTap.length > 0);
   assert.doesNotMatch(recognizeTap, /\b(?:apply|exportSelection|onApply)\s*\(/);
+  assert.match(recognizeTap, /requestId !== tapRequestIdRef\.current/);
 });
 
-test('low-confidence neighborhood mask is preview-only and is not exported as a final transparent rectangle', () => {
+test('low-confidence neighborhood mask uses the established range fallback and never the cloth model', () => {
   assert.match(
     editor,
-    /selectionSource === 'tap' && guidedResult\?\.mask && guidedResult\.source === 'color-region'/,
+    /selectionSource === 'tap' && guidedResult\?\.mask && guidedResult\.source !== 'tap-neighborhood'/,
   );
+  assert.match(editor, /source: 'efficient-sam'/);
   assert.doesNotMatch(
     editor,
     /if \(selectionSource === 'tap' && guidedResult\?\.mask\) \{/,
+  );
+  assert.match(
+    editor,
+    /guidedResult\?\.source === 'tap-neighborhood' \? 'range' : selectionSource/,
   );
 });
 

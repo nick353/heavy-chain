@@ -75,7 +75,6 @@ import {
   renderExperimentalSurfaceComposition,
   renderPrintRequestComposition,
   isPrintGarmentClothModelConfigured,
-  preparePrintGarmentClothModel,
   resolvePrintGarmentCutoutModel,
   suggestPrintableSurfaceDataUrl,
   type MaterialCutoutResult,
@@ -121,11 +120,6 @@ import {
 
 type WorkbenchMode = 'fabric' | 'printing';
 type CutoutState = 'idle' | 'processing' | 'done' | 'error';
-type ClothModelWarmupUiState = {
-  status: 'idle' | 'warming' | 'ready' | 'error' | 'unavailable';
-  progress: number;
-};
-
 type Transform = {
   x: number;
   y: number;
@@ -684,10 +678,6 @@ export function LightchainMaterialWorkbenchPage() {
   const [printGarmentMaskExplicitlyConfirmed, setPrintGarmentMaskExplicitlyConfirmed] = useState(false);
   const [printGarmentCutoutState, setPrintGarmentCutoutState] = useState<CutoutState>('idle');
   const [printGarmentCutoutError, setPrintGarmentCutoutError] = useState<string | null>(null);
-  const [clothModelWarmup, setClothModelWarmup] = useState<ClothModelWarmupUiState>({
-    status: 'idle',
-    progress: 0,
-  });
   const [printDesigns, setPrintDesigns] = useState<SelectedImage[]>([]);
   const [printDesignLayers, setPrintDesignLayers] = useState<AssetLayer[]>([]);
   const [printPlacementSessionOpen, setPrintPlacementSessionOpen] = useState(true);
@@ -1226,35 +1216,6 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintableSurfaceStageMaskUrl(null);
     setPrintableSurfaceResetNotice(reason ?? null);
   }, []);
-
-  useEffect(() => {
-    if (!isPrinting || !printGarment || printGarmentCutoutState !== 'done' || !clothModelConfigured) {
-      setClothModelWarmup({ status: 'idle', progress: 0 });
-      return;
-    }
-    let cancelled = false;
-    setClothModelWarmup({ status: 'warming', progress: 0 });
-    void preparePrintGarmentClothModel((progress) => {
-      if (cancelled) return;
-      setClothModelWarmup({
-        status: 'warming',
-        progress: clamp(Math.round(progress.progress), 0, 100),
-      });
-    }).then((result) => {
-      if (cancelled) return;
-      setClothModelWarmup({
-        status: result.status === 'ready' ? 'ready' : 'unavailable',
-        progress: result.status === 'ready' ? 100 : 0,
-      });
-    }).catch((error) => {
-      if (cancelled) return;
-      console.warn('Cloth model prewarm failed; confirmed-mask fallback remains available.', error);
-      setClothModelWarmup({ status: 'error', progress: 0 });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [clothModelConfigured, isPrinting, printGarment, printGarmentCutoutState]);
 
   useEffect(() => {
     invalidatePrintableSuggestion();
@@ -2092,9 +2053,7 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintGarmentProcessed(null);
     setPrintMaskEditorTarget(null);
     toast.success(selectionSource === 'tap'
-      ? (isPrintGarmentClothModelConfigured()
-        ? 'タップ位置を衣服専用AIマスクへ渡しました'
-        : 'タップ候補を既存AIマスクへ渡しました。服専用モデル未配置のため、手動修正も確認してください')
+      ? '確認した青いタップマスクを適用しています'
       : '選択範囲をAIマスクへ渡しました');
   };
 
@@ -2681,44 +2640,6 @@ export function LightchainMaterialWorkbenchPage() {
                           : '選択範囲からAIマスクを作成しました。自動候補へ戻すには別の画像を選び直してください。'
                       : '服をタップすると、その服の候補範囲だけをAI切り抜きへ渡せます。細かい指定は範囲調整へ切り替えます。'}
                   </p>
-                  {clothModelConfigured && clothModelWarmup.status !== 'idle' && (
-                    <div
-                      className={`mt-3 rounded-lg border px-3 py-2 text-[11px] leading-relaxed ${clothModelWarmup.status === 'ready'
-                        ? 'border-emerald-300/30 bg-emerald-950/30 text-emerald-100'
-                        : clothModelWarmup.status === 'warming'
-                          ? 'border-cyan-300/30 bg-cyan-950/30 text-cyan-100'
-                          : 'border-amber-300/30 bg-amber-950/30 text-amber-100'}`}
-                      role="status"
-                      aria-live="polite"
-                      data-testid="cloth-model-warmup-status"
-                    >
-                      <div className="flex items-center justify-between gap-3 font-semibold">
-                        <span>
-                          {clothModelWarmup.status === 'ready'
-                            ? '衣服専用AIの準備完了'
-                            : clothModelWarmup.status === 'warming'
-                              ? '衣服専用AIを先に準備しています'
-                              : '衣服専用AIの事前準備を完了できませんでした'}
-                        </span>
-                        {clothModelWarmup.status === 'warming' && <span>{clothModelWarmup.progress}%</span>}
-                      </div>
-                      {clothModelWarmup.status === 'warming' && (
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-cyan-950/80" aria-hidden="true">
-                          <div
-                            className="h-full rounded-full bg-cyan-300 transition-[width] duration-300"
-                            style={{ width: `${clothModelWarmup.progress}%` }}
-                          />
-                        </div>
-                      )}
-                      <p className="mt-1 opacity-75">
-                        {clothModelWarmup.status === 'ready'
-                          ? '胸や袖のタップ確定後は、準備済みモデルを再利用します。'
-                          : clothModelWarmup.status === 'warming'
-                            ? '画像を確認している間に準備します。タップ範囲の選択は先に進められます。'
-                            : '確定した青いマスクと既存AI・手動補正はそのまま利用できます。'}
-                      </p>
-                    </div>
-                  )}
                   {printGarmentCutoutState === 'done' && hasConfirmedPrintGarmentMask && (
                     <div role="status" className="mt-3 rounded-lg border border-blue-300/30 bg-blue-950/35 px-3 py-2 text-[11px] leading-relaxed text-blue-50">
                       <div className="flex items-center gap-2 font-semibold">

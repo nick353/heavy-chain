@@ -31,6 +31,14 @@
       "description": "Optional override for manual builds. The default build:deploy embeds a revision-pinned, CORS-enabled Hugging Face model URL after HEAD identity verification.",
       "required": false
     },
+    "VITE_EFFICIENT_SAM_ENCODER_URL": {
+      "description": "Optional managed-host override for the revision-pinned EfficientSAM-Ti encoder ONNX model.",
+      "required": false
+    },
+    "VITE_EFFICIENT_SAM_DECODER_URL": {
+      "description": "Optional managed-host override for the revision-pinned EfficientSAM-Ti decoder ONNX model.",
+      "required": false
+    },
     "VITE_STRIPE_PUBLISHABLE_KEY": {
       "description": "Stripe publishable key (optional, for future payment features)",
       "required": false

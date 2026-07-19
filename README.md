@@ -142,6 +142,9 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 # VITE_REMBG_SILUETA_MODEL_URL=https://your-cors-enabled-model-host.example.com/models/silueta.onnx
 # 任意: 手動build用override。Zeaburのbuild:deployはrevision固定の外部model URLを埋め込みます
 # VITE_REMBG_CLOTH_SEG_MODEL_URL=https://your-cors-enabled-model-host.example.com/models/u2net_cloth_seg.onnx
+# 任意: point-promptモデルを管理下CORS hostへ固定するoverride
+# VITE_EFFICIENT_SAM_ENCODER_URL=https://your-cors-enabled-model-host.example.com/models/efficient_sam_vitt_encoder.onnx
+# VITE_EFFICIENT_SAM_DECODER_URL=https://your-cors-enabled-model-host.example.com/models/efficient_sam_vitt_decoder.onnx
 
 # Stripe (将来用)
 VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
@@ -180,6 +183,7 @@ supabase functions deploy upscale
 - `VITE_REMBG_SILUETA_MODEL_URL` - 任意。未設定時は同梱の `/models/silueta.onnx` を同一originから読み込みます。
 - `VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL` - 任意。管理下CDNに置いたISNetモデルを明示利用する場合だけ設定します。Hugging Face直取得にはfallbackしません。
 - `VITE_REMBG_CLOTH_SEG_MODEL_URL` - 任意の外部host override。productionの通常`npm run build`とZeaburの`build:deploy`は、未設定または空ならrevision固定のHugging Face URLを埋め込みます。developmentでは未設定のまま既存のsilueta/手動マスクへ安全に戻ります。
+- `VITE_EFFICIENT_SAM_ENCODER_URL` / `VITE_EFFICIENT_SAM_DECODER_URL` - 任意の管理下CORS host override。未設定時はApache-2.0 EfficientSAM-Tiのrevision固定ONNXを使用します。
 
 Zeaburの既定buildは、176MBのML modelを静的deploy artifactへ同梱しません。[Zeaburのlarge-file guidance](https://zeabur.com/docs/en-US/deploy/large-files)に沿って、revision固定のHugging Face URLをHEADし、許可host内のredirect、最終CDNの`Access-Control-Allow-Origin: *`、176,194,565 bytes、`x-linked-etag`の固定SHA-256を照合してから、その完全URLをVite buildへ埋め込みます。これによりZeabur上の`/models/u2net_cloth_seg.onnx`配信容量に依存せず、外部object storage/CDNからbrowserへ配信します。
 

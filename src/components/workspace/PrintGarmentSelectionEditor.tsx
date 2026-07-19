@@ -7,6 +7,10 @@ import {
   type PointGuidedSelection,
 } from '../../features/printing/selection/pointGuidedSelection';
 import {
+  preparePointPromptSegmentation,
+  type PreparedPointPromptSegmentation,
+} from '../../features/printing/selection/pointPromptSegmentation';
+import {
   canSubmitGarmentSelectionPreview,
   DEFAULT_GARMENT_SEGMENTATION_TARGET,
   type GarmentSegmentationTarget,
@@ -48,6 +52,10 @@ const garmentTargetOptions: Array<{ value: GarmentSegmentationTarget; label: str
 
 const closePreviewMask = (mask: NonNullable<PointGuidedSelection['mask']>) => {
   const { width, height, data } = mask;
+  // EfficientSAM already returns a full-resolution, smooth object mask. The
+  // legacy colour proposal is at most 280px; only that small mask needs the
+  // morphological closing pass below.
+  if (width * height > 500_000) return mask;
   const dilated = new Uint8Array(data.length);
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
@@ -169,6 +177,8 @@ export function PrintGarmentSelectionEditor({
   const scaleRef = useRef(1);
   const interactionRef = useRef<SelectionInteraction | null>(null);
   const maskDisplayModeRef = useRef<MaskDisplayMode>('overlay');
+  const pointPromptRef = useRef<Promise<PreparedPointPromptSegmentation> | null>(null);
+  const tapRequestIdRef = useRef(0);
   const [selection, setSelection] = useState<SelectionRect | null>(null);
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('tap');
   const [selectionSource, setSelectionSource] = useState<SelectionSource | null>(null);
@@ -319,6 +329,8 @@ export function PrintGarmentSelectionEditor({
     setTapProcessing(false);
     setCanvasSize({ width: 0, height: 0 });
     setError(null);
+    tapRequestIdRef.current += 1;
+    pointPromptRef.current = null;
     void loadImage(sourceUrl)
       .then((image) => {
         if (cancelled) return;
@@ -330,6 +342,18 @@ export function PrintGarmentSelectionEditor({
         canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
         canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
         imageRef.current = image;
+        const analysisContext = canvas.getContext('2d', { willReadFrequently: true });
+        if (!analysisContext) throw new Error('garment_selection_analysis_context_missing');
+        analysisContext.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const analysisData = analysisContext.getImageData(0, 0, canvas.width, canvas.height);
+        pointPromptRef.current = preparePointPromptSegmentation({
+          width: canvas.width,
+          height: canvas.height,
+          data: analysisData.data,
+        });
+        void pointPromptRef.current.catch((modelError) => {
+          console.warn('Point-prompt garment model unavailable; keeping local selection fallback.', modelError);
+        });
         const initialSelection = { x: 0, y: 0, width: canvas.width, height: canvas.height };
         setCanvasSize({ width: canvas.width, height: canvas.height });
         setSelection(initialSelection);
@@ -470,10 +494,10 @@ export function PrintGarmentSelectionEditor({
     context.imageSmoothingQuality = 'high';
     context.drawImage(image, contextX, contextY, contextWidth, contextHeight, 0, 0, output.width, output.height);
 
-    if (selectionSource === 'tap' && guidedResult?.mask && guidedResult.source === 'color-region') {
-      // The preview and the confirmed PNG must use the same closed mask. The
-      // mask is low-resolution by design, so sample it in the original-image
-      // coordinate system while preserving the surrounding AI context crop.
+    if (selectionSource === 'tap' && guidedResult?.mask && guidedResult.source !== 'tap-neighborhood') {
+      // The preview and the confirmed PNG must use the same mask. Sample it in
+      // the original-image coordinate system while preserving the surrounding
+      // AI context crop.
       const displayMask = closePreviewMask(guidedResult.mask);
       const maskCanvas = document.createElement('canvas');
       maskCanvas.width = output.width;
@@ -512,12 +536,41 @@ export function PrintGarmentSelectionEditor({
     onApply(output.toDataURL('image/png'), selectionSource, segmentationTarget);
   };
 
-  const recognizeTap = (point: { x: number; y: number }) => {
+  const recognizeTap = async (point: { x: number; y: number }) => {
     const image = imageRef.current;
     const canvas = canvasRef.current;
     if (!image || !canvas) return;
+    const requestId = tapRequestIdRef.current + 1;
+    tapRequestIdRef.current = requestId;
     setTapProcessing(true);
     try {
+      const prepared = pointPromptRef.current
+        ? await pointPromptRef.current.catch(() => null)
+        : null;
+      if (requestId !== tapRequestIdRef.current) return;
+      if (prepared) {
+        try {
+          const candidate = await prepared.predict(point);
+          if (requestId !== tapRequestIdRef.current) return;
+          const proposal: PointGuidedSelection = {
+            x: candidate.bbox?.x ?? 0,
+            y: candidate.bbox?.y ?? 0,
+            width: candidate.bbox?.width ?? canvas.width,
+            height: candidate.bbox?.height ?? canvas.height,
+            confidence: candidate.predictedIou,
+            source: 'efficient-sam',
+            selectedPixels: candidate.selectedPixels,
+            touchesFrame: candidate.touchesFrame,
+            mask: { width: canvas.width, height: canvas.height, data: candidate.mask },
+          };
+          setGuidedResult(proposal);
+          setSelectionSource('tap');
+          setNextSelection({ x: proposal.x, y: proposal.y, width: proposal.width, height: proposal.height }, 'tap', proposal.mask);
+          return;
+        } catch (modelError) {
+          console.warn('Point-prompt garment prediction failed; using local selection fallback.', modelError);
+        }
+      }
       const analysisCanvas = document.createElement('canvas');
       analysisCanvas.width = canvas.width;
       analysisCanvas.height = canvas.height;
@@ -540,12 +593,13 @@ export function PrintGarmentSelectionEditor({
         height: proposal.height,
       }, 'tap', proposal.mask);
     } catch (analysisError) {
+      if (requestId !== tapRequestIdRef.current) return;
       console.warn('Point-guided garment selection failed; keeping the current range.', analysisError);
       setGuidedResult(null);
       setSelectionSource(null);
       setError('タップ認識に失敗しました。範囲を調整モードで服全体を囲んでください。');
     } finally {
-      setTapProcessing(false);
+      if (requestId === tapRequestIdRef.current) setTapProcessing(false);
     }
   };
 
@@ -567,17 +621,21 @@ export function PrintGarmentSelectionEditor({
     const point = pointFromEvent(event);
     if (!point) return;
     const distance = Math.hypot(point.x - interaction.start.x, point.y - interaction.start.y);
-    if (distance <= Math.max(12, canvasSize.width * 0.015)) recognizeTap(point);
+    if (distance <= Math.max(12, canvasSize.width * 0.015)) void recognizeTap(point);
   };
 
   const selectWholeCanvas = () => {
     if (!ready || !canvasSize.width || !canvasSize.height) return;
+    tapRequestIdRef.current += 1;
+    setTapProcessing(false);
     setSelectionMode('range');
     setGuidedResult(null);
     setNextSelection({ x: 0, y: 0, width: canvasSize.width, height: canvasSize.height }, 'range');
   };
 
   const clearSelection = () => {
+    tapRequestIdRef.current += 1;
+    setTapProcessing(false);
     interactionRef.current = null;
     setSelection(null);
     setSelectionSource(null);
@@ -590,6 +648,8 @@ export function PrintGarmentSelectionEditor({
   };
 
   const chooseTapMode = () => {
+    tapRequestIdRef.current += 1;
+    setTapProcessing(false);
     setSelectionMode('tap');
     setError(null);
     if (selectionSource === 'range') {
@@ -601,6 +661,8 @@ export function PrintGarmentSelectionEditor({
   };
 
   const chooseRangeMode = () => {
+    tapRequestIdRef.current += 1;
+    setTapProcessing(false);
     setSelectionMode('range');
     setError(null);
     if (selectionSource === 'tap' && selection) {
@@ -614,6 +676,17 @@ export function PrintGarmentSelectionEditor({
     maskDisplayModeRef.current = nextMode;
     setMaskDisplayMode(nextMode);
     render(selection, guidedResult?.mask, selectionMode);
+  };
+
+  const chooseSegmentationTarget = (nextTarget: GarmentSegmentationTarget) => {
+    if (nextTarget === segmentationTarget) return;
+    tapRequestIdRef.current += 1;
+    setTapProcessing(false);
+    setSegmentationTarget(nextTarget);
+    setSelection(null);
+    setSelectionSource(null);
+    setGuidedResult(null);
+    render(null);
   };
 
   const apply = () => {
@@ -634,7 +707,10 @@ export function PrintGarmentSelectionEditor({
       return;
     }
     try {
-      exportSelection(currentSelection, selectionSource);
+      exportSelection(
+        currentSelection,
+        guidedResult?.source === 'tap-neighborhood' ? 'range' : selectionSource,
+      );
     } catch (applyError) {
       console.error('Garment selection export failed', applyError);
       setError('選択範囲をAIマスクへ渡せませんでした。別の範囲で再試行してください。');
@@ -675,7 +751,7 @@ export function PrintGarmentSelectionEditor({
     >
       <div className="space-y-4">
         <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-300">
-          「服をタップ（推奨）」で服の位置を1回押すと候補範囲を認識します。青色の範囲が今回のタップから作った確認用プレビューです。内容を確認して「決定」を押すと、既存のAIマスク処理へ渡します。細かく指定するときは「範囲を調整」に切り替えます。
+          「服をタップ（推奨）」で服の位置を1回押すと、タップAIが同じ服の輪郭を候補にします。青色の範囲が実際に切り抜かれる確認用プレビューです。内容を確認して「決定」を押すと、その範囲だけを使用します。細かく指定するときは「範囲を調整」に切り替えます。
         </p>
         {error && <p role="alert" className="text-sm text-rose-500">{error}</p>}
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="服の選択方法">
@@ -717,7 +793,7 @@ export function PrintGarmentSelectionEditor({
                   name="garment-segmentation-target"
                   value={option.value}
                   checked={segmentationTarget === option.value}
-                  onChange={() => setSegmentationTarget(option.value)}
+                  onChange={() => chooseSegmentationTarget(option.value)}
                   className="sr-only"
                 />
                 {option.label}
