@@ -5,6 +5,7 @@ import {
   hasPrintDesignAssetPurpose,
   PRINT_DESIGN_ASSET_PURPOSE,
 } from '../src/features/printing/selection/printDesignAssetPurpose.ts';
+import { shouldShowPrintDesignCreationCta } from '../src/features/printing/selection/galleryPrintDesignCta.ts';
 import { sanitizePrintDesignAssetPurpose } from '../supabase/functions/_shared/printDesignAssetPurpose.ts';
 
 const gallerySelector = fs.readFileSync('src/components/GallerySelector.tsx', 'utf8');
@@ -32,6 +33,23 @@ test('Gallery applies the explicit metadata filter before its result limit', () 
   assert.ok(limitIndex > filterIndex, 'print-design metadata filter must run before limit');
   assert.match(gallerySelector, /assetPurpose === PRINT_DESIGN_ASSET_PURPOSE/);
   assert.match(gallerySelector, /プリントデザインはまだありません。ローカル画像は選択画面からアップロードできます/);
+  assert.match(gallerySelector, /to="\/patterns"/);
+  assert.match(gallerySelector, /プリントデザインを作る/);
+});
+
+test('empty print-design CTA remains visible when unrelated top-level folders exist', () => {
+  const baseline = {
+    assetPurpose: PRINT_DESIGN_ASSET_PURPOSE,
+    normalizedSearchQuery: '',
+    filter: 'recent' as const,
+    currentFolderId: null,
+    visibleImageCount: 0,
+  };
+  assert.equal(shouldShowPrintDesignCreationCta(baseline), true);
+  assert.equal(shouldShowPrintDesignCreationCta({ ...baseline, visibleImageCount: 1 }), false);
+  assert.equal(shouldShowPrintDesignCreationCta({ ...baseline, currentFolderId: 'folder-1' }), false);
+  assert.equal(shouldShowPrintDesignCreationCta({ ...baseline, normalizedSearchQuery: 'logo' }), false);
+  assert.equal(shouldShowPrintDesignCreationCta({ ...baseline, assetPurpose: undefined }), false);
 });
 
 test('only the Lightchain print-design picker requests the purpose filter', () => {

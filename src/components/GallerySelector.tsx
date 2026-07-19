@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Search, Check, Image as ImageIcon, Heart, Clock, Folder as FolderIcon, ChevronRight, House } from 'lucide-react';
 import { Modal } from './ui';
 import { supabase } from '../lib/supabase';
@@ -19,6 +20,7 @@ import {
   PRINT_DESIGN_ASSET_PURPOSE,
   type PrintDesignAssetPurpose,
 } from '../features/printing/selection/printDesignAssetPurpose';
+import { shouldShowPrintDesignCreationCta } from '../features/printing/selection/galleryPrintDesignCta';
 
 interface GallerySelectorProps {
   isOpen: boolean;
@@ -335,6 +337,22 @@ export function GallerySelector({
     return getImageSearchText(image).includes(normalizedQuery);
   });
   const normalizedSearchQuery = searchQuery.trim();
+  const showPrintDesignCreationCta = shouldShowPrintDesignCreationCta({
+    assetPurpose,
+    normalizedSearchQuery,
+    filter,
+    currentFolderId,
+    visibleImageCount: filteredImages.length,
+  });
+  const printDesignCreationCta = showPrintDesignCreationCta ? (
+    <Link
+      to="/patterns"
+      onClick={handleClose}
+      className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+    >
+      プリントデザインを作る
+    </Link>
+  ) : null;
   const emptyMessage = normalizedSearchQuery
     ? '検索条件に一致する画像はありません'
     : currentFolderId && filter === 'favorites'
@@ -478,6 +496,14 @@ export function GallerySelector({
             </div>
           ) : childFolders.length > 0 || filteredImages.length > 0 ? (
             <div className="space-y-4">
+              {showPrintDesignCreationCta && (
+                <div className="flex items-center justify-between gap-4 rounded-xl border border-primary-300/40 bg-primary-50 p-4 dark:border-primary-500/30 dark:bg-primary-900/20">
+                  <p className="text-sm text-neutral-700 dark:text-neutral-200">
+                    このブランドには、選択できるプリントデザインがまだありません。
+                  </p>
+                  {printDesignCreationCta}
+                </div>
+              )}
               {childFolders.length > 0 && (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="gallery-folder-grid">
                   {childFolders.map((folder) => (
@@ -564,6 +590,7 @@ export function GallerySelector({
               <p className="text-sm">
                 {emptyMessage}
               </p>
+              {showPrintDesignCreationCta && <div className="mt-4">{printDesignCreationCta}</div>}
             </div>
           )}
         </div>
