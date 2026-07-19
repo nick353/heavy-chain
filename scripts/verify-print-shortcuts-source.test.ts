@@ -47,6 +47,8 @@ test('Patterns result cards expose a guarded print handoff and the printing page
   assert.match(generateSource, /pointer-events-auto absolute bottom-0/);
   assert.doesNotMatch(generateSource, /to="\/lightchain\/printing-image\?handoff=patterns"/);
   assert.match(generateSource, /writePrintDesignHandoff\(window\.sessionStorage/);
+  assert.match(generateSource, /label: normalizePrintDesignHandoffDisplayText\(image\.label, PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH\)/);
+  assert.match(generateSource, /prompt: normalizePrintDesignHandoffDisplayText\(image\.prompt, PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH\)/);
   assert.match(printSource, /consumePrintDesignHandoff\(window\.sessionStorage, currentBrand\.id\)/);
   assert.match(printSource, /referenceType: 'pattern'/);
   assert.match(printSource, /void addDesigns\(\[\.\.\.printDesigns, importedDesign\]\)/);

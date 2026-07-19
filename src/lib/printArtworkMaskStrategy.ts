@@ -1,5 +1,8 @@
 export const PRINT_ARTWORK_BACKGROUND_MAX_SAMPLE_SPREAD = 55;
 export const PRINT_ARTWORK_BACKGROUND_COLOR_DISTANCE = 34;
+export const PRINT_ARTWORK_LIGHT_BACKGROUND_MAX_SAMPLE_SPREAD = 110;
+export const PRINT_ARTWORK_LIGHT_BACKGROUND_COLOR_DISTANCE = 72;
+export const PRINT_ARTWORK_LIGHT_BACKGROUND_MAX_CHROMA = 18;
 export const PRINT_ARTWORK_MIN_REMOVED_RATIO = 0.02;
 export const PRINT_ARTWORK_MAX_REMOVED_RATIO = 0.92;
 export const PRINT_ARTWORK_MIN_RETAINED_RATIO = 0.08;
@@ -9,6 +12,7 @@ type Rgb = { r: number; g: number; b: number };
 export type PrintArtworkBackgroundEstimate = Rgb & {
   sampleSpread: number;
   sampleCount: number;
+  lightNeutralSampleRatio: number;
 };
 
 export type PrintArtworkBackgroundCutout = {
@@ -26,6 +30,11 @@ const readRgb = (rgba: Uint8ClampedArray, index: number): Rgb => ({
 });
 
 const colorDistance = (a: Rgb, b: Rgb) => Math.hypot(a.r - b.r, a.g - b.g, a.b - b.b);
+const isNearWhiteBackground = (color: Rgb) => {
+  const luminance = (0.2126 * color.r) + (0.7152 * color.g) + (0.0722 * color.b);
+  const chroma = Math.max(color.r, color.g, color.b) - Math.min(color.r, color.g, color.b);
+  return luminance >= 189.5 && chroma <= PRINT_ARTWORK_LIGHT_BACKGROUND_MAX_CHROMA;
+};
 
 export const estimatePrintArtworkBackground = (
   rgba: Uint8ClampedArray,
@@ -57,7 +66,8 @@ export const estimatePrintArtworkBackground = (
   };
   const background = { r: median('r'), g: median('g'), b: median('b') };
   const sampleSpread = Math.max(...samples.map((sample) => colorDistance(sample, background)));
-  return { ...background, sampleSpread, sampleCount: samples.length };
+  const lightNeutralSampleRatio = samples.filter(isNearWhiteBackground).length / samples.length;
+  return { ...background, sampleSpread, sampleCount: samples.length, lightNeutralSampleRatio };
 };
 
 export const isPrintArtworkBackgroundCutoutAcceptable = ({
@@ -83,29 +93,46 @@ export const buildPrintArtworkBackgroundCutoutRgba = ({
   rgba,
   width,
   height,
+  allowLightBackgroundFallback = false,
 }: {
   rgba: Uint8ClampedArray;
   width: number;
   height: number;
+  allowLightBackgroundFallback?: boolean;
 }): PrintArtworkBackgroundCutout => {
   if (width <= 0 || height <= 0 || rgba.length !== width * height * 4) {
     throw new Error('invalid_print_artwork_mask_input');
   }
   const estimate = estimatePrintArtworkBackground(rgba, width, height);
   const output = new Uint8ClampedArray(rgba);
-  if (!estimate || estimate.sampleSpread > PRINT_ARTWORK_BACKGROUND_MAX_SAMPLE_SPREAD) {
+  const canUseLightBackgroundFallback = Boolean(
+    allowLightBackgroundFallback
+    && estimate
+    && isNearWhiteBackground(estimate)
+    && estimate.lightNeutralSampleRatio >= 0.75
+    && estimate.sampleSpread <= PRINT_ARTWORK_LIGHT_BACKGROUND_MAX_SAMPLE_SPREAD,
+  );
+  if (!estimate || (
+    estimate.sampleSpread > PRINT_ARTWORK_BACKGROUND_MAX_SAMPLE_SPREAD
+    && !canUseLightBackgroundFallback
+  )) {
     return { rgba: output, accepted: false, estimate, removedRatio: 0, retainedRatio: 1 };
   }
-
   const visited = new Uint8Array(width * height);
   const queue: number[] = [];
-  const enqueue = (x: number, y: number) => {
+  const enqueue = (x: number, y: number, previousPixelIndex?: number) => {
     if (x < 0 || x >= width || y < 0 || y >= height) return;
     const pixelIndex = (y * width) + x;
     if (visited[pixelIndex]) return;
     const rgbaIndex = pixelIndex * 4;
     const transparent = rgba[rgbaIndex + 3] <= 4;
-    const matchesBackground = colorDistance(readRgb(rgba, rgbaIndex), estimate) <= PRINT_ARTWORK_BACKGROUND_COLOR_DISTANCE;
+    const color = readRgb(rgba, rgbaIndex);
+    const matchesBackground = canUseLightBackgroundFallback
+      ? isNearWhiteBackground(color) && (
+        previousPixelIndex === undefined
+        || colorDistance(color, readRgb(rgba, previousPixelIndex * 4)) <= 36
+      )
+      : colorDistance(color, estimate) <= PRINT_ARTWORK_BACKGROUND_COLOR_DISTANCE;
     if (!transparent && !matchesBackground) return;
     visited[pixelIndex] = 1;
     queue.push(pixelIndex);
@@ -123,10 +150,10 @@ export const buildPrintArtworkBackgroundCutoutRgba = ({
     const pixelIndex = queue[cursor];
     const x = pixelIndex % width;
     const y = Math.floor(pixelIndex / width);
-    enqueue(x + 1, y);
-    enqueue(x - 1, y);
-    enqueue(x, y + 1);
-    enqueue(x, y - 1);
+    enqueue(x + 1, y, pixelIndex);
+    enqueue(x - 1, y, pixelIndex);
+    enqueue(x, y + 1, pixelIndex);
+    enqueue(x, y - 1, pixelIndex);
   }
 
   let opaquePixels = 0;
@@ -142,7 +169,9 @@ export const buildPrintArtworkBackgroundCutoutRgba = ({
   const removedRatio = opaquePixels > 0 ? removedOpaquePixels / opaquePixels : 0;
   const retainedRatio = opaquePixels > 0 ? (opaquePixels - removedOpaquePixels) / opaquePixels : 0;
   const accepted = isPrintArtworkBackgroundCutoutAcceptable({
-    sampleSpread: estimate.sampleSpread,
+    sampleSpread: canUseLightBackgroundFallback
+      ? Math.min(estimate.sampleSpread, PRINT_ARTWORK_BACKGROUND_MAX_SAMPLE_SPREAD)
+      : estimate.sampleSpread,
     removedRatio,
     retainedRatio,
   });

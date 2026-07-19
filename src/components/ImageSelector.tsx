@@ -34,6 +34,7 @@ export interface SelectedImage {
   referenceType: ReferenceType;
   fromGallery?: boolean;
   galleryImageId?: string;
+  printDesignAssetPurpose?: PrintDesignAssetPurpose;
 }
 
 interface ImageSelectorProps {
@@ -168,6 +169,7 @@ export function ImageSelector({
           referenceType: selectedReferenceType,
           fromGallery: true,
           galleryImageId: imageId,
+          ...(galleryAssetPurpose ? { printDesignAssetPurpose: galleryAssetPurpose } : {}),
         }]);
       }
     } else {
@@ -176,6 +178,7 @@ export function ImageSelector({
         referenceType: selectedReferenceType,
         fromGallery: true,
         galleryImageId: imageId,
+        ...(galleryAssetPurpose ? { printDesignAssetPurpose: galleryAssetPurpose } : {}),
       });
     }
     setFileError(null);

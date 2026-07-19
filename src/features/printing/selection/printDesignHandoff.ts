@@ -2,6 +2,8 @@ export const PRINT_DESIGN_HANDOFF_STORAGE_KEY = 'heavy-chain:printing:design-han
 export const PRINT_DESIGN_HANDOFF_SCHEMA = 'heavy-chain.print-design-handoff.v1';
 export const PRINT_DESIGN_HANDOFF_MAX_BYTES = 16 * 1024;
 export const PRINT_DESIGN_HANDOFF_MAX_AGE_MS = 15 * 60 * 1000;
+export const PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH = 160;
+export const PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH = 1_000;
 
 export const TRUSTED_BLANK_GARMENT = Object.freeze({
   url: '/assets/printing/blank-white-tshirt.svg',
@@ -62,6 +64,16 @@ const isNonEmptyString = (value: unknown, maxLength: number): value is string =>
 const isOptionalString = (value: unknown, maxLength: number): value is string | undefined => (
   value === undefined || (typeof value === 'string' && value.length <= maxLength)
 );
+
+/**
+ * Patterns may retain a long generation recipe for auditability. The print
+ * handoff only needs a human-readable summary, so its producer explicitly
+ * bounds those display-only fields before the strict handoff validator runs.
+ */
+export const normalizePrintDesignHandoffDisplayText = (
+  value: string | undefined,
+  maxLength: number,
+) => value?.slice(0, maxLength);
 
 const isTrustedRemoteImageUrl = (value: unknown): value is string => {
   if (!isNonEmptyString(value, 4_096)) return false;
@@ -170,7 +182,8 @@ export function writePrintDesignHandoff(
   if (!isNonEmptyString(input.imageId, 256) && !isNonEmptyString(input.storagePath, 1_024)) {
     return { ok: false, reason: 'generated_asset_identity_missing' };
   }
-  if (!isOptionalString(input.label, 160) || !isOptionalString(input.prompt, 1_000)
+  if (!isOptionalString(input.label, PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH)
+    || !isOptionalString(input.prompt, PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH)
     || !isOptionalString(input.resultId, 256)) {
     return { ok: false, reason: 'field_oversized' };
   }

@@ -77,6 +77,9 @@ import {
   resolveCompletedPatternsResultProvenance,
   type TrustedPatternsResultProvenance,
   writePrintDesignHandoff,
+  normalizePrintDesignHandoffDisplayText,
+  PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH,
+  PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH,
 } from '../features/printing/selection/printDesignHandoff';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -2752,8 +2755,8 @@ export function GeneratePage() {
       resultProvenance: image.printDesignProvenance,
       artifactKind: image.artifactKind,
       imageUrl: image.imageUrl,
-      label: image.label,
-      prompt: image.prompt,
+      label: normalizePrintDesignHandoffDisplayText(image.label, PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH),
+      prompt: normalizePrintDesignHandoffDisplayText(image.prompt, PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH),
       resultId: image.id,
       jobId: image.jobId,
       imageId: image.imageId,

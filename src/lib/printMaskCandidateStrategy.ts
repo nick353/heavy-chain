@@ -318,9 +318,10 @@ export const applyFabricLuminanceModulation = ({
   const foldSampleRadius = hasGrid
     ? Math.max(1, Math.round(Math.min(width as number, height as number) / 180))
     : 1;
+  const maxFabricToneDelta = 64;
   const modulateChannel = (channel: number, factor: number, highlight: number) => clampByte(Math.max(
-    channel - 48,
-    Math.min(channel + 48, (channel * factor) + highlight),
+    channel - maxFabricToneDelta,
+    Math.min(channel + maxFabricToneDelta, (channel * factor) + highlight),
   ));
   const output = new Uint8ClampedArray(designRgba);
   for (let index = 0; index < output.length; index += 4) {
@@ -377,13 +378,18 @@ export const applyFabricLuminanceModulation = ({
     // lighting and local folds into saturated artwork, and the additive carry
     // lets those folds remain visible in black ink without changing alpha or
     // geometry. Exact mode deliberately bypasses this path.
-    const factor = Math.min(1.2, Math.max(
-      0.58,
-      0.62 + (normalizedLuminance * 0.42) + (foldContrast * 0.16) + (drapeContrast * 0.2),
+    const factor = Math.min(1.24, Math.max(
+      0.52,
+      0.68 + (normalizedLuminance * 0.36) + (foldContrast * 0.18) + (drapeContrast * 0.22),
     ));
-    const fabricHighlight = (normalizedLuminance * 34)
-      + (Math.max(0, foldContrast) * 12)
-      + (drapeContrast * 24);
+    // Centre the additive cloth carry around mid-grey so a plain light shirt
+    // produces both broad shadows and highlights instead of a uniform lift.
+    // This makes Fabric distinguishable from Exact at result-card scale while
+    // preserving the artwork's alpha and placement geometry.
+    const fabricHighlight = 10
+      + ((normalizedLuminance - 0.5) * 48)
+      + (foldContrast * 18)
+      + (drapeContrast * 38);
     output[index] = modulateChannel(output[index], factor, fabricHighlight);
     output[index + 1] = modulateChannel(output[index + 1], factor, fabricHighlight);
     output[index + 2] = modulateChannel(output[index + 2], factor, fabricHighlight);

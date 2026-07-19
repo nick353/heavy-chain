@@ -48,8 +48,10 @@ const checks = {
     && stage.includes("filter: 'none'"),
   artwork_uses_conservative_source_mask: library.includes('buildPrintArtworkBackgroundCutoutRgba')
     && artworkStrategy.includes('PRINT_ARTWORK_BACKGROUND_COLOR_DISTANCE = 34')
-    && artworkStrategy.includes('enqueue(x + 1, y)')
-    && artworkStrategy.includes('enqueue(x, y - 1)'),
+    && /enqueue\(x \+ 1, y(?:, pixelIndex)?\)/.test(artworkStrategy)
+    && /enqueue\(x - 1, y(?:, pixelIndex)?\)/.test(artworkStrategy)
+    && /enqueue\(x, y \+ 1(?:, pixelIndex)?\)/.test(artworkStrategy)
+    && /enqueue\(x, y - 1(?:, pixelIndex)?\)/.test(artworkStrategy),
   mask_editor_supports_keep_remove_undo_reset_zoom: editor.includes("type PrintMaskBrushMode")
     && editor.includes("setMode('keep')")
     && editor.includes("setMode('remove')")

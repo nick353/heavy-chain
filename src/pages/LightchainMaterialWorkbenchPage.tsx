@@ -52,6 +52,7 @@ import {
   consumePrintDesignHandoff,
   createTrustedBlankGarmentSelection,
 } from '../features/printing/selection/printDesignHandoff';
+import { PRINT_DESIGN_ASSET_PURPOSE } from '../features/printing/selection/printDesignAssetPurpose';
 import {
   settleComposition,
   waitForDisplayableImage,
@@ -1907,7 +1908,12 @@ export function LightchainMaterialWorkbenchPage() {
       const design = nextImages[index];
       try {
         const result = await withTimeout(
-          buildPrintDesignCutoutDataUrl({ imageUrl: design.url }),
+          buildPrintDesignCutoutDataUrl({
+            imageUrl: design.url,
+            backgroundProfile: design.printDesignAssetPurpose === PRINT_DESIGN_ASSET_PURPOSE
+              ? 'generated-near-white-v1'
+              : 'strict',
+          }),
           CUTOUT_TIMEOUT_MS,
           `デザイン${index + 1}の透明化がタイムアウトしました。元画像を確認して再試行してください`,
         );
@@ -1933,6 +1939,7 @@ export function LightchainMaterialWorkbenchPage() {
     const importedDesign: SelectedImage = {
       url: handoff.design.imageUrl,
       referenceType: 'pattern',
+      printDesignAssetPurpose: PRINT_DESIGN_ASSET_PURPOSE,
     };
     void addDesigns([...printDesigns, importedDesign]);
     toast.success('Patternsの生成結果をプリント画像に追加しました');

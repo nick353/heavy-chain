@@ -3,10 +3,13 @@ import test from 'node:test';
 import {
   PRINT_DESIGN_HANDOFF_STORAGE_KEY,
   PRINT_DESIGN_HANDOFF_MAX_AGE_MS,
+  PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH,
+  PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH,
   consumePrintDesignHandoff,
   createTrustedPatternsResultProvenance,
   createTrustedBlankGarmentSelection,
   resolveCompletedPatternsResultProvenance,
+  normalizePrintDesignHandoffDisplayText,
   writePrintDesignHandoff,
 } from '../src/features/printing/selection/printDesignHandoff.ts';
 
@@ -68,6 +71,24 @@ test('a design-gacha image handoff is brand-bound and consumed only once', () =>
     status: 'empty',
     reason: 'missing',
   });
+});
+
+test('Patterns bounds display-only text before the strict handoff validator', () => {
+  const storage = new MemoryStorage();
+  const now = 1_800_000_000_000;
+  const longLabel = 'L'.repeat(PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH + 40);
+  const longPrompt = 'P'.repeat(PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH + 4_000);
+  assert.deepEqual(writePrintDesignHandoff(storage, {
+    ...validInput,
+    label: normalizePrintDesignHandoffDisplayText(longLabel, PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH),
+    prompt: normalizePrintDesignHandoffDisplayText(longPrompt, PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH),
+  }, now), { ok: true });
+  const accepted = consumePrintDesignHandoff(storage, 'brand-1', now + 1_000);
+  assert.equal(accepted.status, 'accepted');
+  if (accepted.status === 'accepted') {
+    assert.equal(accepted.design.label.length, PRINT_DESIGN_HANDOFF_MAX_LABEL_LENGTH);
+    assert.equal(accepted.design.prompt.length, PRINT_DESIGN_HANDOFF_MAX_PROMPT_LENGTH);
+  }
 });
 
 test('emitter rejects non-Patterns origins, planning briefs, inline URLs, and untracked results', () => {

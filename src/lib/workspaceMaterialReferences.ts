@@ -2034,9 +2034,11 @@ export async function buildPrintGarmentMaskCandidates({
 export async function buildPrintDesignCutoutDataUrl({
   imageUrl,
   maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
+  backgroundProfile = 'strict',
 }: {
   imageUrl: string;
   maxDataUrlBytes?: number;
+  backgroundProfile?: 'strict' | 'generated-near-white-v1';
 }): Promise<MaterialCutoutResult> {
   const image = await loadImageElement(imageUrl);
   const sourceWidth = image.naturalWidth || image.width;
@@ -2067,6 +2069,7 @@ export async function buildPrintDesignCutoutDataUrl({
       rgba: imageData.data,
       width: sourceWidth,
       height: sourceHeight,
+      allowLightBackgroundFallback: backgroundProfile === 'generated-near-white-v1',
     });
     if (!deterministicCutout.accepted) {
       throw new Error(`artwork_background_cutout_rejected:${deterministicCutout.estimate?.sampleSpread ?? 'no_estimate'}:${deterministicCutout.removedRatio}`);
