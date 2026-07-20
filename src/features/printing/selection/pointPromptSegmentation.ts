@@ -1,5 +1,3 @@
-import * as ort from 'onnxruntime-web';
-
 export type PointPromptMaskCandidate = {
   index: number;
   predictedIou: number;
@@ -15,46 +13,71 @@ export type PreparedPointPromptSegmentation = {
   predict: (point: { x: number; y: number }) => Promise<PointPromptMaskCandidate>;
 };
 
-const EFFICIENT_SAM_REVISION = 'd525f622e6f640acf5a0fc37c7ca1f243da5bde0';
-const DEFAULT_ENCODER_URL = `https://raw.githubusercontent.com/yformer/EfficientSAM/${EFFICIENT_SAM_REVISION}/weights/efficient_sam_vitt_encoder.onnx`;
-const DEFAULT_DECODER_URL = `https://raw.githubusercontent.com/yformer/EfficientSAM/${EFFICIENT_SAM_REVISION}/weights/efficient_sam_vitt_decoder.onnx`;
-const pointPromptEnv = import.meta.env ?? {};
-const encoderUrl = String(pointPromptEnv.VITE_EFFICIENT_SAM_ENCODER_URL || DEFAULT_ENCODER_URL).trim();
-const decoderUrl = String(pointPromptEnv.VITE_EFFICIENT_SAM_DECODER_URL || DEFAULT_DECODER_URL).trim();
 const MASK_LOGIT_THRESHOLD = -1;
 const MIN_PREDICTED_IOU = 0.45;
 const MAX_PREDICTED_IOU_GAP = 0.35;
 
-let sessionsPromise: Promise<{ encoder: ort.InferenceSession; decoder: ort.InferenceSession }> | null = null;
-
-const loadSessions = () => {
-  if (sessionsPromise) return sessionsPromise;
-  // The encoder is too expensive for the UI thread. ORT's proxy executes WASM
-  // inference in a worker; one thread avoids a SharedArrayBuffer/COOP dependency.
-  ort.env.wasm.proxy = true;
-  ort.env.wasm.numThreads = 1;
-  sessionsPromise = Promise.all([
-    ort.InferenceSession.create(encoderUrl, { executionProviders: ['wasm'] }),
-    ort.InferenceSession.create(decoderUrl, { executionProviders: ['wasm'] }),
-  ])
-    .then(([encoder, decoder]) => ({ encoder, decoder }))
-    .catch((error) => {
-      sessionsPromise = null;
-      throw error;
-    });
-  return sessionsPromise;
+type WorkerReply = {
+  requestId: number;
+  ok: boolean;
+  error?: string;
+  preparationId?: number;
+  logits?: ArrayBuffer;
+  iouPredictions?: ArrayBuffer;
 };
 
-const toNchwFloat = (data: Uint8ClampedArray, width: number, height: number) => {
-  const planeSize = width * height;
-  const output = new Float32Array(planeSize * 3);
-  for (let pixel = 0; pixel < planeSize; pixel += 1) {
-    const source = pixel * 4;
-    output[pixel] = data[source] / 255;
-    output[planeSize + pixel] = data[source + 1] / 255;
-    output[(planeSize * 2) + pixel] = data[source + 2] / 255;
-  }
-  return output;
+type PendingWorkerRequest = {
+  resolve: (reply: WorkerReply) => void;
+  reject: (error: Error) => void;
+};
+
+let pointPromptWorker: Worker | null = null;
+let nextWorkerRequestId = 1;
+const pendingWorkerRequests = new Map<number, PendingWorkerRequest>();
+
+const rejectPendingWorkerRequests = (error: Error) => {
+  for (const pending of pendingWorkerRequests.values()) pending.reject(error);
+  pendingWorkerRequests.clear();
+};
+
+const getPointPromptWorker = () => {
+  if (pointPromptWorker) return pointPromptWorker;
+  const worker = new Worker(new URL('./pointPromptSegmentation.worker.ts', import.meta.url), {
+    type: 'module',
+    name: 'heavy-chain-point-prompt-segmentation',
+  });
+  worker.addEventListener('message', (event: MessageEvent<WorkerReply>) => {
+    const reply = event.data;
+    const pending = pendingWorkerRequests.get(reply.requestId);
+    if (!pending) return;
+    pendingWorkerRequests.delete(reply.requestId);
+    if (!reply.ok) {
+      pending.reject(new Error(reply.error || 'point_prompt_worker_failed'));
+      return;
+    }
+    pending.resolve(reply);
+  });
+  worker.addEventListener('error', () => {
+    const error = new Error('point_prompt_worker_bootstrap_failed');
+    rejectPendingWorkerRequests(error);
+    worker.terminate();
+    if (pointPromptWorker === worker) pointPromptWorker = null;
+  });
+  pointPromptWorker = worker;
+  return worker;
+};
+
+const requestPointPromptWorker = (
+  message: Record<string, unknown>,
+  transfer: Transferable[] = [],
+) => {
+  const worker = getPointPromptWorker();
+  const requestId = nextWorkerRequestId;
+  nextWorkerRequestId += 1;
+  return new Promise<WorkerReply>((resolve, reject) => {
+    pendingWorkerRequests.set(requestId, { resolve, reject });
+    worker.postMessage({ ...message, requestId }, transfer);
+  });
 };
 
 export const fillEnclosedPointPromptMaskHoles = (
@@ -193,32 +216,26 @@ export const preparePointPromptSegmentation = async ({
   if (width <= 0 || height <= 0 || data.length !== width * height * 4) {
     throw new Error('point_prompt_image_invalid');
   }
-  const { encoder, decoder } = await loadSessions();
-  const encoded = await encoder.run({
-    batched_images: new ort.Tensor('float32', toNchwFloat(data, width, height), [1, 3, height, width]),
-  });
-  const embeddings = encoded.image_embeddings;
-  if (!embeddings) throw new Error('point_prompt_embedding_missing');
+  const rgba = data.slice().buffer;
+  const prepared = await requestPointPromptWorker({ type: 'prepare', width, height, rgba }, [rgba]);
+  if (prepared.preparationId === undefined) throw new Error('point_prompt_preparation_missing');
+  const preparationId = prepared.preparationId;
 
   return {
     width,
     height,
     predict: async (point) => {
-      const pointCoordinates = new Float32Array([point.x, point.y]);
-      const decoded = await decoder.run({
-        image_embeddings: embeddings,
-        batched_point_coords: new ort.Tensor('float32', pointCoordinates, [1, 1, 1, 2]),
-        batched_point_labels: new ort.Tensor('float32', new Float32Array([1]), [1, 1, 1]),
-        orig_im_size: new ort.Tensor('int64', new BigInt64Array([BigInt(height), BigInt(width)]), [2]),
+      const decoded = await requestPointPromptWorker({
+        type: 'predict',
+        preparationId,
+        point: { x: point.x, y: point.y },
       });
-      const logits = decoded.output_masks;
-      const iou = decoded.iou_predictions;
-      if (!(logits?.data instanceof Float32Array) || !(iou?.data instanceof Float32Array)) {
+      if (!decoded.logits || !decoded.iouPredictions) {
         throw new Error('point_prompt_output_invalid');
       }
       return selectPointPromptCandidate({
-        logits: logits.data,
-        iouPredictions: iou.data,
+        logits: new Float32Array(decoded.logits),
+        iouPredictions: new Float32Array(decoded.iouPredictions),
         width,
         height,
         point,

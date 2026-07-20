@@ -13,15 +13,21 @@ const source = readFileSync(
   new URL('../src/features/printing/selection/pointPromptSegmentation.ts', import.meta.url),
   'utf8',
 );
+const workerSource = readFileSync(
+  new URL('../src/features/printing/selection/pointPromptSegmentation.worker.ts', import.meta.url),
+  'utf8',
+);
 
-test('point-prompt runtime uses a proxy worker, production env overrides, retryable sessions, and one operator point', () => {
-  assert.match(source, /const pointPromptEnv = import\.meta\.env \?\? \{\}/);
-  assert.match(source, /ort\.env\.wasm\.proxy = true/);
-  assert.match(source, /ort\.env\.wasm\.numThreads = 1/);
-  assert.match(source, /\.catch\(\(error\) => \{\s*sessionsPromise = null/);
-  assert.match(source, /new Float32Array\(\[point\.x, point\.y\]\)/);
-  assert.match(source, /\[1, 1, 1, 2\]/);
-  assert.doesNotMatch(source, /nearCenter|promptPoints|width - point\.x/);
+test('point-prompt runtime uses a deployable module worker, retryable single-threaded WASM, and one operator point', () => {
+  assert.match(source, /new Worker\(new URL\('\.\/pointPromptSegmentation\.worker\.ts', import\.meta\.url\)/);
+  assert.match(source, /type: 'module'/);
+  assert.match(workerSource, /const pointPromptEnv = import\.meta\.env \?\? \{\}/);
+  assert.match(workerSource, /ort\.env\.wasm\.proxy = false/);
+  assert.match(workerSource, /ort\.env\.wasm\.numThreads = 1/);
+  assert.match(workerSource, /\.catch\(\(error\) => \{\s*sessionsPromise = null/);
+  assert.match(workerSource, /new Float32Array\(\[point\.x, point\.y\]\)/);
+  assert.match(workerSource, /\[1, 1, 1, 2\]/);
+  assert.doesNotMatch(workerSource, /nearCenter|promptPoints|width - point\.x/);
 });
 
 test('point-prompt candidate selector keeps the compact credible instance near the best IoU', () => {
