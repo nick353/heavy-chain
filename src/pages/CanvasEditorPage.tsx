@@ -1104,8 +1104,23 @@ export function CanvasEditorPage() {
       return;
     }
 
-    const imageSrc = await resolveCanvasObjectImageUrl(obj);
     const lightchainEditMetadata = buildLightchainEditMetadata(objectId);
+    if (!currentBrand?.id) {
+      toast.error('ブランドを選択してから実行してください');
+      return;
+    }
+    if (!rightsConfirmed) {
+      toast.error('素材の利用権利を確認してください');
+      return;
+    }
+    if (action === 'edit' || action === 'editWithPrompt' || action === 'edit-prompt') {
+      setEditingImage(obj.src);
+      setEditingObjectId(objectId);
+      setShowEditModal(true);
+      return;
+    }
+
+    const imageSrc = await resolveCanvasObjectImageUrl(obj);
     console.warn('Canvas image action preflight', {
       action,
       objectId,
@@ -1115,14 +1130,6 @@ export function CanvasEditorPage() {
       rightsConfirmed,
       imageSrc,
     });
-    if (!currentBrand?.id) {
-      toast.error('ブランドを選択してから実行してください');
-      return;
-    }
-    if (!rightsConfirmed) {
-      toast.error('素材の利用権利を確認してください');
-      return;
-    }
 
     switch (action) {
       case 'removeBackground':
@@ -1213,14 +1220,6 @@ export function CanvasEditorPage() {
         } catch (err: any) {
           toast.error(await edgeFunctionErrorMessage(err) || 'バリエーション生成に失敗しました', { id: 'variations' });
         }
-        break;
-
-      case 'edit':
-      case 'editWithPrompt':
-      case 'edit-prompt':
-        setEditingImage(imageSrc);
-        setEditingObjectId(objectId);
-        setShowEditModal(true);
         break;
 
       case 'download':
@@ -1581,6 +1580,9 @@ export function CanvasEditorPage() {
       generation: (sourceObject?.metadata?.generation || 0) + 1,
     };
     try {
+      const editSource = sourceObject
+        ? await resolveCanvasObjectImageUrl(sourceObject)
+        : await resolveGeneratedImageUrl(editingImage);
       if (action === 'prompt') {
         if (!params.prompt?.trim()) {
           toast.error('編集したい内容を入力してください');
@@ -1590,7 +1592,7 @@ export function CanvasEditorPage() {
           toast.error(BRAND_LIKENESS_BLOCK_COPY);
           return false;
         }
-        const result = await editImageWithPrompt(editingImage, params.prompt, currentBrand.id, { rightsConfirmed });
+        const result = await editImageWithPrompt(editSource, params.prompt, currentBrand.id, { rightsConfirmed });
         if (!result.success || !result.imageUrl) {
           throw new Error(result.error || '画像編集に失敗しました');
         }
@@ -1616,7 +1618,7 @@ export function CanvasEditorPage() {
           toast.error(BRAND_LIKENESS_BLOCK_COPY);
           return false;
         }
-        const result = await editImageWithPrompt(editingImage, params.prompt, currentBrand.id, {
+        const result = await editImageWithPrompt(editSource, params.prompt, currentBrand.id, {
           rightsConfirmed,
           maskDataUrl: params.maskDataUrl,
         });
@@ -1635,7 +1637,7 @@ export function CanvasEditorPage() {
 
       if (action === 'remove-bg') {
         const { data, error } = await supabase.functions.invoke('remove-background', {
-          body: { imageUrl: editingImage, brandId: currentBrand.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
+          body: { imageUrl: editSource, brandId: currentBrand.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
         assertDerivedImageResult(data, 'removeBackground');
@@ -1654,7 +1656,7 @@ export function CanvasEditorPage() {
         }
         const colors = params.prompt?.split(/[、,\\s]+/).map((item) => item.trim()).filter(Boolean);
         const { data, error } = await supabase.functions.invoke('colorize', {
-          body: { imageUrl: editingImage, brandId: currentBrand.id, colors: colors?.length ? colors : undefined, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
+          body: { imageUrl: editSource, brandId: currentBrand.id, colors: colors?.length ? colors : undefined, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
         assertDerivedImageResult(data, 'colorize');
@@ -1672,7 +1674,7 @@ export function CanvasEditorPage() {
 
       if (action === 'upscale') {
         const { data, error } = await supabase.functions.invoke('upscale', {
-          body: { imageUrl: editingImage, brandId: currentBrand.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
+          body: { imageUrl: editSource, brandId: currentBrand.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
         assertDerivedImageResult(data, 'upscale');
@@ -1690,7 +1692,7 @@ export function CanvasEditorPage() {
           return false;
         }
         const { data, error } = await supabase.functions.invoke('generate-variations', {
-          body: { imageUrl: editingImage, brandId: currentBrand.id, prompt: params.prompt || undefined, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
+          body: { imageUrl: editSource, brandId: currentBrand.id, prompt: params.prompt || undefined, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
         assertDerivedImageResult(data, 'variations');

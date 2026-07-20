@@ -8,7 +8,10 @@ const read = (path: string) => readFile(new URL(path, import.meta.url), 'utf8');
 test('canvas image actions route every visible prompt-edit and variation action', async () => {
   const source = await read('../src/pages/CanvasEditorPage.tsx');
   assert.match(source, /case 'variations':\s*case 'generateVariations':\s*case 'derive':/);
-  assert.match(source, /case 'edit':\s*case 'editWithPrompt':\s*case 'edit-prompt':/);
+  assert.match(source, /action === 'edit' \|\| action === 'editWithPrompt' \|\| action === 'edit-prompt'/);
+  assert.match(source, /setEditingImage\(obj\.src\)[\s\S]*setShowEditModal\(true\)[\s\S]*const imageSrc = await resolveCanvasObjectImageUrl\(obj\)/);
+  assert.match(source, /const editSource = sourceObject\s*\? await resolveCanvasObjectImageUrl\(sourceObject\)\s*: await resolveGeneratedImageUrl\(editingImage\)/);
+  assert.match(source, /editImageWithPrompt\(editSource, params\.prompt/);
 });
 
 test('partial edit UI provides a precise reversible PNG mask', async () => {
