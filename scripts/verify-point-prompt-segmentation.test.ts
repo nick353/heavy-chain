@@ -138,3 +138,32 @@ test('canonical black-hoodie chest and sleeve masks converge after bounded hole 
   }
   assert.ok(intersection / union >= 0.95, `canonical tap mask IoU was ${intersection / union}`);
 });
+
+test('canonical black-hoodie sleeve accepts the measured peripheral low-confidence candidate only', async () => {
+  const { data, info } = await sharp(fileURLToPath(new URL(
+    './fixtures/efficient-sam-ti-black-hoodie-sleeve-candidate-1-thm1.png',
+    import.meta.url,
+  ))).greyscale().raw().toBuffer({ resolveWithObject: true });
+  const logits = new Float32Array(info.width * info.height);
+  for (let pixel = 0; pixel < logits.length; pixel += 1) {
+    logits[pixel] = data[pixel] ? 1 : -4;
+  }
+
+  const sleeve = selectPointPromptCandidate({
+    logits,
+    iouPredictions: new Float32Array([0.4184]),
+    width: info.width,
+    height: info.height,
+    point: { x: 202, y: 765 },
+  });
+  assert.equal(sleeve.index, 0);
+  assert.equal(sleeve.touchesFrame, false);
+
+  assert.throws(() => selectPointPromptCandidate({
+    logits,
+    iouPredictions: new Float32Array([0.4184]),
+    width: info.width,
+    height: info.height,
+    point: { x: 512, y: 765 },
+  }), /point_prompt_mask_candidate_unsafe/);
+});

@@ -15,6 +15,7 @@ export type PreparedPointPromptSegmentation = {
 
 const MASK_LOGIT_THRESHOLD = -1;
 const MIN_PREDICTED_IOU = 0.45;
+const MIN_PERIPHERAL_PREDICTED_IOU = 0.4;
 const MAX_PREDICTED_IOU_GAP = 0.35;
 
 type WorkerReply = {
@@ -183,7 +184,16 @@ export const selectPointPromptCandidate = ({
     const ratio = candidate.selectedPixels / planeSize;
     return ratio >= 0.02 && ratio <= 0.72 && !candidate.touchesFrame;
   });
-  const credible = safe.filter((candidate) => candidate.predictedIou >= MIN_PREDICTED_IOU);
+  // Sleeve taps land near the horizontal edge of a garment, where
+  // EfficientSAM's compact garment candidate is measurably less confident
+  // than the larger person candidate. Keep the geometric safety gates above
+  // unchanged and only allow the observed low-confidence band for peripheral
+  // taps; central taps continue to use the stricter threshold.
+  const isPeripheralTap = tapX <= width * 0.3 || tapX >= width * 0.7;
+  const minimumPredictedIou = isPeripheralTap
+    ? MIN_PERIPHERAL_PREDICTED_IOU
+    : MIN_PREDICTED_IOU;
+  const credible = safe.filter((candidate) => candidate.predictedIou >= minimumPredictedIou);
   const bestPredictedIou = Math.max(...credible.map((candidate) => candidate.predictedIou));
   // EfficientSAM emits nested alternatives. Prefer the most compact credible
   // instance within a bounded distance of the best score; this avoids a larger
