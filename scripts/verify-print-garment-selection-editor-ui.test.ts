@@ -71,3 +71,22 @@ test('switching from range to tap invalidates the old range submission', () => {
   assert.match(chooseTapMode, /setGuidedResult\(null\)/);
   assert.match(chooseTapMode, /render\(null\)/);
 });
+
+test('point-prompt inference preloads for the selected source before the editor opens', () => {
+  assert.match(editor, /const preparePointPromptForImage = \(url: string\)/);
+  assert.match(editor, /pointPromptPreparationCache\?\.sourceUrl === url/);
+  assert.match(editor, /pointPromptPreparationQueue[\s\S]*?\.then\(prepare\)/);
+  assert.match(
+    editor,
+    /useEffect\(\(\) => \{[\s\S]*?const preload = preparePointPromptForImage\(sourceUrl\);[\s\S]*?pointPromptRef\.current = preload;[\s\S]*?\}, \[sourceUrl\]\);/,
+  );
+
+  const openEffect = editor.slice(
+    editor.indexOf("    if (!isOpen) return;"),
+    editor.indexOf('  const pointFromEvent ='),
+  );
+  assert.doesNotMatch(openEffect, /pointPromptRef\.current = null/);
+  assert.match(openEffect, /pointPromptSourceRef\.current !== sourceUrl \|\| !pointPromptRef\.current/);
+  assert.match(openEffect, /pointPromptRef\.current = pointPromptRef\.current\.catch\(prepareFromVisibleCanvas\)/);
+  assert.match(openEffect, /garment_selection_point_prompt_source_changed/);
+});

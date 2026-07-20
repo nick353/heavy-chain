@@ -120,6 +120,51 @@ const loadImage = (url: string) => new Promise<HTMLImageElement>((resolve, rejec
   image.src = url;
 });
 
+let pointPromptPreparationQueue: Promise<void> = Promise.resolve();
+let pointPromptPreparationCache: {
+  sourceUrl: string;
+  promise: Promise<PreparedPointPromptSegmentation>;
+} | null = null;
+
+const enqueuePointPromptPreparation = (
+  prepare: () => Promise<PreparedPointPromptSegmentation>,
+) => {
+  const queued = pointPromptPreparationQueue
+    .catch(() => undefined)
+    .then(prepare);
+  pointPromptPreparationQueue = queued.then(() => undefined, () => undefined);
+  return queued;
+};
+
+const preparePointPromptForImage = (url: string) => {
+  if (pointPromptPreparationCache?.sourceUrl === url) {
+    return pointPromptPreparationCache.promise;
+  }
+  const promise = enqueuePointPromptPreparation(async () => {
+    const image = await loadImage(url);
+    const longestEdge = Math.max(image.naturalWidth, image.naturalHeight);
+    const scale = longestEdge > MAX_CANVAS_EDGE ? MAX_CANVAS_EDGE / longestEdge : 1;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('garment_selection_preload_context_missing');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    return preparePointPromptSegmentation({
+      width: canvas.width,
+      height: canvas.height,
+      data: imageData.data,
+    });
+  });
+  const cached = { sourceUrl: url, promise };
+  pointPromptPreparationCache = cached;
+  void promise.catch(() => {
+    if (pointPromptPreparationCache === cached) pointPromptPreparationCache = null;
+  });
+  return promise;
+};
+
 const normalizeRect = (start: { x: number; y: number }, end: { x: number; y: number }): SelectionRect => ({
   x: Math.min(start.x, end.x),
   y: Math.min(start.y, end.y),
@@ -178,6 +223,7 @@ export function PrintGarmentSelectionEditor({
   const interactionRef = useRef<SelectionInteraction | null>(null);
   const maskDisplayModeRef = useRef<MaskDisplayMode>('overlay');
   const pointPromptRef = useRef<Promise<PreparedPointPromptSegmentation> | null>(null);
+  const pointPromptSourceRef = useRef<string | null>(null);
   const tapRequestIdRef = useRef(0);
   const [selection, setSelection] = useState<SelectionRect | null>(null);
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('tap');
@@ -316,6 +362,23 @@ export function PrintGarmentSelectionEditor({
   }, [guidedResult, ready, selection, selectionMode, syncMaskPreview]);
 
   useEffect(() => {
+    if (!sourceUrl) {
+      pointPromptSourceRef.current = null;
+      pointPromptRef.current = null;
+      return;
+    }
+    pointPromptSourceRef.current = sourceUrl;
+    const preload = preparePointPromptForImage(sourceUrl);
+    pointPromptRef.current = preload;
+    void preload.catch((modelError) => {
+      if (pointPromptSourceRef.current === sourceUrl && pointPromptRef.current === preload) {
+        pointPromptRef.current = null;
+      }
+      console.warn('Point-prompt garment model preload unavailable; keeping on-open preparation.', modelError);
+    });
+  }, [sourceUrl]);
+
+  useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
     setReady(false);
@@ -330,7 +393,6 @@ export function PrintGarmentSelectionEditor({
     setCanvasSize({ width: 0, height: 0 });
     setError(null);
     tapRequestIdRef.current += 1;
-    pointPromptRef.current = null;
     void loadImage(sourceUrl)
       .then((image) => {
         if (cancelled) return;
@@ -346,11 +408,22 @@ export function PrintGarmentSelectionEditor({
         if (!analysisContext) throw new Error('garment_selection_analysis_context_missing');
         analysisContext.drawImage(image, 0, 0, canvas.width, canvas.height);
         const analysisData = analysisContext.getImageData(0, 0, canvas.width, canvas.height);
-        pointPromptRef.current = preparePointPromptSegmentation({
-          width: canvas.width,
-          height: canvas.height,
-          data: analysisData.data,
+        const prepareFromVisibleCanvas = () => enqueuePointPromptPreparation(() => {
+          if (pointPromptSourceRef.current !== sourceUrl) {
+            throw new Error('garment_selection_point_prompt_source_changed');
+          }
+          return preparePointPromptSegmentation({
+            width: canvas.width,
+            height: canvas.height,
+            data: analysisData.data,
+          });
         });
+        if (pointPromptSourceRef.current !== sourceUrl || !pointPromptRef.current) {
+          pointPromptSourceRef.current = sourceUrl;
+          pointPromptRef.current = prepareFromVisibleCanvas();
+        } else {
+          pointPromptRef.current = pointPromptRef.current.catch(prepareFromVisibleCanvas);
+        }
         void pointPromptRef.current.catch((modelError) => {
           console.warn('Point-prompt garment model unavailable; keeping local selection fallback.', modelError);
         });
