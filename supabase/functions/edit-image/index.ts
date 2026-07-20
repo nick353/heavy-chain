@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { editOpenAiImage, openAiImageArtifact } from '../_shared/openaiImage.ts';
+import { editOpenAiImage, openAiImageArtifact, resolveImageEditCleanupStatus } from '../_shared/openaiImage.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
@@ -41,6 +41,8 @@ serve(async (req) => {
   let observedJobId: string | null = null;
   let observedLightchainMetadata: LightchainCompatMetadata | null = null;
   let telemetryClient: any = null;
+  const uploadedStoragePaths: string[] = [];
+  const insertedImageIds: string[] = [];
   const functionName = 'edit-image';
   const requestId = requestIdFrom(req);
   const startedAt = Date.now();
@@ -138,6 +140,7 @@ serve(async (req) => {
           imageUrl: '[provided]',
           prompt,
           requestId,
+          requestedCandidateCount: maskDataUrl ? 4 : 1,
           ...(maskDataUrl ? { maskApplied: true } : {}),
           ...(materialMetadata ?? {}),
           ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
@@ -167,74 +170,146 @@ serve(async (req) => {
       mask: maskDataUrl ? { imageUrl: maskDataUrl } : undefined,
       model: Deno.env.get('OPENAI_IMAGE_EDIT_MODEL')?.trim() || Deno.env.get('OPENAI_IMAGE_MODEL')?.trim() || 'gpt-image-1-mini',
       background: outputBackground === 'transparent' ? 'transparent' : 'auto',
+      count: maskDataUrl ? 4 : 1,
     });
-    const imageAsset = openAiImageArtifact(result);
-    const fileName = `${user.id}/${brandId}/${Date.now()}_edited.${imageAsset.extension}`;
-    const imageBuffer = Uint8Array.from(atob(imageAsset.base64), (c) => c.charCodeAt(0));
+    const requestedCandidateCount = maskDataUrl ? 4 : 1;
+    const generatedCandidates = (result.candidates?.length ? result.candidates : [{
+      base64: result.base64,
+      mimeType: result.mimeType,
+      candidateIndex: 0,
+    }])
+      .slice(0, requestedCandidateCount);
+    const persistedImages: Array<{
+      id: string;
+      imageUrl: string;
+      prompt: string;
+      jobId: string;
+      imageId: string;
+      storagePath: string;
+      persistenceStatus: 'completed';
+      candidateIndex: number;
+      batchId: string;
+    }> = [];
+    const failedCandidates: Array<{ candidateIndex: number; error: string }> = [];
+    const candidateCleanupErrors: string[] = [];
+    let candidateCleanupAttempted = false;
 
-    const { error: uploadError } = await supabaseService.storage
-      .from('generated-images')
-      .upload(fileName, imageBuffer, { contentType: imageAsset.contentType, upsert: false });
-    if (uploadError) {
-      throw uploadError;
+    for (const [fallbackIndex, candidate] of generatedCandidates.entries()) {
+      const candidateIndex = typeof candidate.candidateIndex === 'number'
+        ? candidate.candidateIndex
+        : fallbackIndex;
+      let candidateStoragePath: string | null = null;
+      try {
+        const imageAsset = openAiImageArtifact(candidate);
+        candidateStoragePath = `${user.id}/${brandId}/${Date.now()}_${job.id}_${candidateIndex}_edited.${imageAsset.extension}`;
+        const imageBuffer = Uint8Array.from(atob(imageAsset.base64), (c) => c.charCodeAt(0));
+        const { error: uploadError } = await supabaseService.storage
+          .from('generated-images')
+          .upload(candidateStoragePath, imageBuffer, { contentType: imageAsset.contentType, upsert: false });
+        if (uploadError) throw uploadError;
+        uploadedStoragePaths.push(candidateStoragePath);
+
+        const { data: signedUrlData, error: signedUrlError } = await supabaseService.storage
+          .from('generated-images')
+          .createSignedUrl(candidateStoragePath, 60 * 60);
+        if (signedUrlError || !signedUrlData?.signedUrl) {
+          throw signedUrlError ?? new Error('Storage signed URL failed');
+        }
+
+        const { data: image, error: imageInsertError } = await supabaseClient
+          .from('generated_images')
+          .insert({
+            job_id: job.id,
+            brand_id: brandId,
+            user_id: user.id,
+            storage_path: candidateStoragePath,
+            image_url: null,
+            prompt,
+            negative_prompt: null,
+            feature_type: 'prompt-edit',
+            model_used: result.model,
+            generation_params: {
+              provider: 'openai',
+              taskId: result.taskId,
+              batchId: job.id,
+              candidateIndex,
+              requestedCandidateCount,
+              ...(maskDataUrl ? { maskApplied: true } : {}),
+            },
+            metadata: {
+              remoteSaveStatus: 'succeeded',
+              source: 'edit-image',
+              provider: 'openai',
+              requestId,
+              batchId: job.id,
+              candidateIndex,
+              requestedCandidateCount,
+              ...(maskDataUrl ? { maskApplied: true } : {}),
+              ...(materialMetadata ?? {}),
+              ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
+            } as any,
+          })
+          .select('id')
+          .single();
+        if (imageInsertError || !image?.id) {
+          throw imageInsertError ?? new Error('Generated image insert did not return an id');
+        }
+        insertedImageIds.push(image.id);
+        persistedImages.push({
+          id: image.id,
+          imageUrl: signedUrlData.signedUrl,
+          prompt,
+          jobId: job.id,
+          imageId: image.id,
+          storagePath: candidateStoragePath,
+          persistenceStatus: 'completed',
+          candidateIndex,
+          batchId: job.id,
+        });
+      } catch (candidateError) {
+        failedCandidates.push({ candidateIndex, error: sanitizeError(candidateError) });
+        if (candidateStoragePath && uploadedStoragePaths.includes(candidateStoragePath)) {
+          candidateCleanupAttempted = true;
+          const { error: removeError } = await supabaseService.storage
+            .from('generated-images')
+            .remove([candidateStoragePath]);
+          if (removeError) candidateCleanupErrors.push(sanitizeError(removeError));
+          else uploadedStoragePaths.splice(uploadedStoragePaths.indexOf(candidateStoragePath), 1);
+        }
+      }
     }
 
-    const { data: signedUrlData, error: signedUrlError } = await supabaseService.storage
-      .from('generated-images')
-      .createSignedUrl(fileName, 60 * 60);
-    if (signedUrlError || !signedUrlData?.signedUrl) {
-      throw signedUrlError ?? new Error('Storage signed URL failed');
+    if (!persistedImages.length) {
+      throw new Error(`edit_image_zero_persisted_candidates:${failedCandidates.map((entry) => entry.error).join('|')}`);
     }
-
-    const { data: image, error: imageInsertError } = await supabaseClient
-      .from('generated_images')
-      .insert({
-        job_id: job.id,
-        brand_id: brandId,
-        user_id: user.id,
-        storage_path: fileName,
-        image_url: null,
-        prompt,
-        negative_prompt: null,
-        feature_type: 'prompt-edit',
-        model_used: result.model,
-        generation_params: {
-          provider: 'openai',
-          taskId: result.taskId,
-          ...(maskDataUrl ? { maskApplied: true } : {}),
-        },
-        metadata: {
-          remoteSaveStatus: 'succeeded',
-          source: 'edit-image',
-          provider: 'openai',
-          requestId,
-          ...(maskDataUrl ? { maskApplied: true } : {}),
-          ...(materialMetadata ?? {}),
-          ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
-        } as any,
-      })
-      .select('id')
-      .single();
-    if (imageInsertError || !image?.id) {
-      throw imageInsertError ?? new Error('Generated image insert did not return an id');
-    }
+    const persistenceStatus = persistedImages.length === requestedCandidateCount
+      ? 'completed'
+      : 'partial';
+    const firstImage = persistedImages[0];
 
     await persistLightchainTaskSteps({
       supabaseClient,
       lightchainMetadata: completedLightchainMetadata,
       jobId: job.id,
-      imageId: image.id,
+      imageId: firstImage.imageId,
       brandId,
       userId: user.id,
       status: 'completed',
       requestId,
-      artifactUri: fileName,
+      artifactUri: firstImage.storagePath,
     });
 
-    await supabaseClient
+    const { error: jobCompleteError } = await supabaseClient
       .from('generation_jobs')
-      .update({ status: 'completed', error_message: null, completed_at: new Date().toISOString() })
+      .update({
+        status: 'completed',
+        error_message: persistenceStatus === 'partial'
+          ? `partial:${persistedImages.length}/${requestedCandidateCount}`
+          : null,
+        completed_at: new Date().toISOString(),
+      })
       .eq('id', job.id);
+    if (jobCompleteError) throw jobCompleteError;
 
     await completeBrandUsage(telemetryClient, usageReservation, 'succeeded');
     await recordEdgeFunctionRun(telemetryClient, {
@@ -250,26 +325,47 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       jobId: job.id,
-      imageId: image.id,
-      storagePath: fileName,
-      imageUrl: signedUrlData.signedUrl,
+      imageId: firstImage.imageId,
+      storagePath: firstImage.storagePath,
+      imageUrl: firstImage.imageUrl,
       provider: 'openai',
-      persistenceStatus: 'completed',
-      cleanupStatus: 'none',
-      images: [{
-        id: image.id,
-        imageUrl: signedUrlData.signedUrl,
-        prompt,
-        jobId: job.id,
-        imageId: image.id,
-        storagePath: fileName,
-        persistenceStatus: 'completed',
-      }],
+      persistenceStatus,
+      cleanupStatus: resolveImageEditCleanupStatus(candidateCleanupAttempted, candidateCleanupErrors),
+      requestedCandidateCount,
+      persistedCandidateCount: persistedImages.length,
+      failedCandidates,
+      cleanupErrors: candidateCleanupErrors,
+      images: persistedImages,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
   } catch (error) {
+    const cleanupErrors: string[] = [];
+    let cleanupAttempted = false;
+    if (telemetryClient && insertedImageIds.length) {
+      cleanupAttempted = true;
+      try {
+        const { error: deleteImagesError } = await telemetryClient
+          .from('generated_images')
+          .delete()
+          .in('id', insertedImageIds);
+        if (deleteImagesError) throw deleteImagesError;
+      } catch (cleanupError) {
+        cleanupErrors.push(sanitizeError(cleanupError));
+      }
+    }
+    if (telemetryClient && uploadedStoragePaths.length) {
+      cleanupAttempted = true;
+      try {
+        const { error: removeStorageError } = await telemetryClient.storage
+          .from('generated-images')
+          .remove(uploadedStoragePaths);
+        if (removeStorageError) throw removeStorageError;
+      } catch (cleanupError) {
+        cleanupErrors.push(sanitizeError(cleanupError));
+      }
+    }
     if (telemetryClient) {
       await completeBrandUsage(telemetryClient, usageReservation, 'failed', { error: sanitizeError(error) });
       await recordEdgeFunctionRun(telemetryClient, {
@@ -305,8 +401,8 @@ serve(async (req) => {
       jobId: observedJobId,
       persistenceStatus: observedJobId ? 'failed' : 'not_started',
       failedStage: 'generation',
-      cleanupStatus: 'attempted',
-      cleanupErrors: [],
+      cleanupStatus: resolveImageEditCleanupStatus(cleanupAttempted, cleanupErrors),
+      cleanupErrors,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,

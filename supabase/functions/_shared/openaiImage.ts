@@ -3,6 +3,15 @@ export type OpenAiImageResult = {
   mimeType: string;
   model: string;
   taskId: string;
+  candidates?: OpenAiImageCandidate[];
+  requestedCount?: number;
+  receivedCount?: number;
+};
+
+export type OpenAiImageCandidate = {
+  base64: string;
+  mimeType: string;
+  candidateIndex: number;
 };
 
 export type OpenAiImageArtifact = {
@@ -11,6 +20,16 @@ export type OpenAiImageArtifact = {
   contentType: string;
   extension: string;
 };
+
+export type ImageEditCleanupStatus = 'none' | 'completed' | 'failed';
+
+export function resolveImageEditCleanupStatus(
+  cleanupAttempted: boolean,
+  cleanupErrors: readonly unknown[],
+): ImageEditCleanupStatus {
+  if (cleanupErrors.length > 0) return 'failed';
+  return cleanupAttempted ? 'completed' : 'none';
+}
 
 const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2';
 
@@ -94,20 +113,21 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function extractOpenAiImage(data: unknown) {
+function extractOpenAiImages(data: unknown): OpenAiImageCandidate[] {
   const record = asRecord(data);
   const images = Array.isArray(record?.data) ? record.data : [];
-  for (const image of images) {
+  return images.flatMap((image, candidateIndex) => {
     const imageRecord = asRecord(image);
     const base64 = imageRecord?.b64_json;
     if (typeof base64 === 'string' && base64.trim()) {
-      return {
+      return [{
         base64: base64.trim(),
         mimeType: normalizeMimeType(typeof imageRecord?.mime_type === 'string' ? imageRecord.mime_type : 'image/png'),
-      };
+        candidateIndex,
+      }];
     }
-  }
-  return null;
+    return [];
+  });
 }
 
 function openAiSizeFromDimensions(width?: number, height?: number) {
@@ -160,7 +180,7 @@ export async function generateOpenAiImage(params: {
     if (!response.ok) {
       throw new Error(`openai_image_request_failed:${response.status}:${JSON.stringify(data)}`);
     }
-    const image = extractOpenAiImage(data);
+    const image = extractOpenAiImages(data)[0];
     if (!image?.base64) throw new Error('openai_image_empty_response');
     return {
       ...image,
@@ -178,6 +198,7 @@ export async function editOpenAiImage(params: {
   mask?: { imageUrl: string };
   model?: string | null;
   background?: 'transparent' | 'opaque' | 'auto';
+  count?: number;
 }): Promise<OpenAiImageResult> {
   const model = resolveOpenAiImageEditModel(params.model);
   const images = params.images
@@ -185,12 +206,13 @@ export async function editOpenAiImage(params: {
     .filter(Boolean)
     .slice(0, 16);
   if (!images.length) throw new Error('openai_image_edit_input_missing');
+  const requestedCount = Math.max(1, Math.min(4, Math.trunc(params.count || 1)));
 
   try {
     const formData = new FormData();
     formData.set('model', model);
     formData.set('prompt', params.prompt);
-    formData.set('n', '1');
+    formData.set('n', String(requestedCount));
     formData.set('background', params.background || 'auto');
     formData.set('output_format', 'png');
     images.forEach((imageUrl, index) => {
@@ -216,12 +238,16 @@ export async function editOpenAiImage(params: {
     if (!response.ok) {
       throw new Error(`openai_image_edit_failed:${response.status}:${JSON.stringify(data)}`);
     }
-    const image = extractOpenAiImage(data);
+    const candidates = extractOpenAiImages(data).slice(0, requestedCount);
+    const image = candidates[0];
     if (!image?.base64) throw new Error('openai_image_edit_empty_response');
     return {
       ...image,
       model,
       taskId: `openai-edit-${crypto.randomUUID()}`,
+      candidates,
+      requestedCount,
+      receivedCount: candidates.length,
     };
   } catch (error) {
     throw new Error(sanitizeOpenAiError(error));

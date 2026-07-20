@@ -38,6 +38,11 @@ import { supabase } from '../lib/supabase';
 import { resolveGeneratedImageUrl } from '../lib/storage';
 import { editImageWithPrompt, edgeFunctionErrorMessage } from '../lib/imageApi';
 import {
+  buildCanvasImageEditBatchProof,
+  normalizeCanvasImageEditCandidates,
+  settleCanvasImageEditCandidatesSequentially,
+} from '../lib/canvasImageEditResults';
+import {
   BRAND_LIKENESS_BLOCK_COPY,
   GENERATION_LEGAL_COPY,
   UPLOAD_RIGHTS_CONFIRMATION_LABEL,
@@ -1624,23 +1629,55 @@ export function CanvasEditorPage() {
           rightsConfirmed,
           maskDataUrl: params.maskDataUrl,
         });
-        if (!result.success || !result.imageUrl) {
+        const candidates = normalizeCanvasImageEditCandidates(result);
+        if (!result.success || candidates.length === 0) {
           throw new Error(result.error || '部分編集に失敗しました');
         }
-        addImageToCanvasSafely(result.imageUrl, '部分編集結果', {
-          ...baseMetadata,
-          feature: 'inpaint',
-          prompt: params.prompt,
-          maskApplied: true,
-          parameters: {
-            backendJobId: result.jobId ?? result.images?.[0]?.jobId ?? null,
-            backendImageId: result.imageId ?? result.images?.[0]?.imageId ?? null,
-            backendStoragePath: result.storagePath ?? result.images?.[0]?.storagePath ?? null,
-            backendProvider: result.provider ?? null,
-            persistenceStatus: result.persistenceStatus ?? result.images?.[0]?.persistenceStatus ?? null,
-          },
-          ...buildDerivedLightchainMetadata(sourceObject, 'inpaint', { prompt: params.prompt }),
-        }, editingObjectId ?? undefined);
+        const batchId = candidates[0].jobId;
+        const placement = await settleCanvasImageEditCandidatesSequentially(candidates, async (candidate, placementIndex) => (
+          await addImageToCanvas(candidate.imageUrl, `部分編集結果 ${placementIndex + 1}`, {
+            ...baseMetadata,
+            feature: 'inpaint',
+            prompt: params.prompt,
+            maskApplied: true,
+            parameters: {
+              backendJobId: candidate.jobId,
+              backendImageId: candidate.imageId,
+              backendStoragePath: candidate.storagePath,
+              backendProvider: result.provider ?? null,
+              persistenceStatus: candidate.persistenceStatus,
+              batchId,
+              candidateIndex: candidate.candidateIndex,
+            },
+            ...buildDerivedLightchainMetadata(sourceObject, 'inpaint', { prompt: params.prompt }),
+          }, editingObjectId ?? undefined)
+        ));
+        if (placement.placed.length === 0) {
+          const firstFailure = placement.failed[0]?.error;
+          throw firstFailure instanceof Error ? firstFailure : new Error('部分編集結果をCanvasへ配置できませんでした');
+        }
+        const batchProof = buildCanvasImageEditBatchProof({
+          batchId,
+          parentObjectId: editingObjectId,
+          preResultCount: canvasGenerationState.partialEditResultCount,
+          candidates: placement.placed.map(({ candidate }) => candidate),
+        });
+        placement.placed.forEach(({ value: objectId }) => {
+          const placedObject = useCanvasStore.getState().objects.find((object) => object.id === objectId);
+          if (!placedObject?.metadata) return;
+          updateObject(objectId, {
+            metadata: {
+              ...placedObject.metadata,
+              parameters: {
+                ...placedObject.metadata.parameters,
+                batchProof,
+              },
+            },
+          });
+        });
+        if (placement.failed.length > 0) {
+          toast.error(`${placement.failed.length}件の候補をCanvasへ配置できませんでした`);
+        }
         return true;
       }
 

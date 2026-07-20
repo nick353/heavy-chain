@@ -64,11 +64,17 @@ export interface ImageEditResult {
     jobId?: string | null;
     imageId?: string | null;
     storagePath?: string | null;
-    persistenceStatus?: 'completed' | 'failed' | 'processing' | 'pending';
+    persistenceStatus?: 'completed' | 'partial' | 'failed' | 'processing' | 'pending';
+    candidateIndex?: number;
+    batchId?: string | null;
   }>;
   provider?: string;
-  persistenceStatus?: 'not_started' | 'processing' | 'completed' | 'failed' | 'pending';
-  cleanupStatus?: 'none' | 'attempted' | 'failed';
+  persistenceStatus?: 'not_started' | 'processing' | 'completed' | 'partial' | 'failed' | 'pending';
+  cleanupStatus?: 'none' | 'attempted' | 'completed' | 'failed';
+  requestedCandidateCount?: number;
+  persistedCandidateCount?: number;
+  failedCandidates?: Array<{ candidateIndex: number; error: string }>;
+  cleanupErrors?: string[];
   error?: string;
 }
 
@@ -335,7 +341,14 @@ export async function editImageWithPrompt(
     });
 
     if (error) throw error;
-    return data as ImageEditResult;
+    const result = data as ImageEditResult;
+    return {
+      ...result,
+      imageUrl: result.imageUrl ?? result.images?.[0]?.imageUrl,
+      jobId: result.jobId ?? result.images?.[0]?.jobId ?? null,
+      imageId: result.imageId ?? result.images?.[0]?.imageId ?? null,
+      storagePath: result.storagePath ?? result.images?.[0]?.storagePath ?? undefined,
+    };
   } catch (error: any) {
     console.error('Edit image error:', error);
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };

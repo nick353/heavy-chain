@@ -3,7 +3,15 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { hasEditableMaskPixels } from '../src/components/canvas/inpaintMask.ts';
 import { buildCanvasGenerationState } from '../src/features/canvasGenerationState.ts';
+import {
+  addCanvasImageEditCandidatesSequentially,
+  buildCanvasImageEditBatchProof,
+  normalizeCanvasImageEditCandidates,
+  settleCanvasImageEditCandidatesSequentially,
+} from '../src/lib/canvasImageEditResults.ts';
+import type { ImageEditResult } from '../src/lib/imageApi.ts';
 import type { CanvasObject } from '../src/stores/canvasStore.ts';
+import { resolveImageEditCleanupStatus } from '../supabase/functions/_shared/openaiImage.ts';
 
 const read = (path: string) => readFile(new URL(path, import.meta.url), 'utf8');
 
@@ -43,6 +51,9 @@ test('partial edit mask is sent through the client and edge function without sto
   assert.doesNotMatch(edge, /input_params:[\s\S]{0,500}maskDataUrl[,}]/);
   assert.match(openAi, /formData\.append\('mask', mask\.blob, 'mask\.png'\)/);
   assert.match(openAi, /openai_image_edit_mask_not_png/);
+  assert.match(edge, /count: maskDataUrl \? 4 : 1/);
+  assert.match(openAi, /formData\.set\('n', String\(requestedCount\)\)/);
+  assert.equal((edge.match(/await editOpenAiImage\(/g) ?? []).length, 1);
 });
 
 test('partial edit result remains a parent-linked derived canvas object', async () => {
@@ -50,10 +61,124 @@ test('partial edit result remains a parent-linked derived canvas object', async 
   assert.match(source, /if \(action === 'inpaint'\)/);
   assert.match(source, /feature: 'inpaint'/);
   assert.match(source, /maskApplied: true/);
-  assert.match(source, /backendJobId: result\.jobId \?\? result\.images\?\.\[0\]\?\.jobId \?\? null/);
-  assert.match(source, /backendImageId: result\.imageId \?\? result\.images\?\.\[0\]\?\.imageId \?\? null/);
-  assert.match(source, /backendStoragePath: result\.storagePath \?\? result\.images\?\.\[0\]\?\.storagePath \?\? null/);
-  assert.match(source, /addImageToCanvasSafely\(result\.imageUrl, '部分編集結果',[\s\S]*editingObjectId \?\? undefined\)/);
+  assert.match(source, /normalizeCanvasImageEditCandidates\(result\)/);
+  assert.match(source, /settleCanvasImageEditCandidatesSequentially\(candidates/);
+  assert.match(source, /backendJobId: candidate\.jobId/);
+  assert.match(source, /backendImageId: candidate\.imageId/);
+  assert.match(source, /backendStoragePath: candidate\.storagePath/);
+  assert.match(source, /candidateIndex: candidate\.candidateIndex/);
+  assert.match(source, /await addImageToCanvas\(candidate\.imageUrl,[\s\S]*editingObjectId \?\? undefined/);
+  assert.match(source, /candidates: placement\.placed\.map\(\(\{ candidate \}\) => candidate\)/);
+  assert.match(source, /updateObject\(objectId,[\s\S]*batchProof/);
+});
+
+test('multi-inpaint normalizes only unique persisted candidates and preserves backend indices', () => {
+  const result: ImageEditResult = {
+    success: true,
+    jobId: 'job-1',
+    imageId: 'image-0',
+    imageUrl: 'https://example.test/0.png',
+    storagePath: 'brand/0.png',
+    persistenceStatus: 'partial',
+    images: [
+      { imageUrl: 'https://example.test/0.png', jobId: 'job-1', imageId: 'image-0', storagePath: 'brand/0.png', persistenceStatus: 'completed', candidateIndex: 0 },
+      { imageUrl: 'https://example.test/1.png', jobId: 'job-1', imageId: 'image-1', storagePath: 'brand/1.png', persistenceStatus: 'completed', candidateIndex: 2 },
+      { imageUrl: 'https://example.test/duplicate.png', jobId: 'job-1', imageId: 'image-1', storagePath: 'brand/duplicate.png', persistenceStatus: 'completed', candidateIndex: 3 },
+      { imageUrl: '', jobId: 'job-1', imageId: 'image-4', storagePath: 'brand/4.png', persistenceStatus: 'completed', candidateIndex: 4 },
+    ],
+  };
+  const candidates = normalizeCanvasImageEditCandidates(result);
+  assert.deepEqual(candidates.map(({ imageId, candidateIndex }) => ({ imageId, candidateIndex })), [
+    { imageId: 'image-0', candidateIndex: 0 },
+    { imageId: 'image-1', candidateIndex: 2 },
+  ]);
+});
+
+test('multi-inpaint proof is deterministic and candidates are placed sequentially', async () => {
+  const candidates = normalizeCanvasImageEditCandidates({
+    success: true,
+    images: [
+      { imageUrl: 'https://example.test/a.png', jobId: 'job-1', imageId: 'image-a', storagePath: 'brand/a.png', persistenceStatus: 'completed', candidateIndex: 1 },
+      { imageUrl: 'https://example.test/b.png', jobId: 'job-1', imageId: 'image-b', storagePath: 'brand/b.png', persistenceStatus: 'completed', candidateIndex: 3 },
+    ],
+  });
+  const proof = buildCanvasImageEditBatchProof({ batchId: 'job-1', parentObjectId: 'source', preResultCount: 0, candidates });
+  assert.deepEqual(proof, {
+    schema: 'heavy-chain.canvas-image-edit-batch.v1', batchId: 'job-1', parentObjectId: 'source',
+    preZero: true, preResultCount: 0, postResultCount: 2, postDelta: 2, indices: [1, 3],
+    edges: [
+      { from: 'source', to: 'image-a', candidateIndex: 1 },
+      { from: 'source', to: 'image-b', candidateIndex: 3 },
+    ],
+  });
+  const order: string[] = [];
+  const added = await addCanvasImageEditCandidatesSequentially(candidates, async (candidate, placementIndex) => {
+    order.push(`start:${candidate.imageId}:${placementIndex}`);
+    await Promise.resolve();
+    order.push(`end:${candidate.imageId}:${placementIndex}`);
+    return candidate.imageId;
+  });
+  assert.deepEqual(added, ['image-a', 'image-b']);
+  assert.deepEqual(order, ['start:image-a:0', 'end:image-a:0', 'start:image-b:1', 'end:image-b:1']);
+});
+
+test('partial Canvas placement records proof for actual successes and keeps trying later candidates', async () => {
+  const candidates = normalizeCanvasImageEditCandidates({
+    success: true,
+    images: [
+      { imageUrl: 'https://example.test/a.png', jobId: 'job-1', imageId: 'image-a', storagePath: 'brand/a.png', persistenceStatus: 'completed', candidateIndex: 0 },
+      { imageUrl: 'https://example.test/b.png', jobId: 'job-1', imageId: 'image-b', storagePath: 'brand/b.png', persistenceStatus: 'completed', candidateIndex: 1 },
+      { imageUrl: 'https://example.test/c.png', jobId: 'job-1', imageId: 'image-c', storagePath: 'brand/c.png', persistenceStatus: 'completed', candidateIndex: 2 },
+    ],
+  });
+  const attempted: number[] = [];
+  const placement = await settleCanvasImageEditCandidatesSequentially(candidates, async (candidate) => {
+    attempted.push(candidate.candidateIndex);
+    if (candidate.candidateIndex === 1) throw new Error('candidate-load-failed');
+    return `canvas-${candidate.imageId}`;
+  });
+  const proof = buildCanvasImageEditBatchProof({
+    batchId: 'job-1', parentObjectId: 'source', preResultCount: 0,
+    candidates: placement.placed.map(({ candidate }) => candidate),
+  });
+  assert.deepEqual(attempted, [0, 1, 2]);
+  assert.deepEqual(placement.placed.map(({ value }) => value), ['canvas-image-a', 'canvas-image-c']);
+  assert.deepEqual(placement.failed.map(({ candidate }) => candidate.imageId), ['image-b']);
+  assert.deepEqual(
+    { preZero: proof.preZero, postResultCount: proof.postResultCount, postDelta: proof.postDelta, indices: proof.indices, edges: proof.edges },
+    {
+      preZero: true, postResultCount: 2, postDelta: 2, indices: [0, 2],
+      edges: [
+        { from: 'source', to: 'image-a', candidateIndex: 0 },
+        { from: 'source', to: 'image-c', candidateIndex: 2 },
+      ],
+    },
+  );
+});
+
+test('provider and all-upload zero-persist failures report no cleanup when no cleanup target existed', async () => {
+  assert.equal(resolveImageEditCleanupStatus(false, []), 'none');
+  assert.equal(resolveImageEditCleanupStatus(true, []), 'completed');
+  assert.equal(resolveImageEditCleanupStatus(true, ['storage-remove-failed']), 'failed');
+  const edge = await read('../supabase/functions/edit-image/index.ts');
+  assert.match(edge, /let cleanupAttempted = false/);
+  assert.match(edge, /if \(telemetryClient && insertedImageIds\.length\) \{\s*cleanupAttempted = true/);
+  assert.match(edge, /if \(telemetryClient && uploadedStoragePaths\.length\) \{\s*cleanupAttempted = true/);
+  assert.match(edge, /cleanupStatus: resolveImageEditCleanupStatus\(cleanupAttempted, cleanupErrors\)/);
+});
+
+test('edit-image persists each candidate under one job and keeps first-candidate response fields', async () => {
+  const edge = await read('../supabase/functions/edit-image/index.ts');
+  assert.match(edge, /const persistedImages:/);
+  assert.match(edge, /for \(const \[fallbackIndex, candidate\] of generatedCandidates\.entries\(\)\)/);
+  assert.match(edge, /job_id: job\.id/);
+  assert.match(edge, /batchId: job\.id/);
+  assert.match(edge, /persistenceStatus === 'partial'/);
+  assert.match(edge, /edit_image_zero_persisted_candidates/);
+  assert.match(edge, /imageId: firstImage\.imageId/);
+  assert.match(edge, /storagePath: firstImage\.storagePath/);
+  assert.match(edge, /imageUrl: firstImage\.imageUrl/);
+  assert.match(edge, /\.remove\(uploadedStoragePaths\)/);
 });
 
 test('canvas exposes deterministic generation provenance without counting source images as results', async () => {
