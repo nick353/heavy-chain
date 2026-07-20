@@ -11,8 +11,9 @@ import {
   RefreshCw,
   ImagePlus
 } from 'lucide-react';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useCanvasStore, type CanvasObject } from '../../stores/canvasStore';
+import { clampFloatingToolbarPosition } from './floatingToolbarPosition';
 
 interface FloatingToolbarProps {
   selectedObject: CanvasObject | null;
@@ -22,7 +23,27 @@ interface FloatingToolbarProps {
 
 export function FloatingToolbar({ selectedObject, position, onAction }: FloatingToolbarProps) {
   const [showMore, setShowMore] = useState(false);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [clampedPosition, setClampedPosition] = useState({ left: 8, top: 8 });
   const { deleteSelected } = useCanvasStore();
+
+  useLayoutEffect(() => {
+    const updatePosition = () => {
+      const toolbar = toolbarRef.current;
+      if (!toolbar || typeof window === 'undefined') return;
+      setClampedPosition(clampFloatingToolbarPosition({
+        anchorX: position.x,
+        anchorY: position.y,
+        toolbarWidth: toolbar.offsetWidth,
+        toolbarHeight: toolbar.offsetHeight,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      }));
+    };
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    return () => window.removeEventListener('resize', updatePosition);
+  }, [position.x, position.y, selectedObject?.id]);
 
   if (!selectedObject) return null;
 
@@ -37,11 +58,11 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
 
   return (
     <div
+      ref={toolbarRef}
       className="fixed z-50 animate-scale-in"
       style={{
-        left: position.x,
-        top: position.y - 60,
-        transform: 'translateX(-50%)',
+        left: clampedPosition.left,
+        top: clampedPosition.top,
       }}
     >
       <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-[#101313]/95 p-1.5 shadow-[0_18px_60px_rgba(0,0,0,0.4)] backdrop-blur">
