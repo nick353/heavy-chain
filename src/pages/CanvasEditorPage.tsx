@@ -47,6 +47,7 @@ import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import type Konva from 'konva';
+import { buildCanvasGenerationState } from '../features/canvasGenerationState';
 
 type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
@@ -283,6 +284,7 @@ export function CanvasEditorPage() {
 
     return { passed, zoom, panX, panY, bounds, screenBounds, allowed, objectCount: visibleObjects.length };
   }, [canvasSize.height, canvasSize.width, objects, panX, panY, zoom]);
+  const canvasGenerationState = useMemo(() => buildCanvasGenerationState(objects), [objects]);
 
   const getLightchainCompatForObject = (objectId: string | null) => {
     if (!objectId) return undefined;
@@ -1630,6 +1632,13 @@ export function CanvasEditorPage() {
           feature: 'inpaint',
           prompt: params.prompt,
           maskApplied: true,
+          parameters: {
+            backendJobId: result.jobId ?? result.images?.[0]?.jobId ?? null,
+            backendImageId: result.imageId ?? result.images?.[0]?.imageId ?? null,
+            backendStoragePath: result.storagePath ?? result.images?.[0]?.storagePath ?? null,
+            backendProvider: result.provider ?? null,
+            persistenceStatus: result.persistenceStatus ?? result.images?.[0]?.persistenceStatus ?? null,
+          },
           ...buildDerivedLightchainMetadata(sourceObject, 'inpaint', { prompt: params.prompt }),
         }, editingObjectId ?? undefined);
         return true;
@@ -2107,6 +2116,14 @@ export function CanvasEditorPage() {
               data-testid="mobile-canvas-fit-proof"
               data-passed={mobileCanvasFitProof.passed ? 'true' : 'false'}
               data-proof={JSON.stringify(mobileCanvasFitProof)}
+              className="sr-only"
+            />
+            <div
+              data-testid="canvas-generation-state"
+              data-proof={JSON.stringify(canvasGenerationState)}
+              data-derived-result-count={canvasGenerationState.derivedResultCount}
+              data-partial-edit-result-count={canvasGenerationState.partialEditResultCount}
+              data-max-generation={canvasGenerationState.maxGeneration}
               className="sr-only"
             />
             {/* 背景パターン - position:fixedで固定し、サイドパネル開閉時に動かない */}

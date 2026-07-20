@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { hasEditableMaskPixels } from '../src/components/canvas/inpaintMask.ts';
+import { buildCanvasGenerationState } from '../src/features/canvasGenerationState.ts';
+import type { CanvasObject } from '../src/stores/canvasStore.ts';
 
 const read = (path: string) => readFile(new URL(path, import.meta.url), 'utf8');
 
@@ -48,7 +50,46 @@ test('partial edit result remains a parent-linked derived canvas object', async 
   assert.match(source, /if \(action === 'inpaint'\)/);
   assert.match(source, /feature: 'inpaint'/);
   assert.match(source, /maskApplied: true/);
+  assert.match(source, /backendJobId: result\.jobId \?\? result\.images\?\.\[0\]\?\.jobId \?\? null/);
+  assert.match(source, /backendImageId: result\.imageId \?\? result\.images\?\.\[0\]\?\.imageId \?\? null/);
+  assert.match(source, /backendStoragePath: result\.storagePath \?\? result\.images\?\.\[0\]\?\.storagePath \?\? null/);
   assert.match(source, /addImageToCanvasSafely\(result\.imageUrl, '部分編集結果',[\s\S]*editingObjectId \?\? undefined\)/);
+});
+
+test('canvas exposes deterministic generation provenance without counting source images as results', async () => {
+  const source = await read('../src/pages/CanvasEditorPage.tsx');
+  assert.match(source, /data-testid="canvas-generation-state"/);
+  assert.match(source, /buildCanvasGenerationState\(objects\)/);
+  assert.match(source, /data-partial-edit-result-count=\{canvasGenerationState\.partialEditResultCount\}/);
+  assert.match(source, /data-derived-result-count=\{canvasGenerationState\.derivedResultCount\}/);
+
+  const object = (input: Partial<CanvasObject> & Pick<CanvasObject, 'id'>): CanvasObject => ({
+    type: 'image', x: 0, y: 0, width: 10, height: 10, rotation: 0, scaleX: 1, scaleY: 1,
+    opacity: 1, locked: false, visible: true, zIndex: 0, ...input,
+  });
+  const proof = buildCanvasGenerationState([
+    object({ id: 'source', metadata: { feature: 'gallery-import', generation: 0, source: 'gallery-selector' } as CanvasObject['metadata'] }),
+    object({
+      id: 'result',
+      derivedFrom: 'source',
+      metadata: {
+        feature: 'inpaint', generation: 1, maskApplied: true,
+        parameters: {
+          backendJobId: 'private-job', backendImageId: 'private-image',
+          backendStoragePath: 'private/brand/path.png', backendProvider: 'openai', persistenceStatus: 'completed',
+        },
+      } as CanvasObject['metadata'],
+    }),
+    object({ id: 'derived', derivedFrom: 'source', metadata: { feature: 'upscale', generation: 2 } }),
+  ]);
+  assert.deepEqual(
+    { imageCount: proof.imageCount, sourceImageCount: proof.sourceImageCount, gallerySourceCount: proof.gallerySourceCount,
+      derivedResultCount: proof.derivedResultCount, partialEditResultCount: proof.partialEditResultCount, maxGeneration: proof.maxGeneration },
+    { imageCount: 3, sourceImageCount: 1, gallerySourceCount: 1, derivedResultCount: 2, partialEditResultCount: 1, maxGeneration: 2 },
+  );
+  const serialized = JSON.stringify(proof);
+  assert.doesNotMatch(serialized, /private-job|private-image|private\/brand\/path/);
+  assert.equal(proof.objects.find((item) => item.objectId === 'result')?.hasBackendStoragePath, true);
 });
 
 test('a fully erased mask is rejected while a painted selection remains editable', () => {
