@@ -84,6 +84,7 @@ function dataUrlToBlob(imageUrl: string, index: number) {
   return {
     blob: new Blob([bytes], { type: mimeType }),
     fileName: `reference-${index + 1}.${extensionFromMimeType(mimeType)}`,
+    mimeType,
   };
 }
 
@@ -174,6 +175,7 @@ export async function generateOpenAiImage(params: {
 export async function editOpenAiImage(params: {
   prompt: string;
   images: Array<{ imageUrl: string }>;
+  mask?: { imageUrl: string };
   model?: string | null;
   background?: 'transparent' | 'opaque' | 'auto';
 }): Promise<OpenAiImageResult> {
@@ -195,6 +197,13 @@ export async function editOpenAiImage(params: {
       const image = dataUrlToBlob(imageUrl, index);
       formData.append('image[]', image.blob, image.fileName);
     });
+    if (params.mask?.imageUrl) {
+      const mask = dataUrlToBlob(params.mask.imageUrl, images.length);
+      if (mask.mimeType !== 'image/png') {
+        throw new Error('openai_image_edit_mask_not_png');
+      }
+      formData.append('mask', mask.blob, 'mask.png');
+    }
 
     const response = await fetch(`${openAiImageBaseUrl()}/images/edits`, {
       method: 'POST',

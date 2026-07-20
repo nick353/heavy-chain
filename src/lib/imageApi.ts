@@ -277,20 +277,58 @@ export async function generateImage(
 /**
  * Edit image with text prompt (Image + Text)
  */
+async function imageBlobToDataUrl(blob: Blob): Promise<string> {
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === 'string'
+      ? resolve(reader.result)
+      : reject(new Error('image_edit_input_data_url_failed'));
+    reader.onerror = () => reject(new Error('image_edit_input_data_url_failed'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function imageBlobToPngDataUrl(blob: Blob): Promise<string> {
+  const bitmap = await createImageBitmap(blob);
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('image_edit_png_canvas_unavailable');
+    context.drawImage(bitmap, 0, 0);
+    const png = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((result) => result ? resolve(result) : reject(new Error('image_edit_png_encode_failed')), 'image/png');
+    });
+    return await imageBlobToDataUrl(png);
+  } finally {
+    bitmap.close();
+  }
+}
+
 export async function editImageWithPrompt(
   imageUrl: string,
   prompt: string,
   brandId: string,
   options?: LegalSafetyOptions & {
     outputBackground?: 'auto' | 'transparent';
+    maskDataUrl?: string;
   },
 ): Promise<ImageEditResult> {
   try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) throw new Error(`image_edit_input_fetch_failed:${response.status}`);
+    const imageBlob = await response.blob();
+    if (!imageBlob.type.startsWith('image/')) throw new Error('image_edit_input_not_image');
+    const imageInput = options?.maskDataUrl
+      ? await imageBlobToPngDataUrl(imageBlob)
+      : await imageBlobToDataUrl(imageBlob);
     const { data, error } = await supabase.functions.invoke('edit-image', {
       body: {
-        imageUrl,
+        imageUrl: imageInput,
         prompt,
         brandId,
+        maskDataUrl: options?.maskDataUrl,
         outputBackground: options?.outputBackground === 'transparent' ? 'transparent' : 'auto',
         legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
       },

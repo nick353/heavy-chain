@@ -51,7 +51,7 @@ import type Konva from 'konva';
 type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
 type GenerateMode = 'basic' | 'gacha' | 'product-shots' | 'model-matrix' | 'multilingual';
-type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'generate-variations' | 'prompt-edit';
+type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'generate-variations' | 'prompt-edit' | 'inpaint';
 type CanvasTemplateMode = 'size' | 'design';
 type CanvasRenderState = { totalImageObjects: number; loadedImageObjects: number; renderAllObjects: boolean };
 const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
@@ -66,6 +66,7 @@ const LIGHTCHAIN_EDIT_ACTION_LABELS: Record<LightchainEditAction, string> = {
   upscale: '高解像度化',
   'generate-variations': 'デザインアレンジ',
   'prompt-edit': 'プロンプト編集',
+  inpaint: '部分編集',
 };
 
 const GENERATE_MODES = [
@@ -1191,6 +1192,8 @@ export function CanvasEditorPage() {
         break;
 
       case 'variations':
+      case 'generateVariations':
+      case 'derive':
         toast.loading('バリエーションを生成中...', { id: 'variations' });
         try {
           const { data, error } = await supabase.functions.invoke('generate-variations', {
@@ -1213,6 +1216,8 @@ export function CanvasEditorPage() {
         break;
 
       case 'edit':
+      case 'editWithPrompt':
+      case 'edit-prompt':
         setEditingImage(imageSrc);
         setEditingObjectId(objectId);
         setShowEditModal(true);
@@ -1557,15 +1562,15 @@ export function CanvasEditorPage() {
     setSidePanel('properties');
   };
 
-  const handleEditModalAction = async (action: string, params: { prompt?: string }) => {
-    if (!editingImage) return;
+  const handleEditModalAction = async (action: string, params: { prompt?: string; maskDataUrl?: string }) => {
+    if (!editingImage) return false;
     if (!currentBrand?.id) {
       toast.error('ブランドを選択してから実行してください');
-      return;
+      return false;
     }
     if (!rightsConfirmed) {
       toast.error('素材の利用権利を確認してください');
-      return;
+      return false;
     }
     const sourceObject = editingObjectId
       ? objects.find((item) => item.id === editingObjectId) ?? null
@@ -1579,11 +1584,11 @@ export function CanvasEditorPage() {
       if (action === 'prompt') {
         if (!params.prompt?.trim()) {
           toast.error('編集したい内容を入力してください');
-          return;
+          return false;
         }
         if (validateLegalSafetyInput([params.prompt]).blocked) {
           toast.error(BRAND_LIKENESS_BLOCK_COPY);
-          return;
+          return false;
         }
         const result = await editImageWithPrompt(editingImage, params.prompt, currentBrand.id, { rightsConfirmed });
         if (!result.success || !result.imageUrl) {
@@ -1595,10 +1600,37 @@ export function CanvasEditorPage() {
           prompt: params.prompt,
           ...buildDerivedLightchainMetadata(sourceObject, 'prompt-edit', { prompt: params.prompt }),
         }, editingObjectId ?? undefined);
-        setShowEditModal(false);
-        setEditingImage(null);
-        setEditingObjectId(null);
-        return;
+        return true;
+      }
+
+      if (action === 'inpaint') {
+        if (!params.prompt?.trim()) {
+          toast.error('編集したい内容を入力してください');
+          return false;
+        }
+        if (!params.maskDataUrl) {
+          toast.error('編集する範囲をブラシで指定してください');
+          return false;
+        }
+        if (validateLegalSafetyInput([params.prompt]).blocked) {
+          toast.error(BRAND_LIKENESS_BLOCK_COPY);
+          return false;
+        }
+        const result = await editImageWithPrompt(editingImage, params.prompt, currentBrand.id, {
+          rightsConfirmed,
+          maskDataUrl: params.maskDataUrl,
+        });
+        if (!result.success || !result.imageUrl) {
+          throw new Error(result.error || '部分編集に失敗しました');
+        }
+        addImageToCanvasSafely(result.imageUrl, '部分編集結果', {
+          ...baseMetadata,
+          feature: 'inpaint',
+          prompt: params.prompt,
+          maskApplied: true,
+          ...buildDerivedLightchainMetadata(sourceObject, 'inpaint', { prompt: params.prompt }),
+        }, editingObjectId ?? undefined);
+        return true;
       }
 
       if (action === 'remove-bg') {
@@ -1612,13 +1644,13 @@ export function CanvasEditorPage() {
           feature: 'remove-background',
           ...buildDerivedLightchainMetadata(sourceObject, 'remove-background'),
         }, editingObjectId ?? undefined);
-        return;
+        return true;
       }
 
       if (action === 'colorize') {
         if (params.prompt && validateLegalSafetyInput([params.prompt]).blocked) {
           toast.error(BRAND_LIKENESS_BLOCK_COPY);
-          return;
+          return false;
         }
         const colors = params.prompt?.split(/[、,\\s]+/).map((item) => item.trim()).filter(Boolean);
         const { data, error } = await supabase.functions.invoke('colorize', {
@@ -1635,7 +1667,7 @@ export function CanvasEditorPage() {
             ...buildDerivedLightchainMetadata(sourceObject, 'colorize', { parameters }),
           }, editingObjectId ?? undefined);
         });
-        return;
+        return true;
       }
 
       if (action === 'upscale') {
@@ -1649,13 +1681,13 @@ export function CanvasEditorPage() {
           feature: 'upscale',
           ...buildDerivedLightchainMetadata(sourceObject, 'upscale', { parameters: { scale: 2 } }),
         }, editingObjectId ?? undefined);
-        return;
+        return true;
       }
 
       if (action === 'variations') {
         if (params.prompt && validateLegalSafetyInput([params.prompt]).blocked) {
           toast.error(BRAND_LIKENESS_BLOCK_COPY);
-          return;
+          return false;
         }
         const { data, error } = await supabase.functions.invoke('generate-variations', {
           body: { imageUrl: editingImage, brandId: currentBrand.id, prompt: params.prompt || undefined, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
@@ -1673,7 +1705,9 @@ export function CanvasEditorPage() {
             }),
           }, editingObjectId ?? undefined);
         });
+        return true;
       }
+      return false;
     } catch (error: any) {
       throw new Error(await edgeFunctionErrorMessage(error));
     }

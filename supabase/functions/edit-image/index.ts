@@ -13,6 +13,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function pngDataUrlInfo(value: string) {
+  const prefix = 'data:image/png;base64,';
+  if (!value.startsWith(prefix)) throw new Error('Invalid PNG data URL');
+  const encoded = value.slice(prefix.length);
+  const header = atob(encoded.slice(0, 64));
+  if (header.length < 26 || header.slice(0, 8) !== '\x89PNG\r\n\x1a\n' || header.slice(12, 16) !== 'IHDR') {
+    throw new Error('Invalid PNG header');
+  }
+  const uint32 = (offset: number) => (
+    ((header.charCodeAt(offset) << 24) >>> 0)
+    + (header.charCodeAt(offset + 1) << 16)
+    + (header.charCodeAt(offset + 2) << 8)
+    + header.charCodeAt(offset + 3)
+  );
+  return {
+    width: uint32(16),
+    height: uint32(20),
+    colorType: header.charCodeAt(25),
+  };
+}
+
 serve(async (req) => {
   let usageReservation: UsageReservation | null = null;
   let observedBrandId: string | null = null;
@@ -47,10 +68,30 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { imageUrl, prompt, brandId, lightchainCompat, outputBackground } = body;
+    const { imageUrl, prompt, brandId, lightchainCompat, outputBackground, maskDataUrl } = body;
 
     if (!imageUrl || !prompt || !brandId) {
       throw new Error('Missing required parameters');
+    }
+    if (maskDataUrl !== undefined && (
+      typeof maskDataUrl !== 'string'
+      || !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(maskDataUrl)
+      || maskDataUrl.length > 24_000_000
+    )) {
+      throw new Error('Invalid edit mask');
+    }
+    if (maskDataUrl) {
+      if (typeof imageUrl !== 'string' || !imageUrl.startsWith('data:image/png;base64,')) {
+        throw new Error('Masked edit input must be PNG');
+      }
+      const imageInfo = pngDataUrlInfo(imageUrl);
+      const maskInfo = pngDataUrlInfo(maskDataUrl);
+      if (imageInfo.width !== maskInfo.width || imageInfo.height !== maskInfo.height) {
+        throw new Error('Edit mask dimensions must match input image');
+      }
+      if (maskInfo.colorType !== 4 && maskInfo.colorType !== 6) {
+        throw new Error('Edit mask must contain an alpha channel');
+      }
     }
 
     requireLegalSafetyApproval(body.legalSafety, [
@@ -97,6 +138,7 @@ serve(async (req) => {
           imageUrl: '[provided]',
           prompt,
           requestId,
+          ...(maskDataUrl ? { maskApplied: true } : {}),
           ...(materialMetadata ?? {}),
           ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
         } as any,
@@ -122,6 +164,7 @@ serve(async (req) => {
     const result = await editOpenAiImage({
       prompt,
       images: [{ imageUrl }],
+      mask: maskDataUrl ? { imageUrl: maskDataUrl } : undefined,
       model: Deno.env.get('OPENAI_IMAGE_EDIT_MODEL')?.trim() || Deno.env.get('OPENAI_IMAGE_MODEL')?.trim() || 'gpt-image-1-mini',
       background: outputBackground === 'transparent' ? 'transparent' : 'auto',
     });
@@ -158,12 +201,14 @@ serve(async (req) => {
         generation_params: {
           provider: 'openai',
           taskId: result.taskId,
+          ...(maskDataUrl ? { maskApplied: true } : {}),
         },
         metadata: {
           remoteSaveStatus: 'succeeded',
           source: 'edit-image',
           provider: 'openai',
           requestId,
+          ...(maskDataUrl ? { maskApplied: true } : {}),
           ...(materialMetadata ?? {}),
           ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
         } as any,

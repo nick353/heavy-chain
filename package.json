@@ -16,6 +16,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:model-matrix-verification": "node --experimental-strip-types --test scripts/verify-model-matrix-verification.test.ts",
+    "test:canvas-partial-edit": "node --experimental-strip-types --test scripts/verify-canvas-partial-image-editing.test.ts",
     "test:print-mask-candidates": "node --experimental-strip-types --test scripts/verify-print-mask-candidates.test.ts",
     "test:point-guided-selection": "node --experimental-strip-types --test scripts/verify-point-guided-selection.test.ts scripts/verify-point-prompt-segmentation.test.ts",
     "test:print-shortcuts": "node --experimental-strip-types --test scripts/verify-print-design-handoff.test.ts scripts/verify-print-shortcuts-source.test.ts",
