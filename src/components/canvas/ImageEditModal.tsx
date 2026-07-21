@@ -80,7 +80,7 @@ export function ImageEditModal({ isOpen, onClose, imageUrl, onEdit }: ImageEditM
     context.globalCompositeOperation = maskOutput
       ? (stroke.erase ? 'source-over' : 'destination-out')
       : (stroke.erase ? 'destination-out' : 'source-over');
-    const color = maskOutput ? '#000' : 'rgba(239, 68, 68, 0.58)';
+    const color = maskOutput ? '#000' : 'rgba(37, 99, 235, 0.58)';
     context.strokeStyle = color;
     context.fillStyle = color;
     context.lineCap = 'round';
@@ -242,7 +242,7 @@ export function ImageEditModal({ isOpen, onClose, imageUrl, onEdit }: ImageEditM
             )}
           </div>
           <p className="text-xs text-neutral-500 text-center">
-            {mode === 'inpaint' ? '赤い範囲だけを編集します' : '元の画像'}
+            {mode === 'inpaint' ? '青い範囲だけを編集します' : '元の画像'}
           </p>
           {mode === 'inpaint' && (
             <div className="mt-3 space-y-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3">

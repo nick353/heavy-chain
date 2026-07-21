@@ -17,8 +17,12 @@ const read = (path: string) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('canvas image actions route every visible prompt-edit and variation action', async () => {
   const source = await read('../src/pages/CanvasEditorPage.tsx');
+  const toolbar = await read('../src/components/canvas/FloatingToolbar.tsx');
   assert.match(source, /case 'variations':\s*case 'generateVariations':\s*case 'derive':/);
   assert.match(source, /action === 'edit' \|\| action === 'editWithPrompt' \|\| action === 'edit-prompt'/);
+  assert.match(source, /action === 'inpaint'/);
+  assert.match(toolbar, /onAction\('inpaint'\)/);
+  assert.match(toolbar, /部分編集/);
   assert.match(source, /setEditingImage\(obj\.src\)[\s\S]*setShowEditModal\(true\)[\s\S]*const imageSrc = await resolveCanvasObjectImageUrl\(obj\)/);
   assert.match(source, /const editSource = sourceObject\s*\? await resolveCanvasObjectImageUrl\(sourceObject\)\s*: await resolveGeneratedImageUrl\(editingImage\)/);
   assert.match(source, /editImageWithPrompt\(editSource, params\.prompt/);
@@ -28,6 +32,8 @@ test('partial edit UI provides a precise reversible PNG mask', async () => {
   const source = await read('../src/components/canvas/ImageEditModal.tsx');
   assert.match(source, /id: 'inpaint'.*label: '部分編集'/);
   assert.match(source, /data-testid="canvas-inpaint-mask"/);
+  assert.match(source, /rgba\(37, 99, 235, 0\.58\)/);
+  assert.match(source, /青い範囲だけを編集します/);
   assert.match(source, /stroke\.erase \? 'source-over' : 'destination-out'/);
   assert.match(source, /mask\.toDataURL\('image\/png'\)/);
   assert.match(source, /範囲指定を元に戻す/);
@@ -51,7 +57,8 @@ test('partial edit mask is sent through the client and edge function without sto
   assert.doesNotMatch(edge, /input_params:[\s\S]{0,500}maskDataUrl[,}]/);
   assert.match(openAi, /formData\.append\('mask', mask\.blob, 'mask\.png'\)/);
   assert.match(openAi, /openai_image_edit_mask_not_png/);
-  assert.match(edge, /count: maskDataUrl \? 4 : 1/);
+  assert.match(edge, /count: 1/);
+  assert.match(edge, /const requestedCandidateCount = 1/);
   assert.match(openAi, /formData\.set\('n', String\(requestedCount\)\)/);
   assert.equal((edge.match(/await editOpenAiImage\(/g) ?? []).length, 1);
 });
@@ -61,6 +68,10 @@ test('partial edit result remains a parent-linked derived canvas object', async 
   assert.match(source, /if \(action === 'inpaint'\)/);
   assert.match(source, /feature: 'inpaint'/);
   assert.match(source, /maskApplied: true/);
+  assert.match(source, /parentObjectId: editingObjectId/);
+  assert.match(source, /backendProvider/);
+  assert.match(source, /provider/);
+  assert.match(source, /status/);
   assert.match(source, /normalizeCanvasImageEditCandidates\(result\)/);
   assert.match(source, /settleCanvasImageEditCandidatesSequentially\(candidates/);
   assert.match(source, /backendJobId: candidate\.jobId/);

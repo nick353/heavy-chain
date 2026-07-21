@@ -69,6 +69,8 @@ export interface ImageEditResult {
     batchId?: string | null;
   }>;
   provider?: string;
+  backendProvider?: string;
+  status?: string;
   persistenceStatus?: 'not_started' | 'processing' | 'completed' | 'partial' | 'failed' | 'pending';
   cleanupStatus?: 'none' | 'attempted' | 'completed' | 'failed';
   requestedCandidateCount?: number;

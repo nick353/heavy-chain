@@ -1120,7 +1120,7 @@ export function CanvasEditorPage() {
       toast.error('素材の利用権利を確認してください');
       return;
     }
-    if (action === 'edit' || action === 'editWithPrompt' || action === 'edit-prompt') {
+    if (action === 'edit' || action === 'editWithPrompt' || action === 'edit-prompt' || action === 'inpaint') {
       setEditingImage(obj.src);
       setEditingObjectId(objectId);
       setShowEditModal(true);
@@ -1634,17 +1634,30 @@ export function CanvasEditorPage() {
           throw new Error(result.error || '部分編集に失敗しました');
         }
         const batchId = candidates[0].jobId;
+        const backendProvider = result.backendProvider ?? 'supabase-edge-function';
+        const provider = result.provider ?? 'openai';
+        const status = result.status ?? result.persistenceStatus ?? 'completed';
         const placement = await settleCanvasImageEditCandidatesSequentially(candidates, async (candidate, placementIndex) => (
           await addImageToCanvas(candidate.imageUrl, `部分編集結果 ${placementIndex + 1}`, {
             ...baseMetadata,
+            parentObjectId: editingObjectId ?? null,
             feature: 'inpaint',
             prompt: params.prompt,
             maskApplied: true,
+            backendProvider,
+            provider,
+            status,
+            jobId: candidate.jobId,
+            imageId: candidate.imageId,
+            storagePath: candidate.storagePath,
+            persistenceStatus: candidate.persistenceStatus,
             parameters: {
               backendJobId: candidate.jobId,
               backendImageId: candidate.imageId,
               backendStoragePath: candidate.storagePath,
-              backendProvider: result.provider ?? null,
+              backendProvider,
+              provider,
+              status,
               persistenceStatus: candidate.persistenceStatus,
               batchId,
               candidateIndex: candidate.candidateIndex,

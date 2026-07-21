@@ -36,6 +36,15 @@ export interface CanvasObject {
     parentId?: string;      // 親画像のID
     generation: number;     // 世代数 (0=最初の生成, 1=1回派生...)
     parameters?: any;       // 使用したパラメータ
+    parentObjectId?: string | null;
+    maskApplied?: boolean;
+    backendProvider?: string | null;
+    provider?: string | null;
+    status?: string | null;
+    jobId?: string | null;
+    imageId?: string | null;
+    storagePath?: string | null;
+    persistenceStatus?: string | null;
     lightchainCompat?: any;  // Heavy Chain互換の機能/タスク状態
     galleryStoragePath?: string;
     galleryImageId?: string;

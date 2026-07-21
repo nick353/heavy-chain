@@ -135,12 +135,12 @@ serve(async (req) => {
       .insert({
         brand_id: brandId,
         user_id: user.id,
-        feature_type: 'prompt-edit',
+        feature_type: maskDataUrl ? 'inpaint' : 'prompt-edit',
         input_params: {
           imageUrl: '[provided]',
           prompt,
           requestId,
-          requestedCandidateCount: maskDataUrl ? 4 : 1,
+          requestedCandidateCount: 1,
           ...(maskDataUrl ? { maskApplied: true } : {}),
           ...(materialMetadata ?? {}),
           ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
@@ -170,9 +170,9 @@ serve(async (req) => {
       mask: maskDataUrl ? { imageUrl: maskDataUrl } : undefined,
       model: Deno.env.get('OPENAI_IMAGE_EDIT_MODEL')?.trim() || Deno.env.get('OPENAI_IMAGE_MODEL')?.trim() || 'gpt-image-1-mini',
       background: outputBackground === 'transparent' ? 'transparent' : 'auto',
-      count: maskDataUrl ? 4 : 1,
+      count: 1,
     });
-    const requestedCandidateCount = maskDataUrl ? 4 : 1;
+    const requestedCandidateCount = 1;
     const generatedCandidates = (result.candidates?.length ? result.candidates : [{
       base64: result.base64,
       mimeType: result.mimeType,
@@ -226,7 +226,7 @@ serve(async (req) => {
             image_url: null,
             prompt,
             negative_prompt: null,
-            feature_type: 'prompt-edit',
+            feature_type: maskDataUrl ? 'inpaint' : 'prompt-edit',
             model_used: result.model,
             generation_params: {
               provider: 'openai',
@@ -329,6 +329,8 @@ serve(async (req) => {
       storagePath: firstImage.storagePath,
       imageUrl: firstImage.imageUrl,
       provider: 'openai',
+      backendProvider: 'supabase-edge-function',
+      status: 'completed',
       persistenceStatus,
       cleanupStatus: resolveImageEditCleanupStatus(candidateCleanupAttempted, candidateCleanupErrors),
       requestedCandidateCount,
