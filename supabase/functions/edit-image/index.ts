@@ -70,7 +70,20 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { imageUrl, prompt, brandId, lightchainCompat, outputBackground, maskDataUrl } = body;
+    const {
+      imageUrl,
+      prompt,
+      brandId,
+      lightchainCompat,
+      outputBackground,
+      maskDataUrl,
+      parentObjectId,
+      generation,
+      maskApplied,
+      maskCoveragePercent,
+      maskWidth,
+      maskHeight,
+    } = body;
 
     if (!imageUrl || !prompt || !brandId) {
       throw new Error('Missing required parameters');
@@ -95,6 +108,32 @@ serve(async (req) => {
         throw new Error('Edit mask must contain an alpha channel');
       }
     }
+
+    const hasMask = typeof maskDataUrl === 'string' && maskDataUrl.trim().length > 0;
+    if (hasMask && (!maskDataUrl.startsWith('data:image/png;base64,') || maskDataUrl.length > 12_000_000)) {
+      throw new Error('Invalid partial-edit mask');
+    }
+    if (maskApplied === true && !hasMask) {
+      throw new Error('Partial-edit mask is required');
+    }
+    const safeParentObjectId = typeof parentObjectId === 'string' && parentObjectId.trim()
+      ? parentObjectId.trim().slice(0, 128)
+      : null;
+    const parsedGeneration = Number(generation);
+    const safeGeneration = Number.isInteger(parsedGeneration) && parsedGeneration >= 0 && parsedGeneration <= 100
+      ? parsedGeneration
+      : null;
+    const partialEditProvenance = {
+      mode: hasMask ? 'inpaint' : 'prompt-edit',
+      maskApplied: hasMask,
+      parentObjectId: safeParentObjectId,
+      generation: safeGeneration,
+      maskCoveragePercent: typeof maskCoveragePercent === 'number' ? Math.max(0, Math.min(100, maskCoveragePercent)) : null,
+      maskWidth: typeof maskWidth === 'number' ? Math.max(1, Math.min(8192, Math.round(maskWidth))) : null,
+      maskHeight: typeof maskHeight === 'number' ? Math.max(1, Math.min(8192, Math.round(maskHeight))) : null,
+      backendProvider: 'supabase-edge-function',
+      provider: 'openai',
+    };
 
     requireLegalSafetyApproval(body.legalSafety, [
       prompt,
@@ -135,13 +174,13 @@ serve(async (req) => {
       .insert({
         brand_id: brandId,
         user_id: user.id,
-        feature_type: maskDataUrl ? 'inpaint' : 'prompt-edit',
+        feature_type: hasMask ? 'inpaint' : 'prompt-edit',
         input_params: {
           imageUrl: '[provided]',
           prompt,
           requestId,
           requestedCandidateCount: 1,
-          ...(maskDataUrl ? { maskApplied: true } : {}),
+          ...partialEditProvenance,
           ...(materialMetadata ?? {}),
           ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
         } as any,
@@ -226,25 +265,27 @@ serve(async (req) => {
             image_url: null,
             prompt,
             negative_prompt: null,
-            feature_type: maskDataUrl ? 'inpaint' : 'prompt-edit',
+            feature_type: hasMask ? 'inpaint' : 'prompt-edit',
             model_used: result.model,
             generation_params: {
+              ...partialEditProvenance,
+              ...(hasMask ? { maskApplied: true } : {}),
               provider: 'openai',
               taskId: result.taskId,
               batchId: job.id,
               candidateIndex,
               requestedCandidateCount,
-              ...(maskDataUrl ? { maskApplied: true } : {}),
             },
             metadata: {
               remoteSaveStatus: 'succeeded',
               source: 'edit-image',
-              provider: 'openai',
               requestId,
+              ...partialEditProvenance,
+              ...(hasMask ? { maskApplied: true } : {}),
+              status: 'completed',
               batchId: job.id,
               candidateIndex,
               requestedCandidateCount,
-              ...(maskDataUrl ? { maskApplied: true } : {}),
               ...(materialMetadata ?? {}),
               ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
             } as any,
@@ -328,9 +369,11 @@ serve(async (req) => {
       imageId: firstImage.imageId,
       storagePath: firstImage.storagePath,
       imageUrl: firstImage.imageUrl,
+      feature: hasMask ? 'partial-edit' : 'prompt-edit',
       provider: 'openai',
       backendProvider: 'supabase-edge-function',
       status: 'completed',
+      ...partialEditProvenance,
       persistenceStatus,
       cleanupStatus: resolveImageEditCleanupStatus(candidateCleanupAttempted, candidateCleanupErrors),
       requestedCandidateCount,

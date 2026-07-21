@@ -27,6 +27,7 @@ import { FloatingToolbar } from '../components/canvas/FloatingToolbar';
 import { Minimap } from '../components/canvas/Minimap';
 import { PropertiesPanel } from '../components/canvas/PropertiesPanel';
 import { ImageEditModal } from '../components/canvas/ImageEditModal';
+import { PartialEditModal, type PartialEditPayload } from '../components/canvas/PartialEditModal';
 import { CanvasGuide, useCanvasGuide } from '../components/canvas/CanvasGuide';
 import { useCanvasStore, type CanvasObject } from '../stores/canvasStore';
 import { ChatEditor } from '../components/ChatEditor';
@@ -57,7 +58,7 @@ import { buildCanvasGenerationState } from '../features/canvasGenerationState';
 type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
 type GenerateMode = 'basic' | 'gacha' | 'product-shots' | 'model-matrix' | 'multilingual';
-type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'generate-variations' | 'prompt-edit' | 'inpaint';
+type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'generate-variations' | 'prompt-edit' | 'inpaint' | 'partial-edit';
 type CanvasTemplateMode = 'size' | 'design';
 type CanvasRenderState = { totalImageObjects: number; loadedImageObjects: number; renderAllObjects: boolean };
 const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
@@ -73,6 +74,7 @@ const LIGHTCHAIN_EDIT_ACTION_LABELS: Record<LightchainEditAction, string> = {
   'generate-variations': 'デザインアレンジ',
   'prompt-edit': 'プロンプト編集',
   inpaint: '部分編集',
+  'partial-edit': '部分編集',
 };
 
 const GENERATE_MODES = [
@@ -155,6 +157,9 @@ export function CanvasEditorPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingImage, setEditingImage] = useState<string | null>(null);
   const [editingObjectId, setEditingObjectId] = useState<string | null>(null);
+  const [showPartialEditModal, setShowPartialEditModal] = useState(false);
+  const [partialEditingImage, setPartialEditingImage] = useState<string | null>(null);
+  const [partialEditingObjectId, setPartialEditingObjectId] = useState<string | null>(null);
 
   // Invite modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -253,6 +258,44 @@ export function CanvasEditorPage() {
   const selectedObject = selectedIds.length === 1
     ? objects.find((obj) => obj.id === selectedIds[0]) || null
     : null;
+
+  useEffect(() => {
+    const partialEditObjects = objects.filter((object) => (
+      object.type === 'image' &&
+      (object.metadata?.feature === 'partial-edit' || object.metadata?.feature === 'inpaint')
+    ));
+    const latest = partialEditObjects[partialEditObjects.length - 1] ?? null;
+    const metadata = latest?.metadata;
+    const parameters = metadata?.parameters && typeof metadata.parameters === 'object'
+      ? metadata.parameters
+      : {};
+    const marker = {
+      partialEditResultCount: partialEditObjects.length,
+      parentObjectId: metadata?.parentObjectId ?? metadata?.parentId ?? null,
+      generation: metadata?.generation ?? null,
+      maskApplied: metadata?.maskApplied ?? parameters.maskApplied ?? false,
+      backendProvenance: metadata?.backendProvider ?? parameters.backendProvider ?? null,
+      provider: metadata?.provider ?? parameters.provider ?? null,
+      status: metadata?.status ?? parameters.status ?? null,
+      jobId: metadata?.jobId ?? parameters.jobId ?? null,
+      imageId: metadata?.imageId ?? parameters.imageId ?? null,
+      storagePath: metadata?.storagePath ?? parameters.storagePath ?? null,
+      persistenceStatus: metadata?.persistenceStatus ?? parameters.persistenceStatus ?? null,
+      resultObjectId: latest?.id ?? null,
+    };
+    document.body.dataset.partialEditResultCount = String(marker.partialEditResultCount);
+    document.body.dataset.heavyCanvasPartialEditState = JSON.stringify(marker);
+    document.body.dataset.heavyCanvasGenerationState = JSON.stringify({
+      partialEditResultCount: marker.partialEditResultCount,
+      latestPartialEdit: marker,
+    });
+
+    return () => {
+      delete document.body.dataset.partialEditResultCount;
+      delete document.body.dataset.heavyCanvasPartialEditState;
+      delete document.body.dataset.heavyCanvasGenerationState;
+    };
+  }, [objects]);
   const mobileCanvasFitProof = useMemo(() => {
     if (canvasSize.width >= 640 || objects.length === 0) {
       return { passed: true, reason: objects.length === 0 ? 'no_objects' : 'desktop_view' };
@@ -1105,7 +1148,7 @@ export function CanvasEditorPage() {
 
     // Handle AI actions for images
     if (obj.type !== 'image' || !obj.src) {
-      if (action.startsWith('edit') || action.startsWith('remove') || action.startsWith('color') || action.startsWith('upscale') || action.startsWith('generate') || action.startsWith('design') || action.startsWith('product') || action.startsWith('model') || action.startsWith('multilingual') || action.startsWith('scene')) {
+      if (action.startsWith('edit') || action.startsWith('partial') || action.startsWith('remove') || action.startsWith('color') || action.startsWith('upscale') || action.startsWith('generate') || action.startsWith('design') || action.startsWith('product') || action.startsWith('model') || action.startsWith('multilingual') || action.startsWith('scene')) {
         toast.error('画像を選択してください');
       }
       return;
@@ -1120,7 +1163,13 @@ export function CanvasEditorPage() {
       toast.error('素材の利用権利を確認してください');
       return;
     }
-    if (action === 'edit' || action === 'editWithPrompt' || action === 'edit-prompt' || action === 'inpaint') {
+    if (action === 'partial-edit' || action === 'inpaint') {
+      setPartialEditingImage(obj.src);
+      setPartialEditingObjectId(objectId);
+      setShowPartialEditModal(true);
+      return;
+    }
+    if (action === 'edit' || action === 'editWithPrompt' || action === 'edit-prompt') {
       setEditingImage(obj.src);
       setEditingObjectId(objectId);
       setShowEditModal(true);
@@ -1566,6 +1615,91 @@ export function CanvasEditorPage() {
     selectObject(createdIds[createdIds.length - 1] || frameId);
     toast.success(`${template.name}をCanvasに展開しました`);
     setSidePanel('properties');
+  };
+
+  const handlePartialEditSubmit = async (payload: PartialEditPayload) => {
+    if (!partialEditingImage) return;
+    if (!currentBrand?.id) {
+      throw new Error('ブランドを選択してから実行してください');
+    }
+    if (!rightsConfirmed) {
+      throw new Error('素材の利用権利を確認してください');
+    }
+    if (validateLegalSafetyInput([payload.prompt]).blocked) {
+      throw new Error(BRAND_LIKENESS_BLOCK_COPY);
+    }
+
+    const sourceObject = partialEditingObjectId
+      ? objects.find((item) => item.id === partialEditingObjectId) ?? null
+      : null;
+    const generation = (sourceObject?.metadata?.generation || 0) + 1;
+    const lightchainEditMetadata = buildLightchainEditMetadata(partialEditingObjectId);
+    const editSource = sourceObject
+      ? await resolveCanvasObjectImageUrl(sourceObject)
+      : await resolveGeneratedImageUrl(partialEditingImage);
+    const result = await editImageWithPrompt(
+      editSource,
+      payload.prompt,
+      currentBrand.id,
+      {
+        rightsConfirmed,
+        maskDataUrl: payload.maskDataUrl,
+        parentObjectId: partialEditingObjectId,
+        generation,
+        maskApplied: true,
+        maskCoveragePercent: payload.maskCoveragePercent,
+        maskWidth: payload.maskWidth,
+        maskHeight: payload.maskHeight,
+        idempotencyKey: `heavy-canvas-partial-edit-${crypto.randomUUID()}`,
+        ...lightchainEditMetadata,
+      },
+    );
+    if (!result.success || !result.imageUrl) {
+      throw new Error(result.error || '部分編集に失敗しました');
+    }
+
+    const backendProvider = result.backendProvider || 'supabase-edge-function';
+    const provider = result.provider || 'openai';
+    const status = result.status || result.persistenceStatus || 'completed';
+    const resultParameters = {
+      editMode: 'inpaint',
+      maskApplied: true,
+      maskCoveragePercent: payload.maskCoveragePercent,
+      maskWidth: payload.maskWidth,
+      maskHeight: payload.maskHeight,
+      backendProvider,
+      provider,
+      status,
+      jobId: result.jobId ?? null,
+      imageId: result.imageId ?? null,
+      storagePath: result.storagePath ?? null,
+      persistenceStatus: result.persistenceStatus ?? null,
+    };
+
+    await addImageToCanvas(result.imageUrl, '部分編集結果', {
+      parentId: partialEditingObjectId ?? undefined,
+      parentObjectId: partialEditingObjectId ?? undefined,
+      generation,
+      feature: 'partial-edit',
+      prompt: payload.prompt,
+      maskApplied: true,
+      backendProvider,
+      provider,
+      status,
+      jobId: result.jobId ?? null,
+      imageId: result.imageId ?? null,
+      storagePath: result.storagePath ?? null,
+      persistenceStatus: result.persistenceStatus ?? null,
+      parameters: resultParameters,
+      ...buildDerivedLightchainMetadata(sourceObject, 'partial-edit', {
+        prompt: payload.prompt,
+        parameters: resultParameters,
+      }),
+    }, partialEditingObjectId ?? undefined);
+
+    setShowPartialEditModal(false);
+    setPartialEditingImage(null);
+    setPartialEditingObjectId(null);
   };
 
   const handleEditModalAction = async (action: string, params: { prompt?: string; maskDataUrl?: string }) => {
@@ -2536,6 +2670,19 @@ export function CanvasEditorPage() {
           }}
           imageUrl={editingImage}
           onEdit={handleEditModalAction}
+        />
+      )}
+
+      {showPartialEditModal && partialEditingImage && (
+        <PartialEditModal
+          isOpen={showPartialEditModal}
+          imageUrl={partialEditingImage}
+          onClose={() => {
+            setShowPartialEditModal(false);
+            setPartialEditingImage(null);
+            setPartialEditingObjectId(null);
+          }}
+          onSubmit={handlePartialEditSubmit}
         />
       )}
 

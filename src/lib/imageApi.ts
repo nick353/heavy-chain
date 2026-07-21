@@ -77,6 +77,9 @@ export interface ImageEditResult {
   persistedCandidateCount?: number;
   failedCandidates?: Array<{ candidateIndex: number; error: string }>;
   cleanupErrors?: string[];
+  parentObjectId?: string | null;
+  generation?: number | null;
+  maskApplied?: boolean;
   error?: string;
 }
 
@@ -321,6 +324,14 @@ export async function editImageWithPrompt(
   options?: LegalSafetyOptions & {
     outputBackground?: 'auto' | 'transparent';
     maskDataUrl?: string;
+    parentObjectId?: string | null;
+    generation?: number;
+    maskApplied?: boolean;
+    maskCoveragePercent?: number;
+    maskWidth?: number;
+    maskHeight?: number;
+    lightchainCompat?: LightchainCompatPayload;
+    idempotencyKey?: string;
   },
 ): Promise<ImageEditResult> {
   try {
@@ -338,8 +349,18 @@ export async function editImageWithPrompt(
         brandId,
         maskDataUrl: options?.maskDataUrl,
         outputBackground: options?.outputBackground === 'transparent' ? 'transparent' : 'auto',
+        parentObjectId: options?.parentObjectId ?? null,
+        generation: options?.generation,
+        maskApplied: options?.maskApplied === true,
+        maskCoveragePercent: options?.maskCoveragePercent,
+        maskWidth: options?.maskWidth,
+        maskHeight: options?.maskHeight,
+        lightchainCompat: options?.lightchainCompat,
         legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
       },
+      ...(options?.idempotencyKey
+        ? { headers: { 'Idempotency-Key': options.idempotencyKey } }
+        : {}),
     });
 
     if (error) throw error;

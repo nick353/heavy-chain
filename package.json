@@ -48,6 +48,7 @@
     "verify:lightchain-navigation": "node scripts/verify-lightchain-production-navigation.mjs",
     "verify:lightchain-clone-layout": "node scripts/verify-lightchain-clone-layout.mjs",
     "verify:lightchain-mask-layer": "npm run build && node scripts/verify-lightchain-mask-layer-flow.mjs",
+    "verify:partial-edit-contract": "node scripts/verify-partial-edit-contract.mjs",
     "verify:lightchain-all-features": "npm run build && node scripts/verify-lightchain-all-feature-workflows.mjs",
     "verify:lightchain-beginner-ux": "npm run build && node scripts/verify-lightchain-beginner-ux.mjs",
     "verify:mass-market-qa": "node scripts/verify-mass-market-qa.mjs",
