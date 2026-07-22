@@ -107,6 +107,41 @@ function dataUrlToBlob(imageUrl: string, index: number) {
   };
 }
 
+async function imageUrlToBlob(imageUrl: string, index: number, filePrefix = 'reference') {
+  if (imageUrl.startsWith('data:')) {
+    const data = dataUrlToBlob(imageUrl, index);
+    return {
+      ...data,
+      fileName: `${filePrefix}-${index + 1}.${extensionFromMimeType(data.blob.type)}`,
+    };
+  }
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(imageUrl);
+  } catch {
+    throw new Error(`openai_image_edit_input_invalid_url:${index}`);
+  }
+  if (parsedUrl.protocol !== 'https:') {
+    throw new Error(`openai_image_edit_input_protocol_not_allowed:${index}`);
+  }
+
+  const response = await fetch(parsedUrl.toString());
+  if (!response.ok) {
+    throw new Error(`openai_image_edit_input_fetch_failed:${index}:${response.status}`);
+  }
+  const responseBlob = await response.blob();
+  const rawMimeType = (response.headers.get('content-type') || responseBlob.type || '').split(';')[0].trim().toLowerCase();
+  if (!rawMimeType.startsWith('image/')) {
+    throw new Error(`openai_image_edit_input_not_image:${index}`);
+  }
+  const mimeType = normalizeMimeType(rawMimeType);
+  return {
+    blob: new Blob([await responseBlob.arrayBuffer()], { type: mimeType }),
+    fileName: `${filePrefix}-${index + 1}.${extensionFromMimeType(mimeType)}`,
+  };
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -215,12 +250,12 @@ export async function editOpenAiImage(params: {
     formData.set('n', String(requestedCount));
     formData.set('background', params.background || 'auto');
     formData.set('output_format', 'png');
-    images.forEach((imageUrl, index) => {
-      const image = dataUrlToBlob(imageUrl, index);
+    const imageBlobs = await Promise.all(images.map((imageUrl, index) => imageUrlToBlob(imageUrl, index)));
+    imageBlobs.forEach((image) => {
       formData.append('image[]', image.blob, image.fileName);
     });
     if (params.mask?.imageUrl) {
-      const mask = dataUrlToBlob(params.mask.imageUrl, images.length);
+      const mask = await imageUrlToBlob(params.mask.imageUrl.trim(), images.length, 'mask');
       if (mask.mimeType !== 'image/png') {
         throw new Error('openai_image_edit_mask_not_png');
       }

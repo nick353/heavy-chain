@@ -763,6 +763,14 @@ export function LightchainMaterialWorkbenchPage() {
     garmentMaskConfirmed: hasConfirmedPrintGarmentMask,
     layers: placedPrintDesignLayers,
   });
+  const printDesignsReady = placedPrintDesignLayers.length > 0
+    && placedPrintDesignLayers.every((layer) => (
+      layer.cutoutState === 'done'
+      && Boolean(layer.originalUrl)
+      && Boolean(layer.displayUrl)
+    ));
+  const printDesignsProcessing = placedPrintDesignLayers.some((layer) => layer.cutoutState === 'processing');
+  const printDesignsErrored = placedPrintDesignLayers.some((layer) => layer.cutoutState === 'error');
   const printPlacementConfirmationStatus = !hasConfirmedPrintGarmentMask
     ? '青い服の認識範囲を確定してください'
     : placedPrintDesignLayers.length === 0
@@ -2495,8 +2503,16 @@ export function LightchainMaterialWorkbenchPage() {
     {
       id: 'design',
       label: 'デザイン',
-      complete: printDesignLayers.length > 0,
-      detail: printDesignLayers.length > 0 ? `${printDesignLayers.length}件のデザインを追加済み` : 'デザイン画像を追加',
+      complete: printDesignsReady,
+      detail: printDesignsReady
+        ? `${placedPrintDesignLayers.length}件のデザインを確認済み`
+        : printDesignsProcessing
+          ? 'デザインの透明化が完了するまで待機'
+          : printDesignsErrored
+            ? '透明化に失敗したデザインを削除または再選択'
+            : printDesignLayers.length > 0
+              ? 'デザインの表示準備を完了してください'
+              : 'デザイン画像を追加',
     },
     {
       id: 'mask',
@@ -2518,10 +2534,16 @@ export function LightchainMaterialWorkbenchPage() {
       ? '参考画像を追加してください'
       : printGarmentCutoutState === 'processing'
         ? '服の認識範囲を作成中です'
-        : (!printGarmentProcessed || printGarmentCutoutState !== 'done')
-          ? '服を選択してAIマスクを確認してください'
+          : (!printGarmentProcessed || printGarmentCutoutState !== 'done')
+            ? '服を選択してAIマスクを確認してください'
           : printDesignLayers.length === 0
             ? 'デザイン画像を追加してください'
+            : !printDesignsReady
+              ? printDesignsProcessing
+                ? 'デザインの透明化完了を待ってください'
+                : printDesignsErrored
+                  ? '透明化に失敗したデザインを削除または再選択してください'
+                  : 'デザインの表示準備を完了してください'
             : !hasConfirmedPrintGarmentMask
               ? '青い認識範囲を確認して確定してください'
               : (!printPlacementConfirmed || printPlacementSessionOpen)

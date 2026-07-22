@@ -1,4 +1,4 @@
-import { 
+import {
   Wand2, 
   Palette, 
   Maximize2, 
@@ -10,7 +10,7 @@ import {
   Scissors,
   RefreshCw,
   ImagePlus,
-  Brush
+  Paintbrush
 } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useCanvasStore, type CanvasObject } from '../../stores/canvasStore';
@@ -141,13 +141,14 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
                       プロンプト編集
                     </button>
                     <button
+                      data-testid="floating-toolbar-partial-edit"
                       onClick={() => {
-                        onAction('edit-inpaint');
+                        onAction('inpaint');
                         setShowMore(false);
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-200 hover:bg-white/[0.08]"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50 dark:text-blue-200 dark:hover:bg-blue-500/10"
                     >
-                      <Brush className="w-4 h-4" />
+                      <Paintbrush className="w-4 h-4" />
                       部分編集
                     </button>
                     <button

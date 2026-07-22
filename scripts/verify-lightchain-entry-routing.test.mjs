@@ -28,6 +28,15 @@ test('keeps print-image try-on beside fabric simulation in graphics', async () =
 test('routes fabric search prompts to the simulation entry', async () => {
   const source = await readFile(entryPath, 'utf8');
   assert.match(source, /keywords: \['生地', 'fabric', '布'\], featureId: 'fabric-simulation'/);
+  assert.match(source, /keywords: \['プリント', 'print image', 'print design'\], featureId: 'printing-image'/);
+  assert.ok(
+    source.indexOf("featureId: 'printing-image'") < source.indexOf("featureId: 'graphic-design'"),
+    'print prompts must be classified before generic graphic prompts',
+  );
+  assert.ok(
+    source.indexOf("featureId: 'printing-image'") < source.indexOf("featureId: 'canvas-editing'"),
+    'print prompts must be classified before generic editing prompts',
+  );
   assert.match(source, /'\/lightchain\/fabric-image': Shirt/);
   assert.match(source, /'\/lightchain\/printing-image': Palette/);
 });

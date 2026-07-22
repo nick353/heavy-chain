@@ -3,6 +3,7 @@ set -euo pipefail
 
 all_functions=(
   generate-image
+  edit-image
   remove-background
   upscale
   colorize

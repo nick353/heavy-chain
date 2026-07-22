@@ -21,19 +21,22 @@ test('canvas image actions route every visible prompt-edit and variation action'
     read('../src/components/canvas/FloatingToolbar.tsx'),
   ]);
   assert.match(source, /case 'variations':\s*case 'generateVariations':\s*case 'derive':/);
-  assert.match(source, /action === 'edit' \|\| action === 'editWithPrompt' \|\| action === 'edit-prompt' \|\| action === 'edit-inpaint'/);
+  assert.match(source, /action === 'edit' \|\| action === 'editWithPrompt' \|\| action === 'edit-prompt'/);
+  assert.match(source, /action === 'inpaint'/);
+  assert.match(toolbar, /onAction\('inpaint'\)/);
+  assert.match(toolbar, /部分編集/);
   assert.match(source, /setEditingImage\(obj\.src\)[\s\S]*setShowEditModal\(true\)[\s\S]*const imageSrc = await resolveCanvasObjectImageUrl\(obj\)/);
   assert.match(source, /const editSource = sourceObject\s*\? await resolveCanvasObjectImageUrl\(sourceObject\)\s*: await resolveGeneratedImageUrl\(editingImage\)/);
   assert.match(source, /editImageWithPrompt\(editSource, params\.prompt/);
-  assert.match(toolbar, /onAction\('edit-inpaint'\)[\s\S]*部分編集/);
+  assert.match(toolbar, /data-testid="floating-toolbar-partial-edit"[\s\S]*onAction\('inpaint'\)[\s\S]*部分編集/);
 });
 
 test('partial edit UI provides a precise reversible PNG mask', async () => {
   const source = await read('../src/components/canvas/ImageEditModal.tsx');
-  assert.match(source, /initialMode\?: 'prompt' \| 'inpaint'/);
-  assert.match(source, /setMode\(initialMode\)/);
   assert.match(source, /id: 'inpaint'.*label: '部分編集'/);
   assert.match(source, /data-testid="canvas-inpaint-mask"/);
+  assert.match(source, /rgba\(37, 99, 235, 0\.58\)/);
+  assert.match(source, /青い範囲だけを編集します/);
   assert.match(source, /stroke\.erase \? 'source-over' : 'destination-out'/);
   assert.match(source, /mask\.toDataURL\('image\/png'\)/);
   assert.match(source, /範囲指定を元に戻す/);
@@ -57,9 +60,33 @@ test('partial edit mask is sent through the client and edge function without sto
   assert.doesNotMatch(edge, /input_params:[\s\S]{0,500}maskDataUrl[,}]/);
   assert.match(openAi, /formData\.append\('mask', mask\.blob, 'mask\.png'\)/);
   assert.match(openAi, /openai_image_edit_mask_not_png/);
-  assert.match(edge, /count: maskDataUrl \? 4 : 1/);
+  assert.match(edge, /const requestedCandidateCount = hasMask \? 4 : 1/);
+  assert.match(edge, /count: requestedCandidateCount/);
+  assert.match(edge, /requestedCandidateCount,/);
+  assert.match(edge, /idempotency-key/);
   assert.match(openAi, /formData\.set\('n', String\(requestedCount\)\)/);
   assert.equal((edge.match(/await editOpenAiImage\(/g) ?? []).length, 1);
+});
+
+test('partial edit submit makes one four-candidate batch and refuses incomplete persistence', async () => {
+  const source = await read('../src/pages/CanvasEditorPage.tsx');
+  const handlerStart = source.indexOf('const handlePartialEditSubmit');
+  const handlerEnd = source.indexOf('const handleEditModalAction');
+  assert.ok(handlerStart >= 0 && handlerEnd > handlerStart);
+  const handler = source.slice(handlerStart, handlerEnd);
+  assert.equal((handler.match(/editImageWithPrompt\(/g) ?? []).length, 1);
+  assert.match(handler, /normalizeCanvasImageEditCandidates\(result\)/);
+  assert.match(handler, /result\.requestedCandidateCount === 4/);
+  assert.match(handler, /result\.persistedCandidateCount === 4/);
+  assert.match(handler, /candidates\.length === 4/);
+  assert.match(handler, /settleCanvasImageEditCandidatesSequentially\(candidates/);
+  assert.match(handler, /loadCanvasImage\(candidate\.imageUrl\)/);
+  assert.match(handler, /preloadedImagesById\.get\(candidate\.imageId\)/);
+  assert.match(handler, /placement\.placed\.length !== 4/);
+  assert.match(handler, /deleteObject\(objectId\)/);
+  assert.match(handler, /candidates: placement\.placed\.map\(\(\{ candidate \}\) => candidate\)/);
+  assert.match(handler, /externalInpaintRequestCount: 1/);
+  assert.match(handler, /partialEditAttemptRef\.current\.attempted/);
 });
 
 test('partial edit result remains a parent-linked derived canvas object', async () => {
@@ -67,12 +94,19 @@ test('partial edit result remains a parent-linked derived canvas object', async 
   assert.match(source, /if \(action === 'inpaint'\)/);
   assert.match(source, /feature: 'inpaint'/);
   assert.match(source, /maskApplied: true/);
+  assert.match(source, /parentObjectId: editingObjectId/);
+  assert.match(source, /backendProvider/);
+  assert.match(source, /provider/);
+  assert.match(source, /status/);
   assert.match(source, /normalizeCanvasImageEditCandidates\(result\)/);
   assert.match(source, /settleCanvasImageEditCandidatesSequentially\(candidates/);
   assert.match(source, /backendJobId: candidate\.jobId/);
   assert.match(source, /backendImageId: candidate\.imageId/);
   assert.match(source, /backendStoragePath: candidate\.storagePath/);
   assert.match(source, /candidateIndex: candidate\.candidateIndex/);
+  assert.match(source, /parentObjectId: editingObjectId/);
+  assert.match(source, /idempotencyKey/);
+  assert.match(source, /inpaintAttemptRef\.current\.attempted/);
   assert.match(source, /await addImageToCanvas\(candidate\.imageUrl,[\s\S]*editingObjectId \?\? undefined/);
   assert.match(source, /candidates: placement\.placed\.map\(\(\{ candidate \}\) => candidate\)/);
   assert.match(source, /updateObject\(objectId,[\s\S]*batchProof/);
@@ -211,12 +245,17 @@ test('canvas exposes deterministic generation provenance without counting source
         },
       } as CanvasObject['metadata'],
     }),
+    object({
+      id: 'partial-result',
+      derivedFrom: 'source',
+      metadata: { feature: 'partial-edit', generation: 1, maskApplied: true },
+    }),
     object({ id: 'derived', derivedFrom: 'source', metadata: { feature: 'upscale', generation: 2 } }),
   ]);
   assert.deepEqual(
     { imageCount: proof.imageCount, sourceImageCount: proof.sourceImageCount, gallerySourceCount: proof.gallerySourceCount,
       derivedResultCount: proof.derivedResultCount, partialEditResultCount: proof.partialEditResultCount, maxGeneration: proof.maxGeneration },
-    { imageCount: 3, sourceImageCount: 1, gallerySourceCount: 1, derivedResultCount: 2, partialEditResultCount: 1, maxGeneration: 2 },
+    { imageCount: 4, sourceImageCount: 1, gallerySourceCount: 1, derivedResultCount: 3, partialEditResultCount: 2, maxGeneration: 2 },
   );
   const serialized = JSON.stringify(proof);
   assert.doesNotMatch(serialized, /private-job|private-image|private\/brand\/path/);

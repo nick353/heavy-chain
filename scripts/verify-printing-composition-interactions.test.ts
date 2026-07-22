@@ -239,6 +239,8 @@ test('printing exposes one ordered readiness funnel before generation', () => {
   assert.match(page, /data-testid="printing-next-action" role="status"/);
   assert.match(page, /入力 → マスク → 配置 → 生成/);
   assert.match(page, /printGarmentCutoutState === 'processing'/);
+  assert.match(page, /const printDesignsReady = placedPrintDesignLayers\.length > 0[\s\S]*layer\.cutoutState === 'done'[\s\S]*Boolean\(layer\.originalUrl\)[\s\S]*Boolean\(layer\.displayUrl\)/);
+  assert.match(page, /complete: printDesignsReady/);
   assert.match(page, /printPlacementConfirmed && !printPlacementSessionOpen/);
   const readiness = page.indexOf('data-testid="printing-readiness-summary"');
   const details = page.indexOf('data-testid={isPrinting ? \'printing-control-rail-details\' : undefined}');

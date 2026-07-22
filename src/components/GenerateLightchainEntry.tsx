@@ -61,11 +61,12 @@ const findFeatureFromPrompt = (prompt: string) => {
 
   const keywordRoute = [
     { keywords: ['背景削除', '切り抜き', 'remove background', 'remove-bg'], featureId: 'remove-background' },
+    { keywords: ['プリント', 'print image', 'print design'], featureId: 'printing-image' },
     { keywords: ['canvas', 'キャンバス', '編集'], featureId: 'canvas-editing' },
     { keywords: ['着せ替え', 'フィッティング', 'fitting', '着用'], featureId: 'virtual-fitting' },
     { keywords: ['モデル', '体型', 'サイズ'], featureId: 'model-body-shape' },
     { keywords: ['生地', 'fabric', '布'], featureId: 'fabric-simulation' },
-    { keywords: ['柄', 'プリント', 'ロゴ', 'グラフィック'], featureId: 'graphic-design' },
+    { keywords: ['柄', 'ロゴ', 'グラフィック'], featureId: 'graphic-design' },
     { keywords: ['動画', 'sns動画', 'storyboard'], featureId: 'video-workstation' },
     { keywords: ['バナー', '販促', 'sns', 'ec'], featureId: 'marketing-workspace' },
   ].find((item) => item.keywords.some((keyword) => normalizedPrompt.includes(keyword)));

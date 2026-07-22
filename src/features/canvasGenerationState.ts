@@ -15,7 +15,7 @@ export const buildCanvasGenerationState = (objects: CanvasObject[]) => {
         : {};
       return {
         objectId: object.id,
-        parentObjectId: object.derivedFrom ?? null,
+        parentObjectId: object.derivedFrom ?? metadata?.parentObjectId ?? null,
         feature: metadata?.feature ?? null,
         generation: typeof metadata?.generation === 'number' ? metadata.generation : null,
         source: metadata?.source ?? null,
@@ -23,14 +23,24 @@ export const buildCanvasGenerationState = (objects: CanvasObject[]) => {
         hasBackendJobId: typeof parameters.backendJobId === 'string' && parameters.backendJobId.length > 0,
         hasBackendImageId: typeof parameters.backendImageId === 'string' && parameters.backendImageId.length > 0,
         hasBackendStoragePath: typeof parameters.backendStoragePath === 'string' && parameters.backendStoragePath.length > 0,
-        backendProvider: typeof parameters.backendProvider === 'string' ? parameters.backendProvider : null,
-        persistenceStatus: typeof parameters.persistenceStatus === 'string' ? parameters.persistenceStatus : null,
+        backendProvider: typeof metadata?.backendProvider === 'string'
+          ? metadata.backendProvider
+          : (typeof parameters.backendProvider === 'string' ? parameters.backendProvider : null),
+        provider: typeof metadata?.provider === 'string'
+          ? metadata.provider
+          : (typeof parameters.provider === 'string' ? parameters.provider : null),
+        status: typeof metadata?.status === 'string'
+          ? metadata.status
+          : (typeof parameters.status === 'string' ? parameters.status : null),
+        persistenceStatus: typeof metadata?.persistenceStatus === 'string'
+          ? metadata.persistenceStatus
+          : (typeof parameters.persistenceStatus === 'string' ? parameters.persistenceStatus : null),
       };
     })
     .sort((left, right) => left.objectId.localeCompare(right.objectId));
   const derivedObjects = imageObjects.filter((object) => object.parentObjectId !== null);
   const partialEditObjects = derivedObjects.filter(
-    (object) => object.feature === 'inpaint' && object.maskApplied,
+    (object) => (object.feature === 'inpaint' || object.feature === 'partial-edit') && object.maskApplied,
   );
 
   return {
