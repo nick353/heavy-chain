@@ -233,6 +233,19 @@ test('focused placement requires an explicit decision before generation and supp
   assert.doesNotMatch(cancelBlock, /setPrintPlacementConfirmed\(true\)/);
 });
 
+test('printing exposes one ordered readiness funnel before generation', () => {
+  assert.match(page, /data-testid="printing-readiness-summary"/);
+  assert.match(page, /data-testid="printing-readiness-count"/);
+  assert.match(page, /data-testid="printing-next-action" role="status"/);
+  assert.match(page, /入力 → マスク → 配置 → 生成/);
+  assert.match(page, /printGarmentCutoutState === 'processing'/);
+  assert.match(page, /printPlacementConfirmed && !printPlacementSessionOpen/);
+  const readiness = page.indexOf('data-testid="printing-readiness-summary"');
+  const details = page.indexOf('data-testid={isPrinting ? \'printing-control-rail-details\' : undefined}');
+  const generate = page.indexOf('onClick={handleGenerate}');
+  assert.ok(details < readiness && readiness < generate, 'readiness must appear before the pinned generate action');
+});
+
 test('a delayed design return cannot erase an already-open placement baseline', () => {
   const openStart = page.indexOf('const openPrintPlacementSession');
   const editStart = page.indexOf('const beginPrintPlacementSessionEdit');

@@ -16,16 +16,22 @@ import { resolveImageEditCleanupStatus } from '../supabase/functions/_shared/ope
 const read = (path: string) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('canvas image actions route every visible prompt-edit and variation action', async () => {
-  const source = await read('../src/pages/CanvasEditorPage.tsx');
+  const [source, toolbar] = await Promise.all([
+    read('../src/pages/CanvasEditorPage.tsx'),
+    read('../src/components/canvas/FloatingToolbar.tsx'),
+  ]);
   assert.match(source, /case 'variations':\s*case 'generateVariations':\s*case 'derive':/);
-  assert.match(source, /action === 'edit' \|\| action === 'editWithPrompt' \|\| action === 'edit-prompt'/);
+  assert.match(source, /action === 'edit' \|\| action === 'editWithPrompt' \|\| action === 'edit-prompt' \|\| action === 'edit-inpaint'/);
   assert.match(source, /setEditingImage\(obj\.src\)[\s\S]*setShowEditModal\(true\)[\s\S]*const imageSrc = await resolveCanvasObjectImageUrl\(obj\)/);
   assert.match(source, /const editSource = sourceObject\s*\? await resolveCanvasObjectImageUrl\(sourceObject\)\s*: await resolveGeneratedImageUrl\(editingImage\)/);
   assert.match(source, /editImageWithPrompt\(editSource, params\.prompt/);
+  assert.match(toolbar, /onAction\('edit-inpaint'\)[\s\S]*部分編集/);
 });
 
 test('partial edit UI provides a precise reversible PNG mask', async () => {
   const source = await read('../src/components/canvas/ImageEditModal.tsx');
+  assert.match(source, /initialMode\?: 'prompt' \| 'inpaint'/);
+  assert.match(source, /setMode\(initialMode\)/);
   assert.match(source, /id: 'inpaint'.*label: '部分編集'/);
   assert.match(source, /data-testid="canvas-inpaint-mask"/);
   assert.match(source, /stroke\.erase \? 'source-over' : 'destination-out'/);

@@ -30,6 +30,8 @@ const routeIcon: Record<string, typeof Sparkles> = {
   '/models': UserRound,
   '/studio': Images,
   '/patterns/workbench': Palette,
+  '/lightchain/fabric-image': Shirt,
+  '/lightchain/printing-image': Palette,
   '/brand/settings': CheckCircle2,
   '/canvas/new': Layers3,
 };
@@ -62,6 +64,7 @@ const findFeatureFromPrompt = (prompt: string) => {
     { keywords: ['canvas', 'キャンバス', '編集'], featureId: 'canvas-editing' },
     { keywords: ['着せ替え', 'フィッティング', 'fitting', '着用'], featureId: 'virtual-fitting' },
     { keywords: ['モデル', '体型', 'サイズ'], featureId: 'model-body-shape' },
+    { keywords: ['生地', 'fabric', '布'], featureId: 'fabric-simulation' },
     { keywords: ['柄', 'プリント', 'ロゴ', 'グラフィック'], featureId: 'graphic-design' },
     { keywords: ['動画', 'sns動画', 'storyboard'], featureId: 'video-workstation' },
     { keywords: ['バナー', '販促', 'sns', 'ec'], featureId: 'marketing-workspace' },

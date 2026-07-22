@@ -20,6 +20,7 @@ interface ImageEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   imageUrl: string;
+  initialMode?: 'prompt' | 'inpaint';
   onEdit: (action: string, params: { prompt?: string; maskDataUrl?: string }) => Promise<boolean>;
 }
 
@@ -27,7 +28,7 @@ type EditMode = 'prompt' | 'remove-bg' | 'colorize' | 'upscale' | 'variations' |
 type MaskPoint = { x: number; y: number };
 type MaskStroke = { points: MaskPoint[]; size: number; erase: boolean };
 
-export function ImageEditModal({ isOpen, onClose, imageUrl, onEdit }: ImageEditModalProps) {
+export function ImageEditModal({ isOpen, onClose, imageUrl, initialMode = 'prompt', onEdit }: ImageEditModalProps) {
   const [mode, setMode] = useState<EditMode>('prompt');
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -63,12 +64,12 @@ export function ImageEditModal({ isOpen, onClose, imageUrl, onEdit }: ImageEditM
 
   useEffect(() => {
     if (!isOpen) return;
-    setMode('prompt');
+    setMode(initialMode);
     setPrompt('');
     setIsErasing(false);
     setStrokes([]);
     setRedoStrokes([]);
-  }, [imageUrl, isOpen]);
+  }, [imageUrl, initialMode, isOpen]);
 
   const drawStroke = useCallback((
     context: CanvasRenderingContext2D,

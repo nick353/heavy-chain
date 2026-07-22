@@ -155,6 +155,7 @@ export function CanvasEditorPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingImage, setEditingImage] = useState<string | null>(null);
   const [editingObjectId, setEditingObjectId] = useState<string | null>(null);
+  const [editingMode, setEditingMode] = useState<'prompt' | 'inpaint'>('prompt');
 
   // Invite modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -1120,9 +1121,10 @@ export function CanvasEditorPage() {
       toast.error('素材の利用権利を確認してください');
       return;
     }
-    if (action === 'edit' || action === 'editWithPrompt' || action === 'edit-prompt') {
+    if (action === 'edit' || action === 'editWithPrompt' || action === 'edit-prompt' || action === 'edit-inpaint') {
       setEditingImage(obj.src);
       setEditingObjectId(objectId);
+      setEditingMode(action === 'edit-inpaint' ? 'inpaint' : 'prompt');
       setShowEditModal(true);
       return;
     }
@@ -1984,8 +1986,16 @@ export function CanvasEditorPage() {
                 {currentProjectName || '無題'}
               </h1>
             )}
-            <p className="text-[10px] sm:text-xs text-neutral-400">
-              キャンバス · {currentProjectId ? '自動保存' : '未保存'}
+            <p className="text-[10px] sm:text-xs text-neutral-400 truncate">
+              <span>キャンバス · {currentProjectId ? '自動保存' : '未保存'}</span>
+              <span aria-hidden="true"> · </span>
+              <span
+                data-testid="canvas-current-brand"
+                aria-label={`現在のブランド: ${currentBrand?.name?.trim() || '未選択'}`}
+                className={currentBrand?.name?.trim() ? 'text-cyan-200' : 'text-amber-200'}
+              >
+                ブランド: {currentBrand?.name?.trim() || '未選択'}
+              </span>
             </p>
           </div>
         </div>
@@ -2520,8 +2530,10 @@ export function CanvasEditorPage() {
             setShowEditModal(false);
             setEditingImage(null);
             setEditingObjectId(null);
+            setEditingMode('prompt');
           }}
           imageUrl={editingImage}
+          initialMode={editingMode}
           onEdit={handleEditModalAction}
         />
       )}

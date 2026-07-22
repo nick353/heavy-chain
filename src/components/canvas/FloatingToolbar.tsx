@@ -9,7 +9,8 @@ import {
   MoreHorizontal,
   Scissors,
   RefreshCw,
-  ImagePlus
+  ImagePlus,
+  Brush
 } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useCanvasStore, type CanvasObject } from '../../stores/canvasStore';
@@ -138,6 +139,16 @@ export function FloatingToolbar({ selectedObject, position, onAction }: Floating
                     >
                       <Wand2 className="w-4 h-4" />
                       プロンプト編集
+                    </button>
+                    <button
+                      onClick={() => {
+                        onAction('edit-inpaint');
+                        setShowMore(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-200 hover:bg-white/[0.08]"
+                    >
+                      <Brush className="w-4 h-4" />
+                      部分編集
                     </button>
                     <button
                       onClick={() => {

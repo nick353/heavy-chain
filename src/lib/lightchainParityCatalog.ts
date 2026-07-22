@@ -55,7 +55,7 @@ export const lightchainCategories: LightchainCategory[] = [
     id: 'graphics',
     label: 'グラフィックツール',
     eyebrow: 'Graphic',
-    description: '柄、配置、変換をまとめます。',
+    description: '生地、プリント、柄、配置、変換をまとめます。',
   },
 ];
 
@@ -197,11 +197,23 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     lightchainName: 'FabricBody / DesignatedFabric / PrintingTiling',
     description: '柄と生地の条件を残します。',
     route: '/lightchain/fabric-image',
-    category: 'planning',
+    category: 'graphics',
     status: 'workspace',
     capability: 'motif、repeat、garment、palette',
     evidence: 'pattern-structured-context-local-v1',
     tags: ['生地', '総柄', '服反映'],
+  },
+  {
+    id: 'printing-image',
+    title: 'プリントイメージ',
+    lightchainName: 'PrintingImage / PrintPlacement / PrintingTiling',
+    description: '服画像にプリントを配置し、スポット/全面の仕上がりを確認します。',
+    route: '/lightchain/printing-image',
+    category: 'graphics',
+    status: 'workspace',
+    capability: '服画像、プリント画像、配置範囲、出力解像度',
+    evidence: 'printing-image-iab-r43 and local parity catalog',
+    tags: ['プリント', '配置', '印刷プレビュー'],
   },
   {
     id: 'lineart-to-real',

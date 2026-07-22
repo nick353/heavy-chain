@@ -636,6 +636,76 @@ const truncateSvgText = (value: string, maxLength: number) => {
   return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}…` : normalized;
 };
 
+const buildFashionStudioPreviewDataUrl = ({
+  tab,
+  request,
+}: {
+  tab: string;
+  request: string;
+}) => {
+  const safeTab = escapeSvgText(truncateSvgText(tab, 24));
+  const safeRequest = escapeSvgText(truncateSvgText(request, 62));
+  const isCoordinate = tab === 'コーディネート';
+  const is360 = tab === '360度表示';
+  const modeLabel = is360 ? 'MULTI-ANGLE / 4 CUTS' : isCoordinate ? 'COORDINATE / LOOK SET' : 'STUDIO PLAN / HERO LOOK';
+  const renderLookCard = ({
+    x,
+    y,
+    width,
+    height,
+    label,
+    detail,
+    accent,
+  }: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    label: string;
+    detail: string;
+    accent: string;
+  }) => `
+    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="22" fill="#11191c" stroke="#314145" stroke-width="2"/>
+    <rect x="${x + 16}" y="${y + 16}" width="${width - 32}" height="${Math.max(24, Math.min(34, height * 0.12))}" rx="12" fill="${accent}" opacity="0.22"/>
+    <text x="${x + 30}" y="${y + 40}" fill="#b8fff3" font-family="Arial, sans-serif" font-size="16" font-weight="800">${escapeSvgText(label)}</text>
+    <rect x="${x + width * 0.28}" y="${y + height * 0.28}" width="${width * 0.44}" height="${height * 0.47}" rx="${Math.min(28, width * 0.08)}" fill="#e5e7eb"/>
+    <circle cx="${x + width * 0.5}" cy="${y + height * 0.2}" r="${Math.min(24, width * 0.09)}" fill="#65d3cf"/>
+    <path d="M ${x + width * 0.35} ${y + height * 0.48} L ${x + width * 0.5} ${y + height * 0.62} L ${x + width * 0.65} ${y + height * 0.48}" fill="none" stroke="${accent}" stroke-width="${Math.max(6, width * 0.035)}" stroke-linecap="round"/>
+    <path d="M ${x + width * 0.38} ${y + height * 0.78} L ${x + width * 0.46} ${y + height * 0.9} M ${x + width * 0.62} ${y + height * 0.78} L ${x + width * 0.54} ${y + height * 0.9}" fill="none" stroke="#a3a3a3" stroke-width="${Math.max(4, width * 0.025)}" stroke-linecap="round"/>
+    <text x="${x + 30}" y="${y + height - 22}" fill="#94a3a8" font-family="Arial, sans-serif" font-size="14">${escapeSvgText(detail)}</text>
+  `;
+
+  const body = is360
+    ? [
+      renderLookCard({ x: 70, y: 118, width: 196, height: 310, label: '01 FRONT', detail: '正面 / HERO', accent: '#65d3cf' }),
+      renderLookCard({ x: 282, y: 118, width: 196, height: 310, label: '02 SIDE', detail: '左斜め / PROFILE', accent: '#f7b267' }),
+      renderLookCard({ x: 494, y: 118, width: 196, height: 310, label: '03 BACK', detail: '背面 / DETAIL', accent: '#a78bfa' }),
+      renderLookCard({ x: 706, y: 118, width: 196, height: 310, label: '04 CLOSE', detail: '袖・裾 / MACRO', accent: '#f472b6' }),
+    ].join('')
+    : isCoordinate
+      ? [
+        renderLookCard({ x: 70, y: 118, width: 250, height: 310, label: 'LOOK 01', detail: 'トップス / ボトムス', accent: '#65d3cf' }),
+        renderLookCard({ x: 365, y: 118, width: 250, height: 310, label: 'LOOK 02', detail: '靴 / バッグ', accent: '#f7b267' }),
+        renderLookCard({ x: 660, y: 118, width: 250, height: 310, label: 'LOOK 03', detail: '小物 / 背景', accent: '#a78bfa' }),
+      ].join('')
+      : renderLookCard({ x: 70, y: 118, width: 840, height: 310, label: 'HERO LOOK', detail: 'モデル着用 / EC・SNS撮影案', accent: '#65d3cf' });
+
+  return encodeSvgDataUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620" data-studio-preview="fashion-studio-parity-v2" data-studio-tab="${safeTab}">
+      <rect width="980" height="620" fill="#070b0d"/>
+      <rect x="34" y="28" width="912" height="564" rx="30" fill="#151b1e" stroke="#65d3cf" stroke-width="3"/>
+      <text x="70" y="70" fill="#65d3cf" font-family="Arial, sans-serif" font-size="18" font-weight="800" letter-spacing="2">HEAVY CHAIN / FASHION STUDIO</text>
+      <text x="70" y="98" fill="#f8fafc" font-family="Arial, sans-serif" font-size="25" font-weight="800">${safeTab}</text>
+      <text x="910" y="70" text-anchor="end" fill="#b8fff3" font-family="Arial, sans-serif" font-size="13" font-weight="700">${modeLabel}</text>
+      ${body}
+      <rect x="70" y="462" width="840" height="88" rx="20" fill="#0d1315" stroke="#27363a" stroke-width="2"/>
+      <text x="96" y="496" fill="#65d3cf" font-family="Arial, sans-serif" font-size="14" font-weight="800">PROMPT</text>
+      <text x="96" y="526" fill="#d1d5db" font-family="Arial, sans-serif" font-size="16">${safeRequest}</text>
+      <text x="70" y="572" fill="#94a3a8" font-family="Arial, sans-serif" font-size="13">生成済みプレビュー / 拡大表示・保存に対応</text>
+    </svg>
+  `);
+};
+
 const buildOrderSheetPreview = ({
   tool,
   brief,
@@ -1698,26 +1768,46 @@ export function LightchainWorkbenchPage() {
     toast.success('履歴にプレビューを追加しました');
   };
 
+  const buildGenericWorkspacePreviewDataUrl = ({
+    title,
+    request,
+  }: {
+    title: string;
+    request: string;
+  }) => encodeSvgDataUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620" data-studio-preview="generic-workspace-preview-v1">
+      <rect width="980" height="620" fill="#070b0d"/>
+      <rect x="74" y="72" width="832" height="476" rx="34" fill="#151b1e" stroke="#65d3cf" stroke-width="3"/>
+      <rect x="124" y="126" width="168" height="168" rx="28" fill="#22282b"/>
+      <circle cx="208" cy="210" r="42" fill="#65d3cf" opacity="0.9"/>
+      <rect x="332" y="150" width="470" height="34" rx="17" fill="#65d3cf" opacity="0.26"/>
+      <rect x="332" y="212" width="380" height="26" rx="13" fill="#ffffff" opacity="0.16"/>
+      <rect x="124" y="344" width="678" height="112" rx="24" fill="#0f1416"/>
+      <text x="154" y="396" fill="#65d3cf" font-family="Arial, sans-serif" font-size="30" font-weight="800">${escapeSvgText(truncateSvgText(title, 20))}</text>
+      <text x="154" y="434" fill="#a3a3a3" font-family="Arial, sans-serif" font-size="18">${escapeSvgText(truncateSvgText(request, 62))}</text>
+    </svg>
+  `);
+
   const handleWorkspaceStyleGenerate = () => {
     const request = workspaceText.trim() || workspaceStyle?.prompt || selectedTool.promptTemplate;
-    const preview = encodeSvgDataUrl(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620">
-        <rect width="980" height="620" fill="#070b0d"/>
-        <rect x="74" y="72" width="832" height="476" rx="34" fill="#151b1e" stroke="#65d3cf" stroke-width="3"/>
-        <rect x="124" y="126" width="168" height="168" rx="28" fill="#22282b"/>
-        <circle cx="208" cy="210" r="42" fill="#65d3cf" opacity="0.9"/>
-        <rect x="332" y="150" width="470" height="34" rx="17" fill="#65d3cf" opacity="0.26"/>
-        <rect x="332" y="212" width="380" height="26" rx="13" fill="#ffffff" opacity="0.16"/>
-        <rect x="124" y="344" width="678" height="112" rx="24" fill="#0f1416"/>
-        <text x="154" y="396" fill="#65d3cf" font-family="Arial, sans-serif" font-size="30" font-weight="800">${escapeSvgText(truncateSvgText(selectedTool.title, 20))}</text>
-        <text x="154" y="434" fill="#a3a3a3" font-family="Arial, sans-serif" font-size="18">${escapeSvgText(truncateSvgText(request, 62))}</text>
-      </svg>
-    `);
+    const preview = selectedTool.id === 'fashion-studio'
+      ? buildFashionStudioPreviewDataUrl({
+        tab: workspaceStyle?.tabs?.includes(activeWorkspaceTab)
+          ? activeWorkspaceTab
+          : workspaceStyle?.tabs?.[0] ?? 'スタジオ案',
+        request,
+      })
+      : buildGenericWorkspacePreviewDataUrl({
+        title: workspaceStyle?.title ?? selectedTool.title,
+        request,
+      });
 
     setLightchainResult({
       toolId: selectedTool.id,
       title: selectedTool.title,
-      summary: request,
+      summary: selectedTool.id === 'fashion-studio'
+        ? `${workspaceStyle?.tabs?.includes(activeWorkspaceTab) ? activeWorkspaceTab : workspaceStyle?.tabs?.[0] ?? 'スタジオ案'} / 生成済みプレビュー / ${request}`
+        : request,
       imageUrl: preview,
     });
     toast.success('履歴にプレビューを追加しました');
