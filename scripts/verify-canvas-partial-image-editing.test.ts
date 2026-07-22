@@ -86,6 +86,9 @@ test('partial edit submit makes one four-candidate batch and refuses incomplete 
   assert.match(handler, /deleteObject\(objectId\)/);
   assert.match(handler, /candidates: placement\.placed\.map\(\(\{ candidate \}\) => candidate\)/);
   assert.match(handler, /externalInpaintRequestCount: 1/);
+  assert.match(handler, /backendJobId: candidate\.jobId/);
+  assert.match(handler, /backendImageId: candidate\.imageId/);
+  assert.match(handler, /backendStoragePath: candidate\.storagePath/);
   assert.match(handler, /partialEditAttemptRef\.current\.attempted/);
 });
 
@@ -260,6 +263,31 @@ test('canvas exposes deterministic generation provenance without counting source
   const serialized = JSON.stringify(proof);
   assert.doesNotMatch(serialized, /private-job|private-image|private\/brand\/path/);
   assert.equal(proof.objects.find((item) => item.objectId === 'result')?.hasBackendStoragePath, true);
+});
+
+test('canvas generation state reads partial-edit provenance from legacy metadata without exposing identifiers', () => {
+  const object = (input: Partial<CanvasObject> & Pick<CanvasObject, 'id'>): CanvasObject => ({
+    type: 'image', x: 0, y: 0, width: 10, height: 10, rotation: 0, scaleX: 1, scaleY: 1,
+    opacity: 1, locked: false, visible: true, zIndex: 0, ...input,
+  });
+  const proof = buildCanvasGenerationState([
+    object({
+      id: 'partial-legacy-result',
+      metadata: {
+        feature: 'partial-edit', generation: 1, maskApplied: true,
+        jobId: 'private-top-level-job', imageId: 'private-top-level-image', storagePath: 'private/top-level/path.png',
+        parameters: {
+          jobId: 'private-legacy-job', imageId: 'private-legacy-image', storagePath: 'private/legacy/path.png',
+        },
+      } as CanvasObject['metadata'],
+    }),
+  ]);
+  const state = proof.objects.find((item) => item.objectId === 'partial-legacy-result');
+  assert.equal(state?.hasBackendJobId, true);
+  assert.equal(state?.hasBackendImageId, true);
+  assert.equal(state?.hasBackendStoragePath, true);
+  assert.doesNotMatch(JSON.stringify(proof), /private-top-level-job|private-top-level-image|private\/top-level\/path/);
+  assert.doesNotMatch(JSON.stringify(proof), /private-legacy-job|private-legacy-image|private\/legacy\/path/);
 });
 
 test('a fully erased mask is rejected while a painted selection remains editable', () => {

@@ -13,6 +13,10 @@ export const buildCanvasGenerationState = (objects: CanvasObject[]) => {
       const parameters = metadata?.parameters && typeof metadata.parameters === 'object'
         ? metadata.parameters as Record<string, unknown>
         : {};
+      const hasNonEmptyString = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
+      const backendJobId = [metadata?.jobId, parameters.backendJobId, parameters.jobId].find(hasNonEmptyString);
+      const backendImageId = [metadata?.imageId, parameters.backendImageId, parameters.imageId].find(hasNonEmptyString);
+      const backendStoragePath = [metadata?.storagePath, parameters.backendStoragePath, parameters.storagePath].find(hasNonEmptyString);
       return {
         objectId: object.id,
         parentObjectId: object.derivedFrom ?? metadata?.parentObjectId ?? null,
@@ -20,9 +24,9 @@ export const buildCanvasGenerationState = (objects: CanvasObject[]) => {
         generation: typeof metadata?.generation === 'number' ? metadata.generation : null,
         source: metadata?.source ?? null,
         maskApplied: metadata?.maskApplied === true,
-        hasBackendJobId: typeof parameters.backendJobId === 'string' && parameters.backendJobId.length > 0,
-        hasBackendImageId: typeof parameters.backendImageId === 'string' && parameters.backendImageId.length > 0,
-        hasBackendStoragePath: typeof parameters.backendStoragePath === 'string' && parameters.backendStoragePath.length > 0,
+        hasBackendJobId: backendJobId !== undefined,
+        hasBackendImageId: backendImageId !== undefined,
+        hasBackendStoragePath: backendStoragePath !== undefined,
         backendProvider: typeof metadata?.backendProvider === 'string'
           ? metadata.backendProvider
           : (typeof parameters.backendProvider === 'string' ? parameters.backendProvider : null),
