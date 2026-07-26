@@ -5,7 +5,8 @@
   "fallback_contract": "pass",
   "focused_tests": "35 passed",
   "standard_reviewer_route": "opencode-go/runtime-selected",
-  "live_opencode_go_review": "blocked: reviewer_output_invalid: route returned a truncated final review",
+  "reviewer_bridge_local_version": "0.3.0",
+  "live_opencode_go_review": "blocked: transport_closed_after_reviewer_bridge_reload; restart_required",
   "json_validation": "pass",
   "session_readbacks": {
     "count": 13,
