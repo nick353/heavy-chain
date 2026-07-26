@@ -1,0 +1,54 @@
+{
+  "schema": "adaptive_orchestration_recovery_manifest.v1",
+  "scope": "adaptive_orchestration_only",
+  "purpose": "Portable allowlist for restoring Adaptive Orchestration without importing unrelated workspace state.",
+  "required_recovery_files": [
+    "docs/adaptive-orchestration-recovery.md",
+    "docs/adaptive-orchestration-status.v1.json",
+    "docs/adaptive-orchestration-manifest.v1.json"
+  ],
+  "role_files": [
+    ".codex/agents/architect.toml",
+    ".codex/agents/critical_architect.toml",
+    ".codex/agents/critical_reviewer.toml",
+    ".codex/agents/reviewer.toml",
+    ".codex/agents/worker_gpt_5_3_codex_spark.toml",
+    ".codex/agents/worker_gpt_5_4.toml",
+    ".codex/agents/worker_gpt_5_4_mini.toml",
+    ".codex/agents/worker_gpt_5_5.toml"
+  ],
+  "supporting_files": [
+    "docs/codex-architecture-mode.md",
+    "docs/codex-ux-contract.md",
+    "src/social_flow/codex_model_dispatch.py",
+    "src/social_flow/codex_policy.py",
+    "tests/test_codex_architecture_mode.py",
+    "tests/test_codex_model_dispatch.py"
+  ],
+  "excluded_paths": [
+    "AGENTS.md",
+    "STATE.md",
+    "README.md",
+    ".env",
+    ".env.*",
+    "work/",
+    "outputs/",
+    "platform-follow-up/",
+    "*.png",
+    "*.jsonl",
+    "raw runtime/session/thread/host readbacks"
+  ],
+  "restore_policy": {
+    "model_and_role_selection": "restore_time_after_live_preflight",
+    "fallback": "bounded_same_role_only",
+    "stored_data": "sanitized status/schema/check data only",
+    "forbidden_data": [
+      "secrets",
+      "credentials",
+      "personal data",
+      "session/thread/host identifiers",
+      "absolute local paths",
+      "raw work artifacts"
+    ]
+  }
+}

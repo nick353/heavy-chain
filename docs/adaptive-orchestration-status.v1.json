@@ -1,0 +1,17 @@
+{
+  "schema": "adaptive_orchestration_status.v1",
+  "scope": "adaptive_orchestration_only",
+  "status": "verified",
+  "fallback_contract": "pass",
+  "focused_tests": "16 passed",
+  "json_validation": "pass",
+  "session_readbacks": {
+    "count": 13,
+    "transport_errors": 0,
+    "natural_provider_failure_observed": false
+  },
+  "external_actions": 0,
+  "live_same_thread_fallback_receipt": "not_observed",
+  "unverified": "A real provider outage was not induced; live same-thread fallback remains to be verified when an eligible failure naturally occurs.",
+  "restore_policy": "Choose currently available models and roles at restore time after live preflight; do not treat this summary as a model or credential source."
+}
