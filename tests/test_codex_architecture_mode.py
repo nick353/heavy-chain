@@ -4,7 +4,9 @@ import json
 from pathlib import Path
 
 from social_flow.codex_policy import (
+    DEFAULT_OPENCODE_GO_REVIEWER_MODELS,
     DEFAULT_NATIVE_MODEL_FALLBACK_MODELS,
+    OPENCODE_GO_PROVIDER,
     CodexArchitecturePolicy,
     CodexLanePolicy,
     CodexUxPolicy,
@@ -12,6 +14,7 @@ from social_flow.codex_policy import (
     load_codex_architecture_policy,
     load_codex_ux_policy,
     model_fallback_candidates,
+    select_opencode_go_reviewer_model,
     select_model_fallback,
     validate_codex_reasoning_effort,
 )
@@ -57,9 +60,10 @@ def test_codex_architecture_policy_defaults_to_legacy_social_flow_lanes(monkeypa
             fallback_models=("gpt-5.4", "gpt-5.6-luna"),
         ),
         reviewer=CodexLanePolicy(
-            model="gpt-5.6-sol",
-            reasoning_effort="high",
-            fallback_models=("gpt-5.6-terra", "gpt-5.5", "gpt-5.4"),
+            model="runtime-selected",
+            reasoning_effort="route-defined",
+            fallback_models=DEFAULT_OPENCODE_GO_REVIEWER_MODELS,
+            provider=OPENCODE_GO_PROVIDER,
         ),
         critical_architect=CodexLanePolicy(
             model="gpt-5.6-sol",
@@ -132,6 +136,42 @@ def test_native_model_fallback_can_be_disabled(monkeypatch) -> None:
     ) is None
 
 
+def test_opencode_go_reviewer_model_is_selected_from_fresh_live_capability(monkeypatch) -> None:
+    monkeypatch.delenv("SOCIAL_FLOW_OPENCODE_GO_REVIEWER_MODELS", raising=False)
+    policy = load_codex_ux_policy()
+
+    assert policy.opencode_go_reviewer_models == DEFAULT_OPENCODE_GO_REVIEWER_MODELS
+    architecture_policy = load_codex_architecture_policy()
+    assert architecture_policy.reviewer.provider == OPENCODE_GO_PROVIDER
+    assert architecture_policy.reviewer.model == "runtime-selected"
+    assert architecture_policy.reviewer.fallback_models == DEFAULT_OPENCODE_GO_REVIEWER_MODELS
+    assert select_opencode_go_reviewer_model(
+        {"opencode-go/deepseek-v4-flash"},
+        policy=policy,
+    ) == "opencode-go/deepseek-v4-flash"
+    assert select_opencode_go_reviewer_model(
+        {"opencode-go/mimo-v2.5-pro", "opencode-go/deepseek-v4-pro"},
+        policy=policy,
+    ) == "opencode-go/deepseek-v4-pro"
+
+
+def test_opencode_go_reviewer_model_order_can_be_set_without_persisting_a_selection(monkeypatch) -> None:
+    monkeypatch.setenv(
+        "SOCIAL_FLOW_OPENCODE_GO_REVIEWER_MODELS",
+        "opencode-go/mimo-v2.5-pro,opencode-go/deepseek-v4-flash",
+    )
+    policy = load_codex_ux_policy()
+
+    assert policy.opencode_go_reviewer_models == (
+        "opencode-go/mimo-v2.5-pro",
+        "opencode-go/deepseek-v4-flash",
+    )
+    assert select_opencode_go_reviewer_model(
+        {"opencode-go/deepseek-v4-flash"},
+        policy=policy,
+    ) == "opencode-go/deepseek-v4-flash"
+
+
 def test_validate_codex_reasoning_effort_accepts_extra_high_alias() -> None:
     assert validate_codex_reasoning_effort("xhigh") == "xhigh"
     assert validate_codex_reasoning_effort("extra high") == "xhigh"
@@ -195,7 +235,11 @@ def test_codex_architecture_mode_files_pin_role_routing() -> None:
     assert "gpt-5.4-mini" in doc
     assert "gpt-5.5" in doc
     assert "model_fallback" in doc
+    assert "OpenCode Go MCP / runtime-selected" in doc
+    assert "opencode-go/deepseek-v4-pro" in doc
+    assert "never pass an `opencode-go/*` ID" in doc
     assert "model_fallback.v1" in ux_contract
+    assert "direct OpenCode Go MCP" in ux_contract
 
 
 def test_adaptive_recovery_manifest_is_narrow_and_portable() -> None:

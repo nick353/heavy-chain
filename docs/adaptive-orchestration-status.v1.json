@@ -3,7 +3,9 @@
   "scope": "adaptive_orchestration_only",
   "status": "verified",
   "fallback_contract": "pass",
-  "focused_tests": "16 passed",
+  "focused_tests": "35 passed",
+  "standard_reviewer_route": "opencode-go/runtime-selected",
+  "live_opencode_go_review": "blocked: reviewer_output_invalid: route returned a truncated final review",
   "json_validation": "pass",
   "session_readbacks": {
     "count": 13,

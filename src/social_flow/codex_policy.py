@@ -26,6 +26,26 @@ DEFAULT_NATIVE_MODEL_FALLBACK_MODELS = (
     "gpt-5.4-mini",
     "gpt-5.3-codex-spark",
 )
+OPENCODE_GO_PROVIDER = "opencode-go"
+DEFAULT_OPENCODE_GO_REVIEWER_MODELS = (
+    "opencode-go/deepseek-v4-pro",
+    "opencode-go/mimo-v2.5-pro",
+    "opencode-go/deepseek-v4-flash",
+)
+KNOWN_OPENCODE_GO_MODELS = frozenset(
+    {
+        "opencode-go/deepseek-v4-pro",
+        "opencode-go/deepseek-v4-flash",
+        "opencode-go/mimo-v2.5-pro",
+        "opencode-go/mimo-v2.5",
+        "opencode-go/glm-5.2",
+        "opencode-go/qwen3.7-max",
+        "opencode-go/qwen3.7-plus",
+        "opencode-go/kimi-k3",
+        "opencode-go/minimax-m3",
+        "opencode-go/minimax-m2.7",
+    }
+)
 NATIVE_MODEL_REASONING_EFFORTS = {
     "gpt-5.6-sol": ("low", "medium", "high", "xhigh", "max", "ultra"),
     "gpt-5.6-terra": ("low", "medium", "high", "xhigh", "max", "ultra"),
@@ -72,6 +92,7 @@ class CodexLanePolicy:
     model: str
     reasoning_effort: str
     fallback_models: tuple[str, ...] = ()
+    provider: str = "codex-native"
 
 
 @dataclass(frozen=True)
@@ -94,6 +115,7 @@ class CodexUxPolicy:
     allowed_models: tuple[str, ...]
     model_fallback_enabled: bool = True
     fallback_models: tuple[str, ...] = DEFAULT_NATIVE_MODEL_FALLBACK_MODELS
+    opencode_go_reviewer_models: tuple[str, ...] = DEFAULT_OPENCODE_GO_REVIEWER_MODELS
 
 
 def _parse_models(raw_value: str) -> tuple[str, ...]:
@@ -125,6 +147,42 @@ def _fallback_models_from_environment() -> tuple[str, ...]:
     if unknown:
         raise ValueError(f"codex_model_fallback_not_native:{','.join(unknown)}")
     return configured
+
+
+def _opencode_go_reviewer_models_from_environment() -> tuple[str, ...]:
+    configured = _parse_models(getenv("SOCIAL_FLOW_OPENCODE_GO_REVIEWER_MODELS", ""))
+    if not configured:
+        return DEFAULT_OPENCODE_GO_REVIEWER_MODELS
+    unknown = tuple(model for model in configured if model not in KNOWN_OPENCODE_GO_MODELS)
+    if unknown:
+        raise ValueError(f"opencode_go_reviewer_model_not_allowed:{','.join(unknown)}")
+    return configured
+
+
+def validate_opencode_go_model(model: str) -> str:
+    normalized = model.strip()
+    if normalized not in KNOWN_OPENCODE_GO_MODELS:
+        raise ValueError(f"opencode_go_model_not_allowed:{normalized}")
+    return normalized
+
+
+def select_opencode_go_reviewer_model(
+    available_models: Iterable[str],
+    *,
+    preferred_model: str | None = None,
+    policy: CodexUxPolicy | None = None,
+) -> str | None:
+    """Choose a reviewer model from a fresh OpenCode Go capability snapshot."""
+
+    active_policy = policy or load_codex_ux_policy()
+    configured = tuple(validate_opencode_go_model(model) for model in active_policy.opencode_go_reviewer_models)
+    if preferred_model is not None:
+        preferred = validate_opencode_go_model(preferred_model)
+        candidates = (preferred, *(model for model in configured if model != preferred))
+    else:
+        candidates = configured
+    live_available = {model.strip() for model in available_models}
+    return next((model for model in candidates if model in live_available), None)
 
 
 def model_fallback_candidates(
@@ -214,12 +272,13 @@ def build_model_fallback_receipt(
     tool_name: str | None = None,
     thread_id: str | None = None,
     host_id: str | None = None,
+    provider: str = "codex-native",
 ) -> dict[str, object]:
-    """Create the bounded evidence record required when a native model changes."""
+    """Create the bounded evidence record required when a model changes."""
 
     receipt: dict[str, object] = {
         "schema": "model_fallback.v1",
-        "provider": "codex-native",
+        "provider": provider,
         "role": role,
         "requested_model": requested_model,
         "selected_model": selected_model,
@@ -275,13 +334,13 @@ def load_codex_ux_policy() -> CodexUxPolicy:
         allowed_models=allowed_models,
         model_fallback_enabled=model_fallback_enabled,
         fallback_models=_fallback_models_from_environment(),
+        opencode_go_reviewer_models=_opencode_go_reviewer_models_from_environment(),
     )
 
 
 def load_codex_architecture_policy() -> CodexArchitecturePolicy:
     ux_policy = load_codex_ux_policy()
     worker_model = validate_codex_model_choice(ux_policy.task_model, ux_policy)
-    reviewer_model = validate_codex_model_choice(ux_policy.review_model, ux_policy)
     critical_reviewer_model = validate_codex_model_choice(ux_policy.critical_review_model, ux_policy)
     critical_architect_model = validate_codex_model_choice(
         getenv("SOCIAL_FLOW_CRITICAL_ARCHITECT_MODEL", DEFAULT_CRITICAL_ARCHITECT_MODEL).strip()
@@ -299,10 +358,6 @@ def load_codex_architecture_policy() -> CodexArchitecturePolicy:
     architect_reasoning_effort = validate_codex_reasoning_effort(
         getenv("SOCIAL_FLOW_ARCHITECT_REASONING_EFFORT", DEFAULT_ARCHITECT_REASONING_EFFORT).strip()
         or DEFAULT_ARCHITECT_REASONING_EFFORT
-    )
-    reviewer_reasoning_effort = validate_codex_reasoning_effort(
-        getenv("SOCIAL_FLOW_REVIEW_REASONING_EFFORT", DEFAULT_REVIEW_REASONING_EFFORT).strip()
-        or DEFAULT_REVIEW_REASONING_EFFORT
     )
     critical_architect_reasoning_effort = validate_codex_reasoning_effort(
         getenv(
@@ -327,9 +382,10 @@ def load_codex_architecture_policy() -> CodexArchitecturePolicy:
             fallback_models=model_fallback_candidates(worker_model, lane="worker", policy=ux_policy)[1:],
         ),
         reviewer=CodexLanePolicy(
-            model=reviewer_model,
-            reasoning_effort=reviewer_reasoning_effort,
-            fallback_models=model_fallback_candidates(reviewer_model, lane="reviewer", policy=ux_policy)[1:],
+            model="runtime-selected",
+            reasoning_effort="route-defined",
+            fallback_models=ux_policy.opencode_go_reviewer_models,
+            provider=OPENCODE_GO_PROVIDER,
         ),
         critical_architect=CodexLanePolicy(
             model=critical_architect_model,
