@@ -44,6 +44,11 @@ except ImportError:  # pragma: no cover - the installed runtime is expected to p
 DEFAULT_STATE_ROOT = os.path.realpath(os.environ.get("BROWSER_USE_STATE_ROOT") or os.path.expanduser("~/.browser-use-cli"))
 CONFIG_PATH = os.path.realpath(os.environ.get("BROWSER_USE_RUNTIME_CONFIG") or os.path.join(DEFAULT_STATE_ROOT, "browser-use-runtime.toml"))
 EUID = os.geteuid()
+# Package-manager/system runtimes (notably the macOS hosted runner's Python)
+# can be root-owned while remaining safe to execute.  The executable checks
+# below still require a canonical regular file, exact mode, pinned hash, and
+# pinned version; user-owned files remain supported for venv/local installs.
+TRUSTED_EXECUTABLE_OWNER_UIDS = {0, EUID}
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 # macOS sockaddr_un.sun_path is shorter than a normal CLI identifier. Keep a
 # margin below the platform limit because the daemon socket is
@@ -328,7 +333,7 @@ def validate_executable(spec: dict[str, Any], kind: str) -> dict[str, str]:
     if not stat.S_ISREG(os.stat(canonical).st_mode):
         raise Blocker("browser_use_executable_not_regular", kind)
     canonical_st = os.stat(canonical)
-    if canonical_st.st_uid != EUID:
+    if canonical_st.st_uid not in TRUSTED_EXECUTABLE_OWNER_UIDS:
         raise Blocker("browser_use_executable_owner_mismatch", kind)
     expected_mode = int(spec["mode"], 8)
     if (canonical_st.st_mode & 0o777) != expected_mode:
