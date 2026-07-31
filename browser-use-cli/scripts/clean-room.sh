@@ -12,6 +12,6 @@ state_root="${tmp_root}/state"
 config_path="${tmp_root}/browser-use-runtime.toml"
 "${python_bin}" "${repo_root}/scripts/configure.py" --state-root "${state_root}" --config "${config_path}"
 BROWSER_USE_STATE_ROOT="${state_root}" BROWSER_USE_RUNTIME_CONFIG="${config_path}" "${repo_root}/scripts/doctor.sh" --config "${config_path}" --state-root "${state_root}"
-BROWSER_USE_STATE_ROOT="${state_root}" BROWSER_USE_RUNTIME_CONFIG="${config_path}" "${python_bin}" "${repo_root}/bin/codex-browser-use" validate >/dev/null
+BROWSER_USE_STATE_ROOT="${state_root}" BROWSER_USE_RUNTIME_CONFIG="${config_path}" "${python_bin}" "${repo_root}/bin/codex-browser-use" validate
 node --test "${repo_root}/test/portable-smoke.test.mjs"
 echo "browser_use_cli_cleanroom_completed"
