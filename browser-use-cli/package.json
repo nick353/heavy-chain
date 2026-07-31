@@ -1,0 +1,12 @@
+{
+  "name": "browser-use-cli-portable",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "doctor": "./scripts/doctor.sh",
+    "clean-room": "./scripts/clean-room.sh",
+    "installer-smoke": "./scripts/installer-smoke.sh"
+  }
+}

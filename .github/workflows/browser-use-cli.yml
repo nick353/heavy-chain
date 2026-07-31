@@ -1,0 +1,41 @@
+name: Browser Use CLI portable package
+
+on:
+  push:
+    paths:
+      - "browser-use-cli/**"
+      - ".github/workflows/browser-use-cli.yml"
+  pull_request:
+    paths:
+      - "browser-use-cli/**"
+      - ".github/workflows/browser-use-cli.yml"
+
+jobs:
+  portable-contract:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: browser-use-cli
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Syntax checks
+        run: |
+          python -m py_compile bin/codex-browser-use scripts/configure.py scripts/doctor.py
+          node --check lib/stage-adapter.mjs
+      - name: Portable smoke tests
+        run: npm test
+      - name: Clean-room and installer smoke tests
+        run: |
+          brew list ffmpeg >/dev/null 2>&1 || brew install ffmpeg
+          python -m venv "$RUNNER_TEMP/browser-use-cli-venv"
+          "$RUNNER_TEMP/browser-use-cli-venv/bin/pip" install "browser-use==0.13.7" "imageio[ffmpeg]" numpy Pillow
+          BROWSER_USE_PYTHON="$RUNNER_TEMP/browser-use-cli-venv/bin/python" npm run clean-room
+          BROWSER_USE_PYTHON="$RUNNER_TEMP/browser-use-cli-venv/bin/python" npm run installer-smoke
+      - name: Publication secret and path scan
+        run: ./scripts/publication-scan.sh
