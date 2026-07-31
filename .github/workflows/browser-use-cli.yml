@@ -35,6 +35,7 @@ jobs:
           brew list ffmpeg >/dev/null 2>&1 || brew install ffmpeg
           python -m venv "$RUNNER_TEMP/browser-use-cli-venv"
           "$RUNNER_TEMP/browser-use-cli-venv/bin/pip" install "browser-use==0.13.7" "imageio[ffmpeg]" numpy Pillow
+          export PATH="$RUNNER_TEMP/browser-use-cli-venv/bin:$PATH"
           BROWSER_USE_PYTHON="$RUNNER_TEMP/browser-use-cli-venv/bin/python" npm run clean-room
           BROWSER_USE_PYTHON="$RUNNER_TEMP/browser-use-cli-venv/bin/python" npm run installer-smoke
       - name: Publication secret and path scan
