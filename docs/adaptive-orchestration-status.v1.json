@@ -5,7 +5,7 @@
   "fallback_contract": "pass",
   "focused_tests": "93 passed",
   "standard_reviewer_route": "opencode-go/runtime-selected",
-  "reviewer_bridge_local_version": "0.3.0+region-fallback",
+  "reviewer_bridge_local_version": "0.3.1+region-fallback",
   "live_opencode_go_review": "bridge_pass: deepseek-v4-flash RegionError fell back to opencode-go/deepseek-v4-pro with model_fallback.v1 and verified PASS; current task MCP snapshot still requires refresh",
   "json_validation": "pass",
   "session_readbacks": {
