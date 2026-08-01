@@ -20,8 +20,14 @@
   "supporting_files": [
     "docs/codex-architecture-mode.md",
     "docs/codex-ux-contract.md",
+    "src/social_flow/adaptive_orchestration_runtime.py",
+    "src/social_flow/adaptive_session_audit.py",
+    "src/social_flow/adaptive_route_policy.py",
     "src/social_flow/codex_model_dispatch.py",
     "src/social_flow/codex_policy.py",
+    "tests/test_adaptive_orchestration_runtime.py",
+    "tests/test_adaptive_session_audit.py",
+    "tests/test_adaptive_route_policy.py",
     "tests/test_codex_architecture_mode.py",
     "tests/test_codex_model_dispatch.py"
   ],

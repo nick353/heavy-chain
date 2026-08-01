@@ -12,6 +12,10 @@ from social_flow.codex_model_dispatch import (
     dispatch_opencode_go_reviewer_with_fallback,
     dispatch_native_model_with_fallback,
 )
+from social_flow.adaptive_session_audit import (
+    ChildTaskValidationError,
+    validate_child_task_result,
+)
 
 
 def test_dispatch_retries_next_live_native_model_and_records_receipt() -> None:
@@ -69,6 +73,123 @@ def test_dispatch_downgrades_effort_only_when_fallback_model_requires_it() -> No
 
     assert calls == [("gpt-5.6-sol", "max"), ("gpt-5.6-terra", "max")]
     assert result.selected_reasoning_effort == "max"
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [TimeoutError(), RuntimeError("deadline exceeded"), RuntimeError("no-final response")],
+)
+def test_dispatch_falls_back_on_explicit_native_timeout_or_missing_final(failure: Exception) -> None:
+    calls: list[str] = []
+
+    def dispatch(model: str, effort: str) -> str:
+        calls.append(model)
+        if model == "gpt-5.6-sol":
+            raise failure
+        return "ok"
+
+    result = dispatch_native_model_with_fallback(
+        dispatch,
+        role="reviewer",
+        primary_model="gpt-5.6-sol",
+        reasoning_effort="max",
+        available_models={"gpt-5.6-sol", "gpt-5.6-terra"},
+        lane="reviewer",
+    )
+
+    assert calls == ["gpt-5.6-sol", "gpt-5.6-terra"]
+    assert result.fallback_receipt is not None
+    assert result.fallback_receipt["schema"] == "model_fallback.v1"
+
+
+def test_dispatch_does_not_substitute_on_unclassified_transport_exception() -> None:
+    calls: list[str] = []
+
+    def dispatch(model: str, effort: str) -> str:
+        calls.append(model)
+        raise RuntimeError("bridge transport closed")
+
+    with pytest.raises(RuntimeError, match="bridge transport closed"):
+        dispatch_native_model_with_fallback(
+            dispatch,
+            role="reviewer",
+            primary_model="gpt-5.6-sol",
+            reasoning_effort="max",
+            available_models={"gpt-5.6-sol", "gpt-5.6-terra"},
+            lane="reviewer",
+        )
+    assert calls == ["gpt-5.6-sol"]
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        TimeoutError("authentication timeout"),
+        RuntimeError("transport deadline exceeded"),
+        RuntimeError("task timeout"),
+    ],
+)
+def test_dispatch_does_not_fallback_for_hard_failures_with_timeout_text(failure: Exception) -> None:
+    calls: list[str] = []
+
+    def dispatch(model: str, effort: str) -> str:
+        calls.append(model)
+        raise failure
+
+    with pytest.raises(type(failure)):
+        dispatch_native_model_with_fallback(
+            dispatch,
+            role="reviewer",
+            primary_model="gpt-5.6-sol",
+            reasoning_effort="max",
+            available_models={"gpt-5.6-sol", "gpt-5.6-terra"},
+            lane="reviewer",
+        )
+    assert calls == ["gpt-5.6-sol"]
+
+
+@pytest.mark.parametrize("failure_code", ["provider_timeout", "model_timeout"])
+def test_dispatch_falls_back_for_explicit_provider_or_model_timeout(failure_code: str) -> None:
+    calls: list[str] = []
+
+    def dispatch(model: str, effort: str) -> str:
+        calls.append(model)
+        if model == "gpt-5.6-sol":
+            raise NativeModelDispatchError(failure_code)
+        return "ok"
+
+    result = dispatch_native_model_with_fallback(
+        dispatch,
+        role="reviewer",
+        primary_model="gpt-5.6-sol",
+        reasoning_effort="max",
+        available_models={"gpt-5.6-sol", "gpt-5.6-terra"},
+        lane="reviewer",
+    )
+
+    assert calls == ["gpt-5.6-sol", "gpt-5.6-terra"]
+    assert result.fallback_receipt is not None
+    assert result.fallback_receipt["failure_code"] == failure_code
+
+
+def test_dispatch_validator_blocks_missing_child_final_without_fallback() -> None:
+    calls: list[str] = []
+
+    def dispatch(model: str, effort: str) -> dict[str, str]:
+        calls.append(model)
+        return {"task_prompt": "bounded child task", "final": ""}
+
+    with pytest.raises(ChildTaskValidationError, match="child_task_final_missing"):
+        dispatch_native_model_with_fallback(
+            dispatch,
+            role="worker",
+            primary_model="gpt-5.4-mini",
+            reasoning_effort="medium",
+            available_models={"gpt-5.4-mini", "gpt-5.4"},
+            lane="worker",
+            result_validator=validate_child_task_result,
+        )
+    assert calls == ["gpt-5.4-mini"]
 
 
 def test_dispatch_records_codex_app_tool_thread_provenance() -> None:
@@ -261,7 +382,21 @@ def _opencode_response(model: str, value: str = "PASS") -> OpenCodeGoDispatchRes
         model=model,
         bridge_version="bridge-2026-07",
         request_id=f"req-{model.rsplit('/', 1)[-1]}",
+        request_id_bound=True,
         usage={"input_tokens": 10, "output_tokens": 4},
+        preflight="passed",
+        mode="review",
+        read_only=True,
+        verified=True,
+        terminal=True,
+        status="completed",
+        output_complete=True,
+        truncated=False,
+        finish_reason="stop",
+        verdict="APPROVE",
+        summary="The bounded review completed successfully.",
+        findings=(),
+        bounded_output=True,
     )
 
 
@@ -282,6 +417,7 @@ def test_opencode_go_reviewer_selects_first_live_model_at_runtime() -> None:
     assert calls == ["opencode-go/deepseek-v4-flash"]
     assert result.selected_model == "opencode-go/deepseek-v4-flash"
     assert result.request_id == "req-deepseek-v4-flash"
+    assert result.verdict == "APPROVE"
     assert result.fallback_receipt is None
 
 
@@ -350,6 +486,35 @@ def test_opencode_go_reviewer_does_not_substitute_on_provider_or_task_failure(fa
     assert calls == [models[0]]
 
 
+@pytest.mark.parametrize(
+    "failure_code",
+    ["model_unavailable", "provider_model_unavailable", "provider_timeout", "model_rate_limited", "no_final_response"],
+)
+def test_opencode_go_reviewer_falls_back_only_for_explicit_model_failures(failure_code: str) -> None:
+    calls: list[str] = []
+    models = ("opencode-go/deepseek-v4-pro", "opencode-go/mimo-v2.5-pro")
+
+    def dispatch(model: str) -> OpenCodeGoDispatchResponse[str]:
+        calls.append(model)
+        if model == models[0]:
+            raise OpenCodeGoModelDispatchError(failure_code)
+        return _opencode_response(model)
+
+    result = dispatch_opencode_go_reviewer_with_fallback(
+        dispatch,
+        available_models=set(models),
+        preflight={model: _opencode_preflight(model) for model in models},
+        supported_bridge_versions={"bridge-2026-07"},
+        preferred_model=models[0],
+    )
+
+    assert calls == list(models)
+    assert result.selected_model == models[1]
+    assert result.fallback_receipt is not None
+    assert result.fallback_receipt["schema"] == "model_fallback.v1"
+    assert result.fallback_receipt["failure_code"] == failure_code
+
+
 def test_opencode_go_reviewer_rejects_unverified_route_metadata() -> None:
     model = "opencode-go/deepseek-v4-flash"
 
@@ -365,9 +530,13 @@ def test_opencode_go_reviewer_rejects_unverified_route_metadata() -> None:
 @pytest.mark.parametrize(
     "response_update,expected_code",
     [
-        ({"request_id": ""}, "opencode_go_request_id_missing"),
-        ({"usage": {}}, "opencode_go_usage_missing"),
-        ({"bounded_output": False}, "opencode_go_bounded_output_missing"),
+        ({"request_id": ""}, "reviewer_output_invalid:request"),
+        ({"request_id_bound": False}, "reviewer_output_invalid:request_binding"),
+        ({"usage": {}}, "reviewer_output_invalid:usage"),
+        ({"usage": {"input_tokens": -1, "output_tokens": 4}}, "reviewer_output_invalid:usage"),
+        ({"usage": {"input_tokens": 10, "output_tokens": 0}}, "reviewer_output_invalid:usage"),
+        ({"usage": {"input_tokens": 10.0, "output_tokens": 4}}, "reviewer_output_invalid:usage"),
+        ({"bounded_output": False}, "reviewer_output_invalid:output"),
     ],
 )
 def test_opencode_go_reviewer_rejects_incomplete_result_evidence(
@@ -386,6 +555,69 @@ def test_opencode_go_reviewer_rejects_incomplete_result_evidence(
         )
 
 
+@pytest.mark.parametrize(
+    "response_update,expected_code",
+    [
+        ({"provider": "other-provider"}, "reviewer_output_invalid:provider"),
+        ({"model": "opencode-go/mimo-v2.5-pro"}, "reviewer_output_invalid:model"),
+        ({"bridge_version": "bridge-older"}, "reviewer_output_invalid:bridge"),
+        ({"preflight": "pending"}, "reviewer_output_invalid:preflight"),
+        ({"mode": "execute"}, "reviewer_output_invalid:mode"),
+        ({"read_only": False}, "reviewer_output_invalid:read_only"),
+        ({"verified": False}, "reviewer_output_invalid:verified"),
+        ({"terminal": False}, "reviewer_output_invalid:terminal"),
+        ({"status": "running"}, "reviewer_output_invalid:status"),
+        ({"output_complete": False}, "reviewer_output_invalid:output_complete"),
+        ({"truncated": True}, "reviewer_output_invalid:truncated"),
+        ({"finish_reason": "length"}, "reviewer_output_invalid:finish_reason"),
+        ({"verdict": ""}, "reviewer_output_invalid:verdict"),
+        ({"verdict": "unknown"}, "reviewer_output_invalid:verdict"),
+        ({"summary": "", "findings": ()}, "reviewer_output_invalid:final_content"),
+        ({"findings": None}, "reviewer_output_invalid:findings"),
+    ],
+)
+def test_opencode_go_reviewer_rejects_incomplete_review_envelope_without_fallback(
+    response_update: dict[str, object],
+    expected_code: str,
+) -> None:
+    model = "opencode-go/deepseek-v4-flash"
+    fallback_model = "opencode-go/mimo-v2.5-pro"
+    calls: list[str] = []
+    response = replace(_opencode_response(model), **response_update)
+
+    def dispatch(selected: str) -> OpenCodeGoDispatchResponse[str]:
+        calls.append(selected)
+        return response
+
+    with pytest.raises(OpenCodeGoModelDispatchError, match=expected_code):
+        dispatch_opencode_go_reviewer_with_fallback(
+            dispatch,
+            available_models={model, fallback_model},
+            preflight={
+                model: _opencode_preflight(model),
+                fallback_model: _opencode_preflight(fallback_model),
+            },
+            supported_bridge_versions={"bridge-2026-07"},
+            preferred_model=model,
+        )
+    assert calls == [model]
+
+
+@pytest.mark.parametrize("verdict", ["PASS", "APPROVE", "approved", "REVISE", "changes_requested", "STOP", "blocked"])
+def test_opencode_go_reviewer_normalizes_supported_verdict_aliases(verdict: str) -> None:
+    model = "opencode-go/deepseek-v4-flash"
+    response = replace(_opencode_response(model), verdict=verdict)
+
+    result = dispatch_opencode_go_reviewer_with_fallback(
+        lambda selected: response,
+        available_models={model},
+        preflight={model: _opencode_preflight(model)},
+        supported_bridge_versions={"bridge-2026-07"},
+    )
+
+    assert result.verdict in {"APPROVE", "REVISE", "STOP"}
+
+
 def test_opencode_go_reviewer_does_not_catch_native_dispatch_errors() -> None:
     model = "opencode-go/deepseek-v4-flash"
 
@@ -399,6 +631,30 @@ def test_opencode_go_reviewer_does_not_catch_native_dispatch_errors() -> None:
             preflight={model: _opencode_preflight(model)},
             supported_bridge_versions={"bridge-2026-07"},
         )
+
+
+@pytest.mark.parametrize("failure", [TimeoutError("provider timeout"), RuntimeError("provider timeout")])
+def test_opencode_go_reviewer_does_not_substitute_on_unstructured_timeout(failure: Exception) -> None:
+    model = "opencode-go/deepseek-v4-flash"
+    fallback_model = "opencode-go/mimo-v2.5-pro"
+    calls: list[str] = []
+
+    def dispatch(selected: str) -> OpenCodeGoDispatchResponse[str]:
+        calls.append(selected)
+        raise failure
+
+    with pytest.raises(type(failure), match="provider timeout"):
+        dispatch_opencode_go_reviewer_with_fallback(
+            dispatch,
+            available_models={model, fallback_model},
+            preflight={
+                model: _opencode_preflight(model),
+                fallback_model: _opencode_preflight(fallback_model),
+            },
+            supported_bridge_versions={"bridge-2026-07"},
+            preferred_model=model,
+        )
+    assert calls == [model]
 
 
 def test_opencode_go_reviewer_requires_route_when_no_live_candidate_exists() -> None:

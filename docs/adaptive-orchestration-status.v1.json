@@ -1,20 +1,37 @@
 {
   "schema": "adaptive_orchestration_status.v1",
   "scope": "adaptive_orchestration_only",
-  "status": "verified",
+  "status": "partially_verified",
   "fallback_contract": "pass",
-  "focused_tests": "35 passed",
+  "focused_tests": "93 passed",
   "standard_reviewer_route": "opencode-go/runtime-selected",
   "reviewer_bridge_local_version": "0.3.0",
-  "live_opencode_go_review": "blocked: transport_closed_after_reviewer_bridge_reload; restart_required",
+  "live_opencode_go_review": "blocked: opencode_go_auth_or_transport_blocked: Go request was rejected (opencode-go/deepseek-v4-flash)",
   "json_validation": "pass",
   "session_readbacks": {
     "count": 13,
     "transport_errors": 0,
+    "provenance": "prior persisted readback; not current-turn proof",
     "natural_provider_failure_observed": false
+  },
+  "timeout_remediation": {
+    "status": "implemented_and_tested",
+    "native_explicit_timeout_fallback": "same-role only",
+    "native_missing_final": "reject before success",
+    "opencode_transport_or_malformed": "fail-closed",
+    "local_session_audit": "bounded_bytes_records_elapsed",
+    "current_live_app_readback": "dynamic: official list_threads then bounded read_thread; one hostless/fresh-host retry after explicit-host failure; current-turn proof required",
+    "evidence_only_audit_route": "direct_root_bounded_readback; no executor-only evidence stage"
+  },
+  "reasoning_policy": {
+    "status": "unified",
+    "canonical_source": ".codex/agents/*.toml",
+    "python_adapter": "src/social_flow/codex_policy.py",
+    "worker_contract": "inherit_parent_effort",
+    "opencode_reviewer_contract": "project_marker_validated; current_live_route_blocked_by_auth_or_transport"
   },
   "external_actions": 0,
   "live_same_thread_fallback_receipt": "not_observed",
-  "unverified": "A real provider outage was not induced; live same-thread fallback remains to be verified when an eligible failure naturally occurs.",
+  "unverified": "OpenCode Go Reviewer auth/transport is currently blocked; a real provider outage was not induced, so live same-thread fallback remains to be verified when an eligible model-level failure naturally occurs.",
   "restore_policy": "Choose currently available models and roles at restore time after live preflight; do not treat this summary as a model or credential source."
 }

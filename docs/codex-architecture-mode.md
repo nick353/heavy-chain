@@ -56,11 +56,45 @@ flowchart LR
 - Kept separate critical commander and reviewer contracts so high-impact work remains stricter while STANDARD review uses OpenCode Go and CRITICAL review remains native Sol.
 - Kept evidence-based completion and explicit, receipt-backed native model fallback instead of silent substitution.
 
+- Timeout and no-final handling is bounded at the adapter boundary. Native
+  explicit model timeout/deadline/no-final failures may use the configured
+  same-role fallback once per live candidate and must emit `model_fallback.v1`.
+  A missing child prompt/final is rejected before success. OpenCode transport,
+  bridge, auth, schema, malformed-output, and task failures remain
+  fail-closed. Broad session-list readback is not allowed to block recovery;
+  use the bounded local session-audit helper and preserve the exact blocker.
+
+## Evidence-only session audits
+
+- A read-only cross-session audit is a Direct root task by default. Do not create
+  a LangGraph Executor stage solely to collect session evidence; an Executor
+  timeout would make an otherwise bounded audit appear to have failed. Use the
+  official App list/read tools from the root, then bounded local evidence, and
+  classify missing coverage explicitly.
+- For each App thread, obtain a fresh candidate from `list_threads` and start
+  `read_thread` with the minimal `threadId` plus the fresh `hostId` when one is
+  returned. If that explicit-host read fails, do not retry the same binding:
+  retry once hostless (or with a newly returned host), record
+  `thread_readback_host_binding`, and stop with the exact blocker if both calls
+  fail. A list result alone is discovery, not thread proof.
+- A readback timeout is an evidence-coverage blocker, not permission to infer
+  that the thread is absent, complete, or healthy. Continue from bounded local
+  evidence where safe and report the uncovered scope.
+- The production-facing `social_flow.adaptive_orchestration_runtime` boundary
+  delegates to the project-owned `resolve_adaptive_route` policy after generic
+  `route_task` classification;
+  implementation and resume work remains on Graph. The standard Reviewer role
+  carries `route_contract = "opencode-go/runtime-selected"`, and
+  `social_flow.codex_policy` rejects a conflicting local marker.
+
 ## Source of truth
 
 - [`adaptive-orchestration-manifest.v1.json`](adaptive-orchestration-manifest.v1.json) is the narrow recovery allowlist and exclusion boundary.
 - [`adaptive-orchestration-recovery.md`](adaptive-orchestration-recovery.md) is the portable, self-contained restore procedure.
 - [`../src/social_flow/codex_model_dispatch.py`](../src/social_flow/codex_model_dispatch.py) contains both the canonical native adapter and the direct OpenCode Go reviewer adapter. OpenCode callers pass a fresh model/preflight snapshot and supported bridge versions; the adapter classifies only structured model-level failures as fallback-eligible and persists the returned `model_fallback.v1` receipt.
+- [`../src/social_flow/codex_policy.py`](../src/social_flow/codex_policy.py) reads the role TOMLs for reasoning effort. Native role values are not duplicated in Python; worker roles omit the field to make parent-effort inheritance explicit, and the OpenCode reviewer remains route-defined.
+- [`../src/social_flow/adaptive_route_policy.py`](../src/social_flow/adaptive_route_policy.py) contains the project-owned auto-route exception for bounded evidence-only cross-session audits.
+- [`../src/social_flow/adaptive_orchestration_runtime.py`](../src/social_flow/adaptive_orchestration_runtime.py) is the production-facing boundary for route selection and bounded session evidence.
 - [`codex-ux-contract.md`](codex-ux-contract.md)
 - [`.codex/agents/architect.toml`](../.codex/agents/architect.toml)
 - [`.codex/agents/worker_gpt_5_3_codex_spark.toml`](../.codex/agents/worker_gpt_5_3_codex_spark.toml)

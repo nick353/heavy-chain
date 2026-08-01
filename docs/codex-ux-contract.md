@@ -18,6 +18,7 @@ This workspace keeps Codex usable by treating the harness, not the model alone, 
 - Let the parent AI route from meaning, ambiguity, proof burden, failure impact, and prior failed attempts rather than keywords, then hand command to the selected strong lane.
 - Keep strong-model judgment in the command plan while the parent mechanically dispatches the bounded worker and sends the bounded review packet to the direct OpenCode Go MCP route; the v3 marker selects a concrete worker whose static model pin equals the effective starting parent model and whose effort is inherited. Generic worker aliases, ad hoc overrides, and a native reviewer result are not completion evidence for the STANDARD external review lane.
 - Keep the durable definition in [`codex-architecture-mode.md`](codex-architecture-mode.md) and the role configs in [`.codex/agents/`](../.codex/agents/). Smart roles are [`.codex/agents/architect.toml`](../.codex/agents/architect.toml), [`.codex/agents/reviewer.toml`](../.codex/agents/reviewer.toml), [`.codex/agents/critical_architect.toml`](../.codex/agents/critical_architect.toml), and [`.codex/agents/critical_reviewer.toml`](../.codex/agents/critical_reviewer.toml); worker roles are the model-specific `worker_gpt_*` files.
+- Reasoning effort has one canonical native source: the `model_reasoning_effort` fields in `.codex/agents/*.toml`. Worker files intentionally omit that field and declare inheritance; `src/social_flow/codex_policy.py` reads and validates this contract instead of carrying a second set of defaults. Explicit per-run environment overrides remain overrides, not defaults.
 
 ## Approved model policy
 
@@ -29,12 +30,32 @@ This workspace keeps Codex usable by treating the harness, not the model alone, 
 - If a native Codex model is unavailable, use the same-role fallback chain `Sol → Terra → 5.5 → 5.4` for strong lanes and `Luna → 5.4-mini → 5.4` for fast lanes. Try each candidate at most once after live model preflight, use a supported reasoning effort (for example `max → xhigh` on 5.5), and write a bounded `model_fallback.v1` receipt with the requested/selected model and effort, failure code, attempts, and Codex App tool/thread provenance. With `codex_app__create_thread` / `codex_app__send_message_to_thread`, resend the same bounded packet on the same thread using the next `model`/`thinking` pair; do not create a replacement thread. This does not authorize fallback across OpenCode providers or browser surfaces.
 - For OpenCode Go review, require verified provider/model metadata, a supported bridge version, request ID, usage, and bounded output from the direct MCP route. Only model unavailability, provider/model timeout, model rate limit, or missing final response may advance to the next live same-role OpenCode Go candidate. Auth, provider, bridge, schema, task, safety, malformed-output, and missing-route failures stop; do not substitute native Sol or another provider.
 
+- Session and child readback is bounded: local audit helpers enforce byte,
+  record, and elapsed-time limits and return explicit `session_audit_timeout:*`
+  blockers. A child result is not successful unless both the dispatched task
+  prompt and a non-empty final response are present. A broad live App thread
+  listing is an optional source, never the sole recovery proof; if it stalls,
+  continue only from bounded local evidence and report the live transport
+  blocker.
+- Evidence-only cross-session audits stay on the Direct root lane. They do not
+  require a LangGraph Executor stage just to scan sessions. For App readback,
+  use a fresh `list_threads` result, attempt minimal `read_thread` with its
+  fresh host binding, and make one hostless/fresh-host retry after an explicit
+  host error. Record `thread_readback_host_binding`; never retry a stale host
+  or treat a list result as proof of a thread's contents.
+- The production-facing `social_flow.adaptive_orchestration_runtime` boundary
+  delegates the deterministic route policy after generic `route_task`
+  classification: read-only evidence audits select
+  `direct_root_bounded_readback`, while implementation and resume work select
+  Graph. The Reviewer contract remains `opencode-go/runtime-selected`.
+
 ## Durable Adaptive surfaces
 
 - Recovery boundary: [`adaptive-orchestration-manifest.v1.json`](adaptive-orchestration-manifest.v1.json)
 - Portable restore procedure: [`adaptive-orchestration-recovery.md`](adaptive-orchestration-recovery.md)
 - Architecture and role contracts: [`codex-architecture-mode.md`](codex-architecture-mode.md) and the role files listed by the manifest
 - Native dispatch implementation: [`../src/social_flow/codex_model_dispatch.py`](../src/social_flow/codex_model_dispatch.py)
+- Canonical reasoning-policy adapter: [`../src/social_flow/codex_policy.py`](../src/social_flow/codex_policy.py)
 
 ## Practical effect
 

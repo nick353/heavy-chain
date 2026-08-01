@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import tomllib
+import pytest
 
 from social_flow.codex_policy import (
     DEFAULT_OPENCODE_GO_REVIEWER_MODELS,
     DEFAULT_NATIVE_MODEL_FALLBACK_MODELS,
     OPENCODE_GO_PROVIDER,
+    PROJECT_REVIEWER_ROUTE_CONTRACT,
     CodexArchitecturePolicy,
     CodexLanePolicy,
     CodexUxPolicy,
@@ -16,6 +19,7 @@ from social_flow.codex_policy import (
     model_fallback_candidates,
     select_opencode_go_reviewer_model,
     select_model_fallback,
+    validate_project_reviewer_contract,
     validate_codex_reasoning_effort,
 )
 
@@ -31,7 +35,7 @@ def _load_adaptive_manifest() -> dict:
     return json.loads(_read("docs/adaptive-orchestration-manifest.v1.json"))
 
 
-def test_codex_architecture_policy_defaults_to_legacy_social_flow_lanes(monkeypatch) -> None:
+def test_codex_architecture_policy_reads_reasoning_from_canonical_role_files(monkeypatch) -> None:
     monkeypatch.delenv("SOCIAL_FLOW_ALLOWED_CODEX_MODELS", raising=False)
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
     monkeypatch.delenv("SOCIAL_FLOW_REVIEW_MODEL", raising=False)
@@ -48,15 +52,22 @@ def test_codex_architecture_policy_defaults_to_legacy_social_flow_lanes(monkeypa
 
     policy = load_codex_architecture_policy()
 
+    with (REPO_ROOT / ".codex" / "agents" / "architect.toml").open("rb") as handle:
+        architect_role = tomllib.load(handle)
+    with (REPO_ROOT / ".codex" / "agents" / "critical_architect.toml").open("rb") as handle:
+        critical_architect_role = tomllib.load(handle)
+    with (REPO_ROOT / ".codex" / "agents" / "critical_reviewer.toml").open("rb") as handle:
+        critical_reviewer_role = tomllib.load(handle)
+
     assert policy == CodexArchitecturePolicy(
         architect=CodexLanePolicy(
             model="gpt-5.6-sol",
-            reasoning_effort="high",
+            reasoning_effort=architect_role["model_reasoning_effort"],
             fallback_models=("gpt-5.6-terra", "gpt-5.5", "gpt-5.4"),
         ),
         worker=CodexLanePolicy(
             model="gpt-5.4-mini",
-            reasoning_effort="medium",
+            reasoning_effort="inherit",
             fallback_models=("gpt-5.4", "gpt-5.6-luna"),
         ),
         reviewer=CodexLanePolicy(
@@ -67,12 +78,12 @@ def test_codex_architecture_policy_defaults_to_legacy_social_flow_lanes(monkeypa
         ),
         critical_architect=CodexLanePolicy(
             model="gpt-5.6-sol",
-            reasoning_effort="high",
+            reasoning_effort=critical_architect_role["model_reasoning_effort"],
             fallback_models=("gpt-5.6-terra", "gpt-5.5", "gpt-5.4"),
         ),
         critical_reviewer=CodexLanePolicy(
             model="gpt-5.6-sol",
-            reasoning_effort="high",
+            reasoning_effort=critical_reviewer_role["model_reasoning_effort"],
             fallback_models=("gpt-5.6-terra", "gpt-5.5", "gpt-5.4"),
         ),
         allowed_models=("gpt-5.4-mini", "gpt-5.6-sol"),
@@ -87,6 +98,19 @@ def test_codex_architecture_policy_defaults_to_legacy_social_flow_lanes(monkeypa
         model_fallback_enabled=True,
         fallback_models=DEFAULT_NATIVE_MODEL_FALLBACK_MODELS,
     )
+
+
+def test_worker_inherits_the_explicit_parent_reasoning_effort(monkeypatch) -> None:
+    monkeypatch.delenv("SOCIAL_FLOW_WORKER_REASONING_EFFORT", raising=False)
+
+    policy = load_codex_architecture_policy(parent_reasoning_effort="xhigh")
+
+    assert policy.worker.reasoning_effort == "xhigh"
+
+
+def test_role_reasoning_effort_accepts_canonical_max_and_very_high_alias() -> None:
+    assert validate_codex_reasoning_effort("max") == "max"
+    assert validate_codex_reasoning_effort("very high") == "xhigh"
 
 
 def test_native_model_fallback_is_ordered_and_requires_live_availability(monkeypatch) -> None:
@@ -172,6 +196,20 @@ def test_opencode_go_reviewer_model_order_can_be_set_without_persisting_a_select
     ) == "opencode-go/deepseek-v4-flash"
 
 
+def test_project_reviewer_contract_detects_conflicting_local_role_config(tmp_path: Path) -> None:
+    reviewer = tmp_path / "reviewer.toml"
+    reviewer.write_text(
+        'route_contract = "codex-native"\n'
+        'developer_instructions = "dispatch through the direct OpenCode Go MCP adapter"\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="reviewer_route_conflict"):
+        validate_project_reviewer_contract(reviewer)
+
+    assert validate_project_reviewer_contract() == PROJECT_REVIEWER_ROUTE_CONTRACT
+
+
 def test_validate_codex_reasoning_effort_accepts_extra_high_alias() -> None:
     assert validate_codex_reasoning_effort("xhigh") == "xhigh"
     assert validate_codex_reasoning_effort("extra high") == "xhigh"
@@ -217,6 +255,7 @@ def test_codex_architecture_mode_files_pin_role_routing() -> None:
     assert "model = \"gpt-5.6-sol\"" in architect
     assert "model_reasoning_effort = \"max\"" in architect
     assert "model = \"gpt-5.6-sol\"" in reviewer
+    assert 'route_contract = "opencode-go/runtime-selected"' in reviewer
     assert "model_reasoning_effort = \"max\"" in reviewer
     assert "model = \"gpt-5.6-sol\"" in critical_architect
     assert "model_reasoning_effort = \"max\"" in critical_architect
@@ -237,6 +276,11 @@ def test_codex_architecture_mode_files_pin_role_routing() -> None:
     assert "model_fallback" in doc
     assert "OpenCode Go MCP / runtime-selected" in doc
     assert "opencode-go/deepseek-v4-pro" in doc
+    assert "Evidence-only session audits" in doc
+    assert "Do not create" in doc
+    assert "LangGraph Executor stage solely" in doc
+    assert "thread_readback_host_binding" in doc
+    assert "one hostless/fresh-host retry" in ux_contract
     assert "never pass an `opencode-go/*` ID" in doc
     assert "model_fallback.v1" in ux_contract
     assert "direct OpenCode Go MCP" in ux_contract

@@ -2,7 +2,75 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from os import getenv
+from pathlib import Path
+import tomllib
 from typing import Iterable
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CANONICAL_ROLE_CONFIG_DIR = PROJECT_ROOT / ".codex" / "agents"
+INHERIT_REASONING_EFFORT = "inherit"
+
+
+def _canonical_role_config(role: str) -> dict[str, object]:
+    path = CANONICAL_ROLE_CONFIG_DIR / f"{role}.toml"
+    if not path.is_file():
+        raise RuntimeError(f"codex_role_config_missing:{path}")
+    try:
+        with path.open("rb") as handle:
+            config = tomllib.load(handle)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise RuntimeError(f"codex_role_config_invalid:{path}") from exc
+    if not isinstance(config, dict):
+        raise RuntimeError(f"codex_role_config_invalid:{path}")
+    return config
+
+
+PROJECT_REVIEWER_ROUTE_CONTRACT = "opencode-go/runtime-selected"
+
+
+def validate_project_reviewer_contract(role_path: Path | None = None) -> str:
+    """Reject a local Reviewer role that conflicts with the project contract."""
+
+    path = role_path or (CANONICAL_ROLE_CONFIG_DIR / "reviewer.toml")
+    try:
+        with path.open("rb") as handle:
+            config = tomllib.load(handle)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise RuntimeError(f"reviewer_route_config_invalid:{path}") from exc
+    observed = config.get("route_contract")
+    if observed != PROJECT_REVIEWER_ROUTE_CONTRACT:
+        raise RuntimeError(
+            "reviewer_route_conflict:"
+            f"expected={PROJECT_REVIEWER_ROUTE_CONTRACT}:observed={observed or 'missing'}"
+        )
+    instructions = config.get("developer_instructions")
+    if not isinstance(instructions, str) or "direct OpenCode Go MCP adapter" not in instructions:
+        raise RuntimeError("reviewer_route_conflict:opencode_go_dispatch_marker_missing")
+    return PROJECT_REVIEWER_ROUTE_CONTRACT
+
+
+def _canonical_role_reasoning_effort(role: str) -> str:
+    config = _canonical_role_config(role)
+    value = config.get("model_reasoning_effort")
+    if not isinstance(value, str) or not value.strip():
+        raise RuntimeError(f"codex_role_reasoning_effort_missing:{role}")
+    return value.strip()
+
+
+def _canonical_worker_reasoning_contract() -> str:
+    worker_files = sorted(CANONICAL_ROLE_CONFIG_DIR.glob("worker_gpt_*.toml"))
+    if not worker_files:
+        raise RuntimeError(f"codex_worker_role_configs_missing:{CANONICAL_ROLE_CONFIG_DIR}")
+    for path in worker_files:
+        try:
+            with path.open("rb") as handle:
+                config = tomllib.load(handle)
+        except (OSError, tomllib.TOMLDecodeError) as exc:
+            raise RuntimeError(f"codex_role_config_invalid:{path}") from exc
+        if "model_reasoning_effort" in config:
+            raise RuntimeError(f"codex_worker_reasoning_must_inherit:{path}")
+    return INHERIT_REASONING_EFFORT
 
 
 DEFAULT_WORKER_MODEL = "gpt-5.4-mini"
@@ -11,11 +79,11 @@ DEFAULT_ARCHITECT_MODEL = "gpt-5.6-sol"
 DEFAULT_REVIEW_MODEL = "gpt-5.6-sol"
 DEFAULT_CRITICAL_ARCHITECT_MODEL = "gpt-5.6-sol"
 DEFAULT_CRITICAL_REVIEW_MODEL = "gpt-5.6-sol"
-DEFAULT_WORKER_REASONING_EFFORT = "medium"
-DEFAULT_ARCHITECT_REASONING_EFFORT = "high"
-DEFAULT_REVIEW_REASONING_EFFORT = "high"
-DEFAULT_CRITICAL_ARCHITECT_REASONING_EFFORT = "high"
-DEFAULT_CRITICAL_REVIEW_REASONING_EFFORT = "high"
+DEFAULT_WORKER_REASONING_EFFORT = _canonical_worker_reasoning_contract()
+DEFAULT_ARCHITECT_REASONING_EFFORT = _canonical_role_reasoning_effort("architect")
+DEFAULT_REVIEW_REASONING_EFFORT = "route-defined"
+DEFAULT_CRITICAL_ARCHITECT_REASONING_EFFORT = _canonical_role_reasoning_effort("critical_architect")
+DEFAULT_CRITICAL_REVIEW_REASONING_EFFORT = _canonical_role_reasoning_effort("critical_reviewer")
 DEFAULT_ALLOWED_MODELS = (DEFAULT_WORKER_MODEL, DEFAULT_ARCHITECT_MODEL)
 DEFAULT_NATIVE_MODEL_FALLBACK_MODELS = (
     "gpt-5.6-sol",
@@ -79,11 +147,13 @@ MODEL_FALLBACK_ELIGIBLE_FAILURES = frozenset(
         "no_final_response",
     }
 )
-ALLOWED_REASONING_EFFORTS = ("minimal", "low", "medium", "high", "xhigh")
+ALLOWED_REASONING_EFFORTS = ("minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 REASONING_EFFORT_ALIASES = {
     "extra high": "xhigh",
     "extra-high": "xhigh",
     "x-high": "xhigh",
+    "very high": "xhigh",
+    "very-high": "xhigh",
 }
 
 
@@ -313,6 +383,20 @@ def validate_codex_reasoning_effort(reasoning_effort: str) -> str:
     return normalized
 
 
+def resolve_inherited_reasoning_effort(
+    reasoning_effort: str,
+    *,
+    parent_reasoning_effort: str | None = None,
+) -> str:
+    """Resolve the only implicit contract: a worker inherits its parent effort."""
+
+    if reasoning_effort == INHERIT_REASONING_EFFORT:
+        if parent_reasoning_effort is None:
+            raise ValueError("codex_parent_reasoning_effort_required")
+        return validate_codex_reasoning_effort(parent_reasoning_effort)
+    return validate_codex_reasoning_effort(reasoning_effort)
+
+
 def load_codex_ux_policy() -> CodexUxPolicy:
     allowed_models = _parse_models(getenv("SOCIAL_FLOW_ALLOWED_CODEX_MODELS", ""))
     if not allowed_models:
@@ -338,7 +422,11 @@ def load_codex_ux_policy() -> CodexUxPolicy:
     )
 
 
-def load_codex_architecture_policy() -> CodexArchitecturePolicy:
+def load_codex_architecture_policy(
+    *,
+    parent_reasoning_effort: str | None = None,
+) -> CodexArchitecturePolicy:
+    validate_project_reviewer_contract()
     ux_policy = load_codex_ux_policy()
     worker_model = validate_codex_model_choice(ux_policy.task_model, ux_policy)
     critical_reviewer_model = validate_codex_model_choice(ux_policy.critical_review_model, ux_policy)
@@ -351,9 +439,16 @@ def load_codex_architecture_policy() -> CodexArchitecturePolicy:
         getenv("SOCIAL_FLOW_ARCHITECT_MODEL", DEFAULT_ARCHITECT_MODEL).strip() or DEFAULT_ARCHITECT_MODEL,
         ux_policy,
     )
-    worker_reasoning_effort = validate_codex_reasoning_effort(
-        getenv("SOCIAL_FLOW_WORKER_REASONING_EFFORT", DEFAULT_WORKER_REASONING_EFFORT).strip()
-        or DEFAULT_WORKER_REASONING_EFFORT
+    worker_override = getenv("SOCIAL_FLOW_WORKER_REASONING_EFFORT", "").strip()
+    worker_reasoning_effort = (
+        validate_codex_reasoning_effort(worker_override)
+        if worker_override
+        else resolve_inherited_reasoning_effort(
+            DEFAULT_WORKER_REASONING_EFFORT,
+            parent_reasoning_effort=parent_reasoning_effort,
+        )
+        if parent_reasoning_effort is not None
+        else DEFAULT_WORKER_REASONING_EFFORT
     )
     architect_reasoning_effort = validate_codex_reasoning_effort(
         getenv("SOCIAL_FLOW_ARCHITECT_REASONING_EFFORT", DEFAULT_ARCHITECT_REASONING_EFFORT).strip()

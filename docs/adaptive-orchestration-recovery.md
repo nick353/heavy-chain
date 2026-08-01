@@ -23,7 +23,7 @@ Use this bounded recovery sequence after cloning the repository onto the replace
 3. Run the focused routing and dispatch tests:
 
    ```sh
-   uv run pytest -q tests/test_codex_architecture_mode.py tests/test_codex_model_dispatch.py
+   uv run pytest -q tests/test_codex_architecture_mode.py tests/test_codex_model_dispatch.py tests/test_adaptive_route_policy.py tests/test_adaptive_orchestration_runtime.py tests/test_adaptive_session_audit.py
    ```
 
 4. Perform the current runtime's live capability and model preflight. Make the
@@ -57,6 +57,22 @@ Use this bounded recovery sequence after cloning the repository onto the replace
    fallback must remain bounded and same-role. OpenCode Go provider, auth,
    bridge, schema, task, malformed-output, and missing-route failures do not
    fall back to native Codex or another provider.
+
+7. Keep session audits bounded. Use `social_flow.adaptive_session_audit` for
+   local `session_index.jsonl` and explicitly named rollout evidence; enforce
+   byte, record, and elapsed-time limits and treat `session_audit_timeout:*` as
+   an audit blocker. Do not use a broad live App thread list as the only
+   recovery source, and do not mark a child successful when its task prompt or
+   final response is missing (`child_task_prompt_missing` /
+   `child_task_final_missing`).
+
+8. For an evidence-only cross-session audit, keep the audit on the Direct root
+   lane instead of creating an Executor stage solely for session collection.
+   When using the official App tools, obtain a fresh `list_threads` result and
+   read each candidate with minimal `threadId` plus its fresh host. If the
+   explicit-host read fails, retry once hostless or with a newly returned host;
+   record `thread_readback_host_binding`, and preserve the exact blocker if both
+   attempts fail. A list result alone is discovery evidence, not thread proof.
 
 Machine-local Codex App state and global Codex configuration are not stored in this
 repository. Re-establish that machine-local configuration separately; do not copy
