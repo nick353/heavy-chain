@@ -41,13 +41,29 @@ except ImportError:  # pragma: no cover - the installed runtime is expected to p
     psutil = None
 
 
-DEFAULT_STATE_ROOT = os.path.realpath(os.environ.get("BROWSER_USE_STATE_ROOT") or os.path.expanduser("~/.browser-use-cli"))
-CONFIG_PATH = os.path.realpath(os.environ.get("BROWSER_USE_RUNTIME_CONFIG") or os.path.join(DEFAULT_STATE_ROOT, "browser-use-runtime.toml"))
+_EXPLICIT_STATE_ROOT = os.environ.get("BROWSER_USE_STATE_ROOT")
+_PORTABLE_STATE_ROOT = os.path.expanduser("~/.browser-use-cli")
+_LEGACY_STATE_ROOT = os.path.expanduser("~/.codex/browser-use")
+_EXPLICIT_CONFIG_PATH = os.environ.get("BROWSER_USE_RUNTIME_CONFIG")
+_PRIMARY_CONFIG_PATH = os.path.join(_PORTABLE_STATE_ROOT, "browser-use-runtime.toml")
+# Keep the portable state root as the first choice, while allowing an existing
+# pre-portable Codex installation to continue using its user-relative config.
+# The legacy fallback contains no machine-specific absolute path and is only
+# selected when the portable config does not exist yet.
+_LEGACY_CONFIG_PATH = os.path.join(_LEGACY_STATE_ROOT, "browser-use-runtime.toml")
+if _EXPLICIT_STATE_ROOT:
+    DEFAULT_STATE_ROOT = os.path.realpath(_EXPLICIT_STATE_ROOT)
+elif _EXPLICIT_CONFIG_PATH and os.path.realpath(os.path.dirname(_EXPLICIT_CONFIG_PATH)) == os.path.realpath(_LEGACY_STATE_ROOT):
+    DEFAULT_STATE_ROOT = os.path.realpath(_LEGACY_STATE_ROOT)
+elif os.path.isfile(_LEGACY_CONFIG_PATH) and not os.path.exists(_PRIMARY_CONFIG_PATH):
+    DEFAULT_STATE_ROOT = os.path.realpath(_LEGACY_STATE_ROOT)
+else:
+    DEFAULT_STATE_ROOT = os.path.realpath(_PORTABLE_STATE_ROOT)
+CONFIG_PATH = os.path.realpath(
+    _EXPLICIT_CONFIG_PATH
+    or (_LEGACY_CONFIG_PATH if os.path.isfile(_LEGACY_CONFIG_PATH) and not os.path.exists(_PRIMARY_CONFIG_PATH) else _PRIMARY_CONFIG_PATH)
+)
 EUID = os.geteuid()
-# Package-manager/system runtimes (notably the macOS hosted runner's Python)
-# can be root-owned while remaining safe to execute.  The executable checks
-# below still require a canonical regular file, exact mode, pinned hash, and
-# pinned version; user-owned files remain supported for venv/local installs.
 TRUSTED_EXECUTABLE_OWNER_UIDS = {0, EUID}
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 # macOS sockaddr_un.sun_path is shorter than a normal CLI identifier. Keep a
@@ -73,10 +89,33 @@ HANDOFF_COMPLETE_SUFFIX = ".cleanup-complete.json"
 RECORDING_SCHEMA = "browser-use-recording.v1"
 RECORDING_STATUS_SCHEMA = "browser-use-recording-status.v1"
 OPERATION_LEDGER_SCHEMA = "browser-use-operation-ledger.v1"
+AUTHORITY_RENEWAL_SCHEMA = "browser-use-authority-renewal.v1"
+AUTHORITY_LEDGER_SCHEMA = "browser-use-authority-ledger.v1"
+AUTHORITY_HISTORY_SCHEMA = "browser-use-authority-descriptor-history.v1"
+AUTHORITY_CLOCK_SKEW_SECONDS = 5
+AUTHORITY_READBACK_BUDGET_SECONDS = 15
+AUTHORITY_CHECKPOINT_BUDGET_SECONDS = 5
+AUTHORITY_COMMAND_BUDGETS = {
+    "record-start": 30,
+    "record-command": 30,
+    "record-resume": 30,
+    "record-recover": 20,
+    "record-reconcile": 20,
+    "record-finalize": 30,
+    "target-inspect": 15,
+    "target-click": 30,
+}
+AUTHORITY_RENEWAL_ALLOWED_KEYS = {
+    "schema", "browser_surface", "run_id", "session", "expires_at",
+    "allowed_origins", "account_identity", "data_exposure", "side_effect_scope",
+    "approval", "readback_required", "previous_authority_sha256",
+    "authority_generation", "issuer_id",
+}
 OPERATION_EFFECT_STATES = {"none", "executed", "unknown"}
 READ_ONLY_OPERATION_COMMANDS = {"state", "get", "screenshot", "extract", "wait", "scroll", "back", "close-tab"}
 MAX_CAPTURED_READBACK_CHARS = 32_000
 RECORDING_STATUSES = {"active", "continued", "cleanup_pending", "finalized", "stale"}
+MAX_RECORDING_RECOVERY_ATTEMPTS = 2
 PINNED_BROWSER_USE_VERSION = "0.13.7"
 _LAST_RECORDING_CLI_FAILURE = ""
 _LAST_CLI_FAILURE = ""
@@ -286,6 +325,33 @@ def validate_helper_snapshot(descriptor: dict[str, Any]) -> str | None:
     assert_regular_file(snapshot, mode=0o700)
     if sha256_file(snapshot) != descriptor.get("helper_sha256"):
         raise Blocker("browser_use_recording_helper_snapshot_digest_mismatch")
+    if descriptor.get("helper_snapshot_owner_uid") is not None and descriptor["helper_snapshot_owner_uid"] != EUID:
+        raise Blocker("browser_use_recording_helper_snapshot_owner_mismatch")
+    if descriptor.get("helper_snapshot_mode") is not None and descriptor["helper_snapshot_mode"] != 0o700:
+        raise Blocker("browser_use_recording_helper_snapshot_mode_mismatch")
+    dependency_digest = descriptor.get("helper_dependency_digest")
+    versions = descriptor.get("versions_hashes")
+    if dependency_digest is not None:
+        if not isinstance(versions, dict):
+            raise Blocker("browser_use_recording_helper_dependency_identity_missing")
+        expected = hashlib.sha256(json.dumps(versions, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if dependency_digest != expected:
+            raise Blocker("browser_use_recording_helper_dependency_identity_mismatch")
+    process = descriptor.get("process")
+    if descriptor.get("helper_process_lineage_digest") is not None:
+        if not isinstance(process, dict) or not isinstance(process.get("root_pid"), int) or not isinstance(process.get("root_start_time"), (int, float)):
+            raise Blocker("browser_use_recording_helper_process_identity_missing")
+        lineage = {
+            "run_id": descriptor.get("run_id"),
+            "session": descriptor.get("session"),
+            "profile": descriptor.get("profile"),
+            "port": descriptor.get("port"),
+            "process": process,
+            "helper_sha256": descriptor.get("helper_sha256"),
+        }
+        expected = hashlib.sha256(json.dumps(lineage, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if descriptor.get("helper_process_lineage_digest") != expected:
+            raise Blocker("browser_use_recording_helper_process_identity_mismatch")
     return snapshot
 
 
@@ -599,7 +665,15 @@ def read_recording_tab_inventory(path: str) -> dict[str, Any]:
     return value
 
 
-def write_harness_recording_status(path: str, recording: dict[str, Any], *, active: bool, finalized: bool) -> None:
+def write_harness_recording_status(
+    path: str,
+    recording: dict[str, Any],
+    *,
+    active: bool,
+    finalized: bool,
+    state: str | None = None,
+    reason: str | None = None,
+) -> None:
     """Persist the helper-owned status contract for Browser Harness recordings."""
     source = pathlib.Path(recording["recording_source_dir"])
     frames = sorted(p for p in source.glob("*.jpg") if p.stem.isdigit()) if source.is_dir() else []
@@ -612,6 +686,12 @@ def write_harness_recording_status(path: str, recording: dict[str, Any], *, acti
         "recording_backend": "browser-harness",
         "frame_count": len(frames),
     }
+    if state is not None:
+        value["state"] = state
+        value["durable_state"] = state
+    if reason is not None:
+        value["state_reason"] = str(reason)[:160]
+        value["state_updated_at"] = iso(now_utc())
     if os.path.lexists(path):
         json_atomic_replace(path, value)
     else:
@@ -707,6 +787,25 @@ def read_recording_status(path: str, *, require_active: bool | None = None) -> d
     return value
 
 
+def mark_recording_abandoned(path: str, *, reason: str) -> dict[str, Any]:
+    """Persist an honest stopped/abandoned recorder state without finalizing video."""
+    value = read_recording_status(path, require_active=None)
+    if value.get("finalized") is True:
+        raise Blocker("browser_use_recording_already_finalized")
+    value.update(
+        {
+            "recorder_active": False,
+            "finalized": False,
+            "state": "abandoned",
+            "durable_state": "abandoned",
+            "state_reason": str(reason)[:160],
+            "state_updated_at": iso(now_utc()),
+        }
+    )
+    json_atomic_replace(path, value)
+    return value
+
+
 def require_recording_continuable(descriptor: dict[str, Any]) -> None:
     """Reject descriptor markers that are no longer live recording leases."""
     if descriptor.get("status") not in {"active", "continued"}:
@@ -742,7 +841,7 @@ def require_cross_run_reconciliation_clear(config: dict[str, Any], *, run_id: st
             value = read_json_safe(path)
         except Blocker as exc:
             raise Blocker("browser_use_external_effect_reconciliation_required", exc.code) from exc
-        if value.get("run_id") == run_id or value.get("status") not in {"active", "continued", "cleanup_pending"}:
+        if value.get("run_id") == run_id or value.get("status") not in {"active", "continued", "cleanup_pending", "stale"}:
             continue
         if value.get("automation_id") != automation_id or value.get("account_identity") != account_identity:
             continue
@@ -858,13 +957,19 @@ def recording_status(args: argparse.Namespace) -> int:
         entry = _classify_recording_descriptor(config, path, value)
         if args.mark_stale and entry["liveness"] == "stale" and value.get("status") in {"active", "continued"}:
             value["status"] = "stale"
+            stale_reason = entry.get("exact_blocker", "browser_use_recording_descriptor_stale")
             value["stale_state"] = {
                 "state": "uncertain",
                 "uncertain": True,
-                "exact_blocker": entry.get("exact_blocker", "browser_use_recording_descriptor_stale"),
+                "exact_blocker": stale_reason,
                 "updated_at": iso(now_utc()),
             }
             json_atomic_replace(path, value)
+            try:
+                mark_recording_abandoned(str(value["status_path"]), reason=stale_reason)
+            except Blocker as exc:
+                if exc.code != "browser_use_recording_already_finalized":
+                    raise
             entry["status"] = "stale"
             entry["marked_stale"] = True
             marked_stale += 1
@@ -1097,6 +1202,14 @@ def _operation_ledger_reconciliation(descriptor: dict[str, Any]) -> list[dict[st
 
     intents: dict[str, dict[str, Any]] = {}
     outcomes: dict[str, dict[str, Any]] = {}
+    reconciliations: dict[str, dict[str, Any]] = {}
+    descriptor_reconciliations: set[str] = set()
+    for item in descriptor.get("reconciliations", []):
+        if not isinstance(item, dict) or item.get("resolution") not in {"none", "executed"}:
+            continue
+        for operation_id in item.get("operation_ids", []):
+            if isinstance(operation_id, str):
+                descriptor_reconciliations.add(operation_id)
     for row in rows:
         if row.get("recording_run_id") != descriptor.get("run_id") or row.get("session") != descriptor.get("session"):
             raise Blocker("browser_use_external_effect_reconciliation_required", "browser_use_operation_ledger_binding_invalid")
@@ -1105,10 +1218,15 @@ def _operation_ledger_reconciliation(descriptor: dict[str, Any]) -> list[dict[st
             intents[operation_id] = row
         elif row.get("phase") == "outcome":
             outcomes[operation_id] = row
+        elif row.get("phase") == "reconciliation":
+            reconciliations[operation_id] = row
 
     pending: list[dict[str, str]] = []
     for operation_id, intent in intents.items():
         outcome = outcomes.get(operation_id)
+        reconciliation = reconciliations.get(operation_id)
+        if operation_id in descriptor_reconciliations or (reconciliation is not None and str(reconciliation.get("external_effects")) in {"none", "executed"}):
+            continue
         if outcome is None:
             pending.append({"operation_id": operation_id, "reason": "orphan_intent", "external_effects": "unknown"})
         elif str(outcome.get("external_effects")) == "unknown":
@@ -1118,6 +1236,9 @@ def _operation_ledger_reconciliation(descriptor: dict[str, Any]) -> list[dict[st
         if not isinstance(item, dict) or not item.get("external_action_possible"):
             continue
         operation_id = str(item.get("operation_id") or "failed-operation")
+        reconciliation = reconciliations.get(operation_id)
+        if operation_id in descriptor_reconciliations or (reconciliation is not None and str(reconciliation.get("external_effects")) in {"none", "executed"}):
+            continue
         if not any(entry["operation_id"] == operation_id for entry in pending):
             pending.append({"operation_id": operation_id, "reason": "failed_external_action_possible", "external_effects": "unknown"})
     return pending
@@ -1205,6 +1326,34 @@ def append_operation_outcome_durable(descriptor: dict[str, Any], *, operation_id
     raise Blocker("browser_use_operation_outcome_append_failed", detail)
 
 
+def append_operation_reconciliation_durable(descriptor: dict[str, Any], *, operation_id: str, external_effects: str, outcome: str) -> dict[str, Any] | None:
+    """Append one explicit reconciliation without rewriting the original outcome."""
+    if external_effects not in {"none", "executed"}:
+        raise Blocker("browser_use_operation_reconciliation_resolution_invalid")
+    path = operation_ledger_path(descriptor)
+    for _attempt in range(2):
+        try:
+            rows = _operation_ledger_rows(path)
+            existing = next((item for item in rows if item.get("operation_id") == operation_id and item.get("phase") == "reconciliation"), None)
+            if existing is not None:
+                return existing
+            append_operation_ledger(
+                descriptor,
+                operation_id=operation_id,
+                phase="reconciliation",
+                command=["reconciliation"],
+                external_effects=external_effects,
+                outcome=outcome,
+            )
+            rows = _operation_ledger_rows(path)
+            existing = next((item for item in rows if item.get("operation_id") == operation_id and item.get("phase") == "reconciliation"), None)
+            if existing is not None:
+                return existing
+        except Blocker:
+            continue
+    raise Blocker("browser_use_operation_reconciliation_append_failed")
+
+
 def close_orphan_operation_intents(descriptor: dict[str, Any]) -> list[str]:
     """Record orphan closure without ever clearing the unknown-effect gate."""
     pending = _operation_ledger_reconciliation(descriptor)
@@ -1222,11 +1371,116 @@ def close_orphan_operation_intents(descriptor: dict[str, Any]) -> list[str]:
     return pending_operation_reconciliation_ids(descriptor)
 
 
+def _navigation_reconciliation_candidate(rows: list[dict[str, Any]], operation_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Validate the narrow, read-only navigation intent eligible for reconciliation.
+
+    The ledger intentionally stores command shape rather than URL text.  This
+    helper therefore admits only an original ``open`` intent that was already
+    classified as having no external effect, followed by the bounded recovery
+    outcome that left the effect state unknown.  It must never be used to
+    reinterpret a click, form submission, upload, or other effectful command.
+    """
+    if not re.fullmatch(r"[a-f0-9]{32}", str(operation_id)):
+        raise Blocker("browser_use_navigation_reconciliation_operation_id_invalid")
+    intents = {
+        str(row.get("operation_id")): row
+        for row in rows
+        if row.get("phase") == "intent"
+    }
+    outcomes = {
+        str(row.get("operation_id")): row
+        for row in rows
+        if row.get("phase") == "outcome"
+    }
+    intent = intents.get(operation_id)
+    outcome = outcomes.get(operation_id)
+    if intent is None or outcome is None:
+        raise Blocker("browser_use_navigation_reconciliation_operation_missing")
+    command = intent.get("command")
+    if not isinstance(command, dict) or command.get("name") != "open":
+        raise Blocker("browser_use_navigation_reconciliation_operation_not_open")
+    if command.get("argument_count") != 1 or command.get("argument_shapes") != ["url"]:
+        raise Blocker("browser_use_navigation_reconciliation_open_shape_invalid")
+    if intent.get("external_effects") != "none":
+        raise Blocker("browser_use_navigation_reconciliation_original_effect_not_none")
+    if outcome.get("external_effects") != "unknown" or outcome.get("outcome") != "orphan_intent_closed_by_recover":
+        raise Blocker("browser_use_navigation_reconciliation_outcome_mismatch")
+    return intent, outcome
+
+
+def _target_click_reconciliation_candidate(rows: list[dict[str, Any]], operation_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Validate the helper-rejected target click eligible for live reconciliation."""
+    if not re.fullmatch(r"[a-f0-9]{32}", str(operation_id)):
+        raise Blocker("browser_use_target_reconciliation_operation_id_invalid")
+    intents = {str(row.get("operation_id")): row for row in rows if row.get("phase") == "intent"}
+    outcomes = {str(row.get("operation_id")): row for row in rows if row.get("phase") == "outcome"}
+    intent = intents.get(operation_id)
+    outcome = outcomes.get(operation_id)
+    if intent is None or outcome is None:
+        raise Blocker("browser_use_target_reconciliation_operation_missing")
+    command = intent.get("command")
+    if not isinstance(command, dict) or command.get("name") != "target-click":
+        raise Blocker("browser_use_target_reconciliation_operation_not_target_click")
+    if intent.get("external_effects") != "unknown":
+        raise Blocker("browser_use_target_reconciliation_original_effect_not_unknown")
+    if outcome.get("external_effects") != "unknown" or outcome.get("outcome") != "browser_use_target_click_failed":
+        raise Blocker("browser_use_target_reconciliation_outcome_mismatch")
+    return intent, outcome
+
+
+def _coordinate_click_reconciliation_candidate(rows: list[dict[str, Any]], operation_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Validate a coordinate click whose post-dispatch readback was late."""
+    if not re.fullmatch(r"[a-f0-9]{32}", str(operation_id)):
+        raise Blocker("browser_use_click_reconciliation_operation_id_invalid")
+    intents = {str(row.get("operation_id")): row for row in rows if row.get("phase") == "intent"}
+    outcomes = {str(row.get("operation_id")): row for row in rows if row.get("phase") == "outcome"}
+    intent = intents.get(operation_id)
+    outcome = outcomes.get(operation_id)
+    if intent is None or outcome is None:
+        raise Blocker("browser_use_click_reconciliation_operation_missing")
+    command = intent.get("command")
+    if not isinstance(command, dict) or command.get("name") != "click" or command.get("argument_count") != 2 or command.get("argument_shapes") != ["scalar", "scalar"]:
+        raise Blocker("browser_use_click_reconciliation_operation_not_coordinate_click")
+    if intent.get("external_effects") != "unknown":
+        raise Blocker("browser_use_click_reconciliation_original_effect_not_unknown")
+    if outcome.get("external_effects") != "unknown" or outcome.get("outcome") != "post_dispatch_navigation_readback_failed":
+        raise Blocker("browser_use_click_reconciliation_outcome_mismatch")
+    return intent, outcome
+
+
+def _eval_syntax_error_reconciliation_candidate(rows: list[dict[str, Any]], operation_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Validate an eval that failed in the Browser Use CLI parser before page dispatch.
+
+    This is intentionally narrower than a general eval reconciliation.  It
+    accepts only the one-argument eval shape and the exact dispatch-failed
+    ledger outcome produced by the old helper.  The caller must also provide
+    the CLI's syntax-error evidence code and a fresh same-run page readback.
+    """
+    if not re.fullmatch(r"[a-f0-9]{32}", str(operation_id)):
+        raise Blocker("browser_use_eval_reconciliation_operation_id_invalid")
+    intents = {str(row.get("operation_id")): row for row in rows if row.get("phase") == "intent"}
+    outcomes = {str(row.get("operation_id")): row for row in rows if row.get("phase") == "outcome"}
+    intent = intents.get(operation_id)
+    outcome = outcomes.get(operation_id)
+    if intent is None or outcome is None:
+        raise Blocker("browser_use_eval_reconciliation_operation_missing")
+    command = intent.get("command")
+    if not isinstance(command, dict) or command.get("name") != "eval":
+        raise Blocker("browser_use_eval_reconciliation_operation_not_eval")
+    if command.get("argument_count") != 1 or command.get("argument_shapes") != ["scalar"]:
+        raise Blocker("browser_use_eval_reconciliation_eval_shape_invalid")
+    if intent.get("external_effects") != "unknown":
+        raise Blocker("browser_use_eval_reconciliation_original_effect_not_unknown")
+    if outcome.get("external_effects") != "unknown" or outcome.get("outcome") != "dispatch_failed":
+        raise Blocker("browser_use_eval_reconciliation_outcome_mismatch")
+    return intent, outcome
+
+
 def append_operation_ledger(descriptor: dict[str, Any], *, operation_id: str, phase: str, command: list[str], external_effects: str, outcome: str = "") -> dict[str, Any]:
     """Append one fsynced, secret-free intent/outcome row before/after dispatch."""
     if not re.fullmatch(r"[a-f0-9]{32}", str(operation_id)):
         raise Blocker("browser_use_operation_id_invalid")
-    if phase not in {"intent", "outcome"} or external_effects not in OPERATION_EFFECT_STATES:
+    if phase not in {"intent", "outcome", "reconciliation"} or external_effects not in OPERATION_EFFECT_STATES:
         raise Blocker("browser_use_operation_ledger_entry_invalid")
     if not isinstance(command, list) or not command or not isinstance(command[0], str):
         raise Blocker("browser_use_operation_ledger_command_invalid")
@@ -1249,6 +1503,19 @@ def append_operation_ledger(descriptor: dict[str, Any], *, operation_id: str, ph
             raise Blocker("browser_use_operation_intent_missing")
         if phase == "outcome" and any(row.get("phase") == "outcome" for row in matching):
             raise Blocker("browser_use_operation_outcome_replay")
+        if phase == "reconciliation" and any(row.get("phase") == "reconciliation" for row in matching):
+            raise Blocker("browser_use_operation_reconciliation_replay")
+        if phase == "reconciliation" and not matching:
+            failed_operation = next(
+                (
+                    item
+                    for item in descriptor.get("failed_operations", [])
+                    if isinstance(item, dict) and str(item.get("operation_id") or "failed-operation") == operation_id
+                ),
+                None,
+            )
+            if failed_operation is None:
+                raise Blocker("browser_use_operation_reconciliation_target_missing")
         previous = rows[-1].get("chain_digest", "0" * 64) if rows else "0" * 64
         body = {
             "schema": OPERATION_LEDGER_SCHEMA,
@@ -1290,6 +1557,14 @@ def operation_effect_summary(descriptor: dict[str, Any]) -> str:
             raise Blocker("browser_use_operation_ledger_binding_invalid")
         if row.get("phase") == "outcome":
             outcomes[str(row["operation_id"])] = str(row.get("external_effects"))
+        elif row.get("phase") == "reconciliation":
+            outcomes[str(row["operation_id"])] = str(row.get("external_effects"))
+    for item in descriptor.get("reconciliations", []):
+        if not isinstance(item, dict) or item.get("resolution") not in {"none", "executed"}:
+            continue
+        for operation_id in item.get("operation_ids", []):
+            if isinstance(operation_id, str):
+                outcomes[operation_id] = "executed" if item.get("resolution") == "executed" else "none"
     intent_ids = {str(row["operation_id"]) for row in rows if row.get("phase") == "intent"}
     if intent_ids - set(outcomes):
         return "unknown"
@@ -1480,9 +1755,14 @@ def handoff_expiry(descriptor: dict[str, Any]) -> dt.datetime:
 
 
 def authority_for_handoff(path: str, run_id: str, session: str, descriptor: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
-    config = config or read_toml()
     requested_session = descriptor.get("requested_session")
-    aliases = session_aliases(config, requested_session, session) if isinstance(requested_session, str) else []
+    # A same-session authority drift check must not be masked by an unrelated
+    # missing global config.  Only load config when a requested/effective
+    # session alias is actually needed.
+    aliases = []
+    if isinstance(requested_session, str) and requested_session != session:
+        config = config or read_toml()
+        aliases = session_aliases(config, requested_session, session)
     authority = parse_authority(path, run_id, session, aliases=aliases)
     digest = sha256_file(path)
     if digest != descriptor["authority_sha256"]:
@@ -1658,7 +1938,7 @@ def browser_harness_cli_enabled() -> bool:
 def browser_harness_root(session: str) -> str:
     """Use a short, per-session private root so Harness sockets stay bounded."""
     digest = hashlib.sha256(session.encode("utf-8")).hexdigest()[:16]
-    return os.path.join(tempfile.gettempdir(), f"codex-browser-use-{digest}")
+    return os.path.join("/tmp", f"codex-browser-use-{digest}")
 
 
 def browser_harness_env(home: str, port: int, session: str, recording: dict[str, Any] | None = None) -> dict[str, str]:
@@ -2509,6 +2789,252 @@ def parse_authority(path: str, run_id: str, session: str, *, aliases: list[str] 
     return value
 
 
+def _authority_expiry(authority: dict[str, Any]) -> dt.datetime:
+    try:
+        expires = dt.datetime.fromisoformat(str(authority["expires_at"]).replace("Z", "+00:00"))
+    except (KeyError, TypeError, ValueError) as exc:
+        raise Blocker("browser_use_authority_expiry_invalid") from exc
+    if expires.tzinfo is None:
+        raise Blocker("browser_use_authority_expiry_invalid")
+    return expires.astimezone(dt.timezone.utc)
+
+
+def authority_scope_digest(authority: dict[str, Any]) -> str:
+    scope = {
+        "data_exposure": authority.get("data_exposure"),
+        "side_effect_scope": authority.get("side_effect_scope"),
+        "approval": authority.get("approval"),
+        "readback_required": authority.get("readback_required"),
+    }
+    return hashlib.sha256(json.dumps(scope, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def authority_budget(command_class: str) -> dict[str, int]:
+    if not isinstance(command_class, str) or not command_class.strip():
+        raise Blocker("browser_use_authority_command_class_invalid")
+    dispatch = AUTHORITY_COMMAND_BUDGETS.get(command_class, AUTHORITY_READBACK_BUDGET_SECONDS)
+    return {
+        "dispatch_seconds": dispatch,
+        "readback_seconds": AUTHORITY_READBACK_BUDGET_SECONDS,
+        "checkpoint_seconds": AUTHORITY_CHECKPOINT_BUDGET_SECONDS,
+        "clock_skew_seconds": AUTHORITY_CLOCK_SKEW_SECONDS,
+        "required_seconds": dispatch + AUTHORITY_READBACK_BUDGET_SECONDS + AUTHORITY_CHECKPOINT_BUDGET_SECONDS + AUTHORITY_CLOCK_SKEW_SECONDS,
+    }
+
+
+def remaining_authority_budget(authority: dict[str, Any], command_class: str, *, now: dt.datetime | None = None) -> dict[str, Any]:
+    now = (now or now_utc()).astimezone(dt.timezone.utc)
+    expiry = _authority_expiry(authority)
+    budget = authority_budget(command_class)
+    remaining = (expiry - now).total_seconds()
+    return {
+        "command_class": command_class,
+        "expires_at": iso(expiry),
+        "remaining_seconds": max(0.0, remaining),
+        "sufficient": remaining >= budget["required_seconds"],
+        **budget,
+    }
+
+
+def write_authority_renewal_checkpoint(descriptor: dict[str, Any], *, command_class: str, budget: dict[str, Any], exact_blocker: str = "browser_use_authority_renewal_required") -> str:
+    """Write only bounded, non-secret admission evidence before dispatch."""
+    recording_dir = os.path.realpath(str(descriptor.get("recording_dir") or ""))
+    if not recording_dir or not os.path.isabs(recording_dir):
+        raise Blocker("browser_use_authority_checkpoint_scope_invalid")
+    assert_directory(recording_dir, create=True)
+    path = os.path.join(recording_dir, "authority-renewal-checkpoint.json")
+    payload = {
+        "schema": "browser-use-authority-renewal-checkpoint.v1",
+        "run_id": descriptor.get("run_id"),
+        "session": descriptor.get("session"),
+        "command_class": command_class,
+        "authority_generation": descriptor.get("authority_generation", 1),
+        "authority_sha256": descriptor.get("authority_sha256"),
+        "exact_blocker": exact_blocker,
+        "remaining_seconds": budget.get("remaining_seconds"),
+        "required_seconds": budget.get("required_seconds"),
+        "readback_seconds": budget.get("readback_seconds"),
+        "checkpoint_seconds": budget.get("checkpoint_seconds"),
+        "clock_skew_seconds": budget.get("clock_skew_seconds"),
+        "updated_at": iso(now_utc()),
+    }
+    json_atomic_replace(path, payload)
+    descriptor["authority_checkpoint_path"] = path
+    return path
+
+
+def _authority_history_path(descriptor: dict[str, Any], name: str) -> str:
+    recording_dir = os.path.realpath(str(descriptor.get("recording_dir") or ""))
+    if not recording_dir or not os.path.isabs(recording_dir):
+        raise Blocker("browser_use_authority_history_scope_invalid")
+    path = os.path.join(recording_dir, name)
+    if os.path.realpath(os.path.dirname(path)) != recording_dir:
+        raise Blocker("browser_use_authority_history_scope_invalid")
+    return path
+
+
+def _read_jsonl_chain(path: str, schema: str, code_prefix: str) -> list[dict[str, Any]]:
+    if not os.path.lexists(path):
+        return []
+    assert_regular_file(path, mode=0o600)
+    rows: list[dict[str, Any]] = []
+    previous = "0" * 64
+    with open(path, encoding="utf-8") as handle:
+        for sequence, line in enumerate(handle, 1):
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise Blocker(f"{code_prefix}_invalid") from exc
+            if not isinstance(row, dict) or row.get("schema") != schema or row.get("sequence") != sequence or row.get("previous_chain_digest") != previous:
+                raise Blocker(f"{code_prefix}_sequence_invalid")
+            body = dict(row)
+            chain = body.pop("chain_digest", None)
+            expected = hashlib.sha256((previous + json.dumps(body, sort_keys=True, separators=(",", ":"))).encode()).hexdigest()
+            if chain != expected:
+                raise Blocker(f"{code_prefix}_chain_invalid")
+            rows.append(row)
+            previous = chain
+    return rows
+
+
+def _append_jsonl_chain(path: str, schema: str, row: dict[str, Any], code_prefix: str) -> dict[str, Any]:
+    parent = os.path.dirname(path)
+    assert_directory(parent, create=True)
+    if os.path.lexists(path):
+        assert_regular_file(path, mode=0o600)
+    else:
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        os.close(fd)
+    rows = _read_jsonl_chain(path, schema, code_prefix)
+    value = {"schema": schema, "sequence": len(rows) + 1, "previous_chain_digest": rows[-1].get("chain_digest", "0" * 64) if rows else "0" * 64, **row}
+    value["chain_digest"] = hashlib.sha256((value["previous_chain_digest"] + json.dumps(value, sort_keys=True, separators=(",", ":"))).encode()).hexdigest()
+    with open(path, "a", encoding="utf-8") as handle:
+        handle.write(json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    if _read_jsonl_chain(path, schema, code_prefix)[-1] != value:
+        raise Blocker(f"{code_prefix}_readback_failed")
+    return value
+
+
+def _authority_history_row(descriptor: dict[str, Any], authority: dict[str, Any], *, digest: str, generation: int, previous_digest: str | None, issuer_id: str) -> dict[str, Any]:
+    return {
+        "run_id": descriptor.get("run_id"),
+        "session": descriptor.get("session"),
+        "authority_generation": generation,
+        "authority_sha256": digest,
+        "previous_authority_sha256": previous_digest,
+        "issuer_id": issuer_id,
+        "expires_at": authority.get("expires_at"),
+        "account_identity": authority.get("account_identity"),
+        "allowed_origins": sorted({normalize_origin(item) for item in authority.get("allowed_origins", [])}),
+        "authority_scope_digest": authority_scope_digest(authority),
+    }
+
+
+def append_authority_generation(descriptor: dict[str, Any], authority: dict[str, Any], *, digest: str, generation: int, previous_digest: str | None, issuer_id: str) -> None:
+    ledger = _authority_history_path(descriptor, "authority-generation-ledger.jsonl")
+    rows = _read_jsonl_chain(ledger, AUTHORITY_LEDGER_SCHEMA, "browser_use_authority_ledger")
+    if rows and generation != int(rows[-1]["authority_generation"]) + 1:
+        raise Blocker("browser_use_authority_generation_lineage_mismatch")
+    if not rows and generation != 1:
+        raise Blocker("browser_use_authority_generation_lineage_mismatch")
+    if rows and previous_digest != rows[-1].get("authority_sha256"):
+        raise Blocker("browser_use_authority_previous_digest_mismatch")
+    row = _authority_history_row(descriptor, authority, digest=digest, generation=generation, previous_digest=previous_digest, issuer_id=issuer_id)
+    _append_jsonl_chain(ledger, AUTHORITY_LEDGER_SCHEMA, row, "browser_use_authority_ledger")
+    history = _authority_history_path(descriptor, "authority-descriptor-history.jsonl")
+    lineage = {
+        "profile": descriptor.get("profile"),
+        "port": descriptor.get("port"),
+        "process": descriptor.get("process"),
+        "session": descriptor.get("session"),
+        "helper_sha256": descriptor.get("helper_sha256"),
+    }
+    _append_jsonl_chain(history, AUTHORITY_HISTORY_SCHEMA, {**row, "resource_lineage_digest": hashlib.sha256(json.dumps(lineage, sort_keys=True, separators=(",", ":")).encode()).hexdigest()}, "browser_use_authority_history")
+    descriptor["authority_ledger_path"] = ledger
+    descriptor["authority_history_path"] = history
+
+
+def _validate_renewal_contract(config: dict[str, Any], descriptor: dict[str, Any], current: dict[str, Any], current_digest: str, renewal_path: str) -> tuple[dict[str, Any], str, int, str]:
+    if not os.path.isabs(renewal_path) or os.path.realpath(renewal_path) != renewal_path:
+        raise Blocker("browser_use_authority_renewal_path_invalid")
+    assert_regular_file(renewal_path, mode=0o600)
+    value = read_json_safe(renewal_path)
+    if set(value) - AUTHORITY_RENEWAL_ALLOWED_KEYS or value.get("schema") != AUTHORITY_RENEWAL_SCHEMA:
+        raise Blocker("browser_use_authority_renewal_schema_invalid")
+    missing = sorted(AUTHORITY_RENEWAL_ALLOWED_KEYS - set(value))
+    if missing:
+        raise Blocker("browser_use_authority_renewal_fields_missing", ",".join(missing))
+    authority = parse_authority(renewal_path, descriptor["run_id"], descriptor["session"], aliases=session_aliases(config, descriptor.get("requested_session", descriptor["session"]), descriptor["session"]))
+    if value.get("previous_authority_sha256") != current_digest:
+        raise Blocker("browser_use_authority_previous_digest_mismatch")
+    try:
+        generation = int(value["authority_generation"])
+    except (TypeError, ValueError) as exc:
+        raise Blocker("browser_use_authority_generation_invalid") from exc
+    expected_generation = int(descriptor.get("authority_generation", 1)) + 1
+    if generation != expected_generation:
+        raise Blocker("browser_use_authority_generation_lineage_mismatch")
+    issuer_id = value.get("issuer_id")
+    if not isinstance(issuer_id, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}", issuer_id):
+        raise Blocker("browser_use_authority_issuer_id_invalid")
+    if authority["account_identity"] != current["account_identity"]:
+        raise Blocker("browser_use_authority_renewal_account_mismatch")
+    if sorted({normalize_origin(item) for item in authority["allowed_origins"]}) != sorted({normalize_origin(item) for item in current["allowed_origins"]}):
+        raise Blocker("browser_use_authority_renewal_origins_mismatch")
+    if authority_scope_digest(authority) != authority_scope_digest(current):
+        raise Blocker("browser_use_authority_renewal_scope_mismatch")
+    if _authority_expiry(authority) <= now_utc() + dt.timedelta(seconds=AUTHORITY_CLOCK_SKEW_SECONDS):
+        raise Blocker("browser_use_authority_renewal_expiry_insufficient")
+    if (_authority_expiry(authority) - now_utc()).total_seconds() > 86400:
+        raise Blocker("browser_use_authority_renewal_expiry_unbounded")
+    return authority, sha256_file(renewal_path), generation, issuer_id
+
+
+def renew_recording_authority(config: dict[str, Any], descriptor: dict[str, Any], current_path: str, renewal_path: str) -> dict[str, Any]:
+    current_path = os.path.realpath(current_path)
+    if descriptor.get("authority_current_path"):
+        current_path = os.path.realpath(str(descriptor["authority_current_path"]))
+    current = parse_authority(current_path, descriptor["run_id"], descriptor["session"], aliases=session_aliases(config, descriptor.get("requested_session", descriptor["session"]), descriptor["session"]), require_unexpired=False)
+    current_digest = sha256_file(current_path)
+    if current_digest != descriptor.get("authority_sha256"):
+        raise Blocker("browser_use_recording_authority_changed")
+    authority, digest, generation, issuer_id = _validate_renewal_contract(config, descriptor, current, current_digest, renewal_path)
+    ledger = _authority_history_path(descriptor, "authority-generation-ledger.jsonl")
+    if not _read_jsonl_chain(ledger, AUTHORITY_LEDGER_SCHEMA, "browser_use_authority_ledger"):
+        append_authority_generation(
+            descriptor,
+            current,
+            digest=current_digest,
+            generation=int(descriptor.get("authority_generation", 1)),
+            previous_digest=None,
+            issuer_id=str(descriptor.get("authority_issuer_id") or "initial"),
+        )
+    append_authority_generation(descriptor, authority, digest=digest, generation=generation, previous_digest=current_digest, issuer_id=issuer_id)
+    descriptor.update({
+        "authority_sha256": digest,
+        "authority_generation": generation,
+        "authority_issuer_id": issuer_id,
+        "authority_expires_at": authority["expires_at"],
+        "authority_current_path": os.path.realpath(renewal_path),
+    })
+    return authority
+
+
+def admit_authority_budget(config: dict[str, Any], descriptor: dict[str, Any], authority: dict[str, Any], command_class: str, *, renewal_path: str | None = None) -> dict[str, Any]:
+    if renewal_path:
+        authority = renew_recording_authority(config, descriptor, str(descriptor.get("authority_current_path") or descriptor.get("authority_path") or ""), renewal_path)
+    budget = remaining_authority_budget(authority, command_class)
+    if not budget["sufficient"]:
+        try:
+            write_authority_renewal_checkpoint(descriptor, command_class=command_class, budget=budget)
+        except Blocker:
+            pass
+        raise Blocker("browser_use_authority_renewal_required")
+    return budget
+
+
 def normalize_origin(value: str) -> str:
     parsed = urllib.parse.urlparse(value)
     if parsed.scheme not in {"http", "https"} or parsed.username or parsed.password or not parsed.hostname or parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
@@ -2651,7 +3177,9 @@ def lsof_listener(port: int) -> bool:
 
 def assert_debug_listener_absent(port: int) -> None:
     """Require two independent local listener checks to report absence."""
-    if port_listener(port) or lsof_listener(port):
+    socket_listener = port_listener(port)
+    lsof_listener_present = lsof_listener(port)
+    if socket_listener or lsof_listener_present:
         raise Blocker("browser_use_listener_remains_after_cleanup")
 
 
@@ -4117,7 +4645,15 @@ def _recording_target_context(config: dict[str, Any], args: argparse.Namespace, 
     descriptor = read_recording_descriptor(config, args.descriptor, run_id, session, allow_pinned_helper_reexec=True)
     require_recording_continuable(descriptor)
     require_temporary_task_id(args, descriptor)
-    authority = recording_authority(config, descriptor, args.authority)
+    authority = recording_authority(
+        config,
+        descriptor,
+        args.authority,
+        command_class="target-click" if operation == "target-click" else "target-inspect",
+        renewal_path=getattr(args, "authority_renewal", None),
+    )
+    if getattr(args, "authority_renewal", None):
+        _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
     validate_recording_process(config, descriptor)
     if operation == "target-click" and descriptor["mode"] != "authorized":
         raise Blocker("browser_use_target_click_requires_authorized_mode")
@@ -4462,7 +4998,7 @@ def recording_descriptor_path(config: dict[str, Any], run_id: str, session: str,
     return os.path.join(run_root, f"{session}-{nonce}.json")
 
 
-def read_recording_descriptor(config: dict[str, Any], path: str, run_id: str, session: str, *, allow_finalized: bool = False, allow_helper_hash_mismatch: bool = False, allow_pinned_helper_reexec: bool = False, allow_expired_temporary: bool = False) -> dict[str, Any]:
+def read_recording_descriptor(config: dict[str, Any], path: str, run_id: str, session: str, *, allow_finalized: bool = False, allow_helper_hash_mismatch: bool = False, allow_pinned_helper_reexec: bool = False, allow_expired_temporary: bool = False, allow_stale_runtime_recovery: bool = False) -> dict[str, Any]:
     path = os.path.realpath(path)
     assert_recording_descriptor_path(config, path)
     value = read_json_safe(path)
@@ -4483,7 +5019,9 @@ def read_recording_descriptor(config: dict[str, Any], path: str, run_id: str, se
     assert_directory(recording_dir)
     current_helper = os.path.realpath(sys.argv[0])
     current_helper_matches = value["helper_sha256"] == sha256_file(current_helper)
-    if not current_helper_matches and not allow_helper_hash_mismatch:
+    if value.get("helper_snapshot_path"):
+        validate_helper_snapshot(value)
+    if not current_helper_matches:
         pinned_helper = validate_helper_snapshot(value)
         if allow_pinned_helper_reexec and pinned_helper and current_helper != pinned_helper:
             try:
@@ -4540,7 +5078,7 @@ def read_recording_descriptor(config: dict[str, Any], path: str, run_id: str, se
             validate_temporary_marker(config, value["profile"], {
                 "mode": value["mode"], "lifecycle": lifecycle, "automation_id": value["automation_id"], "task_id": value["task_id"], "run_id": value["run_id"], "creation_binding": value["creation_binding"], "canonical_profile": value["profile"], "port": value["port"], "authority_sha256": value["authority_sha256"], "authority_scope": value["authority_scope"], "account_identity": value["account_identity"], "origins": value["target_origins"],
             }, require_unexpired=(not allow_expired_temporary) and value["status"] not in {"finalized", "cleanup_pending"})
-            if value["status"] not in {"finalized", "cleanup_pending"}:
+            if value["status"] not in {"finalized", "cleanup_pending"} and not allow_stale_runtime_recovery:
                 assert_owned_locks(value["lock_paths"], value["run_id"], value["nonce"])
         elif value["status"] != "finalized" and not (value.get("cleanup_state") or {}).get("profile_removed"):
             raise Blocker("browser_use_temporary_profile_missing")
@@ -4575,20 +5113,38 @@ def read_recording_descriptor(config: dict[str, Any], path: str, run_id: str, se
     return value
 
 
-def recording_authority(config: dict[str, Any], descriptor: dict[str, Any], authority_path: str | None, *, cleanup_only: bool = False) -> dict[str, Any] | None:
+def recording_authority(config: dict[str, Any], descriptor: dict[str, Any], authority_path: str | None, *, cleanup_only: bool = False, command_class: str | None = None, renewal_path: str | None = None) -> dict[str, Any] | None:
     if descriptor["mode"] == "public":
         return None
     if not authority_path:
         raise Blocker("browser_use_authority_required")
     requested_session = descriptor.get("requested_session")
     aliases = session_aliases(config, requested_session, descriptor["session"]) if isinstance(requested_session, str) else []
-    authority = parse_authority(authority_path, descriptor["run_id"], descriptor["session"], aliases=aliases, require_unexpired=not cleanup_only)
-    if sha256_file(authority_path) != descriptor["authority_sha256"]:
+    supplied_path = os.path.realpath(authority_path)
+    current_path = os.path.realpath(str(descriptor.get("authority_current_path") or supplied_path))
+    if descriptor.get("authority_current_path") and sha256_file(current_path) != descriptor["authority_sha256"]:
+        raise Blocker("browser_use_authority_generation_lineage_mismatch")
+    supplied_digest = sha256_file(supplied_path)
+    if supplied_digest != descriptor["authority_sha256"]:
+        # An old path may be supplied after a successful renewal.  Continue only
+        # with the descriptor's immutable current generation; never reinterpret
+        # the old file as current authority.
+        if current_path == supplied_path:
+            raise Blocker("browser_use_recording_authority_changed")
+        if renewal_path is None and not os.path.lexists(current_path):
+            raise Blocker("browser_use_authority_generation_lineage_mismatch")
+    authority = parse_authority(current_path, descriptor["run_id"], descriptor["session"], aliases=aliases, require_unexpired=not cleanup_only and renewal_path is None)
+    if renewal_path:
+        authority = renew_recording_authority(config, descriptor, current_path, renewal_path)
+        current_path = os.path.realpath(renewal_path)
+    elif sha256_file(current_path) != descriptor["authority_sha256"]:
         raise Blocker("browser_use_recording_authority_changed")
     if descriptor["account_identity"] != authority["account_identity"]:
         raise Blocker("browser_use_recording_account_identity_mismatch")
     if not set(descriptor["target_origins"]).issubset({normalize_origin(item) for item in authority["allowed_origins"]}):
         raise Blocker("browser_use_recording_origin_not_authorized")
+    if command_class and not cleanup_only:
+        admit_authority_budget(config, descriptor, authority, command_class)
     return authority
 
 
@@ -4603,6 +5159,139 @@ def validate_recording_process(config: dict[str, Any], descriptor: dict[str, Any
         {"process": descriptor["process"], "port": descriptor["port"], "profile": descriptor["profile"]},
         allow_missing=False,
     )
+
+
+def _recording_runtime_is_stale(config: dict[str, Any], descriptor: dict[str, Any]) -> bool:
+    """Freshly distinguish a dead owned runtime from a live normal path."""
+    if descriptor.get("owned_chrome") is not True:
+        return False
+    try:
+        process_present = validate_handoff_process_identity(
+            config,
+            {"process": descriptor["process"], "port": descriptor["port"], "profile": descriptor["profile"]},
+            allow_missing=True,
+        )
+        if process_present is False:
+            runtime = os.path.join(browser_harness_root(descriptor["session"]), "runtime")
+            if any(os.path.lexists(os.path.join(runtime, name)) for name in ("bu.sock", "bu.pid", "bu.port")):
+                raise Blocker("browser_use_recording_daemon_still_present")
+            return True
+    except Blocker as exc:
+        if exc.code == "browser_use_handoff_chrome_missing":
+            runtime = os.path.join(browser_harness_root(descriptor["session"]), "runtime")
+            if any(os.path.lexists(os.path.join(runtime, name)) for name in ("bu.sock", "bu.pid", "bu.port")):
+                raise Blocker("browser_use_recording_daemon_still_present") from exc
+            return True
+        raise
+    return False
+
+
+def _stale_runtime_lock_paths(config: dict[str, Any], descriptor: dict[str, Any]) -> list[str]:
+    """Return only the two exact locks that a temporary recording can own."""
+    if descriptor.get("lifecycle") != TEMPORARY_LIFECYCLE or descriptor.get("owned_chrome") is not True:
+        raise Blocker("browser_use_recording_stale_runtime_unsupported")
+    expected = {
+        os.path.realpath(temporary_profile_lock_path(config, descriptor["profile"])),
+        os.path.realpath(temporary_port_lock_path(config, int(descriptor["port"]))),
+    }
+    actual = descriptor.get("lock_paths")
+    if not isinstance(actual, list) or {os.path.realpath(str(path)) for path in actual} != expected or len(actual) != len(expected):
+        raise Blocker("browser_use_recording_recovery_lock_binding_invalid")
+    return sorted(expected)
+
+
+def _release_stale_runtime_locks(config: dict[str, Any], descriptor: dict[str, Any]) -> list[str]:
+    """Preflight every exact lock, then release only locks owned by this run."""
+    paths = _stale_runtime_lock_paths(config, descriptor)
+    for path in paths:
+        if not os.path.lexists(path):
+            continue
+        value = read_json_safe(path)
+        if value.get("run_id") != descriptor["run_id"] or value.get("nonce") != descriptor["nonce"]:
+            raise Blocker("browser_use_recording_recovery_foreign_lock", path)
+        if value.get("canonical_profile") != os.path.realpath(descriptor["profile"]):
+            raise Blocker("browser_use_recording_recovery_lock_binding_invalid", path)
+        if int(value.get("port", -1)) != int(descriptor["port"]):
+            raise Blocker("browser_use_recording_recovery_lock_binding_invalid", path)
+    for path in paths:
+        release_lock(path, descriptor["run_id"], descriptor["nonce"])
+    if any(os.path.lexists(path) for path in paths):
+        raise Blocker("browser_use_recording_recovery_lock_release_readback_failed")
+    return paths
+
+
+def reconcile_stale_recording_runtime(config: dict[str, Any], descriptor: dict[str, Any], descriptor_path: str, *, max_attempts: int) -> dict[str, Any]:
+    """Make a dead temporary recording restartable without touching its profile or effects."""
+    current_state = str(descriptor.get("recovery_state") or "")
+    paths = _stale_runtime_lock_paths(config, descriptor)
+    room_id = descriptor.get("room_id")
+    room = room_registry_lookup(config, room_id) if room_id else None
+    if current_state == "restartable" and all(not os.path.lexists(path) for path in paths) and room and room.get("state") == "held":
+        pending = pending_operation_reconciliation_ids(descriptor)
+        return {
+            "status": "recording_recovered",
+            "descriptor": os.path.realpath(descriptor_path),
+            "run_id": descriptor["run_id"],
+            "session": descriptor["session"],
+            "recovery_state": "restartable",
+            "recording_status": "abandoned",
+            "pending_reconciliation": pending,
+            "effectful_resume_allowed": not pending,
+            "idempotent": True,
+            "finalized": False,
+        }
+    try:
+        max_attempts = max(1, min(int(max_attempts), MAX_RECORDING_RECOVERY_ATTEMPTS))
+    except (TypeError, ValueError) as exc:
+        raise Blocker("browser_use_recording_recovery_attempts_invalid") from exc
+    descriptor_max = int(descriptor.get("recovery_max_attempts", max_attempts))
+    descriptor_max = max(1, min(descriptor_max, MAX_RECORDING_RECOVERY_ATTEMPTS))
+    prior_attempts = int(descriptor.get("recovery_retry_count", 0))
+    if prior_attempts >= descriptor_max:
+        raise Blocker("browser_use_recording_recovery_attempt_limit", "fresh same-task record-start after reconciliation")
+
+    pending = close_orphan_operation_intents(descriptor)
+    if room_id:
+        if room is None:
+            raise Blocker("browser_use_recording_recovery_room_missing")
+        room_registry_update(config, room_id, run_id=descriptor["run_id"], state="held", activity="record-recover")
+    _release_stale_runtime_locks(config, descriptor)
+    mark_recording_abandoned(descriptor["status_path"], reason="owned Chrome process and both listeners absent")
+    descriptor.update(
+        {
+            "status": "stale",
+            "recovery_state": "restartable",
+            "recovery_max_attempts": descriptor_max,
+            "recovery_retry_count": prior_attempts + 1,
+            "stale_state": {
+                "state": "abandoned",
+                "uncertain": True,
+                "exact_blocker": "browser_use_recording_stale_runtime_reconciled",
+                "updated_at": iso(now_utc()),
+            },
+            "recording_status_state": "abandoned",
+        }
+    )
+    checkpoint = write_recovery_checkpoint(
+        descriptor,
+        exact_blocker="browser_use_recording_stale_runtime_reconciled",
+        next_action="fresh same-task record-start with the bound profile/port/room; reconcile unknown external effects before effectful retry",
+    )
+    _write_recording_descriptor(config, os.path.realpath(descriptor_path), descriptor, replace=True)
+    pending_after = pending_operation_reconciliation_ids(descriptor)
+    return {
+        "status": "recording_recovered",
+        "descriptor": os.path.realpath(descriptor_path),
+        "run_id": descriptor["run_id"],
+        "session": descriptor["session"],
+        "recovery_state": "restartable",
+        "recording_status": "abandoned",
+        "pending_reconciliation": pending_after,
+        "effectful_resume_allowed": not pending_after,
+        "attempts": 1,
+        "checkpoint": checkpoint,
+        "finalized": False,
+    }
 
 
 def load_recording_commands(config: dict[str, Any], path: str, mode: str, allowed_origins: list[str], download_dir: str) -> list[list[str]]:
@@ -4882,6 +5571,18 @@ def record_start(args: argparse.Namespace) -> int:
         account_identity=account_identity,
     )
     recording_dir = validate_recording_output_dir(args.recording_dir)
+    if authority is not None:
+        start_budget = remaining_authority_budget(authority, "record-start")
+        if not start_budget["sufficient"]:
+            try:
+                write_authority_renewal_checkpoint(
+                    {"recording_dir": recording_dir, "run_id": run_id, "session": session, "authority_generation": 1, "authority_sha256": authority_digest},
+                    command_class="record-start",
+                    budget=start_budget,
+                )
+            except Blocker:
+                pass
+            raise Blocker("browser_use_authority_renewal_required")
     try:
         framerate = int(args.framerate or recording_runtime["default_framerate"])
     except (TypeError, ValueError) as exc:
@@ -5019,7 +5720,13 @@ def record_start(args: argparse.Namespace) -> int:
         tab_inventory = read_recording_tab_inventory(recording["tab_inventory_path"]) if browser_harness_cli_enabled() else None
         descriptor_path = recording_descriptor_path(config, run_id, session, ctx["nonce"])
         helper_snapshot, helper_digest = create_helper_snapshot(recording_dir)
-        descriptor = {"schema": RECORDING_SCHEMA, "status": "active", "mode": args.mode, "lifecycle": args.lifecycle, "completion_policy": TEMPORARY_COMPLETION_POLICY if args.lifecycle == TEMPORARY_LIFECYCLE else None, "completion_assessment": "not_assessed" if args.lifecycle == TEMPORARY_LIFECYCLE else None, "retention_decision": "retain_until_ai_assessment" if args.lifecycle == TEMPORARY_LIFECYCLE else None, "task_completion_signal": "not_received" if args.lifecycle == TEMPORARY_LIFECYCLE else None, "run_id": run_id, "session": session, "requested_session": requested_session, "automation_id": automation_id, "task_id": ctx.get("task_id"), "creation_binding": ctx.get("creation_binding"), "authority_scope": ctx.get("authority_scope"), "nonce": ctx["nonce"], "helper_sha256": helper_digest, "helper_snapshot_path": helper_snapshot, "started_at": ctx["started_at"], "authority_sha256": authority_digest, "account_identity": account_identity, "target_origins": sorted(set(origins or allowed_origins)), "recording_dir": recording_dir, "status_path": recording["status_path"], "operation_ledger_path": os.path.join(recording_dir, "operation-ledger.jsonl"), "recording_framerate": framerate, "port": port, "process": process_identity, "owned_chrome": owned_chrome, "profile": profile, "download_dir": download_dir, "lock_paths": list(ctx["lock_paths"]), "room_id": ctx.get("room_id"), "operations": [command[0]], "failed_operations": [], "navigation_verified": False, "business_effect_proof": "not_applicable", "source_handoff_descriptor": os.path.realpath(args.handoff_descriptor) if args.handoff_descriptor else None, "source_run_id": source_run_id if args.handoff_descriptor else None, "source_session": source_session if args.handoff_descriptor else None, "versions_hashes": {**versions, "recording_tools": {kind: {"canonical_path": path} for kind, path in recording_tools.items()}}, "uploads": uploads, "recording_backend": "browser-harness" if browser_harness_cli_enabled() else "legacy", "recording_source_dir": recording.get("recording_source_dir", recording_dir), "harness_workspace": recording.get("harness_workspace"), "tab_inventory_path": recording.get("tab_inventory_path"), "tab_inventory": tab_inventory}
+        versions_hashes = {**versions, "recording_tools": {kind: {"canonical_path": path} for kind, path in recording_tools.items()}}
+        dependency_digest = hashlib.sha256(json.dumps(versions_hashes, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        process_lineage = {"run_id": run_id, "session": session, "profile": profile, "port": port, "process": process_identity, "helper_sha256": helper_digest}
+        process_lineage_digest = hashlib.sha256(json.dumps(process_lineage, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        descriptor = {"schema": RECORDING_SCHEMA, "status": "active", "mode": args.mode, "lifecycle": args.lifecycle, "completion_policy": TEMPORARY_COMPLETION_POLICY if args.lifecycle == TEMPORARY_LIFECYCLE else None, "completion_assessment": "not_assessed" if args.lifecycle == TEMPORARY_LIFECYCLE else None, "retention_decision": "retain_until_ai_assessment" if args.lifecycle == TEMPORARY_LIFECYCLE else None, "task_completion_signal": "not_received" if args.lifecycle == TEMPORARY_LIFECYCLE else None, "run_id": run_id, "session": session, "requested_session": requested_session, "automation_id": automation_id, "task_id": ctx.get("task_id"), "creation_binding": ctx.get("creation_binding"), "authority_scope": ctx.get("authority_scope"), "nonce": ctx["nonce"], "helper_sha256": helper_digest, "helper_snapshot_path": helper_snapshot, "helper_snapshot_owner_uid": EUID, "helper_snapshot_mode": 0o700, "helper_dependency_digest": dependency_digest, "helper_process_lineage_digest": process_lineage_digest, "started_at": ctx["started_at"], "authority_sha256": authority_digest, "authority_generation": 1 if authority_digest else None, "authority_issuer_id": str(authority.get("issuer_id") if authority and authority.get("issuer_id") else "initial"), "authority_expires_at": authority.get("expires_at") if authority else None, "authority_current_path": os.path.realpath(args.authority) if authority and args.authority else None, "authority_ledger_path": os.path.join(recording_dir, "authority-generation-ledger.jsonl") if authority_digest else None, "authority_history_path": os.path.join(recording_dir, "authority-descriptor-history.jsonl") if authority_digest else None, "account_identity": account_identity, "target_origins": sorted(set(origins or allowed_origins)), "recording_dir": recording_dir, "status_path": recording["status_path"], "operation_ledger_path": os.path.join(recording_dir, "operation-ledger.jsonl"), "recording_framerate": framerate, "port": port, "process": process_identity, "owned_chrome": owned_chrome, "profile": profile, "download_dir": download_dir, "lock_paths": list(ctx["lock_paths"]), "room_id": ctx.get("room_id"), "operations": [command[0]], "failed_operations": [], "navigation_verified": False, "business_effect_proof": "not_applicable", "source_handoff_descriptor": os.path.realpath(args.handoff_descriptor) if args.handoff_descriptor else None, "source_run_id": source_run_id if args.handoff_descriptor else None, "source_session": source_session if args.handoff_descriptor else None, "versions_hashes": versions_hashes, "uploads": uploads, "recording_backend": "browser-harness" if browser_harness_cli_enabled() else "legacy", "recording_source_dir": recording.get("recording_source_dir", recording_dir), "harness_workspace": recording.get("harness_workspace"), "tab_inventory_path": recording.get("tab_inventory_path"), "tab_inventory": tab_inventory}
+        if authority is not None:
+            append_authority_generation(descriptor, authority, digest=authority_digest, generation=1, previous_digest=None, issuer_id=descriptor["authority_issuer_id"])
         _write_recording_descriptor(config, descriptor_path, descriptor, replace=False)
         print(json.dumps({"status": "recording_ready", "descriptor": descriptor_path, "run_id": run_id, "requested_session": requested_session, "session": session, "session_socket_path_bytes": session_socket_path_bytes(config["roots"]["browser_use_home"], session), "recording_dir": recording_dir, "recording_status": "active", "finalized": False}, sort_keys=True))
         return 0
@@ -5049,7 +5756,15 @@ def record_command(args: argparse.Namespace) -> int:
     )
     require_recording_continuable(descriptor)
     require_temporary_task_id(args, descriptor)
-    recording_authority(config, descriptor, args.authority)
+    authority = recording_authority(
+        config,
+        descriptor,
+        args.authority,
+        command_class="record-command",
+        renewal_path=getattr(args, "authority_renewal", None),
+    )
+    if getattr(args, "authority_renewal", None):
+        _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
     validate_recording_process(config, descriptor)
     command = list(args.command)
     if command and command[0] == "--":
@@ -5078,12 +5793,64 @@ def record_command(args: argparse.Namespace) -> int:
             code, readback_exit = run_cli_keep_alive(config, config["roots"]["browser_use_home"], descriptor["port"], descriptor["session"], command, True, recording=recording)
     except Exception as exc:
         append_operation_outcome_durable(descriptor, operation_id=operation_id, command=command, external_effects="unknown" if operation_effect == "unknown" else "none", outcome=exc.code if isinstance(exc, Blocker) else "dispatch_exception")
+        if operation_effect in OPERATION_EFFECT_STATES:
+            descriptor["recovery_state"] = "readback_pending"
+            descriptor["effectful_retry_allowed"] = False
+            try:
+                write_recovery_checkpoint(
+                    descriptor,
+                    exact_blocker=exc.code if isinstance(exc, Blocker) else "browser_use_recording_dispatch_exception",
+                    next_action="fresh authority admission, then same-resource read-only reconcile; never replay the effectful command",
+                    operation_id=operation_id,
+                )
+                _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+            except Exception:
+                pass
         raise
     if code != 0:
+        parser_syntax_error = command[0] == "eval" and str(_LAST_RECORDING_CLI_FAILURE).strip() == "syntax_error"
         append_operation_outcome_durable(descriptor, operation_id=operation_id, command=command, external_effects="unknown" if operation_effect == "unknown" else "none", outcome="dispatch_failed")
+        if operation_effect in OPERATION_EFFECT_STATES:
+            descriptor["recovery_state"] = "readback_pending"
+            descriptor["effectful_retry_allowed"] = False
+            try:
+                write_recovery_checkpoint(
+                    descriptor,
+                    exact_blocker="browser_use_recording_command_failed",
+                    next_action="fresh authority admission, then same-resource read-only reconcile; never replay the effectful command",
+                    operation_id=operation_id,
+                )
+                _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+            except Exception:
+                pass
+        if parser_syntax_error:
+            # Browser Use rejected the expression before page dispatch.  Keep
+            # the command blocked, but do not manufacture an unknown external
+            # effect that would prevent an otherwise safe continuation.
+            # The immutable ledger keeps the original dispatch_failed row;
+            # the explicit reconciliation row records the safe resolution.
+            append_operation_reconciliation_durable(
+                descriptor,
+                operation_id=operation_id,
+                external_effects="none",
+                outcome="syntax_error_before_page_dispatch",
+            )
         raise Blocker("browser_use_recording_command_failed", _LAST_RECORDING_CLI_FAILURE or str(code))
     if readback_exit != 0:
         append_operation_outcome_durable(descriptor, operation_id=operation_id, command=command, external_effects="unknown" if operation_effect == "unknown" else "none", outcome="readback_failed")
+        if operation_effect in OPERATION_EFFECT_STATES:
+            descriptor["recovery_state"] = "readback_pending"
+            descriptor["effectful_retry_allowed"] = False
+            try:
+                write_recovery_checkpoint(
+                    descriptor,
+                    exact_blocker="browser_use_recording_readback_failed",
+                    next_action="fresh authority admission, then same-resource read-only reconcile; never replay the effectful command",
+                    operation_id=operation_id,
+                )
+                _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+            except Exception:
+                pass
         raise Blocker("browser_use_recording_readback_failed", str(readback_exit))
     read_recording_status(descriptor["status_path"], require_active=True)
     if descriptor.get("tab_inventory_path"):
@@ -5206,7 +5973,15 @@ def record_resume(args: argparse.Namespace) -> int:
     require_temporary_task_id(args, descriptor)
     if descriptor.get("status") not in {"active", "continued"}:
         raise Blocker("browser_use_recording_resume_descriptor_not_continuable")
-    recording_authority(config, descriptor, args.authority)
+    recording_authority(
+        config,
+        descriptor,
+        args.authority,
+        command_class="record-resume",
+        renewal_path=getattr(args, "authority_renewal", None),
+    )
+    if getattr(args, "authority_renewal", None):
+        _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
     validate_recording_process(config, descriptor)
     old_status = read_json_safe(descriptor["status_path"])
     if old_status.get("finalized") is not True:
@@ -5273,10 +6048,54 @@ def record_recover(args: argparse.Namespace) -> int:
     run_id = safe_id(args.run_id, "run_id")
     requested_session = validate_id(args.session, "session")
     session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
-    descriptor = read_recording_descriptor(config, args.descriptor, run_id, session, allow_pinned_helper_reexec=True)
-    require_recording_continuable(descriptor)
+    descriptor = read_recording_descriptor(
+        config,
+        args.descriptor,
+        run_id,
+        session,
+        allow_helper_hash_mismatch=False,
+        allow_pinned_helper_reexec=True,
+        allow_stale_runtime_recovery=True,
+    )
     require_temporary_task_id(args, descriptor)
-    recording_authority(config, descriptor, args.authority)
+    recording_authority(
+        config,
+        descriptor,
+        args.authority,
+        command_class="record-recover",
+        renewal_path=getattr(args, "authority_renewal", None),
+    )
+    if getattr(args, "authority_renewal", None):
+        _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+    stale_runtime = _recording_runtime_is_stale(config, descriptor)
+    if stale_runtime:
+        try:
+            output = reconcile_stale_recording_runtime(
+                config,
+                descriptor,
+                os.path.realpath(args.descriptor),
+                max_attempts=getattr(args, "max_attempts", MAX_RECORDING_RECOVERY_ATTEMPTS),
+            )
+        except Blocker as exc:
+            current_attempts = int(descriptor.get("recovery_retry_count", 0))
+            configured_limit = max(1, min(int(descriptor.get("recovery_max_attempts", getattr(args, "max_attempts", MAX_RECORDING_RECOVERY_ATTEMPTS))), MAX_RECORDING_RECOVERY_ATTEMPTS))
+            descriptor["recovery_max_attempts"] = configured_limit
+            descriptor["recovery_retry_count"] = min(current_attempts + 1, configured_limit)
+            try:
+                write_recovery_checkpoint(
+                    descriptor,
+                    exact_blocker=exc.code,
+                    next_action="preserve unknown effects and retry only within the descriptor recovery limit",
+                )
+                _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+            except Exception:
+                pass
+            print(json.dumps({"status": "blocked", "descriptor": os.path.realpath(args.descriptor), "exact_blocker": exc.code, "detail": exc.detail, "finalized": False}, sort_keys=True))
+            return 1
+        print(json.dumps(output, sort_keys=True))
+        return 0
+    require_recording_continuable(descriptor)
+    assert_owned_locks(descriptor["lock_paths"], descriptor["run_id"], descriptor["nonce"])
     validate_recording_process(config, descriptor)
     read_recording_status(descriptor["status_path"], require_active=True)
     recording = recording_env(config, descriptor["recording_dir"], descriptor["status_path"], descriptor["recording_framerate"])
@@ -5284,7 +6103,20 @@ def record_recover(args: argparse.Namespace) -> int:
     # is deliberately ``unknown`` so recovery cannot make an effectful retry
     # admissible or turn finalization into a false success.
     close_orphan_operation_intents(descriptor)
-    max_attempts = max(1, min(int(getattr(args, "max_attempts", 2)), 2))
+    max_attempts = max(1, min(int(getattr(args, "max_attempts", MAX_RECORDING_RECOVERY_ATTEMPTS)), MAX_RECORDING_RECOVERY_ATTEMPTS))
+    descriptor_max_attempts = max(1, min(int(descriptor.get("recovery_max_attempts", max_attempts)), MAX_RECORDING_RECOVERY_ATTEMPTS))
+    prior_recovery_attempts = int(descriptor.get("recovery_retry_count", 0))
+    if prior_recovery_attempts >= descriptor_max_attempts:
+        write_recovery_checkpoint(
+            descriptor,
+            exact_blocker="browser_use_recording_recovery_attempt_limit",
+            next_action="fresh same-task admission or new owned run",
+        )
+        _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+        print(json.dumps({"status": "blocked", "descriptor": os.path.realpath(args.descriptor), "exact_blocker": "browser_use_recording_recovery_attempt_limit", "recovery_attempts": prior_recovery_attempts, "finalized": False}, sort_keys=True))
+        return 1
+    max_attempts = min(max_attempts, descriptor_max_attempts - prior_recovery_attempts)
+    descriptor["recovery_max_attempts"] = descriptor_max_attempts
     last_blocker = "browser_use_recording_recovery_readback_failed"
     for attempt in range(1, max_attempts + 1):
         operation_id = uuid.uuid4().hex
@@ -5309,7 +6141,7 @@ def record_recover(args: argparse.Namespace) -> int:
             if descriptor.get("tab_inventory_path"):
                 descriptor["tab_inventory"] = read_recording_tab_inventory(descriptor["tab_inventory_path"])
             descriptor["status"] = "continued"
-            descriptor["recovery_retry_count"] = attempt - 1
+            descriptor["recovery_retry_count"] = prior_recovery_attempts + attempt - 1
             descriptor["last_recovery_readback"] = summary
             _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
             print(json.dumps({"status": "recording_recovered", "descriptor": os.path.realpath(args.descriptor), "run_id": run_id, "session": descriptor["session"], "attempts": attempt, "navigation_verified": descriptor.get("navigation_verified") is True, "readback": summary, "pending_reconciliation": pending_operation_reconciliation_ids(descriptor), "effectful_resume_allowed": not pending_operation_reconciliation_ids(descriptor), "finalized": False}, sort_keys=True))
@@ -5324,11 +6156,1123 @@ def record_recover(args: argparse.Namespace) -> int:
                 # stronger reconciliation blocker.
                 last_blocker = outcome_exc.code
                 break
-    descriptor["recovery_retry_count"] = int(descriptor.get("recovery_retry_count", 0)) + max_attempts
+    descriptor["recovery_retry_count"] = prior_recovery_attempts + max_attempts
     write_recovery_checkpoint(descriptor, exact_blocker=last_blocker, next_action="fresh same-run admission or new owned run")
     _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
     print(json.dumps({"status": "blocked", "descriptor": os.path.realpath(args.descriptor), "exact_blocker": last_blocker, "recovery_attempts": max_attempts, "finalized": False}, sort_keys=True))
     return 1
+
+
+def record_reconcile_navigation(args: argparse.Namespace) -> int:
+    """Clear one recovered ``open`` intent only after fresh same-run readback.
+
+    ``record-recover`` deliberately records an unknown outcome and therefore
+    cannot reopen effectful work.  This command is the narrowly scoped owner
+    path for the read-only case where the original intent was already marked
+    ``external_effects=none`` and the live run now proves the authorized page
+    is present.  It never dispatches the original navigation again.
+    """
+    config = read_toml()
+    validate_installation(config)
+    run_id = safe_id(args.run_id, "run_id")
+    requested_session = validate_id(args.session, "session")
+    session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
+    descriptor = read_recording_descriptor(
+        config,
+        args.descriptor,
+        run_id,
+        session,
+        # A live run may be undergoing this helper's bounded, read-only
+        # reconciliation after a canonical helper update.  The immutable
+        # run-pinned snapshot remains the fallback for all later commands.
+        allow_helper_hash_mismatch=True,
+        allow_pinned_helper_reexec=False,
+    )
+    require_recording_continuable(descriptor)
+    require_temporary_task_id(args, descriptor)
+    recording_authority(config, descriptor, args.authority)
+    validate_recording_process(config, descriptor)
+    assert_owned_locks(descriptor["lock_paths"], descriptor["run_id"], descriptor["nonce"])
+    read_recording_status(descriptor["status_path"], require_active=True)
+    recording = recording_env(config, descriptor["recording_dir"], descriptor["status_path"], descriptor["recording_framerate"])
+
+    pending = pending_operation_reconciliation_ids(descriptor)
+    rows = _operation_ledger_rows(operation_ledger_path(descriptor))
+    # A prior invocation of this same bounded read-only repair may have
+    # stopped after dispatching its get/state probe but before appending the
+    # probe outcome.  Only the helper's own, externally-none readback intents
+    # are eligible for this idempotent closure; the original open intent is
+    # never touched here.
+    outcome_ids = {
+        str(row.get("operation_id"))
+        for row in rows
+        if row.get("phase") == "outcome"
+    }
+    for row in rows:
+        if (
+            row.get("phase") == "intent"
+            and str(row.get("operation_id")) not in outcome_ids
+            and row.get("external_effects") == "none"
+            and row.get("outcome") == "navigation_reconciliation_readback_intent"
+            and isinstance(row.get("command"), dict)
+            and row["command"].get("name") in {"get", "state"}
+        ):
+            append_operation_outcome_durable(
+                descriptor,
+                operation_id=str(row["operation_id"]),
+                command=[str(row["command"].get("name")), "readback"],
+                external_effects="none",
+                outcome="navigation_reconciliation_readback_recovered",
+            )
+    rows = _operation_ledger_rows(operation_ledger_path(descriptor))
+    if args.operation_id not in pending:
+        reconciled = {
+            operation_id
+            for item in descriptor.get("reconciliations", [])
+            if isinstance(item, dict) and item.get("resolution") in {"none", "executed"}
+            for operation_id in item.get("operation_ids", [])
+            if isinstance(operation_id, str)
+        }
+        ledger_reconciled = {
+            str(row.get("operation_id"))
+            for row in rows
+            if row.get("phase") == "reconciliation" and row.get("external_effects") in {"none", "executed"}
+        }
+        if args.operation_id in reconciled or args.operation_id in ledger_reconciled:
+            remaining = pending_operation_reconciliation_ids(descriptor)
+            print(json.dumps({
+                "status": "recording_reconciliation_already_completed",
+                "descriptor": os.path.realpath(args.descriptor),
+                "run_id": run_id,
+                "session": descriptor["session"],
+                "operation_id": args.operation_id,
+                "resolution": "none",
+                "pending_reconciliation": remaining,
+                "fresh_run_admission_allowed": not remaining,
+                "effectful_resume_allowed": not remaining,
+                "finalized": False,
+            }, sort_keys=True))
+            return 0
+        raise Blocker("browser_use_navigation_reconciliation_operation_not_pending")
+
+    _navigation_reconciliation_candidate(rows, args.operation_id)
+
+    def readback_operation(command: list[str], outcome: str) -> dict[str, Any]:
+        readback_id = uuid.uuid4().hex
+        append_operation_intent_durable(
+            descriptor,
+            operation_id=readback_id,
+            command=command,
+            external_effects="none",
+            outcome="navigation_reconciliation_readback_intent",
+        )
+        try:
+            code, readback_exit, stdout = run_cli_keep_alive_capture(
+                config,
+                config["roots"]["browser_use_home"],
+                descriptor["port"],
+                descriptor["session"],
+                command,
+                recording=recording,
+            )
+            if code != 0 or readback_exit != 0:
+                append_operation_outcome_durable(
+                    descriptor,
+                    operation_id=readback_id,
+                    command=command,
+                    external_effects="none",
+                    outcome=outcome,
+                )
+                raise Blocker("browser_use_navigation_reconciliation_readback_failed", command[0])
+            parsed = _parse_cli_json(stdout)
+            if command == ["state"]:
+                raw_state = _state_text_from_cli(parsed)
+                summary = _target_state_summary(parsed, raw_state)
+            else:
+                # ``get url`` is a URL envelope, not a page-state envelope.
+                # Keep only a digest/length so no URL text enters durable state.
+                url_value = str(_first_field(parsed, {"url", "href"}) or "")
+                summary = {
+                    "url_sha256": hashlib.sha256(url_value.encode("utf-8")).hexdigest(),
+                    "url_length": len(url_value),
+                }
+            append_operation_outcome_durable(
+                descriptor,
+                operation_id=readback_id,
+                command=command,
+                external_effects="none",
+                outcome="navigation_reconciliation_readback_verified",
+            )
+            return {"operation_id": readback_id, **summary}
+        except Blocker as exc:
+            try:
+                append_operation_outcome_durable(
+                    descriptor,
+                    operation_id=readback_id,
+                    command=command,
+                    external_effects="none",
+                    outcome="navigation_reconciliation_readback_failed",
+                )
+            except Blocker:
+                pass
+            raise
+        except Exception as exc:
+            append_operation_outcome_durable(
+                descriptor,
+                operation_id=readback_id,
+                command=command,
+                external_effects="none",
+                outcome=outcome,
+            )
+            raise Blocker("browser_use_navigation_reconciliation_readback_failed", type(exc).__name__) from exc
+
+    try:
+        navigation = _verified_navigation_with_checkpoint(
+            config,
+            descriptor,
+            recording,
+            os.path.realpath(args.descriptor),
+            expected_origins=list(descriptor["target_origins"]),
+        )
+        url_readback = readback_operation(["get", "url"], "navigation_url_readback_failed")
+        state_readback = readback_operation(["state"], "navigation_state_readback_failed")
+    except Exception as exc:
+        blocker = exc.code if isinstance(exc, Blocker) else "browser_use_navigation_reconciliation_readback_failed"
+        try:
+            write_recovery_checkpoint(
+                descriptor,
+                exact_blocker=blocker,
+                next_action="preserve the pending navigation intent and stop before any effectful operation",
+                operation_id=args.operation_id,
+            )
+            _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+        except Exception:
+            pass
+        raise
+
+    append_operation_reconciliation_durable(
+        descriptor,
+        operation_id=args.operation_id,
+        external_effects="none",
+        outcome="navigation_readback_verified_no_external_effect",
+    )
+    descriptor.setdefault("reconciliations", []).append({
+        "operation_ids": [args.operation_id],
+        "resolution": "none",
+        "basis": "browser_use_navigation_readback_verified_no_external_effect",
+        "readback_operation_ids": [url_readback["operation_id"], state_readback["operation_id"]],
+        "navigation_origin": navigation.get("origin") if isinstance(navigation, dict) else str(navigation),
+        "navigation_path_sha256": navigation.get("path_sha256") if isinstance(navigation, dict) else None,
+        "navigation_path_length": navigation.get("path_length") if isinstance(navigation, dict) else None,
+        "state_sha256": state_readback["state_sha256"],
+        "state_length": state_readback["state_length"],
+        "recorded_at": iso(now_utc()),
+    })
+    descriptor["navigation_verified"] = True
+    descriptor["reconciliation_state"] = "completed"
+    descriptor["reconciliation_exact_blocker"] = "browser_use_navigation_reconciliation_completed"
+    descriptor["last_navigation_readback"] = navigation
+    checkpoint = write_recovery_checkpoint(
+        descriptor,
+        exact_blocker="browser_use_navigation_reconciliation_completed",
+        next_action="fresh same-task target inspection before any effectful UI operation",
+        operation_id=args.operation_id,
+    )
+    _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+    remaining = pending_operation_reconciliation_ids(descriptor)
+    print(json.dumps({
+        "status": "recording_reconciliation_completed",
+        "descriptor": os.path.realpath(args.descriptor),
+        "run_id": run_id,
+        "session": descriptor["session"],
+        "operation_id": args.operation_id,
+        "resolution": "none",
+        "evidence": "browser_use_navigation_readback_verified_no_external_effect",
+        "readback": {"navigation": navigation, "url": url_readback, "state": state_readback},
+        "pending_reconciliation": remaining,
+        "fresh_run_admission_allowed": not remaining,
+        "effectful_resume_allowed": not remaining,
+        "checkpoint": checkpoint,
+        "finalized": False,
+    }, sort_keys=True))
+    return 0
+
+
+def record_reconcile_eval_syntax_error(args: argparse.Namespace) -> int:
+    """Reconcile one parser-level eval failure without replaying the eval."""
+    config = read_toml()
+    validate_installation(config)
+    run_id = safe_id(args.run_id, "run_id")
+    requested_session = validate_id(args.session, "session")
+    session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
+    descriptor = read_recording_descriptor(
+        config,
+        args.descriptor,
+        run_id,
+        session,
+        allow_helper_hash_mismatch=True,
+        allow_pinned_helper_reexec=False,
+    )
+    require_recording_continuable(descriptor)
+    require_temporary_task_id(args, descriptor)
+    recording_authority(config, descriptor, args.authority)
+    validate_recording_process(config, descriptor)
+    assert_owned_locks(descriptor["lock_paths"], descriptor["run_id"], descriptor["nonce"])
+    read_recording_status(descriptor["status_path"], require_active=True)
+    recording = recording_env(config, descriptor["recording_dir"], descriptor["status_path"], descriptor["recording_framerate"])
+
+    pending = pending_operation_reconciliation_ids(descriptor)
+    reconciled = {
+        operation_id
+        for item in descriptor.get("reconciliations", [])
+        if isinstance(item, dict) and item.get("resolution") in {"none", "executed"}
+        for operation_id in item.get("operation_ids", [])
+        if isinstance(operation_id, str)
+    }
+    if args.operation_id not in pending:
+        if args.operation_id in reconciled:
+            remaining = pending_operation_reconciliation_ids(descriptor)
+            print(json.dumps({
+                "status": "recording_reconciliation_already_completed",
+                "descriptor": os.path.realpath(args.descriptor),
+                "run_id": run_id,
+                "session": descriptor["session"],
+                "operation_id": args.operation_id,
+                "resolution": "none",
+                "evidence": args.evidence_code,
+                "pending_reconciliation": remaining,
+                "fresh_run_admission_allowed": not remaining,
+                "effectful_resume_allowed": not remaining,
+                "finalized": False,
+            }, sort_keys=True))
+            return 0
+        raise Blocker("browser_use_eval_reconciliation_operation_not_pending")
+
+    rows = _operation_ledger_rows(operation_ledger_path(descriptor))
+    _eval_syntax_error_reconciliation_candidate(rows, args.operation_id)
+    navigation = _verified_navigation_with_checkpoint(
+        config,
+        descriptor,
+        recording,
+        os.path.realpath(args.descriptor),
+        expected_origins=list(descriptor["target_origins"]),
+    )
+
+    expected_path = str(args.expected_path)
+    parsed_expected = urllib.parse.urlparse(expected_path)
+    if (
+        not expected_path.startswith("/")
+        or parsed_expected.path != expected_path
+        or parsed_expected.query
+        or parsed_expected.fragment
+    ):
+        raise Blocker("browser_use_eval_reconciliation_expected_path_invalid")
+    if (
+        not isinstance(navigation, dict)
+        or navigation.get("path_length") != len(expected_path)
+        or navigation.get("path_sha256") != hashlib.sha256(expected_path.encode("utf-8")).hexdigest()
+    ):
+        raise Blocker("browser_use_eval_reconciliation_expected_path_mismatch")
+
+    readback_id = uuid.uuid4().hex
+    readback_command = ["state"]
+    append_operation_intent_durable(
+        descriptor,
+        operation_id=readback_id,
+        command=readback_command,
+        external_effects="none",
+        outcome="eval_reconciliation_readback_intent",
+    )
+    try:
+        code, readback_exit, stdout = run_cli_keep_alive_capture(
+            config,
+            config["roots"]["browser_use_home"],
+            descriptor["port"],
+            descriptor["session"],
+            readback_command,
+            recording=recording,
+        )
+        if code != 0 or readback_exit != 0:
+            append_operation_outcome_durable(
+                descriptor,
+                operation_id=readback_id,
+                command=readback_command,
+                external_effects="none",
+                outcome="eval_reconciliation_readback_failed",
+            )
+            raise Blocker("browser_use_eval_reconciliation_state_readback_failed")
+        parsed = _parse_cli_json(stdout)
+        raw_state = _state_text_from_cli(parsed)
+        state_marker = str(args.state_marker)
+        if not state_marker or state_marker not in raw_state:
+            append_operation_outcome_durable(
+                descriptor,
+                operation_id=readback_id,
+                command=readback_command,
+                external_effects="none",
+                outcome="eval_reconciliation_state_marker_missing",
+            )
+            raise Blocker("browser_use_eval_reconciliation_state_marker_missing")
+        append_operation_outcome_durable(
+            descriptor,
+            operation_id=readback_id,
+            command=readback_command,
+            external_effects="none",
+            outcome="eval_reconciliation_readback_verified",
+        )
+    except Blocker:
+        try:
+            append_operation_outcome_durable(
+                descriptor,
+                operation_id=readback_id,
+                command=readback_command,
+                external_effects="none",
+                outcome="eval_reconciliation_readback_failed",
+            )
+        except Blocker:
+            pass
+        raise
+    except Exception as exc:
+        append_operation_outcome_durable(
+            descriptor,
+            operation_id=readback_id,
+            command=readback_command,
+            external_effects="none",
+            outcome="eval_reconciliation_readback_failed",
+        )
+        raise Blocker("browser_use_eval_reconciliation_state_readback_failed", type(exc).__name__) from exc
+
+    append_operation_reconciliation_durable(
+        descriptor,
+        operation_id=args.operation_id,
+        external_effects="none",
+        outcome="eval_syntax_error_before_page_dispatch",
+    )
+    descriptor.setdefault("reconciliations", []).append({
+        "operation_ids": [args.operation_id],
+        "resolution": "none",
+        "basis": args.evidence_code,
+        "eval_shape": "one_scalar_argument",
+        "navigation_origin": navigation.get("origin"),
+        "navigation_path_sha256": navigation.get("path_sha256"),
+        "navigation_path_length": navigation.get("path_length"),
+        "state_marker_sha256": hashlib.sha256(str(args.state_marker).encode("utf-8")).hexdigest(),
+        "state_marker_length": len(str(args.state_marker)),
+        "state_sha256": hashlib.sha256(raw_state.encode("utf-8")).hexdigest(),
+        "state_length": len(raw_state),
+        "readback_operation_ids": [readback_id],
+        "recorded_at": iso(now_utc()),
+    })
+    descriptor["navigation_verified"] = True
+    descriptor["reconciliation_state"] = "completed"
+    descriptor["reconciliation_exact_blocker"] = "browser_use_eval_reconciliation_completed"
+    descriptor["last_navigation_readback"] = navigation
+    checkpoint = write_recovery_checkpoint(
+        descriptor,
+        exact_blocker="browser_use_eval_reconciliation_completed",
+        next_action="fresh target inspect before the next effectful operation",
+        operation_id=args.operation_id,
+    )
+    _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+    remaining = pending_operation_reconciliation_ids(descriptor)
+    print(json.dumps({
+        "status": "recording_reconciliation_completed",
+        "descriptor": os.path.realpath(args.descriptor),
+        "run_id": run_id,
+        "session": descriptor["session"],
+        "operation_id": args.operation_id,
+        "resolution": "none",
+        "evidence": args.evidence_code,
+        "navigation_readback": navigation,
+        "state_marker_sha256": hashlib.sha256(str(args.state_marker).encode("utf-8")).hexdigest(),
+        "state_marker_length": len(str(args.state_marker)),
+        "state_sha256": hashlib.sha256(raw_state.encode("utf-8")).hexdigest(),
+        "state_length": len(raw_state),
+        "readback_operation_id": readback_id,
+        "pending_reconciliation": remaining,
+        "fresh_run_admission_allowed": not remaining,
+        "effectful_resume_allowed": not remaining,
+        "checkpoint": checkpoint,
+        "finalized": False,
+    }, sort_keys=True))
+    return 0
+
+
+def record_reconcile_target_not_interactive_live(args: argparse.Namespace) -> int:
+    """Reconcile one live target-click rejection after fresh noninteractive proof."""
+    config = read_toml()
+    validate_installation(config)
+    run_id = safe_id(args.run_id, "run_id")
+    requested_session = validate_id(args.session, "session")
+    session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
+    descriptor = read_recording_descriptor(
+        config,
+        args.descriptor,
+        run_id,
+        session,
+        allow_helper_hash_mismatch=True,
+        allow_pinned_helper_reexec=False,
+    )
+    require_recording_continuable(descriptor)
+    require_temporary_task_id(args, descriptor)
+    authority = recording_authority(config, descriptor, args.authority)
+    if not authority:
+        raise Blocker("browser_use_authority_required")
+    validate_recording_process(config, descriptor)
+    assert_owned_locks(descriptor["lock_paths"], descriptor["run_id"], descriptor["nonce"])
+    read_recording_status(descriptor["status_path"], require_active=True)
+    recording = recording_env(config, descriptor["recording_dir"], descriptor["status_path"], descriptor["recording_framerate"])
+
+    target_hash = hashlib.sha256(str(args.target_text).encode("utf-8")).hexdigest()
+    failures = [
+        item
+        for item in descriptor.get("failed_operations", [])
+        if isinstance(item, dict)
+        and item.get("operation") == "target-click"
+        and item.get("operation_id") == args.operation_id
+        and item.get("exact_blocker") == "browser_use_target_click_failed"
+        and item.get("external_action_possible") is True
+        and item.get("target_text_length") == len(args.target_text)
+        and item.get("target_text_sha256") == target_hash
+    ]
+    if len(failures) != 1:
+        raise Blocker("browser_use_target_reconciliation_evidence_mismatch")
+    pending = pending_operation_reconciliation_ids(descriptor)
+    if args.operation_id not in pending:
+        raise Blocker("browser_use_target_reconciliation_operation_not_pending")
+    rows = _operation_ledger_rows(operation_ledger_path(descriptor))
+    _target_click_reconciliation_candidate(rows, args.operation_id)
+
+    navigation = _verified_navigation_with_checkpoint(
+        config,
+        descriptor,
+        recording,
+        os.path.realpath(args.descriptor),
+        expected_origins=list(descriptor["target_origins"]),
+    )
+    candidate, before = _target_capture(config, descriptor, recording, args.target_text)
+    if candidate.get("interactive") is not False:
+        raise Blocker("browser_use_target_reconciliation_candidate_changed")
+    if candidate.get("text_length") != len(args.target_text) or candidate.get("match_text_sha256") != target_hash:
+        raise Blocker("browser_use_target_reconciliation_evidence_mismatch")
+
+    append_operation_reconciliation_durable(
+        descriptor,
+        operation_id=args.operation_id,
+        external_effects="none",
+        outcome="target_rejected_noninteractive_before_dispatch",
+    )
+    descriptor.setdefault("reconciliations", []).append({
+        "operation_ids": [args.operation_id],
+        "resolution": "none",
+        "basis": "runtime_error_browser_use_target_not_interactive",
+        "target_text_length": len(args.target_text),
+        "target_text_sha256": target_hash,
+        "candidate_interactive": False,
+        "candidate_bbox": candidate.get("bbox"),
+        "navigation_origin": navigation.get("origin") if isinstance(navigation, dict) else str(navigation),
+        "before_state": before,
+        "recorded_at": iso(now_utc()),
+    })
+    descriptor["navigation_verified"] = True
+    descriptor["reconciliation_state"] = "completed"
+    descriptor["reconciliation_exact_blocker"] = "browser_use_target_reconciliation_completed"
+    descriptor["last_navigation_readback"] = navigation
+    checkpoint = write_recovery_checkpoint(
+        descriptor,
+        exact_blocker="browser_use_target_reconciliation_completed",
+        next_action="fresh target inspect, then one explicit fresh-bbox coordinate click if still authorized",
+        operation_id=args.operation_id,
+    )
+    _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+    remaining = pending_operation_reconciliation_ids(descriptor)
+    print(json.dumps({
+        "status": "recording_reconciliation_completed",
+        "descriptor": os.path.realpath(args.descriptor),
+        "run_id": run_id,
+        "session": descriptor["session"],
+        "operation_id": args.operation_id,
+        "resolution": "none",
+        "evidence": "runtime_error_browser_use_target_not_interactive",
+        "candidate": candidate,
+        "before_state": before,
+        "navigation_readback": navigation,
+        "pending_reconciliation": remaining,
+        "fresh_run_admission_allowed": not remaining,
+        "effectful_resume_allowed": not remaining,
+        "checkpoint": checkpoint,
+        "finalized": False,
+    }, sort_keys=True))
+    return 0
+
+
+def record_reconcile_target_not_interactive_history(args: argparse.Namespace) -> int:
+    """Reconcile a helper rejection when the target disappeared after a later UI state change."""
+    config = read_toml()
+    validate_installation(config)
+    run_id = safe_id(args.run_id, "run_id")
+    requested_session = validate_id(args.session, "session")
+    session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
+    descriptor = read_recording_descriptor(
+        config,
+        args.descriptor,
+        run_id,
+        session,
+        allow_helper_hash_mismatch=True,
+        allow_pinned_helper_reexec=False,
+    )
+    require_recording_continuable(descriptor)
+    require_temporary_task_id(args, descriptor)
+    authority = recording_authority(config, descriptor, args.authority)
+    if not authority:
+        raise Blocker("browser_use_authority_required")
+    validate_recording_process(config, descriptor)
+    assert_owned_locks(descriptor["lock_paths"], descriptor["run_id"], descriptor["nonce"])
+    read_recording_status(descriptor["status_path"], require_active=True)
+    recording = recording_env(config, descriptor["recording_dir"], descriptor["status_path"], descriptor["recording_framerate"])
+
+    target_hash = str(args.target_text_sha256)
+    failures = [
+        item
+        for item in descriptor.get("failed_operations", [])
+        if isinstance(item, dict)
+        and item.get("operation") == "target-click"
+        and item.get("operation_id") == args.operation_id
+        and item.get("exact_blocker") == "browser_use_target_click_failed"
+        and item.get("external_action_possible") is True
+        and item.get("target_text_length") == args.target_text_length
+        and item.get("target_text_sha256") == target_hash
+    ]
+    if len(failures) != 1:
+        raise Blocker("browser_use_target_reconciliation_evidence_mismatch")
+    pending = pending_operation_reconciliation_ids(descriptor)
+    reconciled = {
+        operation_id
+        for item in descriptor.get("reconciliations", [])
+        if isinstance(item, dict) and item.get("resolution") in {"none", "executed"}
+        for operation_id in item.get("operation_ids", [])
+        if isinstance(operation_id, str)
+    }
+    if args.operation_id not in pending:
+        if args.operation_id in reconciled:
+            remaining = pending_operation_reconciliation_ids(descriptor)
+            print(json.dumps({
+                "status": "recording_reconciliation_already_completed",
+                "descriptor": os.path.realpath(args.descriptor),
+                "run_id": run_id,
+                "session": descriptor["session"],
+                "operation_id": args.operation_id,
+                "resolution": "none",
+                "pending_reconciliation": remaining,
+                "fresh_run_admission_allowed": not remaining,
+                "effectful_resume_allowed": not remaining,
+                "finalized": False,
+            }, sort_keys=True))
+            return 0
+        raise Blocker("browser_use_target_reconciliation_operation_not_pending")
+
+    rows = _operation_ledger_rows(operation_ledger_path(descriptor))
+    _target_click_reconciliation_candidate(rows, args.operation_id)
+    navigation = _verified_navigation_with_checkpoint(
+        config,
+        descriptor,
+        recording,
+        os.path.realpath(args.descriptor),
+        expected_origins=list(descriptor["target_origins"]),
+    )
+    code, readback_exit, stdout = run_cli_keep_alive_capture(
+        config,
+        config["roots"]["browser_use_home"],
+        descriptor["port"],
+        descriptor["session"],
+        ["state"],
+        recording=recording,
+    )
+    if code != 0 or readback_exit != 0:
+        raise Blocker("browser_use_target_reconciliation_state_readback_failed")
+    parsed = _parse_cli_json(stdout)
+    raw_state = _state_text_from_cli(parsed)
+    state_marker = str(args.state_marker)
+    if not state_marker or state_marker not in raw_state:
+        raise Blocker("browser_use_target_reconciliation_state_marker_missing")
+
+    append_operation_reconciliation_durable(
+        descriptor,
+        operation_id=args.operation_id,
+        external_effects="none",
+        outcome="target_rejected_noninteractive_before_dispatch",
+    )
+    descriptor.setdefault("reconciliations", []).append({
+        "operation_ids": [args.operation_id],
+        "resolution": "none",
+        "basis": args.evidence_code,
+        "target_text_length": args.target_text_length,
+        "target_text_sha256": target_hash,
+        "candidate_status": "not_present_after_later_same_run_state_change",
+        "navigation_origin": navigation.get("origin") if isinstance(navigation, dict) else str(navigation),
+        "state_marker_sha256": hashlib.sha256(state_marker.encode("utf-8")).hexdigest(),
+        "state_marker_length": len(state_marker),
+        "state_sha256": hashlib.sha256(raw_state.encode("utf-8")).hexdigest(),
+        "state_length": len(raw_state),
+        "recorded_at": iso(now_utc()),
+    })
+    descriptor["navigation_verified"] = True
+    descriptor["reconciliation_state"] = "completed"
+    descriptor["reconciliation_exact_blocker"] = "browser_use_target_reconciliation_completed"
+    descriptor["last_navigation_readback"] = navigation
+    checkpoint = write_recovery_checkpoint(
+        descriptor,
+        exact_blocker="browser_use_target_reconciliation_completed",
+        next_action="fresh target inspect before the next effectful operation",
+        operation_id=args.operation_id,
+    )
+    _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+    remaining = pending_operation_reconciliation_ids(descriptor)
+    print(json.dumps({
+        "status": "recording_reconciliation_completed",
+        "descriptor": os.path.realpath(args.descriptor),
+        "run_id": run_id,
+        "session": descriptor["session"],
+        "operation_id": args.operation_id,
+        "resolution": "none",
+        "evidence": "target_click_helper_rejected_before_dispatch_after_same_run_state_change",
+        "candidate_status": "not_present_after_later_same_run_state_change",
+        "navigation_readback": navigation,
+        "state_marker_length": len(state_marker),
+        "state_marker_sha256": hashlib.sha256(state_marker.encode("utf-8")).hexdigest(),
+        "state_length": len(raw_state),
+        "state_sha256": hashlib.sha256(raw_state.encode("utf-8")).hexdigest(),
+        "pending_reconciliation": remaining,
+        "fresh_run_admission_allowed": not remaining,
+        "effectful_resume_allowed": not remaining,
+        "checkpoint": checkpoint,
+        "finalized": False,
+    }, sort_keys=True))
+    return 0
+
+
+def record_reconcile_click_readback(args: argparse.Namespace) -> int:
+    """Resolve one click only after exact same-run URL and page-state proof."""
+    config = read_toml()
+    validate_installation(config)
+    run_id = safe_id(args.run_id, "run_id")
+    requested_session = validate_id(args.session, "session")
+    session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
+    descriptor = read_recording_descriptor(
+        config,
+        args.descriptor,
+        run_id,
+        session,
+        allow_helper_hash_mismatch=True,
+        allow_pinned_helper_reexec=False,
+    )
+    require_recording_continuable(descriptor)
+    require_temporary_task_id(args, descriptor)
+    authority = recording_authority(config, descriptor, args.authority)
+    if not authority:
+        raise Blocker("browser_use_authority_required")
+    validate_recording_process(config, descriptor)
+    assert_owned_locks(descriptor["lock_paths"], descriptor["run_id"], descriptor["nonce"])
+    read_recording_status(descriptor["status_path"], require_active=True)
+    recording = recording_env(config, descriptor["recording_dir"], descriptor["status_path"], descriptor["recording_framerate"])
+    pending = pending_operation_reconciliation_ids(descriptor)
+    if args.operation_id not in pending:
+        raise Blocker("browser_use_click_reconciliation_operation_not_pending")
+    rows = _operation_ledger_rows(operation_ledger_path(descriptor))
+    _coordinate_click_reconciliation_candidate(rows, args.operation_id)
+
+    def readback(command: list[str], *, state: bool) -> tuple[str, dict[str, Any]]:
+        readback_id = uuid.uuid4().hex
+        append_operation_intent_durable(
+            descriptor,
+            operation_id=readback_id,
+            command=command,
+            external_effects="none",
+            outcome="click_reconciliation_readback_intent",
+        )
+        try:
+            code, readback_exit, stdout = run_cli_keep_alive_capture(
+                config,
+                config["roots"]["browser_use_home"],
+                descriptor["port"],
+                descriptor["session"],
+                command,
+                recording=recording,
+            )
+            if code != 0 or readback_exit != 0:
+                append_operation_outcome_durable(
+                    descriptor,
+                    operation_id=readback_id,
+                    command=command,
+                    external_effects="none",
+                    outcome="click_reconciliation_readback_failed",
+                )
+                raise Blocker("browser_use_click_reconciliation_readback_failed", command[0])
+            parsed = _parse_cli_json(stdout)
+            if state:
+                raw_state = _state_text_from_cli(parsed)
+                if "デザインワークスペースへようこそ" not in raw_state:
+                    append_operation_outcome_durable(
+                        descriptor,
+                        operation_id=readback_id,
+                        command=command,
+                        external_effects="none",
+                        outcome="click_reconciliation_business_state_missing",
+                    )
+                    raise Blocker("browser_use_click_reconciliation_business_state_missing")
+                summary = _target_state_summary(parsed, raw_state)
+            else:
+                value = str(_first_field(parsed, {"url", "href"}) or "")
+                parsed_url = urllib.parse.urlparse(value)
+                if (
+                    parsed_url.scheme != "https"
+                    or (parsed_url.hostname or "").lower().rstrip(".") != "jp.linkaigc.com"
+                    or (parsed_url.path or "/") != "/designProduction"
+                    or parsed_url.query
+                    or parsed_url.fragment
+                ):
+                    append_operation_outcome_durable(
+                        descriptor,
+                        operation_id=readback_id,
+                        command=command,
+                        external_effects="none",
+                        outcome="click_reconciliation_url_mismatch",
+                    )
+                    raise Blocker("browser_use_click_reconciliation_url_mismatch")
+                summary = {
+                    "origin": "https://jp.linkaigc.com",
+                    "path_sha256": hashlib.sha256("/designProduction".encode("utf-8")).hexdigest(),
+                    "path_length": len("/designProduction"),
+                    "path_representation": "sha256_only",
+                }
+            append_operation_outcome_durable(
+                descriptor,
+                operation_id=readback_id,
+                command=command,
+                external_effects="none",
+                outcome="click_reconciliation_readback_verified",
+            )
+            return readback_id, summary
+        except Blocker:
+            raise
+        except Exception as exc:
+            try:
+                append_operation_outcome_durable(
+                    descriptor,
+                    operation_id=readback_id,
+                    command=command,
+                    external_effects="none",
+                    outcome="click_reconciliation_readback_failed",
+                )
+            except Blocker:
+                pass
+            raise Blocker("browser_use_click_reconciliation_readback_failed", type(exc).__name__) from exc
+
+    url_id, navigation = readback(["get", "url"], state=False)
+    state_id, state_summary = readback(["state"], state=True)
+    append_operation_reconciliation_durable(
+        descriptor,
+        operation_id=args.operation_id,
+        external_effects="executed",
+        outcome="click_navigation_readback_verified",
+    )
+    descriptor.setdefault("reconciliations", []).append({
+        "operation_ids": [args.operation_id],
+        "resolution": "executed",
+        "basis": "browser_use_click_navigation_readback_verified",
+        "readback_operation_ids": [url_id, state_id],
+        "navigation": navigation,
+        "state": state_summary,
+        "recorded_at": iso(now_utc()),
+    })
+    descriptor["navigation_verified"] = True
+    descriptor["last_navigation_readback"] = {"schema": "browser-use-navigation-readback.v1", **navigation, "ready_state_verified": False}
+    descriptor["reconciliation_state"] = "completed"
+    descriptor["reconciliation_exact_blocker"] = "browser_use_click_reconciliation_completed"
+    checkpoint = write_recovery_checkpoint(
+        descriptor,
+        exact_blocker="browser_use_click_reconciliation_completed",
+        next_action="fresh read-only state and feature inspection in design workspace",
+        operation_id=args.operation_id,
+    )
+    _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+    remaining = pending_operation_reconciliation_ids(descriptor)
+    print(json.dumps({
+        "status": "recording_reconciliation_completed",
+        "descriptor": os.path.realpath(args.descriptor),
+        "run_id": run_id,
+        "session": descriptor["session"],
+        "operation_id": args.operation_id,
+        "resolution": "executed",
+        "evidence": "browser_use_click_navigation_readback_verified",
+        "navigation": navigation,
+        "state": state_summary,
+        "pending_reconciliation": remaining,
+        "fresh_run_admission_allowed": not remaining,
+        "effectful_resume_allowed": not remaining,
+        "checkpoint": checkpoint,
+        "finalized": False,
+    }, sort_keys=True))
+    return 0
+
+
+def record_reconcile_click_readback_live(args: argparse.Namespace) -> int:
+    """Reconcile a coordinate click after fresh same-run route and state proof."""
+    config = read_toml()
+    validate_installation(config)
+    run_id = safe_id(args.run_id, "run_id")
+    requested_session = validate_id(args.session, "session")
+    session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
+    descriptor = read_recording_descriptor(
+        config,
+        args.descriptor,
+        run_id,
+        session,
+        allow_helper_hash_mismatch=True,
+        allow_pinned_helper_reexec=False,
+    )
+    require_recording_continuable(descriptor)
+    require_temporary_task_id(args, descriptor)
+    authority = recording_authority(config, descriptor, args.authority)
+    if not authority:
+        raise Blocker("browser_use_authority_required")
+    validate_recording_process(config, descriptor)
+    assert_owned_locks(descriptor["lock_paths"], descriptor["run_id"], descriptor["nonce"])
+    read_recording_status(descriptor["status_path"], require_active=True)
+    recording = recording_env(config, descriptor["recording_dir"], descriptor["status_path"], descriptor["recording_framerate"])
+
+    pending = pending_operation_reconciliation_ids(descriptor)
+    rows = _operation_ledger_rows(operation_ledger_path(descriptor))
+    if args.operation_id not in pending:
+        reconciled = {
+            operation_id
+            for item in descriptor.get("reconciliations", [])
+            if isinstance(item, dict) and item.get("resolution") in {"none", "executed"}
+            for operation_id in item.get("operation_ids", [])
+            if isinstance(operation_id, str)
+        }
+        if args.operation_id in reconciled:
+            remaining = pending_operation_reconciliation_ids(descriptor)
+            print(json.dumps({
+                "status": "recording_reconciliation_already_completed",
+                "descriptor": os.path.realpath(args.descriptor),
+                "run_id": run_id,
+                "session": descriptor["session"],
+                "operation_id": args.operation_id,
+                "resolution": "executed",
+                "pending_reconciliation": remaining,
+                "fresh_run_admission_allowed": not remaining,
+                "effectful_resume_allowed": not remaining,
+                "finalized": False,
+            }, sort_keys=True))
+            return 0
+        raise Blocker("browser_use_click_reconciliation_operation_not_pending")
+    _coordinate_click_reconciliation_candidate(rows, args.operation_id)
+
+    expected_path = str(args.expected_path)
+    parsed_expected = urllib.parse.urlparse(expected_path)
+    if (
+        not expected_path.startswith("/")
+        or parsed_expected.path != expected_path
+        or parsed_expected.query
+        or parsed_expected.fragment
+    ):
+        raise Blocker("browser_use_click_reconciliation_expected_path_invalid")
+    state_marker = str(args.state_marker)
+    if not state_marker:
+        raise Blocker("browser_use_click_reconciliation_state_marker_empty")
+
+    navigation = _verified_navigation_with_checkpoint(
+        config,
+        descriptor,
+        recording,
+        os.path.realpath(args.descriptor),
+        expected_origins=list(descriptor["target_origins"]),
+    )
+    if not isinstance(navigation, dict):
+        raise Blocker("browser_use_click_reconciliation_navigation_evidence_missing")
+    if (
+        navigation.get("path_length") != len(expected_path)
+        or navigation.get("path_sha256") != hashlib.sha256(expected_path.encode("utf-8")).hexdigest()
+    ):
+        raise Blocker("browser_use_click_reconciliation_expected_path_mismatch")
+
+    code, readback_exit, stdout = run_cli_keep_alive_capture(
+        config,
+        config["roots"]["browser_use_home"],
+        descriptor["port"],
+        descriptor["session"],
+        ["state"],
+        recording=recording,
+    )
+    if code != 0 or readback_exit != 0:
+        raise Blocker("browser_use_click_reconciliation_state_readback_failed")
+    parsed = _parse_cli_json(stdout)
+    raw_state = _state_text_from_cli(parsed)
+    if state_marker not in raw_state:
+        raise Blocker("browser_use_click_reconciliation_state_marker_missing")
+
+    append_operation_reconciliation_durable(
+        descriptor,
+        operation_id=args.operation_id,
+        external_effects="executed",
+        outcome="click_navigation_readback_verified",
+    )
+    descriptor.setdefault("reconciliations", []).append({
+        "operation_ids": [args.operation_id],
+        "resolution": "executed",
+        "basis": "browser_use_coordinate_click_navigation_readback_verified",
+        "navigation": {
+            "origin": navigation.get("origin"),
+            "path_sha256": navigation.get("path_sha256"),
+            "path_length": navigation.get("path_length"),
+        },
+        "state_marker_sha256": hashlib.sha256(state_marker.encode("utf-8")).hexdigest(),
+        "state_marker_length": len(state_marker),
+        "state_sha256": hashlib.sha256(raw_state.encode("utf-8")).hexdigest(),
+        "state_length": len(raw_state),
+        "recorded_at": iso(now_utc()),
+    })
+    descriptor["navigation_verified"] = True
+    descriptor["reconciliation_state"] = "completed"
+    descriptor["reconciliation_exact_blocker"] = "browser_use_coordinate_click_reconciliation_completed"
+    descriptor["last_navigation_readback"] = navigation
+    checkpoint = write_recovery_checkpoint(
+        descriptor,
+        exact_blocker="browser_use_coordinate_click_reconciliation_completed",
+        next_action="fresh same-task target inspection before any effectful UI operation",
+        operation_id=args.operation_id,
+    )
+    _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+    remaining = pending_operation_reconciliation_ids(descriptor)
+    print(json.dumps({
+        "status": "recording_reconciliation_completed",
+        "descriptor": os.path.realpath(args.descriptor),
+        "run_id": run_id,
+        "session": descriptor["session"],
+        "operation_id": args.operation_id,
+        "resolution": "executed",
+        "evidence": "browser_use_coordinate_click_navigation_readback_verified",
+        "navigation_readback": navigation,
+        "state_marker_length": len(state_marker),
+        "state_marker_sha256": hashlib.sha256(state_marker.encode("utf-8")).hexdigest(),
+        "state_length": len(raw_state),
+        "state_sha256": hashlib.sha256(raw_state.encode("utf-8")).hexdigest(),
+        "pending_reconciliation": remaining,
+        "fresh_run_admission_allowed": not remaining,
+        "effectful_resume_allowed": not remaining,
+        "checkpoint": checkpoint,
+        "finalized": False,
+    }, sort_keys=True))
+    return 0
+
+
+def record_reconcile_target_not_interactive(args: argparse.Namespace) -> int:
+    """Resolve only a helper-proven non-interactive target rejection."""
+    config = read_toml()
+    validate_installation(config)
+    run_id = safe_id(args.run_id, "run_id")
+    requested_session = validate_id(args.session, "session")
+    session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
+    descriptor = read_recording_descriptor(
+        config,
+        args.descriptor,
+        run_id,
+        session,
+        allow_helper_hash_mismatch=True,
+        allow_pinned_helper_reexec=False,
+        allow_stale_runtime_recovery=True,
+    )
+    require_temporary_task_id(args, descriptor)
+    recording_authority(config, descriptor, args.authority, cleanup_only=True)
+    if descriptor.get("status") != "stale" or descriptor.get("recovery_state") != "restartable":
+        raise Blocker("browser_use_recording_reconciliation_requires_restartable_stale")
+    failures = [
+        item
+        for item in descriptor.get("failed_operations", [])
+        if isinstance(item, dict)
+        and item.get("exact_blocker") == "browser_use_target_click_failed"
+        and item.get("external_action_possible") is True
+        and item.get("target_text_length") == args.target_text_length
+        and item.get("target_text_sha256") == args.target_text_sha256
+    ]
+    if len(failures) != 1:
+        raise Blocker("browser_use_target_reconciliation_evidence_mismatch")
+    pending = pending_operation_reconciliation_ids(descriptor)
+    descriptor_reconciled = {
+        operation_id
+        for item in descriptor.get("reconciliations", [])
+        if isinstance(item, dict) and item.get("resolution") in {"none", "executed"}
+        for operation_id in item.get("operation_ids", [])
+        if isinstance(operation_id, str)
+    }
+    if args.operation_id not in pending and args.operation_id not in descriptor_reconciled:
+        raise Blocker("browser_use_target_reconciliation_operation_not_pending")
+    operation_ids = [] if args.operation_id in descriptor_reconciled else [args.operation_id]
+    if "failed-operation" in pending and "failed-operation" not in operation_ids:
+        operation_ids.append("failed-operation")
+    for operation_id in operation_ids:
+        if re.fullmatch(r"[a-f0-9]{32}", operation_id):
+            append_operation_reconciliation_durable(
+                descriptor,
+                operation_id=operation_id,
+                external_effects="none",
+                outcome="target_rejected_noninteractive_before_dispatch",
+            )
+    rows = _operation_ledger_rows(operation_ledger_path(descriptor))
+    intents = {str(row.get("operation_id")): row for row in rows if row.get("phase") == "intent"}
+    outcomes = {str(row.get("operation_id")): row for row in rows if row.get("phase") == "outcome"}
+    for operation_id, intent in intents.items():
+        outcome = outcomes.get(operation_id)
+        if (
+            operation_id in pending
+            and operation_id not in operation_ids
+            and intent.get("external_effects") == "none"
+            and outcome is not None
+            and outcome.get("external_effects") == "unknown"
+            and outcome.get("outcome") == "orphan_intent_closed_by_recover"
+        ):
+            append_operation_reconciliation_durable(
+                descriptor,
+                operation_id=operation_id,
+                external_effects="none",
+                outcome="read_only_recovery_orphan_reconciled",
+            )
+            operation_ids.append(operation_id)
+    descriptor.setdefault("reconciliations", []).append(
+        {
+            "operation_ids": operation_ids,
+            "resolution": "none",
+            "basis": args.evidence_code,
+            "target_text_length": args.target_text_length,
+            "target_text_sha256": args.target_text_sha256,
+            "recorded_at": iso(now_utc()),
+        }
+    )
+    descriptor["reconciliation_state"] = "completed"
+    descriptor["reconciliation_exact_blocker"] = "browser_use_target_reconciliation_completed"
+    checkpoint = write_recovery_checkpoint(
+        descriptor,
+        exact_blocker="browser_use_target_reconciliation_completed",
+        next_action="fresh same-task record-start after noninteractive target rejection reconciliation",
+        operation_id=args.operation_id,
+    )
+    _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
+    remaining = pending_operation_reconciliation_ids(descriptor)
+    print(json.dumps({
+        "status": "recording_reconciliation_completed",
+        "descriptor": os.path.realpath(args.descriptor),
+        "run_id": run_id,
+        "session": descriptor["session"],
+        "operation_ids": operation_ids,
+        "resolution": "none",
+        "evidence": args.evidence_code,
+        "pending_reconciliation": remaining,
+        "fresh_run_admission_allowed": not remaining,
+        "checkpoint": checkpoint,
+        "finalized": False,
+    }, sort_keys=True))
+    return 0
 
 
 def record_finalize(args: argparse.Namespace) -> int:
@@ -5355,7 +7299,16 @@ def record_finalize(args: argparse.Namespace) -> int:
         _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
     if descriptor.get("status") == "stale" and not cleanup_only:
         raise Blocker("browser_use_recording_stale_descriptor_requires_cleanup_only")
-    recording_authority(config, descriptor, args.authority, cleanup_only=cleanup_only)
+    recording_authority(
+        config,
+        descriptor,
+        args.authority,
+        cleanup_only=cleanup_only,
+        command_class="record-finalize" if not cleanup_only else None,
+        renewal_path=getattr(args, "authority_renewal", None) if not cleanup_only else None,
+    )
+    if getattr(args, "authority_renewal", None) and not cleanup_only:
+        _write_recording_descriptor(config, os.path.realpath(args.descriptor), descriptor, replace=True)
     status = read_json_safe(descriptor["status_path"])
     # A close can finish asynchronously.  Once the recorder has truthfully
     # reported finalized, allow a retry to finish probing/cleanup even if the
@@ -6482,11 +8435,11 @@ def _cleanup_execute_failure(config: dict[str, Any], ctx: dict[str, Any], chrome
 
 
 def execute(args: argparse.Namespace) -> int:
-    config = read_toml()
     if args.lifecycle == TEMPORARY_LIFECYCLE and args.mode != "authorized":
         raise Blocker("browser_use_temporary_requires_authorized_mode")
     if args.lifecycle == TEMPORARY_LIFECYCLE and not getattr(args, "task_id", None):
         raise Blocker("browser_use_temporary_task_id_required")
+    config = read_toml()
     run_id = safe_id(args.run_id, "run_id")
     requested_session = validate_id(args.session, "session")
     session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
@@ -6942,6 +8895,7 @@ def build_parser() -> argparse.ArgumentParser:
     record_command.add_argument("--session", required=True)
     record_command.add_argument("--descriptor", required=True)
     record_command.add_argument("--authority")
+    record_command.add_argument("--authority-renewal", "--authority-renewal-path", dest="authority_renewal", help="immutable 0600 renewal JSON for the next authority generation")
     record_command.add_argument("--task-id", help="required when the recording lifecycle is temporary")
     record_command.add_argument("--capture-readback", action="store_true", help="return transient stdout for one bounded read-only command")
     record_command.add_argument("--refresh-helper", action="store_true", help="adopt the current canonical helper after one read-only command")
@@ -6952,6 +8906,7 @@ def build_parser() -> argparse.ArgumentParser:
     record_resume.add_argument("--session", required=True)
     record_resume.add_argument("--descriptor", required=True)
     record_resume.add_argument("--authority")
+    record_resume.add_argument("--authority-renewal", "--authority-renewal-path", dest="authority_renewal", help="immutable 0600 renewal JSON for the next authority generation")
     record_resume.add_argument("--task-id", help="required when the recording lifecycle is temporary")
     record_resume.add_argument("--recording-dir", required=True)
     record_resume.set_defaults(action="record-resume")
@@ -6960,14 +8915,86 @@ def build_parser() -> argparse.ArgumentParser:
     record_recover.add_argument("--session", required=True)
     record_recover.add_argument("--descriptor", required=True)
     record_recover.add_argument("--authority")
+    record_recover.add_argument("--authority-renewal", "--authority-renewal-path", dest="authority_renewal", help="immutable 0600 renewal JSON for the next authority generation")
     record_recover.add_argument("--task-id", help="required when the recording lifecycle is temporary")
     record_recover.add_argument("--max-attempts", type=int, default=2)
     record_recover.set_defaults(action="record-recover")
+    record_reconcile = sub.add_parser("record-reconcile-target-not-interactive", help="reconcile one helper-rejected non-interactive target without browser dispatch")
+    record_reconcile.add_argument("--run-id", required=True)
+    record_reconcile.add_argument("--session", required=True)
+    record_reconcile.add_argument("--descriptor", required=True)
+    record_reconcile.add_argument("--authority")
+    record_reconcile.add_argument("--task-id", help="required when the recording lifecycle is temporary")
+    record_reconcile.add_argument("--operation-id", required=True)
+    record_reconcile.add_argument("--target-text-length", type=int, required=True)
+    record_reconcile.add_argument("--target-text-sha256", required=True)
+    record_reconcile.add_argument("--evidence-code", choices=("runtime_error_browser_use_target_not_interactive",), required=True)
+    record_reconcile.set_defaults(action="record-reconcile-target-not-interactive")
+    record_reconcile_navigation = sub.add_parser("record-reconcile-navigation", help="reconcile one recovered read-only open after fresh same-run URL/state readback")
+    record_reconcile_navigation.add_argument("--run-id", required=True)
+    record_reconcile_navigation.add_argument("--session", required=True)
+    record_reconcile_navigation.add_argument("--descriptor", required=True)
+    record_reconcile_navigation.add_argument("--authority")
+    record_reconcile_navigation.add_argument("--task-id", help="required when the recording lifecycle is temporary")
+    record_reconcile_navigation.add_argument("--operation-id", required=True)
+    record_reconcile_navigation.set_defaults(action="record-reconcile-navigation")
+    record_reconcile_eval = sub.add_parser("record-reconcile-eval-syntax-error", help="reconcile one parser-level eval syntax error without replaying eval")
+    record_reconcile_eval.add_argument("--run-id", required=True)
+    record_reconcile_eval.add_argument("--session", required=True)
+    record_reconcile_eval.add_argument("--descriptor", required=True)
+    record_reconcile_eval.add_argument("--authority")
+    record_reconcile_eval.add_argument("--task-id", help="required when the recording lifecycle is temporary")
+    record_reconcile_eval.add_argument("--operation-id", required=True)
+    record_reconcile_eval.add_argument("--expected-path", required=True)
+    record_reconcile_eval.add_argument("--state-marker", required=True)
+    record_reconcile_eval.add_argument("--evidence-code", choices=("browser_use_cli_syntax_error_before_page_dispatch",), required=True)
+    record_reconcile_eval.set_defaults(action="record-reconcile-eval-syntax-error")
+    record_reconcile_target_live = sub.add_parser("record-reconcile-target-not-interactive-live", help="reconcile a live helper-rejected target after fresh noninteractive readback")
+    record_reconcile_target_live.add_argument("--run-id", required=True)
+    record_reconcile_target_live.add_argument("--session", required=True)
+    record_reconcile_target_live.add_argument("--descriptor", required=True)
+    record_reconcile_target_live.add_argument("--authority")
+    record_reconcile_target_live.add_argument("--task-id", help="required when the recording lifecycle is temporary")
+    record_reconcile_target_live.add_argument("--operation-id", required=True)
+    record_reconcile_target_live.add_argument("--target-text", required=True)
+    record_reconcile_target_live.add_argument("--evidence-code", choices=("runtime_error_browser_use_target_not_interactive",), required=True)
+    record_reconcile_target_live.set_defaults(action="record-reconcile-target-not-interactive-live")
+    record_reconcile_target_history = sub.add_parser("record-reconcile-target-not-interactive-history", help="reconcile a helper-rejected target after a later same-run state change")
+    record_reconcile_target_history.add_argument("--run-id", required=True)
+    record_reconcile_target_history.add_argument("--session", required=True)
+    record_reconcile_target_history.add_argument("--descriptor", required=True)
+    record_reconcile_target_history.add_argument("--authority")
+    record_reconcile_target_history.add_argument("--task-id", help="required when the recording lifecycle is temporary")
+    record_reconcile_target_history.add_argument("--operation-id", required=True)
+    record_reconcile_target_history.add_argument("--target-text-length", type=int, required=True)
+    record_reconcile_target_history.add_argument("--target-text-sha256", required=True)
+    record_reconcile_target_history.add_argument("--state-marker", required=True)
+    record_reconcile_target_history.add_argument("--evidence-code", choices=("runtime_error_browser_use_target_not_interactive",), required=True)
+    record_reconcile_target_history.set_defaults(action="record-reconcile-target-not-interactive-history")
+    record_reconcile_click = sub.add_parser("record-reconcile-click-readback", help="reconcile one dispatched click after exact same-run URL/state readback")
+    record_reconcile_click.add_argument("--run-id", required=True)
+    record_reconcile_click.add_argument("--session", required=True)
+    record_reconcile_click.add_argument("--descriptor", required=True)
+    record_reconcile_click.add_argument("--authority")
+    record_reconcile_click.add_argument("--task-id", help="required when the recording lifecycle is temporary")
+    record_reconcile_click.add_argument("--operation-id", required=True)
+    record_reconcile_click.set_defaults(action="record-reconcile-click-readback")
+    record_reconcile_click_live = sub.add_parser("record-reconcile-click-readback-live", help="reconcile a dispatched coordinate click after fresh same-run route/state proof")
+    record_reconcile_click_live.add_argument("--run-id", required=True)
+    record_reconcile_click_live.add_argument("--session", required=True)
+    record_reconcile_click_live.add_argument("--descriptor", required=True)
+    record_reconcile_click_live.add_argument("--authority")
+    record_reconcile_click_live.add_argument("--task-id", help="required when the recording lifecycle is temporary")
+    record_reconcile_click_live.add_argument("--operation-id", required=True)
+    record_reconcile_click_live.add_argument("--expected-path", required=True)
+    record_reconcile_click_live.add_argument("--state-marker", required=True)
+    record_reconcile_click_live.set_defaults(action="record-reconcile-click-readback-live")
     target_inspect = sub.add_parser("record-target-inspect", help="resolve one target from fresh state without clicking")
     target_inspect.add_argument("--run-id", required=True)
     target_inspect.add_argument("--session", required=True)
     target_inspect.add_argument("--descriptor", required=True)
     target_inspect.add_argument("--authority")
+    target_inspect.add_argument("--authority-renewal", "--authority-renewal-path", dest="authority_renewal", help="immutable 0600 renewal JSON for the next authority generation")
     target_inspect.add_argument("--task-id", help="required when the recording lifecycle is temporary")
     target_inspect.add_argument("--target-text", required=True)
     target_inspect.set_defaults(action="record-target-inspect")
@@ -6976,6 +9003,7 @@ def build_parser() -> argparse.ArgumentParser:
     target_click.add_argument("--session", required=True)
     target_click.add_argument("--descriptor", required=True)
     target_click.add_argument("--authority", required=True)
+    target_click.add_argument("--authority-renewal", "--authority-renewal-path", dest="authority_renewal", help="immutable 0600 renewal JSON for the next authority generation")
     target_click.add_argument("--task-id", help="required when the recording lifecycle is temporary")
     target_click.add_argument("--target-text", required=True)
     target_click.add_argument("--allow-coordinate-fallback", action="store_true", help="allow fresh bbox center click for non-interactive elements")
@@ -6985,6 +9013,7 @@ def build_parser() -> argparse.ArgumentParser:
     record_finalize.add_argument("--session", required=True)
     record_finalize.add_argument("--descriptor", required=True)
     record_finalize.add_argument("--authority")
+    record_finalize.add_argument("--authority-renewal", "--authority-renewal-path", dest="authority_renewal", help="immutable 0600 renewal JSON for the next authority generation")
     record_finalize.add_argument("--task-id", help="required when finalizing a temporary recording")
     record_finalize.add_argument("--delete-approved", action="store_true", help="user approved deletion after the AI asked whether the task is complete")
     record_finalize.add_argument("--user-ok", dest="delete_approved", action="store_true", help=argparse.SUPPRESS)
@@ -7077,6 +9106,20 @@ def main() -> int:
             return record_resume(args)
         if args.action == "record-recover":
             return record_recover(args)
+        if args.action == "record-reconcile-target-not-interactive":
+            return record_reconcile_target_not_interactive(args)
+        if args.action == "record-reconcile-navigation":
+            return record_reconcile_navigation(args)
+        if args.action == "record-reconcile-eval-syntax-error":
+            return record_reconcile_eval_syntax_error(args)
+        if args.action == "record-reconcile-target-not-interactive-live":
+            return record_reconcile_target_not_interactive_live(args)
+        if args.action == "record-reconcile-target-not-interactive-history":
+            return record_reconcile_target_not_interactive_history(args)
+        if args.action == "record-reconcile-click-readback":
+            return record_reconcile_click_readback(args)
+        if args.action == "record-reconcile-click-readback-live":
+            return record_reconcile_click_readback_live(args)
         if args.action == "record-target-inspect":
             return record_target_inspect(args)
         if args.action == "record-target-click":

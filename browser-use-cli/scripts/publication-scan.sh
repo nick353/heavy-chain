@@ -19,6 +19,7 @@ expected_files=(
   "scripts/installer-smoke.sh"
   "scripts/publication-scan.sh"
   "test/portable-smoke.test.mjs"
+  "test/record-recover.test.mjs"
 )
 
 is_expected_file() {
