@@ -74,6 +74,16 @@ Use this bounded recovery sequence after cloning the repository onto the replace
    record `thread_readback_host_binding`, and preserve the exact blocker if both
    attempts fail. A list result alone is discovery evidence, not thread proof.
 
+9. OpenCode Go DeepSeek V4 Flash may return a provider `RegionError` even when
+   the Go credential and model-list preflight are healthy. The Reviewer bridge
+   classifies that response as model-level unavailability, tries the next
+   configured same-role Go candidate once, and returns a `model_fallback.v1`
+   receipt with the selected model. Other auth, transport, bridge, schema, and
+   task failures remain fail-closed. If the bridge script is changed while the
+   Codex task is already running, the old MCP process does not reload it;
+   require a fresh Codex task or Desktop restart before using current-task
+   Reviewer proof (`mcp_snapshot_stale_restart_required`).
+
 Machine-local Codex App state and global Codex configuration are not stored in this
 repository. Re-establish that machine-local configuration separately; do not copy
 secrets, credentials, personal data, session/thread/host identifiers, or absolute local paths

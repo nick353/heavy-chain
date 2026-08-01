@@ -30,6 +30,13 @@ This workspace keeps Codex usable by treating the harness, not the model alone, 
 - If a native Codex model is unavailable, use the same-role fallback chain `Sol → Terra → 5.5 → 5.4` for strong lanes and `Luna → 5.4-mini → 5.4` for fast lanes. Try each candidate at most once after live model preflight, use a supported reasoning effort (for example `max → xhigh` on 5.5), and write a bounded `model_fallback.v1` receipt with the requested/selected model and effort, failure code, attempts, and Codex App tool/thread provenance. With `codex_app__create_thread` / `codex_app__send_message_to_thread`, resend the same bounded packet on the same thread using the next `model`/`thinking` pair; do not create a replacement thread. This does not authorize fallback across OpenCode providers or browser surfaces.
 - For OpenCode Go review, require verified provider/model metadata, a supported bridge version, request ID, usage, and bounded output from the direct MCP route. Only model unavailability, provider/model timeout, model rate limit, or missing final response may advance to the next live same-role OpenCode Go candidate. Auth, provider, bridge, schema, task, safety, malformed-output, and missing-route failures stop; do not substitute native Sol or another provider.
 
+- A Go `RegionError` for the selected model is model-level unavailability, not a
+  license to change provider or role. The bridge may select the next configured
+  same-role Go candidate once and must emit `model_fallback.v1`. If the MCP
+  server was already running when the bridge changed, its old code remains in
+  memory; require a fresh task or Desktop restart and do not use the stale
+  process as current live proof.
+
 - Session and child readback is bounded: local audit helpers enforce byte,
   record, and elapsed-time limits and return explicit `session_audit_timeout:*`
   blockers. A child result is not successful unless both the dispatched task

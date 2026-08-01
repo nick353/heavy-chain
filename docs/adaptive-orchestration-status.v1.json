@@ -5,8 +5,8 @@
   "fallback_contract": "pass",
   "focused_tests": "93 passed",
   "standard_reviewer_route": "opencode-go/runtime-selected",
-  "reviewer_bridge_local_version": "0.3.0",
-  "live_opencode_go_review": "blocked: opencode_go_auth_or_transport_blocked: Go request was rejected (opencode-go/deepseek-v4-flash)",
+  "reviewer_bridge_local_version": "0.3.0+region-fallback",
+  "live_opencode_go_review": "bridge_pass: deepseek-v4-flash RegionError fell back to opencode-go/deepseek-v4-pro with model_fallback.v1 and verified PASS; current task MCP snapshot still requires refresh",
   "json_validation": "pass",
   "session_readbacks": {
     "count": 13,
@@ -19,6 +19,7 @@
     "native_explicit_timeout_fallback": "same-role only",
     "native_missing_final": "reject before success",
     "opencode_transport_or_malformed": "fail-closed",
+    "opencode_region_model_unavailable": "same-role OpenCode Go candidate fallback with model_fallback.v1",
     "local_session_audit": "bounded_bytes_records_elapsed",
     "current_live_app_readback": "dynamic: official list_threads then bounded read_thread; one hostless/fresh-host retry after explicit-host failure; current-turn proof required",
     "evidence_only_audit_route": "direct_root_bounded_readback; no executor-only evidence stage"
@@ -28,10 +29,10 @@
     "canonical_source": ".codex/agents/*.toml",
     "python_adapter": "src/social_flow/codex_policy.py",
     "worker_contract": "inherit_parent_effort",
-    "opencode_reviewer_contract": "project_marker_validated; current_live_route_blocked_by_auth_or_transport"
+    "opencode_reviewer_contract": "project_marker_validated; region fallback verified in fresh bridge process; current_task_mcp_refresh_required"
   },
   "external_actions": 0,
   "live_same_thread_fallback_receipt": "not_observed",
-  "unverified": "OpenCode Go Reviewer auth/transport is currently blocked; a real provider outage was not induced, so live same-thread fallback remains to be verified when an eligible model-level failure naturally occurs.",
+  "unverified": "The already-running MCP process in the current Codex task has not reloaded the region-fallback bridge; direct fresh-bridge E2E passed. Refresh the MCP snapshot by restarting Codex Desktop or starting a new task before claiming current-task Reviewer proof. A real provider outage was not induced, so live same-thread fallback remains to be verified when an eligible model-level failure naturally occurs.",
   "restore_policy": "Choose currently available models and roles at restore time after live preflight; do not treat this summary as a model or credential source."
 }

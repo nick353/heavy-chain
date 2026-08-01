@@ -86,6 +86,12 @@ flowchart LR
   implementation and resume work remains on Graph. The standard Reviewer role
   carries `route_contract = "opencode-go/runtime-selected"`, and
   `social_flow.codex_policy` rejects a conflicting local marker.
+- OpenCode Go Reviewer `RegionError` is classified as model-level regional
+  unavailability. The bridge may try one next same-role Go candidate and must
+  return `model_fallback.v1` plus selected-model metadata. Generic auth,
+  transport, bridge, schema, and task failures remain fail-closed. A bridge
+  change made after the current MCP process started requires a fresh task or
+  Desktop restart before live Reviewer proof is accepted.
 
 ## Source of truth
 
