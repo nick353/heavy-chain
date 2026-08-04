@@ -115,6 +115,7 @@ AUTHORITY_COMMAND_BUDGETS = {
     "record-recover": 20,
     "record-reconcile": 20,
     "record-finalize": 30,
+    "record-stop-preserve-temporary": 30,
     "target-inspect": 15,
     "target-click": 30,
 }
@@ -12516,6 +12517,297 @@ def reconcile_failed_startup(args: argparse.Namespace) -> int:
     return 0
 
 
+TEMPORARY_STARTUP_RECONCILIATION_SCHEMA = "browser-use-temporary-startup-reconciliation.v1"
+
+
+def _temporary_startup_lock_value(lock_path: str, *, run_id: str, profile: str, port: int) -> dict[str, Any]:
+    """Read one exact temporary startup lock without changing it."""
+    assert_regular_file(lock_path, mode=0o600)
+    value = read_json_safe(lock_path)
+    if value.get("schema") != "browser-use-lock.v1":
+        raise Blocker("browser_use_temporary_startup_lock_schema_mismatch")
+    if value.get("run_id") != run_id or value.get("canonical_profile") != profile or value.get("port") != port:
+        raise Blocker("browser_use_temporary_startup_lock_binding_mismatch")
+    nonce = value.get("nonce")
+    safe_id(nonce, "nonce")
+    # The lock file path is itself part of the owner binding.  Newer payloads
+    # may carry it explicitly; older temporary locks are bound by their
+    # canonical derived path and are accepted only under that exact path.
+    declared_path = value.get("path")
+    if declared_path is not None and os.path.realpath(str(declared_path)) != os.path.realpath(lock_path):
+        raise Blocker("browser_use_temporary_startup_lock_path_mismatch")
+    return value
+
+
+def _temporary_startup_room(config: dict[str, Any], *, room_id: str, run_id: str, task_id: str, profile: str, port: int) -> dict[str, Any]:
+    """Require a temporary room whose persisted lease is exactly run-owned."""
+    if not isinstance(room_id, str) or not room_id.startswith("room-"):
+        raise Blocker("browser_use_temporary_startup_room_id_invalid")
+    ledger = room_registry_read(config)
+    room = next((item for item in ledger["rooms"] if item.get("room_id") == room_id), None)
+    if room is None:
+        raise Blocker("browser_use_temporary_startup_room_missing")
+    expected_lease = hashlib.sha256(run_id.encode("utf-8")).hexdigest()
+    owner = room.get("owner") if isinstance(room.get("owner"), dict) else {}
+    if (
+        room.get("lifecycle") != TEMPORARY_LIFECYCLE
+        or room.get("state") not in ROOM_REGISTRY_STATES
+        or room.get("profile") != profile
+        or room.get("port") != port
+        or room.get("task_id") != task_id
+        or owner.get("kind") != "task"
+        or owner.get("id") != task_id
+        or room.get("lease_digest") != expected_lease
+    ):
+        raise Blocker("browser_use_temporary_startup_room_owner_conflict")
+    return room
+
+
+def _temporary_startup_daemon_absent(session: str) -> None:
+    """Fail closed if any Harness marker for this exact session remains."""
+    runtime_root = os.path.join(browser_harness_root(session), "runtime")
+    markers = [os.path.join(runtime_root, name) for name in ("bu.sock", "bu.pid", "bu.port")]
+    present = [path for path in markers if os.path.lexists(path)]
+    if present:
+        raise Blocker("browser_use_temporary_startup_harness_daemon_present")
+
+
+def reconcile_temporary_startup(args: argparse.Namespace, config: dict[str, Any] | None = None) -> int:
+    """Reconcile a descriptorless temporary startup failure owner-safely.
+
+    This is deliberately separate from the single-use ``reconcile-failed-startup``
+    command.  It never removes a temporary profile and never terminates a
+    process; it only releases two exact locks after fresh absence readback,
+    then releases the matching room and writes a bound receipt.
+    """
+    config = config or read_toml()
+    validate_installation(config)
+    run_id = safe_id(args.run_id, "run_id")
+    session = safe_id(args.session, "session")
+    task_id = safe_id(args.task_id, "task_id")
+    room_id = args.room_id
+    if not isinstance(args.profile, str) or not os.path.isabs(args.profile) or os.path.realpath(args.profile) != args.profile:
+        raise Blocker("browser_use_temporary_startup_profile_path_invalid")
+    profile = args.profile
+    temporary_root = os.path.realpath(config["roots"]["temporary_profiles"])
+    if not profile.startswith(temporary_root + os.sep):
+        raise Blocker("browser_use_temporary_startup_profile_scope_mismatch")
+    if not isinstance(args.port, int) or not (int(config["ports"]["temporary_start"]) <= args.port <= int(config["ports"]["temporary_end"])):
+        raise Blocker("browser_use_temporary_startup_port_out_of_range")
+    port = args.port
+    profile_lock = os.path.realpath(temporary_profile_lock_path(config, profile))
+    port_lock = os.path.realpath(temporary_port_lock_path(config, port))
+    locks_root = os.path.realpath(config["roots"]["locks"])
+    if not profile_lock.startswith(locks_root + os.sep) or not port_lock.startswith(locks_root + os.sep):
+        raise Blocker("browser_use_temporary_startup_lock_scope_mismatch")
+
+    room = _temporary_startup_room(config, room_id=room_id, run_id=run_id, task_id=task_id, profile=profile, port=port)
+    receipt_dir = os.path.realpath(config["roots"]["receipts"])
+    if not os.path.isabs(config["roots"]["receipts"]) or receipt_dir != config["roots"]["receipts"]:
+        raise Blocker("browser_use_temporary_startup_receipt_scope_mismatch")
+
+    profile_exists = os.path.lexists(profile)
+    if profile_exists:
+        if os.path.islink(profile) or not os.path.isdir(profile):
+            raise Blocker("browser_use_temporary_startup_profile_binding_mismatch")
+        marker_path = os.path.join(profile, ".browser-use-profile.json")
+        assert_regular_file(marker_path, mode=0o600)
+        marker = read_json_safe(marker_path)
+        if (
+            marker.get("schema") != TEMPORARY_PROFILE_MARKER_SCHEMA
+            or marker.get("lifecycle") != TEMPORARY_LIFECYCLE
+            or marker.get("run_id") != run_id
+            or marker.get("task_id") != task_id
+            or marker.get("canonical_profile") != profile
+            or marker.get("port") != port
+            or marker.get("profile_lock_path") != profile_lock
+            or marker.get("port_lock_path") != port_lock
+        ):
+            raise Blocker("browser_use_temporary_startup_profile_binding_mismatch")
+
+    lock_exists = [os.path.lexists(profile_lock), os.path.lexists(port_lock)]
+    if not any(lock_exists):
+        raise Blocker("browser_use_temporary_startup_lock_set_missing")
+    if not all(lock_exists):
+        raise Blocker("browser_use_temporary_startup_lock_set_incomplete")
+    profile_lock_value = _temporary_startup_lock_value(profile_lock, run_id=run_id, profile=profile, port=port)
+    port_lock_value = _temporary_startup_lock_value(port_lock, run_id=run_id, profile=profile, port=port)
+    nonce = profile_lock_value.get("nonce")
+    if nonce != port_lock_value.get("nonce"):
+        raise Blocker("browser_use_temporary_startup_lock_nonce_mismatch")
+    nonce = safe_id(nonce, "nonce")
+
+    # The receipt is immutable.  Check for a same-path collision before any
+    # lock mutation, while still allowing a matching receipt to be read back.
+    receipt_path = os.path.join(receipt_dir, f"{run_id}-temporary-startup-reconciliation-{nonce}.json")
+    if os.path.lexists(receipt_path):
+        existing = read_json_safe(receipt_path)
+        if (
+            existing.get("schema") != TEMPORARY_STARTUP_RECONCILIATION_SCHEMA
+            or existing.get("status") != "completed"
+            or existing.get("run_id") != run_id
+            or existing.get("session") != session
+            or existing.get("task_id") != task_id
+            or existing.get("room_id") != room_id
+            or existing.get("profile") != profile
+            or existing.get("port") != port
+            or existing.get("nonce") != nonce
+        ):
+            raise Blocker("browser_use_temporary_startup_receipt_binding_mismatch")
+
+    verify_chrome_absent(config["executables"]["chrome"]["canonical_path"], port, profile)
+    _temporary_startup_daemon_absent(session)
+    released_ok, release_error, released = _release_lock_set([profile_lock, port_lock], run_id, nonce)
+    if not released_ok:
+        raise Blocker(release_error or "browser_use_temporary_startup_lock_release_uncertain")
+    if any(os.path.lexists(path) for path in (profile_lock, port_lock)):
+        raise Blocker("browser_use_temporary_startup_lock_cleanup_readback_failed")
+    released_room = room_registry_release(config, room_id, run_id=run_id, activity="failed-temporary-startup-reconcile")
+    receipt = {
+        "schema": TEMPORARY_STARTUP_RECONCILIATION_SCHEMA,
+        "status": "completed",
+        "run_id": run_id,
+        "session": session,
+        "task_id": task_id,
+        "room_id": room_id,
+        "nonce": nonce,
+        "profile": profile,
+        "port": port,
+        "process_absent": True,
+        "listener_absent": True,
+        "harness_daemon_absent": True,
+        "locks_removed": released,
+        "room_state": released_room.get("state"),
+        "profile_preserved": profile_exists,
+        "external_effects": "none",
+    }
+    if os.path.lexists(receipt_path):
+        existing = read_json_safe(receipt_path)
+        if existing != receipt:
+            raise Blocker("browser_use_temporary_startup_receipt_binding_mismatch")
+    else:
+        json_atomic_no_replace(receipt_path, receipt)
+    print(json.dumps({"status": "completed", "receipt": receipt_path, **receipt}, sort_keys=True))
+    return 0
+
+
+def record_stop_preserve_temporary(args: argparse.Namespace) -> int:
+    """Stop one owned temporary recording while retaining its login profile.
+
+    This is an explicit alternative to ``record-finalize``.  It does not claim
+    a finalized video; it records an honest stale/abandoned cleanup receipt and
+    preserves the temporary profile for a later fresh-run decision.
+    """
+    config = read_toml()
+    versions = validate_installation(config)
+    run_id = safe_id(args.run_id, "run_id")
+    requested_session = validate_id(args.session, "session")
+    session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
+    descriptor_path = os.path.realpath(args.descriptor)
+    descriptor = read_recording_descriptor(
+        config,
+        descriptor_path,
+        run_id,
+        session,
+        allow_helper_hash_mismatch=bool(getattr(args, "refresh_helper", False)),
+        allow_pinned_helper_reexec=False,
+    )
+    if not getattr(args, "refresh_helper", False):
+        raise Blocker("browser_use_recording_helper_refresh_required")
+    descriptor = refresh_recording_helper_generation(config, descriptor, descriptor_path)
+    require_temporary_task_id(args, descriptor)
+    if descriptor.get("lifecycle") != TEMPORARY_LIFECYCLE or descriptor.get("owned_chrome") is not True:
+        raise Blocker("browser_use_temporary_profile_preserve_unsupported")
+    if descriptor.get("status") not in {"active", "continued"}:
+        raise Blocker("browser_use_temporary_profile_preserve_requires_live_descriptor")
+    effect_state = operation_effect_summary(descriptor)
+    if effect_state != "none":
+        raise Blocker("browser_use_temporary_profile_preserve_external_effects_not_none")
+    recording_authority(
+        config,
+        descriptor,
+        args.authority,
+        command_class="record-stop-preserve-temporary",
+    )
+    assert_owned_locks(descriptor["lock_paths"], descriptor["run_id"], descriptor["nonce"])
+    validate_recording_process(config, descriptor)
+    status = read_recording_status(descriptor["status_path"], require_active=True)
+    recording = recording_env(config, descriptor["recording_dir"], descriptor["status_path"], descriptor["recording_framerate"])
+    source_dir = descriptor.get("recording_source_dir", descriptor["recording_dir"])
+    code, readback_exit, _captured_stop = run_cli_keep_alive_capture(
+        config,
+        config["roots"]["browser_use_home"],
+        descriptor["port"],
+        descriptor["session"],
+        ["record-stop", source_dir],
+        recording=recording,
+    )
+    if code != 0 or readback_exit not in (None, 0):
+        raise Blocker("browser_use_recording_stop_preserve_failed")
+    write_harness_recording_status(
+        descriptor["status_path"],
+        recording,
+        active=False,
+        finalized=False,
+        state="stopped_preserved",
+        reason="temporary profile retained by explicit stop-only lane",
+    )
+    runtime = os.path.join(browser_harness_root(descriptor["session"]), "runtime")
+    daemon_markers = [os.path.join(runtime, name) for name in ("bu.sock", "bu.pid", "bu.port")]
+    if any(os.path.lexists(path) for path in daemon_markers):
+        daemon_closed, daemon_blocker = close_owned_daemon_if_active(
+            config,
+            config["roots"]["browser_use_home"],
+            descriptor["port"],
+            descriptor["session"],
+        )
+        if not daemon_closed:
+            raise Blocker(daemon_blocker or "browser_use_temporary_profile_preserve_daemon_cleanup_failed")
+    if any(os.path.lexists(path) for path in daemon_markers):
+        raise Blocker("browser_use_temporary_profile_preserve_daemon_readback_failed")
+    process_ok, process_blocker = terminate_chrome(
+        None,
+        descriptor["process"],
+        config["executables"]["chrome"]["canonical_path"],
+        descriptor["port"],
+        descriptor["profile"],
+    )
+    if not process_ok:
+        raise Blocker(process_blocker or "browser_use_temporary_profile_preserve_process_cleanup_failed")
+    if os.path.lexists(descriptor["profile"]):
+        marker_path = os.path.join(descriptor["profile"], ".browser-use-profile.json")
+        assert_regular_file(marker_path, mode=0o600)
+    descriptor.update(
+        {
+            "status": "stale",
+            "recovery_state": "cleanup_pending",
+            "recording_status_state": "stopped_preserved",
+            "recording_stop_preserved": True,
+            "external_effects": effect_state,
+            "completion_blocker": "browser_use_temporary_profile_preserved_recording_not_finalized",
+        }
+    )
+    _write_recording_descriptor(config, descriptor_path, descriptor, replace=True)
+    cleanup = cleanup_stale_recording_descriptor(
+        config,
+        versions,
+        descriptor,
+        descriptor_path,
+        delete_approved=False,
+    )
+    print(json.dumps({
+        "status": "cleanup_completed",
+        "descriptor": descriptor_path,
+        "cleanup_receipt": cleanup["cleanup_receipt"],
+        "cleanup": cleanup.get("cleanup", {}),
+        "pending_reconciliation": cleanup.get("pending_reconciliation", []),
+        "external_effects": cleanup.get("external_effects"),
+        "profile_preserved": cleanup.get("cleanup", {}).get("profile_preserved") is True,
+        "finalized": False,
+    }, sort_keys=True))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="codex-browser-use", description="Bounded Browser Use CLI runtime; no stdout/page body/cookies/tokens/CDP URLs are persisted.")
     sub = parser.add_subparsers(dest="action", required=True)
@@ -12805,6 +13097,22 @@ def build_parser() -> argparse.ArgumentParser:
     reconcile.add_argument("--profile", required=True)
     reconcile.add_argument("--port", type=int, required=True)
     reconcile.set_defaults(action="reconcile-failed-startup")
+    reconcile_temporary = sub.add_parser("reconcile-failed-temporary-startup", help="reconcile one descriptorless temporary startup after exact owner and absence readback")
+    reconcile_temporary.add_argument("--run-id", required=True)
+    reconcile_temporary.add_argument("--session", required=True)
+    reconcile_temporary.add_argument("--task-id", required=True)
+    reconcile_temporary.add_argument("--room-id", required=True)
+    reconcile_temporary.add_argument("--profile", required=True)
+    reconcile_temporary.add_argument("--port", type=int, required=True)
+    reconcile_temporary.set_defaults(action="reconcile-failed-temporary-startup")
+    stop_preserve = sub.add_parser("record-stop-preserve-temporary", help="stop one owned temporary recording while preserving its profile; does not finalize video")
+    stop_preserve.add_argument("--run-id", required=True)
+    stop_preserve.add_argument("--session", required=True)
+    stop_preserve.add_argument("--task-id", required=True)
+    stop_preserve.add_argument("--descriptor", required=True)
+    stop_preserve.add_argument("--authority", required=True)
+    stop_preserve.add_argument("--refresh-helper", action="store_true", help="explicitly adopt the current canonical helper generation before local stop-only cleanup")
+    stop_preserve.set_defaults(action="record-stop-preserve-temporary")
     return parser
 
 
@@ -12833,6 +13141,10 @@ def main() -> int:
             return 0
         if args.action == "reconcile-failed-startup":
             return reconcile_failed_startup(args)
+        if args.action == "reconcile-failed-temporary-startup":
+            return reconcile_temporary_startup(args, config)
+        if args.action == "record-stop-preserve-temporary":
+            return record_stop_preserve_temporary(args)
         if args.action == "resume":
             return task_resume(args)
         if args.action == "login-handoff":
