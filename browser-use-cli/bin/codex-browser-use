@@ -1759,9 +1759,58 @@ def recording_status(args: argparse.Namespace) -> int:
     cleanup_pending = sum(entry.get("status") == "cleanup_pending" for entry in entries)
     finalized_blocked = sum(entry["liveness"] == "finalized_blocked" for entry in entries)
     finalized_count = sum(entry["liveness"] == "finalized" for entry in entries)
+    # Active runtime requires fresh positive process/listener evidence.  A
+    # recoverable entry without that evidence is pending historical
+    # reconciliation, not an active runtime.
+    active_runtime_count = sum(
+        entry["liveness"] == "live"
+        or (entry["liveness"] == "recoverable" and entry.get("process_live") is True)
+        for entry in entries
+    )
+    recoverable_pending_count = sum(
+        entry["liveness"] == "recoverable" and entry.get("process_live") is not True
+        for entry in entries
+    )
+    active_runtime_process_live_count = active_runtime_count
+    historical_debt_count = sum(entry["liveness"] in {"stale", "finalized_blocked"} for entry in entries)
+    # This is current work still pending runtime/cleanup completion.  It
+    # intentionally excludes historical debt and finalized recordings.
+    recording_completion_pending_count = active_runtime_count + recoverable_pending_count + cleanup_pending
+    recording_completion_status = (
+        "blocked"
+        if finalized_blocked
+        else "pending"
+        if recording_completion_pending_count
+        else "completed"
+    )
     unresolved = live + recoverable + cleanup_pending + finalized_blocked
     overall_completion = "blocked" if unresolved else "completed"
-    print(json.dumps({"status": "completed", "entries": entries, "live_count": live, "stale_count": stale, "recoverable_count": recoverable, "recoverable_live_count": recoverable_live, "process_live_count": process_live_count, "cleanup_pending_count": cleanup_pending, "finalized_count": finalized_count, "finalized_blocked_count": finalized_blocked, "unresolved_count": unresolved, "overall_completion": overall_completion, "marked_stale_count": marked_stale, "finalized": overall_completion == "completed"}, sort_keys=True))
+    print(json.dumps({
+        "status": "completed",
+        "inspection_status": "completed",
+        "inspection_succeeded": True,
+        "inspection_command_succeeded": True,
+        "entries": entries,
+        "live_count": live,
+        "stale_count": stale,
+        "recoverable_count": recoverable,
+        "recoverable_live_count": recoverable_live,
+        "process_live_count": process_live_count,
+        "active_runtime_count": active_runtime_count,
+        "active_runtime_process_live_count": active_runtime_process_live_count,
+        "recoverable_pending_count": recoverable_pending_count,
+        "historical_debt_count": historical_debt_count,
+        "cleanup_pending_count": cleanup_pending,
+        "finalized_count": finalized_count,
+        "finalized_blocked_count": finalized_blocked,
+        "recording_completion_count": finalized_count,
+        "recording_completion_pending_count": recording_completion_pending_count,
+        "recording_completion_status": recording_completion_status,
+        "unresolved_count": unresolved,
+        "overall_completion": overall_completion,
+        "marked_stale_count": marked_stale,
+        "finalized": overall_completion == "completed",
+    }, sort_keys=True))
     return 0
 
 
@@ -2744,6 +2793,23 @@ def _resume_optional_id(value: Any) -> str | None:
         return None
 
 
+def _resume_safe_hint(value: Any, *, field: str) -> str | None:
+    """Project only bounded, secret-free diagnostic hints into the index."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()[:160]
+    if field == "exact_blocker":
+        return text if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,159}", text) else None
+    if re.search(
+        r"(?:password|passwd|token|cookie|secret|bearer|authorization|api[_-]?key|jwt)\s*[:=]"
+        r"|https?://[^\s?]+\?[^\s]*",
+        text,
+        re.IGNORECASE,
+    ):
+        return "redacted"
+    return text
+
+
 def _resume_source_thread_id(descriptor: dict[str, Any]) -> str | None:
     owner = descriptor.get("owner_metadata")
     candidates = [
@@ -2833,6 +2899,35 @@ def _resume_checkpoint_from_descriptor(
     source_descriptor = _resume_safe_path(config, descriptor_path)
     source_thread_id = _resume_source_thread_id(descriptor) or existing.get("source_thread_id")
     created_at = existing.get("created_at") if isinstance(existing.get("created_at"), str) else iso(now_utc())
+    authentication_wait = descriptor.get("authentication_wait")
+    authentication_wait = authentication_wait if isinstance(authentication_wait, dict) else {}
+    authentication_state = descriptor.get("authentication_state")
+    auth_waiting = authentication_state == "waiting" or authentication_wait.get("state") == "waiting"
+    exact_candidates = (
+        [exact_blocker] if exact_blocker is not None else []
+    ) + (
+        [authentication_wait.get("exact_blocker")] if auth_waiting else []
+    ) + [descriptor.get("exact_blocker"), existing.get("exact_blocker")]
+    next_candidates = (
+        [next_action] if next_action is not None else []
+    ) + (
+        [authentication_wait.get("next_action")] if auth_waiting else []
+    ) + [descriptor.get("next_action"), existing.get("next_action")]
+    restart_candidates = [restart_point, existing.get("restart_point")]
+    projected_exact_blocker = next(
+        (hint for candidate in exact_candidates if (hint := _resume_safe_hint(candidate, field="exact_blocker"))),
+        None,
+    )
+    projected_next_action = next(
+        (hint for candidate in next_candidates if (hint := _resume_safe_hint(candidate, field="next_action"))),
+        None,
+    )
+    projected_restart_point = next(
+        (hint for candidate in restart_candidates if (hint := _resume_safe_hint(candidate, field="restart_point"))),
+        None,
+    )
+    current_state = current_state if current_state in {"active", "claimed", "continued", "stale", "cleanup_pending", "finalized", "waiting_auth"} else "unknown"
+    projected_authentication_state = authentication_state if authentication_state in {"waiting", "authenticated"} else None
     return {
         "schema": TASK_RESUME_CHECKPOINT_SCHEMA,
         "version": TASK_RESUME_CHECKPOINT_VERSION,
@@ -2857,9 +2952,10 @@ def _resume_checkpoint_from_descriptor(
         "completion_blocker": descriptor.get("completion_blocker") or descriptor.get("finalize_failure"),
         "owner_completion": descriptor.get("owner_completion_receipt") if isinstance(descriptor.get("owner_completion_receipt"), dict) else None,
         "state": current_state,
-        "exact_blocker": exact_blocker or descriptor.get("exact_blocker") or existing.get("exact_blocker"),
-        "next_action": next_action or descriptor.get("next_action") or existing.get("next_action"),
-        "restart_point": restart_point or existing.get("restart_point") or (
+        "authentication_state": projected_authentication_state,
+        "exact_blocker": projected_exact_blocker,
+        "next_action": projected_next_action,
+        "restart_point": projected_restart_point or (
             "same descriptor/room; fresh process, authority, and readback checks required"
             if current_state in {"active", "claimed", "continued", "waiting_auth"}
             else "new authorized handoff for the same task_id; prior cookies/profile are not assumed"
@@ -2898,14 +2994,47 @@ def write_task_resume_checkpoint(
     return path
 
 
-def _resume_checkpoint_matches(value: dict[str, Any], *, task_id: str | None, source_thread_id: str | None) -> bool:
+def _resume_checkpoint_matches(value: dict[str, Any], *, task_id: str | None, source_thread_id: str | None, run_id: str | None = None) -> bool:
     if value.get("schema") != TASK_RESUME_CHECKPOINT_SCHEMA or value.get("version") != TASK_RESUME_CHECKPOINT_VERSION:
         return False
     if task_id and value.get("task_id") != task_id:
         return False
     if source_thread_id and value.get("source_thread_id") != source_thread_id:
         return False
+    if run_id and value.get("run_id") != run_id:
+        return False
     return True
+
+
+def _resume_current_descriptor(value: dict[str, Any], descriptor: dict[str, Any] | None = None) -> dict[str, Any]:
+    if descriptor is None:
+        return {"same_descriptor": False, "readback": "cleanup_complete_or_missing"}
+    return {
+        "task_id": value.get("task_id"),
+        "run_id": value.get("run_id"),
+        "status": descriptor.get("status"),
+        "authentication_state": descriptor.get("authentication_state"),
+        "recovery_state": descriptor.get("recovery_state"),
+        "room_id": descriptor.get("room_id"),
+        "port": descriptor.get("port"),
+        "same_descriptor": True,
+    }
+
+
+def _resume_refresh_match(config: dict[str, Any], value: dict[str, Any]) -> dict[str, Any]:
+    """Refresh one locator from its current descriptor without persisting it."""
+    descriptor_path = value.get("descriptor_path")
+    if not isinstance(descriptor_path, str):
+        return value
+    canonical_path = _resume_safe_path(config, descriptor_path)
+    if canonical_path != os.path.realpath(descriptor_path) or not os.path.lexists(descriptor_path):
+        return value
+    try:
+        descriptor = read_json_safe(canonical_path)
+        refreshed = _resume_checkpoint_from_descriptor(config, descriptor, canonical_path)
+    except (Blocker, OSError, ValueError, json.JSONDecodeError):
+        return value
+    return refreshed if refreshed is not None else value
 
 
 def task_resume(args: argparse.Namespace) -> int:
@@ -2914,10 +3043,13 @@ def task_resume(args: argparse.Namespace) -> int:
     validate_installation(config)
     task_id = _resume_optional_id(getattr(args, "task_id", None))
     source_thread_id = _resume_optional_id(getattr(args, "thread_id", None))
+    run_id = _resume_optional_id(getattr(args, "run_id", None))
     if getattr(args, "task_id", None) and not task_id:
         raise Blocker("browser_use_task_resume_task_id_invalid")
     if getattr(args, "thread_id", None) and not source_thread_id:
         raise Blocker("browser_use_task_resume_thread_id_invalid")
+    if getattr(args, "run_id", None) and not run_id:
+        raise Blocker("browser_use_task_resume_run_id_invalid")
     root = task_resume_root(config)
     matches: list[dict[str, Any]] = []
     for path in sorted(pathlib.Path(root).glob("*.json")):
@@ -2925,8 +3057,8 @@ def task_resume(args: argparse.Namespace) -> int:
             value = read_json_safe(str(path))
         except (Blocker, OSError, ValueError, json.JSONDecodeError):
             continue
-        if _resume_checkpoint_matches(value, task_id=task_id, source_thread_id=source_thread_id):
-            matches.append(value)
+        if _resume_checkpoint_matches(value, task_id=task_id, source_thread_id=source_thread_id, run_id=run_id):
+            matches.append(_resume_refresh_match(config, value))
     matches.sort(key=lambda item: str(item.get("updated_at") or ""), reverse=True)
     if not matches:
         print(json.dumps({
@@ -2938,20 +3070,27 @@ def task_resume(args: argparse.Namespace) -> int:
         }, sort_keys=True))
         return 1
     output: dict[str, Any] = {"status": "resume_locator_found", "count": len(matches), "matches": matches, "finalized": False}
-    if len(matches) == 1:
-        value = matches[0]
+    current_candidates = [
+        value for value in matches
+        if value.get("state") in {"active", "continued", "waiting_auth"}
+    ]
+    explicitly_selected = bool(task_id or run_id)
+    if len(current_candidates) > 1 and not explicitly_selected:
+        print(json.dumps({
+            **output,
+            "status": "resume_locator_ambiguous",
+            "exact_blocker": "browser_use_task_resume_multiple_current_candidates",
+            "next_action": "select the intended task-scoped handoff with --task-id or --run-id",
+            "restart_point": "resume locator only; no descriptor, room, profile, or process was selected",
+        }, sort_keys=True))
+        return 1
+    if len(matches) == 1 or explicitly_selected or len(current_candidates) == 1:
+        value = current_candidates[0] if len(current_candidates) == 1 and not explicitly_selected else matches[0]
         descriptor_path = value.get("descriptor_path")
         if isinstance(descriptor_path, str) and os.path.lexists(descriptor_path):
             try:
                 descriptor = read_json_safe(descriptor_path)
-                output["current_descriptor"] = {
-                    "status": descriptor.get("status"),
-                    "authentication_state": descriptor.get("authentication_state"),
-                    "recovery_state": descriptor.get("recovery_state"),
-                    "room_id": descriptor.get("room_id"),
-                    "port": descriptor.get("port"),
-                    "same_descriptor": True,
-                }
+                output["current_descriptor"] = _resume_current_descriptor(value, descriptor)
             except (Blocker, OSError, ValueError, json.JSONDecodeError):
                 output["current_descriptor"] = {"same_descriptor": False, "readback": "unavailable"}
         else:
@@ -6706,6 +6845,56 @@ def _authentication_wait_state(
     }
 
 
+def _supabase_authenticated_landing_readback(
+    config: dict[str, Any],
+    descriptor: dict[str, Any],
+    recording: dict[str, Any],
+    evidence: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Accept Supabase's authenticated organization landing after login.
+
+    Supabase redirects ``/dashboard`` to ``/dashboard/organizations`` for an
+    authenticated account.  The login handoff originally bound the expected
+    navigation to the pre-login path, so a valid session was left waiting
+    forever.  Keep this exception narrow: same-origin Supabase only, and
+    require a fresh, non-secret state readback containing the authenticated
+    organization/project navigation surface.  Never persist the state text.
+    """
+    try:
+        origins = {normalize_origin(item) for item in descriptor.get("target_origins", [])}
+    except Blocker:
+        return None
+    if origins != {"https://supabase.com"}:
+        return None
+    code, readback_exit, stdout = run_cli_keep_alive_capture(
+        config,
+        config["roots"]["browser_use_home"],
+        descriptor["port"],
+        descriptor["session"],
+        ["state"],
+        recording=recording,
+    )
+    if code != 0 or readback_exit != 0:
+        return None
+    try:
+        parsed = _parse_cli_json(stdout)
+        raw_state = _state_text_from_cli(parsed)
+    except Blocker:
+        return None
+    authenticated_surface = (
+        re.search(r'href=["\']/dashboard/(?:org|project)/', raw_state, re.IGNORECASE) is not None
+        and re.search(r"(?:Organizations|Your Organizations|Projects)", raw_state, re.IGNORECASE) is not None
+    )
+    if not authenticated_surface:
+        return None
+    return {
+        **evidence,
+        "authentication_readback": "supabase_authenticated_dashboard_landing",
+        "state_sha256": hashlib.sha256(raw_state.encode("utf-8")).hexdigest(),
+        "state_length": len(raw_state),
+    }
+
+
 def _persist_authentication_wait(
     config: dict[str, Any],
     descriptor: dict[str, Any],
@@ -6821,7 +7010,10 @@ def _wait_for_authentication(
                 operation_id=operation_id,
             )
             if expected_url is None and isinstance(expected_navigation, dict) and not _navigation_binding_matches(evidence, expected_navigation):
-                raise Blocker("browser_use_authentication_navigation_readback_pending")
+                reconciled = _supabase_authenticated_landing_readback(config, descriptor, recording, evidence)
+                if reconciled is None:
+                    raise Blocker("browser_use_authentication_navigation_readback_pending")
+                evidence = reconciled
         except Blocker as exc:
             if exc.code not in {"browser_use_authentication_required", "browser_use_authentication_navigation_readback_pending"}:
                 if exc.code == "browser_use_navigation_exact_url_mismatch" and expected_url:
@@ -13260,8 +13452,9 @@ def build_parser() -> argparse.ArgumentParser:
     continuation.add_argument("--human-complete", action="store_true", help="one-time human signal; never used as authentication proof")
     continuation.add_argument("command", nargs=argparse.REMAINDER, help="Existing authorized Browser Use command after --")
     continuation.set_defaults(action="continue")
-    resume = sub.add_parser("resume", help="locate one task-scoped resume checkpoint without attaching or dispatching")
+    resume = sub.add_parser("resume", help="locate one task-scoped resume checkpoint; refuse ambiguous current candidates without an explicit selector")
     resume.add_argument("--task-id", help="stable task identifier")
+    resume.add_argument("--run-id", help="explicit recording run identifier when the source thread has multiple current candidates")
     resume.add_argument("--thread-id", help="source Codex thread identifier")
     resume.set_defaults(action="resume")
     watchdog = sub.add_parser("handoff-watchdog", help=argparse.SUPPRESS)
@@ -13465,7 +13658,7 @@ def build_parser() -> argparse.ArgumentParser:
     record_finalize.add_argument("--user-ok", dest="delete_approved", action="store_true", help=argparse.SUPPRESS)
     record_finalize.add_argument("--cleanup-only", action="store_true", help="terminal cleanup only; permits descriptor-bound expired authority without browser actions")
     record_finalize.set_defaults(action="record-finalize")
-    recording_status = sub.add_parser("recording-status", help="classify recording descriptors by fresh process/listener/recorder evidence")
+    recording_status = sub.add_parser("recording-status", help="inspect recording descriptors and separate inspection success from overall completion")
     recording_status.add_argument("--descriptor", help="inspect one descriptor; otherwise inspect all canonical recording descriptors")
     recording_status.add_argument("--mark-stale", action="store_true", help="mark only positively stale active/continued descriptors; never deletes or stops processes")
     recording_status.set_defaults(action="recording-status")
