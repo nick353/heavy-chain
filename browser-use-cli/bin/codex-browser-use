@@ -5809,7 +5809,22 @@ def terminate_chrome(proc: subprocess.Popen[bytes] | None, identity: dict[str, A
         try:
             candidate.wait(timeout=10)
         except psutil.TimeoutExpired:
-            return False, "browser_use_chrome_did_not_exit"
+            # Chrome may keep the remote-debugging process alive after a
+            # graceful SIGTERM.  Escalate only after revalidating the exact
+            # PID, start time, executable, port, and profile binding; an
+            # unknown or replaced process remains fail-closed.
+            try:
+                rechecked = psutil.Process(identity["root_pid"])
+                if abs(rechecked.create_time() - identity["root_start_time"]) > 0.5 or not process_matches(rechecked, chrome_path, port, profile):
+                    return False, "browser_use_unknown_process_not_killed"
+                rechecked.kill()
+                rechecked.wait(timeout=10)
+            except psutil.TimeoutExpired:
+                return False, "browser_use_chrome_did_not_exit"
+            except psutil.NoSuchProcess:
+                pass
+            except psutil.Error:
+                return False, "browser_use_process_identity_recheck_failed"
     except psutil.NoSuchProcess:
         pass
     except psutil.Error:
@@ -13121,6 +13136,169 @@ def reconcile_failed_startup(args: argparse.Namespace) -> int:
     return 0
 
 
+SINGLE_USE_EXECUTE_RECONCILIATION_SCHEMA = "browser-use-single-use-execute-reconciliation.v1"
+
+
+def _single_use_execute_room(config: dict[str, Any], *, room_id: str, run_id: str, profile: str, port: int) -> dict[str, Any]:
+    """Require the failed one-shot room to remain positively run-owned."""
+    if not isinstance(room_id, str) or not room_id.startswith("room-"):
+        raise Blocker("browser_use_single_use_execute_room_id_invalid")
+    ledger = room_registry_read(config)
+    room = next((item for item in ledger["rooms"] if item.get("room_id") == room_id), None)
+    owner = room.get("owner") if isinstance(room, dict) and isinstance(room.get("owner"), dict) else {}
+    if (
+        room is None
+        or room.get("lifecycle") != "single-use"
+        or room.get("state") not in ROOM_REGISTRY_ACTIVE_STATES
+        or room.get("profile") != profile
+        or room.get("port") != port
+        or owner.get("kind") != "task"
+        or owner.get("id") != run_id
+        or room.get("task_id") != run_id
+        or room.get("lease_digest") != hashlib.sha256(run_id.encode("utf-8")).hexdigest()
+    ):
+        raise Blocker("browser_use_single_use_execute_room_owner_conflict")
+    return room
+
+
+def _single_use_execute_lock(lock_path: str, *, run_id: str, profile: str, port: int) -> dict[str, Any]:
+    assert_regular_file(lock_path, mode=0o600)
+    value = read_json_safe(lock_path)
+    if (
+        value.get("schema") != "browser-use-lock.v1"
+        or value.get("run_id") != run_id
+        or value.get("canonical_profile") != profile
+        or value.get("port") != port
+    ):
+        raise Blocker("browser_use_single_use_execute_lock_owner_conflict")
+    safe_id(value.get("nonce"), "nonce")
+    return value
+
+
+def reconcile_failed_single_use_execute(args: argparse.Namespace, config: dict[str, Any] | None = None) -> int:
+    """Close and reconcile one failed descriptorless public one-shot launch.
+
+    ``public`` is intentionally a non-recording one-shot command, so an
+    early cleanup failure has no recording descriptor to pass to the normal
+    finalize lanes.  This command is the owner-bound recovery path: it
+    validates the room, profile marker, both exact locks, and the exact Chrome
+    command line before closing only that process, quarantining the profile,
+    releasing the locks, releasing the room, and writing one immutable receipt.
+    """
+    config = config or read_toml()
+    validate_installation(config)
+    run_id = safe_id(args.run_id, "run_id")
+    requested_session = validate_id(args.session, "session")
+    session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
+    profile = os.path.realpath(args.profile)
+    profile_root = os.path.realpath(config["roots"]["single_use_profiles"])
+    if not os.path.isabs(args.profile) or profile != args.profile or not profile.startswith(profile_root + os.sep):
+        raise Blocker("browser_use_single_use_execute_profile_scope_mismatch")
+    if not isinstance(args.port, int) or not (int(config["ports"]["single_use_start"]) <= args.port <= int(config["ports"]["single_use_end"])):
+        raise Blocker("browser_use_single_use_execute_port_out_of_range")
+    port = args.port
+    _single_use_execute_room(config, room_id=args.room_id, run_id=run_id, profile=profile, port=port)
+    if not os.path.isdir(profile) or os.path.islink(profile):
+        raise Blocker("browser_use_single_use_execute_profile_binding_mismatch")
+    marker = read_json_safe(os.path.join(profile, ".browser-use-profile.json"))
+    if marker.get("schema") != "browser-use-profile.v1" or marker.get("run_id") != run_id:
+        raise Blocker("browser_use_single_use_execute_profile_marker_binding_mismatch")
+    locks_root = os.path.realpath(config["roots"]["locks"])
+    profile_lock = os.path.join(locks_root, f"profile-{hashlib.sha256(profile.encode("utf-8")).hexdigest()[:24]}.lock")
+    port_lock = os.path.join(locks_root, f"port-{port}.lock")
+    profile_value = _single_use_execute_lock(profile_lock, run_id=run_id, profile=profile, port=port)
+    port_value = _single_use_execute_lock(port_lock, run_id=run_id, profile=profile, port=port)
+    nonce = safe_id(profile_value.get("nonce"), "nonce")
+    if port_value.get("nonce") != nonce:
+        raise Blocker("browser_use_single_use_execute_lock_nonce_mismatch")
+    receipt_dir = os.path.realpath(os.path.join(config["roots"]["receipts"], run_id))
+    assert_directory(receipt_dir, create=True)
+    receipt_path = os.path.join(receipt_dir, f"{session}-{nonce}-single-use-reconciliation.json")
+    if os.path.lexists(receipt_path):
+        existing = read_json_safe(receipt_path)
+        if (
+            existing.get("schema") != SINGLE_USE_EXECUTE_RECONCILIATION_SCHEMA
+            or existing.get("status") != "completed"
+            or existing.get("run_id") != run_id
+            or existing.get("session") != session
+            or existing.get("room_id") != args.room_id
+            or existing.get("profile") != profile
+            or existing.get("port") != port
+            or existing.get("nonce") != nonce
+        ):
+            raise Blocker("browser_use_single_use_execute_receipt_binding_mismatch")
+        verify_chrome_absent(config["executables"]["chrome"]["canonical_path"], port, profile)
+        print(json.dumps({"status": "completed", "receipt": receipt_path, **existing}, sort_keys=True))
+        return 0
+
+    process_candidates: list[Any] = []
+    if psutil is None:
+        raise Blocker("browser_use_process_identity_recheck_failed")
+    try:
+        for candidate in psutil.process_iter():
+            try:
+                if process_matches(candidate, config["executables"]["chrome"]["canonical_path"], port, profile):
+                    process_candidates.append(candidate)
+            except psutil.NoSuchProcess:
+                continue
+            except psutil.AccessDenied as exc:
+                raise Blocker("browser_use_process_identity_recheck_failed") from exc
+    except Blocker:
+        raise
+    except psutil.Error as exc:
+        raise Blocker("browser_use_process_identity_recheck_failed") from exc
+    if len(process_candidates) > 1:
+        raise Blocker("browser_use_single_use_execute_multiple_processes")
+    process: dict[str, Any] = {}
+    if process_candidates:
+        candidate = process_candidates[0]
+        try:
+            process = {"pid": candidate.pid, "root_pid": candidate.pid, "start_time": candidate.create_time(), "root_start_time": candidate.create_time()}
+        except psutil.Error as exc:
+            raise Blocker("browser_use_process_identity_recheck_failed") from exc
+
+    runtime = os.path.join(browser_harness_root(session), "runtime")
+    markers = [os.path.join(runtime, name) for name in ("bu.sock", "bu.pid", "bu.port")]
+    if any(os.path.lexists(path) for path in markers):
+        daemon_closed, daemon_error = close_owned_daemon_if_active(config, config["roots"]["browser_use_home"], port, session)
+        if not daemon_closed:
+            raise Blocker(daemon_error or "browser_use_daemon_cleanup_unverified")
+    if any(os.path.lexists(path) for path in markers):
+        raise Blocker("browser_use_single_use_execute_harness_daemon_present")
+    if process:
+        process_ok, process_error = terminate_chrome(None, process, config["executables"]["chrome"]["canonical_path"], port, profile)
+        if not process_ok:
+            raise Blocker(process_error or "browser_use_chrome_process_cleanup_unverified")
+    verify_chrome_absent(config["executables"]["chrome"]["canonical_path"], port, profile)
+    ctx = {"config": config, "lifecycle": "single-use", "run_id": run_id, "session": session, "nonce": nonce, "port": port, "profile": profile, "process": process, "room_id": args.room_id, "lock_paths": [profile_lock, port_lock], "cleanup": {}, "process_terminated": True, "listener_absent": True}
+    quarantine_path = quarantine_profile(config, profile, ctx)
+    released_ok, release_error = _release_locks_after_verified_cleanup(ctx, run_id, nonce)
+    if not released_ok:
+        raise Blocker(release_error or "browser_use_single_use_execute_cleanup_uncertain")
+    if any(os.path.lexists(path) for path in (profile_lock, port_lock)):
+        raise Blocker("browser_use_single_use_execute_lock_cleanup_readback_failed")
+    receipt = {
+        "schema": SINGLE_USE_EXECUTE_RECONCILIATION_SCHEMA,
+        "status": "completed",
+        "run_id": run_id,
+        "session": session,
+        "room_id": args.room_id,
+        "nonce": nonce,
+        "profile": profile,
+        "port": port,
+        "process_absent": True,
+        "listener_absent": True,
+        "harness_daemon_absent": True,
+        "quarantine_path": quarantine_path,
+        "locks_removed": [profile_lock, port_lock],
+        "room_state": "released",
+        "external_effects": "none",
+    }
+    json_atomic_no_replace(receipt_path, receipt)
+    print(json.dumps({"status": "completed", "receipt": receipt_path, **receipt}, sort_keys=True))
+    return 0
+
+
 TEMPORARY_STARTUP_RECONCILIATION_SCHEMA = "browser-use-temporary-startup-reconciliation.v1"
 
 
@@ -13710,6 +13888,13 @@ def build_parser() -> argparse.ArgumentParser:
     reconcile.add_argument("--profile", required=True)
     reconcile.add_argument("--port", type=int, required=True)
     reconcile.set_defaults(action="reconcile-failed-startup")
+    reconcile_single_use_execute = sub.add_parser("reconcile-failed-single-use-execute", help="close and reconcile one owner-bound descriptorless public one-shot launch")
+    reconcile_single_use_execute.add_argument("--run-id", required=True)
+    reconcile_single_use_execute.add_argument("--session", required=True)
+    reconcile_single_use_execute.add_argument("--room-id", required=True)
+    reconcile_single_use_execute.add_argument("--profile", required=True)
+    reconcile_single_use_execute.add_argument("--port", type=int, required=True)
+    reconcile_single_use_execute.set_defaults(action="reconcile-failed-single-use-execute")
     reconcile_temporary = sub.add_parser("reconcile-failed-temporary-startup", help="reconcile one descriptorless temporary startup after exact owner and absence readback")
     reconcile_temporary.add_argument("--run-id", required=True)
     reconcile_temporary.add_argument("--session", required=True)
@@ -13754,6 +13939,8 @@ def main() -> int:
             return 0
         if args.action == "reconcile-failed-startup":
             return reconcile_failed_startup(args)
+        if args.action == "reconcile-failed-single-use-execute":
+            return reconcile_failed_single_use_execute(args, config)
         if args.action == "reconcile-failed-temporary-startup":
             return reconcile_temporary_startup(args, config)
         if args.action == "record-stop-preserve-temporary":
