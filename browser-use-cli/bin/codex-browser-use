@@ -91,6 +91,8 @@ HANDOFF_COMPLETE_SUFFIX = ".cleanup-complete.json"
 RECORDING_SCHEMA = "browser-use-recording.v1"
 RECORDING_STATUS_SCHEMA = "browser-use-recording-status.v1"
 RECORDING_CLEANUP_RECEIPT_SCHEMA = "browser-use-recording-cleanup.v1"
+AUDIT_FRESHNESS_SCHEMA = "browser-use-audit-freshness.v1"
+OWNER_COMPLETION_RECEIPT_SCHEMA = "browser-use-owner-completion.v1"
 TASK_RESUME_CHECKPOINT_SCHEMA = "browser-use-task-resume.v1"
 TASK_RESUME_CHECKPOINT_VERSION = 1
 OPERATION_LEDGER_SCHEMA = "browser-use-operation-ledger.v1"
@@ -589,6 +591,36 @@ def sha256_file(path: str) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def build_audit_freshness(
+    *,
+    run_id: str | None,
+    session: str | None,
+    nonce: str | None = None,
+    room_id: str | None = None,
+    port: int | None = None,
+    helper_sha256: str | None = None,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    """Bind an audit artifact to one run/resource observation.
+
+    This is deliberately secret-free and does not claim that a local helper
+    is published or synced to GitHub.  It only prevents a receipt from being
+    mistaken for evidence from another run, session, room, or helper image.
+    """
+    payload = {
+        "schema": AUDIT_FRESHNESS_SCHEMA,
+        "run_id": run_id,
+        "session": session,
+        "nonce": nonce,
+        "room_id": room_id,
+        "port": port,
+        "helper_sha256": helper_sha256,
+        "generated_at": generated_at or iso(now_utc()),
+    }
+    binding = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return {**payload, "binding_hash": hashlib.sha256(binding).hexdigest()}
 
 
 def sha256_trusted_executable(path: str) -> str:
@@ -1147,6 +1179,7 @@ def write_harness_recording_status(
     *,
     active: bool,
     finalized: bool,
+    media_finalized: bool | None = None,
     state: str | None = None,
     reason: str | None = None,
 ) -> None:
@@ -1162,6 +1195,8 @@ def write_harness_recording_status(
         "recording_backend": "browser-harness",
         "frame_count": len(frames),
     }
+    if media_finalized is not None:
+        value["media_finalized"] = media_finalized
     if state is not None:
         value["state"] = state
         value["durable_state"] = state
@@ -1426,6 +1461,8 @@ def read_recording_status(path: str, *, require_active: bool | None = None) -> d
         raise Blocker("browser_use_recording_status_schema_invalid")
     if not isinstance(value.get("recorder_configured"), bool) or not isinstance(value.get("recorder_active"), bool):
         raise Blocker("browser_use_recording_status_invalid")
+    if "media_finalized" in value and not isinstance(value.get("media_finalized"), bool):
+        raise Blocker("browser_use_recording_status_invalid")
     if require_active is True and value.get("recorder_active") is not True:
         raise Blocker("browser_use_recording_not_active")
     if require_active is False and value.get("recorder_active") is not False:
@@ -1442,6 +1479,7 @@ def mark_recording_abandoned(path: str, *, reason: str) -> dict[str, Any]:
         {
             "recorder_active": False,
             "finalized": False,
+            "media_finalized": False,
             "state": "abandoned",
             "durable_state": "abandoned",
             "state_reason": str(reason)[:160],
@@ -1555,6 +1593,11 @@ def _classify_recording_descriptor(config: dict[str, Any], path: str, value: dic
         "process_root_start_time": process.get("root_start_time"),
         "recorder_active": None,
         "recorder_finalized": None,
+        "media_finalized": None,
+        "recording_finalized": value.get("recording_finalized"),
+        "cleanup_completed": value.get("cleanup_completed"),
+        "completion_status": value.get("completion_status"),
+        "completion_blocker": value.get("completion_blocker") or value.get("finalize_failure"),
         "authentication_state": value.get("authentication_state"),
         "authentication_wait_blocker": (value.get("authentication_wait") or {}).get("exact_blocker"),
     }
@@ -1562,14 +1605,18 @@ def _classify_recording_descriptor(config: dict[str, Any], path: str, value: dic
         status = read_recording_status(str(value["status_path"]), require_active=None)
         entry["recorder_active"] = status["recorder_active"]
         entry["recorder_finalized"] = status["finalized"]
+        entry["media_finalized"] = status.get("media_finalized")
     except (KeyError, Blocker) as exc:
         entry["liveness"] = "stale"
         entry["exact_blocker"] = exc.code if isinstance(exc, Blocker) else "browser_use_recording_status_missing"
         return entry
 
     if value.get("status") == "finalized" or entry["recorder_finalized"] is True:
-        entry["liveness"] = "finalized" if value.get("status") == "finalized" else "stale"
-        if entry["liveness"] == "stale":
+        blocked = bool(entry.get("completion_blocker")) or entry.get("completion_status") == "blocked" or value.get("external_effects") == "unknown" or entry.get("media_finalized") is False or entry.get("recording_finalized") is False
+        entry["liveness"] = "finalized_blocked" if blocked else ("finalized" if value.get("status") == "finalized" else "stale")
+        if blocked:
+            entry["exact_blocker"] = entry.get("completion_blocker") or ("browser_use_recording_media_not_finalized" if entry.get("media_finalized") is False or entry.get("recording_finalized") is False else "browser_use_external_effects_unknown")
+        elif entry["liveness"] == "stale":
             entry["exact_blocker"] = "browser_use_recording_descriptor_status_not_finalized"
         return entry
     if value.get("status") not in {"active", "continued"}:
@@ -1649,7 +1696,11 @@ def recording_status(args: argparse.Namespace) -> int:
     recoverable_live = sum(entry["liveness"] == "recoverable" and entry.get("process_live") is True for entry in entries)
     process_live_count = sum(entry.get("process_live") is True for entry in entries)
     cleanup_pending = sum(entry.get("status") == "cleanup_pending" for entry in entries)
-    print(json.dumps({"status": "completed", "entries": entries, "live_count": live, "stale_count": stale, "recoverable_count": recoverable, "recoverable_live_count": recoverable_live, "process_live_count": process_live_count, "cleanup_pending_count": cleanup_pending, "marked_stale_count": marked_stale, "finalized": True}, sort_keys=True))
+    finalized_blocked = sum(entry["liveness"] == "finalized_blocked" for entry in entries)
+    finalized_count = sum(entry["liveness"] == "finalized" for entry in entries)
+    unresolved = live + recoverable + cleanup_pending + finalized_blocked
+    overall_completion = "blocked" if unresolved else "completed"
+    print(json.dumps({"status": "completed", "entries": entries, "live_count": live, "stale_count": stale, "recoverable_count": recoverable, "recoverable_live_count": recoverable_live, "process_live_count": process_live_count, "cleanup_pending_count": cleanup_pending, "finalized_count": finalized_count, "finalized_blocked_count": finalized_blocked, "unresolved_count": unresolved, "overall_completion": overall_completion, "marked_stale_count": marked_stale, "finalized": overall_completion == "completed"}, sort_keys=True))
     return 0
 
 
@@ -2646,6 +2697,42 @@ def _resume_source_thread_id(descriptor: dict[str, Any]) -> str | None:
     return None
 
 
+def owner_completion_receipt(
+    descriptor: dict[str, Any],
+    *,
+    command: list[str],
+    readback_exit: int | None,
+    consumed_at: str | None = None,
+) -> dict[str, Any]:
+    """Create durable, owner-bound handoff completion metadata.
+
+    The receipt records that the one-time human signal was consumed after a
+    successful same-session command/readback.  It is explicitly not an auth
+    proof and never sends a signal to another thread or service.
+    """
+    command_digest = hashlib.sha256(
+        json.dumps(command, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    owner_metadata = descriptor.get("owner_metadata") if isinstance(descriptor.get("owner_metadata"), dict) else {}
+    return {
+        "schema": OWNER_COMPLETION_RECEIPT_SCHEMA,
+        "run_id": descriptor.get("run_id"),
+        "session": descriptor.get("session"),
+        "nonce": descriptor.get("nonce"),
+        "task_id": descriptor.get("task_id"),
+        "source_thread_id": _resume_source_thread_id(descriptor),
+        "owner_thread_id": owner_metadata.get("thread_id"),
+        "owner_host_id": owner_metadata.get("host_id"),
+        "signal_kind": "human_completion",
+        "state": "consumed_not_auth_proof",
+        "auth_proof": False,
+        "external_signal_sent": False,
+        "command_digest": command_digest,
+        "readback_exit": readback_exit,
+        "consumed_at": consumed_at or iso(now_utc()),
+    }
+
+
 def _resume_checkpoint_state(descriptor: dict[str, Any]) -> str:
     if descriptor.get("authentication_state") == "waiting":
         return "waiting_auth"
@@ -2703,6 +2790,11 @@ def _resume_checkpoint_from_descriptor(
         "profile": profile,
         "port": descriptor.get("port") if isinstance(descriptor.get("port"), int) else None,
         "room_id": descriptor.get("room_id") if isinstance(descriptor.get("room_id"), str) else None,
+        "recording_finalized": descriptor.get("recording_finalized"),
+        "cleanup_completed": descriptor.get("cleanup_completed"),
+        "completion_status": descriptor.get("completion_status"),
+        "completion_blocker": descriptor.get("completion_blocker") or descriptor.get("finalize_failure"),
+        "owner_completion": descriptor.get("owner_completion_receipt") if isinstance(descriptor.get("owner_completion_receipt"), dict) else None,
         "state": current_state,
         "exact_blocker": exact_blocker or descriptor.get("exact_blocker") or existing.get("exact_blocker"),
         "next_action": next_action or descriptor.get("next_action") or existing.get("next_action"),
@@ -3023,6 +3115,34 @@ def validate_handoff_process_identity(config: dict[str, Any], descriptor: dict[s
     if not port_listener(descriptor["port"]) or not lsof_listener(descriptor["port"]):
         raise Blocker("browser_use_handoff_listener_missing")
     return True
+
+
+def _close_stale_recording_daemon_if_present(config: dict[str, Any], descriptor: dict[str, Any]) -> None:
+    """Gracefully close only the daemon bound to a dead recording session.
+
+    Chrome may disappear before the recorder reaches its normal finalize path.
+    The daemon is still safe to close when the caller has already proven the
+    descriptor-bound Chrome identity is absent, the exact debug listener is
+    absent, and the Harness runtime is rooted at this session.  Never fall
+    back to a signal or process kill: the existing reload path must close the
+    owned daemon and its runtime markers must disappear before recovery can
+    continue.
+    """
+    runtime = os.path.join(browser_harness_root(str(descriptor["session"])), "runtime")
+    daemon_paths = [os.path.join(runtime, name) for name in ("bu.sock", "bu.pid", "bu.port")]
+    if not any(os.path.lexists(path) for path in daemon_paths):
+        return
+    assert_debug_listener_absent(int(descriptor["port"]))
+    closed, blocker = close_owned_daemon_if_active(
+        config,
+        config["roots"]["browser_use_home"],
+        int(descriptor["port"]),
+        str(descriptor["session"]),
+    )
+    if not closed:
+        raise Blocker(blocker or "browser_use_daemon_cleanup_unverified")
+    if any(os.path.lexists(path) for path in daemon_paths):
+        raise Blocker("browser_use_daemon_cleanup_unverified")
 
 
 def validate_handoff_identity(config: dict[str, Any], descriptor: dict[str, Any]) -> None:
@@ -7304,15 +7424,11 @@ def _recording_runtime_is_stale(config: dict[str, Any], descriptor: dict[str, An
             allow_missing=True,
         )
         if process_present is False:
-            runtime = os.path.join(browser_harness_root(descriptor["session"]), "runtime")
-            if any(os.path.lexists(os.path.join(runtime, name)) for name in ("bu.sock", "bu.pid", "bu.port")):
-                raise Blocker("browser_use_recording_daemon_still_present")
+            _close_stale_recording_daemon_if_present(config, descriptor)
             return True
     except Blocker as exc:
         if exc.code == "browser_use_handoff_chrome_missing":
-            runtime = os.path.join(browser_harness_root(descriptor["session"]), "runtime")
-            if any(os.path.lexists(os.path.join(runtime, name)) for name in ("bu.sock", "bu.pid", "bu.port")):
-                raise Blocker("browser_use_recording_daemon_still_present") from exc
+            _close_stale_recording_daemon_if_present(config, descriptor)
             return True
         raise
     return False
@@ -7574,6 +7690,10 @@ def cleanup_stale_handoff_recording_descriptor(
     cleanup = {
         "status": "cleaned",
         "kind": "stale_handoff_recording_cleanup",
+        "recording_finalized": False,
+        "cleanup_completed": True,
+        "completion_status": "cleanup_complete_recording_unfinalized",
+        "completion_blocker": blocker,
         **runtime_evidence,
         "locks_removed": released,
         "locks_retained": [path for path in source_lock_paths if os.path.lexists(path)],
@@ -7593,6 +7713,10 @@ def cleanup_stale_handoff_recording_descriptor(
         "session": descriptor["session"],
         "nonce": descriptor["nonce"],
         "lifecycle": descriptor["lifecycle"],
+        "recording_finalized": False,
+        "cleanup_completed": True,
+        "completion_status": "cleanup_complete_recording_unfinalized",
+        "completion_blocker": blocker,
         **runtime_evidence,
         "external_effects": effect_state,
         "pending_reconciliation_count": len(pending),
@@ -7618,6 +7742,10 @@ def cleanup_stale_handoff_recording_descriptor(
         "cleanup_state": cleanup,
         "cleanup_receipt_path": cleanup_receipt,
         "external_effects": effect_state,
+        "recording_finalized": False,
+        "cleanup_completed": True,
+        "completion_status": "cleanup_complete_recording_unfinalized",
+        "completion_blocker": blocker,
     })
     _write_recording_descriptor(config, descriptor_path, descriptor, replace=True)
     return {
@@ -7630,6 +7758,10 @@ def cleanup_stale_handoff_recording_descriptor(
         "pending_reconciliation": pending,
         "external_effects": effect_state,
         "exact_blocker": blocker,
+        "recording_finalized": False,
+        "cleanup_completed": True,
+        "completion_status": "cleanup_complete_recording_unfinalized",
+        "completion_blocker": blocker,
         "finalized": False,
     }
 
@@ -7695,6 +7827,10 @@ def reconcile_cleanup_complete_source_recording(
     cleanup = {
         "status": "cleaned",
         "kind": "source_handoff_cleanup_marker_reconciliation",
+        "recording_finalized": False,
+        "cleanup_completed": True,
+        "completion_status": "cleanup_complete_recording_unfinalized",
+        "completion_blocker": blocker,
         "process_absent": True,
         "listener_absent": True,
         "daemon_absent": True,
@@ -7717,6 +7853,10 @@ def reconcile_cleanup_complete_source_recording(
         "session": descriptor["session"],
         "nonce": descriptor["nonce"],
         "lifecycle": descriptor["lifecycle"],
+        "recording_finalized": False,
+        "cleanup_completed": True,
+        "completion_status": "cleanup_complete_recording_unfinalized",
+        "completion_blocker": blocker,
         "process_absent": True,
         "listener_absent": True,
         "daemon_absent": True,
@@ -7751,6 +7891,10 @@ def reconcile_cleanup_complete_source_recording(
             "cleanup_state": cleanup,
             "cleanup_receipt_path": cleanup_receipt,
             "external_effects": effect_state,
+            "recording_finalized": False,
+            "cleanup_completed": True,
+            "completion_status": "cleanup_complete_recording_unfinalized",
+            "completion_blocker": blocker,
         }
     )
     _write_recording_descriptor(config, descriptor_path, descriptor, replace=True)
@@ -7764,6 +7908,10 @@ def reconcile_cleanup_complete_source_recording(
         "pending_reconciliation": pending,
         "external_effects": effect_state,
         "exact_blocker": blocker,
+        "recording_finalized": False,
+        "cleanup_completed": True,
+        "completion_status": "cleanup_complete_recording_unfinalized",
+        "completion_blocker": blocker,
         "finalized": False,
     }
 
@@ -7888,6 +8036,10 @@ def cleanup_stale_recording_descriptor(
     cleanup = {
         "status": "cleaned",
         "kind": "stale_recording_terminal_cleanup",
+        "recording_finalized": False,
+        "cleanup_completed": True,
+        "completion_status": "cleanup_complete_recording_unfinalized",
+        "completion_blocker": blocker,
         "process_absent": True,
         "listener_absent": True,
         "daemon_absent": True,
@@ -7910,6 +8062,10 @@ def cleanup_stale_recording_descriptor(
         "session": descriptor["session"],
         "nonce": descriptor["nonce"],
         "lifecycle": descriptor["lifecycle"],
+        "recording_finalized": False,
+        "cleanup_completed": True,
+        "completion_status": "cleanup_complete_recording_unfinalized",
+        "completion_blocker": blocker,
         "process_absent": True,
         "listener_absent": True,
         "daemon_absent": True,
@@ -7938,6 +8094,10 @@ def cleanup_stale_recording_descriptor(
             "cleanup_state": cleanup,
             "cleanup_receipt_path": cleanup_receipt,
             "external_effects": effect_state,
+            "recording_finalized": False,
+            "cleanup_completed": True,
+            "completion_status": "cleanup_complete_recording_unfinalized",
+            "completion_blocker": blocker,
         }
     )
     _write_recording_descriptor(config, descriptor_path, descriptor, replace=True)
@@ -7951,6 +8111,10 @@ def cleanup_stale_recording_descriptor(
         "pending_reconciliation": pending,
         "external_effects": effect_state,
         "exact_blocker": blocker,
+        "recording_finalized": False,
+        "cleanup_completed": True,
+        "completion_status": "cleanup_complete_recording_unfinalized",
+        "completion_blocker": blocker,
         "finalized": False,
     }
 
@@ -7983,6 +8147,7 @@ def _recording_context(config: dict[str, Any], descriptor: dict[str, Any]) -> di
         "requested_session": descriptor.get("requested_session", descriptor["session"]),
         "automation_id": descriptor["automation_id"],
         "nonce": descriptor["nonce"],
+        "helper_sha256": descriptor.get("helper_sha256"),
         "task_id": descriptor.get("task_id"),
         "started_at": descriptor.get("started_at"),
         "lock_paths": list(descriptor["lock_paths"]),
@@ -7994,6 +8159,10 @@ def _recording_context(config: dict[str, Any], descriptor: dict[str, Any]) -> di
         "room_terminal_cleanup": True,
         "config": config,
         "room_id": descriptor.get("room_id"),
+        "recording_finalized": descriptor.get("recording_finalized"),
+        "cleanup_completed": descriptor.get("cleanup_completed"),
+        "completion_status": descriptor.get("completion_status"),
+        "completion_blocker": descriptor.get("completion_blocker") or descriptor.get("finalize_failure"),
     }
 
 
@@ -8061,6 +8230,10 @@ def _recording_finalize_cleanup_after_media_failure(
     ctx = _recording_context(config, descriptor)
     ctx.update(
         {
+            "recording_finalized": False,
+            "cleanup_completed": False,
+            "completion_status": "blocked",
+            "completion_blocker": failure,
             "account_identity": descriptor.get("account_identity", "authorized"),
             "authority_summary": {
                 "data_exposure": "authorized_recording" if descriptor.get("mode") == "authorized" else "public_read_only",
@@ -8077,6 +8250,10 @@ def _recording_finalize_cleanup_after_media_failure(
     cleanup: dict[str, Any] = {
         "status": "cleanup_pending",
         "recording_finalize": "blocked",
+        "recording_finalized": False,
+        "cleanup_completed": False,
+        "completion_status": "blocked",
+        "completion_blocker": failure,
         failure_phase: "failed",
         f"{failure_phase}_blocker": failure,
         "daemon_close_attempted": False,
@@ -8122,6 +8299,7 @@ def _recording_finalize_cleanup_after_media_failure(
             cleanup.update(
                 {
                     "status": "cleaned",
+                    "cleanup_completed": True,
                     "process_terminated": True,
                     "listener_absent": True,
                     "profile_preserved": str(descriptor.get("lifecycle")) == "scheduled",
@@ -8167,6 +8345,10 @@ def _recording_finalize_cleanup_after_media_failure(
     ctx["cleanup"] = cleanup
     descriptor["status"] = "cleanup_pending"
     descriptor["finalize_failure"] = failure
+    descriptor["recording_finalized"] = False
+    descriptor["cleanup_completed"] = cleanup.get("status") == "cleaned"
+    descriptor["completion_status"] = "blocked"
+    descriptor["completion_blocker"] = failure
     descriptor["cleanup_state"] = cleanup
     persistence_failure: str | None = None
     try:
@@ -9606,6 +9788,87 @@ def record_reconcile_navigation(args: argparse.Namespace) -> int:
     return 0
 
 
+def record_cleanup_daemon(args: argparse.Namespace) -> int:
+    """Close one dead-Chrome recording daemon through an explicit cleanup lane.
+
+    This is intentionally separate from ``record-recover``.  It is the
+    compatibility path for a temporary descriptor pinned to an older helper
+    generation after Chrome has already disappeared.  The command never
+    resumes the browser or clears unknown effects; it only accepts a
+    user-approved, descriptor-bound terminal cleanup.
+    """
+    config = read_toml()
+    versions = validate_installation(config)
+    run_id = safe_id(args.run_id, "run_id")
+    requested_session = validate_id(args.session, "session")
+    session = canonical_session_id(requested_session, config["roots"]["browser_use_home"])
+    descriptor_path = os.path.realpath(args.descriptor)
+    descriptor = read_recording_descriptor(
+        config,
+        descriptor_path,
+        run_id,
+        session,
+        allow_helper_hash_mismatch=True,
+        allow_pinned_helper_reexec=False,
+        allow_expired_temporary=True,
+        allow_stale_runtime_recovery=True,
+    )
+    require_temporary_task_id(args, descriptor)
+    if not bool(getattr(args, "delete_approved", False)):
+        raise Blocker("browser_use_temporary_delete_approval_required")
+    if descriptor.get("lifecycle") != TEMPORARY_LIFECYCLE or descriptor.get("owned_chrome") is not True:
+        raise Blocker("browser_use_temporary_daemon_cleanup_unsupported")
+    recording_authority(config, descriptor, args.authority, cleanup_only=True)
+    assert_owned_locks(descriptor["lock_paths"], descriptor["run_id"], descriptor["nonce"])
+    try:
+        process_present = validate_handoff_process_identity(
+            config,
+            {"process": descriptor["process"], "port": descriptor["port"], "profile": descriptor["profile"]},
+            allow_missing=True,
+        )
+    except Blocker as exc:
+        if exc.code != "browser_use_handoff_chrome_missing":
+            raise
+        process_present = False
+    if process_present:
+        raise Blocker("browser_use_recording_cleanup_process_still_live")
+    assert_debug_listener_absent(int(descriptor["port"]))
+    _close_stale_recording_daemon_if_present(config, descriptor)
+    assert_debug_listener_absent(int(descriptor["port"]))
+    descriptor.update({
+        "status": "stale",
+        "recovery_state": "restartable",
+        "completion_assessment": "ai_judged_complete",
+        "retention_decision": "delete_approved",
+        "task_completion_signal": "delete_approval_received",
+        "delete_approval_at": iso(now_utc()),
+        "stale_state": {
+            "state": "abandoned",
+            "uncertain": True,
+            "exact_blocker": "browser_use_recording_stale_runtime_reconciled",
+            "updated_at": iso(now_utc()),
+        },
+    })
+    _write_recording_descriptor(config, descriptor_path, descriptor, replace=True)
+    cleanup = cleanup_stale_recording_descriptor(
+        config,
+        versions,
+        descriptor,
+        descriptor_path,
+        delete_approved=True,
+    )
+    print(json.dumps({
+        "status": "cleanup_completed" if cleanup.get("external_effects") != "unknown" else "cleanup_completed_external_effects_pending",
+        "descriptor": descriptor_path,
+        "cleanup_receipt": cleanup.get("cleanup_receipt"),
+        "cleanup": cleanup.get("cleanup", {}),
+        "pending_reconciliation": cleanup.get("pending_reconciliation", []),
+        "external_effects": cleanup.get("external_effects"),
+        "finalized": False,
+    }, sort_keys=True))
+    return 0
+
+
 def record_reconcile_eval_syntax_error(args: argparse.Namespace) -> int:
     """Reconcile one parser-level eval failure without replaying the eval."""
     config = read_toml()
@@ -10797,7 +11060,15 @@ def record_finalize(args: argparse.Namespace) -> int:
                 final_visual_readback = final_visual_readback_from_stop_capture(recording, captured_stop)
             except Exception as exc:
                 final_visual_blocker = exc.code if isinstance(exc, Blocker) else "browser_use_recording_final_visual_readback_failed"
-        write_harness_recording_status(descriptor["status_path"], recording, active=False, finalized=True)
+        write_harness_recording_status(
+            descriptor["status_path"],
+            recording,
+            active=False,
+            finalized=True,
+            media_finalized=False,
+            state="stopped_pending_media_finalize",
+            reason="recorder stopped; MP4 probe is still required",
+        )
         code, _ = run_cli_keep_alive(config, config["roots"]["browser_use_home"], descriptor["port"], descriptor["session"], ["close"], False, recording=recording)
     elif status.get("finalized") is not True:
         code, _ = run_cli_keep_alive(config, config["roots"]["browser_use_home"], descriptor["port"], descriptor["session"], ["close"], False, recording=recording)
@@ -10832,6 +11103,16 @@ def record_finalize(args: argparse.Namespace) -> int:
             video = probe_recording_video(config, str(source_dir))
         else:
             video = probe_recording_video(config, descriptor["recording_dir"])
+        if browser_harness_cli_enabled():
+            write_harness_recording_status(
+                descriptor["status_path"],
+                recording,
+                active=False,
+                finalized=True,
+                media_finalized=True,
+                state="media_finalized",
+                reason="MP4 probe passed with positive duration and frames",
+            )
     except (Blocker, OSError, subprocess.SubprocessError, ValueError, json.JSONDecodeError) as exc:
         media_failure = exc.code if isinstance(exc, Blocker) else "browser_use_recording_video_finalize_failed"
         receipt_path, final_failure = _recording_finalize_cleanup_after_media_failure(
@@ -10872,7 +11153,7 @@ def record_finalize(args: argparse.Namespace) -> int:
     ledger_rows = _operation_ledger_rows(operation_ledger_path(descriptor))
     ledger_tail_digest = ledger_rows[-1].get("chain_digest") if ledger_rows else "0" * 64
     semantic_bundle = semantic_readback_bundle(descriptor)
-    manifest = {"schema": RECORDING_SCHEMA, "status": "blocked" if completion_blocker else "completed", "run_id": descriptor["run_id"], "session": descriptor["session"], "recording_dir": descriptor["recording_dir"], "operations": descriptor["operations"], "failed_operations": descriptor.get("failed_operations", []), "target_origins": descriptor["target_origins"], "recording_framerate": descriptor["recording_framerate"], "video": video, "external_effects": effect_state, "business_effect_proof": descriptor.get("business_effect_proof", "not_applicable"), "completion_blocker": completion_blocker, "final_visual_readback": final_visual_readback, "semantic_readback": semantic_bundle, "operation_ledger_path": operation_ledger_path(descriptor), "operation_ledger_tail_digest": ledger_tail_digest}
+    manifest = {"schema": RECORDING_SCHEMA, "status": "blocked" if completion_blocker else "completed", "run_id": descriptor["run_id"], "session": descriptor["session"], "recording_dir": descriptor["recording_dir"], "operations": descriptor["operations"], "failed_operations": descriptor.get("failed_operations", []), "target_origins": descriptor["target_origins"], "recording_framerate": descriptor["recording_framerate"], "video": video, "external_effects": effect_state, "business_effect_proof": descriptor.get("business_effect_proof", "not_applicable"), "recording_finalized": True, "cleanup_completed": True, "completion_status": "blocked" if completion_blocker else "completed", "completion_blocker": completion_blocker, "final_visual_readback": final_visual_readback, "semantic_readback": semantic_bundle, "operation_ledger_path": operation_ledger_path(descriptor), "operation_ledger_tail_digest": ledger_tail_digest}
     if descriptor.get("tab_inventory_path"):
         manifest["tab_inventory_path"] = descriptor["tab_inventory_path"]
         manifest["tab_inventory"] = read_recording_tab_inventory(descriptor["tab_inventory_path"])
@@ -10880,8 +11161,12 @@ def record_finalize(args: argparse.Namespace) -> int:
     write_recording_manifest(manifest_path, manifest)
     descriptor["status"] = "finalized"
     descriptor["external_effects"] = effect_state
-    if completion_blocker:
-        descriptor["completion_blocker"] = completion_blocker
+    descriptor["recording_finalized"] = True
+    descriptor["cleanup_required"] = bool(descriptor.get("owned_chrome"))
+    descriptor["cleanup_completed"] = True
+    descriptor["completion_status"] = "blocked" if completion_blocker else "completed"
+    descriptor["completion_blocker"] = completion_blocker
+    descriptor["cleanup_scope"] = "owned_recording" if descriptor.get("owned_chrome") else "source_handoff_preserved"
     descriptor["manifest_path"] = manifest_path
     descriptor["video"] = video
     if final_visual_readback is not None:
@@ -10902,6 +11187,10 @@ def record_finalize(args: argparse.Namespace) -> int:
     )
     cleanup_receipt = {
         "status": cleanup_status,
+        "recording_finalized": True,
+        "cleanup_completed": True,
+        "completion_status": "blocked" if completion_blocker else "completed",
+        "completion_blocker": completion_blocker,
         "profile_removed": not os.path.lexists(descriptor["profile"]),
         "download_dir_removed": not os.path.lexists(descriptor["download_dir"]),
         "locks_removed": list(descriptor["lock_paths"]) if descriptor["owned_chrome"] else [],
@@ -11585,7 +11874,54 @@ def finalized_receipt(config: dict[str, Any], versions: dict[str, Any], ctx: dic
     assert_directory(run_dir, create=True)
     path = os.path.join(run_dir, f"{ctx['session']}-{ctx['nonce']}.json")
     end_time = now_utc()
-    receipt = {"schema": "browser-use-receipt.v1", "authority_mode": ctx["mode"], "lifecycle": ctx["lifecycle"], "run_id": ctx["run_id"], "session": ctx["session"], "requested_session": ctx.get("requested_session", ctx["session"]), "automation_id": ctx["automation_id"], "task_id": ctx.get("task_id"), "creation_binding": ctx.get("creation_binding"), "authority_sha256": ctx.get("authority_sha256"), "authority_scope": ctx.get("authority_scope"), "paths": {"profile": ctx.get("profile"), "download_dir": ctx.get("download_dir"), "browser_use_home": config["roots"]["browser_use_home"]}, "versions_hashes": versions, "pid": ctx.get("process", {}).get("root_pid"), "start_time": ctx.get("started_at"), "end_time": iso(end_time), "port": ctx.get("port"), "profile_hash": ctx.get("profile_hash"), "target_origins": sorted(ctx.get("target_origins", [])), "account_identity": ctx.get("account_identity", "public"), "authority_summary": ctx.get("authority_summary", {"data_exposure": "public_read_only", "side_effect_scope": "none", "approval": "not_required"}), "external_effects": ctx.get("external_effects", "none"), "operation_ledger_path": ctx.get("operation_ledger_path"), "operation_ledger_tail_digest": ctx.get("operation_ledger_tail_digest"), "guard_readback": {"preflight": ctx.get("preflight", False), "listener_verified": ctx.get("listener_verified", False), "process_identity_verified": ctx.get("process_identity_verified", False), "post_command_state_readback": ctx.get("readback_exit") is not None, "readback_exit": ctx.get("readback_exit"), "readback_required": ctx.get("readback_required", True)}, "uploads": ctx.get("uploads", []), "downloads": ctx.get("downloads", []), "exit": {"code": 1 if failure else 0, "exact_blocker": failure}, "cleanup": ctx.get("cleanup", {}), "quarantine": ctx.get("quarantine"), "finalized": failure is None}
+    completion_blocker = ctx.get("completion_blocker") or failure
+    completion_status = ctx.get("completion_status") or ("blocked" if failure else "completed")
+    receipt = {
+        "schema": "browser-use-receipt.v1",
+        "authority_mode": ctx["mode"],
+        "lifecycle": ctx["lifecycle"],
+        "run_id": ctx["run_id"],
+        "session": ctx["session"],
+        "requested_session": ctx.get("requested_session", ctx["session"]),
+        "automation_id": ctx["automation_id"],
+        "task_id": ctx.get("task_id"),
+        "creation_binding": ctx.get("creation_binding"),
+        "authority_sha256": ctx.get("authority_sha256"),
+        "authority_scope": ctx.get("authority_scope"),
+        "paths": {"profile": ctx.get("profile"), "download_dir": ctx.get("download_dir"), "browser_use_home": config["roots"]["browser_use_home"]},
+        "versions_hashes": versions,
+        "pid": ctx.get("process", {}).get("root_pid"),
+        "start_time": ctx.get("started_at"),
+        "end_time": iso(end_time),
+        "port": ctx.get("port"),
+        "profile_hash": ctx.get("profile_hash"),
+        "target_origins": sorted(ctx.get("target_origins", [])),
+        "account_identity": ctx.get("account_identity", "public"),
+        "authority_summary": ctx.get("authority_summary", {"data_exposure": "public_read_only", "side_effect_scope": "none", "approval": "not_required"}),
+        "external_effects": ctx.get("external_effects", "none"),
+        "operation_ledger_path": ctx.get("operation_ledger_path"),
+        "operation_ledger_tail_digest": ctx.get("operation_ledger_tail_digest"),
+        "audit_freshness": build_audit_freshness(
+            run_id=ctx.get("run_id"),
+            session=ctx.get("session"),
+            nonce=ctx.get("nonce"),
+            room_id=ctx.get("room_id"),
+            port=ctx.get("port"),
+            helper_sha256=ctx.get("helper_sha256"),
+            generated_at=iso(end_time),
+        ),
+        "guard_readback": {"preflight": ctx.get("preflight", False), "listener_verified": ctx.get("listener_verified", False), "process_identity_verified": ctx.get("process_identity_verified", False), "post_command_state_readback": ctx.get("readback_exit") is not None, "readback_exit": ctx.get("readback_exit"), "readback_required": ctx.get("readback_required", True)},
+        "uploads": ctx.get("uploads", []),
+        "downloads": ctx.get("downloads", []),
+        "exit": {"code": 1 if failure else 0, "exact_blocker": failure},
+        "cleanup": ctx.get("cleanup", {}),
+        "recording_finalized": ctx.get("recording_finalized"),
+        "cleanup_completed": ctx.get("cleanup_completed"),
+        "completion_status": completion_status,
+        "completion_blocker": completion_blocker,
+        "quarantine": ctx.get("quarantine"),
+        "finalized": failure is None,
+    }
     try:
         json_atomic_no_replace(path, receipt)
     except Blocker as exc:
@@ -11884,9 +12220,16 @@ def continue_handoff(args: argparse.Namespace) -> int:
     if readback_exit != 0:
         raise Blocker("browser_use_readback_failed", str(readback_exit))
     validate_handoff_process_identity(config, descriptor, allow_missing=False)
+    owner_completion = owner_completion_receipt(
+        descriptor,
+        command=command,
+        readback_exit=readback_exit,
+    )
     descriptor["status"] = "continued"
     descriptor["human_completion_signal"] = "one_time_untrusted_signal_consumed"
     descriptor["human_completion_at"] = iso(now_utc())
+    descriptor["owner_completion_receipt"] = owner_completion
+    descriptor["owner_completion_state"] = "consumed_not_auth_proof"
     descriptor["last_command"] = command[0]
     descriptor["readback_exit"] = readback_exit
     update_handoff(consumed_path, descriptor)
@@ -12934,6 +13277,14 @@ def build_parser() -> argparse.ArgumentParser:
     record_recover.add_argument("--task-id", help="required when the recording lifecycle is temporary")
     record_recover.add_argument("--max-attempts", type=int, default=2)
     record_recover.set_defaults(action="record-recover")
+    record_cleanup_daemon = sub.add_parser("record-cleanup-daemon", help="close one dead-Chrome temporary recording daemon and perform terminal cleanup")
+    record_cleanup_daemon.add_argument("--run-id", required=True)
+    record_cleanup_daemon.add_argument("--session", required=True)
+    record_cleanup_daemon.add_argument("--descriptor", required=True)
+    record_cleanup_daemon.add_argument("--authority", required=True)
+    record_cleanup_daemon.add_argument("--task-id", required=True)
+    record_cleanup_daemon.add_argument("--delete-approved", action="store_true", required=True)
+    record_cleanup_daemon.set_defaults(action="record-cleanup-daemon")
     record_reconcile = sub.add_parser("record-reconcile-target-not-interactive", help="reconcile one helper-rejected non-interactive target without browser dispatch")
     record_reconcile.add_argument("--run-id", required=True)
     record_reconcile.add_argument("--session", required=True)
@@ -13165,6 +13516,8 @@ def main() -> int:
             return record_resume(args)
         if args.action == "record-recover":
             return record_recover(args)
+        if args.action == "record-cleanup-daemon":
+            return record_cleanup_daemon(args)
         if args.action == "record-reconcile-target-not-interactive":
             return record_reconcile_target_not_interactive(args)
         if args.action == "record-reconcile-navigation":

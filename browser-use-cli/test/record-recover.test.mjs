@@ -425,6 +425,122 @@ print("ok")
   }
 });
 
+test("dead Chrome recovery gracefully closes only the session-bound Harness daemon", () => {
+  const script = String.raw`
+import importlib.util, os, pathlib, tempfile
+from importlib.machinery import SourceFileLoader
+from unittest.mock import patch
+
+helper_path = os.environ["HELPER_PATH"]
+spec = importlib.util.spec_from_loader("codex_browser_use_stale_daemon", SourceFileLoader("codex_browser_use_stale_daemon", helper_path))
+h = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(h)
+
+with tempfile.TemporaryDirectory() as temp:
+    session = "stale-daemon-" + pathlib.Path(temp).name
+    runtime = pathlib.Path(h.browser_harness_root(session)) / "runtime"
+    runtime.mkdir(parents=True, mode=0o700)
+    for name in ("bu.pid", "bu.sock", "bu.port"):
+        (runtime / name).write_text("owned\n", encoding="utf-8")
+    config = {"roots": {"browser_use_home": os.path.join(temp, "browser-home")}}
+    descriptor = {
+        "owned_chrome": True,
+        "session": session,
+        "port": 29991,
+        "profile": os.path.join(temp, "profile"),
+        "process": {"root_pid": 999999, "root_start_time": 1.0},
+    }
+    calls = []
+    def close(config_arg, home, port, session_arg):
+        calls.append((home, port, session_arg))
+        assert session_arg == session
+        assert port == 29991
+        for path in runtime.iterdir():
+            path.unlink()
+        return True, None
+
+    with patch.object(h, "validate_handoff_process_identity", return_value=False), \
+         patch.object(h, "close_owned_daemon_if_active", side_effect=close):
+        assert h._recording_runtime_is_stale(config, descriptor) is True
+    assert calls == [(config["roots"]["browser_use_home"], 29991, session)]
+    assert not any(runtime.iterdir())
+    runtime.rmdir()
+    pathlib.Path(h.browser_harness_root(session)).rmdir()
+print("session-bound stale daemon close ok")
+`;
+  const helper = path.join(root, "bin", "codex-browser-use");
+  const result = spawnSync(process.env.PYTHON ?? "python3", ["-c", script], {
+    env: { ...process.env, HELPER_PATH: helper },
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, `${helper}\n${result.stdout}\n${result.stderr}`);
+  assert.match(result.stdout, /session-bound stale daemon close ok/);
+});
+
+test("explicit dead-Chrome cleanup lane rebinds an old helper generation without browser dispatch", () => {
+  const script = String.raw`
+import importlib.util, io, json, os, tempfile
+from contextlib import redirect_stdout
+from importlib.machinery import SourceFileLoader
+from types import SimpleNamespace
+from unittest.mock import patch
+
+helper_path = os.environ["HELPER_PATH"]
+spec = importlib.util.spec_from_loader("codex_browser_use_cleanup_daemon", SourceFileLoader("codex_browser_use_cleanup_daemon", helper_path))
+h = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(h)
+
+parser = h.build_parser()
+parsed = parser.parse_args([
+    "record-cleanup-daemon", "--run-id", "run-1", "--session", "session-1",
+    "--task-id", "task-1", "--descriptor", "/tmp/descriptor.json",
+    "--authority", "/tmp/authority.json", "--delete-approved",
+])
+assert parsed.action == "record-cleanup-daemon"
+
+descriptor = {
+    "lifecycle": h.TEMPORARY_LIFECYCLE, "owned_chrome": True,
+    "run_id": "run-1", "session": "session-1", "task_id": "task-1", "nonce": "nonce-1",
+    "process": {"root_pid": 999999, "root_start_time": 1.0}, "port": 20080,
+    "profile": "/tmp/profile", "lock_paths": ["/tmp/profile.lock", "/tmp/port.lock"],
+    "status": "continued",
+}
+config = {"roots": {"browser_use_home": "/tmp/browser-home"}}
+args = SimpleNamespace(
+    run_id="run-1", session="session-1", task_id="task-1", descriptor="/tmp/descriptor.json",
+    authority="/tmp/authority.json", delete_approved=True,
+)
+cleanup = {"cleanup_receipt": "/tmp/cleanup.json", "cleanup": {"daemon_absent": True}, "pending_reconciliation": ["unknown-op"], "external_effects": "unknown"}
+close_calls = []
+with patch.object(h, "read_toml", return_value=config), \
+     patch.object(h, "validate_installation", return_value={"helper": "v"}), \
+     patch.object(h, "canonical_session_id", return_value="session-1"), \
+     patch.object(h, "read_recording_descriptor", return_value=descriptor), \
+     patch.object(h, "require_temporary_task_id"), \
+     patch.object(h, "recording_authority"), \
+     patch.object(h, "assert_owned_locks"), \
+     patch.object(h, "validate_handoff_process_identity", return_value=False), \
+     patch.object(h, "assert_debug_listener_absent"), \
+     patch.object(h, "_close_stale_recording_daemon_if_present", side_effect=lambda *a: close_calls.append(True)), \
+     patch.object(h, "_write_recording_descriptor"), \
+     patch.object(h, "cleanup_stale_recording_descriptor", return_value=cleanup):
+    output = io.StringIO()
+    with redirect_stdout(output):
+        code = h.record_cleanup_daemon(args)
+assert code == 0
+assert close_calls == [True]
+assert json.loads(output.getvalue())["pending_reconciliation"] == ["unknown-op"]
+print("explicit dead-Chrome cleanup lane ok")
+`;
+  const helper = path.join(root, "bin", "codex-browser-use");
+  const result = spawnSync(process.env.PYTHON ?? "python3", ["-c", script], {
+    env: { ...process.env, HELPER_PATH: helper },
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, `${helper}\n${result.stdout}\n${result.stderr}`);
+  assert.match(result.stdout, /explicit dead-Chrome cleanup lane ok/);
+});
+
 test("stale recording terminal cleanup is recording-scoped, idempotent, and preserves unknown effects", () => {
   const script = String.raw`
 import importlib.util, json, os, pathlib, tempfile
@@ -1002,5 +1118,93 @@ print("continued cleanup route ok")
     });
     assert.equal(result.status, 0, `${helper}\n${result.stdout}\n${result.stderr}`);
     assert.match(result.stdout, /continued cleanup route ok/);
+  }
+});
+
+test("recording status separates recorder stop from media finalization and blocks misleading terminal state", () => {
+  const script = String.raw`
+import importlib.util, json, os, pathlib, tempfile
+from importlib.machinery import SourceFileLoader
+
+helper_path = os.environ["HELPER_PATH"]
+spec = importlib.util.spec_from_loader("codex_browser_use_completion_contract", SourceFileLoader("codex_browser_use_completion_contract", helper_path))
+h = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(h)
+
+with tempfile.TemporaryDirectory() as temp:
+    temp_root = pathlib.Path(os.path.realpath(temp))
+    recording_dir = temp_root / "frames"
+    recording_dir.mkdir()
+    status_path = temp_root / "recording-status.json"
+    recording = {"recording_source_dir": str(recording_dir)}
+    h.write_harness_recording_status(
+        str(status_path), recording, active=False, finalized=True,
+        media_finalized=False, state="stopped_pending_media_finalize",
+    )
+    status_path.chmod(0o600)
+    stopped = h.read_recording_status(str(status_path), require_active=False)
+    assert stopped["finalized"] is True and stopped["media_finalized"] is False
+    h.write_harness_recording_status(
+        str(status_path), recording, active=False, finalized=True,
+        media_finalized=True, state="media_finalized",
+    )
+    status_path.chmod(0o600)
+    finished = h.read_recording_status(str(status_path), require_active=False)
+    assert finished["media_finalized"] is True
+
+    descriptor = {
+        "schema": h.RECORDING_SCHEMA, "status": "finalized", "run_id": "run-1", "session": "session-1",
+        "lifecycle": h.TEMPORARY_LIFECYCLE, "status_path": str(status_path),
+        "process": {}, "owned_chrome": True, "profile": str(temp_root / "profile"),
+        "lock_paths": [], "recording_finalized": False,
+        "completion_status": "blocked", "completion_blocker": "browser_use_recording_media_not_finalized",
+    }
+    classified = h._classify_recording_descriptor({}, str(temp_root / "descriptor.json"), descriptor)
+    assert classified["liveness"] == "finalized_blocked"
+    assert classified["exact_blocker"] == "browser_use_recording_media_not_finalized"
+print("recording completion contract ok")
+`;
+  for (const helper of helpers) {
+    const result = spawnSync(process.env.PYTHON ?? "python3", ["-c", script], {
+      env: { ...process.env, HELPER_PATH: helper },
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, `${helper}\n${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /recording completion contract ok/);
+  }
+});
+
+test("audit freshness and owner completion metadata are bound without sending signals", () => {
+  const script = String.raw`
+import hashlib, importlib.util, json, os
+from importlib.machinery import SourceFileLoader
+
+helper_path = os.environ["HELPER_PATH"]
+spec = importlib.util.spec_from_loader("codex_browser_use_audit_contract", SourceFileLoader("codex_browser_use_audit_contract", helper_path))
+h = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(h)
+
+fresh = h.build_audit_freshness(
+    run_id="run-1", session="session-1", nonce="nonce-1", room_id="room-1", port=20080,
+    helper_sha256="a" * 64, generated_at="2026-08-04T00:00:00Z",
+)
+expected = hashlib.sha256(json.dumps({key: fresh[key] for key in ("schema", "run_id", "session", "nonce", "room_id", "port", "helper_sha256", "generated_at")}, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+assert fresh["schema"] == h.AUDIT_FRESHNESS_SCHEMA and fresh["binding_hash"] == expected
+assert fresh["binding_hash"] != h.build_audit_freshness(run_id="run-2", session="session-1", nonce="nonce-1", room_id="room-1", port=20080, helper_sha256="a" * 64, generated_at="2026-08-04T00:00:00Z")["binding_hash"]
+
+descriptor = {"run_id": "run-1", "session": "session-1", "nonce": "nonce-1", "task_id": "task-1", "source_thread_id": "thread-1"}
+owner = h.owner_completion_receipt(descriptor, command=["state"], readback_exit=0, consumed_at="2026-08-04T00:00:00Z")
+assert owner["schema"] == h.OWNER_COMPLETION_RECEIPT_SCHEMA
+assert owner["state"] == "consumed_not_auth_proof" and owner["auth_proof"] is False and owner["external_signal_sent"] is False
+assert "state" not in owner["command_digest"] and len(owner["command_digest"]) == 64
+print("audit and owner completion contracts ok")
+`;
+  for (const helper of helpers) {
+    const result = spawnSync(process.env.PYTHON ?? "python3", ["-c", script], {
+      env: { ...process.env, HELPER_PATH: helper },
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, `${helper}\n${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /audit and owner completion contracts ok/);
   }
 });
