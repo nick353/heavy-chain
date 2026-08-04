@@ -1572,6 +1572,62 @@ def _diagnostic_process_liveness(config: dict[str, Any], value: dict[str, Any]) 
         return False, exc.code if isinstance(exc, Blocker) else "browser_use_recording_process_identity_invalid"
 
 
+def _recording_media_proof(value: dict[str, Any]) -> tuple[bool, str | None]:
+    """Read-only validation of the media proof already recorded for a run.
+
+    This intentionally does not call ffprobe or generate frames: status
+    inspection must not mutate historical recordings.  It catches legacy
+    descriptors that claimed finalization without a usable manifest/video,
+    including zero-byte MP4s.
+    """
+    recording_dir = value.get("recording_dir")
+    if not isinstance(recording_dir, str) or not os.path.isabs(recording_dir):
+        return False, "browser_use_recording_media_recording_dir_missing"
+    manifest_path = value.get("manifest_path")
+    if not isinstance(manifest_path, str) or not manifest_path:
+        manifest_path = recording_manifest_path(recording_dir)
+    manifest: dict[str, Any] | None = None
+    if os.path.lexists(manifest_path):
+        try:
+            manifest = read_json_safe(manifest_path)
+        except (Blocker, OSError, ValueError, json.JSONDecodeError):
+            return False, "browser_use_recording_media_manifest_invalid"
+        if manifest.get("schema") != RECORDING_SCHEMA or manifest.get("status") not in {"completed", "blocked"}:
+            return False, "browser_use_recording_media_manifest_invalid"
+    elif value.get("manifest_path"):
+        return False, "browser_use_recording_media_manifest_missing"
+
+    video = manifest.get("video") if manifest is not None else value.get("video")
+    if not isinstance(video, dict):
+        fallback_video = os.path.join(recording_dir, "browser-recording.mp4")
+        try:
+            if os.path.isfile(fallback_video) and os.path.getsize(fallback_video) <= 0:
+                return False, "browser_use_recording_video_empty"
+        except OSError:
+            pass
+        return False, "browser_use_recording_media_proof_missing"
+    try:
+        frames = int(video.get("frames") or 0)
+        duration = float(video.get("duration_seconds") or 0)
+    except (TypeError, ValueError):
+        return False, "browser_use_recording_media_proof_invalid"
+    if frames <= 0 or duration <= 0:
+        return False, "browser_use_recording_media_empty"
+    video_path = video.get("video_path")
+    if not isinstance(video_path, str) or not video_path:
+        video_path = os.path.join(recording_dir, "browser-recording.mp4")
+    try:
+        canonical_video = os.path.realpath(video_path)
+        canonical_dir = os.path.realpath(recording_dir)
+        if os.path.dirname(canonical_video) != canonical_dir or os.path.islink(video_path) or not os.path.isfile(video_path):
+            return False, "browser_use_recording_media_video_path_invalid"
+        if os.path.getsize(video_path) <= 0:
+            return False, "browser_use_recording_video_empty"
+    except OSError:
+        return False, "browser_use_recording_media_video_missing"
+    return True, None
+
+
 def _classify_recording_descriptor(config: dict[str, Any], path: str, value: dict[str, Any]) -> dict[str, Any]:
     """Return bounded liveness metadata without page content or cleanup side effects."""
     process = value.get("process") if isinstance(value.get("process"), dict) else {}
@@ -1598,6 +1654,8 @@ def _classify_recording_descriptor(config: dict[str, Any], path: str, value: dic
         "cleanup_completed": value.get("cleanup_completed"),
         "completion_status": value.get("completion_status"),
         "completion_blocker": value.get("completion_blocker") or value.get("finalize_failure"),
+        "media_proof": None,
+        "media_proof_blocker": None,
         "authentication_state": value.get("authentication_state"),
         "authentication_wait_blocker": (value.get("authentication_wait") or {}).get("exact_blocker"),
     }
@@ -1612,10 +1670,13 @@ def _classify_recording_descriptor(config: dict[str, Any], path: str, value: dic
         return entry
 
     if value.get("status") == "finalized" or entry["recorder_finalized"] is True:
-        blocked = bool(entry.get("completion_blocker")) or entry.get("completion_status") == "blocked" or value.get("external_effects") == "unknown" or entry.get("media_finalized") is False or entry.get("recording_finalized") is False
+        media_ok, media_blocker = _recording_media_proof(value)
+        entry["media_proof"] = media_ok
+        entry["media_proof_blocker"] = media_blocker
+        blocked = bool(entry.get("completion_blocker")) or entry.get("completion_status") == "blocked" or value.get("external_effects") == "unknown" or entry.get("media_finalized") is False or entry.get("recording_finalized") is False or not media_ok
         entry["liveness"] = "finalized_blocked" if blocked else ("finalized" if value.get("status") == "finalized" else "stale")
         if blocked:
-            entry["exact_blocker"] = entry.get("completion_blocker") or ("browser_use_recording_media_not_finalized" if entry.get("media_finalized") is False or entry.get("recording_finalized") is False else "browser_use_external_effects_unknown")
+            entry["exact_blocker"] = entry.get("completion_blocker") or ("browser_use_recording_media_not_finalized" if entry.get("media_finalized") is False or entry.get("recording_finalized") is False else media_blocker or "browser_use_external_effects_unknown")
         elif entry["liveness"] == "stale":
             entry["exact_blocker"] = "browser_use_recording_descriptor_status_not_finalized"
         return entry

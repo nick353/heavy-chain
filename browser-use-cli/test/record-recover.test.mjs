@@ -1176,7 +1176,7 @@ print("recording completion contract ok")
 
 test("audit freshness and owner completion metadata are bound without sending signals", () => {
   const script = String.raw`
-import hashlib, importlib.util, json, os
+import hashlib, importlib.util, json, os, pathlib, tempfile
 from importlib.machinery import SourceFileLoader
 
 helper_path = os.environ["HELPER_PATH"]
@@ -1197,6 +1197,14 @@ owner = h.owner_completion_receipt(descriptor, command=["state"], readback_exit=
 assert owner["schema"] == h.OWNER_COMPLETION_RECEIPT_SCHEMA
 assert owner["state"] == "consumed_not_auth_proof" and owner["auth_proof"] is False and owner["external_signal_sent"] is False
 assert "state" not in owner["command_digest"] and len(owner["command_digest"]) == 64
+with tempfile.TemporaryDirectory() as temp:
+    root = pathlib.Path(os.path.realpath(temp))
+    checkpoint_descriptor = dict(descriptor, owner_completion_receipt=owner, recording_dir=str(root / "recording"), profile=str(root / "profile"))
+    checkpoint = h._resume_checkpoint_from_descriptor(
+        {"roots": {"browser_use_home": str(root)}}, checkpoint_descriptor, str(root / "descriptor.json"),
+    )
+    assert checkpoint["owner_completion"]["auth_proof"] is False
+    assert checkpoint["owner_completion"]["external_signal_sent"] is False
 print("audit and owner completion contracts ok")
 `;
   for (const helper of helpers) {
@@ -1206,5 +1214,61 @@ print("audit and owner completion contracts ok")
     });
     assert.equal(result.status, 0, `${helper}\n${result.stdout}\n${result.stderr}`);
     assert.match(result.stdout, /audit and owner completion contracts ok/);
+  }
+});
+
+test("recording status rejects legacy finalization claims without usable media proof", () => {
+  const script = String.raw`
+import importlib.util, json, os, pathlib, tempfile
+from importlib.machinery import SourceFileLoader
+
+helper_path = os.environ["HELPER_PATH"]
+spec = importlib.util.spec_from_loader("codex_browser_use_legacy_media_audit", SourceFileLoader("codex_browser_use_legacy_media_audit", helper_path))
+h = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(h)
+
+with tempfile.TemporaryDirectory() as temp:
+    root = pathlib.Path(os.path.realpath(temp))
+    recording_dir = root / "recording"
+    recording_dir.mkdir()
+    status_path = recording_dir / ".recording-status.json"
+    status_path.write_text(json.dumps({
+        "schema": h.RECORDING_STATUS_SCHEMA,
+        "recorder_configured": True,
+        "recorder_active": False,
+        "finalized": True,
+    }), encoding="utf-8")
+    status_path.chmod(0o600)
+    video_path = recording_dir / "browser-recording.mp4"
+    video_path.write_bytes(b"valid-media-proof")
+    video_path.chmod(0o600)
+    manifest_path = recording_dir / "browser-use-recording-manifest.json"
+    manifest_path.write_text(json.dumps({
+        "schema": h.RECORDING_SCHEMA,
+        "status": "completed",
+        "video": {"frames": 3, "duration_seconds": 1.0, "video_path": str(video_path)},
+    }), encoding="utf-8")
+    manifest_path.chmod(0o600)
+    descriptor = {
+        "schema": h.RECORDING_SCHEMA, "status": "finalized", "run_id": "run-1", "session": "session-1",
+        "lifecycle": h.TEMPORARY_LIFECYCLE, "status_path": str(status_path),
+        "recording_dir": str(recording_dir), "manifest_path": str(manifest_path),
+        "process": {}, "owned_chrome": True, "profile": str(root / "profile"), "lock_paths": [],
+    }
+    good = h._classify_recording_descriptor({}, str(root / "descriptor.json"), descriptor)
+    assert good["liveness"] == "finalized" and good["media_proof"] is True
+    video_path.write_bytes(b"")
+    bad = h._classify_recording_descriptor({}, str(root / "descriptor.json"), descriptor)
+    assert bad["liveness"] == "finalized_blocked"
+    assert bad["exact_blocker"] == "browser_use_recording_video_empty"
+print("legacy media audit contract ok")
+`;
+  for (const helper of helpers) {
+    const result = spawnSync(process.env.PYTHON ?? "python3", ["-c", script], {
+      env: { ...process.env, HELPER_PATH: helper },
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, `${helper}\n${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /legacy media audit contract ok/);
   }
 });
