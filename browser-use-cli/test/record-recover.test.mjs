@@ -1272,3 +1272,36 @@ print("legacy media audit contract ok")
     assert.match(result.stdout, /legacy media audit contract ok/);
   }
 });
+
+test("receipt retries reject a prior successful marker when the current result is blocked", () => {
+  const script = String.raw`
+import importlib.util, os, pathlib, tempfile
+from importlib.machinery import SourceFileLoader
+
+helper_path = os.environ["HELPER_PATH"]
+spec = importlib.util.spec_from_loader("codex_browser_use_receipt_retry_contract", SourceFileLoader("codex_browser_use_receipt_retry_contract", helper_path))
+h = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(h)
+
+with tempfile.TemporaryDirectory() as temp:
+    root = pathlib.Path(os.path.realpath(temp))
+    config = {"roots": {"receipts": str(root / "receipts"), "browser_use_home": str(root / "home")}}
+    ctx = {"mode": "authorized", "lifecycle": h.TEMPORARY_LIFECYCLE, "run_id": "run-1", "session": "session-1", "nonce": "nonce-1", "automation_id": "manual", "process": {}, "target_origins": []}
+    h.finalized_receipt(config, {}, ctx, None)
+    try:
+        h.finalized_receipt(config, {}, ctx, "browser_use_recording_video_empty")
+    except h.Blocker as exc:
+        assert exc.code == "browser_use_receipt_binding_mismatch"
+    else:
+        raise AssertionError("a successful receipt must not satisfy a blocked retry")
+print("receipt retry binding contract ok")
+`;
+  for (const helper of helpers) {
+    const result = spawnSync(process.env.PYTHON ?? "python3", ["-c", script], {
+      env: { ...process.env, HELPER_PATH: helper },
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, `${helper}\n${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /receipt retry binding contract ok/);
+  }
+});

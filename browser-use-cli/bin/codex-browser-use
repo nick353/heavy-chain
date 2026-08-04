@@ -11989,7 +11989,15 @@ def finalized_receipt(config: dict[str, Any], versions: dict[str, Any], ctx: dic
         if exc.code != "browser_use_receipt_already_exists":
             raise
         existing = read_json_safe(path)
-        if existing.get("schema") != "browser-use-receipt.v1" or existing.get("run_id") != ctx["run_id"] or existing.get("session") != ctx["session"] or existing.get("finalized") is not True:
+        existing_blocker = existing.get("completion_blocker") or (existing.get("exit") or {}).get("exact_blocker")
+        if (
+            existing.get("schema") != "browser-use-receipt.v1"
+            or existing.get("run_id") != ctx["run_id"]
+            or existing.get("session") != ctx["session"]
+            or existing.get("finalized") is not (failure is None)
+            or (failure is None and existing.get("completion_status") == "blocked")
+            or (failure is not None and existing_blocker not in {None, failure, completion_blocker})
+        ):
             raise Blocker("browser_use_receipt_binding_mismatch")
     return path
 
