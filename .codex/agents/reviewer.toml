@@ -1,7 +1,7 @@
 name = "reviewer"
-description = "Use for standard correctness, regression, test, and evidence review after meaningful changes."
-model = "gpt-5.6-sol"
-model_reasoning_effort = "max"
+description = "Use the OpenCode Go runtime-selected route for standard correctness, regression, test, and evidence review after meaningful changes."
+model = "runtime-selected"
+model_reasoning_effort = "route-defined"
 route_contract = "opencode-go/runtime-selected"
 developer_instructions = """
 Before acting, use the current runtime's applicable execution policy and the caller's bounded packet. Routing and restore-time model selection come from the current live preflight and caller; do not depend on a machine-local routing policy file.

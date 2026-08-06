@@ -4,6 +4,8 @@ This repository translates the `fable-advisor` architect-as-orchestrator idea an
 
 The outer parent keeps the current starting parent model as the BASE executor. In `auto`, 5.6-family starting parents native-bypass to OFF. Verified non-5.6 starts (`gpt-5.3-codex-spark`, `gpt-5.4`, `gpt-5.4-mini`, and `gpt-5.5`) route through an immutable model-pinned worker role selected in the per-turn v3 marker. Hidden/internal and unknown future models stay native OFF until a pinned role and canary exist. An explicit user-selected parent-model override remains allowed. This is agent routing, not an attempt to mutate the parent task's model selector mid-turn.
 
+Fast service tier is independent from reasoning effort and is never pinned by an Adaptive role. The current user or thread chooses the tier; the project role files inherit that choice. The `fast_mode` feature flag only exposes the user-facing switch and does not force Fast for other users. OpenCode routes do not use Codex Fast mode. Existing App threads keep their own per-thread tier until the App applies a new setting; changing `config.toml` alone cannot rewrite that historical thread state.
+
 ## Roles
 
 | Role | Model | Reasoning | Use when |

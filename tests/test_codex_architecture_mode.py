@@ -254,9 +254,9 @@ def test_codex_architecture_mode_files_pin_role_routing() -> None:
         assert "Do not take over orchestration or self-review" in worker
     assert "model = \"gpt-5.6-sol\"" in architect
     assert "model_reasoning_effort = \"max\"" in architect
-    assert "model = \"gpt-5.6-sol\"" in reviewer
+    assert "model = \"runtime-selected\"" in reviewer
     assert 'route_contract = "opencode-go/runtime-selected"' in reviewer
-    assert "model_reasoning_effort = \"max\"" in reviewer
+    assert "model_reasoning_effort = \"route-defined\"" in reviewer
     assert "model = \"gpt-5.6-sol\"" in critical_architect
     assert "model_reasoning_effort = \"max\"" in critical_architect
     assert "model = \"gpt-5.6-sol\"" in critical_reviewer
@@ -285,6 +285,27 @@ def test_codex_architecture_mode_files_pin_role_routing() -> None:
     assert "model_fallback.v1" in ux_contract
     assert "direct OpenCode Go MCP" in ux_contract
 
+
+def test_adaptive_role_service_tiers_are_inherited_from_user_or_thread() -> None:
+    role_filenames = {
+        "architect.toml",
+        "critical_architect.toml",
+        "critical_reviewer.toml",
+        "worker_gpt_5_3_codex_spark.toml",
+        "worker_gpt_5_4.toml",
+        "worker_gpt_5_4_mini.toml",
+        "worker_gpt_5_5.toml",
+    }
+
+    for filename in role_filenames:
+        with (REPO_ROOT / ".codex" / "agents" / filename).open("rb") as handle:
+            role = tomllib.load(handle)
+        assert "service_tier" not in role
+
+    doc = _read("docs/codex-architecture-mode.md")
+    ux_contract = _read("docs/codex-ux-contract.md")
+    assert "role files inherit that choice" in doc
+    assert "do not pin `service_tier`" in ux_contract
 
 def test_adaptive_recovery_manifest_is_narrow_and_portable() -> None:
     manifest = _load_adaptive_manifest()
