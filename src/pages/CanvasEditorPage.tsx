@@ -115,6 +115,93 @@ const isUsableLoadedImage = (image?: HTMLImageElement | null) => (
   Boolean(image?.naturalWidth && image?.naturalHeight)
 );
 
+const LOCAL_UPLOAD_READ_TIMEOUT_MS = 15_000;
+type LocalUploadPayload = { bytes: ArrayBuffer; dataUrl: string };
+
+const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return window.btoa(binary);
+};
+
+const dataUrlToArrayBuffer = (dataUrl: string) => {
+  const match = dataUrl.match(/^data:[^;,]+;base64,(.*)$/s);
+  if (!match) throw new Error('canvas_upload_data_url_invalid');
+
+  const binary = window.atob(match[1]);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  return bytes.buffer;
+};
+
+const withLocalUploadTimeout = <T,>(promise: Promise<T>, message: string) => (
+  new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error(message)), LOCAL_UPLOAD_READ_TIMEOUT_MS);
+    promise.then((value) => {
+      window.clearTimeout(timeoutId);
+      resolve(value);
+    }).catch((error) => {
+      window.clearTimeout(timeoutId);
+      reject(error);
+    });
+  })
+);
+
+const readLocalUploadFile = async (file: File): Promise<LocalUploadPayload> => {
+  const fromArrayBuffer = withLocalUploadTimeout(
+    file.arrayBuffer().then((bytes) => ({
+      bytes,
+      dataUrl: `data:${file.type};base64,${arrayBufferToBase64(bytes)}`,
+    })),
+    'canvas_upload_read_timeout',
+  );
+  const fromFileReader = withLocalUploadTimeout(new Promise<LocalUploadPayload>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('canvas_upload_read_failed'));
+    reader.onabort = () => reject(new Error('canvas_upload_read_aborted'));
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      if (typeof dataUrl !== 'string') {
+        reject(new Error('canvas_upload_data_url_invalid'));
+        return;
+      }
+      try {
+        resolve({ dataUrl, bytes: dataUrlToArrayBuffer(dataUrl) });
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.readAsDataURL(file);
+  }), 'canvas_upload_read_timeout');
+
+  const payload = await Promise.any([fromArrayBuffer, fromFileReader]);
+  if (payload.bytes.byteLength !== file.size) {
+    throw new Error('canvas_source_bytes_changed');
+  }
+  return payload;
+};
+
+const loadLocalUploadImage = (source: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+  const image = new window.Image();
+  const timeoutId = window.setTimeout(() => {
+    image.onload = null;
+    image.onerror = null;
+    reject(new Error('canvas_upload_image_timeout'));
+  }, LOCAL_UPLOAD_READ_TIMEOUT_MS);
+  image.onerror = () => {
+    window.clearTimeout(timeoutId);
+    reject(new Error('canvas_upload_image_failed'));
+  };
+  image.onload = () => {
+    window.clearTimeout(timeoutId);
+    resolve(image);
+  };
+  image.src = source;
+});
+
 export function CanvasEditorPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -618,71 +705,62 @@ export function CanvasEditorPage() {
     };
 
     files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onerror = () => failUpload('画像の読み込みに失敗しました');
-      reader.onload = (event) => {
-        const source = event.target?.result;
-        if (typeof source !== 'string' || !source.startsWith('data:image/')) {
-          failUpload('画像データを読み取れませんでした');
-          return;
-        }
-        const img = new window.Image();
-        img.onerror = () => failUpload('画像の表示に失敗しました');
-        img.onload = () => {
-          void (async () => {
-            let sourceMetadata: CanvasSourceMetadata;
-            try {
-              // Hash the exact File bytes, not the data URL used only for the
-              // transient preview. No path, filename, or data URL enters
-              // persisted metadata.
-              sourceMetadata = sanitizeCanvasSourceMetadata(await buildLocalUploadSourceMetadata(file, {
-                width: img.naturalWidth || img.width,
-                height: img.naturalHeight || img.height,
-              })) as CanvasSourceMetadata;
-            } catch (error) {
-              console.error('Canvas local upload metadata failed:', error);
-              failUpload('画像の検証情報を作成できませんでした');
-              return;
-            }
+      void (async () => {
+        try {
+          const { bytes, dataUrl: source } = await readLocalUploadFile(file);
+          if (!source.startsWith('data:image/')) {
+            throw new Error('canvas_upload_data_url_invalid');
+          }
+          const img = await loadLocalUploadImage(source);
+          // Hash the exact bytes captured before the bridge resets the input.
+          // The in-memory Blob avoids rereading a bridge-provided File object
+          // after its input has been cleared.
+          const sourceMetadata = sanitizeCanvasSourceMetadata(await buildLocalUploadSourceMetadata(
+            new Blob([bytes], { type: file.type }),
+            {
+              width: img.naturalWidth || img.width,
+              height: img.naturalHeight || img.height,
+            },
+          )) as CanvasSourceMetadata;
 
-            const newId = addObject({
-              type: 'image',
-              x: 100 + Math.random() * 200,
-              y: 100 + Math.random() * 200,
-              width: Math.min(img.width, 400),
-              height: Math.min(img.height, 400),
-              rotation: 0,
-              scaleX: 1,
-              scaleY: 1,
-              opacity: 1,
-              locked: false,
-              visible: true,
-              src: source,
-              metadata: {
-                feature: 'local-upload',
-                generation: 0,
-                ...sourceMetadata,
-              },
-            });
-            selectObject(newId);
-            // Programmatic selection must take the same action/toolbar path as
-            // a canvas click, otherwise the selected object's controls start at
-            // the stale pre-upload position.
-            handleObjectSelect(newId);
-            setLocalUploadState({
-              status: 'ready',
-              objectId: newId,
-              sourceRevision: sourceMetadata.sourceRevision.revision,
-              error: null,
-            });
-            setViewMode('canvas');
-            setZoom(1);
-            setPan(0, 0);
-          })();
-        };
-        img.src = source;
-      };
-      reader.readAsDataURL(file);
+          const newId = addObject({
+            type: 'image',
+            x: 100 + Math.random() * 200,
+            y: 100 + Math.random() * 200,
+            width: Math.min(img.width, 400),
+            height: Math.min(img.height, 400),
+            rotation: 0,
+            scaleX: 1,
+            scaleY: 1,
+            opacity: 1,
+            locked: false,
+            visible: true,
+            src: source,
+            metadata: {
+              feature: 'local-upload',
+              generation: 0,
+              ...sourceMetadata,
+            },
+          });
+          selectObject(newId);
+          // Programmatic selection must take the same action/toolbar path as
+          // a canvas click, otherwise the selected object's controls start at
+          // the stale pre-upload position.
+          handleObjectSelect(newId);
+          setLocalUploadState({
+            status: 'ready',
+            objectId: newId,
+            sourceRevision: sourceMetadata.sourceRevision.revision,
+            error: null,
+          });
+          setViewMode('canvas');
+          setZoom(1);
+          setPan(0, 0);
+        } catch (error) {
+          console.error('Canvas local upload failed:', error);
+          failUpload('画像の読み込みに失敗しました。もう一度お試しください');
+        }
+      })();
     });
   }, [addObject, handleObjectSelect, selectObject]);
 

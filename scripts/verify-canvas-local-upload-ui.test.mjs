@@ -26,10 +26,16 @@ test('local upload selects the new image and restores the visible canvas viewpor
   assert.match(upload, /setLocalUploadState\(\{ status: 'loading'/);
   assert.match(upload, /setLocalUploadState\(\{\s*status: 'ready'/);
   assert.match(upload, /handleObjectSelect\(newId\)/);
+  assert.match(page, /const readLocalUploadFile = async/);
+  assert.match(page, /Promise\.any\(\[fromArrayBuffer, fromFileReader\]\)/);
+  assert.match(page, /LOCAL_UPLOAD_READ_TIMEOUT_MS/);
+  assert.match(upload, /new Blob\(\[bytes\], \{ type: file\.type \}\)/);
+  assert.match(upload, /画像の読み込みに失敗しました。もう一度お試しください/);
+  assert.match(page, /canvas_upload_image_timeout/);
   assert.match(page, /onInputCapture=\{handleFileUpload\}/);
   assert.match(page, /onChangeCapture=\{handleFileUpload\}/);
   assert.match(upload, /localUploadEventKeysRef\.current\.has\(eventKey\)/);
-  assert.match(upload, /const source = event\.target\?\.result;/);
+  assert.match(upload, /const \{ bytes, dataUrl: source \} = await readLocalUploadFile\(file\)/);
   assert.match(upload, /src: source,/);
   assert.match(page, /ref=\{localUploadInputRef\}/);
   assert.match(page, /window\.setInterval\(\(\) => \{/);
