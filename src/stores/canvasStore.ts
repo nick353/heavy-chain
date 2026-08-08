@@ -166,46 +166,48 @@ export interface CanvasState {
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
+const stripPersistedDataUrls = (value: unknown): unknown => {
+  if (typeof value === 'string') {
+    return value.startsWith('data:') ? '' : value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(stripPersistedDataUrls);
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, stripPersistedDataUrls(entry)]),
+    );
+  }
+  return value;
+};
+
 const sanitizePersistedObject = (obj: CanvasObject): CanvasObject => {
-  if (obj.type !== 'image' || typeof obj.src !== 'string' || !obj.src.startsWith('data:')) {
-    return obj;
+  let candidate = obj;
+  if (obj.type === 'image' && typeof obj.src === 'string' && obj.src.startsWith('data:')) {
+    const galleryStoragePath = obj.metadata?.galleryStoragePath;
+    if (galleryStoragePath) {
+      candidate = { ...obj, src: galleryStoragePath };
+    } else if (
+      obj.metadata?.feature === 'gallery-import'
+      || obj.metadata?.feature === 'local-upload'
+      || obj.metadata?.sourceIdentity?.kind === 'local-upload'
+    ) {
+      candidate = { ...obj, src: '' };
+    }
   }
 
-  const galleryStoragePath = obj.metadata?.galleryStoragePath;
-  if (galleryStoragePath) {
-    return {
-      ...obj,
-      src: galleryStoragePath,
-    };
-  }
-
-  if (obj.metadata?.feature === 'gallery-import') {
-    return {
-      ...obj,
-      src: '',
-    };
-  }
-
-  // Local files are intentionally session-scoped. Persisting their data URLs
-  // makes the small localStorage canvas record grow without bound and can
-  // throw QuotaExceededError while an otherwise valid upload is being added.
-  // Keep the object in memory for the current canvas session, but persist only
-  // its safe metadata on the next store write.
-  if (obj.metadata?.feature === 'local-upload' || obj.metadata?.sourceIdentity?.kind === 'local-upload') {
-    return {
-      ...obj,
-      src: '',
-    };
-  }
-
-  return obj;
+  // Local files and generated previews can also be nested in metadata
+  // parameters. Strip every data URL from the persisted snapshot so any
+  // canvas mutation remains below localStorage quota while the active canvas
+  // still retains the full in-memory object.
+  return stripPersistedDataUrls(candidate) as CanvasObject;
 };
 
 const sanitizePersistedObjects = (objects: CanvasObject[]): CanvasObject[] =>
   objects.map(sanitizePersistedObject).filter((obj) => obj.src !== '');
 
 const sanitizePersistedProject = (project: CanvasProject): CanvasProject => ({
-  ...project,
+  ...(stripPersistedDataUrls(project) as CanvasProject),
   objects: sanitizePersistedObjects(project.objects),
 });
 

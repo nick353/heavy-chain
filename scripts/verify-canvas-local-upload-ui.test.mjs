@@ -51,10 +51,12 @@ test('local upload selects the new image and restores the visible canvas viewpor
 test('local upload data URLs stay in the active canvas session without filling localStorage', () => {
   assert.match(store, /obj\.metadata\?\.feature === 'local-upload'/);
   assert.match(store, /obj\.metadata\?\.sourceIdentity\?\.kind === 'local-upload'/);
+  assert.match(store, /const stripPersistedDataUrls = \(value: unknown\)/);
+  assert.match(store, /value\.startsWith\('data:'\) \? '' : value/);
   assert.match(store, /const sanitizePersistedObjects = \(objects: CanvasObject\[\]\)/);
   assert.match(store, /projects: state\.projects\.map\(sanitizePersistedProject\)/);
   assert.match(store, /objects: sanitizePersistedObjects\(state\.objects\)/);
-  assert.match(store, /Persisting their data URLs/);
+  assert.match(store, /Strip every data URL from the persisted snapshot/);
 });
 test('empty canvas no longer exposes the explicit guide or empty properties panel', () => {
   assert.doesNotMatch(page, /title="キャンバスガイドを開く"/);
