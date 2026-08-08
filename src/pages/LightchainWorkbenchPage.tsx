@@ -1205,7 +1205,7 @@ export function LightchainWorkbenchPage() {
   const flowTabs =
     selectedTool.id === 'image-repair'
         ? ['手足の変形を修正', 'マスクツール']
-        : ['素材を入れる', '調整する', '保存'];
+        : ['素材を入れる', '調整する', 'Canvasへ保存'];
   const primaryUploadLabel =
     selectedTool.id === 'printing-image'
       ? '参考画像をアップロードしてください'
@@ -3103,7 +3103,7 @@ export function LightchainWorkbenchPage() {
                 <ArrowRight className="h-4 w-4 rotate-180" />
               </button>
               <button type="button" className="flex-1 rounded-xl border border-[#65d3cf] bg-[#1b2426] px-4 py-3 text-left text-sm font-semibold text-white shadow-[0_0_18px_rgba(101,211,207,0.18)]">
-                Untitled
+                無題のプロジェクト
               </button>
             </div>
             <div className="mt-5 rounded-xl border border-[#65d3cf]/50 bg-[#91f0df] px-4 py-2 text-xs font-semibold text-neutral-950">
@@ -3236,11 +3236,11 @@ export function LightchainWorkbenchPage() {
   if (selectedTool.id === 'print-design-project') {
     const printProjectCards = [
       { title: '新規ファイル', age: '', tone: 'bg-[#171c1f]', isNew: true },
-      { title: 'Untitled', age: '10日前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc,#facc15_38%,#111827_39%,#111827_72%,#f8fafc_73%)]' },
-      { title: 'Untitled', age: '1か月前 修正', tone: 'bg-[linear-gradient(135deg,#dbeafe,#f8fafc_45%,#0f172a_46%,#f472b6_78%)]' },
-      { title: 'Untitled', age: '2か月前 修正', tone: 'bg-[radial-gradient(circle_at_30%_24%,#fb7185,#111827_34%,#e5e7eb_35%,#e5e7eb_52%,#65d3cf_53%)]' },
-      { title: 'Untitled', age: '4か月前 修正', tone: 'bg-[linear-gradient(135deg,#1f2937,#1f2937_48%,#f8fafc_49%,#f8fafc_66%,#111827_67%)]' },
-      { title: 'Untitled', age: '5か月前 修正', tone: 'bg-[linear-gradient(135deg,#fef3c7,#fef3c7_42%,#0f172a_43%,#0f172a_62%,#fb7185_63%)]' },
+      { title: '無題のプロジェクト', age: '10日前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc,#facc15_38%,#111827_39%,#111827_72%,#f8fafc_73%)]' },
+      { title: '無題のプロジェクト', age: '1か月前 修正', tone: 'bg-[linear-gradient(135deg,#dbeafe,#f8fafc_45%,#0f172a_46%,#f472b6_78%)]' },
+      { title: '無題のプロジェクト', age: '2か月前 修正', tone: 'bg-[radial-gradient(circle_at_30%_24%,#fb7185,#111827_34%,#e5e7eb_35%,#e5e7eb_52%,#65d3cf_53%)]' },
+      { title: '無題のプロジェクト', age: '4か月前 修正', tone: 'bg-[linear-gradient(135deg,#1f2937,#1f2937_48%,#f8fafc_49%,#f8fafc_66%,#111827_67%)]' },
+      { title: '無題のプロジェクト', age: '5か月前 修正', tone: 'bg-[linear-gradient(135deg,#fef3c7,#fef3c7_42%,#0f172a_43%,#0f172a_62%,#fb7185_63%)]' },
     ];
     const exampleCards = [
       { title: 'ファッション用途', age: '8か月前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc,#111827_42%,#65d3cf_43%,#f8fafc_72%)]' },
@@ -3383,7 +3383,7 @@ export function LightchainWorkbenchPage() {
               <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
                 <div>
                   <h1 className="text-base font-semibold text-white">柄・グラフィック</h1>
-                  <p className="mt-1 text-xs font-semibold text-neutral-500">Untitled / {printDesignMode === 'guide' ? 'ガイドあり' : 'ガイドなし'}</p>
+                  <p className="mt-1 text-xs font-semibold text-neutral-500">無題のプロジェクト / {printDesignMode === 'guide' ? 'ガイドあり' : 'ガイドなし'}</p>
                 </div>
                 <button type="button" onClick={() => setPrintDesignDetailStarted(false)} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-300 transition hover:text-white">
                   戻る
@@ -3471,14 +3471,14 @@ export function LightchainWorkbenchPage() {
   if (selectedTool.id === 'wear-design-lab') {
     const projectCards = [
       { title: '新規ファイル', age: '', tone: 'bg-[#171c1f]', isNew: true },
-      { title: 'Untitled', age: '3ヶ月前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc_0%,#f8fafc_48%,#f9d66d_49%,#f6b74b_66%,#ffffff_67%)]' },
-      { title: 'Untitled', age: '4ヶ月前 修正', tone: 'bg-[linear-gradient(135deg,#7dd3fc,#fca5a5_42%,#facc15_43%,#111827_80%)]' },
-      { title: 'Untitled', age: '6ヶ月前 修正', tone: 'bg-[#333333]' },
-      { title: 'Untitled', age: '6ヶ月前 修正', tone: 'bg-[#333333]' },
-      { title: 'Untitled', age: '7ヶ月前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc_0%,#f8fafc_52%,#111827_53%,#111827_66%,#d1d5db_67%)]' },
-      { title: 'Untitled', age: '7ヶ月前 修正', tone: 'bg-[#333333]' },
-      { title: 'Untitled', age: '8ヶ月前 修正', tone: 'bg-[#333333]' },
-      { title: 'Untitled', age: '9ヶ月前 修正', tone: 'bg-[#333333]' },
+      { title: '無題のプロジェクト', age: '3ヶ月前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc_0%,#f8fafc_48%,#f9d66d_49%,#f6b74b_66%,#ffffff_67%)]' },
+      { title: '無題のプロジェクト', age: '4ヶ月前 修正', tone: 'bg-[linear-gradient(135deg,#7dd3fc,#fca5a5_42%,#facc15_43%,#111827_80%)]' },
+      { title: '無題のプロジェクト', age: '6ヶ月前 修正', tone: 'bg-[#333333]' },
+      { title: '無題のプロジェクト', age: '6ヶ月前 修正', tone: 'bg-[#333333]' },
+      { title: '無題のプロジェクト', age: '7ヶ月前 修正', tone: 'bg-[linear-gradient(135deg,#f8fafc_0%,#f8fafc_52%,#111827_53%,#111827_66%,#d1d5db_67%)]' },
+      { title: '無題のプロジェクト', age: '7ヶ月前 修正', tone: 'bg-[#333333]' },
+      { title: '無題のプロジェクト', age: '8ヶ月前 修正', tone: 'bg-[#333333]' },
+      { title: '無題のプロジェクト', age: '9ヶ月前 修正', tone: 'bg-[#333333]' },
     ];
     const exampleCards = [
       { title: 'デザイン要素融合', age: '5ヶ月前 修正', tone: 'bg-[linear-gradient(135deg,#dbeafe,#f8fafc_52%,#65d3cf_53%)]' },
@@ -3914,7 +3914,7 @@ export function LightchainWorkbenchPage() {
                 <div className="max-w-2xl">
                   <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-cyan-200">
                     <Sparkles className="h-4 w-4" />
-                    Light-style quick start
+                    素材作業台
                   </p>
                   <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">まず作りたいものを選んでください</h2>
                   <p className="mt-2 text-sm leading-6 text-neutral-300">
