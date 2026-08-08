@@ -65,6 +65,12 @@ type GenerateMode = 'basic' | 'gacha' | 'product-shots' | 'model-matrix' | 'mult
 type LightchainEditAction = 'remove-background' | 'colorize' | 'upscale' | 'generate-variations' | 'prompt-edit' | 'inpaint' | 'partial-edit';
 type CanvasTemplateMode = 'size' | 'design';
 type CanvasRenderState = { totalImageObjects: number; loadedImageObjects: number; renderAllObjects: boolean };
+type LocalUploadState = {
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  objectId: string | null;
+  sourceRevision: string | null;
+  error: string | null;
+};
 const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
 const MAX_MODEL_MATRIX_PATTERNS = 3;
 const DerivationTree = lazy(() =>
@@ -147,6 +153,13 @@ export function CanvasEditorPage() {
   const [selectedLanguages, setSelectedLanguages] = useState(['ja', 'en']);
   const [isGenerating, setIsGenerating] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  const [localUploadState, setLocalUploadState] = useState<LocalUploadState>({
+    status: 'idle',
+    objectId: null,
+    sourceRevision: null,
+    error: null,
+  });
+  const localUploadEventKeysRef = useRef<Set<string>>(new Set());
 
   // Reference image states for generate modal
   const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
@@ -515,7 +528,7 @@ export function CanvasEditorPage() {
 
   const handleObjectSelect = useCallback((id: string | null) => {
     if (id && containerRef.current) {
-      const obj = objects.find((o) => o.id === id);
+      const obj = useCanvasStore.getState().objects.find((o) => o.id === id);
       if (obj) {
         const { zoom, panX, panY } = useCanvasStore.getState();
         const rect = containerRef.current.getBoundingClientRect();
@@ -524,7 +537,7 @@ export function CanvasEditorPage() {
         setSelectedPosition({ x, y });
       }
     }
-  }, [objects]);
+  }, []);
 
   const handleAddText = () => {
     addObject({
@@ -584,64 +597,94 @@ export function CanvasEditorPage() {
     });
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    Array.from(files).forEach((file) => {
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new window.Image();
-          img.onload = () => {
-            void (async () => {
-              let sourceMetadata;
-              try {
-                // Hash the exact File bytes, not the data URL used only for the
-                // transient preview. No path, filename, or data URL enters
-                // persisted metadata.
-                sourceMetadata = sanitizeCanvasSourceMetadata(await buildLocalUploadSourceMetadata(file, {
-                  width: img.naturalWidth || img.width,
-                  height: img.naturalHeight || img.height,
-                })) as CanvasSourceMetadata;
-              } catch (error) {
-                console.error('Canvas local upload metadata failed:', error);
-                toast.error('画像の検証情報を作成できませんでした');
-                return;
-              }
-
-              const newId = addObject({
-                type: 'image',
-                x: 100 + Math.random() * 200,
-                y: 100 + Math.random() * 200,
-                width: Math.min(img.width, 400),
-                height: Math.min(img.height, 400),
-                rotation: 0,
-                scaleX: 1,
-                scaleY: 1,
-                opacity: 1,
-                locked: false,
-                visible: true,
-                src: event.target?.result as string,
-                metadata: {
-                  feature: 'local-upload',
-                  generation: 0,
-                  ...sourceMetadata,
-                },
-              });
-              selectObject(newId);
-              setViewMode('canvas');
-              setZoom(1);
-              setPan(0, 0);
-            })();
-          };
-          img.src = event.target?.result as string;
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-    // Allow selecting the same file again after a failed or completed attempt.
+  const handleFileUpload = (e: React.FormEvent<HTMLInputElement>) => {
+    const files = Array.from(e.currentTarget.files ?? []).filter((file) => file.type.startsWith('image/'));
+    // Reset synchronously so choosing the same file emits a new change event.
     e.currentTarget.value = '';
+    if (files.length === 0) return;
+
+    // Browsers may deliver both input and change for one file selection. The
+    // capture bridge below intentionally handles either event, so coalesce
+    // that pair without preventing a later selection of the same file.
+    const eventKey = files.map((file) => `${file.name}:${file.size}:${file.lastModified}:${file.type}`).join('|');
+    if (localUploadEventKeysRef.current.has(eventKey)) return;
+    localUploadEventKeysRef.current.add(eventKey);
+    window.setTimeout(() => localUploadEventKeysRef.current.delete(eventKey), 0);
+
+    setLocalUploadState({ status: 'loading', objectId: null, sourceRevision: null, error: null });
+
+    const failUpload = (message: string) => {
+      setLocalUploadState({ status: 'error', objectId: null, sourceRevision: null, error: message });
+      toast.error(message);
+    };
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onerror = () => failUpload('画像の読み込みに失敗しました');
+      reader.onload = (event) => {
+        const source = event.target?.result;
+        if (typeof source !== 'string' || !source.startsWith('data:image/')) {
+          failUpload('画像データを読み取れませんでした');
+          return;
+        }
+        const img = new window.Image();
+        img.onerror = () => failUpload('画像の表示に失敗しました');
+        img.onload = () => {
+          void (async () => {
+            let sourceMetadata: CanvasSourceMetadata;
+            try {
+              // Hash the exact File bytes, not the data URL used only for the
+              // transient preview. No path, filename, or data URL enters
+              // persisted metadata.
+              sourceMetadata = sanitizeCanvasSourceMetadata(await buildLocalUploadSourceMetadata(file, {
+                width: img.naturalWidth || img.width,
+                height: img.naturalHeight || img.height,
+              })) as CanvasSourceMetadata;
+            } catch (error) {
+              console.error('Canvas local upload metadata failed:', error);
+              failUpload('画像の検証情報を作成できませんでした');
+              return;
+            }
+
+            const newId = addObject({
+              type: 'image',
+              x: 100 + Math.random() * 200,
+              y: 100 + Math.random() * 200,
+              width: Math.min(img.width, 400),
+              height: Math.min(img.height, 400),
+              rotation: 0,
+              scaleX: 1,
+              scaleY: 1,
+              opacity: 1,
+              locked: false,
+              visible: true,
+              src: source,
+              metadata: {
+                feature: 'local-upload',
+                generation: 0,
+                ...sourceMetadata,
+              },
+            });
+            selectObject(newId);
+            // Programmatic selection must take the same action/toolbar path as
+            // a canvas click, otherwise the selected object's controls start at
+            // the stale pre-upload position.
+            handleObjectSelect(newId);
+            setLocalUploadState({
+              status: 'ready',
+              objectId: newId,
+              sourceRevision: sourceMetadata.sourceRevision.revision,
+              error: null,
+            });
+            setViewMode('canvas');
+            setZoom(1);
+            setPan(0, 0);
+          })();
+        };
+        img.src = source;
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const loadCanvasImage = useCallback(async (imageUrl: string) => {
@@ -2348,7 +2391,8 @@ export function CanvasEditorPage() {
             id="file-upload"
             accept="image/*"
             multiple
-            onChange={handleFileUpload}
+            onInputCapture={handleFileUpload}
+            onChangeCapture={handleFileUpload}
             className="hidden"
           />
           <label
@@ -2436,6 +2480,14 @@ export function CanvasEditorPage() {
               data-derived-result-count={canvasGenerationState.derivedResultCount}
               data-partial-edit-result-count={canvasGenerationState.partialEditResultCount}
               data-max-generation={canvasGenerationState.maxGeneration}
+              className="sr-only"
+            />
+            <div
+              data-testid="canvas-local-upload-readback"
+              data-status={localUploadState.status}
+              data-object-id={localUploadState.objectId ?? ''}
+              data-source-revision={localUploadState.sourceRevision ?? ''}
+              data-error={localUploadState.error ?? ''}
               className="sr-only"
             />
             {/* 背景パターン - position:fixedで固定し、サイドパネル開閉時に動かない */}

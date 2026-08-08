@@ -120,6 +120,11 @@ import {
 } from '../features/printing/selection/placementEditSession';
 
 type WorkbenchMode = 'fabric' | 'printing';
+type PrintCoverageMode = 'spot' | 'full';
+const PRINT_COVERAGE_OPTIONS: Array<{ value: PrintCoverageMode; label: string }> = [
+  { value: 'spot', label: 'スポット' },
+  { value: 'full', label: '全体' },
+];
 type CutoutState = 'idle' | 'processing' | 'done' | 'error';
 type Transform = {
   x: number;
@@ -635,7 +640,7 @@ export function LightchainMaterialWorkbenchPage() {
   const { currentBrand, isInitialized: isAuthInitialized, isLoading: isAuthLoading } = useAuthStore();
   const mode: WorkbenchMode = location.pathname.includes('printing') ? 'printing' : 'fabric';
   const isPrinting = mode === 'printing';
-  const [printCoverageMode, setPrintCoverageMode] = useState<'スポット' | '全体'>('スポット');
+  const [printCoverageMode, setPrintCoverageMode] = useState<PrintCoverageMode>('spot');
   const [printOutputScale, setPrintOutputScale] = useState<1 | 2>(1);
   const printOutputStageSize = useMemo(() => ({
     width: printPreviewStageSize.width * printOutputScale,
@@ -1521,7 +1526,7 @@ export function LightchainMaterialWorkbenchPage() {
           revision: nextRevision,
           brandId: currentBrand.id,
           brandName: currentBrand.name || 'brand',
-          coverageMode: printCoverageMode === '全体' ? 'full' : 'spot',
+          coverageMode: printCoverageMode,
           garmentUrl: printGarmentProcessed!,
           garmentReferenceType: printGarment?.referenceType ?? null,
           garmentMaskCandidateId: selectedPrintGarmentMaskCandidateId,
@@ -1624,7 +1629,7 @@ export function LightchainMaterialWorkbenchPage() {
         resultKind: 'exact',
         generatedAt,
         title: '配置そのまま',
-        note: `${printCoverageMode}範囲 / AI再描画なし / 元デザインの色・形・透明度を保持`,
+        note: `${PRINT_COVERAGE_OPTIONS.find((option) => option.value === printCoverageMode)?.label ?? 'スポット'}範囲 / AI再描画なし / 元デザインの色・形・透明度を保持`,
         imageUrl: exactComposition.imageUrl,
         outputSize: { ...printOutputStageSize },
       };
@@ -1665,7 +1670,7 @@ export function LightchainMaterialWorkbenchPage() {
         resultKind: 'fabric',
         generatedAt,
         title: '布になじませる',
-        note: `${printCoverageMode}範囲 / 輪郭と透明度は固定 / Tシャツの明暗だけをデザインのRGBへ反映`,
+        note: `${PRINT_COVERAGE_OPTIONS.find((option) => option.value === printCoverageMode)?.label ?? 'スポット'}範囲 / 輪郭と透明度は固定 / Tシャツの明暗だけをデザインのRGBへ反映`,
         imageUrl: fabricComposition.imageUrl,
         outputSize: { ...printOutputStageSize },
       };
@@ -1679,8 +1684,8 @@ export function LightchainMaterialWorkbenchPage() {
       setGenerationError(null);
       toast.success('2種類のプリント結果を作成しました');
 
-      if (printCoverageMode === '全体' || !printableSurfaceEnabled || !manualPrintableSurface) {
-        setSurfaceConformStatus(printCoverageMode === '全体'
+      if (printCoverageMode === 'full' || !printableSurfaceEnabled || !manualPrintableSurface) {
+        setSurfaceConformStatus(printCoverageMode === 'full'
           ? '全体範囲ではスポット専用の布面追従（試験）を省略しました。'
           : '手動の印刷可能面を有効にすると「布面追従（試験）」を追加できます。');
         return;
@@ -2957,19 +2962,27 @@ export function LightchainMaterialWorkbenchPage() {
           )}
 
           {isPrinting && (
-            <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/70">
+            <div
+              data-testid="print-coverage-controls"
+              data-ready={printingReadinessCompleteCount === printingReadinessSteps.length ? 'true' : 'false'}
+              data-selected-coverage={printCoverageMode}
+              className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/70"
+            >
               <div>
                 <span className="mb-2 block font-semibold text-white">プリント範囲</span>
                 <div className="grid grid-cols-2 gap-1 rounded-lg bg-neutral-900 p-1" role="group" aria-label="プリント範囲">
-                  {(['スポット', '全体'] as const).map((coverage) => (
+                  {PRINT_COVERAGE_OPTIONS.map((coverage) => (
                     <button
-                      key={coverage}
+                      key={coverage.value}
                       type="button"
-                      aria-pressed={printCoverageMode === coverage}
-                      onClick={() => setPrintCoverageMode(coverage)}
-                      className={`rounded-md px-3 py-2 text-sm font-semibold transition ${printCoverageMode === coverage ? 'bg-[#737d84] text-white' : 'text-neutral-400 hover:text-white'}`}
+                      data-testid={`print-coverage-${coverage.value}`}
+                      data-selected={printCoverageMode === coverage.value ? 'true' : 'false'}
+                      aria-label={`プリント範囲: ${coverage.label}`}
+                      aria-pressed={printCoverageMode === coverage.value}
+                      onClick={() => setPrintCoverageMode(coverage.value)}
+                      className={`rounded-md px-3 py-2 text-sm font-semibold transition ${printCoverageMode === coverage.value ? 'bg-[#737d84] text-white' : 'text-neutral-400 hover:text-white'}`}
                     >
-                      {coverage}
+                      {coverage.label}
                     </button>
                   ))}
                 </div>

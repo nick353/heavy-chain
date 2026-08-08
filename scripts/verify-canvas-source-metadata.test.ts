@@ -99,7 +99,9 @@ test('Canvas upload persists source metadata and exposes sanitized readback', as
   assert.match(page, /sanitizeCanvasSourceMetadata\(await buildLocalUploadSourceMetadata/);
   assert.match(page, /\.\.\.sourceMetadata/);
   assert.match(page, /from '\.\.\/lib\/legalSafetyGuard'/);
-  assert.match(page, /src: event\.target\?\.result as string/);
+  assert.match(page, /const source = event\.target\?\.result;/);
+  assert.match(page, /typeof source !== 'string' \|\| !source\.startsWith\('data:image\/'\)/);
+  assert.match(page, /src: source,/);
   assert.match(properties, /data-testid="canvas-source-readback"/);
   assert.match(properties, /権利・所有の証明ではありません/);
 });

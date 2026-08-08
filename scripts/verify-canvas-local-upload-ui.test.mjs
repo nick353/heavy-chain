@@ -22,6 +22,17 @@ test('local upload selects the new image and restores the visible canvas viewpor
   assert.match(upload, /setZoom\(1\)/);
   assert.match(upload, /setPan\(0, 0\)/);
   assert.match(upload, /e\.currentTarget\.value = ''/);
+  assert.match(upload, /setLocalUploadState\(\{ status: 'loading'/);
+  assert.match(upload, /setLocalUploadState\(\{\s*status: 'ready'/);
+  assert.match(upload, /handleObjectSelect\(newId\)/);
+  assert.match(page, /onInputCapture=\{handleFileUpload\}/);
+  assert.match(page, /onChangeCapture=\{handleFileUpload\}/);
+  assert.match(upload, /localUploadEventKeysRef\.current\.has\(eventKey\)/);
+  assert.match(upload, /const source = event\.target\?\.result;/);
+  assert.match(upload, /src: source,/);
+  assert.match(page, /data-testid="canvas-local-upload-readback"/);
+  assert.match(page, /data-status=\{localUploadState\.status\}/);
+  assert.match(page, /data-source-revision=\{localUploadState\.sourceRevision \?\? ''\}/);
 });
 test('empty canvas no longer exposes the explicit guide or empty properties panel', () => {
   assert.doesNotMatch(page, /title="キャンバスガイドを開く"/);

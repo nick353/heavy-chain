@@ -248,6 +248,24 @@ test('printing exposes one ordered readiness funnel before generation', () => {
   assert.ok(details < readiness && readiness < generate, 'readiness must appear before the pinned generate action');
 });
 
+test('printing keeps accessible coverage controls available at 5/5 readiness and preserves the payload mode', () => {
+  assert.match(page, /type PrintCoverageMode = 'spot' \| 'full'/);
+  assert.match(page, /const \[printCoverageMode, setPrintCoverageMode\] = useState<PrintCoverageMode>\('spot'\)/);
+  assert.match(page, /data-testid="print-coverage-controls"/);
+  assert.match(page, /data-ready=\{printingReadinessCompleteCount === printingReadinessSteps\.length \? 'true' : 'false'\}/);
+  assert.match(page, /data-testid=\{isPrinting \? 'printing-control-rail' : undefined\}/);
+  assert.match(page, /data-testid=\{isPrinting \? 'printing-control-rail-details' : undefined\}/);
+  assert.match(page, /data-selected-coverage=\{printCoverageMode\}/);
+  assert.match(page, /data-testid=\{`print-coverage-\$\{coverage\.value\}`\}/);
+  assert.match(page, /data-selected=\{printCoverageMode === coverage\.value \? 'true' : 'false'\}/);
+  assert.match(page, /aria-label=\{`プリント範囲: \$\{coverage\.label\}`\}/);
+  assert.match(page, /aria-pressed=\{printCoverageMode === coverage\.value\}/);
+  assert.match(page, /coverageMode: printCoverageMode/);
+  assert.match(page, /\{ value: 'spot', label: 'スポット' \}/);
+  assert.match(page, /\{ value: 'full', label: '全体' \}/);
+  assert.match(page, /printCoverageMode === 'full'/);
+});
+
 test('a delayed design return cannot erase an already-open placement baseline', () => {
   const openStart = page.indexOf('const openPrintPlacementSession');
   const editStart = page.indexOf('const beginPrintPlacementSessionEdit');
