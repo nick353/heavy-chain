@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { buildLocalCanvasAssetReference, hasLocalCanvasAsset } from '../lib/canvasLocalAssets';
 import type {
   CanvasSourceIdentity,
   CanvasSourceReadback,
@@ -192,7 +193,10 @@ const sanitizePersistedObject = (obj: CanvasObject): CanvasObject => {
       || obj.metadata?.feature === 'local-upload'
       || obj.metadata?.sourceIdentity?.kind === 'local-upload'
     ) {
-      candidate = { ...obj, src: '' };
+      const revision = obj.metadata?.sourceRevision?.revision || obj.metadata?.sourceIdentity?.hash;
+      candidate = revision && hasLocalCanvasAsset(revision)
+        ? { ...obj, src: buildLocalCanvasAssetReference(revision) }
+        : { ...obj, src: '' };
     }
   }
 
@@ -577,7 +581,7 @@ export const useCanvasStore = create<CanvasState>()(
     }),
     {
       name: 'heavy-chain-canvas',
-      version: 1,
+      version: 2,
       migrate: (persistedState: any) => {
         const state = persistedState?.state ?? persistedState;
         if (!state || typeof state !== 'object') {

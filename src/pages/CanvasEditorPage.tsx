@@ -36,6 +36,7 @@ import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { supabase } from '../lib/supabase';
 import { resolveGeneratedImageUrl } from '../lib/storage';
+import { putLocalCanvasAsset, resolveLocalCanvasAsset } from '../lib/canvasLocalAssets';
 import { editImageWithPrompt, edgeFunctionErrorMessage } from '../lib/imageApi';
 import {
   buildCanvasImageEditBatchProof,
@@ -67,6 +68,7 @@ type CanvasTemplateMode = 'size' | 'design';
 type CanvasRenderState = { totalImageObjects: number; loadedImageObjects: number; renderAllObjects: boolean };
 type LocalUploadState = {
   status: 'idle' | 'loading' | 'ready' | 'error';
+  persistenceStatus: 'persistent' | 'session-only' | 'unknown';
   objectId: string | null;
   sourceRevision: string | null;
   error: string | null;
@@ -228,6 +230,7 @@ export function CanvasEditorPage() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isExportRenderingAll, setIsExportRenderingAll] = useState(false);
   const preloadedGalleryImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const localAssetReleasesRef = useRef<Map<string, () => void>>(new Map());
 
   // Generate modal states
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -244,6 +247,7 @@ export function CanvasEditorPage() {
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [localUploadState, setLocalUploadState] = useState<LocalUploadState>({
     status: 'idle',
+    persistenceStatus: 'unknown',
     objectId: null,
     sourceRevision: null,
     error: null,
@@ -295,6 +299,8 @@ export function CanvasEditorPage() {
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+      localAssetReleasesRef.current.forEach((release) => release());
+      localAssetReleasesRef.current.clear();
     };
   }, []);
 
@@ -465,6 +471,12 @@ export function CanvasEditorPage() {
 
     for (const source of candidates) {
       try {
+        const localResolution = await resolveLocalCanvasAsset(source);
+        if (localResolution) {
+          localAssetReleasesRef.current.get(source)?.();
+          localAssetReleasesRef.current.set(source, localResolution.release);
+          return localResolution.source;
+        }
         return await resolveGeneratedImageUrl(source);
       } catch (error) {
         lastError = error;
@@ -699,10 +711,10 @@ export function CanvasEditorPage() {
     localUploadEventKeysRef.current.add(eventKey);
     window.setTimeout(() => localUploadEventKeysRef.current.delete(eventKey), 0);
 
-    setLocalUploadState({ status: 'loading', objectId: null, sourceRevision: null, error: null, errorCode: null });
+    setLocalUploadState({ status: 'loading', persistenceStatus: 'unknown', objectId: null, sourceRevision: null, error: null, errorCode: null });
 
     const failUpload = (message: string, errorCode: string) => {
-      setLocalUploadState({ status: 'error', objectId: null, sourceRevision: null, error: message, errorCode });
+      setLocalUploadState({ status: 'error', persistenceStatus: 'unknown', objectId: null, sourceRevision: null, error: message, errorCode });
       toast.error(message);
     };
 
@@ -725,6 +737,17 @@ export function CanvasEditorPage() {
             },
           )) as CanvasSourceMetadata;
 
+          let persistenceStatus: LocalUploadState['persistenceStatus'] = 'persistent';
+          try {
+            await putLocalCanvasAsset(
+              sourceMetadata.sourceRevision.revision,
+              new Blob([bytes], { type: file.type }),
+            );
+          } catch (persistenceError) {
+            persistenceStatus = 'session-only';
+            console.warn('Canvas local upload persistence unavailable; keeping this upload session-scoped', persistenceError);
+          }
+
           const newId = addObject({
             type: 'image',
             x: 100 + Math.random() * 200,
@@ -741,6 +764,7 @@ export function CanvasEditorPage() {
             metadata: {
               feature: 'local-upload',
               generation: 0,
+              persistenceStatus,
               ...sourceMetadata,
             },
           });
@@ -751,11 +775,15 @@ export function CanvasEditorPage() {
           handleObjectSelect(newId);
           setLocalUploadState({
             status: 'ready',
+            persistenceStatus,
             objectId: newId,
             sourceRevision: sourceMetadata.sourceRevision.revision,
             error: null,
             errorCode: null,
           });
+          if (persistenceStatus === 'session-only') {
+            toast.error('このブラウザでは画像をリロード後に復元できません。現在のタブ内で続けてください');
+          }
           setViewMode('canvas');
           setZoom(1);
           setPan(0, 0);
@@ -802,7 +830,8 @@ export function CanvasEditorPage() {
       return Promise.reject(new Error('画像URLが空です'));
     }
 
-    const resolvedSource = await resolveGeneratedImageUrl(source);
+    const localResolution = await resolveLocalCanvasAsset(source);
+    const resolvedSource = localResolution?.source || await resolveGeneratedImageUrl(source);
     const loadDirect = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new window.Image();
       img.crossOrigin = 'anonymous';
@@ -863,7 +892,11 @@ export function CanvasEditorPage() {
     };
 
     if (!/^https?:/i.test(resolvedSource)) {
-      return loadDirect(resolvedSource);
+      try {
+        return await loadDirect(resolvedSource);
+      } finally {
+        localResolution?.release();
+      }
     }
 
     return loadDirect(resolvedSource).catch((error) => {
@@ -872,7 +905,7 @@ export function CanvasEditorPage() {
     }).catch((error) => {
       console.error('Canvas image load final failure', { source, resolvedSource, error: String(error) });
       throw error;
-    });
+    }).finally(() => localResolution?.release());
   }, []);
 
   const addImageToCanvas = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string, preloadedImage?: HTMLImageElement | null) => {
@@ -2594,6 +2627,7 @@ export function CanvasEditorPage() {
             <div
               data-testid="canvas-local-upload-readback"
               data-status={localUploadState.status}
+              data-persistence-status={localUploadState.persistenceStatus}
               data-object-id={localUploadState.objectId ?? ''}
               data-source-revision={localUploadState.sourceRevision ?? ''}
               data-error={localUploadState.error ?? ''}

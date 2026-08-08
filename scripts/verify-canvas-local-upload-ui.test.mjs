@@ -32,6 +32,7 @@ test('local upload selects the new image and restores the visible canvas viewpor
   assert.match(page, /Promise\.any\(\[fromArrayBuffer, fromFileReader\]\)/);
   assert.match(page, /LOCAL_UPLOAD_READ_TIMEOUT_MS/);
   assert.match(upload, /new Blob\(\[bytes\], \{ type: file\.type \}\)/);
+  assert.match(upload, /putLocalCanvasAsset\(/);
   assert.match(upload, /画像の読み込みに失敗しました。もう一度お試しください/);
   assert.match(page, /canvas_upload_image_timeout/);
   assert.match(page, /onInputCapture=\{handleFileUpload\}/);
@@ -46,11 +47,13 @@ test('local upload selects the new image and restores the visible canvas viewpor
   assert.match(page, /data-testid="canvas-local-upload-readback"/);
   assert.match(page, /data-status=\{localUploadState\.status\}/);
   assert.match(page, /data-source-revision=\{localUploadState\.sourceRevision \?\? ''\}/);
+  assert.match(page, /data-persistence-status=\{localUploadState\.persistenceStatus\}/);
   assert.match(page, /data-error-code=\{localUploadState\.errorCode \?\? ''\}/);
 });
 test('local upload data URLs stay in the active canvas session without filling localStorage', () => {
   assert.match(store, /obj\.metadata\?\.feature === 'local-upload'/);
   assert.match(store, /obj\.metadata\?\.sourceIdentity\?\.kind === 'local-upload'/);
+  assert.match(store, /buildLocalCanvasAssetReference\(revision\)/);
   assert.match(store, /const stripPersistedDataUrls = \(value: unknown\)/);
   assert.match(store, /value\.startsWith\('data:'\) \? '' : value/);
   assert.match(store, /const sanitizePersistedObjects = \(objects: CanvasObject\[\]\)/);

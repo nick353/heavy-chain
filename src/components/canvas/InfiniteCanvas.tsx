@@ -3,6 +3,7 @@ import { Stage, Layer, Rect, Image as KonvaImage, Text, Transformer, Line, Circl
 import type Konva from 'konva';
 import { useCanvasStore, type CanvasObject } from '../../stores/canvasStore';
 import { resolveGeneratedImageUrl } from '../../lib/storage';
+import { resolveLocalCanvasAsset } from '../../lib/canvasLocalAssets';
 import { ContextMenu } from './ContextMenu';
 
 interface InfiniteCanvasProps {
@@ -114,8 +115,10 @@ export function InfiniteCanvas({
       if (pendingImageFlushRef.current !== null) return;
       pendingImageFlushRef.current = window.requestAnimationFrame(flushLoadedImages);
     };
-    const loadImage = (source: string) =>
-      resolveGeneratedImageUrl(source).then((resolvedSource) => {
+    const loadImage = async (source: string) => {
+      const localResolution = await resolveLocalCanvasAsset(source);
+      const resolvedSource = localResolution?.source || await resolveGeneratedImageUrl(source);
+      try {
         const loadDirect = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
           const img = new window.Image();
           img.crossOrigin = 'anonymous';
@@ -165,11 +168,14 @@ export function InfiniteCanvas({
         };
 
         if (!/^https?:/i.test(resolvedSource)) {
-          return loadDirect(resolvedSource);
+          return await loadDirect(resolvedSource);
         }
 
-        return loadDirect(resolvedSource).catch(() => loadViaBlob());
-      });
+        return await loadDirect(resolvedSource).catch(() => loadViaBlob());
+      } finally {
+        localResolution?.release();
+      }
+    };
 
     renderedObjects.forEach((obj) => {
       if (
