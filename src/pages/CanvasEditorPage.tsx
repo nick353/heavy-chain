@@ -16,7 +16,6 @@ import {
   Layout,
   Globe,
   Grid3x3,
-  CircleHelp,
   Palette,
   Maximize2,
   CopyPlus
@@ -54,6 +53,11 @@ import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import type Konva from 'konva';
 import { buildCanvasGenerationState } from '../features/canvasGenerationState';
+import {
+  buildLocalUploadSourceMetadata,
+  sanitizeCanvasSourceMetadata,
+  type CanvasSourceMetadata,
+} from '../features/canvasSourceMetadata';
 
 type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
@@ -116,16 +120,11 @@ export function CanvasEditorPage() {
   const lastMobileFitKeyRef = useRef<string | null>(null);
   const pendingMobileGalleryFocusRef = useRef<string | null>(null);
   const { currentBrand, user, profile } = useAuthStore();
-  const { showGuide, completeGuide, resetGuide } = useCanvasGuide(user?.id);
+  const { showGuide, completeGuide } = useCanvasGuide(user?.id);
 
   const [viewMode, setViewMode] = useState<ViewMode>('canvas');
-  // Start with no side panel on mobile, properties on desktop
-  const [sidePanel, setSidePanel] = useState<SidePanel>(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      return null;
-    }
-    return 'properties';
-  });
+  // Keep the canvas unobstructed until an object is selected or a tool is opened.
+  const [sidePanel, setSidePanel] = useState<SidePanel>(null);
   const [templateMode, setTemplateMode] = useState<CanvasTemplateMode>('size');
   const [selectedSizeTemplateId, setSelectedSizeTemplateId] = useState<string | undefined>();
   const [selectedDesignTemplateId, setSelectedDesignTemplateId] = useState<string | undefined>();
@@ -260,6 +259,12 @@ export function CanvasEditorPage() {
   const selectedObject = selectedIds.length === 1
     ? objects.find((obj) => obj.id === selectedIds[0]) || null
     : null;
+
+  useEffect(() => {
+    if (!selectedObject && sidePanel === 'properties') {
+      setSidePanel(null);
+    }
+  }, [selectedObject, sidePanel]);
 
   useEffect(() => {
     const partialEditObjects = objects.filter((object) => (
@@ -589,26 +594,54 @@ export function CanvasEditorPage() {
         reader.onload = (event) => {
           const img = new window.Image();
           img.onload = () => {
-            addObject({
-              type: 'image',
-              x: 100 + Math.random() * 200,
-              y: 100 + Math.random() * 200,
-              width: Math.min(img.width, 400),
-              height: Math.min(img.height, 400),
-              rotation: 0,
-              scaleX: 1,
-              scaleY: 1,
-              opacity: 1,
-              locked: false,
-              visible: true,
-              src: event.target?.result as string,
-            });
+            void (async () => {
+              let sourceMetadata;
+              try {
+                // Hash the exact File bytes, not the data URL used only for the
+                // transient preview. No path, filename, or data URL enters
+                // persisted metadata.
+                sourceMetadata = sanitizeCanvasSourceMetadata(await buildLocalUploadSourceMetadata(file, {
+                  width: img.naturalWidth || img.width,
+                  height: img.naturalHeight || img.height,
+                })) as CanvasSourceMetadata;
+              } catch (error) {
+                console.error('Canvas local upload metadata failed:', error);
+                toast.error('画像の検証情報を作成できませんでした');
+                return;
+              }
+
+              const newId = addObject({
+                type: 'image',
+                x: 100 + Math.random() * 200,
+                y: 100 + Math.random() * 200,
+                width: Math.min(img.width, 400),
+                height: Math.min(img.height, 400),
+                rotation: 0,
+                scaleX: 1,
+                scaleY: 1,
+                opacity: 1,
+                locked: false,
+                visible: true,
+                src: event.target?.result as string,
+                metadata: {
+                  feature: 'local-upload',
+                  generation: 0,
+                  ...sourceMetadata,
+                },
+              });
+              selectObject(newId);
+              setViewMode('canvas');
+              setZoom(1);
+              setPan(0, 0);
+            })();
           };
           img.src = event.target?.result as string;
         };
         reader.readAsDataURL(file);
       }
     });
+    // Allow selecting the same file again after a failed or completed attempt.
+    e.currentTarget.value = '';
   };
 
   const loadCanvasImage = useCallback(async (imageUrl: string) => {
@@ -621,6 +654,7 @@ export function CanvasEditorPage() {
     const resolvedSource = await resolveGeneratedImageUrl(source);
     const loadDirect = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new window.Image();
+      img.crossOrigin = 'anonymous';
       console.debug('Canvas image direct load start', { source, resolvedSource: src });
       let settled = false;
       const timeoutId = window.setTimeout(() => {
@@ -2269,17 +2303,6 @@ export function CanvasEditorPage() {
 
           <div className="hidden sm:block w-px h-6 bg-white/10 mx-1 sm:mx-2" />
 
-          <Button
-            variant="secondary"
-            size="sm"
-            className="shadow-sm text-xs sm:text-sm px-2 sm:px-3"
-            onClick={resetGuide}
-            title="キャンバスガイドを開く"
-          >
-            <CircleHelp className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1.5" />
-            <span className="hidden lg:inline">ガイド</span>
-          </Button>
-
           {/* Active user avatar - shows current logged in user */}
           <div className="hidden md:flex -space-x-2 items-center">
             <div
@@ -2371,17 +2394,19 @@ export function CanvasEditorPage() {
             <Layout className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
-          <button
-            onClick={() => setSidePanel(sidePanel === 'properties' ? null : 'properties')}
-            className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
-              sidePanel === 'properties'
-                ? 'bg-cyan-300/15 text-cyan-200'
-                : 'hover:bg-white/[0.08] text-neutral-300'
-            }`}
-            title="プロパティ"
-          >
-            <Settings2 className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
+          {selectedObject && (
+            <button
+              onClick={() => setSidePanel(sidePanel === 'properties' ? null : 'properties')}
+              className={`p-2 sm:p-3 rounded-lg sm:rounded-xl transition-colors ${
+                sidePanel === 'properties'
+                  ? 'bg-cyan-300/15 text-cyan-200'
+                  : 'hover:bg-white/[0.08] text-neutral-300'
+              }`}
+              title="プロパティ"
+            >
+              <Settings2 className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          )}
         </aside>
 
         {/* Canvas area */}
@@ -2459,18 +2484,18 @@ export function CanvasEditorPage() {
                   })}
                 </div>
                 <p className="mt-2 px-1 text-xs text-neutral-500">画像を選択すると、背景削除・色変更・派生などを直接かけられます。</p>
-                <label className="mt-3 flex items-start gap-3 rounded-xl border border-cyan-300/30 bg-cyan-300/[0.08] p-3 text-xs text-cyan-100">
+                <label className="mt-2 flex min-w-0 items-center gap-2 rounded-lg border border-cyan-300/25 bg-cyan-300/[0.06] px-2.5 py-2 text-xs text-cyan-100">
                   <input
                     type="checkbox"
                     checked={rightsConfirmed}
                     onChange={(event) => setRightsConfirmed(event.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-cyan-300 text-cyan-300 focus:ring-cyan-300"
+                    className="h-4 w-4 shrink-0 rounded border-cyan-300 text-cyan-300 focus:ring-cyan-300"
                     disabled={isGenerating}
                   />
-                  <span>
-                    <span className="block font-semibold">{UPLOAD_RIGHTS_CONFIRMATION_LABEL}</span>
-                    <span className="mt-1 block leading-5">{GENERATION_LEGAL_COPY}</span>
+                  <span className="min-w-0 truncate font-semibold" title={UPLOAD_RIGHTS_CONFIRMATION_LABEL}>
+                    {UPLOAD_RIGHTS_CONFIRMATION_LABEL}
                   </span>
+                  <span className="ml-auto shrink-0 text-[10px] text-cyan-200/70">生成時にも確認</span>
                 </label>
               </div>
             )}

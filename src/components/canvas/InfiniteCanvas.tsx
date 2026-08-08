@@ -118,6 +118,7 @@ export function InfiniteCanvas({
       resolveGeneratedImageUrl(source).then((resolvedSource) => {
         const loadDirect = (src: string) => new Promise<HTMLImageElement>((resolve, reject) => {
           const img = new window.Image();
+          img.crossOrigin = 'anonymous';
           let settled = false;
           const timeoutId = window.setTimeout(() => {
             if (settled) return;

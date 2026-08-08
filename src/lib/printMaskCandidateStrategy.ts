@@ -699,6 +699,7 @@ export const selectPrintGarmentMaskCandidateValue = <T extends { candidateId: Pr
 export type PrintRequestSignatureValueInput = {
   brandId: string;
   brandName: string;
+  coverageMode?: 'spot' | 'full';
   stageSize: { width: number; height: number };
   garment: {
     sourceUrl: string;
@@ -733,6 +734,7 @@ export type PrintRequestSignatureValueInput = {
 export const buildPrintRequestSignatureValue = (input: PrintRequestSignatureValueInput) => JSON.stringify({
   brandId: input.brandId,
   brandName: input.brandName,
+  ...(input.coverageMode ? { coverageMode: input.coverageMode } : {}),
   stageSize: input.stageSize,
   garment: {
     sourceUrl: input.garment.sourceUrl,

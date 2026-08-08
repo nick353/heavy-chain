@@ -24,6 +24,7 @@ import {
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import { withSignedImageUrls } from '../lib/storage';
+import { clearCanonicalRemoteImageUrls } from '../lib/storagePathSafety';
 import {
   deleteWorkspaceArtifact,
   deleteWorkspaceArtifactsPersisted,
@@ -192,6 +193,18 @@ export function GalleryPage() {
     try {
       const localImages = listWorkspaceGeneratedImages(brandId)
         .filter((image) => filter !== 'favorites' || image.is_favorite);
+      const resolveLocalImages = async (candidates: GeneratedImage[]) => {
+        try {
+          return await withTimeout(
+            withSignedImageUrls(candidates),
+            GALLERY_REMOTE_TIMEOUT_MS,
+            'gallery_local_signed_urls_timeout',
+          );
+        } catch {
+          return clearCanonicalRemoteImageUrls(candidates);
+        }
+      };
+      const signedLocalImages = await resolveLocalImages(localImages);
       let query = supabase
         .from('generated_images')
         .select('*')
@@ -226,11 +239,11 @@ export function GalleryPage() {
           );
         } catch {
           if (!isCurrentRequest()) return;
-          remoteImages = remoteRows;
+          remoteImages = clearCanonicalRemoteImageUrls(remoteRows);
         }
       }
 
-      const mergedImages = [...remoteImages, ...localImages]
+      const mergedImages = [...remoteImages, ...signedLocalImages]
         .sort((a, b) => {
           if (sortBy === 'oldest') {
             return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -242,8 +255,19 @@ export function GalleryPage() {
     } catch {
       const localImages = listWorkspaceGeneratedImages(brandId)
         .filter((image) => filter !== 'favorites' || image.is_favorite);
+      let signedLocalImages = localImages;
+      try {
+        signedLocalImages = await withTimeout(
+          withSignedImageUrls(localImages),
+          GALLERY_REMOTE_TIMEOUT_MS,
+          'gallery_local_signed_urls_fallback_timeout',
+        );
+      } catch {
+        // Keep legacy URL-only local entries readable if re-signing is unavailable.
+        signedLocalImages = clearCanonicalRemoteImageUrls(localImages);
+      }
       if (!isCurrentRequest()) return;
-      setImages(localImages);
+      setImages(signedLocalImages);
     } finally {
       if (isCurrentRequest()) {
         setIsLoading(false);

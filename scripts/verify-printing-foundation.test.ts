@@ -95,6 +95,10 @@ test('surface identity changes signature while omitted identity preserves legacy
   };
   const legacy = buildPrintRequestSignatureValue(base);
   assert.equal(legacy, '{"brandId":"brand","brandName":"Brand","stageSize":{"width":720,"height":900},"garment":{"sourceUrl":"garment","referenceType":"base","maskCandidateId":"auto","maskRevision":0},"designs":[]}');
+  const spot = buildPrintRequestSignatureValue({ ...base, coverageMode: 'spot' });
+  const full = buildPrintRequestSignatureValue({ ...base, coverageMode: 'full' });
+  assert.notEqual(spot, legacy);
+  assert.notEqual(full, spot);
   const first = buildPrintRequestSignatureValue({
     ...base,
     surfaceIdentity: { version: 'garment-surface-map-v1', sourceHash: 'sha256:a', contentHash: 'sha256:b', manualRevision: 0, status: 'semantic-ready' },

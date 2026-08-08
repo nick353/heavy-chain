@@ -3,10 +3,10 @@ export const PRINTING_APPROVAL_SCHEMA_VERSION = 'printing-approval-v1' as const;
 export const PRINTING_SCORE_AXES = [
   'garmentEdge',
   'printableSurface',
-  'warp',
-  'foldIntegration',
   'seamOcclusion',
   'designFidelity',
+  'warp',
+  'foldIntegration',
   'materialPlausibility',
   'commercialRealism',
 ] as const;

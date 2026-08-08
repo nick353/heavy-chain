@@ -813,6 +813,10 @@ async function bodyText(page) {
 async function waitForSettledRoute(page, toolId) {
   await page.waitForFunction((currentToolId) => {
     const text = document.body.innerText.trim();
+    // React.lazy renders a route-specific loading shell before the feature
+    // component resolves. A non-empty body is not enough to call the route
+    // ready; otherwise the interaction assertions race the real screen.
+    if (text.includes('制作入口を準備しています') || text.includes('ワークスペースを準備しています')) return false;
     if (currentToolId === 'fashion-studio' && text.includes('ファッションスタジオ') && text.includes('生成履歴')) return true;
     if (['ai-fitting', 'ai-fitting-reference', 'fitting-clothing-reference', 'fitting-background-reference'].includes(currentToolId)) {
       return text.includes('AIフィッティング') && text.includes('シングルタスク') && text.includes('生成履歴') && !text.includes('素材作業台を準備しています') && !text.includes('ログイン');

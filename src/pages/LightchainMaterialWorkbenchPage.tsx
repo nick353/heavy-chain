@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
   FolderHeart,
   Heart,
@@ -634,6 +635,7 @@ export function LightchainMaterialWorkbenchPage() {
   const { currentBrand, isInitialized: isAuthInitialized, isLoading: isAuthLoading } = useAuthStore();
   const mode: WorkbenchMode = location.pathname.includes('printing') ? 'printing' : 'fabric';
   const isPrinting = mode === 'printing';
+  const [printCoverageMode, setPrintCoverageMode] = useState<'スポット' | '全体'>('スポット');
   const [printOutputScale, setPrintOutputScale] = useState<1 | 2>(1);
   const printOutputStageSize = useMemo(() => ({
     width: printPreviewStageSize.width * printOutputScale,
@@ -812,6 +814,7 @@ export function LightchainMaterialWorkbenchPage() {
     printGarmentMaskRevision,
     printGarmentMaskExplicitlyConfirmed,
     printGarmentCutoutState,
+    printCoverageMode,
     printOutputScale,
     printableSurfaceIdentity: printableSurfaceEnabled ? manualPrintableSurface?.identity : undefined,
     printDesignLayers: placedPrintDesignLayers.map((layer) => ({
@@ -833,6 +836,7 @@ export function LightchainMaterialWorkbenchPage() {
     printGarmentSelectionSource,
     printGarmentSegmentationTarget,
     printGarmentCutoutState,
+    printCoverageMode,
     printGarmentProcessed,
     printGarmentMaskRevision,
     printGarmentMaskExplicitlyConfirmed,
@@ -1517,6 +1521,7 @@ export function LightchainMaterialWorkbenchPage() {
           revision: nextRevision,
           brandId: currentBrand.id,
           brandName: currentBrand.name || 'brand',
+          coverageMode: printCoverageMode === '全体' ? 'full' : 'spot',
           garmentUrl: printGarmentProcessed!,
           garmentReferenceType: printGarment?.referenceType ?? null,
           garmentMaskCandidateId: selectedPrintGarmentMaskCandidateId,
@@ -1619,7 +1624,7 @@ export function LightchainMaterialWorkbenchPage() {
         resultKind: 'exact',
         generatedAt,
         title: '配置そのまま',
-        note: 'AI再描画なし / 元デザインの色・形・透明度を保持',
+        note: `${printCoverageMode}範囲 / AI再描画なし / 元デザインの色・形・透明度を保持`,
         imageUrl: exactComposition.imageUrl,
         outputSize: { ...printOutputStageSize },
       };
@@ -1660,7 +1665,7 @@ export function LightchainMaterialWorkbenchPage() {
         resultKind: 'fabric',
         generatedAt,
         title: '布になじませる',
-        note: '輪郭と透明度は固定 / Tシャツの明暗だけをデザインのRGBへ反映',
+        note: `${printCoverageMode}範囲 / 輪郭と透明度は固定 / Tシャツの明暗だけをデザインのRGBへ反映`,
         imageUrl: fabricComposition.imageUrl,
         outputSize: { ...printOutputStageSize },
       };
@@ -1674,8 +1679,10 @@ export function LightchainMaterialWorkbenchPage() {
       setGenerationError(null);
       toast.success('2種類のプリント結果を作成しました');
 
-      if (!printableSurfaceEnabled || !manualPrintableSurface) {
-        setSurfaceConformStatus('手動の印刷可能面を有効にすると「布面追従（試験）」を追加できます。');
+      if (printCoverageMode === '全体' || !printableSurfaceEnabled || !manualPrintableSurface) {
+        setSurfaceConformStatus(printCoverageMode === '全体'
+          ? '全体範囲ではスポット専用の布面追従（試験）を省略しました。'
+          : '手動の印刷可能面を有効にすると「布面追従（試験）」を追加できます。');
         return;
       }
       const surfaceJobId = surfaceJobSequenceRef.current + 1;
@@ -1963,6 +1970,7 @@ export function LightchainMaterialWorkbenchPage() {
     const importedDesign: SelectedImage = {
       url: handoff.design.imageUrl,
       referenceType: 'pattern',
+      ...(handoff.design.storagePath ? { storagePath: handoff.design.storagePath } : {}),
       printDesignAssetPurpose: PRINT_DESIGN_ASSET_PURPOSE,
     };
     void addDesigns([...printDesigns, importedDesign]).then((result) => {
@@ -2569,6 +2577,13 @@ export function LightchainMaterialWorkbenchPage() {
               ? '参考画像とデザインを高精度マスクで透明合成し、元の色・形・配置を保ちます。'
               : '生地画像にデザインを重ね、色味の違う複数生地をまとめて確認できます。'}
           </p>
+          <Link
+            to="/history"
+            className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-cyan-300 transition hover:text-cyan-200"
+          >
+            生成履歴を確認
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
         <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/20 p-1 backdrop-blur-md">
           <button
@@ -2942,19 +2957,37 @@ export function LightchainMaterialWorkbenchPage() {
           )}
 
           {isPrinting && (
-            <label className="block rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/70">
-              <span className="mb-2 block font-semibold text-white">出力解像度</span>
-              <select
-                value={printOutputScale}
-                disabled={isGenerating}
-                onChange={(event) => setPrintOutputScale(Number(event.target.value) === 2 ? 2 : 1)}
-                className="w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-white disabled:opacity-50"
-                aria-label="プリント結果の出力解像度"
-              >
-                <option value={1}>720 × 900（標準）</option>
-                <option value={2}>1440 × 1800（高解像度）</option>
-              </select>
-            </label>
+            <div className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-white/70">
+              <div>
+                <span className="mb-2 block font-semibold text-white">プリント範囲</span>
+                <div className="grid grid-cols-2 gap-1 rounded-lg bg-neutral-900 p-1" role="group" aria-label="プリント範囲">
+                  {(['スポット', '全体'] as const).map((coverage) => (
+                    <button
+                      key={coverage}
+                      type="button"
+                      aria-pressed={printCoverageMode === coverage}
+                      onClick={() => setPrintCoverageMode(coverage)}
+                      className={`rounded-md px-3 py-2 text-sm font-semibold transition ${printCoverageMode === coverage ? 'bg-[#737d84] text-white' : 'text-neutral-400 hover:text-white'}`}
+                    >
+                      {coverage}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="block">
+                <span className="mb-2 block font-semibold text-white">出力解像度</span>
+                <select
+                  value={printOutputScale}
+                  disabled={isGenerating}
+                  onChange={(event) => setPrintOutputScale(Number(event.target.value) === 2 ? 2 : 1)}
+                  className="w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2 text-white disabled:opacity-50"
+                  aria-label="プリント結果の出力解像度"
+                >
+                  <option value={1}>720 × 900（標準）</option>
+                  <option value={2}>1440 × 1800（高解像度）</option>
+                </select>
+              </label>
+            </div>
           )}
           </div>
 
@@ -3027,7 +3060,7 @@ export function LightchainMaterialWorkbenchPage() {
             size="lg"
             leftIcon={isGenerating ? undefined : <Sparkles className="w-5 h-5" />}
           >
-            {isGenerating ? '生成中...' : '生成して結果を出す'}
+            {isGenerating ? '生成中...' : 'AI生成して結果を出す'}
           </Button>
 
           {generationError && (

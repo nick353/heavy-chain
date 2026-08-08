@@ -4,15 +4,19 @@ import {
   ArrowRight,
   Bot,
   Boxes,
+  CheckCircle2,
+  Clock3,
   ClipboardList,
   Film,
   Layers3,
   ImagePlus,
+  LayoutGrid,
   Maximize2,
   MessageSquareText,
   Palette,
   Search,
   Shirt,
+  ShieldCheck,
   Sparkles,
   UserRound,
   WandSparkles,
@@ -1120,6 +1124,30 @@ export function LightchainWorkbenchPage() {
       ].join(' ').toLowerCase().includes(normalized);
     });
   }, [activeCategory, query]);
+
+  const lightchainReadiness = useMemo(() => {
+    const ready = tools.filter((tool) => tool.status === 'ready').length;
+    const workspace = tools.filter((tool) => tool.status === 'workspace').length;
+    const needsImage = tools.filter((tool) => tool.status === 'needs-image').length;
+    return { ready, workspace, needsImage, total: tools.length };
+  }, []);
+
+  const quickStartTools = useMemo(() => (
+    ['marketing-home', 'ai-fitting', 'model-library', 'image-repair']
+      .map((id) => tools.find((tool) => tool.id === id))
+      .filter((tool): tool is CompatTool => Boolean(tool))
+  ), []);
+
+  const hasCurrentInput = Boolean(
+    garmentImageUrl
+      || workspaceText.trim()
+      || Object.values(materialSlotFiles).some(Boolean),
+  );
+  const workflowPhase = lightchainResult
+    ? { label: '結果あり', detail: '保存して再利用できます。', tone: 'success' as const }
+    : hasCurrentInput
+      ? { label: '生成準備', detail: '入力を確認してAI生成へ進めます。', tone: 'ready' as const }
+      : { label: '入力待ち', detail: 'まず素材か依頼内容を追加します。', tone: 'waiting' as const };
 
   const routeTool = toolId ? tools.find((tool) => tool.id === toolId) ?? null : null;
   const isFeatureDetail = Boolean(toolId);
@@ -2650,7 +2678,7 @@ export function LightchainWorkbenchPage() {
               type="button"
               className="absolute right-4 top-4 rounded-xl border border-white/15 bg-[#181b1d] px-4 py-2 text-sm font-semibold text-white"
             >
-              履歴
+              生成履歴
             </button>
             <div className="text-center">
               <h2 className="text-xl font-semibold text-[#6ee7df]">AIフィッティング</h2>
@@ -3186,7 +3214,7 @@ export function LightchainWorkbenchPage() {
             )}
             <section className="max-h-[42%] shrink-0 overflow-y-auto border-t border-white/10 bg-[#0f1416] p-3" data-testid="lightchain-marketing-detail-readback" data-preview-title="マーケティング詳細プレビュー">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-white">履歴</p>
+                <p className="text-sm font-semibold text-white">生成履歴</p>
                 <button type="button" onClick={handleSaveToCanvas} disabled={isSaving || !lightchainResult} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-60">保存</button>
               </div>
               <p className="mt-3 text-sm font-semibold text-white">マーケティング詳細プレビュー</p>
@@ -3302,10 +3330,16 @@ export function LightchainWorkbenchPage() {
       <main className="dark min-h-screen bg-[#0d1112] px-4 py-4 text-white sm:px-6" data-testid="lightchain-print-design-detail-page">
         {!printDesignDetailStarted ? (
           <section className="mx-auto flex min-h-[calc(100vh-112px)] max-w-[780px] items-center justify-center">
-            <div className="grid w-full gap-8 md:grid-cols-2">
+            <div className="w-full">
+              <div className="mb-6 text-center">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200/75">PRINT DESIGN</p>
+                <h1 className="mt-2 text-2xl font-semibold text-white">柄・グラフィック詳細</h1>
+                <p className="mt-2 text-sm text-neutral-400">ガイドを選び、素材を追加して、AI生成と生成履歴へ進みます。</p>
+              </div>
+              <div className="grid w-full gap-8 md:grid-cols-2">
                 {[
-                { mode: 'guide' as const, title: 'ガイドあり', subtitle: 'まずはガイドを表示', tone: 'bg-[#111719]' },
-                { mode: 'no-guide' as const, title: 'ガイドなし', subtitle: 'そのまま開始', tone: 'bg-[linear-gradient(135deg,#20282b,#30383b)]' },
+                { mode: 'guide' as const, title: 'ガイドを見る', subtitle: 'ガイドを表示する', tone: 'bg-[#111719]' },
+                { mode: 'no-guide' as const, title: 'ガイドを表示しない', subtitle: 'ガイド無しで開始します', tone: 'bg-[linear-gradient(135deg,#20282b,#30383b)]' },
               ].map((item) => (
                 <button
                   key={item.mode}
@@ -3328,6 +3362,7 @@ export function LightchainWorkbenchPage() {
                   <p className="mt-3 text-sm font-semibold text-neutral-400">{item.subtitle}</p>
                 </button>
               ))}
+              </div>
             </div>
           </section>
         ) : (
@@ -3406,7 +3441,7 @@ export function LightchainWorkbenchPage() {
 
             <aside className="rounded-2xl border border-white/10 bg-[#141717] p-4" data-testid="lightchain-print-design-history">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">履歴</h2>
+                <h2 className="text-sm font-semibold text-white">生成履歴</h2>
                 {lightchainResult && (
                   <button type="button" onClick={handleSaveToCanvas} disabled={isSaving} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
                     保存
@@ -3637,7 +3672,7 @@ export function LightchainWorkbenchPage() {
 
             <aside className="rounded-2xl border border-white/10 bg-[#141717] p-4" data-testid="lightchain-wear-design-history">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">履歴</h2>
+                <h2 className="text-sm font-semibold text-white">生成履歴</h2>
                 {lightchainResult && (
                   <button type="button" onClick={handleSaveToCanvas} disabled={isSaving} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
                     保存
@@ -3770,7 +3805,7 @@ export function LightchainWorkbenchPage() {
             {lightchainResult && (
               <section className="mt-6 rounded-xl border border-white/10 bg-[#111719] p-4" data-testid="lightchain-custom-style-readback">
                 <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">履歴</h2>
+                <h2 className="text-sm font-semibold text-white">生成履歴</h2>
                   <button
                     type="button"
                     onClick={handleSaveToCanvas}
@@ -3870,6 +3905,105 @@ export function LightchainWorkbenchPage() {
         </section>
 
         <section className="space-y-5">
+          {!isFeatureDetail && (
+            <section
+              className="overflow-hidden rounded-[28px] border border-neutral-200 bg-[radial-gradient(circle_at_top_right,rgba(101,211,207,0.18),transparent_38%),linear-gradient(135deg,#111719,#20282b)] p-5 text-white shadow-soft sm:p-6"
+              data-testid="lightchain-quick-start"
+            >
+              <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+                <div className="max-w-2xl">
+                  <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-cyan-200">
+                    <Sparkles className="h-4 w-4" />
+                    Light-style quick start
+                  </p>
+                  <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">まず作りたいものを選んでください</h2>
+                  <p className="mt-2 text-sm leading-6 text-neutral-300">
+                    入口で目的を決め、必要な素材だけを追加して、生成結果をCanvas・履歴へつなげます。高度な設定は次の画面で開きます。
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 sm:min-w-[360px]" data-testid="lightchain-readiness-summary">
+                  {[
+                    { label: 'すぐ開始', value: lightchainReadiness.ready, icon: CheckCircle2, tone: 'text-emerald-300' },
+                    { label: 'ワークスペース', value: lightchainReadiness.workspace, icon: LayoutGrid, tone: 'text-cyan-200' },
+                    { label: '素材が必要', value: lightchainReadiness.needsImage, icon: ImagePlus, tone: 'text-amber-200' },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={item.label} className="rounded-2xl border border-white/10 bg-white/[0.06] p-3">
+                        <Icon className={`h-4 w-4 ${item.tone}`} />
+                        <p className="mt-3 text-xl font-semibold">{item.value}</p>
+                        <p className="mt-1 text-[11px] text-neutral-400">{item.label}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4" data-testid="lightchain-quick-start-list">
+                {quickStartTools.map((tool) => (
+                  <Link
+                    key={tool.id}
+                    to={`/lightchain/${tool.id}`}
+                    className="group rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-cyan-300/[0.08]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-300/15 text-cyan-200">
+                        {tool.category === 'fitting' ? <Shirt className="h-5 w-5" /> : tool.category === 'marketing' ? <MessageSquareText className="h-5 w-5" /> : tool.category === 'model' ? <UserRound className="h-5 w-5" /> : <WandSparkles className="h-5 w-5" />}
+                      </span>
+                      <ArrowRight className="h-4 w-4 text-neutral-500 transition group-hover:translate-x-0.5 group-hover:text-cyan-200" />
+                    </div>
+                    <p className="mt-4 text-sm font-semibold">{tool.title}</p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-neutral-400">{tool.description}</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {tool.inputs.slice(0, 2).map((input) => <span key={input} className="rounded-full bg-white/[0.08] px-2 py-1 text-[10px] text-neutral-300">{input}</span>)}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-neutral-400">
+                <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-cyan-200" />権利確認は生成前に固定</span>
+                <span className="inline-flex items-center gap-1.5"><Layers3 className="h-3.5 w-3.5 text-cyan-200" />結果はCanvasへ再利用</span>
+                <span className="inline-flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-cyan-200" />状態は入力→生成→保存で表示</span>
+              </div>
+            </section>
+          )}
+
+          {isFeatureDetail && (
+            <section
+              className="rounded-2xl border border-white/10 bg-[#111719] p-3 text-white shadow-soft sm:p-4"
+              data-testid="lightchain-workflow-rail"
+            >
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-300/15 text-cyan-200"><Sparkles className="h-4 w-4" /></span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{currentDisplayTitle}</p>
+                    <p className="mt-0.5 truncate text-xs text-neutral-400">{workflowPhase.detail}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${workflowPhase.tone === 'success' ? 'bg-emerald-400/15 text-emerald-200' : workflowPhase.tone === 'ready' ? 'bg-cyan-400/15 text-cyan-200' : 'bg-amber-400/15 text-amber-200'}`}>
+                    {workflowPhase.label}
+                  </span>
+                </div>
+                <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold" aria-label="制作の次の操作">
+                  <Link to="/history" className="rounded-lg border border-white/10 px-3 py-2 text-neutral-300 transition hover:border-cyan-300/40 hover:text-white">生成履歴</Link>
+                  <Link to="/gallery" className="rounded-lg border border-white/10 px-3 py-2 text-neutral-300 transition hover:border-cyan-300/40 hover:text-white">Gallery</Link>
+                  <Link to="/jobs" className="rounded-lg border border-white/10 px-3 py-2 text-neutral-300 transition hover:border-cyan-300/40 hover:text-white">Jobs</Link>
+                  <Link to="/canvas/new" className="rounded-lg bg-cyan-300 px-3 py-2 text-neutral-950 transition hover:bg-cyan-200">Canvasへ</Link>
+                </nav>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] font-semibold text-neutral-400 sm:max-w-xl">
+                {[
+                  ['1', '素材・依頼', hasCurrentInput],
+                  ['2', 'AI生成', Boolean(lightchainResult)],
+                  ['3', '保存・再利用', Boolean(lightchainResult)],
+                ].map(([step, label, done]) => (
+                  <div key={step as string} className={`rounded-lg px-3 py-2 ${done ? 'bg-emerald-400/10 text-emerald-200' : 'bg-white/[0.05]'}`}>
+                    <span className="mr-1.5">{done ? '✓' : step}</span>{label}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {!isFeatureDetail && (
           <div className="rounded-2xl border border-neutral-200 bg-white p-2 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
             <div className="flex gap-1.5 overflow-x-auto">
@@ -4047,6 +4181,18 @@ export function LightchainWorkbenchPage() {
                         </span>
                         <span className="mt-2 line-clamp-2 block text-sm leading-6 text-neutral-500 dark:text-neutral-400">
                           {tool.description}
+                        </span>
+                        <span className="mt-3 flex flex-wrap gap-1.5">
+                          {tool.inputs.slice(0, 2).map((input) => (
+                            <span key={input} className="rounded-full bg-neutral-100 px-2 py-1 text-[10px] font-medium text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
+                              入力: {input}
+                            </span>
+                          ))}
+                          {tool.outputs.slice(0, 1).map((output) => (
+                            <span key={output} className="rounded-full bg-cyan-50 px-2 py-1 text-[10px] font-medium text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-200">
+                              出力: {output}
+                            </span>
+                          ))}
                         </span>
                       </span>
                     </div>
@@ -5264,7 +5410,7 @@ export function LightchainWorkbenchPage() {
                         <div className="w-full rounded-2xl border border-white/10 bg-[#101719] p-4 text-left">
                           <div className="mb-4 flex items-center justify-between">
                             <div>
-                              <p className="text-sm font-semibold text-white">履歴</p>
+                              <p className="text-sm font-semibold text-white">生成履歴</p>
                               <p className="mt-1 text-xs text-neutral-500">{selectedTool.title}</p>
                             </div>
                               <div className="flex items-center gap-2">

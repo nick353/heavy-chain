@@ -1,5 +1,6 @@
 import type { GeneratedImage, Json } from '../types/database';
 import { supabase } from './supabase';
+import { normalizeGeneratedImageStoragePath } from './storagePathSafety';
 
 const STORE_PREFIX = 'heavy-chain-workspace-artifacts:v1';
 const MAX_ARTIFACTS_PER_BRAND = 30;
@@ -56,6 +57,52 @@ interface RemoteSaveFunctionResult {
 }
 
 const getStorageKey = (brandId: string) => `${STORE_PREFIX}:${brandId}`;
+
+const CANONICAL_STORAGE_PATH_KEYS = [
+  'storagePath',
+  'storage_path',
+  'remoteStoragePath',
+  'sourceStoragePath',
+  'backendStoragePath',
+] as const;
+
+export const getWorkspaceArtifactCanonicalStoragePath = (
+  metadata: Record<string, Json | undefined>,
+): string | null => {
+  for (const key of CANONICAL_STORAGE_PATH_KEYS) {
+    const value = metadata[key];
+    const normalized = typeof value === 'string' ? normalizeGeneratedImageStoragePath(value) : null;
+    if (normalized) return normalized;
+  }
+  return null;
+};
+
+const hasCanonicalStoragePath = (metadata: Record<string, Json | undefined>) => (
+  Boolean(getWorkspaceArtifactCanonicalStoragePath(metadata))
+);
+
+const isEphemeralRemoteImageUrl = (imageUrl: string) => /^(?:https?:|\/\/)/i.test(imageUrl.trim());
+
+/**
+ * Keep bearer/query URLs ephemeral. The returned value is the durable local
+ * representation; the input artifact remains usable in memory by callers.
+ */
+export const normalizeWorkspaceArtifactForPersistence = (
+  artifact: WorkspaceArtifact,
+): WorkspaceArtifact => ({
+  ...artifact,
+  // URL-only legacy entries are intentionally preserved for readback. New
+  // remote entries must carry a validated canonical path before persistence.
+  imageUrl: isEphemeralRemoteImageUrl(artifact.imageUrl) && getWorkspaceArtifactCanonicalStoragePath(artifact.metadata)
+    ? ''
+    : artifact.imageUrl,
+});
+
+/** A remote URL is only a durable local reference when its canonical path is retained. */
+export const canPersistWorkspaceArtifactLocally = (
+  imageUrl: string,
+  metadata: Record<string, Json | undefined>,
+) => /^(?:data:|blob:|local:|\/|\.\.?\/)/i.test(imageUrl.trim()) || hasCanonicalStoragePath(metadata);
 
 const isBrowser = () => {
   if (typeof window === 'undefined') return false;
@@ -159,12 +206,16 @@ const parseArtifacts = (value: string | null): WorkspaceArtifact[] => {
 const isWorkspaceArtifact = (value: unknown): value is WorkspaceArtifact => {
   if (!value || typeof value !== 'object') return false;
   const artifact = value as Partial<WorkspaceArtifact>;
+  const metadata = artifact.metadata && typeof artifact.metadata === 'object'
+    ? artifact.metadata as Record<string, Json | undefined>
+    : {};
   return Boolean(
     artifact.id &&
     artifact.brandId &&
     artifact.featureType &&
     artifact.title &&
-    artifact.imageUrl &&
+    typeof artifact.imageUrl === 'string' &&
+    (artifact.imageUrl.trim() || hasCanonicalStoragePath(metadata)) &&
     artifact.createdAt
   );
 };
@@ -239,21 +290,33 @@ export const saveWorkspaceArtifactPersisted = (
         ...input.metadata,
       },
     };
+    const preservesLegacyUrlOnlyEntry = Boolean(
+      existingArtifact &&
+      !getWorkspaceArtifactCanonicalStoragePath(existingArtifact.metadata) &&
+      existingArtifact.imageUrl === artifact.imageUrl,
+    );
+    if (!canPersistWorkspaceArtifactLocally(artifact.imageUrl, artifact.metadata) && !preservesLegacyUrlOnlyEntry) {
+      return {
+        ok: false,
+        error: new Error('Remote image URL requires canonical storage path metadata for local persistence.'),
+      };
+    }
     const nextArtifacts = [
       artifact,
       ...current.artifacts.filter((item) => item.id !== artifact.id),
     ].slice(0, MAX_ARTIFACTS_PER_BRAND);
-    const persisted = persistArtifactsToLocalStorage(getStorageKey(artifact.brandId), nextArtifacts, 'save');
+    const persistedArtifacts = nextArtifacts.map(normalizeWorkspaceArtifactForPersistence);
+    const persisted = persistArtifactsToLocalStorage(getStorageKey(artifact.brandId), persistedArtifacts, 'save');
     if (!persisted) {
       return { ok: false, error: toPersistenceError('save') };
     }
     const readback = parseArtifacts(window.localStorage.getItem(getStorageKey(artifact.brandId)))
       .find((item) => item.id === artifact.id);
-    const normalizedArtifact = JSON.parse(JSON.stringify(artifact)) as WorkspaceArtifact;
+    const normalizedArtifact = JSON.parse(JSON.stringify(normalizeWorkspaceArtifactForPersistence(artifact))) as WorkspaceArtifact;
     if (!readback || JSON.stringify(readback) !== JSON.stringify(normalizedArtifact)) {
       return { ok: false, error: new Error('Local workspace artifact save could not be verified.') };
     }
-    return { ok: true, artifact: readback };
+    return { ok: true, artifact };
   } catch (error) {
     return { ok: false, error: toPersistenceError('save', error) };
   }
@@ -270,6 +333,13 @@ export const saveWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceA
 
   if (!isBrowser()) return artifact;
 
+  if (!canPersistWorkspaceArtifactLocally(artifact.imageUrl, artifact.metadata)) {
+    console.warn('Skipping local workspace artifact persistence for URL-only remote image.', {
+      artifactId: artifact.id,
+    });
+    return artifact;
+  }
+
   const nextArtifacts = [
     artifact,
     ...listWorkspaceArtifacts(artifact.brandId).filter((item) => item.id !== artifact.id),
@@ -277,7 +347,11 @@ export const saveWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceA
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, MAX_ARTIFACTS_PER_BRAND);
 
-  persistArtifactsToLocalStorage(getStorageKey(artifact.brandId), nextArtifacts, 'save');
+  persistArtifactsToLocalStorage(
+    getStorageKey(artifact.brandId),
+    nextArtifacts.map(normalizeWorkspaceArtifactForPersistence),
+    'save',
+  );
   return artifact;
 };
 
@@ -383,8 +457,8 @@ export const workspaceArtifactToGeneratedImage = (artifact: WorkspaceArtifact): 
   job_id: artifact.sourceJobId ?? null,
   brand_id: artifact.brandId,
   user_id: LOCAL_USER_ID,
-  storage_path: `local/${artifact.id}`,
-  image_url: artifact.imageUrl,
+  storage_path: getWorkspaceArtifactCanonicalStoragePath(artifact.metadata) ?? `local/${artifact.id}`,
+  image_url: artifact.imageUrl || null,
   thumbnail_path: null,
   version: 1,
   parent_image_id: null,

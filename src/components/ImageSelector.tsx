@@ -34,6 +34,7 @@ export interface SelectedImage {
   referenceType: ReferenceType;
   fromGallery?: boolean;
   galleryImageId?: string;
+  storagePath?: string;
   printDesignAssetPurpose?: PrintDesignAssetPurpose;
 }
 
@@ -161,7 +162,7 @@ export function ImageSelector({
     void processFiles(e.dataTransfer.files);
   };
 
-  const handleGallerySelect = (imageUrl: string, imageId: string, _storagePath?: string, _imageElement?: HTMLImageElement | null) => {
+  const handleGallerySelect = (imageUrl: string, imageId: string, storagePath?: string, _imageElement?: HTMLImageElement | null) => {
     if (multiple && onMultipleChange) {
       if (multipleValue.length < maxImages) {
         onMultipleChange([...multipleValue, {
@@ -169,6 +170,7 @@ export function ImageSelector({
           referenceType: selectedReferenceType,
           fromGallery: true,
           galleryImageId: imageId,
+          ...(storagePath ? { storagePath } : {}),
           ...(galleryAssetPurpose ? { printDesignAssetPurpose: galleryAssetPurpose } : {}),
         }]);
       }
@@ -178,6 +180,7 @@ export function ImageSelector({
         referenceType: selectedReferenceType,
         fromGallery: true,
         galleryImageId: imageId,
+        ...(storagePath ? { storagePath } : {}),
         ...(galleryAssetPurpose ? { printDesignAssetPurpose: galleryAssetPurpose } : {}),
       });
     }

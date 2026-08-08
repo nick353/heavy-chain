@@ -1,5 +1,23 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type {
+  CanvasSourceIdentity,
+  CanvasSourceReadback,
+  CanvasSourceRevision,
+} from '../features/canvasSourceMetadata';
+
+export type {
+  CanvasSourceIdentity,
+  CanvasSourceMetadata,
+  CanvasSourceReadback,
+  CanvasSourceRevision,
+} from '../features/canvasSourceMetadata';
+export {
+  buildLocalUploadSourceMetadata,
+  sanitizeCanvasSourceMetadata,
+  sha256Hex,
+  sourceRevisionMatches,
+} from '../features/canvasSourceMetadata';
 
 export interface CanvasObject {
   id: string;
@@ -49,6 +67,13 @@ export interface CanvasObject {
     galleryStoragePath?: string;
     galleryImageId?: string;
     galleryImageUrl?: string;
+    legalSafety?: {
+      rightsConfirmed?: boolean;
+    };
+    /** Sanitized provenance for local uploads; never contains paths or bytes. */
+    sourceIdentity?: CanvasSourceIdentity;
+    sourceRevision?: CanvasSourceRevision;
+    sourceReadback?: CanvasSourceReadback;
     lightchainEditStages?: Array<{
       stageId: string;
       action: string;

@@ -198,6 +198,7 @@ export type PrintRequestSnapshot = {
   signature: string;
   brandId: string;
   brandName: string;
+  coverageMode: 'spot' | 'full';
   stageSize: PrintStageSize;
   garment: {
     sourceUrl: string;
@@ -575,6 +576,7 @@ export async function buildPrintRequestSnapshot({
   revision,
   brandId,
   brandName,
+  coverageMode = 'spot',
   garmentUrl,
   garmentReferenceType,
   garmentMaskCandidateId,
@@ -587,6 +589,7 @@ export async function buildPrintRequestSnapshot({
   revision: number;
   brandId: string;
   brandName: string;
+  coverageMode?: 'spot' | 'full';
   garmentUrl: string;
   garmentReferenceType: string | null;
   garmentMaskCandidateId: PrintGarmentMaskCandidateId;
@@ -616,6 +619,7 @@ export async function buildPrintRequestSnapshot({
   const signature = buildPrintRequestSignature({
     brandId,
     brandName,
+    coverageMode,
     stageSize,
     garment: {
       sourceUrl: garmentUrl,
@@ -674,6 +678,7 @@ export async function buildPrintRequestSnapshot({
     signature,
     brandId,
     brandName,
+    coverageMode,
     stageSize,
     garment: garmentSnapshot,
     ...(effectiveSurfaceIdentity ? { surfaceIdentity: { ...effectiveSurfaceIdentity } } : {}),
@@ -776,7 +781,9 @@ export async function renderPrintRequestComposition(
   }
   await applyMaskToCanvas(
     clippedDesignCanvas,
-    snapshot.printableSurface?.stageMask.url ?? snapshot.garment.mask.url,
+    snapshot.coverageMode === 'full'
+      ? snapshot.garment.mask.url
+      : snapshot.printableSurface?.stageMask.url ?? snapshot.garment.mask.url,
   );
   if (mode === 'fabric') {
     const designData = clippedDesignContext.getImageData(0, 0, clippedDesignCanvas.width, clippedDesignCanvas.height);

@@ -72,6 +72,7 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
   const parameters = selectedObject?.metadata?.parameters ?? {};
   const { materialReference, layerPlan, maskPlan, compositionPreview } = normalizeMaterialWorkflowParameters(parameters);
   const sourceLabel = parameters.source ?? selectedObject?.metadata?.feature ?? null;
+  const sourceReadback = selectedObject?.metadata?.sourceReadback;
 
   useEffect(() => {
     if (selectedObject) {
@@ -90,11 +91,7 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
   }, [selectedObject]);
 
   if (!selectedObject) {
-    return (
-      <div className="p-4 text-center text-neutral-500">
-        <p className="text-sm">オブジェクトを選択してください</p>
-      </div>
-    );
+    return null;
   }
 
   const handleChange = (key: keyof CanvasObject, value: any) => {
@@ -369,6 +366,20 @@ export function PropertiesPanel({ selectedObject }: PropertiesPanelProps) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {selectedObject.type === 'image' && sourceReadback && (
+        <div className="pt-4 border-t border-neutral-100" data-testid="canvas-source-readback">
+          <h4 className="text-xs font-semibold text-neutral-500 mb-2">素材の検証情報</h4>
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600 space-y-1">
+            <p>状態: {sourceReadback.status === 'verified' ? '確認済み' : sourceReadback.status}</p>
+            <p>出所: 権利・所有の証明ではありません</p>
+            <p>形式: {sourceReadback.mimeType}</p>
+            <p>寸法: {sourceReadback.width} × {sourceReadback.height}</p>
+            <p>サイズ: {sourceReadback.sizeBytes.toLocaleString()} bytes</p>
+            <p className="break-all">Revision: {sourceReadback.revision}</p>
           </div>
         </div>
       )}
