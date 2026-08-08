@@ -70,6 +70,7 @@ type LocalUploadState = {
   objectId: string | null;
   sourceRevision: string | null;
   error: string | null;
+  errorCode: string | null;
 };
 const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
 const MAX_MODEL_MATRIX_PATTERNS = 3;
@@ -246,6 +247,7 @@ export function CanvasEditorPage() {
     objectId: null,
     sourceRevision: null,
     error: null,
+    errorCode: null,
   });
   const localUploadEventKeysRef = useRef<Set<string>>(new Set());
 
@@ -697,10 +699,10 @@ export function CanvasEditorPage() {
     localUploadEventKeysRef.current.add(eventKey);
     window.setTimeout(() => localUploadEventKeysRef.current.delete(eventKey), 0);
 
-    setLocalUploadState({ status: 'loading', objectId: null, sourceRevision: null, error: null });
+    setLocalUploadState({ status: 'loading', objectId: null, sourceRevision: null, error: null, errorCode: null });
 
-    const failUpload = (message: string) => {
-      setLocalUploadState({ status: 'error', objectId: null, sourceRevision: null, error: message });
+    const failUpload = (message: string, errorCode: string) => {
+      setLocalUploadState({ status: 'error', objectId: null, sourceRevision: null, error: message, errorCode });
       toast.error(message);
     };
 
@@ -752,13 +754,17 @@ export function CanvasEditorPage() {
             objectId: newId,
             sourceRevision: sourceMetadata.sourceRevision.revision,
             error: null,
+            errorCode: null,
           });
           setViewMode('canvas');
           setZoom(1);
           setPan(0, 0);
         } catch (error) {
           console.error('Canvas local upload failed:', error);
-          failUpload('画像の読み込みに失敗しました。もう一度お試しください');
+          failUpload(
+            '画像の読み込みに失敗しました。もう一度お試しください',
+            error instanceof Error ? error.message : 'canvas_upload_unknown_error',
+          );
         }
       })();
     });
@@ -2591,6 +2597,7 @@ export function CanvasEditorPage() {
               data-object-id={localUploadState.objectId ?? ''}
               data-source-revision={localUploadState.sourceRevision ?? ''}
               data-error={localUploadState.error ?? ''}
+              data-error-code={localUploadState.errorCode ?? ''}
               className="sr-only"
             />
             {/* 背景パターン - position:fixedで固定し、サイドパネル開閉時に動かない */}

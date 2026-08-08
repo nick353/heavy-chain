@@ -44,6 +44,7 @@ test('local upload selects the new image and restores the visible canvas viewpor
   assert.match(page, /data-testid="canvas-local-upload-readback"/);
   assert.match(page, /data-status=\{localUploadState\.status\}/);
   assert.match(page, /data-source-revision=\{localUploadState\.sourceRevision \?\? ''\}/);
+  assert.match(page, /data-error-code=\{localUploadState\.errorCode \?\? ''\}/);
 });
 test('empty canvas no longer exposes the explicit guide or empty properties panel', () => {
   assert.doesNotMatch(page, /title="キャンバスガイドを開く"/);
