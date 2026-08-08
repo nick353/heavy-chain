@@ -36,7 +36,11 @@ import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { supabase } from '../lib/supabase';
 import { resolveGeneratedImageUrl } from '../lib/storage';
-import { putLocalCanvasAsset, resolveLocalCanvasAsset } from '../lib/canvasLocalAssets';
+import {
+  isLocalCanvasAssetReference,
+  putLocalCanvasAsset,
+  resolveLocalCanvasAsset,
+} from '../lib/canvasLocalAssets';
 import { editImageWithPrompt, edgeFunctionErrorMessage } from '../lib/imageApi';
 import {
   buildCanvasImageEditBatchProof,
@@ -73,6 +77,11 @@ type LocalUploadState = {
   sourceRevision: string | null;
   error: string | null;
   errorCode: string | null;
+};
+type LocalRestoreState = {
+  status: 'idle' | 'restoring' | 'restored' | 'missing';
+  objectCount: number;
+  missingCount: number;
 };
 const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
 const MAX_MODEL_MATRIX_PATTERNS = 3;
@@ -253,6 +262,11 @@ export function CanvasEditorPage() {
     error: null,
     errorCode: null,
   });
+  const [localRestoreState, setLocalRestoreState] = useState<LocalRestoreState>({
+    status: 'idle',
+    objectCount: 0,
+    missingCount: 0,
+  });
   const localUploadEventKeysRef = useRef<Set<string>>(new Set());
 
   // Reference image states for generate modal
@@ -295,6 +309,61 @@ export function CanvasEditorPage() {
     renameProject,
     clearCanvas,
   } = useCanvasStore();
+
+  const localRestoreReferences = useMemo(() => (
+    Array.from(new Set(
+      objects
+        .filter((object) => object.type === 'image' && isLocalCanvasAssetReference(object.src))
+        .map((object) => object.src as string),
+    ))
+  ), [objects]);
+
+  useEffect(() => {
+    if (localRestoreReferences.length === 0) {
+      setLocalRestoreState({ status: 'idle', objectCount: 0, missingCount: 0 });
+      return;
+    }
+
+    let cancelled = false;
+    setLocalRestoreState({
+      status: 'restoring',
+      objectCount: localRestoreReferences.length,
+      missingCount: 0,
+    });
+
+    void (async () => {
+      const releases: Array<() => void> = [];
+      let missingCount = 0;
+      try {
+        await Promise.all(localRestoreReferences.map(async (reference) => {
+          try {
+            const resolution = await resolveLocalCanvasAsset(reference);
+            if (!resolution) {
+              missingCount += 1;
+              return;
+            }
+            releases.push(resolution.release);
+          } catch {
+            missingCount += 1;
+          }
+        }));
+      } finally {
+        releases.forEach((release) => release());
+      }
+
+      if (!cancelled) {
+        setLocalRestoreState({
+          status: missingCount > 0 ? 'missing' : 'restored',
+          objectCount: localRestoreReferences.length,
+          missingCount,
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [localRestoreReferences]);
 
   useEffect(() => {
     return () => {
@@ -2634,6 +2703,42 @@ export function CanvasEditorPage() {
               data-error-code={localUploadState.errorCode ?? ''}
               className="sr-only"
             />
+            {localRestoreState.status !== 'idle' && (
+              <div
+                data-testid="canvas-local-restore-state"
+                data-status={localRestoreState.status}
+                data-object-count={localRestoreState.objectCount}
+                data-missing-count={localRestoreState.missingCount}
+                className={`absolute left-2 right-2 top-16 z-20 mx-auto flex max-w-3xl items-center gap-3 rounded-xl border px-3 py-2 text-xs shadow-lg backdrop-blur sm:left-20 sm:right-auto sm:max-w-xl ${
+                  localRestoreState.status === 'missing'
+                    ? 'border-amber-300/35 bg-amber-950/85 text-amber-100'
+                    : localRestoreState.status === 'restoring'
+                      ? 'border-cyan-300/25 bg-cyan-950/85 text-cyan-100'
+                      : 'border-emerald-300/25 bg-emerald-950/85 text-emerald-100'
+                }`}
+              >
+                <span className="font-semibold">
+                  {localRestoreState.status === 'restoring'
+                    ? 'ローカル画像を復元中…'
+                    : localRestoreState.status === 'missing'
+                      ? '一部のローカル画像を復元できません'
+                      : 'ローカル画像を復元しました'}
+                </span>
+                <span className="min-w-0 flex-1 text-[11px] opacity-80">
+                  {localRestoreState.status === 'missing'
+                    ? '元画像をもう一度アップロードしてください。'
+                    : `${localRestoreState.objectCount}件の画像をこのブラウザの保存領域から確認しました。`}
+                </span>
+                {localRestoreState.status === 'missing' && (
+                  <label
+                    htmlFor="file-upload"
+                    className="shrink-0 cursor-pointer rounded-lg border border-amber-200/40 px-2 py-1 font-semibold hover:bg-amber-200/10"
+                  >
+                    再アップロード
+                  </label>
+                )}
+              </div>
+            )}
             {/* 背景パターン - position:fixedで固定し、サイドパネル開閉時に動かない */}
             <div className="fixed inset-0 pointer-events-none bg-[#050808]" style={{ zIndex: 0 }}>
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(103,232,249,0.14)_1px,transparent_1px)] bg-[length:24px_24px]" />

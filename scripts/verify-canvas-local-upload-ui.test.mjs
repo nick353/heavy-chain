@@ -49,6 +49,12 @@ test('local upload selects the new image and restores the visible canvas viewpor
   assert.match(page, /data-source-revision=\{localUploadState\.sourceRevision \?\? ''\}/);
   assert.match(page, /data-persistence-status=\{localUploadState\.persistenceStatus\}/);
   assert.match(page, /data-error-code=\{localUploadState\.errorCode \?\? ''\}/);
+  assert.match(page, /data-testid="canvas-local-restore-state"/);
+  assert.match(page, /ローカル画像を復元中/);
+  assert.match(page, /ローカル画像を復元しました/);
+  assert.match(page, /一部のローカル画像を復元できません/);
+  assert.match(page, /再アップロード/);
+  assert.match(page, /isLocalCanvasAssetReference\(object\.src\)/);
 });
 test('local upload data URLs stay in the active canvas session without filling localStorage', () => {
   assert.match(store, /obj\.metadata\?\.feature === 'local-upload'/);
