@@ -120,6 +120,7 @@ export function CanvasEditorPage() {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const projectNameInputRef = useRef<HTMLInputElement>(null);
+  const localUploadInputRef = useRef<HTMLInputElement>(null);
   const isMountedRef = useRef(true);
   const canvasStageRef = useRef<Konva.Stage | null>(null);
   const canvasRenderStateRef = useRef<CanvasRenderState>({ totalImageObjects: 0, loadedImageObjects: 0, renderAllObjects: false });
@@ -597,10 +598,8 @@ export function CanvasEditorPage() {
     });
   };
 
-  const handleFileUpload = (e: React.FormEvent<HTMLInputElement>) => {
-    const files = Array.from(e.currentTarget.files ?? []).filter((file) => file.type.startsWith('image/'));
-    // Reset synchronously so choosing the same file emits a new change event.
-    e.currentTarget.value = '';
+  const processLocalUploadFiles = useCallback((inputFiles: File[]) => {
+    const files = inputFiles.filter((file) => file.type.startsWith('image/'));
     if (files.length === 0) return;
 
     // Browsers may deliver both input and change for one file selection. The
@@ -685,7 +684,32 @@ export function CanvasEditorPage() {
       };
       reader.readAsDataURL(file);
     });
-  };
+  }, [addObject, handleObjectSelect, selectObject]);
+
+  const handleFileUpload = useCallback((e: React.FormEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+    const files = Array.from(input.files ?? []);
+    // Reset synchronously so choosing the same file emits a new change event.
+    input.value = '';
+    processLocalUploadFiles(files);
+  }, [processLocalUploadFiles]);
+
+  useEffect(() => {
+    const input = localUploadInputRef.current;
+    if (!input) return;
+
+    // Some automation/file-picker bridges set input.files without dispatching
+    // input/change. Detect that narrow state transition and route it through
+    // the same guarded upload path as native browser events.
+    const pollId = window.setInterval(() => {
+      const files = Array.from(input.files ?? []);
+      if (files.length === 0) return;
+      input.value = '';
+      processLocalUploadFiles(files);
+    }, 250);
+
+    return () => window.clearInterval(pollId);
+  }, [processLocalUploadFiles]);
 
   const loadCanvasImage = useCallback(async (imageUrl: string) => {
     const source = imageUrl.trim();
@@ -2387,6 +2411,7 @@ export function CanvasEditorPage() {
         {/* Left sidebar - Tools */}
         <aside className="w-10 sm:w-14 border-r border-white/10 bg-[#070b0b] flex flex-col items-center py-2 sm:py-4 gap-1 sm:gap-2 z-10">
           <input
+            ref={localUploadInputRef}
             type="file"
             id="file-upload"
             accept="image/*"

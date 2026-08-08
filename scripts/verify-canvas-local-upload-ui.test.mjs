@@ -11,17 +11,18 @@ const [page, properties] = await Promise.all([
 ]);
 
 test('local upload selects the new image and restores the visible canvas viewport', () => {
-  const uploadStart = page.indexOf('const handleFileUpload');
-  const uploadEnd = page.indexOf('const loadCanvasImage', uploadStart);
-  assert.ok(uploadStart >= 0 && uploadEnd > uploadStart, 'local upload handler must exist');
-  const upload = page.slice(uploadStart, uploadEnd);
+  const processStart = page.indexOf('const processLocalUploadFiles');
+  const handlerStart = page.indexOf('const handleFileUpload');
+  const uploadEnd = page.indexOf('const loadCanvasImage', handlerStart);
+  assert.ok(processStart >= 0 && handlerStart >= 0 && uploadEnd > handlerStart, 'local upload handler must exist');
+  const upload = page.slice(processStart, uploadEnd);
 
   assert.match(upload, /const newId = addObject\(/);
   assert.match(upload, /selectObject\(newId\)/);
   assert.match(upload, /setViewMode\('canvas'\)/);
   assert.match(upload, /setZoom\(1\)/);
   assert.match(upload, /setPan\(0, 0\)/);
-  assert.match(upload, /e\.currentTarget\.value = ''/);
+  assert.match(page, /input\.value = ''/);
   assert.match(upload, /setLocalUploadState\(\{ status: 'loading'/);
   assert.match(upload, /setLocalUploadState\(\{\s*status: 'ready'/);
   assert.match(upload, /handleObjectSelect\(newId\)/);
@@ -30,6 +31,10 @@ test('local upload selects the new image and restores the visible canvas viewpor
   assert.match(upload, /localUploadEventKeysRef\.current\.has\(eventKey\)/);
   assert.match(upload, /const source = event\.target\?\.result;/);
   assert.match(upload, /src: source,/);
+  assert.match(page, /ref=\{localUploadInputRef\}/);
+  assert.match(page, /window\.setInterval\(\(\) => \{/);
+  assert.match(page, /const files = Array\.from\(input\.files \?\? \[\]\)/);
+  assert.match(page, /processLocalUploadFiles\(files\)/);
   assert.match(page, /data-testid="canvas-local-upload-readback"/);
   assert.match(page, /data-status=\{localUploadState\.status\}/);
   assert.match(page, /data-source-revision=\{localUploadState\.sourceRevision \?\? ''\}/);
