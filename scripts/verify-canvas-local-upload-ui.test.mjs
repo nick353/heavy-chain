@@ -4,10 +4,12 @@ import assert from 'node:assert/strict';
 
 const pagePath = new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url);
 const propertiesPath = new URL('../src/components/canvas/PropertiesPanel.tsx', import.meta.url);
+const storePath = new URL('../src/stores/canvasStore.ts', import.meta.url);
 
-const [page, properties] = await Promise.all([
+const [page, properties, store] = await Promise.all([
   readFile(pagePath, 'utf8'),
   readFile(propertiesPath, 'utf8'),
+  readFile(storePath, 'utf8'),
 ]);
 
 test('local upload selects the new image and restores the visible canvas viewport', () => {
@@ -45,6 +47,14 @@ test('local upload selects the new image and restores the visible canvas viewpor
   assert.match(page, /data-status=\{localUploadState\.status\}/);
   assert.match(page, /data-source-revision=\{localUploadState\.sourceRevision \?\? ''\}/);
   assert.match(page, /data-error-code=\{localUploadState\.errorCode \?\? ''\}/);
+});
+test('local upload data URLs stay in the active canvas session without filling localStorage', () => {
+  assert.match(store, /obj\.metadata\?\.feature === 'local-upload'/);
+  assert.match(store, /obj\.metadata\?\.sourceIdentity\?\.kind === 'local-upload'/);
+  assert.match(store, /const sanitizePersistedObjects = \(objects: CanvasObject\[\]\)/);
+  assert.match(store, /projects: state\.projects\.map\(sanitizePersistedProject\)/);
+  assert.match(store, /objects: sanitizePersistedObjects\(state\.objects\)/);
+  assert.match(store, /Persisting their data URLs/);
 });
 test('empty canvas no longer exposes the explicit guide or empty properties panel', () => {
   assert.doesNotMatch(page, /title="キャンバスガイドを開く"/);

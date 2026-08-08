@@ -186,12 +186,27 @@ const sanitizePersistedObject = (obj: CanvasObject): CanvasObject => {
     };
   }
 
+  // Local files are intentionally session-scoped. Persisting their data URLs
+  // makes the small localStorage canvas record grow without bound and can
+  // throw QuotaExceededError while an otherwise valid upload is being added.
+  // Keep the object in memory for the current canvas session, but persist only
+  // its safe metadata on the next store write.
+  if (obj.metadata?.feature === 'local-upload' || obj.metadata?.sourceIdentity?.kind === 'local-upload') {
+    return {
+      ...obj,
+      src: '',
+    };
+  }
+
   return obj;
 };
 
+const sanitizePersistedObjects = (objects: CanvasObject[]): CanvasObject[] =>
+  objects.map(sanitizePersistedObject).filter((obj) => obj.src !== '');
+
 const sanitizePersistedProject = (project: CanvasProject): CanvasProject => ({
   ...project,
-  objects: project.objects.map(sanitizePersistedObject).filter((obj) => obj.src !== ''),
+  objects: sanitizePersistedObjects(project.objects),
 });
 
 export const useCanvasStore = create<CanvasState>()(
@@ -569,19 +584,17 @@ export const useCanvasStore = create<CanvasState>()(
 
         return {
           ...state,
-          objects: Array.isArray(state.objects)
-            ? state.objects.map(sanitizePersistedObject).filter((obj: CanvasObject) => obj.src !== '')
-            : [],
+          objects: Array.isArray(state.objects) ? sanitizePersistedObjects(state.objects) : [],
           projects: Array.isArray(state.projects)
             ? state.projects.map(sanitizePersistedProject)
             : [],
         };
       },
       partialize: (state) => ({
-        projects: state.projects,
+        projects: state.projects.map(sanitizePersistedProject),
         currentProjectId: state.currentProjectId,
         currentProjectName: state.currentProjectName,
-        objects: state.objects,
+        objects: sanitizePersistedObjects(state.objects),
       }),
     }
   )
