@@ -16,7 +16,7 @@ const library = readFileSync(
 );
 
 test('tap selection keeps the source crop opaque and carries the reviewed mask separately', () => {
-  assert.match(editor, /Keep the\n+      \/\/ crop opaque for the downstream cloth model/);
+  assert.match(editor, /Keep the\n+\s+\/\/ crop opaque for the downstream cloth model/);
   assert.match(editor, /selectionMaskUrl = maskCanvas\.toDataURL\('image\/png'\)/);
   assert.match(editor, /onApply\(output\.toDataURL\('image\/png'\), selectionSource, segmentationTarget, selectionMaskUrl\)/);
   assert.doesNotMatch(

@@ -111,6 +111,12 @@ import {
   restorePrintResultHistory,
 } from '../lib/printResultHistoryPersistence';
 import {
+  persistPrintInputState,
+  releaseRestoredPrintInput,
+  restorePrintInputState,
+  type RestoredPrintInputImage,
+} from '../lib/printInputPersistence';
+import {
   canExplicitlyConfirmProcessedGarmentMask,
   DEFAULT_GARMENT_SEGMENTATION_TARGET,
   garmentSelectionModelStatus,
@@ -744,6 +750,10 @@ export function LightchainMaterialWorkbenchPage() {
   const printHistoryHydratedBrandRef = useRef<string | null>(null);
   const restoredPrintResultUrlsRef = useRef(new Map<string, string>());
   const printHistoryPersistenceGenerationRef = useRef(0);
+  const printInputHydrationGenerationRef = useRef(0);
+  const printInputHydratedBrandRef = useRef<string | null>(null);
+  const restoredPrintInputImagesRef = useRef<RestoredPrintInputImage[]>([]);
+  const printInputPersistenceGenerationRef = useRef(0);
   const selectedPrintGarmentMaskCandidateIdRef = useRef(selectedPrintGarmentMaskCandidateId);
   const printGarmentMaskRevisionRef = useRef(printGarmentMaskRevision);
   const printGarmentProcessedRef = useRef(printGarmentProcessed);
@@ -2103,6 +2113,66 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintGarmentSegmentationTarget(DEFAULT_GARMENT_SEGMENTATION_TARGET);
     setPrintGarment(image);
   };
+
+  useEffect(() => {
+    if (!isPrinting || !isAuthInitialized || isAuthLoading || !currentBrand?.id) return;
+    const brandId = currentBrand.id;
+    const hydrationGeneration = ++printInputHydrationGenerationRef.current;
+    printInputHydratedBrandRef.current = null;
+    restoredPrintInputImagesRef.current.forEach((image) => releaseRestoredPrintInput(image));
+    restoredPrintInputImagesRef.current = [];
+    let cancelled = false;
+
+    void restorePrintInputState(brandId)
+      .then(async (restored) => {
+        const restoredImages = [
+          ...(restored.garment ? [restored.garment] : []),
+          ...restored.designs,
+        ];
+        if (cancelled || hydrationGeneration !== printInputHydrationGenerationRef.current) {
+          restoredImages.forEach((image) => releaseRestoredPrintInput(image));
+          return;
+        }
+        restoredPrintInputImagesRef.current = restoredImages;
+        if (restored.garment) selectPrintGarment(restored.garment);
+        if (restored.designs.length > 0) {
+          const result = await addDesigns(restored.designs);
+          if (!result.ok) {
+            toast.error(`保存済みデザインの復元に失敗しました: ${result.reason}`);
+          }
+        }
+        if (!cancelled && hydrationGeneration === printInputHydrationGenerationRef.current) {
+          printInputHydratedBrandRef.current = brandId;
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.warn('Printing input restore skipped.', error);
+        printInputHydratedBrandRef.current = brandId;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // addDesigns/selectPrintGarment intentionally bind to the current workbench session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBrand?.id, isAuthInitialized, isAuthLoading, isPrinting]);
+
+  useEffect(() => () => {
+    restoredPrintInputImagesRef.current.forEach((image) => releaseRestoredPrintInput(image));
+    restoredPrintInputImagesRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    if (!isPrinting || !currentBrand?.id || printInputHydratedBrandRef.current !== currentBrand.id) return;
+    const brandId = currentBrand.id;
+    const persistenceGeneration = ++printInputPersistenceGenerationRef.current;
+    void persistPrintInputState(brandId, printGarment, printDesigns)
+      .catch((error) => {
+        if (persistenceGeneration !== printInputPersistenceGenerationRef.current) return;
+        console.warn('Printing input persistence skipped.', error);
+      });
+  }, [currentBrand?.id, isPrinting, printDesigns, printGarment]);
 
   const openGarmentMaskEditor = async () => {
     if (!printGarment) return;
