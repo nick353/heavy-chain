@@ -82,7 +82,7 @@ test('tap selects the cloth model only when the build explicitly provides one', 
     clothModelConfigured: true,
     modnetModelConfigured: true,
     ben2ModelConfigured: true,
-  }), 'ben2');
+  }), 'modnet');
 });
 
 test('automatic and range paths never silently switch to the cloth model', () => {
