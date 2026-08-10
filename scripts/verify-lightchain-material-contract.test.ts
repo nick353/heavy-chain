@@ -54,6 +54,8 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /buildFabricModelGarmentMask/);
   assert.match(page, /renderFabricTryOnComposition/);
   assert.match(page, /keepCentralGarmentMaskComponent/);
+  assert.match(page, /refineCoarseGarmentMask/);
+  assert.match(page, /coarseMaskWasRectangular/);
   assert.match(page, /averageColor/);
   assert.match(page, /FABRIC_OUTPUT_BACKGROUND/);
   assert.doesNotMatch(page, /backgroundColor: (?:previewVariant|preset)\.tint/);

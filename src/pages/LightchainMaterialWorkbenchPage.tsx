@@ -102,6 +102,7 @@ import {
   PRINT_RESULT_HISTORY_MAX_RUNS,
   type PrintGarmentMaskCandidateId,
 } from '../lib/printMaskCandidateStrategy';
+import { refineCoarseGarmentMask } from '../features/printing/selection/refineCoarseGarmentMask';
 import {
   canCommitPrintableSurfaceEditorOperation,
   canCommitPrintableSuggestion,
@@ -760,6 +761,7 @@ async function renderFabricTryOnComposition({
   const modelX = (stageWidth - modelWidth) / 2;
   const modelY = (stageHeight - modelHeight) / 2;
   context.drawImage(model, modelX, modelY, modelWidth, modelHeight);
+  const modelImageData = context.getImageData(0, 0, stageWidth, stageHeight);
 
   const maskCanvas = document.createElement('canvas');
   maskCanvas.width = stageWidth;
@@ -782,7 +784,29 @@ async function renderFabricTryOnComposition({
     bottom: Math.ceil(modelY + modelHeight),
   });
 
-  const maskRgba = maskContext.getImageData(0, 0, stageWidth, stageHeight).data;
+  const maskImageData = maskContext.getImageData(0, 0, stageWidth, stageHeight);
+  const maskRgba = maskImageData.data;
+  const refinedMask = refineCoarseGarmentMask({
+    mask: maskRgba,
+    source: modelImageData.data,
+    width: stageWidth,
+    height: stageHeight,
+    modelBounds: {
+      left: modelX,
+      top: modelY,
+      right: modelX + modelWidth,
+      bottom: modelY + modelHeight,
+    },
+  });
+  if (refinedMask.coarseMaskWasRectangular) {
+    if (!refinedMask.refined) {
+      throw new Error('モデル画像の衣服輪郭を精密化できませんでした。服全体が見える画像で再試行してください');
+    }
+    for (let index = 0; index < refinedMask.alpha.length; index += 1) {
+      maskRgba[(index * 4) + 3] = refinedMask.alpha[index];
+    }
+    maskContext.putImageData(maskImageData, 0, 0);
+  }
   let targetLeft = stageWidth;
   let targetTop = stageHeight;
   let targetRight = -1;
