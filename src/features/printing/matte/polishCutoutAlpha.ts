@@ -77,8 +77,9 @@ const pruneTinyComponents = (rgba: Uint8ClampedArray, width: number, height: num
  * Removes only tiny disconnected alpha islands, then softens a binary contour
  * over a very small five-by-five neighbourhood. The old one-pixel pass left
  * low-resolution point-prompt masks visibly stair-stepped after the crop was
- * displayed in a result card. The bounded blur only runs where transparent
- * and opaque pixels meet, so garment interiors and large connected regions
+ * displayed in a result card. The bounded blur also handles partial-alpha
+ * pixels emitted by matting models, but only where near-transparent and
+ * near-opaque pixels meet, so garment interiors and large connected regions
  * keep their original alpha and RGB values.
  */
 export const polishCutoutAlpha = ({
@@ -103,14 +104,14 @@ export const polishCutoutAlpha = ({
       // removed. A tiny stray pixel can sit close to the garment and would
       // otherwise become a faint halo under the wider contour kernel.
       if (centerAlpha === 0 && rgba[center + 3] > 0) continue;
-      let sawTransparent = centerAlpha === 0;
-      let sawOpaque = centerAlpha === 255;
-      let weightedAlpha = centerAlpha * 9;
-      let totalWeight = 9;
-      let red = cleaned[center] * 9;
-      let green = cleaned[center + 1] * 9;
-      let blue = cleaned[center + 2] * 9;
-      let foregroundWeight = centerAlpha >= 200 ? 9 : 0;
+      let sawTransparent = false;
+      let sawOpaque = false;
+      let weightedAlpha = 0;
+      let totalWeight = 0;
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+      let foregroundWeight = 0;
 
       for (let offsetY = -2; offsetY <= 2; offsetY += 1) {
         const nextY = y + offsetY;
@@ -121,8 +122,8 @@ export const polishCutoutAlpha = ({
           if (nextX < 0 || nextY < 0 || nextX >= width || nextY >= height) continue;
           const next = pixelOffset(nextX, nextY, width);
           const nextAlpha = cleaned[next + 3];
-          sawTransparent ||= nextAlpha === 0;
-          sawOpaque ||= nextAlpha === 255;
+          sawTransparent ||= nextAlpha <= 8;
+          sawOpaque ||= nextAlpha >= 247;
           weightedAlpha += nextAlpha * weight;
           totalWeight += weight;
           if (nextAlpha >= 200) {

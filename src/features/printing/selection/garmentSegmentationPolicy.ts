@@ -107,8 +107,9 @@ export const isGarmentSemanticSegmentationResult = ({
 
 /**
  * A tap is an intent signal, not proof that a cloth model is available.
- * Keep the general model as the deterministic fallback until a cloth model
- * has been explicitly deployed and configured for this build.
+ * Prefer the higher-resolution BEN2 matting lane when it is explicitly
+ * deployed. MODNet remains a lightweight fallback, followed by the
+ * cloth-specific rembg model and finally the deterministic local path.
  */
 export const resolveGarmentCutoutModel = ({
   selectionSource,
@@ -121,10 +122,10 @@ export const resolveGarmentCutoutModel = ({
   modnetModelConfigured?: boolean;
   ben2ModelConfigured?: boolean;
 }): GarmentCutoutModel => (
-  selectionSource === 'tap' && modnetModelConfigured
-    ? 'modnet'
-    : selectionSource === 'tap' && ben2ModelConfigured
+  selectionSource === 'tap' && ben2ModelConfigured
     ? 'ben2'
+    : selectionSource === 'tap' && modnetModelConfigured
+    ? 'modnet'
     : selectionSource === 'tap' && clothModelConfigured
     ? 'u2net_cloth_seg'
     : 'silueta'
