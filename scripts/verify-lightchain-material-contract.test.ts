@@ -53,6 +53,10 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /切り抜き済み生地を衣服領域へ適用した参考/);
   assert.match(page, /buildFabricModelGarmentMask/);
   assert.match(page, /renderFabricTryOnComposition/);
+  assert.match(page, /keepCentralGarmentMaskComponent/);
+  assert.match(page, /averageColor/);
+  assert.match(page, /FABRIC_OUTPUT_BACKGROUND/);
+  assert.doesNotMatch(page, /backgroundColor: (?:previewVariant|preset)\.tint/);
   assert.match(page, /globalCompositeOperation = 'destination-in'/);
   assert.match(page, /result\.engine !== 'browser-ai-u2net_cloth_seg-v1'/);
   assert.match(page, /モデル画像の衣服領域AIが未配置のため、生地を安全に適用できません/);

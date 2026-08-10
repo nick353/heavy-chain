@@ -467,28 +467,30 @@ const fabricVariants = [
   {
     id: 'cotton',
     name: 'コットン',
-    tint: 'rgba(255,255,255,0.06)',
+    tint: 'rgba(248,250,252,0.42)',
     filter: 'saturate(0.98) contrast(1.02)',
   },
   {
     id: 'denim',
     name: 'デニム',
-    tint: 'rgba(30,58,95,0.10)',
+    tint: 'rgba(30,58,95,0.58)',
     filter: 'saturate(1.2) contrast(1.08)',
   },
   {
     id: 'satin',
     name: 'サテン',
-    tint: 'rgba(255,255,255,0.18)',
+    tint: 'rgba(255,255,255,0.48)',
     filter: 'brightness(1.08) saturate(0.92)',
   },
   {
     id: 'linen',
     name: 'リネン',
-    tint: 'rgba(180,140,90,0.09)',
+    tint: 'rgba(180,140,90,0.38)',
     filter: 'saturate(0.95) contrast(1.05)',
   },
 ];
+
+const FABRIC_OUTPUT_BACKGROUND = '#0b1113';
 
 const printPreviewStageSize = { width: 720, height: 900 };
 const IMAGE_LOAD_TIMEOUT_MS = 30_000;
@@ -592,6 +594,7 @@ type ImageAlphaBounds = {
   top: number;
   right: number;
   bottom: number;
+  averageColor: string;
 };
 
 async function loadImageAlphaBounds(imageUrl: string): Promise<ImageAlphaBounds> {
@@ -610,17 +613,97 @@ async function loadImageAlphaBounds(imageUrl: string): Promise<ImageAlphaBounds>
   let top = height;
   let right = -1;
   let bottom = -1;
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+  let opaquePixels = 0;
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
-      if (rgba[((y * width) + x) * 4 + 3] < 24) continue;
+      const offset = ((y * width) + x) * 4;
+      const alpha = rgba[offset + 3];
+      if (alpha < 24) continue;
       left = Math.min(left, x);
       top = Math.min(top, y);
       right = Math.max(right, x);
       bottom = Math.max(bottom, y);
+      red += rgba[offset];
+      green += rgba[offset + 1];
+      blue += rgba[offset + 2];
+      opaquePixels += 1;
     }
   }
   if (right < left || bottom < top) throw new Error('衣服領域を認識できませんでした');
-  return { image, width, height, left, top, right, bottom };
+  const averageColor = `rgb(${Math.round(red / Math.max(1, opaquePixels))},${Math.round(green / Math.max(1, opaquePixels))},${Math.round(blue / Math.max(1, opaquePixels))})`;
+  return { image, width, height, left, top, right, bottom, averageColor };
+}
+
+function keepCentralGarmentMaskComponent(
+  maskContext: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  modelBounds: { left: number; top: number; right: number; bottom: number },
+) {
+  const mask = maskContext.getImageData(0, 0, width, height);
+  const pixelCount = width * height;
+  const visited = new Uint8Array(pixelCount);
+  const bestComponent = new Uint8Array(pixelCount);
+  const component = new Int32Array(pixelCount);
+  let bestScore = -1;
+  const centerX = (modelBounds.left + modelBounds.right) / 2;
+  const centerY = modelBounds.top + (modelBounds.bottom - modelBounds.top) * 0.42;
+
+  for (let start = 0; start < pixelCount; start += 1) {
+    if (visited[start] || mask.data[(start * 4) + 3] < 24) continue;
+    let componentSize = 0;
+    let queueHead = 0;
+    component[componentSize++] = start;
+    visited[start] = 1;
+    let sumX = 0;
+    let sumY = 0;
+    while (queueHead < componentSize) {
+      const current = component[queueHead++];
+      const x = current % width;
+      const y = Math.floor(current / width);
+      sumX += x;
+      sumY += y;
+      const neighbours = [
+        x > 0 ? current - 1 : -1,
+        x < width - 1 ? current + 1 : -1,
+        y > 0 ? current - width : -1,
+        y < height - 1 ? current + width : -1,
+      ];
+      for (const next of neighbours) {
+        if (next < 0 || next >= pixelCount || visited[next]) continue;
+        if (mask.data[(next * 4) + 3] < 24) continue;
+        visited[next] = 1;
+        component[componentSize++] = next;
+      }
+    }
+    const componentCenterX = sumX / componentSize;
+    const componentCenterY = sumY / componentSize;
+    const distance = Math.hypot(componentCenterX - centerX, componentCenterY - centerY);
+    const centrality = 1 / (1 + distance / Math.max(width, height));
+    const score = componentSize * centrality;
+    if (score <= bestScore) continue;
+    bestScore = score;
+    bestComponent.fill(0);
+    for (let index = 0; index < componentSize; index += 1) bestComponent[component[index]] = 1;
+  }
+
+  for (let index = 0; index < pixelCount; index += 1) {
+    const x = index % width;
+    const y = Math.floor(index / width);
+    if (
+      !bestComponent[index]
+      || x < modelBounds.left
+      || x > modelBounds.right
+      || y < modelBounds.top
+      || y > modelBounds.bottom
+    ) {
+      mask.data[(index * 4) + 3] = 0;
+    }
+  }
+  maskContext.putImageData(mask, 0, 0);
 }
 
 async function buildFabricModelGarmentMask(imageUrl: string): Promise<string> {
@@ -689,6 +772,16 @@ async function renderFabricTryOnComposition({
   const maskY = (stageHeight - maskHeight) / 2;
   maskContext.drawImage(garmentMask.image, maskX, maskY, maskWidth, maskHeight);
 
+  // Cloth segmentation can produce small disconnected false positives in
+  // foliage/background regions. Keep only the central garment component and
+  // hard-clip it to the opaque model rectangle before any texture is drawn.
+  keepCentralGarmentMaskComponent(maskContext, stageWidth, stageHeight, {
+    left: Math.floor(modelX),
+    top: Math.floor(modelY),
+    right: Math.ceil(modelX + modelWidth),
+    bottom: Math.ceil(modelY + modelHeight),
+  });
+
   const maskRgba = maskContext.getImageData(0, 0, stageWidth, stageHeight).data;
   let targetLeft = stageWidth;
   let targetTop = stageHeight;
@@ -712,15 +805,37 @@ async function renderFabricTryOnComposition({
   textureCanvas.height = stageHeight;
   const textureContext = textureCanvas.getContext('2d');
   if (!textureContext) throw new Error('生地テクスチャ用Canvasを初期化できませんでした');
+  const fabricPatchCanvas = document.createElement('canvas');
   const sourceWidth = fabric.right - fabric.left + 1;
   const sourceHeight = fabric.bottom - fabric.top + 1;
+  fabricPatchCanvas.width = sourceWidth;
+  fabricPatchCanvas.height = sourceHeight;
+  const fabricPatchContext = fabricPatchCanvas.getContext('2d');
+  if (!fabricPatchContext) throw new Error('生地テクスチャ用パッチを初期化できませんでした');
+  // The reference garment's alpha is a spatial hint, not the final garment
+  // silhouette. Fill transparent holes in its crop with the sampled fabric
+  // color so the material covers the target garment instead of disappearing
+  // wherever the source shirt shape differs from the model's shirt shape.
+  fabricPatchContext.fillStyle = fabric.averageColor;
+  fabricPatchContext.fillRect(0, 0, sourceWidth, sourceHeight);
+  fabricPatchContext.drawImage(
+    fabric.image,
+    fabric.left,
+    fabric.top,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    sourceWidth,
+    sourceHeight,
+  );
   const targetWidth = targetRight - targetLeft + 1;
   const targetHeight = targetBottom - targetTop + 1;
   textureContext.filter = variant.filter;
   textureContext.drawImage(
-    fabric.image,
-    fabric.left,
-    fabric.top,
+    fabricPatchCanvas,
+    0,
+    0,
     sourceWidth,
     sourceHeight,
     targetLeft,
@@ -741,10 +856,10 @@ async function renderFabricTryOnComposition({
   // appearing as a floating rectangle or a second garment around the model.
   context.save();
   context.globalCompositeOperation = 'multiply';
-  context.globalAlpha = 0.68;
+  context.globalAlpha = 0.82;
   context.drawImage(textureCanvas, 0, 0);
   context.globalCompositeOperation = 'soft-light';
-  context.globalAlpha = 0.42;
+  context.globalAlpha = 0.24;
   context.drawImage(textureCanvas, 0, 0);
   context.restore();
 
@@ -1639,7 +1754,7 @@ export function LightchainMaterialWorkbenchPage() {
         modelUrl: fabricDesign.url,
         fabricOverlayUrl: overlayUrl,
         garmentMaskUrl: modelGarmentMaskUrl,
-        backgroundColor: previewVariant.tint,
+        backgroundColor: FABRIC_OUTPUT_BACKGROUND,
         variant: previewVariant,
       });
       return { overlayUrl, modelGarmentMaskUrl, previewUrl };
@@ -1990,7 +2105,7 @@ export function LightchainMaterialWorkbenchPage() {
               modelUrl: fabricDesign!.url,
               fabricOverlayUrl: fabricOverlayUrl,
               garmentMaskUrl: fabricModelMaskUrl,
-              backgroundColor: preset.tint,
+              backgroundColor: FABRIC_OUTPUT_BACKGROUND,
               variant: preset,
             }),
             COMPOSITION_TIMEOUT_MS,
