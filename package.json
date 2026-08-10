@@ -23,6 +23,7 @@
     "test:canvas-brand-readback": "node --test scripts/verify-canvas-brand-readback.test.mjs",
     "test:print-mask-candidates": "node --experimental-strip-types --test scripts/verify-print-mask-candidates.test.ts",
     "test:fabric-material-synthesis": "node --experimental-strip-types --test scripts/verify-fabric-material-synthesis.test.ts",
+    "test:lightchain-asset-anchored-preview": "node --experimental-strip-types --test scripts/verify-lightchain-asset-anchored-preview.test.ts",
     "test:point-guided-selection": "node --experimental-strip-types --test scripts/verify-point-guided-selection.test.ts scripts/verify-point-prompt-segmentation.test.ts",
     "test:print-shortcuts": "node --experimental-strip-types --test scripts/verify-print-design-handoff.test.ts scripts/verify-print-shortcuts-source.test.ts",
     "test:lightchain-entry-routing": "node --test scripts/verify-lightchain-entry-routing.test.mjs",

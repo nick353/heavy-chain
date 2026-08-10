@@ -42,6 +42,7 @@ import {
   PrintingImageComposer,
 } from '../components/lightchain/PrintingImageComposer';
 import { LIGHTCHAIN_MATERIAL_LIBRARY_TABS } from '../lib/lightchainMaterialContract';
+import { buildAssetAnchoredPreviewDataUrl } from '../features/lightchain/assetAnchoredPreview';
 
 type ToolCategory = 'home' | 'marketing' | 'fitting' | 'planning' | 'graphics' | 'model' | 'video' | 'lab';
 type ToolStatus = 'ready' | 'workspace' | 'needs-image' | 'coming-soon';
@@ -1674,26 +1675,21 @@ export function LightchainWorkbenchPage() {
         return;
       }
       setImageRepairGenerating(true);
-      const imageRepairPreview = encodeSvgDataUrl(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
-          <rect width="900" height="560" fill="#050909"/>
-          <rect x="84" y="68" width="732" height="424" rx="28" fill="#141b1d" stroke="#243236" stroke-width="3"/>
-          <rect x="278" y="126" width="344" height="302" rx="24" fill="#f8fafc"/>
-          <path d="M354 190c44-28 148-28 192 0v154c0 52-42 88-96 88s-96-36-96-88z" fill="#ffffff" stroke="#d1d5db" stroke-width="8"/>
-          <circle cx="572" cy="180" r="32" fill="#65d3cf"/>
-          <path d="M556 180h32M572 164v32" stroke="#052f2f" stroke-width="8" stroke-linecap="round"/>
-          <path d="M338 366c48-34 176-34 224 0" fill="none" stroke="#65d3cf" stroke-width="16" stroke-linecap="round"/>
-          <text x="450" y="466" text-anchor="middle" fill="#65d3cf" font-family="Arial, sans-serif" font-size="28" font-weight="800">画像修正</text>
-          <text x="450" y="500" text-anchor="middle" fill="#a3a3a3" font-family="Arial, sans-serif" font-size="18">${escapeSvgText(imageRepairMode)} / ${escapeSvgText(materialSlotFiles.primary?.name ?? '参考画像')}</text>
-        </svg>
-      `);
+      const imageRepairSummary = `${imageRepairMode} / ${materialSlotFiles.primary?.name ?? '参考画像'}`;
+      const imageRepairPreview = buildAssetAnchoredPreviewDataUrl({
+        sourceImageUrl: materialSlotFiles.primary?.imageUrl ?? garmentImageUrl,
+        title: '画像修正',
+        summary: imageRepairSummary,
+        mode: 'repair',
+      });
       setLightchainResult({
         toolId: selectedTool.id,
         title: '画像修正プレビュー',
-        summary: `${imageRepairMode} / ${materialSlotFiles.primary?.name ?? '参考画像'}`,
+        summary: imageRepairSummary,
         imageUrl: imageRepairPreview,
       });
-      toast.success('画像修正を開始しました');
+      setImageRepairGenerating(false);
+      toast.success('入力画像を保持した画像修正プレビューを作成しました');
       return;
     }
     if (aiGenerateDisabled && !isFittingDetail) {
@@ -1760,9 +1756,46 @@ export function LightchainWorkbenchPage() {
 	        currentModelPanel.variant === 'size' ? `${modelFormState.garmentType} / ${modelFormState.sourceSize}→${modelFormState.targetSize}` : null,
 	        currentModelPanel.variant === 'angle' ? `左右${modelFormState.angleHorizontal} / 上下${modelFormState.angleVertical} / 距離${modelFormState.angleZoom} / 背面${modelFormState.backView}` : null,
 		        currentModelPanel.variant === 'uploadPair' ? `${currentModelPanel.secondaryLabel ?? '参考画像'}: ${materialSlotFiles.secondary?.name ?? 'ランダム参考'}` : null,
-          selectedTool.id === 'model-change' ? `サイズ維持${modelFormState.keepSize}` : null,
-	      ].filter(Boolean).join(' / ')
+        selectedTool.id === 'model-change' ? `サイズ維持${modelFormState.keepSize}` : null,
+      ].filter(Boolean).join(' / ')
       : selectedTool.title;
+
+    const sourceImageUrl = materialSlotFiles.primary?.imageUrl || garmentImageUrl;
+    if (sourceImageUrl) {
+      const previewMode = selectedTool.id === 'line-generation'
+        ? 'line-art'
+        : selectedTool.id === 'line-to-real'
+          ? 'asset'
+          : isPatternVectorProFlow
+            ? 'pattern'
+            : selectedTool.id === 'svg-convert'
+              ? 'vector'
+              : currentModelPanel
+                ? 'model'
+                : 'asset';
+      const anchoredPreview = buildAssetAnchoredPreviewDataUrl({
+        sourceImageUrl,
+        secondaryImageUrl: materialSlotFiles.secondary?.imageUrl,
+        title: currentDisplayTitle,
+        summary: modelSummary,
+        mode: previewMode,
+      });
+      const resultTitle = selectedTool.id === 'svg-convert'
+        ? 'SVGプレビュー'
+        : ['line-to-real', 'line-generation', 'pattern-vector', 'pattern-vector-pro'].includes(selectedTool.id)
+          ? `${currentDisplayTitle}プレビュー`
+          : currentModelPanel
+            ? `${currentDisplayTitle}プレビュー`
+            : currentDisplayTitle;
+      setLightchainResult({
+        toolId: selectedTool.id,
+        title: resultTitle,
+        summary: modelSummary,
+        imageUrl: anchoredPreview,
+      });
+      toast.success('入力素材を保持した生成プレビューを履歴に追加しました');
+      return;
+    }
 
     const preview = encodeSvgDataUrl(`
       <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
@@ -2308,7 +2341,7 @@ export function LightchainWorkbenchPage() {
         lightchainTaskSteps: [{
           taskCode: selectedTool.id,
           route: selectedTool.lightchainRoute,
-          status: selectedTool.id === 'svg-convert' && lightchainResult ? 'completed' as const : 'processing' as const,
+          status: lightchainResult ? 'completed' as const : 'processing' as const,
         }],
       };
 	      const slotMaterialReferences = lightchainWorkbenchState
@@ -2358,11 +2391,12 @@ export function LightchainWorkbenchPage() {
         workbenchStep,
         outputs: selectedTool.outputs,
       });
+      const artifactPreview = lightchainResult?.imageUrl ?? orderSheetPreview;
       const artifact = await saveWorkspaceArtifactBestEffort({
         brandId: currentBrand.id,
         featureType: `lightchain-${selectedTool.id}`,
         title: selectedTool.title,
-        imageUrl: orderSheetPreview,
+        imageUrl: artifactPreview,
         prompt: `${selectedTool.promptTemplate}\n\n依頼: ${brief}\n参考: ${referenceNote}${lightchainWorkbenchState ? `\n素材: ${garmentCategory} / ${cutMode} / ${printPlacement} / ${printScale}%` : ''}`,
         canvasProjectId: projectId,
         metadata: {
@@ -2378,6 +2412,7 @@ export function LightchainWorkbenchPage() {
 
       let materialObjectId: string | null = null;
       let overlayObjectId: string | null = null;
+      let resultObjectId: string | null = null;
 
       if (shouldSaveWorkbenchAsset) {
         if (selectedTool.id === 'printing-image') {
@@ -2528,6 +2563,38 @@ export function LightchainWorkbenchPage() {
         }
       }
 
+      if (shouldSaveWorkbenchAsset && lightchainResult?.imageUrl && selectedTool.id !== 'printing-image') {
+        resultObjectId = addObject({
+          type: 'image',
+          x: 520,
+          y: 100,
+          width: 420,
+          height: 360,
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          opacity: 1,
+          locked: false,
+          visible: true,
+          src: lightchainResult.imageUrl,
+          label: `${selectedTool.title} 生成結果`,
+          metadata: {
+            feature: `lightchain-${selectedTool.id}-generated-result`,
+            prompt: selectedTool.promptTemplate,
+            generation: 1,
+            lightchainCompat,
+            parameters: {
+              toolId: selectedTool.id,
+              artifactId: artifact.artifact.id,
+              resultTitle: lightchainResult.title,
+              resultSummary: lightchainResult.summary,
+              previewKind: 'asset-anchored-v2',
+              ...workbenchParameters,
+            },
+          },
+        });
+      }
+
       addObject({
         type: 'text',
         x: shouldSaveWorkbenchAsset ? 520 : 120,
@@ -2560,8 +2627,8 @@ export function LightchainWorkbenchPage() {
           },
         },
       });
-      if (overlayObjectId ?? materialObjectId) {
-        selectObject((overlayObjectId ?? materialObjectId) as string);
+      if (resultObjectId ?? overlayObjectId ?? materialObjectId) {
+        selectObject((resultObjectId ?? overlayObjectId ?? materialObjectId) as string);
       }
       saveCurrentProject();
       toast.success('制作内容を保存しました');
