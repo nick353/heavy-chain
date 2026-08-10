@@ -7,9 +7,11 @@ import {
   Check,
   FolderHeart,
   Heart,
+  History,
   Layers3,
   Laptop,
   Loader2,
+  Palette,
   Plus,
   Scissors,
   Sparkles,
@@ -663,6 +665,11 @@ export function LightchainMaterialWorkbenchPage() {
   const { currentBrand, isInitialized: isAuthInitialized, isLoading: isAuthLoading } = useAuthStore();
   const mode: WorkbenchMode = location.pathname.includes('printing') ? 'printing' : 'fabric';
   const isPrinting = mode === 'printing';
+  // The recorded Light Chain print flow is intentionally direct: reference image
+  // -> print upload -> spot/full -> AI generation. Heavy's mask/placement editor
+  // remains available as an explicit advanced editor, but it must not become a
+  // mandatory extra step in the parity path.
+  const lightchainPrintParity = isPrinting;
   const [printCoverageMode, setPrintCoverageMode] = useState<PrintCoverageMode>('spot');
   const [printOutputScale, setPrintOutputScale] = useState<1 | 2>(1);
   const printOutputStageSize = useMemo(() => ({
@@ -711,7 +718,7 @@ export function LightchainMaterialWorkbenchPage() {
   const [printGarmentCutoutError, setPrintGarmentCutoutError] = useState<string | null>(null);
   const [printDesigns, setPrintDesigns] = useState<SelectedImage[]>([]);
   const [printDesignLayers, setPrintDesignLayers] = useState<AssetLayer[]>([]);
-  const [printPlacementSessionOpen, setPrintPlacementSessionOpen] = useState(true);
+  const [printPlacementSessionOpen, setPrintPlacementSessionOpen] = useState(false);
   const [printPlacementConfirmed, setPrintPlacementConfirmed] = useState(false);
   const [printPlacementSessionDirty, setPrintPlacementSessionDirty] = useState(false);
   const [printPlacementSessionRevision, setPrintPlacementSessionRevision] = useState(0);
@@ -742,7 +749,7 @@ export function LightchainMaterialWorkbenchPage() {
   const currentPrintDesignLayerIdsRef = useRef<string[]>([]);
   const printDesignLayerSequenceRef = useRef(0);
   const printPlacementBaselineRef = useRef<PlacementEditBaseline<Transform> | null>(null);
-  const printPlacementSessionOpenRef = useRef(true);
+  const printPlacementSessionOpenRef = useRef(false);
   const pendingActivePrintDesignLayerIdRef = useRef<string | null>(null);
   const printDesignReturnIntentRef = useRef<PrintDesignReturnIntent | null>(null);
   const printDesignReturnFrameRef = useRef<number | null>(null);
@@ -812,6 +819,10 @@ export function LightchainMaterialWorkbenchPage() {
       && Boolean(layer.originalUrl)
       && Boolean(layer.displayUrl)
     ));
+  const lightchainPrintReady = lightchainPrintParity
+    && Boolean(printGarmentProcessed)
+    && printGarmentCutoutState === 'done'
+    && printDesignsReady;
   const printDesignsProcessing = placedPrintDesignLayers.some((layer) => layer.cutoutState === 'processing');
   const printDesignsErrored = placedPrintDesignLayers.some((layer) => layer.cutoutState === 'error');
   const printPlacementConfirmationStatus = !hasConfirmedPrintGarmentMask
@@ -1542,18 +1553,18 @@ export function LightchainMaterialWorkbenchPage() {
         : '参考画像の透明化を完了してください');
       return;
     }
-    if (isPrinting && !hasConfirmedPrintGarmentMask) {
+    if (isPrinting && !lightchainPrintParity && !hasConfirmedPrintGarmentMask) {
       setPrintGarmentSelectionOpen(true);
       toast.error('青い認識範囲を確認し、「決定」を押してください');
       return;
     }
-    if (isPrinting && (printPlacementSessionOpen || !printPlacementConfirmed)) {
+    if (isPrinting && !lightchainPrintParity && (printPlacementSessionOpen || !printPlacementConfirmed)) {
       toast.error('デザイン配置を「決定」してから生成してください');
       if (printPlacementSessionOpen) focusPrintPlacementPane();
       else openPrintPlacementSession();
       return;
     }
-    if (isPrinting && !canConfirmPrintPlacement) {
+    if (isPrinting && !lightchainPrintParity && !canConfirmPrintPlacement) {
       toast.error(placedPrintDesignLayers.some((layer) => layer.cutoutState === 'processing')
         ? '配置中デザインの透明化が完了するまでお待ちください'
         : printPlacementConfirmationStatus);
@@ -1867,7 +1878,12 @@ export function LightchainMaterialWorkbenchPage() {
       ));
     if (placementMembershipChanged) {
       setPrintPlacementConfirmed(false);
-      openPrintPlacementSession();
+      if (lightchainPrintParity) {
+        setPrintPlacementSessionOpen(false);
+        printPlacementSessionOpenRef.current = false;
+      } else {
+        openPrintPlacementSession();
+      }
     }
     if (inputPlan.duplicateCount > 0) {
       toast(`同じデザインの重複を${inputPlan.duplicateCount}件まとめました`);
@@ -2037,6 +2053,31 @@ export function LightchainMaterialWorkbenchPage() {
     }
     return { ok: true };
   };
+
+  const resetPrintingInputs = useCallback(() => {
+    if (!isPrinting) return;
+    setPrintGarment(null);
+    setPrintDesigns([]);
+    setPrintDesignLayers([]);
+    setPrintDesignProcessedUrls({});
+    setPrintDesignCutoutResults({});
+    setPrintDesignMaskRevisions({});
+    setPrintDesignCutoutStates({});
+    setPrintDesignCutoutErrors({});
+    setPrintGarmentMaskExplicitlyConfirmed(false);
+    setPrintGarmentSelectionSource('automatic');
+    setPrintGarmentCutoutSourceUrl(null);
+    setPrintGarmentSelectionMaskUrl(null);
+    setPrintGarmentCutoutState('idle');
+    setPrintGarmentProcessed(null);
+    setPrintPlacementConfirmed(false);
+    setPrintPlacementSessionOpen(false);
+    printPlacementSessionOpenRef.current = false;
+    setPrintCoverageMode('spot');
+    setPrintOutputScale(1);
+    setGenerationError(null);
+    setSurfaceConformStatus(null);
+  }, [isPrinting]);
 
   useEffect(() => {
     if (
@@ -2743,7 +2784,7 @@ export function LightchainMaterialWorkbenchPage() {
 
   return (
     <div className="min-h-screen bg-[#0b1113] text-white">
-      <div className="mx-auto grid max-w-[1680px] gap-4 px-3 py-4 sm:px-5 lg:grid-cols-[72px_minmax(0,1fr)] lg:px-6 lg:py-6">
+      <div className={`mx-auto grid max-w-[1680px] gap-4 px-3 py-4 sm:px-5 lg:grid-cols-[72px_minmax(0,1fr)] lg:px-6 lg:py-6 ${isPrinting ? 'hidden' : ''}`}>
         <aside
           aria-label="Light Chainグラフィックツール"
           className="hidden rounded-2xl border border-white/10 bg-[#111719] p-2 shadow-2xl shadow-black/20 lg:block"
@@ -3748,6 +3789,250 @@ export function LightchainMaterialWorkbenchPage() {
       </div>
         </main>
       </div>
+
+      {isPrinting && (
+        <div
+          data-testid="lightchain-print-parity-view"
+          className="min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
+        >
+          <div className="mx-auto grid max-w-[1680px] gap-4 lg:grid-cols-[112px_minmax(0,1.08fr)_minmax(360px,0.92fr)]">
+            <aside
+              aria-label="Light Chainツールバー"
+              className="rounded-2xl border border-white/10 bg-[#111719] p-2 shadow-2xl shadow-black/20"
+            >
+              <div className="flex flex-row gap-2 overflow-x-auto lg:sticky lg:top-[88px] lg:flex-col">
+                <div className="hidden items-center justify-center rounded-xl bg-cyan-300/15 p-2 text-cyan-100 lg:flex">
+                  <Layers3 className="h-8 w-8" aria-hidden="true" />
+                </div>
+                {[
+                  { label: 'ツールバー', Icon: Layers3 },
+                  { label: 'デザインツール', Icon: Layers3 },
+                  { label: 'フィッティングツール', Icon: Sparkles },
+                  { label: 'グラフィックデザインツール', Icon: Palette },
+                  { label: '衣類生産ツール', Icon: Scissors },
+                ].map(({ label, Icon }) => (
+                  <button
+                    key={String(label)}
+                    type="button"
+                    className={`flex min-w-[8rem] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-[10px] font-semibold leading-4 transition lg:min-w-0 ${label === 'デザインツール'
+                      ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30'
+                      : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
+                  >
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </aside>
+
+            <section className="min-w-0 rounded-2xl border border-white/10 bg-[#171d20] p-4 shadow-2xl shadow-black/20 lg:p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/70">プリントイメージ</p>
+                  <p className="mt-1 text-sm text-white/60">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/history')}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-white/75 transition hover:border-cyan-300/40 hover:text-cyan-100"
+                >
+                  <History className="h-4 w-4" aria-hidden="true" />
+                  生成履歴
+                </button>
+              </div>
+
+              <nav className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#111719] p-1 sm:grid-cols-4" aria-label="素材ツール">
+                {LIGHTCHAIN_MATERIAL_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => navigate(tab.route)}
+                    aria-current={tab.id === activeMaterialTab.id ? 'page' : undefined}
+                    className={`rounded-lg px-2 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${tab.id === activeMaterialTab.id
+                      ? 'bg-[#737d84] text-white shadow-lg shadow-black/20'
+                      : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+
+              <div className="space-y-4">
+                <div data-testid="lightchain-print-reference-input" className="rounded-xl border border-white/10 bg-[#202629] p-3">
+                  <p className="mb-2 text-sm font-semibold text-white">参考画像をアップロード</p>
+                  <p className="mb-3 text-xs text-white/50">20MB以下の画像アップロードしてください</p>
+                  <ImageSelector
+                    label="参考画像"
+                    required
+                    value={printGarment}
+                    galleryTitle="素材を選択"
+                    confirmGallerySelection
+                    galleryConfirmLabel="適用"
+                    selectionTestId="print-garment-selector"
+                    onChange={selectPrintGarment}
+                    allowedReferenceTypes={['base']}
+                    defaultReferenceType="base"
+                    hint="服・商品画像をプリントの基準にします"
+                    processing={printGarmentCutoutState === 'processing'}
+                    hideSelectedPreviewWhileProcessing
+                    previewUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
+                    processingLabel="画像を処理中"
+                  />
+                  {printGarment && printGarmentCutoutState === 'done' && (
+                    <button
+                      type="button"
+                      onClick={() => setPrintGarmentSelectionOpen(true)}
+                      className="mt-3 inline-flex items-center gap-2 rounded-lg border border-cyan-300/25 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-300/10"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                      画像のプリント領域を調整
+                    </button>
+                  )}
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-[#202629] p-3">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-white">プリントをアップロード</p>
+                    <button
+                      type="button"
+                      onClick={resetPrintingInputs}
+                      className="text-xs text-white/55 transition hover:text-cyan-100"
+                    >
+                      ↻ リセット
+                    </button>
+                  </div>
+                  <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-neutral-900 p-1" role="group" aria-label="プリント範囲">
+                    {PRINT_COVERAGE_OPTIONS.map((coverage) => (
+                      <button
+                        key={coverage.value}
+                        type="button"
+                        data-testid={`print-coverage-${coverage.value}`}
+                        data-selected={printCoverageMode === coverage.value ? 'true' : 'false'}
+                        aria-pressed={printCoverageMode === coverage.value}
+                        onClick={() => setPrintCoverageMode(coverage.value)}
+                        className={`rounded-md px-3 py-2 text-sm font-semibold transition ${printCoverageMode === coverage.value ? 'bg-[#737d84] text-white' : 'text-neutral-400 hover:text-white'}`}
+                      >
+                        {coverage.label}
+                      </button>
+                    ))}
+                  </div>
+                  <ImageSelector
+                    label="画像をアップロード"
+                    required
+                    value={printDesigns[0] ?? null}
+                    galleryTitle="素材を選択"
+                    confirmGallerySelection
+                    galleryConfirmLabel="適用"
+                    selectionTestId="print-design-selector"
+                    galleryAssetPurpose="print-design"
+                    onChange={(image) => {
+                      if (image) void addDesigns([image]);
+                      else setPrintDesigns([]);
+                    }}
+                    allowedReferenceTypes={['pattern']}
+                    defaultReferenceType="pattern"
+                    hint="20MB以下の画像アップロードしてください"
+                    processing={printDesignsProcessing}
+                    hideSelectedPreviewWhileProcessing
+                    previewUrl={printDesignCutoutStates[0] === 'done' ? printDesignProcessedUrls[0] : null}
+                    processingLabel="プリントを処理中"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleGenerate}
+                  isLoading={isGenerating}
+                  disabled={isGenerating || !lightchainPrintReady}
+                  className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
+                  size="lg"
+                  leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
+                >
+                  {isGenerating ? '生成中…' : 'AI生成'}
+                </Button>
+
+                {generationError && (
+                  <p role="alert" className="rounded-xl border border-rose-300/25 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-100">
+                    {generationError}
+                  </p>
+                )}
+                {surfaceConformStatus && (
+                  <p role="status" className="rounded-xl border border-cyan-300/20 bg-cyan-950/25 px-3 py-2 text-xs leading-relaxed text-cyan-100">
+                    {surfaceConformStatus}
+                  </p>
+                )}
+                <p className="rounded-lg border border-amber-300/20 bg-amber-950/20 px-3 py-2 text-[11px] leading-relaxed text-amber-100/80">
+                  この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
+                </p>
+              </div>
+            </section>
+
+            <aside className="min-w-0 rounded-2xl border border-white/10 bg-[#111719] p-4 shadow-2xl shadow-black/20 lg:p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-white">生成履歴</h2>
+                  <span className="text-xs text-white/45">ⓘ</span>
+                </div>
+                {printResultRuns.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearPrintResultHistory}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-2 text-xs font-semibold text-white/65 transition hover:border-red-300/35 hover:text-red-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    全削除
+                  </button>
+                )}
+              </div>
+
+              <div data-testid="print-result-run-history" className="space-y-4">
+                {progressivePrintRun && (
+                  <section data-testid="progressive-print-run" className="rounded-xl border border-cyan-300/25 bg-cyan-300/[0.035] p-3" aria-busy={progressivePrintRun.fabric.status === 'rendering'}>
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-cyan-50">現在の生成</p>
+                      <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-1 text-[10px] text-cyan-100">
+                        {progressivePrintRun.fabric.status === 'ready' ? '2/2' : progressivePrintRun.exact.status === 'ready' ? '1/2' : '0/2'}
+                      </span>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                      <ProgressivePrintSurfaceCard label="配置そのまま" surface={progressivePrintRun.exact} onOpen={setSelectedResult} onFavorite={openFavoriteDialog} isFavorite={Boolean(progressivePrintRun.exact.result && favoriteResultIds.has(progressivePrintRun.exact.result.id))} />
+                      <ProgressivePrintSurfaceCard label="布になじませる" surface={progressivePrintRun.fabric} onOpen={setSelectedResult} onFavorite={openFavoriteDialog} isFavorite={Boolean(progressivePrintRun.fabric.result && favoriteResultIds.has(progressivePrintRun.fabric.result.id))} />
+                    </div>
+                  </section>
+                )}
+
+                {printResultRuns.length === 0 && !progressivePrintRun && (
+                  <div className="flex min-h-[20rem] items-center justify-center rounded-xl border border-dashed border-white/10 px-5 text-center text-sm text-white/40">
+                    生成履歴はここに表示されます
+                  </div>
+                )}
+                {printResultRuns.map((run, runIndex) => (
+                  <section key={run.runId} data-testid="print-result-run" className="rounded-xl border border-white/10 bg-black/20 p-3">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-semibold text-white/80">プリントイメージ {runIndex + 1}{runIndex === 0 && !progressivePrintRun ? '（最新）' : ''}</p>
+                        <p className="mt-1 text-[10px] text-white/40">スポット／全体の生成結果</p>
+                      </div>
+                      <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] text-white/45">{run.results.length}結果</span>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                      {run.results.map((result) => (
+                        <WorkbenchResultCard
+                          key={result.id}
+                          result={result}
+                          onOpen={setSelectedResult}
+                          onFavorite={openFavoriteDialog}
+                          onDeleteRun={deletePrintResultRun}
+                          isFavorite={favoriteResultIds.has(result.id)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </aside>
+          </div>
+        </div>
+      )}
 
       <Modal
         isOpen={favoriteTargetResult !== null}

@@ -324,33 +324,19 @@ test('read-only composition keeps artwork but omits every placement mutator and 
 });
 
 test('desktop printing keeps the primary composition and generate action pinned beside scrolling history', () => {
-  assert.match(page, /className="mx-auto grid max-w-\[1680px\] gap-4 px-3 py-4 sm:px-5 lg:grid-cols-\[72px_minmax\(0,1fr\)\]/);
-  assert.match(page, /className=\{`grid gap-6 \$\{isPrinting\s+\? 'xl:grid-cols-\[360px_minmax\(0,1fr\)\]'\s+: 'xl:grid-cols-\[420px_1fr\]'\}`\}/);
-  assert.match(page, /data-testid=\{isPrinting \? 'printing-control-rail' : undefined\}/);
-  assert.match(page, /xl:sticky xl:top-\[86px\] xl:flex xl:max-h-\[calc\(100dvh-102px\)\] xl:self-start xl:flex-col xl:overflow-hidden/);
+  assert.match(page, /data-testid="lightchain-print-parity-view"/);
+  assert.match(page, /lg:grid-cols-\[112px_minmax\(0,1\.08fr\)_minmax\(360px,0\.92fr\)\]/);
+  assert.match(page, /data-testid="lightchain-print-reference-input"/);
+  assert.match(page, /参考画像をアップロード/);
+  assert.match(page, /プリントをアップロード/);
+  assert.match(page, /↻ リセット/);
+  assert.match(page, /data-testid=\{`print-coverage-\$\{coverage\.value\}`\}/);
+  assert.match(page, /data-testid="print-result-run-history"/);
+  assert.match(page, /この機能はまもなく終了します/);
   assert.match(layout, /overflow-x-clip/);
   assert.doesNotMatch(layout, /overflow-x-hidden/);
-  assert.match(page, /data-testid=\{isPrinting \? 'printing-control-rail-details' : undefined\}/);
-  assert.match(page, /xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain/);
-  assert.match(page, /aria-label=\{isPrinting \? 'プリント素材と詳細設定' : undefined\}/);
-  assert.match(page, /data-testid=\{isPrinting \? 'printing-control-rail-primary' : undefined\}/);
-  assert.match(page, /className="space-y-5 xl:shrink-0"/);
-  assert.match(page, /data-testid="confirmed-print-composition-canvas"/);
-  assert.match(page, /maxWidth: 'clamp\(96px, calc\(\(100dvh - 520px\) \* 0\.8\), 220px\)'/);
-
-  const outerLayout = page.indexOf('className="mx-auto grid max-w-[1680px]');
-  const desktopGrid = page.indexOf("? 'xl:grid-cols-[360px_minmax(0,1fr)]'");
-  const details = page.indexOf("'printing-control-rail-details'");
-  const primary = page.indexOf("'printing-control-rail-primary'");
-  const outputResolution = page.indexOf('aria-label="プリント結果の出力解像度"');
-  const preview = page.indexOf('data-testid="confirmed-print-composition-preview"');
-  const generate = page.indexOf('onClick={handleGenerate}');
   const results = page.indexOf('data-testid="print-result-run-history"');
-  assert.ok(outerLayout >= 0 && desktopGrid > outerLayout, 'print-only width and grid must wrap the existing rail and workspace ordering');
-  assert.ok(details >= 0 && primary > details, 'primary controls must follow the internally scrollable details');
-  assert.ok(outputResolution > details && outputResolution < primary, 'output settings must stay in the internally scrollable details');
-  assert.ok(preview > primary && generate > preview, 'confirmed composition and Generate must remain in the pinned primary region');
-  assert.ok(results > generate, 'result history must remain in the adjacent content column');
+  assert.ok(results >= 0, 'result history must remain in the right parity column');
 
   const previewWidthForViewport = (height: number) => Math.min(220, Math.max(96, (height - 520) * 0.8));
   assert.equal(previewWidthForViewport(900), 220);
@@ -771,8 +757,11 @@ test('repeat design changes reuse completed cutouts and prioritize the new activ
   assert.match(page, /pendingActivePrintDesignLayerIdRef\.current = nextPendingLayerId/);
   assert.match(page, /const processingFallbackLayerId = selectLatestProcessingPrintDesignLayerId\(fallbackLayers\)/);
   assert.match(page, /current === activePrintDesignLayerId \? readyFallbackLayerId : current/);
-  assert.doesNotMatch(page, /setPrintDesignProcessedUrls\(\{\}\)/);
-  assert.doesNotMatch(page, /setPrintDesignCutoutResults\(\{\}\)/);
+  const addDesignsStart = page.indexOf('const addDesigns');
+  const resetInputsStart = page.indexOf('const resetPrintingInputs');
+  const addDesignsBlock = page.slice(addDesignsStart, resetInputsStart);
+  assert.doesNotMatch(addDesignsBlock, /setPrintDesignProcessedUrls\(\{\}\)/);
+  assert.doesNotMatch(addDesignsBlock, /setPrintDesignCutoutResults\(\{\}\)/);
 });
 
 test('stage, readiness, request identity, and snapshot use every placed design in stable order', () => {
@@ -780,7 +769,7 @@ test('stage, readiness, request identity, and snapshot use every placed design i
   assert.match(page, /printDesignLayers: placedPrintDesignLayers\.map/);
   assert.match(page, /designs: placedPrintDesignLayers\.map\(\(layer\) => \(\{/);
   assert.match(page, /layers: placedPrintDesignLayers/);
-  assert.match(page, /if \(isPrinting && !canConfirmPrintPlacement\)/);
+  assert.match(page, /if \(isPrinting && !lightchainPrintParity && !canConfirmPrintPlacement\)/);
   assert.match(page, /disabled=\{!canConfirmPrintPlacement\}/);
   assert.doesNotMatch(page, /activePrintDesignLayerId,\s*printDesignLayers:/);
   const generationSignatureBlock = page.slice(
