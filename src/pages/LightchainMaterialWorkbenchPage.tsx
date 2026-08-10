@@ -832,23 +832,32 @@ async function renderFabricTryOnComposition({
   textureCanvas.height = stageHeight;
   const textureContext = textureCanvas.getContext('2d');
   if (!textureContext) throw new Error('生地テクスチャ用Canvasを初期化できませんでした');
+  // A flat-lay garment photo contains structural edges (sleeves, placket,
+  // collar) that are not material texture. Sampling its centered interior
+  // keeps the fabric's tone/weave while preventing those garment boundaries
+  // from being stretched across the model garment as artificial seams.
+  const fabricBoundsWidth = fabric.right - fabric.left + 1;
+  const fabricBoundsHeight = fabric.bottom - fabric.top + 1;
+  const coreInsetX = Math.floor(fabricBoundsWidth * 0.28);
+  const coreInsetY = Math.floor(fabricBoundsHeight * 0.2);
+  const fabricCoreLeft = fabric.left + coreInsetX;
+  const fabricCoreTop = fabric.top + coreInsetY;
+  const sourceWidth = Math.max(1, fabricBoundsWidth - (coreInsetX * 2));
+  const sourceHeight = Math.max(1, fabricBoundsHeight - (coreInsetY * 2));
   const fabricPatchCanvas = document.createElement('canvas');
-  const sourceWidth = fabric.right - fabric.left + 1;
-  const sourceHeight = fabric.bottom - fabric.top + 1;
   fabricPatchCanvas.width = sourceWidth;
   fabricPatchCanvas.height = sourceHeight;
   const fabricPatchContext = fabricPatchCanvas.getContext('2d');
   if (!fabricPatchContext) throw new Error('生地テクスチャ用パッチを初期化できませんでした');
-  // The reference garment's alpha is a spatial hint, not the final garment
-  // silhouette. Fill transparent holes in its crop with the sampled fabric
-  // color so the material covers the target garment instead of disappearing
-  // wherever the source shirt shape differs from the model's shirt shape.
+  // The reference garment's alpha is only a spatial hint. Fill any remaining
+  // transparent pixels in the interior sample with the sampled fabric color
+  // so a small neckline/button gap cannot punch a hole in the target garment.
   fabricPatchContext.fillStyle = fabric.averageColor;
   fabricPatchContext.fillRect(0, 0, sourceWidth, sourceHeight);
   fabricPatchContext.drawImage(
     fabric.image,
-    fabric.left,
-    fabric.top,
+    fabricCoreLeft,
+    fabricCoreTop,
     sourceWidth,
     sourceHeight,
     0,

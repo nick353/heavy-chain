@@ -54,6 +54,8 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /buildFabricModelGarmentMask/);
   assert.match(page, /buildHighPrecisionMaterialCutoutDataUrl/);
   assert.match(page, /preserveSourceFrame: true/);
+  assert.match(page, /fabricBoundsWidth/);
+  assert.match(page, /fabricCoreLeft/);
   assert.match(page, /renderFabricTryOnComposition/);
   assert.match(page, /keepCentralGarmentMaskComponent/);
   assert.match(page, /refineCoarseGarmentMask/);
