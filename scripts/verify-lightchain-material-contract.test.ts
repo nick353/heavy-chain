@@ -53,3 +53,11 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /note: `\$\{preset\.name\} の質感で重ねた見本/);
   assert.match(page, /outputSize: \{ width, height \}/);
 });
+
+test('Light-style routes keep Heavy Chain branding in the shared header', () => {
+  const layout = fs.readFileSync('src/components/layout/Layout.tsx', 'utf8');
+  assert.match(layout, /import \{ HeavyChainLogo \} from '\.\.\/icons';/);
+  assert.match(layout, /<HeavyChainLogo height=\{28\} showText=\{false\}/);
+  assert.match(layout, /HEAVY CHAIN/);
+  assert.doesNotMatch(layout, /isLightchainRoute \? 'LIGHTCHAIN' : 'HEAVY CHAIN'/);
+});

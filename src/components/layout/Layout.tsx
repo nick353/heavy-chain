@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FeedbackButton } from '../ui/FeedbackForm';
 import { SkipLink, KeyboardShortcuts, defaultShortcuts } from '../ui';
 import { lightchainCategories } from '../../lib/lightchainParityCatalog';
+import { HeavyChainLogo } from '../icons';
 import { HelpCircle, History, UserCircle } from 'lucide-react';
 
 export function Layout() {
@@ -45,8 +46,8 @@ export function Layout() {
             <div className="mx-auto flex h-[70px] max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 lightchain-route-header-inner">
               <div className="flex items-center gap-7">
                 <Link to={isLightchainRoute ? '/lightchain' : '/dashboard'} className="flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
-                  {isLightchainRoute ? <span aria-hidden="true" className="lightchain-brand-mark">◉</span> : null}
-                  {isLightchainRoute ? 'LIGHTCHAIN' : 'HEAVY CHAIN'}
+                  <HeavyChainLogo height={28} showText={false} className="shrink-0" />
+                  HEAVY CHAIN
                 </Link>
                 {!isLightchainRoute && (
                   <div className="hidden items-center gap-2 text-sm text-neutral-300 md:flex">
