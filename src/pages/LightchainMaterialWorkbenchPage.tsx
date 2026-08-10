@@ -117,6 +117,7 @@ import {
   releaseRestoredPrintInput,
   restorePrintInputState,
   type RestoredPrintInputImage,
+  type PrintInputProcessedState,
 } from '../lib/printInputPersistence';
 import {
   canExplicitlyConfirmProcessedGarmentMask,
@@ -165,6 +166,9 @@ type AssetLayer = {
   autoCutout: boolean;
   cutoutState: CutoutState;
   maskRevision: number;
+  filter?: string;
+  tint?: string;
+  blendMode?: GlobalCompositeOperation;
 };
 
 type PrintMaskEditorTarget = {
@@ -552,6 +556,33 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: s
   }
 }
 
+async function buildFabricReferenceOverlay(imageUrl: string): Promise<string> {
+  try {
+    const artworkResult = await withTimeout(
+      buildPrintDesignCutoutDataUrl({ imageUrl, backgroundProfile: 'strict' }),
+      CUTOUT_TIMEOUT_MS,
+      '生地画像の背景分離がタイムアウトしました。画像を確認して再試行してください',
+    );
+    return artworkResult.dataUrl;
+  } catch (artworkError) {
+    try {
+      const garmentResult = await withTimeout(
+        buildPrintGarmentCutoutDataUrl({
+          imageUrl,
+          modelName: resolvePrintGarmentCutoutModel({ selectionSource: 'automatic' }),
+          segmentationTarget: 'full',
+        }),
+        CLOTH_CUTOUT_TIMEOUT_MS,
+        '生地画像の服領域分離がタイムアウトしました。画像を確認して再試行してください',
+      );
+      return garmentResult.dataUrl;
+    } catch (garmentError) {
+      console.warn('Fabric reference overlay cutout failed.', { artworkError, garmentError });
+      throw new Error('生地画像の背景を分離できませんでした。服だけが写った画像で再試行してください');
+    }
+  }
+}
+
 async function renderComposition(
   stageWidth: number,
   stageHeight: number,
@@ -593,7 +624,9 @@ async function renderComposition(
       const scaleBump = mode === 'fabric' ? 1 : 0.9 + variantIndex * 0.08;
       const isBase = index === 0;
       const baseWidth = isBase
-        ? stageWidth * (mode === 'fabric' ? 0.96 : 0.84)
+        ? mode === 'fabric'
+          ? Math.min(stageWidth * 0.92, stageHeight * (image.width / image.height))
+          : stageWidth * 0.84
         : stageWidth * stageBase * transform.scale * scaleBump;
       const drawWidth = baseWidth;
       const drawHeight = drawWidth * (image.height / image.width);
@@ -602,10 +635,18 @@ async function renderComposition(
 
       ctx.save();
       ctx.globalAlpha = transform.opacity;
+      ctx.globalCompositeOperation = layer.blendMode ?? 'source-over';
+      ctx.filter = layer.filter ?? 'none';
       ctx.translate(centerX, centerY);
       ctx.rotate((transform.rotation * Math.PI) / 180);
       ctx.scale(transform.flipX ? -1 : 1, transform.flipY ? -1 : 1);
       ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+      if (layer.tint) {
+        ctx.globalAlpha = transform.opacity * 0.35;
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = layer.tint;
+        ctx.fillRect(-drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+      }
       ctx.restore();
     } catch {
       // Keep exporting even if one layer fails to load.
@@ -790,6 +831,7 @@ export function LightchainMaterialWorkbenchPage() {
   const printInputHydrationGenerationRef = useRef(0);
   const printInputHydratedBrandRef = useRef<string | null>(null);
   const restoredPrintInputImagesRef = useRef<RestoredPrintInputImage[]>([]);
+  const restoredPrintGarmentArtifactsRef = useRef<RestoredPrintInputImage | null>(null);
   const printInputPersistenceGenerationRef = useRef(0);
   const selectedPrintGarmentMaskCandidateIdRef = useRef(selectedPrintGarmentMaskCandidateId);
   const printGarmentMaskRevisionRef = useRef(printGarmentMaskRevision);
@@ -1400,6 +1442,41 @@ export function LightchainMaterialWorkbenchPage() {
       setPrintGarmentCutoutError(null);
       return;
     }
+    const restoredArtifact = restoredPrintGarmentArtifactsRef.current;
+    if (restoredArtifact?.processedUrl && restoredArtifact.url === printGarment.url) {
+      restoredPrintGarmentArtifactsRef.current = null;
+      setPrintGarmentCutoutSourceUrl(null);
+      setPrintGarmentSelectionMaskUrl(null);
+      setPrintGarmentSelectionSource(restoredArtifact.selectionSource ?? 'automatic');
+      setPrintGarmentSegmentationTarget(
+        restoredArtifact.segmentationTarget ?? DEFAULT_GARMENT_SEGMENTATION_TARGET,
+      );
+      setPrintGarmentMaskCandidates(
+        restoredArtifact.maskCandidates?.length
+          ? restoredArtifact.maskCandidates
+          : restoredArtifact.processedResult
+            ? [{
+                candidateId: 'auto',
+                label: '復元済み',
+                description: '保存済みの切り抜き結果です',
+                result: restoredArtifact.processedResult,
+              }]
+            : [],
+      );
+      setSelectedPrintGarmentMaskCandidateId(
+        (
+          restoredArtifact.selectedMaskCandidateId
+            ?? restoredArtifact.maskCandidates?.[0]?.candidateId
+            ?? 'auto'
+        ) as PrintGarmentMaskCandidateId,
+      );
+      setPrintGarmentMaskRevision(restoredArtifact.maskRevision ?? 0);
+      setPrintGarmentMaskExplicitlyConfirmed(restoredArtifact.maskExplicitlyConfirmed ?? false);
+      setPrintGarmentProcessed(restoredArtifact.processedUrl);
+      setPrintGarmentCutoutState('done');
+      setPrintGarmentCutoutError(null);
+      return;
+    }
     let cancelled = false;
     setPrintGarmentCutoutState('processing');
     setPrintGarmentCutoutError(null);
@@ -1639,21 +1716,23 @@ export function LightchainMaterialWorkbenchPage() {
             : 1125;
 
       if (!isPrinting) {
+        const fabricOverlayUrl = await buildFabricReferenceOverlay(fabricBase!.url);
+        if (!isCurrentRequest()) return;
         const baseLayers: AssetLayer[] = [{
-          id: 'fabric-base',
-          label: '生地画像',
-          originalUrl: fabricBase!.url,
-          displayUrl: fabricBase!.url,
+          id: 'fabric-model',
+          label: 'モデル/デザイン画像',
+          originalUrl: fabricDesign!.url,
+          displayUrl: fabricDesign!.url,
           transform: defaultTransform({ x: 50, y: 50, scale: 1, opacity: 1 }),
           autoCutout: false,
           cutoutState: 'done',
           maskRevision: 0,
         }, {
-          id: 'fabric-design',
-          label: 'デザイン',
-          originalUrl: fabricDesign!.url,
-          displayUrl: fabricDesign!.url,
-          transform: fabricLayer?.transform || defaultTransform({ x: 54, y: 47, scale: 1, rotation: -8 }),
+          id: 'fabric-reference',
+          label: '生地画像',
+          originalUrl: fabricBase!.url,
+          displayUrl: fabricOverlayUrl,
+          transform: fabricLayer?.transform || defaultTransform({ x: 50, y: 40, scale: 1.08, rotation: 0, opacity: 0.82 }),
           autoCutout: false,
           cutoutState: 'idle',
           maskRevision: 0,
@@ -1663,7 +1742,15 @@ export function LightchainMaterialWorkbenchPage() {
         for (const preset of fabricVariants.filter((variant) => fabricPresetIds.includes(variant.id))) {
           await yieldToBrowser();
           const imageUrl = await withTimeout(
-            renderComposition(width, height, fabricBase?.url || null, preset.tint, baseLayers, 'fabric'),
+            renderComposition(width, height, null, preset.tint, [
+              baseLayers[0],
+              {
+                ...baseLayers[1],
+                filter: preset.filter,
+                tint: preset.tint,
+                blendMode: preset.id === 'denim' ? 'multiply' : 'soft-light',
+              },
+            ], 'fabric'),
             COMPOSITION_TIMEOUT_MS,
             '生地プレビューの描画がタイムアウトしました。素材を確認して再試行してください',
           );
@@ -2060,6 +2147,18 @@ export function LightchainMaterialWorkbenchPage() {
       processedResults[nextIndex] = printDesignCutoutResults[previousIndex];
       initialMaskRevisions[nextIndex] = printDesignMaskRevisions[previousIndex] ?? 0;
     });
+    const restoredProcessedIndexes = new Set<number>();
+    nextImages.forEach((image, index) => {
+      const restoredImage = image as SelectedImage & RestoredPrintInputImage;
+      if (!restoredImage.processedUrl) return;
+      restoredProcessedIndexes.add(index);
+      initialStates[index] = 'done';
+      processedUrls[index] = restoredImage.processedUrl;
+      if (restoredImage.processedResult) {
+        processedResults[index] = restoredImage.processedResult;
+      }
+      initialMaskRevisions[index] = restoredImage.maskRevision ?? 0;
+    });
     setPrintDesignProcessedUrls({ ...processedUrls });
     setPrintDesignCutoutResults({ ...processedResults });
     setPrintDesignMaskRevisions(initialMaskRevisions);
@@ -2067,7 +2166,7 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintDesignCutoutErrors({});
     if (duplicateTargetLayerId) scheduleDeferredPrintDesignReturn(duplicateTargetLayerId);
 
-    for (const index of reconciliation.processOrder) {
+    for (const index of reconciliation.processOrder.filter((nextIndex) => !restoredProcessedIndexes.has(nextIndex))) {
       const design = nextImages[index];
       try {
         const result = await withTimeout(
@@ -2191,7 +2290,10 @@ export function LightchainMaterialWorkbenchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentBrand?.id, isAuthInitialized, isAuthLoading, isPrinting, printDesigns]);
 
-  const selectPrintGarment = (image: SelectedImage | null) => {
+  const selectPrintGarment = (
+    image: SelectedImage | null,
+    restoredArtifact: RestoredPrintInputImage | null = null,
+  ) => {
     cancelScheduledPrintDesignReturn();
     printDesignReturnIntentRef.current = null;
     invalidatePrintableSuggestion();
@@ -2202,6 +2304,7 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintGarmentSelectionSource('automatic');
     setPrintGarmentMaskExplicitlyConfirmed(false);
     setPrintGarmentSegmentationTarget(DEFAULT_GARMENT_SEGMENTATION_TARGET);
+    restoredPrintGarmentArtifactsRef.current = restoredArtifact?.processedUrl ? restoredArtifact : null;
     setPrintGarment(image);
   };
 
@@ -2225,7 +2328,7 @@ export function LightchainMaterialWorkbenchPage() {
           return;
         }
         restoredPrintInputImagesRef.current = restoredImages;
-        if (restored.garment) selectPrintGarment(restored.garment);
+        if (restored.garment) selectPrintGarment(restored.garment, restored.garment);
         if (restored.designs.length > 0) {
           const result = await addDesigns(restored.designs);
           if (!result.ok) {
@@ -2258,12 +2361,47 @@ export function LightchainMaterialWorkbenchPage() {
     if (!isPrinting || !currentBrand?.id || printInputHydratedBrandRef.current !== currentBrand.id) return;
     const brandId = currentBrand.id;
     const persistenceGeneration = ++printInputPersistenceGenerationRef.current;
-    void persistPrintInputState(brandId, printGarment, printDesigns)
+    const processedState: PrintInputProcessedState = {
+      garment: printGarment
+        ? {
+            processedUrl: printGarmentProcessed,
+            processedResult: selectedPrintGarmentMaskCandidate?.result ?? null,
+            maskCandidates: printGarmentMaskCandidates,
+            selectedMaskCandidateId: selectedPrintGarmentMaskCandidateId,
+            maskRevision: printGarmentMaskRevision,
+            maskExplicitlyConfirmed: printGarmentMaskExplicitlyConfirmed,
+            selectionSource: printGarmentSelectionSource,
+            segmentationTarget: printGarmentSegmentationTarget,
+          }
+        : null,
+      designs: printDesigns.map((_, index) => ({
+        processedUrl: printDesignProcessedUrls[index] ?? null,
+        processedResult: printDesignCutoutResults[index] ?? null,
+        maskRevision: printDesignMaskRevisions[index] ?? 0,
+      })),
+    };
+    void persistPrintInputState(brandId, printGarment, printDesigns, processedState)
       .catch((error) => {
         if (persistenceGeneration !== printInputPersistenceGenerationRef.current) return;
         console.warn('Printing input persistence skipped.', error);
       });
-  }, [currentBrand?.id, isPrinting, printDesigns, printGarment]);
+  }, [
+    currentBrand?.id,
+    isPrinting,
+    printDesigns,
+    printGarment,
+    printGarmentMaskCandidates,
+    printGarmentMaskExplicitlyConfirmed,
+    printGarmentMaskRevision,
+    printGarmentProcessed,
+    printGarmentSelectionSource,
+    printGarmentSegmentationTarget,
+    printDesignCutoutResults,
+    printDesignMaskRevisions,
+    printDesignProcessedUrls,
+    selectedPrintGarmentMaskCandidate,
+    selectedPrintGarmentMaskCandidateId,
+  ]);
 
   const openGarmentMaskEditor = async () => {
     if (!printGarment) return;
@@ -4270,13 +4408,13 @@ export function LightchainMaterialWorkbenchPage() {
                 </div>
 
                 <div ref={stageRef} data-testid="lightchain-fabric-preview" className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-neutral-900">
-                  {fabricBase ? (
-                    <img src={fabricBase.url} alt="生地プレビュー" className="absolute inset-0 h-full w-full object-cover opacity-80" />
+                  {fabricDesign ? (
+                    <img src={fabricDesign.url} alt="モデル/デザインプレビュー" className="absolute inset-0 h-full w-full object-contain bg-black/10" />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-sm text-white/40">生地画像をアップロードしてください</div>
+                    <div className="absolute inset-0 flex items-center justify-center text-sm text-white/40">モデル/デザイン画像をアップロードしてください</div>
                   )}
-                  {fabricDesign && (
-                    <img src={fabricDesign.url} alt="モデル/デザインプレビュー" className="absolute inset-[12%] h-[76%] w-[76%] object-contain drop-shadow-2xl" />
+                  {fabricBase && (
+                    <img src={fabricBase.url} alt="生地プレビュー" className="absolute inset-[10%] h-[80%] w-[80%] object-contain opacity-75 mix-blend-soft-light drop-shadow-2xl" />
                   )}
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-4 pb-3 pt-10 text-xs text-white/75">
                     {fabricDesign && fabricBase ? '入力内容を確認してAI生成へ進みます' : '2つの画像を追加するとプレビューできます'}
@@ -4326,8 +4464,8 @@ export function LightchainMaterialWorkbenchPage() {
                 <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-black/30">
                   {fabricDesign && fabricBase ? (
                     <div className="relative h-full w-full">
-                      <img src={fabricBase.url} alt="生地の参考" className="absolute inset-0 h-full w-full object-cover opacity-80" />
-                      <img src={fabricDesign.url} alt="デザインの参考" className="absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain" />
+                      <img src={fabricDesign.url} alt="モデル/デザインの参考" className="absolute inset-0 h-full w-full object-contain bg-black/10" />
+                      <img src={fabricBase.url} alt="生地の参考" className="absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain opacity-75 mix-blend-soft-light" />
                     </div>
                   ) : (
                     <div className="flex h-full items-center justify-center text-xs text-white/35">入力待ち</div>

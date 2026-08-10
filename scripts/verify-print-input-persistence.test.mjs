@@ -24,7 +24,9 @@ test('Printing inputs keep image bytes in IndexedDB and only safe metadata in lo
 
 test('Printing page hydrates inputs before saving state and releases restored object URLs', () => {
   assert.match(page, /restorePrintInputState\(brandId\)/);
-  assert.match(page, /persistPrintInputState\(brandId, printGarment, printDesigns\)/);
+  assert.match(page, /persistPrintInputState\(brandId, printGarment, printDesigns, processedState\)/);
+  assert.match(page, /processedResult: selectedPrintGarmentMaskCandidate\?\.result/);
+  assert.match(page, /processedUrl: printDesignProcessedUrls\[index\]/);
   assert.match(page, /printInputHydratedBrandRef\.current = brandId/);
   assert.match(page, /releaseRestoredPrintInput/);
   assert.match(page, /printInputHydrationGenerationRef/);

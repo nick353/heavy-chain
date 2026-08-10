@@ -1,4 +1,12 @@
 import type { SelectedImage } from '../components/ImageSelector';
+import type {
+  MaterialCutoutResult,
+  PrintGarmentMaskCandidate,
+} from './workspaceMaterialReferences';
+import type {
+  GarmentSegmentationTarget,
+  GarmentSelectionSource,
+} from '../features/printing/selection/garmentSegmentationPolicy';
 
 const DB_NAME = 'heavy-chain-print-input-assets';
 const DB_VERSION = 1;
@@ -15,6 +23,20 @@ type StoredInputAsset = {
   createdAt: string;
 };
 
+type PersistedCutoutResult = Omit<MaterialCutoutResult, 'dataUrl'> & {
+  dataUrlAssetRef: string;
+};
+
+type PersistedMaskCandidate = Omit<PrintGarmentMaskCandidate, 'result'> & {
+  result: PersistedCutoutResult;
+};
+
+type PersistedProcessedArtifact = {
+  dataUrlAssetRef: string;
+  result?: PersistedCutoutResult;
+  maskRevision?: number;
+};
+
 type PersistedInputImage = {
   kind: PrintInputKind;
   index: number;
@@ -25,10 +47,42 @@ type PersistedInputImage = {
   printDesignAssetPurpose?: SelectedImage['printDesignAssetPurpose'];
   source?: string;
   assetRef?: string;
+  processed?: PersistedProcessedArtifact;
+  maskCandidates?: PersistedMaskCandidate[];
+  selectedMaskCandidateId?: string;
+  maskExplicitlyConfirmed?: boolean;
+  selectionSource?: GarmentSelectionSource;
+  segmentationTarget?: GarmentSegmentationTarget;
 };
 
 export type RestoredPrintInputImage = Omit<SelectedImage, 'file'> & {
   release?: () => void;
+  processedUrl?: string;
+  processedResult?: MaterialCutoutResult;
+  maskCandidates?: PrintGarmentMaskCandidate[];
+  selectedMaskCandidateId?: string;
+  maskRevision?: number;
+  maskExplicitlyConfirmed?: boolean;
+  selectionSource?: GarmentSelectionSource;
+  segmentationTarget?: GarmentSegmentationTarget;
+};
+
+export type PrintInputProcessedState = {
+  garment?: {
+    processedUrl?: string | null;
+    processedResult?: MaterialCutoutResult | null;
+    maskCandidates?: readonly PrintGarmentMaskCandidate[];
+    selectedMaskCandidateId?: string;
+    maskRevision?: number;
+    maskExplicitlyConfirmed?: boolean;
+    selectionSource?: GarmentSelectionSource;
+    segmentationTarget?: GarmentSegmentationTarget;
+  } | null;
+  designs: ReadonlyArray<{
+    processedUrl?: string | null;
+    processedResult?: MaterialCutoutResult | null;
+    maskRevision?: number;
+  }>;
 };
 
 export type RestoredPrintInputState = {
@@ -42,6 +96,15 @@ const storageKey = (brandId: string) => `${STORAGE_PREFIX}:${brandId}`;
 
 const buildAssetReference = (brandId: string, kind: PrintInputKind, index: number) => (
   `${REFERENCE_PREFIX}${encodeURIComponent(`${brandId}:${kind}:${index}`)}`
+);
+
+const buildArtifactReference = (
+  brandId: string,
+  kind: PrintInputKind,
+  index: number,
+  suffix: string,
+) => (
+  `${REFERENCE_PREFIX}${encodeURIComponent(`${brandId}:${kind}:${index}:${suffix}`)}`
 );
 
 const isAssetReference = (value: unknown): value is string => (
@@ -122,6 +185,20 @@ const dataUrlToBlob = async (url: string): Promise<Blob> => {
   return response.blob();
 };
 
+const createStoredAsset = async (reference: string, url: string): Promise<StoredInputAsset> => ({
+  key: assetKey(reference),
+  blob: await dataUrlToBlob(url),
+  createdAt: new Date().toISOString(),
+});
+
+const serializeCutoutResult = (
+  result: MaterialCutoutResult,
+  dataUrlAssetRef: string,
+): PersistedCutoutResult => {
+  const { dataUrl: _dataUrl, ...metadata } = result;
+  return { ...metadata, dataUrlAssetRef };
+};
+
 const isLocalImageSource = (url: string) => url.startsWith('data:') || url.startsWith('blob:');
 
 const blobToDataUrl = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
@@ -199,19 +276,72 @@ const persistInputState = async (
   brandId: string,
   garment: SelectedImage | null,
   designs: readonly SelectedImage[],
+  processedState: PrintInputProcessedState,
 ) => {
   if (!isBrowser() || !brandId) throw new Error('print_input_storage_unavailable');
   const previous = readMetadata(brandId);
   const images: Array<{ kind: PrintInputKind; index: number; image: SelectedImage }> = [];
   if (garment) images.push({ kind: 'garment', index: 0, image: garment });
   designs.slice(0, MAX_DESIGNS).forEach((image, index) => images.push({ kind: 'design', index, image }));
-  const resolved = await Promise.all(images.map(({ kind, index, image }) => metadataForImage(brandId, kind, index, image)));
+  const resolved = await Promise.all(images.map(async ({ kind, index, image }) => {
+    const source = await metadataForImage(brandId, kind, index, image);
+    const artifacts = kind === 'garment'
+      ? processedState.garment
+      : processedState.designs[index];
+    const assets: StoredInputAsset[] = source.asset ? [source.asset] : [];
+    const metadata: PersistedInputImage = { ...source.metadata };
+
+    const processedUrl = artifacts?.processedUrl || artifacts?.processedResult?.dataUrl;
+    const processedResult = artifacts?.processedResult || undefined;
+    if (processedUrl) {
+      const processedReference = buildArtifactReference(brandId, kind, index, 'processed');
+      assets.push(await createStoredAsset(processedReference, processedUrl));
+      metadata.processed = {
+        dataUrlAssetRef: processedReference,
+        ...(processedResult ? {
+          result: serializeCutoutResult(processedResult, processedReference),
+        } : {}),
+        ...(artifacts?.maskRevision !== undefined ? { maskRevision: artifacts.maskRevision } : {}),
+      };
+    }
+
+    if (kind === 'garment' && artifacts && 'maskCandidates' in artifacts) {
+      const persistedCandidates: PersistedMaskCandidate[] = [];
+      for (const candidate of artifacts.maskCandidates || []) {
+        const candidateReference = buildArtifactReference(
+          brandId,
+          kind,
+          index,
+          `candidate:${candidate.candidateId}`,
+        );
+        assets.push(await createStoredAsset(candidateReference, candidate.result.dataUrl));
+        persistedCandidates.push({
+          candidateId: candidate.candidateId,
+          label: candidate.label,
+          description: candidate.description,
+          result: serializeCutoutResult(candidate.result, candidateReference),
+        });
+      }
+      if (persistedCandidates.length > 0) metadata.maskCandidates = persistedCandidates;
+      if (artifacts.selectedMaskCandidateId) metadata.selectedMaskCandidateId = artifacts.selectedMaskCandidateId;
+      if (artifacts.maskExplicitlyConfirmed !== undefined) metadata.maskExplicitlyConfirmed = artifacts.maskExplicitlyConfirmed;
+      if (artifacts.selectionSource) metadata.selectionSource = artifacts.selectionSource;
+      if (artifacts.segmentationTarget) metadata.segmentationTarget = artifacts.segmentationTarget;
+    }
+
+    return { metadata, assets };
+  }));
   const metadata = resolved.map((entry) => entry.metadata);
-  await putAssets(resolved.flatMap((entry) => entry.asset ? [entry.asset] : []));
+  await putAssets(resolved.flatMap((entry) => entry.assets));
   window.localStorage.setItem(storageKey(brandId), JSON.stringify(metadata));
-  const nextKeys = new Set(metadata.flatMap((entry) => entry.assetRef ? [assetKey(entry.assetRef)] : []));
+  const assetReferences = (entry: PersistedInputImage) => [
+    ...(entry.assetRef ? [entry.assetRef] : []),
+    ...(entry.processed?.dataUrlAssetRef ? [entry.processed.dataUrlAssetRef] : []),
+    ...(entry.maskCandidates || []).map((candidate) => candidate.result.dataUrlAssetRef),
+  ];
+  const nextKeys = new Set(metadata.flatMap((entry) => assetReferences(entry).map(assetKey)));
   const staleKeys = previous
-    .flatMap((entry) => entry.assetRef ? [assetKey(entry.assetRef)] : [])
+    .flatMap((entry) => assetReferences(entry).map(assetKey))
     .filter((key) => !nextKeys.has(key));
   await deleteAssets(staleKeys);
 };
@@ -220,10 +350,11 @@ export function persistPrintInputState(
   brandId: string,
   garment: SelectedImage | null,
   designs: readonly SelectedImage[],
+  processedState: PrintInputProcessedState = { garment: null, designs: [] },
 ): Promise<void> {
   const queued = (persistQueue.get(brandId) || Promise.resolve())
     .catch(() => undefined)
-    .then(() => persistInputState(brandId, garment, designs));
+    .then(() => persistInputState(brandId, garment, designs, processedState));
   persistQueue.set(brandId, queued);
   return queued.finally(() => {
     if (persistQueue.get(brandId) === queued) persistQueue.delete(brandId);
@@ -232,6 +363,15 @@ export function persistPrintInputState(
 
 export async function restorePrintInputState(brandId: string): Promise<RestoredPrintInputState> {
   const metadata = readMetadata(brandId);
+  const restoreAssetDataUrl = async (reference: string): Promise<string | null> => {
+    if (!isAssetReference(reference)) return null;
+    const blob = await getAsset(reference);
+    return blob ? blobToDataUrl(blob) : null;
+  };
+  const restoreCutoutResult = async (result: PersistedCutoutResult): Promise<MaterialCutoutResult | null> => {
+    const dataUrl = await restoreAssetDataUrl(result.dataUrlAssetRef);
+    return dataUrl ? { ...result, dataUrl } : null;
+  };
   const restore = async (entry: PersistedInputImage): Promise<RestoredPrintInputImage | null> => {
     let url = entry.source;
     if (entry.assetRef) {
@@ -244,6 +384,20 @@ export async function restorePrintInputState(brandId: string): Promise<RestoredP
       url = await blobToDataUrl(blob);
     }
     if (!url) return null;
+    const processedUrl = entry.processed
+      ? await restoreAssetDataUrl(entry.processed.dataUrlAssetRef)
+      : null;
+    const processedResult = entry.processed?.result
+      ? await restoreCutoutResult(entry.processed.result)
+      : null;
+    const maskCandidates = entry.maskCandidates
+      ? (await Promise.all(entry.maskCandidates.map(async (candidate) => {
+          const result = await restoreCutoutResult(candidate.result);
+          return result ? { ...candidate, result } : null;
+        }))).filter((candidate): candidate is PrintGarmentMaskCandidate => candidate !== null)
+      : [];
+    const selectedCandidate = maskCandidates.find((candidate) => candidate.candidateId === entry.selectedMaskCandidateId)
+      || maskCandidates[0];
     return {
       url,
       referenceType: entry.referenceType,
@@ -251,6 +405,18 @@ export async function restorePrintInputState(brandId: string): Promise<RestoredP
       ...(entry.galleryImageId ? { galleryImageId: entry.galleryImageId } : {}),
       ...(entry.storagePath ? { storagePath: entry.storagePath } : {}),
       ...(entry.printDesignAssetPurpose ? { printDesignAssetPurpose: entry.printDesignAssetPurpose } : {}),
+      ...(processedUrl ? { processedUrl } : {}),
+      ...(processedResult ? { processedResult } : {}),
+      ...(maskCandidates.length > 0 ? { maskCandidates } : {}),
+      ...(entry.selectedMaskCandidateId ? { selectedMaskCandidateId: entry.selectedMaskCandidateId } : {}),
+      ...(entry.processed?.maskRevision !== undefined ? { maskRevision: entry.processed.maskRevision } : {}),
+      ...(entry.maskExplicitlyConfirmed !== undefined ? { maskExplicitlyConfirmed: entry.maskExplicitlyConfirmed } : {}),
+      ...(entry.selectionSource ? { selectionSource: entry.selectionSource } : {}),
+      ...(entry.segmentationTarget ? { segmentationTarget: entry.segmentationTarget } : {}),
+      ...(!processedUrl && selectedCandidate ? {
+        processedUrl: selectedCandidate.result.dataUrl,
+        processedResult: selectedCandidate.result,
+      } : {}),
     };
   };
   const restored = await Promise.all(metadata.map(restore));
