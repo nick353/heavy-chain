@@ -65,3 +65,11 @@ test('line-generation renders the real result instead of fixed pending cards', (
 test('generated result controls are not clipped by the empty-state aspect ratio', () => {
   assert.match(workbenchSource, /lightchainResult \? 'min-h-\[420px\] overflow-visible' : 'aspect-\[16\/9\] overflow-hidden'/);
 });
+
+test('workspace and detail handlers preserve uploaded assets before canned previews', () => {
+  assert.match(workbenchSource, /const setUploadedAssetResult =/);
+  assert.equal((workbenchSource.match(/setUploadedAssetResult\(\{/g) ?? []).length, 6);
+  assert.match(workbenchSource, /mode: selectedTool\.id === 'fashion-studio' \? 'model' : 'asset'/);
+  assert.match(workbenchSource, /toolId: 'print-design-detail',[\s\S]*?mode: 'pattern'/);
+  assert.match(workbenchSource, /toolId: 'marketing-detail',[\s\S]*?mode: 'asset'/);
+});

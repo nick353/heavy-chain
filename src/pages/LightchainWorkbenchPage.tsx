@@ -42,7 +42,7 @@ import {
   PrintingImageComposer,
 } from '../components/lightchain/PrintingImageComposer';
 import { LIGHTCHAIN_MATERIAL_LIBRARY_TABS } from '../lib/lightchainMaterialContract';
-import { buildAssetAnchoredPreviewDataUrl } from '../features/lightchain/assetAnchoredPreview';
+import { buildAssetAnchoredPreviewDataUrl, type AssetAnchoredPreviewMode } from '../features/lightchain/assetAnchoredPreview';
 
 type ToolCategory = 'home' | 'marketing' | 'fitting' | 'planning' | 'graphics' | 'model' | 'video' | 'lab';
 type ToolStatus = 'ready' | 'workspace' | 'needs-image' | 'coming-soon';
@@ -1659,6 +1659,36 @@ export function LightchainWorkbenchPage() {
     setModelFormState((current) => ({ ...current, [key]: value }));
   };
 
+  const setUploadedAssetResult = ({
+    toolId,
+    title,
+    summary,
+    mode = 'asset',
+    includeSecondary = true,
+  }: {
+    toolId: string;
+    title: string;
+    summary: string;
+    mode?: AssetAnchoredPreviewMode;
+    includeSecondary?: boolean;
+  }) => {
+    const sourceImageUrl = materialSlotFiles.primary?.imageUrl || garmentImageUrl;
+    if (!sourceImageUrl) return false;
+    setLightchainResult({
+      toolId,
+      title,
+      summary,
+      imageUrl: buildAssetAnchoredPreviewDataUrl({
+        sourceImageUrl,
+        secondaryImageUrl: includeSecondary ? materialSlotFiles.secondary?.imageUrl : undefined,
+        title,
+        summary,
+        mode,
+      }),
+    });
+    return true;
+  };
+
   const handleLightchainPreviewGenerate = () => {
     if (selectedTool.id === 'fabric-image' && materialRequirementsMissing) {
       setFabricNotice('先に生地をアップロードしてください');
@@ -1858,6 +1888,18 @@ export function LightchainWorkbenchPage() {
 
   const handleWorkspaceStyleGenerate = () => {
     const request = workspaceText.trim() || workspaceStyle?.prompt || selectedTool.promptTemplate;
+    const workspaceSummary = selectedTool.id === 'fashion-studio'
+      ? `${workspaceStyle?.tabs?.includes(activeWorkspaceTab) ? activeWorkspaceTab : workspaceStyle?.tabs?.[0] ?? 'スタジオ案'} / 生成済みプレビュー / ${request}`
+      : request;
+    if (setUploadedAssetResult({
+      toolId: selectedTool.id,
+      title: selectedTool.title,
+      summary: workspaceSummary,
+      mode: selectedTool.id === 'fashion-studio' ? 'model' : 'asset',
+    })) {
+      toast.success('入力素材を保持したプレビューを履歴に追加しました');
+      return;
+    }
     const preview = selectedTool.id === 'fashion-studio'
       ? buildFashionStudioPreviewDataUrl({
         tab: workspaceStyle?.tabs?.includes(activeWorkspaceTab)
@@ -1873,9 +1915,7 @@ export function LightchainWorkbenchPage() {
     setLightchainResult({
       toolId: selectedTool.id,
       title: selectedTool.title,
-      summary: selectedTool.id === 'fashion-studio'
-        ? `${workspaceStyle?.tabs?.includes(activeWorkspaceTab) ? activeWorkspaceTab : workspaceStyle?.tabs?.[0] ?? 'スタジオ案'} / 生成済みプレビュー / ${request}`
-        : request,
+      summary: workspaceSummary,
       imageUrl: preview,
     });
     toast.success('履歴にプレビューを追加しました');
@@ -1887,6 +1927,15 @@ export function LightchainWorkbenchPage() {
       selectedTool.inputs.join(' / '),
       selectedTool.outputs.join(' / '),
     ].join(' / ');
+    if (setUploadedAssetResult({
+      toolId: selectedTool.id,
+      title: `${selectedTool.title}プレビュー`,
+      summary,
+      mode: selectedTool.category === 'graphics' ? 'pattern' : selectedTool.category === 'model' ? 'model' : 'asset',
+    })) {
+      toast.success('入力素材を保持したプレビューを履歴に追加しました');
+      return;
+    }
     const preview = encodeSvgDataUrl(`
       <svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620">
         <rect width="980" height="620" fill="#0b0f10"/>
@@ -1919,6 +1968,15 @@ export function LightchainWorkbenchPage() {
       '学習素材 30〜50枚',
       '比率統一',
     ].join(' / ');
+    if (setUploadedAssetResult({
+      toolId: selectedTool.id,
+      title: 'カスタムスタイル保存プレビュー',
+      summary,
+      mode: 'model',
+    })) {
+      toast.success('入力素材を保持したカスタムスタイルを保存しました');
+      return;
+    }
     const preview = encodeSvgDataUrl(`
       <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
         <rect width="900" height="560" fill="#0f1416"/>
@@ -1952,6 +2010,15 @@ export function LightchainWorkbenchPage() {
       materialSlotFiles.primary?.name ?? '画像追加待ち',
       wearDesignPrompt.trim() || 'ディテール変更',
     ].join(' / ');
+    if (setUploadedAssetResult({
+      toolId: 'wear-design-detail',
+      title: 'ディテール変更プレビュー',
+      summary,
+      mode: 'asset',
+    })) {
+      toast.success(mode === 'guide' ? '入力素材を保持したガイドを表示しました' : '入力素材を保持した詳細プレビューを作成しました');
+      return;
+    }
     const preview = encodeSvgDataUrl(`
       <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
         <rect width="900" height="560" fill="#090d0f"/>
@@ -1985,6 +2052,15 @@ export function LightchainWorkbenchPage() {
       materialSlotFiles.primary?.name ?? '画像追加待ち',
       printDesignPrompt.trim() || 'プリント編集',
     ].join(' / ');
+    if (setUploadedAssetResult({
+      toolId: 'print-design-detail',
+      title: '柄・グラフィックプレビュー',
+      summary,
+      mode: 'pattern',
+    })) {
+      toast.success(mode === 'guide' ? '入力素材を保持したガイドを表示しました' : '入力素材を保持した柄プレビューを作成しました');
+      return;
+    }
     const preview = encodeSvgDataUrl(`
       <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
         <rect width="900" height="560" fill="#0a0d0f"/>
@@ -2017,6 +2093,15 @@ export function LightchainWorkbenchPage() {
       materialSlotFiles.primary?.name ?? 'アップロード待ち',
       `生成元: ${marketingDetailTab === 'assistant' ? 'AIアシスタント' : 'レイヤー設定'}`,
     ].join(' / ');
+    if (setUploadedAssetResult({
+      toolId: 'marketing-detail',
+      title: 'マーケティング詳細プレビュー',
+      summary,
+      mode: 'asset',
+    })) {
+      toast.success('入力素材を保持したマーケティングプレビューを履歴に追加しました');
+      return;
+    }
     const preview = encodeSvgDataUrl(`
       <svg xmlns="http://www.w3.org/2000/svg" width="980" height="620" viewBox="0 0 980 620">
         <rect width="980" height="620" fill="#080c0d"/>
