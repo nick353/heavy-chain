@@ -70,11 +70,11 @@ test('confirmed single Gallery selection resolves only one live image with a usa
 });
 
 test('printing garment Gallery requires an explicit pending selection commit', () => {
-  assert.match(page, /galleryTitle="参考画像を選択"\s+confirmGallerySelection\s+galleryConfirmLabel="素材を追加"/);
+  assert.match(page, /galleryTitle="素材を選択"\s+confirmGallerySelection\s+galleryConfirmLabel="素材を追加"/);
   assert.match(imageSelector, /confirmedSingle=\{confirmGallerySelection\}/);
   assert.match(gallerySelector, /else if \(confirmedSingle\) \{\s*setSelectedImages\(new Set\(\[image\.id\]\)\);/);
   assert.match(gallerySelector, /aria-pressed=\{multiple \|\| confirmedSingle \? isSelected : undefined\}/);
-  assert.match(gallerySelector, /const handleFilterChange = \(nextFilter: FilterType\) => \{\s*if \(nextFilter === filter\) return;\s*fetchRequestRevisionRef\.current \+= 1;\s*setSelectedImages\(new Set\(\)\);[\s\S]*setLoadedBrandId\(null\);[\s\S]*setFilter\(nextFilter\);/);
+  assert.match(gallerySelector, /const handleLibraryTabChange = \(nextTab: LightchainMaterialLibraryTabId\) => \{\s*if \(nextTab === activeLibraryTab\) return;\s*fetchRequestRevisionRef\.current \+= 1;\s*setSelectedImages\(new Set\(\)\);[\s\S]*setLoadedBrandId\(null\);[\s\S]*setActiveLibraryTab\(nextTab\);\s*setFilter\(nextTab === 'upload-history' \? 'recent' : 'all'\);/);
   assert.match(gallerySelector, /const requestRevision = fetchRequestRevisionRef\.current \+ 1;/);
   assert.match(gallerySelector, /if \(requestRevision !== fetchRequestRevisionRef\.current\) return;/);
   assert.match(gallerySelector, /if \(requestRevision === fetchRequestRevisionRef\.current\) \{\s*setIsLoading\(false\);/);
@@ -324,7 +324,7 @@ test('read-only composition keeps artwork but omits every placement mutator and 
 });
 
 test('desktop printing keeps the primary composition and generate action pinned beside scrolling history', () => {
-  assert.match(page, /className=\{`\$\{isPrinting \? 'max-w-\[1600px\]' : 'max-w-7xl'\} mx-auto/);
+  assert.match(page, /className="mx-auto grid max-w-\[1680px\] gap-4 px-3 py-4 sm:px-5 lg:grid-cols-\[72px_minmax\(0,1fr\)\]/);
   assert.match(page, /className=\{`grid gap-6 \$\{isPrinting\s+\? 'xl:grid-cols-\[360px_minmax\(0,1fr\)\]'\s+: 'xl:grid-cols-\[420px_1fr\]'\}`\}/);
   assert.match(page, /data-testid=\{isPrinting \? 'printing-control-rail' : undefined\}/);
   assert.match(page, /xl:sticky xl:top-\[86px\] xl:flex xl:max-h-\[calc\(100dvh-102px\)\] xl:self-start xl:flex-col xl:overflow-hidden/);
@@ -338,7 +338,7 @@ test('desktop printing keeps the primary composition and generate action pinned 
   assert.match(page, /data-testid="confirmed-print-composition-canvas"/);
   assert.match(page, /maxWidth: 'clamp\(96px, calc\(\(100dvh - 520px\) \* 0\.8\), 220px\)'/);
 
-  const outerLayout = page.indexOf("isPrinting ? 'max-w-[1600px]' : 'max-w-7xl'");
+  const outerLayout = page.indexOf('className="mx-auto grid max-w-[1680px]');
   const desktopGrid = page.indexOf("? 'xl:grid-cols-[360px_minmax(0,1fr)]'");
   const details = page.indexOf("'printing-control-rail-details'");
   const primary = page.indexOf("'printing-control-rail-primary'");

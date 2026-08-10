@@ -44,6 +44,33 @@ type FilterType = 'all' | 'recent' | 'favorites';
 
 const GALLERY_SKELETON_TILE_COUNT = 12;
 
+// Platform assets are product-owned, same-origin files. Keep this list small
+// and explicit until a first-class platform-assets table exists; never mix a
+// generated brand image into this tab by inference.
+const PLATFORM_GALLERY_ASSETS: GeneratedImage[] = [
+  {
+    id: 'platform-blank-white-tshirt-v1',
+    job_id: null,
+    brand_id: 'platform',
+    user_id: 'platform',
+    storage_path: '/assets/printing/blank-white-tshirt.svg',
+    image_url: '/assets/printing/blank-white-tshirt.svg',
+    thumbnail_path: '/assets/printing/blank-white-tshirt.svg',
+    version: 1,
+    parent_image_id: null,
+    is_favorite: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    expires_at: null,
+    prompt: '無地の白いTシャツ',
+    negative_prompt: null,
+    feature_type: 'platform-asset',
+    style_preset: null,
+    model_used: null,
+    generation_params: null,
+    metadata: { assetOrigin: 'platform', assetRole: 'garment' },
+  },
+];
+
 const normalizeSearchText = (value: unknown): string => {
   if (value == null) return '';
   if (typeof value === 'string') return value.toLowerCase();
@@ -135,7 +162,10 @@ export function GallerySelector({
     }
     if (activeLibraryTab === 'platform-assets') {
       if (requestRevision !== fetchRequestRevisionRef.current) return;
-      setImages([]);
+      // The bundled garment is valid for the reference-image picker. A
+      // garment must never appear in the print-design picker, so that mode
+      // remains an honest empty state until a platform artwork asset exists.
+      setImages(assetPurpose === PRINT_DESIGN_ASSET_PURPOSE ? [] : PLATFORM_GALLERY_ASSETS);
       setFolders([]);
       setFolderMemberships([]);
       setLoadedBrandId(currentBrand.id);
@@ -436,13 +466,15 @@ export function GallerySelector({
           </div>
         </div>
 
-        {activeLibraryTab === 'platform-assets' && (
+        {activeLibraryTab === 'platform-assets' && !displayLoading && visibleImages.length === 0 && (
           <div
             role="status"
             data-testid="lightchain-platform-assets-unavailable"
             className="rounded-xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:border-amber-400/20 dark:bg-amber-900/20 dark:text-amber-100"
           >
-            プラットフォームアセットは、このHeavy Chain環境ではまだ配布されていません。アップロード履歴・生成履歴・ライブラリーから選択してください。
+            {assetPurpose === PRINT_DESIGN_ASSET_PURPOSE
+              ? 'プリントデザイン用のプラットフォームアセットは、まだ配布されていません。アップロード履歴・生成履歴・ライブラリーから選択してください。'
+              : 'プラットフォームアセットは、このHeavy Chain環境ではまだ配布されていません。アップロード履歴・生成履歴・ライブラリーから選択してください。'}
           </div>
         )}
 

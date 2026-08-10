@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {
   LIGHTCHAIN_MATERIAL_INPUTS,
   LIGHTCHAIN_MATERIAL_LIBRARY_TABS,
@@ -30,4 +31,13 @@ test('fabric and print keep the same required-input order as the Light recording
     LIGHTCHAIN_MATERIAL_INPUTS['printing-image'].every((slot) => slot.required),
     true,
   );
+});
+
+test('platform assets expose only explicit product-owned inputs', () => {
+  const gallery = fs.readFileSync('src/components/GallerySelector.tsx', 'utf8');
+  assert.match(gallery, /const PLATFORM_GALLERY_ASSETS: GeneratedImage\[\] = \[/);
+  assert.match(gallery, /platform-blank-white-tshirt-v1/);
+  assert.match(gallery, /\/assets\/printing\/blank-white-tshirt\.svg/);
+  assert.match(gallery, /assetOrigin: 'platform'/);
+  assert.match(gallery, /setImages\(assetPurpose === PRINT_DESIGN_ASSET_PURPOSE \? \[\] : PLATFORM_GALLERY_ASSETS\)/);
 });

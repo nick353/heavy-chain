@@ -62,7 +62,7 @@ test('only the Lightchain print-design picker requests the purpose filter', () =
   assert.match(imageSelector, /printDesignAssetPurpose\?: PrintDesignAssetPurpose/);
   assert.equal((imageSelector.match(/printDesignAssetPurpose: galleryAssetPurpose/g) ?? []).length, 2);
   assert.equal((imageSelector.match(/assetPurpose=\{galleryAssetPurpose\}/g) ?? []).length, 2);
-  assert.match(printingPage, /galleryTitle="プリントデザインを選択"\s+galleryAssetPurpose="print-design"/);
+  assert.match(printingPage, /galleryTitle="素材を選択"\s+galleryAssetPurpose="print-design"/);
   assert.equal((printingPage.match(/galleryAssetPurpose="print-design"/g) ?? []).length, 1);
   assert.match(imageSelector, /type="file"\s+accept="image\/\*"/);
   assert.match(printingPage, /backgroundProfile: design\.printDesignAssetPurpose === PRINT_DESIGN_ASSET_PURPOSE/);
