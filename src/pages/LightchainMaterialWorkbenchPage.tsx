@@ -105,6 +105,10 @@ import {
 } from '../lib/printMaskCandidateStrategy';
 import { refineCoarseGarmentMask } from '../features/printing/selection/refineCoarseGarmentMask';
 import {
+  applyFabricMaterialResponse,
+  type FabricMaterialProfile,
+} from '../features/printing/fabricMaterialSynthesis';
+import {
   canCommitPrintableSurfaceEditorOperation,
   canCommitPrintableSuggestion,
   type PrintableSuggestionCommitToken,
@@ -469,26 +473,50 @@ const fabricVariants = [
   {
     id: 'cotton',
     name: 'コットン',
-    tint: 'rgba(248,250,252,0.42)',
-    filter: 'saturate(0.98) contrast(1.02)',
+    profile: {
+      tintColor: [245, 245, 240],
+      tintStrength: 0.08,
+      sourceTextureStrength: 0.92,
+      weaveStrength: 0.018,
+      sheenStrength: 0.02,
+      drapeStrength: 0.11,
+    } satisfies FabricMaterialProfile,
   },
   {
     id: 'denim',
     name: 'デニム',
-    tint: 'rgba(30,58,95,0.58)',
-    filter: 'saturate(1.2) contrast(1.08)',
+    profile: {
+      tintColor: [46, 72, 108],
+      tintStrength: 0.78,
+      sourceTextureStrength: 0.75,
+      weaveStrength: 0.035,
+      sheenStrength: 0.03,
+      drapeStrength: 0.14,
+    } satisfies FabricMaterialProfile,
   },
   {
     id: 'satin',
     name: 'サテン',
-    tint: 'rgba(255,255,255,0.48)',
-    filter: 'brightness(1.08) saturate(0.92)',
+    profile: {
+      tintColor: [245, 232, 224],
+      tintStrength: 0.18,
+      sourceTextureStrength: 0.82,
+      weaveStrength: 0.008,
+      sheenStrength: 0.18,
+      drapeStrength: 0.05,
+    } satisfies FabricMaterialProfile,
   },
   {
     id: 'linen',
     name: 'リネン',
-    tint: 'rgba(180,140,90,0.38)',
-    filter: 'saturate(0.95) contrast(1.05)',
+    profile: {
+      tintColor: [194, 176, 145],
+      tintStrength: 0.46,
+      sourceTextureStrength: 0.84,
+      weaveStrength: 0.028,
+      sheenStrength: 0.01,
+      drapeStrength: 0.1,
+    } satisfies FabricMaterialProfile,
   },
 ];
 
@@ -744,7 +772,7 @@ async function renderFabricTryOnComposition({
   fabricOverlayUrl: string;
   garmentMaskUrl: string;
   backgroundColor: string;
-  variant: { filter: string; tint: string };
+  variant: { profile: FabricMaterialProfile };
 }) {
   const [model, fabric, garmentMask] = await Promise.all([
     loadImage(modelUrl),
@@ -867,7 +895,6 @@ async function renderFabricTryOnComposition({
   );
   const targetWidth = targetRight - targetLeft + 1;
   const targetHeight = targetBottom - targetTop + 1;
-  textureContext.filter = variant.filter;
   textureContext.drawImage(
     fabricPatchCanvas,
     0,
@@ -879,10 +906,20 @@ async function renderFabricTryOnComposition({
     targetWidth,
     targetHeight,
   );
-  textureContext.globalCompositeOperation = 'source-atop';
-  textureContext.globalAlpha = 0.7;
-  textureContext.fillStyle = variant.tint;
-  textureContext.fillRect(targetLeft, targetTop, targetWidth, targetHeight);
+  // A multiply-only overlay cannot transfer a bright/white reference onto a
+  // darker model garment: white multiplied by the cardigan is still the
+  // cardigan. Resolve RGB from the reference plus the model's photographed
+  // luminance before masking, so cotton/satin also visibly replace the source
+  // garment while denim/linen retain their intended tone.
+  const materialImageData = textureContext.getImageData(0, 0, stageWidth, stageHeight);
+  materialImageData.data.set(applyFabricMaterialResponse({
+    materialRgba: materialImageData.data,
+    garmentRgba: modelImageData.data,
+    width: stageWidth,
+    height: stageHeight,
+    profile: variant.profile,
+  }));
+  textureContext.putImageData(materialImageData, 0, 0);
   textureContext.globalCompositeOperation = 'destination-in';
   textureContext.globalAlpha = 1;
   textureContext.drawImage(maskCanvas, 0, 0);
@@ -891,11 +928,11 @@ async function renderFabricTryOnComposition({
   // This is the key invariant that prevents the source shirt silhouette from
   // appearing as a floating rectangle or a second garment around the model.
   context.save();
-  context.globalCompositeOperation = 'multiply';
-  context.globalAlpha = 0.82;
+  context.globalCompositeOperation = 'source-over';
+  context.globalAlpha = 0.96;
   context.drawImage(textureCanvas, 0, 0);
   context.globalCompositeOperation = 'soft-light';
-  context.globalAlpha = 0.24;
+  context.globalAlpha = 0.12;
   context.drawImage(textureCanvas, 0, 0);
   context.restore();
 
