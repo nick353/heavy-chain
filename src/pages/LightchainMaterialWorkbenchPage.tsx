@@ -558,26 +558,26 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: s
 
 async function buildFabricReferenceOverlay(imageUrl: string): Promise<string> {
   try {
-    const artworkResult = await withTimeout(
-      buildPrintDesignCutoutDataUrl({ imageUrl, backgroundProfile: 'strict' }),
-      CUTOUT_TIMEOUT_MS,
-      '生地画像の背景分離がタイムアウトしました。画像を確認して再試行してください',
+    const garmentResult = await withTimeout(
+      buildPrintGarmentCutoutDataUrl({
+        imageUrl,
+        modelName: resolvePrintGarmentCutoutModel({ selectionSource: 'automatic' }),
+        segmentationTarget: 'full',
+      }),
+      CLOTH_CUTOUT_TIMEOUT_MS,
+      '生地画像の服領域分離がタイムアウトしました。画像を確認して再試行してください',
     );
-    return artworkResult.dataUrl;
-  } catch (artworkError) {
+    return garmentResult.dataUrl;
+  } catch (garmentError) {
     try {
-      const garmentResult = await withTimeout(
-        buildPrintGarmentCutoutDataUrl({
-          imageUrl,
-          modelName: resolvePrintGarmentCutoutModel({ selectionSource: 'automatic' }),
-          segmentationTarget: 'full',
-        }),
-        CLOTH_CUTOUT_TIMEOUT_MS,
-        '生地画像の服領域分離がタイムアウトしました。画像を確認して再試行してください',
+      const artworkResult = await withTimeout(
+        buildPrintDesignCutoutDataUrl({ imageUrl, backgroundProfile: 'strict' }),
+        CUTOUT_TIMEOUT_MS,
+        '生地画像の背景分離がタイムアウトしました。画像を確認して再試行してください',
       );
-      return garmentResult.dataUrl;
-    } catch (garmentError) {
-      console.warn('Fabric reference overlay cutout failed.', { artworkError, garmentError });
+      return artworkResult.dataUrl;
+    } catch (artworkError) {
+      console.warn('Fabric reference overlay cutout failed.', { garmentError, artworkError });
       throw new Error('生地画像の背景を分離できませんでした。服だけが写った画像で再試行してください');
     }
   }
@@ -764,6 +764,9 @@ export function LightchainMaterialWorkbenchPage() {
   const [showResultComparison, setShowResultComparison] = useState(false);
   const [fabricBase, setFabricBase] = useState<SelectedImage | null>(null);
   const [fabricDesign, setFabricDesign] = useState<SelectedImage | null>(null);
+  const [fabricPreviewOverlayUrl, setFabricPreviewOverlayUrl] = useState<string | null>(null);
+  const [fabricPreviewState, setFabricPreviewState] = useState<CutoutState>('idle');
+  const [fabricPreviewError, setFabricPreviewError] = useState<string | null>(null);
   const [fabricLayer, setFabricLayer] = useState<AssetLayer | null>(null);
   const [fabricPresetIds, setFabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
   const [fabricPrompt, setFabricPrompt] = useState('');
@@ -810,6 +813,7 @@ export function LightchainMaterialWorkbenchPage() {
   const printableSuggestionRequestRef = useRef(0);
   const printableSurfaceEditorOperationRef = useRef(0);
   const printGarmentCutoutRequestRef = useRef(0);
+  const fabricPreviewRequestRef = useRef(0);
   const printDesignCutoutRequestRef = useRef(0);
   const printDesignLayerIdsRef = useRef(new Map<string, string>());
   const currentPrintDesignLayerIdsRef = useRef<string[]>([]);
@@ -1415,6 +1419,37 @@ export function LightchainMaterialWorkbenchPage() {
     }));
   }, [fabricBase, fabricDesign]);
 
+  useEffect(() => {
+    const requestId = ++fabricPreviewRequestRef.current;
+    if (!fabricBase?.url) {
+      setFabricPreviewOverlayUrl(null);
+      setFabricPreviewState('idle');
+      setFabricPreviewError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setFabricPreviewOverlayUrl(null);
+    setFabricPreviewState('processing');
+    setFabricPreviewError(null);
+    void buildFabricReferenceOverlay(fabricBase.url)
+      .then((overlayUrl) => {
+        if (cancelled || fabricPreviewRequestRef.current !== requestId) return;
+        setFabricPreviewOverlayUrl(overlayUrl);
+        setFabricPreviewState('done');
+      })
+      .catch((error) => {
+        if (cancelled || fabricPreviewRequestRef.current !== requestId) return;
+        setFabricPreviewOverlayUrl(null);
+        setFabricPreviewState('error');
+        setFabricPreviewError(error instanceof Error ? error.message : String(error));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fabricBase?.url]);
+
   const clearManualPrintableSurface = useCallback((reason?: string) => {
     manualPrintableSurfaceRef.current = null;
     setManualPrintableSurface(null);
@@ -1716,7 +1751,7 @@ export function LightchainMaterialWorkbenchPage() {
             : 1125;
 
       if (!isPrinting) {
-        const fabricOverlayUrl = await buildFabricReferenceOverlay(fabricBase!.url);
+        const fabricOverlayUrl = fabricPreviewOverlayUrl ?? await buildFabricReferenceOverlay(fabricBase!.url);
         if (!isCurrentRequest()) return;
         const baseLayers: AssetLayer[] = [{
           id: 'fabric-model',
@@ -2789,9 +2824,7 @@ export function LightchainMaterialWorkbenchPage() {
     toast.success('マスク補正をステージへ反映しました');
   };
 
-  const fabricStageBackground = fabricBase?.url
-    ? `url(${fabricBase.url})`
-    : 'linear-gradient(135deg, rgba(34,197,94,0.18), rgba(59,130,246,0.15), rgba(15,23,42,0.8))';
+  const fabricStageBackground = 'linear-gradient(135deg, rgba(34,197,94,0.18), rgba(59,130,246,0.15), rgba(15,23,42,0.8))';
 
   const printStageBackground = 'linear-gradient(180deg, rgba(248,250,252,0.08), rgba(148,163,184,0.10))';
 
@@ -4413,19 +4446,29 @@ export function LightchainMaterialWorkbenchPage() {
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-sm text-white/40">モデル/デザイン画像をアップロードしてください</div>
                   )}
-                  {fabricBase && (
-                    <img src={fabricBase.url} alt="生地プレビュー" className="absolute inset-[10%] h-[80%] w-[80%] object-contain opacity-75 mix-blend-soft-light drop-shadow-2xl" />
+                  {fabricBase && fabricPreviewOverlayUrl && (
+                    <img src={fabricPreviewOverlayUrl} alt="切り抜き済み生地プレビュー" className="absolute inset-[10%] h-[80%] w-[80%] object-contain opacity-75 mix-blend-soft-light drop-shadow-2xl" />
+                  )}
+                  {fabricBase && fabricPreviewState === 'processing' && (
+                    <div className="absolute inset-x-3 top-3 rounded-lg border border-cyan-200/20 bg-slate-950/60 px-3 py-2 text-center text-[11px] text-cyan-100 backdrop-blur">
+                      生地の背景を分離しています…
+                    </div>
+                  )}
+                  {fabricBase && fabricPreviewState === 'error' && (
+                    <div role="alert" className="absolute inset-x-3 top-3 rounded-lg border border-rose-200/25 bg-rose-950/70 px-3 py-2 text-center text-[11px] text-rose-100 backdrop-blur">
+                      {fabricPreviewError ?? '生地の背景を分離できませんでした'}
+                    </div>
                   )}
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-4 pb-3 pt-10 text-xs text-white/75">
                     {fabricDesign && fabricBase ? '入力内容を確認してAI生成へ進みます' : '2つの画像を追加するとプレビューできます'}
                   </div>
                 </div>
 
-                <Button
-                  data-testid="lightchain-fabric-generate"
-                  onClick={handleGenerate}
-                  isLoading={isGenerating}
-                  disabled={isGenerating || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
+                  <Button
+                    data-testid="lightchain-fabric-generate"
+                    onClick={handleGenerate}
+                    isLoading={isGenerating}
+                    disabled={isGenerating || fabricPreviewState === 'processing' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
                   className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
                   size="lg"
                   leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
@@ -4465,7 +4508,19 @@ export function LightchainMaterialWorkbenchPage() {
                   {fabricDesign && fabricBase ? (
                     <div className="relative h-full w-full">
                       <img src={fabricDesign.url} alt="モデル/デザインの参考" className="absolute inset-0 h-full w-full object-contain bg-black/10" />
-                      <img src={fabricBase.url} alt="生地の参考" className="absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain opacity-75 mix-blend-soft-light" />
+                      {fabricPreviewOverlayUrl && (
+                        <img src={fabricPreviewOverlayUrl} alt="切り抜き済み生地の参考" className="absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain opacity-75 mix-blend-soft-light" />
+                      )}
+                      {fabricPreviewState === 'processing' && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/35 text-[11px] text-cyan-100 backdrop-blur-[1px]">
+                          生地の背景を分離しています…
+                        </div>
+                      )}
+                      {fabricPreviewState === 'error' && (
+                        <div role="alert" className="absolute inset-0 flex items-center justify-center bg-rose-950/45 px-4 text-center text-[11px] text-rose-100">
+                          {fabricPreviewError ?? '生地の背景を分離できませんでした'}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="flex h-full items-center justify-center text-xs text-white/35">入力待ち</div>

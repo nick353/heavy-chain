@@ -49,7 +49,11 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /data-testid="lightchain-fabric-input"/);
   assert.match(page, /data-testid="fabric-result-history"/);
   assert.match(page, /value=\{fabricPrompt\}[\s\S]*?onChange=\{\(event\) => setFabricPrompt\(event\.target\.value\)\}/);
-  assert.match(page, /disabled=\{isGenerating \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
+  assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState === 'processing' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
+  assert.match(page, /切り抜き済み生地プレビュー/);
+  assert.match(page, /切り抜き済み生地の参考/);
+  assert.doesNotMatch(page, /<img src=\{fabricBase\.url\} alt="生地プレビュー"/);
+  assert.doesNotMatch(page, /<img src=\{fabricBase\.url\} alt="生地の参考"/);
   assert.match(page, /note: `\$\{preset\.name\} の質感で重ねた見本/);
   assert.match(page, /outputSize: \{ width, height \}/);
   assert.match(page, /const imageLoadCache = new Map<string, Promise<HTMLImageElement>>\(\)/);
