@@ -24,7 +24,7 @@ test('fabric and print keep the same required-input order as the Light recording
   );
   assert.deepEqual(
     LIGHTCHAIN_MATERIAL_INPUTS['printing-image'].map((slot) => slot.label),
-    ['参考画像', 'プリント画像'],
+    ['参考画像', 'プリントをアップロード'],
   );
   assert.equal(
     LIGHTCHAIN_MATERIAL_INPUTS['printing-image'].every((slot) => slot.required),

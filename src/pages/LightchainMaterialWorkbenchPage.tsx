@@ -2888,9 +2888,9 @@ export function LightchainMaterialWorkbenchPage() {
               {isPrinting ? <Scissors className="h-5 w-5" /> : <Layers3 className="h-5 w-5" />}
             </div>
             <div>
-              <h2 className="text-lg font-semibold">{isPrinting ? 'プリント画像を積み上げる' : '生地の上に重ねる'}</h2>
+              <h2 className="text-lg font-semibold">{isPrinting ? 'プリントをアップロード' : '生地の上に重ねる'}</h2>
               <p className="text-sm text-white/60">
-                {isPrinting ? '服や参考画像を切り抜いて、デザインを自由に置けます。' : '素材を選び、質感違いの見本をまとめて出せます。'}
+                {isPrinting ? '服を選び、スポット／全体のプリント効果を確認します。' : '素材を選び、質感違いの見本をまとめて出せます。'}
               </p>
             </div>
           </div>

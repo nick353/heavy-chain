@@ -81,7 +81,7 @@ export const LIGHTCHAIN_MATERIAL_INPUTS: Record<
     },
     {
       id: 'print',
-      label: 'プリント画像',
+      label: 'プリントをアップロード',
       required: true,
       acceptedKinds: ['pattern'],
       description: 'スポット／全体へ配置する柄・ロゴ画像です。',
