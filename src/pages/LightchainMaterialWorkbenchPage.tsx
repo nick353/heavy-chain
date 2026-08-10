@@ -75,6 +75,7 @@ import {
   buildPrintRequestSnapshot,
   renderExperimentalSurfaceComposition,
   renderPrintRequestComposition,
+  isPrintGarmentModnetModelConfigured,
   isPrintGarmentBen2ModelConfigured,
   isPrintGarmentClothModelConfigured,
   resolvePrintGarmentCutoutModel,
@@ -476,6 +477,7 @@ const printPreviewStageSize = { width: 720, height: 900 };
 const IMAGE_LOAD_TIMEOUT_MS = 30_000;
 const CUTOUT_TIMEOUT_MS = 75_000;
 const CLOTH_CUTOUT_TIMEOUT_MS = 105_000;
+const MODNET_CUTOUT_TIMEOUT_MS = 60_000;
 const BEN2_CUTOUT_TIMEOUT_MS = 180_000;
 const COMPOSITION_TIMEOUT_MS = 30_000;
 
@@ -753,15 +755,17 @@ export function LightchainMaterialWorkbenchPage() {
     [printGarmentMaskCandidates, selectedPrintGarmentMaskCandidateId],
   );
   const clothModelConfigured = isPrintGarmentClothModelConfigured();
+  const modnetModelConfigured = isPrintGarmentModnetModelConfigured();
   const ben2ModelConfigured = isPrintGarmentBen2ModelConfigured();
   const printGarmentSegmentationStatus = useMemo(() => garmentSelectionModelStatus({
     selectionSource: printGarmentSelectionSource,
     clothModelConfigured,
+    modnetModelConfigured,
     ben2ModelConfigured,
     resultEngine: selectedPrintGarmentMaskCandidate?.result.engine,
     requestedTarget: printGarmentSegmentationTarget,
     resultTarget: selectedPrintGarmentMaskCandidate?.result.segmentationTarget,
-  }), [ben2ModelConfigured, clothModelConfigured, printGarmentSegmentationTarget, printGarmentSelectionSource, selectedPrintGarmentMaskCandidate]);
+  }), [ben2ModelConfigured, clothModelConfigured, modnetModelConfigured, printGarmentSegmentationTarget, printGarmentSelectionSource, selectedPrintGarmentMaskCandidate]);
   const hasConfirmedPrintGarmentMask = isGarmentMaskExplicitlyConfirmed({
     selectionSource: printGarmentSelectionSource,
     maskCandidateId: selectedPrintGarmentMaskCandidateId,
@@ -1349,7 +1353,9 @@ export function LightchainMaterialWorkbenchPage() {
     setSelectedPrintGarmentMaskCandidateId('auto');
     const cutoutSourceUrl = printGarmentCutoutSourceUrl ?? printGarment.url;
     const cutoutModel = resolvePrintGarmentCutoutModel({ selectionSource: printGarmentSelectionSource });
-    const cutoutTimeoutMilliseconds = cutoutModel === 'ben2'
+    const cutoutTimeoutMilliseconds = cutoutModel === 'modnet'
+      ? MODNET_CUTOUT_TIMEOUT_MS
+      : cutoutModel === 'ben2'
       ? BEN2_CUTOUT_TIMEOUT_MS
       : cutoutModel === 'u2net_cloth_seg'
       ? CLOTH_CUTOUT_TIMEOUT_MS

@@ -56,6 +56,11 @@ import {
   resolveRembgClothSegModelUrl,
 } from '../features/printing/selection/clothModelRuntimeContract';
 import { polishCutoutAlpha } from '../features/printing/matte/polishCutoutAlpha';
+import { runModnetMatting } from '../features/printing/matte/modnetMatting';
+import {
+  isModnetOnnxModelConfigured,
+  resolveModnetOnnxModelUrl,
+} from '../features/printing/matte/modnetMattingRuntimeContract';
 import { runBen2Matting } from '../features/printing/matte/ben2Matting';
 import {
   isBen2OnnxModelConfigured,
@@ -1575,6 +1580,10 @@ const ben2OnnxModelUrl = resolveBen2OnnxModelUrl({
   configuredUrl: import.meta.env.VITE_BEN2_ONNX_MODEL_URL,
   isProduction: import.meta.env.PROD,
 });
+const modnetOnnxModelUrl = resolveModnetOnnxModelUrl({
+  configuredUrl: import.meta.env.VITE_MODNET_ONNX_MODEL_URL,
+  isProduction: import.meta.env.PROD,
+});
 
 type RembgCutoutModel =
   | GarmentCutoutModel
@@ -1618,6 +1627,7 @@ const clothModelWarmupController = createClothModelWarmupController({
 });
 
 export const isPrintGarmentClothModelConfigured = () => isRembgClothSegModelConfigured(rembgClothSegModelUrl);
+export const isPrintGarmentModnetModelConfigured = () => isModnetOnnxModelConfigured(modnetOnnxModelUrl);
 export const isPrintGarmentBen2ModelConfigured = () => isBen2OnnxModelConfigured(ben2OnnxModelUrl);
 
 export const preparePrintGarmentClothModel = async (
@@ -1639,8 +1649,48 @@ export const resolvePrintGarmentCutoutModel = ({
 }): GarmentCutoutModel => resolveGarmentCutoutModel({
   selectionSource,
   clothModelConfigured: isPrintGarmentClothModelConfigured(),
+  modnetModelConfigured: isPrintGarmentModnetModelConfigured(),
   ben2ModelConfigured: isPrintGarmentBen2ModelConfigured(),
 });
+
+const buildModnetMaterialCutoutDataUrl = async ({
+  imageUrl,
+  maxDataUrlBytes,
+}: {
+  imageUrl: string;
+  maxDataUrlBytes: number;
+}): Promise<MaterialCutoutResult> => {
+  if (!isPrintGarmentModnetModelConfigured()) throw new Error('modnet_model_unconfigured');
+  const image = await loadImageElement(imageUrl);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('modnet_cutout_context_missing');
+  context.drawImage(image, 0, 0, sourceWidth, sourceHeight);
+  const source = context.getImageData(0, 0, sourceWidth, sourceHeight);
+  const alpha = await runModnetMatting({
+    rgba: new Uint8ClampedArray(source.data),
+    width: sourceWidth,
+    height: sourceHeight,
+  });
+  if (alpha.length !== sourceWidth * sourceHeight) throw new Error('modnet_alpha_shape_invalid');
+  for (let pixel = 0; pixel < alpha.length; pixel += 1) {
+    source.data[(pixel * 4) + 3] = alpha[pixel];
+  }
+  context.putImageData(source, 0, 0);
+  return buildBoundedPngFromCanvas({
+    canvas,
+    sourceWidth,
+    sourceHeight,
+    maxDataUrlBytes,
+    storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
+    engine: 'browser-ai-modnet-v1',
+    validateSubjectShape: true,
+  });
+};
 
 const buildBen2MaterialCutoutDataUrl = async ({
   imageUrl,
@@ -1984,7 +2034,7 @@ export async function buildPrintGarmentCutoutDataUrl({
         validateSubjectShape: true,
       })
     : null;
-  const effectiveModelName: Exclude<GarmentCutoutModel, 'ben2'> = modelName === 'ben2'
+  const effectiveModelName: Exclude<GarmentCutoutModel, 'modnet' | 'ben2'> = modelName === 'modnet' || modelName === 'ben2'
     ? (rembgClothSegModelUrl ? 'u2net_cloth_seg' : 'silueta')
     : modelName;
 
@@ -2027,17 +2077,19 @@ export async function buildPrintGarmentCutoutDataUrl({
   }
 
   const sourceBackground = estimateBackgroundColor(sourceData.data, sourceWidth, sourceHeight);
-  if (modelName === 'ben2') {
+  if (modelName === 'modnet' || modelName === 'ben2') {
     try {
-      const result = await buildBen2MaterialCutoutDataUrl({ imageUrl, maxDataUrlBytes });
+      const result = modelName === 'modnet'
+        ? await buildModnetMaterialCutoutDataUrl({ imageUrl, maxDataUrlBytes })
+        : await buildBen2MaterialCutoutDataUrl({ imageUrl, maxDataUrlBytes });
       return await finalizeResult(await constrainCutoutResultToSelectionMask({
         result,
         selectionMaskUrl,
         maxDataUrlBytes,
       }));
-    } catch (ben2Error) {
-      console.warn('BEN2 garment matting failed; falling back to the configured cloth model.', ben2Error);
-      const fallbackModel: Exclude<GarmentCutoutModel, 'ben2'> = rembgClothSegModelUrl ? 'u2net_cloth_seg' : 'silueta';
+    } catch (mattingError) {
+      console.warn(`${modelName === 'modnet' ? 'MODNet' : 'BEN2'} garment matting failed; falling back to the configured cloth model.`, mattingError);
+      const fallbackModel: Exclude<GarmentCutoutModel, 'modnet' | 'ben2'> = rembgClothSegModelUrl ? 'u2net_cloth_seg' : 'silueta';
       try {
         const fallbackResult = await buildHighPrecisionMaterialCutoutDataUrl({
           imageUrl,
