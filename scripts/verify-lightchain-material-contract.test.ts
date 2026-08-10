@@ -57,6 +57,8 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.ok(page.includes("https?:"));
   assert.match(page, /const yieldToBrowser = \(\) => new Promise<void>/);
   assert.match(page, /data-testid="lightchain-fabric-generate"/);
+  assert.ok(page.includes("canvas.toBlob"));
+  assert.ok(page.includes("URL.createObjectURL(blob)"));
 });
 
 test('Light-style routes keep Heavy Chain branding in the shared header', () => {

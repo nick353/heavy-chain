@@ -612,7 +612,13 @@ async function renderComposition(
     }
   }
 
-  return canvas.toDataURL('image/png');
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((nextBlob) => {
+      if (nextBlob) resolve(nextBlob);
+      else reject(new Error('Canvas画像の書き出しに失敗しました'));
+    }, 'image/png');
+  });
+  return URL.createObjectURL(blob);
 }
 
 function LayerPreview({
