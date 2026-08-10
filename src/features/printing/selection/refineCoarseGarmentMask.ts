@@ -131,9 +131,16 @@ const refineRectangularMask = (
   width: number,
   height: number,
   bounds: Bounds,
+  modelBounds: Bounds,
 ) => {
   const boxWidth = bounds.right - bounds.left + 1;
   const boxHeight = bounds.bottom - bounds.top + 1;
+  const searchBounds: Bounds = {
+    left: clamp(bounds.left - Math.floor(boxWidth * 0.45), Math.floor(modelBounds.left), Math.ceil(modelBounds.right)),
+    top: clamp(bounds.top - Math.floor(boxHeight * 0.85), Math.floor(modelBounds.top), Math.ceil(modelBounds.bottom)),
+    right: clamp(bounds.right + Math.floor(boxWidth * 0.45), Math.floor(modelBounds.left), Math.ceil(modelBounds.right)),
+    bottom: clamp(bounds.bottom + Math.floor(boxHeight * 0.18), Math.floor(modelBounds.top), Math.ceil(modelBounds.bottom)),
+  };
   const sampleLeft = bounds.left + Math.floor(boxWidth * 0.28);
   const sampleRight = bounds.left + Math.ceil(boxWidth * 0.72);
   const sampleTop = bounds.top + Math.floor(boxHeight * 0.32);
@@ -165,10 +172,9 @@ const refineRectangularMask = (
   const threshold = clamp(median(distances) * 2.25 + 18, 32, 92);
   const candidate = new Uint8Array(width * height);
   let candidatePixels = 0;
-  for (let y = bounds.top; y <= bounds.bottom; y += 1) {
-    for (let x = bounds.left; x <= bounds.right; x += 1) {
+  for (let y = searchBounds.top; y <= searchBounds.bottom; y += 1) {
+    for (let x = searchBounds.left; x <= searchBounds.right; x += 1) {
       const index = pixelIndex(x, y, width);
-      if (coarseAlpha[index] < 24) continue;
       const sourceOffset = index * 4;
       const skinLike = neutralGarment
         && y <= bounds.top + Math.floor(boxHeight * 0.24)
@@ -210,7 +216,7 @@ const refineRectangularMask = (
         [x - 1, y],                 [x + 1, y],
         [x - 1, y + 1], [x, y + 1], [x + 1, y + 1],
       ] as const) {
-        if (nextX < bounds.left || nextY < bounds.top || nextX > bounds.right || nextY > bounds.bottom) continue;
+        if (nextX < searchBounds.left || nextY < searchBounds.top || nextX > searchBounds.right || nextY > searchBounds.bottom) continue;
         const next = pixelIndex(nextX, nextY, width);
         if (!candidate[next] || visited[next]) continue;
         visited[next] = 1;
@@ -247,7 +253,8 @@ const refineRectangularMask = (
     refined[index] = 255;
     refinedPixels += 1;
   }
-  const refinedCoverage = refinedPixels / (boxWidth * boxHeight);
+  const searchArea = (searchBounds.right - searchBounds.left + 1) * (searchBounds.bottom - searchBounds.top + 1);
+  const refinedCoverage = refinedPixels / searchArea;
   if (refinedCoverage < 0.08 || refinedCoverage > 0.88) return null;
   return refined;
 };
@@ -276,7 +283,12 @@ export const refineCoarseGarmentMask = ({
     right: clamp(shape.bounds.right, Math.floor(modelBounds.left), Math.ceil(modelBounds.right)),
     bottom: clamp(shape.bounds.bottom, Math.floor(modelBounds.top), Math.ceil(modelBounds.bottom)),
   };
-  const refined = refineRectangularMask(coarseAlpha, source, width, height, clampedBounds);
+  const refined = refineRectangularMask(coarseAlpha, source, width, height, clampedBounds, {
+    left: Math.floor(modelBounds.left),
+    top: Math.floor(modelBounds.top),
+    right: Math.ceil(modelBounds.right),
+    bottom: Math.ceil(modelBounds.bottom),
+  });
   if (!refined) return { alpha: coarseAlpha, coarseMaskWasRectangular: true, refined: false };
   return { alpha: refined, coarseMaskWasRectangular: true, refined: true };
 };
