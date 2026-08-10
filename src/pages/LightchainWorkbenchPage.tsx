@@ -5479,7 +5479,7 @@ export function LightchainWorkbenchPage() {
                           ? currentModelPanel.subtitle ?? selectedTool.description
                         : selectedTool.description}
                     </p>
-                    <div className="mx-auto mt-10 flex aspect-[16/9] max-w-[520px] items-center justify-center overflow-hidden bg-black/30 p-4">
+                    <div className={`mx-auto mt-10 flex max-w-[520px] items-center justify-center bg-black/30 p-4 ${lightchainResult ? 'min-h-[420px] overflow-visible' : 'aspect-[16/9] overflow-hidden'}`}>
                       {lightchainResult ? (
 	                        <div className="w-full">
 	                          {renderLightchainResultPreviewImage('mx-auto max-h-56 w-full rounded-lg object-contain', '生成結果プレビュー')}

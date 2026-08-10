@@ -61,3 +61,7 @@ test('line-generation renders the real result instead of fixed pending cards', (
   assert.match(workbenchSource, /\{lightchainResult \? \(/);
   assert.doesNotMatch(workbenchSource, /Array\.from\(\{ length: 4 \}\)/);
 });
+
+test('generated result controls are not clipped by the empty-state aspect ratio', () => {
+  assert.match(workbenchSource, /lightchainResult \? 'min-h-\[420px\] overflow-visible' : 'aspect-\[16\/9\] overflow-hidden'/);
+});
