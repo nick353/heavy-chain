@@ -41,6 +41,7 @@ import {
   type PrintArtworkTransform,
   PrintingImageComposer,
 } from '../components/lightchain/PrintingImageComposer';
+import { LIGHTCHAIN_MATERIAL_LIBRARY_TABS } from '../lib/lightchainMaterialContract';
 
 type ToolCategory = 'home' | 'marketing' | 'fitting' | 'planning' | 'graphics' | 'model' | 'video' | 'lab';
 type ToolStatus = 'ready' | 'workspace' | 'needs-image' | 'coming-soon';
@@ -793,13 +794,19 @@ function getOverlayPosition(placement: string, scale: number) {
 
 const defaultMaskCandidates: MaskCandidate[] = ['トップス', '無地部分', '柄'];
 
-const materialTabs: Array<{ id: MaterialTab; label: string; description: string }> = [
-  { id: 'upload-history', label: '履歴アップロード', description: '直近で使ったアップロード素材を再利用します。' },
-  { id: 'generation-history', label: '履歴', description: '過去14日間の生成結果を素材として使います。' },
-  { id: 'my-library', label: 'マイライブラリー', description: '個人で保存した商品、柄、モデル参照を選びます。' },
-  { id: 'team-library', label: 'チームライブラリー', description: 'チーム共有の素材を制作に使います。' },
-  { id: 'platform-assets', label: 'プラットフォームアセット', description: 'サンプル素材から開始します。' },
-];
+const materialTabDescriptions: Record<MaterialTab, string> = {
+  'upload-history': '直近で使ったアップロード素材を再利用します。',
+  'generation-history': '過去14日間の生成結果を素材として使います。',
+  'my-library': '個人で保存した商品、柄、モデル参照を選びます。',
+  'team-library': 'チーム共有の素材を制作に使います。',
+  'platform-assets': 'サンプル素材から開始します。',
+};
+
+const materialTabs: Array<{ id: MaterialTab; label: string; description: string }> =
+  LIGHTCHAIN_MATERIAL_LIBRARY_TABS.map((tab) => ({
+    ...tab,
+    description: materialTabDescriptions[tab.id],
+  }));
 
 const materialTabItems: Record<MaterialTab, Array<{ title: string; kind: string; note: string }>> = {
   'upload-history': [

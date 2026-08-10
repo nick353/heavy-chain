@@ -131,6 +131,11 @@ import {
   restorePlacementEditBaseline,
   type PlacementEditBaseline,
 } from '../features/printing/selection/placementEditSession';
+import {
+  LIGHTCHAIN_MATERIAL_INPUTS,
+  LIGHTCHAIN_MATERIAL_TABS,
+  getLightchainMaterialTab,
+} from '../lib/lightchainMaterialContract';
 
 type WorkbenchMode = 'fabric' | 'printing';
 type PrintCoverageMode = 'spot' | 'full';
@@ -2733,48 +2738,86 @@ export function LightchainMaterialWorkbenchPage() {
               : (!printPlacementConfirmed || printPlacementSessionOpen)
                 ? '配置を開いて「決定」を押してください'
                 : '生成できます';
+  const activeMaterialTab = getLightchainMaterialTab(isPrinting ? 'printing-image' : 'fabric-image');
+  const activeMaterialInputs = LIGHTCHAIN_MATERIAL_INPUTS[isPrinting ? 'printing-image' : 'fabric-image'];
 
   return (
-    <div className={`${isPrinting ? 'max-w-[1600px]' : 'max-w-7xl'} mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8`}>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
+    <div className="min-h-screen bg-[#0b1113] text-white">
+      <div className="mx-auto grid max-w-[1680px] gap-4 px-3 py-4 sm:px-5 lg:grid-cols-[72px_minmax(0,1fr)] lg:px-6 lg:py-6">
+        <aside
+          aria-label="Light Chainグラフィックツール"
+          className="hidden rounded-2xl border border-white/10 bg-[#111719] p-2 shadow-2xl shadow-black/20 lg:block"
+        >
+          <div className="sticky top-[88px] flex flex-col items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-300/15 text-cyan-200" aria-hidden="true">
+              <Layers3 className="h-5 w-5" />
+            </div>
+            {LIGHTCHAIN_MATERIAL_TABS.map((tab) => {
+              const active = tab.id === activeMaterialTab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => navigate(tab.route)}
+                  aria-label={tab.label}
+                  aria-pressed={active}
+                  className={`flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold leading-4 transition ${active
+                    ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30'
+                    : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
+                >
+                  <span aria-hidden="true" className={`h-2 w-2 rounded-full ${active ? 'bg-cyan-200 shadow-[0_0_10px_rgba(165,243,252,0.8)]' : 'bg-white/20'}`} />
+                  <span className="text-center">{tab.label.replace('イメージ', '').replace('の実写化', '実写')}</span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+
+        <main className="min-w-0">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
           <button
             onClick={() => navigate('/generate')}
-            className="mb-3 inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            className="mb-3 inline-flex items-center gap-2 text-sm text-white/45 transition hover:text-white/80"
           >
             <ArrowLeft className="w-4 h-4" />
             生成一覧へ
           </button>
-          <h1 className="text-2xl font-display font-semibold text-neutral-900 dark:text-white">
-            {isPrinting ? 'プリントイメージ' : '生地イメージ'}
+          <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-cyan-200/70">LIGHTCHAIN MATERIAL WORKBENCH</p>
+          <h1 className="mt-2 text-2xl font-display font-semibold text-white sm:text-3xl">
+            {activeMaterialTab.label}
           </h1>
-          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-            {isPrinting
-              ? '参考画像とデザインを高精度マスクで透明合成し、元の色・形・配置を保ちます。'
-              : '生地画像にデザインを重ね、色味の違う複数生地をまとめて確認できます。'}
-          </p>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-white/55">{activeMaterialTab.description}</p>
+          <div className="mt-3 flex flex-wrap gap-2" data-testid="lightchain-material-input-contract">
+            {activeMaterialInputs.map((slot, index) => (
+              <span key={slot.id} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/55">
+                {index + 1}. {slot.label}{slot.required ? ' *' : ''}
+              </span>
+            ))}
+          </div>
           <Link
             to="/history"
-            className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-cyan-300 transition hover:text-cyan-200"
+            className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-cyan-200 transition hover:text-cyan-100"
           >
             生成履歴を確認
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/20 p-1 backdrop-blur-md">
-          <button
-            onClick={() => navigate('/lightchain/fabric-image')}
-            className={`rounded-full px-4 py-2 text-sm transition-all ${!isPrinting ? 'bg-primary-500 text-white shadow-lg' : 'text-neutral-300 hover:text-white'}`}
-          >
-            生地イメージ
-          </button>
-          <button
-            onClick={() => navigate('/lightchain/printing-image')}
-            className={`rounded-full px-4 py-2 text-sm transition-all ${isPrinting ? 'bg-primary-500 text-white shadow-lg' : 'text-neutral-300 hover:text-white'}`}
-          >
-            プリントイメージ
-          </button>
-        </div>
+        <nav className="flex max-w-full gap-1 overflow-x-auto rounded-xl border border-white/10 bg-[#111719] p-1" aria-label="素材ツール">
+          {LIGHTCHAIN_MATERIAL_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => navigate(tab.route)}
+              aria-current={tab.id === activeMaterialTab.id ? 'page' : undefined}
+              className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${tab.id === activeMaterialTab.id
+                ? 'bg-[#737d84] text-white shadow-lg shadow-black/20'
+                : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
       </div>
 
       <div className={`grid gap-6 ${isPrinting
@@ -2855,22 +2898,24 @@ export function LightchainMaterialWorkbenchPage() {
           {!isPrinting ? (
             <div className="space-y-4">
               <ImageSelector
-                label="生地画像"
+                label={activeMaterialInputs[0].label}
                 required
-                value={fabricBase}
-                onChange={setFabricBase}
-                allowedReferenceTypes={['base']}
-                defaultReferenceType="base"
-                hint="土台となる生地の写真を入れます"
-              />
-              <ImageSelector
-                label="デザイン画像"
-                required
+                galleryTitle="素材を選択"
                 value={fabricDesign}
                 onChange={setFabricDesign}
                 allowedReferenceTypes={['base', 'pattern']}
                 defaultReferenceType="base"
                 hint="柄やロゴをそのまま重ねるか、切り抜いて重ねます"
+              />
+              <ImageSelector
+                label={activeMaterialInputs[1].label}
+                required
+                galleryTitle="素材を選択"
+                value={fabricBase}
+                onChange={setFabricBase}
+                allowedReferenceTypes={['base']}
+                defaultReferenceType="base"
+                hint="土台となる生地の写真を入れます"
               />
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="mb-3 flex items-center justify-between">
@@ -2912,23 +2957,26 @@ export function LightchainMaterialWorkbenchPage() {
                   <span className="mt-1 block text-[11px] leading-relaxed text-cyan-100/65">装飾のない同梱素材です。ギャラリーやアップロードも引き続き選べます。</span>
                 </span>
               </button>
-              <ImageSelector
-                label="参考画像をアップロードしてください"
-                required
-                value={printGarment}
-                galleryTitle="参考画像を選択"
-                confirmGallerySelection
-                galleryConfirmLabel="素材を追加"
-                selectionTestId="print-garment-selector"
-                onChange={selectPrintGarment}
-                allowedReferenceTypes={['base']}
-                defaultReferenceType="base"
-                hint="服・Tシャツ・パーカーなどの参考画像を入れます"
-                processing={printGarmentCutoutState === 'processing'}
-                hideSelectedPreviewWhileProcessing
-                previewUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
-                processingLabel="服を切り抜き中"
-              />
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                <p className="mb-3 text-sm font-semibold text-white">{activeMaterialInputs[0].label}</p>
+                <ImageSelector
+                  label={activeMaterialInputs[0].label}
+                  required
+                  value={printGarment}
+                  galleryTitle="素材を選択"
+                  confirmGallerySelection
+                  galleryConfirmLabel="素材を追加"
+                  selectionTestId="print-garment-selector"
+                  onChange={selectPrintGarment}
+                  allowedReferenceTypes={['base']}
+                  defaultReferenceType="base"
+                  hint="服・Tシャツ・パーカーなどの参考画像を入れます"
+                  processing={printGarmentCutoutState === 'processing'}
+                  hideSelectedPreviewWhileProcessing
+                  previewUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
+                  processingLabel="服を切り抜き中"
+                />
+              </div>
               {printGarment && (
                 <div className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] p-3">
                   <button
@@ -3056,11 +3104,11 @@ export function LightchainMaterialWorkbenchPage() {
               )}
               <div ref={printDesignSelectorRef} data-testid="print-design-selection-anchor" tabIndex={-1}>
                 <ImageSelector
-                  label="プリント画像を追加"
+                  label={activeMaterialInputs[1].label}
                   multiple
                   required
                   value={null}
-                  galleryTitle="プリントデザインを選択"
+                  galleryTitle="素材を選択"
                   galleryAssetPurpose="print-design"
                   selectionTestId="print-design-selector"
                   onChange={() => {}}
@@ -3697,6 +3745,8 @@ export function LightchainMaterialWorkbenchPage() {
             </div>
           )}
         </motion.div>
+      </div>
+        </main>
       </div>
 
       <Modal

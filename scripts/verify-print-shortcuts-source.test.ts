@@ -10,7 +10,7 @@ test('printing workbench keeps gallery/upload and shares garment reset logic wit
   assert.match(source, /無地Tシャツを使う（推奨）/);
   assert.match(source, /onChange=\{selectPrintGarment\}/);
   assert.match(source, /selectPrintGarment\(createTrustedBlankGarmentSelection\(\)\)/);
-  assert.match(source, /galleryTitle="参考画像を選択"/);
+  assert.match(source, /galleryTitle="素材を選択"/);
 });
 
 test('Patterns result cards expose a guarded print handoff and the printing page consumes it once', async () => {

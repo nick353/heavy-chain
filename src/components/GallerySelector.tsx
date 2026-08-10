@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Check, Image as ImageIcon, Heart, Clock, Folder as FolderIcon, ChevronRight, House } from 'lucide-react';
+import { Search, Check, Image as ImageIcon, Heart, Folder as FolderIcon, ChevronRight, House } from 'lucide-react';
 import { Modal } from './ui';
 import { supabase } from '../lib/supabase';
 import { withSignedImageUrls } from '../lib/storage';
@@ -22,6 +22,10 @@ import {
 } from '../features/printing/selection/printDesignAssetPurpose';
 import { shouldShowPrintDesignCreationCta } from '../features/printing/selection/galleryPrintDesignCta';
 import { getGalleryImageLabel } from '../features/printing/selection/galleryImageLabel';
+import {
+  LIGHTCHAIN_MATERIAL_LIBRARY_TABS,
+  type LightchainMaterialLibraryTabId,
+} from '../lib/lightchainMaterialContract';
 
 interface GallerySelectorProps {
   isOpen: boolean;
@@ -73,7 +77,7 @@ export function GallerySelector({
   onMultipleSelect,
   assetPurpose,
 }: GallerySelectorProps) {
-  const { currentBrand } = useAuthStore();
+  const { currentBrand, user } = useAuthStore();
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [folderMemberships, setFolderMemberships] = useState<GalleryFolderMembership[]>([]);
@@ -83,6 +87,7 @@ export function GallerySelector({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('recent');
+  const [activeLibraryTab, setActiveLibraryTab] = useState<LightchainMaterialLibraryTabId>('upload-history');
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [loadedImageIds, setLoadedImageIds] = useState<Set<string>>(new Set());
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
@@ -100,6 +105,7 @@ export function GallerySelector({
     setFolderMemberships([]);
     setLoadedBrandId(null);
     setSearchQuery('');
+    setActiveLibraryTab('upload-history');
     setCurrentFolderId(null);
     setLoadError(null);
     setIsLoading(false);
@@ -127,12 +133,29 @@ export function GallerySelector({
       setIsLoading(false);
       return;
     }
+    if (activeLibraryTab === 'platform-assets') {
+      if (requestRevision !== fetchRequestRevisionRef.current) return;
+      setImages([]);
+      setFolders([]);
+      setFolderMemberships([]);
+      setLoadedBrandId(currentBrand.id);
+      setIsLoading(false);
+      return;
+    }
     try {
       let imageQuery = supabase
         .from('generated_images')
         .select('*')
         .eq('brand_id', currentBrand.id)
         .order('created_at', { ascending: false });
+
+      if (activeLibraryTab === 'my-library' && user) {
+        imageQuery = imageQuery.eq('user_id', user.id);
+      }
+
+      if (activeLibraryTab === 'generation-history') {
+        imageQuery = imageQuery.not('job_id', 'is', null);
+      }
 
       if (assetPurpose === PRINT_DESIGN_ASSET_PURPOSE) {
         imageQuery = imageQuery.contains('metadata', { assetPurpose: PRINT_DESIGN_ASSET_PURPOSE });
@@ -194,7 +217,7 @@ export function GallerySelector({
         setIsLoading(false);
       }
     }
-  }, [assetPurpose, currentBrand, filter]);
+  }, [activeLibraryTab, assetPurpose, currentBrand, filter, user]);
 
   useEffect(() => {
     if (isOpen) {
@@ -208,8 +231,8 @@ export function GallerySelector({
     }
   }, [clearGalleryState, isOpen]);
 
-  const handleFilterChange = (nextFilter: FilterType) => {
-    if (nextFilter === filter) return;
+  const handleLibraryTabChange = (nextTab: LightchainMaterialLibraryTabId) => {
+    if (nextTab === activeLibraryTab) return;
     fetchRequestRevisionRef.current += 1;
     setSelectedImages(new Set());
     setLoadedImageIds(new Set());
@@ -219,9 +242,11 @@ export function GallerySelector({
     setFolders([]);
     setFolderMemberships([]);
     setLoadedBrandId(null);
+    setCurrentFolderId(null);
     setLoadError(null);
     setIsLoading(true);
-    setFilter(nextFilter);
+    setActiveLibraryTab(nextTab);
+    setFilter(nextTab === 'upload-history' ? 'recent' : 'all');
   };
 
   const hasCurrentBrandData = Boolean(currentBrand && loadedBrandId === currentBrand.id);
@@ -374,7 +399,7 @@ export function GallerySelector({
       size="xl"
     >
       <div className="space-y-4">
-        {/* Search and Filter */}
+        {/* Search and Light Chain library tabs */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
@@ -386,44 +411,40 @@ export function GallerySelector({
               className="w-full pl-10 pr-4 py-2 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
-          <div className="flex shrink-0 items-center gap-1 overflow-x-auto bg-neutral-100 dark:bg-neutral-800 rounded-lg p-1">
-            <button
-              type="button"
-              onClick={() => handleFilterChange('recent')}
-              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs rounded-md transition-colors ${
-                filter === 'recent'
-                  ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-700'
-              }`}
-            >
-              <Clock className="w-3 h-3" />
-              最近
-            </button>
-            <button
-              type="button"
-              onClick={() => handleFilterChange('favorites')}
-              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs rounded-md transition-colors ${
-                filter === 'favorites'
-                  ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-700'
-              }`}
-            >
-              <Heart className="w-3 h-3" />
-              お気に入り
-            </button>
-            <button
-              type="button"
-              onClick={() => handleFilterChange('all')}
-              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3 py-1.5 text-xs rounded-md transition-colors ${
-                filter === 'all'
-                  ? 'bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-700'
-              }`}
-            >
-              すべて
-            </button>
+          <div
+            className="flex shrink-0 items-center gap-1 overflow-x-auto rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800"
+            role="tablist"
+            aria-label="素材ライブラリー"
+            data-testid="lightchain-material-library-tabs"
+          >
+            {LIGHTCHAIN_MATERIAL_LIBRARY_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={activeLibraryTab === tab.id}
+                onClick={() => handleLibraryTabChange(tab.id)}
+                className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-xs transition-colors ${
+                  activeLibraryTab === tab.id
+                    ? 'bg-white font-semibold text-neutral-800 shadow-sm dark:bg-neutral-700 dark:text-white'
+                    : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
+
+        {activeLibraryTab === 'platform-assets' && (
+          <div
+            role="status"
+            data-testid="lightchain-platform-assets-unavailable"
+            className="rounded-xl border border-amber-200/60 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:border-amber-400/20 dark:bg-amber-900/20 dark:text-amber-100"
+          >
+            プラットフォームアセットは、このHeavy Chain環境ではまだ配布されていません。アップロード履歴・生成履歴・ライブラリーから選択してください。
+          </div>
+        )}
 
         {/* Read-only folder path */}
         {(visibleFolders.length > 0 || currentFolderId) && (
