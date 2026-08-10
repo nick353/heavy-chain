@@ -41,6 +41,11 @@ test('the semantic result and every fallback are constrained by the reviewed mas
 test('a reviewed tap mask remains usable when semantic cutout models fail', () => {
   assert.match(library, /const buildGuidedSelectionMaskFallback = async/);
   assert.match(library, /browser-canvas-guided-selection-mask-v1/);
-  assert.match(library, /if \(selectionMaskUrl\) \{[\s\S]*?buildGuidedSelectionMaskFallback/);
-  assert.match(library, /return await finalizeResult\(await buildGuidedSelectionMaskFallback\([\s\S]*?selectionMaskUrl/);
+  assert.match(library, /if \(modelName === 'modnet' \|\| modelName === 'ben2'\)/);
+  assert.ok(
+    library.indexOf("if (modelName === 'modnet' || modelName === 'ben2')")
+      < library.indexOf('const guidedFallback = await buildGuidedSelectionMaskFallback'),
+    'the reviewed mask must constrain a semantic matte before the terminal guided fallback',
+  );
+  assert.match(library, /const guidedFallback = await buildGuidedSelectionMaskFallback\([\s\S]*?selectionMaskUrl/);
 });

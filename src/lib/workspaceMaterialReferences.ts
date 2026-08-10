@@ -2045,22 +2045,13 @@ export async function buildPrintGarmentCutoutDataUrl({
       dataUrlBytes: estimateDataUrlBytes(dataUrl),
     };
   };
-  if (selectionMaskUrl) {
-    try {
-      // The tap editor already produced a reviewed, anti-aliased subject mask.
-      // Use that bounded surface first so a slow or unavailable semantic
-      // model cannot block the browser and turn a confirmed selection into a
-      // dead end. The model route remains available when this strict fallback
-      // fails its quality gate.
-      return await finalizeResult(await buildGuidedSelectionMaskFallback({
-        imageUrl,
-        selectionMaskUrl,
-        maxDataUrlBytes,
-      }));
-    } catch (guidedSelectionError) {
-      console.warn('Reviewed guided selection was not usable; trying semantic cutout.', guidedSelectionError);
-    }
-  }
+  // A reviewed tap mask is a hard spatial constraint, not the final alpha
+  // matte. Let the configured lightweight matting model recover sub-pixel
+  // garment edges from the original opaque crop, then intersect its alpha with
+  // the reviewed mask. This keeps the operator's selection authoritative while
+  // avoiding the visibly stair-stepped output produced by exporting a binary
+  // point-prompt mask directly. The guided mask remains the terminal fallback
+  // when model loading/inference is unavailable.
   const image = await loadImageElement(imageUrl);
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;

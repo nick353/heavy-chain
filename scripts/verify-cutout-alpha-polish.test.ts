@@ -6,11 +6,11 @@ import { polishCutoutAlpha } from '../src/features/printing/matte/polishCutoutAl
 const pixel = (rgba: Uint8ClampedArray, width: number, x: number, y: number) => ((y * width) + x) * 4;
 
 test('cutout alpha polish removes tiny islands and softens only the binary contour', () => {
-  const width = 8;
-  const height = 8;
+  const width = 12;
+  const height = 12;
   const input = new Uint8ClampedArray(width * height * 4);
-  for (let y = 2; y < 6; y += 1) {
-    for (let x = 2; x < 6; x += 1) {
+  for (let y = 3; y < 9; y += 1) {
+    for (let x = 3; x < 9; x += 1) {
       const offset = pixel(input, width, x, y);
       input[offset] = 32;
       input[offset + 1] = 64;
@@ -26,11 +26,11 @@ test('cutout alpha polish removes tiny islands and softens only the binary conto
 
   const output = polishCutoutAlpha({ rgba: input, width, height });
   assert.equal(output[island + 3], 0);
-  assert.equal(output[pixel(output, width, 3, 3) + 3], 255);
-  assert.ok(output[pixel(output, width, 1, 3) + 3] > 0);
-  assert.ok(output[pixel(output, width, 1, 3) + 3] < 255);
+  assert.equal(output[pixel(output, width, 5, 5) + 3], 255);
+  assert.ok(output[pixel(output, width, 2, 5) + 3] > 0);
+  assert.ok(output[pixel(output, width, 2, 5) + 3] < 255);
   assert.deepEqual(
-    [...output.slice(pixel(output, width, 3, 3), pixel(output, width, 3, 3) + 3)],
+    [...output.slice(pixel(output, width, 5, 5), pixel(output, width, 5, 5) + 3)],
     [32, 64, 96],
   );
 });

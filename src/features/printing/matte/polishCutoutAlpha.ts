@@ -74,9 +74,12 @@ const pruneTinyComponents = (rgba: Uint8ClampedArray, width: number, height: num
 };
 
 /**
- * Removes only tiny disconnected alpha islands, then softens the binary
- * contour by one pixel. This is intentionally bounded: garment interiors and
- * large connected regions keep their original alpha and RGB values.
+ * Removes only tiny disconnected alpha islands, then softens a binary contour
+ * over a very small five-by-five neighbourhood. The old one-pixel pass left
+ * low-resolution point-prompt masks visibly stair-stepped after the crop was
+ * displayed in a result card. The bounded blur only runs where transparent
+ * and opaque pixels meet, so garment interiors and large connected regions
+ * keep their original alpha and RGB values.
  */
 export const polishCutoutAlpha = ({
   rgba,
@@ -90,41 +93,44 @@ export const polishCutoutAlpha = ({
   validate(rgba, width, height);
   const cleaned = pruneTinyComponents(rgba, width, height);
   const output = new Uint8ClampedArray(cleaned);
-  const neighborOffsets = [
-    [-1, -1, 1], [0, -1, 2], [1, -1, 1],
-    [-1, 0, 2],             [1, 0, 2],
-    [-1, 1, 1],  [0, 1, 2],  [1, 1, 1],
-  ] as const;
+  const spatialWeights = [1, 2, 3, 2, 1] as const;
 
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const center = pixelOffset(x, y, width);
       const centerAlpha = cleaned[center + 3];
-      if (centerAlpha !== 0 && centerAlpha !== 255) continue;
+      // Do not reintroduce a component that the cleanup pass deliberately
+      // removed. A tiny stray pixel can sit close to the garment and would
+      // otherwise become a faint halo under the wider contour kernel.
+      if (centerAlpha === 0 && rgba[center + 3] > 0) continue;
       let sawTransparent = centerAlpha === 0;
       let sawOpaque = centerAlpha === 255;
-      let weightedAlpha = centerAlpha * 4;
-      let totalWeight = 4;
-      let red = cleaned[center] * 4;
-      let green = cleaned[center + 1] * 4;
-      let blue = cleaned[center + 2] * 4;
-      let foregroundWeight = centerAlpha >= 200 ? 4 : 0;
+      let weightedAlpha = centerAlpha * 9;
+      let totalWeight = 9;
+      let red = cleaned[center] * 9;
+      let green = cleaned[center + 1] * 9;
+      let blue = cleaned[center + 2] * 9;
+      let foregroundWeight = centerAlpha >= 200 ? 9 : 0;
 
-      for (const [offsetX, offsetY, weight] of neighborOffsets) {
-        const nextX = x + offsetX;
+      for (let offsetY = -2; offsetY <= 2; offsetY += 1) {
         const nextY = y + offsetY;
-        if (nextX < 0 || nextY < 0 || nextX >= width || nextY >= height) continue;
-        const next = pixelOffset(nextX, nextY, width);
-        const nextAlpha = cleaned[next + 3];
-        sawTransparent ||= nextAlpha === 0;
-        sawOpaque ||= nextAlpha === 255;
-        weightedAlpha += nextAlpha * weight;
-        totalWeight += weight;
-        if (nextAlpha >= 200) {
-          red += cleaned[next] * weight;
-          green += cleaned[next + 1] * weight;
-          blue += cleaned[next + 2] * weight;
-          foregroundWeight += weight;
+        for (let offsetX = -2; offsetX <= 2; offsetX += 1) {
+          const nextX = x + offsetX;
+          const weight = spatialWeights[offsetX + 2] * spatialWeights[offsetY + 2];
+          if (weight <= 0) continue;
+          if (nextX < 0 || nextY < 0 || nextX >= width || nextY >= height) continue;
+          const next = pixelOffset(nextX, nextY, width);
+          const nextAlpha = cleaned[next + 3];
+          sawTransparent ||= nextAlpha === 0;
+          sawOpaque ||= nextAlpha === 255;
+          weightedAlpha += nextAlpha * weight;
+          totalWeight += weight;
+          if (nextAlpha >= 200) {
+            red += cleaned[next] * weight;
+            green += cleaned[next + 1] * weight;
+            blue += cleaned[next + 2] * weight;
+            foregroundWeight += weight;
+          }
         }
       }
       if (!sawTransparent || !sawOpaque) continue;
