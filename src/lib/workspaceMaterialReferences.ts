@@ -2045,6 +2045,22 @@ export async function buildPrintGarmentCutoutDataUrl({
       dataUrlBytes: estimateDataUrlBytes(dataUrl),
     };
   };
+  if (selectionMaskUrl) {
+    try {
+      // The tap editor already produced a reviewed, anti-aliased subject mask.
+      // Use that bounded surface first so a slow or unavailable semantic
+      // model cannot block the browser and turn a confirmed selection into a
+      // dead end. The model route remains available when this strict fallback
+      // fails its quality gate.
+      return await finalizeResult(await buildGuidedSelectionMaskFallback({
+        imageUrl,
+        selectionMaskUrl,
+        maxDataUrlBytes,
+      }));
+    } catch (guidedSelectionError) {
+      console.warn('Reviewed guided selection was not usable; trying semantic cutout.', guidedSelectionError);
+    }
+  }
   const image = await loadImageElement(imageUrl);
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
