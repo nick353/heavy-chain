@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { buildAssetAnchoredPreviewDataUrl } from '../src/features/lightchain/assetAnchoredPreview.ts';
 
 const source = 'data:image/png;base64,AAAA';
 const secondary = 'data:image/jpeg;base64,BBBB';
+const workbenchSource = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
 
 test('asset preview embeds the exact source and secondary material', () => {
   const result = buildAssetAnchoredPreviewDataUrl({
@@ -53,4 +55,9 @@ test('non-image input fails closed instead of creating a fake result', () => {
     }),
     /asset_anchored_preview_source_image_required/,
   );
+});
+
+test('line-generation renders the real result instead of fixed pending cards', () => {
+  assert.match(workbenchSource, /\{lightchainResult \? \(/);
+  assert.doesNotMatch(workbenchSource, /Array\.from\(\{ length: 4 \}\)/);
 });

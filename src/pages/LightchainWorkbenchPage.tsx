@@ -5480,44 +5480,7 @@ export function LightchainWorkbenchPage() {
                         : selectedTool.description}
                     </p>
                     <div className="mx-auto mt-10 flex aspect-[16/9] max-w-[520px] items-center justify-center overflow-hidden bg-black/30 p-4">
-                      {lightchainResult && selectedTool.id === 'line-generation' ? (
-                        <div className="w-full rounded-2xl border border-white/10 bg-[#101719] p-4 text-left">
-                          <div className="mb-4 flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-semibold text-white">生成履歴</p>
-                              <p className="mt-1 text-xs text-neutral-500">{selectedTool.title}</p>
-                            </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  className="text-xs font-semibold text-neutral-400 transition hover:text-white"
-                                >
-                                  全削除
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={handleSaveToCanvas}
-                                  disabled={isSaving}
-                                  className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
-                                >
-                                  保存
-                                </button>
-                              </div>
-	                          </div>
-	                          <div className="grid grid-cols-4 gap-2">
-	                            {Array.from({ length: 4 }).map((_, index) => (
-	                              <div key={index} className="min-h-[220px] rounded-xl border border-white/10 bg-gradient-to-b from-[#243f42] via-[#32595a] to-[#0e1719] p-3">
-	                                <div className="flex h-full flex-col justify-center">
-	                                  <div className="h-1.5 w-12 overflow-hidden rounded-full bg-white/20">
-	                                    <div className="h-full w-8 rounded-full bg-[#65d3cf]" />
-	                                  </div>
-	                                  <p className="mt-3 text-sm font-semibold text-neutral-200">生成中...</p>
-	                                </div>
-	                              </div>
-	                            ))}
-	                          </div>
-	                        </div>
-	                      ) : lightchainResult ? (
+                      {lightchainResult ? (
 	                        <div className="w-full">
 	                          {renderLightchainResultPreviewImage('mx-auto max-h-56 w-full rounded-lg object-contain', '生成結果プレビュー')}
 	                          <div className="mx-auto mt-3 max-w-[420px] rounded-xl border border-white/10 bg-[#111719] px-4 py-3 text-left">
