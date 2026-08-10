@@ -494,6 +494,7 @@ const printPreviewStageSize = { width: 720, height: 900 };
 const IMAGE_LOAD_TIMEOUT_MS = 30_000;
 const CUTOUT_TIMEOUT_MS = 75_000;
 const CLOTH_CUTOUT_TIMEOUT_MS = 105_000;
+const FABRIC_MODEL_MASK_TIMEOUT_MS = 150_000;
 const MODNET_CUTOUT_TIMEOUT_MS = 60_000;
 const BEN2_CUTOUT_TIMEOUT_MS = 180_000;
 const COMPOSITION_TIMEOUT_MS = 30_000;
@@ -583,7 +584,184 @@ async function buildFabricReferenceOverlay(imageUrl: string): Promise<string> {
   }
 }
 
-async function renderComposition(
+type ImageAlphaBounds = {
+  image: HTMLImageElement;
+  width: number;
+  height: number;
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+
+async function loadImageAlphaBounds(imageUrl: string): Promise<ImageAlphaBounds> {
+  const image = await loadImage(imageUrl);
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  if (!width || !height) throw new Error('画像の寸法を取得できませんでした');
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('画像マスク用Canvasを初期化できませんでした');
+  context.drawImage(image, 0, 0, width, height);
+  const rgba = context.getImageData(0, 0, width, height).data;
+  let left = width;
+  let top = height;
+  let right = -1;
+  let bottom = -1;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (rgba[((y * width) + x) * 4 + 3] < 24) continue;
+      left = Math.min(left, x);
+      top = Math.min(top, y);
+      right = Math.max(right, x);
+      bottom = Math.max(bottom, y);
+    }
+  }
+  if (right < left || bottom < top) throw new Error('衣服領域を認識できませんでした');
+  return { image, width, height, left, top, right, bottom };
+}
+
+async function buildFabricModelGarmentMask(imageUrl: string): Promise<string> {
+  if (!isPrintGarmentClothModelConfigured()) {
+    throw new Error('モデル画像の衣服領域AIが未配置のため、生地を安全に適用できません');
+  }
+  const result = await withTimeout(
+    buildPrintGarmentCutoutDataUrl({
+      imageUrl,
+      modelName: 'u2net_cloth_seg',
+      segmentationTarget: 'upper',
+    }),
+    FABRIC_MODEL_MASK_TIMEOUT_MS,
+    'モデル画像の衣服領域認識がタイムアウトしました。別の画像で再試行してください',
+  );
+  if (result.engine !== 'browser-ai-u2net_cloth_seg-v1' || result.segmentationTarget !== 'upper') {
+    throw new Error('モデル画像の衣服領域を専用AIで確定できませんでした。服が見える画像で再試行してください');
+  }
+  return result.dataUrl;
+}
+
+async function renderFabricTryOnComposition({
+  stageWidth,
+  stageHeight,
+  modelUrl,
+  fabricOverlayUrl,
+  garmentMaskUrl,
+  backgroundColor,
+  variant,
+}: {
+  stageWidth: number;
+  stageHeight: number;
+  modelUrl: string;
+  fabricOverlayUrl: string;
+  garmentMaskUrl: string;
+  backgroundColor: string;
+  variant: { filter: string; tint: string };
+}) {
+  const [model, fabric, garmentMask] = await Promise.all([
+    loadImage(modelUrl),
+    loadImageAlphaBounds(fabricOverlayUrl),
+    loadImageAlphaBounds(garmentMaskUrl),
+  ]);
+  const canvas = document.createElement('canvas');
+  canvas.width = stageWidth;
+  canvas.height = stageHeight;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('生地合成用Canvasを初期化できませんでした');
+
+  context.fillStyle = backgroundColor;
+  context.fillRect(0, 0, stageWidth, stageHeight);
+  const modelWidth = Math.min(stageWidth * 0.92, stageHeight * (model.width / model.height));
+  const modelHeight = modelWidth * (model.height / model.width);
+  const modelX = (stageWidth - modelWidth) / 2;
+  const modelY = (stageHeight - modelHeight) / 2;
+  context.drawImage(model, modelX, modelY, modelWidth, modelHeight);
+
+  const maskCanvas = document.createElement('canvas');
+  maskCanvas.width = stageWidth;
+  maskCanvas.height = stageHeight;
+  const maskContext = maskCanvas.getContext('2d');
+  if (!maskContext) throw new Error('衣服領域マスク用Canvasを初期化できませんでした');
+  const maskWidth = Math.min(stageWidth * 0.92, stageHeight * (garmentMask.width / garmentMask.height));
+  const maskHeight = maskWidth * (garmentMask.height / garmentMask.width);
+  const maskX = (stageWidth - maskWidth) / 2;
+  const maskY = (stageHeight - maskHeight) / 2;
+  maskContext.drawImage(garmentMask.image, maskX, maskY, maskWidth, maskHeight);
+
+  const maskRgba = maskContext.getImageData(0, 0, stageWidth, stageHeight).data;
+  let targetLeft = stageWidth;
+  let targetTop = stageHeight;
+  let targetRight = -1;
+  let targetBottom = -1;
+  for (let y = 0; y < stageHeight; y += 1) {
+    for (let x = 0; x < stageWidth; x += 1) {
+      if (maskRgba[((y * stageWidth) + x) * 4 + 3] < 24) continue;
+      targetLeft = Math.min(targetLeft, x);
+      targetTop = Math.min(targetTop, y);
+      targetRight = Math.max(targetRight, x);
+      targetBottom = Math.max(targetBottom, y);
+    }
+  }
+  if (targetRight < targetLeft || targetBottom < targetTop) {
+    throw new Error('モデル画像の衣服領域を認識できませんでした');
+  }
+
+  const textureCanvas = document.createElement('canvas');
+  textureCanvas.width = stageWidth;
+  textureCanvas.height = stageHeight;
+  const textureContext = textureCanvas.getContext('2d');
+  if (!textureContext) throw new Error('生地テクスチャ用Canvasを初期化できませんでした');
+  const sourceWidth = fabric.right - fabric.left + 1;
+  const sourceHeight = fabric.bottom - fabric.top + 1;
+  const targetWidth = targetRight - targetLeft + 1;
+  const targetHeight = targetBottom - targetTop + 1;
+  textureContext.filter = variant.filter;
+  textureContext.drawImage(
+    fabric.image,
+    fabric.left,
+    fabric.top,
+    sourceWidth,
+    sourceHeight,
+    targetLeft,
+    targetTop,
+    targetWidth,
+    targetHeight,
+  );
+  textureContext.globalCompositeOperation = 'source-atop';
+  textureContext.globalAlpha = 0.7;
+  textureContext.fillStyle = variant.tint;
+  textureContext.fillRect(targetLeft, targetTop, targetWidth, targetHeight);
+  textureContext.globalCompositeOperation = 'destination-in';
+  textureContext.globalAlpha = 1;
+  textureContext.drawImage(maskCanvas, 0, 0);
+
+  // The fabric is applied only inside the model's detected upper-garment mask.
+  // This is the key invariant that prevents the source shirt silhouette from
+  // appearing as a floating rectangle or a second garment around the model.
+  context.save();
+  context.globalCompositeOperation = 'multiply';
+  context.globalAlpha = 0.68;
+  context.drawImage(textureCanvas, 0, 0);
+  context.globalCompositeOperation = 'soft-light';
+  context.globalAlpha = 0.42;
+  context.drawImage(textureCanvas, 0, 0);
+  context.restore();
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((nextBlob) => {
+      if (nextBlob) resolve(nextBlob);
+      else reject(new Error('生地合成画像の書き出しに失敗しました'));
+    }, 'image/png');
+  });
+  return URL.createObjectURL(blob);
+}
+
+// Kept for the legacy editor branch, which still relies on the generic layer
+// renderer for print placement previews. Fabric generation intentionally uses
+// renderFabricTryOnComposition so a source garment can never escape its target
+// model-garment mask.
+async function _renderComposition(
   stageWidth: number,
   stageHeight: number,
   backgroundUrl: string | null,
@@ -616,7 +794,6 @@ async function renderComposition(
   }
 
   const stageBase = mode === 'fabric' ? 0.56 : 0.62;
-
   for (const [index, layer] of layers.entries()) {
     try {
       const image = await loadImage(layer.displayUrl);
@@ -661,6 +838,10 @@ async function renderComposition(
   });
   return URL.createObjectURL(blob);
 }
+
+// Keep the legacy renderer type-checked for the print editor compatibility
+// path even when the active material routes use the masked fabric renderer.
+void _renderComposition;
 
 function LayerPreview({
   layer,
@@ -765,6 +946,8 @@ export function LightchainMaterialWorkbenchPage() {
   const [fabricBase, setFabricBase] = useState<SelectedImage | null>(null);
   const [fabricDesign, setFabricDesign] = useState<SelectedImage | null>(null);
   const [fabricPreviewOverlayUrl, setFabricPreviewOverlayUrl] = useState<string | null>(null);
+  const [fabricModelGarmentMaskUrl, setFabricModelGarmentMaskUrl] = useState<string | null>(null);
+  const [fabricTryOnPreviewUrl, setFabricTryOnPreviewUrl] = useState<string | null>(null);
   const [fabricPreviewState, setFabricPreviewState] = useState<CutoutState>('idle');
   const [fabricPreviewError, setFabricPreviewError] = useState<string | null>(null);
   const [fabricLayer, setFabricLayer] = useState<AssetLayer | null>(null);
@@ -978,6 +1161,11 @@ export function LightchainMaterialWorkbenchPage() {
     generationSequenceRef.current += 1;
   }
   const generationInputEffectSignatureRef = useRef(generationInputSignature);
+
+  useEffect(() => {
+    if (!isAuthInitialized || isAuthLoading || currentBrand?.id) return;
+    void useAuthStore.getState().refreshCurrentBrand();
+  }, [currentBrand?.id, isAuthInitialized, isAuthLoading]);
 
   useEffect(() => {
     selectedPrintGarmentMaskCandidateIdRef.current = selectedPrintGarmentMaskCandidateId;
@@ -1421,8 +1609,10 @@ export function LightchainMaterialWorkbenchPage() {
 
   useEffect(() => {
     const requestId = ++fabricPreviewRequestRef.current;
-    if (!fabricBase?.url) {
+    if (!fabricBase?.url || !fabricDesign?.url) {
       setFabricPreviewOverlayUrl(null);
+      setFabricModelGarmentMaskUrl(null);
+      setFabricTryOnPreviewUrl(null);
       setFabricPreviewState('idle');
       setFabricPreviewError(null);
       return;
@@ -1430,12 +1620,35 @@ export function LightchainMaterialWorkbenchPage() {
 
     let cancelled = false;
     setFabricPreviewOverlayUrl(null);
+    setFabricModelGarmentMaskUrl(null);
+    setFabricTryOnPreviewUrl(null);
     setFabricPreviewState('processing');
     setFabricPreviewError(null);
-    void buildFabricReferenceOverlay(fabricBase.url)
-      .then((overlayUrl) => {
+    const previewVariant = fabricVariants.find((variant) => fabricPresetIds.includes(variant.id)) ?? fabricVariants[0];
+    const previewSize = fabricImageRatio === '正方形 1:1'
+      ? { width: 900, height: 900 }
+      : fabricImageRatio === '横長 16:9'
+        ? { width: 1280, height: 720 }
+        : { width: 900, height: 1125 };
+    void (async () => {
+      const overlayUrl = await buildFabricReferenceOverlay(fabricBase.url);
+      const modelGarmentMaskUrl = await buildFabricModelGarmentMask(fabricDesign.url);
+      const previewUrl = await renderFabricTryOnComposition({
+        stageWidth: previewSize.width,
+        stageHeight: previewSize.height,
+        modelUrl: fabricDesign.url,
+        fabricOverlayUrl: overlayUrl,
+        garmentMaskUrl: modelGarmentMaskUrl,
+        backgroundColor: previewVariant.tint,
+        variant: previewVariant,
+      });
+      return { overlayUrl, modelGarmentMaskUrl, previewUrl };
+    })()
+      .then(({ overlayUrl, modelGarmentMaskUrl, previewUrl }) => {
         if (cancelled || fabricPreviewRequestRef.current !== requestId) return;
         setFabricPreviewOverlayUrl(overlayUrl);
+        setFabricModelGarmentMaskUrl(modelGarmentMaskUrl);
+        setFabricTryOnPreviewUrl(previewUrl);
         setFabricPreviewState('done');
       })
       .catch((error) => {
@@ -1448,7 +1661,7 @@ export function LightchainMaterialWorkbenchPage() {
     return () => {
       cancelled = true;
     };
-  }, [fabricBase?.url]);
+  }, [fabricBase?.url, fabricDesign?.url, fabricImageRatio, fabricPresetIds]);
 
   const clearManualPrintableSurface = useCallback((reason?: string) => {
     manualPrintableSurfaceRef.current = null;
@@ -1679,8 +1892,20 @@ export function LightchainMaterialWorkbenchPage() {
   const handleGenerate = async () => {
     if (isPrinting) invalidatePrintableSuggestion();
     if (!stageRef.current && !isPrinting) return;
-    if (!currentBrand?.id) {
-      toast.error('ブランドを選択してください');
+    let generationBrand = currentBrand;
+    if (!generationBrand?.id) {
+      if (!isAuthInitialized || isAuthLoading) {
+        const message = 'ブランド情報を読み込み中です。少し待ってから再試行してください';
+        setGenerationError(message);
+        toast.error(message);
+        return;
+      }
+      generationBrand = await useAuthStore.getState().refreshCurrentBrand();
+    }
+    if (!generationBrand?.id) {
+      const message = '保存先ブランドを取得できませんでした。ブランド設定を確認して再試行してください';
+      setGenerationError(message);
+      toast.error(message);
       return;
     }
 
@@ -1752,47 +1977,29 @@ export function LightchainMaterialWorkbenchPage() {
 
       if (!isPrinting) {
         const fabricOverlayUrl = fabricPreviewOverlayUrl ?? await buildFabricReferenceOverlay(fabricBase!.url);
+        const fabricModelMaskUrl = fabricModelGarmentMaskUrl ?? await buildFabricModelGarmentMask(fabricDesign!.url);
         if (!isCurrentRequest()) return;
-        const baseLayers: AssetLayer[] = [{
-          id: 'fabric-model',
-          label: 'モデル/デザイン画像',
-          originalUrl: fabricDesign!.url,
-          displayUrl: fabricDesign!.url,
-          transform: defaultTransform({ x: 50, y: 50, scale: 1, opacity: 1 }),
-          autoCutout: false,
-          cutoutState: 'done',
-          maskRevision: 0,
-        }, {
-          id: 'fabric-reference',
-          label: '生地画像',
-          originalUrl: fabricBase!.url,
-          displayUrl: fabricOverlayUrl,
-          transform: fabricLayer?.transform || defaultTransform({ x: 50, y: 40, scale: 1.08, rotation: 0, opacity: 0.82 }),
-          autoCutout: false,
-          cutoutState: 'idle',
-          maskRevision: 0,
-        }];
 
         const variantResults: WorkbenchResult[] = [];
         for (const preset of fabricVariants.filter((variant) => fabricPresetIds.includes(variant.id))) {
           await yieldToBrowser();
           const imageUrl = await withTimeout(
-            renderComposition(width, height, null, preset.tint, [
-              baseLayers[0],
-              {
-                ...baseLayers[1],
-                filter: preset.filter,
-                tint: preset.tint,
-                blendMode: preset.id === 'denim' ? 'multiply' : 'soft-light',
-              },
-            ], 'fabric'),
+            renderFabricTryOnComposition({
+              stageWidth: width,
+              stageHeight: height,
+              modelUrl: fabricDesign!.url,
+              fabricOverlayUrl: fabricOverlayUrl,
+              garmentMaskUrl: fabricModelMaskUrl,
+              backgroundColor: preset.tint,
+              variant: preset,
+            }),
             COMPOSITION_TIMEOUT_MS,
             '生地プレビューの描画がタイムアウトしました。素材を確認して再試行してください',
           );
           if (!isCurrentRequest()) return;
           variantResults.push({
             id: `${preset.id}-${Date.now()}`,
-            brandId: currentBrand.id,
+            brandId: generationBrand.id,
             title: `生地バリエーション: ${preset.name}`,
             note: `${preset.name} の質感で重ねた見本${fabricPrompt.trim() ? ` / ${fabricPrompt.trim()}` : ''}`,
             imageUrl,
@@ -1815,8 +2022,8 @@ export function LightchainMaterialWorkbenchPage() {
       const nextSnapshot = await withTimeout(
         buildPrintRequestSnapshot({
           revision: nextRevision,
-          brandId: currentBrand.id,
-          brandName: currentBrand.name || 'brand',
+          brandId: generationBrand.id,
+          brandName: generationBrand.name || 'brand',
           coverageMode: printCoverageMode,
           garmentUrl: printGarmentProcessed!,
           garmentReferenceType: printGarment?.referenceType ?? null,
@@ -1915,7 +2122,7 @@ export function LightchainMaterialWorkbenchPage() {
       if (!isCurrentRequest()) return;
       const exactResult: WorkbenchResult = {
         id: `${runId}-exact`,
-        brandId: currentBrand.id,
+        brandId: generationBrand.id,
         runId,
         resultKind: 'exact',
         generatedAt,
@@ -1956,7 +2163,7 @@ export function LightchainMaterialWorkbenchPage() {
       if (!isCurrentRequest()) return;
       const fabricResult: WorkbenchResult = {
         id: `${runId}-fabric`,
-        brandId: currentBrand.id,
+        brandId: generationBrand.id,
         runId,
         resultKind: 'fabric',
         generatedAt,
@@ -1992,7 +2199,7 @@ export function LightchainMaterialWorkbenchPage() {
         exactId: nextResults[0].id,
         fabricId: nextResults[1].id,
         runId,
-        brandId: currentBrand.id,
+        brandId: generationBrand.id,
         generatedAt,
       });
     } catch (error: any) {
@@ -2201,7 +2408,8 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintDesignCutoutErrors({});
     if (duplicateTargetLayerId) scheduleDeferredPrintDesignReturn(duplicateTargetLayerId);
 
-    for (const index of reconciliation.processOrder.filter((nextIndex) => !restoredProcessedIndexes.has(nextIndex))) {
+    for (const index of reconciliation.processOrder) {
+      if (restoredProcessedIndexes.has(index)) continue;
       const design = nextImages[index];
       try {
         const result = await withTimeout(
@@ -4441,13 +4649,12 @@ export function LightchainMaterialWorkbenchPage() {
                 </div>
 
                 <div ref={stageRef} data-testid="lightchain-fabric-preview" className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-neutral-900">
-                  {fabricDesign ? (
+                  {fabricTryOnPreviewUrl ? (
+                    <img src={fabricTryOnPreviewUrl} alt="生地を衣服領域へ適用したプレビュー" className="absolute inset-0 h-full w-full object-contain bg-black/10" />
+                  ) : fabricDesign ? (
                     <img src={fabricDesign.url} alt="モデル/デザインプレビュー" className="absolute inset-0 h-full w-full object-contain bg-black/10" />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-sm text-white/40">モデル/デザイン画像をアップロードしてください</div>
-                  )}
-                  {fabricBase && fabricPreviewOverlayUrl && (
-                    <img src={fabricPreviewOverlayUrl} alt="切り抜き済み生地プレビュー" className="absolute inset-[10%] h-[80%] w-[80%] object-contain opacity-75 mix-blend-soft-light drop-shadow-2xl" />
                   )}
                   {fabricBase && fabricPreviewState === 'processing' && (
                     <div className="absolute inset-x-3 top-3 rounded-lg border border-cyan-200/20 bg-slate-950/60 px-3 py-2 text-center text-[11px] text-cyan-100 backdrop-blur">
@@ -4468,13 +4675,22 @@ export function LightchainMaterialWorkbenchPage() {
                     data-testid="lightchain-fabric-generate"
                     onClick={handleGenerate}
                     isLoading={isGenerating}
-                    disabled={isGenerating || fabricPreviewState === 'processing' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
+                    disabled={isGenerating || fabricPreviewState !== 'done' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
                   className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
                   size="lg"
                   leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
                 >
                   {isGenerating ? '生成中…' : 'AI生成'}
                 </Button>
+                {!isAuthInitialized || isAuthLoading ? (
+                  <p role="status" className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] px-3 py-2 text-xs leading-relaxed text-cyan-100">
+                    ブランド情報を読み込んでいます…
+                  </p>
+                ) : !currentBrand?.id ? (
+                  <p role="status" className="rounded-xl border border-amber-300/20 bg-amber-950/20 px-3 py-2 text-xs leading-relaxed text-amber-100">
+                    ブランド情報を確認中です。生成時に保存先を再取得します。
+                  </p>
+                ) : null}
                 {generationError && (
                   <p role="alert" className="rounded-xl border border-rose-300/25 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-100">
                     {generationError}
@@ -4507,10 +4723,7 @@ export function LightchainMaterialWorkbenchPage() {
                 <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-black/30">
                   {fabricDesign && fabricBase ? (
                     <div className="relative h-full w-full">
-                      <img src={fabricDesign.url} alt="モデル/デザインの参考" className="absolute inset-0 h-full w-full object-contain bg-black/10" />
-                      {fabricPreviewOverlayUrl && (
-                        <img src={fabricPreviewOverlayUrl} alt="切り抜き済み生地の参考" className="absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain opacity-75 mix-blend-soft-light" />
-                      )}
+                      <img src={fabricTryOnPreviewUrl ?? fabricDesign.url} alt="切り抜き済み生地を衣服領域へ適用した参考" className="absolute inset-0 h-full w-full object-contain bg-black/10" />
                       {fabricPreviewState === 'processing' && (
                         <div className="absolute inset-0 flex items-center justify-center bg-slate-950/35 text-[11px] text-cyan-100 backdrop-blur-[1px]">
                           生地の背景を分離しています…

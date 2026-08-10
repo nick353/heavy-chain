@@ -49,9 +49,14 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /data-testid="lightchain-fabric-input"/);
   assert.match(page, /data-testid="fabric-result-history"/);
   assert.match(page, /value=\{fabricPrompt\}[\s\S]*?onChange=\{\(event\) => setFabricPrompt\(event\.target\.value\)\}/);
-  assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState === 'processing' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
-  assert.match(page, /切り抜き済み生地プレビュー/);
-  assert.match(page, /切り抜き済み生地の参考/);
+  assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState !== 'done' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
+  assert.match(page, /切り抜き済み生地を衣服領域へ適用した参考/);
+  assert.match(page, /buildFabricModelGarmentMask/);
+  assert.match(page, /renderFabricTryOnComposition/);
+  assert.match(page, /globalCompositeOperation = 'destination-in'/);
+  assert.match(page, /result\.engine !== 'browser-ai-u2net_cloth_seg-v1'/);
+  assert.match(page, /モデル画像の衣服領域AIが未配置のため、生地を安全に適用できません/);
+  assert.doesNotMatch(page, /<img src=\{fabricPreviewOverlayUrl\}/);
   assert.doesNotMatch(page, /<img src=\{fabricBase\.url\} alt="生地プレビュー"/);
   assert.doesNotMatch(page, /<img src=\{fabricBase\.url\} alt="生地の参考"/);
   assert.match(page, /note: `\$\{preset\.name\} の質感で重ねた見本/);
