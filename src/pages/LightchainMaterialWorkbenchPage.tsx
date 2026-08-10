@@ -70,6 +70,7 @@ import { useAuthStore } from '../stores/authStore';
 import {
   buildDerivedPrintGarmentMaskCandidates,
   buildPrintGarmentCutoutDataUrl,
+  buildHighPrecisionMaterialCutoutDataUrl,
   buildEncodedManualPrintableSurface,
   buildPrintableSurfaceStageMaskDataUrl,
   buildPrintDesignCutoutDataUrl,
@@ -712,10 +713,12 @@ async function buildFabricModelGarmentMask(imageUrl: string): Promise<string> {
     throw new Error('モデル画像の衣服領域AIが未配置のため、生地を安全に適用できません');
   }
   const result = await withTimeout(
-    buildPrintGarmentCutoutDataUrl({
+    buildHighPrecisionMaterialCutoutDataUrl({
       imageUrl,
       modelName: 'u2net_cloth_seg',
       segmentationTarget: 'upper',
+      postProcessMask: false,
+      preserveSourceFrame: true,
     }),
     FABRIC_MODEL_MASK_TIMEOUT_MS,
     'モデル画像の衣服領域認識がタイムアウトしました。別の画像で再試行してください',

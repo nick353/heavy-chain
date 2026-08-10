@@ -52,6 +52,8 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState !== 'done' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
   assert.match(page, /切り抜き済み生地を衣服領域へ適用した参考/);
   assert.match(page, /buildFabricModelGarmentMask/);
+  assert.match(page, /buildHighPrecisionMaterialCutoutDataUrl/);
+  assert.match(page, /preserveSourceFrame: true/);
   assert.match(page, /renderFabricTryOnComposition/);
   assert.match(page, /keepCentralGarmentMaskComponent/);
   assert.match(page, /refineCoarseGarmentMask/);

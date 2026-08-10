@@ -1147,6 +1147,7 @@ const buildBoundedPngFromCanvas = ({
   storagePolicy,
   engine,
   validateSubjectShape = true,
+  preserveSourceFrame = false,
 }: {
   canvas: HTMLCanvasElement;
   sourceWidth: number;
@@ -1155,6 +1156,7 @@ const buildBoundedPngFromCanvas = ({
   storagePolicy: MaterialCutoutResult['storagePolicy'];
   engine: MaterialCutoutResult['engine'];
   validateSubjectShape?: boolean;
+  preserveSourceFrame?: boolean;
 }): MaterialCutoutResult => {
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Canvasを初期化できませんでした');
@@ -1168,6 +1170,19 @@ const buildBoundedPngFromCanvas = ({
     if (!hasMeaningfulTransparentSubject(imageData, alphaBounds.bounds)) {
       throw new Error('背景の四角い範囲が残っています。服だけを分離できる写真で再試行してください。');
     }
+  }
+  if (preserveSourceFrame) {
+    const dataUrl = canvasToPngDataUrl(canvas);
+    return {
+      dataUrl,
+      bounds: alphaBounds.bounds,
+      sourceSize: { width: sourceWidth, height: sourceHeight },
+      outputSize: { width: canvas.width, height: canvas.height },
+      dataUrlBytes: estimateDataUrlBytes(dataUrl),
+      storagePolicy,
+      engine,
+      hasTransparentPixels: alphaBounds.hasTransparentPixels,
+    };
   }
 
   const padding = Math.round(Math.max(canvas.width, canvas.height) * 0.025);
@@ -1739,6 +1754,7 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   postProcessMask = true,
   constrainToSourceAlpha = false,
   segmentationTarget = DEFAULT_GARMENT_SEGMENTATION_TARGET,
+  preserveSourceFrame = false,
 }: {
   imageUrl: string;
   maxDataUrlBytes?: number;
@@ -1746,6 +1762,7 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   postProcessMask?: boolean;
   constrainToSourceAlpha?: boolean;
   segmentationTarget?: GarmentSegmentationTarget;
+  preserveSourceFrame?: boolean;
 }): Promise<MaterialCutoutResult> {
   if (!canUseBrowserWebGlBackend()) {
     console.warn('Falling back to local white-background garment cutout because WebGL is unavailable.');
@@ -1907,6 +1924,7 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
     maxDataUrlBytes,
     storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
     engine: `browser-ai-${modelName}-v1`,
+    preserveSourceFrame,
   });
   return modelName === 'u2net_cloth_seg'
     ? { ...result, segmentationTarget }
