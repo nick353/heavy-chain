@@ -305,9 +305,10 @@ const persistInputState = async (
       };
     }
 
-    if (kind === 'garment' && artifacts && 'maskCandidates' in artifacts) {
+    if (kind === 'garment' && artifacts) {
+      const garmentArtifacts = artifacts as NonNullable<PrintInputProcessedState['garment']>;
       const persistedCandidates: PersistedMaskCandidate[] = [];
-      for (const candidate of artifacts.maskCandidates || []) {
+      for (const candidate of garmentArtifacts.maskCandidates || []) {
         const candidateReference = buildArtifactReference(
           brandId,
           kind,
@@ -323,10 +324,10 @@ const persistInputState = async (
         });
       }
       if (persistedCandidates.length > 0) metadata.maskCandidates = persistedCandidates;
-      if (artifacts.selectedMaskCandidateId) metadata.selectedMaskCandidateId = artifacts.selectedMaskCandidateId;
-      if (artifacts.maskExplicitlyConfirmed !== undefined) metadata.maskExplicitlyConfirmed = artifacts.maskExplicitlyConfirmed;
-      if (artifacts.selectionSource) metadata.selectionSource = artifacts.selectionSource;
-      if (artifacts.segmentationTarget) metadata.segmentationTarget = artifacts.segmentationTarget;
+      if (garmentArtifacts.selectedMaskCandidateId) metadata.selectedMaskCandidateId = garmentArtifacts.selectedMaskCandidateId;
+      if (garmentArtifacts.maskExplicitlyConfirmed !== undefined) metadata.maskExplicitlyConfirmed = garmentArtifacts.maskExplicitlyConfirmed;
+      if (garmentArtifacts.selectionSource) metadata.selectionSource = garmentArtifacts.selectionSource;
+      if (garmentArtifacts.segmentationTarget) metadata.segmentationTarget = garmentArtifacts.segmentationTarget;
     }
 
     return { metadata, assets };
