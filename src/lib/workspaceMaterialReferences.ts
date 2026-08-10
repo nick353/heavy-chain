@@ -109,6 +109,7 @@ export type MaterialCutoutResult = {
     | `browser-ai-${string}-v1`
     | 'browser-existing-transparent-garment-v1'
     | 'browser-local-white-background-garment-cutout-v1'
+    | 'browser-canvas-guided-selection-mask-v1'
     | 'browser-canvas-artwork-background-cutout-v1';
   hasTransparentPixels: boolean;
   segmentationTarget?: GarmentSegmentationTarget;
@@ -1951,6 +1952,42 @@ const constrainCutoutResultToSelectionMask = async ({
   };
 };
 
+const buildGuidedSelectionMaskFallback = async ({
+  imageUrl,
+  selectionMaskUrl,
+  maxDataUrlBytes,
+}: {
+  imageUrl: string;
+  selectionMaskUrl: string;
+  maxDataUrlBytes: number;
+}): Promise<MaterialCutoutResult> => {
+  const sourceImage = await loadImageElement(imageUrl);
+  const selectionMask = await loadImageElement(selectionMaskUrl);
+  const sourceWidth = sourceImage.naturalWidth || sourceImage.width;
+  const sourceHeight = sourceImage.naturalHeight || sourceImage.height;
+  if (!sourceWidth || !sourceHeight) throw new Error('guided_selection_source_dimensions_invalid');
+  const canvas = document.createElement('canvas');
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('guided_selection_fallback_context_missing');
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(sourceImage, 0, 0, sourceWidth, sourceHeight);
+  context.globalCompositeOperation = 'destination-in';
+  context.drawImage(selectionMask, 0, 0, sourceWidth, sourceHeight);
+  context.globalCompositeOperation = 'source-over';
+  return buildBoundedPngFromCanvas({
+    canvas,
+    sourceWidth,
+    sourceHeight,
+    maxDataUrlBytes,
+    storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
+    engine: 'browser-canvas-guided-selection-mask-v1',
+    validateSubjectShape: true,
+  });
+};
+
 export async function buildPrintGarmentCutoutDataUrl({
   imageUrl,
   maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
@@ -2160,6 +2197,22 @@ export async function buildPrintGarmentCutoutDataUrl({
         maxDataUrlBytes,
       }));
     } catch (fallbackError) {
+      if (selectionMaskUrl) {
+        try {
+          // A reviewed tap mask is already a bounded, anti-aliased subject
+          // proposal. If every semantic model/flood fallback is unavailable,
+          // keep the user-confirmed boundary instead of turning a recoverable
+          // model failure into a dead end.
+          const guidedFallback = await buildGuidedSelectionMaskFallback({
+            imageUrl,
+            selectionMaskUrl,
+            maxDataUrlBytes,
+          });
+          return await finalizeResult(guidedFallback);
+        } catch (guidedFallbackError) {
+          console.warn('Guided selection mask fallback was not usable.', guidedFallbackError);
+        }
+      }
       const detail = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
       console.warn('Print garment cutout failed', { highPrecisionError, fallbackError });
       throw new Error(`参考画像の背景を透明化できませんでした。${detail}`);

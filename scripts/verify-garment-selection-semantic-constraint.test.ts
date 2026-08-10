@@ -37,3 +37,9 @@ test('the semantic result and every fallback are constrained by the reviewed mas
   assert.match(library, /result: fallback,[\s\S]*?selectionMaskUrl,[\s\S]*?maxDataUrlBytes/);
   assert.match(library, /result: fastResult,[\s\S]*?selectionMaskUrl,[\s\S]*?maxDataUrlBytes/);
 });
+
+test('a reviewed tap mask remains usable when semantic cutout models fail', () => {
+  assert.match(library, /const buildGuidedSelectionMaskFallback = async/);
+  assert.match(library, /browser-canvas-guided-selection-mask-v1/);
+  assert.match(library, /if \(selectionMaskUrl\) \{[\s\S]*?buildGuidedSelectionMaskFallback/);
+});
