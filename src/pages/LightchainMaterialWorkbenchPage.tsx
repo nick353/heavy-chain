@@ -3937,6 +3937,17 @@ export function LightchainMaterialWorkbenchPage() {
                     previewUrl={printDesignCutoutStates[0] === 'done' ? printDesignProcessedUrls[0] : null}
                     processingLabel="プリントを処理中"
                   />
+                  {printDesigns[0] && printDesignCutoutStates[0] === 'done' && (
+                    <button
+                      type="button"
+                      onClick={() => openDesignMaskEditor(0)}
+                      className="mt-3 inline-flex items-center gap-2 rounded-lg border border-cyan-300/25 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-300/10"
+                      data-testid="lightchain-print-design-mask-editor"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                      画像のプリント領域を調整
+                    </button>
+                  )}
                 </div>
 
                 <Button

@@ -42,6 +42,29 @@
 }
 
 @layer components {
+  /* Light Chain's print workspace uses a compact utility header instead of
+     the wider Heavy Chain marketing header. Keep this route-specific so the
+     rest of the authenticated product retains its existing shell. */
+  .lightchain-route-header .lightchain-route-header-inner {
+    height: 48px;
+    max-width: none;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .lightchain-brand-mark {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 9999px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 9px;
+    letter-spacing: 0;
+  }
+
   /* Heavy Chain dark cyan surface */
   .glass-panel {
     @apply bg-[#080c0d]/95 backdrop-blur-2xl border border-cyan-300/10 shadow-none

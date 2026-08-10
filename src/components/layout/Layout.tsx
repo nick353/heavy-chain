@@ -19,6 +19,7 @@ export function Layout() {
   const isPublicPage = ['/login', '/signup', '/forgot-password', '/'].includes(location.pathname);
   const showSidebar = user && !isPublicPage;
   const isLightchainRoute = location.pathname.startsWith('/lightchain');
+  const isLightchainPrintRoute = location.pathname === '/lightchain/printing-image';
   const isLightchainNotFoundRoute = location.pathname === '/lightchain/fashion-studio';
 
   // Handle scroll for header transparency effects
@@ -40,11 +41,12 @@ export function Layout() {
       
       {showSidebar ? (
         <div className="dark min-h-screen bg-[#070b0d] text-white">
-          {!isLightchainNotFoundRoute && <header className="sticky top-0 z-40 border-b border-white/10 bg-[#070b0d]/95 backdrop-blur-xl">
-            <div className="mx-auto flex h-[70px] max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          {!isLightchainNotFoundRoute && <header className={`sticky top-0 z-40 border-b border-white/10 bg-[#070b0d]/95 backdrop-blur-xl ${isLightchainPrintRoute ? 'lightchain-route-header' : ''}`}>
+            <div className="mx-auto flex h-[70px] max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 lightchain-route-header-inner">
               <div className="flex items-center gap-7">
-                <Link to={isLightchainRoute ? '/lightchain' : '/dashboard'} className="text-sm font-semibold tracking-[0.32em] text-white">
-                  HEAVY CHAIN
+                <Link to={isLightchainRoute ? '/lightchain' : '/dashboard'} className="flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
+                  {isLightchainRoute ? <span aria-hidden="true" className="lightchain-brand-mark">◉</span> : null}
+                  {isLightchainRoute ? 'LIGHTCHAIN' : 'HEAVY CHAIN'}
                 </Link>
                 {!isLightchainRoute && (
                   <div className="hidden items-center gap-2 text-sm text-neutral-300 md:flex">
@@ -66,14 +68,23 @@ export function Layout() {
                     日本語
                   </span>
                 )}
-                <Link to="/history" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
-                  <History className="h-4 w-4" />
-                  {isLightchainRoute ? '生成履歴' : '生成履歴'}
-                </Link>
-                <Link to="/jobs" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
-                  <HelpCircle className="h-4 w-4" />
-                  ジョブ
-                </Link>
+                {!isLightchainRoute && (
+                  <Link to="/history" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
+                    <History className="h-4 w-4" />
+                    生成履歴
+                  </Link>
+                )}
+                {isLightchainRoute ? (
+                  <span className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm text-neutral-300 sm:inline-flex">
+                    <HelpCircle className="h-4 w-4" />
+                    ヘルプセンター
+                  </span>
+                ) : (
+                  <Link to="/jobs" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
+                    <HelpCircle className="h-4 w-4" />
+                    ジョブ
+                  </Link>
+                )}
                 <Link to="/brand/settings" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15" aria-label="アカウント">
                   <UserCircle className="h-5 w-5" />
                 </Link>
@@ -94,7 +105,7 @@ export function Layout() {
             )}
           </header>}
 
-          <main id="main-content" className={`${isLightchainNotFoundRoute ? 'min-h-screen bg-white' : 'min-h-[calc(100vh-70px)] bg-[#070b0d]'} ${isLightchainRoute ? 'px-0 py-0' : 'px-3 py-5 sm:px-5 lg:px-8'}`} tabIndex={-1}>
+          <main id="main-content" className={`${isLightchainNotFoundRoute ? 'min-h-screen bg-white' : isLightchainPrintRoute ? 'min-h-[calc(100vh-48px)] bg-[#070b0d]' : 'min-h-[calc(100vh-70px)] bg-[#070b0d]'} ${isLightchainRoute ? 'px-0 py-0' : 'px-3 py-5 sm:px-5 lg:px-8'}`} tabIndex={-1}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
