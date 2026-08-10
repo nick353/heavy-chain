@@ -2450,13 +2450,27 @@ export function LightchainMaterialWorkbenchPage() {
     }
   };
 
-  const openDesignMaskEditor = (index: number) => {
+  const openDesignMaskEditor = async (index: number) => {
     const design = printDesigns[index];
-    const result = printDesignCutoutResults[index];
     const maskUrl = printDesignProcessedUrls[index];
-    if (!design || !result || !maskUrl) return;
+    if (!design || !maskUrl) return;
     invalidatePrintableSuggestion();
     setPrintMaskEditorError(null);
+    let result = printDesignCutoutResults[index];
+    if (!result) {
+      try {
+        // Restored print inputs may retain the processed preview URL before
+        // the richer cutout metadata has been rehydrated. Rebuild a bounded
+        // manual-mask result from the exact visible preview instead of
+        // silently making the Light Chain adjustment control inert.
+        result = await buildManualMaskSourceResult(maskUrl);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'プリント画像のマスク編集を開始できませんでした';
+        setPrintMaskEditorError(message);
+        toast.error(message);
+        return;
+      }
+    }
     setPrintMaskEditorTarget({
       kind: 'design',
       capturedDesignLayerId: getPrintDesignLayerId(design),
