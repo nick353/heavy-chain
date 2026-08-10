@@ -52,6 +52,11 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /disabled=\{isGenerating \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
   assert.match(page, /note: `\$\{preset\.name\} の質感で重ねた見本/);
   assert.match(page, /outputSize: \{ width, height \}/);
+  assert.match(page, /const imageLoadCache = new Map<string, Promise<HTMLImageElement>>\(\)/);
+  assert.ok(page.includes("img.crossOrigin = 'anonymous'"));
+  assert.ok(page.includes("https?:"));
+  assert.match(page, /const yieldToBrowser = \(\) => new Promise<void>/);
+  assert.match(page, /data-testid="lightchain-fabric-generate"/);
 });
 
 test('Light-style routes keep Heavy Chain branding in the shared header', () => {

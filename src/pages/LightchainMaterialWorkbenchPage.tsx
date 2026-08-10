@@ -493,13 +493,17 @@ const CLOTH_CUTOUT_TIMEOUT_MS = 105_000;
 const MODNET_CUTOUT_TIMEOUT_MS = 60_000;
 const BEN2_CUTOUT_TIMEOUT_MS = 180_000;
 const COMPOSITION_TIMEOUT_MS = 30_000;
+const imageLoadCache = new Map<string, Promise<HTMLImageElement>>();
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
 async function loadImage(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
+  const cached = imageLoadCache.get(url);
+  if (cached) return cached;
+
+  const pending = new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
     let settled = false;
     const timeoutId = window.setTimeout(() => {
@@ -516,12 +520,25 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
       window.clearTimeout(timeoutId);
       callback();
     };
-    img.crossOrigin = 'anonymous';
+    // Uploaded assets are blob/data URLs and must not be forced through a
+    // CORS fetch. Remote assets still opt into anonymous CORS so their pixels
+    // remain exportable to Canvas when the host allows it.
+    if (/^https?:\/\//i.test(url)) img.crossOrigin = 'anonymous';
     img.onload = () => settle(() => resolve(img));
     img.onerror = () => settle(() => reject(new Error('image load failed')));
     img.src = url;
   });
+
+  imageLoadCache.set(url, pending);
+  try {
+    return await pending;
+  } catch (error) {
+    if (imageLoadCache.get(url) === pending) imageLoadCache.delete(url);
+    throw error;
+  }
 }
+
+const yieldToBrowser = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
   let timeoutId: number | undefined;
@@ -1638,6 +1655,7 @@ export function LightchainMaterialWorkbenchPage() {
 
         const variantResults: WorkbenchResult[] = [];
         for (const preset of fabricVariants.filter((variant) => fabricPresetIds.includes(variant.id))) {
+          await yieldToBrowser();
           const imageUrl = await withTimeout(
             renderComposition(width, height, fabricBase?.url || null, preset.tint, baseLayers, 'fabric'),
             COMPOSITION_TIMEOUT_MS,
@@ -4260,6 +4278,7 @@ export function LightchainMaterialWorkbenchPage() {
                 </div>
 
                 <Button
+                  data-testid="lightchain-fabric-generate"
                   onClick={handleGenerate}
                   isLoading={isGenerating}
                   disabled={isGenerating || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
