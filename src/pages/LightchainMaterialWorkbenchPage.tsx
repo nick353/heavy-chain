@@ -702,6 +702,8 @@ export function LightchainMaterialWorkbenchPage() {
   const [fabricDesign, setFabricDesign] = useState<SelectedImage | null>(null);
   const [fabricLayer, setFabricLayer] = useState<AssetLayer | null>(null);
   const [fabricPresetIds, setFabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
+  const [fabricPrompt, setFabricPrompt] = useState('');
+  const [fabricImageRatio, setFabricImageRatio] = useState('画像比率自動');
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentCutoutSourceUrl, setPrintGarmentCutoutSourceUrl] = useState<string | null>(null);
   const [printGarmentSelectionMaskUrl, setPrintGarmentSelectionMaskUrl] = useState<string | null>(null);
@@ -858,6 +860,8 @@ export function LightchainMaterialWorkbenchPage() {
     fabricBaseUrl: fabricBase?.url ?? null,
     fabricDesignUrl: fabricDesign?.url ?? null,
     fabricPresetIds,
+    fabricPrompt,
+    fabricImageRatio,
     printGarmentUrl: printGarment?.url ?? null,
     printGarmentSelectionSource,
     printGarmentSegmentationTarget,
@@ -881,6 +885,8 @@ export function LightchainMaterialWorkbenchPage() {
     currentBrand?.id,
     fabricBase?.url,
     fabricDesign?.url,
+    fabricImageRatio,
+    fabricPrompt,
     fabricPresetIds,
     mode,
     placedPrintDesignLayers,
@@ -1592,8 +1598,22 @@ export function LightchainMaterialWorkbenchPage() {
     );
     try {
       const rect = stageRef.current?.getBoundingClientRect();
-      const width = Math.max(720, Math.round(rect?.width || 960));
-      const height = Math.max(720, Math.round(rect?.height || 960));
+      const stageWidth = Math.max(720, Math.round(rect?.width || 960));
+      const stageHeight = Math.max(720, Math.round(rect?.height || 960));
+      const width = isPrinting
+        ? stageWidth
+        : fabricImageRatio === '正方形 1:1'
+          ? 900
+          : fabricImageRatio === '横長 16:9'
+            ? 1280
+            : 900;
+      const height = isPrinting
+        ? stageHeight
+        : fabricImageRatio === '正方形 1:1'
+          ? 900
+          : fabricImageRatio === '横長 16:9'
+            ? 720
+            : 1125;
 
       if (!isPrinting) {
         const baseLayers: AssetLayer[] = [{
@@ -1628,8 +1648,9 @@ export function LightchainMaterialWorkbenchPage() {
             id: `${preset.id}-${Date.now()}`,
             brandId: currentBrand.id,
             title: `生地バリエーション: ${preset.name}`,
-            note: `${preset.name} の質感で重ねた見本`,
+            note: `${preset.name} の質感で重ねた見本${fabricPrompt.trim() ? ` / ${fabricPrompt.trim()}` : ''}`,
             imageUrl,
+            outputSize: { width, height },
           });
         }
         if (!variantResults.length) {
@@ -2717,6 +2738,17 @@ export function LightchainMaterialWorkbenchPage() {
     toast.success('プリント生成履歴をすべて削除しました');
   };
 
+  const clearFabricResultHistory = () => {
+    const fabricResultIds = new Set(generatedResults
+      .filter((result) => !result.id.startsWith('print-'))
+      .map((result) => result.id));
+    if (fabricResultIds.size === 0) return;
+    setGeneratedResults((current) => current.filter((result) => !fabricResultIds.has(result.id)));
+    setSelectedResult((current) => current && fabricResultIds.has(current.id) ? null : current);
+    setGeneratedResultsStale(false);
+    toast.success('生地生成履歴をすべて削除しました');
+  };
+
   const returnToPrintDesignSelection = () => {
     const selector = printDesignSelectorRef.current;
     if (!selector) return;
@@ -2798,7 +2830,7 @@ export function LightchainMaterialWorkbenchPage() {
 
   return (
     <div className="min-h-screen bg-[#0b1113] text-white">
-      <div className={`mx-auto grid max-w-[1680px] gap-4 px-3 py-4 sm:px-5 lg:grid-cols-[72px_minmax(0,1fr)] lg:px-6 lg:py-6 ${isPrinting ? 'hidden' : ''}`}>
+      <div className="hidden">
         <aside
           aria-label="Light Chainグラフィックツール"
           className="hidden rounded-2xl border border-white/10 bg-[#111719] p-2 shadow-2xl shadow-black/20 lg:block"
@@ -4054,6 +4086,245 @@ export function LightchainMaterialWorkbenchPage() {
                   </section>
                 ))}
               </div>
+            </aside>
+          </div>
+        </div>
+      )}
+
+      {!isPrinting && (
+        <div
+          data-testid="lightchain-fabric-parity-view"
+          className="min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
+        >
+          <div className="mx-auto grid max-w-[1680px] gap-4 lg:grid-cols-[112px_minmax(0,1.08fr)_minmax(360px,0.92fr)]">
+            <aside
+              aria-label="Light Chainツールバー"
+              className="rounded-2xl border border-white/10 bg-[#111719] p-2 shadow-2xl shadow-black/20"
+            >
+              <div className="flex flex-row gap-2 overflow-x-auto lg:sticky lg:top-[88px] lg:flex-col">
+                <div className="hidden items-center justify-center rounded-xl bg-cyan-300/15 p-2 text-cyan-100 lg:flex">
+                  <Layers3 className="h-8 w-8" aria-hidden="true" />
+                </div>
+                {[
+                  { label: 'ツールバー', Icon: Layers3 },
+                  { label: 'デザインツール', Icon: Layers3 },
+                  { label: 'フィッティングツール', Icon: Sparkles },
+                  { label: 'グラフィックデザインツール', Icon: Palette },
+                  { label: '衣類生産ツール', Icon: Scissors },
+                ].map(({ label, Icon }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    className={`flex min-w-[8rem] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-[10px] font-semibold leading-4 transition lg:min-w-0 ${label === 'デザインツール'
+                      ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30'
+                      : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
+                  >
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </aside>
+
+            <section className="min-w-0 rounded-2xl border border-white/10 bg-[#171d20] p-4 shadow-2xl shadow-black/20 lg:p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/70">生地イメージ</p>
+                  <p className="mt-1 text-sm text-white/60">異なる生地の質感を商品画像で確認できます</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/history')}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-white/75 transition hover:border-cyan-300/40 hover:text-cyan-100"
+                >
+                  <History className="h-4 w-4" aria-hidden="true" />
+                  生成履歴
+                </button>
+              </div>
+
+              <nav className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#111719] p-1 sm:grid-cols-4" aria-label="素材ツール">
+                {LIGHTCHAIN_MATERIAL_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => navigate(tab.route)}
+                    aria-current={tab.id === activeMaterialTab.id ? 'page' : undefined}
+                    className={`rounded-lg px-2 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${tab.id === activeMaterialTab.id
+                      ? 'bg-[#737d84] text-white shadow-lg shadow-black/20'
+                      : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+
+              <div className="space-y-4">
+                <p className="rounded-xl border border-emerald-300/25 bg-emerald-300/[0.08] px-3 py-2 text-[11px] leading-relaxed text-emerald-100">
+                  この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
+                </p>
+
+                <section data-testid="lightchain-fabric-design-input" className="rounded-xl border border-white/10 bg-[#202629] p-3">
+                  <p className="mb-2 text-sm font-semibold text-white">モデル/デザイン画像 *</p>
+                  <p className="mb-3 text-xs text-white/50">20MB以下の画像アップロードしてください</p>
+                  <ImageSelector
+                    label="モデル/デザイン画像"
+                    required
+                    value={fabricDesign}
+                    galleryTitle="素材を選択"
+                    confirmGallerySelection
+                    galleryConfirmLabel="適用"
+                    selectionTestId="fabric-design-selector"
+                    onChange={setFabricDesign}
+                    allowedReferenceTypes={['base', 'pattern']}
+                    defaultReferenceType="base"
+                    hint="商品・モデル・デザインの基準画像を入れます"
+                  />
+                </section>
+
+                <section data-testid="lightchain-fabric-input" className="rounded-xl border border-white/10 bg-[#202629] p-3">
+                  <p className="mb-2 text-sm font-semibold text-white">生地画像 *</p>
+                  <p className="mb-3 text-xs text-white/50">質感を反映する生地の参照画像をアップロードしてください</p>
+                  <ImageSelector
+                    label="生地画像"
+                    required
+                    value={fabricBase}
+                    galleryTitle="素材を選択"
+                    confirmGallerySelection
+                    galleryConfirmLabel="適用"
+                    selectionTestId="fabric-base-selector"
+                    onChange={setFabricBase}
+                    allowedReferenceTypes={['base']}
+                    defaultReferenceType="base"
+                    hint="布・編地・光沢などの質感素材を入れます"
+                  />
+                </section>
+
+                <label className="block rounded-xl border border-white/10 bg-[#202629] p-3" htmlFor="lightchain-fabric-prompt">
+                  <span className="text-sm font-semibold text-white">キーワードを追加してください（任意）</span>
+                  <textarea
+                    id="lightchain-fabric-prompt"
+                    value={fabricPrompt}
+                    onChange={(event) => setFabricPrompt(event.target.value)}
+                    placeholder="白い衣服に指定した生地の質感を自然に反映"
+                    rows={3}
+                    className="mt-3 w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/50"
+                  />
+                </label>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="rounded-xl border border-white/10 bg-[#202629] p-3">
+                    <span className="block text-xs font-semibold text-white/75">画像比率</span>
+                    <select
+                      value={fabricImageRatio}
+                      onChange={(event) => setFabricImageRatio(event.target.value)}
+                      className="mt-2 w-full rounded-lg border border-white/10 bg-[#111719] px-3 py-2 text-sm text-white outline-none focus:border-cyan-300/50"
+                    >
+                      <option>画像比率自動</option>
+                      <option>正方形 1:1</option>
+                      <option>縦長 4:5</option>
+                      <option>横長 16:9</option>
+                    </select>
+                  </label>
+                  <div className="rounded-xl border border-white/10 bg-[#202629] p-3">
+                    <span className="block text-xs font-semibold text-white/75">生地バリエーション</span>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {fabricVariants.map((variant) => (
+                        <button
+                          key={variant.id}
+                          type="button"
+                          onClick={() => updateFabricPreset(variant.id)}
+                          aria-pressed={fabricPresetIds.includes(variant.id)}
+                          className={`rounded-full border px-2.5 py-1 text-[11px] transition ${fabricPresetIds.includes(variant.id)
+                            ? 'border-cyan-300/50 bg-cyan-300/15 text-cyan-50'
+                            : 'border-white/10 text-white/55 hover:text-white'}`}
+                        >
+                          {variant.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div ref={stageRef} data-testid="lightchain-fabric-preview" className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-neutral-900">
+                  {fabricBase ? (
+                    <img src={fabricBase.url} alt="生地プレビュー" className="absolute inset-0 h-full w-full object-cover opacity-80" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-sm text-white/40">生地画像をアップロードしてください</div>
+                  )}
+                  {fabricDesign && (
+                    <img src={fabricDesign.url} alt="モデル/デザインプレビュー" className="absolute inset-[12%] h-[76%] w-[76%] object-contain drop-shadow-2xl" />
+                  )}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-4 pb-3 pt-10 text-xs text-white/75">
+                    {fabricDesign && fabricBase ? '入力内容を確認してAI生成へ進みます' : '2つの画像を追加するとプレビューできます'}
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleGenerate}
+                  isLoading={isGenerating}
+                  disabled={isGenerating || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
+                  className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
+                  size="lg"
+                  leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
+                >
+                  {isGenerating ? '生成中…' : 'AI生成'}
+                </Button>
+                {generationError && (
+                  <p role="alert" className="rounded-xl border border-rose-300/25 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-100">
+                    {generationError}
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <aside className="min-w-0 rounded-2xl border border-white/10 bg-[#111719] p-4 shadow-2xl shadow-black/20 lg:p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-white">生成履歴</h2>
+                  <span className="text-xs text-white/45">ⓘ</span>
+                </div>
+                {visibleGeneratedResults.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearFabricResultHistory}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-2 text-xs font-semibold text-white/65 transition hover:border-red-300/35 hover:text-red-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    全削除
+                  </button>
+                )}
+              </div>
+
+              <div className="mb-4 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.05] p-3">
+                <p className="text-sm font-semibold text-cyan-100">生地イメージ</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-white/50">異なる生地の質感を生成して比較できます</p>
+                <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-black/30">
+                  {fabricDesign && fabricBase ? (
+                    <div className="relative h-full w-full">
+                      <img src={fabricBase.url} alt="生地の参考" className="absolute inset-0 h-full w-full object-cover opacity-80" />
+                      <img src={fabricDesign.url} alt="デザインの参考" className="absolute inset-3 h-[calc(100%-1.5rem)] w-[calc(100%-1.5rem)] object-contain" />
+                    </div>
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-white/35">入力待ち</div>
+                  )}
+                </div>
+              </div>
+
+              {visibleGeneratedResults.length === 0 ? (
+                <div className="flex min-h-[20rem] items-center justify-center rounded-xl border border-dashed border-white/10 px-5 text-center text-sm text-white/40">
+                  生成履歴はここに表示されます
+                </div>
+              ) : (
+                <div data-testid="fabric-result-history" className="space-y-3">
+                  {[...visibleGeneratedResults].reverse().map((result) => (
+                    <WorkbenchResultCard
+                      key={result.id}
+                      result={result}
+                      onOpen={setSelectedResult}
+                    />
+                  ))}
+                </div>
+              )}
             </aside>
           </div>
         </div>

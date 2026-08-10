@@ -41,3 +41,15 @@ test('platform assets expose only explicit product-owned inputs', () => {
   assert.match(gallery, /assetOrigin: 'platform'/);
   assert.match(gallery, /setImages\(assetPurpose === PRINT_DESIGN_ASSET_PURPOSE \? \[\] : PLATFORM_GALLERY_ASSETS\)/);
 });
+
+test('fabric uses the Light-style parity shell while retaining the real generation path', () => {
+  const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+  assert.match(page, /data-testid="lightchain-fabric-parity-view"/);
+  assert.match(page, /data-testid="lightchain-fabric-design-input"/);
+  assert.match(page, /data-testid="lightchain-fabric-input"/);
+  assert.match(page, /data-testid="fabric-result-history"/);
+  assert.match(page, /value=\{fabricPrompt\}[\s\S]*?onChange=\{\(event\) => setFabricPrompt\(event\.target\.value\)\}/);
+  assert.match(page, /disabled=\{isGenerating \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
+  assert.match(page, /note: `\$\{preset\.name\} の質感で重ねた見本/);
+  assert.match(page, /outputSize: \{ width, height \}/);
+});
