@@ -124,6 +124,19 @@ const dataUrlToBlob = async (url: string): Promise<Blob> => {
 
 const isLocalImageSource = (url: string) => url.startsWith('data:') || url.startsWith('blob:');
 
+const blobToDataUrl = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (typeof reader.result === 'string') {
+      resolve(reader.result);
+      return;
+    }
+    reject(new Error('print_input_blob_read_failed'));
+  };
+  reader.onerror = () => reject(new Error('print_input_blob_read_failed'));
+  reader.readAsDataURL(blob);
+});
+
 const readMetadata = (brandId: string): PersistedInputImage[] => {
   if (!isBrowser() || !brandId) return [];
   try {
@@ -221,12 +234,14 @@ export async function restorePrintInputState(brandId: string): Promise<RestoredP
   const metadata = readMetadata(brandId);
   const restore = async (entry: PersistedInputImage): Promise<RestoredPrintInputImage | null> => {
     let url = entry.source;
-    let release: (() => void) | undefined;
     if (entry.assetRef) {
       const blob = await getAsset(entry.assetRef);
       if (!blob) return null;
-      url = URL.createObjectURL(blob);
-      release = () => URL.revokeObjectURL(url as string);
+      // Normalize persisted local bytes back to the same data-URL boundary
+      // used by ImageSelector. This keeps browser cutout/model loaders
+      // identical across a fresh upload and a reload, without putting bytes
+      // into localStorage.
+      url = await blobToDataUrl(blob);
     }
     if (!url) return null;
     return {
@@ -236,7 +251,6 @@ export async function restorePrintInputState(brandId: string): Promise<RestoredP
       ...(entry.galleryImageId ? { galleryImageId: entry.galleryImageId } : {}),
       ...(entry.storagePath ? { storagePath: entry.storagePath } : {}),
       ...(entry.printDesignAssetPurpose ? { printDesignAssetPurpose: entry.printDesignAssetPurpose } : {}),
-      ...(release ? { release } : {}),
     };
   };
   const restored = await Promise.all(metadata.map(restore));
@@ -255,4 +269,3 @@ export async function restorePrintInputState(brandId: string): Promise<RestoredP
 export const releaseRestoredPrintInput = (image: RestoredPrintInputImage | null) => {
   image?.release?.();
 };
-

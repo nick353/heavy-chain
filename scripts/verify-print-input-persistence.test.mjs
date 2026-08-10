@@ -18,7 +18,8 @@ test('Printing inputs keep image bytes in IndexedDB and only safe metadata in lo
   assert.match(helper, /window\.localStorage\.setItem\(storageKey\(brandId\), JSON\.stringify\(metadata\)\)/);
   assert.doesNotMatch(helper, /localStorage\.setItem\([^\n]*image\.url/);
   assert.match(helper, /isLocalImageSource/);
-  assert.match(helper, /URL\.createObjectURL\(blob\)/);
+  assert.match(helper, /readAsDataURL\(blob\)/);
+  assert.match(helper, /Normalize persisted local bytes back to the same data-URL boundary/);
 });
 
 test('Printing page hydrates inputs before saving state and releases restored object URLs', () => {
