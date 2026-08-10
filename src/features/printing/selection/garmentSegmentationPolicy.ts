@@ -1,6 +1,6 @@
 export type GarmentSelectionSource = 'automatic' | 'tap' | 'range';
 
-export type GarmentCutoutModel = 'silueta' | 'u2net_cloth_seg';
+export type GarmentCutoutModel = 'silueta' | 'u2net_cloth_seg' | 'ben2';
 
 export type GarmentSegmentationTarget = 'upper' | 'lower' | 'full';
 
@@ -113,11 +113,15 @@ export const isGarmentSemanticSegmentationResult = ({
 export const resolveGarmentCutoutModel = ({
   selectionSource,
   clothModelConfigured,
+  ben2ModelConfigured = false,
 }: {
   selectionSource: GarmentSelectionSource;
   clothModelConfigured: boolean;
+  ben2ModelConfigured?: boolean;
 }): GarmentCutoutModel => (
-  selectionSource === 'tap' && clothModelConfigured
+  selectionSource === 'tap' && ben2ModelConfigured
+    ? 'ben2'
+    : selectionSource === 'tap' && clothModelConfigured
     ? 'u2net_cloth_seg'
     : 'silueta'
 );
@@ -154,12 +158,14 @@ export const shouldRunConfiguredClothModelForGarmentInput = ({
 export const garmentSelectionModelStatus = ({
   selectionSource,
   clothModelConfigured,
+  ben2ModelConfigured = false,
   resultEngine,
   requestedTarget,
   resultTarget,
 }: {
   selectionSource: GarmentSelectionSource;
   clothModelConfigured: boolean;
+  ben2ModelConfigured?: boolean;
   resultEngine: string | null | undefined;
   requestedTarget: GarmentSegmentationTarget;
   resultTarget: GarmentSegmentationTarget | null | undefined;
@@ -175,6 +181,15 @@ export const garmentSelectionModelStatus = ({
       model: 'silueta' as const,
       semantic: false,
       message: '範囲指定は既存の高精度AI切り抜きと手動マスク修正で処理します。',
+    };
+  }
+  if (resultEngine === 'browser-ai-ben2-v1') {
+    return {
+      model: 'ben2' as const,
+      semantic: false,
+      message: ben2ModelConfigured
+        ? 'BEN2高精度マッティングで輪郭を抽出し、確認範囲で制約しています。'
+        : 'BEN2が未配置のため、既存AI切り抜きへ戻しています。',
     };
   }
   if (semantic) {

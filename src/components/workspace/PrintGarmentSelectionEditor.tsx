@@ -16,6 +16,7 @@ import {
   type GarmentSegmentationTarget,
   type GarmentSelectionSource,
 } from '../../features/printing/selection/garmentSegmentationPolicy';
+import { rasterizeGuidedMaskAlpha } from '../../features/printing/selection/guidedMaskRasterization';
 
 type SelectionRect = {
   x: number;
@@ -213,6 +214,7 @@ export function PrintGarmentSelectionEditor({
     selectedImageUrl: string,
     selectionSource: Exclude<GarmentSelectionSource, 'automatic'>,
     segmentationTarget: GarmentSegmentationTarget,
+    selectionMaskUrl?: string,
   ) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -567,46 +569,43 @@ export function PrintGarmentSelectionEditor({
     context.imageSmoothingQuality = 'high';
     context.drawImage(image, contextX, contextY, contextWidth, contextHeight, 0, 0, output.width, output.height);
 
+    let selectionMaskUrl: string | undefined;
     if (selectionSource === 'tap' && guidedResult?.mask && guidedResult.source !== 'tap-neighborhood') {
-      // The preview and the confirmed PNG must use the same mask. Sample it in
-      // the original-image coordinate system while preserving the surrounding
-      // AI context crop.
+      // The preview and the confirmed PNG must use the same mask. Keep the
+      // crop opaque for the downstream cloth model: passing a transparent
+      // tap result back into semantic segmentation makes the model see a
+      // partially erased person and collapses the garment mask. The reviewed
+      // mask is carried separately as a constraint and intersected after the
+      // model has seen the original pixels.
       const displayMask = closePreviewMask(guidedResult.mask);
       const maskCanvas = document.createElement('canvas');
       maskCanvas.width = output.width;
       maskCanvas.height = output.height;
       const maskContext = maskCanvas.getContext('2d');
       if (!maskContext) throw new Error('garment_selection_mask_context_missing');
+      const maskAlpha = rasterizeGuidedMaskAlpha({
+        mask: displayMask.data,
+        maskWidth: displayMask.width,
+        maskHeight: displayMask.height,
+        outputWidth: output.width,
+        outputHeight: output.height,
+        sourceImageWidth: imageWidth,
+        sourceImageHeight: imageHeight,
+        context: { x: contextX, y: contextY, width: contextWidth, height: contextHeight },
+        samplesPerPixel: 4,
+      });
       const maskImageData = maskContext.createImageData(output.width, output.height);
-      for (let y = 0; y < output.height; y += 1) {
-        const sourceY = contextY + ((y + 0.5) / output.height) * contextHeight;
-        const canvasY = sourceY * scale;
-        const maskY = Math.max(
-          0,
-          Math.min(displayMask.height - 1, Math.floor((canvasY / editorCanvas.height) * displayMask.height)),
-        );
-        for (let x = 0; x < output.width; x += 1) {
-          const sourceX = contextX + ((x + 0.5) / output.width) * contextWidth;
-          const canvasX = sourceX * scale;
-          const maskX = Math.max(
-            0,
-            Math.min(displayMask.width - 1, Math.floor((canvasX / editorCanvas.width) * displayMask.width)),
-          );
-          const selected = displayMask.data[(maskY * displayMask.width) + maskX] === 1;
-          const offset = ((y * output.width) + x) * 4;
-          maskImageData.data[offset] = 255;
-          maskImageData.data[offset + 1] = 255;
-          maskImageData.data[offset + 2] = 255;
-          maskImageData.data[offset + 3] = selected ? 255 : 0;
-        }
+      for (let index = 0; index < maskAlpha.length; index += 1) {
+        const offset = index * 4;
+        maskImageData.data[offset] = 255;
+        maskImageData.data[offset + 1] = 255;
+        maskImageData.data[offset + 2] = 255;
+        maskImageData.data[offset + 3] = maskAlpha[index];
       }
       maskContext.putImageData(maskImageData, 0, 0);
-      context.save();
-      context.globalCompositeOperation = 'destination-in';
-      context.drawImage(maskCanvas, 0, 0);
-      context.restore();
+      selectionMaskUrl = maskCanvas.toDataURL('image/png');
     }
-    onApply(output.toDataURL('image/png'), selectionSource, segmentationTarget);
+    onApply(output.toDataURL('image/png'), selectionSource, segmentationTarget, selectionMaskUrl);
   };
 
   const recognizeTap = async (point: { x: number; y: number }) => {
@@ -824,7 +823,7 @@ export function PrintGarmentSelectionEditor({
     >
       <div className="space-y-4">
         <p className="text-sm leading-relaxed text-neutral-500 dark:text-neutral-300">
-          「服をタップ（推奨）」で服の位置を1回押すと、タップAIが同じ服の輪郭を候補にします。青色の範囲が実際に切り抜かれる確認用プレビューです。内容を確認して「決定」を押すと、その範囲だけを使用します。細かく指定するときは「範囲を調整」に切り替えます。
+          「服をタップ（推奨）」で服の位置を1回押すと、タップAIが同じ服の候補範囲を作ります。青色の範囲を上限に、選択した服カテゴリのAIが元画像から最終輪郭を作ります。内容を確認して「決定」を押してください。細かく指定するときは「範囲を調整」に切り替えます。
         </p>
         {error && <p role="alert" className="text-sm text-rose-500">{error}</p>}
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="服の選択方法">

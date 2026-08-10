@@ -40,3 +40,22 @@ test('missing IndexedDB remains an explicit session-only fallback', () => {
   assert.match(helper, /canvas_local_asset_indexeddb_unavailable/);
   assert.match(page, /keeping this upload session-scoped/);
 });
+
+test('saving a new canvas routes to its created project before reload', () => {
+  const start = page.indexOf('const handleSave = () =>');
+  const end = page.indexOf('const handleObjectSelect', start);
+  assert.ok(start >= 0, 'canvas save handler must exist');
+  assert.ok(end > start, 'canvas object handlers must follow the save handler');
+  const saveHandler = page.slice(start, end);
+  assert.match(saveHandler, /if \(!currentProjectId\)/);
+  assert.match(saveHandler, /createProject\(currentProjectName \|\| '無題のプロジェクト', currentBrand\?\.id, objects\)/);
+  assert.match(saveHandler, /navigate\(`\/canvas\/\$\{newId\}`/);
+});
+
+test('new project creation carries current canvas objects into the routed project', () => {
+  assert.match(store, /createProject: \(name: string, brandId\?: string, initialObjects\?: CanvasObject\[\]\) => string/);
+  assert.match(store, /createProject: \(name, brandId, initialObjects = \[\]\) =>/);
+  assert.match(store, /objects: initialObjects,/);
+  assert.match(store, /history: \[initialObjects\]/);
+  assert.match(store, /currentProjectName: name,\n\s+objects: initialObjects,/);
+});

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { BarChart3, Check, ChevronRight, FlaskConical, Images, Layers3, Lightbulb, Save, Sparkles, Target } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
@@ -487,6 +488,23 @@ export function LabPage() {
         </div>
       </section>
 
+      <section
+        data-testid="lab-readiness-entry"
+        className="mb-5"
+      >
+        <WorkspaceReadinessStrip
+          eyebrow="LIGHTCHAIN PARITY / LAB START"
+          title="仮説と評価軸を先に揃え、採用候補を決めます"
+          description="ラボは実験室であることを明示し、生成前に比較対象・評価軸・次のアクションを確認できる入口にしています。"
+          nextAction="仮説 → 評価 → 出力"
+          steps={[
+            { label: '仮説', detail: hypothesis.slice(0, 44), ready: Boolean(hypothesis.trim()) },
+            { label: '評価軸', detail: evaluationAxis.slice(0, 44), ready: Boolean(evaluationAxis.trim()) },
+            { label: '採用候補', detail: candidate.slice(0, 44), ready: Boolean(candidate.trim()) },
+            { label: '次の操作', detail: '生成、Canvas、Galleryへ渡す', ready: Boolean(currentBrand) },
+          ]}
+        />
+      </section>
       <section
         data-testid="lab-action-panel"
         className="grid gap-4 rounded-2xl border border-cyan-300/35 bg-cyan-300/[0.08] p-5 dark:border-cyan-300/30 dark:bg-cyan-300/[0.08] lg:grid-cols-[minmax(0,1fr)_auto]"

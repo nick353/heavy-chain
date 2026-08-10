@@ -40,3 +40,9 @@ test('routes fabric search prompts to the simulation entry', async () => {
   assert.match(source, /'\/lightchain\/fabric-image': Shirt/);
   assert.match(source, /'\/lightchain\/printing-image': Palette/);
 });
+
+test('does not expose the compact hub count as the detailed workbench count', async () => {
+  const source = await readFile(new URL('../src/components/LightchainParityHub.tsx', import.meta.url), 'utf8');
+  assert.match(source, /目的別の機能をすべて見る/);
+  assert.doesNotMatch(source, /\{lightchainFeatureCatalog\.length\}機能をすべて見る/);
+});

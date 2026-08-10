@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Check, ChevronRight, Clapperboard, Film, Save, Smartphone } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
@@ -535,6 +536,23 @@ export function VideoWorkstationPage() {
         </div>
       </section>
 
+      <section
+        data-testid="video-readiness-entry"
+        className="mb-5"
+      >
+        <WorkspaceReadinessStrip
+          eyebrow="LIGHTCHAIN PARITY / VIDEO START"
+          title="ショット構成を決めてから、素材と書き出しへ進みます"
+          description="動画は最初にストーリーボードを選び、比率・尺・CTAを確認します。素材が未選択でも構成の保存とCanvas handoffを先に進められます。"
+          nextAction="構成 → 素材 → 書き出し"
+          steps={[
+            { label: 'ストーリーボード', detail: selectedStoryboard.label, ready: Boolean(selectedStoryboard.id) },
+            { label: '尺・比率', detail: `${duration} / ${aspectRatio}`, ready: Boolean(duration && aspectRatio) },
+            { label: '素材', detail: materialReference.imageUrl ? '参照素材を選択済み' : '素材なしでも構成を保存できます', ready: Boolean(materialReference.imageUrl) },
+            { label: '次の操作', detail: '生成指示、Canvas、Galleryへ渡す', ready: Boolean(currentBrand) },
+          ]}
+        />
+      </section>
       <section
         data-testid="video-action-panel"
         className="glass-panel rounded-2xl border dark:border-cyan-300/30 border-cyan-300/35 bg-cyan-300/[0.08] p-5 dark:border-cyan-300/30 dark:bg-cyan-300/[0.08]"

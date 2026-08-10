@@ -177,6 +177,18 @@ test('print result cards expose visible exact and fabric identities over each im
   assert.match(page, /eyebrow: 'FABRIC', label: '布になじませる'/);
 });
 
+test('printing comparison and download actions expose stable semantic readback hooks', () => {
+  assert.match(page, /data-testid="compare-print-results"/);
+  assert.match(page, /aria-label="生成結果を比較"/);
+  assert.match(page, /data-testid=\{`print-result-download-\$\{result\.id\}`\}/);
+  assert.match(page, /data-testid="selected-print-result-download"/);
+  assert.match(page, /aria-label=\{`\$\{selectedResult\.title\}のPNGをダウンロード`\}/);
+  assert.match(page, /<ImageCompare/);
+  assert.match(fs.readFileSync('src/components/ui/ImageCompare.tsx', 'utf8'), /data-testid="image-compare-dialog"/);
+  assert.match(fs.readFileSync('src/components/ui/ImageCompare.tsx', 'utf8'), /role="dialog"/);
+  assert.match(fs.readFileSync('src/components/ui/ImageCompare.tsx', 'utf8'), /data-testid="image-compare-close"/);
+});
+
 test('placement session fails closed on duplicate layer identities', () => {
   assert.throws(
     () => createPlacementEditBaseline([
@@ -264,6 +276,17 @@ test('printing keeps accessible coverage controls available at 5/5 readiness and
   assert.match(page, /\{ value: 'spot', label: 'スポット' \}/);
   assert.match(page, /\{ value: 'full', label: '全体' \}/);
   assert.match(page, /printCoverageMode === 'full'/);
+});
+
+test('printing request snapshot signature includes the selected coverage mode', () => {
+  const signatureStart = page.indexOf('const printSnapshotSignature = useMemo');
+  const currentStateStart = page.indexOf('const currentPrintStateRef', signatureStart);
+  assert.ok(signatureStart >= 0, 'print snapshot signature must exist');
+  assert.ok(currentStateStart > signatureStart, 'current print state must follow the snapshot signature');
+  const signatureBlock = page.slice(signatureStart, currentStateStart);
+  assert.match(signatureBlock, /coverageMode: printCoverageMode/);
+  assert.match(signatureBlock, /surfaceOccluderContentHash: manualPrintableSurface\.occluder\.contentHash/);
+  assert.match(signatureBlock, /printCoverageMode/);
 });
 
 test('a delayed design return cannot erase an already-open placement baseline', () => {

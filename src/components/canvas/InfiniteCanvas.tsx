@@ -255,7 +255,7 @@ export function InfiniteCanvas({
       pendingLoadedImages.clear();
       startedLoadingIds.forEach((id) => loadingImageIds.delete(id));
     };
-  }, [renderedObjects]);
+  }, [preloadedImages, renderedObjects]);
 
   useEffect(() => {
     if (!onRenderStateChange) return;

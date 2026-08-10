@@ -4,7 +4,7 @@ import { clientError, createServiceClient, requireBrandRole, type Database } fro
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 import { editOpenAiImage, openAiImageArtifact, resolveImageEditCleanupStatus } from '../_shared/openaiImage.ts';
-import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
+import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 
@@ -39,7 +39,6 @@ serve(async (req) => {
   let observedBrandId: string | null = null;
   let observedUserId: string | null = null;
   let observedJobId: string | null = null;
-  let observedLightchainMetadata: LightchainCompatMetadata | null = null;
   let telemetryClient: any = null;
   const uploadedStoragePaths: string[] = [];
   const insertedImageIds: string[] = [];
@@ -166,7 +165,6 @@ serve(async (req) => {
 
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
-    observedLightchainMetadata = lightchainMetadata;
     const materialMetadata = sanitizeMaterialGenerationMetadata(body);
     const requestedCandidateCount = hasMask ? 4 : 1;
 

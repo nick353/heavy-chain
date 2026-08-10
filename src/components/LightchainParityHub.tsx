@@ -216,7 +216,7 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
                 className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white transition active:scale-[0.99] md:hidden"
                 data-testid="dashboard-lightchain-all-tools-link"
               >
-                {lightchainFeatureCatalog.length}機能をすべて見る
+                目的別の機能をすべて見る
                 <ArrowRight className="h-4 w-4" />
               </Link>
             )}

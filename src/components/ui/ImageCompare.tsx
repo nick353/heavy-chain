@@ -63,6 +63,10 @@ export function ImageCompare({ images, onClose, className }: ImageCompareProps) 
   return (
     <div
       ref={containerRef}
+      data-testid="image-compare-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label="画像比較"
       className={clsx(
         'fixed inset-0 z-50 bg-black flex flex-col',
         className
@@ -70,7 +74,7 @@ export function ImageCompare({ images, onClose, className }: ImageCompareProps) 
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-black/50 backdrop-blur-sm border-b border-white/10">
-        <h3 className="text-white font-medium">
+        <h3 data-testid="image-compare-heading" className="text-white font-medium">
           画像比較 ({selectedImages.length}枚選択中)
         </h3>
         
@@ -79,6 +83,9 @@ export function ImageCompare({ images, onClose, className }: ImageCompareProps) 
           <div className="flex items-center gap-1 bg-white/10 rounded-lg p-1">
             <button
               onClick={handleZoomOut}
+              type="button"
+              data-testid="image-compare-zoom-out"
+              aria-label="比較画像を縮小"
               disabled={zoom <= 0.5}
               className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded disabled:opacity-30"
             >
@@ -89,6 +96,9 @@ export function ImageCompare({ images, onClose, className }: ImageCompareProps) 
             </span>
             <button
               onClick={handleZoomIn}
+              type="button"
+              data-testid="image-compare-zoom-in"
+              aria-label="比較画像を拡大"
               disabled={zoom >= 3}
               className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded disabled:opacity-30"
             >
@@ -96,6 +106,9 @@ export function ImageCompare({ images, onClose, className }: ImageCompareProps) 
             </button>
             <button
               onClick={handleResetZoom}
+              type="button"
+              data-testid="image-compare-zoom-reset"
+              aria-label="比較画像の倍率をリセット"
               className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded"
             >
               <RotateCcw className="w-4 h-4" />
@@ -105,6 +118,9 @@ export function ImageCompare({ images, onClose, className }: ImageCompareProps) 
           {/* Fullscreen */}
           <button
             onClick={toggleFullscreen}
+            type="button"
+            data-testid="image-compare-fullscreen"
+            aria-label={isFullscreen ? '比較画面をフルスクリーン解除' : '比較画面をフルスクリーン表示'}
             className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg"
           >
             {isFullscreen ? (
@@ -118,6 +134,9 @@ export function ImageCompare({ images, onClose, className }: ImageCompareProps) 
           {onClose && (
             <button
               onClick={onClose}
+              type="button"
+              data-testid="image-compare-close"
+              aria-label="画像比較を閉じる"
               className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg"
             >
               <X className="w-5 h-5" />
@@ -179,6 +198,9 @@ export function ImageCompare({ images, onClose, className }: ImageCompareProps) 
               <button
                 key={index}
                 onClick={() => toggleImageSelection(index)}
+                type="button"
+                data-testid={`image-compare-thumbnail-${index}`}
+                aria-label={`${image.label || `比較画像 ${index + 1}`}を比較対象に${selectedIndices.includes(index) ? '含めない' : '含める'}`}
                 className={clsx(
                   'flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all',
                   selectedIndices.includes(index)
@@ -202,4 +224,3 @@ export function ImageCompare({ images, onClose, className }: ImageCompareProps) 
     </div>
   );
 }
-

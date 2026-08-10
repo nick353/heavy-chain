@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Check, ChevronRight, ImagePlus, Palette, Repeat2, Save, Shapes, Shirt, Upload, WandSparkles } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
@@ -576,6 +577,23 @@ export function PatternWorkspacePage() {
         </div>
       </section>
 
+      <section
+        data-testid="pattern-readiness-entry"
+        className="mb-5"
+      >
+        <WorkspaceReadinessStrip
+          eyebrow="LIGHTCHAIN PARITY / GRAPHICS START"
+          title="柄、用途、ベクター化の順に制作条件を組み立てます"
+          description="グラフィック、総柄、ベクター化を最初に選び、服モックやロゴを必要な時だけ追加します。制作条件は生成とCanvasへ同じ形で渡されます。"
+          nextAction="柄 → 用途 → ベクター / Canvas"
+          steps={[
+            { label: 'モード', detail: activeMode, ready: Boolean(activeMode) },
+            { label: '用途', detail: garmentTarget.slice(0, 44), ready: Boolean(garmentTarget.trim()) },
+            { label: '素材', detail: materialReference.imageUrl ? '参照素材を選択済み' : 'ロゴ・服モックは後から追加できます', ready: Boolean(materialReference.imageUrl) },
+            { label: '次の操作', detail: '生成またはCanvasへ保存', ready: Boolean(currentBrand) },
+          ]}
+        />
+      </section>
       <section
         data-testid="pattern-action-panel"
         className="glass-panel rounded-2xl border dark:border-cyan-300/30 border-cyan-300/35 bg-cyan-300/[0.08] p-5 dark:border-cyan-300/30 dark:bg-cyan-300/[0.08]"

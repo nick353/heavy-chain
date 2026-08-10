@@ -288,7 +288,7 @@ export function PrintingImageComposer({
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerUp);
     };
-  }, [scheduleTransform]);
+  }, [endInteraction, scheduleTransform]);
 
   const startInteraction = (mode: InteractionMode) => (event: ReactPointerEvent<HTMLButtonElement | HTMLDivElement>) => {
     if (!printImageUrl || isProcessing) return;

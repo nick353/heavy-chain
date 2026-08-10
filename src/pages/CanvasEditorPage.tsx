@@ -366,10 +366,11 @@ export function CanvasEditorPage() {
   }, [localRestoreReferences]);
 
   useEffect(() => {
+    const releases = localAssetReleasesRef.current;
     return () => {
       isMountedRef.current = false;
-      localAssetReleasesRef.current.forEach((release) => release());
-      localAssetReleasesRef.current.clear();
+      releases.forEach((release) => release());
+      releases.clear();
     };
   }, []);
 
@@ -686,9 +687,11 @@ export function CanvasEditorPage() {
   };
 
   const handleSave = () => {
-    if (!currentProjectId && !currentProjectName) {
-      // Need to create a project first
-      const newId = createProject('無題のプロジェクト', currentBrand?.id);
+    if (!currentProjectId) {
+      // A new canvas must become a routed project before reload.  The store
+      // can create the project internally, but leaving the URL at /canvas/new
+      // causes the new-canvas effect to clear the hydrated project on reload.
+      const newId = createProject(currentProjectName || '無題のプロジェクト', currentBrand?.id, objects);
       navigate(`/canvas/${newId}`, { replace: true });
       toast.success('プロジェクトを作成しました');
     } else {
@@ -865,7 +868,7 @@ export function CanvasEditorPage() {
         }
       })();
     });
-  }, [addObject, handleObjectSelect, selectObject]);
+  }, [addObject, handleObjectSelect, selectObject, setPan, setZoom]);
 
   const handleFileUpload = useCallback((e: React.FormEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
@@ -1049,7 +1052,7 @@ export function CanvasEditorPage() {
       setPan(0, 0);
     }
     return newId;
-  }, [addObject, loadCanvasImage, selectObject, setPan, setZoom]);
+  }, [addObject, canvasSize.height, canvasSize.width, loadCanvasImage, selectObject, setPan, setZoom]);
 
   const addImageToCanvasSafely = useCallback((imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
     void addImageToCanvas(imageUrl, label, metadata, parentId).catch((error: any) => {

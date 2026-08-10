@@ -125,7 +125,7 @@ export interface CanvasState {
   historyIndex: number;
   
   // Project actions
-  createProject: (name: string, brandId?: string) => string;
+  createProject: (name: string, brandId?: string, initialObjects?: CanvasObject[]) => string;
   loadProject: (projectId: string) => void;
   saveCurrentProject: () => void;
   deleteProject: (projectId: string) => void;
@@ -234,13 +234,13 @@ export const useCanvasStore = create<CanvasState>()(
       historyIndex: 0,
 
       // Project management
-      createProject: (name, brandId) => {
+      createProject: (name, brandId, initialObjects = []) => {
         const id = generateId();
         const now = new Date().toISOString();
         const newProject: CanvasProject = {
           id,
           name,
-          objects: [],
+          objects: initialObjects,
           createdAt: now,
           updatedAt: now,
           brandId,
@@ -250,9 +250,9 @@ export const useCanvasStore = create<CanvasState>()(
           projects: [newProject, ...state.projects],
           currentProjectId: id,
           currentProjectName: name,
-          objects: [],
+          objects: initialObjects,
           selectedIds: [],
-          history: [[]],
+          history: [initialObjects],
           historyIndex: 0,
           zoom: 1,
           panX: 0,

@@ -75,6 +75,7 @@ test('garment targets select the model class masks shown in the reference flow',
 test('tap selects the cloth model only when the build explicitly provides one', () => {
   assert.equal(resolveGarmentCutoutModel({ selectionSource: 'tap', clothModelConfigured: true }), 'u2net_cloth_seg');
   assert.equal(resolveGarmentCutoutModel({ selectionSource: 'tap', clothModelConfigured: false }), 'silueta');
+  assert.equal(resolveGarmentCutoutModel({ selectionSource: 'tap', clothModelConfigured: true, ben2ModelConfigured: true }), 'ben2');
 });
 
 test('automatic and range paths never silently switch to the cloth model', () => {

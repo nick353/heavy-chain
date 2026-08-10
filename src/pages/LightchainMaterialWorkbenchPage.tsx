@@ -75,6 +75,7 @@ import {
   buildPrintRequestSnapshot,
   renderExperimentalSurfaceComposition,
   renderPrintRequestComposition,
+  isPrintGarmentBen2ModelConfigured,
   isPrintGarmentClothModelConfigured,
   resolvePrintGarmentCutoutModel,
   suggestPrintableSurfaceDataUrl,
@@ -103,6 +104,11 @@ import {
   canCommitPrintableSuggestion,
   type PrintableSuggestionCommitToken,
 } from '../features/printing/surface/printableSuggestionRequest';
+import {
+  persistPrintResultHistory,
+  releaseRestoredPrintResult,
+  restorePrintResultHistory,
+} from '../lib/printResultHistoryPersistence';
 import {
   canExplicitlyConfirmProcessedGarmentMask,
   DEFAULT_GARMENT_SEGMENTATION_TARGET,
@@ -171,6 +177,7 @@ type WorkbenchResult = {
   note: string;
   imageUrl: string;
   outputSize?: { width: number; height: number };
+  assetRef?: string;
 };
 
 type ProgressivePrintSurface = {
@@ -269,6 +276,8 @@ function WorkbenchResultCard({
             <a
               href={result.imageUrl}
               download={`heavy-chain-${result.id}-${result.outputSize.width}x${result.outputSize.height}.png`}
+              data-testid={`print-result-download-${result.id}`}
+              aria-label={`${result.title}のPNGをダウンロード`}
               className="inline-flex rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 transition hover:border-cyan-300/40 hover:text-cyan-100"
             >
               PNGをダウンロード
@@ -467,6 +476,7 @@ const printPreviewStageSize = { width: 720, height: 900 };
 const IMAGE_LOAD_TIMEOUT_MS = 30_000;
 const CUTOUT_TIMEOUT_MS = 75_000;
 const CLOTH_CUTOUT_TIMEOUT_MS = 105_000;
+const BEN2_CUTOUT_TIMEOUT_MS = 180_000;
 const COMPOSITION_TIMEOUT_MS = 30_000;
 
 function clamp(value: number, min: number, max: number) {
@@ -674,6 +684,7 @@ export function LightchainMaterialWorkbenchPage() {
   const [fabricPresetIds, setFabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
   const [printGarmentCutoutSourceUrl, setPrintGarmentCutoutSourceUrl] = useState<string | null>(null);
+  const [printGarmentSelectionMaskUrl, setPrintGarmentSelectionMaskUrl] = useState<string | null>(null);
   const [printGarmentSelectionSource, setPrintGarmentSelectionSource] = useState<GarmentSelectionSource>('automatic');
   const [printGarmentSegmentationTarget, setPrintGarmentSegmentationTarget] = useState<GarmentSegmentationTarget>(
     DEFAULT_GARMENT_SEGMENTATION_TARGET,
@@ -727,6 +738,10 @@ export function LightchainMaterialWorkbenchPage() {
   const surfaceJobSequenceRef = useRef(0);
   const generationRequestRef = useRef<number | null>(null);
   const generationRequestSignatureRef = useRef<string | null>(null);
+  const printHistoryHydrationGenerationRef = useRef(0);
+  const printHistoryHydratedBrandRef = useRef<string | null>(null);
+  const restoredPrintResultUrlsRef = useRef(new Map<string, string>());
+  const printHistoryPersistenceGenerationRef = useRef(0);
   const selectedPrintGarmentMaskCandidateIdRef = useRef(selectedPrintGarmentMaskCandidateId);
   const printGarmentMaskRevisionRef = useRef(printGarmentMaskRevision);
   const printGarmentProcessedRef = useRef(printGarmentProcessed);
@@ -738,13 +753,15 @@ export function LightchainMaterialWorkbenchPage() {
     [printGarmentMaskCandidates, selectedPrintGarmentMaskCandidateId],
   );
   const clothModelConfigured = isPrintGarmentClothModelConfigured();
+  const ben2ModelConfigured = isPrintGarmentBen2ModelConfigured();
   const printGarmentSegmentationStatus = useMemo(() => garmentSelectionModelStatus({
     selectionSource: printGarmentSelectionSource,
     clothModelConfigured,
+    ben2ModelConfigured,
     resultEngine: selectedPrintGarmentMaskCandidate?.result.engine,
     requestedTarget: printGarmentSegmentationTarget,
     resultTarget: selectedPrintGarmentMaskCandidate?.result.segmentationTarget,
-  }), [clothModelConfigured, printGarmentSegmentationTarget, printGarmentSelectionSource, selectedPrintGarmentMaskCandidate]);
+  }), [ben2ModelConfigured, clothModelConfigured, printGarmentSegmentationTarget, printGarmentSelectionSource, selectedPrintGarmentMaskCandidate]);
   const hasConfirmedPrintGarmentMask = isGarmentMaskExplicitlyConfirmed({
     selectionSource: printGarmentSelectionSource,
     maskCandidateId: selectedPrintGarmentMaskCandidateId,
@@ -898,11 +915,79 @@ export function LightchainMaterialWorkbenchPage() {
     setGenerationError('素材が変更されたため、進行中の生成結果を無効化しました。内容を確認して再生成してください。');
   }, [generatedResults.length, generationInputSignature]);
 
+  useEffect(() => {
+    if (!isPrinting || !currentBrand?.id) return;
+    const brandId = currentBrand.id;
+    const hydrationGeneration = ++printHistoryHydrationGenerationRef.current;
+    printHistoryHydratedBrandRef.current = null;
+    restoredPrintResultUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    restoredPrintResultUrlsRef.current.clear();
+    setGeneratedResults((current) => current.filter(
+      (result) => !result.id.startsWith('print-') || result.brandId === brandId,
+    ));
+    let cancelled = false;
+    void restorePrintResultHistory(brandId)
+      .then((restoredResults) => {
+        if (cancelled || hydrationGeneration !== printHistoryHydrationGenerationRef.current) {
+          restoredResults.forEach(releaseRestoredPrintResult);
+          return;
+        }
+        restoredResults.forEach((result) => {
+          restoredPrintResultUrlsRef.current.set(result.id, result.imageUrl);
+        });
+        printHistoryHydratedBrandRef.current = brandId;
+        if (restoredResults.length) setGeneratedResultsStale(true);
+        setGeneratedResults((current) => {
+          if (current.some((result) => result.id.startsWith('print-'))) return current;
+          return restoredResults.length ? restoredResults : current;
+        });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.warn('Printing result history restore skipped.', error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBrand?.id, isPrinting]);
+
+  useEffect(() => () => {
+    restoredPrintResultUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    restoredPrintResultUrlsRef.current.clear();
+  }, []);
+
+  useEffect(() => {
+    if (!isPrinting || !currentBrand?.id || printHistoryHydratedBrandRef.current !== currentBrand.id) return;
+    const brandId = currentBrand.id;
+    const persistenceGeneration = ++printHistoryPersistenceGenerationRef.current;
+    const results = generatedResults.filter((result) => result.id.startsWith('print-'));
+    void persistPrintResultHistory(brandId, results)
+      .then(({ assetRefs }) => {
+        if (persistenceGeneration !== printHistoryPersistenceGenerationRef.current) return;
+        setGeneratedResults((current) => {
+          let changed = false;
+          const next = current.map((result) => {
+          const assetRef = assetRefs[result.id];
+            if (assetRef && result.assetRef !== assetRef) {
+              changed = true;
+              return { ...result, assetRef };
+            }
+            return result;
+          });
+          return changed ? next : current;
+        });
+      })
+      .catch((error) => {
+        console.warn('Printing result history persistence skipped.', error);
+      });
+  }, [currentBrand?.id, generatedResults, isPrinting]);
+
   const printSnapshotSignature = useMemo(() => {
     if (!currentBrand?.id || !printGarmentProcessed) return '';
     return buildPrintRequestSignature({
       brandId: currentBrand.id,
       brandName: currentBrand.name || 'brand',
+      coverageMode: printCoverageMode,
       stageSize: printOutputStageSize,
       garment: {
         sourceUrl: printGarmentProcessed,
@@ -913,6 +998,9 @@ export function LightchainMaterialWorkbenchPage() {
       ...(printableSurfaceEnabled && manualPrintableSurface
         ? { surfaceIdentity: manualPrintableSurface.identity }
         : {}),
+      ...(printableSurfaceEnabled && manualPrintableSurface?.occluder
+        ? { surfaceOccluderContentHash: manualPrintableSurface.occluder.contentHash }
+        : {}),
       designs: placedPrintDesignLayers.map((layer) => ({
         id: layer.id,
         sourceUrl: layer.originalUrl,
@@ -920,7 +1008,7 @@ export function LightchainMaterialWorkbenchPage() {
         transform: layer.transform,
       })),
     });
-  }, [placedPrintDesignLayers, currentBrand?.id, currentBrand?.name, manualPrintableSurface, printableSurfaceEnabled, printGarment?.referenceType, printGarmentProcessed, printGarmentMaskRevision, printOutputStageSize, selectedPrintGarmentMaskCandidateId]);
+  }, [placedPrintDesignLayers, currentBrand?.id, currentBrand?.name, manualPrintableSurface, printableSurfaceEnabled, printCoverageMode, printGarment?.referenceType, printGarmentProcessed, printGarmentMaskRevision, printOutputStageSize, selectedPrintGarmentMaskCandidateId]);
 
   const currentPrintStateRef = useRef<{ revision: number; signature: string }>({ revision: 0, signature: printSnapshotSignature });
 
@@ -1242,6 +1330,7 @@ export function LightchainMaterialWorkbenchPage() {
     clearManualPrintableSurface();
     if (!printGarment) {
       setPrintGarmentCutoutSourceUrl(null);
+      setPrintGarmentSelectionMaskUrl(null);
       setPrintGarmentSelectionSource('automatic');
       setPrintGarmentSegmentationTarget(DEFAULT_GARMENT_SEGMENTATION_TARGET);
       setPrintGarmentProcessed(null);
@@ -1260,7 +1349,9 @@ export function LightchainMaterialWorkbenchPage() {
     setSelectedPrintGarmentMaskCandidateId('auto');
     const cutoutSourceUrl = printGarmentCutoutSourceUrl ?? printGarment.url;
     const cutoutModel = resolvePrintGarmentCutoutModel({ selectionSource: printGarmentSelectionSource });
-    const cutoutTimeoutMilliseconds = cutoutModel === 'u2net_cloth_seg'
+    const cutoutTimeoutMilliseconds = cutoutModel === 'ben2'
+      ? BEN2_CUTOUT_TIMEOUT_MS
+      : cutoutModel === 'u2net_cloth_seg'
       ? CLOTH_CUTOUT_TIMEOUT_MS
       : CUTOUT_TIMEOUT_MS;
     void withTimeout(
@@ -1268,6 +1359,7 @@ export function LightchainMaterialWorkbenchPage() {
         imageUrl: cutoutSourceUrl,
         modelName: cutoutModel,
         segmentationTarget: printGarmentSegmentationTarget,
+        selectionMaskUrl: printGarmentSelectionMaskUrl ?? undefined,
       }),
       cutoutTimeoutMilliseconds,
       '参考画像の透明化がタイムアウトしました。元画像を確認して再試行してください',
@@ -1320,7 +1412,7 @@ export function LightchainMaterialWorkbenchPage() {
         printGarmentCutoutRequestRef.current += 1;
       }
     };
-  }, [clearManualPrintableSurface, invalidatePrintableSuggestion, printGarment, printGarmentCutoutSourceUrl, printGarmentSegmentationTarget, printGarmentSelectionSource]);
+  }, [clearManualPrintableSurface, invalidatePrintableSuggestion, printGarment, printGarmentCutoutSourceUrl, printGarmentSelectionMaskUrl, printGarmentSegmentationTarget, printGarmentSelectionSource]);
 
   const selectPrintGarmentMaskCandidate = (candidateId: PrintGarmentMaskCandidateId) => {
     if (candidateId === selectedPrintGarmentMaskCandidateId) return;
@@ -1999,6 +2091,7 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintPlacementConfirmed(false);
     if (placedPrintDesignLayers.length > 0) openPrintPlacementSession();
     setPrintGarmentCutoutSourceUrl(null);
+    setPrintGarmentSelectionMaskUrl(null);
     setPrintGarmentSelectionSource('automatic');
     setPrintGarmentMaskExplicitlyConfirmed(false);
     setPrintGarmentSegmentationTarget(DEFAULT_GARMENT_SEGMENTATION_TARGET);
@@ -2062,10 +2155,12 @@ export function LightchainMaterialWorkbenchPage() {
     selectedImageUrl: string,
     selectionSource: Exclude<GarmentSelectionSource, 'automatic'>,
     segmentationTarget: GarmentSegmentationTarget,
+    selectionMaskUrl?: string,
   ) => {
     invalidatePrintableSuggestion();
     setPrintGarmentSelectionOpen(false);
     setPrintGarmentCutoutSourceUrl(selectedImageUrl);
+    setPrintGarmentSelectionMaskUrl(selectionMaskUrl ?? null);
     setPrintGarmentSelectionSource(selectionSource);
     setPrintGarmentMaskExplicitlyConfirmed(selectionSource === 'tap');
     setPrintGarmentSegmentationTarget(segmentationTarget);
@@ -2074,7 +2169,7 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintGarmentProcessed(null);
     setPrintMaskEditorTarget(null);
     toast.success(selectionSource === 'tap'
-      ? '確認した青いタップマスクを適用しています'
+      ? '元画像に衣服カテゴリAIを適用し、確認マスクで範囲を制約しています'
       : '選択範囲をAIマスクへ渡しました');
   };
 
@@ -2774,7 +2869,7 @@ export function LightchainMaterialWorkbenchPage() {
                         ? '選択範囲からAIマスクを作成中です。自動候補へ戻すには別の画像を選び直してください。'
                         : printGarmentCutoutState === 'error'
                           ? '選択範囲のAIマスクに失敗しました。範囲を少し広げるか、範囲調整へ切り替えて再試行してください。'
-                          : '選択範囲からAIマスクを作成しました。自動候補へ戻すには別の画像を選び直してください。'
+                          : '元画像から衣服カテゴリAIマスクを作成しました。確認範囲の外側は除外しています。自動候補へ戻すには別の画像を選び直してください。'
                       : '服をタップすると、その服の候補範囲だけをAI切り抜きへ渡せます。細かい指定は範囲調整へ切り替えます。'}
                   </p>
                   {printGarmentCutoutState === 'done' && hasConfirmedPrintGarmentMask && (
@@ -3426,6 +3521,8 @@ export function LightchainMaterialWorkbenchPage() {
                   {isPrinting && visibleGeneratedResults.length >= 2 && (
                     <button
                       type="button"
+                      data-testid="compare-print-results"
+                      aria-label="生成結果を比較"
                       onClick={() => setShowResultComparison(true)}
                       className="rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-300/15"
                     >
@@ -3674,6 +3771,8 @@ export function LightchainMaterialWorkbenchPage() {
               <a
                 href={selectedResult.imageUrl}
                 download={`heavy-chain-${selectedResult.id}-${selectedResult.outputSize.width}x${selectedResult.outputSize.height}.png`}
+                data-testid="selected-print-result-download"
+                aria-label={`${selectedResult.title}のPNGをダウンロード`}
                 className="inline-flex rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 dark:border-white/15 dark:text-white"
               >
                 {selectedResult.outputSize.width} × {selectedResult.outputSize.height}px PNGをダウンロード

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Check, ChevronRight, Images, Layers3, Save, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
@@ -466,6 +467,23 @@ export function FashionStudioPage() {
         </div>
       </section>
 
+      <section
+        data-testid="studio-readiness-entry"
+        className="mb-5"
+      >
+        <WorkspaceReadinessStrip
+          eyebrow="LIGHTCHAIN PARITY / STUDIO START"
+          title="まず素材、モデル、撮影セットを順番に決めます"
+          description="最初から全項目を埋める必要はありません。商品素材を置き、モデルと背景を選んだら生成指示かCanvasへ進めます。"
+          nextAction="素材 → セット → 生成 / Canvas"
+          steps={[
+            { label: '素材', detail: materialReference.imageUrl ? '参照素材を選択済み' : '商品画像は後から追加できます', ready: Boolean(materialReference.imageUrl) },
+            { label: 'モデル', detail: modelProfile.split(' / ')[0], ready: Boolean(modelProfile) },
+            { label: '撮影セット', detail: `${pose.split('、')[0]} / ${background.split('、')[0]}`, ready: Boolean(pose && background) },
+            { label: '次の操作', detail: '生成指示またはCanvasへ保存', ready: Boolean(currentBrand) },
+          ]}
+        />
+      </section>
       <section
         data-testid="studio-action-panel"
         className="grid gap-4 rounded-[28px] border border-cyan-300/25 bg-cyan-300/[0.08] p-5 shadow-soft lg:grid-cols-[minmax(0,1fr)_auto]"

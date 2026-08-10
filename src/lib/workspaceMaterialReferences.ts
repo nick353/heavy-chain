@@ -55,6 +55,12 @@ import {
   REMBG_CLOTH_SEG_MODEL_SHA256,
   resolveRembgClothSegModelUrl,
 } from '../features/printing/selection/clothModelRuntimeContract';
+import { polishCutoutAlpha } from '../features/printing/matte/polishCutoutAlpha';
+import { runBen2Matting } from '../features/printing/matte/ben2Matting';
+import {
+  isBen2OnnxModelConfigured,
+  resolveBen2OnnxModelUrl,
+} from '../features/printing/matte/ben2MattingRuntimeContract';
 
 export type MaterialReferenceState = {
   imageUrl: string;
@@ -1565,6 +1571,10 @@ const rembgClothSegModelUrl = resolveRembgClothSegModelUrl({
   configuredUrl: import.meta.env.VITE_REMBG_CLOTH_SEG_MODEL_URL,
   isProduction: import.meta.env.PROD,
 });
+const ben2OnnxModelUrl = resolveBen2OnnxModelUrl({
+  configuredUrl: import.meta.env.VITE_BEN2_ONNX_MODEL_URL,
+  isProduction: import.meta.env.PROD,
+});
 
 type RembgCutoutModel =
   | GarmentCutoutModel
@@ -1608,6 +1618,7 @@ const clothModelWarmupController = createClothModelWarmupController({
 });
 
 export const isPrintGarmentClothModelConfigured = () => isRembgClothSegModelConfigured(rembgClothSegModelUrl);
+export const isPrintGarmentBen2ModelConfigured = () => isBen2OnnxModelConfigured(ben2OnnxModelUrl);
 
 export const preparePrintGarmentClothModel = async (
   onProgress?: (progress: ClothModelWarmupProgress) => void,
@@ -1628,7 +1639,47 @@ export const resolvePrintGarmentCutoutModel = ({
 }): GarmentCutoutModel => resolveGarmentCutoutModel({
   selectionSource,
   clothModelConfigured: isPrintGarmentClothModelConfigured(),
+  ben2ModelConfigured: isPrintGarmentBen2ModelConfigured(),
 });
+
+const buildBen2MaterialCutoutDataUrl = async ({
+  imageUrl,
+  maxDataUrlBytes,
+}: {
+  imageUrl: string;
+  maxDataUrlBytes: number;
+}): Promise<MaterialCutoutResult> => {
+  if (!isPrintGarmentBen2ModelConfigured()) throw new Error('ben2_model_unconfigured');
+  const image = await loadImageElement(imageUrl);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('ben2_cutout_context_missing');
+  context.drawImage(image, 0, 0, sourceWidth, sourceHeight);
+  const source = context.getImageData(0, 0, sourceWidth, sourceHeight);
+  const alpha = await runBen2Matting({
+    rgba: new Uint8ClampedArray(source.data),
+    width: sourceWidth,
+    height: sourceHeight,
+  });
+  if (alpha.length !== sourceWidth * sourceHeight) throw new Error('ben2_alpha_shape_invalid');
+  for (let pixel = 0; pixel < alpha.length; pixel += 1) {
+    source.data[(pixel * 4) + 3] = alpha[pixel];
+  }
+  context.putImageData(source, 0, 0);
+  return buildBoundedPngFromCanvas({
+    canvas,
+    sourceWidth,
+    sourceHeight,
+    maxDataUrlBytes,
+    storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
+    engine: 'browser-ai-ben2-v1',
+    validateSubjectShape: true,
+  });
+};
 
 export async function buildHighPrecisionMaterialCutoutDataUrl({
   imageUrl,
@@ -1811,24 +1862,84 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
     : result;
 }
 
+const constrainCutoutResultToSelectionMask = async ({
+  result,
+  selectionMaskUrl,
+  maxDataUrlBytes,
+}: {
+  result: MaterialCutoutResult;
+  selectionMaskUrl?: string;
+  maxDataUrlBytes: number;
+}): Promise<MaterialCutoutResult> => {
+  if (!selectionMaskUrl) return result;
+  const cutoutImage = await loadImageElement(result.dataUrl);
+  const selectionMask = await loadImageElement(selectionMaskUrl);
+  const width = cutoutImage.naturalWidth || cutoutImage.width;
+  const height = cutoutImage.naturalHeight || cutoutImage.height;
+  if (!width || !height) throw new Error('selection_mask_cutout_dimensions_invalid');
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('selection_mask_cutout_context_missing');
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(cutoutImage, 0, 0, width, height);
+  context.globalCompositeOperation = 'destination-in';
+  context.drawImage(selectionMask, 0, 0, width, height);
+  context.globalCompositeOperation = 'source-over';
+  const dataUrl = canvasToPngDataUrl(canvas);
+  const dataUrlBytes = estimateDataUrlBytes(dataUrl);
+  if (dataUrlBytes > maxDataUrlBytes) {
+    throw new Error(`選択マスクが保存上限を超えています。画像を小さくして再試行してください。${dataUrlBytes}/${maxDataUrlBytes} bytes`);
+  }
+  return {
+    ...result,
+    dataUrl,
+    dataUrlBytes,
+    outputSize: { width, height },
+  };
+};
+
 export async function buildPrintGarmentCutoutDataUrl({
   imageUrl,
   maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
   modelName = 'silueta',
   segmentationTarget = DEFAULT_GARMENT_SEGMENTATION_TARGET,
+  selectionMaskUrl,
 }: {
   imageUrl: string;
   maxDataUrlBytes?: number;
   modelName?: GarmentCutoutModel;
   segmentationTarget?: GarmentSegmentationTarget;
+  selectionMaskUrl?: string;
 }): Promise<MaterialCutoutResult> {
   const finalizeResult = async (result: MaterialCutoutResult) => {
     const verified = await assertPrintCutoutQuality(result, '参考画像');
     const image = await loadImageElement(verified.dataUrl);
     const width = image.naturalWidth || image.width;
     const height = image.naturalHeight || image.height;
+    const alphaCanvas = document.createElement('canvas');
+    alphaCanvas.width = width;
+    alphaCanvas.height = height;
+    const alphaContext = alphaCanvas.getContext('2d', { willReadFrequently: true });
+    if (!alphaContext) throw new Error('Canvasを初期化できませんでした');
+    alphaContext.drawImage(image, 0, 0, width, height);
+    const polishedRgba = polishCutoutAlpha({
+      rgba: alphaContext.getImageData(0, 0, width, height).data,
+      width,
+      height,
+    });
+    alphaContext.putImageData(new ImageData(polishedRgba, width, height), 0, 0);
+    const polishedDataUrl = alphaCanvas.toDataURL('image/png');
     const ratio = Math.min(1, PRINT_CUTOUT_MAX_OUTPUT_DIMENSION / Math.max(width, height));
-    if (ratio >= 1) return verified;
+    if (ratio >= 1) {
+      return {
+        ...verified,
+        dataUrl: polishedDataUrl,
+        dataUrlBytes: estimateDataUrlBytes(polishedDataUrl),
+      };
+    }
     const outputWidth = Math.max(1, Math.round(width * ratio));
     const outputHeight = Math.max(1, Math.round(height * ratio));
     const outputCanvas = document.createElement('canvas');
@@ -1838,7 +1949,7 @@ export async function buildPrintGarmentCutoutDataUrl({
     if (!outputContext) throw new Error('Canvasを初期化できませんでした');
     outputContext.imageSmoothingEnabled = true;
     outputContext.imageSmoothingQuality = 'high';
-    outputContext.drawImage(image, 0, 0, width, height, 0, 0, outputWidth, outputHeight);
+    outputContext.drawImage(alphaCanvas, 0, 0, width, height, 0, 0, outputWidth, outputHeight);
     const dataUrl = canvasToPngDataUrl(outputCanvas);
     return {
       ...verified,
@@ -1873,9 +1984,16 @@ export async function buildPrintGarmentCutoutDataUrl({
         validateSubjectShape: true,
       })
     : null;
+  const effectiveModelName: Exclude<GarmentCutoutModel, 'ben2'> = modelName === 'ben2'
+    ? (rembgClothSegModelUrl ? 'u2net_cloth_seg' : 'silueta')
+    : modelName;
 
   if (existingTransparentResult && transparentInputRoute === 'preserve-existing') {
-    return finalizeResult(existingTransparentResult);
+    return finalizeResult(await constrainCutoutResultToSelectionMask({
+      result: existingTransparentResult,
+      selectionMaskUrl,
+      maxDataUrlBytes,
+    }));
   }
 
   if (existingTransparentResult && transparentInputRoute === 'semantic-first') {
@@ -1883,13 +2001,17 @@ export async function buildPrintGarmentCutoutDataUrl({
       const semanticResult = await buildHighPrecisionMaterialCutoutDataUrl({
         imageUrl,
         maxDataUrlBytes,
-        modelName,
+        modelName: effectiveModelName,
         postProcessMask: false,
         constrainToSourceAlpha: true,
         segmentationTarget,
       });
       if (semanticResult.engine === GARMENT_SEMANTIC_SEGMENTATION_ENGINE) {
-        return await finalizeResult(semanticResult);
+        return await finalizeResult(await constrainCutoutResultToSelectionMask({
+          result: semanticResult,
+          selectionMaskUrl,
+          maxDataUrlBytes,
+        }));
       }
       console.warn('Cloth segmentation did not complete with the configured engine; preserving the confirmed tap mask.', {
         resultEngine: semanticResult.engine,
@@ -1897,10 +2019,43 @@ export async function buildPrintGarmentCutoutDataUrl({
     } catch (semanticError) {
       console.warn('Cloth segmentation failed; preserving the confirmed tap mask.', semanticError);
     }
-    return finalizeResult(existingTransparentResult);
+    return finalizeResult(await constrainCutoutResultToSelectionMask({
+      result: existingTransparentResult,
+      selectionMaskUrl,
+      maxDataUrlBytes,
+    }));
   }
 
   const sourceBackground = estimateBackgroundColor(sourceData.data, sourceWidth, sourceHeight);
+  if (modelName === 'ben2') {
+    try {
+      const result = await buildBen2MaterialCutoutDataUrl({ imageUrl, maxDataUrlBytes });
+      return await finalizeResult(await constrainCutoutResultToSelectionMask({
+        result,
+        selectionMaskUrl,
+        maxDataUrlBytes,
+      }));
+    } catch (ben2Error) {
+      console.warn('BEN2 garment matting failed; falling back to the configured cloth model.', ben2Error);
+      const fallbackModel: Exclude<GarmentCutoutModel, 'ben2'> = rembgClothSegModelUrl ? 'u2net_cloth_seg' : 'silueta';
+      try {
+        const fallbackResult = await buildHighPrecisionMaterialCutoutDataUrl({
+          imageUrl,
+          maxDataUrlBytes,
+          modelName: fallbackModel,
+          postProcessMask: false,
+          segmentationTarget,
+        });
+        return await finalizeResult(await constrainCutoutResultToSelectionMask({
+          result: fallbackResult,
+          selectionMaskUrl,
+          maxDataUrlBytes,
+        }));
+      } catch (fallbackError) {
+        console.warn('Configured cloth fallback also failed after BEN2.', fallbackError);
+      }
+    }
+  }
   // A tap is an explicit garment-selection intent. When the optional cloth
   // model is configured, do not let the fast uniform-background path silently
   // bypass it; the model must get the crop so it can distinguish garment
@@ -1909,7 +2064,7 @@ export async function buildPrintGarmentCutoutDataUrl({
   // bounded fallback.
   const shouldPreferConfiguredClothModel = shouldRunConfiguredClothModelForGarmentInput({
     hasTransparentPixels: Boolean(alphaBounds?.hasTransparentPixels),
-    modelName,
+    modelName: effectiveModelName,
     clothModelConfigured: Boolean(rembgClothSegModelUrl),
   });
   if (
@@ -1918,7 +2073,11 @@ export async function buildPrintGarmentCutoutDataUrl({
   ) {
     try {
       const fastResult = await buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
-      return await finalizeResult(fastResult);
+      return await finalizeResult(await constrainCutoutResultToSelectionMask({
+        result: fastResult,
+        selectionMaskUrl,
+        maxDataUrlBytes,
+      }));
     } catch (fastCutoutError) {
       console.warn('Fast uniform-background garment cutout was not usable; trying AI cutout.', {
         sourceBackground,
@@ -1931,15 +2090,23 @@ export async function buildPrintGarmentCutoutDataUrl({
     const result = await buildHighPrecisionMaterialCutoutDataUrl({
       imageUrl,
       maxDataUrlBytes,
-      modelName,
+      modelName: effectiveModelName,
       postProcessMask: false,
       segmentationTarget,
     });
-      return await finalizeResult(result);
+    return await finalizeResult(await constrainCutoutResultToSelectionMask({
+      result,
+      selectionMaskUrl,
+      maxDataUrlBytes,
+    }));
   } catch (highPrecisionError) {
     try {
       const fallback = await buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
-      return await finalizeResult(fallback);
+      return await finalizeResult(await constrainCutoutResultToSelectionMask({
+        result: fallback,
+        selectionMaskUrl,
+        maxDataUrlBytes,
+      }));
     } catch (fallbackError) {
       const detail = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
       console.warn('Print garment cutout failed', { highPrecisionError, fallbackError });
