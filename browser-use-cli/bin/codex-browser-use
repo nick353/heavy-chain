@@ -5591,7 +5591,10 @@ def state_text():
     return js({state_expression})
 
 def element_bbox(index):
-    return js("(()=>{{const e=Array.from(document.querySelectorAll('body *'))[%d];if(!e)return null;const r=e.getBoundingClientRect();return {{x:r.x,y:r.y,width:r.width,height:r.height}};}})()" % int(index))
+    # Numeric targets are resolved from a fresh DOM snapshot.  Scroll the
+    # resolved element into the viewport before reading its box so controls
+    # below the fold cannot produce an unusable off-screen click coordinate.
+    return js("(()=>{{const e=Array.from(document.querySelectorAll('body *'))[%d];if(!e)return null;try{{e.scrollIntoView({{block:'center',inline:'nearest',behavior:'instant'}});}}catch(_){{try{{e.scrollIntoView({{block:'center',inline:'nearest'}});}}catch(__){{}}}}const r=e.getBoundingClientRect();return {{x:r.x,y:r.y,width:r.width,height:r.height}};}})()" % int(index))
 
 def attach_recording_target(target_id, activate=False):
     """Bind the daemon to the run target without stealing the OS focus.
@@ -6282,6 +6285,13 @@ def resolve_target():
         if backend is None:
             continue
         try:
+            # AX nodes may be semantically correct while still being below
+            # the current viewport.  Make the same fresh target visible
+            # before taking its box model; otherwise ax-click can dispatch to
+            # an off-screen or stale coordinate (notably upload/submit
+            # controls rendered after a long form).
+            cdp("DOM.scrollIntoViewIfNeeded", backendNodeId=int(backend))
+            wait(0.05)
             model = cdp("DOM.getBoxModel", backendNodeId=int(backend)).get("model", {})
         except Exception:
             continue

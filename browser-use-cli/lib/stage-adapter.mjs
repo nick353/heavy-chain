@@ -1740,6 +1740,19 @@ function readFlowDescriptor(descriptorPath, { automationId, runId, session, life
   });
 }
 
+export function bindBrowserUseCliEffectiveSession(contract, helper = {}) {
+  const requestedSession = String(contract?.requested_session || "");
+  const helperRequestedSession = String(helper?.requested_session || "");
+  const effectiveSession = String(helper?.session || "");
+  if (!requestedSession || helperRequestedSession !== requestedSession || !effectiveSession) {
+    throw p6RedactedError("browser_use_cli_helper_session_binding_invalid");
+  }
+  if (normalizeP6Session(effectiveSession, "effective_session") !== effectiveSession) {
+    throw p6RedactedError("browser_use_cli_helper_session_binding_invalid");
+  }
+  return Object.freeze({ ...contract, effective_session: effectiveSession });
+}
+
 /**
  * Start one Browser Use CLI flow.  The returned descriptor remains live across
  * related commands; callers must finalize it once the whole user task/run is
@@ -1794,13 +1807,13 @@ export async function startBrowserUseCliFlow({
   const descriptorPath = path.resolve(String(parsed.helper.descriptor));
   try {
     const rawDescriptor = readJsonFileStrict(descriptorPath, "browser_use_cli_flow_descriptor_invalid");
-    const activeContract = Object.freeze({ ...p6Contract, descriptor: Object.freeze({ ...p6Contract.descriptor, path: descriptorPath, identity: digestValue(descriptorPath) }), descriptor_state: "active", recorder_active: true });
+    const activeContract = Object.freeze({ ...bindBrowserUseCliEffectiveSession(p6Contract, parsed.helper), descriptor: Object.freeze({ ...p6Contract.descriptor, path: descriptorPath, identity: digestValue(descriptorPath) }), descriptor_state: "active", recorder_active: true });
     writePrivateJsonReplace(descriptorPath, { ...rawDescriptor, recorder_active: true, contract: activeContract }, "browser_use_cli_descriptor_contract_write_failed");
-    const flow = readFlowDescriptor(descriptorPath, { automationId, runId, session: resolvedSession, lifecycle, port: Number(port), contract: activeContract });
+    const flow = readFlowDescriptor(descriptorPath, { automationId, runId, session: activeContract.effective_session, lifecycle, port: Number(port), contract: activeContract });
     const tabInventory = readBrowserUseCliFlowTabInventory({ ...flow, contract: activeContract });
     return Object.freeze({ ...flow, contract: activeContract, flow_id: activeContract.flow_id, lease_id: activeContract.lease_id, generation: activeContract.generation, authority_path: authorityPath, allowed_origins: [...activeContract.normalized_origins], tab_inventory: tabInventory, started: true, cleanup_verified: false, transport: parsed.transport || browserUseCliTransportMarker() });
   } catch (error) {
-    const cleanupArgs = ["record-finalize", "--run-id", runId, "--session", resolvedSession, "--descriptor", descriptorPath];
+    const cleanupArgs = ["record-finalize", "--run-id", runId, "--session", String(parsed.helper?.session || resolvedSession), "--descriptor", descriptorPath];
     if (mode === "authorized") cleanupArgs.push("--authority", authorityPath);
     try { await spawnHelper(cleanupArgs, { timeoutMs }); } catch (_) { /* preserve the original start blocker */ }
     throw error;

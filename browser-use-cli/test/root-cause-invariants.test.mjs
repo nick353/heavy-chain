@@ -1,11 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const helper = path.join(root, "bin", "codex-browser-use");
+
+test("target coordinates scroll the fresh DOM or AX target before dispatch", () => {
+  const source = readFileSync(helper, "utf8");
+  assert.match(
+    source,
+    /e\.scrollIntoView\(\{\{block:'center',inline:'nearest',behavior:'instant'\}\}\)/,
+  );
+  assert.match(
+    source,
+    /DOM\.scrollIntoViewIfNeeded\", backendNodeId=int\(backend\)\)\s*\n\s*wait\(0\.05\)\s*\n\s*model = cdp\("DOM\.getBoxModel"/,
+  );
+});
 
 test("shared projections do not re-request login or mix current and historical completion", () => {
   const script = String.raw`
