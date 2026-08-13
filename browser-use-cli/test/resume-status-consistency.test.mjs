@@ -142,11 +142,12 @@ with tempfile.TemporaryDirectory() as temp:
     assert summary["overall_completion"] == "blocked"
     assert summary["active_runtime_count"] == 2
     assert summary["recoverable_pending_count"] == 1
-    assert summary["historical_debt_count"] == 2
+    assert summary["historical_debt_count"] == 3
     assert summary["cleanup_pending_count"] == 1
     assert summary["recording_completion_count"] == 1
-    assert summary["recording_completion_pending_count"] == 4
-    assert summary["recording_completion_status"] == "blocked"
+    assert summary["recording_completion_pending_count"] == 3
+    assert summary["recording_completion_status"] == "pending"
+    assert summary["historical_completion_status"] == "debt"
     assert summary["finalized"] is False
 
 print("ok")

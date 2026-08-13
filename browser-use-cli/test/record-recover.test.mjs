@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -143,6 +144,12 @@ for kwargs, expected in (
     except h.Blocker as exc:
         assert exc.code == expected
 h.require_temporary_delete_approval(descriptor, delete_approved=True)
+h.require_temporary_delete_approval(descriptor, preserve_temporary=True)
+try:
+    h.require_temporary_delete_approval(descriptor, delete_approved=True, preserve_temporary=True)
+    raise AssertionError("conflicting retention choices were accepted")
+except h.Blocker as exc:
+    assert exc.code == "browser_use_temporary_retention_choice_conflict"
 print("temporary deletion gate ok")
 `;
   for (const helper of helpers) {
@@ -174,6 +181,8 @@ with tempfile.TemporaryDirectory() as temp:
     first = h.room_registry_claim(config, lifecycle=h.TEMPORARY_LIFECYCLE, run_id="run-a", task_id="owner-a", port=20088)
     second = h.room_registry_claim(config, lifecycle=h.TEMPORARY_LIFECYCLE, run_id="run-b", task_id="owner-b", port=20089)
     assert {first["port"], second["port"]} == {20088, 20089}
+    assert h.re.fullmatch(r"[0-9a-f]{64}", first["helper_sha256"])
+    assert first["helper_sha256"] == h.sha256_trusted_helper(os.path.realpath(helper_path))
     try:
         h.room_registry_release(config, first["room_id"], run_id="run-b", activity="foreign-cleanup")
         raise AssertionError("foreign owner released another room")
@@ -282,6 +291,129 @@ with tempfile.TemporaryDirectory() as temp:
     assert.equal(result.status, 0, `${helper}\n${result.stdout}\n${result.stderr}`);
     assert.match(result.stdout, /no-dispatch receipt proof ok/);
   }
+});
+
+test("numeric click failures keep a bounded pre-dispatch proof by default", () => {
+  const script = String.raw`
+import importlib.util, os, tempfile
+from importlib.machinery import SourceFileLoader
+from unittest.mock import patch
+
+helper_path = os.environ["HELPER_PATH"]
+spec = importlib.util.spec_from_loader("codex_browser_use_click_proof", SourceFileLoader("codex_browser_use_click_proof", helper_path))
+h = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(h)
+
+assert h.should_capture_dispatch_proof(["click", "12"]) is True
+assert h.should_capture_dispatch_proof(["state"]) is False
+marker = h.recording_cli_failure_marker("RuntimeError: element has no visible bounding box")
+assert marker == "runtime_error_browser_use_element_no_visible_bounding_box"
+assert h.target_resolution_failed_before_dispatch(marker) is True
+
+with tempfile.TemporaryDirectory() as temp:
+    descriptor = {
+        "run_id": "run-1", "session": "session-1", "nonce": "nonce-1",
+        "profile": os.path.join(temp, "profile"), "port": 20080,
+        "authority_sha256": "a" * 64, "recording_dir": temp,
+        "dispatch_proof_target_fingerprint": h._no_dispatch_command_fingerprint(["click", "12"]),
+        "dispatch_proof_command": ["click", "12"],
+    }
+    descriptor["operation_lineage_digest"] = h.operation_lineage_digest(descriptor)
+    observation = {
+        "state_sha256": "b" * 64, "state_length": 10,
+        "tab_inventory": {"sha256": "c" * 64, "tab_count": 1},
+        "downloads": {"exists": True, "entries": 0, "sha256": "d" * 64},
+        "readback_exit": 0, "observed_at": "2026-01-01T00:00:00Z",
+    }
+    receipts = []
+    with patch.object(h, "append_operation_intent_durable"), \
+         patch.object(h, "append_operation_outcome_durable"), \
+         patch.object(h, "run_cli_keep_alive", return_value=(0, 0)), \
+         patch.object(h, "_safe_state_observation", return_value=dict(observation)), \
+         patch.object(h, "_persist_no_dispatch_receipt", side_effect=lambda _descriptor, receipt: receipts.append(receipt) or os.path.join(temp, "receipt.json")), \
+         patch.object(h, "_write_recording_descriptor"):
+        result = h.automatic_effectful_recovery_readback(
+            {"roots": {"browser_use_home": temp}}, descriptor, os.path.join(temp, "descriptor.json"),
+            {"status_path": os.path.join(temp, "recording-status.json")}, "e" * 32,
+            "browser_use_recording_command_failed", pre_dispatch_observation=observation,
+            dispatch_failure_marker=marker,
+        )
+    assert result["status"] == "verified"
+    assert result["no_dispatch_receipt_status"] == "ready_for_reconciliation"
+    assert len(receipts) == 1
+    assert receipts[0]["failure_marker"] == marker
+    assert receipts[0]["effect_observation"]["network_dispatch_started"] is False
+print("default click no-dispatch proof ok")
+`;
+  const result = spawnSync(process.env.PYTHON ?? "python3", ["-c", script], {
+    env: { ...process.env, HELPER_PATH: helpers[0] },
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, `${helpers[0]}\n${result.stdout}\n${result.stderr}`);
+  assert.match(result.stdout, /default click no-dispatch proof ok/);
+});
+
+test("upload pre-dispatch failures keep a path-free owner-bound proof", () => {
+  const script = String.raw`
+import importlib.util, os, tempfile
+from importlib.machinery import SourceFileLoader
+from unittest.mock import patch
+
+helper_path = os.environ["HELPER_PATH"]
+spec = importlib.util.spec_from_loader("codex_browser_use_upload_proof", SourceFileLoader("codex_browser_use_upload_proof", helper_path))
+h = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(h)
+
+assert h.should_capture_dispatch_proof(["upload", "1", "/private/canary/secret-image.png"]) is True
+marker = h.recording_cli_failure_marker("RuntimeError: upload_file_input_not_found")
+assert marker == "runtime_error_upload_file_input_not_found"
+assert marker in h.NO_DISPATCH_FAILURE_MARKERS
+
+with tempfile.TemporaryDirectory() as temp:
+    command = ["upload", "1", "/private/canary/secret-image.png"]
+    descriptor = {
+        "run_id": "run-1", "session": "session-1", "nonce": "nonce-1",
+        "profile": os.path.join(temp, "profile"), "port": 20080,
+        "authority_sha256": "a" * 64, "recording_dir": temp,
+        "dispatch_proof_target_fingerprint": h._no_dispatch_command_fingerprint(command),
+        "dispatch_proof_command": command,
+        "dispatch_proof_command_public": h._dispatch_proof_public_command(command),
+    }
+    descriptor["operation_lineage_digest"] = h.operation_lineage_digest(descriptor)
+    observation = {
+        "state_sha256": "b" * 64, "state_length": 10,
+        "tab_inventory": {"sha256": "c" * 64, "tab_count": 1},
+        "downloads": {"exists": True, "entries": 0, "sha256": "d" * 64},
+        "readback_exit": 0, "observed_at": "2026-01-01T00:00:00Z",
+    }
+    receipts = []
+    with patch.object(h, "append_operation_intent_durable"), \
+         patch.object(h, "append_operation_outcome_durable"), \
+         patch.object(h, "run_cli_keep_alive", return_value=(0, 0)), \
+         patch.object(h, "_safe_state_observation", return_value=dict(observation)), \
+         patch.object(h, "_persist_no_dispatch_receipt", side_effect=lambda _descriptor, receipt: receipts.append(receipt) or os.path.join(temp, "receipt.json")), \
+         patch.object(h, "_write_recording_descriptor"):
+        result = h.automatic_effectful_recovery_readback(
+            {"roots": {"browser_use_home": temp}}, descriptor, os.path.join(temp, "descriptor.json"),
+            {"status_path": os.path.join(temp, "recording-status.json")}, "e" * 32,
+            "browser_use_recording_command_failed", pre_dispatch_observation=observation,
+            dispatch_failure_marker=marker,
+        )
+    assert result["status"] == "verified"
+    assert result["no_dispatch_receipt_status"] == "ready_for_reconciliation"
+    assert len(receipts) == 1
+    assert receipts[0]["command_name"] == "upload"
+    assert receipts[0]["command"] == ["upload", "file-input-index", "path"]
+    assert "/private/canary/secret-image.png" not in str(receipts[0])
+    h._validate_no_dispatch_receipt(descriptor, "e" * 32, receipts[0])
+print("upload no-dispatch proof ok")
+`;
+  const result = spawnSync(process.env.PYTHON ?? "python3", ["-c", script], {
+    env: { ...process.env, HELPER_PATH: helpers[0] },
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, `${helpers[0]}\n${result.stdout}\n${result.stderr}`);
+  assert.match(result.stdout, /upload no-dispatch proof ok/);
 });
 
 test("stale temporary recording recovery is bounded, owned, and effect-safe", () => {
@@ -781,7 +913,7 @@ for mode, lifecycle in (("public", "single-use"), ("authorized", "single-use"), 
 authority_base = dict(base, thread_id="thread-1", host_id="host-1", source_handoff="opaque-handoff")
 with patch.object(h, "read_toml", return_value=config), patch.object(h, "validate_installation", return_value={}), patch.object(h, "validate_recording_tools", return_value={}), patch.object(h, "validate_recording_runtime", return_value=runtime):
     expect_block(lambda: h.record_start(argparse.Namespace(**dict(authority_base, authority=None))), "browser_use_authority_required")
-    expect_block(lambda: h.record_start(argparse.Namespace(**dict(authority_base, authority="/does/not/exist/authority.json"))), "browser_use_path_missing")
+    expect_block(lambda: h.record_start(argparse.Namespace(**dict(authority_base, authority="/does/not/exist/authority.json"))), "browser_use_authority_path_missing")
 
 print("owner metadata ok")
 `;
@@ -838,6 +970,20 @@ with tempfile.TemporaryDirectory() as temp:
         assert h._cleanup_execute_failure(config, uncreated, None, h.TEMPORARY_LIFECYCLE) is None
     assert "temporary_profile_preserved" not in uncreated["cleanup"]
     assert uncreated["cleanup"].get("uncertain") is not True
+
+    single_use_prelaunch = context(config, profile, profile_created=False)
+    single_use_prelaunch["lifecycle"] = "single-use"
+    single_use_prelaunch["profile"] = None
+    with patch.object(h, "close_owned_daemon_if_active", return_value=(True, None)), patch.object(h, "_release_locks_after_verified_cleanup", return_value=(True, None)):
+        assert h._cleanup_execute_failure(config, single_use_prelaunch, None, "single-use") is None
+    assert single_use_prelaunch["cleanup"].get("uncertain") is not True
+
+    startup_room = context(config, profile, profile_created=False)
+    startup_room.update({"room_id": "room-startup", "room_terminal_cleanup": True})
+    with patch.object(h, "close_owned_daemon_if_active", return_value=(True, None)), \
+         patch.object(h, "room_registry_release", return_value={"room_id": "room-startup", "state": "released"}) as room_release:
+        assert h._cleanup_execute_failure(config, startup_room, None, h.TEMPORARY_LIFECYCLE) is None
+    room_release.assert_called_once_with(config, "room-startup", run_id="run-1", activity="release")
 
     created_then_missing = context(config, profile, profile_created=True)
     with patch.object(h, "close_owned_daemon_if_active", return_value=(True, None)):
@@ -1303,5 +1449,17 @@ print("receipt retry binding contract ok")
     });
     assert.equal(result.status, 0, `${helper}\n${result.stdout}\n${result.stderr}`);
     assert.match(result.stdout, /receipt retry binding contract ok/);
+  }
+});
+
+test("upload command rebinds a repainted file input before dispatch", () => {
+  for (const helper of helpers) {
+    const source = readFileSync(helper, "utf8");
+    assert.match(source, /DOM\.describeNode[\s\S]{0,900}backend_node_id/u);
+    assert.match(source, /Runtime\.evaluate[\s\S]{0,1800}DOM\.requestNode/u);
+    assert.match(source, /Target\.getTargets[\s\S]{0,1800}DOM\.querySelectorAll/u);
+    assert.match(source, /session_id=candidate_session_id[\s\S]{0,500}DOM\.setFileInputFiles/u);
+    assert.match(source, /upload_file_input_dispatch_failed/u);
+    assert.match(source, /upload_file_input_not_found/u);
   }
 });

@@ -18,13 +18,24 @@ expected_files=(
   "scripts/install.sh"
   "scripts/installer-smoke.sh"
   "scripts/publication-scan.sh"
+  "scripts/sync-live.sh"
+  "test/auth-wait.test.mjs"
   "test/portable-smoke.test.mjs"
   "test/record-recover.test.mjs"
+  "test/state-redaction.test.mjs"
 )
 
 is_expected_file() {
   local candidate="$1"
   local expected
+  case "${candidate}" in
+    ./test/*.test.mjs)
+      # The test suite is intentionally extensible.  Admit only regular
+      # package-local test files; symlinks remain rejected by the caller.
+      [[ -f "${candidate}" && ! -L "${candidate}" ]]
+      return
+      ;;
+  esac
   for expected in "${expected_files[@]}"; do
     if [[ "${candidate}" == "./${expected}" ]]; then
       return 0

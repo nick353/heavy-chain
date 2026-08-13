@@ -7,6 +7,7 @@ import argparse
 import importlib.metadata
 import os
 import pathlib
+import plistlib
 import shutil
 import site
 import stat
@@ -51,6 +52,8 @@ def chrome_executable() -> pathlib.Path:
 
 
 def version(path: pathlib.Path, kind: str) -> str:
+    import re
+
     if kind == "browser_use":
         try:
             value = importlib.metadata.version("browser-use")
@@ -61,13 +64,27 @@ def version(path: pathlib.Path, kind: str) -> str:
         return value
     if kind == "python":
         return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    if kind == "chrome":
+        # macOS Chrome may block while launched with --version (for example
+        # when an existing GUI instance owns the profile). Read the signed
+        # bundle metadata instead; this is deterministic and does not launch
+        # Chrome. Fall back to the CLI only for non-bundle Chromium installs.
+        bundle_info = path.parent.parent / "Info.plist"
+        if bundle_info.is_file():
+            try:
+                with bundle_info.open("rb") as handle:
+                    metadata = plistlib.load(handle)
+                text = str(metadata.get("CFBundleShortVersionString") or metadata.get("CFBundleVersion") or "")
+                match = re.search(r"(\d+\.\d+(?:\.\d+){1,2})", text)
+                if match:
+                    return match.group(1)
+            except (OSError, plistlib.InvalidFileException, ValueError, TypeError):
+                pass
     try:
         result = subprocess.run([str(path), "--version"], check=False, capture_output=True, text=True, timeout=10)
     except (OSError, subprocess.SubprocessError) as exc:
         raise SystemExit(f"browser_use_cli_configure_{kind}_version_unavailable") from exc
     text = f"{result.stdout} {result.stderr}"
-    import re
-
     match = re.search(r"(\d+\.\d+(?:\.\d+){1,2})", text)
     if not match:
         raise SystemExit(f"browser_use_cli_configure_{kind}_version_unavailable")

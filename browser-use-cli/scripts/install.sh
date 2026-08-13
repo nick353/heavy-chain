@@ -121,10 +121,20 @@ fi
 
 existing_helper=0
 existing_helper_same_target=0
+existing_helper_symlink=0
+if [[ ! -f "${target_path}" || -L "${target_path}" ]]; then
+  echo "browser_use_cli_install_source_not_regular:${target_path}" >&2
+  exit 1
+fi
 if [[ -e "${link_path}" || -L "${link_path}" ]]; then
   existing_helper=1
+  if [[ -L "${link_path}" ]]; then
+    existing_helper_symlink=1
+  fi
   resolved="$("${python_bin}" -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "${link_path}")"
   if [[ "${resolved}" == "${target_path}" ]]; then
+    existing_helper_same_target=1
+  elif [[ -f "${link_path}" && ! -L "${link_path}" ]] && cmp -s "${link_path}" "${target_path}"; then
     existing_helper_same_target=1
   elif [[ "${BROWSER_USE_FORCE_INSTALL:-0}" != "1" ]]; then
     echo "browser_use_cli_install_existing_helper_conflict:${link_path}" >&2
@@ -138,8 +148,8 @@ chmod 700 "${bin_dir}"
 backup_dir=""
 config_backup=""
 config_had_existing=0
-backup_link=""
-temporary_link="${link_path}.tmp.$$"
+backup_helper=""
+temporary_helper="${link_path}.tmp.$$"
 transaction_succeeded=0
 link_swap_succeeded=0
 
@@ -170,13 +180,13 @@ cleanup_created_paths() {
 
 rollback_install() {
   if [[ "${transaction_succeeded}" != "1" ]]; then
-    rm -f "${temporary_link}"
-    if [[ -n "${backup_link}" && ( -e "${backup_link}" || -L "${backup_link}" ) ]]; then
+    rm -f "${temporary_helper}"
+    if [[ -n "${backup_helper}" && ( -e "${backup_helper}" || -L "${backup_helper}" ) ]]; then
       rm -f "${link_path}"
-      mv "${backup_link}" "${link_path}"
+      mv "${backup_helper}" "${link_path}"
     elif [[ "${link_swap_succeeded}" == "1" ]]; then
       rm -f "${link_path}"
-      if [[ "${existing_helper_same_target}" == "1" ]]; then
+      if [[ "${existing_helper_same_target}" == "1" && "${existing_helper_symlink}" == "1" ]]; then
         ln -s "${target_path}" "${link_path}"
       fi
     fi
@@ -207,14 +217,20 @@ fi
 
 "${python_bin}" "${repo_root}/scripts/configure.py" --state-root "${state_root}" --config "${config_path}"
 
-if [[ "${existing_helper}" == "1" && "${existing_helper_same_target}" != "1" ]]; then
-  backup_link="${link_path}.backup.$(date +%Y%m%d%H%M%S).$$"
-  mv "${link_path}" "${backup_link}"
+if [[ "${existing_helper}" == "1" ]]; then
+  backup_helper="${link_path}.backup.$(date +%Y%m%d%H%M%S).$$"
+  mv "${link_path}" "${backup_helper}"
 fi
-ln -s "${target_path}" "${temporary_link}"
-mv -f "${temporary_link}" "${link_path}"
+
+cp -p "${target_path}" "${temporary_helper}"
+chmod 700 "${temporary_helper}"
+if [[ ! -f "${temporary_helper}" || -L "${temporary_helper}" ]]; then
+  echo "browser_use_cli_install_staged_helper_not_regular:${temporary_helper}" >&2
+  exit 1
+fi
+mv -f "${temporary_helper}" "${link_path}"
 link_swap_succeeded=1
-chmod 700 "${target_path}"
+chmod 700 "${link_path}"
 
 "${repo_root}/scripts/doctor.sh" --config "${config_path}" --state-root "${state_root}"
 transaction_succeeded=1

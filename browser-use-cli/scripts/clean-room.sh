@@ -10,8 +10,9 @@ tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/browser-use-cli-cleanroom.XXXXXX")"
 trap 'rm -rf "${tmp_root}"' EXIT
 state_root="${tmp_root}/state"
 config_path="${tmp_root}/browser-use-runtime.toml"
+helper_path="${repo_root}/bin/codex-browser-use"
 "${python_bin}" "${repo_root}/scripts/configure.py" --state-root "${state_root}" --config "${config_path}"
-BROWSER_USE_STATE_ROOT="${state_root}" BROWSER_USE_RUNTIME_CONFIG="${config_path}" "${repo_root}/scripts/doctor.sh" --config "${config_path}" --state-root "${state_root}"
-BROWSER_USE_STATE_ROOT="${state_root}" BROWSER_USE_RUNTIME_CONFIG="${config_path}" "${python_bin}" "${repo_root}/bin/codex-browser-use" validate
+BROWSER_USE_STATE_ROOT="${state_root}" BROWSER_USE_RUNTIME_CONFIG="${config_path}" BROWSER_USE_CLI_HELPER="${helper_path}" "${repo_root}/scripts/doctor.sh" --config "${config_path}" --state-root "${state_root}" --helper "${helper_path}"
+BROWSER_USE_STATE_ROOT="${state_root}" BROWSER_USE_RUNTIME_CONFIG="${config_path}" BROWSER_USE_CLI_HELPER="${helper_path}" "${python_bin}" "${helper_path}" validate
 node --test "${repo_root}/test/portable-smoke.test.mjs"
 echo "browser_use_cli_cleanroom_completed"

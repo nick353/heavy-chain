@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import crypto from "node:crypto";
 import net from "node:net";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync, spawn } from "node:child_process";
@@ -13,6 +14,20 @@ const process = globalThis.process || {
   pid: 0,
   getuid: undefined,
 };
+const HOST_HOME = os.homedir();
+// Codex App's NodeREPL does not expose the host process environment to
+// imported modules. The Browser Use helper is a Python entrypoint whose
+// shebang resolves through env, so an empty inherited PATH makes the official
+// bridge fail before it can emit a JSON receipt. Keep a minimal canonical
+// executable path for that host while preserving an explicitly supplied PATH.
+const DEFAULT_CHILD_PATH = [
+  "/usr/local/bin",
+  "/opt/homebrew/bin",
+  "/usr/bin",
+  "/bin",
+  "/usr/sbin",
+  "/sbin",
+].join(path.delimiter);
 
 /**
  * Shared Browser Use CLI stage boundary for registered automations.
@@ -25,10 +40,41 @@ const process = globalThis.process || {
  * as completed.
  */
 
-const DEFAULT_STATE_ROOT = path.resolve(String(process.env.BROWSER_USE_STATE_ROOT || path.join(process.env.HOME || ".", ".browser-use-cli")));
+const DEFAULT_STATE_ROOT = path.resolve(String(process.env.BROWSER_USE_STATE_ROOT || path.join(process.env.HOME || HOST_HOME, ".browser-use-cli")));
 export const BROWSER_USE_HOME = path.resolve(String(process.env.BROWSER_USE_HOME || DEFAULT_STATE_ROOT));
-export const BROWSER_USE_CLI_HELPER = path.resolve(String(process.env.BROWSER_USE_CLI_HELPER || path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "codex-browser-use")));
+const PACKAGE_HELPER = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "bin", "codex-browser-use");
+const INSTALLED_HELPER = path.join(process.env.HOME || HOST_HOME, ".local", "bin", "codex-browser-use");
+// The installed entrypoint is the live lane after installation. The package
+// helper remains the deterministic fallback for a clean checkout before
+// installation. Live adapters import this package, never a global skill copy.
+export const BROWSER_USE_CLI_HELPER = path.resolve(String(
+  process.env.BROWSER_USE_CLI_HELPER
+    || (fs.existsSync(INSTALLED_HELPER) ? INSTALLED_HELPER : PACKAGE_HELPER),
+));
 export const BROWSER_USE_RUNTIME_CONFIG = path.resolve(String(process.env.BROWSER_USE_RUNTIME_CONFIG || path.join(BROWSER_USE_HOME, "browser-use-runtime.toml")));
+
+export function browserUseCliChildEnvironment(baseEnv = process.env) {
+  return Object.freeze({
+    ...(baseEnv || {}),
+    HOME: String(baseEnv?.HOME || HOST_HOME),
+    PATH: String(baseEnv?.PATH || DEFAULT_CHILD_PATH),
+    BROWSER_USE_HOME,
+    BROWSER_USE_RUNTIME_CONFIG,
+    BROWSER_USE_CLI_HELPER,
+  });
+}
+
+export function createBrowserUseCliActionNonce({ runId = "", actionSequence = 0, salt = "" } = {}) {
+  const sequence = Number.isSafeInteger(Number(actionSequence)) && Number(actionSequence) >= 0
+    ? String(Number(actionSequence))
+    : "0";
+  const digest = crypto.createHash("sha256")
+    .update(`${String(runId)}:${sequence}:${String(salt)}:${crypto.randomUUID()}`)
+    .digest("hex")
+    .slice(0, 32);
+  return `bu-${digest}-${sequence}`;
+}
+
 export const BROWSER_USE_CLI_SURFACE = "browser_use_cli";
 export const BROWSER_USE_CLI_ADAPTER_SCHEMA = "browser_use_cli_stage_observation.v1";
 export const BROWSER_USE_CLI_START_DESCRIPTOR_SCHEMA = "browser_use_cli_start_descriptor.v1";
@@ -50,10 +96,127 @@ export const BROWSER_USE_CLI_FINALIZE_ACCEPTANCE = Object.freeze({
   unknown_process_policy: "never_kill_unknown; exact blocker",
   business_effect_proof: "navigation_readback_is_not_business_completion",
 });
+export const CODEX_APP_RUN_NOW_CAPABILITY_SCHEMA = "codex_app_run_now_capability.v1";
+export const CODEX_APP_RUN_NOW_BLOCKER = "codex_app_automation_run_now_api_unavailable";
+export const CODEX_APP_REGISTERED_ROOT_RECEIPT_SCHEMA = "codex_app_registered_root_receipt.v1";
+export const CODEX_APP_REGISTERED_ROOT_RECEIPT_AUDIENCE = "codex_app_registered_automation";
+const CODEX_APP_REGISTERED_ROOT_RECEIPT_MAX_TTL_MS = 60 * 60 * 1000;
+const CODEX_APP_REGISTERED_ROOT_RECEIPT_FIELDS = [
+  "schema", "issuer", "audience", "automation_id", "registered_prompt_sha256", "prompt_version",
+  "invocation_id", "thread_id", "turn_id", "session_id", "run_id", "issued_at", "expires_at", "nonce",
+];
+const CODEX_APP_RUN_NOW_HANDLER_NAMES = new Set([
+  "codex_app__automation_run_now",
+  "codex_app__automation_run_now_handler",
+  "codex_app__run_automation_now",
+]);
+
+/**
+ * Inspect only a current-turn handler snapshot.  The management card handler
+ * is intentionally reported as view-only and can never authorize a receipt.
+ */
+export function diagnoseCodexAppRunNowCapability({ handlerSnapshot = {} } = {}) {
+  const names = Array.isArray(handlerSnapshot)
+    ? new Set(handlerSnapshot.map((value) => String(value)))
+    : new Set(handlerSnapshot && typeof handlerSnapshot === "object" ? Object.keys(handlerSnapshot).filter((name) => handlerSnapshot[name] !== false && handlerSnapshot[name] !== null) : []);
+  const runNowHandlers = [...names].filter((name) => CODEX_APP_RUN_NOW_HANDLER_NAMES.has(name)).sort();
+  const viewHandlerExposed = names.has("codex_app__automation_update");
+  const available = runNowHandlers.length > 0;
+  return Object.freeze({
+    schema: CODEX_APP_RUN_NOW_CAPABILITY_SCHEMA,
+    status: available ? "available" : "blocked",
+    run_now_handler_exposed: available,
+    run_now_handlers: Object.freeze(runNowHandlers),
+    view_handler_exposed: viewHandlerExposed,
+    view_handler_is_not_run_now: viewHandlerExposed,
+    receipt_issuance_allowed: available,
+    exact_blocker: available ? null : CODEX_APP_RUN_NOW_BLOCKER,
+  });
+}
+
+export function requireCodexAppRunNowCapability(options = {}) {
+  const diagnostic = diagnoseCodexAppRunNowCapability(options);
+  if (diagnostic.status !== "available") throw exactError(CODEX_APP_RUN_NOW_BLOCKER, { capability: diagnostic });
+  return diagnostic;
+}
+
+/**
+ * Validate the official App handler's returned receipt without creating one.
+ * The nonce set is caller-owned and must be persisted by the real execution
+ * bridge when it needs replay protection across process restarts.
+ */
+export function validateCodexAppRunNowResult({ handlerSnapshot = {}, officialResult = null, expectedBinding = {}, consumedNonces } = {}) {
+  const capability = requireCodexAppRunNowCapability({ handlerSnapshot });
+  if (!(consumedNonces instanceof Set)) throw exactError("codex_app_registered_root_receipt_replay_guard_required");
+  if (!officialResult || typeof officialResult !== "object" || Array.isArray(officialResult)) throw exactError("codex_app_registered_root_receipt_invalid");
+  const handlerName = String(officialResult.handler_name || "").trim();
+  if (!capability.run_now_handlers.includes(handlerName)) throw exactError("codex_app_registered_root_receipt_invalid");
+  const resultFields = ["invocation_id", "thread_id", "turn_id", "session_id", "run_id"];
+  for (const field of resultFields) if (!String(officialResult[field] || "").trim()) throw exactError("codex_app_registered_root_receipt_invalid");
+  const receipt = officialResult.receipt;
+  if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) throw exactError("codex_app_registered_root_receipt_invalid");
+  for (const field of CODEX_APP_REGISTERED_ROOT_RECEIPT_FIELDS) if (!(field in receipt)) throw exactError("codex_app_registered_root_receipt_invalid");
+  if (receipt.schema !== CODEX_APP_REGISTERED_ROOT_RECEIPT_SCHEMA || receipt.issuer !== handlerName || receipt.audience !== CODEX_APP_REGISTERED_ROOT_RECEIPT_AUDIENCE) throw exactError("codex_app_registered_root_receipt_invalid");
+  for (const field of ["automation_id", "prompt_version", ...resultFields]) if (typeof receipt[field] !== "string" || !receipt[field].trim()) throw exactError("codex_app_registered_root_receipt_invalid");
+  if (!/^[a-f0-9]{64}$/u.test(String(receipt.registered_prompt_sha256 || "")) || !/^[a-f0-9]{32,128}$/u.test(String(receipt.nonce || ""))) throw exactError("codex_app_registered_root_receipt_invalid");
+  const issuedAt = Date.parse(String(receipt.issued_at || ""));
+  const expiresAt = Date.parse(String(receipt.expires_at || ""));
+  if (!Number.isFinite(issuedAt) || !Number.isFinite(expiresAt) || expiresAt <= issuedAt || expiresAt - issuedAt > CODEX_APP_REGISTERED_ROOT_RECEIPT_MAX_TTL_MS || Date.now() < issuedAt || Date.now() >= expiresAt) throw exactError("codex_app_registered_root_receipt_invalid");
+  for (const field of resultFields) if (receipt[field] !== officialResult[field]) throw exactError("codex_app_registered_root_receipt_invalid");
+  for (const [field, expected] of Object.entries(expectedBinding || {})) if (!(field in receipt) || receipt[field] !== expected) throw exactError("codex_app_registered_root_receipt_invalid");
+  if (consumedNonces.has(receipt.nonce)) throw exactError("codex_app_registered_root_receipt_replay");
+  consumedNonces.add(receipt.nonce);
+  return Object.freeze(Object.fromEntries(CODEX_APP_REGISTERED_ROOT_RECEIPT_FIELDS.map((field) => [field, receipt[field]])));
+}
+
+/** Keep helper/session proof separate from OS/process proof. */
+export function buildBrowserUseCliCleanupProof(receipt = {}, { descriptorPath = "", receiptPath = "" } = {}) {
+  const cleanup = receipt?.cleanup && typeof receipt.cleanup === "object" ? receipt.cleanup : {};
+  const unknownProcesses = Array.isArray(cleanup.unknown_processes) ? [...cleanup.unknown_processes] : [];
+  const helperSession = {
+    session_close: cleanup.sessions_closed === true,
+    descriptor_finalized: receipt.finalized === true,
+    receipt_persisted: Boolean(receiptPath || receipt.receipt_path),
+    daemon_closed: cleanup.daemon_closed === true,
+    socket_absent: cleanup.socket_absent === true,
+    profile_lock_released: cleanup.profile_lock_released === true,
+  };
+  const os = {
+    expected_pid_start_identity: cleanup.pid_verified === true,
+    loopback_listener_absent: cleanup.loopback_listener_closed === true,
+    port_ownership_released: cleanup.port_ownership_released === true,
+    lock_state: cleanup.lock_cleanup === true ? "released" : "unknown",
+    unknown_processes: unknownProcesses,
+    unknown_processes_untouched: cleanup.unknown_processes_untouched !== false,
+  };
+  const helperSessionVerified = Object.values(helperSession).every(Boolean);
+  const osVerified = os.expected_pid_start_identity
+    && os.loopback_listener_absent
+    && os.port_ownership_released
+    && os.lock_state === "released"
+    && os.unknown_processes_untouched
+    && os.unknown_processes.length === 0;
+  return Object.freeze({
+    schema: "browser_use_cli_cleanup_proof.v1",
+    status: helperSessionVerified && osVerified ? "verified" : "incomplete",
+    helper_session: Object.freeze(helperSession),
+    os: Object.freeze(os),
+    descriptor_path: descriptorPath ? path.resolve(String(descriptorPath)) : "",
+    receipt_path: receiptPath ? path.resolve(String(receiptPath)) : "",
+  });
+}
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
-const MAX_OUTPUT_BYTES = 64 * 1024;
+// The helper emits a single JSON line containing a transient form snapshot
+// capped at 128KB. Keep the parent transport above that envelope size so the
+// final JSON remains parseable; durable artifacts still receive only the
+// bounded/redacted metadata returned below.
+// Keep the helper's bounded captured-readback JSON envelope parseable. The
+// raw page snapshot remains transient and is redacted/bounded before return.
+const MAX_OUTPUT_BYTES = 4 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 180_000;
+const HELPER_TIMEOUT_GRACE_MS = 2_000;
+const RECOVERY_TIMEOUT_MS = 20_000;
 const P5_PUBLIC_ORIGIN = "https://example.com";
 const P5_PUBLIC_PORT = 19980;
 const BROWSER_USE_RECORDINGS_ROOT = path.join(BROWSER_USE_HOME, "recordings");
@@ -86,7 +249,12 @@ const READ_ONLY_SOCIAL_CARD_CONTAINER_EVAL = "Array.from(document.querySelectorA
 // route.  Do not expand this to page HTML, body text, cookies, or form
 // values: those remain outside the transport readback contract.
 const READ_ONLY_APPLICATION_LINK_EVAL = "Array.from(document.querySelectorAll('a[href]')).map((a) => ({href: a.href, text: (a.innerText || a.textContent || '').trim().slice(0, 160)})).filter((a) => a.href)";
+const READ_ONLY_JOB_DETAIL_EVAL = `(() => { const clean = (value) => String(value || '').replace(/\\s+/g, ' ').trim().slice(0, 240); const root = document; const roleSelectors = ['[class*="job-details-jobs-unified-top-card__job-title"]', '[class*="jobs-unified-top-card__job-title"]', '[data-test-job-details-jobs-unified-top-card-job-title]', 'h1', 'h2', 'h3', '[role="heading"]']; const ignoredHeading = /^(?:\\d+\\s+notifications?|notifications?|home|my network|messaging|sign in|log in|join now)$/iu; const roleNode = roleSelectors.flatMap((selector) => Array.from(root.querySelectorAll(selector))).find((node) => { const text = clean(node.innerText || node.textContent); if (!text || ignoredHeading.test(text)) return false; const className = String(node.className || ''); return /job-title|top-card__job-title/iu.test(className) || /\\b(?:manager|director|specialist|lead|coordinator|analyst|marketing|engineer|designer|producer|consultant|developer|product)\\b/iu.test(text); }); const role = clean(roleNode?.innerText || roleNode?.textContent); const ancestors = []; let cursor = roleNode; for (let i = 0; cursor && i < 8; i += 1, cursor = cursor.parentElement) { const lines = String(cursor.innerText || cursor.textContent || '').split(/\\n+/).map(clean).filter(Boolean).slice(0, 12); ancestors.push({ node: cursor, lines }); } const matchingAncestors = ancestors.filter(({ lines }) => lines.some((line) => line === role || line.includes(role))); const selected = matchingAncestors.find(({ lines }) => lines.length >= 3) || matchingAncestors.find(({ lines }) => lines.length >= 2) || matchingAncestors[0] || ancestors[0] || { node: root, lines: [] }; const scopes = []; for (const entry of [selected, ...ancestors]) { if (entry.node && !scopes.includes(entry.node)) scopes.push(entry.node); } scopes.push(root); const companySelectors = ['a[href*="/company/"]', '[class~="job-details-jobs-unified-top-card__company-name"]', '[class*="job-details-jobs-unified-top-card__company-name"]', '[class*="jobs-unified-top-card__company-name"]', '[data-test-job-details-jobs-unified-top-card-company-name]', '[data-tracking-control-name*="org-name"]']; const explicitCompany = scopes.flatMap((scope) => companySelectors.flatMap((selector) => Array.from(scope.querySelectorAll(selector)))).map((node) => clean(node.innerText || node.textContent)).find(Boolean) || ''; const ignored = /^(?:jobs|home|my network|messaging|notifications|apply|save|on-site|full-time|promoted by|backfilling a role)$/iu; const nearbyLines = selected.lines.filter((line) => line && line !== role && !ignored.test(line)); const ancestorCompany = nearbyLines[0] || ''; const bodyLines = String(root.body?.innerText || '').split(/\\n+/).map(clean).filter(Boolean).slice(0, 240); const bodyRoleIndex = bodyLines.findIndex((line) => line === role || line.includes(role)); const bodyNearby = bodyRoleIndex >= 0 ? bodyLines.slice(Math.max(0, bodyRoleIndex - 4), bodyRoleIndex + 5) : []; const bodyCompany = bodyNearby.find((line) => line && line !== role && !ignored.test(line) && !/^(?:\\d+\\s+applicants?|[A-Za-z -]+,\\s*(?:Japan|Tokyo)|reposted|promoted by|on-site|full-time)$/iu.test(line)) || ''; const imageCompany = scopes.flatMap((scope) => Array.from(scope.querySelectorAll('img[alt]'))).map((node) => clean(node.getAttribute('alt'))).filter((alt) => alt && /logo/iu.test(alt)).map((alt) => alt.replace(/\\s+logo$/iu, '')).find(Boolean) || ''; return JSON.stringify({ role, company: explicitCompany || ancestorCompany || bodyCompany || imageCompany }); })()`;
 const P6_MAX_STRING_LENGTH = 512;
+// A form can place its navigation controls after the first 512 characters of
+// a read-only state snapshot. Keep this larger bound only for transient state
+// readback; it is never persisted as an artifact by the workflow adapters.
+const P6_MAX_TRANSIENT_READBACK_LENGTH = 512_000;
 const P6_MAX_ARRAY_LENGTH = 32;
 const P6_MAX_OBJECT_KEYS = 64;
 const P6_MAX_ERROR_LENGTH = 160;
@@ -96,6 +264,7 @@ const P6_ALLOWED_ACTIONS = Object.freeze([...AUTHORIZED_COMMANDS].sort());
 let p6TestCommandInvoker = null;
 export const BROWSER_USE_CLI_ALLOWED_ACTIONS = P6_ALLOWED_ACTIONS;
 export const BROWSER_USE_CLI_READ_ONLY_APPLICATION_LINK_EVAL = READ_ONLY_APPLICATION_LINK_EVAL;
+export const BROWSER_USE_CLI_READ_ONLY_JOB_DETAIL_EVAL = READ_ONLY_JOB_DETAIL_EVAL;
 export const BROWSER_USE_CLI_READ_ONLY_SOCIAL_LINK_EVAL = READ_ONLY_SOCIAL_LINK_EVAL;
 export const BROWSER_USE_CLI_READ_ONLY_SOCIAL_CARD_EVAL = READ_ONLY_SOCIAL_CARD_EVAL;
 export const BROWSER_USE_CLI_READ_ONLY_SOCIAL_FEED_CARD_EVAL = READ_ONLY_SOCIAL_FEED_CARD_EVAL;
@@ -140,6 +309,57 @@ function sha256File(filePath) {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
 }
 
+export function browserUseCliHelperSourceParity() {
+  const helperPath = path.resolve(BROWSER_USE_CLI_HELPER);
+  const packagePath = path.resolve(PACKAGE_HELPER);
+  try {
+    const helperStat = fs.statSync(helperPath);
+    const packageStat = fs.statSync(packagePath);
+    const helperDigest = sha256File(helperPath);
+    const packageDigest = sha256File(packagePath);
+    return Object.freeze({
+      helper_path: helperPath,
+      package_path: packagePath,
+      helper_sha256: helperDigest,
+      package_sha256: packageDigest,
+      same_source: fs.realpathSync(helperPath) === fs.realpathSync(packagePath) || helperDigest === packageDigest,
+      helper_owner_uid: helperStat.uid,
+      package_owner_uid: packageStat.uid,
+      helper_mode: helperStat.mode & 0o777,
+      package_mode: packageStat.mode & 0o777,
+    });
+  } catch (_) {
+    return Object.freeze({
+      helper_path: helperPath,
+      package_path: packagePath,
+      helper_sha256: "",
+      package_sha256: "",
+      same_source: false,
+      helper_owner_uid: null,
+      package_owner_uid: null,
+      helper_mode: null,
+      package_mode: null,
+    });
+  }
+}
+
+function assertBrowserUseCliHelperSourceParity() {
+  const parity = browserUseCliHelperSourceParity();
+  const currentUid = typeof process.getuid === "function" ? process.getuid() : parity.helper_owner_uid;
+  if (
+    parity.same_source !== true
+    || parity.helper_owner_uid !== currentUid
+    || parity.helper_mode !== 0o700
+  ) {
+    throw p6RedactedError("browser_use_cli_helper_source_parity_required", {
+      helper_sha256: parity.helper_sha256,
+      package_sha256: parity.package_sha256,
+      helper_mode: parity.helper_mode,
+    });
+  }
+  return parity;
+}
+
 function currentAdapterSha256() {
   return sha256Text(fs.readFileSync(new URL(import.meta.url)));
 }
@@ -159,11 +379,23 @@ function boundedString(value, max = P6_MAX_STRING_LENGTH) {
   return text.length <= max ? text : `${text.slice(0, Math.max(0, max - 1))}…`;
 }
 
+function sanitizeTransientReadbackText(value) {
+  const text = String(value ?? "")
+    .replace(/\b(value|data-value|defaultValue|aria-valuetext)\s*=\s*(["'])[^"']*\2/giu, "$1=\"<redacted>\"")
+    .replace(/\b(value|data-value|defaultValue|aria-valuetext)\s*=\s*(?!["'])([^\s>]+)/giu, "$1=<redacted>");
+  return boundedString(text, P6_MAX_TRANSIENT_READBACK_LENGTH);
+}
+
 function redactValue(value, key = "", depth = 0) {
   if (depth > 8) return "<depth-limited>";
   if (P6_SECRET_KEY.test(String(key))) return "<redacted>";
   if (typeof value === "string") {
     if (/^(?:bearer\s+|sk-[A-Za-z0-9]|gh[pousr]_[A-Za-z0-9]|eyJ[A-Za-z0-9_-]+\.)/iu.test(value) || /(?:password|token|secret|cookie)\s*[:=]/iu.test(value)) return "<redacted>";
+    // Captured readbacks are emitted as numeric command-index keys ("0",
+    // "1", ...). Treat those values as transient too, otherwise the generic
+    // 512-character string cap silently cuts the form controls and CTA at
+    // the end of a multi-page snapshot before the business adapter parses it.
+    if (["_raw_text", "state", "text", "result"].includes(String(key)) || /^\d+$/u.test(String(key))) return sanitizeTransientReadbackText(value);
     return boundedString(value);
   }
   if (typeof value === "number" || typeof value === "boolean" || value === null) return value;
@@ -176,6 +408,24 @@ function redactValue(value, key = "", depth = 0) {
 
 export function redactBrowserUseCliResult(value) {
   return Object.freeze(redactValue(value));
+}
+
+export function normalizeBrowserUseCliCapturedReadback(value) {
+  let current = value;
+  for (let depth = 0; depth < 6 && typeof current === "string"; depth += 1) {
+    try {
+      const parsed = JSON.parse(current);
+      if (parsed === current) break;
+      current = parsed;
+    } catch {
+      break;
+    }
+  }
+  // Parse the transient JSON envelope before bounded redaction. Redacting the
+  // raw stdout string first can cut a valid envelope at P6_MAX_STRING_LENGTH,
+  // making bounded role/company readback impossible. The returned structure is
+  // still redacted and is consumed in-memory; callers persist hashes/booleans.
+  return typeof current === "string" ? sanitizeTransientReadbackText(current) : redactBrowserUseCliResult(current);
 }
 
 function normalizeExternalEffects(value, fallback = "unknown") {
@@ -421,6 +671,51 @@ function validateP6Action(command, contract, { actionSequence, actionNonce } = {
   return { action, sequence, nonce };
 }
 
+const BROWSER_USE_CLI_READ_ONLY_BATCH_COMMANDS = new Set([
+  "open", "back", "switch", "state", "get", "screenshot", "extract", "wait", "scroll", "close-tab",
+]);
+const BROWSER_USE_CLI_READ_ONLY_BATCH_EVALS = new Set([
+  "location.href",
+  "document.title",
+  READ_ONLY_LINK_EVAL,
+  READ_ONLY_APPLICATION_LINK_EVAL,
+  READ_ONLY_JOB_DETAIL_EVAL,
+  READ_ONLY_SOCIAL_LINK_EVAL,
+  READ_ONLY_SOCIAL_CARD_EVAL,
+  READ_ONLY_SOCIAL_FEED_CARD_EVAL,
+  READ_ONLY_SOCIAL_CARD_CONTAINER_EVAL,
+]);
+
+/**
+ * Validate the bounded adaptive exploration lane.  This lane is deliberately
+ * read-only: it may discover a fresh page state, links, headings, and a
+ * screenshot on an unfamiliar site, but it cannot click, type, submit, post,
+ * upload, download, or delete anything.  Effectful operations remain behind
+ * the target-bound operation/approval/readback contract.
+ */
+export function validateBrowserUseCliReadOnlyBatchCommands(commands) {
+  if (!Array.isArray(commands) || commands.length < 1 || commands.length > 8) {
+    throw p6RedactedError("browser_use_cli_read_only_batch_commands_invalid");
+  }
+  const normalized = commands.map((entry) => {
+    if (!Array.isArray(entry) || entry.length === 0 || typeof entry[0] !== "string") {
+      throw p6RedactedError("browser_use_cli_read_only_batch_command_invalid");
+    }
+    const command = entry.map((value) => String(value));
+    const name = command[0];
+    if (!BROWSER_USE_CLI_READ_ONLY_BATCH_COMMANDS.has(name)) {
+      if (name !== "eval" || command.length !== 2 || !BROWSER_USE_CLI_READ_ONLY_BATCH_EVALS.has(command[1])) {
+        throw p6RedactedError("browser_use_cli_read_only_batch_effectful_command_rejected", { action: name });
+      }
+    }
+    if (name === "get" && command.length !== 2) throw p6RedactedError("browser_use_cli_read_only_batch_get_invalid");
+    if (name === "screenshot" && command.length !== 2) throw p6RedactedError("browser_use_cli_read_only_batch_screenshot_invalid");
+    if (name === "eval" && command.length !== 2) throw p6RedactedError("browser_use_cli_read_only_batch_eval_invalid");
+    return command;
+  });
+  return Object.freeze(normalized.map((command) => Object.freeze(command)));
+}
+
 export function validateBrowserUseCliFlowBinding(flow, expected = {}) {
   const contract = flow?.contract || flow;
   assertP6ContractShape(contract);
@@ -491,8 +786,9 @@ function helperSnapshotMatches(descriptor) {
   const snapshot = descriptor.helper_snapshot_path;
   if (snapshot === undefined || snapshot === null || snapshot === "") return false;
   const recordingDir = String(descriptor.recording?.recording_dir || "");
-  const expected = path.join(path.resolve(recordingDir), ".helper-generation", "codex-browser-use");
-  if (String(snapshot) !== expected) return false;
+  const generationRoot = path.join(path.resolve(recordingDir), ".helper-generation");
+  const expected = path.join(generationRoot, "codex-browser-use");
+  if (String(snapshot) !== expected && !String(snapshot).startsWith(`${generationRoot}${path.sep}`)) return false;
   try {
     assertCanonicalPath(snapshot, recordingDir, "browser_use_cli_helper_snapshot_path_invalid");
     assertOwnerMode(snapshot, 0o700, "browser_use_cli_helper_snapshot_invalid");
@@ -574,7 +870,10 @@ function normalizeDescriptor(raw, expected) {
   if (descriptor.helper_sha256 !== undefined && !/^[a-f0-9]{64}$/u.test(String(descriptor.helper_sha256))) throw exactError("browser_use_cli_helper_hash_invalid");
   const helperHashMatches = descriptor.helper_sha256 === expected.helperSha256 && /^[a-f0-9]{64}$/u.test(String(descriptor.helper_sha256));
   if (descriptor.helper_snapshot_path !== undefined && !helperSnapshotMatches(descriptor)) throw exactError("browser_use_cli_helper_snapshot_invalid");
-  if (expected.requireHelperHash === true && !helperHashMatches && !helperSnapshotMatches(descriptor)) throw exactError("browser_use_cli_helper_hash_mismatch");
+  // The current canonical helper hash is the only trust decision.  A
+  // run-pinned snapshot remains useful as historical evidence and for
+  // explicit recovery, but it must never satisfy a current helper mismatch.
+  if (expected.requireHelperHash === true && !helperHashMatches) throw exactError("browser_use_cli_helper_hash_mismatch");
   const profilePrefix = path.join(BROWSER_USE_SINGLE_USE_PROFILES_ROOT, `${expected.runId}-`);
   const downloadPrefix = path.join(BROWSER_USE_DOWNLOADS_ROOT, `${expected.runId}-`);
   const profileName = path.basename(descriptor.profile);
@@ -795,28 +1094,35 @@ function spawnHelper(args, { timeoutMs }) {
   return new Promise((resolve) => {
     const child = spawn(BROWSER_USE_CLI_HELPER, args, {
       cwd: path.dirname(BROWSER_USE_RUNTIME_CONFIG),
-      env: { ...process.env },
+      env: browserUseCliChildEnvironment(process.env),
       stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
     let settled = false;
+    let timeoutGraceTimer = null;
     const finish = (result) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      if (timeoutGraceTimer) clearTimeout(timeoutGraceTimer);
       resolve(result);
     };
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill("SIGTERM");
-      finish({ code: null, signal: "SIGTERM", timed_out: true, stdout, stderr });
+      // Give the helper a bounded chance to flush its JSON result and close
+      // its transport before classifying cleanup as unverified. Same-run
+      // recovery is still required by the caller after this grace period.
+      timeoutGraceTimer = setTimeout(() => {
+        finish({ code: null, signal: "SIGTERM", timed_out: true, child_exited: false, stdout, stderr });
+      }, HELPER_TIMEOUT_GRACE_MS);
     }, Math.max(1, Number(timeoutMs || DEFAULT_TIMEOUT_MS)));
     child.stdout.on("data", (chunk) => { stdout = appendBounded(stdout, chunk); });
     child.stderr.on("data", (chunk) => { stderr = appendBounded(stderr, chunk); });
     child.on("error", (error) => finish({ code: null, signal: null, spawn_error: error.code || "spawn_error", timed_out: timedOut, stdout, stderr }));
-    child.on("close", (code, signal) => finish({ code, signal, timed_out: timedOut, stdout, stderr }));
+    child.on("close", (code, signal) => finish({ code, signal, timed_out: timedOut, child_exited: true, stdout, stderr }));
   });
 }
 
@@ -837,12 +1143,58 @@ function invokeFlowCommand(args, options) {
   return spawnHelper(args, options);
 }
 
-function parseHelperResult(result, expectedStatus, fallbackBlocker, { allowFinalized = false } = {}) {
-  const helper = parseLastJson(result.stdout);
+const HELPER_REFRESH_READ_ONLY_COMMANDS = new Set(["state", "get", "screenshot", "extract", "wait"]);
+
+async function recoverFlowAfterTransportTimeout({ flow, authorityPath = "", timeoutMs = RECOVERY_TIMEOUT_MS } = {}) {
+  const contract = validateBrowserUseCliFlowBinding(flow, { authoritySha256: flow.contract.authority?.sha256 });
+  const args = [
+    "record-recover",
+    "--run-id", contract.run_id,
+    "--session", contract.effective_session,
+    "--descriptor", flow.descriptor_path,
+    "--max-attempts", "1",
+  ];
+  if (contract.authority.mode === "authorized") args.push("--authority", authorityPath || contract.authority.reference, "--auto-renew");
+  const result = await invokeFlowCommand(args, { timeoutMs, phase: "record-recover" });
+  const parsed = parseHelperResult(result, "recording_recovered", "browser_use_cli_flow_recovery_failed");
+  return {
+    status: parsed.helper?.status || "blocked",
+    exactBlocker: parsed.exactBlocker || "",
+    helper: parsed.helper,
+    childExited: result.child_exited !== false,
+  };
+}
+
+export function parseHelperResult(result, expectedStatus, fallbackBlocker, { allowFinalized = false } = {}) {
+  // The canonical helper normally writes one JSON receipt to stdout, but a
+  // startup/argument failure can be emitted on stderr by the Python entry
+  // point. Parse both streams so the adapter keeps the exact blocker while
+  // never persisting arbitrary diagnostics or page data.
+  const helper = parseLastJson(result.stdout) || parseLastJson(result.stderr);
   if (result.code !== 0 || !helper || helper.status !== expectedStatus || (!allowFinalized && helper.finalized === true)) {
     return { helper, exactBlocker: helper?.exact_blocker || (result.timed_out ? "browser_use_cli_helper_timeout_cleanup_unverified" : result.spawn_error || fallbackBlocker) };
   }
   return { helper, exactBlocker: "", transport: result.transport || browserUseCliTransportMarker() };
+}
+
+function flowContractAfterAuthorityRenewal(contract, helper) {
+  const digest = String(helper?.authority_sha256 || "");
+  const reference = String(helper?.authority_current_path || "");
+  const expiresAt = String(helper?.authority_expires_at || "");
+  if (!digest && !reference && !expiresAt) return contract;
+  if (!/^[a-f0-9]{64}$/u.test(digest) || !reference || !path.isAbsolute(reference) || !expiresAt) {
+    throw p6RedactedError("browser_use_cli_authority_renewal_readback_invalid");
+  }
+  const authority = Object.freeze({
+    ...contract.authority,
+    reference: path.resolve(reference),
+    sha256: digest,
+  });
+  return Object.freeze({
+    ...contract,
+    authority,
+    expires_at: expiresAt,
+  });
 }
 
 function readJsonFileStrict(filePath, code) {
@@ -1155,7 +1507,7 @@ function normalizePostCommands(postCommands, mode) {
       throw exactError("browser_use_cli_post_command_not_read_only");
     }
     assertCommandPolicy(normalized, mode);
-    if (normalized[0] === "eval" && (normalized.length !== 2 || !["location.href", "document.title", READ_ONLY_LINK_EVAL, READ_ONLY_APPLICATION_LINK_EVAL, READ_ONLY_SOCIAL_LINK_EVAL, READ_ONLY_SOCIAL_CARD_EVAL, READ_ONLY_SOCIAL_FEED_CARD_EVAL, READ_ONLY_SOCIAL_CARD_CONTAINER_EVAL].includes(normalized[1]))) {
+    if (normalized[0] === "eval" && (normalized.length !== 2 || !["location.href", "document.title", READ_ONLY_LINK_EVAL, READ_ONLY_APPLICATION_LINK_EVAL, READ_ONLY_JOB_DETAIL_EVAL, READ_ONLY_SOCIAL_LINK_EVAL, READ_ONLY_SOCIAL_CARD_EVAL, READ_ONLY_SOCIAL_FEED_CARD_EVAL, READ_ONLY_SOCIAL_CARD_CONTAINER_EVAL].includes(normalized[1]))) {
       throw exactError("browser_use_cli_post_eval_not_allowlisted");
     }
     if (normalized[0] === "screenshot" && normalized.length !== 2) {
@@ -1382,6 +1734,7 @@ function readFlowDescriptor(descriptorPath, { automationId, runId, session, life
     navigation_verified: descriptor.navigation_verified === true,
     tab_inventory_path: path.join(String(descriptor.recording_dir), "tab-inventory.json"),
     external_effects: normalizeExternalEffects(descriptor.external_effects, "none"),
+    helper_sha256: String(descriptor.helper_sha256 || ""),
     operation_ledger_path: String(descriptor.operation_ledger_path || path.join(String(descriptor.recording_dir), "operation-ledger.jsonl")),
     operation_ledger_tail_digest: String(descriptor.operation_ledger_tail_digest || ""),
   });
@@ -1418,6 +1771,7 @@ export async function startBrowserUseCliFlow({
   const p6Contract = createBrowserUseCliFlowContract({ automationId, runId, stageId, session, mode, lifecycle, authorityPath, allowedOrigins, descriptorPath: recordingDir ? path.join(path.resolve(recordingDir), "descriptor.json") : "", contract });
   if (mode === "authorized") validateP6AuthorityFile(authorityPath, { automationId, runId, stageId, contract: p6Contract });
   ensureP6LiveWindow(p6Contract);
+  assertBrowserUseCliHelperSourceParity();
   const resolvedSession = p6Contract.effective_session;
   if (port !== null && (!Number.isSafeInteger(Number(port)) || !(Number(port) >= 19880 && Number(port) <= 19999))) throw exactError("browser_use_cli_port_invalid");
   const recordingsRoot = p6RecordingsRoot();
@@ -1425,12 +1779,12 @@ export async function startBrowserUseCliFlow({
   // direct child of BROWSER_USE_HOME/recordings.  Keep the run/stage binding
   // in the directory name while preserving that helper-owned layout.
   const defaultRecordingName = `${runId}__${stageId}`;
-  const resolvedRecordingDir = path.resolve(String(recordingDir || path.join(recordingsRoot, defaultRecordingName)));
-  if (!resolvedRecordingDir.startsWith(`${recordingsRoot}${path.sep}`)) throw exactError("browser_use_cli_flow_recording_dir_invalid");
+  const resolvedRecordingDir = validateBrowserUseCliRecordingDir(recordingDir || path.join(recordingsRoot, defaultRecordingName), recordingsRoot);
   fs.mkdirSync(path.dirname(resolvedRecordingDir), { recursive: true, mode: 0o700 });
   fs.chmodSync(path.dirname(resolvedRecordingDir), 0o700);
   if (fs.existsSync(resolvedRecordingDir) && fs.readdirSync(resolvedRecordingDir).length > 0) throw exactError("browser_use_cli_flow_recording_dir_not_fresh");
   const args = ["record-start", "--mode", mode, "--run-id", runId, "--session", resolvedSession, "--automation-id", automationId, "--lifecycle", lifecycle, "--recording-dir", resolvedRecordingDir];
+  if (mode === "authorized" && lifecycle === "scheduled") args.push("--helper-generation-scope", "owner-lane");
   if (port !== null) args.push("--port", String(Number(port)));
   if (mode === "authorized") args.push("--authority", authorityPath);
   for (const origin of p6Contract.normalized_origins) args.push("--allowed-origin", String(origin));
@@ -1551,6 +1905,14 @@ export function writeBrowserUseCliFlowLease({ flow, leasePath, authorityPath = "
   return Object.freeze({ ...lease, lease_path: resolvedLeasePath });
 }
 
+export function validateBrowserUseCliRecordingDir(recordingDir, recordingsRoot = BROWSER_USE_RECORDINGS_ROOT) {
+  const root = path.resolve(String(recordingsRoot || ""));
+  const resolved = path.resolve(String(recordingDir || ""));
+  if (!resolved.startsWith(`${root}${path.sep}`)) throw exactError("browser_use_cli_flow_recording_dir_invalid");
+  if (path.dirname(resolved) !== root) throw exactError("browser_use_recording_dir_not_harness_scoped");
+  return resolved;
+}
+
 export function resumeBrowserUseCliFlowFromLease({ leasePath } = {}) {
   const lease = readFlowLease(leasePath, { status: "held" });
   const flow = readFlowDescriptor(lease.descriptor_path, {
@@ -1602,17 +1964,66 @@ export async function runBrowserUseCliFlowCommand({ flow, authorityPath = "", co
   if (!flow?.descriptor_path || !flow?.contract) throw p6RedactedError("browser_use_cli_flow_descriptor_required");
   const contract = validateBrowserUseCliFlowBinding(flow, { authoritySha256: flow.contract.authority?.sha256 });
   if (contract.authorized_scheduled_flow !== true || contract.mode !== "authorized" || contract.lifecycle !== "scheduled") throw p6RedactedError("browser_use_cli_authorized_scheduled_flow_required");
+  assertBrowserUseCliHelperSourceParity();
   if (authorityPath && flow.authority_path && path.resolve(String(authorityPath)) !== path.resolve(String(flow.authority_path))) throw p6RedactedError("browser_use_cli_authority_mismatch");
   validateP6AuthorityFile(authorityPath || contract.authority.reference, { automationId: contract.automation_id, runId: contract.run_id, stageId: contract.step_id, contract });
   const request = validateBrowserUseCliStageRequest({ automationId: contract.automation_id, runId: contract.run_id, stageId: contract.step_id, session: contract.effective_session, mode: "authorized", lifecycle: "scheduled", authorityPath: authorityPath || contract.authority.reference, allowedOrigins: contract.normalized_origins, command, postCommands: [] });
   const action = validateP6Action(request.commands[0], contract, { actionSequence, actionNonce });
-  if (captureReadback && !(request.commands[0][0] === "state" || (request.commands[0][0] === "eval" && ["location.href", "document.title", READ_ONLY_LINK_EVAL, READ_ONLY_APPLICATION_LINK_EVAL, READ_ONLY_SOCIAL_LINK_EVAL, READ_ONLY_SOCIAL_CARD_EVAL, READ_ONLY_SOCIAL_FEED_CARD_EVAL, READ_ONLY_SOCIAL_CARD_CONTAINER_EVAL].includes(request.commands[0][1])))) throw p6RedactedError("browser_use_cli_flow_capture_command_not_allowlisted");
-  readFlowDescriptor(flow.descriptor_path, { automationId: contract.automation_id, runId: contract.run_id, session: contract.effective_session, lifecycle: contract.lifecycle, port: flow.port, contract });
+  if (captureReadback && !(request.commands[0][0] === "state"
+    || (request.commands[0][0] === "get" && ["url", "title"].includes(request.commands[0][1]))
+    || (request.commands[0][0] === "eval" && ["location.href", "document.title", READ_ONLY_LINK_EVAL, READ_ONLY_APPLICATION_LINK_EVAL, READ_ONLY_JOB_DETAIL_EVAL, READ_ONLY_SOCIAL_LINK_EVAL, READ_ONLY_SOCIAL_CARD_EVAL, READ_ONLY_SOCIAL_FEED_CARD_EVAL, READ_ONLY_SOCIAL_CARD_CONTAINER_EVAL].includes(request.commands[0][1])))) throw p6RedactedError("browser_use_cli_flow_capture_command_not_allowlisted");
+  const admitted = readFlowDescriptor(flow.descriptor_path, { automationId: contract.automation_id, runId: contract.run_id, session: contract.effective_session, lifecycle: contract.lifecycle, port: flow.port, contract });
+  const normalizedCommand = request.commands[0];
+  const currentHelperDigest = sha256File(BROWSER_USE_CLI_HELPER);
+  const helperMismatch = Boolean(admitted.helper_sha256) && admitted.helper_sha256 !== currentHelperDigest;
+  const navigationCommand = ["open", "back", "switch"].includes(normalizedCommand[0]);
+  const readOnlyRefreshable = HELPER_REFRESH_READ_ONLY_COMMANDS.has(normalizedCommand[0]);
+  let helperRefreshed = false;
+  if (helperMismatch && !readOnlyRefreshable) {
+    if (navigationCommand) {
+      const recoveryArgs = ["record-command", "--run-id", contract.run_id, "--session", contract.effective_session, "--descriptor", flow.descriptor_path, "--refresh-helper"];
+      if (contract.authority.mode === "authorized") recoveryArgs.push("--authority", authorityPath || contract.authority.reference, "--auto-renew");
+      recoveryArgs.push("--", "state");
+      const refreshResult = await invokeFlowCommand(recoveryArgs, { timeoutMs: RECOVERY_TIMEOUT_MS, phase: "refresh-helper" });
+      const refreshParsed = parseHelperResult(refreshResult, "recording_continued", "browser_use_cli_helper_refresh_failed");
+      if (refreshParsed.exactBlocker || !refreshParsed.helper) {
+        throw p6RedactedError(refreshParsed.exactBlocker || "browser_use_cli_helper_refresh_failed", { helper_refresh: true });
+      }
+      helperRefreshed = true;
+      throw p6RedactedError("browser_use_cli_helper_refreshed_navigation_readback_required", {
+        helper_refresh: true,
+        navigation_readback_required: true,
+      });
+    }
+    throw p6RedactedError("browser_use_cli_helper_hash_mismatch", { helper_refresh: false });
+  }
   const args = ["record-command", "--run-id", contract.run_id, "--session", contract.effective_session, "--descriptor", flow.descriptor_path];
-  if (contract.authority.mode === "authorized") args.push("--authority", authorityPath || contract.authority.reference);
+  if (contract.authority.mode === "authorized") args.push("--authority", authorityPath || contract.authority.reference, "--auto-renew");
   if (captureReadback) args.push("--capture-readback");
-  args.push("--", ...request.commands[0]);
+  if (helperMismatch && readOnlyRefreshable) {
+    args.push("--refresh-helper");
+    helperRefreshed = true;
+  }
+  args.push("--", ...normalizedCommand);
   const result = await invokeFlowCommand(args, { timeoutMs });
+  if (result.timed_out) {
+    let recovery;
+    try {
+      recovery = await recoverFlowAfterTransportTimeout({ flow, authorityPath, timeoutMs: RECOVERY_TIMEOUT_MS });
+    } catch (error) {
+      recovery = { status: "blocked", exactBlocker: error?.exact_blocker || "browser_use_cli_flow_recovery_failed", childExited: false };
+    }
+    throw p6RedactedError(
+      recovery.exactBlocker ? "browser_use_cli_transport_timeout_recovery_failed" : "browser_use_cli_transport_timeout_recovered",
+      {
+        transport_timeout: true,
+        helper_child_exited: result.child_exited !== false,
+        recovery_status: recovery.status,
+        recovery_blocker: recovery.exactBlocker || "",
+        restart_point: "same-run read-only readback required before replay",
+      },
+    );
+  }
   const parsed = parseHelperResult(result, "recording_continued", "browser_use_cli_flow_command_failed");
   if (parsed.exactBlocker || !parsed.helper) {
     throw p6RedactedError(parsed.exactBlocker || "browser_use_cli_flow_command_failed", {
@@ -1622,24 +2033,167 @@ export async function runBrowserUseCliFlowCommand({ flow, authorityPath = "", co
       timed_out: result.timed_out === true,
     });
   }
-  const current = readFlowDescriptor(flow.descriptor_path, { automationId: contract.automation_id, runId: contract.run_id, session: contract.effective_session, lifecycle: contract.lifecycle, port: flow.port, contract });
-  const tabInventory = readBrowserUseCliFlowTabInventory({ ...flow, ...current, contract });
+  const renewedContract = flowContractAfterAuthorityRenewal(contract, parsed.helper);
+  const current = readFlowDescriptor(flow.descriptor_path, { automationId: renewedContract.automation_id, runId: renewedContract.run_id, session: renewedContract.effective_session, lifecycle: renewedContract.lifecycle, port: flow.port, contract: renewedContract });
+  const tabInventory = readBrowserUseCliFlowTabInventory({ ...flow, ...current, contract: renewedContract });
   const effectfulCommand = !["state", "get", "screenshot", "extract", "wait", "scroll", "back", "close-tab"].includes(request.commands[0][0]);
   const externalEffects = normalizeExternalEffects(parsed.helper?.external_effects, effectfulCommand ? "unknown" : "none");
-  const nextContract = Object.freeze({ ...contract, action_sequence: action.sequence, last_action_nonce: action.nonce, descriptor_state: "continued", recorder_active: true });
+  const nextContract = Object.freeze({ ...renewedContract, action_sequence: action.sequence, last_action_nonce: action.nonce, descriptor_state: "continued", recorder_active: true });
   return Object.freeze({
     ...flow,
     ...current,
     contract: nextContract,
     tab_inventory: tabInventory,
     command: Object.freeze({ name: request.commands[0][0], argument_count: Math.max(0, request.commands[0].length - 1), origins: publicCommand(request.commands[0]).origins }),
-    captured_readback: redactBrowserUseCliResult(parsed.helper.captured_readback || {}),
+    captured_readback: normalizeBrowserUseCliCapturedReadback(parsed.helper.captured_readback || {}),
     command_completed: true,
     external_effects: externalEffects,
     business_effect_proof: parsed.helper?.business_effect_proof || (effectfulCommand ? "workflow_source_of_truth_required" : "not_applicable"),
     external_action_executed: externalEffects === "executed",
+    helper_refreshed: helperRefreshed,
+    authority_path: nextContract.authority.reference,
     transport: parsed.transport || "helper",
     result_schema: "browser_use_cli_bounded_command_result.v1",
+  });
+}
+
+export async function runBrowserUseCliFlowReadOnlyBatch({
+  flow,
+  authorityPath = "",
+  commands = [],
+  actionSequence = 0,
+  actionNonces = [],
+  captureReadback = true,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+} = {}) {
+  if (!flow?.descriptor_path || !flow?.contract) throw p6RedactedError("browser_use_cli_flow_descriptor_required");
+  const contract = validateBrowserUseCliFlowBinding(flow, { authoritySha256: flow.contract.authority?.sha256 });
+  if (contract.authorized_scheduled_flow !== true || contract.mode !== "authorized" || contract.lifecycle !== "scheduled") {
+    throw p6RedactedError("browser_use_cli_authorized_scheduled_flow_required");
+  }
+  assertBrowserUseCliHelperSourceParity();
+  if (authorityPath && flow.authority_path && path.resolve(String(authorityPath)) !== path.resolve(String(flow.authority_path))) {
+    throw p6RedactedError("browser_use_cli_authority_mismatch");
+  }
+  const authority = authorityPath || contract.authority.reference;
+  validateP6AuthorityFile(authority, { automationId: contract.automation_id, runId: contract.run_id, stageId: contract.step_id, contract });
+  const request = validateBrowserUseCliStageRequest({
+    automationId: contract.automation_id,
+    runId: contract.run_id,
+    stageId: contract.step_id,
+    session: contract.effective_session,
+    mode: "authorized",
+    lifecycle: "scheduled",
+    authorityPath: authority,
+    allowedOrigins: contract.normalized_origins,
+    commands,
+    postCommands: [],
+  });
+  const normalizedCommands = validateBrowserUseCliReadOnlyBatchCommands(request.commands);
+  const baseSequence = Math.max(Number(contract.action_sequence), Number(actionSequence) || 0);
+  const suppliedNonces = Array.isArray(actionNonces) ? actionNonces : [];
+  const batchActions = [];
+  const seenNonces = new Set();
+  for (const [index, command] of normalizedCommands.entries()) {
+    const sequence = baseSequence + index + 1;
+    const nonce = String(suppliedNonces[index] || createBrowserUseCliActionNonce({
+      runId: contract.run_id,
+      actionSequence: sequence,
+      salt: `readonly-batch-${index}`,
+    }));
+    if (seenNonces.has(nonce)) throw p6RedactedError("browser_use_cli_read_only_batch_nonce_replay");
+    seenNonces.add(nonce);
+    const action = validateP6Action(command, contract, { actionSequence: sequence, actionNonce: nonce });
+    batchActions.push(Object.freeze({
+      sequence: action.sequence,
+      nonce: action.nonce,
+      name: command[0],
+      argument_count: Math.max(0, command.length - 1),
+      origins: publicCommand(command).origins,
+    }));
+  }
+  const args = [
+    "record-batch",
+    "--run-id", contract.run_id,
+    "--session", contract.effective_session,
+    "--descriptor", flow.descriptor_path,
+    "--authority", authority,
+    "--auto-renew",
+    "--commands-json", JSON.stringify(normalizedCommands),
+    "--batch-actions-json", JSON.stringify(batchActions),
+  ];
+  if (captureReadback) args.push("--capture-readback");
+  const result = await invokeFlowCommand(args, { timeoutMs, phase: "record-batch" });
+  if (result.timed_out) {
+    let recovery;
+    try {
+      recovery = await recoverFlowAfterTransportTimeout({ flow, authorityPath: authority, timeoutMs: RECOVERY_TIMEOUT_MS });
+    } catch (error) {
+      recovery = { status: "blocked", exactBlocker: error?.exact_blocker || "browser_use_cli_flow_recovery_failed", childExited: false };
+    }
+    throw p6RedactedError(
+      recovery.exactBlocker ? "browser_use_cli_transport_timeout_recovery_failed" : "browser_use_cli_transport_timeout_recovered",
+      {
+        transport_timeout: true,
+        helper_child_exited: result.child_exited !== false,
+        recovery_status: recovery.status,
+        recovery_blocker: recovery.exactBlocker || "",
+        restart_point: "same-run read-only batch reconciliation required before replay",
+      },
+    );
+  }
+  const parsed = parseHelperResult(result, "recording_continued", "browser_use_cli_flow_read_only_batch_failed");
+  const helper = parsed.helper;
+  const results = Array.isArray(helper?.results) ? helper.results : [];
+  const completedCount = Number(helper?.completed_count);
+  const batchValid = helper?.batch === true
+    && helper?.external_effects === "none"
+    && completedCount === normalizedCommands.length
+    && results.length === normalizedCommands.length
+    && results.every((entry) => entry && entry.status === "recording_continued" && String(entry.external_effects || "none") === "none");
+  if (parsed.exactBlocker || !helper || !batchValid) {
+    throw p6RedactedError(parsed.exactBlocker || "browser_use_cli_read_only_batch_result_invalid", {
+      helper_status: helper?.status || "",
+      helper_batch: helper?.batch === true,
+      helper_external_effects: helper?.external_effects || "",
+      command_count: normalizedCommands.length,
+      completed_count: Number.isFinite(completedCount) ? completedCount : -1,
+    });
+  }
+  const renewedContract = flowContractAfterAuthorityRenewal(contract, helper);
+  const current = readFlowDescriptor(flow.descriptor_path, {
+    automationId: renewedContract.automation_id,
+    runId: renewedContract.run_id,
+    session: renewedContract.effective_session,
+    lifecycle: renewedContract.lifecycle,
+    port: flow.port,
+    contract: renewedContract,
+  });
+  const tabInventory = readBrowserUseCliFlowTabInventory({ ...flow, ...current, contract: renewedContract });
+  const lastAction = batchActions.at(-1);
+  const nextContract = Object.freeze({
+    ...renewedContract,
+    action_sequence: lastAction.sequence,
+    last_action_nonce: lastAction.nonce,
+    descriptor_state: "continued",
+    recorder_active: true,
+  });
+  return Object.freeze({
+    ...flow,
+    ...current,
+    contract: nextContract,
+    tab_inventory: tabInventory,
+    batch: true,
+    batch_actions: Object.freeze(batchActions),
+    batch_results: redactBrowserUseCliResult(results),
+    captured_readback: normalizeBrowserUseCliCapturedReadback(helper.captured_readback || {}),
+    command_completed: true,
+    external_effects: "none",
+    business_effect_proof: "not_applicable",
+    external_action_executed: false,
+    authority_path: nextContract.authority.reference,
+    transport: parsed.transport || "helper",
+    result_schema: "browser_use_cli_bounded_read_only_batch_result.v1",
   });
 }
 
@@ -1649,20 +2203,22 @@ async function runBrowserUseCliFlowTargetOperation({ flow, authorityPath = "", t
   if (!target) throw p6RedactedError("browser_use_cli_target_text_missing");
   const contract = validateBrowserUseCliFlowBinding(flow, { authoritySha256: flow.contract.authority?.sha256 });
   if (contract.authorized_scheduled_flow !== true || contract.mode !== "authorized" || contract.lifecycle !== "scheduled") throw p6RedactedError("browser_use_cli_authorized_scheduled_flow_required");
+  assertBrowserUseCliHelperSourceParity();
   if (authorityPath && flow.authority_path && path.resolve(String(authorityPath)) !== path.resolve(String(flow.authority_path))) throw p6RedactedError("browser_use_cli_authority_mismatch");
   const sequenceAction = operation === "target-click" ? ["click", target] : ["state"];
   const action = validateP6Action(sequenceAction, contract, { actionSequence, actionNonce });
   const admitted = readFlowDescriptor(flow.descriptor_path, { automationId: contract.automation_id, runId: contract.run_id, session: contract.effective_session, lifecycle: contract.lifecycle, port: flow.port, contract });
   if (admitted.navigation_verified !== true) throw exactError("browser_use_cli_navigation_readback_required_before_target");
-  const args = [operation === "target-click" ? "record-target-click" : "record-target-inspect", "--run-id", contract.run_id, "--session", contract.effective_session, "--descriptor", flow.descriptor_path, ...(authorityPath || flow.authority_path ? ["--authority", authorityPath || flow.authority_path] : []), "--target-text", target];
+  const args = [operation === "target-click" ? "record-target-click" : "record-target-inspect", "--run-id", contract.run_id, "--session", contract.effective_session, "--descriptor", flow.descriptor_path, ...(authorityPath || flow.authority_path ? ["--authority", authorityPath || flow.authority_path, "--auto-renew"] : []), "--target-text", target];
   if (operation === "target-click" && allowCoordinateFallback === true) args.push("--allow-coordinate-fallback");
   const result = await invokeFlowCommand(args, { timeoutMs });
   const parsed = parseHelperResult(result, "recording_continued", "browser_use_cli_flow_target_operation_failed");
   if (parsed.exactBlocker || !parsed.helper) throw p6RedactedError(parsed.exactBlocker || "browser_use_cli_flow_target_operation_failed");
-  const current = readFlowDescriptor(flow.descriptor_path, { automationId: contract.automation_id, runId: contract.run_id, session: contract.effective_session, lifecycle: contract.lifecycle, port: flow.port, contract });
-  const tabInventory = readBrowserUseCliFlowTabInventory({ ...flow, ...current, contract });
+  const renewedContract = flowContractAfterAuthorityRenewal(contract, parsed.helper);
+  const current = readFlowDescriptor(flow.descriptor_path, { automationId: renewedContract.automation_id, runId: renewedContract.run_id, session: renewedContract.effective_session, lifecycle: renewedContract.lifecycle, port: flow.port, contract: renewedContract });
+  const tabInventory = readBrowserUseCliFlowTabInventory({ ...flow, ...current, contract: renewedContract });
   const externalEffects = normalizeExternalEffects(parsed.helper?.external_effects, operation === "target-click" ? "unknown" : "none");
-  const nextContract = Object.freeze({ ...contract, action_sequence: action.sequence, last_action_nonce: action.nonce, descriptor_state: "continued", recorder_active: true });
+  const nextContract = Object.freeze({ ...renewedContract, action_sequence: action.sequence, last_action_nonce: action.nonce, descriptor_state: "continued", recorder_active: true });
   const safeHelper = redactBrowserUseCliResult(parsed.helper);
   return Object.freeze({
     ...flow,
@@ -1676,6 +2232,7 @@ async function runBrowserUseCliFlowTargetOperation({ flow, authorityPath = "", t
     external_effects: externalEffects,
     business_effect_proof: parsed.helper?.business_effect_proof || (operation === "target-click" ? "workflow_source_of_truth_required" : "not_applicable"),
     external_action_executed: externalEffects === "executed",
+    authority_path: nextContract.authority.reference,
     result_schema: "browser_use_cli_bounded_target_result.v1",
   });
 }
@@ -1727,11 +2284,15 @@ export async function finalizeBrowserUseCliFlow({ flow, authorityPath = "", time
       unknown_processes: receipt.cleanup?.unknown_processes || [],
     },
   };
+  evidence.cleanup_proof = buildBrowserUseCliCleanupProof(evidence, {
+    descriptorPath: flow.descriptor_path,
+    receiptPath,
+  });
   validateBrowserUseCliFinalizeAcceptance(evidence);
   validateBrowserUseCliFinalizeCleanup(evidence, flow.lifecycle);
   const cleanupStatus = String(evidence.cleanup?.status || "");
   const finalizedContract = Object.freeze({ ...contract, descriptor_state: "finalized", recorder_active: false, lease_state: "finalized" });
-  return Object.freeze({ ...flow, contract: finalizedContract, finalized: true, cleanup_verified: true, receipt_path: receiptPath, manifest_path: boundedString(String(parsed.helper?.manifest || "")), cleanup_status: cleanupStatus, external_effects: evidence.external_effects, business_effect_proof: evidence.business_effect_proof, external_action_executed: evidence.external_effects === "executed", result_schema: "browser_use_cli_bounded_finalize_result.v1" });
+  return Object.freeze({ ...flow, contract: finalizedContract, finalized: true, cleanup_verified: true, cleanup_proof: evidence.cleanup_proof, receipt_path: receiptPath, manifest_path: boundedString(String(parsed.helper?.manifest || "")), cleanup_status: cleanupStatus, external_effects: evidence.external_effects, business_effect_proof: evidence.business_effect_proof, external_action_executed: evidence.external_effects === "executed", result_schema: "browser_use_cli_bounded_finalize_result.v1" });
 }
 
 export function validateBrowserUseCliFinalizeCleanup(receipt = {}, lifecycle = "single-use") {

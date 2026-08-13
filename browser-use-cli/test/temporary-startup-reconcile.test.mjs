@@ -52,8 +52,9 @@ with tempfile.TemporaryDirectory() as temp:
     base = pathlib.Path(temp)
     parsed = h.build_parser().parse_args(["reconcile-failed-temporary-startup", "--run-id", "r", "--session", "s", "--task-id", "t", "--room-id", "room-r", "--profile", "/tmp/p", "--port", "20086"])
     assert parsed.action == "reconcile-failed-temporary-startup"
-    stop_parsed = h.build_parser().parse_args(["record-stop-preserve-temporary", "--run-id", "r", "--session", "s", "--task-id", "t", "--descriptor", "/tmp/d.json", "--authority", "/tmp/a.json"])
+    stop_parsed = h.build_parser().parse_args(["record-stop-preserve-temporary", "--run-id", "r", "--session", "s", "--task-id", "t", "--descriptor", "/tmp/d.json", "--authority", "/tmp/a.json", "--cleanup-only"])
     assert stop_parsed.action == "record-stop-preserve-temporary"
+    assert stop_parsed.cleanup_only is True
 
     config, args, profile_lock, port_lock, profile, home = prepare(base / "success")
     order = []; original_release, original_room, original_receipt = h.release_lock, h.room_registry_release, h.json_atomic_no_replace

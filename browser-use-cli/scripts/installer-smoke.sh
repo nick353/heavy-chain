@@ -41,8 +41,9 @@ mkdir -p "${clean_home}"
 for _attempt in 1 2; do
   HOME="${clean_home}" BROWSER_USE_STATE_ROOT="${clean_state}" BROWSER_USE_RUNTIME_CONFIG="${clean_state}/browser-use-runtime.toml" BROWSER_USE_PYTHON="${python_bin}" "${repo_root}/scripts/install.sh" >/dev/null
 done
-test -L "${clean_home}/.local/bin/codex-browser-use"
-test "$(readlink "${clean_home}/.local/bin/codex-browser-use")" = "${repo_root}/bin/codex-browser-use"
+test -f "${clean_home}/.local/bin/codex-browser-use"
+test ! -L "${clean_home}/.local/bin/codex-browser-use"
+cmp -s "${repo_root}/bin/codex-browser-use" "${clean_home}/.local/bin/codex-browser-use"
 
 rollback_home="${tmp_root}/rollback-home"
 rollback_state="${rollback_home}/state"
