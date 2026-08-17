@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { User as DbUser, Brand } from '../types/database';
+import { selectCurrentBrand } from '../lib/authBrandSelection';
 
 interface AuthState {
   user: User | null;
@@ -230,9 +231,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 const state = get();
                 if (brandRefreshSeq !== authBrandRefreshSeq) return;
                 if (state.user?.id !== user.id) return;
-                const currentBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
-                  ? state.currentBrand
-                  : brands[0] || null;
+                const currentBrand = selectCurrentBrand(state.currentBrand, brands);
 
                 set({
                   user,
@@ -249,7 +248,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 set({
                   user,
                   profile: canKeepUserScopedData ? state.profile : null,
-                  currentBrand: null,
+                  currentBrand: state.currentBrand,
                   authRecoveryRequired: false,
                 });
               }
@@ -284,9 +283,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 const state = get();
                 if (brandRefreshSeq !== authBrandRefreshSeq) return;
                 if (state.user?.id !== user.id) return;
-                const currentBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
-                  ? state.currentBrand
-                  : brands[0] || null;
+                const currentBrand = selectCurrentBrand(state.currentBrand, brands);
 
                 set({
                   user,
@@ -341,9 +338,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const state = get();
             if (brandRefreshSeq !== authBrandRefreshSeq) return;
             if (state.user?.id !== storedUser.id) return;
-            const currentBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
-              ? state.currentBrand
-              : brands[0] || null;
+            const currentBrand = selectCurrentBrand(state.currentBrand, brands);
 
             set({
               user: storedUser,
@@ -414,9 +409,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const state = get();
             if (brandRefreshSeq !== authBrandRefreshSeq) return;
             if (state.user?.id !== user.id) return;
-            const currentBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
-              ? state.currentBrand
-              : brands[0] || null;
+            const currentBrand = selectCurrentBrand(state.currentBrand, brands);
 
             set({
               user,
@@ -563,9 +556,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (refreshSeq !== currentBrandRefreshSeq) return null;
       if (state.user?.id !== user.id) return null;
 
-      const nextBrand = state.currentBrand && brands.some((brand) => brand.id === state.currentBrand?.id)
-        ? state.currentBrand
-        : brands[0] || null;
+      const nextBrand = selectCurrentBrand(state.currentBrand, brands);
 
       authBrandRefreshSeq++;
       set({ currentBrand: nextBrand });
