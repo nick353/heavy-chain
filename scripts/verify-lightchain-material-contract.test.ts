@@ -42,6 +42,27 @@ test('platform assets expose only explicit product-owned inputs', () => {
   assert.match(gallery, /setImages\(assetPurpose === PRINT_DESIGN_ASSET_PURPOSE \? \[\] : PLATFORM_GALLERY_ASSETS\)/);
 });
 
+test('general Heavy workbenches can use an existing Gallery asset before upload', () => {
+  const workbench = fs.readFileSync('src/components/workspace/MaterialWorkbench.tsx', 'utf8');
+  assert.match(workbench, /enableGallerySelection = true/);
+  assert.match(workbench, /data-testid="material-gallery-select"/);
+  assert.match(workbench, /Galleryから選ぶ/);
+  assert.match(workbench, /handleGallerySelect/);
+  assert.match(workbench, /sourceImageId: imageId/);
+  assert.match(workbench, /sourceImageId: null/);
+  assert.match(workbench, /sourceStoragePath: null/);
+  assert.match(workbench, /<GallerySelector/);
+});
+
+test('Gallery keeps a loading shell while auth and brand state are initializing', () => {
+  const gallery = fs.readFileSync('src/components/GallerySelector.tsx', 'utf8');
+  assert.match(gallery, /isLoading: authLoading/);
+  assert.match(gallery, /isInitialized: authInitialized/);
+  assert.match(gallery, /!currentBrand && \(authLoading \|\| !authInitialized\)/);
+  assert.match(gallery, /authLoading \|\| !authInitialized/);
+  assert.match(gallery, /ブランドを選択してからギャラリーを開いてください/);
+});
+
 test('fabric uses the Light-style parity shell while retaining the real generation path', () => {
   const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
   assert.match(page, /data-testid="lightchain-fabric-parity-view"/);
@@ -49,7 +70,9 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /data-testid="lightchain-fabric-input"/);
   assert.match(page, /data-testid="fabric-result-history"/);
   assert.match(page, /value=\{fabricPrompt\}[\s\S]*?onChange=\{\(event\) => setFabricPrompt\(event\.target\.value\)\}/);
-  assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState !== 'done' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
+  assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState !== 'done' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0 \|\| !providerRightsConfirmed\}/);
+  assert.match(page, /data-testid="lightchain-material-rights-confirmation"/);
+  assert.match(page, /AIプロバイダーへ送信して生成します/);
   assert.match(page, /切り抜き済み生地を衣服領域へ適用した参考/);
   assert.match(page, /buildFabricModelGarmentMask/);
   assert.match(page, /buildHighPrecisionMaterialCutoutDataUrl/);
@@ -64,8 +87,11 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /FABRIC_OUTPUT_BACKGROUND/);
   assert.doesNotMatch(page, /backgroundColor: (?:previewVariant|preset)\.tint/);
   assert.match(page, /globalCompositeOperation = 'destination-in'/);
-  assert.match(page, /result\.engine !== 'browser-ai-u2net_cloth_seg-v1'/);
-  assert.match(page, /モデル画像の衣服領域AIが未配置のため、生地を安全に適用できません/);
+  assert.match(page, /const isDedicatedClothResult = result\.engine === 'browser-ai-u2net_cloth_seg-v1'/);
+  assert.match(page, /const isSafeWhiteBackgroundFallback = result\.engine === 'browser-local-white-background-garment-cutout-v1'/);
+  assert.match(page, /const isSafePortraitPriorFallback = result\.engine === 'browser-local-portrait-garment-prior-v1'/);
+  assert.match(page, /if \(!isDedicatedClothResult && !isSafeWhiteBackgroundFallback && !isSafePortraitPriorFallback\)/);
+  assert.match(page, /モデル画像の衣服領域を専用AIで確定できませんでした/);
   assert.doesNotMatch(page, /<img src=\{fabricPreviewOverlayUrl\}/);
   assert.doesNotMatch(page, /<img src=\{fabricBase\.url\} alt="生地プレビュー"/);
   assert.doesNotMatch(page, /<img src=\{fabricBase\.url\} alt="生地の参考"/);
@@ -74,7 +100,11 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /const imageLoadCache = new Map<string, Promise<HTMLImageElement>>\(\)/);
   assert.ok(page.includes("img.crossOrigin = 'anonymous'"));
   assert.ok(page.includes("https?:"));
-  assert.match(page, /const yieldToBrowser = \(\) => new Promise<void>/);
+  assert.match(page, /const handleGenerate = async \(\) => \{/);
+  assert.match(page, /const providerResult = await withTimeout\(/);
+  assert.match(page, /lightchainFeatureId: 'fabric-image'/);
+  assert.match(page, /maskApplied: true/);
+  assert.match(page, /protectedRegionComposited: true/);
   assert.match(page, /data-testid="lightchain-fabric-generate"/);
   assert.ok(page.includes("canvas.toBlob"));
   assert.ok(page.includes("URL.createObjectURL(blob)"));

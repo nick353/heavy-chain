@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, Images, Layers3, Save, Sparkles } from 'lucide-react';
@@ -9,7 +9,12 @@ import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
-import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
+import {
+  buildGenerationIntentHref,
+  handoffWorkspaceToCanvas,
+  restoreWorkspaceHandoffHistory,
+  workspaceSourceConfig,
+} from '../lib/workspaceHandoff';
 
 const choices = ['ライン企画', '素材確認', 'EC準備'];
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
@@ -30,11 +35,6 @@ type HistoryItem = {
   id: string;
   label: string;
 };
-
-const initialHistory: HistoryItem[] = [
-  { id: 'fashion-history-1', label: 'シルエット候補を整理' },
-  { id: 'fashion-history-2', label: '素材メモを更新' },
-];
 
 const modelOptions: StudioOption[] = [
   {
@@ -209,10 +209,10 @@ const buildStudioPreviewSvg = ({
 
 export function FashionStudioPage() {
   const navigate = useNavigate();
-  const { currentBrand } = useAuthStore();
+  const { user, currentBrand } = useAuthStore();
   const [activeChoice, setActiveChoice] = useState(choices[0]);
   const [progress, setProgress] = useState(35);
-  const [history, setHistory] = useState(initialHistory);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedModelId, setSelectedModelId] = useState(modelOptions[0].id);
   const [selectedPoseId, setSelectedPoseId] = useState(poseOptions[0].id);
   const [selectedBackgroundId, setSelectedBackgroundId] = useState(backgroundOptions[0].id);
@@ -223,7 +223,7 @@ export function FashionStudioPage() {
   const [productLine, setProductLine] = useState('Heavy Chain 2026 SS シアージャケット');
   const [referenceImage, setReferenceImage] = useState('参照画像: lookbook_ref_01.jpg / fabric_ref_02.png');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialStudioMaterial);
-  const nextHistoryId = useRef(3);
+  const nextHistoryId = useRef(1);
   const selectedStudioSetup = useMemo<StudioSetup>(() => ({
     model: modelOptions.find((option) => option.id === selectedModelId) ?? modelOptions[0],
     pose: poseOptions.find((option) => option.id === selectedPoseId) ?? poseOptions[0],
@@ -238,6 +238,10 @@ export function FashionStudioPage() {
     productLine,
     selectedStudioSetup,
   }), [activeChoice, background, modelProfile, pose, productLine, props, selectedStudioSetup]);
+
+  useEffect(() => {
+    setHistory(restoreWorkspaceHandoffHistory(currentBrand?.id, 'fashion-studio', user?.id));
+  }, [currentBrand?.id, user?.id]);
 
   const recordProgress = (choice: string) => {
     const historyItem = {
@@ -322,8 +326,10 @@ export function FashionStudioPage() {
       `Material reference: ${materialReferenceSummary}`,
       `Next step: ${nextStep}`,
     ].join('\n');
+    try {
     const { projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
+      scopeId: user?.id,
       featureType: 'fashion-studio',
       projectName: `Fashion Studio: ${activeChoice}`,
       title: `Fashion Studio: ${activeChoice}`,
@@ -421,6 +427,11 @@ export function FashionStudioPage() {
 
     toast.success('Fashion Studioを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Canvas保存に失敗しました';
+      console.error('Failed to persist Fashion Studio workspace handoff:', error);
+      toast.error(message);
+    }
   };
 
   return (

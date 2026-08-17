@@ -80,6 +80,7 @@ export function CanvasToolbar({
     className?: string;
   }) => (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
       title={title}

@@ -4,6 +4,7 @@ import { clientError, createServiceClient, requireBrandRole, type Database } fro
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 import { editOpenAiImage, generateOpenAiImage, openAiImageArtifact, openAiImageDataUri, type OpenAiImageResult } from '../_shared/openaiImage.ts';
+import { generateGeminiImage, hasGeminiImageKey, type GeminiImageResult } from '../_shared/geminiImage.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
@@ -290,6 +291,15 @@ type SemanticVerification = {
   checkedAt: string;
 };
 
+type ProviderImageResult = (OpenAiImageResult | GeminiImageResult) & {
+  provider: 'openai' | 'gemini';
+};
+
+const isOpenAiQuotaError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return /insufficient_quota|credit_balance_exhausted|openai_image_(edit_failed|request_failed).*?(?:429|quota|billing|credit)/i.test(message);
+};
+
 // 画像をBase64に変換
 async function fetchImageAsBase64(imageUrl: string): Promise<{ base64: string; mimeType: string } | null> {
   try {
@@ -336,7 +346,7 @@ async function generateWithReference(
   ageGroup: typeof AGE_GROUPS[0],
   gender: string,
   imageModel?: string | null
-): Promise<OpenAiImageResult | null> {
+): Promise<ProviderImageResult | null> {
   console.log(`🎨 Generating ${bodyType.name} x ${ageGroup.name} with reference...`);
 
   const modelReferenceInstruction = modelBase64
@@ -363,12 +373,30 @@ STYLE: Professional fashion photography, full body shot, studio lighting, neutra
     ...(modelBase64 ? [{ imageUrl: openAiImageDataUri(modelBase64, modelMimeType || 'image/png') }] : []),
   ];
 
-  return await editOpenAiImage({
-    prompt,
-    images: referenceImages,
-    model: imageModel,
-    background: 'auto',
-  });
+  try {
+    return {
+      ...(await editOpenAiImage({
+        prompt,
+        images: referenceImages,
+        model: imageModel,
+        background: 'auto',
+      })),
+      provider: 'openai',
+    };
+  } catch (error) {
+    if (!isOpenAiQuotaError(error) || !hasGeminiImageKey()) throw error;
+    console.warn('OpenAI image quota exhausted; using Heavy-owned Gemini image fallback for model-matrix.', {
+      fallback: 'gemini-2.5-flash-image',
+    });
+    const fallback = await generateGeminiImage({
+      prompt,
+      images: [
+        { base64: originalBase64, mimeType: originalMimeType },
+        ...(modelBase64 ? [{ base64: modelBase64, mimeType: modelMimeType || 'image/png' }] : []),
+      ],
+    });
+    return { ...fallback, provider: 'gemini' };
+  }
 }
 
 // テキストのみで生成
@@ -378,9 +406,21 @@ async function generateFromText(
   ageGroup: typeof AGE_GROUPS[0],
   gender: string,
   imageModel?: string | null
-): Promise<OpenAiImageResult | null> {
+): Promise<ProviderImageResult | null> {
   const prompt = `${gender} model wearing ${description}, ${bodyType.prompt}, ${ageGroup.prompt}, fashion photography, full body shot, professional studio lighting, neutral background, high quality`;
-  return await generateOpenAiImage({ prompt, model: imageModel });
+  try {
+    return {
+      ...(await generateOpenAiImage({ prompt, model: imageModel })),
+      provider: 'openai',
+    };
+  } catch (error) {
+    if (!isOpenAiQuotaError(error) || !hasGeminiImageKey()) throw error;
+    console.warn('OpenAI image quota exhausted; using Heavy-owned Gemini image fallback for model-matrix text generation.', {
+      fallback: 'gemini-2.5-flash-image',
+    });
+    const fallback = await generateGeminiImage({ prompt });
+    return { ...fallback, provider: 'gemini' };
+  }
 }
 
 serve(async (req) => {
@@ -497,7 +537,12 @@ serve(async (req) => {
       units: requestedGenerationUnits,
       requestId,
       idempotencyKey: req.headers.get('idempotency-key'),
-      metadata: { provider: 'openai', imageCount: requestedGenerationUnits },
+      metadata: {
+        provider: 'openai',
+        fallbackProvider: hasGeminiImageKey() ? 'gemini' : null,
+        providerStrategy: 'openai-primary-gemini-on-quota-v1',
+        imageCount: requestedGenerationUnits,
+      },
     });
     await recordEdgeFunctionRun(telemetryClient, {
       reservation: usageReservation,
@@ -610,7 +655,7 @@ serve(async (req) => {
     // Generate matrix
     for (const bodyType of selectedBodyTypes) {
       for (const ageGroup of selectedAgeGroups) {
-        let generatedImage: OpenAiImageResult | null = null;
+        let generatedImage: ProviderImageResult | null = null;
 
         // 元画像がある場合は参照生成
         if (originalImageBase64) {
@@ -676,13 +721,14 @@ serve(async (req) => {
                 ageGroup: ageGroup.id,
                 gender,
                 productDescription: finalDescription,
-                provider: 'openai',
+                provider: generatedImage.provider,
                 providerTaskId: generatedImage.taskId,
               },
               metadata: {
                 remoteSaveStatus: 'succeeded',
+                feature: 'model-matrix',
                 source: 'model-matrix',
-                provider: 'openai',
+                provider: generatedImage.provider,
                 providerTaskId: generatedImage.taskId,
                 requestId,
                 ...(finalSourceMetadata ?? {}),
@@ -721,7 +767,8 @@ serve(async (req) => {
             imageId: image.id,
             persistenceStatus: 'completed',
             prompt: finalDescription,
-            modelUsed: imageModel,
+            modelUsed: generatedImage.model,
+            provider: generatedImage.provider,
             referenceSummary: finalDescription,
             semanticVerification,
             verifier: semanticVerification,

@@ -1,8 +1,10 @@
 import type { GeneratedImage, Json } from '../types/database';
 import { supabase } from './supabase';
 import { normalizeGeneratedImageStoragePath } from './storagePathSafety';
+import { shouldClearWorkspaceArtifactImageUrl } from './generatedImageIdentity';
 
 const STORE_PREFIX = 'heavy-chain-workspace-artifacts:v1';
+const SCOPED_STORE_PREFIX = 'heavy-chain-workspace-artifacts:v2';
 const MAX_ARTIFACTS_PER_BRAND = 30;
 const LOCAL_USER_ID = 'local-workspace';
 
@@ -17,6 +19,8 @@ export interface WorkspaceArtifact {
   metadata: Record<string, Json | undefined>;
   canvasProjectId?: string;
   sourceJobId?: string;
+  /** Authenticated owner scope for browser-local isolation. */
+  scopeId?: string;
 }
 
 export type WorkspaceArtifactInput = Omit<WorkspaceArtifact, 'id' | 'createdAt'> & {
@@ -31,6 +35,8 @@ export interface WorkspaceArtifactBestEffortResult {
     imageId: string;
     storagePath: string;
   };
+  localPersisted: boolean;
+  localError?: unknown;
   remoteError?: unknown;
   cleanupError?: unknown;
 }
@@ -56,15 +62,46 @@ interface RemoteSaveFunctionResult {
   error?: unknown;
 }
 
-const getStorageKey = (brandId: string) => `${STORE_PREFIX}:${brandId}`;
+const getStorageKey = (brandId: string, scopeId?: string) => {
+  const normalizedScopeId = scopeId?.trim();
+  return normalizedScopeId
+    ? `${SCOPED_STORE_PREFIX}:${brandId}:${normalizedScopeId}`
+    : `${STORE_PREFIX}:${brandId}`;
+};
+
+export const getWorkspaceArtifactStorageKey = (brandId: string, scopeId?: string) => (
+  getStorageKey(brandId, scopeId)
+);
 
 const CANONICAL_STORAGE_PATH_KEYS = [
+  'remoteStoragePath',
   'storagePath',
   'storage_path',
-  'remoteStoragePath',
   'sourceStoragePath',
   'backendStoragePath',
 ] as const;
+
+const findNestedCanonicalStoragePath = (value: Json | undefined, depth = 0): string | null => {
+  if (depth > 6 || value === null || value === undefined) return null;
+  if (Array.isArray(value)) {
+    for (const child of value) {
+      const nested = findNestedCanonicalStoragePath(child, depth + 1);
+      if (nested) return nested;
+    }
+    return null;
+  }
+  if (typeof value !== 'object') return null;
+
+  for (const [key, child] of Object.entries(value as Record<string, Json | undefined>)) {
+    if (CANONICAL_STORAGE_PATH_KEYS.includes(key as typeof CANONICAL_STORAGE_PATH_KEYS[number])) {
+      const normalized = typeof child === 'string' ? normalizeGeneratedImageStoragePath(child) : null;
+      if (normalized) return normalized;
+    }
+    const nested = findNestedCanonicalStoragePath(child, depth + 1);
+    if (nested) return nested;
+  }
+  return null;
+};
 
 export const getWorkspaceArtifactCanonicalStoragePath = (
   metadata: Record<string, Json | undefined>,
@@ -74,7 +111,7 @@ export const getWorkspaceArtifactCanonicalStoragePath = (
     const normalized = typeof value === 'string' ? normalizeGeneratedImageStoragePath(value) : null;
     if (normalized) return normalized;
   }
-  return null;
+  return findNestedCanonicalStoragePath(metadata);
 };
 
 const hasCanonicalStoragePath = (metadata: Record<string, Json | undefined>) => (
@@ -224,7 +261,7 @@ export const isLocalWorkspaceImage = (image: GeneratedImage) => {
   return image.storage_path.startsWith('local/') || image.user_id === LOCAL_USER_ID;
 };
 
-const readWorkspaceArtifacts = (brandId: string):
+const readWorkspaceArtifacts = (brandId: string, scopeId?: string):
   | { ok: true; artifacts: WorkspaceArtifact[] }
   | { ok: false; error: Error } => {
   if (!brandId || !isBrowser()) {
@@ -233,7 +270,7 @@ const readWorkspaceArtifacts = (brandId: string):
   try {
     return {
       ok: true,
-      artifacts: parseArtifacts(window.localStorage.getItem(getStorageKey(brandId)))
+      artifacts: parseArtifacts(window.localStorage.getItem(getStorageKey(brandId, scopeId)))
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, MAX_ARTIFACTS_PER_BRAND),
     };
@@ -242,8 +279,8 @@ const readWorkspaceArtifacts = (brandId: string):
   }
 };
 
-export const listWorkspaceArtifacts = (brandId: string): WorkspaceArtifact[] => {
-  const result = readWorkspaceArtifacts(brandId);
+export const listWorkspaceArtifacts = (brandId: string, scopeId?: string): WorkspaceArtifact[] => {
+  const result = readWorkspaceArtifacts(brandId, scopeId);
   if (result.ok) return result.artifacts;
   console.warn('Failed to read local workspace artifacts:', result.error);
   return [];
@@ -252,8 +289,9 @@ export const listWorkspaceArtifacts = (brandId: string): WorkspaceArtifact[] => 
 export const findWorkspaceArtifactPersisted = (
   brandId: string,
   artifactId: string,
+  scopeId?: string,
 ): { ok: true; artifact: WorkspaceArtifact | null } | { ok: false; error: Error } => {
-  const result = readWorkspaceArtifacts(brandId);
+  const result = readWorkspaceArtifacts(brandId, scopeId);
   if (!result.ok) return result;
   return {
     ok: true,
@@ -261,9 +299,9 @@ export const findWorkspaceArtifactPersisted = (
   };
 };
 
-export const findWorkspaceArtifact = (brandId: string, artifactId: string): WorkspaceArtifact | null => {
+export const findWorkspaceArtifact = (brandId: string, artifactId: string, scopeId?: string): WorkspaceArtifact | null => {
   if (!brandId || !artifactId) return null;
-  return listWorkspaceArtifacts(brandId).find((artifact) => artifact.id === artifactId) ?? null;
+  return listWorkspaceArtifacts(brandId, scopeId).find((artifact) => artifact.id === artifactId) ?? null;
 };
 
 export const saveWorkspaceArtifactPersisted = (
@@ -274,7 +312,7 @@ export const saveWorkspaceArtifactPersisted = (
   }
 
   try {
-    const current = readWorkspaceArtifacts(input.brandId);
+    const current = readWorkspaceArtifacts(input.brandId, input.scopeId);
     if (!current.ok) return current;
     const existingArtifact = input.id
       ? current.artifacts.find((artifact) => artifact.id === input.id) ?? null
@@ -285,6 +323,7 @@ export const saveWorkspaceArtifactPersisted = (
       id: input.id ?? generateArtifactId(),
       createdAt: input.createdAt ?? existingArtifact?.createdAt ?? new Date().toISOString(),
       prompt: input.prompt ?? existingArtifact?.prompt ?? null,
+      scopeId: input.scopeId ?? existingArtifact?.scopeId,
       metadata: {
         ...existingArtifact?.metadata,
         ...input.metadata,
@@ -306,11 +345,12 @@ export const saveWorkspaceArtifactPersisted = (
       ...current.artifacts.filter((item) => item.id !== artifact.id),
     ].slice(0, MAX_ARTIFACTS_PER_BRAND);
     const persistedArtifacts = nextArtifacts.map(normalizeWorkspaceArtifactForPersistence);
-    const persisted = persistArtifactsToLocalStorage(getStorageKey(artifact.brandId), persistedArtifacts, 'save');
+    const storageKey = getStorageKey(artifact.brandId, artifact.scopeId);
+    const persisted = persistArtifactsToLocalStorage(storageKey, persistedArtifacts, 'save');
     if (!persisted) {
       return { ok: false, error: toPersistenceError('save') };
     }
-    const readback = parseArtifacts(window.localStorage.getItem(getStorageKey(artifact.brandId)))
+    const readback = parseArtifacts(window.localStorage.getItem(storageKey))
       .find((item) => item.id === artifact.id);
     const normalizedArtifact = JSON.parse(JSON.stringify(normalizeWorkspaceArtifactForPersistence(artifact))) as WorkspaceArtifact;
     if (!readback || JSON.stringify(readback) !== JSON.stringify(normalizedArtifact)) {
@@ -342,13 +382,13 @@ export const saveWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceA
 
   const nextArtifacts = [
     artifact,
-    ...listWorkspaceArtifacts(artifact.brandId).filter((item) => item.id !== artifact.id),
+    ...listWorkspaceArtifacts(artifact.brandId, artifact.scopeId).filter((item) => item.id !== artifact.id),
   ]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, MAX_ARTIFACTS_PER_BRAND);
 
   persistArtifactsToLocalStorage(
-    getStorageKey(artifact.brandId),
+    getStorageKey(artifact.brandId, artifact.scopeId),
     nextArtifacts.map(normalizeWorkspaceArtifactForPersistence),
     'save',
   );
@@ -356,7 +396,8 @@ export const saveWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceA
 };
 
 export const saveWorkspaceArtifactBestEffort = async (
-  input: WorkspaceArtifactInput
+  input: WorkspaceArtifactInput,
+  options: { reuseCanonicalRemoteArtifact?: boolean } = {},
 ): Promise<WorkspaceArtifactBestEffortResult> => {
   let remote: WorkspaceArtifactBestEffortResult['remote'];
   let remoteError: unknown;
@@ -377,6 +418,12 @@ export const saveWorkspaceArtifactBestEffort = async (
           metadata: input.metadata ?? {},
           canvasProjectId: input.canvasProjectId ?? null,
           sourceJobId: input.sourceJobId ?? null,
+          sourceStoragePath: options.reuseCanonicalRemoteArtifact === false
+            ? null
+            : (() => {
+                const candidate = getWorkspaceArtifactCanonicalStoragePath(input.metadata ?? {});
+                return candidate && !/^local(?:\/|$)/i.test(candidate) ? candidate : null;
+              })(),
         },
       })
     );
@@ -412,10 +459,17 @@ export const saveWorkspaceArtifactBestEffort = async (
     },
     sourceJobId: remote?.jobId ?? input.sourceJobId,
   });
+  const localReadback = findWorkspaceArtifactPersisted(artifact.brandId, artifact.id, artifact.scopeId);
+  const localPersisted = localReadback.ok && Boolean(localReadback.artifact);
+  const localError = localReadback.ok
+    ? (localPersisted ? undefined : new Error('Local workspace artifact save could not be verified.'))
+    : localReadback.error;
 
   return {
     artifact,
     remote,
+    localPersisted,
+    localError,
     remoteError,
     cleanupError,
   };
@@ -424,6 +478,7 @@ export const saveWorkspaceArtifactBestEffort = async (
 export const deleteWorkspaceArtifactsPersisted = (
   brandId: string,
   artifactIds: Iterable<string>,
+  scopeId?: string,
 ): WorkspaceArtifactDeleteResult => {
   if (!brandId || !isBrowser()) {
     return { ok: false, error: new Error('Local workspace storage is unavailable.') };
@@ -432,12 +487,13 @@ export const deleteWorkspaceArtifactsPersisted = (
   if (ids.size === 0) return { ok: true };
 
   try {
-    const current = readWorkspaceArtifacts(brandId);
+    const current = readWorkspaceArtifacts(brandId, scopeId);
     if (!current.ok) return current;
     const nextArtifacts = current.artifacts.filter((item) => !ids.has(item.id));
-    const persisted = persistArtifactsToLocalStorage(getStorageKey(brandId), nextArtifacts, 'delete');
+    const storageKey = getStorageKey(brandId, scopeId);
+    const persisted = persistArtifactsToLocalStorage(storageKey, nextArtifacts, 'delete');
     if (!persisted) return { ok: false, error: toPersistenceError('delete') };
-    const remainingIds = new Set(parseArtifacts(window.localStorage.getItem(getStorageKey(brandId))).map((item) => item.id));
+    const remainingIds = new Set(parseArtifacts(window.localStorage.getItem(storageKey)).map((item) => item.id));
     if (Array.from(ids).some((id) => remainingIds.has(id))) {
       return { ok: false, error: new Error('Local workspace artifact delete could not be verified.') };
     }
@@ -450,7 +506,8 @@ export const deleteWorkspaceArtifactsPersisted = (
 export const deleteWorkspaceArtifact = (
   brandId: string,
   artifactId: string,
-): WorkspaceArtifactDeleteResult => deleteWorkspaceArtifactsPersisted(brandId, [artifactId]);
+  scopeId?: string,
+): WorkspaceArtifactDeleteResult => deleteWorkspaceArtifactsPersisted(brandId, [artifactId], scopeId);
 
 export const workspaceArtifactToGeneratedImage = (artifact: WorkspaceArtifact): GeneratedImage => ({
   id: artifact.id,
@@ -458,7 +515,14 @@ export const workspaceArtifactToGeneratedImage = (artifact: WorkspaceArtifact): 
   brand_id: artifact.brandId,
   user_id: LOCAL_USER_ID,
   storage_path: getWorkspaceArtifactCanonicalStoragePath(artifact.metadata) ?? `local/${artifact.id}`,
-  image_url: artifact.imageUrl || null,
+  // A canonical remote path must be re-signed by the caller. Never expose a
+  // potentially expired bearer URL from the local backup as current proof.
+  image_url: shouldClearWorkspaceArtifactImageUrl(
+    artifact.imageUrl,
+    Boolean(getWorkspaceArtifactCanonicalStoragePath(artifact.metadata)),
+  )
+    ? null
+    : artifact.imageUrl || null,
   thumbnail_path: null,
   version: 1,
   parent_image_id: null,
@@ -483,8 +547,7 @@ export const workspaceArtifactToGeneratedImage = (artifact: WorkspaceArtifact): 
   },
 });
 
-export const listWorkspaceGeneratedImages = (brandId: string): GeneratedImage[] => {
-  return listWorkspaceArtifacts(brandId)
-    .filter((artifact) => artifact.metadata.remoteSaveStatus !== 'succeeded')
+export const listWorkspaceGeneratedImages = (brandId: string, scopeId?: string): GeneratedImage[] => {
+  return listWorkspaceArtifacts(brandId, scopeId)
     .map(workspaceArtifactToGeneratedImage);
 };

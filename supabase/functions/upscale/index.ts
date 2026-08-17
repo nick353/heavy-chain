@@ -3,8 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { runwayImageArtifact, runwayProviderName, upscaleRunwayImage } from '../_shared/runway.ts';
-import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
+import { providerImageArtifact, providerName, upscaleProviderImage } from '../_shared/imageProvider.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
@@ -73,7 +72,6 @@ serve(async (req) => {
     ]);
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
-    await requireRunwayMcpConnectionApproval(supabaseService, brandId);
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {
@@ -129,7 +127,7 @@ serve(async (req) => {
       requestId,
     });
 
-    const imageModel = 'runway';
+    const imageModel = 'openai';
 
     // Fetch and analyze the original image
     console.log('🖼️ Fetching original image...');
@@ -149,13 +147,13 @@ serve(async (req) => {
       'Ultra high resolution, detailed restoration, sharp focus, pristine product image.'
     ].join(' ');
 
-    const runwayResult = await upscaleRunwayImage({
+    const providerResult = await upscaleProviderImage({
       brandId,
       base64: sourceImage.base64,
       mimeType: sourceImage.mimeType,
     });
-    const imageBase64 = runwayResult.base64;
-    const imageAsset = runwayImageArtifact(runwayResult);
+    const imageBase64 = providerResult.base64;
+    const imageAsset = providerImageArtifact(providerResult);
 
     const imageDataUrl = imageAsset.dataUrl;
     const fileName = `${user.id}/${brandId}/${Date.now()}_upscaled_${scale}x.${imageAsset.extension}`;
@@ -218,7 +216,7 @@ serve(async (req) => {
       await supabaseService.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
-        provider: runwayProviderName() as any,
+        provider: providerName() as any,
         tokens_used: 500,
         cost_usd: 0,
       });

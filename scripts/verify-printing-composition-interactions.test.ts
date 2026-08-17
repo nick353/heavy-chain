@@ -19,6 +19,7 @@ import {
 } from '../src/features/printing/selection/placementEditSession.ts';
 import {
   getGalleryPendingImageUrl,
+  getGallerySelectionStoragePath,
   resolveGalleryPendingSelection,
 } from '../src/features/printing/selection/galleryPendingSelection.ts';
 import {
@@ -62,6 +63,22 @@ test('confirmed single Gallery selection resolves only one live image with a usa
   ];
 
   assert.equal(getGalleryPendingImageUrl(images[0]), 'https://signed.example/first.png');
+  assert.equal(
+    getGallerySelectionStoragePath({
+      id: 'signed-path',
+      storage_path: 'https://project.supabase.co/storage/v1/object/sign/generated-images/brand/job/result.png?token=fresh',
+      image_url: 'https://signed.example/display.png',
+    }),
+    'brand/job/result.png',
+  );
+  assert.equal(
+    getGallerySelectionStoragePath({
+      id: 'signed-image',
+      storage_path: 'https://cdn.example/legacy-direct-url.png',
+      image_url: 'https://project.supabase.co/storage/v1/object/sign/generated-images/brand/job/result-2.png?token=fresh',
+    }),
+    'brand/job/result-2.png',
+  );
   assert.equal(getGalleryPendingImageUrl(images[1]), 'data:image/png;base64,AAAA');
   assert.equal(resolveGalleryPendingSelection(images, ' first ')?.image.id, 'first');
   assert.equal(resolveGalleryPendingSelection(images, 'missing'), null);
@@ -79,7 +96,7 @@ test('printing garment Gallery requires an explicit pending selection commit', (
   assert.match(gallerySelector, /if \(requestRevision !== fetchRequestRevisionRef\.current\) return;/);
   assert.match(gallerySelector, /if \(requestRevision === fetchRequestRevisionRef\.current\) \{\s*setIsLoading\(false\);/);
   assert.match(gallerySelector, /const handleConfirmSingle = \(\) => \{\s*if \(displayLoading \|\| !pendingSingleSelection \|\| singleCommitInFlightRef\.current\) return;\s*singleCommitInFlightRef\.current = true;/);
-  assert.match(gallerySelector, /onSelect\(imageUrl, image\.id, image\.storage_path, null\);\s*handleClose\(\);/);
+  assert.match(gallerySelector, /onSelect\(imageUrl, image\.id, getGallerySelectionStoragePath\(image\), null\);\s*handleClose\(\);/);
   assert.match(gallerySelector, /disabled=\{displayLoading \|\| !pendingSingleSelection\}/);
   assert.match(gallerySelector, /\{confirmLabel\}/);
 
@@ -824,8 +841,8 @@ test('stale or cross-brand results cannot be favorited into the current brand', 
 test('Gallery favorite mutation is limited to printing results and closes filtered removals', () => {
   assert.match(galleryPage, /if \(image\.feature_type !== 'printing-result'\)/);
   assert.match(galleryPage, /このローカル成果物は、現在の保存形式ではお気に入りを変更できません/);
-  assert.match(galleryPage, /setSelectedImage\(filter === 'favorites' && !newValue \? null : updatedImage\)/);
-  assert.match(galleryPage, /if \(filter === 'favorites' && !newValue\) setSearchParams\(\{\}\)/);
+  assert.match(galleryPage, /if \(filter === 'favorites' && !newValue\) \{\s*selectImage\(null\);\s*\} else \{\s*setSelectedImage\(updatedImage\);/);
+  assert.match(galleryPage, /const selectImage = useCallback\(\(image: GeneratedImage \| null\) => \{[\s\S]*?setSearchParams\(image \? \{ image: getGeneratedImageSelectionKey\(image\) \} : \{\}\);/);
 });
 
 test('design mask editor commits by stable layer identity instead of a stale array index', () => {

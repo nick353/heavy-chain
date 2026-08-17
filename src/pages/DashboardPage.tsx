@@ -21,6 +21,7 @@ import type { Brand, GeneratedImage } from '../types/database';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchWorkspaceActivity, emptyWorkspaceActivity, type WorkspaceActivity } from '../lib/workspaceActivity';
+import { getGeneratedImageSelectionKey } from '../lib/generatedImageIdentity';
 import { CreditSummaryPanel, FailureRetryCard, JobQueuePanel, WorkspaceGuidePanel } from '../components/workspace';
 import { LightchainParityHub } from '../components/LightchainParityHub';
 
@@ -159,7 +160,7 @@ export function DashboardPage() {
         setIsLoading(false);
       }
     }
-  }, [currentBrand]);
+  }, [currentBrand, user?.id]);
 
   const fetchActivity = useCallback(async (brandOverride?: Brand | null) => {
     const targetBrand = brandOverride ?? currentBrand;
@@ -173,7 +174,7 @@ export function DashboardPage() {
     setIsActivityLoading(true);
     setActivityError(null);
     try {
-      const nextActivity = await fetchWorkspaceActivity(targetBrand.id);
+      const nextActivity = await fetchWorkspaceActivity(targetBrand.id, user?.id);
       if (useAuthStore.getState().currentBrand?.id !== targetBrand.id) return;
       setWorkspaceActivity(nextActivity);
     } catch (error) {
@@ -185,7 +186,7 @@ export function DashboardPage() {
         setIsActivityLoading(false);
       }
     }
-  }, [currentBrand]);
+  }, [currentBrand, user?.id]);
 
   useEffect(() => {
     let mounted = true;
@@ -471,7 +472,7 @@ export function DashboardPage() {
                     className="rounded-2xl border border-white/10 bg-white/[0.06] p-3"
                   >
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">残り</p>
-                    <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.creditSummary.remainingUnits.toLocaleString()}</p>
+                    <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.creditSummary.billingTestAccountQuotaBypass ? '無制限' : workspaceActivity.creditSummary.remainingUnits.toLocaleString()}</p>
                   </Link>
                 </div>
                 <Link
@@ -745,7 +746,7 @@ export function DashboardPage() {
                   transition={{ delay: i * 0.05 }}
                   className="group aspect-square rounded-xl sm:rounded-2xl overflow-hidden bg-neutral-100 dark:bg-neutral-800 cursor-pointer relative shadow-sm hover:shadow-lg transition-all duration-300"
                   data-testid="dashboard-recent-image-card"
-                  onClick={() => navigate(`/gallery?image=${image.id}`)}
+                  onClick={() => navigate(`/gallery?image=${encodeURIComponent(getGeneratedImageSelectionKey(image))}`)}
                 >
                   {getImageUrl(image) ? (
                     <img

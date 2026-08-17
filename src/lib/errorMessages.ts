@@ -36,18 +36,10 @@ export const ERROR_MESSAGES: Record<string, string> = {
   BRAND_NOT_FOUND: 'ブランドが見つかりません。',
   BRAND_ACCESS_DENIED: 'このブランドで操作する権限がありません。ブランドを選び直してください。',
   BRAND_SUBSCRIPTION_UNAVAILABLE: 'このブランドの有効なサブスクが見つかりません。ブランド設定でプランの有効期間を確認してください。',
-  RUNWAY_MCP_ELIGIBLE_SUBSCRIPTION_REQUIRED: 'Runway生成にはRunway対応の有料プランが必要です。ブランド設定でプラン状態を確認してください。',
-  RUNWAY_MCP_CONNECTION_NOT_APPROVED: 'Runway MCP接続が未承認です。ブランド設定から接続を申請し、管理者承認後に再試行してください。',
-  RUNWAY_MCP_CONNECTION_STATUS_UNAVAILABLE: 'Runway MCP接続状態を確認できません。少し待ってから更新し、続く場合は管理者に接続状態を確認してください。',
-  RUNWAY_MCP_BRIDGE_NOT_CONFIGURED: 'Runway MCPブリッジが本番に設定されていません。管理者がRUNWAY_MCP_BRIDGE_URLとRUNWAY_MCP_BRIDGE_TOKENを設定する必要があります。',
-  RUNWAY_MCP_AUTH_REQUIRED: 'Runway MCPブリッジのRunwayログインが切れています。管理者がRunway MCPへ再接続してください。',
-  RUNWAY_MCP_SUBSCRIPTION_INACTIVE: 'Runway側のサブスクまたはクレジットが有効ではありません。今回は生成できません。Runwayアカウントのプランと残量を確認してから再試行してください。',
-  RUNWAY_MCP_REQUEST_FAILED: 'Runway MCPとの通信に失敗しました。入力は保存されています。少し待ってから再試行し、続く場合は管理者に接続状態を確認してください。',
-  LOCAL_RUNWAY_WORKER_NOT_RUNNING: 'Mac側のRunway workerが起動していません。入力は保存されています。workerを起動してからこのジョブを再開してください。',
-  LOCAL_RUNWAY_WORKER_TIMEOUT: 'Runway workerの生成完了を確認できませんでした。workerの結果JSONとRunway画面を確認し、完了していなければこのジョブを再開してください。',
-  LOCAL_RUNWAY_OAUTH_FAILED: 'Runway公式OAuthが失敗しています。Runwayの同意画面で「Consent session missing or expired」が出ているため、Runway MCPを再接続してください。',
   GEMINI_API_KEY_MISSING: 'Gemini生成のAPIキーがサーバーに設定されていません。管理者がSupabase Edge Function secretsにGEMINI_API_KEYを設定してから再試行してください。',
   IMAGE_PROVIDER_QUOTA_EXHAUSTED: '画像生成プロバイダの利用枠が不足しています。APIキーは届いていても、画像生成quota、課金設定、またはモデル利用権限が不足している可能性があります。',
+  AI_FITTING_PROVIDER_QUOTA_EXHAUSTED: 'AI fittingの画像生成quotaまたはモデル利用権限が不足しています。課金設定・provider quota・モデル権限を確認してから同じ入力で再開してください。',
+  VIDEO_PROVIDER_NOT_ADMITTED: '動画providerはまだ利用可能な状態ではありません。providerの接続状態を確認するまで生成は再開できません。',
   GEMINI_IMAGE_REQUEST_FAILED: 'Geminiでの画像生成に失敗しました。入力を少し短く具体化して再試行し、続く場合はAPIキー、モデル名、利用上限を確認してください。',
   GEMINI_IMAGE_EMPTY_RESPONSE: 'Geminiから画像が返りませんでした。プロンプトを調整して再試行してください。',
   OPENAI_IMAGE_API_KEY_MISSING: 'OpenAI画像生成のAPIキーがサーバーに設定されていません。管理者がSupabase Edge Function secretsにOPENAI_IMAGE_API_KEYを設定してから再試行してください。',
@@ -72,12 +64,14 @@ export const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export type FailureRecoveryKind =
-  | 'runway-limit'
+  | 'openai-quota'
+  | 'gemini-quota'
+  | 'provider-quota'
+  | 'provider-admission'
   | 'worker-wait'
   | 'reference-image'
   | 'generation'
   | 'network-api'
-  | 'runway-approval'
   | 'unknown';
 
 export interface FailureRecoveryGuidance {
@@ -90,13 +84,37 @@ export interface FailureRecoveryGuidance {
 }
 
 const FAILURE_RECOVERY_GUIDANCE: Record<FailureRecoveryKind, FailureRecoveryGuidance> = {
-  'runway-limit': {
-    kind: 'runway-limit',
-    title: 'Runwayの残量を確認',
-    userMessage: 'Runway側のサブスク、クレジット、または生成枠が不足している可能性があります。入力は残っているため、残量を確認してから再開できます。',
-    nextAction: 'Runwayのプランと残量を確認してから再試行',
-    retryLabel: '残量確認後に再開',
-    retryHrefFallback: '/jobs',
+  'openai-quota': {
+    kind: 'openai-quota',
+    title: 'OpenAI画像APIの残高を確認',
+    userMessage: 'OpenAI画像APIのquota、課金設定、または画像モデルの利用枠が不足しています。入力は保存されているため、OpenAI側の状態を確認してから再開できます。',
+    nextAction: 'OpenAI APIの課金・残高・organization設定を確認してから同じ入力で再開',
+    retryLabel: 'OpenAI確認後に再開',
+    retryHrefFallback: '/brand/settings',
+  },
+  'gemini-quota': {
+    kind: 'gemini-quota',
+    title: 'Gemini画像APIのquotaを確認',
+    userMessage: 'Gemini画像APIのquota、課金設定、または画像モデルの利用権限が不足しています。APIキーは届いていても、画像生成quotaが0の場合は生成できません。',
+    nextAction: 'Gemini APIのquota・課金・画像モデル権限を確認してから同じ入力で再開',
+    retryLabel: 'Gemini確認後に再開',
+    retryHrefFallback: '/brand/settings',
+  },
+  'provider-quota': {
+    kind: 'provider-quota',
+    title: '画像providerのquotaを確認',
+    userMessage: '画像providerのquota、課金設定、またはモデル利用権限が不足しています。外部providerの状態を確認するまで同じリクエストを繰り返しません。',
+    nextAction: '画像providerのquota・課金・モデル権限を確認してから同じ入力で再開',
+    retryLabel: 'provider確認後に再開',
+    retryHrefFallback: '/brand/settings',
+  },
+  'provider-admission': {
+    kind: 'provider-admission',
+    title: '動画providerのadmissionを確認',
+    userMessage: '動画providerが未admittedのため、動画生成はfail-closedです。provider toolsと同一runのreadbackが確認できるまで再試行しません。',
+    nextAction: '動画providerの接続状態と利用可能性を確認してから再開',
+    retryLabel: 'admission確認後に再開',
+    retryHrefFallback: '/video',
   },
   'worker-wait': {
     kind: 'worker-wait',
@@ -130,14 +148,6 @@ const FAILURE_RECOVERY_GUIDANCE: Record<FailureRecoveryKind, FailureRecoveryGuid
     retryLabel: '接続確認後に再試行',
     retryHrefFallback: '/jobs',
   },
-  'runway-approval': {
-    kind: 'runway-approval',
-    title: 'Runway承認を確認',
-    userMessage: 'このブランドのRunway接続または管理者承認が未完了です。承認後に同じ入力から再開できます。',
-    nextAction: 'ブランド設定でRunway承認と接続状態を確認',
-    retryLabel: '承認後に再開',
-    retryHrefFallback: '/brand/settings',
-  },
   unknown: {
     kind: 'unknown',
     title: '原因を確認して再開',
@@ -156,25 +166,37 @@ export function getFailureRecoveryGuidance(error: unknown): FailureRecoveryGuida
       : '';
   const message = rawMessage.toLowerCase();
 
+  if (/video_provider_not_admitted|provider.*not[_ ]?admitted/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE['provider-admission'];
+  }
+  if (/openai_image_(edit_failed|request_failed)|insufficient_quota|credit_balance_exhausted/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE['openai-quota'];
+  }
+  if (/gemini_image_request_failed|generativelanguage\.googleapis\.com|free[_ ]tier.*(quota|limit)|generate_content_.*(quota|requests)/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE['gemini-quota'];
+  }
+  if (/ai_fitting_provider_(quota_exhausted|permission_denied)|image_provider_quota_exhausted|provider[_ ]?(quota|permission)|quota.*provider/.test(message)) {
+    return FAILURE_RECOVERY_GUIDANCE['provider-quota'];
+  }
   if (/rate[_ ]?limit|user_usage_rate_limit|brand_usage_rate_limit|短時間|リクエスト制限/.test(message)) {
     return FAILURE_RECOVERY_GUIDANCE['network-api'];
   }
   if (/quota|credit|workspace_limit|subscription_inactive|usage.*quota.*exceeded|monthly|残量|生成枠|クレジット/.test(message)) {
-    return FAILURE_RECOVERY_GUIDANCE['runway-limit'];
+    return FAILURE_RECOVERY_GUIDANCE['provider-quota'];
   }
-  if (/reference|handoff|reference.*(storage|signed url|download|upload)|local_runway_worker_reference|参照画像|素材画像/.test(message)) {
+  if (/reference|handoff|reference.*(storage|signed url|download|upload)|参照画像|素材画像/.test(message)) {
     return FAILURE_RECOVERY_GUIDANCE['reference-image'];
   }
-  if (/waiting_for_runway|result json|result_json|timeout|pending local runway|local_runway_worker_(not_running|timeout)|worker.*(not running|waiting|timeout|result)/.test(message)) {
+  if (/result json|result_json|timeout|worker.*(not running|waiting|timeout|result)/.test(message)) {
     return FAILURE_RECOVERY_GUIDANCE['worker-wait'];
   }
   if (/approval|not_approved|auth_required|oauth|login|承認|ログイン/.test(message)) {
-    return FAILURE_RECOVERY_GUIDANCE['runway-approval'];
+    return FAILURE_RECOVERY_GUIDANCE['network-api'];
   }
   if (/network|fetch|api|502|503|504|request_failed|bridge_not_configured|connection_status_unavailable|storage|signed url|通信|接続/.test(message)) {
     return FAILURE_RECOVERY_GUIDANCE['network-api'];
   }
-  if (/generation|generate|runway_mcp|image|prompt|nsfw|failed|生成|プロンプト/.test(message)) {
+  if (/generation|generate|image|prompt|nsfw|failed|生成|プロンプト/.test(message)) {
     return FAILURE_RECOVERY_GUIDANCE.generation;
   }
   return FAILURE_RECOVERY_GUIDANCE.unknown;
@@ -186,17 +208,9 @@ const KNOWN_MESSAGE_MAP: Array<[RegExp, string]> = [
   [/user usage rate limit exceeded/i, ERROR_MESSAGES.USER_USAGE_RATE_LIMIT],
   [/brand usage rate limit exceeded/i, ERROR_MESSAGES.BRAND_USAGE_RATE_LIMIT],
   [/no active subscription for brand/i, ERROR_MESSAGES.BRAND_SUBSCRIPTION_UNAVAILABLE],
-  [/Runway MCP generation requires an active eligible subscription/i, ERROR_MESSAGES.RUNWAY_MCP_ELIGIBLE_SUBSCRIPTION_REQUIRED],
-  [/runway_mcp_connection_not_approved/i, ERROR_MESSAGES.RUNWAY_MCP_CONNECTION_NOT_APPROVED],
-  [/runway_mcp_connection_status_unavailable/i, ERROR_MESSAGES.RUNWAY_MCP_CONNECTION_STATUS_UNAVAILABLE],
-  [/runway_mcp_bridge_not_configured/i, ERROR_MESSAGES.RUNWAY_MCP_BRIDGE_NOT_CONFIGURED],
-  [/Consent session missing or expired|runway_mcp_local_bridge_failed:401|runway_mcp_remote_exited/i, ERROR_MESSAGES.LOCAL_RUNWAY_OAUTH_FAILED],
-  [/runway_mcp_auth_required/i, ERROR_MESSAGES.RUNWAY_MCP_AUTH_REQUIRED],
-  [/runway_mcp_subscription_inactive/i, ERROR_MESSAGES.RUNWAY_MCP_SUBSCRIPTION_INACTIVE],
-  [/runway_mcp_request_failed/i, ERROR_MESSAGES.RUNWAY_MCP_REQUEST_FAILED],
-  [/runway_mcp_output_fetch_failed|runway_mcp_empty_image_response/i, ERROR_MESSAGES.RUNWAY_MCP_REQUEST_FAILED],
-  [/local_runway_worker_not_running/i, ERROR_MESSAGES.LOCAL_RUNWAY_WORKER_NOT_RUNNING],
-  [/local_runway_worker_timeout/i, ERROR_MESSAGES.LOCAL_RUNWAY_WORKER_TIMEOUT],
+  [/video_provider_not_admitted|provider_not_admitted/i, ERROR_MESSAGES.VIDEO_PROVIDER_NOT_ADMITTED],
+  [/ai_fitting_provider_(quota_exhausted|permission_denied)|image_provider_quota_exhausted/i, ERROR_MESSAGES.AI_FITTING_PROVIDER_QUOTA_EXHAUSTED],
+  [/openai_image_edit_failed|insufficient_quota|credit_balance_exhausted/i, ERROR_MESSAGES.IMAGE_PROVIDER_QUOTA_EXHAUSTED],
   [/gemini_api_key_missing/i, ERROR_MESSAGES.GEMINI_API_KEY_MISSING],
   [/RESOURCE_EXHAUSTED|quota.*limit|free.*tier|paid.*plan|required|billing/i, ERROR_MESSAGES.IMAGE_PROVIDER_QUOTA_EXHAUSTED],
   [/gemini_image_empty_response/i, ERROR_MESSAGES.GEMINI_IMAGE_EMPTY_RESPONSE],

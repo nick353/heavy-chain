@@ -6,11 +6,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 
-const PROVIDER = 'runway_mcp_local_worker';
+const PROVIDER = 'openai';
 const GEMINI_PROVIDER = 'gemini';
 const OPENAI_PROVIDER = 'openai';
 const DEFAULT_OPENAI_LIVE_MODEL = 'gpt-image-1-mini';
-const CONTRACT_VERSION = 'heavy-chain.local-runway-worker.v1';
+const CONTRACT_VERSION = 'heavy-chain.openai-image.v1';
 const BUCKET = 'generated-images';
 const DEFAULT_USER_ID = '86b39a16-3ae0-4717-9e91-4764e8ee7292';
 const DEFAULT_BRAND_ID = 'e5571b0b-7af7-4265-9d47-7d90ae4767d3';
@@ -229,7 +229,7 @@ async function enqueueJobs() {
       model: input.model || defaultModelForFeature(job.feature_type),
       expected: input.expectedVisualOutcome,
       createdAt: job.created_at,
-      resultJsonPath: path.join('output/runway-mcp-results/inbox', `${job.id}.json`),
+      resultJsonPath: null,
     };
   });
   const manifest = {

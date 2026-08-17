@@ -145,17 +145,6 @@
       "required": false
     },
     {
-      "id": "runway_mcp_generation",
-      "effect_class": "external_non_idempotent",
-      "owner": "repo_local_worker",
-      "lane": "runway_mcp",
-      "entrypoints": [],
-      "needs_chrome": false,
-      "chrome_lease": null,
-      "replay": "approved_marker_scoped_request_only",
-      "required": false
-    },
-    {
       "id": "live_production_route_visual_qa",
       "effect_class": "internal_idempotent",
       "owner": "qa_orchestrator",
@@ -246,7 +235,7 @@
     },
     {
       "id": "generation_architecture",
-      "rule": "Preserve the Runway local-worker path, Supabase redaction and RLS rules, and marker-scoped database and Storage cleanup.",
+      "rule": "Preserve the OpenAI image-provider path, Supabase redaction and RLS rules, and marker-scoped database and Storage cleanup.",
       "on_violation": "generation_architecture_gate"
     },
     {

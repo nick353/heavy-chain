@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { buildLocalCanvasAssetReference, hasLocalCanvasAsset } from '../lib/canvasLocalAssets';
+import type { Json } from '../types/database';
 import type {
   CanvasSourceIdentity,
   CanvasSourceReadback,
@@ -57,6 +58,7 @@ export interface CanvasObject {
     parameters?: any;       // 使用したパラメータ
     parentObjectId?: string | null;
     maskApplied?: boolean;
+    protectedRegionComposited?: boolean;
     backendProvider?: string | null;
     provider?: string | null;
     status?: string | null;
@@ -68,6 +70,8 @@ export interface CanvasObject {
     galleryStoragePath?: string;
     galleryImageId?: string;
     galleryImageUrl?: string;
+    source?: string;
+    parityRuntime?: Json;
     legalSafety?: {
       rightsConfirmed?: boolean;
     };
@@ -127,6 +131,7 @@ export interface CanvasState {
   // Project actions
   createProject: (name: string, brandId?: string, initialObjects?: CanvasObject[]) => string;
   loadProject: (projectId: string) => void;
+  hydrateProject: (project: CanvasProject) => void;
   saveCurrentProject: () => void;
   deleteProject: (projectId: string) => void;
   renameProject: (projectId: string, name: string) => void;
@@ -279,6 +284,21 @@ export const useCanvasStore = create<CanvasState>()(
             panY: 0,
           });
         }
+      },
+
+      hydrateProject: (project) => {
+        set((state) => ({
+          projects: [project, ...state.projects.filter((item) => item.id !== project.id)],
+          currentProjectId: project.id,
+          currentProjectName: project.name,
+          objects: project.objects,
+          selectedIds: [],
+          history: [project.objects],
+          historyIndex: 0,
+          zoom: 1,
+          panX: 0,
+          panY: 0,
+        }));
       },
 
       saveCurrentProject: () => {
@@ -581,7 +601,7 @@ export const useCanvasStore = create<CanvasState>()(
     }),
     {
       name: 'heavy-chain-canvas',
-      version: 2,
+      version: 3,
       migrate: (persistedState: any) => {
         const state = persistedState?.state ?? persistedState;
         if (!state || typeof state !== 'object') {
@@ -597,10 +617,23 @@ export const useCanvasStore = create<CanvasState>()(
         };
       },
       partialize: (state) => ({
-        projects: state.projects.map(sanitizePersistedProject),
+        // Durable document snapshots live in Supabase. Keep only lightweight
+        // project metadata plus a bounded current-session working set here so
+        // a large canvas cannot exhaust localStorage again.
+        projects: state.projects.map((project) => ({
+          ...sanitizePersistedProject(project),
+          objects: [],
+          thumbnail: undefined,
+        })),
         currentProjectId: state.currentProjectId,
         currentProjectName: state.currentProjectName,
         objects: sanitizePersistedObjects(state.objects),
+        zoom: state.zoom,
+        panX: state.panX,
+        panY: state.panY,
+        gridVisible: state.gridVisible,
+        snapToGrid: state.snapToGrid,
+        gridSize: state.gridSize,
       }),
     }
   )

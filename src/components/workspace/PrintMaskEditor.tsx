@@ -16,13 +16,31 @@ import {
 import { Button } from '../ui';
 import { Modal } from '../ui/Modal';
 
-const loadImage = (url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
-  const image = new Image();
-  image.crossOrigin = 'anonymous';
-  image.onload = () => resolve(image);
-  image.onerror = () => reject(new Error('mask_editor_image_load_failed'));
-  image.src = url;
-});
+const loadImage = async (url: string) => {
+  let resolvedUrl = url;
+  let temporaryObjectUrl: string | null = null;
+  if (/^https?:\/\//i.test(url)) {
+    const response = await fetch(url, { credentials: 'omit', mode: 'cors' });
+    if (!response.ok) throw new Error('mask_editor_image_fetch_failed');
+    const blob = await response.blob();
+    if (/svg|xml/i.test(blob.type || '')) throw new Error('mask_editor_svg_not_allowed');
+    temporaryObjectUrl = URL.createObjectURL(blob);
+    resolvedUrl = temporaryObjectUrl;
+  }
+
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      if (temporaryObjectUrl) URL.revokeObjectURL(temporaryObjectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      if (temporaryObjectUrl) URL.revokeObjectURL(temporaryObjectUrl);
+      reject(new Error('mask_editor_image_load_failed'));
+    };
+    image.src = resolvedUrl;
+  });
+};
 
 const readAlpha = (rgba: Uint8ClampedArray) => {
   const alpha = new Uint8ClampedArray(rgba.length / 4);

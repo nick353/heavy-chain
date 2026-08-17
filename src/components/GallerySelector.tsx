@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/authStore';
 import type { Folder, GeneratedImage } from '../types/database';
 import {
   getGalleryPendingImageUrl,
+  getGallerySelectionStoragePath,
   resolveGalleryPendingSelection,
 } from '../features/printing/selection/galleryPendingSelection';
 import {
@@ -104,7 +105,12 @@ export function GallerySelector({
   onMultipleSelect,
   assetPurpose,
 }: GallerySelectorProps) {
-  const { currentBrand, user } = useAuthStore();
+  const {
+    currentBrand,
+    user,
+    isLoading: authLoading,
+    isInitialized: authInitialized,
+  } = useAuthStore();
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [folderMemberships, setFolderMemberships] = useState<GalleryFolderMembership[]>([]);
@@ -155,6 +161,14 @@ export function GallerySelector({
     setLoadedBrandId(null);
     setLoadError(null);
     setIsLoading(true);
+    if (!currentBrand && (authLoading || !authInitialized)) {
+      // The brand is populated asynchronously after the auth session. Keep the
+      // Light-style loading shell visible instead of presenting a misleading
+      // "ブランドを選択" error during the initial bootstrap window.
+      setLoadError(null);
+      setIsLoading(true);
+      return;
+    }
     if (!currentBrand) {
       setLoadError('ブランドを選択してからギャラリーを開いてください。');
       setIsLoading(false);
@@ -247,7 +261,7 @@ export function GallerySelector({
         setIsLoading(false);
       }
     }
-  }, [activeLibraryTab, assetPurpose, currentBrand, filter, user]);
+  }, [activeLibraryTab, assetPurpose, authInitialized, authLoading, currentBrand, filter, user]);
 
   useEffect(() => {
     if (isOpen) {
@@ -283,7 +297,10 @@ export function GallerySelector({
   const visibleFolders = hasCurrentBrandData ? folders : [];
   const visibleMemberships = hasCurrentBrandData ? folderMemberships : [];
   const visibleImages = hasCurrentBrandData ? images : [];
-  const displayLoading = isLoading || Boolean(isOpen && currentBrand && !hasCurrentBrandData && !loadError);
+  const displayLoading = isLoading || Boolean(
+    isOpen
+    && (authLoading || !authInitialized || (currentBrand && !hasCurrentBrandData && !loadError)),
+  );
   const folderNavigation = createGalleryFolderNavigation(visibleFolders);
   const folderPath = getGalleryFolderPath(folderNavigation, currentFolderId) ?? [];
   const childFolders = folderNavigation.childrenByParentId.get(currentFolderId) ?? [];
@@ -350,7 +367,7 @@ export function GallerySelector({
     } else {
       const imageUrl = getImageUrl(image);
       const imageElement = event.currentTarget.querySelector('img') as HTMLImageElement | null;
-      onSelect(imageUrl, image.id, image.storage_path, imageElement);
+      onSelect(imageUrl, image.id, getGallerySelectionStoragePath(image), imageElement);
     }
   };
 
@@ -367,7 +384,7 @@ export function GallerySelector({
     if (displayLoading || !pendingSingleSelection || singleCommitInFlightRef.current) return;
     singleCommitInFlightRef.current = true;
     const { image, imageUrl } = pendingSingleSelection;
-    onSelect(imageUrl, image.id, image.storage_path, null);
+    onSelect(imageUrl, image.id, getGallerySelectionStoragePath(image), null);
     handleClose();
   };
 

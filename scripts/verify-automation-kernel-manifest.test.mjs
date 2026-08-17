@@ -123,9 +123,6 @@ test('Playwright stays repo-owned and only live production visual QA leases Chro
   assert.equal(stages.live_production_cleanup_proof.replay, 'run_owned_resources_only');
   assert.equal(stages.repo_playwright_e2e.lane, 'repo_owned_playwright');
   assert.equal(stages.repo_playwright_e2e.chrome_lease, null);
-  assert.equal(stages.runway_mcp_generation.lane, 'runway_mcp');
-  assert.equal(stages.runway_mcp_generation.effect_class, 'external_non_idempotent');
-  assert.equal(stages.runway_mcp_generation.chrome_lease, null);
   assert.equal(stages.deploy.approval_required, true);
   assert.equal(stages.deploy.effect_class, 'external_non_idempotent');
   assert.equal(stages.live_production_cleanup_proof.always_run, true);

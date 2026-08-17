@@ -28,7 +28,7 @@ export interface PrintDesignHandoffInput {
 }
 
 export interface TrustedPatternsResultProvenance {
-  generationLane: 'hosted-gemini' | 'edge-design-gacha';
+  generationLane: 'hosted-image' | 'edge-design-gacha';
   originFeature: 'design-gacha';
   sourceWorkspace: 'patterns';
   workflowVersion: 'pattern-preview-local-v1';
@@ -114,7 +114,7 @@ export const createTrustedPatternsResultProvenance = ({
   generationLane: unknown;
 }): TrustedPatternsResultProvenance | undefined => {
   if (featureId !== 'design-gacha' || !isTrustedPatternsOrigin(sourceReadback)) return undefined;
-  if (generationLane !== 'hosted-gemini' && generationLane !== 'edge-design-gacha') return undefined;
+  if (generationLane !== 'hosted-image' && generationLane !== 'edge-design-gacha') return undefined;
   if (!Number.isFinite(generationStartedAt) || generationStartedAt <= 0) return undefined;
   return {
     generationLane,
@@ -131,7 +131,7 @@ export const isTrustedPatternsResultProvenance = (
   value: unknown,
 ): value is TrustedPatternsResultProvenance => (
   isRecord(value)
-  && (value.generationLane === 'hosted-gemini' || value.generationLane === 'edge-design-gacha')
+  && (value.generationLane === 'hosted-image' || value.generationLane === 'edge-design-gacha')
   && value.originFeature === 'design-gacha'
   && isTrustedPatternsOrigin(value)
   && typeof value.generationStartedAt === 'number'
@@ -258,7 +258,7 @@ export function readPrintDesignHandoff(
     || payload.schema !== PRINT_DESIGN_HANDOFF_SCHEMA
     || payload.schemaVersion !== 1
     || payload.sourceApp !== 'heavy-chain'
-    || (payload.generationLane !== 'hosted-gemini' && payload.generationLane !== 'edge-design-gacha')
+    || (payload.generationLane !== 'hosted-image' && payload.generationLane !== 'edge-design-gacha')
     || payload.sourceWorkspace !== 'patterns'
     || payload.workflowVersion !== 'pattern-preview-local-v1'
     || payload.sourceResumePath !== '/patterns/workbench'

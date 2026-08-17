@@ -3,8 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { generateRunwayImage, runwayImageArtifact, runwayProviderName, runwayReferenceImage, type RunwayImageResult } from '../_shared/runway.ts';
-import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
+import { generateProviderImage, providerImageArtifact, providerName, providerReferenceImage, type ProviderImageResult } from '../_shared/imageProvider.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 
@@ -61,7 +60,7 @@ async function generateAngleWithReference(
   backgroundPrompt: string,
   _apiKey?: string,
   _imageModel?: string
-): Promise<RunwayImageResult | null> {
+): Promise<ProviderImageResult | null> {
   console.log(`🎨 Generating ${shot.name} with reference image...`);
   
   // 強化されたプロンプト: 質感の一貫性を重視
@@ -84,10 +83,10 @@ STYLE: Professional e-commerce product photography, high resolution, sharp focus
 
 DO NOT change any aspect of the garment itself - only change the camera angle.`;
 
-  return await generateRunwayImage({
+  return await generateProviderImage({
     brandId,
     prompt,
-    referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
+    referenceImages: [providerReferenceImage(originalBase64, originalMimeType, 'product')],
   });
 }
 
@@ -99,7 +98,7 @@ async function generateAngleFromText(
   backgroundPrompt: string,
   _apiKey?: string,
   _imageModel?: string
-): Promise<RunwayImageResult | null> {
+): Promise<ProviderImageResult | null> {
   console.log(`🎨 Generating ${shot.name} from text (fallback)...`);
   
   const prompt = `Generate a professional e-commerce product photo.
@@ -110,7 +109,7 @@ BACKGROUND: ${backgroundPrompt}
 
 STYLE: High-resolution commercial product photography, sharp focus, professional lighting.`;
 
-  return await generateRunwayImage({ brandId, prompt });
+  return await generateProviderImage({ brandId, prompt });
 }
 
 serve(async (req) => {
@@ -171,7 +170,6 @@ serve(async (req) => {
     ]);
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
-    await requireRunwayMcpConnectionApproval(supabaseService, brandId);
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {
@@ -196,7 +194,7 @@ serve(async (req) => {
     const backgroundPrompt = BACKGROUND_OPTIONS[background] || BACKGROUND_OPTIONS['white'];
     console.log('🎨 Background:', background, '->', backgroundPrompt);
 
-    const imageModel = 'runway';
+    const imageModel = 'openai';
 
     // 元画像のBase64を取得（参照画像として使用）
     let originalImageBase64: string | null = null;
@@ -238,7 +236,7 @@ serve(async (req) => {
     const results = [];
 
     for (const shot of selectedShots) {
-      let generatedImage: RunwayImageResult | null = null;
+      let generatedImage: ProviderImageResult | null = null;
       
       // 元画像がある場合は参照生成、ない場合はテキスト生成
       if (originalImageBase64) {
@@ -259,7 +257,7 @@ serve(async (req) => {
       }
 
       if (generatedImage) {
-        const imageAsset = runwayImageArtifact(generatedImage);
+        const imageAsset = providerImageArtifact(generatedImage);
         const imageBase64 = imageAsset.base64;
         const imageDataUrl = imageAsset.dataUrl;
         const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
@@ -326,7 +324,7 @@ serve(async (req) => {
       await supabaseService.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
-        provider: runwayProviderName() as any,
+        provider: providerName() as any,
         tokens_used: results.length * 500,
         cost_usd: 0,
       });

@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { Json } from '../types/database';
+export { assertCompletedImageEditResult, assertCompletedModelMatrixResult } from './providerResultReadback';
 
 export interface TextOverlayPayload {
   text: string;
@@ -74,12 +75,19 @@ export interface ImageEditResult {
   persistenceStatus?: 'not_started' | 'processing' | 'completed' | 'partial' | 'failed' | 'pending';
   cleanupStatus?: 'none' | 'attempted' | 'completed' | 'failed';
   requestedCandidateCount?: number;
+  inputImageCount?: number;
   persistedCandidateCount?: number;
   failedCandidates?: Array<{ candidateIndex: number; error: string }>;
   cleanupErrors?: string[];
   parentObjectId?: string | null;
   generation?: number | null;
   maskApplied?: boolean;
+  maskCoveragePercent?: number;
+  maskWidth?: number;
+  maskHeight?: number;
+  providerModel?: string | null;
+  inputFidelity?: 'low' | 'high' | null;
+  quality?: 'low' | 'medium' | 'high' | 'auto' | null;
   error?: string;
 }
 
@@ -237,7 +245,7 @@ export async function generateImage(
   prompt: string,
   brandId: string,
   options?: {
-    generationProvider?: 'gemini' | 'gemini_image' | 'openai' | 'openai_image' | 'mock' | 'mock_image' | 'runway' | 'runway_mcp';
+    generationProvider?: 'gemini' | 'gemini_image' | 'openai' | 'openai_image' | 'mock' | 'mock_image';
     generationModel?: string;
     featureType?: string;
     style?: string;
@@ -330,21 +338,39 @@ export async function editImageWithPrompt(
     maskCoveragePercent?: number;
     maskWidth?: number;
     maskHeight?: number;
+    providerModel?: string;
+    inputFidelity?: 'low' | 'high';
+    quality?: 'low' | 'medium' | 'high' | 'auto';
     lightchainCompat?: LightchainCompatPayload;
     idempotencyKey?: string;
+    referenceImageUrls?: string[];
+    generationIntent?: unknown;
+    materialReferences?: unknown;
+    layerPlan?: unknown;
+    maskPlan?: unknown;
+    compositionPreview?: unknown;
   },
 ): Promise<ImageEditResult> {
   try {
-    const response = await fetch(imageUrl);
-    if (!response.ok) throw new Error(`image_edit_input_fetch_failed:${response.status}`);
-    const imageBlob = await response.blob();
-    if (!imageBlob.type.startsWith('image/')) throw new Error('image_edit_input_not_image');
-    const imageInput = options?.maskDataUrl
-      ? await imageBlobToPngDataUrl(imageBlob)
-      : await imageBlobToDataUrl(imageBlob);
+    const inputImageUrls = [imageUrl, ...(options?.referenceImageUrls ?? [])]
+      .filter((value, index, values): value is string => typeof value === 'string' && value.trim().length > 0 && values.indexOf(value) === index)
+      .slice(0, 16);
+    if (!inputImageUrls.length) throw new Error('image_edit_input_missing');
+    const inputImages = await Promise.all(inputImageUrls.map(async (inputImageUrl, index) => {
+      const response = await fetch(inputImageUrl);
+      if (!response.ok) throw new Error(`image_edit_input_fetch_failed:${index}:${response.status}`);
+      const imageBlob = await response.blob();
+      if (!imageBlob.type.startsWith('image/')) throw new Error(`image_edit_input_not_image:${index}`);
+      const dataUrl = index === 0 && options?.maskDataUrl
+        ? await imageBlobToPngDataUrl(imageBlob)
+        : await imageBlobToDataUrl(imageBlob);
+      return dataUrl;
+    }));
+    const imageInput = inputImages[0];
     const { data, error } = await supabase.functions.invoke('edit-image', {
       body: {
         imageUrl: imageInput,
+        imageUrls: inputImages,
         prompt,
         brandId,
         maskDataUrl: options?.maskDataUrl,
@@ -355,7 +381,15 @@ export async function editImageWithPrompt(
         maskCoveragePercent: options?.maskCoveragePercent,
         maskWidth: options?.maskWidth,
         maskHeight: options?.maskHeight,
+        providerModel: options?.providerModel,
+        inputFidelity: options?.inputFidelity,
+        quality: options?.quality,
         lightchainCompat: options?.lightchainCompat,
+        generationIntent: options?.generationIntent,
+        materialReferences: options?.materialReferences,
+        layerPlan: options?.layerPlan,
+        maskPlan: options?.maskPlan,
+        compositionPreview: options?.compositionPreview,
         legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
       },
       ...(options?.idempotencyKey
@@ -478,6 +512,25 @@ export async function generateProductShots(
   }
 }
 
+export interface ModelMatrixResult {
+  success: boolean;
+  jobId?: string | null;
+  persistenceStatus?: 'not_started' | 'processing' | 'completed' | 'failed';
+  failedStage?: string | null;
+  cleanupStatus?: 'none' | 'attempted' | 'failed';
+  matrix?: Array<{
+    bodyType: string;
+    bodyTypeName: string;
+    ageGroup: string;
+    ageGroupName: string;
+    imageUrl: string;
+    storagePath?: string;
+    imageId?: string;
+    persistenceStatus?: 'completed' | 'failed';
+  }>;
+  error?: string;
+}
+
 /**
  * Generate model matrix (body types x age groups)
  */
@@ -496,27 +549,11 @@ export async function generateModelMatrix(
     layerPlan?: unknown;
     maskPlan?: unknown;
     compositionPreview?: unknown;
+    lightchainCompat?: LightchainCompatPayload;
     textOverlay?: TextOverlayPayload;
     rightsConfirmed?: boolean;
   }
-): Promise<{
-  success: boolean;
-  jobId?: string | null;
-  persistenceStatus?: 'not_started' | 'processing' | 'completed' | 'failed';
-  failedStage?: string | null;
-  cleanupStatus?: 'none' | 'attempted' | 'failed';
-  matrix?: Array<{
-    bodyType: string;
-    bodyTypeName: string;
-    ageGroup: string;
-    ageGroupName: string;
-    imageUrl: string;
-    storagePath?: string;
-    imageId?: string;
-    persistenceStatus?: 'completed' | 'failed';
-  }>;
-  error?: string;
-}> {
+): Promise<ModelMatrixResult> {
   try {
     const { data, error } = await supabase.functions.invoke('model-matrix', {
       body: { productDescription, brandId, ...options, legalSafety: { rightsConfirmed: options?.rightsConfirmed === true } },

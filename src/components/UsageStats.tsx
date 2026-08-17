@@ -228,7 +228,7 @@ export function UsageStats({ className }: UsageStatsProps) {
     },
     {
       label: '今月残り',
-      value: summary.remainingUnits.toLocaleString(),
+      value: summary.billingTestAccountQuotaBypass ? '無制限' : summary.remainingUnits.toLocaleString(),
       suffix: '回',
       icon: Gauge,
       color: 'text-purple-500',
@@ -252,7 +252,7 @@ export function UsageStats({ className }: UsageStatsProps) {
     },
     {
       label: '月間上限',
-      value: summary.monthlyQuota.toLocaleString(),
+      value: summary.billingTestAccountQuotaBypass ? '無制限' : summary.monthlyQuota.toLocaleString(),
       suffix: '回',
       icon: Gauge,
       color: 'text-purple-500',
@@ -278,7 +278,7 @@ export function UsageStats({ className }: UsageStatsProps) {
         <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
           {summary.appleSandboxTesterNoRealCharge
             ? 'Apple sandbox tester: 購入フロー検証はテスト扱いで、実請求されない想定です。'
-            : 'テストアカウント: 運用確認用の生成 quota bypass が有効です。'}
+            : 'このアカウントは月間生成 quota 無制限です（安全レート制限は維持）。'}
         </div>
       )}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3 sm:gap-4 lg:gap-6">

@@ -13,6 +13,72 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, idempotency-key',
 };
 
+const MAX_INPUT_IMAGE_URL_LENGTH = 32_000_000;
+const MAX_INPUT_IMAGE_COUNT = 16;
+const MAX_TOTAL_INPUT_IMAGE_URL_LENGTH = 48_000_000;
+const LIGHTCHAIN_MATERIAL_FEATURE_IDS = new Set(['fabric-image', 'printing-image']);
+const LIGHTCHAIN_MATERIAL_EDIT_MODELS = new Set(['gpt-image-1']);
+const IMAGE_EDIT_QUALITIES = new Set(['low', 'medium', 'high', 'auto']);
+
+function resolveLightchainImageEditOptions({
+  featureId,
+  providerModel,
+  inputFidelity,
+  quality,
+}: {
+  featureId: unknown;
+  providerModel: unknown;
+  inputFidelity: unknown;
+  quality: unknown;
+}) {
+  const isLightchainMaterialRoute = typeof featureId === 'string'
+    && LIGHTCHAIN_MATERIAL_FEATURE_IDS.has(featureId);
+  const requestedModel = typeof providerModel === 'string' ? providerModel.trim() : '';
+  const resolvedModel = isLightchainMaterialRoute
+    ? (LIGHTCHAIN_MATERIAL_EDIT_MODELS.has(requestedModel) ? requestedModel : 'gpt-image-1')
+    : requestedModel || Deno.env.get('OPENAI_IMAGE_EDIT_MODEL')?.trim()
+      || Deno.env.get('OPENAI_IMAGE_MODEL')?.trim()
+      || 'gpt-image-1-mini';
+  const requestedFidelity = inputFidelity === 'high' || inputFidelity === 'low' ? inputFidelity : null;
+  const resolvedFidelity: 'low' | 'high' | null = resolvedModel === 'gpt-image-1'
+    ? requestedFidelity ?? 'low'
+    : null;
+  const resolvedQuality = typeof quality === 'string' && IMAGE_EDIT_QUALITIES.has(quality)
+    ? quality as 'low' | 'medium' | 'high' | 'auto'
+    : 'auto';
+  return {
+    isLightchainMaterialRoute,
+    providerModel: resolvedModel,
+    inputFidelity: resolvedFidelity,
+    quality: resolvedQuality,
+  };
+}
+
+function normalizeEditImageInputs(imageUrl: unknown, imageUrls: unknown) {
+  const candidates = Array.isArray(imageUrls) ? imageUrls : [imageUrl];
+  const normalized = candidates
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .map((value) => value.trim());
+
+  if (!normalized.length || normalized.length > MAX_INPUT_IMAGE_COUNT) {
+    throw new Error('Invalid edit input images');
+  }
+  if (normalized.some((value) => value.length > MAX_INPUT_IMAGE_URL_LENGTH)) {
+    throw new Error('Edit input image is too large');
+  }
+  if (normalized.reduce((total, value) => total + value.length, 0) > MAX_TOTAL_INPUT_IMAGE_URL_LENGTH) {
+    throw new Error('Edit input images are too large');
+  }
+  for (const [index, value] of normalized.entries()) {
+    const isDataImage = /^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/i.test(value);
+    const isHttpsImage = /^https:\/\/[^\s]+$/i.test(value);
+    if (!isDataImage && !isHttpsImage) {
+      throw new Error(`Invalid edit input image:${index}`);
+    }
+  }
+  return normalized;
+}
+
 function pngDataUrlInfo(value: string) {
   const prefix = 'data:image/png;base64,';
   if (!value.startsWith(prefix)) throw new Error('Invalid PNG data URL');
@@ -71,6 +137,7 @@ serve(async (req) => {
     const body = await req.json();
     const {
       imageUrl,
+      imageUrls,
       prompt,
       brandId,
       lightchainCompat,
@@ -82,11 +149,16 @@ serve(async (req) => {
       maskCoveragePercent,
       maskWidth,
       maskHeight,
+      providerModel,
+      inputFidelity,
+      quality,
     } = body;
 
-    if (!imageUrl || !prompt || !brandId) {
+    if (!prompt || !brandId) {
       throw new Error('Missing required parameters');
     }
+    const editInputImages = normalizeEditImageInputs(imageUrl, imageUrls);
+    const primaryImageUrl = editInputImages[0];
     if (maskDataUrl !== undefined && (
       typeof maskDataUrl !== 'string'
       || !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(maskDataUrl)
@@ -95,10 +167,10 @@ serve(async (req) => {
       throw new Error('Invalid edit mask');
     }
     if (maskDataUrl) {
-      if (typeof imageUrl !== 'string' || !imageUrl.startsWith('data:image/png;base64,')) {
+      if (!primaryImageUrl.startsWith('data:image/png;base64,')) {
         throw new Error('Masked edit input must be PNG');
       }
-      const imageInfo = pngDataUrlInfo(imageUrl);
+      const imageInfo = pngDataUrlInfo(primaryImageUrl);
       const maskInfo = pngDataUrlInfo(maskDataUrl);
       if (imageInfo.width !== maskInfo.width || imageInfo.height !== maskInfo.height) {
         throw new Error('Edit mask dimensions must match input image');
@@ -115,6 +187,15 @@ serve(async (req) => {
     if (maskApplied === true && !hasMask) {
       throw new Error('Partial-edit mask is required');
     }
+    const requestedFeatureId = typeof lightchainCompat?.lightchainFeatureId === 'string'
+      ? lightchainCompat.lightchainFeatureId
+      : null;
+    const imageEditOptions = resolveLightchainImageEditOptions({
+      featureId: requestedFeatureId,
+      providerModel,
+      inputFidelity,
+      quality,
+    });
     const safeParentObjectId = typeof parentObjectId === 'string' && parentObjectId.trim()
       ? parentObjectId.trim().slice(0, 128)
       : null;
@@ -124,12 +205,16 @@ serve(async (req) => {
       : null;
     const partialEditProvenance = {
       mode: hasMask ? 'inpaint' : 'prompt-edit',
+      inputImageCount: editInputImages.length,
       maskApplied: hasMask,
       parentObjectId: safeParentObjectId,
       generation: safeGeneration,
       maskCoveragePercent: typeof maskCoveragePercent === 'number' ? Math.max(0, Math.min(100, maskCoveragePercent)) : null,
       maskWidth: typeof maskWidth === 'number' ? Math.max(1, Math.min(8192, Math.round(maskWidth))) : null,
       maskHeight: typeof maskHeight === 'number' ? Math.max(1, Math.min(8192, Math.round(maskHeight))) : null,
+      providerModel: imageEditOptions.providerModel,
+      inputFidelity: imageEditOptions.inputFidelity,
+      quality: imageEditOptions.quality,
       backendProvider: 'supabase-edge-function',
       provider: 'openai',
     };
@@ -166,7 +251,7 @@ serve(async (req) => {
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
     const materialMetadata = sanitizeMaterialGenerationMetadata(body);
-    const requestedCandidateCount = hasMask ? 4 : 1;
+    const requestedCandidateCount = hasMask && !imageEditOptions.isLightchainMaterialRoute ? 4 : 1;
 
     const { data: job, error: jobError } = await supabaseClient
       .from('generation_jobs')
@@ -204,9 +289,11 @@ serve(async (req) => {
 
     const result = await editOpenAiImage({
       prompt,
-      images: [{ imageUrl }],
+      images: editInputImages.map((inputImageUrl) => ({ imageUrl: inputImageUrl })),
       mask: maskDataUrl ? { imageUrl: maskDataUrl } : undefined,
-      model: Deno.env.get('OPENAI_IMAGE_EDIT_MODEL')?.trim() || Deno.env.get('OPENAI_IMAGE_MODEL')?.trim() || 'gpt-image-1-mini',
+      model: imageEditOptions.providerModel,
+      inputFidelity: imageEditOptions.inputFidelity,
+      quality: imageEditOptions.quality,
       background: outputBackground === 'transparent' ? 'transparent' : 'auto',
       count: requestedCandidateCount,
     });
@@ -270,9 +357,13 @@ serve(async (req) => {
               ...(hasMask ? { maskApplied: true } : {}),
               provider: 'openai',
               taskId: result.taskId,
+              providerModel: result.model,
+              inputFidelity: result.inputFidelity ?? imageEditOptions.inputFidelity,
+              quality: result.quality ?? imageEditOptions.quality,
               batchId: job.id,
               candidateIndex,
               requestedCandidateCount,
+              inputImageCount: editInputImages.length,
             },
             metadata: {
               remoteSaveStatus: 'succeeded',
@@ -284,6 +375,10 @@ serve(async (req) => {
               batchId: job.id,
               candidateIndex,
               requestedCandidateCount,
+              inputImageCount: editInputImages.length,
+              providerModel: result.model,
+              inputFidelity: result.inputFidelity ?? imageEditOptions.inputFidelity,
+              quality: result.quality ?? imageEditOptions.quality,
               ...(materialMetadata ?? {}),
               ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
             } as any,
@@ -368,8 +463,6 @@ serve(async (req) => {
       storagePath: firstImage.storagePath,
       imageUrl: firstImage.imageUrl,
       feature: hasMask ? 'partial-edit' : 'prompt-edit',
-      provider: 'openai',
-      backendProvider: 'supabase-edge-function',
       status: 'completed',
       ...partialEditProvenance,
       persistenceStatus,

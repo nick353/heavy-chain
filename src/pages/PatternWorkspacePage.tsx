@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, ImagePlus, Palette, Repeat2, Save, Shapes, Shirt, Upload, WandSparkles } from 'lucide-react';
@@ -10,7 +10,12 @@ import {
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
 import type { PatternGenerationContext, PatternPreviewContext } from '../lib/workspaceHandoff';
-import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
+import {
+  buildGenerationIntentHref,
+  handoffWorkspaceToCanvas,
+  restoreWorkspaceHandoffHistory,
+  workspaceSourceConfig,
+} from '../lib/workspaceHandoff';
 
 const modes = ['グラフィック', '総柄', 'ベクター化'] as const;
 
@@ -28,11 +33,6 @@ type HistoryItem = {
   id: string;
   label: string;
 };
-
-const initialHistory: HistoryItem[] = [
-  { id: 'pattern-history-1', label: 'ブランドモチーフ案を整理' },
-  { id: 'pattern-history-2', label: '総柄リピート条件を保存' },
-];
 
 const motifPresets = [
   {
@@ -263,11 +263,11 @@ const buildPatternPreviewSvg = ({
 
 export function PatternWorkspacePage() {
   const navigate = useNavigate();
-  const { currentBrand } = useAuthStore();
+  const { user, currentBrand } = useAuthStore();
   const [activeMode, setActiveMode] = useState<Mode>(modes[0]);
   const [selectedPreviewId, setSelectedPreviewId] = useState('graphic-emblem');
   const [progress, setProgress] = useState(32);
-  const [history, setHistory] = useState(initialHistory);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [motifPrompt, setMotifPrompt] = useState('Heavy Chainの鎖モチーフ、細い線画、Tシャツ胸元向けの静かなグラフィック');
   const [repeatStyle, setRepeatStyle] = useState('ハーフドロップ、余白多め、遠目でうるさくならない密度');
   const [garmentTarget, setGarmentTarget] = useState('ブラックのヘビーウェイトTシャツ / 胸元ワンポイントと背面総柄');
@@ -275,7 +275,7 @@ export function PatternWorkspacePage() {
   const [vectorIntent, setVectorIntent] = useState('刺繍とシルクスクリーンに使える2色ベクターへ整理');
   const [referenceAssets, setReferenceAssets] = useState('chain_mark_ref.svg, vintage_bandana_grid.png, tee_mockup_front.jpg');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
-  const nextHistoryId = useRef(3);
+  const nextHistoryId = useRef(1);
   const previewCandidates = useMemo<PatternPreviewCandidate[]>(() => {
     const candidates = [
       {
@@ -321,6 +321,9 @@ export function PatternWorkspacePage() {
   const selectedPreview = previewCandidates.find((candidate) => candidate.id === selectedPreviewId) ?? previewCandidates[0];
   const primaryInput = `${motifPrompt} / ${garmentTarget}`;
   const nextStep = `${repeatStyle}をpattern-design-briefとして、${vectorIntent}へ進める`;
+  useEffect(() => {
+    setHistory(restoreWorkspaceHandoffHistory(currentBrand?.id, 'graphic-pattern-workspace', user?.id));
+  }, [currentBrand?.id, user?.id]);
   const directPatternGenerationHref = buildGenerationIntentHref({
     feature: 'design-gacha',
     prompt: [
@@ -433,8 +436,10 @@ export function PatternWorkspacePage() {
       `Material reference: ${materialReferenceSummary}`,
       `Next step: ${nextStep}`,
     ].join('\n');
+    try {
     const { projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
+      scopeId: user?.id,
       featureType: 'graphic-pattern-workspace',
       projectName: `パターン作業台: ${activeMode}`,
       title: `パターン作業台: ${activeMode}`,
@@ -534,6 +539,11 @@ export function PatternWorkspacePage() {
 
     toast.success('柄・グラフィックを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Canvas保存に失敗しました';
+      console.error('Failed to persist Pattern workspace handoff:', error);
+      toast.error(message);
+    }
   };
 
   return (

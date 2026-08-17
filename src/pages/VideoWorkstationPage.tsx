@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, Clapperboard, Film, Save, Smartphone } from 'lucide-react';
@@ -9,7 +9,7 @@ import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
-import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
+import { handoffWorkspaceToCanvas, restoreWorkspaceHandoffHistory } from '../lib/workspaceHandoff';
 
 const choices = ['構成', '編集', '書き出し'];
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
@@ -31,11 +31,6 @@ type HistoryItem = {
   id: string;
   label: string;
 };
-
-const initialHistory: HistoryItem[] = [
-  { id: 'video-history-1', label: '15秒リール構成を保存' },
-  { id: 'video-history-2', label: '字幕チェックを完了' },
-];
 
 const storyboardCandidates: VideoStoryboardCandidate[] = [
   {
@@ -212,10 +207,10 @@ const buildVideoStoryboardPreviewSvg = ({
 
 export function VideoWorkstationPage() {
   const navigate = useNavigate();
-  const { currentBrand } = useAuthStore();
+  const { user, currentBrand } = useAuthStore();
   const [activeChoice, setActiveChoice] = useState(choices[0]);
   const [progress, setProgress] = useState(40);
-  const [history, setHistory] = useState(initialHistory);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedStoryboardId, setSelectedStoryboardId] = useState(storyboardCandidates[0].id);
   const [duration, setDuration] = useState(storyboardCandidates[0].duration);
   const [aspectRatio, setAspectRatio] = useState(storyboardCandidates[0].aspectRatio);
@@ -223,7 +218,7 @@ export function VideoWorkstationPage() {
   const [subtitleCta, setSubtitleCta] = useState(storyboardCandidates[0].cta);
   const [materials, setMaterials] = useState(storyboardCandidates[0].materials);
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
-  const nextHistoryId = useRef(3);
+  const nextHistoryId = useRef(1);
   const selectedStoryboard = storyboardCandidates.find((candidate) => candidate.id === selectedStoryboardId) ?? storyboardCandidates[0];
   const shotSteps = shotPlan
     .split('/')
@@ -239,25 +234,12 @@ export function VideoWorkstationPage() {
     materials,
   }), [activeChoice, aspectRatio, duration, materials, selectedStoryboard, shotPlan, subtitleCta]);
   const primaryInput = `${duration} / ${aspectRatio} / ${shotPlan}`;
-  const nextStep = `${shotPlan}をvideo-shot-planとしてレンダー指示へ進める`;
-  const directVideoGenerationHref = buildGenerationIntentHref({
-    feature: 'campaign-image',
-    prompt: [
-      `Storyboard: ${selectedStoryboard.label}`,
-      `Shot order: ${shotPlan}`,
-      `Motion: ${selectedStoryboard.motion}`,
-      `Framing: ${selectedStoryboard.framing}`,
-      `CTA: ${subtitleCta}`,
-      `Materials: ${materials}`,
-      `Format: ${aspectRatio}`,
-    ].join('\n'),
-    aspectRatio,
-    sourceWorkspace: 'video',
-    workflowVersion: 'video-storyboard-local-v1',
-    sourceLabel: workspaceSourceConfig.video.label,
-    sourceResumePath: workspaceSourceConfig.video.resumePath,
-    sourceMode: 'local-workflow-intake',
-  });
+  const nextStep = `${shotPlan}をvideo-shot-planとして保存し、動画providerの利用可能確認後にレンダーへ進める`;
+  const videoProviderBlocker = 'video_provider_not_admitted: 動画providerの利用可能状態が未確認です';
+
+  useEffect(() => {
+    setHistory(restoreWorkspaceHandoffHistory(currentBrand?.id, 'video-workstation', user?.id));
+  }, [currentBrand?.id, user?.id]);
 
   const recordProgress = (choice: string) => {
     const historyItem = {
@@ -286,13 +268,6 @@ export function VideoWorkstationPage() {
     }
 
     const note = history[0]?.label ?? 'ローカルメモなし';
-    const generationSource = {
-      sourceWorkspace: 'video' as const,
-      workflowVersion: 'video-storyboard-local-v1',
-      sourceLabel: workspaceSourceConfig.video.label,
-      sourceResumePath: workspaceSourceConfig.video.resumePath,
-      sourceMode: 'local-workflow-intake' as const,
-    };
     const selectedVideoStoryboardMetadata = {
       id: selectedStoryboard.id,
       label: selectedStoryboard.label,
@@ -311,16 +286,6 @@ export function VideoWorkstationPage() {
     const materialReferenceSummary = materialReferenceMetadata.hasImage
       ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
       : '素材を追加するとここに反映されます';
-    const generationPrompt = [
-      `Storyboard: ${selectedStoryboard.label}`,
-      `Shot order: ${shotPlan}`,
-      `Motion: ${selectedStoryboard.motion}`,
-      `Framing: ${selectedStoryboard.framing}`,
-      `CTA: ${subtitleCta}`,
-      `Materials: ${materials}`,
-      `Material reference: ${materialReferenceSummary}`,
-      `Format: ${aspectRatio}`,
-    ].join('\n');
     const prompt = [
       `Primary input: ${primaryInput}`,
       `Duration: ${duration}`,
@@ -335,8 +300,10 @@ export function VideoWorkstationPage() {
       `Format: ${aspectRatio}`,
       `Next step: ${nextStep}`,
     ].join('\n');
+    try {
     const { projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
+      scopeId: user?.id,
       featureType: 'video-workstation',
       projectName: `Video Workstation: ${activeChoice}`,
       title: `Video Workstation: ${activeChoice}`,
@@ -376,33 +343,8 @@ export function VideoWorkstationPage() {
         handoffKind: 'local-workflow-intake',
         primaryInput,
         nextStep,
-        generationIntent: {
-          feature: 'campaign-image',
-          prompt: generationPrompt,
-          href: buildGenerationIntentHref({
-            feature: 'campaign-image',
-            prompt: generationPrompt,
-            aspectRatio,
-            ...generationSource,
-          }),
-          label: 'キャンペーン画像で生成',
-          ...generationSource,
-          aspectRatio,
-          materialReferences: [materialReferenceMetadata],
-          layerPlan: {
-            activeLayer: materialReference.activeLayer,
-            placement: materialReference.placement,
-            scale: materialReference.scale,
-          },
-          maskPlan: {
-            maskMode: materialReference.maskMode,
-          },
-          compositionPreview: {
-            selectedStoryboardId: selectedStoryboard.id,
-            hasUploadedMaterial: Boolean(materialReference.imageUrl),
-            placement: materialReference.placement,
-          },
-        },
+        providerRoute: 'unsupported',
+        providerBlocker: videoProviderBlocker,
       },
       previewMetadata: {
         selectedVideoStoryboard: selectedVideoStoryboardMetadata,
@@ -428,6 +370,8 @@ export function VideoWorkstationPage() {
       },
       metadata: {
         workspace: 'video',
+        providerRoute: 'unsupported',
+        providerBlocker: videoProviderBlocker,
         searchTokens: ['video-shot-plan', 'video-workstation', 'video-storyboard-local-v1', activeChoice, selectedStoryboard.id],
         selectedVideoStoryboard: selectedVideoStoryboardMetadata,
         materialReferences: [materialReferenceMetadata],
@@ -436,6 +380,11 @@ export function VideoWorkstationPage() {
 
     toast.success('Video Workstationを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Canvas保存に失敗しました';
+      console.error('Failed to persist Video Workstation handoff:', error);
+      toast.error(message);
+    }
   };
 
   return (
@@ -483,7 +432,7 @@ export function VideoWorkstationPage() {
             <div>
               <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">動画レーンを選ぶ</h2>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-500 dark:text-neutral-400">
-                尺・比率・ショット順・CTAをまとめて決め、動画生成に使う構成を整えます。
+                尺・比率・ショット順・CTAをまとめて決めます。動画providerがadmittedされるまで、生成はfail-closedです。
               </p>
             </div>
             <span className="w-fit rounded-full bg-cyan-300/15 px-3 py-1 text-xs font-semibold text-cyan-100 ring-1 ring-cyan-300/30">
@@ -544,12 +493,12 @@ export function VideoWorkstationPage() {
           eyebrow="LIGHTCHAIN PARITY / VIDEO START"
           title="ショット構成を決めてから、素材と書き出しへ進みます"
           description="動画は最初にストーリーボードを選び、比率・尺・CTAを確認します。素材が未選択でも構成の保存とCanvas handoffを先に進められます。"
-          nextAction="構成 → 素材 → 書き出し"
+            nextAction="構成 → 素材 → provider admission待ち / Canvas保存"
           steps={[
             { label: 'ストーリーボード', detail: selectedStoryboard.label, ready: Boolean(selectedStoryboard.id) },
             { label: '尺・比率', detail: `${duration} / ${aspectRatio}`, ready: Boolean(duration && aspectRatio) },
             { label: '素材', detail: materialReference.imageUrl ? '参照素材を選択済み' : '素材なしでも構成を保存できます', ready: Boolean(materialReference.imageUrl) },
-            { label: '次の操作', detail: '生成指示、Canvas、Galleryへ渡す', ready: Boolean(currentBrand) },
+            { label: '次の操作', detail: 'provider admission待ち / Canvasへ保存', ready: Boolean(currentBrand) },
           ]}
         />
       </section>
@@ -563,7 +512,7 @@ export function VideoWorkstationPage() {
               Video flow
             </p>
             <h2 className="mt-2 text-xl font-semibold text-neutral-950 dark:text-white">
-              ショット順、尺、CTAを決めて、生成指示かCanvas仕上げへ進む
+              ショット順、尺、CTAを決めて、provider admission待ちまたはCanvas仕上げへ進む
             </h2>
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
               {[
@@ -583,14 +532,21 @@ export function VideoWorkstationPage() {
             </div>
           </div>
           <div data-testid="video-next-actions" className="grid gap-2">
-            <Link
-              to={directVideoGenerationHref}
-              className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+            <button
+              type="button"
+              disabled
+              data-testid="video-generation-blocked"
+              aria-disabled="true"
+              title={videoProviderBlocker}
+              className="btn-primary inline-flex cursor-not-allowed items-center justify-center gap-2 text-sm opacity-60"
             >
               <Film className="h-4 w-4" />
-              生成指示へ送る
+              動画生成（provider未接続）
               <ChevronRight className="h-4 w-4" />
-            </Link>
+            </button>
+            <p data-testid="video-provider-blocker" className="rounded-xl border border-amber-300/35 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100">
+              {videoProviderBlocker}。画像生成への代替は行いません。
+            </p>
             <button
               type="button"
               onClick={handoffToCanvas}

@@ -423,13 +423,17 @@ export const PRINT_RESULT_HISTORY_MAX_RUNS = 4;
 type PrintResultHistoryEntry = {
   id: string;
   runId?: string;
-  resultKind?: 'exact' | 'fabric' | 'surface';
+  resultKind?: 'exact' | 'fabric' | 'surface' | 'provider';
 };
 
 const isCompletePrintResultRun = <T extends PrintResultHistoryEntry>(results: readonly T[]) => {
   const exactCount = results.filter((result) => result.resultKind === 'exact').length;
   const fabricCount = results.filter((result) => result.resultKind === 'fabric').length;
   const surfaceCount = results.filter((result) => result.resultKind === 'surface').length;
+  const providerCount = results.filter((result) => result.resultKind === 'provider').length;
+  if (providerCount === 1 && exactCount === 0 && fabricCount === 0 && surfaceCount === 0 && results.length === 1) {
+    return true;
+  }
   return exactCount === 1
     && fabricCount === 1
     && surfaceCount <= 1

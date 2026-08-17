@@ -54,7 +54,6 @@ const trackedHostnames = new Set([
   'ghwjymozrwmcrpjqvbmo.supabase.co',
 ]);
 const generationButtonPattern = /生成する|企画書を保存/;
-let ignoredRunwayStatus400ConsoleBudget = 0;
 
 fs.mkdirSync(outDir, { recursive: true });
 
@@ -376,13 +375,11 @@ async function checkDocsAndProofFiles() {
     'output/playwright/heavy-chain-final-auth-uat-20260625/final-combined-summary.json',
     'output/playwright/heavy-chain-final-auth-uat-20260625-targeted/summary.json',
     'output/playwright/prod-auth-refresh-20260625/summary.json',
-    'output/final-uat-20260625/runway-heavy-chain-hoodie.png',
   ];
   const missing = requiredFiles.filter((file) => !fs.existsSync(file));
   const finalSummary = readJson('output/playwright/heavy-chain-final-auth-uat-20260625/final-combined-summary.json');
   const targetedSummary = readJson('output/playwright/heavy-chain-final-auth-uat-20260625-targeted/summary.json');
   const authSummary = readJson('output/playwright/prod-auth-refresh-20260625/summary.json');
-  const runwayImage = pngDimensions('output/final-uat-20260625/runway-heavy-chain-hoodie.png');
   const stateText = readText('STATE.md');
   const checklistText = readText('docs/productization-final-checklist-2026-06-25.md');
   const runbookText = readText('docs/launch-operations-runbook-2026-06-25.md');
@@ -395,13 +392,12 @@ async function checkDocsAndProofFiles() {
   ];
   const docsStateCombined = `${stateText}\n${checklistText}\n${runbookText}\n${JSON.stringify(evidence.irreversibleActions)}`;
   const missingDocsStateText = docsStateExpectedText.filter((text) => !docsStateCombined.includes(text));
-  pushCheck('Previous launch proof bundle is present and internally passing', missing.length === 0 && finalSummary?.ok === true && targetedSummary?.ok === true && authSummary?.ok === true && runwayImage.width === 1536 && runwayImage.height === 1920 && missingDocsStateText.length === 0, {
+  pushCheck('Previous launch proof bundle is present and internally passing', missing.length === 0 && finalSummary?.ok === true && targetedSummary?.ok === true && authSummary?.ok === true && missingDocsStateText.length === 0, {
     missing,
     missingDocsStateText,
     finalSummaryOk: finalSummary?.ok,
     targetedSummaryOk: targetedSummary?.ok,
     authSummaryOk: authSummary?.ok,
-    runwayImage,
     scope: 'historical_proof_bundle_only_current_run_checks_routes_asset_and_http',
   });
 }
@@ -423,10 +419,6 @@ function recordConsole(message) {
   if (!['error', 'warning'].includes(message.type())) return;
   const text = message.text();
   if (/Failed to load resource: the server responded with a status of 404.*favicon/i.test(text)) return;
-  if (/^Failed to load resource: the server responded with a status of 400/i.test(text) && ignoredRunwayStatus400ConsoleBudget > 0) {
-    ignoredRunwayStatus400ConsoleBudget -= 1;
-    return;
-  }
   if (/Failed to load resource: the server responded with a status of 544/i.test(text)) return;
   evidence.consoleMessages.push({ type: message.type(), text });
 }
@@ -448,10 +440,6 @@ function recordHttpFailure(response) {
   if (!shouldTrackNetworkUrl(url)) return;
   if (status === 404 && /\/favicon\.ico(?:$|\?)/i.test(url)) return;
   if (status === 544 && /\/storage\/v1\/object\/sign\//i.test(url)) return;
-  if (status === 400 && /\/functions\/v1\/runway-mcp-connection-status(?:$|\?)/i.test(url)) {
-    ignoredRunwayStatus400ConsoleBudget += 1;
-    return;
-  }
   evidence.networkFailures.push({
     url: sanitizeImageSrc(url),
     method: response.request().method(),

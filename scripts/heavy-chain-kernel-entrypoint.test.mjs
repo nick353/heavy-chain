@@ -276,23 +276,23 @@ test('an unimplemented selected stage fails instead of producing a success recei
   const result = runHeavyChainKernelEntrypoint(
     {
       manifestPath,
-      runId: 'unimplemented-runway',
+      runId: 'unimplemented-retired-provider',
       resume: true,
-      selectedStages: ['runway_mcp_generation'],
+      selectedStages: ['retired_provider_generation'],
     },
-    { spawn: createSpawnStub(calls, { compileStages: ['runway_mcp_generation'] }) },
+    { spawn: createSpawnStub(calls, { compileStages: ['retired_provider_generation'] }) },
   );
 
   assert.equal(result.terminal_status, 'failed');
   assert.equal(result.ok, false);
   assert.equal(resultExitCode(result), 1);
-  assert.equal(result.exact_blocker, 'heavy_chain_stage_not_implemented:runway_mcp_generation');
+  assert.equal(result.exact_blocker, 'heavy_chain_stage_not_implemented:retired_provider_generation');
   const record = calls.find((call) => call.command === process.execPath && call.args[1] === 'record');
   assert.ok(record);
   assert.equal(record.args[record.args.indexOf('--outcome') + 1], 'failed');
   assert.equal(
     record.args[record.args.indexOf('--exact-blocker') + 1],
-    'heavy_chain_stage_not_implemented:runway_mcp_generation',
+    'heavy_chain_stage_not_implemented:retired_provider_generation',
   );
 });
 

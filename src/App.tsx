@@ -33,6 +33,11 @@ const CreditsPage = lazy(() => import('./pages/CreditsPage').then((module) => ({
 const GalleryPage = lazy(() => import('./pages/GalleryPage').then((module) => ({ default: module.GalleryPage })));
 const CanvasEditorPage = lazy(() => import('./pages/CanvasEditorPage').then((module) => ({ default: module.CanvasEditorPage })));
 const LightchainMaterialWorkbenchPage = lazy(() => import('./pages/LightchainMaterialWorkbenchPage').then((module) => ({ default: module.LightchainMaterialWorkbenchPage })));
+const LightchainCreatorPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainCreatorPage })));
+const LightchainModelPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainModelPage })));
+const LightchainDesignProductionPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainDesignProductionPage })));
+const LightchainAssetCenterPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainAssetCenterPage })));
+const LightchainOrientedDesignPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainOrientedDesignPage })));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })));
 const BrandSettingsPage = lazy(() => import('./pages/BrandSettingsPage').then((module) => ({ default: module.BrandSettingsPage })));
@@ -722,6 +727,62 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(<LightchainMaterialWorkbenchPage />)}
               </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/creator"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>{lazyPage(<LightchainCreatorPage />)}</ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/model"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>{lazyPage(<LightchainModelPage />)}</ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/fabric"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>{lazyPage(<LightchainMaterialWorkbenchPage />)}</ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/designProduction"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>{lazyPage(<LightchainDesignProductionPage />)}</ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/designProduction/detail"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>{lazyPage(<LightchainWorkbenchPage />)}</ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/asset-center"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>{lazyPage(<LightchainAssetCenterPage />)}</ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/flow/orientedDesign"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>{lazyPage(<LightchainOrientedDesignPage />)}</ErrorBoundary>
             </ProtectedRoute>
           }
         />

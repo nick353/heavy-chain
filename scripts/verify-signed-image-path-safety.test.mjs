@@ -115,6 +115,14 @@ test('resolution exposes signing and missing-canonical-path status separately', 
   assert.match(source, /isLocalWorkspaceStoragePath\(trimmed\)/);
 });
 
+test('large Galleries sign batches concurrently and salvage valid paths after a mixed batch failure', async () => {
+  const source = await read('src/lib/storage.ts');
+  assert.match(source, /SIGNED_URL_BATCH_CONCURRENCY/);
+  assert.match(source, /chunks\.slice\(index, index \+ SIGNED_URL_BATCH_CONCURRENCY\)/);
+  assert.match(source, /unresolvedPaths = chunk\.filter/);
+  assert.match(source, /createSignedUrl\(path, SIGNED_URL_TTL_SECONDS\)/);
+});
+
 test('local workspace paths stay local while canonical remote paths are re-signed in Gallery', async () => {
   const [storage, gallery] = await Promise.all([
     read('src/lib/storage.ts'),

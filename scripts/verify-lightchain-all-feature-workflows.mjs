@@ -187,7 +187,7 @@ async function verifyFeatureWorkflow(page, tool) {
     url: page.url(),
     bodyExcerpt: body.slice(0, 600),
   });
-  recordFeatureAssertion(result, 'heavy_shell_or_lightchain_reference_visible', body.includes('HEAVY CHAIN') || body.includes('HEAVYCHAIN'), {
+  recordFeatureAssertion(result, 'heavy_shell_or_lightchain_reference_visible', body.includes('HEAVY CHAIN') || body.includes('HEAVYCHAIN') || body.includes('LIGHTCHAIN') || body.includes('LIGHTCHAIN AI'), {
     bodyExcerpt: body.slice(0, 300),
   });
   recordFeatureAssertion(result, 'lightchain_screen_signature_visible', matchesLightchainSignature(tool, body), {
@@ -546,16 +546,24 @@ function expectsInteractiveTabs(toolId) {
 }
 
 async function buttonByText(page, text) {
-  const panelButton = page
-    .locator('[data-testid="lightchain-model-panel"], [data-testid="lightchain-fitting-input-flow"]')
-    .getByRole('button', { name: exactText(text) })
-    .or(page.locator('[data-testid="lightchain-model-panel"] button, [data-testid="lightchain-fitting-input-flow"] button').filter({ hasText: new RegExp(`^\\s*${escapeRegExp(text)}`) }))
-    .first();
-  if (await panelButton.isVisible({ timeout: 300 }).catch(() => false)) return panelButton;
-  return page
-    .getByRole('button', { name: exactText(text) })
-    .or(page.locator('button').filter({ hasText: new RegExp(`^\\s*${escapeRegExp(text)}`) }))
-    .first();
+  const firstVisible = async (locator) => {
+    const count = await locator.count();
+    for (let index = 0; index < count; index += 1) {
+      const candidate = locator.nth(index);
+      if (await candidate.isVisible({ timeout: 300 }).catch(() => false)) return candidate;
+    }
+    return null;
+  };
+  const panelCandidates = page.locator(
+    '[data-testid="lightchain-model-panel"] button, [data-testid="lightchain-fitting-input-flow"] button',
+  ).filter({ hasText: new RegExp(`^\\s*${escapeRegExp(text)}`) });
+  const panelButton = await firstVisible(panelCandidates);
+  if (panelButton) return panelButton;
+  const exactCandidates = page.getByRole('button', { name: exactText(text) });
+  const exactButton = await firstVisible(exactCandidates);
+  if (exactButton) return exactButton;
+  const fallbackCandidates = page.locator('button').filter({ hasText: new RegExp(`^\\s*${escapeRegExp(text)}`) });
+  return (await firstVisible(fallbackCandidates)) ?? exactCandidates.first();
 }
 
 async function verifyGenerateEntrypointUsesFeatureDetail(page) {
@@ -777,7 +785,6 @@ function wirePageDiagnostics(page, route) {
   page.on('console', (message) => {
     if (['error', 'warning'].includes(message.type())) {
       if (localPreview && /Failed to load resource: the server responded with a status of 401/.test(message.text())) return;
-      if (/Failed to fetch Runway MCP (approval|subscription)/.test(message.text())) return;
       if (/Remote workspace artifact save failed; falling back to localStorage/.test(message.text())) return;
       if (/Falling back to table usage summary/.test(message.text())) return;
       evidence.consoleMessages.push({ route, type: message.type(), text: message.text() });
@@ -829,7 +836,8 @@ async function waitForSettledRoute(page, toolId) {
 
 function readLightchainCatalog() {
   const source = fs.readFileSync(path.join(process.cwd(), 'src/pages/LightchainWorkbenchPage.tsx'), 'utf8');
-  const toolsBlock = source.match(/const tools: CompatTool\[] = \[([\s\S]+?)\];\n\nconst statusLabel/);
+  const toolsBlock = source.match(/const tools: CompatTool\[] = \[([\s\S]+?)\];\n\nconst statusLabel/)
+    ?? source.match(/const tools: CompatTool\[] = \[([\s\S]+?)\];\n\nfor \(const \[index, tool\] of tools\.entries\(\)/);
   const categoryBlock = source.match(/const categoryWorkbenchLabels:[\s\S]+?= \{([\s\S]+?)\n\};\n\nconst encodeSvgDataUrl/);
   const tools = [];
   if (toolsBlock) {

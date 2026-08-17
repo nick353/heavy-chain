@@ -60,14 +60,21 @@ export async function testSupabaseConnection() {
       .limit(1);
     
     if (!imagesError && images && images.length > 0) {
-      console.log('✅ サンプル画像データ:', images[0]);
+      console.log('✅ サンプル画像メタデータ:', {
+        id: images[0].id,
+        storage_path: images[0].storage_path,
+        feature_type: images[0].feature_type,
+      });
       
       // 画像URLを生成
       const { data: urlData } = await supabase.storage
         .from('generated-images')
         .createSignedUrl(images[0].storage_path, 300);
       
-      console.log('📷 画像URL:', urlData?.signedUrl);
+      console.log('📷 画像URL生成:', {
+        ok: Boolean(urlData?.signedUrl),
+        expiresInSeconds: 300,
+      });
       
       // URLが実際にアクセス可能か確認
       try {

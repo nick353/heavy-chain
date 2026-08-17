@@ -1,9 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  persistPrintInputState,
-  restorePrintInputState,
-} from '../src/lib/printInputPersistence.ts';
+import { persistPrintInputState } from '../src/lib/printInputPersistence.ts';
 
 type RecordValue = { key: string; blob: Blob; createdAt: string };
 

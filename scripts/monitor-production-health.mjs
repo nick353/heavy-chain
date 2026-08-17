@@ -19,7 +19,7 @@ const maxFailedJobs = numberArg(args.maxFailedJobs, 0);
 const maxStaleActiveJobs = numberArg(args.maxStaleActiveJobs, 0);
 const maxStorageErrors = numberArg(args.maxStorageErrors, 0);
 const maxUiFailures = numberArg(args.maxUiFailures, 0);
-const brandId = args.brandId || process.env.HEAVY_CHAIN_MONITOR_BRAND_ID || process.env.RUNWAY_READINESS_BRAND_ID || DEFAULT_BRAND_ID;
+const brandId = args.brandId || process.env.HEAVY_CHAIN_MONITOR_BRAND_ID || DEFAULT_BRAND_ID;
 const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'https://heavy-chain.zeabur.app');
 const outDir = args.out || `output/playwright/production-monitor-${dateStamp(now)}`;
 const uiOutDir = path.join(outDir, 'ui');
@@ -73,7 +73,6 @@ await collectGenerationHealth();
 await collectEdgeFunctionHealth();
 await collectUsageHealth();
 await collectStorageHealth();
-collectLocalWorkerInboxHealth();
 if (runUi) await collectUiHealth();
 else addWarning('ui_probe_skipped', 'UI probe was skipped by --skip-ui.', 'Run without --skip-ui for daily production monitoring.');
 
@@ -100,9 +99,7 @@ async function collectGenerationHealth() {
   const failureRate = terminal > 0 ? (counts.failed || 0) / terminal : 0;
   const activeRows = rows.filter((row) => ['pending', 'processing'].includes(row.status));
   const staleActiveRows = activeRows.filter((row) => Date.parse(row.created_at || '') < staleBefore.getTime());
-  const localWorkerRows = rows.filter((row) => asRecord(row.input_params).provider === 'runway_mcp_local_worker');
   const failedRows = rows.filter((row) => row.status === 'failed');
-  const runwayImportFailures = failedRows.filter((row) => /runway|mcp|worker|import|storage/i.test(`${row.error_message || ''} ${JSON.stringify(row.input_params || {})}`));
 
   report.sections.generation = {
     total: rows.length,
@@ -111,8 +108,6 @@ async function collectGenerationHealth() {
     failureRate,
     active: activeRows.length,
     staleActive: staleActiveRows.length,
-    localWorkerJobs: localWorkerRows.length,
-    runwayImportFailures: runwayImportFailures.length,
     recentFailedJobs: failedRows.slice(0, 10).map(projectJob),
     staleActiveJobs: staleActiveRows.slice(0, 10).map(projectJob),
   };
@@ -132,11 +127,7 @@ async function collectGenerationHealth() {
     staleActive: staleActiveRows.length,
     threshold: maxStaleActiveJobs,
     staleActiveJobs: staleActiveRows.slice(0, 5).map(projectJob),
-  }, 'stale_generation_jobs_detected', 'Start or repair npm run worker:local-runway:watch, then rerun monitor after processing.');
-
-  if (runwayImportFailures.length > 0) {
-    addWarning('runway_import_failures_seen', `${runwayImportFailures.length} recent Runway/MCP/worker-like failure(s) found.`, 'Inspect the failed generation_jobs rows and worker artifacts.');
-  }
+  }, 'stale_generation_jobs_detected', 'Open Jobs/Admin and inspect stale generation jobs before processing more requests.');
 }
 
 async function collectEdgeFunctionHealth() {
@@ -266,32 +257,6 @@ async function createSignedUrlWithRetry(storagePath, expiresIn) {
   return { signed, signedError, attempts: maxAttempts };
 }
 
-function collectLocalWorkerInboxHealth() {
-  const inboxDir = 'output/runway-mcp-results/inbox';
-  const files = fs.existsSync(inboxDir)
-    ? fs.readdirSync(inboxDir, { withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
-    : [];
-  const unprocessed = files.map((entry) => {
-    const filePath = path.join(inboxDir, entry.name);
-    const stat = fs.statSync(filePath);
-    return {
-      file: filePath,
-      ageMinutes: Math.round((now.getTime() - stat.mtimeMs) / 60000),
-      mtime: new Date(stat.mtimeMs).toISOString(),
-    };
-  }).sort((a, b) => b.ageMinutes - a.ageMinutes);
-  const stale = unprocessed.filter((file) => file.ageMinutes >= staleMinutes);
-  report.sections.localWorkerInbox = {
-    inboxDir,
-    unprocessed: unprocessed.length,
-    stale: stale.length,
-    staleFiles: stale.slice(0, 10),
-    note: 'Local inbox files are warnings unless matching DB jobs are stale; old audit files may intentionally remain.',
-  };
-  addCheck('local worker inbox readable', true, { unprocessed: unprocessed.length, stale: stale.length });
-  if (stale.length > 0) addWarning('local_worker_inbox_stale_files', `${stale.length} local Runway MCP result JSON file(s) remain in inbox.`, 'If these are not intentional audit files, run npm run worker:local-runway:watch or move/archive them.');
-}
-
 async function collectUiHealth() {
   const expectedAsset = args.expectedAsset || process.env.HEAVY_CHAIN_EXPECTED_ASSET || readCurrentBuildAsset();
   const launchArgs = ['scripts/verify-launch-operations-readiness.mjs', '--baseUrl', baseUrl, '--out', uiOutDir];
@@ -334,7 +299,6 @@ async function finish() {
     warnings: report.warnings.length,
     generationFailureRate: report.sections.generation?.failureRate ?? null,
     staleActiveJobs: report.sections.generation?.staleActive ?? null,
-    localInboxStaleFiles: report.sections.localWorkerInbox?.stale ?? null,
     storageErrors: report.sections.storage?.errors ?? null,
     uiOk: report.sections.ui?.ok ?? null,
   };
@@ -362,7 +326,6 @@ function renderMarkdown(proof, jsonPath) {
     '',
     `- Generation failure rate: ${formatRate(proof.summary.generationFailureRate)}`,
     `- Stale active jobs: ${proof.summary.staleActiveJobs ?? 'n/a'}`,
-    `- Local inbox stale files: ${proof.summary.localInboxStaleFiles ?? 'n/a'}`,
     `- Storage errors: ${proof.summary.storageErrors ?? 'n/a'}`,
     `- UI probe: ${proof.summary.uiOk === null ? 'skipped' : proof.summary.uiOk ? 'OK' : 'failed'}`,
     `- Blockers: ${proof.blockers.length}`,

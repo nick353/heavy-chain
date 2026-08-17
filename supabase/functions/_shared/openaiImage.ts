@@ -2,6 +2,8 @@ export type OpenAiImageResult = {
   base64: string;
   mimeType: string;
   model: string;
+  inputFidelity?: 'low' | 'high';
+  quality?: 'low' | 'medium' | 'high' | 'auto';
   taskId: string;
   candidates?: OpenAiImageCandidate[];
   requestedCount?: number;
@@ -139,6 +141,7 @@ async function imageUrlToBlob(imageUrl: string, index: number, filePrefix = 'ref
   return {
     blob: new Blob([await responseBlob.arrayBuffer()], { type: mimeType }),
     fileName: `${filePrefix}-${index + 1}.${extensionFromMimeType(mimeType)}`,
+    mimeType,
   };
 }
 
@@ -232,6 +235,8 @@ export async function editOpenAiImage(params: {
   images: Array<{ imageUrl: string }>;
   mask?: { imageUrl: string };
   model?: string | null;
+  inputFidelity?: 'low' | 'high' | null;
+  quality?: 'low' | 'medium' | 'high' | 'auto' | null;
   background?: 'transparent' | 'opaque' | 'auto';
   count?: number;
 }): Promise<OpenAiImageResult> {
@@ -250,6 +255,13 @@ export async function editOpenAiImage(params: {
     formData.set('n', String(requestedCount));
     formData.set('background', params.background || 'auto');
     formData.set('output_format', 'png');
+    const quality = params.quality || 'auto';
+    formData.set('quality', quality);
+    // The edit endpoint accepts input_fidelity for gpt-image-1. Do not send
+    // the field to models that do not advertise it; the Lightchain route
+    // explicitly pins gpt-image-1 when high fidelity is required.
+    const inputFidelity = model === 'gpt-image-1' ? (params.inputFidelity || 'low') : undefined;
+    if (inputFidelity) formData.set('input_fidelity', inputFidelity);
     const imageBlobs = await Promise.all(images.map((imageUrl, index) => imageUrlToBlob(imageUrl, index)));
     imageBlobs.forEach((image) => {
       formData.append('image[]', image.blob, image.fileName);
@@ -279,6 +291,8 @@ export async function editOpenAiImage(params: {
     return {
       ...image,
       model,
+      ...(inputFidelity ? { inputFidelity } : {}),
+      quality,
       taskId: `openai-edit-${crypto.randomUUID()}`,
       candidates,
       requestedCount,

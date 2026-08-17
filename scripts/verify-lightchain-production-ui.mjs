@@ -20,7 +20,7 @@ const pages = [
   {
     name: 'generate',
     path: '/generate',
-    expected: ['制作レーンから始める', '制作ワークフローへ戻る', 'Runway生成前チェック'],
+    expected: ['制作レーンから始める', '制作ワークフローへ戻る', '運用状態'],
   },
   {
     name: 'fitting',
@@ -80,12 +80,7 @@ const pages = [
   {
     name: 'brand-settings',
     path: '/brand/settings',
-    expected: ['Runway MCP接続', '承認済み', '生成可否', 'Heavy Chain側の月間 quota は通常アカウントの生成条件に含まれ'],
-  },
-  {
-    name: 'admin-runway',
-    path: '/admin?tab=runway',
-    expected: ['Runway MCP', '承認', '本番生成 readiness', '生成承認OK'],
+    expected: ['ブランド設定', 'ブランド情報', 'チームメンバー'],
   },
 ];
 

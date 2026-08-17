@@ -38,9 +38,9 @@ const userFacingBundle = [
 ];
 
 for (const [label, source] of userFacingBundle) {
-  addCheck(`no_legacy_primary_cta:${label}`, !/(Geminiで生成|Runway workerで生成|Untitled|未読込|画像なし)/.test(source), {
+  addCheck(`no_legacy_primary_cta:${label}`, !/(Geminiで生成|Untitled|未読込|画像なし)/.test(source), {
     label,
-    matches: [...source.matchAll(/Geminiで生成|Runway workerで生成|Untitled|未読込|画像なし/g)].map((match) => match[0]),
+    matches: [...source.matchAll(/Geminiで生成|Untitled|未読込|画像なし/g)].map((match) => match[0]),
   });
 }
 
@@ -54,7 +54,6 @@ addCheck('dashboard_uses_category_workflow_entry_without_quick_start_noise', (
 
 addCheck('generate_primary_action_is_provider_neutral', (
   generate.includes("noImageGenerationMode ? '生成する'")
-  && !generate.includes('Runway workerで生成')
   && !generate.includes('Geminiで生成')
 ), {});
 

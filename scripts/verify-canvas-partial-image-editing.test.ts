@@ -60,7 +60,7 @@ test('partial edit mask is sent through the client and edge function without sto
   assert.doesNotMatch(edge, /input_params:[\s\S]{0,500}maskDataUrl[,}]/);
   assert.match(openAi, /formData\.append\('mask', mask\.blob, 'mask\.png'\)/);
   assert.match(openAi, /openai_image_edit_mask_not_png/);
-  assert.match(edge, /const requestedCandidateCount = hasMask \? 4 : 1/);
+  assert.match(edge, /const requestedCandidateCount = hasMask && !imageEditOptions\.isLightchainMaterialRoute \? 4 : 1/);
   assert.match(edge, /count: requestedCandidateCount/);
   assert.match(edge, /requestedCandidateCount,/);
   assert.match(edge, /idempotency-key/);

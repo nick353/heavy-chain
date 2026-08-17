@@ -33,6 +33,7 @@ export type {
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
 const SIGNED_URL_BATCH_SIZE = 50;
+const SIGNED_URL_BATCH_CONCURRENCY = 4;
 
 export type GeneratedImageUrlResolutionFailureCode =
   | 'missing_url'
@@ -136,18 +137,49 @@ export async function withSignedImageUrls<T extends Pick<GeneratedImage, 'storag
       .filter((path): path is string => Boolean(path)),
   ));
 
+  const chunks: string[][] = [];
   for (let index = 0; index < paths.length; index += SIGNED_URL_BATCH_SIZE) {
-    const chunk = paths.slice(index, index + SIGNED_URL_BATCH_SIZE);
+    chunks.push(paths.slice(index, index + SIGNED_URL_BATCH_SIZE));
+  }
+
+  const signChunk = async (chunk: string[]) => {
+    const resolved = new Map<string, string>();
     const { data, error } = await supabase.storage
       .from('generated-images')
       .createSignedUrls(chunk, SIGNED_URL_TTL_SECONDS)
       .catch(() => ({ data: null, error: true }));
 
-    if (error || !data) continue;
-
-    data.forEach((item, itemIndex) => {
+    data?.forEach((item, itemIndex) => {
       if (item.error || !item.signedUrl) return;
-      signedUrlByPath.set(chunk[itemIndex], item.signedUrl);
+      resolved.set(chunk[itemIndex], item.signedUrl);
+    });
+
+    // A single stale object can make a whole batch fail on some Supabase
+    // versions. Retry only the unresolved paths individually so valid Gallery
+    // images in that batch remain viewable and downloadable.
+    if (error || !data || resolved.size < chunk.length) {
+      const unresolvedPaths = chunk.filter((path) => !resolved.has(path));
+      const individualResults = await Promise.all(unresolvedPaths.map(async (path) => {
+        const result = await supabase.storage
+          .from('generated-images')
+          .createSignedUrl(path, SIGNED_URL_TTL_SECONDS)
+          .catch(() => ({ data: null, error: true }));
+        return result.data?.signedUrl ? { path, url: result.data.signedUrl } : null;
+      }));
+      individualResults.forEach((result) => {
+        if (result) resolved.set(result.path, result.url);
+      });
+    }
+
+    return resolved;
+  };
+
+  for (let index = 0; index < chunks.length; index += SIGNED_URL_BATCH_CONCURRENCY) {
+    const batchResults = await Promise.all(
+      chunks.slice(index, index + SIGNED_URL_BATCH_CONCURRENCY).map(signChunk),
+    );
+    batchResults.forEach((resolved) => {
+      resolved.forEach((url, path) => signedUrlByPath.set(path, url));
     });
   }
 

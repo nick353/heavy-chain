@@ -7,6 +7,7 @@ import {
   requireBrandRole,
   requireUser,
 } from '../_shared/auth.ts';
+import { normalizeGeneratedImageStoragePath } from '../../../src/lib/storagePathSafety.ts';
 import type { Json } from '../../../src/types/database.ts';
 
 const corsHeaders = {
@@ -27,6 +28,7 @@ interface MarketingWorkspaceArtifactRequest {
   metadata?: Record<string, Json | undefined>;
   canvasProjectId?: string;
   sourceJobId?: string;
+  sourceStoragePath?: string | null;
 }
 
 type RemoteSaveStage = 'auth' | 'prepare' | 'storage' | 'job' | 'image' | 'completed';
@@ -81,6 +83,7 @@ serve(async (req) => {
   let storagePath: string | null = null;
   let storageUploaded = false;
   let jobId: string | null = null;
+  let generatedImageId: string | null = null;
   let observedBrandId: string | null = null;
   let observedUserId: string | null = null;
   let supabaseService: AppSupabaseClient | null = null;
@@ -106,6 +109,7 @@ serve(async (req) => {
       metadata = {},
       canvasProjectId,
       sourceJobId,
+      sourceStoragePath,
     } = body;
 
     if (!brandId) throw new Error('Brand ID is required');
@@ -118,22 +122,66 @@ serve(async (req) => {
     observedUserId = user.id;
 
     const now = createdAt ?? new Date().toISOString();
-    const { bytes, contentType } = dataUrlToBytes(imageUrl);
-    storagePath = `${user.id}/${brandId}/workspace/${generateRemotePathId()}`;
-
-    remoteSaveStage = 'storage';
     supabaseService = createServiceClient();
-    const { error: uploadError } = await supabaseService.storage
-      .from(GENERATED_IMAGES_BUCKET)
-      .upload(storagePath, bytes, {
-        contentType,
-        upsert: false,
-      });
 
-    if (uploadError) {
-      throw uploadError;
+    const canonicalSourceStoragePath = sourceStoragePath
+      ? normalizeGeneratedImageStoragePath(sourceStoragePath)
+      : null;
+    if (sourceStoragePath && !canonicalSourceStoragePath) {
+      throw new Error('Invalid source storage path.');
     }
-    storageUploaded = true;
+    if (canonicalSourceStoragePath && !canonicalSourceStoragePath.startsWith(`${user.id}/${brandId}/`)) {
+      throw new Error('Source storage path is outside the current brand scope.');
+    }
+
+    if (canonicalSourceStoragePath) {
+      remoteSaveStage = 'storage';
+      const { error: sourceDownloadError } = await supabaseService.storage
+        .from(GENERATED_IMAGES_BUCKET)
+        .download(canonicalSourceStoragePath);
+      if (sourceDownloadError) throw sourceDownloadError;
+
+      const { data: existingImage, error: existingImageError } = await supabaseService
+        .from('generated_images')
+        .select('id,job_id,storage_path')
+        .eq('brand_id', brandId)
+        .eq('user_id', user.id)
+        .eq('storage_path', canonicalSourceStoragePath)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existingImageError) throw existingImageError;
+      if (existingImage?.id && existingImage.job_id) {
+        return jsonResponse({
+          success: true,
+          remoteSaveStage: 'completed',
+          remoteCleanupStatus: 'none',
+          remote: {
+            jobId: existingImage.job_id,
+            imageId: existingImage.id,
+            storagePath: canonicalSourceStoragePath,
+          },
+        });
+      }
+
+      storagePath = canonicalSourceStoragePath;
+    } else {
+      const { bytes, contentType } = dataUrlToBytes(imageUrl);
+      storagePath = `${user.id}/${brandId}/workspace/${generateRemotePathId()}`;
+
+      remoteSaveStage = 'storage';
+      const { error: uploadError } = await supabaseService.storage
+        .from(GENERATED_IMAGES_BUCKET)
+        .upload(storagePath, bytes, {
+          contentType,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+      storageUploaded = true;
+    }
 
     remoteSaveStage = 'job';
     const { data: job, error: jobError } = await supabaseService
@@ -147,6 +195,7 @@ serve(async (req) => {
           title,
           canvasProjectId: canvasProjectId ?? null,
           sourceJobId: sourceJobId ?? null,
+          sourceStoragePath: canonicalSourceStoragePath,
           metadata,
         },
         optimized_prompt: prompt,
@@ -194,6 +243,7 @@ serve(async (req) => {
     if (imageError || !image?.id) {
       throw imageError ?? new Error('Remote generated image insert did not return an id.');
     }
+    generatedImageId = image.id;
 
     remoteSaveStage = 'completed';
     return jsonResponse({
@@ -207,34 +257,34 @@ serve(async (req) => {
       },
     });
   } catch (error) {
+    const cleanupClient = supabaseService ?? createServiceClient();
+    if (generatedImageId && observedBrandId && observedUserId) {
+      try {
+        const { error: deleteImageError } = await cleanupClient
+          .from('generated_images')
+          .delete()
+          .eq('id', generatedImageId)
+          .eq('brand_id', observedBrandId)
+          .eq('user_id', observedUserId);
+        if (deleteImageError) throw deleteImageError;
+      } catch (deleteError) {
+        cleanupError.push(deleteError);
+      }
+    }
+
+    if (jobId) {
+      try {
+        const { error: deleteJobError } = await cleanupClient
+          .from('generation_jobs')
+          .delete()
+          .eq('id', jobId);
+        if (deleteJobError) throw deleteJobError;
+      } catch (deleteError) {
+        cleanupError.push(deleteError);
+      }
+    }
+
     if (storageUploaded && storagePath) {
-      const cleanupClient = supabaseService ?? createServiceClient();
-      if (observedBrandId && observedUserId) {
-        try {
-          const { error: deleteImageError } = await cleanupClient
-            .from('generated_images')
-            .delete()
-            .eq('storage_path', storagePath)
-            .eq('brand_id', observedBrandId)
-            .eq('user_id', observedUserId);
-          if (deleteImageError) throw deleteImageError;
-        } catch (deleteError) {
-          cleanupError.push(deleteError);
-        }
-      }
-
-      if (jobId) {
-        try {
-          const { error: deleteJobError } = await cleanupClient
-            .from('generation_jobs')
-            .delete()
-            .eq('id', jobId);
-          if (deleteJobError) throw deleteJobError;
-        } catch (deleteError) {
-          cleanupError.push(deleteError);
-        }
-      }
-
       try {
         const { error: removeStorageError } = await cleanupClient
           .storage
@@ -251,7 +301,9 @@ serve(async (req) => {
       success: false,
       error: clientError(error),
       remoteSaveStage,
-      remoteCleanupStatus: cleanupError.length ? 'failed' : storageUploaded ? 'attempted' : 'none',
+      remoteCleanupStatus: cleanupError.length
+        ? 'failed'
+        : generatedImageId || jobId || storageUploaded ? 'attempted' : 'none',
       cleanupError: cleanupError.length ? cleanupError.map(clientError) : null,
     }, statusForFailure(remoteSaveStage, error));
   }

@@ -75,7 +75,7 @@ const piiPatterns = [
   { id: 'payment_card_pattern', pattern: /\b(?:\d[ -]*?){13,19}\b/ },
   { id: 'otp_or_security_code', pattern: /\b(?:otp|security code|認証コード|確認コード)\s*[:=]?\s*\d{4,8}\b/i },
   { id: 'api_key', pattern: /\b(?:sk-[A-Za-z0-9_-]{12,}|AIza[0-9A-Za-z_-]{12,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,})\b/ },
-  { id: 'secret_assignment', pattern: /\b(?:SUPABASE|OPENAI|GEMINI|RUNWAY|VITE)_[A-Z0-9_]*(?:KEY|TOKEN|SECRET)\s*[=:]\s*\S+/i },
+  { id: 'secret_assignment', pattern: /\b(?:SUPABASE|OPENAI|GEMINI|VITE)_[A-Z0-9_]*(?:KEY|TOKEN|SECRET)\s*[=:]\s*\S+/i },
 ];
 
 if (initTemplate) {

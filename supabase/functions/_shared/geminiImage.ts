@@ -5,6 +5,12 @@ export type GeminiImageResult = {
   mimeType: string;
   model: string;
   taskId: string;
+  inputImageCount?: number;
+};
+
+export type GeminiImageInput = {
+  base64: string;
+  mimeType?: string | null;
 };
 
 export type GeminiImageArtifact = {
@@ -13,6 +19,10 @@ export type GeminiImageArtifact = {
   contentType: string;
   extension: string;
 };
+
+export function hasGeminiImageKey() {
+  return Boolean(Deno.env.get('GEMINI_API_KEY')?.trim());
+}
 
 function geminiApiKey() {
   const key = Deno.env.get('GEMINI_API_KEY')?.trim();
@@ -105,8 +115,12 @@ export async function generateGeminiImage(params: {
   width?: number;
   height?: number;
   model?: string | null;
+  images?: GeminiImageInput[];
 }): Promise<GeminiImageResult> {
   const model = resolveGeminiImageModel(params.model);
+  const inputImages = (params.images || [])
+    .filter((image) => typeof image?.base64 === 'string' && image.base64.trim())
+    .slice(0, 4);
   const promptText = [
     params.prompt,
     params.negativePrompt ? `Avoid: ${params.negativePrompt}` : '',
@@ -139,9 +153,16 @@ export async function generateGeminiImage(params: {
         ...image,
         model,
         taskId: `gemini-${crypto.randomUUID()}`,
+        inputImageCount: 0,
       };
     }
 
+    const imageParts = inputImages.map((image) => ({
+      inlineData: {
+        mimeType: normalizeMimeType(image.mimeType),
+        data: image.base64.trim(),
+      },
+    }));
     const response = await fetch(geminiGenerateContentUrl(model, geminiApiKey()), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -149,7 +170,7 @@ export async function generateGeminiImage(params: {
         contents: [
           {
             role: 'user',
-            parts: [{ text: promptText }],
+            parts: [...imageParts, { text: promptText }],
           },
         ],
         generationConfig: {
@@ -167,6 +188,7 @@ export async function generateGeminiImage(params: {
       ...image,
       model,
       taskId: `gemini-${crypto.randomUUID()}`,
+      inputImageCount: inputImages.length,
     };
   } catch (error) {
     throw new Error(sanitizeGeminiError(error));

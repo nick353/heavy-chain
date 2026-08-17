@@ -3,9 +3,7 @@ import { clientError, createServiceClient, createUserClient, requireBrandRole, r
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
-import { sanitizeMaterialGenerationMetadata, sanitizeMetadataWithoutImageUrls } from '../_shared/materialMetadata.ts';
-import { generateRunwayImage, runwayImageArtifact } from '../_shared/runway.ts';
-import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
+import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 import { generateGeminiImage, geminiImageArtifact } from '../_shared/geminiImage.ts';
 import { generateOpenAiImage, openAiImageArtifact } from '../_shared/openaiImage.ts';
@@ -33,7 +31,6 @@ interface GenerateRequest {
   compositionPreview?: unknown
   campaignMeta?: unknown
   textOverlay?: unknown
-  localRunwayWorker?: unknown
   generationProvider?: unknown
   generationModel?: unknown
   legalSafety?: unknown
@@ -58,164 +55,8 @@ const readString = (record: Record<string, unknown>, key: string) => {
   return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
-const ALLOWED_LOCAL_WORKER_FEATURES = new Set([
-  'campaign-image',
-  'design-gacha',
-  'product-shots',
-  'model-matrix',
-  'multilingual-banner',
-  'scene-coordinate',
-  'remove-bg',
-  'remove-background',
-  'colorize',
-  'upscale',
-  'variations',
-  'generate-variations',
-])
-
-const sanitizePositiveInteger = (value: unknown, fallback: number, min: number, max: number) => {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return fallback
-  return Math.max(min, Math.min(max, Math.round(numeric)))
-}
-
-const normalizeImageMimeType = (mimeType: string | null | undefined) => {
-  const clean = String(mimeType || '').split(';')[0].trim().toLowerCase()
-  return clean.startsWith('image/') ? clean : 'image/png'
-}
-
-const extensionFromMimeType = (mimeType: string) => {
-  switch (normalizeImageMimeType(mimeType)) {
-    case 'image/jpeg':
-    case 'image/jpg':
-      return 'jpg'
-    case 'image/webp':
-      return 'webp'
-    case 'image/png':
-    default:
-      return 'png'
-  }
-}
-
-const bytesToHex = (bytes: Uint8Array) => Array.from(bytes)
-  .map((byte) => byte.toString(16).padStart(2, '0'))
-  .join('')
-
-const sha256Hex = async (bytes: Uint8Array) => {
-  const buffer = new Uint8Array(bytes).buffer
-  const digest = await crypto.subtle.digest('SHA-256', buffer)
-  return bytesToHex(new Uint8Array(digest))
-}
-
-const parseDataImage = (value: string) => {
-  const match = value.match(/^data:(image\/(?:png|jpeg|jpg|webp));base64,([A-Za-z0-9+/=]+)$/i)
-  if (!match) return null
-  const [, mimeType, payload] = match
-  const binary = atob(payload)
-  const bytes = new Uint8Array(binary.length)
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index)
-  }
-  return { bytes, mimeType: normalizeImageMimeType(mimeType) }
-}
-
-const fetchReferenceImageBytes = async (referenceImage: string) => {
-  const dataImage = parseDataImage(referenceImage)
-  if (dataImage) return dataImage
-
-  const response = await fetch(referenceImage)
-  if (!response.ok) {
-    throw new Error(`local_runway_worker_reference_image_fetch_failed:${response.status}`)
-  }
-  const mimeType = normalizeImageMimeType(response.headers.get('content-type'))
-  if (!mimeType.startsWith('image/')) {
-    throw new Error('local_runway_worker_reference_image_fetch_not_image')
-  }
-  const bytes = new Uint8Array(await response.arrayBuffer())
-  if (bytes.byteLength > 1_500_000) {
-    throw new Error('local_runway_worker_reference_image_too_large')
-  }
-  return { bytes, mimeType }
-}
-
-const createLocalWorkerReferenceImageHandoff = async ({
-  supabaseClient,
-  referenceImage,
-  userId,
-  brandId,
-  requestId,
-}: {
-  supabaseClient: ReturnType<typeof createServiceClient>
-  referenceImage: string | null
-  userId: string
-  brandId: string
-  requestId: string
-}) => {
-  if (!referenceImage) return null
-  const { bytes, mimeType } = await fetchReferenceImageBytes(referenceImage)
-  const sha256 = await sha256Hex(bytes)
-  const extension = extensionFromMimeType(mimeType)
-  const storagePath = `${userId}/${brandId}/local-runway-reference-handoffs/${requestId}-${crypto.randomUUID()}.${extension}`
-  const { error } = await supabaseClient.storage
-    .from('generated-images')
-    .upload(storagePath, bytes, {
-      contentType: mimeType,
-      upsert: false,
-      cacheControl: '60',
-    })
-  if (error) throw error
-  return {
-    bucket: 'generated-images',
-    storagePath,
-    mimeType,
-    bytes: bytes.byteLength,
-    sha256,
-    createdAt: new Date().toISOString(),
-  }
-}
-
-const sanitizeLocalRunwayWorkerRequest = (value: unknown, persistedFeatureType: string) => {
-  if (!isRecord(value) || value.enabled !== true) return null
-  if (!ALLOWED_LOCAL_WORKER_FEATURES.has(persistedFeatureType)) {
-    throw new Error('local_runway_worker_feature_not_allowed')
-  }
-
-  const provider = readString(value, 'provider') || 'runway_mcp_local_worker'
-  if (provider !== 'runway_mcp_local_worker') {
-    throw new Error('local_runway_worker_provider_invalid')
-  }
-
-  const workerContractVersion = readString(value, 'workerContractVersion') || 'heavy-chain.local-runway-worker.v1'
-  if (workerContractVersion !== 'heavy-chain.local-runway-worker.v1') {
-    throw new Error('local_runway_worker_contract_invalid')
-  }
-
-  const referenceImage = readString(value, 'referenceImage')
-  if (referenceImage) {
-    const isDataImage = /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=]+$/i.test(referenceImage)
-    const isHttpsImage = /^https:\/\/[^\s]+$/i.test(referenceImage)
-    if (!isDataImage && !isHttpsImage) {
-      throw new Error('local_runway_worker_reference_image_invalid')
-    }
-    if (referenceImage.length > 1_500_000) {
-      throw new Error('local_runway_worker_reference_image_too_large')
-    }
-  }
-
-  const metadata = sanitizeMetadataWithoutImageUrls(value.metadata)
-  return {
-    provider,
-    workerContractVersion,
-    count: sanitizePositiveInteger(value.count, 1, 1, 4),
-    referenceImage: referenceImage ?? null,
-    referenceType: readString(value, 'referenceType'),
-    metadata,
-  }
-}
-
 const sanitizeGenerationProvider = (value: unknown) => {
   const requested = typeof value === 'string' ? value.trim().toLowerCase() : ''
-  if (requested === 'runway' || requested === 'runway_mcp') return 'runway'
   if (requested === 'gemini' || requested === 'gemini_image') return 'gemini'
   if (requested === 'openai' || requested === 'openai_image' || requested === 'gpt_image') return 'openai'
   if (requested === 'mock' || requested === 'mock_image') return 'mock'
@@ -331,7 +172,6 @@ serve(async (req) => {
       compositionPreview,
       campaignMeta,
       textOverlay,
-      localRunwayWorker,
       generationProvider,
       generationModel,
       legalSafety,
@@ -352,14 +192,10 @@ serve(async (req) => {
     const persistedFeatureType = typeof featureType === 'string' && featureType.trim()
       ? featureType.trim()
       : 'text-to-image'
-    const localWorkerRequest = sanitizeLocalRunwayWorkerRequest(localRunwayWorker, persistedFeatureType)
-    const selectedProvider = localWorkerRequest ? localWorkerRequest.provider : sanitizeGenerationProvider(generationProvider)
+    const selectedProvider = sanitizeGenerationProvider(generationProvider)
     const selectedGenerationModel = selectedProvider === 'gemini' || selectedProvider === 'openai' || selectedProvider === 'mock'
       ? sanitizeGenerationModel(generationModel)
       : null
-    if (selectedProvider === 'runway' || localWorkerRequest) {
-      await requireRunwayMcpConnectionApproval(supabaseClient, brandId);
-    }
     requireLegalSafetyApproval(legalSafety, [
       prompt,
       negativePrompt,
@@ -391,20 +227,8 @@ serve(async (req) => {
       units: 1,
       requestId,
       idempotencyKey: req.headers.get('idempotency-key'),
-      metadata: { provider: selectedProvider, queued: Boolean(localWorkerRequest) },
+      metadata: { provider: selectedProvider },
     });
-    const referenceImageHandoff = localWorkerRequest
-      ? await createLocalWorkerReferenceImageHandoff({
-        supabaseClient,
-        referenceImage: localWorkerRequest.referenceImage,
-        userId: user.id,
-        brandId,
-        requestId,
-      })
-      : null
-    if (referenceImageHandoff?.storagePath) {
-      uploadedStoragePaths.push(referenceImageHandoff.storagePath)
-    }
     const inputParams = {
       prompt,
       negativePrompt,
@@ -420,17 +244,6 @@ serve(async (req) => {
       ...(printDesignPurpose ?? {}),
       ...(materialMetadata ?? {}),
       ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
-      ...(localWorkerRequest ? {
-        ...localWorkerRequest.metadata,
-        provider: localWorkerRequest.provider,
-        workerContractVersion: localWorkerRequest.workerContractVersion,
-        count: localWorkerRequest.count,
-        hasReferenceImage: Boolean(localWorkerRequest.referenceImage),
-        ...(referenceImageHandoff ? { referenceImageHandoff } : {}),
-        referenceType: localWorkerRequest.referenceType,
-        usageEventId: usageReservation?.usageEventId ?? null,
-        requestedAt: new Date().toISOString(),
-      } : {}),
     }
 
     await recordEdgeFunctionRun(telemetryClient, {
@@ -477,46 +290,6 @@ serve(async (req) => {
     })
     console.log('Job created:', job.id)
 
-    if (localWorkerRequest) {
-      failedStage = 'queued'
-      await recordEdgeFunctionRun(telemetryClient, {
-        reservation: usageReservation,
-        brandId: observedBrandId,
-        userId: observedUserId,
-        functionName,
-        status: 'succeeded',
-        requestId,
-        durationMs: durationSince(startedAt),
-      });
-      failedStage = null
-      persistenceStatus = 'processing'
-      const { data: queuedJob, error: queueError } = await supabaseClient
-        .from('generation_jobs')
-        .update({ status: 'pending', error_message: null })
-        .eq('id', job.id)
-        .select('*')
-        .single()
-      if (queueError || !queuedJob) {
-        throw queueError ?? new Error('local_runway_worker_queue_update_failed')
-      }
-      return new Response(
-        JSON.stringify({
-          success: true,
-          queued: true,
-          provider: localWorkerRequest.provider,
-          workerContractVersion: localWorkerRequest.workerContractVersion,
-          job: queuedJob,
-          jobId: job.id,
-          persistenceStatus: 'pending',
-          cleanupStatus: 'none',
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 202,
-        },
-      )
-    }
-
     failedStage = 'generation'
     const productionPrompt = printDesignPurpose
       ? buildPrintDesignAssetPrompt({
@@ -525,29 +298,21 @@ serve(async (req) => {
         hasReference: false,
       })
       : `Generate a high-quality professional fashion/apparel image: ${optimizedPrompt}. Style: Professional fashion photography, studio lighting, high resolution, commercial quality.`
-    const generatedResult = selectedProvider === 'runway'
-      ? await generateRunwayImage({
-        brandId,
+    const generatedResult = selectedProvider === 'openai'
+      ? await generateOpenAiImage({
         prompt: productionPrompt,
         negativePrompt,
         width,
         height,
+        model: selectedGenerationModel,
       })
-      : selectedProvider === 'openai'
-        ? await generateOpenAiImage({
+      : selectedProvider === 'mock'
+        ? await generateMockImage({
           prompt: productionPrompt,
-          negativePrompt,
           width,
           height,
           model: selectedGenerationModel,
         })
-        : selectedProvider === 'mock'
-          ? await generateMockImage({
-            prompt: productionPrompt,
-            width,
-            height,
-            model: selectedGenerationModel,
-          })
         : await generateGeminiImage({
           prompt: productionPrompt,
           negativePrompt,
@@ -557,12 +322,10 @@ serve(async (req) => {
         })
     const imageBase64 = generatedResult.base64
     const usedModel = generatedResult.model
-    const imageAsset = selectedProvider === 'runway'
-      ? runwayImageArtifact(generatedResult)
-      : selectedProvider === 'openai'
-        ? openAiImageArtifact(generatedResult)
-        : selectedProvider === 'mock'
-          ? mockImageArtifact(generatedResult)
+    const imageAsset = selectedProvider === 'openai'
+      ? openAiImageArtifact(generatedResult)
+      : selectedProvider === 'mock'
+        ? mockImageArtifact(generatedResult)
         : geminiImageArtifact(generatedResult)
     console.log(`Image generated with model: ${usedModel}`)
 

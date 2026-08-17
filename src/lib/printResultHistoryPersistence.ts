@@ -1,3 +1,5 @@
+import type { Json } from '../types/database';
+
 const DB_NAME = 'heavy-chain-print-result-assets';
 const DB_VERSION = 1;
 const STORE_NAME = 'images';
@@ -5,17 +7,20 @@ const REFERENCE_PREFIX = 'local-print-result://';
 const STORAGE_PREFIX = 'heavy-chain-print-result-history:v1';
 const MAX_PERSISTED_RESULTS = 12;
 
+type PersistedParityRuntime = Json;
+
 export type PersistablePrintResult = {
   id: string;
   brandId: string;
   runId?: string;
-  resultKind?: 'exact' | 'fabric' | 'surface';
+  resultKind?: 'exact' | 'fabric' | 'surface' | 'provider';
   generatedAt?: number;
   title: string;
   note: string;
   imageUrl: string;
   outputSize?: { width: number; height: number };
   assetRef?: string;
+  parityRuntime?: PersistedParityRuntime;
 };
 
 export type RestoredPrintResult = Omit<PersistablePrintResult, 'imageUrl'> & {
@@ -72,7 +77,7 @@ const isPersistedPrintResult = (value: unknown): value is PersistedPrintResult =
     && typeof result.note === 'string'
     && typeof result.assetRef === 'string' && isLocalPrintResultAssetReference(result.assetRef)
     && (!result.runId || typeof result.runId === 'string')
-    && (!result.resultKind || ['exact', 'fabric', 'surface'].includes(result.resultKind))
+    && (!result.resultKind || ['exact', 'fabric', 'surface', 'provider'].includes(result.resultKind))
     && (!result.generatedAt || Number.isFinite(result.generatedAt))
     && (!outputSize || (
       Number.isSafeInteger(outputSize.width) && outputSize.width > 0

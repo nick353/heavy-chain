@@ -7,7 +7,7 @@ import {
   type WorkspaceArtifact,
 } from '../../../lib/localWorkspaceArtifacts';
 
-export type PrintResultKind = 'exact' | 'fabric' | 'surface';
+export type PrintResultKind = 'exact' | 'fabric' | 'surface' | 'provider';
 
 export interface PrintResultFavoriteValue {
   id: string;
@@ -21,6 +21,7 @@ export interface PrintResultFavoriteValue {
 
 export interface SavePrintResultFavoriteInput {
   brandId: string;
+  scopeId?: string;
   result: PrintResultFavoriteValue;
   destinationLabel?: string;
 }
@@ -67,6 +68,7 @@ const buildFavoriteMetadata = (
 
 export const setPrintResultFavorite = ({
   brandId,
+  scopeId,
   result,
   destinationLabel,
 }: SavePrintResultFavoriteInput, isFavorite: boolean): SavePrintResultFavoriteResult => {
@@ -75,7 +77,7 @@ export const setPrintResultFavorite = ({
   }
 
   try {
-    const existing = findWorkspaceArtifactPersisted(brandId, result.id);
+    const existing = findWorkspaceArtifactPersisted(brandId, result.id, scopeId);
     if (!existing.ok) return existing;
     const existingArtifact = existing.artifact;
     if (!isFavorite && !existingArtifact) {
@@ -86,6 +88,7 @@ export const setPrintResultFavorite = ({
     return saveWorkspaceArtifactPersisted({
       id: result.id,
       brandId,
+      scopeId,
       featureType: existingArtifact?.featureType ?? 'printing-result',
       title: result.title || existingArtifact?.title || '印刷結果',
       imageUrl: result.imageUrl,
@@ -111,13 +114,13 @@ export const savePrintResultFavorite = (
   input: SavePrintResultFavoriteInput,
 ): SavePrintResultFavoriteResult => setPrintResultFavorite(input, true);
 
-export const isPrintResultFavorite = (brandId: string, resultId: string): boolean => {
-  const artifact = findWorkspaceArtifact(brandId, resultId);
+export const isPrintResultFavorite = (brandId: string, resultId: string, scopeId?: string): boolean => {
+  const artifact = findWorkspaceArtifact(brandId, resultId, scopeId);
   return artifact ? metadataValue(artifact.metadata, 'printResultFavorite') === true : false;
 };
 
-export const listPrintResultFavoriteIds = (brandId: string): string[] => (
-  listWorkspaceArtifacts(brandId)
+export const listPrintResultFavoriteIds = (brandId: string, scopeId?: string): string[] => (
+  listWorkspaceArtifacts(brandId, scopeId)
     .filter((artifact) => metadataValue(artifact.metadata, 'printResultFavorite') === true)
     .map((artifact) => artifact.id)
 );

@@ -1,5 +1,9 @@
 # GOAL.md
 
+## Current Scope Override: Runway retirement / OpenAI path
+
+The current continuation retires the legacy third-party image provider from Heavy Chain. Active UI, Edge Functions, worker/bridge scripts, configuration, provider types, monitoring, and operator docs use the OpenAI image path or a generic provider boundary. The retirement migration is prepared for remote Supabase apply; OpenAI API calls, generation, billing, and deploy are excluded until separately verified.
+
 ## Loop Metadata
 
 Loop ID: HC-10M-PRODUCT-READINESS-20260626-R2

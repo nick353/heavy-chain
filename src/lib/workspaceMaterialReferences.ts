@@ -34,6 +34,7 @@ import {
   type PrintGarmentMaskCandidateId,
 } from './printMaskCandidateStrategy';
 import { buildPrintArtworkBackgroundCutoutRgba } from './printArtworkMaskStrategy';
+import { buildPortraitGarmentPriorAlpha } from '../features/lightchain/portraitGarmentMask';
 import { getContainedStageBounds, getInnerContainedBounds, getIntegerStageScale, scaleStageBounds } from './printingStageGeometry';
 import {
   GARMENT_SEMANTIC_SEGMENTATION_ENGINE,
@@ -70,6 +71,8 @@ import {
 export type MaterialReferenceState = {
   imageUrl: string;
   fileName: string;
+  sourceImageId?: string | null;
+  sourceStoragePath?: string | null;
   materialKind: string;
   maskMode: 'auto' | 'manual' | 'keep';
   activeLayer: string;
@@ -100,6 +103,8 @@ export type MaterialCutoutResult = {
   dataUrl: string;
   bounds: MaterialCutoutBounds;
   sourceSize: { width: number; height: number };
+  /** Dimensions of the canvas on which `bounds` is expressed. */
+  sourceFrameSize?: { width: number; height: number };
   outputSize: { width: number; height: number };
   dataUrlBytes: number;
   storagePolicy: 'bounded-local-canvas-data-url-v1' | 'bounded-local-ai-cutout-data-url-v1';
@@ -109,6 +114,7 @@ export type MaterialCutoutResult = {
     | `browser-ai-${string}-v1`
     | 'browser-existing-transparent-garment-v1'
     | 'browser-local-white-background-garment-cutout-v1'
+    | 'browser-local-portrait-garment-prior-v1'
     | 'browser-canvas-guided-selection-mask-v1'
     | 'browser-canvas-artwork-background-cutout-v1';
   hasTransparentPixels: boolean;
@@ -962,6 +968,8 @@ export const buildMaterialReferenceMetadata = (
   hasImage: Boolean(state.imageUrl),
   imageUrl: state.imageUrl || null,
   fileName: state.fileName || null,
+  sourceImageId: state.sourceImageId ?? null,
+  sourceStoragePath: state.sourceStoragePath ?? null,
   materialKind: state.materialKind,
   maskMode: state.maskMode,
   activeLayer: state.activeLayer,
@@ -983,7 +991,29 @@ export const buildMaterialReferenceMetadata = (
 
 const IMAGE_LOAD_TIMEOUT_MS = 20_000;
 
-const loadImageElement = (imageUrl: string): Promise<HTMLImageElement> => {
+const loadImageElement = async (imageUrl: string): Promise<HTMLImageElement> => {
+  let resolvedImageUrl = imageUrl;
+  let temporaryObjectUrl: string | null = null;
+
+  // Never draw a remote provider/signed URL directly into a readable canvas.
+  // Fetching the already-authorized raster as a Blob gives the canvas a same-
+  // origin object URL and avoids relying on crossOrigin headers at draw time.
+  if (/^https?:\/\//i.test(imageUrl)) {
+    try {
+      const response = await fetch(imageUrl, { credentials: 'omit', mode: 'cors' });
+      if (!response.ok) throw new Error(`image_fetch_${response.status}`);
+      const blob = await response.blob();
+      if (blob.size > 20 * 1024 * 1024) throw new Error('image_blob_too_large');
+      if (/svg|xml/i.test(blob.type || '')) throw new Error('svg_image_not_allowed');
+      temporaryObjectUrl = URL.createObjectURL(blob);
+      resolvedImageUrl = temporaryObjectUrl;
+    } catch (error) {
+      throw new Error(error instanceof Error && error.message === 'svg_image_not_allowed'
+        ? 'SVG画像はカット処理に使用できません'
+        : '画像を安全なBlobとして読み込めませんでした。Galleryの保存済み素材を選んで再試行してください');
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const image = new Image();
     let settled = false;
@@ -993,6 +1023,7 @@ const loadImageElement = (imageUrl: string): Promise<HTMLImageElement> => {
       image.onload = null;
       image.onerror = null;
       image.src = '';
+      if (temporaryObjectUrl) URL.revokeObjectURL(temporaryObjectUrl);
       reject(new Error('画像の読み込みがタイムアウトしました。画像を確認して再試行してください'));
     }, IMAGE_LOAD_TIMEOUT_MS);
     const settle = (callback: () => void) => {
@@ -1001,12 +1032,15 @@ const loadImageElement = (imageUrl: string): Promise<HTMLImageElement> => {
       window.clearTimeout(timeoutId);
       callback();
     };
-    if (/^https?:\/\//i.test(imageUrl)) {
-      image.crossOrigin = 'anonymous';
-    }
-    image.onload = () => settle(() => resolve(image));
-    image.onerror = () => settle(() => reject(new Error('カット用の画像処理に失敗しました')));
-    image.src = imageUrl;
+    image.onload = () => settle(() => {
+      if (temporaryObjectUrl) URL.revokeObjectURL(temporaryObjectUrl);
+      resolve(image);
+    });
+    image.onerror = () => settle(() => {
+      if (temporaryObjectUrl) URL.revokeObjectURL(temporaryObjectUrl);
+      reject(new Error('カット用の画像処理に失敗しました'));
+    });
+    image.src = resolvedImageUrl;
   });
 };
 
@@ -1177,6 +1211,7 @@ const buildBoundedPngFromCanvas = ({
       dataUrl,
       bounds: alphaBounds.bounds,
       sourceSize: { width: sourceWidth, height: sourceHeight },
+      sourceFrameSize: { width: canvas.width, height: canvas.height },
       outputSize: { width: canvas.width, height: canvas.height },
       dataUrlBytes: estimateDataUrlBytes(dataUrl),
       storagePolicy,
@@ -1214,6 +1249,7 @@ const buildBoundedPngFromCanvas = ({
         dataUrl: lastDataUrl,
         bounds: { x: cropX, y: cropY, width: cropWidth, height: cropHeight },
         sourceSize: { width: sourceWidth, height: sourceHeight },
+        sourceFrameSize: { width: canvas.width, height: canvas.height },
         outputSize: lastOutputSize,
         dataUrlBytes: estimateDataUrlBytes(lastDataUrl),
         storagePolicy,
@@ -1451,12 +1487,14 @@ export async function buildMaterialCutoutDataUrl({
   candidate,
   maxSize = 720,
   maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
+  preserveSourceFrame = false,
 }: {
   imageUrl: string;
   mode: MaterialReferenceState['maskMode'];
   candidate?: string | null;
   maxSize?: number;
   maxDataUrlBytes?: number;
+  preserveSourceFrame?: boolean;
 }): Promise<MaterialCutoutResult> {
   const storagePolicy = 'bounded-local-canvas-data-url-v1' as const;
   if (mode === 'keep') {
@@ -1471,6 +1509,7 @@ export async function buildMaterialCutoutDataUrl({
       dataUrl: imageUrl,
       bounds: { x: 0, y: 0, width: sourceWidth, height: sourceHeight },
       sourceSize: { width: sourceWidth, height: sourceHeight },
+      sourceFrameSize: { width: sourceWidth, height: sourceHeight },
       outputSize: { width: sourceWidth, height: sourceHeight },
       dataUrlBytes,
       storagePolicy,
@@ -1494,6 +1533,8 @@ export async function buildMaterialCutoutDataUrl({
       candidate,
       maxSize: targetMaxSize,
       storagePolicy,
+      maxDataUrlBytes,
+      preserveSourceFrame,
     });
     lastResult = result;
     if (result.dataUrlBytes <= maxDataUrlBytes) return result;
@@ -1509,9 +1550,11 @@ export async function buildMaterialCutoutDataUrl({
 const buildWhiteBackgroundFallbackCutout = async ({
   imageUrl,
   maxDataUrlBytes,
+  preserveSourceFrame = false,
 }: {
   imageUrl: string;
   maxDataUrlBytes: number;
+  preserveSourceFrame?: boolean;
 }): Promise<MaterialCutoutResult> => {
   const result = await buildMaterialCutoutDataUrl({
     imageUrl,
@@ -1519,6 +1562,7 @@ const buildWhiteBackgroundFallbackCutout = async ({
     candidate: 'トップス',
     maxSize: 1_400,
     maxDataUrlBytes,
+    preserveSourceFrame,
   });
   const sourceArea = result.sourceSize.width * result.sourceSize.height;
   const boundsArea = result.bounds.width * result.bounds.height;
@@ -1531,6 +1575,67 @@ const buildWhiteBackgroundFallbackCutout = async ({
     storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
     engine: 'browser-local-white-background-garment-cutout-v1',
   };
+};
+
+/**
+ * Deterministic, model-independent garment cutout for the provider boundary.
+ *
+ * The optional semantic cloth model is a quality improvement, not an
+ * execution prerequisite. The uploaded Lightchain reference is still
+ * provider-safe when its white-background boundary can be proven locally.
+ */
+export const buildWhiteBackgroundGarmentCutoutDataUrl = ({
+  imageUrl,
+  maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
+  preserveSourceFrame = false,
+}: {
+  imageUrl: string;
+  maxDataUrlBytes?: number;
+  preserveSourceFrame?: boolean;
+}) => buildWhiteBackgroundFallbackCutout({
+  imageUrl,
+  maxDataUrlBytes,
+  preserveSourceFrame,
+});
+
+export const buildPortraitGarmentPriorCutoutDataUrl = async ({
+  imageUrl,
+  maxDataUrlBytes = PRINT_CUTOUT_MAX_DATA_URL_BYTES,
+  preserveSourceFrame = false,
+}: {
+  imageUrl: string;
+  maxDataUrlBytes?: number;
+  preserveSourceFrame?: boolean;
+}): Promise<MaterialCutoutResult> => {
+  const image = await loadImageElement(imageUrl);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const canvas = document.createElement('canvas');
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('portrait_garment_prior_context_missing');
+  context.drawImage(image, 0, 0, sourceWidth, sourceHeight);
+  const source = context.getImageData(0, 0, sourceWidth, sourceHeight);
+  const prior = buildPortraitGarmentPriorAlpha({
+    rgba: source.data,
+    width: sourceWidth,
+    height: sourceHeight,
+  });
+  if (!prior) throw new Error('portrait_garment_prior_not_proven');
+  for (let offset = 0; offset < source.data.length; offset += 4) {
+    source.data[offset + 3] = Math.min(source.data[offset + 3], prior.alpha[offset + 3]);
+  }
+  context.putImageData(source, 0, 0);
+  return buildBoundedPngFromCanvas({
+    canvas,
+    sourceWidth,
+    sourceHeight,
+    maxDataUrlBytes,
+    storagePolicy: 'bounded-local-ai-cutout-data-url-v1',
+    engine: 'browser-local-portrait-garment-prior-v1',
+    preserveSourceFrame,
+  });
 };
 
 const REMBG_OPERATION_TIMEOUT_MS = 30_000;
@@ -1567,14 +1672,7 @@ const isRembgModelLoadError = (error: unknown) => {
   ].some((fragment) => message.includes(fragment));
 };
 
-const canUseBrowserWebGlBackend = () => {
-  try {
-    const canvas = document.createElement('canvas');
-    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
-  } catch {
-    return false;
-  }
-};
+const canUseBrowserWasmBackend = () => typeof WebAssembly !== 'undefined';
 
 const aiGarmentCutoutSessions = new Map<string, Awaited<ReturnType<typeof newSession>> | null>();
 let clothPredictionInFlight: Promise<HTMLCanvasElement[]> | null = null;
@@ -1652,7 +1750,7 @@ export const preparePrintGarmentClothModel = async (
   if (!isPrintGarmentClothModelConfigured()) {
     return { status: 'unconfigured', reused: false };
   }
-  if (!canUseBrowserWebGlBackend()) {
+  if (!canUseBrowserWasmBackend()) {
     return { status: 'unavailable', reused: false };
   }
   return clothModelWarmupController.warmup(onProgress);
@@ -1764,9 +1862,9 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
   segmentationTarget?: GarmentSegmentationTarget;
   preserveSourceFrame?: boolean;
 }): Promise<MaterialCutoutResult> {
-  if (!canUseBrowserWebGlBackend()) {
-    console.warn('Falling back to local white-background garment cutout because WebGL is unavailable.');
-    return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
+  if (!canUseBrowserWasmBackend()) {
+    console.warn('Falling back to local white-background garment cutout because WebAssembly is unavailable.');
+    return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes, preserveSourceFrame });
   }
 
   configureRembgModelPath(modelName);
@@ -1815,7 +1913,7 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
       modelName,
       error,
     });
-    return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
+    return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes, preserveSourceFrame });
   }
   const aiGarmentCutoutSession = aiGarmentCutoutSessions.get(modelName) ?? undefined;
   const canvas = document.createElement('canvas');
@@ -1881,7 +1979,7 @@ export async function buildHighPrecisionMaterialCutoutDataUrl({
         error,
       });
       aiGarmentCutoutSessions.set(modelName, null);
-      return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes });
+      return buildWhiteBackgroundFallbackCutout({ imageUrl, maxDataUrlBytes, preserveSourceFrame });
     }
     const outputDataUrl = await blobToDataUrl(outputBlob);
     const outputImage = await loadImageElement(outputDataUrl);
@@ -2425,6 +2523,8 @@ function buildCutoutFromImage({
   candidate,
   maxSize,
   storagePolicy,
+  maxDataUrlBytes,
+  preserveSourceFrame = false,
 }: {
   image: HTMLImageElement;
   sourceWidth: number;
@@ -2433,6 +2533,8 @@ function buildCutoutFromImage({
   candidate?: string | null;
   maxSize: number;
   storagePolicy: MaterialCutoutResult['storagePolicy'];
+  maxDataUrlBytes: number;
+  preserveSourceFrame?: boolean;
 }): MaterialCutoutResult {
   const ratio = Math.min(1, maxSize / Math.max(sourceWidth, sourceHeight));
   const width = Math.max(1, Math.round(sourceWidth * ratio));
@@ -2498,12 +2600,25 @@ function buildCutoutFromImage({
   }
 
   context.putImageData(imageData, 0, 0);
+  if (preserveSourceFrame) {
+    return buildBoundedPngFromCanvas({
+      canvas,
+      sourceWidth,
+      sourceHeight,
+      maxDataUrlBytes,
+      storagePolicy,
+      engine: backgroundMask ? 'browser-canvas-background-flood-cutout-v2' : 'browser-canvas-geometric-mask-v1',
+      validateSubjectShape: true,
+      preserveSourceFrame: true,
+    });
+  }
   if (maxX < minX || maxY < minY) {
     const dataUrl = canvas.toDataURL('image/png');
     return {
       dataUrl,
       bounds: { x: 0, y: 0, width, height },
       sourceSize: { width: sourceWidth, height: sourceHeight },
+      sourceFrameSize: { width, height },
       outputSize: { width, height },
       dataUrlBytes: estimateDataUrlBytes(dataUrl),
       storagePolicy,
@@ -2531,6 +2646,7 @@ function buildCutoutFromImage({
     dataUrl,
     bounds: { x: cropX, y: cropY, width: cropWidth, height: cropHeight },
     sourceSize: { width: sourceWidth, height: sourceHeight },
+    sourceFrameSize: { width, height },
     outputSize: { width: cropWidth, height: cropHeight },
     dataUrlBytes: estimateDataUrlBytes(dataUrl),
     storagePolicy,

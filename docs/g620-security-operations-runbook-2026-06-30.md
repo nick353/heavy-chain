@@ -25,8 +25,8 @@ Allowed without extra approval:
 |---|---|---|
 | Anonymous generation attempt | Edge Functions require user auth before brand access | `createUserClient`, `requireUser`, and JWT config guards |
 | Viewer/member privilege escalation | Generation requires brand `editor` or stronger | `requireBrandRole(..., 'editor')` in every generation function |
-| Unapproved Runway MCP use | Runway-backed generation requires brand approval before usage reservation | `requireRunwayMcpConnectionApproval` appears before `reserveBrandUsage` in Runway-backed functions |
-| OpenAI fitting generation misuse | `model-matrix` uses the OpenAI image path with brand editor, H601, usage, provider metadata, and Edge observability controls | `model-matrix` checks `requireBrandRole`, `reserveBrandUsage`, OpenAI provider metadata, `recordEdgeFunctionRun`, and no Runway approval gate |
+| Unsupported provider use | Hosted image generation is routed through the OpenAI adapter before usage reservation | Active generation functions use the shared OpenAI adapter and no retired provider gate |
+| OpenAI fitting generation misuse | `model-matrix` uses the OpenAI image path with brand editor, H601, usage, provider metadata, and Edge observability controls | `model-matrix` checks `requireBrandRole`, `reserveBrandUsage`, OpenAI provider metadata, and `recordEdgeFunctionRun` |
 | Generation spam | Short-window brand/user rate limits remain active while billing is inactive | `v_brand_recent_units + p_units > 5`, `v_user_recent_units + p_units > 3` |
 | Stale reservation abuse | Old reservations are released and marked | `reservation_stale`, `INTERVAL '15 minutes'`, `status = 'released'` |
 | Edge failure invisibility | Started/succeeded/failed Edge runs are recorded | `edge_function_runs`, `recordEdgeFunctionRun`, monitor readback |
@@ -41,7 +41,7 @@ Security operations rely on these durable tables and proof artifacts:
 - `public.usage_events`: usage reservations, succeeded/failed/released state, idempotency key, stale release metadata.
 - `public.edge_function_runs`: Edge Function status, request id, duration, error message, and brand/user linkage.
 - `public.admin_audit_logs`: platform-admin-only audit log visibility.
-- `public.runway_mcp_connection_approvals`: brand-level Runway MCP approval lifecycle.
+- The legacy provider approval tables are removed by `20260817081436_retire_legacy_image_provider.sql`.
 - `output/playwright/10m-product-readiness-g620/summary.json`: G620 acceptance summary.
 - `output/playwright/10m-product-readiness-g620/production-monitor-readback/summary.json`: read-only production monitor input.
 
@@ -51,7 +51,7 @@ Security operations rely on these durable tables and proof artifacts:
 2. Classify the incident: generation abuse, access/role issue, worker/import failure, storage readback failure, Edge Function failure, or suspected secret exposure.
 3. Use `request_id`, `brand_id`, `user_id`, `generation_jobs.id`, `usage_events.id`, and `edge_function_runs.id` to join evidence.
 4. Stop generation by disabling or repairing the approved local worker path, not by using broad destructive cleanup.
-5. For Runway approval issues, revoke or reject the brand approval through the approved admin path and preserve the audit trail.
+5. For provider failures, preserve the job/error/readback evidence and retry only after the provider state is understood.
 6. For storage issues, do not trust Gallery until signed URL readback passes.
 7. Rerun:
 

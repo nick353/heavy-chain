@@ -24,7 +24,7 @@ test('local Canvas assets use an IndexedDB reference instead of persisting image
   assert.match(helper, /hasLocalCanvasAsset/);
   assert.match(store, /buildLocalCanvasAssetReference\(revision\)/);
   assert.match(store, /hasLocalCanvasAsset\(revision\)/);
-  assert.match(store, /version: 2/);
+  assert.match(store, /version: 3/);
   assert.doesNotMatch(store, /src: dataUrl/);
 });
 
@@ -41,15 +41,18 @@ test('missing IndexedDB remains an explicit session-only fallback', () => {
   assert.match(page, /keeping this upload session-scoped/);
 });
 
-test('saving a new canvas routes to its created project before reload', () => {
-  const start = page.indexOf('const handleSave = () =>');
+test('saving a Canvas writes and verifies the server snapshot before route update', () => {
+  const start = page.indexOf('const handleSave = async () =>');
   const end = page.indexOf('const handleObjectSelect', start);
   assert.ok(start >= 0, 'canvas save handler must exist');
   assert.ok(end > start, 'canvas object handlers must follow the save handler');
   const saveHandler = page.slice(start, end);
-  assert.match(saveHandler, /if \(!currentProjectId\)/);
-  assert.match(saveHandler, /createProject\(currentProjectName \|\| '無題のプロジェクト', currentBrand\?\.id, objects\)/);
-  assert.match(saveHandler, /navigate\(`\/canvas\/\$\{newId\}`/);
+  assert.match(saveHandler, /if \(!currentBrand\?\.id \|\| !user\?\.id\)/);
+  assert.match(saveHandler, /createCanvasDocument\(\{ brandId, title, snapshot \}\)/);
+  assert.match(saveHandler, /getCanvasDocument\(document\.id, brandId\)/);
+  assert.match(saveHandler, /hydrateProject\(/);
+  assert.match(saveHandler, /setCanvasPersistenceStatus\('saved'\)/);
+  assert.doesNotMatch(saveHandler, /createProject\(currentProjectName/);
 });
 
 test('new project creation carries current canvas objects into the routed project', () => {

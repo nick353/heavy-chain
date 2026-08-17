@@ -6,7 +6,7 @@ import { CreditSummaryPanel } from '../components/workspace';
 import { emptyWorkspaceActivity, fetchWorkspaceActivity, type WorkspaceActivity } from '../lib/workspaceActivity';
 
 export function CreditsPage() {
-  const { currentBrand } = useAuthStore();
+  const { user, currentBrand } = useAuthStore();
   const [activity, setActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
   const [isLoading, setIsLoading] = useState(false);
   const [activityError, setActivityError] = useState<string | null>(null);
@@ -21,14 +21,14 @@ export function CreditsPage() {
     setIsLoading(true);
     setActivityError(null);
     try {
-      setActivity(await fetchWorkspaceActivity(currentBrand.id));
+      setActivity(await fetchWorkspaceActivity(currentBrand.id, user?.id));
     } catch (error) {
       console.warn('Failed to load credits:', error);
       setActivityError('credits');
     } finally {
       setIsLoading(false);
     }
-  }, [currentBrand]);
+  }, [currentBrand, user?.id]);
 
   useEffect(() => {
     void loadActivity();
@@ -104,14 +104,16 @@ export function CreditsPage() {
                   <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
                     {summary.appleSandboxTesterNoRealCharge
                       ? 'Apple sandbox tester: 購入フロー検証はテスト扱いで、実請求されない想定です。'
-                      : 'テストアカウント: 運用確認用の生成 quota bypass が有効です。'}
+                      : 'このアカウントは月間生成 quota 無制限です（安全レート制限は維持）。'}
                   </div>
                 )}
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-xl bg-white/60 p-4 dark:bg-surface-950/45">
                     <Gauge className="h-5 w-5 text-primary-600 dark:text-primary-300" />
-                    <p className="mt-3 text-2xl font-semibold text-neutral-950 dark:text-white">{summary.remainingUnits.toLocaleString()}</p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">今月残り / 上限 {summary.monthlyQuota.toLocaleString()}</p>
+                    <p className="mt-3 text-2xl font-semibold text-neutral-950 dark:text-white">{summary.billingTestAccountQuotaBypass ? '無制限' : summary.remainingUnits.toLocaleString()}</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {summary.billingTestAccountQuotaBypass ? '月間生成 quota 無制限' : `今月残り / 上限 ${summary.monthlyQuota.toLocaleString()}`}
+                    </p>
                   </div>
                   <div className="rounded-xl bg-white/60 p-4 dark:bg-surface-950/45">
                     <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />

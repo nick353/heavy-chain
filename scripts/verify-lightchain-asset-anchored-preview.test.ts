@@ -68,8 +68,15 @@ test('generated result controls are not clipped by the empty-state aspect ratio'
 
 test('workspace and detail handlers preserve uploaded assets before canned previews', () => {
   assert.match(workbenchSource, /const setUploadedAssetResult =/);
-  assert.equal((workbenchSource.match(/setUploadedAssetResult\(\{/g) ?? []).length, 6);
-  assert.match(workbenchSource, /mode: selectedTool\.id === 'fashion-studio' \? 'model' : 'asset'/);
-  assert.match(workbenchSource, /toolId: 'print-design-detail',[\s\S]*?mode: 'pattern'/);
-  assert.match(workbenchSource, /toolId: 'marketing-detail',[\s\S]*?mode: 'asset'/);
+  assert.match(workbenchSource, /const sourceImageUrl = materialSlotFiles\.primary\?\.imageUrl \|\| garmentImageUrl/);
+  assert.match(workbenchSource, /const anchoredPreview = buildAssetAnchoredPreviewDataUrl\(\{/);
+  assert.match(workbenchSource, /imageUrl: anchoredPreview/);
+  assert.match(workbenchSource, /const handleWorkspaceStyleGenerate = async \(\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
+  assert.match(workbenchSource, /const handleCustomStyleSave = async \(\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
+  assert.match(workbenchSource, /const handleWearDesignStart = async \(mode: 'guide' \| 'no-guide'\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
+  assert.match(workbenchSource, /const handlePrintDesignStart = async \(mode: 'guide' \| 'no-guide'\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
+  assert.match(workbenchSource, /const handleMarketingDetailGenerate = async \(\) => \{[\s\S]*?handleLightchainPreviewGenerate\(/);
+  assert.match(workbenchSource, /const previewMode = selectedTool\.id === 'line-generation'[\s\S]*?currentModelPanel\s*\n\s*\? 'model'/);
+  assert.match(workbenchSource, /const handlePrintDesignStart = async \(mode: 'guide' \| 'no-guide'\) =>/);
+  assert.match(workbenchSource, /const handleMarketingDetailGenerate = async \(\) =>/);
 });

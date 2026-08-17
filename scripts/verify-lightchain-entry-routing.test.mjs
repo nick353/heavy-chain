@@ -12,7 +12,7 @@ test('keeps fabric try-on in the visible graphics category', async () => {
   const featureEnd = source.indexOf("id: 'lineart-to-real'", featureStart);
   const feature = source.slice(featureStart, featureEnd === -1 ? source.length : featureEnd);
   assert.match(feature, /category: 'graphics'/);
-  assert.match(feature, /route: '\/lightchain\/fabric-image'/);
+  assert.match(feature, /route: '(?:\/tools\/fabric|\/lightchain\/fabric-image)'/);
 });
 
 test('keeps print-image try-on beside fabric simulation in graphics', async () => {
@@ -38,6 +38,7 @@ test('routes fabric search prompts to the simulation entry', async () => {
     'print prompts must be classified before generic editing prompts',
   );
   assert.match(source, /'\/lightchain\/fabric-image': Shirt/);
+  assert.match(source, /'\/tools\/fabric': Shirt/);
   assert.match(source, /'\/lightchain\/printing-image': Palette/);
 });
 

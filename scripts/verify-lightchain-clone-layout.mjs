@@ -687,7 +687,7 @@ function buildComparisonLedger(result) {
       lightchainReference: 'category-first home before detailed generation input',
       heavyChainProof: 'desktop-home / mobile-home',
       matchStatus: matched(['desktop-home', 'mobile-home']) ? 'matched' : 'missing-proof',
-      intentionalHeavyChainAddition: 'Heavy Chain branding and Runway worker readiness remain visible.',
+      intentionalHeavyChainAddition: 'Heavy Chain branding and provider readiness remain visible.',
       remainingMismatch: 'not pixel-identical; richer Heavy Chain workspace cards are intentionally retained.',
     },
     {
@@ -721,7 +721,7 @@ function buildComparisonLedger(result) {
           'lightchain_canvas_toolbar_present',
           'planning_preview_scoped_to_design_panel',
         ])) ? 'matched' : 'missing-proof',
-      intentionalHeavyChainAddition: 'Operations details disclose local Runway worker and Canvas/Gallery continuity.',
+      intentionalHeavyChainAddition: 'Operations details disclose provider status and Canvas/Gallery continuity.',
       remainingMismatch: 'assistant plan is deterministic local planning, not Heavy Chain live LLM response.',
     },
     {

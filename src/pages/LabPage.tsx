@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { BarChart3, Check, ChevronRight, FlaskConical, Images, Layers3, Lightbulb, Save, Sparkles, Target } from 'lucide-react';
@@ -9,7 +9,12 @@ import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
-import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
+import {
+  buildLightchainToolHref,
+  handoffWorkspaceToCanvas,
+  restoreWorkspaceHandoffHistory,
+  workspaceSourceConfig,
+} from '../lib/workspaceHandoff';
 
 const choices = ['プロンプト実験', '品質評価', '採用候補'];
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
@@ -30,11 +35,6 @@ type HistoryItem = {
   id: string;
   label: string;
 };
-
-const initialHistory: HistoryItem[] = [
-  { id: 'lab-history-1', label: '素材感プロンプトを比較' },
-  { id: 'lab-history-2', label: 'EC背景候補を採点' },
-];
 
 const labExperimentCandidates: LabExperimentCandidate[] = [
   {
@@ -73,7 +73,7 @@ const labExperimentCandidates: LabExperimentCandidate[] = [
     score: 79,
     scoreSignature: 'quality-79-campaign-transfer',
     experimentMode: 'campaign-reuse',
-    decision: 'CTA余白を残して campaign-image に渡す',
+    decision: 'CTA余白を残してHeavy Chain Labの販促転用候補へ渡す',
     risk: '寄りすぎるとシルエット判断が弱くなる',
   },
 ];
@@ -191,19 +191,29 @@ const buildLabExperimentPreviewSvg = ({
 
 export function LabPage() {
   const navigate = useNavigate();
-  const { currentBrand } = useAuthStore();
+  const { user, currentBrand } = useAuthStore();
   const [activeChoice, setActiveChoice] = useState(choices[0]);
   const [progress, setProgress] = useState(28);
-  const [history, setHistory] = useState(initialHistory);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedExperimentId, setSelectedExperimentId] = useState(labExperimentCandidates[0].id);
   const [hypothesis, setHypothesis] = useState('シアー素材は自然光より硬めのスタジオ光で高級感が出る');
   const [promptDraft, setPromptDraft] = useState('Japanese fashion ecommerce editorial, sheer jacket, crisp studio lighting');
   const [evaluationAxis, setEvaluationAxis] = useState('素材感 / 顔の自然さ / 商品識別性 / EC転用しやすさ');
   const [candidate, setCandidate] = useState('候補A: 白背景スタジオ、候補B: グレー背景寄り');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
-  const nextHistoryId = useRef(3);
+  const nextHistoryId = useRef(1);
   const selectedExperiment = labExperimentCandidates.find((item) => item.id === selectedExperimentId) ?? labExperimentCandidates[0];
   const axisItems = evaluationAxis.split('/').map((item) => item.trim()).filter(Boolean);
+  const materialReferenceMetadata = useMemo(
+    () => buildMaterialReferenceMetadata(materialReference),
+    [materialReference],
+  );
+  const materialReferenceSummary = materialReferenceMetadata.hasImage
+    ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
+    : '素材を追加するとここに反映されます';
+  useEffect(() => {
+    setHistory(restoreWorkspaceHandoffHistory(currentBrand?.id, 'lab-workflow', user?.id));
+  }, [currentBrand?.id, user?.id]);
   const previewImageUrl = useMemo(() => buildLabExperimentPreviewSvg({
     activeChoice,
     selectedExperiment,
@@ -261,10 +271,6 @@ export function LabPage() {
       decision: selectedExperiment.decision,
       risk: selectedExperiment.risk,
     };
-    const materialReferenceMetadata = buildMaterialReferenceMetadata(materialReference);
-    const materialReferenceSummary = materialReferenceMetadata.hasImage
-      ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
-      : '素材を追加するとここに反映されます';
     const generationPrompt = [
       promptDraft,
       `Hypothesis: ${hypothesis}`,
@@ -289,8 +295,10 @@ export function LabPage() {
       `Material reference: ${materialReferenceSummary}`,
       `Next step: ${nextStep}`,
     ].join('\n');
+    try {
     const { projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
+      scopeId: user?.id,
       featureType: 'lab-workflow',
       projectName: `Lab: ${activeChoice}`,
       title: `Lab: ${activeChoice}`,
@@ -331,14 +339,15 @@ export function LabPage() {
         primaryInput,
         nextStep,
         generationIntent: {
-          feature: 'campaign-image',
+          feature: 'lab',
           prompt: generationPrompt,
-          href: buildGenerationIntentHref({
-            feature: 'campaign-image',
-            prompt: generationPrompt,
+          href: buildLightchainToolHref({
+            toolId: 'lab',
+            brief: generationPrompt,
+            referenceNote: materialReferenceSummary,
             ...generationSource,
           }),
-          label: 'キャンペーン画像で生成',
+          label: 'Heavy Chain Labで生成',
           ...generationSource,
           materialReferences: [materialReferenceMetadata],
           layerPlan: {
@@ -388,6 +397,11 @@ export function LabPage() {
 
     toast.success('Labを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Canvas保存に失敗しました';
+      console.error('Failed to persist Lab workspace handoff:', error);
+      toast.error(message);
+    }
   };
 
   return (
@@ -534,9 +548,10 @@ export function LabPage() {
           className="flex flex-col gap-2 sm:flex-row lg:min-w-64 lg:flex-col lg:justify-center"
         >
           <Link
-            to={buildGenerationIntentHref({
-              feature: 'campaign-image',
-              prompt: `${promptDraft}\nHypothesis: ${hypothesis}\nEvaluation axis: ${evaluationAxis}\nCandidate direction: ${candidate}`,
+            to={buildLightchainToolHref({
+              toolId: 'lab',
+              brief: `${promptDraft}\nHypothesis: ${hypothesis}\nEvaluation axis: ${evaluationAxis}\nCandidate direction: ${candidate}`,
+              referenceNote: materialReferenceSummary,
               sourceWorkspace: 'lab',
               workflowVersion: 'lab-evaluation-local-v1',
               sourceLabel: workspaceSourceConfig.lab.label,
@@ -546,7 +561,7 @@ export function LabPage() {
             className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
           >
             <Sparkles className="h-4 w-4" />
-            ラボで試す
+            Heavy Chain Labで試す
           </Link>
           <button
             type="button"

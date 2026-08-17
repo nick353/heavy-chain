@@ -3,8 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { generateRunwayImage, runwayImageArtifact, runwayReferenceImage, type RunwayImageResult } from '../_shared/runway.ts';
-import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
+import { generateProviderImage, providerImageArtifact, providerReferenceImage, type ProviderImageResult } from '../_shared/imageProvider.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
@@ -215,7 +214,7 @@ async function generateWithReference(
   direction: typeof DESIGN_DIRECTIONS[0],
   _apiKey?: string,
   _imageModel?: string
-): Promise<RunwayImageResult | null> {
+): Promise<ProviderImageResult | null> {
   console.log(`🎨 Generating ${direction.name} with product reference...`);
 
   const prompt = `Create a fashion product photo with ${direction.prompt} style.
@@ -230,10 +229,10 @@ CRITICAL - KEEP THE PRODUCT IDENTICAL:
 
 Style: ${direction.prompt}, professional fashion photography`;
 
-  return await generateRunwayImage({
+  return await generateProviderImage({
     brandId,
     prompt,
-    referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
+    referenceImages: [providerReferenceImage(originalBase64, originalMimeType, 'product')],
   });
 }
 
@@ -244,9 +243,9 @@ async function generateFromText(
   direction: typeof DESIGN_DIRECTIONS[0],
   _apiKey?: string,
   _imageModel?: string
-): Promise<RunwayImageResult | null> {
+): Promise<ProviderImageResult | null> {
   const fullPrompt = `${brief}, ${direction.prompt}, professional fashion photography, high quality, studio lighting`;
-  return await generateRunwayImage({ brandId, prompt: fullPrompt });
+  return await generateProviderImage({ brandId, prompt: fullPrompt });
 }
 
 async function generatePrintDesignAsset({
@@ -261,17 +260,17 @@ async function generatePrintDesignAsset({
   direction: typeof DESIGN_DIRECTIONS[0];
   referenceBase64?: string | null;
   referenceMimeType?: string;
-}): Promise<RunwayImageResult | null> {
+}): Promise<ProviderImageResult | null> {
   const prompt = buildPrintDesignAssetPrompt({
     description,
     directionPrompt: direction.prompt,
     hasReference: Boolean(referenceBase64),
   });
-  return await generateRunwayImage({
+  return await generateProviderImage({
     brandId,
     prompt,
     ...(referenceBase64
-      ? { referenceImages: [runwayReferenceImage(referenceBase64, referenceMimeType || 'image/jpeg', 'style')] }
+      ? { referenceImages: [providerReferenceImage(referenceBase64, referenceMimeType || 'image/jpeg', 'style')] }
       : {}),
   });
 }
@@ -354,7 +353,6 @@ serve(async (req) => {
     ]);
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
-    await requireRunwayMcpConnectionApproval(supabaseService, brandId);
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {
@@ -423,7 +421,7 @@ serve(async (req) => {
       requestId,
     });
 
-    const imageModel = 'runway';
+    const imageModel = 'openai';
 
     // 画像がある場合は分析
     let originalImageBase64: string | null = null;
@@ -452,7 +450,7 @@ serve(async (req) => {
     const results = [];
 
     for (const direction of selectedDirections) {
-      let generatedImage: RunwayImageResult | null = null;
+      let generatedImage: ProviderImageResult | null = null;
 
       if (finalPrintDesignPurpose) {
         generatedImage = await generatePrintDesignAsset({
@@ -491,7 +489,7 @@ serve(async (req) => {
       }
 
       if (generatedImage) {
-        const imageAsset = runwayImageArtifact(generatedImage);
+        const imageAsset = providerImageArtifact(generatedImage);
         const imageBase64 = imageAsset.base64;
         const fileName = `${user.id}/${brandId}/${jobId}_gacha_${direction.id}_${Date.now()}.${imageAsset.extension}`;
         const imgBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));

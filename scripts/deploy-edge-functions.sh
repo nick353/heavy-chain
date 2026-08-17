@@ -16,15 +16,10 @@ all_functions=(
   marketing-workspace-artifact
   bulk-download
   share-link
-  runway-mcp-connect-start
-  runway-mcp-connect-callback
-  runway-mcp-connection-status
-  runway-mcp-bridge
   submit-feedback
 )
 
 jwt_disabled_functions=(
-  runway-mcp-connect-callback
 )
 
 if [ "$#" -gt 0 ]; then

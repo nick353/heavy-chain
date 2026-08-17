@@ -33,11 +33,16 @@ import {
   workspaceArtifactToGeneratedImage,
 } from '../lib/localWorkspaceArtifacts';
 import {
+  getGeneratedImageSelectionKey,
+  mergeGeneratedImagesByCanonicalIdentity,
+} from '../lib/generatedImageIdentity';
+import {
   setPrintResultFavorite,
   type PrintResultFavoriteValue,
   type PrintResultKind,
 } from '../features/printing/history/printResultFavorite';
 import { buildSourceContextSummaryRows } from '../lib/sourceContextSummary';
+import { downloadValidatedImage } from '../lib/imageDownload';
 import { Button, SearchInput } from '../components/ui';
 import type { GeneratedImage } from '../types/database';
 import type { GenerationIntent } from '../lib/workspaceHandoff';
@@ -71,7 +76,7 @@ const getMetadataString = (image: GeneratedImage | null, key: string) => {
 
 const getPrintResultKind = (image: GeneratedImage): PrintResultKind | undefined => {
   const value = getMetadataString(image, 'printResultKind');
-  return value === 'exact' || value === 'fabric' || value === 'surface' ? value : undefined;
+  return value === 'exact' || value === 'fabric' || value === 'surface' || value === 'provider' ? value : undefined;
 };
 
 const getLocalPrintResult = (image: GeneratedImage): PrintResultFavoriteValue | null => {
@@ -122,6 +127,11 @@ export function GalleryPage() {
   const selectedSourceResumePath = getMetadataString(selectedImage, 'sourceResumePath');
   const selectedSourceSummaryRows = buildSourceContextSummaryRows(selectedImage?.metadata);
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
+
+  const selectImage = useCallback((image: GeneratedImage | null) => {
+    setSelectedImage(image);
+    setSearchParams(image ? { image: getGeneratedImageSelectionKey(image) } : {});
+  }, [setSearchParams]);
 
   // Multi-select mode
   const [selectMode, setSelectMode] = useState(false);
@@ -191,7 +201,7 @@ export function GalleryPage() {
     setIsLoadingStalled(false);
     setFailedImageIds(new Set());
     try {
-      const localImages = listWorkspaceGeneratedImages(brandId)
+      const localImages = listWorkspaceGeneratedImages(brandId, user?.id)
         .filter((image) => filter !== 'favorites' || image.is_favorite);
       const resolveLocalImages = async (candidates: GeneratedImage[]) => {
         try {
@@ -243,7 +253,7 @@ export function GalleryPage() {
         }
       }
 
-      const mergedImages = [...remoteImages, ...signedLocalImages]
+      const mergedImages = mergeGeneratedImagesByCanonicalIdentity(remoteImages, signedLocalImages)
         .sort((a, b) => {
           if (sortBy === 'oldest') {
             return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -253,7 +263,7 @@ export function GalleryPage() {
       if (!isCurrentRequest()) return;
       setImages(mergedImages);
     } catch {
-      const localImages = listWorkspaceGeneratedImages(brandId)
+      const localImages = listWorkspaceGeneratedImages(brandId, user?.id)
         .filter((image) => filter !== 'favorites' || image.is_favorite);
       let signedLocalImages = localImages;
       try {
@@ -274,7 +284,7 @@ export function GalleryPage() {
         setIsLoadingStalled(false);
       }
     }
-  }, [currentBrand, filter, sortBy]);
+  }, [currentBrand, filter, sortBy, user?.id]);
 
   useEffect(() => {
     let mounted = true;
@@ -317,32 +327,51 @@ export function GalleryPage() {
   useEffect(() => {
     // Check for image ID in URL
     const imageId = searchParams.get('image');
-    if (imageId && images.length > 0) {
-      const image = images.find(img => img.id === imageId);
-      if (image) {
-        setSelectedImage(image);
-      }
+    if (!imageId) {
+      if (selectedImage) setSelectedImage(null);
+      return;
     }
-  }, [searchParams, images]);
+    const image = images.find((candidate) => (
+      candidate.id === imageId
+      || getGeneratedImageSelectionKey(candidate) === imageId
+    ));
+    if (image) {
+      setSelectedImage(image);
+    } else if (!isLoading && images.length > 0) {
+      setSelectedImage(null);
+      setSearchParams({});
+    }
+  }, [images, isLoading, searchParams, selectedImage, setSearchParams]);
 
-  const handleDownload = async (image: GeneratedImage, format: 'png' | 'jpeg' | 'webp' = 'png') => {
+  const handleDownload = async (image: GeneratedImage, format: 'png' | 'jpeg' | 'webp' = 'png'): Promise<boolean> => {
     try {
-      const imageUrl = getImageUrl(image);
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `heavy-chain-${image.id}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      if (!currentBrand || image.brand_id !== currentBrand.id) {
+        throw new Error('gallery_image_brand_mismatch');
+      }
+      const currentIdentity = getGeneratedImageSelectionKey(image);
+      const currentImage = images.find((candidate) => (
+        candidate.brand_id === currentBrand.id
+        && (candidate.id === image.id || getGeneratedImageSelectionKey(candidate) === currentIdentity)
+      ));
+      if (!currentImage) {
+        throw new Error('gallery_image_identity_unavailable');
+      }
+      const imageUrl = getImageUrl(currentImage);
+      if (!imageUrl) {
+        throw new Error('gallery_image_url_unavailable');
+      }
+      await downloadValidatedImage(
+        imageUrl,
+        `heavy-chain-${currentImage.id}.${format}`,
+        'gallery_image_download',
+        format,
+      );
 
       toast.success('ダウンロードしました');
+      return true;
     } catch {
       toast.error('ダウンロードに失敗しました');
+      return false;
     }
   };
 
@@ -353,15 +382,21 @@ export function GalleryPage() {
 
     // In a real implementation, this would call the bulk-download Edge Function
     // For now, download each image individually
+    const downloadResults: boolean[] = [];
     for (const id of selectedIds) {
       const image = images.find(img => img.id === id);
       if (image) {
-        await handleDownload(image, 'png');
+        downloadResults.push(await handleDownload(image, 'png'));
       }
     }
 
     toast.dismiss();
-    toast.success('ダウンロード完了');
+    const succeeded = downloadResults.filter(Boolean).length;
+    if (succeeded === selectedIds.size) {
+      toast.success('ダウンロード完了');
+    } else if (succeeded > 0) {
+      toast.error(`${selectedIds.size - succeeded}件のダウンロードに失敗しました`);
+    }
   };
 
   const handleToggleFavorite = useCallback(async (image: GeneratedImage) => {
@@ -394,8 +429,11 @@ export function GalleryPage() {
           : previous.map((item) => item.id === image.id ? updatedImage : item)
       ));
       if (selectedImage?.id === image.id) {
-        setSelectedImage(filter === 'favorites' && !newValue ? null : updatedImage);
-        if (filter === 'favorites' && !newValue) setSearchParams({});
+        if (filter === 'favorites' && !newValue) {
+          selectImage(null);
+        } else {
+          setSelectedImage(updatedImage);
+        }
       }
       toast.success(newValue ? 'お気に入りに追加しました' : 'お気に入りから削除しました');
       return;
@@ -422,7 +460,7 @@ export function GalleryPage() {
     } catch {
       toast.error('操作に失敗しました');
     }
-  }, [filter, selectedImage, setSearchParams]);
+  }, [filter, selectImage, selectedImage]);
 
   const handleDelete = async (image: GeneratedImage) => {
     if (!confirm('この画像を削除しますか？')) return;
@@ -435,7 +473,7 @@ export function GalleryPage() {
         return;
       }
       setImages(prev => prev.filter(img => img.id !== image.id));
-      setSelectedImage(null);
+      if (selectedImage?.id === image.id) selectImage(null);
       toast.success('ローカル成果物を削除しました');
       return;
     }
@@ -453,7 +491,7 @@ export function GalleryPage() {
       if (deleteError) throw deleteError;
 
       setImages(prev => prev.filter(img => img.id !== image.id));
-      setSelectedImage(null);
+      if (selectedImage?.id === image.id) selectImage(null);
       toast.success('画像を削除しました');
     } catch {
       toast.error('削除に失敗しました');
@@ -474,7 +512,7 @@ export function GalleryPage() {
         localIdsByBrand.set(image.brand_id, [...(localIdsByBrand.get(image.brand_id) ?? []), image.id]);
       });
       for (const [brandId, artifactIds] of localIdsByBrand) {
-        const deleted = deleteWorkspaceArtifactsPersisted(brandId, artifactIds);
+        const deleted = deleteWorkspaceArtifactsPersisted(brandId, artifactIds, user?.id);
         if (!deleted.ok) throw deleted.error;
       }
 
@@ -492,6 +530,7 @@ export function GalleryPage() {
       }
 
       setImages(prev => prev.filter(img => !selectedIds.has(img.id)));
+      if (selectedImage && selectedIds.has(selectedImage.id)) selectImage(null);
       setSelectedIds(new Set());
       setSelectMode(false);
       toast.success('削除しました');
@@ -625,10 +664,9 @@ export function GalleryPage() {
 
   useEffect(() => {
     if (selectedImage && failedImageIds.has(selectedImage.id)) {
-      setSelectedImage(null);
-      setSearchParams({});
+      selectImage(null);
     }
-  }, [failedImageIds, selectedImage, setSearchParams]);
+  }, [failedImageIds, selectImage, selectedImage]);
 
   const visibleImages = useMemo(
     () => galleryImages.slice(0, visibleImageCount),
@@ -655,11 +693,8 @@ export function GalleryPage() {
     }
 
     const newImage = galleryImages[newIndex];
-    setSelectedImage(newImage);
-
-    // Update URL
-    setSearchParams({ image: newImage.id });
-  }, [galleryImages, selectedImage, setSearchParams]);
+    selectImage(newImage);
+  }, [galleryImages, selectImage, selectedImage]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -673,8 +708,7 @@ export function GalleryPage() {
         e.preventDefault();
         navigateImage('next');
       } else if (e.key === 'Escape') {
-        setSelectedImage(null);
-        setSearchParams({});
+        selectImage(null);
       } else if (e.key === 'f' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         handleToggleFavorite(selectedImage);
@@ -683,7 +717,7 @@ export function GalleryPage() {
 
     document.addEventListener('keydown', handleKeydown);
     return () => document.removeEventListener('keydown', handleKeydown);
-  }, [selectedImage, navigateImage, setSearchParams, handleToggleFavorite]);
+  }, [selectedImage, navigateImage, selectImage, handleToggleFavorite]);
 
   return (
     <>
@@ -699,7 +733,7 @@ export function GalleryPage() {
               ギャラリー
             </h1>
             <p className="text-neutral-400">
-              {images.length}枚の画像
+              {isLoading ? '画像を確認中' : `${images.length}枚の画像`}
             </p>
           </div>
 
@@ -916,7 +950,7 @@ export function GalleryPage() {
                     className={`group relative aspect-square overflow-hidden rounded-xl bg-white/[0.04] cursor-pointer transition-all shadow-sm hover:shadow-lg backdrop-blur-sm ${
                       selectMode && selectedIds.has(image.id) ? 'ring-2 ring-cyan-300 ring-offset-2 ring-offset-[#050607]' : 'hover:ring-2 hover:ring-cyan-300'
                     }`}
-                    onClick={() => selectMode ? toggleSelectImage(image.id) : setSelectedImage(image)}
+                    onClick={() => selectMode ? toggleSelectImage(image.id) : selectImage(image)}
                   >
                     {getImageUrl(image) ? (
                       <img
@@ -1060,8 +1094,7 @@ export function GalleryPage() {
             {/* Close Button */}
             <button
               onClick={() => {
-                setSelectedImage(null);
-                setSearchParams({});
+                selectImage(null);
               }}
               className="absolute top-4 right-4 p-3 text-white/70 hover:text-white transition-all z-20 bg-black/30 hover:bg-black/50 rounded-full backdrop-blur-sm hover:scale-110"
             >

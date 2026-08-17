@@ -171,7 +171,9 @@ export function InfiniteCanvas({
           return await loadDirect(resolvedSource);
         }
 
-        return await loadDirect(resolvedSource).catch(() => loadViaBlob());
+        // A successful direct cross-origin load can still taint the Konva
+        // canvas. Use the readable blob-backed image for every remote source.
+        return await loadViaBlob();
       } finally {
         localResolution?.release();
       }
@@ -187,7 +189,13 @@ export function InfiniteCanvas({
         loadingImageIds.add(obj.id);
         startedLoadingIds.push(obj.id);
         const preloadedImageKey = obj.metadata?.galleryImageUrl || obj.src;
-        const preloadedImage = preloadedImages?.get(preloadedImageKey);
+        // GallerySelector preview images can be cross-origin and taint a
+        // Konva canvas even when they render successfully. Gallery imports
+        // must use the blob-first loader below so export/toDataURL remains
+        // readable; preloadedImages is retained for non-gallery callers.
+        const preloadedImage = obj.metadata?.source === 'gallery-selector'
+          ? undefined
+          : preloadedImages?.get(preloadedImageKey);
         if (preloadedImage) {
           loadedImageSourcesRef.current.set(preloadedImageKey, preloadedImage);
           setLoadedImages((prev) => {

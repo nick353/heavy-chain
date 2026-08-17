@@ -8,8 +8,9 @@ interface CreditSummaryPanelProps {
 }
 
 export function CreditSummaryPanel({ summary, className = '' }: CreditSummaryPanelProps) {
+  const isUnlimited = summary.billingTestAccountQuotaBypass;
   const activityPercent =
-    summary.monthlyQuota > 0
+    !isUnlimited && summary.monthlyQuota > 0
       ? Math.min(((summary.usedUnits + summary.reservedUnits) / summary.monthlyQuota) * 100, 100)
       : 0;
 
@@ -28,13 +29,15 @@ export function CreditSummaryPanel({ summary, className = '' }: CreditSummaryPan
       <div className="mt-5">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-3xl font-semibold text-neutral-950 dark:text-white">{summary.remainingUnits.toLocaleString()}</p>
+            <p className="text-3xl font-semibold text-neutral-950 dark:text-white">{isUnlimited ? '無制限' : summary.remainingUnits.toLocaleString()}</p>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              今月残り / {summary.appleSandboxTesterNoRealCharge ? 'Sandbox' : summary.planName} 上限 {summary.monthlyQuota.toLocaleString()}
+              {isUnlimited
+                ? '月間生成 quota 無制限'
+                : `今月残り / ${summary.appleSandboxTesterNoRealCharge ? 'Sandbox' : summary.planName} 上限 ${summary.monthlyQuota.toLocaleString()}`}
             </p>
             {summary.billingTestAccountQuotaBypass && (
               <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                {summary.appleSandboxTesterNoRealCharge ? 'Apple sandbox tester / 実請求なし' : 'テストアカウント quota bypass'}
+                {summary.appleSandboxTesterNoRealCharge ? 'Apple sandbox tester / 実請求なし' : 'オーナー指定の quota 無制限'}
               </p>
             )}
           </div>

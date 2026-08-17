@@ -1127,7 +1127,7 @@ async function installGenerationNetworkGuard(browserContext) {
 
 function isGenerationLikeRequest(url) {
   if (/marketing-workspace-artifact/i.test(url)) return false;
-  return /\/functions\/v1\/(?:generate|.*generation|runway|replicate|openai|image|video)|runway|replicate|openai|fal\.ai|stability|image-generation|generate-image|ai-generate/i.test(url);
+  return /\/functions\/v1\/(?:generate|.*generation|replicate|openai|image|video)|replicate|openai|fal\.ai|stability|image-generation|generate-image|ai-generate/i.test(url);
 }
 
 function isAllowedExternalRequest(url) {

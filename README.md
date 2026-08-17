@@ -14,7 +14,7 @@
 
 ### 🎯 概要
 
-Heavy Chainは、**AI（Gemini + OpenAI）を活用したアパレル向け画像生成プラットフォーム**です。マーケティング、商品企画、EC、編集ユーティリティなど、アパレルビジネスに必要な画像生成・編集機能をワンストップで提供します。
+Heavy Chainは、**OpenAI画像APIを中心とするアパレル向け画像生成プラットフォーム**です。マーケティング、商品企画、EC、編集ユーティリティなど、アパレルビジネスに必要な画像生成・編集機能をワンストップで提供します。
 
 ### ✨ デモ
 
@@ -40,7 +40,7 @@ Coming Soon - デモ画面を追加予定
 
 - ✅ **認証システム** - メール/Google/Apple OAuth対応
 - ✅ **ブランド管理** - 複数ブランドの一元管理
-- ✅ **AI画像生成** - Text-to-Image生成（Gemini API）
+- ✅ **AI画像生成** - Text-to-Image生成（OpenAI Images API）
 - ✅ **画像ギャラリー** - 生成画像の一覧・管理
 - ✅ **ダウンロード機能** - PNG/JPEG/WebP形式対応
 - ✅ **お気に入り機能** - 重要な画像をブックマーク
@@ -70,8 +70,8 @@ Coming Soon - デモ画面を追加予定
 - **Row Level Security (RLS)** - セキュアなデータアクセス制御
 
 #### AI/機械学習
-- **Gemini API** - 画像生成
-- **OpenAI GPT-4** - プロンプト最適化・自然言語処理
+- **OpenAI Images API** - 画像生成・編集
+- **OpenAI API** - プロンプト最適化・自然言語処理
 
 #### キャンバス・UI
 - **Konva.js** + **react-konva** - 2Dキャンバス操作
@@ -178,7 +178,7 @@ supabase functions deploy upscale
 ```
 
 フロントエンドのビルド時環境変数はZeabur（または利用するViteホスト）に設定：
-- `VITE_GENERATION_PROVIDER` - 通常は `gemini`。Runway workerを明示的に使う場合だけ `local-runway`
+- `VITE_GENERATION_PROVIDER` - 通常は `openai`
 - `VITE_REMBG_MODEL_BASE_URL` - 任意のモデル配信元override。silueta以外のモデルで使います。
 - `VITE_REMBG_SILUETA_MODEL_URL` - 任意。未設定時は同梱の `/models/silueta.onnx` を同一originから読み込みます。
 - `VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL` - 任意。管理下CDNに置いたISNetモデルを明示利用する場合だけ設定します。Hugging Face直取得にはfallbackしません。
@@ -305,7 +305,7 @@ Nichika Tanaka
 
 ### 🎯 Overview
 
-Heavy Chain is an **AI-powered image generation platform for fashion brands**, leveraging Gemini and OpenAI APIs. It provides one-stop solutions for marketing, product planning, e-commerce, and editing utilities tailored for the apparel industry.
+Heavy Chain is an **OpenAI-powered image generation platform for fashion brands**. It provides one-stop solutions for marketing, product planning, e-commerce, and editing utilities tailored for the apparel industry.
 
 ### ✨ Demo
 
@@ -331,7 +331,7 @@ Coming Soon - Demo screens will be added
 
 - ✅ **Authentication System** - Email/Google/Apple OAuth
 - ✅ **Brand Management** - Multi-brand support
-- ✅ **AI Image Generation** - Text-to-Image with Gemini API
+- ✅ **AI Image Generation** - Text-to-Image with OpenAI Images API
 - ✅ **Image Gallery** - Browse and manage generated images
 - ✅ **Download** - PNG/JPEG/WebP format support
 - ✅ **Favorites** - Bookmark important images
@@ -361,8 +361,8 @@ Coming Soon - Demo screens will be added
 - **Row Level Security (RLS)** - Secure data access control
 
 #### AI/ML
-- **Gemini API** - Image generation
-- **OpenAI GPT-4** - Prompt optimization & NLP
+- **OpenAI Images API** - Image generation & editing
+- **OpenAI API** - Prompt optimization & NLP
 
 #### Canvas & UI
 - **Konva.js** + **react-konva** - 2D canvas manipulation
@@ -463,7 +463,7 @@ supabase functions deploy upscale
 Set environment variables for Edge Functions in Supabase Dashboard:
 - `GEMINI_API_KEY` - Google AI Studio API key
 - `GEMINI_IMAGE_MODEL` - Image generation model name (default: `gemini-2.5-flash-image`)
-- `VITE_GENERATION_PROVIDER` - Use `gemini` by default. Use `local-runway` only for the explicit Runway worker path.
+- `VITE_GENERATION_PROVIDER` - Use `openai` by default.
 - `OPENAI_IMAGE_API_KEY` - OpenAI Images API key (falls back to `OPENAI_API_KEY`)
 - `OPENAI_IMAGE_MODEL` - OpenAI image generation model name (default: `gpt-image-2`)
 

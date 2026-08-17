@@ -93,7 +93,7 @@ function JobRow({ job }: { job: WorkspaceJob }) {
 export function JobsPage() {
   const { user, currentBrand, refreshCurrentBrand } = useAuthStore();
   const [activity, setActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [activityError, setActivityError] = useState<string | null>(null);
   const [showFailedJobs, setShowFailedJobs] = useState(false);
   const [showAllMobileJobs, setShowAllMobileJobs] = useState(false);
@@ -115,7 +115,7 @@ export function JobsPage() {
     setIsLoading(true);
     setActivityError(null);
     try {
-      const nextActivity = await fetchWorkspaceActivity(brandId);
+      const nextActivity = await fetchWorkspaceActivity(brandId, user?.id);
       if (useAuthStore.getState().currentBrand?.id !== brandId) return;
       setActivity(nextActivity);
     } catch (error) {
@@ -140,21 +140,21 @@ export function JobsPage() {
   const queueCards = [
     {
       label: '再開できる作業',
-      count: activity.activeJobs.length,
+      count: isLoading ? '—' : activity.activeJobs.length,
       href: activity.activeJobs[0]?.resumeHref ?? '/lightchain',
       icon: PlayCircle,
       detail: '進行中の生成や直近の制作レーンへ戻ります。',
     },
     {
       label: '止まった作業',
-      count: activity.failedJobs.length,
+      count: isLoading ? '—' : activity.failedJobs.length,
       href: activity.failedJobs[0]?.retryHref ?? '/history',
       icon: AlertTriangle,
       detail: '原因と次の操作を確認し、入力を保ったまま再開します。',
     },
     {
       label: '完了した成果物',
-      count: activity.completedJobs.length,
+      count: isLoading ? '—' : activity.completedJobs.length,
       href: '/gallery',
       icon: GalleryHorizontalEnd,
       detail: '保存済み画像を開き、Canvas再編集や共有へ進みます。',

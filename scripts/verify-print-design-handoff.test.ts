@@ -34,7 +34,7 @@ class MemoryStorage {
 const validInput = {
   brandId: 'brand-1',
   resultProvenance: {
-    generationLane: 'hosted-gemini',
+    generationLane: 'hosted-image',
     originFeature: 'design-gacha',
     sourceWorkspace: 'patterns',
     workflowVersion: 'pattern-preview-local-v1',
@@ -210,7 +210,7 @@ test('a delayed result loses provenance after navigation to another feature or s
     featureId: 'design-gacha',
     sourceReadback,
     generationStartedAt: 1_800_000_000_000,
-    generationLane: 'hosted-gemini',
+    generationLane: 'hosted-image',
   });
   assert.ok(startedProvenance);
   assert.equal(resolveCompletedPatternsResultProvenance({
@@ -237,7 +237,7 @@ test('only hosted Gemini and sanitized Edge lanes can create result provenance',
     sourceResumePath: '/patterns/workbench',
     sourceMode: 'local-workflow-intake',
   };
-  for (const generationLane of ['hosted-gemini', 'edge-design-gacha'] as const) {
+  for (const generationLane of ['hosted-image', 'edge-design-gacha'] as const) {
     assert.equal(createTrustedPatternsResultProvenance({
       featureId: 'design-gacha',
       sourceReadback,
@@ -245,7 +245,7 @@ test('only hosted Gemini and sanitized Edge lanes can create result provenance',
       generationLane,
     })?.generationLane, generationLane);
   }
-  for (const generationLane of ['local-runway-worker', 'manual-import', 'planning', undefined]) {
+  for (const generationLane of ['manual-import', 'planning', undefined]) {
     assert.equal(createTrustedPatternsResultProvenance({
       featureId: 'design-gacha',
       sourceReadback,

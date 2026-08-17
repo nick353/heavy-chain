@@ -26,11 +26,12 @@ test('Patterns result cards expose a guarded print handoff and the printing page
   assert.match(generateSource, /currentFeatureId: currentGenerationContextRef\.current\.featureId/);
   assert.match(generateSource, /currentGenerationContextRef\.current = \{\s*featureId: renderedFeatureId,\s*sourceReadback,\s*\}/);
   assert.match(generateSource, /const stampGeneratedImagesForCurrentContext = \(images: GeneratedResult\[\]\)/);
-  assert.match(generateSource, /generationLane: geminiGenerationMode\s*\? 'hosted-gemini'\s*: localRunwayWorkerMode \|\| generationProvider === 'planning'\s*\? undefined\s*: 'edge-design-gacha'/);
+  assert.match(generateSource, /generationLane: hostedImageGenerationMode\s*\n?\s*\? 'hosted-image'\s*\n?\s*: generationProvider === 'planning'\s*\n?\s*\? undefined\s*\n?\s*: 'edge-design-gacha'/);
   assert.match(generateSource, /image\.artifactKind === 'planning_brief'/);
   assert.match(generateSource, /const \{ printDesignProvenance: _untrustedProvenance, \.\.\.unstampedImage \} = image/);
-  assert.match(generateSource, /const stampedImages = stampGeneratedImagesForCurrentContext\(images\);\s*newGeneratedImages = stampedImages;\s*setGeneratedImages\(stampedImages\)/);
-  assert.match(generateSource, /const stampedImages = stampGeneratedImagesForCurrentContext\(images\);\s*newGeneratedImages = stampedImages;\s*setGeneratedImages\(prev => \[\.\.\.stampedImages, \.\.\.prev\]\)/);
+  assert.match(generateSource, /const replaceGeneratedImages = \(images: GeneratedResult\[\]\) => \{[\s\S]*?stampGeneratedImagesForCurrentContext\(images\.map\(/);
+  assert.match(generateSource, /const prependGeneratedImages = \(images: GeneratedResult\[\]\) => \{[\s\S]*?stampGeneratedImagesForCurrentContext\(images\.map\(/);
+  assert.match(generateSource, /const commitGeneratedImagesAfterReadback = \(\) => \{[\s\S]*?setGeneratedImages\(prev => \[\.\.\.committedImages, \.\.\.prev\]\)/);
   assert.match(generateSource, /replaceGeneratedImages\(geminiResults\)/);
   assert.match(generateSource, /const materializedDesignGachaResults = await Promise\.all/);
   assert.match(generateSource, /replaceGeneratedImages\(materializedDesignGachaResults\)/);

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowRight,
   Check,
   Camera,
+  Download,
   Images,
   Pencil,
   RefreshCw,
@@ -15,25 +16,46 @@ import {
   Users,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { generateModelMatrix } from '../lib/imageApi';
+import { assertCompletedModelMatrixResult, generateModelMatrix } from '../lib/imageApi';
 import { getErrorMessage } from '../lib/errorMessages';
+import { downloadValidatedImage } from '../lib/imageDownload';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
   GENERATION_LEGAL_COPY,
   UPLOAD_RIGHTS_CONFIRMATION_LABEL,
   validateLegalSafetyInput,
 } from '../lib/legalSafetyGuard';
-import { saveWorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
+import {
+  deleteWorkspaceArtifactsPersisted,
+  listWorkspaceArtifacts,
+  listWorkspaceGeneratedImages,
+  saveWorkspaceArtifactPersisted,
+} from '../lib/localWorkspaceArtifacts';
+import { readFittingDraftMaterial, readFittingResumeMaterial } from '../lib/fittingResume';
+import {
+  compactFittingMaterialReferenceForPersistence,
+  prepareFittingDraftMaterialReferenceForPersistence,
+} from '../lib/fittingPersistence';
+import { resolveGeneratedImageUrl, withSignedImageUrls } from '../lib/storage';
+import { mergeGeneratedImagesByCanonicalIdentity } from '../lib/generatedImageIdentity';
+import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
+import { GallerySelector } from '../components/GallerySelector';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceMetadata,
   type MaterialReferenceState,
   readWorkspaceImageAsDataUrl,
 } from '../lib/workspaceMaterialReferences';
-import type { Json } from '../types/database';
+import {
+  buildLightchainParityRuntime,
+  serializeLightchainParityRuntime,
+} from '../features/lightchain/parityRuntime';
+import type { ParityJsonValue } from '../features/lightchain/parityContract';
+import type { GeneratedImage, Json } from '../types/database';
 
 type Gender = 'female' | 'male';
 type MatrixItem = {
@@ -95,6 +117,7 @@ type HistoryItem = {
   title: string;
   status: string;
   time: string;
+  prompt?: string;
   previewUrl?: string;
   imageUrls?: string[];
   count: number;
@@ -110,6 +133,158 @@ type HistoryItem = {
   layerPlan?: Record<string, Json | undefined>;
   maskPlan?: Record<string, Json | undefined>;
   compositionPreview?: Record<string, Json | undefined>;
+  bodyTypes?: string[];
+  ageGroups?: string[];
+  gender?: Gender;
+};
+
+const getGeneratedImageMetadata = (image: GeneratedImage): Record<string, unknown> => {
+  const metadata = image.metadata;
+  return metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? metadata as Record<string, unknown>
+    : {};
+};
+
+const getGeneratedImageMetadataString = (image: GeneratedImage, key: string): string | null => {
+  const value = getGeneratedImageMetadata(image)[key];
+  return typeof value === 'string' && value.trim() ? value : null;
+};
+
+const getGeneratedImageMetadataObject = <T extends Record<string, unknown>>(
+  image: GeneratedImage,
+  key: string,
+): T | undefined => {
+  const value = getGeneratedImageMetadata(image)[key];
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as T
+    : undefined;
+};
+
+/** Rebuild Fitting history from the persisted model-matrix artifact readback. */
+export const buildFittingHistoryFromPersistedImages = (
+  images: readonly GeneratedImage[],
+): HistoryItem[] => {
+  type HistoryGroup = {
+    id: string;
+    remoteJobId: string | null;
+    title: string;
+    createdAt: string;
+    prompt?: string;
+    imageUrls: string[];
+    artifactIds: string[];
+    remoteImageIds: Array<string | null>;
+    remoteStoragePaths: Array<string | null>;
+    sourceMaterialImageUrl?: string;
+    modelReferenceImageUrl?: string;
+    modelReferenceFileName?: string;
+    materialReference?: MaterialReferenceMetadata;
+    materialReferences?: MaterialReferenceMetadata[];
+    layerPlan?: Record<string, Json | undefined>;
+    maskPlan?: Record<string, Json | undefined>;
+    compositionPreview?: Record<string, Json | undefined>;
+    bodyTypes: string[];
+    ageGroups: string[];
+    gender?: Gender;
+  };
+
+  const groups = new Map<string, HistoryGroup>();
+  for (const image of images) {
+    const metadata = getGeneratedImageMetadata(image);
+    if (
+      image.feature_type !== 'model-matrix'
+      || (metadata.feature !== 'model-matrix' && metadata.source !== 'model-matrix')
+    ) continue;
+
+    const remoteJobId = image.job_id ?? getGeneratedImageMetadataString(image, 'remoteJobId');
+    const groupId = remoteJobId ? `fit-${remoteJobId}` : `fit-artifact-${image.id}`;
+    const title = getGeneratedImageMetadataString(image, 'title')
+      ?? image.prompt?.split('\n')[0]?.trim().slice(0, 80)
+      ?? 'モデル着用';
+    const materialReference = getGeneratedImageMetadataObject<MaterialReferenceMetadata>(image, 'materialReference');
+    const materialReferencesValue = metadata.materialReferences;
+    const materialReferences = Array.isArray(materialReferencesValue)
+      ? materialReferencesValue.filter((value): value is MaterialReferenceMetadata => (
+        Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+      )) as MaterialReferenceMetadata[]
+      : undefined;
+    const persistedSourceMaterialImageUrl = getGeneratedImageMetadataString(image, 'sourceMaterialImageUrl')
+      ?? materialReference?.imageUrl
+      ?? materialReference?.extractedImageUrl
+      ?? undefined;
+    const group = groups.get(groupId) ?? {
+      id: groupId,
+      remoteJobId: remoteJobId ?? null,
+      title,
+      createdAt: image.created_at,
+      prompt: image.prompt ?? undefined,
+      imageUrls: [],
+      artifactIds: [],
+      remoteImageIds: [],
+      remoteStoragePaths: [],
+      sourceMaterialImageUrl: persistedSourceMaterialImageUrl,
+      modelReferenceImageUrl: getGeneratedImageMetadataString(image, 'modelReferenceImageUrl') ?? undefined,
+      modelReferenceFileName: getGeneratedImageMetadataString(image, 'modelReferenceFileName') ?? undefined,
+      materialReference,
+      materialReferences,
+      layerPlan: getGeneratedImageMetadataObject<Record<string, Json | undefined>>(image, 'layerPlan'),
+      maskPlan: getGeneratedImageMetadataObject<Record<string, Json | undefined>>(image, 'maskPlan'),
+      compositionPreview: getGeneratedImageMetadataObject<Record<string, Json | undefined>>(image, 'compositionPreview'),
+      bodyTypes: [],
+      ageGroups: [],
+      gender: undefined,
+    } satisfies HistoryGroup;
+
+    if (new Date(image.created_at).getTime() < new Date(group.createdAt).getTime()) {
+      group.createdAt = image.created_at;
+    }
+    if (image.image_url?.trim()) group.imageUrls.push(image.image_url);
+    group.artifactIds.push(image.id);
+    group.remoteImageIds.push(getGeneratedImageMetadataString(image, 'remoteImageId'));
+    group.remoteStoragePaths.push(
+      getGeneratedImageMetadataString(image, 'remoteStoragePath') ?? image.storage_path ?? null,
+    );
+    const bodyType = getGeneratedImageMetadataString(image, 'bodyType');
+    const ageGroup = getGeneratedImageMetadataString(image, 'ageGroup');
+    const gender = getGeneratedImageMetadataString(image, 'gender');
+    if (bodyType && !group.bodyTypes.includes(bodyType)) group.bodyTypes.push(bodyType);
+    if (ageGroup && !group.ageGroups.includes(ageGroup)) group.ageGroups.push(ageGroup);
+    if ((gender === 'female' || gender === 'male') && !group.gender) group.gender = gender;
+    if (!group.prompt && image.prompt) group.prompt = image.prompt;
+    if (!group.materialReference && materialReference) group.materialReference = materialReference;
+    if (!group.materialReferences && materialReferences) group.materialReferences = materialReferences;
+    if (!group.sourceMaterialImageUrl && persistedSourceMaterialImageUrl) {
+      group.sourceMaterialImageUrl = persistedSourceMaterialImageUrl;
+    }
+    groups.set(groupId, group);
+  }
+
+  return Array.from(groups.values())
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .map((group) => ({
+      id: group.id,
+      title: `${group.title} / ${group.artifactIds.length}枚`,
+      status: '完了',
+      time: new Date(group.createdAt).toLocaleString('ja-JP'),
+      prompt: group.prompt,
+      previewUrl: group.imageUrls[0],
+      imageUrls: group.imageUrls,
+      count: group.artifactIds.length,
+      artifactIds: group.artifactIds,
+      remoteJobId: group.remoteJobId,
+      remoteImageIds: group.remoteImageIds,
+      remoteStoragePaths: group.remoteStoragePaths,
+      sourceMaterialImageUrl: group.sourceMaterialImageUrl,
+      modelReferenceImageUrl: group.modelReferenceImageUrl,
+      modelReferenceFileName: group.modelReferenceFileName,
+      materialReference: group.materialReference,
+      materialReferences: group.materialReferences,
+      layerPlan: group.layerPlan,
+      maskPlan: group.maskPlan,
+      compositionPreview: group.compositionPreview,
+      bodyTypes: group.bodyTypes,
+      ageGroups: group.ageGroups,
+      gender: group.gender,
+    }));
 };
 
 const bodyTypeOptions = [
@@ -174,11 +349,6 @@ const fittingWorkflows = [
     icon: Users,
     outputs: ['年代比較', '販促判断', '顧客層確認'],
   },
-];
-
-const seedHistory: HistoryItem[] = [
-  { id: 'fit-1042', title: 'リネンシャツ / モデル着用', status: '完了', time: '12分前', count: 4 },
-  { id: 'fit-1038', title: 'ワイドパンツ / EC白背景', status: '完了', time: '昨日', count: 3 },
 ];
 
 const initialMaterialReference: MaterialReferenceState = {
@@ -316,7 +486,8 @@ const buildFittingPreviewSvg = ({
 
 export function FittingPage() {
   const navigate = useNavigate();
-  const { currentBrand } = useAuthStore();
+  const [searchParams] = useSearchParams();
+  const { user, currentBrand } = useAuthStore();
   const { createProject, addObject, saveCurrentProject } = useCanvasStore();
   const [productDescription, setProductDescription] = useState(
     '春夏向けのリネン混シャツ。自然光、EC商品ページのメイン画像として使える落ち着いた構図。'
@@ -330,15 +501,193 @@ export function FittingPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const generationClickLockedRef = useRef(false);
   const [resultMatrix, setResultMatrix] = useState<MatrixItem[]>([]);
-  const [history, setHistory] = useState<HistoryItem[]>(seedHistory);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
+  const [resumeInputReadback, setResumeInputReadback] = useState<'restored' | 'unavailable' | null>(null);
+  const [fittingDraftPersistenceStatus, setFittingDraftPersistenceStatus] = useState<'idle' | 'saved' | 'restored' | 'unavailable' | 'failed'>('idle');
+  const [fittingDraftPersistenceMessage, setFittingDraftPersistenceMessage] = useState('');
+  const fittingDraftRestoredRef = useRef(false);
   const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  const [showGallerySelector, setShowGallerySelector] = useState(false);
+  const resumeJob = searchParams.get('resumeJob');
+  const heavyFallbackSource = searchParams.get('source') === 'lightchain-model-heavy-fallback';
+  const heavyFallbackEntryPoint = searchParams.get('entryPoint') || 'permission';
+  const heavyFallbackPreset = searchParams.get('modelPreset') || 'Smart';
+  const heavyFallbackPose = searchParams.get('posePreset') || '正面';
+  const heavyFallbackLighting = searchParams.get('lightingPreset') || '自然光';
   const garmentImageUrl = materialReference.imageUrl || undefined;
   const extractedGarmentImageUrl = materialReference.extractedImageUrl || undefined;
   const garmentFileName = materialReference.fileName;
   const modelReferenceImageUrl = modelReference.imageUrl || undefined;
   const patternCount = selectedBodyTypes.length * selectedAgeGroups.length;
+
+  useEffect(() => {
+    if (!resumeJob || !currentBrand?.id || !user?.id) return;
+    setResumeInputReadback(null);
+    const resumed = readFittingResumeMaterial(listWorkspaceArtifacts(currentBrand.id, user?.id), resumeJob);
+    if (!resumed) {
+      setResumeInputReadback('unavailable');
+      return;
+    }
+    setMaterialReference(resumed.materialReference);
+    setErrorMessage('');
+    setResumeInputReadback('restored');
+  }, [currentBrand?.id, resumeJob, user?.id]);
+
+  useEffect(() => {
+    if (resumeJob || !currentBrand?.id || !user?.id) return;
+    let cancelled = false;
+    const draft = readFittingDraftMaterial(listWorkspaceArtifacts(currentBrand.id, user.id));
+    if (!draft) return;
+
+    const restoreDraft = async () => {
+      let restored = draft.materialReference;
+      if (!restored.imageUrl && restored.sourceStoragePath) {
+        try {
+          restored = {
+            ...restored,
+            imageUrl: await resolveGeneratedImageUrl(restored.sourceStoragePath),
+          };
+        } catch (error) {
+          if (!cancelled) {
+            setFittingDraftPersistenceStatus('unavailable');
+            setFittingDraftPersistenceMessage(
+              error instanceof Error
+                ? `保存済みGallery素材の再署名に失敗しました。${error.message}`
+                : '保存済みGallery素材を再署名できませんでした。素材を選び直してください。',
+            );
+          }
+          return;
+        }
+      }
+
+      if (!cancelled && restored.imageUrl) {
+        fittingDraftRestoredRef.current = true;
+        setMaterialReference(restored);
+        setFittingDraftPersistenceStatus('restored');
+        setFittingDraftPersistenceMessage(
+          restored.nextStepReady
+            ? '保存済みのFitting素材と切り抜き状態を復元しました。'
+            : '保存済みのFitting素材を復元しました。切り抜き状態は再確認してください。',
+        );
+      }
+    };
+
+    void restoreDraft();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBrand?.id, resumeJob, user?.id]);
+
+  useEffect(() => {
+    if (!currentBrand?.id || !user?.id || !materialReference.imageUrl) return;
+    const preparedMaterialReference = prepareFittingDraftMaterialReferenceForPersistence(
+      buildMaterialReferenceMetadata(materialReference),
+      materialReference.imageUrl,
+    );
+    if (!preparedMaterialReference) return;
+
+    const durableImageUrl = preparedMaterialReference.imageUrl ?? '';
+    if (!durableImageUrl && !preparedMaterialReference.sourceStoragePath) {
+      setFittingDraftPersistenceStatus('unavailable');
+      setFittingDraftPersistenceMessage('この素材には再読込可能な保存先がありません。素材を選び直してください。');
+      return;
+    }
+
+    const persisted = saveWorkspaceArtifactPersisted({
+      id: `fitting-draft-${currentBrand.id}`,
+      brandId: currentBrand.id,
+      scopeId: user.id,
+      featureType: 'fitting-background-draft',
+      title: `AIフィッティング入力 / ${materialReference.fileName || '衣服素材'}`,
+      imageUrl: durableImageUrl,
+      prompt: productDescription,
+      metadata: {
+        feature: 'fitting-background-draft',
+        draftVersion: 'fitting-background-draft-v1',
+        sourceImageId: preparedMaterialReference.sourceImageId ?? null,
+        sourceStoragePath: preparedMaterialReference.sourceStoragePath ?? null,
+        materialReference: preparedMaterialReference,
+      },
+    });
+
+    if (!persisted.ok) {
+      setFittingDraftPersistenceStatus('failed');
+      setFittingDraftPersistenceMessage(`Fitting入力の保存確認に失敗しました。${persisted.error.message}`);
+      fittingDraftRestoredRef.current = false;
+      return;
+    }
+
+    const restoredDraft = fittingDraftRestoredRef.current;
+    setFittingDraftPersistenceStatus(restoredDraft ? 'restored' : 'saved');
+    setFittingDraftPersistenceMessage(restoredDraft
+      ? (preparedMaterialReference.nextStepReady
+        ? '保存済みのFitting素材と切り抜き状態を復元しました。'
+        : '保存済みのFitting素材を復元しました。切り抜き状態は再確認してください。')
+      : preparedMaterialReference.nextStepReady
+        ? 'Fitting入力と切り抜き状態を保存確認しました。'
+        : 'Fitting入力を保存確認しました。切り抜き状態は再読込時に再確認します。');
+    fittingDraftRestoredRef.current = false;
+  }, [currentBrand?.id, materialReference, productDescription, user?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!currentBrand?.id || !user?.id) {
+      setHistory([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const hydrateHistory = async () => {
+      const localImages = listWorkspaceGeneratedImages(currentBrand.id, user?.id)
+        .filter((image) => image.feature_type === 'model-matrix');
+      const { data: remoteImages, error: remoteError } = await supabase
+        .from('generated_images')
+        .select('*')
+        .eq('brand_id', currentBrand.id)
+        .eq('feature_type', 'model-matrix')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (remoteError && import.meta.env.DEV) console.warn('Failed to hydrate remote fitting history:', remoteError);
+      const signedRemoteImages = await withSignedImageUrls(remoteImages ?? []).catch(() => remoteImages ?? []);
+      const signedLocalImages = await withSignedImageUrls(localImages).catch(() => localImages);
+      const signedImages = mergeGeneratedImagesByCanonicalIdentity(signedRemoteImages, signedLocalImages)
+        .filter((image) => image.feature_type === 'model-matrix');
+      if (!cancelled) setHistory(buildFittingHistoryFromPersistedImages(signedImages));
+    };
+
+    void hydrateHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBrand?.id, user?.id]);
+
+  useEffect(() => {
+    if (!resumeJob && !heavyFallbackSource) return;
+    const prompt = searchParams.get('prompt');
+    const bodyTypes = searchParams.get('bodyTypes')?.split(',').filter((value) => (
+      bodyTypeOptions.some((option) => option.id === value)
+    )) ?? [];
+    const ageGroups = searchParams.get('ageGroups')?.split(',').filter((value) => (
+      ageGroupOptions.some((option) => option.id === value)
+    )) ?? [];
+    const resumedGender = searchParams.get('gender');
+    if (prompt) setProductDescription(prompt);
+    if (bodyTypes.length > 0) setSelectedBodyTypes(bodyTypes);
+    if (ageGroups.length > 0) setSelectedAgeGroups(ageGroups);
+    if (genderOptions.some((option) => option.id === resumedGender)) {
+      setGender(resumedGender as Gender);
+    }
+  }, [heavyFallbackSource, resumeJob, searchParams]);
+
+  useEffect(() => {
+    if (!heavyFallbackSource) return;
+    if (searchParams.get('selectGallery') === '1') {
+      setShowGallerySelector(true);
+    }
+  }, [heavyFallbackSource, searchParams]);
 
   const canGenerate = useMemo(() => {
     return Boolean(
@@ -409,6 +758,15 @@ export function FittingPage() {
     patternCount,
   }), [activeWorkflow.title, genderLabel, materialReference, patternCount, selectedAgeGroupLabels, selectedBodyTypeLabels]);
 
+  const handleDownloadFittingImage = async (imageUrl: string, filename: string) => {
+    try {
+      await downloadValidatedImage(imageUrl, filename, 'fitting_result_download');
+      setErrorMessage('');
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'fitting_result_download_failed');
+    }
+  };
+
   const handleModelReferenceUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -426,6 +784,24 @@ export function FittingPage() {
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'モデル画像を読み込めませんでした。');
     }
+  };
+
+  const handleSelectFittingGalleryImage = (
+    imageUrl: string,
+    imageId: string,
+    storagePath?: string,
+  ) => {
+    setMaterialReference({
+      ...initialMaterialReference,
+      imageUrl,
+      sourceImageId: imageId,
+      sourceStoragePath: storagePath ?? null,
+      fileName: `Gallery素材-${imageId.slice(0, 8)}`,
+      note: `Gallery素材をHeavy Chainの${heavyFallbackPreset} / ${heavyFallbackPose} / ${heavyFallbackLighting}生成へ引き継ぎました。${storagePath ? ` storage:${storagePath}` : ''}`,
+    });
+    setShowGallerySelector(false);
+    setErrorMessage('');
+    window.requestAnimationFrame(scrollToMaterialWorkbench);
   };
 
   const scrollToMaterialWorkbench = () => {
@@ -463,9 +839,9 @@ export function FittingPage() {
   };
 
 	  const runGeneration = async (request: LastRequest) => {
-	    if (!currentBrand) {
-	      setErrorMessage('ブランドを読み込んでからもう一度試してください。');
-	      return;
+    if (!currentBrand || !user?.id) {
+      setErrorMessage('ブランドを読み込んでからもう一度試してください。');
+      return;
 	    }
 	    if (
 	      !request.imageUrl
@@ -483,10 +859,9 @@ export function FittingPage() {
         return;
       }
 
-	    setIsGenerating(true);
+    setIsGenerating(true);
     setErrorMessage('');
     setResultMatrix([]);
-    setLastRequest(request);
 
     if (!rightsConfirmed) {
       setIsGenerating(false);
@@ -507,37 +882,81 @@ export function FittingPage() {
       return;
     }
 
-    const response = await generateModelMatrix(request.productDescription, currentBrand.id, {
-      imageUrl: request.imageUrl,
-      modelReferenceImageUrl: request.modelReferenceImageUrl,
-      bodyTypes: request.bodyTypes,
-      ageGroups: request.ageGroups,
-      gender: request.gender,
-      materialReferences: request.materialReferences,
-      layerPlan: request.layerPlan,
-      maskPlan: request.maskPlan,
-      compositionPreview: request.compositionPreview,
-      rightsConfirmed,
-    });
+    const parityRuntimeJson = serializeLightchainParityRuntime(buildLightchainParityRuntime({
+      rowId: 'ai-fitting',
+      inputRoles: ['primary'],
+      fixtureId: request.imageUrl ?? request.sourceMaterialImageUrl ?? 'brief',
+      settings: {
+        bodyTypes: request.bodyTypes,
+        ageGroups: request.ageGroups,
+        gender: request.gender,
+        modelReferencePresent: Boolean(request.modelReferenceImageUrl),
+        maskMode: typeof request.maskPlan?.maskMode === 'string' ? request.maskPlan.maskMode : null,
+      } satisfies Readonly<Record<string, ParityJsonValue>>,
+    }));
+    const providerCompositionPreview = {
+      ...(request.compositionPreview ?? {}),
+      parityRuntime: parityRuntimeJson,
+    };
+    setLastRequest({ ...request, compositionPreview: providerCompositionPreview });
 
-    setIsGenerating(false);
-
-    const matrix = response.matrix ?? [];
-
-    if (!response.success || matrix.length === 0) {
-      setErrorMessage(getErrorMessage(response.error || 'モデルセット写真を生成できませんでした。'));
+    let response: Awaited<ReturnType<typeof generateModelMatrix>>;
+    try {
+      response = await generateModelMatrix(request.productDescription, currentBrand.id, {
+        imageUrl: request.imageUrl,
+        modelReferenceImageUrl: request.modelReferenceImageUrl,
+        bodyTypes: request.bodyTypes,
+        ageGroups: request.ageGroups,
+        gender: request.gender,
+        materialReferences: request.materialReferences,
+        layerPlan: request.layerPlan,
+        maskPlan: request.maskPlan,
+        compositionPreview: providerCompositionPreview,
+        rightsConfirmed,
+      });
+    } catch (error) {
+      setIsGenerating(false);
+      setErrorMessage(getErrorMessage(error instanceof Error ? error.message : 'モデルセット写真を生成できませんでした。'));
       return;
     }
 
-    const artifactIds = matrix.map((item, index) => {
+    setIsGenerating(false);
+
+    try {
+      assertCompletedModelMatrixResult(response, 'model_matrix_result');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error instanceof Error ? error.message : 'モデルセット写真を生成できませんでした。'));
+      return;
+    }
+    const matrix = response.matrix;
+
+    const attemptedArtifactIds: string[] = [];
+    const artifactIds: string[] = [];
+    const artifactBatchId = Date.now();
+    const persistedMaterialReference = compactFittingMaterialReferenceForPersistence(
+      request.materialReference,
+      request.sourceMaterialImageUrl,
+    );
+    const persistedMaterialReferences = request.materialReferences
+      ?.map((reference) => compactFittingMaterialReferenceForPersistence(reference, request.sourceMaterialImageUrl))
+      .filter((reference): reference is MaterialReferenceMetadata => Boolean(reference));
+
+    for (const [index, item] of matrix.entries()) {
       const title = `${item.bodyTypeName} ${item.ageGroupName} / モデル着用`;
-      const artifactId = `local-fit-${Date.now()}-${index}`;
-      return saveWorkspaceArtifact({
+      const artifactId = `local-fit-${artifactBatchId}-${index}`;
+      attemptedArtifactIds.push(artifactId);
+      const persisted = saveWorkspaceArtifactPersisted({
         id: artifactId,
         brandId: currentBrand.id,
+        scopeId: user?.id,
         featureType: 'model-matrix',
         title,
-        imageUrl: item.imageUrl,
+        // Keep the provider data URL available in the active result matrix,
+        // but persist only the canonical remote path when one exists. The
+        // platform/Gallery fitting flow can otherwise duplicate several
+        // large result images into localStorage and fail at the save-confirm
+        // readback boundary.
+        imageUrl: item.storagePath ? '' : item.imageUrl,
         prompt: request.productDescription,
         metadata: {
           feature: 'model-matrix',
@@ -553,17 +972,27 @@ export function FittingPage() {
           remotePersistenceStatus: item.persistenceStatus ?? response.persistenceStatus ?? null,
           sourceArtifactId: artifactId,
           sourceStoragePath: item.storagePath ?? null,
-          materialReference: request.materialReference,
-          materialReferences: request.materialReferences,
+          materialReference: persistedMaterialReference,
+          materialReferences: persistedMaterialReferences,
           modelReferenceImageUrl: request.modelReferenceImageUrl ? '[provided]' : null,
           modelReferenceFileName: request.modelReferenceFileName ?? null,
           layerPlan: request.layerPlan,
           maskPlan: request.maskPlan,
-          compositionPreview: request.compositionPreview,
+          compositionPreview: providerCompositionPreview,
         },
         sourceJobId: response.jobId ?? undefined,
-      }).id;
-    });
+      });
+
+      if (!persisted.ok) {
+        const cleanup = deleteWorkspaceArtifactsPersisted(currentBrand.id, attemptedArtifactIds, user?.id);
+        const cleanupMessage = cleanup.ok
+          ? ''
+          : ` 保存済みの一部成果物も削除確認できませんでした: ${cleanup.error.message}`;
+        setErrorMessage(`生成結果の保存確認に失敗しました。${getErrorMessage(persisted.error.message)}${cleanupMessage}`);
+        return;
+      }
+      artifactIds.push(persisted.artifact.id);
+    }
 
     setResultMatrix(matrix);
     setHistory((items) => [
@@ -572,6 +1001,7 @@ export function FittingPage() {
         title: `${request.productDescription.trim().slice(0, 24) || '衣服画像'} / ${matrix.length}枚`,
         status: '完了',
         time: 'たった今',
+        prompt: request.productDescription,
         previewUrl: matrix[0]?.imageUrl,
         imageUrls: matrix.map((item) => item.imageUrl),
         count: matrix.length,
@@ -586,7 +1016,10 @@ export function FittingPage() {
         modelReferenceFileName: request.modelReferenceFileName,
         layerPlan: request.layerPlan,
         maskPlan: request.maskPlan,
-        compositionPreview: request.compositionPreview,
+        compositionPreview: providerCompositionPreview,
+        bodyTypes: request.bodyTypes,
+        ageGroups: request.ageGroups,
+        gender: request.gender,
       },
       ...items,
     ]);
@@ -639,6 +1072,8 @@ export function FittingPage() {
       previewKind: 'uploaded-fitting-material',
       hasUploadedMaterial: Boolean(garmentImageUrl),
       placement: materialReference.placement,
+      sourceLabel: 'AIフィッティング',
+      sourceResumePath: '/fitting',
     };
     const fittingBrief = [
       productDescription.trim(),
@@ -686,7 +1121,12 @@ export function FittingPage() {
 
     const projectId = createProject(`Fitting: ${item.title}`, currentBrand.id);
     const imageUrls = item.imageUrls?.length ? item.imageUrls : [item.previewUrl];
-    const sourceMaterialImageUrl = item.sourceMaterialImageUrl ?? lastRequest?.sourceMaterialImageUrl ?? lastRequest?.imageUrl;
+    const sourceMaterialImageUrl = item.sourceMaterialImageUrl
+      ?? item.materialReference?.imageUrl
+      ?? item.materialReference?.extractedImageUrl
+      ?? lastRequest?.sourceMaterialImageUrl
+      ?? lastRequest?.imageUrl;
+    const prompt = item.prompt ?? lastRequest?.productDescription;
     if (sourceMaterialImageUrl) {
       addObject({
         type: 'image',
@@ -704,10 +1144,14 @@ export function FittingPage() {
         label: `${item.materialReference?.fileName ?? lastRequest?.materialReference?.fileName ?? '衣服素材'} / 参照レイヤー`,
         metadata: {
           feature: 'model-matrix-source-material',
-          prompt: lastRequest?.productDescription,
+          prompt,
           generation: 0,
           parameters: {
             source: 'fitting-material-reference',
+            prompt,
+            bodyTypes: item.bodyTypes ?? lastRequest?.bodyTypes ?? [],
+            ageGroups: item.ageGroups ?? lastRequest?.ageGroups ?? [],
+            gender: item.gender ?? lastRequest?.gender ?? null,
             materialReference: item.materialReference ?? lastRequest?.materialReference,
             materialReferences: item.materialReferences ?? lastRequest?.materialReferences,
             layerPlan: item.layerPlan ?? lastRequest?.layerPlan,
@@ -734,10 +1178,14 @@ export function FittingPage() {
         label: imageUrls.length > 1 ? `${item.title} ${index + 1}` : item.title,
         metadata: {
           feature: 'model-matrix',
-          prompt: lastRequest?.productDescription,
+          prompt,
           generation: 0,
           parameters: {
             source: 'fitting-history',
+            prompt,
+            bodyTypes: item.bodyTypes ?? lastRequest?.bodyTypes ?? [],
+            ageGroups: item.ageGroups ?? lastRequest?.ageGroups ?? [],
+            gender: item.gender ?? lastRequest?.gender ?? null,
             sourceArtifactId: item.artifactIds?.[index],
             sourceArtifactIds: item.artifactIds ?? [],
             remoteJobId: item.remoteJobId ?? null,
@@ -778,6 +1226,28 @@ export function FittingPage() {
               画像を入れて作る
             </button>
           </div>
+
+          {heavyFallbackSource && (
+            <div className="mt-5 rounded-2xl border border-cyan-200 bg-cyan-50/80 p-4 dark:border-cyan-400/30 dark:bg-cyan-400/10" data-testid="heavy-native-fallback-banner">
+              <p className="text-sm font-semibold text-cyan-950 dark:text-cyan-50">Heavy Chainの自前生成ロジック</p>
+              <p className="mt-1 text-xs leading-5 text-cyan-900/80 dark:text-cyan-100/80">
+                Lightchainの「権限がありません」はプラン規制として維持し、Heavyでは既存Gallery素材をこの画面で切り抜き、設定済みのmodel-matrix APIへ渡します。
+              </p>
+              <PermissionLockedButton
+                testId="heavy-lightchain-permission-locked"
+                marginClass="mt-3"
+              />
+              <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-cyan-950 dark:text-cyan-50">
+                <span className="rounded-full bg-white/70 px-2.5 py-1 dark:bg-black/20">入口: {heavyFallbackEntryPoint}</span>
+                <span className="rounded-full bg-white/70 px-2.5 py-1 dark:bg-black/20">モデル: {heavyFallbackPreset}</span>
+                <span className="rounded-full bg-white/70 px-2.5 py-1 dark:bg-black/20">ポーズ: {heavyFallbackPose}</span>
+                <span className="rounded-full bg-white/70 px-2.5 py-1 dark:bg-black/20">光: {heavyFallbackLighting}</span>
+              </div>
+              <button type="button" onClick={() => setShowGallerySelector(true)} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-3 py-2 text-xs font-semibold text-neutral-950 hover:bg-cyan-200">
+                <Images className="h-4 w-4" /> Gallery素材を選ぶ
+              </button>
+            </div>
+          )}
 
           <details className="mt-6 rounded-2xl border border-neutral-200 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/40">
             <summary className="cursor-pointer text-base font-semibold text-neutral-950 dark:text-white">
@@ -957,6 +1427,18 @@ export function FittingPage() {
                   )}
                 </label>
               </div>
+              {fittingDraftPersistenceStatus !== 'idle' && (
+                <p
+                  data-testid="fitting-draft-persistence-status"
+                  className={`mt-3 rounded-xl border px-3 py-2 text-xs font-semibold leading-5 ${
+                    fittingDraftPersistenceStatus === 'failed' || fittingDraftPersistenceStatus === 'unavailable'
+                      ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-100'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100'
+                  }`}
+                >
+                  {fittingDraftPersistenceMessage}
+                </p>
+              )}
               <details className="mt-4 rounded-xl border border-neutral-200 bg-white/70 p-3 dark:border-white/10 dark:bg-surface-950/50">
                 <summary className="cursor-pointer text-sm font-semibold text-neutral-700 dark:text-neutral-200">
                   詳細条件
@@ -1150,6 +1632,17 @@ export function FittingPage() {
             </motion.div>
           )}
 
+          {resumeInputReadback === 'restored' && (
+            <p className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm font-semibold leading-6 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100" data-testid="fitting-resume-input-restored">
+              保存済みの同一Jobの高精度フィッティング入力を復元しました。モデル参照画像は再選択が必要な場合があります。
+            </p>
+          )}
+          {resumeInputReadback === 'unavailable' && (
+            <p className="mt-5 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm font-semibold leading-6 text-amber-900 dark:border-amber-400/30 dark:bg-amber-950/30 dark:text-amber-100" data-testid="fitting-resume-input-unavailable">
+              保存済みの同一Jobの高精度フィッティング入力を復元できません。remote URLは再利用せず、素材を選び直してください。
+            </p>
+          )}
+
           {isGenerating && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-5 rounded-2xl border border-primary-200 bg-primary-50/70 p-4 dark:border-primary-900/60 dark:bg-primary-950/30">
               <div className="flex items-center gap-3">
@@ -1174,8 +1667,18 @@ export function FittingPage() {
                 {resultMatrix.map((item, index) => (
                   <figure key={item.storagePath || item.imageUrl || `${item.bodyType}-${item.ageGroup}-${index}`} className="overflow-hidden rounded-2xl border border-white/60 bg-white/60 dark:border-white/10 dark:bg-surface-900/50">
                     <img src={item.imageUrl} alt={`${item.bodyTypeName} ${item.ageGroupName} のモデル写真`} className="aspect-[4/5] w-full object-cover" />
-                    <figcaption className="p-3 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-                      {item.bodyTypeName} × {item.ageGroupName}
+                    <figcaption className="flex items-center justify-between gap-3 p-3 text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+                      <span>{item.bodyTypeName} × {item.ageGroupName}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadFittingImage(item.imageUrl, `fitting-${item.bodyType}-${item.ageGroup}-${index + 1}.png`)}
+                        className="btn-secondary inline-flex shrink-0 items-center justify-center gap-1 text-xs"
+                        data-testid={`fitting-result-download-${item.bodyType}-${item.ageGroup}-${index}`}
+                        aria-label={`${item.bodyTypeName} ${item.ageGroupName}の生成結果をダウンロード`}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        保存
+                      </button>
                     </figcaption>
                   </figure>
                 ))}
@@ -1183,7 +1686,7 @@ export function FittingPage() {
             </section>
           )}
         </div>
-        <details className="glass-panel rounded-2xl p-5 sm:p-6">
+        <details id="fitting-history" className="glass-panel rounded-2xl p-5 sm:p-6">
           <summary className="cursor-pointer text-lg font-semibold text-neutral-950 dark:text-white">
             生成履歴
           </summary>
@@ -1208,6 +1711,16 @@ export function FittingPage() {
                     <Pencil className="h-3.5 w-3.5" />
                     編集
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => item.previewUrl && handleDownloadFittingImage(item.previewUrl, `fitting-history-${item.id}.png`)}
+                    disabled={!item.previewUrl}
+                    className="btn-secondary inline-flex items-center justify-center gap-1 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                    data-testid={`fitting-history-download-${item.id}`}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    保存
+                  </button>
                   <button type="button" onClick={() => setHistory((items) => items.filter((historyItem) => historyItem.id !== item.id))} className="btn-secondary inline-flex items-center justify-center gap-1 text-xs">
                     <Trash2 className="h-3.5 w-3.5" />
                     削除
@@ -1217,6 +1730,14 @@ export function FittingPage() {
             ))}
           </div>
         </details>
+
+        <GallerySelector
+          isOpen={showGallerySelector}
+          onClose={() => setShowGallerySelector(false)}
+          onSelect={handleSelectFittingGalleryImage}
+          title="Heavy Chainで使うGallery素材"
+          confirmLabel="この素材を使う"
+        />
       </section>
     </div>
   );

@@ -8,7 +8,7 @@ import { emptyWorkspaceActivity, fetchWorkspaceActivity, type WorkspaceActivity 
 export function HistoryPage() {
   const { user, currentBrand, refreshCurrentBrand } = useAuthStore();
   const [activity, setActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [activityError, setActivityError] = useState<string | null>(null);
 
   const loadActivity = useCallback(async () => {
@@ -28,7 +28,7 @@ export function HistoryPage() {
     setIsLoading(true);
     setActivityError(null);
     try {
-      const nextActivity = await fetchWorkspaceActivity(brandId);
+      const nextActivity = await fetchWorkspaceActivity(brandId, user?.id);
       if (useAuthStore.getState().currentBrand?.id !== brandId) return;
       setActivity(nextActivity);
     } catch (error) {
@@ -84,7 +84,7 @@ export function HistoryPage() {
                   進行中または直近のワークフローを開きます。
                 </p>
                 <span className="mt-3 inline-flex rounded-full bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-400/10 dark:text-primary-200">
-                  進行中 {activity.activeJobs.length}件
+                  進行中 {isLoading ? '確認中' : `${activity.activeJobs.length}件`}
                 </span>
               </Link>
 
@@ -101,7 +101,7 @@ export function HistoryPage() {
                   止まった生成を見て、入力や承認状態から再開します。
                 </p>
                 <span className="mt-3 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-400/10 dark:text-amber-200">
-                  失敗 {activity.failedJobs.length}件
+                  失敗 {isLoading ? '確認中' : `${activity.failedJobs.length}件`}
                 </span>
               </Link>
 
@@ -126,7 +126,7 @@ export function HistoryPage() {
             <div className="grid gap-4 lg:grid-cols-[0.25fr_1fr]" data-testid="history-timeline-panel">
               <aside className="rounded-2xl bg-white/50 p-4 dark:bg-surface-900/45">
                 <p className="text-xs font-semibold uppercase text-primary-600 dark:text-primary-300">Timeline</p>
-                <p className="mt-2 text-2xl font-semibold text-neutral-950 dark:text-white">{activity.timelineItems.length}</p>
+                <p className="mt-2 text-2xl font-semibold text-neutral-950 dark:text-white">{isLoading ? '—' : activity.timelineItems.length}</p>
                 <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
                   生成ジョブとギャラリー保存の最新状況です。
                 </p>

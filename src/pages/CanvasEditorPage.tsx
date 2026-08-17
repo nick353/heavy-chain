@@ -36,12 +36,13 @@ import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { supabase } from '../lib/supabase';
 import { resolveGeneratedImageUrl } from '../lib/storage';
+import { downloadValidatedImage } from '../lib/imageDownload';
 import {
   isLocalCanvasAssetReference,
   putLocalCanvasAsset,
   resolveLocalCanvasAsset,
 } from '../lib/canvasLocalAssets';
-import { editImageWithPrompt, edgeFunctionErrorMessage } from '../lib/imageApi';
+import { assertCompletedImageEditResult, editImageWithPrompt, edgeFunctionErrorMessage } from '../lib/imageApi';
 import {
   buildCanvasImageEditBatchProof,
   normalizeCanvasImageEditCandidates,
@@ -63,6 +64,15 @@ import {
   sanitizeCanvasSourceMetadata,
   type CanvasSourceMetadata,
 } from '../features/canvasSourceMetadata';
+import {
+  acknowledgeCanvasRemoteReadback,
+  buildCanvasDocumentSnapshot,
+  captureLegacyCanvasPayload,
+  createCanvasDocument,
+  getCanvasDocument,
+  retainCanvasCacheAfterFailedReadback,
+  updateCanvasDocument,
+} from '../lib/canvasDocumentPersistence';
 
 type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
@@ -126,6 +136,39 @@ const isUsableLoadedImage = (image?: HTMLImageElement | null) => (
   Boolean(image?.complete) &&
   Boolean(image?.naturalWidth && image?.naturalHeight)
 );
+
+const CANVAS_DOCUMENT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const restoreCanvasObjects = (snapshot: unknown): CanvasObject[] => {
+  if (!snapshot || typeof snapshot !== 'object' || !Array.isArray((snapshot as any).objects)) return [];
+  return (snapshot as any).objects.filter((item: unknown) => item && typeof item === 'object').map((item: any, index: number) => ({
+    id: typeof item.id === 'string' && item.id ? item.id : `remote-object-${index}`,
+    type: ['image', 'text', 'shape', 'frame'].includes(item.type) ? item.type : 'shape',
+    x: Number.isFinite(item.x) ? item.x : 0,
+    y: Number.isFinite(item.y) ? item.y : 0,
+    width: Number.isFinite(item.width) ? item.width : 100,
+    height: Number.isFinite(item.height) ? item.height : 100,
+    rotation: Number.isFinite(item.rotation) ? item.rotation : 0,
+    scaleX: Number.isFinite(item.scaleX) ? item.scaleX : 1,
+    scaleY: Number.isFinite(item.scaleY) ? item.scaleY : 1,
+    opacity: Number.isFinite(item.opacity) ? item.opacity : 1,
+    locked: item.locked === true,
+    visible: item.visible !== false,
+    zIndex: Number.isFinite(item.zIndex) ? item.zIndex : index,
+    src: typeof item.src === 'string' ? item.src : undefined,
+    text: typeof item.text === 'string' ? item.text : undefined,
+    fontSize: Number.isFinite(item.fontSize) ? item.fontSize : undefined,
+    fontFamily: typeof item.fontFamily === 'string' ? item.fontFamily : undefined,
+    fill: typeof item.fill === 'string' ? item.fill : undefined,
+    stroke: typeof item.stroke === 'string' ? item.stroke : undefined,
+    strokeWidth: Number.isFinite(item.strokeWidth) ? item.strokeWidth : undefined,
+    shapeType: item.shapeType,
+    parentId: typeof item.parentId === 'string' ? item.parentId : null,
+    derivedFrom: typeof item.derivedFrom === 'string' ? item.derivedFrom : null,
+    label: typeof item.label === 'string' ? item.label : undefined,
+    metadata: item.metadata && typeof item.metadata === 'object' ? item.metadata : undefined,
+  }));
+};
 
 const LOCAL_UPLOAD_READ_TIMEOUT_MS = 15_000;
 type LocalUploadPayload = { bytes: ArrayBuffer; dataUrl: string };
@@ -222,6 +265,12 @@ export function CanvasEditorPage() {
   const localUploadInputRef = useRef<HTMLInputElement>(null);
   const isMountedRef = useRef(true);
   const canvasStageRef = useRef<Konva.Stage | null>(null);
+  const handleCanvasStageReady = useCallback((stage: Konva.Stage | null) => {
+    canvasStageRef.current = stage;
+    if (typeof document !== 'undefined') {
+      document.body.dataset.canvasStageReady = stage ? 'true' : 'false';
+    }
+  }, []);
   const canvasRenderStateRef = useRef<CanvasRenderState>({ totalImageObjects: 0, loadedImageObjects: 0, renderAllObjects: false });
   const lastMobileFitKeyRef = useRef<string | null>(null);
   const pendingMobileGalleryFocusRef = useRef<string | null>(null);
@@ -240,6 +289,11 @@ export function CanvasEditorPage() {
   const [isExportRenderingAll, setIsExportRenderingAll] = useState(false);
   const preloadedGalleryImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const localAssetReleasesRef = useRef<Map<string, () => void>>(new Map());
+  const remoteDocumentIdRef = useRef<string | null>(null);
+  const remoteRevisionRef = useRef<number | null>(null);
+  const legacyCanvasCapturedRef = useRef(false);
+  const suppressPersistenceDirtyRef = useRef(false);
+  const [canvasPersistenceStatus, setCanvasPersistenceStatus] = useState<'unsaved' | 'loading' | 'saving' | 'verifying' | 'saved' | 'conflict' | 'failed'>('unsaved');
 
   // Generate modal states
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -302,9 +356,8 @@ export function CanvasEditorPage() {
     updateObject,
     currentProjectId,
     currentProjectName,
-    projects,
     loadProject,
-    createProject,
+    hydrateProject,
     saveCurrentProject,
     renameProject,
     clearCanvas,
@@ -419,21 +472,72 @@ export function CanvasEditorPage() {
     }
   }, [canvasSize.height, canvasSize.width, currentProjectId, objects, setPan, setZoom]);
 
-  // Load project when projectId changes
+  // Load local projects immediately, then replace a remote UUID route with the
+  // server snapshot. A missing remote document never deletes the local draft.
   useEffect(() => {
-    if (projectId && projectId !== 'new' && projectId !== currentProjectId) {
-      const project = projects.find(p => p.id === projectId);
-      if (project) {
-        loadProject(projectId);
-      } else {
-        // Project not found, redirect to new
-        navigate('/canvas/new', { replace: true });
-      }
-    } else if (projectId === 'new' && currentProjectId) {
-      // Starting fresh
-      clearCanvas();
+    if (user?.id && currentBrand?.id && !legacyCanvasCapturedRef.current) {
+      legacyCanvasCapturedRef.current = captureLegacyCanvasPayload(user.id, currentBrand.id);
     }
-  }, [projectId, currentProjectId, projects, loadProject, clearCanvas, navigate]);
+
+    if (!projectId || projectId === 'new') {
+      remoteDocumentIdRef.current = null;
+      remoteRevisionRef.current = null;
+      setCanvasPersistenceStatus('unsaved');
+      if (projectId === 'new' && useCanvasStore.getState().currentProjectId) clearCanvas();
+      return;
+    }
+
+    const localProject = useCanvasStore.getState().projects.find((project) => project.id === projectId);
+    if (!CANVAS_DOCUMENT_ID_PATTERN.test(projectId)) {
+      remoteDocumentIdRef.current = null;
+      remoteRevisionRef.current = null;
+      if (localProject) {
+        loadProject(projectId);
+        setCanvasPersistenceStatus('unsaved');
+      }
+      return;
+    }
+
+    if (!user?.id || !currentBrand?.id) {
+      setCanvasPersistenceStatus('failed');
+      return;
+    }
+
+    let cancelled = false;
+    setCanvasPersistenceStatus('loading');
+    void getCanvasDocument(projectId, currentBrand.id)
+      .then((document) => {
+        if (cancelled) return;
+        remoteDocumentIdRef.current = document.id;
+        remoteRevisionRef.current = document.revision;
+        hydrateProject({
+          id: document.id,
+          name: document.title,
+          objects: restoreCanvasObjects(document.snapshot),
+          createdAt: document.createdAt,
+          updatedAt: document.updatedAt,
+          brandId: document.brandId,
+        });
+        // Hydration is a read operation; it must not be reported as a user edit.
+        suppressPersistenceDirtyRef.current = true;
+        setCanvasPersistenceStatus('saved');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        remoteDocumentIdRef.current = null;
+        remoteRevisionRef.current = null;
+        if (localProject) {
+          loadProject(projectId);
+          setCanvasPersistenceStatus('unsaved');
+        } else {
+          setCanvasPersistenceStatus('failed');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, user?.id, currentBrand?.id, loadProject, hydrateProject, clearCanvas]);
 
   const selectedObject = selectedIds.length === 1
     ? objects.find((obj) => obj.id === selectedIds[0]) || null
@@ -520,15 +624,37 @@ export function CanvasEditorPage() {
   }, [canvasSize.height, canvasSize.width, objects, panX, panY, zoom]);
   const canvasGenerationState = useMemo(() => buildCanvasGenerationState(objects), [objects]);
 
+  useEffect(() => {
+    if (suppressPersistenceDirtyRef.current) {
+      suppressPersistenceDirtyRef.current = false;
+      return;
+    }
+    if (remoteDocumentIdRef.current && canvasPersistenceStatus === 'saved') {
+      setCanvasPersistenceStatus('unsaved');
+    }
+  }, [objects, currentProjectName]);
+
   const getLightchainCompatForObject = (objectId: string | null) => {
     if (!objectId) return undefined;
     const object = objects.find((item) => item.id === objectId);
     return object?.metadata?.lightchainCompat;
   };
 
+  const getParityRuntimeForObject = (objectId: string | null) => {
+    if (!objectId) return undefined;
+    const object = objects.find((item) => item.id === objectId);
+    return object?.metadata?.parityRuntime;
+  };
+
   const buildLightchainEditMetadata = (objectId: string | null) => {
     const lightchainCompat = getLightchainCompatForObject(objectId);
-    return lightchainCompat ? { lightchainCompat } : {};
+    const parityRuntime = getParityRuntimeForObject(objectId);
+    return lightchainCompat || parityRuntime
+      ? {
+        ...(lightchainCompat ? { lightchainCompat } : {}),
+        ...(parityRuntime ? { parityRuntime } : {}),
+      }
+      : {};
   };
 
   const resolveCanvasObjectImageUrl = useCallback(async (object: CanvasObject) => {
@@ -565,7 +691,8 @@ export function CanvasEditorPage() {
       ? sourceObject.metadata.lightchainEditStages
       : [];
     const lightchainCompat = sourceObject?.metadata?.lightchainCompat;
-    if (!lightchainCompat && previousStages.length === 0) return {};
+    const parityRuntime = sourceObject?.metadata?.parityRuntime;
+    if (!lightchainCompat && !parityRuntime && previousStages.length === 0) return {};
 
     const nextStage = {
       stageId: `${action}-${previousStages.length + 1}`,
@@ -581,6 +708,7 @@ export function CanvasEditorPage() {
 
     return {
       ...(lightchainCompat ? { lightchainCompat } : {}),
+      ...(parityRuntime ? { parityRuntime } : {}),
       lightchainEditStages: [...previousStages, nextStage],
     };
   };
@@ -673,7 +801,7 @@ export function CanvasEditorPage() {
   const handleNameBlur = () => {
     setIsEditingName(false);
     if (currentProjectId) {
-      toast.success(`プロジェクト名を更新しました`);
+      setCanvasPersistenceStatus('unsaved');
     }
   };
 
@@ -686,17 +814,66 @@ export function CanvasEditorPage() {
     }
   };
 
-  const handleSave = () => {
-    if (!currentProjectId) {
-      // A new canvas must become a routed project before reload.  The store
-      // can create the project internally, but leaving the URL at /canvas/new
-      // causes the new-canvas effect to clear the hydrated project on reload.
-      const newId = createProject(currentProjectName || '無題のプロジェクト', currentBrand?.id, objects);
-      navigate(`/canvas/${newId}`, { replace: true });
-      toast.success('プロジェクトを作成しました');
-    } else {
+  const handleSave = async () => {
+    if (!currentBrand?.id || !user?.id) {
+      setCanvasPersistenceStatus('failed');
+      toast.error('ブランドとログイン状態を確認してください');
+      return;
+    }
+    if (canvasPersistenceStatus === 'loading' || canvasPersistenceStatus === 'saving' || canvasPersistenceStatus === 'verifying') {
+      return;
+    }
+
+    const brandId = currentBrand.id;
+    const title = (currentProjectName || '無題のプロジェクト').trim().slice(0, 160);
+    const snapshot = buildCanvasDocumentSnapshot({
+      projectId: currentProjectId,
+      name: title,
+      objects,
+      view: { zoom, panX, panY },
+    });
+    setCanvasPersistenceStatus('saving');
+
+    try {
+      const document = remoteDocumentIdRef.current && remoteRevisionRef.current !== null
+        ? await updateCanvasDocument({
+          brandId,
+          documentId: remoteDocumentIdRef.current,
+          title,
+          snapshot,
+          expectedRevision: remoteRevisionRef.current,
+        })
+        : await createCanvasDocument({ brandId, title, snapshot });
+
+      setCanvasPersistenceStatus('verifying');
+      const readback = await getCanvasDocument(document.id, brandId);
+      if (readback.id !== document.id || readback.brandId !== brandId || readback.revision !== document.revision) {
+        throw new Error('canvas_document_readback_mismatch');
+      }
+
+      remoteDocumentIdRef.current = readback.id;
+      remoteRevisionRef.current = readback.revision;
+      hydrateProject({
+        id: readback.id,
+        name: readback.title,
+        objects: restoreCanvasObjects(readback.snapshot),
+        createdAt: readback.createdAt,
+        updatedAt: readback.updatedAt,
+        brandId: readback.brandId,
+      });
+      // The object update below is the verified server snapshot, not a local edit.
+      suppressPersistenceDirtyRef.current = true;
       saveCurrentProject();
-      toast.success('保存しました');
+      acknowledgeCanvasRemoteReadback(user.id, brandId, readback.id, readback.snapshot);
+      if (projectId !== readback.id) navigate(`/canvas/${readback.id}`, { replace: true });
+      setCanvasPersistenceStatus('saved');
+      toast.success('Canvasを保存し、サーバーで確認しました');
+    } catch (error: any) {
+      const documentId = remoteDocumentIdRef.current;
+      if (documentId) retainCanvasCacheAfterFailedReadback(user.id, brandId, documentId, snapshot);
+      const message = String(error?.message || error || '');
+      setCanvasPersistenceStatus(/conflict|revision|409/i.test(message) ? 'conflict' : 'failed');
+      toast.error(/conflict|revision|409/i.test(message) ? '他の編集と競合しました。最新状態を読み直してください' : 'Canvasをサーバーへ保存できませんでした');
     }
   };
 
@@ -953,6 +1130,7 @@ export function CanvasEditorPage() {
       }
 
       const blob = await response.blob();
+      if (/svg|xml/i.test(blob.type || '')) throw new Error('SVG画像はCanvas処理に使用できません');
       const objectUrl = window.URL.createObjectURL(blob);
 
       try {
@@ -971,18 +1149,24 @@ export function CanvasEditorPage() {
       }
     }
 
-    return loadDirect(resolvedSource).catch((error) => {
-      console.warn('Canvas image direct path failed, trying blob fallback', { source, resolvedSource, error: String(error) });
-      return loadViaBlob();
-    }).catch((error) => {
+    // Blob-first is required for readable Canvas operations. A successful
+    // direct cross-origin image load is not proof that getImageData/export is
+    // safe, so never fall back to a taintable remote image.
+    return loadViaBlob().catch((error) => {
       console.error('Canvas image load final failure', { source, resolvedSource, error: String(error) });
       throw error;
     }).finally(() => localResolution?.release());
   }, []);
 
   const addImageToCanvas = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string, preloadedImage?: HTMLImageElement | null) => {
-    const usablePreloadedImage = isUsableLoadedImage(preloadedImage) ? preloadedImage : null;
     const isGalleryImport = metadata?.source === 'gallery-selector';
+    // GallerySelector's <img> is optimized for preview and may be a signed
+    // cross-origin image that Konva can render but cannot export. Re-resolve
+    // Gallery imports through the blob-first loader below so the Canvas never
+    // stores a taintable HTMLImageElement.
+    const usablePreloadedImage = isGalleryImport
+      ? null
+      : (isUsableLoadedImage(preloadedImage) ? preloadedImage : null);
     const canvasImageSource = isGalleryImport && metadata?.galleryStoragePath
       ? metadata.galleryStoragePath
       : imageUrl;
@@ -1054,12 +1238,31 @@ export function CanvasEditorPage() {
     return newId;
   }, [addObject, canvasSize.height, canvasSize.width, loadCanvasImage, selectObject, setPan, setZoom]);
 
-  const addImageToCanvasSafely = useCallback((imageUrl: string, label?: string, metadata?: any, parentId?: string) => {
-    void addImageToCanvas(imageUrl, label, metadata, parentId).catch((error: any) => {
+  const addImageToCanvasSafely = useCallback(async (imageUrl: string, label?: string, metadata?: any, parentId?: string): Promise<boolean> => {
+    try {
+      await addImageToCanvas(imageUrl, label, metadata, parentId);
+      return true;
+    } catch (error: any) {
       console.error('Canvas image load error:', error);
       toast.error(error?.message || '画像をCanvasへ配置できませんでした');
-    });
+      return false;
+    }
   }, [addImageToCanvas]);
+
+  const placeDerivedImages = useCallback(async (
+    entries: ReadonlyArray<{ imageUrl: string; label?: string; metadata?: any; parentId?: string }>,
+  ) => {
+    const results = await Promise.all(entries.map((entry) => addImageToCanvasSafely(
+      entry.imageUrl,
+      entry.label,
+      entry.metadata,
+      entry.parentId,
+    )));
+    return {
+      total: results.length,
+      succeeded: results.filter(Boolean).length,
+    };
+  }, [addImageToCanvasSafely]);
 
   const assertDerivedImageResult = useCallback((result: any, action: 'removeBackground' | 'colorize' | 'upscale' | 'variations') => {
     if (action === 'removeBackground' || action === 'upscale') {
@@ -1129,30 +1332,48 @@ export function CanvasEditorPage() {
     try {
       const payload = JSON.parse(raw);
       const images = Array.isArray(payload?.images) ? payload.images : [];
+      const entries: Array<{ imageUrl: string; label: string; metadata: any }> = [];
       images.forEach((image: any, index: number) => {
         if (typeof image?.imageUrl !== 'string' || !image.imageUrl) return;
-        addImageToCanvasSafely(image.imageUrl, image.label || `生成結果 ${index + 1}`, {
-          feature: image.feature || 'generate-image',
-          prompt: image.prompt || '',
-          generation: 0,
-          parameters: {
-            source: payload?.source || 'generate-results',
-            resultId: image.resultId || null,
-            jobId: image.jobId || null,
-            imageId: image.imageId || null,
-            storagePath: image.storagePath || null,
-            artifactKind: image.artifactKind || null,
-            handoffCreatedAt: payload?.createdAt || null,
-            materialReferences: image.materialReferences || null,
-            layerPlan: image.layerPlan || null,
-            maskPlan: image.maskPlan || null,
-            compositionPreview: image.compositionPreview || null,
+        entries.push({
+          imageUrl: image.imageUrl,
+          label: image.label || `生成結果 ${index + 1}`,
+          metadata: {
+            feature: image.feature || 'generate-image',
+            prompt: image.prompt || '',
+            generation: 0,
+            parameters: {
+              source: payload?.source || 'generate-results',
+              resultId: image.resultId || null,
+              jobId: image.jobId || null,
+              imageId: image.imageId || null,
+              storagePath: image.storagePath || null,
+              provider: image.provider || null,
+              backendProvider: image.backendProvider || null,
+              providerModel: image.providerModel || null,
+              inputFidelity: image.inputFidelity || null,
+              quality: image.quality || null,
+              persistenceStatus: image.persistenceStatus || null,
+              artifactKind: image.artifactKind || null,
+              handoffCreatedAt: payload?.createdAt || null,
+              materialReferences: image.materialReferences || null,
+              layerPlan: image.layerPlan || null,
+              maskPlan: image.maskPlan || null,
+              compositionPreview: image.compositionPreview || null,
+            },
           },
         });
       });
-      if (images.length) {
-        toast.success(`${images.length}件の生成結果をCanvasへ配置しました`);
-      }
+      void Promise.all(entries.map((entry) => addImageToCanvasSafely(entry.imageUrl, entry.label, entry.metadata)))
+        .then((results) => {
+          const succeeded = results.filter(Boolean).length;
+          if (succeeded > 0) {
+            toast.success(`${succeeded}件の生成結果をCanvasへ配置しました`);
+          }
+          if (succeeded < entries.length) {
+            toast.error(`${entries.length - succeeded}件の生成結果をCanvasへ配置できませんでした`);
+          }
+        });
     } catch (error) {
       console.error('Generated canvas handoff failed:', error);
       toast.error('生成結果をCanvasへ配置できませんでした');
@@ -1169,6 +1390,7 @@ export function CanvasEditorPage() {
     try {
       let data;
       let error;
+      let canvasGenerationResultCount = 0;
       const safetyText = [generatePrompt, productDescription, headline, subheadline].filter(Boolean).join(' ');
       if (!rightsConfirmed) {
         toast.error('素材と生成指示の権利確認にチェックしてください');
@@ -1206,16 +1428,15 @@ export function CanvasEditorPage() {
               directions: 4
             }
           }));
-          if (data?.variations) {
-            data.variations.forEach((v: any) => {
-              addImageToCanvasSafely(v.imageUrl, v.directionName, {
+          if (Array.isArray(data?.variations) && data.variations.length > 0) {
+            canvasGenerationResultCount = (await Promise.all(data.variations.map((v: any) => addImageToCanvasSafely(v.imageUrl, v.directionName, {
                 feature: 'design-gacha',
                 prompt: generatePrompt,
                 generation: 0,
                 parameters: { direction: v.directionName },
-              });
-            });
-            toast.success(`${data.variations.length}つのデザインを生成しました`);
+              })))).filter(Boolean).length;
+            if (canvasGenerationResultCount > 0) toast.success(`${canvasGenerationResultCount}つのデザインをCanvasへ配置しました`);
+            if (canvasGenerationResultCount < data.variations.length) toast.error(`${data.variations.length - canvasGenerationResultCount}つのデザインをCanvasへ配置できませんでした`);
           }
           break;
 
@@ -1232,16 +1453,15 @@ export function CanvasEditorPage() {
               imageUrl: referenceImage?.url,
             }
           }));
-          if (data?.shots) {
-            data.shots.forEach((s: any) => {
-              addImageToCanvasSafely(s.imageUrl, s.shotName, {
+          if (Array.isArray(data?.shots) && data.shots.length > 0) {
+            canvasGenerationResultCount = (await Promise.all(data.shots.map((s: any) => addImageToCanvasSafely(s.imageUrl, s.shotName, {
                 feature: 'product-shots',
                 prompt: productDescription,
                 generation: 0,
                 parameters: { shotType: s.shotType },
-              });
-            });
-            toast.success('商品カット（4方向）を生成しました');
+              })))).filter(Boolean).length;
+            if (canvasGenerationResultCount > 0) toast.success(`${canvasGenerationResultCount}件の商品カットをCanvasへ配置しました`);
+            if (canvasGenerationResultCount < data.shots.length) toast.error(`${data.shots.length - canvasGenerationResultCount}件の商品カットをCanvasへ配置できませんでした`);
           }
           break;
 
@@ -1266,16 +1486,15 @@ export function CanvasEditorPage() {
               ageGroups: selectedAgeGroups
             }
           }));
-          if (data?.matrix) {
-            data.matrix.forEach((m: any) => {
-              addImageToCanvasSafely(m.imageUrl, `${m.bodyTypeName} × ${m.ageGroupName}`, {
+          if (Array.isArray(data?.matrix) && data.matrix.length > 0) {
+            canvasGenerationResultCount = (await Promise.all(data.matrix.map((m: any) => addImageToCanvasSafely(m.imageUrl, `${m.bodyTypeName} × ${m.ageGroupName}`, {
                 feature: 'model-matrix',
                 prompt: productDescription,
                 generation: 0,
                 parameters: { bodyType: m.bodyType, ageGroup: m.ageGroup },
-              });
-            });
-            toast.success(`${data.matrix.length}パターンのモデル画像を生成しました`);
+              })))).filter(Boolean).length;
+            if (canvasGenerationResultCount > 0) toast.success(`${canvasGenerationResultCount}パターンのモデル画像をCanvasへ配置しました`);
+            if (canvasGenerationResultCount < data.matrix.length) toast.error(`${data.matrix.length - canvasGenerationResultCount}パターンをCanvasへ配置できませんでした`);
           }
           break;
 
@@ -1295,16 +1514,15 @@ export function CanvasEditorPage() {
               aspectRatio: '1:1'
             }
           }));
-          if (data?.banners) {
-            data.banners.forEach((b: any) => {
-              addImageToCanvasSafely(b.imageUrl, b.languageName, {
+          if (Array.isArray(data?.banners) && data.banners.length > 0) {
+            canvasGenerationResultCount = (await Promise.all(data.banners.map((b: any) => addImageToCanvasSafely(b.imageUrl, b.languageName, {
                 feature: 'multilingual-banner',
                 prompt: headline,
                 generation: 0,
                 parameters: { language: b.language, subheadline },
-              });
-            });
-            toast.success(`${data.banners.length}言語のバナーを生成しました`);
+              })))).filter(Boolean).length;
+            if (canvasGenerationResultCount > 0) toast.success(`${canvasGenerationResultCount}言語のバナーをCanvasへ配置しました`);
+            if (canvasGenerationResultCount < data.banners.length) toast.error(`${data.banners.length - canvasGenerationResultCount}言語のバナーをCanvasへ配置できませんでした`);
           }
           break;
 
@@ -1323,19 +1541,19 @@ export function CanvasEditorPage() {
               generationProvider: 'openai',
             }
           }));
-          if (data?.images && data.images.length > 0) {
-            data.images.forEach((img: any) => {
-              addImageToCanvasSafely(img.imageUrl, undefined, {
+          if (Array.isArray(data?.images) && data.images.length > 0) {
+            canvasGenerationResultCount = (await Promise.all(data.images.map((img: any) => addImageToCanvasSafely(img.imageUrl, undefined, {
                 feature: 'generate-image',
                 prompt: generatePrompt,
                 generation: 0,
-              });
-            });
-            toast.success('画像を生成しました');
+              })))).filter(Boolean).length;
+            if (canvasGenerationResultCount > 0) toast.success(`${canvasGenerationResultCount}件の画像をCanvasへ配置しました`);
+            if (canvasGenerationResultCount < data.images.length) toast.error(`${data.images.length - canvasGenerationResultCount}件の画像をCanvasへ配置できませんでした`);
           }
       }
 
       if (error) throw error;
+      if (canvasGenerationResultCount === 0) throw new Error('canvas_generation_no_results');
 
       setShowGenerateModal(false);
       setGeneratePrompt('');
@@ -1420,16 +1638,11 @@ export function CanvasEditorPage() {
         if (obj.type === 'image' && obj.src) {
           try {
             const resolvedSrc = await resolveCanvasObjectImageUrl(obj);
-            const response = await fetch(resolvedSrc);
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${obj.label || 'image'}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
+            await downloadValidatedImage(
+              resolvedSrc,
+              `${obj.label || 'image'}.png`,
+              'canvas_image_download',
+            );
             toast.success('ダウンロードしました');
           } catch {
             toast.error('ダウンロードに失敗しました');
@@ -1491,12 +1704,13 @@ export function CanvasEditorPage() {
           });
           if (error) throw error;
           assertDerivedImageResult(data, 'removeBackground');
-          addImageToCanvasSafely(data.resultUrl, '背景削除', {
+          const placed = await addImageToCanvasSafely(data.resultUrl, '背景削除', {
             feature: 'remove-background',
             parentId: objectId,
             generation: (obj.metadata?.generation || 0) + 1,
             ...buildDerivedLightchainMetadata(obj, 'remove-background'),
           }, objectId);
+          if (!placed) throw new Error('canvas_derived_result_placement_failed');
           toast.success('背景を削除しました', { id: 'remove-bg' });
         } catch (err: any) {
           toast.error(await edgeFunctionErrorMessage(err) || '背景削除に失敗しました', { id: 'remove-bg' });
@@ -1512,17 +1726,27 @@ export function CanvasEditorPage() {
           });
           if (error) throw error;
           assertDerivedImageResult(data, 'colorize');
-          data.variations.forEach((v: any) => {
+          const placement = await placeDerivedImages(data.variations.map((v: any) => {
             const parameters = { color: v.colorName };
-            addImageToCanvasSafely(v.imageUrl, v.colorName, {
+            return {
+              imageUrl: v.imageUrl,
+              label: v.colorName,
+              parentId: objectId,
+              metadata: {
               feature: 'colorize',
               parentId: objectId,
               generation: (obj.metadata?.generation || 0) + 1,
               parameters,
               ...buildDerivedLightchainMetadata(obj, 'colorize', { parameters }),
-            }, objectId);
-          });
-          toast.success('カラバリを生成しました', { id: 'colorize' });
+              },
+            };
+          }));
+          if (placement.succeeded === 0) throw new Error('canvas_derived_result_placement_failed');
+          if (placement.succeeded < placement.total) {
+            toast.error(`${placement.total - placement.succeeded}件のカラバリをCanvasへ配置できませんでした`, { id: 'colorize' });
+          } else {
+            toast.success('カラバリを生成しました', { id: 'colorize' });
+          }
         } catch (err: any) {
           toast.error(await edgeFunctionErrorMessage(err) || 'カラバリ生成に失敗しました', { id: 'colorize' });
         }
@@ -1536,12 +1760,13 @@ export function CanvasEditorPage() {
           });
           if (error) throw error;
           assertDerivedImageResult(data, 'upscale');
-          addImageToCanvasSafely(data.resultUrl, '高解像度', {
+          const placed = await addImageToCanvasSafely(data.resultUrl, '高解像度', {
             feature: 'upscale',
             parentId: objectId,
             generation: (obj.metadata?.generation || 0) + 1,
             ...buildDerivedLightchainMetadata(obj, 'upscale', { parameters: { scale: 2 } }),
           }, objectId);
+          if (!placed) throw new Error('canvas_derived_result_placement_failed');
           toast.success('アップスケールしました', { id: 'upscale' });
         } catch (err: any) {
           toast.error(await edgeFunctionErrorMessage(err) || 'アップスケールに失敗しました', { id: 'upscale' });
@@ -1558,15 +1783,23 @@ export function CanvasEditorPage() {
           });
           if (error) throw error;
           assertDerivedImageResult(data, 'variations');
-          data.variations.forEach((v: any, i: number) => {
-            addImageToCanvasSafely(v.imageUrl, `バリエーション ${i + 1}`, {
+          const placement = await placeDerivedImages(data.variations.map((v: any, i: number) => ({
+            imageUrl: v.imageUrl,
+            label: `バリエーション ${i + 1}`,
+            parentId: objectId,
+            metadata: {
               feature: 'generate-variations',
               parentId: objectId,
               generation: (obj.metadata?.generation || 0) + 1,
               ...buildDerivedLightchainMetadata(obj, 'generate-variations', { parameters: { index: i + 1 } }),
-            }, objectId);
-          });
-          toast.success('バリエーションを生成しました', { id: 'variations' });
+            },
+          })));
+          if (placement.succeeded === 0) throw new Error('canvas_derived_result_placement_failed');
+          if (placement.succeeded < placement.total) {
+            toast.error(`${placement.total - placement.succeeded}件のバリエーションをCanvasへ配置できませんでした`, { id: 'variations' });
+          } else {
+            toast.success('バリエーションを生成しました', { id: 'variations' });
+          }
         } catch (err: any) {
           toast.error(await edgeFunctionErrorMessage(err) || 'バリエーション生成に失敗しました', { id: 'variations' });
         }
@@ -1574,16 +1807,7 @@ export function CanvasEditorPage() {
 
       case 'download':
         try {
-          const response = await fetch(imageSrc);
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'image.png';
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
+          await downloadValidatedImage(imageSrc, 'image.png', 'canvas_image_download');
           toast.success('ダウンロードしました');
         } catch {
           toast.error('ダウンロードに失敗しました');
@@ -1659,14 +1883,26 @@ export function CanvasEditorPage() {
   };
 
   const handleExportCanvas = async () => {
-    const stage = canvasStageRef.current;
+    const setExportReadback = (value: string) => {
+      if (typeof document !== 'undefined') {
+        document.body.dataset.canvasExportLastResult = value;
+      }
+    };
+    setExportReadback('started');
+    let stage = canvasStageRef.current;
     if (!stage) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      stage = canvasStageRef.current;
+    }
+    if (!stage) {
+      setExportReadback('stage_missing');
       toast.error('キャンバスの準備が完了していません');
       return;
     }
     const previousScale = stage.scale();
     const previousPosition = stage.position();
     try {
+      setExportReadback('rendering');
       setIsExportRenderingAll(true);
       await waitForExportRenderReady();
       stage.scale({ x: 1, y: 1 });
@@ -1683,14 +1919,31 @@ export function CanvasEditorPage() {
         mimeType: 'image/png',
       });
 
+      // Use a Blob URL for the download. Direct data: URL downloads are
+      // treated as the current document by some Chrome extension bridges,
+      // which can leave a .png file containing the app HTML instead of the
+      // rendered canvas.
+      const dataResponse = await fetch(dataUrl);
+      const imageBlob = await dataResponse.blob();
+      if (imageBlob.size <= 0 || !imageBlob.type.toLowerCase().startsWith('image/')) {
+        throw new Error('Canvas export did not produce an image blob');
+      }
+      const objectUrl = window.URL.createObjectURL(imageBlob);
+
       const link = document.createElement('a');
-      link.href = dataUrl;
+      link.href = objectUrl;
       link.download = `${(currentProjectName || 'heavy-chain-canvas').replace(/[\\/:*?"<>|]+/g, '-')}.png`;
       document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success('CanvasをPNGで書き出しました');
+      try {
+        link.click();
+        setExportReadback('success');
+        toast.success('CanvasをPNGで書き出しました');
+      } finally {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(objectUrl);
+      }
     } catch (error) {
+      setExportReadback(`error:${error instanceof Error ? error.message : 'unknown'}`);
       console.error('Canvas export failed:', error);
       toast.error('PNG書き出しに失敗しました。外部画像を含む場合は個別画像のダウンロードを使ってください');
     } finally {
@@ -2083,15 +2336,14 @@ export function CanvasEditorPage() {
           return false;
         }
         const result = await editImageWithPrompt(editSource, params.prompt, currentBrand.id, { rightsConfirmed });
-        if (!result.success || !result.imageUrl) {
-          throw new Error(result.error || '画像編集に失敗しました');
-        }
-        addImageToCanvasSafely(result.imageUrl, '編集結果', {
+        assertCompletedImageEditResult(result, 'canvas_prompt_edit_result');
+        const placed = await addImageToCanvasSafely(result.imageUrl, '編集結果', {
           ...baseMetadata,
           feature: 'prompt-edit',
           prompt: params.prompt,
           ...buildDerivedLightchainMetadata(sourceObject, 'prompt-edit', { prompt: params.prompt }),
         }, editingObjectId ?? undefined);
+        if (!placed) throw new Error('canvas_derived_result_placement_failed');
         return true;
       }
 
@@ -2219,11 +2471,12 @@ export function CanvasEditorPage() {
         });
         if (error) throw error;
         assertDerivedImageResult(data, 'removeBackground');
-        addImageToCanvasSafely(data.resultUrl, '背景削除', {
+        const placed = await addImageToCanvasSafely(data.resultUrl, '背景削除', {
           ...baseMetadata,
           feature: 'remove-background',
           ...buildDerivedLightchainMetadata(sourceObject, 'remove-background'),
         }, editingObjectId ?? undefined);
+        if (!placed) throw new Error('canvas_derived_result_placement_failed');
         return true;
       }
 
@@ -2238,15 +2491,24 @@ export function CanvasEditorPage() {
         });
         if (error) throw error;
         assertDerivedImageResult(data, 'colorize');
-        data?.variations?.forEach((variation: any) => {
+        const placement = await placeDerivedImages((data?.variations ?? []).map((variation: any) => {
           const parameters = { color: variation.colorName || variation.color };
-          addImageToCanvasSafely(variation.imageUrl, variation.colorName || variation.color || 'カラバリ', {
+          return {
+            imageUrl: variation.imageUrl,
+            label: variation.colorName || variation.color || 'カラバリ',
+            parentId: editingObjectId ?? undefined,
+            metadata: {
             ...baseMetadata,
             feature: 'colorize',
             parameters,
             ...buildDerivedLightchainMetadata(sourceObject, 'colorize', { parameters }),
-          }, editingObjectId ?? undefined);
-        });
+            },
+          };
+        }));
+        if (placement.succeeded === 0) throw new Error('canvas_derived_result_placement_failed');
+        if (placement.succeeded < placement.total) {
+          toast.error(`${placement.total - placement.succeeded}件のカラバリをCanvasへ配置できませんでした`);
+        }
         return true;
       }
 
@@ -2256,11 +2518,12 @@ export function CanvasEditorPage() {
         });
         if (error) throw error;
         assertDerivedImageResult(data, 'upscale');
-        addImageToCanvasSafely(data.resultUrl, '高解像度', {
+        const placed = await addImageToCanvasSafely(data.resultUrl, '高解像度', {
           ...baseMetadata,
           feature: 'upscale',
           ...buildDerivedLightchainMetadata(sourceObject, 'upscale', { parameters: { scale: 2 } }),
         }, editingObjectId ?? undefined);
+        if (!placed) throw new Error('canvas_derived_result_placement_failed');
         return true;
       }
 
@@ -2274,8 +2537,11 @@ export function CanvasEditorPage() {
         });
         if (error) throw error;
         assertDerivedImageResult(data, 'variations');
-        data?.variations?.forEach((variation: any, index: number) => {
-          addImageToCanvasSafely(variation.imageUrl, `バリエーション ${index + 1}`, {
+        const placement = await placeDerivedImages((data?.variations ?? []).map((variation: any, index: number) => ({
+          imageUrl: variation.imageUrl,
+          label: `バリエーション ${index + 1}`,
+          parentId: editingObjectId ?? undefined,
+          metadata: {
             ...baseMetadata,
             feature: 'generate-variations',
             prompt: params.prompt,
@@ -2283,8 +2549,12 @@ export function CanvasEditorPage() {
               prompt: params.prompt,
               parameters: { index: index + 1 },
             }),
-          }, editingObjectId ?? undefined);
-        });
+          },
+        })));
+        if (placement.succeeded === 0) throw new Error('canvas_derived_result_placement_failed');
+        if (placement.succeeded < placement.total) {
+          toast.error(`${placement.total - placement.succeeded}件のバリエーションをCanvasへ配置できませんでした`);
+        }
         return true;
       }
       return false;
@@ -2486,6 +2756,16 @@ export function CanvasEditorPage() {
     }
   };
 
+  const canvasPersistenceLabel = {
+    unsaved: '未保存の変更',
+    loading: 'サーバーから読込中',
+    saving: '保存中',
+    verifying: '保存を確認中',
+    saved: 'サーバー確認済み',
+    conflict: '競合: 再読込が必要',
+    failed: '保存失敗・再試行',
+  }[canvasPersistenceStatus];
+
   return (
     <div className="h-screen flex flex-col bg-[#050808] text-white">
       {/* Header */}
@@ -2517,7 +2797,7 @@ export function CanvasEditorPage() {
               </h1>
             )}
             <p className="text-[10px] sm:text-xs text-neutral-400 truncate">
-              <span>キャンバス · {currentProjectId ? '自動保存' : '未保存'}</span>
+              <span data-testid="canvas-persistence-status">キャンバス · {canvasPersistenceLabel}</span>
               <span aria-hidden="true"> · </span>
               <span
                 data-testid="canvas-current-brand"
@@ -2588,7 +2868,7 @@ export function CanvasEditorPage() {
             <span className="hidden sm:inline">招待</span>
           </Button>
 
-          <Button size="sm" className="shadow-glow hover:shadow-glow-lg text-xs sm:text-sm px-2 sm:px-3" onClick={handleSave}>
+          <Button size="sm" className="shadow-glow hover:shadow-glow-lg text-xs sm:text-sm px-2 sm:px-3" onClick={() => void handleSave()} disabled={canvasPersistenceStatus === 'loading' || canvasPersistenceStatus === 'saving' || canvasPersistenceStatus === 'verifying'}>
             <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1.5" />
             <span className="hidden sm:inline">保存</span>
           </Button>
@@ -2845,9 +3125,7 @@ export function CanvasEditorPage() {
                   height={canvasSize.height}
                   onObjectSelect={handleObjectSelect}
                   onContextAction={handleContextAction}
-											onStageReady={(stage) => {
-												canvasStageRef.current = stage;
-											}}
+											onStageReady={handleCanvasStageReady}
 											preloadedImages={preloadedGalleryImagesRef.current}
 											renderAllObjects={isExportRenderingAll}
 											exportMode={isExportRenderingAll}

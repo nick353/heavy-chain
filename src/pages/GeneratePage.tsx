@@ -1,4 +1,4 @@
-import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Wand2,
@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   Sparkles,
   History,
-  FolderOpen,
   ExternalLink,
   Plus,
   Minus,
@@ -20,8 +19,8 @@ import {
   CheckCircle2,
   CreditCard,
   Hand,
+  FolderOpen,
   Images,
-  KeyRound,
   MousePointer2,
   Redo2,
   Undo2,
@@ -36,16 +35,16 @@ import { ImageSelector, type SelectedImage, type ReferenceType } from '../compon
 import { UsageStats } from '../components/UsageStats';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { getErrorMessage, getFailureRecoveryGuidance } from '../lib/errorMessages';
-import { saveWorkspaceArtifact, saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
-import { parseLocalRunwayMcpImportBundle } from '../lib/localRunwayMcpImport';
+import {
+  deleteWorkspaceArtifactsPersisted,
+  saveWorkspaceArtifactPersisted,
+  type WorkspaceArtifactInput,
+} from '../lib/localWorkspaceArtifacts';
+import { downloadValidatedImage } from '../lib/imageDownload';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
-import {
-  enqueueLocalRunwayWorkerGeneration,
-  pollLocalRunwayWorkerGeneration,
-} from '../lib/localRunwayWorkerQueue';
 import { generateImage } from '../lib/imageApi';
 import {
   hydrateGenerationIntentSource,
@@ -356,43 +355,6 @@ const supportsAssistantPlanning = (featureId: string | undefined): featureId is 
   Boolean(featureId && featureId in defaultAssistantPlans)
 );
 
-type RunwayMcpConnectionStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
-
-interface RunwayMcpConnectionApproval {
-  status: RunwayMcpConnectionStatus;
-  updated_at: string;
-}
-
-interface BrandRunwaySubscription {
-  status: string | null;
-  current_period_start: string | null;
-  current_period_end: string | null;
-  plan: {
-    code: string | null;
-    name: string | null;
-    is_active: boolean | null;
-    runway_mcp_generation: boolean;
-  } | null;
-}
-
-interface RunwayMcpOAuthConnection {
-  connected: boolean;
-  bridgeConfigured?: boolean;
-  verificationError?: string | null;
-}
-
-const RUNWAY_APPROVAL_LABELS: Record<RunwayMcpConnectionStatus | 'not_requested', string> = {
-  not_requested: '未申請',
-  pending: '承認待ち',
-  approved: '承認済み',
-  rejected: '却下',
-  revoked: '取消済み',
-};
-
-const getRunwayPlanLabel = (subscription: BrandRunwaySubscription | null) => {
-  return subscription?.plan?.name || subscription?.plan?.code || 'Free';
-};
-
 const initialGenerateMaterialReference: MaterialReferenceState = {
   imageUrl: '',
   fileName: '',
@@ -505,19 +467,6 @@ const generateWorkbenchByFeature: Record<string, {
   },
 };
 
-function getRunwayReadinessIssues({
-  approved,
-  bridgeConfigured,
-}: {
-  approved: boolean;
-  bridgeConfigured: boolean;
-}) {
-  const issues: string[] = [];
-  if (!approved) issues.push('Runway MCP接続承認が必要です');
-  if (!bridgeConfigured) issues.push('本番ブリッジが未設定です');
-  return issues;
-}
-
 // Feature configuration for reference images
 const FEATURE_CONFIG: Record<string, {
   requiresImage: boolean;
@@ -613,6 +562,12 @@ interface GeneratedResult {
   jobId?: string;
   imageId?: string;
   storagePath?: string;
+  provider?: string | null;
+  backendProvider?: string | null;
+  providerModel?: string | null;
+  inputFidelity?: string | null;
+  quality?: string | null;
+  persistenceStatus?: string | null;
   artifactKind?: 'image' | 'planning_brief';
   materialReferences?: unknown;
   layerPlan?: unknown;
@@ -627,6 +582,24 @@ interface GeneratedResult {
   printDesignProvenance?: TrustedPatternsResultProvenance;
 }
 
+const getGeneratedProviderReceipt = (response: any, image?: any) => ({
+  provider: image?.provider ?? response?.provider ?? null,
+  backendProvider: image?.backendProvider ?? response?.backendProvider ?? null,
+  providerModel: image?.providerModel ?? response?.providerModel ?? null,
+  inputFidelity: image?.inputFidelity ?? response?.inputFidelity ?? null,
+  quality: image?.quality ?? response?.quality ?? null,
+  persistenceStatus: image?.persistenceStatus ?? response?.persistenceStatus ?? null,
+});
+
+const getGeneratedResultReceiptMetadata = (image: GeneratedResult) => ({
+  provider: image.provider ?? null,
+  backendProvider: image.backendProvider ?? null,
+  providerModel: image.providerModel ?? null,
+  inputFidelity: image.inputFidelity ?? null,
+  quality: image.quality ?? null,
+  persistenceStatus: image.persistenceStatus ?? null,
+});
+
 const isPrintEligibleDesignGachaResult = (image: GeneratedResult) => (
   isTrustedPatternsResultProvenance(image.printDesignProvenance)
   && image.artifactKind !== 'planning_brief'
@@ -636,10 +609,9 @@ const isPrintEligibleDesignGachaResult = (image: GeneratedResult) => (
 );
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
-const generationProvider = String(import.meta.env.VITE_GENERATION_PROVIDER || 'gemini').toLowerCase();
-const localRunwayWorkerMode = generationProvider === 'local-runway' || generationProvider === 'runway-local';
-const geminiGenerationMode = generationProvider === 'gemini' || generationProvider === 'gemini-image';
-const noImageGenerationMode = generationProvider === 'planning' || localRunwayWorkerMode || geminiGenerationMode;
+const generationProvider = String(import.meta.env.VITE_GENERATION_PROVIDER || 'openai').toLowerCase();
+const hostedImageGenerationMode = ['gemini', 'gemini-image', 'openai', 'openai-image'].includes(generationProvider);
+const noImageGenerationMode = generationProvider === 'planning';
 
 const generationModelOptions = [
   {
@@ -1054,7 +1026,7 @@ function ImageModal({
 export function GeneratePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { currentBrand } = useAuthStore();
+  const { user, currentBrand } = useAuthStore();
   const { addToHistory } = usePromptHistory();
   const initialFeatureRef = useRef<Feature | null>(getInitialFeatureFromLocation());
   const categoryParam = searchParams.get('category');
@@ -1071,9 +1043,7 @@ export function GeneratePage() {
   const [selectedRatio, setSelectedRatio] = useState('1:1');
   const [isGenerating, setIsGenerating] = useState(false);
   const generationSubmitLockRef = useRef(false);
-  const [isImportingLocalRunway, setIsImportingLocalRunway] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedResult[]>([]);
-  const localRunwayImportInputRef = useRef<HTMLInputElement | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [generateCount, setGenerateCount] = useState(1);
   const [overlayEnabled, setOverlayEnabled] = useState(false);
@@ -1138,9 +1108,6 @@ export function GeneratePage() {
   const [skinTone, setSkinTone] = useState<'light' | 'medium' | 'dark'>('medium');
   const [hairStyle, setHairStyle] = useState<'short' | 'medium' | 'long'>('medium');
   const [modelCandidateLabel, setModelCandidateLabel] = useState<string>('');
-  const [runwayApproval, setRunwayApproval] = useState<RunwayMcpConnectionApproval | null>(null);
-  const [runwaySubscription, setRunwaySubscription] = useState<BrandRunwaySubscription | null>(null);
-  const [runwayOAuthConnection, setRunwayOAuthConnection] = useState<RunwayMcpOAuthConnection | null>(null);
 
   const featureConfig = selectedFeature ? FEATURE_CONFIG[selectedFeature.id] : null;
   const selectedGenerateWorkbench = selectedFeature
@@ -1186,79 +1153,6 @@ export function GeneratePage() {
       fileName: current.fileName || 'reference image',
     }));
   }, [materialReference.imageUrl, referenceImage?.url, selectedGenerateWorkbench]);
-
-  useEffect(() => {
-    if (!currentBrand) {
-      setRunwayApproval(null);
-      setRunwaySubscription(null);
-      setRunwayOAuthConnection(null);
-      return;
-    }
-
-    let active = true;
-
-    const fetchRunwayReadiness = async () => {
-      const [approvalResult, subscriptionResult, oauthResult] = await Promise.all([
-        supabase
-          .from('runway_mcp_connection_approvals')
-          .select('status, updated_at')
-          .eq('brand_id', currentBrand.id)
-          .maybeSingle(),
-        supabase
-          .from('brand_subscriptions')
-          .select('status, current_period_start, current_period_end, plans(code, name, is_active, features)')
-          .eq('brand_id', currentBrand.id)
-          .maybeSingle(),
-        supabase.functions.invoke('runway-mcp-connection-status', {
-          body: { brandId: currentBrand.id },
-        }),
-      ]);
-
-      if (!active) return;
-
-      if (approvalResult.error) {
-        console.error('Failed to fetch Runway MCP approval:', approvalResult.error);
-        setRunwayApproval(null);
-      } else {
-        setRunwayApproval((approvalResult.data || null) as RunwayMcpConnectionApproval | null);
-      }
-
-      if (subscriptionResult.error) {
-        console.error('Failed to fetch Runway MCP subscription:', subscriptionResult.error);
-        setRunwaySubscription(null);
-      } else {
-        const row = subscriptionResult.data as any;
-        const plan = Array.isArray(row?.plans) ? row.plans[0] : row?.plans;
-        setRunwaySubscription(row ? {
-          status: row.status || null,
-          current_period_start: row.current_period_start || null,
-          current_period_end: row.current_period_end || null,
-          plan: plan ? {
-            code: plan.code || null,
-            name: plan.name || null,
-            is_active: plan.is_active ?? null,
-            runway_mcp_generation: plan.features?.runway_mcp_generation === true,
-          } : null,
-        } : null);
-      }
-
-      if (oauthResult.error) {
-        debugLog('Runway MCP OAuth connection status unavailable', {
-          message: oauthResult.error.message,
-        });
-        setRunwayOAuthConnection(null);
-      } else {
-        setRunwayOAuthConnection((oauthResult.data || null) as RunwayMcpOAuthConnection | null);
-      }
-
-    };
-
-    fetchRunwayReadiness();
-
-    return () => {
-      active = false;
-    };
-  }, [currentBrand]);
 
   useEffect(() => {
     const workflow = getWorkflowMetadata(searchParams.get('workflow'));
@@ -1488,34 +1382,6 @@ export function GeneratePage() {
     });
   };
 
-  const generatedImageRowToResult = async (image: any, index: number): Promise<GeneratedResult> => {
-    let imageUrl = image.image_url || '';
-    if (!imageUrl && image.storage_path) {
-      const { data, error } = await supabase.storage
-        .from('generated-images')
-        .createSignedUrl(image.storage_path, 60 * 60);
-      if (error || !data?.signedUrl) {
-        const details = [image.id, image.storage_path].filter(Boolean).join(':');
-        throw error ?? new Error(`local_runway_worker_signed_url_failed:${details}`);
-      }
-      imageUrl = data?.signedUrl || '';
-    }
-    if (!imageUrl) {
-      const details = [image.id, image.storage_path].filter(Boolean).join(':');
-      throw new Error(`local_runway_worker_image_url_missing:${details}`);
-    }
-    return {
-      id: image.id || `${image.job_id || 'local-runway'}-${index}`,
-      imageUrl,
-      prompt: image.prompt || image.metadata?.prompt || image.generation_params?.prompt || '',
-      label: image.metadata?.title || `生成結果 ${index + 1}`,
-      jobId: image.job_id || undefined,
-      imageId: image.id || undefined,
-      storagePath: image.storage_path || undefined,
-      artifactKind: 'image',
-    };
-  };
-
   const designGachaVariationToResult = async (
     variation: any,
     index: number,
@@ -1546,25 +1412,6 @@ export function GeneratePage() {
       storagePath: variation.storagePath || undefined,
       artifactKind: 'image',
     };
-  };
-
-  const waitForLocalRunwayWorkerResults = async (jobId: string): Promise<GeneratedResult[]> => {
-    const maxAttempts = 120;
-    const maxPendingAttempts = 12;
-    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const result = await pollLocalRunwayWorkerGeneration(jobId);
-      if (result.job.status === 'failed') {
-        throw new Error(result.job.error_message || 'local_runway_worker_generation_failed');
-      }
-      if (result.job.status === 'completed' && result.images.length > 0) {
-        return Promise.all(result.images.map(generatedImageRowToResult));
-      }
-      if (result.job.status === 'pending' && attempt >= maxPendingAttempts) {
-        throw new Error('local_runway_worker_not_running');
-      }
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
-    throw new Error('local_runway_worker_timeout');
   };
 
   const buildGenerateMaterialContext = useCallback((imageUrlOverride?: string | null, referenceTypeOverride?: string) => {
@@ -1650,7 +1497,7 @@ export function GeneratePage() {
         return;
       }
 
-      if (selectedFeatureUsesRunwayMcp && !rightsConfirmed) {
+      if (!rightsConfirmed) {
         toast.error('素材と生成指示の権利確認にチェックしてください');
         return;
       }
@@ -1667,18 +1514,9 @@ export function GeneratePage() {
         assistantPrompt,
         materialReference.note,
       ]);
-      if (selectedFeatureUsesRunwayMcp && legalSafetyAssessment.blocked) {
+      if (legalSafetyAssessment.blocked) {
         setGenerationError(BRAND_LIKENESS_BLOCK_COPY);
         toast.error(BRAND_LIKENESS_BLOCK_COPY);
-        return;
-      }
-
-      if (!noImageGenerationMode && selectedFeatureUsesRunwayMcp && !runwayReadyInApp) {
-        const message = runwayReadinessIssues.length
-          ? runwayReadinessIssues.join(' / ')
-          : 'Runway MCP生成条件を確認できません。ブランド設定を確認してください';
-        setGenerationError(message);
-        toast.error(message);
         return;
       }
 
@@ -1691,9 +1529,9 @@ export function GeneratePage() {
         featureId: selectedFeature?.id,
         sourceReadback,
         generationStartedAt: Date.now(),
-        generationLane: geminiGenerationMode
-          ? 'hosted-gemini'
-          : localRunwayWorkerMode || generationProvider === 'planning'
+        generationLane: hostedImageGenerationMode
+          ? 'hosted-image'
+          : generationProvider === 'planning'
             ? undefined
             : 'edge-design-gacha',
       });
@@ -1713,6 +1551,7 @@ export function GeneratePage() {
       let data: any;
       let error: any;
       let newGeneratedImages: GeneratedResult[] = [];
+      let pendingGeneratedImagesMode: 'replace' | 'prepend' = 'replace';
       const stampGeneratedImagesForCurrentContext = (images: GeneratedResult[]): GeneratedResult[] => {
         const provenance = resolveCompletedPatternsResultProvenance({
           startedProvenance: startedPrintDesignProvenance,
@@ -1726,14 +1565,71 @@ export function GeneratePage() {
         });
       };
       const replaceGeneratedImages = (images: GeneratedResult[]) => {
-        const stampedImages = stampGeneratedImagesForCurrentContext(images);
+        const stampedImages = stampGeneratedImagesForCurrentContext(images.map((image) => ({
+          ...getGeneratedProviderReceipt(data, image),
+          ...image,
+        })));
         newGeneratedImages = stampedImages;
-        setGeneratedImages(stampedImages);
+        pendingGeneratedImagesMode = 'replace';
       };
       const prependGeneratedImages = (images: GeneratedResult[]) => {
-        const stampedImages = stampGeneratedImagesForCurrentContext(images);
+        const stampedImages = stampGeneratedImagesForCurrentContext(images.map((image) => ({
+          ...getGeneratedProviderReceipt(data, image),
+          ...image,
+        })));
         newGeneratedImages = stampedImages;
-        setGeneratedImages(prev => [...stampedImages, ...prev]);
+        pendingGeneratedImagesMode = 'prepend';
+      };
+      const assertGeneratedResponseAccepted = (response: any) => {
+        if (response?.success === false) {
+          throw new Error(response.error || response.message || 'generation_request_failed');
+        }
+        if (response?.persistenceStatus === 'failed' || response?.persistenceStatus === 'partial') {
+          throw new Error(`generation_persistence_incomplete:${response.persistenceStatus}`);
+        }
+        if (
+          Number.isFinite(response?.requestedCandidateCount)
+          && Number.isFinite(response?.persistedCandidateCount)
+          && response.persistedCandidateCount < response.requestedCandidateCount
+        ) {
+          throw new Error([
+            'generation_persisted_candidate_count_incomplete',
+            `requested=${response.requestedCandidateCount}`,
+            `persisted=${response.persistedCandidateCount}`,
+          ].join(':'));
+        }
+      };
+      const assertMaterializedGeneratedImages = (images: readonly GeneratedResult[]) => {
+        if (images.length === 0) throw new Error('generation_result_missing');
+        const invalidIndex = images.findIndex((image) => (
+          typeof image?.imageUrl !== 'string' || image.imageUrl.trim().length === 0
+        ));
+        if (invalidIndex >= 0) throw new Error(`generation_result_image_url_missing:${invalidIndex}`);
+      };
+      const saveLocalArtifactsWithReadback = (inputs: WorkspaceArtifactInput[]) => {
+        const attemptedArtifactIds: string[] = [];
+        for (const input of inputs) {
+          const artifactId = input.id ?? `local-generated-${Date.now()}-${attemptedArtifactIds.length}`;
+          attemptedArtifactIds.push(artifactId);
+          const persisted = saveWorkspaceArtifactPersisted({ ...input, id: artifactId, scopeId: user?.id });
+          if (!persisted.ok) {
+            const cleanup = deleteWorkspaceArtifactsPersisted(currentBrand.id, attemptedArtifactIds, user?.id);
+            const cleanupMessage = cleanup.ok
+              ? ''
+              : ` local cleanupも確認できませんでした: ${cleanup.error.message}`;
+            throw new Error(`workspace_artifact_persistence_unverified:${persisted.error.message}${cleanupMessage}`);
+          }
+        }
+      };
+      const commitGeneratedImagesAfterReadback = () => {
+        const committedImages = [...newGeneratedImages];
+        assertMaterializedGeneratedImages(committedImages);
+        if (pendingGeneratedImagesMode === 'prepend') {
+          setGeneratedImages(prev => [...committedImages, ...prev]);
+        } else {
+          setGeneratedImages(committedImages);
+        }
+        return committedImages;
       };
       const textOverlay = overlayEnabled && overlayText.trim() ? {
         text: overlayText.trim(),
@@ -1793,7 +1689,7 @@ export function GeneratePage() {
       });
 
       const planningFeature = selectedFeature;
-      if (noImageGenerationMode && planningFeature && planningFeature.id !== 'optimize-prompt') {
+      if ((hostedImageGenerationMode || noImageGenerationMode) && planningFeature && planningFeature.id !== 'optimize-prompt') {
         const shotLabels: Record<string, string> = {
           front: '正面',
           side: '側面',
@@ -1844,7 +1740,7 @@ export function GeneratePage() {
           const count = Math.max(1, Math.min(generateCount, 6));
           return Array.from({ length: count }, (_, index) => `${planningFeature.name} 企画 ${index + 1}`);
         })();
-        if (geminiGenerationMode) {
+        if (hostedImageGenerationMode) {
           const ratio = aspectRatios.find(r => r.id === selectedRatio) || aspectRatios[0];
           const geminiPrompt = buildProductionImagePrompt({
             feature: planningFeature,
@@ -1881,6 +1777,7 @@ export function GeneratePage() {
             if (!result.success) {
               throw new Error(result.error || 'image_generation_failed');
             }
+            assertGeneratedResponseAccepted(result);
             const image = result.images?.[0] ?? (
               result.imageUrl
                 ? {
@@ -1902,65 +1799,29 @@ export function GeneratePage() {
               jobId: image.jobId || result.jobId || undefined,
               imageId: image.imageId || undefined,
               storagePath: image.storagePath || result.storagePath || undefined,
+              ...getGeneratedProviderReceipt(result, image),
               artifactKind: 'image',
               ...generateMaterialMetadata,
             });
           }
 
           replaceGeneratedImages(geminiResults);
-          if (primaryBrief) {
-            addToHistory(primaryBrief, `${planningFeature.name} ${selectedGenerationModelOption.title}生成`);
-          }
-          setShowSuccessCard(true);
-          toast.success(`${selectedGenerationModelOption.title}で生成しました`);
-          return;
-        }
-        if (localRunwayWorkerMode) {
-          const ratio = aspectRatios.find(r => r.id === selectedRatio) || aspectRatios[0];
-          const workerPrompt = buildProductionImagePrompt({
-            feature: planningFeature,
-            userBrief: primaryBrief || fallbackBrief,
-            styleLabel: selectedStyleLabel,
-            aspectRatio: selectedRatio,
-            textOverlay,
-            referenceImagePresent: Boolean(processedImageUrl),
-            extraLines: featureLines,
-          });
-          const productionNegativePrompt = mergeProductionNegativePrompt(negativePrompt);
-          const { job } = await enqueueLocalRunwayWorkerGeneration({
+          saveLocalArtifactsWithReadback(geminiResults.map((image, index) => ({
+            id: image.id ? `local-generated-${image.id}` : undefined,
             brandId: currentBrand.id,
             featureType: planningFeature.id,
-            prompt: workerPrompt,
-            negativePrompt: productionNegativePrompt,
-            width: ratio.width,
-            height: ratio.height,
-            count: Math.max(1, Math.min(resultLabels.length || generateCount, 4)),
-            referenceImage: processedImageUrl ?? null,
-            referenceType: effectiveReferenceType,
-            rightsConfirmed,
+            title: image.label || planningFeature.name,
+            imageUrl: image.imageUrl,
+            prompt: image.prompt || geminiPrompt,
+            sourceJobId: image.jobId ?? undefined,
             metadata: {
-              source: 'generate_page',
-              artifactKind: 'runway_local_worker_request',
-              aspectRatio: selectedRatio,
-              selectedStyle: selectedStyleLabel ?? null,
-              promptQualityPreset: 'heavy-chain-production-apparel-v1',
-              originalUserBrief: primaryBrief || fallbackBrief,
-              negativePrompt: productionNegativePrompt,
-              resultLabels,
-              referenceImagePresent: Boolean(processedImageUrl),
-              referenceType: effectiveReferenceType,
-              ...generateMaterialMetadata,
-              selectedShots,
-              selectedBodyTypes,
-              selectedAgeGroups,
-              selectedScenes,
-              selectedLanguages,
-              fixedElements,
-              randomizedElements,
-              campaignTitle,
-              campaignSubheadline,
-              campaignCTA,
-              ...(lightchainCompat ? { lightchainCompat } : {}),
+              artifactKind: image.artifactKind ?? 'image',
+              generatedResultId: image.id,
+              generatedResultLabel: image.label,
+              generationIndex: index,
+              jobId: image.jobId ?? null,
+              imageId: image.imageId ?? null,
+              storagePath: image.storagePath ?? null,
               ...(sourceReadback ? {
                 sourceWorkspace: sourceReadback.sourceWorkspace,
                 workflowVersion: sourceReadback.workflowVersion,
@@ -1968,17 +1829,14 @@ export function GeneratePage() {
                 sourceResumePath: sourceReadback.sourceResumePath,
                 sourceMode: sourceReadback.sourceMode,
               } : {}),
-              ...(patternContext ?? {}),
             },
-          });
-          toast.success('生成依頼を送信しました');
-          const workerResults = await waitForLocalRunwayWorkerResults(job.id);
-          replaceGeneratedImages(workerResults);
+          })));
+          commitGeneratedImagesAfterReadback();
           if (primaryBrief) {
-            addToHistory(primaryBrief, `${planningFeature.name} 生成`);
+            addToHistory(primaryBrief, `${planningFeature.name} ${selectedGenerationModelOption.title}生成`);
           }
           setShowSuccessCard(true);
-          toast.success('生成が完了しました');
+          toast.success(`${selectedGenerationModelOption.title}で生成しました`);
           return;
         }
         const planIdBase = Date.now().toString();
@@ -2000,9 +1858,7 @@ export function GeneratePage() {
           };
         });
 
-        replaceGeneratedImages(planningResults);
-        planningResults.forEach((image, index) => {
-          saveWorkspaceArtifact({
+        saveLocalArtifactsWithReadback(planningResults.map((image, index) => ({
             id: `no-image-${image.id}`,
             brandId: currentBrand.id,
             featureType: planningFeature.id,
@@ -2039,8 +1895,9 @@ export function GeneratePage() {
               } : {}),
               ...(patternContext ?? {}),
             },
-          });
-        });
+        })));
+        replaceGeneratedImages(planningResults);
+        commitGeneratedImagesAfterReadback();
         if (primaryBrief) {
           addToHistory(primaryBrief, `${planningFeature.name} 企画`);
         }
@@ -2479,6 +2336,10 @@ export function GeneratePage() {
       }
 
       if (error) throw error;
+      if (selectedFeature?.id !== 'optimize-prompt') {
+        assertGeneratedResponseAccepted(data);
+        assertMaterializedGeneratedImages(newGeneratedImages);
+      }
       
       if (selectedFeature?.id !== 'optimize-prompt') {
         const promptToSave = prompt || productDescription || headline || campaignTitle;
@@ -2495,7 +2356,7 @@ export function GeneratePage() {
           const generatedPatternContext = selectedFeature.id === 'design-gacha'
             ? patternContext
             : null;
-          newGeneratedImages.forEach((image, index) => {
+          saveLocalArtifactsWithReadback(newGeneratedImages.map((image, index) => {
             const intentPrompt = image.prompt || promptToSave || '';
             const generationIntent: GenerationIntent = {
               feature: selectedFeature.id,
@@ -2516,13 +2377,14 @@ export function GeneratePage() {
               ...(generatedPatternContext ?? {}),
             };
 
-            saveWorkspaceArtifact({
+            return {
               id: image.id ? `local-generated-${image.id}` : undefined,
               brandId: currentBrand.id,
               featureType: selectedFeature.id,
               title: image.label || selectedFeature.name,
               imageUrl: image.imageUrl,
               prompt: intentPrompt,
+              sourceJobId: image.jobId ?? undefined,
               metadata: {
                 sourceWorkspace: sourceReadback.sourceWorkspace,
                 workflowVersion: sourceReadback.workflowVersion,
@@ -2538,12 +2400,35 @@ export function GeneratePage() {
                 ...(image.jobId ? { jobId: image.jobId } : {}),
                 ...(image.imageId ? { imageId: image.imageId } : {}),
                 ...(image.storagePath ? { storagePath: image.storagePath } : {}),
+                ...getGeneratedResultReceiptMetadata(image),
                 generationIndex: index,
                 ...(lightchainCompat ? { lightchainCompat } : {}),
               },
-            });
-          });
+            };
+          }));
+        } else if (selectedFeature && newGeneratedImages.length > 0) {
+          saveLocalArtifactsWithReadback(newGeneratedImages.map((image, index) => ({
+            id: image.id ? `local-generated-${image.id}` : undefined,
+            brandId: currentBrand.id,
+            featureType: selectedFeature.id,
+            title: image.label || selectedFeature.name,
+            imageUrl: image.imageUrl,
+            prompt: image.prompt || promptToSave || '',
+            sourceJobId: image.jobId ?? undefined,
+            metadata: {
+              artifactKind: image.artifactKind ?? 'image',
+              generatedResultId: image.id,
+              generatedResultLabel: image.label,
+              generationIndex: index,
+              jobId: image.jobId ?? null,
+              imageId: image.imageId ?? null,
+              storagePath: image.storagePath ?? null,
+              ...getGeneratedResultReceiptMetadata(image),
+              ...(lightchainCompat ? { lightchainCompat } : {}),
+            },
+          })));
         }
+        commitGeneratedImagesAfterReadback();
         if (promptToSave) {
           addToHistory(promptToSave, selectedFeature?.name);
         }
@@ -2602,97 +2487,31 @@ export function GeneratePage() {
     }
   };
 
-  const handleLocalRunwayImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    if (!currentBrand) {
-      toast.error('ブランドを選択してください');
-      return;
-    }
-
-    setIsImportingLocalRunway(true);
-    setGenerationError('');
+  const handleDownload = async (imageUrl: string, filename: string = 'generated-image.png'): Promise<boolean> => {
     try {
-      const bundle = parseLocalRunwayMcpImportBundle(JSON.parse(await file.text()));
-      const importedAt = new Date().toISOString();
-      const featureType = selectedFeature?.id ?? bundle.featureType ?? 'campaign-image';
-      const importedResults: GeneratedResult[] = [];
-
-      for (const [index, image] of bundle.images.entries()) {
-        const artifactId = image.id ? `runway-local-${image.id}` : `runway-local-${Date.now()}-${index + 1}`;
-        const title = image.title || `Runway MCP local image ${index + 1}`;
-        const promptText = image.prompt ?? prompt.trim() ?? '';
-        await saveWorkspaceArtifactBestEffort({
-          id: artifactId,
-          brandId: currentBrand.id,
-          featureType: image.featureType ?? featureType,
-          title,
-          imageUrl: image.imageUrl,
-          prompt: promptText,
-          createdAt: importedAt,
-          metadata: {
-            ...bundle.source,
-            ...image.metadata,
-            artifactKind: 'runway_local_image',
-            localRunwayMcpWorker: true,
-            noHostedBridge: true,
-            importedFromBundleSchema: bundle.schema,
-            importedBundleCreatedAt: bundle.createdAt ?? null,
-            importedBundleBrandId: bundle.brandId ?? null,
-            importedFileName: file.name,
-            importIndex: index,
-            selectedFeatureId: selectedFeature?.id ?? null,
-          },
-        });
-        importedResults.push({
-          id: artifactId,
-          imageUrl: image.imageUrl,
-          prompt: promptText,
-          label: title,
-          artifactKind: 'image',
-        });
-      }
-
-      setGeneratedImages((prev) => [...importedResults, ...prev]);
-      setShowSuccessCard(true);
-      toast.success(`${importedResults.length}件のローカルRunway成果物を取り込みました`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'ローカルRunway成果物の取り込みに失敗しました';
-      setGenerationError(message);
-      toast.error(message);
-    } finally {
-      setIsImportingLocalRunway(false);
-    }
-  };
-
-  const handleDownload = async (imageUrl: string, filename: string = 'generated-image.png') => {
-    try {
-      const response = await fetch(imageUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      await downloadValidatedImage(imageUrl, filename, 'generate_result_download');
       toast.success('ダウンロードしました');
+      return true;
     } catch {
       toast.error('ダウンロードに失敗しました');
+      return false;
     }
   };
 
   const handleBulkDownload = async () => {
     if (!currentBrand || generatedImages.length === 0) return;
     if (noImageGenerationMode || generatedImages.every((image) => image.artifactKind === 'planning_brief' || image.imageUrl.startsWith('data:'))) {
-      generatedImages.forEach((image, index) => {
+      const downloadResults = await Promise.all(generatedImages.map((image, index) => {
         const fallbackExtension = image.artifactKind === 'planning_brief' ? 'svg' : 'png';
         const extension = getDataUrlExtension(image.imageUrl, fallbackExtension);
-        void handleDownload(image.imageUrl, `${image.label || `workspace-artifact-${index + 1}`}.${extension}`);
-      });
-      toast.success(`${generatedImages.length}件の保存済み成果物をダウンロードします`);
+        return handleDownload(image.imageUrl, `${image.label || `workspace-artifact-${index + 1}`}.${extension}`);
+      }));
+      const succeeded = downloadResults.filter(Boolean).length;
+      if (succeeded === generatedImages.length) {
+        toast.success(`${succeeded}件の保存済み成果物をダウンロードしました`);
+      } else if (succeeded > 0) {
+        toast.error(`${generatedImages.length - succeeded}件のダウンロードに失敗しました`);
+      }
       return;
     }
     const imageIds = generatedImages.map(img => img.id).filter(Boolean);
@@ -2742,6 +2561,7 @@ export function GeneratePage() {
         imageId: image.imageId,
         storagePath: image.storagePath,
         artifactKind: image.artifactKind,
+        ...getGeneratedResultReceiptMetadata(image),
         ...materialHandoffMetadata,
       }],
     };
@@ -3913,35 +3733,15 @@ export function GeneratePage() {
     }
   };
 
-  const runwayStatus = runwayApproval?.status || 'not_requested';
-  const runwayApproved = runwayStatus === 'approved';
-  const runwayBridgeConfigured = runwayOAuthConnection?.bridgeConfigured === true;
-  const selectedFeatureUsesRunwayMcp = Boolean(selectedFeature && selectedFeature.id !== 'optimize-prompt' && selectedFeature.id !== 'chat-edit');
-  const runwayReadyInApp = runwayApproved && runwayBridgeConfigured;
-  const runwayReadinessIssues = getRunwayReadinessIssues({
-    approved: runwayApproved,
-    bridgeConfigured: runwayBridgeConfigured,
-  });
-  const runwayPlanLabel = getRunwayPlanLabel(runwaySubscription);
-  const runwayPeriodEnd = runwaySubscription?.current_period_end
-    ? new Date(runwaySubscription.current_period_end).toLocaleDateString('ja-JP')
-    : null;
-  const generationReadyInApp = noImageGenerationMode || runwayReadyInApp;
-  const runwayReadinessText = noImageGenerationMode
-    ? geminiGenerationMode
-      ? `${selectedGenerationModelOption.title}で生成します`
-      : localRunwayWorkerMode
-      ? '社内連携の生成環境で実行します'
-      : '画像生成はオフです。Runway接続なしで企画書を保存できます'
-    : runwayReadyInApp
-    ? 'サイト側の生成条件は満たしています'
-    : runwayReadinessIssues.join(' / ');
+  const generationReadyInApp = Boolean(selectedFeature);
+  const generationReadinessText = noImageGenerationMode
+    ? '画像生成なしで企画書を保存します'
+    : `${selectedGenerationModelOption.title}で生成します`;
   const isGenerateDisabled = (() => {
     if (!selectedFeature) return true;
     if (isGenerating) return true;
-    if (!noImageGenerationMode && selectedFeatureUsesRunwayMcp && !runwayReadyInApp) return true;
     if (featureConfig?.requiresImage && !referenceImage) return true;
-    if (selectedFeatureUsesRunwayMcp && !rightsConfirmed) return true;
+    if (!rightsConfirmed) return true;
     switch (selectedFeature.id) {
       case 'design-gacha':
         return !prompt.trim() && !referenceImage;
@@ -3999,36 +3799,7 @@ export function GeneratePage() {
       ? '再試行'
       : selectedFeature?.id === 'optimize-prompt'
         ? '最適化'
-        : noImageGenerationMode ? '生成する' : '企画書を保存';
-
-  const renderLocalRunwayImportControl = () => (
-    <div className="mt-4 flex flex-col gap-2 rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70 sm:flex-row sm:items-center sm:justify-between">
-      <input
-        ref={localRunwayImportInputRef}
-        type="file"
-        accept="application/json"
-        className="hidden"
-        onChange={handleLocalRunwayImportFile}
-      />
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-neutral-800 dark:text-white">
-          ローカルRunway MCP成果物
-        </p>
-        <p className="mt-1 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
-          Etsy/NisenPrints方式のimport bundleをWorkspaceへ保存します。
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={() => localRunwayImportInputRef.current?.click()}
-        disabled={!currentBrand || isImportingLocalRunway}
-        className="inline-flex w-fit items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-primary-300 hover:text-primary-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
-      >
-        {isImportingLocalRunway ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FolderOpen className="h-3.5 w-3.5" />}
-        JSONを読み込む
-      </button>
-    </div>
-  );
+        : noImageGenerationMode ? '企画書を保存' : '生成する';
 
   const handleGenerateMaterialChange = (nextState: MaterialReferenceState) => {
     setMaterialReference(nextState);
@@ -4142,27 +3913,23 @@ export function GeneratePage() {
               運用状態
             </span>
             <span className={`text-xs ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-              {runwayReadinessText}
+              {generationReadinessText}
             </span>
           </summary>
           <div className="mt-4 grid gap-2 text-xs sm:grid-cols-3">
             <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
               <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
-                <KeyRound className="h-4 w-4" />
-                接続承認
+                <Sparkles className="h-4 w-4" />
+                生成モデル
               </div>
-              <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                {RUNWAY_APPROVAL_LABELS[runwayStatus]}
-              </p>
+              <p className="mt-1 text-neutral-500 dark:text-neutral-400">{selectedGenerationModelOption.title}</p>
             </div>
             <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
               <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
                 <CreditCard className="h-4 w-4" />
                 利用量管理
               </div>
-              <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
-              </p>
+              <p className="mt-1 text-neutral-500 dark:text-neutral-400">Heavy Chain usage</p>
             </div>
             <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
               <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
@@ -4170,11 +3937,10 @@ export function GeneratePage() {
                 最終接続
               </div>
               <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                {noImageGenerationMode ? '不要' : 'Hosted bridge'}
+                {noImageGenerationMode ? '企画書保存' : 'OpenAI画像API'}
               </p>
             </div>
           </div>
-          {renderLocalRunwayImportControl()}
           <div className="mt-3 flex justify-end">
             <Link
               to="/brand/settings"
@@ -4577,7 +4343,7 @@ export function GeneratePage() {
               </div>
             )}
 
-            {geminiGenerationMode && selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && (
+            {hostedImageGenerationMode && selectedFeature.id !== 'chat-edit' && selectedFeature.id !== 'optimize-prompt' && (
               <details className="mt-5 rounded-2xl border border-neutral-200 bg-white/85 p-4 dark:border-neutral-800 dark:bg-neutral-900/70">
                 <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
                   <div>
@@ -4660,25 +4426,23 @@ export function GeneratePage() {
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
               <span className="text-sm font-semibold text-neutral-900 dark:text-white">詳細情報</span>
               <span className={`text-xs ${generationReadyInApp ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                {runwayReadinessText}
+                {generationReadinessText}
               </span>
             </summary>
             <div className="mt-4 grid gap-3 text-xs md:grid-cols-3">
               <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
                 <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
-                  <KeyRound className="h-4 w-4" />
-                  接続承認
+                  <Sparkles className="h-4 w-4" />
+                  生成モデル
                 </div>
-                <p className="mt-1 text-neutral-500 dark:text-neutral-400">{RUNWAY_APPROVAL_LABELS[runwayStatus]}</p>
+                <p className="mt-1 text-neutral-500 dark:text-neutral-400">{selectedGenerationModelOption.title}</p>
               </div>
               <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
                 <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
                   <CreditCard className="h-4 w-4" />
                   利用量管理
                 </div>
-                <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                  {runwayPlanLabel}{runwayPeriodEnd ? ` / ${runwayPeriodEnd}まで` : ''}
-                </p>
+                <p className="mt-1 text-neutral-500 dark:text-neutral-400">Heavy Chain usage</p>
               </div>
               <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
                 <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
@@ -4686,7 +4450,7 @@ export function GeneratePage() {
                   最終接続
                 </div>
                 <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                  {noImageGenerationMode ? '不要' : 'Hosted bridge'}
+                  {noImageGenerationMode ? '企画書保存' : 'OpenAI画像API'}
                 </p>
               </div>
             </div>
@@ -4714,7 +4478,6 @@ export function GeneratePage() {
                 </div>
               )}
               <UsageStats />
-              {renderLocalRunwayImportControl()}
             </div>
           </details>
         </motion.div>

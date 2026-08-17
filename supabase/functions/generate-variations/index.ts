@@ -3,8 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { generateRunwayImage, runwayImageArtifact, runwayProviderName, runwayReferenceImage, type RunwayImageResult } from '../_shared/runway.ts';
-import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
+import { generateProviderImage, providerImageArtifact, providerName, providerReferenceImage, type ProviderImageResult } from '../_shared/imageProvider.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
@@ -44,7 +43,7 @@ async function generateVariationWithReference(
   variationPrompt: string,
   _apiKey?: string,
   _imageModel?: string
-): Promise<RunwayImageResult | null> {
+): Promise<ProviderImageResult | null> {
   console.log('🎨 Generating variation with reference...');
 
   const prompt = `Generate a fashion photo variation.
@@ -59,10 +58,10 @@ CRITICAL - KEEP THE PRODUCT IDENTICAL:
 
 Style: Professional fashion photography, high quality`;
 
-  return await generateRunwayImage({
+  return await generateProviderImage({
     brandId,
     prompt,
-    referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
+    referenceImages: [providerReferenceImage(originalBase64, originalMimeType, 'product')],
   });
 }
 
@@ -75,7 +74,7 @@ async function generateSceneWithReference(
   scenePrompt: string,
   _apiKey?: string,
   _imageModel?: string
-): Promise<RunwayImageResult | null> {
+): Promise<ProviderImageResult | null> {
   console.log('🎨 Generating scene variation with reference...');
 
   const prompt = `Generate a fashion coordinate photo.
@@ -92,10 +91,10 @@ CRITICAL - KEEP THE PRODUCT IDENTICAL:
 
 Style: Professional lifestyle fashion photography, natural lighting`;
 
-  return await generateRunwayImage({
+  return await generateProviderImage({
     brandId,
     prompt,
-    referenceImages: [runwayReferenceImage(originalBase64, originalMimeType, 'product')],
+    referenceImages: [providerReferenceImage(originalBase64, originalMimeType, 'product')],
   });
 }
 
@@ -171,7 +170,6 @@ serve(async (req) => {
     ]);
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
-    await requireRunwayMcpConnectionApproval(supabaseService, brandId);
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {
@@ -229,7 +227,7 @@ serve(async (req) => {
       requestId,
     });
 
-    const imageModel = 'runway';
+    const imageModel = 'openai';
 
     // Fetch and analyze the image
     console.log('🖼️ Fetching original image...');
@@ -259,7 +257,7 @@ serve(async (req) => {
         );
 
         if (generatedImage) {
-          const imageAsset = runwayImageArtifact(generatedImage);
+          const imageAsset = providerImageArtifact(generatedImage);
           const genImageBase64 = imageAsset.base64;
           const imageDataUrl = imageAsset.dataUrl;
           const fileName = `${user.id}/${brandId}/${Date.now()}_scene${i + 1}.${imageAsset.extension}`;
@@ -346,7 +344,7 @@ serve(async (req) => {
         );
 
         if (generatedImage) {
-          const imageAsset = runwayImageArtifact(generatedImage);
+          const imageAsset = providerImageArtifact(generatedImage);
           const genImageBase64 = imageAsset.base64;
           const imageDataUrl = imageAsset.dataUrl;
           const fileName = `${user.id}/${brandId}/${Date.now()}_var${i + 1}.${imageAsset.extension}`;
@@ -426,7 +424,7 @@ serve(async (req) => {
       await supabaseService.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
-        provider: runwayProviderName() as any,
+        provider: providerName() as any,
         tokens_used: results.length * 500,
         cost_usd: 0,
       });

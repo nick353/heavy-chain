@@ -17,7 +17,7 @@ The current accepted baseline is non-destructive:
 - G618 local synthetic scale: 1200 Gallery images, 600 Canvas objects, PNG export proof, and 96h read-only production monitor.
 - G620 security operations: production monitor SLO checks, audit/RLS/RPC/Edge observability, abuse-case matrix, and incident response guidance.
 - G631 production broad UX readback: 17 desktop routes and 8 mobile routes on Zeabur, with no submit/payment/publish action.
-- G632 incident response drill: Runway failure, worker stop, Storage readback failure, RLS/permission anomaly, and generation-quality regression.
+- G632 incident response drill: provider failure, Storage readback failure, RLS/permission anomaly, and generation-quality regression.
 
 This baseline is not a real concurrent production load test and not external alerting.
 
@@ -36,7 +36,7 @@ These are planning targets only. They require approval before any run:
 
 - authenticated users: 25 synthetic/operator-controlled sessions
 - generation jobs: 50 marker-scoped jobs across the 10 major features
-- Runway concurrency: at most 2 image generations in flight unless the user approves a different provider limit
+- OpenAI image concurrency: at most 2 image generations in flight unless the user approves a different provider limit
 - duration: 30 minutes active window plus 60 minutes post-run monitor
 - cost cap: operator-approved cap recorded before start
 - data scope: one marker prefix, one brand, no broad cleanup

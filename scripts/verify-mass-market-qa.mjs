@@ -1031,7 +1031,7 @@ async function interactJobsToggle(page, routeEvidence) {
   await button.click();
   await page.waitForTimeout(500);
   const body = await bodyText(page);
-  const expanded = /失敗を隠す|入力を直して再開|Runway承認状態|workerとRunway/.test(body);
+  const expanded = /失敗を隠す|入力を直して再開|provider|生成/.test(body);
   routeEvidence.interactions.push({ type: 'jobs-failed-toggle-expanded', expanded });
   addAssertion(routeEvidence, 'jobs_failed_toggle_expands', expanded);
 }

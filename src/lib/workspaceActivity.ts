@@ -1,5 +1,10 @@
 import { supabase } from './supabase';
 import { listWorkspaceGeneratedImages } from './localWorkspaceArtifacts';
+import {
+  getGeneratedImageSelectionKey,
+  mergeGeneratedImagesByCanonicalIdentity,
+} from './generatedImageIdentity';
+import { withSignedImageUrls } from './storage';
 import { buildSourceContextSummaryRows, type SourceContextSummaryRow } from './sourceContextSummary';
 import { getFailureRecoveryGuidance, type FailureRecoveryKind } from './errorMessages';
 import type { GenerationIntent } from './workspaceHandoff';
@@ -51,6 +56,7 @@ export interface RecentOutput {
   jobId: string | null;
   imageUrl: string | null;
   storagePath: string;
+  metadata: Json | null;
   prompt: string | null;
   featureType: string | null;
   createdAt: string;
@@ -188,24 +194,43 @@ const getProductLane = (featureType: string | null | undefined) => {
   }
 };
 
-const inputValueToString = (inputParams: Json | null, key: string) => {
+const inputValueToString = (inputParams: Json | null | undefined, key: string) => {
   if (!inputParams || typeof inputParams !== 'object' || Array.isArray(inputParams)) return null;
   const value = inputParams[key];
   return typeof value === 'string' && value.trim() ? value : null;
 };
 
+/**
+ * Workspace-artifact jobs store their source metadata under input_params.metadata,
+ * while provider/generation jobs may store it at the input root. Read both shapes
+ * through one boundary so Jobs, History, and Dashboard share the same readback.
+ */
+const getWorkspaceActivityMetadata = (metadata: Json | null | undefined): Json | null => {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return metadata ?? null;
+  const root = metadata as Record<string, Json | undefined>;
+  const embedded = root.metadata;
+  if (!embedded || typeof embedded !== 'object' || Array.isArray(embedded)) return metadata;
+  return { ...root, ...(embedded as Record<string, Json | undefined>) } as Json;
+};
+
 const getJobPrompt = (job: GenerationJob) => {
-  return job.optimized_prompt || inputValueToString(job.input_params, 'prompt') || inputValueToString(job.input_params, 'description');
+  return job.optimized_prompt
+    || inputValueToString(job.input_params, 'prompt')
+    || inputValueToString(job.input_params, 'description')
+    || getMetadataString(job.input_params, 'brief')
+    || null;
 };
 
 const hasMaterialReference = (inputParams: Json | null | undefined) => {
-  if (!inputParams || typeof inputParams !== 'object' || Array.isArray(inputParams)) return false;
-  if (inputParams.hasReferenceImage === true || inputParams.referenceImageHandoff) return true;
-  if (Array.isArray(inputParams.materialReferences) && inputParams.materialReferences.length > 0) return true;
+  const metadata = getWorkspaceActivityMetadata(inputParams);
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return false;
+  if (metadata.hasReferenceImage === true || metadata.referenceImageHandoff) return true;
+  if (Array.isArray(metadata.materialReferences) && metadata.materialReferences.length > 0) return true;
   const promptLike = [
     inputValueToString(inputParams, 'prompt'),
     inputValueToString(inputParams, 'description'),
     inputValueToString(inputParams, 'optimizedPrompt'),
+    getMetadataString(inputParams, 'brief'),
   ].filter(Boolean).join(' ');
   return /衣服素材|素材:|Material:|reference image|garment/i.test(promptLike);
 };
@@ -228,9 +253,38 @@ const getJobRecoveryGuidance = (job: GenerationJob) => {
 };
 
 const buildResumeHref = (job: GenerationJob) => {
-  const generationHref = getGenerationHref(job.input_params);
+  const metadata = getWorkspaceActivityMetadata(job.input_params);
+  const generationHref = getGenerationHref(metadata);
   if (generationHref) return generationHref;
   if (!job.feature_type) return '/lightchain';
+
+  const sourceResumePath = getMetadataString(metadata, 'sourceResumePath');
+  if (sourceResumePath === '/fitting') {
+    const params = new URLSearchParams({ resumeJob: job.id });
+    const prompt = getJobPrompt(job);
+    const bodyTypes = getMetadataStringList(metadata, 'bodyTypes');
+    const ageGroups = getMetadataStringList(metadata, 'ageGroups');
+    const gender = getMetadataString(metadata, 'gender');
+    if (prompt) params.set('prompt', prompt);
+    if (bodyTypes.length) params.set('bodyTypes', bodyTypes.join(','));
+    if (ageGroups.length) params.set('ageGroups', ageGroups.join(','));
+    if (gender) params.set('gender', gender);
+    return `/fitting?${params.toString()}`;
+  }
+
+  const persistedLightchainFeatureId = getLightchainCompatFeatureId(metadata);
+  const lightchainFeature = job.feature_type.match(/^lightchain-(.+?)(?:-provider-result)?$/);
+  const lightchainFeatureId = persistedLightchainFeatureId
+    ?? (lightchainFeature && lightchainFeature[1] !== 'material-result' ? lightchainFeature[1] : null);
+  if (lightchainFeatureId) {
+    const params = new URLSearchParams({ resumeJob: job.id });
+    const brief = getMetadataString(metadata, 'brief') ?? getJobPrompt(job);
+    const referenceNote = getMetadataString(metadata, 'referenceNote');
+    if (brief) params.set('brief', brief);
+    if (referenceNote) params.set('referenceNote', referenceNote);
+    return `/lightchain/${encodeURIComponent(lightchainFeatureId)}?${params.toString()}`;
+  }
+
   const params = new URLSearchParams({ resumeJob: job.id });
   const prompt = getJobPrompt(job);
   params.set('feature', job.feature_type);
@@ -280,33 +334,69 @@ const isGenerationIntent = (value: unknown): value is GenerationIntent => {
 };
 
 const getGenerationHref = (metadata: Json | null | undefined) => {
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return undefined;
-  const generationIntent = metadata.generationIntent;
+  const activityMetadata = getWorkspaceActivityMetadata(metadata);
+  if (!activityMetadata || typeof activityMetadata !== 'object' || Array.isArray(activityMetadata)) return undefined;
+  const generationIntent = activityMetadata.generationIntent;
   return isGenerationIntent(generationIntent) ? generationIntent.href : undefined;
 };
 
+/**
+ * Provider jobs use a backend-owned generic feature_type (for example
+ * `prompt-edit` or `model-matrix`) but retain the source Lightchain feature in
+ * lightchainCompat. Keep retry/resume on the same feature surface instead of
+ * silently routing the user to the generic Generate page.
+ */
+const getLightchainCompatFeatureId = (metadata: Json | null | undefined) => {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
+  const compat = metadata.lightchainCompat;
+  return getMetadataString(compat as Json | null | undefined, 'lightchainFeatureId');
+};
+
 const getMetadataString = (metadata: Json | null | undefined, key: string) => {
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return undefined;
-  const value = metadata[key];
-  if (typeof value === 'string' && value.trim()) return value;
-  const generationIntent = metadata.generationIntent;
-  if (generationIntent && typeof generationIntent === 'object' && !Array.isArray(generationIntent)) {
-    const intentValue = generationIntent[key];
-    if (typeof intentValue === 'string' && intentValue.trim()) return intentValue;
-  }
-  const sourceReadback = metadata.sourceReadback;
-  if (sourceReadback && typeof sourceReadback === 'object' && !Array.isArray(sourceReadback)) {
-    const sourceValue = sourceReadback[key];
-    if (typeof sourceValue === 'string' && sourceValue.trim()) return sourceValue;
+  const activityMetadata = getWorkspaceActivityMetadata(metadata);
+  if (!activityMetadata || typeof activityMetadata !== 'object' || Array.isArray(activityMetadata)) return undefined;
+  const containers = [
+    activityMetadata,
+    activityMetadata.generationIntent,
+    activityMetadata.sourceReadback,
+    activityMetadata.compositionPreview,
+  ].filter((value): value is Record<string, Json | undefined> => (
+    Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+  ));
+  for (const container of containers) {
+    const value = container[key];
+    if (typeof value === 'string' && value.trim()) return value;
   }
   return undefined;
 };
 
+const getMetadataStringList = (metadata: Json | null | undefined, key: string) => {
+  const activityMetadata = getWorkspaceActivityMetadata(metadata);
+  if (!activityMetadata || typeof activityMetadata !== 'object' || Array.isArray(activityMetadata)) return [];
+  const containers = [
+    activityMetadata,
+    activityMetadata.generationIntent,
+    activityMetadata.sourceReadback,
+    activityMetadata.compositionPreview,
+  ].filter((value): value is Record<string, Json | undefined> => (
+    Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+  ));
+  for (const container of containers) {
+    const value = container[key];
+    if (Array.isArray(value)) {
+      const strings = value.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()));
+      if (strings.length > 0) return strings;
+    }
+  }
+  return [];
+};
+
 const hasLightchainCompat = (metadata: Json | null | undefined) => {
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return false;
-  const lightchainCompat = metadata.lightchainCompat;
+  const activityMetadata = getWorkspaceActivityMetadata(metadata);
+  if (!activityMetadata || typeof activityMetadata !== 'object' || Array.isArray(activityMetadata)) return false;
+  const lightchainCompat = activityMetadata.lightchainCompat;
   if (lightchainCompat && typeof lightchainCompat === 'object' && !Array.isArray(lightchainCompat)) return true;
-  const generationIntent = metadata.generationIntent;
+  const generationIntent = activityMetadata.generationIntent;
   if (generationIntent && typeof generationIntent === 'object' && !Array.isArray(generationIntent)) {
     const intentCompat = generationIntent.lightchainCompat;
     if (intentCompat && typeof intentCompat === 'object' && !Array.isArray(intentCompat)) return true;
@@ -315,10 +405,11 @@ const hasLightchainCompat = (metadata: Json | null | undefined) => {
 };
 
 const lightchainCompatFromMetadata = (metadata: Json | null | undefined) => {
-  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
-  const lightchainCompat = metadata.lightchainCompat;
+  const activityMetadata = getWorkspaceActivityMetadata(metadata);
+  if (!activityMetadata || typeof activityMetadata !== 'object' || Array.isArray(activityMetadata)) return null;
+  const lightchainCompat = activityMetadata.lightchainCompat;
   if (lightchainCompat && typeof lightchainCompat === 'object' && !Array.isArray(lightchainCompat)) return lightchainCompat as Record<string, unknown>;
-  const generationIntent = metadata.generationIntent;
+  const generationIntent = activityMetadata.generationIntent;
   if (generationIntent && typeof generationIntent === 'object' && !Array.isArray(generationIntent)) {
     const intentCompat = generationIntent.lightchainCompat;
     if (intentCompat && typeof intentCompat === 'object' && !Array.isArray(intentCompat)) return intentCompat as Record<string, unknown>;
@@ -362,7 +453,7 @@ const buildSourceSummaryRows = (
   status?: WorkspaceJobStatus | 'output',
   durableLightchainTaskSteps: LightchainTaskStep[] = [],
 ) => {
-  const rows = buildSourceContextSummaryRows(metadata);
+  const rows = buildSourceContextSummaryRows(getWorkspaceActivityMetadata(metadata));
   if (!status || !hasLightchainCompat(metadata)) return rows;
   const hasStepRow = rows.some((row) => row.label === 'Heavy Chain steps');
   const taskCodes = getLightchainTaskCodes(metadata);
@@ -384,6 +475,7 @@ const mapOutput = (image: GeneratedImage, lightchainTaskSteps: LightchainTaskSte
   jobId: image.job_id,
   imageUrl: image.image_url,
   storagePath: image.storage_path,
+  metadata: image.metadata,
   prompt: image.prompt,
   featureType: image.feature_type,
   createdAt: image.created_at,
@@ -426,7 +518,11 @@ const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[]): Time
       description: output.storagePath.startsWith('local/') ? 'ローカル成果物を保存済み' : 'ギャラリーに保存済み',
       prompt: output.prompt,
       status: 'output',
-      href: `/gallery?image=${output.id}`,
+      href: `/gallery?image=${encodeURIComponent(getGeneratedImageSelectionKey({
+        id: output.id,
+        storage_path: output.storagePath,
+        metadata: output.metadata,
+      }))}`,
       generationHref: output.generationHref,
       sourceLabel: output.sourceLabel,
       sourceResumePath: output.sourceResumePath,
@@ -504,7 +600,7 @@ const fetchOutputs = async (brandId: string): Promise<GeneratedImage[]> => {
       throw error;
     }
 
-    return data ?? [];
+    return withSignedImageUrls(data ?? []);
   } catch (error) {
     logWorkspaceActivityFetchError('Failed to fetch workspace outputs:', error);
     throw error;
@@ -546,12 +642,21 @@ const groupLightchainStepsByImage = (steps: LightchainTaskStep[]) => {
   }, {});
 };
 
+const mergeLightchainTaskSteps = (...groups: LightchainTaskStep[][]): LightchainTaskStep[] => {
+  const seen = new Set<string>();
+  return groups.flat().filter((step) => {
+    if (seen.has(step.id)) return false;
+    seen.add(step.id);
+    return true;
+  });
+};
+
 const throwWorkspaceActivityFetchError = (failedSources: string[]) => {
   if (!failedSources.length) return;
   throw new Error(`Failed to fetch workspace activity: ${failedSources.join(', ')}`);
 };
 
-export async function fetchWorkspaceActivity(brandId: string): Promise<WorkspaceActivity> {
+export async function fetchWorkspaceActivity(brandId: string, scopeId?: string): Promise<WorkspaceActivity> {
   if (!brandId) return emptyWorkspaceActivity;
 
   const [creditResult, jobsResult, outputsResult, lightchainStepsResult] = await Promise.allSettled([
@@ -573,15 +678,23 @@ export async function fetchWorkspaceActivity(brandId: string): Promise<Workspace
   const lightchainTaskSteps = lightchainStepsResult.status === 'fulfilled' ? lightchainStepsResult.value : [];
   const lightchainStepsByJob = groupLightchainStepsByJob(lightchainTaskSteps);
   const lightchainStepsByImage = groupLightchainStepsByImage(lightchainTaskSteps);
-  const localOutputs = listWorkspaceGeneratedImages(brandId);
-  const outputs = [...remoteOutputs, ...localOutputs]
+  const localOutputs = await withSignedImageUrls(listWorkspaceGeneratedImages(brandId, scopeId));
+  const outputs = mergeGeneratedImagesByCanonicalIdentity(remoteOutputs, localOutputs)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const outputCounts = buildOutputCounts(outputs);
   const mappedJobs = jobs.map((job) => mapJob(job, outputCounts[job.id] ?? 0, lightchainStepsByJob[job.id] ?? []));
   const activeJobs = mappedJobs.filter((job) => job.status === 'pending' || job.status === 'processing').slice(0, 20);
   const failedJobs = mappedJobs.filter((job) => job.status === 'failed').slice(0, 20);
   const completedJobs = mappedJobs.filter((job) => job.status === 'completed').slice(0, 20);
-  const recentOutputs = outputs.map((output) => mapOutput(output, lightchainStepsByImage[output.id] ?? [])).slice(0, 12);
+  const recentOutputs = outputs.map((output) => {
+    const remoteImageId = getMetadataString(output.metadata, 'remoteImageId');
+    const outputSteps = mergeLightchainTaskSteps(
+      lightchainStepsByImage[output.id] ?? [],
+      remoteImageId ? lightchainStepsByImage[remoteImageId] ?? [] : [],
+      output.job_id ? lightchainStepsByJob[output.job_id] ?? [] : [],
+    );
+    return mapOutput(output, outputSteps);
+  }).slice(0, 12);
 
   return {
     creditSummary,

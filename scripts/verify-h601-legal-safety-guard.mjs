@@ -104,7 +104,7 @@ addCheck('Generate page requires rights confirmation before generation', allIncl
   'rightsConfirmed',
   '素材と生成指示の権利確認にチェックしてください',
   'UPLOAD_RIGHTS_CONFIRMATION_LABEL',
-  'selectedFeatureUsesRunwayMcp && !rightsConfirmed',
+  'if (!rightsConfirmed)',
 ]), {
   file: files.generate,
 });

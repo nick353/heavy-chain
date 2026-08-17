@@ -4,7 +4,6 @@ import {
   buildLocalCanvasAssetReference,
   hasLocalCanvasAsset,
   putLocalCanvasAsset,
-  resolveLocalCanvasAsset,
 } from '../src/lib/canvasLocalAssets.ts';
 
 type RecordValue = { key: string; blob: Blob; createdAt: string };

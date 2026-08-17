@@ -53,6 +53,7 @@
         "npm:react-router-dom@^7.10.0",
         "npm:react@^19.2.0",
         "npm:reactflow@^11.11.4",
+        "npm:sharp@~0.35.3",
         "npm:tailwind-merge@^3.4.0",
         "npm:tailwindcss@^3.4.0",
         "npm:typescript-eslint@^8.46.4",

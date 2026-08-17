@@ -73,7 +73,7 @@ for (const tier of ['T0 local synthetic', 'T1 production read-only', 'T2 marker-
 for (const phrase of [
   'authenticated users: 25',
   'generation jobs: 50',
-  'Runway concurrency: at most 2',
+  'Image generation concurrency: at most 2',
   'duration: 30 minutes',
   'cost cap',
   'marker prefix',

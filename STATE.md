@@ -1,6 +1,37 @@
 # Heavy Chain Current State
 
-Updated: 2026-07-07
+Updated: 2026-08-18
+
+2026-08-18 current non-OpenAI QA continuation:
+- Fresh authenticated Chrome Plugin recovery tab `1980902270` opened production `/fitting`, waited for the Gallery library, selected `campaign-image`, confirmed `この素材を使う`, and read back `素材あり`, `Gallery素材-239503df-8bd6-4d36-ba62-c611036c5a4f`, and the local next step `高精度AIで切り抜く`. `AI生成` stayed disabled; the previously observed same-input cutout failure was not retried.
+- Official Zeabur deployment `6a8321d946afbcef424d7e51` is `RUNNING`; public Fitting bundle SHA-256 matches the local build (`220e62b65192509ea9b91630f7d3e3c5497f937ec5376e2e987897d09e2c2bd7`) and includes the Fitting Gallery `sourceImageId/sourceStoragePath` persistence fix. Commit/ref/repository association remains `PENDING_CONFIRMATION` because Zeabur metadata is empty.
+- Fresh Supabase CLI readback: 33/33 migration pairs aligned, `db lint` has no schema errors, and 16/16 Edge Functions are `ACTIVE` with `verify_jwt=true` and no legacy Runway names. G620 read-only static verification passed. Connector-backed RLS/Auth/SECURITY DEFINER readback still requires reauthentication.
+- A bounded live release-gate run produced no output after 30 seconds and was controlled-interrupted; `--skip-commands` is explicitly non-acceptance and returned 16 stale/missing readback failures plus `blocker:git_dirty` and `blocker:commands_skipped_not_release_acceptance`. No OpenAI API, generation, retry, billing, Runway, upload, delete, save, or permission change occurred.
+- Current evidence ledger: `/Users/nichikatanaka/Desktop/アパレル１/work/browser-evidence/lightchain-heavy-paired-20260815/full-qa-20260816/goal-run-openai-excluded-20260818.json` checkpoint 68 and `CURRENT-TURN-20260818.json` are the current run artifacts; strict Extension recording, reviewer transport, generated-history, alternate cutout/save, authenticated RLS/Auth, immutable source association, and release gate remain open.
+- The fitting-background persistence boundary now has a runtime regression suite at `scripts/verify-fitting-persistence-runtime.test.mjs`; the focused fitting/provider/persistence set passed `26/26`. It proves canonical storage-path readback clears ephemeral signed URLs, rejects URL-only remote artifacts with the exact error, and accepts path-only durable artifacts. This is test-only evidence; it does not close the live alternate-input cutout/save or release blockers.
+- Fresh reopened Chrome tab `1980902275` selected `lightchain-fabric-image-provider-result`, completed local high-precision cutout successfully, and read back the extracted layer plus exact success status. A visual screenshot was emitted. Plain `/fitting` reload then returned to `素材を追加` with no intermediate cutout state; no explicit intermediate save control was exposed. Treat cutout save/restart as `PENDING_CONFIRMATION` until the existing durable Job/artifact promotion path is exercised under an allowed non-OpenAI flow.
+
+2026-08-17 current persistence/deployment continuation:
+- Lightchain Workbench durable snapshots now compact only large duplicate remote-result data URLs when a canonical `storagePath` exists; the canonical path remains authoritative and local no-path previews remain resumable. Source: `src/lib/lightchainPersistence.ts` and `src/pages/LightchainWorkbenchPage.tsx`.
+- Focused compaction verification passed `3/3`; combined persistence/readback passed `23/23`; typecheck, build, and `git diff --check` passed. No OpenAI API call, generation, retry, billing, Runway, upload, delete, or save effect occurred.
+- Official Zeabur deployment `6a830ece6f0c2b522ddd2ece` is `RUNNING`; `https://heavy-chain.zeabur.app/` returned HTTP `200`; served `assets/LightchainWorkbenchPage.CMRiHfcl.js` matched local `dist` byte-for-byte (`241577` bytes, SHA-256 `7cf3ea023c0e2ec3c8833e8061f96a0fde5fb5ffbe6de8f84ec8de1d2548156b`). Zeabur commit/ref/repository association remains `PENDING_CONFIRMATION` because metadata fields are empty.
+- Chrome Plugin remains the required surface and is currently blocked after the permitted Profile 2 window reopen plus one bounded retry: exact `Browser is not available: chrome`. Fresh same-session Gallery-to-Canvas Export/Download remains `PENDING_CONFIRMATION`; do not substitute another browser.
+
+2026-08-18 current Chrome Plugin QA continuation:
+- Profile 2 same-session Heavy Chain tab `1980902249` reached Canvas with brand `NiSEN`; existing Gallery asset `campaign-image` was selected and the property panel read `gallery-import` source metadata.
+- Existing-asset Canvas QA succeeded without generation: Export produced `/Users/nichikatanaka/Downloads/モデルライブラリ- EC標準 (1).png` (`696x696`, `707321` bytes) and selected-image Download produced `/Users/nichikatanaka/Downloads/Gallery素材 (1).png` (`1024x1024`, `1562303` bytes). Hashes are recorded in the current evidence packet.
+- Live permission readback confirmed visible disabled `権限がありません` on fabric-image, printing-image, line-generation, image-repair, and model routes. Lightchain model-to-Heavy fitting fallback navigation was reached, but the handoff DOM readback reset the Chrome connection twice with exact `js execution timed out; kernel reset, rerun your request`; that route remains `PENDING_CONFIRMATION`.
+- No OpenAI API call, generation, retry, billing, Runway, upload, delete, or save effect occurred.
+- A fresh same-browser Gallery tab `1980902254` visually showed `ギャラリーを準備しています` with `再読み込み` and `ログイン画面へ`; it did not expose authenticated brand context, so generated-history/full-library inspection remains `PENDING_CONFIRMATION`.
+
+2026-08-17 provider-boundary / OpenAI routing continuation:
+- Active Heavy Chain product/runtime/config paths no longer include the retired third-party provider, OAuth bridge, local worker, approval UI, or provider enum.
+- Hosted image generation now defaults to `VITE_GENERATION_PROVIDER=openai` and routes through `supabase/functions/_shared/imageProvider.ts` -> `openaiImage.ts`.
+- Official Supabase CLI readback confirms local and remote migration alignment for `20260817081436_retire_legacy_image_provider` and `20260817092731_harden_canvas_snapshot_and_function_search_path`.
+- Official Supabase Functions readback confirms `16` ACTIVE functions, `0` legacy provider functions, and OpenAI-backed generation/edit functions active. `colorize` is ACTIVE v33 with JWT verification enabled.
+- Verification passed locally: TypeScript typecheck, Vite build, OpenAI provider readiness, error mapping, Edge smoke, Supabase static verification, security audit, and `git diff --check`. No OpenAI API call, generation submit, retry, billing, or production database write was performed in this continuation.
+- Fresh same-session Chrome Plugin verification now passes the non-provider Gallery -> Canvas save path after bounded nested canonical storage-path resolution; Zeabur deployment `6a82ed0a201aaa81bcfa776a` is RUNNING and Canvas readback reached `サーバー確認済み`.
+- Exact remaining blockers: authenticated two-user RLS/SECURITY DEFINER runtime proof, Supabase app connector reauthentication/local runtime instability, strict Chrome Extension recording, Zeabur immutable commit association, external Reviewer/Verifier transport, and release-gate freshness. Historical QA artifacts and migration history may still mention the retired provider for audit traceability; they are not active runtime paths.
 
 2026-07-11 parity slice:
 - matrix conversion: added `lightchainParityGoals` metadata for all 13 supplied comparison rows with explicit `P0/P1` priorities and Heavy target outcomes.

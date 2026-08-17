@@ -1,4 +1,8 @@
-import { saveWorkspaceArtifact } from './localWorkspaceArtifacts';
+import {
+  deleteWorkspaceArtifactsPersisted,
+  listWorkspaceArtifacts,
+  saveWorkspaceArtifactPersisted,
+} from './localWorkspaceArtifacts';
 import { useCanvasStore } from '../stores/canvasStore';
 import type { Json } from '../types/database';
 import type { MaterialReferenceMetadata } from './workspaceMaterialReferences';
@@ -11,6 +15,11 @@ export type WorkspaceHandoffFeatureType =
   | 'graphic-pattern-workspace';
 export type WorkspaceHandoffStatus = 'draft' | 'planned' | 'ready-for-generation';
 export type WorkspaceHandoffKind = 'local-workflow-intake';
+
+export type WorkspaceHandoffHistoryItem = {
+  id: string;
+  label: string;
+};
 
 export interface GenerationIntent extends Record<string, Json | undefined> {
   feature: string;
@@ -75,6 +84,9 @@ export interface WorkspaceWorkflowMetadata {
   inputs: Record<string, Json | undefined>;
   plan: Record<string, Json | undefined>;
   status: WorkspaceHandoffStatus;
+  /** Provider admission state for local-intake workflows; never infer success from a preview. */
+  providerRoute?: string;
+  providerBlocker?: string;
   resumePath: string;
   handoffKind: WorkspaceHandoffKind;
   primaryInput: string;
@@ -84,6 +96,7 @@ export interface WorkspaceWorkflowMetadata {
 
 export interface WorkspaceHandoffInput {
   brandId: string;
+  scopeId?: string;
   featureType: WorkspaceHandoffFeatureType;
   projectName: string;
   title: string;
@@ -123,6 +136,29 @@ export const workspaceSourceConfig: Record<WorkspaceSource, { label: string; res
   lab: { label: 'Lab', resumePath: '/lab' },
   marketing: { label: 'マーケティングワークスペース', resumePath: '/marketing' },
   fitting: { label: 'AIフィッティング', resumePath: '/fitting' },
+};
+
+/**
+ * Restore only history labels written into a durable workspace handoff.
+ * Static seed rows would look like generated work after a reload, so an
+ * unpersisted route intentionally has an empty history.
+ */
+export const restoreWorkspaceHandoffHistory = (
+  brandId: string | null | undefined,
+  featureType: WorkspaceHandoffFeatureType,
+  scopeId?: string,
+): WorkspaceHandoffHistoryItem[] => {
+  if (!brandId) return [];
+  const artifact = listWorkspaceArtifacts(brandId, scopeId).find((candidate) => candidate.featureType === featureType);
+  const history = artifact?.metadata.history;
+  if (!artifact || !Array.isArray(history)) return [];
+  return history
+    .filter((label): label is string => typeof label === 'string' && Boolean(label.trim()))
+    .slice(0, 4)
+    .map((label, index) => ({
+      id: `${artifact.id}-history-${index}`,
+      label,
+    }));
 };
 
 const workspaceAllowedWorkflowVersions: Record<WorkspaceSource, readonly string[]> = {
@@ -201,6 +237,28 @@ export const buildGenerationIntentHref = ({
     params.set('referenceAssets', patternContext.referenceAssets);
   }
   return `/generate?${params.toString()}`;
+};
+
+export const buildLightchainToolHref = ({
+  toolId,
+  brief,
+  referenceNote,
+  ...source
+}: {
+  toolId: string;
+  brief: string;
+  referenceNote?: string;
+} & GenerationIntentSourceMetadata) => {
+  const params = new URLSearchParams({
+    brief,
+    sourceWorkspace: source.sourceWorkspace,
+    workflowVersion: source.workflowVersion,
+    sourceLabel: source.sourceLabel,
+    sourceResumePath: source.sourceResumePath,
+    sourceMode: source.sourceMode,
+  });
+  if (referenceNote) params.set('referenceNote', referenceNote);
+  return `/lightchain/${encodeURIComponent(toolId)}?${params.toString()}`;
 };
 
 export const hydrateGenerationIntentSource = (params: URLSearchParams): GenerationIntentSourceMetadata | null => {
@@ -328,12 +386,15 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
   const projectId = canvasStore.createProject(input.projectName, input.brandId);
   const imageUrl = input.imageUrl ?? buildPreviewImage(input);
   const createdAt = new Date().toISOString();
+  const artifactId = `local-handoff-${projectId}`;
   const extractedMaterialReference = input.materialReferences?.find((reference) => (
     reference.hasImage && reference.extractedLayerReady && reference.extractedImageUrl
   ));
 
-  const artifact = saveWorkspaceArtifact({
+  const persisted = saveWorkspaceArtifactPersisted({
+    id: artifactId,
     brandId: input.brandId,
+    scopeId: input.scopeId,
     featureType: input.featureType,
     title: input.title,
     imageUrl,
@@ -351,6 +412,8 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
       inputs: input.workflow.inputs,
       plan: input.workflow.plan,
       status: input.workflow.status,
+      providerRoute: input.workflow.providerRoute,
+      providerBlocker: input.workflow.providerBlocker,
       resumePath: input.workflow.resumePath,
       handoffKind: input.workflow.handoffKind,
       primaryInput: input.workflow.primaryInput,
@@ -368,6 +431,15 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
       ...input.metadata,
     },
   });
+  if (!persisted.ok) {
+    const cleanup = deleteWorkspaceArtifactsPersisted(input.brandId, [artifactId], input.scopeId);
+    canvasStore.deleteProject(projectId);
+    const cleanupMessage = cleanup.ok
+      ? ''
+      : ` Canvas project and local artifact cleanup could not be verified: ${cleanup.error.message}`;
+    throw new Error(`workspace_handoff_persistence_unverified:${persisted.error.message}${cleanupMessage}`);
+  }
+  const artifact = persisted.artifact;
 
   if (extractedMaterialReference?.imageUrl && extractedMaterialReference.extractedImageUrl) {
     const baseObjectId = canvasStore.addObject({
@@ -391,6 +463,7 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
         parameters: {
           source: 'workspace-handoff-original-base',
           sourceArtifactId: artifact.id,
+          sourceJobId: artifact.sourceJobId ?? null,
           layerRole: 'original-base',
           materialReference: extractedMaterialReference,
           materialReferences: input.materialReferences,
@@ -425,6 +498,7 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
         parameters: {
           source: 'workspace-handoff-extracted-cutout',
           sourceArtifactId: artifact.id,
+          sourceJobId: artifact.sourceJobId ?? null,
           layerRole: 'extracted-cutout',
           processedImageKind: 'masked-transparent-png',
           cutoutBounds: extractedMaterialReference.cutoutBounds,
@@ -464,6 +538,7 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
         parameters: {
           source: 'workspace-handoff',
           sourceArtifactId: artifact.id,
+          sourceJobId: artifact.sourceJobId ?? null,
           activeChoice: input.activeChoice,
           progress: input.progress,
           workflowVersion: input.workflow.workflowVersion,
@@ -508,6 +583,7 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
       parameters: {
         source: 'workspace-handoff-note',
         sourceArtifactId: artifact.id,
+        sourceJobId: artifact.sourceJobId ?? null,
         primaryInput: input.workflow.primaryInput,
         nextStep: input.workflow.nextStep,
         status: input.workflow.status,

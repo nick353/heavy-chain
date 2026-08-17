@@ -1,14 +1,20 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Check, ChevronRight, Save, Shirt, SlidersHorizontal, Sparkles, UserRound } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
-import { buildGenerationIntentHref, handoffWorkspaceToCanvas, workspaceSourceConfig } from '../lib/workspaceHandoff';
+import {
+  buildGenerationIntentHref,
+  handoffWorkspaceToCanvas,
+  restoreWorkspaceHandoffHistory,
+  workspaceSourceConfig,
+} from '../lib/workspaceHandoff';
 
 const intents = ['EC標準', 'LOOK確認', '広告検証'] as const;
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
@@ -34,11 +40,6 @@ type HistoryItem = {
   id: string;
   label: string;
 };
-
-const initialHistory: HistoryItem[] = [
-  { id: 'model-library-history-1', label: 'EC標準モデル候補を整理' },
-  { id: 'model-library-history-2', label: '着用目的と商品説明を保存' },
-];
 
 const intentMeta: Record<Intent, { label: string; description: string; outputs: string[] }> = {
   EC標準: {
@@ -213,11 +214,11 @@ const buildModelLibraryPreviewSvg = ({
 
 export function ModelLibraryPage() {
   const navigate = useNavigate();
-  const { currentBrand } = useAuthStore();
+  const { user, currentBrand } = useAuthStore();
   const [activeIntent, setActiveIntent] = useState<Intent>(intents[0]);
   const [selectedCandidateId, setSelectedCandidateId] = useState(modelCandidates[0].id);
   const [progress, setProgress] = useState(34);
-  const [history, setHistory] = useState(initialHistory);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [face, setFace] = useState(modelCandidates[0].face);
   const [pose, setPose] = useState(modelCandidates[0].pose);
   const [bodyType, setBodyType] = useState(modelCandidates[0].bodyType);
@@ -226,10 +227,13 @@ export function ModelLibraryPage() {
   const [usage, setUsage] = useState<Intent>(modelCandidates[0].usage);
   const [productDescription, setProductDescription] = useState(modelCandidates[0].productDescription);
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialModelMaterial);
-  const nextHistoryId = useRef(3);
+  const nextHistoryId = useRef(1);
   const selectedCandidate = modelCandidates.find((candidate) => candidate.id === selectedCandidateId) ?? modelCandidates[0];
   const primaryInput = `${face} / ${pose} / ${bodyType} / ${skinTone} / ${ageGroup} / ${usage} / ${productDescription}`;
   const nextStep = `${usage}向けモデル候補 ${selectedCandidate.label} をmodel-library-workspaceとしてモデルマトリクスへ渡す`;
+  useEffect(() => {
+    setHistory(restoreWorkspaceHandoffHistory(currentBrand?.id, 'model-library-workspace', user?.id));
+  }, [currentBrand?.id, user?.id]);
   const directModelMatrixHref = buildGenerationIntentHref({
     feature: 'model-matrix',
     prompt: [
@@ -352,8 +356,10 @@ export function ModelLibraryPage() {
       `Material reference: ${materialReferenceSummary}`,
       `Next step: ${nextStep}`,
     ].join('\n');
+    try {
     const { projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
+      scopeId: user?.id,
       featureType: 'model-library-workspace',
       projectName: `モデルライブラリ: ${usage}`,
       title: `モデルライブラリ: ${usage}`,
@@ -467,6 +473,11 @@ export function ModelLibraryPage() {
 
     toast.success('モデルライブラリを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Canvas保存に失敗しました';
+      console.error('Failed to persist Model Library workspace handoff:', error);
+      toast.error(message);
+    }
   };
 
   return (
@@ -556,6 +567,7 @@ export function ModelLibraryPage() {
             </div>
           </div>
           <div data-testid="model-library-next-actions" className="grid gap-2">
+            <PermissionLockedButton testId="lightchain-model-library-permission-locked" marginClass="" />
             <Link
               to={directModelMatrixHref}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"

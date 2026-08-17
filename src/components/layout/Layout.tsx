@@ -14,12 +14,15 @@ export function Layout() {
   const { user } = useAuthStore();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
+  const [isLightAccountMenuOpen, setIsLightAccountMenuOpen] = useState(false);
   
   // Determine if we should show sidebar (only for authenticated users on dashboard pages)
   // Exclude public pages and auth pages
   const isPublicPage = ['/login', '/signup', '/forgot-password', '/'].includes(location.pathname);
   const showSidebar = user && !isPublicPage;
-  const isLightchainRoute = location.pathname.startsWith('/lightchain');
+  const lightchainParityAliases = ['/creator', '/model', '/tools/fabric', '/designProduction', '/asset-center', '/flow/orientedDesign'];
+  const isLightchainRoute = location.pathname.startsWith('/lightchain')
+    || lightchainParityAliases.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
   const isLightchainPrintRoute = location.pathname === '/lightchain/printing-image';
   const isLightchainNotFoundRoute = location.pathname === '/lightchain/fashion-studio';
 
@@ -31,6 +34,10 @@ export function Layout() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    setIsLightAccountMenuOpen(false);
+  }, [location.pathname, location.search]);
 
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950 text-neutral-800 dark:text-neutral-100 font-sans transition-colors duration-700 overflow-x-clip selection:bg-primary-200 selection:text-primary-900">
@@ -45,10 +52,17 @@ export function Layout() {
           {!isLightchainNotFoundRoute && <header className={`sticky top-0 z-40 border-b border-white/10 bg-[#070b0d]/95 backdrop-blur-xl ${isLightchainPrintRoute ? 'lightchain-route-header' : ''}`}>
             <div className="mx-auto flex h-[70px] max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 lightchain-route-header-inner">
               <div className="flex items-center gap-7">
-                <Link to={isLightchainRoute ? '/lightchain' : '/dashboard'} className="flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
-                  <HeavyChainLogo height={28} showText={false} className="shrink-0" />
-                  HEAVY CHAIN
-                </Link>
+                {isLightchainRoute ? (
+                  <Link to="/lightchain" aria-label="Lightchain AI" className="flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/80 bg-white text-[11px] font-black tracking-normal text-neutral-950">◌</span>
+                    LIGHTCHAIN
+                  </Link>
+                ) : (
+                  <Link to="/dashboard" className="flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
+                    <HeavyChainLogo height={28} showText={false} className="shrink-0" />
+                    HEAVY CHAIN
+                  </Link>
+                )}
                 {!isLightchainRoute && (
                   <div className="hidden items-center gap-2 text-sm text-neutral-300 md:flex">
                     {lightchainCategories.map((category) => (
@@ -86,9 +100,34 @@ export function Layout() {
                     ジョブ
                   </Link>
                 )}
-                <Link to="/brand/settings" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15" aria-label="アカウント">
-                  <UserCircle className="h-5 w-5" />
-                </Link>
+                {isLightchainRoute ? (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15"
+                      aria-label="アカウント"
+                      aria-expanded={isLightAccountMenuOpen}
+                      onClick={() => setIsLightAccountMenuOpen((open) => !open)}
+                    >
+                      <UserCircle className="h-5 w-5" />
+                    </button>
+                    {isLightAccountMenuOpen && (
+                      <div className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-2xl border border-neutral-200 bg-white py-2 text-sm text-neutral-800 shadow-2xl">
+                        <Link to="/brand/settings" className="block px-4 py-3 transition hover:bg-neutral-100">マイアカウント</Link>
+                        <Link to="/designProduction" className="block px-4 py-3 transition hover:bg-neutral-100">デザインドキュメント</Link>
+                        <Link to="/asset-center" className="block px-4 py-3 transition hover:bg-neutral-100">ライブラリー</Link>
+                        <Link to="/brand/settings" className="block px-4 py-3 transition hover:bg-neutral-100">チーム管理</Link>
+                        <div className="my-1 border-t border-neutral-200" />
+                        <button type="button" className="block w-full px-4 py-3 text-left text-neutral-500 transition hover:bg-neutral-100">透かし（ウォーターマーク）表示</button>
+                        <button type="button" className="block w-full px-4 py-3 text-left text-neutral-500 transition hover:bg-neutral-100">ログアウト</button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link to="/brand/settings" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15" aria-label="アカウント">
+                    <UserCircle className="h-5 w-5" />
+                  </Link>
+                )}
               </div>
             </div>
             {!isLightchainRoute && (
@@ -120,7 +159,7 @@ export function Layout() {
               </motion.div>
             </AnimatePresence>
           </main>
-          <FeedbackButton />
+          {!isLightchainRoute && <FeedbackButton />}
         </div>
       ) : (
         <>

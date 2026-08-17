@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
-import { saveWorkspaceArtifactBestEffort } from '../lib/localWorkspaceArtifacts';
+import { listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import {
   buildMaterialReferenceMetadata,
@@ -45,12 +45,6 @@ const templatesByChannel = {
   live: ['ライブ配信サムネイル', '配信中テロップ', '購入導線バナー', '次回告知'],
   promo: ['クーポンバナー', '期間限定LP', 'リターゲティング広告', '予約販売告知'],
 } as const;
-
-const projects = [
-  { name: '24SS Linen Launch', format: 'EC / SNS', updated: '今日 14:20' },
-  { name: 'Holiday Capsule Poster', format: '店舗ポスター', updated: '昨日' },
-  { name: 'Live Commerce Kit', format: 'ライブ配信', updated: '2日前' },
-];
 
 type ChannelId = (typeof channels)[number]['id'];
 type MarketingJobStatus = 'idle' | 'running' | 'stalled' | 'failed' | 'succeeded';
@@ -145,9 +139,22 @@ const buildMarketingPreviewSvg = ({
   `);
 };
 
+const buildMarketingProjectHref = (artifact: WorkspaceArtifact) => {
+  const params = new URLSearchParams({
+    brief: artifact.prompt?.trim() || artifact.title,
+    projectName: artifact.title,
+    sourceWorkspace: 'marketing',
+    workflowVersion: 'marketing-brief-local-v1',
+    sourceLabel: workspaceSourceConfig.marketing.label,
+    sourceResumePath: workspaceSourceConfig.marketing.resumePath,
+    sourceMode: 'local-workflow-intake',
+  });
+  return `/lightchain/marketing-detail?${params.toString()}`;
+};
+
 export function MarketingWorkspacePage() {
   const navigate = useNavigate();
-  const { currentBrand } = useAuthStore();
+  const { user, currentBrand } = useAuthStore();
   const [activeChannel, setActiveChannel] = useState<ChannelId>('ec');
   const [selectedTemplate, setSelectedTemplate] = useState<string>(templatesByChannel.ec[0]);
   const [campaignCopy, setCampaignCopy] = useState('軽やかなリネンセットで、静かな夏をはじめる。');
@@ -156,9 +163,18 @@ export function MarketingWorkspacePage() {
   const [job, setJob] = useState<MarketingJob>(initialJob);
   const [isHandingOff, setIsHandingOff] = useState(false);
 
-  const { createProject, addObject, saveCurrentProject } = useCanvasStore();
+  const { createProject, deleteProject, addObject, saveCurrentProject } = useCanvasStore();
   const productImageUrl = materialReference.imageUrl;
   const productFileName = materialReference.fileName;
+  const currentBrandId = currentBrand?.id ?? null;
+  const persistedProjects = useMemo(
+    () => currentBrandId
+      ? listWorkspaceArtifacts(currentBrandId, user?.id)
+        .filter((artifact) => artifact.featureType === 'marketing-workflow')
+        .slice(0, 6)
+      : [],
+    [currentBrandId, user?.id],
+  );
 
   const activeLabel = useMemo(
     () => channels.find((channel) => channel.id === activeChannel)?.label ?? 'EC',
@@ -276,9 +292,12 @@ export function MarketingWorkspacePage() {
     const materialReferenceSummary = materialReferenceMetadata.hasImage
       ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
       : '素材を追加するとここに反映されます';
+    let persistedArtifactId: string | null = null;
+    let persistedSourceJobId: string | null = null;
     try {
       const result = await saveWorkspaceArtifactBestEffort({
         brandId: currentBrand.id,
+        scopeId: user?.id,
         featureType: 'marketing-workflow',
         title: `Marketing: ${activeLabel} / ${selectedTemplate}`,
         imageUrl: productImageUrl,
@@ -312,11 +331,18 @@ export function MarketingWorkspacePage() {
           },
         },
       });
-      if (result.remote) {
-        toast.success('Canvasへ保存しました');
-      } else {
-        toast.success('Canvasへ保存しました');
+      if (!result.remote && !result.localPersisted) {
+        deleteProject(projectId);
+        throw result.localError ?? result.remoteError ?? new Error('workspace_artifact_persistence_unverified');
       }
+      persistedArtifactId = result.artifact.id;
+      persistedSourceJobId = result.artifact.sourceJobId ?? result.remote?.jobId ?? job.id;
+      toast.success('Canvasへ保存しました');
+    } catch (error) {
+      deleteProject(projectId);
+      console.error('Failed to persist marketing workspace artifact:', error);
+      toast.error('Canvas保存に失敗しました');
+      return;
     } finally {
       setIsHandingOff(false);
     }
@@ -343,6 +369,8 @@ export function MarketingWorkspacePage() {
           channelLabel: activeLabel,
           template: selectedTemplate,
           jobStatus: job.status,
+          sourceArtifactId: persistedArtifactId,
+          sourceJobId: persistedSourceJobId,
           materialReference: materialReferenceMetadata,
           materialReferenceSummary,
           layerPlan: {
@@ -388,6 +416,7 @@ export function MarketingWorkspacePage() {
           channel: activeChannel,
           template: selectedTemplate,
           sourceJobId: job.id,
+          sourceArtifactId: persistedArtifactId,
           materialReference: materialReferenceMetadata,
           materialReferenceSummary,
         },
@@ -660,12 +689,21 @@ export function MarketingWorkspacePage() {
           <section className="glass-panel rounded-2xl p-5">
             <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">マイプロジェクト</h2>
             <div className="mt-4 space-y-3">
-              {projects.map((project) => (
-                <button key={project.name} type="button" className="w-full rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-cyan-300/50 hover:bg-white/[0.07]">
-                  <p className="text-sm font-semibold text-white">{project.name}</p>
-                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{project.format} / {project.updated}</p>
-                </button>
-              ))}
+              {persistedProjects.length > 0 ? persistedProjects.map((project) => (
+                <Link
+                  key={project.id}
+                  to={buildMarketingProjectHref(project)}
+                  data-testid="marketing-project-card"
+                  className="block w-full rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-cyan-300/50 hover:bg-white/[0.07]"
+                >
+                  <p className="text-sm font-semibold text-white">{project.title}</p>
+                  <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">保存済み / {new Date(project.createdAt).toLocaleDateString('ja-JP')}</p>
+                </Link>
+              )) : (
+                <p data-testid="marketing-project-empty" className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+                  保存済みのマーケティングプロジェクトはありません。Canvasへ保存するとここに表示されます。
+                </p>
+              )}
             </div>
           </section>
 

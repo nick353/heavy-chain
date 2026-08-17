@@ -24,6 +24,7 @@ import { motion } from 'framer-motion';
 import { Button, ImageCompare } from '../components/ui';
 import { Modal } from '../components/ui/Modal';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
+import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import { PrintingCompositionStage } from '../components/workspace/PrintingCompositionStage';
 import { PrintMaskCandidatePicker } from '../components/workspace/PrintMaskCandidatePicker';
 import { PrintMaskEditor } from '../components/workspace/PrintMaskEditor';
@@ -59,25 +60,30 @@ import {
 } from '../features/printing/selection/printDesignHandoff';
 import { PRINT_DESIGN_ASSET_PURPOSE } from '../features/printing/selection/printDesignAssetPurpose';
 import {
-  settleComposition,
-  waitForDisplayableImage,
-} from '../features/printing/history/progressivePrintGeneration';
-import {
   listPrintResultFavoriteIds,
   savePrintResultFavorite,
 } from '../features/printing/history/printResultFavorite';
 import { useAuthStore } from '../stores/authStore';
+import { useCanvasStore } from '../stores/canvasStore';
+import {
+  deleteWorkspaceArtifactsPersisted,
+  listWorkspaceGeneratedImages,
+  saveWorkspaceArtifactPersisted,
+} from '../lib/localWorkspaceArtifacts';
+import { persistProviderResultArtifact } from '../lib/providerResultPersistence';
+import { withSignedImageUrls } from '../lib/storage';
 import {
   buildDerivedPrintGarmentMaskCandidates,
   buildPrintGarmentCutoutDataUrl,
   buildHighPrecisionMaterialCutoutDataUrl,
+  buildWhiteBackgroundGarmentCutoutDataUrl,
+  buildPortraitGarmentPriorCutoutDataUrl,
   buildEncodedManualPrintableSurface,
   buildPrintableSurfaceStageMaskDataUrl,
   buildPrintDesignCutoutDataUrl,
   buildPrintRequestSignature,
-  buildPrintRequestSnapshot,
+  preparePrintGarmentClothModel,
   renderExperimentalSurfaceComposition,
-  renderPrintRequestComposition,
   isPrintGarmentModnetModelConfigured,
   isPrintGarmentBen2ModelConfigured,
   isPrintGarmentClothModelConfigured,
@@ -134,6 +140,7 @@ import {
   type GarmentSegmentationTarget,
   type GarmentSelectionSource,
 } from '../features/printing/selection/garmentSegmentationPolicy';
+import type { ClothModelWarmupProgress } from '../features/printing/selection/clothModelWarmup';
 import {
   canConfirmPlacementEdit,
   createPlacementEditBaseline,
@@ -145,9 +152,28 @@ import {
   LIGHTCHAIN_MATERIAL_TABS,
   getLightchainMaterialTab,
 } from '../lib/lightchainMaterialContract';
+import { buildLightchainProviderPrompt } from '../features/lightchain/providerAdapter';
+import {
+  buildLightchainParityRuntime,
+  serializeLightchainParityRuntime,
+} from '../features/lightchain/parityRuntime';
+import {
+  buildProviderGarmentEditMask,
+  composeProviderProtectedResult,
+} from '../features/lightchain/providerMask';
+import { assertCompletedImageEditResult, editImageWithPrompt } from '../lib/imageApi';
+import { downloadValidatedImage } from '../lib/imageDownload';
+import type { GeneratedImage, Json } from '../types/database';
 
 type WorkbenchMode = 'fabric' | 'printing';
 type PrintCoverageMode = 'spot' | 'full';
+const MATERIAL_TOOLBAR_ROUTES: Record<string, string> = {
+  'ツールバー': '/lightchain',
+  'デザインツール': '/lightchain?category=planning',
+  'フィッティングツール': '/lightchain?category=fitting',
+  'グラフィックデザインツール': '/lightchain?category=graphics',
+  '衣類生産ツール': '/lightchain/printing-image',
+};
 const PRINT_COVERAGE_OPTIONS: Array<{ value: PrintCoverageMode; label: string }> = [
   { value: 'spot', label: 'スポット' },
   { value: 'full', label: '全体' },
@@ -195,13 +221,111 @@ type WorkbenchResult = {
   id: string;
   brandId: string;
   runId?: string;
-  resultKind?: 'exact' | 'fabric' | 'surface';
+  resultKind?: 'exact' | 'fabric' | 'surface' | 'provider';
   generatedAt?: number;
   title: string;
   note: string;
   imageUrl: string;
   outputSize?: { width: number; height: number };
   assetRef?: string;
+  generationMode?: 'provider' | 'preview';
+  provider?: string | null;
+  backendProvider?: string | null;
+  jobId?: string | null;
+  imageId?: string | null;
+  storagePath?: string | null;
+  inputImageCount?: number;
+  maskApplied?: boolean;
+  maskCoveragePercent?: number | null;
+  maskWidth?: number | null;
+  maskHeight?: number | null;
+  providerModel?: string | null;
+  inputFidelity?: 'low' | 'high' | null;
+  quality?: 'low' | 'medium' | 'high' | 'auto' | null;
+  protectedRegionComposited?: boolean;
+  persistenceStatus?: string | null;
+  artifactId?: string | null;
+  parityRuntime?: ReturnType<typeof serializeLightchainParityRuntime>;
+};
+
+const FABRIC_PROVIDER_RESULT_FEATURE_TYPE = 'lightchain-fabric-image-provider-result';
+
+const jsonRecord = (value: Json | null | undefined): Record<string, Json | undefined> => (
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, Json | undefined>
+    : {}
+);
+
+const jsonString = (value: Json | undefined): string | null => (
+  typeof value === 'string' && value.trim() ? value : null
+);
+
+const jsonNumber = (value: Json | undefined): number | null => (
+  typeof value === 'number' && Number.isFinite(value) ? value : null
+);
+
+const jsonBoolean = (value: Json | undefined): boolean | null => (
+  typeof value === 'boolean' ? value : null
+);
+
+const restoredMaterialOutputSize = (value: Json | undefined): { width: number; height: number } | undefined => {
+  const record = jsonRecord(value);
+  const width = jsonNumber(record.width);
+  const height = jsonNumber(record.height);
+  return width && height && width > 0 && height > 0
+    ? { width, height }
+    : undefined;
+};
+
+const restoredMaterialQuality = (value: Json | undefined): WorkbenchResult['quality'] => {
+  const quality = jsonString(value);
+  return quality === 'low' || quality === 'medium' || quality === 'high' || quality === 'auto'
+    ? quality
+    : null;
+};
+
+const restoredMaterialInputFidelity = (value: Json | undefined): WorkbenchResult['inputFidelity'] => {
+  const fidelity = jsonString(value);
+  return fidelity === 'low' || fidelity === 'high' ? fidelity : null;
+};
+
+const restoredFabricProviderResult = (image: GeneratedImage): WorkbenchResult | null => {
+  if (image.feature_type !== FABRIC_PROVIDER_RESULT_FEATURE_TYPE) return null;
+  const metadata = jsonRecord(image.metadata);
+  if (metadata.providerResultArtifact !== true) return null;
+  const imageUrl = image.image_url?.trim();
+  if (!imageUrl) return null;
+
+  const generatedAt = Date.parse(image.created_at);
+  return {
+    id: image.id,
+    brandId: image.brand_id,
+    runId: jsonString(metadata.providerJobId) ?? image.job_id ?? undefined,
+    resultKind: 'provider',
+    generatedAt: Number.isFinite(generatedAt) ? generatedAt : undefined,
+    title: jsonString(metadata.title) ?? '生地イメージ AI生成',
+    note: image.prompt ?? jsonString(metadata.brief) ?? '生地画像を衣服領域へ反映',
+    imageUrl,
+    outputSize: restoredMaterialOutputSize(metadata.outputSize),
+    generationMode: 'provider',
+    provider: jsonString(metadata.provider),
+    backendProvider: jsonString(metadata.backendProvider),
+    jobId: jsonString(metadata.providerJobId) ?? image.job_id,
+    imageId: jsonString(metadata.remoteImageId) ?? jsonString(metadata.providerImageId),
+    storagePath: image.storage_path,
+    inputImageCount: jsonNumber(metadata.inputImageCount) ?? undefined,
+    maskApplied: jsonBoolean(metadata.maskApplied) ?? false,
+    maskCoveragePercent: jsonNumber(metadata.maskCoveragePercent),
+    maskWidth: jsonNumber(metadata.maskWidth),
+    maskHeight: jsonNumber(metadata.maskHeight),
+    providerModel: jsonString(metadata.providerModel),
+    inputFidelity: restoredMaterialInputFidelity(metadata.inputFidelity),
+    quality: restoredMaterialQuality(metadata.quality),
+    protectedRegionComposited: jsonBoolean(metadata.protectedRegionComposited) ?? false,
+    persistenceStatus: jsonString(metadata.persistenceStatus),
+    artifactId: image.id,
+    parityRuntime: metadata.parityRuntime,
+  };
 };
 
 type ProgressivePrintSurface = {
@@ -221,17 +345,27 @@ const preferredScrollBehavior = (): ScrollBehavior => (
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 );
 
+const downloadWorkbenchResult = async (result: WorkbenchResult) => {
+  await downloadValidatedImage(
+    result.imageUrl,
+    `heavy-chain-${result.id}-${result.outputSize?.width ?? 'result'}x${result.outputSize?.height ?? 'image'}.png`,
+    'print_result_download',
+  );
+};
+
 function WorkbenchResultCard({
   result,
   onOpen,
   onFavorite,
   onDeleteRun,
+  onSaveToCanvas,
   isFavorite = false,
 }: {
   result: WorkbenchResult;
   onOpen: (result: WorkbenchResult) => void;
   onFavorite?: (result: WorkbenchResult) => void;
   onDeleteRun?: (result: WorkbenchResult) => void;
+  onSaveToCanvas?: (result: WorkbenchResult) => void;
   isFavorite?: boolean;
 }) {
   const surfaceBadge = result.resultKind === 'exact'
@@ -240,6 +374,8 @@ function WorkbenchResultCard({
       ? { eyebrow: 'FABRIC', label: '布になじませる', className: 'border-fuchsia-200/35 bg-fuchsia-950/85 text-fuchsia-50' }
       : result.resultKind === 'surface'
         ? { eyebrow: 'SURFACE', label: '布面追従（試験）', className: 'border-amber-200/35 bg-amber-950/85 text-amber-50' }
+        : result.resultKind === 'provider'
+          ? { eyebrow: 'PROVIDER', label: 'AI生成', className: 'border-emerald-200/35 bg-emerald-950/85 text-emerald-50' }
         : null;
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/30">
@@ -272,6 +408,18 @@ function WorkbenchResultCard({
           {result.outputSize && (
             <p className="mt-1 text-xs text-cyan-200">{result.outputSize.width} × {result.outputSize.height}px</p>
           )}
+          {result.generationMode === 'provider' && (
+            <p data-testid={`provider-result-provenance-${result.id}`} className="mt-1 text-[11px] leading-relaxed text-emerald-200/80">
+              {result.provider ?? 'provider'} / {result.backendProvider ?? 'edge-function'}
+              {result.inputImageCount ? ` / 入力${result.inputImageCount}枚` : ''}
+              {result.providerModel ? ` / ${result.providerModel}` : ''}
+              {result.inputFidelity ? ` / fidelity=${result.inputFidelity}` : ''}
+              {result.quality ? ` / quality=${result.quality}` : ''}
+              {result.maskApplied ? ` / mask=${result.maskCoveragePercent?.toFixed(1) ?? '?'}%` : ''}
+              {result.protectedRegionComposited ? ' / protected=source-outside-mask' : ''}
+              {result.jobId ? ` / job ${result.jobId}` : ''}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {onFavorite && (
@@ -297,15 +445,25 @@ function WorkbenchResultCard({
             </button>
           )}
           {result.outputSize && (
-            <a
-              href={result.imageUrl}
-              download={`heavy-chain-${result.id}-${result.outputSize.width}x${result.outputSize.height}.png`}
+            <button
+              type="button"
+              onClick={() => void downloadWorkbenchResult(result).catch(() => toast.error('ダウンロードに失敗しました'))}
               data-testid={`print-result-download-${result.id}`}
               aria-label={`${result.title}のPNGをダウンロード`}
               className="inline-flex rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 transition hover:border-cyan-300/40 hover:text-cyan-100"
             >
               PNGをダウンロード
-            </a>
+            </button>
+          )}
+          {onSaveToCanvas && (
+            <button
+              type="button"
+              onClick={() => onSaveToCanvas(result)}
+              data-testid={`result-save-to-canvas-${result.id}`}
+              className="inline-flex rounded-lg border border-emerald-300/30 px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-300/10"
+            >
+              Canvasへ保存
+            </button>
           )}
         </div>
       </div>
@@ -425,24 +583,6 @@ const surfaceConformStatusMessage = (reason: string) => {
   return messages[reason] ?? `布面追従（試験）を省略しました: ${reason}`;
 };
 
-const waitForCommittedPaint = () => new Promise<void>((resolve) => {
-  let settled = false;
-  let firstFrame = 0;
-  let secondFrame = 0;
-  const finish = () => {
-    if (settled) return;
-    settled = true;
-    window.clearTimeout(fallbackTimer);
-    if (firstFrame) window.cancelAnimationFrame(firstFrame);
-    if (secondFrame) window.cancelAnimationFrame(secondFrame);
-    resolve();
-  };
-  const fallbackTimer = window.setTimeout(finish, 250);
-  firstFrame = window.requestAnimationFrame(() => {
-    secondFrame = window.requestAnimationFrame(finish);
-  });
-});
-
 const printableSuggestionStatusMessage = (reason: string) => {
   const messages: Record<string, string> = {
     EMPTY_GARMENT: '服の領域を確認できなかったため、手動指定を使ってください。',
@@ -529,7 +669,7 @@ const CLOTH_CUTOUT_TIMEOUT_MS = 105_000;
 const FABRIC_MODEL_MASK_TIMEOUT_MS = 150_000;
 const MODNET_CUTOUT_TIMEOUT_MS = 60_000;
 const BEN2_CUTOUT_TIMEOUT_MS = 180_000;
-const COMPOSITION_TIMEOUT_MS = 30_000;
+const PROVIDER_GENERATION_TIMEOUT_MS = 180_000;
 const imageLoadCache = new Map<string, Promise<HTMLImageElement>>();
 
 function clamp(value: number, min: number, max: number) {
@@ -575,8 +715,6 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   }
 }
 
-const yieldToBrowser = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
   let timeoutId: number | undefined;
   const timeout = new Promise<never>((_, reject) => {
@@ -611,7 +749,14 @@ async function buildFabricReferenceOverlay(imageUrl: string): Promise<string> {
       return artworkResult.dataUrl;
     } catch (artworkError) {
       console.warn('Fabric reference overlay cutout failed.', { garmentError, artworkError });
-      throw new Error('生地画像の背景を分離できませんでした。服だけが写った画像で再試行してください');
+      // A fabric reference is often a flat pattern swatch rather than a
+      // photographed garment. Both cutout models are intentionally best
+      // effort here: forcing a textile swatch through garment segmentation
+      // made the provider route fail before generation. The raw texture is a
+      // valid reference for the provider and for the masked local preview;
+      // keep it as the terminal fallback instead of converting a valid input
+      // into a false generation blocker.
+      return imageUrl;
     }
   }
 }
@@ -736,25 +881,67 @@ function keepCentralGarmentMaskComponent(
   maskContext.putImageData(mask, 0, 0);
 }
 
-async function buildFabricModelGarmentMask(imageUrl: string): Promise<string> {
-  if (!isPrintGarmentClothModelConfigured()) {
-    throw new Error('モデル画像の衣服領域AIが未配置のため、生地を安全に適用できません');
+async function buildFabricModelGarmentMask(imageUrl: string): Promise<MaterialCutoutResult> {
+  let result: MaterialCutoutResult;
+  let deterministicError: unknown;
+  try {
+    // The current fabric fixture is a white-background garment image. Prefer
+    // the bounded local cutout for that known input shape so a cold/blocked
+    // semantic ONNX asset cannot stall the provider request. The semantic
+    // model remains an opt-in secondary lane for non-uniform backgrounds.
+    result = await withTimeout(
+      buildWhiteBackgroundGarmentCutoutDataUrl({
+        imageUrl,
+        preserveSourceFrame: true,
+      }),
+      FABRIC_MODEL_MASK_TIMEOUT_MS,
+      'モデル画像の白背景衣服マスク生成がタイムアウトしました。背景が単色の画像で再試行してください',
+    );
+  } catch (error) {
+    deterministicError = error;
+    try {
+      result = await withTimeout(
+        buildPortraitGarmentPriorCutoutDataUrl({
+          imageUrl,
+          preserveSourceFrame: true,
+        }),
+        FABRIC_MODEL_MASK_TIMEOUT_MS,
+        'モデル画像から衣服領域を確定できませんでした。柄が見える縦長画像で再試行してください',
+      );
+    } catch (semanticError) {
+      deterministicError = { deterministicError, portraitPriorError: semanticError };
+      if (!isPrintGarmentClothModelConfigured()) throw semanticError;
+      try {
+        result = await withTimeout(
+          buildHighPrecisionMaterialCutoutDataUrl({
+            imageUrl,
+            modelName: 'u2net_cloth_seg',
+            segmentationTarget: 'upper',
+            postProcessMask: false,
+            preserveSourceFrame: true,
+          }),
+          FABRIC_MODEL_MASK_TIMEOUT_MS,
+          'モデル画像の衣服領域認識がタイムアウトしました。別の画像で再試行してください',
+        );
+      } catch (semanticModelError) {
+        console.warn('Fabric provider mask generation failed in deterministic, portrait-prior, and semantic lanes.', {
+          deterministicError,
+          semanticModelError,
+        });
+        throw semanticModelError;
+      }
+    }
   }
-  const result = await withTimeout(
-    buildHighPrecisionMaterialCutoutDataUrl({
-      imageUrl,
-      modelName: 'u2net_cloth_seg',
-      segmentationTarget: 'upper',
-      postProcessMask: false,
-      preserveSourceFrame: true,
-    }),
-    FABRIC_MODEL_MASK_TIMEOUT_MS,
-    'モデル画像の衣服領域認識がタイムアウトしました。別の画像で再試行してください',
-  );
-  if (result.engine !== 'browser-ai-u2net_cloth_seg-v1' || result.segmentationTarget !== 'upper') {
+  const isDedicatedClothResult = result.engine === 'browser-ai-u2net_cloth_seg-v1'
+    && result.segmentationTarget === 'upper';
+  const isSafeWhiteBackgroundFallback = result.engine === 'browser-local-white-background-garment-cutout-v1'
+    && result.hasTransparentPixels;
+  const isSafePortraitPriorFallback = result.engine === 'browser-local-portrait-garment-prior-v1'
+    && result.hasTransparentPixels;
+  if (!isDedicatedClothResult && !isSafeWhiteBackgroundFallback && !isSafePortraitPriorFallback) {
     throw new Error('モデル画像の衣服領域を専用AIで確定できませんでした。服が見える画像で再試行してください');
   }
-  return result.dataUrl;
+  return result;
 }
 
 async function renderFabricTryOnComposition({
@@ -1095,7 +1282,8 @@ function LayerPreview({
 export function LightchainMaterialWorkbenchPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentBrand, isInitialized: isAuthInitialized, isLoading: isAuthLoading } = useAuthStore();
+  const { user, currentBrand, isInitialized: isAuthInitialized, isLoading: isAuthLoading } = useAuthStore();
+  const { createProject, deleteProject, addObject, selectObject, saveCurrentProject } = useCanvasStore();
   const mode: WorkbenchMode = location.pathname.includes('printing') ? 'printing' : 'fabric';
   const isPrinting = mode === 'printing';
   // The recorded Light Chain print flow is intentionally direct: reference image
@@ -1115,6 +1303,7 @@ export function LightchainMaterialWorkbenchPage() {
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const userClearedSelectionRef = useRef(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [providerRightsConfirmed, setProviderRightsConfirmed] = useState(false);
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
   const [progressivePrintRun, setProgressivePrintRun] = useState<ProgressivePrintRun | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -1134,7 +1323,7 @@ export function LightchainMaterialWorkbenchPage() {
   const [fabricBase, setFabricBase] = useState<SelectedImage | null>(null);
   const [fabricDesign, setFabricDesign] = useState<SelectedImage | null>(null);
   const [fabricPreviewOverlayUrl, setFabricPreviewOverlayUrl] = useState<string | null>(null);
-  const [fabricModelGarmentMaskUrl, setFabricModelGarmentMaskUrl] = useState<string | null>(null);
+  const [fabricModelGarmentMaskResult, setFabricModelGarmentMaskResult] = useState<MaterialCutoutResult | null>(null);
   const [fabricTryOnPreviewUrl, setFabricTryOnPreviewUrl] = useState<string | null>(null);
   const [fabricPreviewState, setFabricPreviewState] = useState<CutoutState>('idle');
   const [fabricPreviewError, setFabricPreviewError] = useState<string | null>(null);
@@ -1156,6 +1345,9 @@ export function LightchainMaterialWorkbenchPage() {
   const [printGarmentMaskExplicitlyConfirmed, setPrintGarmentMaskExplicitlyConfirmed] = useState(false);
   const [printGarmentCutoutState, setPrintGarmentCutoutState] = useState<CutoutState>('idle');
   const [printGarmentCutoutError, setPrintGarmentCutoutError] = useState<string | null>(null);
+  const [clothModelWarmupStatus, setClothModelWarmupStatus] = useState<'idle' | 'warming' | 'ready' | 'unconfigured' | 'unavailable' | 'error'>('idle');
+  const [clothModelWarmupProgress, setClothModelWarmupProgress] = useState<ClothModelWarmupProgress | null>(null);
+  const [clothModelWarmupError, setClothModelWarmupError] = useState<string | null>(null);
   const [printDesigns, setPrintDesigns] = useState<SelectedImage[]>([]);
   const [printDesignLayers, setPrintDesignLayers] = useState<AssetLayer[]>([]);
   const [printPlacementSessionOpen, setPrintPlacementSessionOpen] = useState(false);
@@ -1196,6 +1388,7 @@ export function LightchainMaterialWorkbenchPage() {
   const printDesignReturnFrameRef = useRef<number | null>(null);
   const printRequestRevisionRef = useRef(0);
   const generationSequenceRef = useRef(0);
+  const fabricHistoryHydrationGenerationRef = useRef(0);
   const surfaceJobSequenceRef = useRef(0);
   const generationRequestRef = useRef<number | null>(null);
   const generationRequestSignatureRef = useRef<string | null>(null);
@@ -1385,6 +1578,7 @@ export function LightchainMaterialWorkbenchPage() {
   useEffect(() => {
     if (generationInputEffectSignatureRef.current === generationInputSignature) return;
     generationInputEffectSignatureRef.current = generationInputSignature;
+    setProviderRightsConfirmed(false);
     if (generatedResults.length > 0) setGeneratedResultsStale(true);
     setPendingSurfaceJob(null);
     setProgressivePrintRun(null);
@@ -1462,6 +1656,41 @@ export function LightchainMaterialWorkbenchPage() {
         console.warn('Printing result history persistence skipped.', error);
       });
   }, [currentBrand?.id, generatedResults, isPrinting]);
+
+  useEffect(() => {
+    if (isPrinting || !currentBrand?.id) return;
+    const brandId = currentBrand.id;
+    const hydrationGeneration = ++fabricHistoryHydrationGenerationRef.current;
+    let cancelled = false;
+    setGeneratedResults((current) => current.filter(
+      (result) => result.id.startsWith('print-') || result.brandId === brandId,
+    ));
+
+    const hydrateFabricHistory = async () => {
+      const persistedImages = listWorkspaceGeneratedImages(brandId, user?.id)
+        .filter((image) => image.feature_type === FABRIC_PROVIDER_RESULT_FEATURE_TYPE);
+      const signedImages = await withSignedImageUrls(persistedImages).catch(() => persistedImages);
+      const restoredResults = signedImages
+        .map(restoredFabricProviderResult)
+        .filter((result): result is WorkbenchResult => Boolean(result));
+      if (cancelled || hydrationGeneration !== fabricHistoryHydrationGenerationRef.current) return;
+      if (restoredResults.length > 0) {
+        setGeneratedResultsStale(true);
+        setGeneratedResults((current) => {
+          const currentFabricResults = current.filter((result) => !result.id.startsWith('print-'));
+          if (currentFabricResults.length > 0) return current;
+          return [...restoredResults, ...current.filter((result) => result.id.startsWith('print-'))];
+        });
+      }
+    };
+
+    void hydrateFabricHistory().catch((error) => {
+      if (!cancelled) console.warn('Fabric result history restore skipped.', error);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBrand?.id, isPrinting, user?.id]);
 
   const printSnapshotSignature = useMemo(() => {
     if (!currentBrand?.id || !printGarmentProcessed) return '';
@@ -1799,7 +2028,7 @@ export function LightchainMaterialWorkbenchPage() {
     const requestId = ++fabricPreviewRequestRef.current;
     if (!fabricBase?.url || !fabricDesign?.url) {
       setFabricPreviewOverlayUrl(null);
-      setFabricModelGarmentMaskUrl(null);
+      setFabricModelGarmentMaskResult(null);
       setFabricTryOnPreviewUrl(null);
       setFabricPreviewState('idle');
       setFabricPreviewError(null);
@@ -1808,7 +2037,7 @@ export function LightchainMaterialWorkbenchPage() {
 
     let cancelled = false;
     setFabricPreviewOverlayUrl(null);
-    setFabricModelGarmentMaskUrl(null);
+    setFabricModelGarmentMaskResult(null);
     setFabricTryOnPreviewUrl(null);
     setFabricPreviewState('processing');
     setFabricPreviewError(null);
@@ -1819,23 +2048,38 @@ export function LightchainMaterialWorkbenchPage() {
         ? { width: 1280, height: 720 }
         : { width: 900, height: 1125 };
     void (async () => {
-      const overlayUrl = await buildFabricReferenceOverlay(fabricBase.url);
-      const modelGarmentMaskUrl = await buildFabricModelGarmentMask(fabricDesign.url);
-      const previewUrl = await renderFabricTryOnComposition({
-        stageWidth: previewSize.width,
-        stageHeight: previewSize.height,
-        modelUrl: fabricDesign.url,
-        fabricOverlayUrl: overlayUrl,
-        garmentMaskUrl: modelGarmentMaskUrl,
-        backgroundColor: FABRIC_OUTPUT_BACKGROUND,
-        variant: previewVariant,
-      });
-      return { overlayUrl, modelGarmentMaskUrl, previewUrl };
+      // The provider receives the original model and textile references. The
+      // browser-side cutout is only a convenience preview and must not turn a
+      // valid provider input into a hard generation blocker when a white
+      // background or flat swatch defeats the optional segmentation model.
+      let overlayUrl = fabricBase.url;
+      try {
+        overlayUrl = await buildFabricReferenceOverlay(fabricBase.url);
+      } catch (error) {
+        console.warn('Fabric reference preview cutout unavailable; using raw textile reference.', error);
+      }
+
+      try {
+        const modelGarmentMaskResult = await buildFabricModelGarmentMask(fabricDesign.url);
+        const previewUrl = await renderFabricTryOnComposition({
+          stageWidth: previewSize.width,
+          stageHeight: previewSize.height,
+          modelUrl: fabricDesign.url,
+          fabricOverlayUrl: overlayUrl,
+          garmentMaskUrl: modelGarmentMaskResult.dataUrl,
+          backgroundColor: FABRIC_OUTPUT_BACKGROUND,
+          variant: previewVariant,
+        });
+        return { overlayUrl, modelGarmentMaskResult, previewUrl };
+      } catch (error) {
+        console.warn('Fabric local try-on preview unavailable; keeping the uploaded model visible.', error);
+        return { overlayUrl, modelGarmentMaskResult: null, previewUrl: fabricDesign.url };
+      }
     })()
-      .then(({ overlayUrl, modelGarmentMaskUrl, previewUrl }) => {
+      .then(({ overlayUrl, modelGarmentMaskResult, previewUrl }) => {
         if (cancelled || fabricPreviewRequestRef.current !== requestId) return;
         setFabricPreviewOverlayUrl(overlayUrl);
-        setFabricModelGarmentMaskUrl(modelGarmentMaskUrl);
+        setFabricModelGarmentMaskResult(modelGarmentMaskResult);
         setFabricTryOnPreviewUrl(previewUrl);
         setFabricPreviewState('done');
       })
@@ -1988,6 +2232,47 @@ export function LightchainMaterialWorkbenchPage() {
     };
   }, [clearManualPrintableSurface, invalidatePrintableSuggestion, printGarment, printGarmentCutoutSourceUrl, printGarmentSelectionMaskUrl, printGarmentSegmentationTarget, printGarmentSelectionSource]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!isPrinting || !printGarment?.url || printGarmentCutoutState !== 'done') {
+      setClothModelWarmupStatus('idle');
+      setClothModelWarmupProgress(null);
+      setClothModelWarmupError(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (!clothModelConfigured) {
+      setClothModelWarmupStatus('unconfigured');
+      setClothModelWarmupProgress(null);
+      setClothModelWarmupError(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setClothModelWarmupStatus('warming');
+    setClothModelWarmupProgress(null);
+    setClothModelWarmupError(null);
+    void preparePrintGarmentClothModel((progress) => {
+      if (cancelled) return;
+      setClothModelWarmupProgress(progress);
+    })
+      .then((result) => {
+        if (cancelled) return;
+        setClothModelWarmupStatus(result.status);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setClothModelWarmupStatus('error');
+        setClothModelWarmupError(error instanceof Error ? error.message : String(error));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clothModelConfigured, isPrinting, printGarment?.url, printGarmentCutoutState]);
+
   const selectPrintGarmentMaskCandidate = (candidateId: PrintGarmentMaskCandidateId) => {
     if (candidateId === selectedPrintGarmentMaskCandidateId) return;
     invalidatePrintableSuggestion();
@@ -2077,7 +2362,9 @@ export function LightchainMaterialWorkbenchPage() {
     }));
   }, [fabricBase, fabricDesign]);
 
-  const handleGenerate = async () => {
+  const handleLegacyPreviewGenerate = async () => {
+    return;
+    /*
     if (isPrinting) invalidatePrintableSuggestion();
     if (!stageRef.current && !isPrinting) return;
     let generationBrand = currentBrand;
@@ -2094,6 +2381,13 @@ export function LightchainMaterialWorkbenchPage() {
       const message = '保存先ブランドを取得できませんでした。ブランド設定を確認して再試行してください';
       setGenerationError(message);
       toast.error(message);
+      return;
+    }
+
+    if (!providerRightsConfirmed) {
+      const message = 'rights_confirmation_required';
+      setGenerationError(message);
+      toast.error('AI生成前に、アップロード素材の権利・利用許諾を確認してください');
       return;
     }
 
@@ -2165,7 +2459,7 @@ export function LightchainMaterialWorkbenchPage() {
 
       if (!isPrinting) {
         const fabricOverlayUrl = fabricPreviewOverlayUrl ?? await buildFabricReferenceOverlay(fabricBase!.url);
-        const fabricModelMaskUrl = fabricModelGarmentMaskUrl ?? await buildFabricModelGarmentMask(fabricDesign!.url);
+        const fabricModelMaskResult = fabricModelGarmentMaskResult ?? await buildFabricModelGarmentMask(fabricDesign!.url);
         if (!isCurrentRequest()) return;
 
         const variantResults: WorkbenchResult[] = [];
@@ -2177,7 +2471,7 @@ export function LightchainMaterialWorkbenchPage() {
               stageHeight: height,
               modelUrl: fabricDesign!.url,
               fabricOverlayUrl: fabricOverlayUrl,
-              garmentMaskUrl: fabricModelMaskUrl,
+              garmentMaskUrl: fabricModelMaskResult.dataUrl,
               backgroundColor: FABRIC_OUTPUT_BACKGROUND,
               variant: preset,
             }),
@@ -2394,6 +2688,375 @@ export function LightchainMaterialWorkbenchPage() {
       console.error('Workbench generation failed', error);
       if (isCurrentRequest()) {
         const message = error?.message || '生成に失敗しました';
+        setGenerationError(message);
+        if (generatedResults.length > 0) setGeneratedResultsStale(true);
+        toast.error(message);
+      }
+    } finally {
+      if (generationRequestRef.current === requestId) {
+        generationRequestRef.current = null;
+        generationRequestSignatureRef.current = null;
+        setIsGenerating(false);
+      }
+    }
+    */
+  };
+
+  void handleLegacyPreviewGenerate;
+
+  const handleGenerate = async () => {
+    if (isPrinting) invalidatePrintableSuggestion();
+    let generationBrand = currentBrand;
+    if (!generationBrand?.id) {
+      if (!isAuthInitialized || isAuthLoading) {
+        const message = 'ブランド情報を読み込み中です。少し待ってから再試行してください';
+        setGenerationError(message);
+        toast.error(message);
+        return;
+      }
+      generationBrand = await useAuthStore.getState().refreshCurrentBrand();
+    }
+    if (!generationBrand?.id) {
+      const message = '保存先ブランドを取得できませんでした。ブランド設定を確認して再試行してください';
+      setGenerationError(message);
+      toast.error(message);
+      return;
+    }
+    if (!providerRightsConfirmed) {
+      const message = 'rights_confirmation_required';
+      setGenerationError(message);
+      toast.error('AI生成前に、アップロード素材の権利・利用許諾を確認してください');
+      return;
+    }
+    if (!isPrinting && (!fabricBase || !fabricDesign)) {
+      toast.error('生地画像とデザイン画像を入れてください');
+      return;
+    }
+    if (isPrinting && (!printGarment || !printGarmentProcessed || printGarmentCutoutState !== 'done')) {
+      toast.error(printGarmentCutoutState === 'processing'
+        ? '背景の透明化が完了するまでお待ちください'
+        : '参考画像の透明化を完了してください');
+      return;
+    }
+    if (isPrinting && !printDesigns.length) {
+      toast.error('プリント画像を1つ以上選択してください');
+      return;
+    }
+    if (isPrinting && printDesignsProcessing) {
+      toast.error('プリント画像の透明化が完了するまでお待ちください');
+      return;
+    }
+
+    const requestId = ++generationSequenceRef.current;
+    const requestSignature = generationInputSignatureRef.current;
+    generationRequestRef.current = requestId;
+    generationRequestSignatureRef.current = requestSignature;
+    setIsGenerating(true);
+    setGenerationError(null);
+    setSurfaceConformStatus(null);
+    setPendingSurfaceJob(null);
+    setProgressivePrintRun(null);
+    if (generatedResults.length > 0) setGeneratedResultsStale(true);
+    const isCurrentRequest = () => (
+      generationRequestRef.current === requestId
+      && generationSequenceRef.current === requestId
+      && generationInputSignatureRef.current === requestSignature
+    );
+
+    try {
+      const printReferenceUrls = printDesigns.map((design) => design.url).filter(Boolean).slice(0, 15);
+      const printPlacementSummary = placedPrintDesignLayers.map((layer, index) => ({
+        index,
+        layerId: layer.id,
+        x: layer.transform.x,
+        y: layer.transform.y,
+        scale: layer.transform.scale,
+        rotation: layer.transform.rotation,
+        opacity: layer.transform.opacity,
+        flipX: layer.transform.flipX,
+        flipY: layer.transform.flipY,
+      }));
+      const providerGarmentCutout = isPrinting
+        ? selectedPrintGarmentMaskCandidate?.result ?? null
+        : fabricModelGarmentMaskResult ?? null;
+      if (!providerGarmentCutout) {
+        throw new Error('provider_garment_mask_required');
+      }
+      const providerGarmentMask = await withTimeout(
+        buildProviderGarmentEditMask({
+          sourceImageUrl: isPrinting ? printGarment!.url : fabricDesign!.url,
+          garmentCutout: providerGarmentCutout,
+        }),
+        FABRIC_MODEL_MASK_TIMEOUT_MS,
+        '衣服領域マスクの生成がタイムアウトしました。画像を確認して再試行してください',
+      );
+      if (!isCurrentRequest()) return;
+      const providerPrompt = isPrinting
+        ? buildLightchainProviderPrompt({
+            toolId: 'printing-image',
+            toolTitle: 'プリントイメージ',
+            summary: `${PRINT_COVERAGE_OPTIONS.find((option) => option.value === printCoverageMode)?.label ?? 'スポット'}範囲 / ${printPlacementSummary.length}件 / 出力倍率${printOutputScale}x`,
+            primaryName: printGarment?.file?.name ?? '参考画像',
+            secondaryName: printDesigns[0]?.file?.name ?? 'プリント画像',
+            brief: '参考画像の服の形・縫製・明暗を保ったまま、プリント画像を指定範囲へ自然に配置する',
+            referenceNote: '服の外側や無関係な背景をデザインとして扱わず、プリントの輪郭・色・向き・透明度を保持する',
+          })
+        : buildLightchainProviderPrompt({
+            toolId: 'fabric-image',
+            toolTitle: '生地イメージ',
+            summary: `${fabricImageRatio} / ${fabricPresetIds.map((id) => fabricVariants.find((variant) => variant.id === id)?.name ?? id).join('・')}`,
+            primaryName: fabricDesign?.file?.name ?? 'モデル/デザイン画像',
+            secondaryName: fabricBase?.file?.name ?? '生地画像',
+            brief: fabricPrompt.trim() || '白い衣服に指定した生地の質感と柄を自然に反映する',
+            referenceNote: 'モデル/デザイン画像を主画像、生地画像を質感・柄の参照として扱い、衣服の形・構造・人物を変更しない',
+          });
+      const parityRuntime = buildLightchainParityRuntime({
+        rowId: isPrinting ? 'printing-image' : 'fabric-image',
+        inputRoles: isPrinting ? ['garment', 'print-artwork'] : ['model-or-design', 'textile'],
+        fixtureId: [
+          isPrinting ? printGarment!.url : fabricDesign!.url,
+          ...(isPrinting ? printReferenceUrls : [fabricBase!.url]),
+        ].join('|'),
+        settings: {
+          mode,
+          coverage: isPrinting ? printCoverageMode : null,
+          outputScale: isPrinting ? printOutputScale : null,
+          fabricImageRatio: isPrinting ? null : fabricImageRatio,
+          fabricPresetIds: isPrinting ? [] : fabricPresetIds,
+          placement: isPrinting ? printPlacementSummary : [],
+        },
+      });
+      const parityRuntimeJson = serializeLightchainParityRuntime(parityRuntime);
+      const providerResult = await withTimeout(
+        isPrinting
+          ? editImageWithPrompt(
+              printGarment!.url,
+              providerPrompt,
+              generationBrand.id,
+              {
+                referenceImageUrls: printReferenceUrls,
+                maskDataUrl: providerGarmentMask.dataUrl,
+                maskApplied: true,
+                maskCoveragePercent: providerGarmentMask.coveragePercent,
+                maskWidth: providerGarmentMask.width,
+                maskHeight: providerGarmentMask.height,
+                providerModel: 'gpt-image-1',
+                inputFidelity: 'high',
+                quality: 'high',
+                rightsConfirmed: providerRightsConfirmed,
+                lightchainCompat: {
+                  lightchainFeatureId: 'printing-image',
+                  lightchainFeatureTitle: 'プリントイメージ',
+                  lightchainTaskCodes: ['printing_image', 'print_artwork_transfer'],
+                },
+                generationIntent: {
+                  feature: 'printing-image',
+                  coverageMode: printCoverageMode,
+                  designCount: printReferenceUrls.length,
+                },
+                materialReferences: [
+                  { role: 'garment', referenceType: printGarment?.referenceType ?? null, hasImage: true },
+                  ...printDesigns.map((design, index) => ({
+                    role: 'print-artwork',
+                    index,
+                    referenceType: design.referenceType,
+                    hasImage: true,
+                  })),
+                ],
+                layerPlan: {
+                  primary: 'garment',
+                  secondary: 'print-artwork',
+                  placement: printPlacementSummary,
+                },
+                maskPlan: {
+                  garmentCutoutReady: Boolean(printGarmentProcessed),
+                  garmentMaskCandidate: selectedPrintGarmentMaskCandidateId,
+                  garmentMaskRevision: printGarmentMaskRevision,
+                  providerMaskReady: true,
+                  providerMaskOrientation: providerGarmentMask.orientation,
+                  providerMaskCoveragePercent: providerGarmentMask.coveragePercent,
+                  providerMaskSourceEngine: providerGarmentMask.sourceEngine,
+                },
+                compositionPreview: {
+                  coverageMode: printCoverageMode,
+                  outputScale: printOutputScale,
+                  placement: printPlacementSummary,
+                  parityRuntime: parityRuntimeJson,
+                },
+              },
+            )
+          : editImageWithPrompt(
+              fabricDesign!.url,
+              providerPrompt,
+              generationBrand.id,
+              {
+                referenceImageUrls: [fabricBase!.url],
+                maskDataUrl: providerGarmentMask.dataUrl,
+                maskApplied: true,
+                maskCoveragePercent: providerGarmentMask.coveragePercent,
+                maskWidth: providerGarmentMask.width,
+                maskHeight: providerGarmentMask.height,
+                providerModel: 'gpt-image-1',
+                inputFidelity: 'high',
+                quality: 'high',
+                rightsConfirmed: providerRightsConfirmed,
+                lightchainCompat: {
+                  lightchainFeatureId: 'fabric-image',
+                  lightchainFeatureTitle: '生地イメージ',
+                  lightchainTaskCodes: ['fabric_image', 'fabric_material_transfer'],
+                },
+                generationIntent: {
+                  feature: 'fabric-image',
+                  imageRatio: fabricImageRatio,
+                  selectedPresets: fabricPresetIds,
+                },
+                materialReferences: [
+                  { role: 'model-or-design', referenceType: fabricDesign?.referenceType ?? null, hasImage: true },
+                  { role: 'textile', referenceType: fabricBase?.referenceType ?? null, hasImage: true },
+                ],
+                layerPlan: {
+                  primary: 'model-or-design',
+                  secondary: 'textile',
+                  materialTransfer: 'garment-only',
+                },
+                maskPlan: {
+                  modelGarmentMaskReady: true,
+                  textileReferenceMaskReady: Boolean(fabricPreviewOverlayUrl),
+                  providerMaskReady: true,
+                  providerMaskOrientation: providerGarmentMask.orientation,
+                  providerMaskCoveragePercent: providerGarmentMask.coveragePercent,
+                  providerMaskSourceEngine: providerGarmentMask.sourceEngine,
+                },
+                compositionPreview: {
+                  imageRatio: fabricImageRatio,
+                  selectedPresets: fabricPresetIds,
+                  source: 'uploaded-reference-pair',
+                  parityRuntime: parityRuntimeJson,
+                },
+              },
+            ),
+        PROVIDER_GENERATION_TIMEOUT_MS,
+        isPrinting ? 'プリント画像のAI生成がタイムアウトしました。素材を確認して再試行してください' : '生地画像のAI生成がタイムアウトしました。素材を確認して再試行してください',
+      );
+      if (!isCurrentRequest()) return;
+      assertCompletedImageEditResult(providerResult, `provider_${mode}_result`);
+      const protectedComposite = await withTimeout(
+        composeProviderProtectedResult({
+          sourceImageUrl: isPrinting ? printGarment!.url : fabricDesign!.url,
+          providerImageUrl: providerResult.imageUrl,
+          maskDataUrl: providerGarmentMask.dataUrl,
+        }),
+        30_000,
+        'AI生成結果の衣服外領域を元画像へ戻せませんでした。画像を確認して再試行してください',
+      );
+      const outputImage = await loadImage(protectedComposite.dataUrl);
+      if (!isCurrentRequest()) return;
+      const generatedAt = Date.now();
+      const runId = isPrinting ? `print-provider-${generatedAt}` : `fabric-provider-${generatedAt}`;
+      const result: WorkbenchResult = {
+        id: `${runId}-result`,
+        brandId: generationBrand.id,
+        runId,
+        resultKind: 'provider',
+        generatedAt,
+        title: isPrinting ? 'プリントイメージ AI生成' : '生地イメージ AI生成',
+        note: isPrinting
+          ? `${PRINT_COVERAGE_OPTIONS.find((option) => option.value === printCoverageMode)?.label ?? 'スポット'}範囲 / OpenAI画像編集 / 服の形状を保持`
+          : `${fabricImageRatio} / OpenAI画像編集 / 選択した生地参照を衣服領域へ反映`,
+        imageUrl: protectedComposite.dataUrl,
+        outputSize: {
+          width: Math.max(1, outputImage.naturalWidth || outputImage.width),
+          height: Math.max(1, outputImage.naturalHeight || outputImage.height),
+        },
+        generationMode: 'provider',
+        provider: providerResult.provider ?? 'openai',
+        backendProvider: providerResult.backendProvider ?? 'supabase-edge-function:edit-image',
+        jobId: providerResult.jobId ?? null,
+        imageId: providerResult.imageId ?? null,
+        storagePath: providerResult.storagePath ?? null,
+        inputImageCount: providerResult.inputImageCount ?? (1 + (isPrinting ? printReferenceUrls.length : 1)),
+        maskApplied: providerResult.maskApplied === true,
+        maskCoveragePercent: providerResult.maskCoveragePercent ?? providerGarmentMask.coveragePercent,
+        maskWidth: providerResult.maskWidth ?? providerGarmentMask.width,
+        maskHeight: providerResult.maskHeight ?? providerGarmentMask.height,
+        providerModel: providerResult.providerModel ?? 'gpt-image-1',
+        inputFidelity: providerResult.inputFidelity ?? 'high',
+        quality: providerResult.quality ?? 'high',
+        protectedRegionComposited: true,
+        persistenceStatus: providerResult.persistenceStatus ?? null,
+        parityRuntime: parityRuntimeJson,
+      };
+      const persistedProviderArtifact = await persistProviderResultArtifact({
+        brandId: generationBrand.id,
+        scopeId: user?.id,
+        featureType: `lightchain-${isPrinting ? 'printing-image' : 'fabric-image'}-provider-result`,
+        title: result.title,
+        imageUrl: result.imageUrl,
+        prompt: providerPrompt,
+        sourceJobId: result.jobId,
+        storagePath: result.storagePath,
+        requireRemote: true,
+        reuseCanonicalRemoteArtifact: false,
+        metadata: {
+          sourceWorkspace: 'lightchain-material-workbench-provider-result',
+          resultKind: result.resultKind ?? 'provider',
+          toolId: isPrinting ? 'printing-image' : 'fabric-image',
+          toolTitle: result.title,
+          brief: isPrinting
+            ? `${PRINT_COVERAGE_OPTIONS.find((option) => option.value === printCoverageMode)?.label ?? 'スポット'}範囲でプリントを配置する`
+            : fabricPrompt.trim() || '白い衣服に指定した生地の質感と柄を自然に反映する',
+          referenceNote: isPrinting
+            ? '服の外側や無関係な背景をデザインとして扱わず、プリントの輪郭・色・向き・透明度を保持する'
+            : 'モデル/デザイン画像を主画像、生地画像を質感・柄の参照として扱い、衣服の形・構造・人物を変更しない',
+          sourceLabel: result.title,
+          sourceResumePath: `/lightchain/${isPrinting ? 'printing-image' : 'fabric-image'}`,
+          mode,
+          providerJobId: result.jobId ?? null,
+          providerImageId: result.imageId ?? null,
+          providerStoragePath: result.storagePath ?? null,
+          provider: result.provider ?? null,
+          backendProvider: result.backendProvider ?? null,
+          imageId: result.imageId ?? null,
+          providerModel: result.providerModel ?? null,
+          inputFidelity: result.inputFidelity ?? null,
+          quality: result.quality ?? null,
+          inputImageCount: result.inputImageCount ?? null,
+          outputSize: result.outputSize ?? null,
+          generatedAt: result.generatedAt ?? null,
+          persistenceStatus: result.persistenceStatus ?? null,
+          protectedRegionComposited: result.protectedRegionComposited ?? false,
+          maskApplied: result.maskApplied ?? false,
+          maskCoveragePercent: result.maskCoveragePercent ?? null,
+          generationInputSignature: generationInputSignatureRef.current,
+          parityRuntime: parityRuntimeJson,
+        },
+      });
+      let persistedResult: WorkbenchResult = {
+        ...result,
+        jobId: persistedProviderArtifact.remote?.jobId ?? result.jobId,
+        imageId: persistedProviderArtifact.remote?.imageId ?? result.imageId,
+        storagePath: persistedProviderArtifact.remote?.storagePath ?? result.storagePath,
+        artifactId: persistedProviderArtifact.artifact.id,
+      };
+      if (isPrinting) {
+        const { assetRefs } = await persistPrintResultHistory(generationBrand.id, [persistedResult]);
+        const assetRef = assetRefs[persistedResult.id];
+        if (!assetRef) throw new Error('print_result_history_persistence_unverified');
+        persistedResult = { ...persistedResult, assetRef };
+      }
+      setGeneratedResults((previous) => isPrinting
+        ? mergePrintResultHistory([persistedResult], previous.filter((candidate) => candidate.id.startsWith('print-')))
+        : [persistedResult, ...previous.filter((candidate) => !candidate.id.startsWith('print-'))]);
+      setProgressivePrintRun(null);
+      setPendingSurfaceJob(null);
+      setSurfaceConformStatus(null);
+      setGeneratedResultsStale(false);
+      setGenerationError(null);
+      toast.success('OpenAI画像編集の生成結果を履歴に追加しました');
+    } catch (error: any) {
+      console.error('Provider generation failed', error);
+      if (isCurrentRequest()) {
+        const message = error?.message || 'provider_generation_failed';
         setGenerationError(message);
         if (generatedResults.length > 0) setGeneratedResultsStale(true);
         toast.error(message);
@@ -3260,6 +3923,7 @@ export function LightchainMaterialWorkbenchPage() {
     setFavoriteSaving(true);
     const saved = savePrintResultFavorite({
       brandId: favoriteTargetBrandId,
+      scopeId: user?.id,
       result: favoriteTargetResult,
       destinationLabel,
     });
@@ -3277,12 +3941,119 @@ export function LightchainMaterialWorkbenchPage() {
     toast.success(`「${destinationLabel}」へお気に入り保存しました`);
   };
 
+  const saveResultToCanvas = (result: WorkbenchResult) => {
+    if (!currentBrand?.id || result.brandId !== currentBrand.id) {
+      toast.error('ブランドが変わったためCanvasへ保存できません。現在のブランドで再生成してください');
+      return;
+    }
+    const projectId = createProject(`Lightchain: ${result.title}`, currentBrand.id);
+    // Provider results are rendered from the protected in-memory composite,
+    // which is intentionally a data URL. Once the provider artifact has been
+    // persisted, keep only its canonical Storage path in the local artifact
+    // ledger so a large PNG cannot exhaust localStorage before Canvas opens.
+    // The Canvas object below still receives result.imageUrl for the active
+    // session and carries the same path for remote/local readback.
+    const canvasArtifactImageUrl = result.storagePath ? '' : result.imageUrl;
+    const parityRuntimeJson = result.parityRuntime ?? serializeLightchainParityRuntime(buildLightchainParityRuntime({
+      rowId: isPrinting ? 'printing-image' : 'fabric-image',
+      inputRoles: isPrinting ? ['garment', 'print-artwork'] : ['model-or-design', 'textile'],
+      fixtureId: `${result.id}:${result.jobId ?? 'unknown'}`,
+    }));
+    const artifact = saveWorkspaceArtifactPersisted({
+      id: result.id,
+      brandId: currentBrand.id,
+      scopeId: user?.id,
+      featureType: 'lightchain-material-result',
+      title: result.title,
+      imageUrl: canvasArtifactImageUrl,
+      prompt: result.note,
+      canvasProjectId: projectId,
+      sourceJobId: result.jobId ?? undefined,
+      metadata: {
+        title: result.title,
+        source: 'lightchain-material-provider-v1',
+        sourceProviderResultArtifactId: result.artifactId ?? null,
+        generationMode: result.generationMode ?? 'provider',
+        provider: result.provider ?? null,
+        backendProvider: result.backendProvider ?? null,
+        jobId: result.jobId ?? null,
+        imageId: result.imageId ?? null,
+        storagePath: result.storagePath ?? null,
+        remoteStoragePath: result.storagePath ?? null,
+        inputImageCount: result.inputImageCount ?? null,
+        maskApplied: result.maskApplied ?? false,
+        maskCoveragePercent: result.maskCoveragePercent ?? null,
+        maskWidth: result.maskWidth ?? null,
+        maskHeight: result.maskHeight ?? null,
+        providerModel: result.providerModel ?? null,
+        inputFidelity: result.inputFidelity ?? null,
+        quality: result.quality ?? null,
+        protectedRegionComposited: result.protectedRegionComposited ?? false,
+        printResultKind: result.resultKind ?? null,
+        printResultNote: result.note,
+        printResultOutputSize: result.outputSize ?? null,
+        printResultGeneratedAt: result.generatedAt ?? null,
+        parityRuntime: parityRuntimeJson,
+      },
+    });
+    if (!artifact.ok) {
+      deleteProject(projectId);
+      toast.error('Canvas保存に失敗しました。生成結果の保存先証跡を確認してください');
+      return;
+    }
+    const objectId = addObject({
+      type: 'image',
+      x: 96,
+      y: 96,
+      width: 720,
+      height: 720,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      locked: false,
+      visible: true,
+      src: result.imageUrl,
+      label: result.title,
+      metadata: {
+        feature: 'lightchain-material-provider',
+        prompt: result.note,
+        generation: 1,
+        provider: result.provider ?? null,
+        backendProvider: result.backendProvider ?? null,
+        jobId: result.jobId ?? null,
+        imageId: result.imageId ?? null,
+        storagePath: result.storagePath ?? null,
+        galleryStoragePath: result.storagePath ?? undefined,
+        galleryImageId: result.imageId ?? undefined,
+        galleryImageUrl: result.imageUrl,
+        status: 'completed',
+        protectedRegionComposited: result.protectedRegionComposited ?? false,
+        parityRuntime: parityRuntimeJson,
+        lightchainCompat: {
+          lightchainFeatureId: isPrinting ? 'printing-image' : 'fabric-image',
+          lightchainFeatureTitle: isPrinting ? 'プリントイメージ' : '生地イメージ',
+          lightchainTaskCodes: [isPrinting ? 'printing_image' : 'fabric_image'],
+        },
+        parameters: {
+          sourceProviderResultArtifactId: result.artifactId ?? null,
+        },
+        legalSafety: { rightsConfirmed: true },
+        timestamp: new Date().toISOString(),
+      },
+    });
+    selectObject(objectId);
+    saveCurrentProject();
+    toast.success('生成結果をCanvasへ保存しました');
+    navigate(`/canvas/${projectId}`);
+  };
+
   const favoriteResultIds = useMemo(
     () => {
       void favoriteRevision;
-      return new Set(currentBrand?.id ? listPrintResultFavoriteIds(currentBrand.id) : []);
+      return new Set(currentBrand?.id ? listPrintResultFavoriteIds(currentBrand.id, user?.id) : []);
     },
-    [currentBrand?.id, favoriteRevision],
+    [currentBrand?.id, favoriteRevision, user?.id],
   );
 
   const closeDeletedResultSurfaces = (deletedIds: ReadonlySet<string>) => {
@@ -3330,10 +4101,20 @@ export function LightchainMaterialWorkbenchPage() {
   };
 
   const clearFabricResultHistory = () => {
-    const fabricResultIds = new Set(generatedResults
-      .filter((result) => !result.id.startsWith('print-'))
-      .map((result) => result.id));
-    if (fabricResultIds.size === 0) return;
+    const fabricResults = generatedResults
+      .filter((result) => !result.id.startsWith('print-'));
+    if (fabricResults.length === 0) return;
+    const artifactIds = fabricResults
+      .map((result) => result.artifactId)
+      .filter((artifactId): artifactId is string => Boolean(artifactId));
+    if (currentBrand?.id && artifactIds.length > 0) {
+      const deleted = deleteWorkspaceArtifactsPersisted(currentBrand.id, artifactIds, user?.id);
+      if (!deleted.ok) {
+        toast.error('生地生成履歴の保存証跡を削除できませんでした');
+        return;
+      }
+    }
+    const fabricResultIds = new Set(fabricResults.map((result) => result.id));
     setGeneratedResults((current) => current.filter((result) => !fabricResultIds.has(result.id)));
     setSelectedResult((current) => current && fabricResultIds.has(current.id) ? null : current);
     setGeneratedResultsStale(false);
@@ -3693,6 +4474,44 @@ export function LightchainMaterialWorkbenchPage() {
                       {printGarmentSelectionSource !== 'automatic'
                         ? '選択したAIマスクはまだ未確定です。下の青い認識範囲を確認し、「このAIマスクで確定」を押すまでデザインは適用されません。'
                         : '自動切り抜きはまだ未確定です。服をタップして青い認識範囲を確認し、「決定」を押すまでデザインは適用されません。'}
+                    </div>
+                  )}
+                  {printGarmentCutoutState === 'done' && clothModelConfigured && (
+                    <div
+                      role="status"
+                      data-testid="cloth-model-warmup-status"
+                      data-fallback-status="confirmed-mask fallback remains available"
+                      className="mt-3 rounded-lg border border-violet-300/25 bg-violet-950/25 px-3 py-2 text-[11px] leading-relaxed text-violet-50"
+                    >
+                      <div className="flex items-center gap-2 font-semibold">
+                        {clothModelWarmupStatus === 'warming' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        衣服専用AIの準備
+                      </div>
+                      {clothModelWarmupStatus === 'warming' && (
+                        <>
+                          <p className="mt-1 text-violet-100/75">
+                            {clothModelWarmupProgress?.message ?? '次のAIマスク生成で再利用するモデルを準備しています。'}
+                            {clothModelWarmupProgress ? ` (${clothModelWarmupProgress.progress}%)` : ''}
+                          </p>
+                          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+                            <div
+                              className="h-full rounded-full bg-violet-300 transition-[width]"
+                              style={{ width: `${Math.min(100, Math.max(0, clothModelWarmupProgress?.progress ?? 0))}%` }}
+                            />
+                          </div>
+                        </>
+                      )}
+                      {clothModelWarmupStatus === 'ready' && (
+                        <p className="mt-1 text-violet-100/75">準備済みです。次のAIマスク生成で同じセッションを再利用します。</p>
+                      )}
+                      {clothModelWarmupStatus === 'error' && (
+                        <p className="mt-1 text-amber-100/85">
+                          準備に失敗しました（{clothModelWarmupError ?? 'unknown'}）。確定済みマスクの代替経路は利用できます。
+                        </p>
+                      )}
+                      {clothModelWarmupStatus === 'unavailable' && (
+                        <p className="mt-1 text-amber-100/85">この環境では衣服専用AIを利用できません。確定済みマスクの代替経路は利用できます。</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -4385,7 +5204,9 @@ export function LightchainMaterialWorkbenchPage() {
                             生成履歴 {runIndex + 1}{runIndex === 0 && !progressivePrintRun ? '（最新）' : ''}
                           </p>
                           <p className="mt-1 text-[10px] text-white/40">
-                            exact / fabric{run.results.some((result) => result.resultKind === 'surface') ? ' / experimental' : ''}
+                            {run.results.some((result) => result.resultKind === 'provider')
+                              ? 'provider / OpenAI画像編集'
+                              : `exact / fabric${run.results.some((result) => result.resultKind === 'surface') ? ' / experimental' : ''}`}
                           </p>
                         </div>
                         <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] text-white/45">
@@ -4400,6 +5221,7 @@ export function LightchainMaterialWorkbenchPage() {
                             onOpen={setSelectedResult}
                             onFavorite={openFavoriteDialog}
                             onDeleteRun={deletePrintResultRun}
+                            onSaveToCanvas={saveResultToCanvas}
                             isFavorite={favoriteResultIds.has(result.id)}
                           />
                         ))}
@@ -4415,6 +5237,7 @@ export function LightchainMaterialWorkbenchPage() {
                       result={result}
                       onOpen={setSelectedResult}
                       onFavorite={isPrinting ? openFavoriteDialog : undefined}
+                      onSaveToCanvas={saveResultToCanvas}
                       isFavorite={Boolean(isPrinting && favoriteResultIds.has(result.id))}
                     />
                   ))}
@@ -4451,6 +5274,8 @@ export function LightchainMaterialWorkbenchPage() {
                   <button
                     key={String(label)}
                     type="button"
+                    onClick={() => navigate(MATERIAL_TOOLBAR_ROUTES[label] ?? '/lightchain')}
+                    data-testid={`lightchain-material-toolbar-${String(label)}`}
                     className={`flex min-w-[8rem] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-[10px] font-semibold leading-4 transition lg:min-w-0 ${label === 'デザインツール'
                       ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30'
                       : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
@@ -4587,10 +5412,23 @@ export function LightchainMaterialWorkbenchPage() {
                   )}
                 </div>
 
+                <label data-testid="lightchain-material-provider-gate" className="flex items-start gap-3 rounded-xl border border-emerald-300/25 bg-emerald-300/[0.06] px-3 py-3 text-xs leading-relaxed text-emerald-50">
+                  <input
+                    type="checkbox"
+                    data-testid="lightchain-material-rights-confirmation"
+                    checked={providerRightsConfirmed}
+                    onChange={(event) => setProviderRightsConfirmed(event.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-400"
+                  />
+                  <span>入力素材の利用権限を確認しました。AIプロバイダーへ送信して生成します。</span>
+                </label>
+
+                <PermissionLockedButton testId="lightchain-printing-permission-locked" />
+
                 <Button
                   onClick={handleGenerate}
                   isLoading={isGenerating}
-                  disabled={isGenerating || !lightchainPrintReady}
+                  disabled={isGenerating || !lightchainPrintReady || !providerRightsConfirmed}
                   className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
                   size="lg"
                   leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
@@ -4658,7 +5496,9 @@ export function LightchainMaterialWorkbenchPage() {
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <div>
                         <p className="text-xs font-semibold text-white/80">プリントイメージ {runIndex + 1}{runIndex === 0 && !progressivePrintRun ? '（最新）' : ''}</p>
-                        <p className="mt-1 text-[10px] text-white/40">スポット／全体の生成結果</p>
+                        <p className="mt-1 text-[10px] text-white/40">
+                          {run.results.some((result) => result.resultKind === 'provider') ? 'provider / OpenAI画像編集' : 'スポット／全体の生成結果'}
+                        </p>
                       </div>
                       <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] text-white/45">{run.results.length}結果</span>
                     </div>
@@ -4670,6 +5510,7 @@ export function LightchainMaterialWorkbenchPage() {
                           onOpen={setSelectedResult}
                           onFavorite={openFavoriteDialog}
                           onDeleteRun={deletePrintResultRun}
+                          onSaveToCanvas={saveResultToCanvas}
                           isFavorite={favoriteResultIds.has(result.id)}
                         />
                       ))}
@@ -4706,6 +5547,8 @@ export function LightchainMaterialWorkbenchPage() {
                   <button
                     key={label}
                     type="button"
+                    onClick={() => navigate(MATERIAL_TOOLBAR_ROUTES[label] ?? '/lightchain')}
+                    data-testid={`lightchain-material-toolbar-${String(label)}`}
                     className={`flex min-w-[8rem] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-[10px] font-semibold leading-4 transition lg:min-w-0 ${label === 'デザインツール'
                       ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30'
                       : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
@@ -4753,6 +5596,8 @@ export function LightchainMaterialWorkbenchPage() {
                 <p className="rounded-xl border border-emerald-300/25 bg-emerald-300/[0.08] px-3 py-2 text-[11px] leading-relaxed text-emerald-100">
                   この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
                 </p>
+
+                <PermissionLockedButton testId="lightchain-fabric-permission-locked" marginClass="mt-0" />
 
                 <section data-testid="lightchain-fabric-design-input" className="rounded-xl border border-white/10 bg-[#202629] p-3">
                   <p className="mb-2 text-sm font-semibold text-white">モデル/デザイン画像 *</p>
@@ -4859,11 +5704,22 @@ export function LightchainMaterialWorkbenchPage() {
                   </div>
                 </div>
 
+                  <label data-testid="lightchain-material-provider-gate" className="flex items-start gap-3 rounded-xl border border-emerald-300/25 bg-emerald-300/[0.06] px-3 py-3 text-xs leading-relaxed text-emerald-50">
+                    <input
+                      type="checkbox"
+                      data-testid="lightchain-material-rights-confirmation"
+                      checked={providerRightsConfirmed}
+                      onChange={(event) => setProviderRightsConfirmed(event.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-400"
+                    />
+                    <span>入力素材の利用権限を確認しました。AIプロバイダーへ送信して生成します。</span>
+                  </label>
+
                   <Button
                     data-testid="lightchain-fabric-generate"
                     onClick={handleGenerate}
                     isLoading={isGenerating}
-                    disabled={isGenerating || fabricPreviewState !== 'done' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
+                    disabled={isGenerating || fabricPreviewState !== 'done' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0 || !providerRightsConfirmed}
                   className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
                   size="lg"
                   leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
@@ -4940,6 +5796,7 @@ export function LightchainMaterialWorkbenchPage() {
                       key={result.id}
                       result={result}
                       onOpen={setSelectedResult}
+                      onSaveToCanvas={saveResultToCanvas}
                     />
                   ))}
                 </div>
@@ -5094,15 +5951,15 @@ export function LightchainMaterialWorkbenchPage() {
               {selectedResult.note}
             </p>
             {selectedResult.outputSize && (
-              <a
-                href={selectedResult.imageUrl}
-                download={`heavy-chain-${selectedResult.id}-${selectedResult.outputSize.width}x${selectedResult.outputSize.height}.png`}
+              <button
+                type="button"
+                onClick={() => void downloadWorkbenchResult(selectedResult).catch(() => toast.error('ダウンロードに失敗しました'))}
                 data-testid="selected-print-result-download"
                 aria-label={`${selectedResult.title}のPNGをダウンロード`}
                 className="inline-flex rounded-lg border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 dark:border-white/15 dark:text-white"
               >
                 {selectedResult.outputSize.width} × {selectedResult.outputSize.height}px PNGをダウンロード
-              </a>
+              </button>
             )}
           </div>
         )}

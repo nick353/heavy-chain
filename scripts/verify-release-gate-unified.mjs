@@ -16,11 +16,6 @@ const REQUIRED_G608_REQUIREMENT_IDS = [
   'logged_in_production_ui',
   'local_production_build_full_ui',
   'logged_in_navigation',
-  'local_worker_operator_controls',
-  'runway_site_approval',
-  'unapproved_denial',
-  'local_worker_contract_redaction',
-  'runway_bridge_tools',
   'approved_live_generation_readback',
   'workspace_readback_expected_task_codes',
   'approved_generation_cleanup',
@@ -719,8 +714,6 @@ function isKnownG618ProbeFailure(failure) {
   const message = String(failure?.errorMessage || '');
   return (
     message.includes('API_KEY_INVALID') ||
-    message.includes('runway_mcp_request_failed:502') ||
-    message.includes('timeout_waiting_for_runway_mcp_response') ||
     message.includes('No active subscription for brand')
   );
 }
@@ -814,7 +807,7 @@ function redact(text) {
     .replace(/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/g, '[redacted]')
     .replace(/sk-[A-Za-z0-9_-]{12,}/g, '[redacted]')
     .replace(/AIza[0-9A-Za-z_-]{12,}/g, '[redacted]')
-    .replace(/((?:SUPABASE|OPENAI|GEMINI|RUNWAY|VITE)_[A-Z0-9_]*(?:KEY|TOKEN|SECRET|URL)?\s*[=:]\s*)\S+/gi, '$1[redacted]');
+    .replace(/((?:SUPABASE|OPENAI|GEMINI|VITE)_[A-Z0-9_]*(?:KEY|TOKEN|SECRET|URL)?\s*[=:]\s*)\S+/gi, '$1[redacted]');
 }
 
 function arrayFrom(value) {

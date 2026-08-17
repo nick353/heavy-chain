@@ -3,8 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { clientError, createServiceClient, requireBrandRole, type Database } from '../_shared/auth.ts';
 import { completeBrandUsage, reserveBrandUsage, type UsageReservation } from '../_shared/usage.ts';
 import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } from '../_shared/observability.ts';
-import { generateRunwayImage, runwayImageArtifact, runwayProviderName } from '../_shared/runway.ts';
-import { requireRunwayMcpConnectionApproval } from '../_shared/runwayApproval.ts';
+import { generateProviderImage, providerImageArtifact, providerName } from '../_shared/imageProvider.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 
@@ -306,7 +305,6 @@ serve(async (req) => {
     ]);
 
     await requireBrandRole(supabaseClient, brandId, user.id, 'editor');
-    await requireRunwayMcpConnectionApproval(supabaseService, brandId);
     observedBrandId = brandId;
     observedUserId = user.id;
     usageReservation = await reserveBrandUsage(telemetryClient, {
@@ -327,7 +325,7 @@ serve(async (req) => {
     });
 
 
-    const imageModel = 'runway';
+    const imageModel = 'openai';
 
     const translations: Record<string, { headline: string; subheadline?: string }> = {};
     languages.forEach(lang => {
@@ -345,8 +343,8 @@ serve(async (req) => {
 
       console.log(`🎨 Generating ${lang.name} banner...`);
 
-      const runwayResult = await generateRunwayImage({ brandId, prompt });
-      const imageAsset = runwayImageArtifact(runwayResult);
+      const providerResult = await generateProviderImage({ brandId, prompt });
+      const imageAsset = providerImageArtifact(providerResult);
       const imageBase64 = imageAsset.base64;
       const imageMimeType = imageAsset.contentType;
       if (imageBase64) {
@@ -440,7 +438,7 @@ serve(async (req) => {
       await supabaseService.from('api_usage_logs').insert({
         user_id: user.id,
         brand_id: brandId,
-        provider: runwayProviderName() as any,
+        provider: providerName() as any,
         tokens_used: results.length * 500,
         cost_usd: 0,
       });
