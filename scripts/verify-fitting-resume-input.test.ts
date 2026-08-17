@@ -145,3 +145,10 @@ test('Fitting exposes explicit resume readback states', async () => {
   assert.match(source, /data-testid="fitting-resume-input-unavailable"/);
   assert.match(source, /remote URLは再利用せず/);
 });
+
+test('Fitting save confirmation does not overwrite a cutout persistence failure', async () => {
+  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
+  assert.match(source, /fittingDraftPersistenceErrorRef/);
+  assert.match(source, /!fittingDraftPersistenceErrorRef\.current/);
+  assert.match(source, /fittingDraftPersistenceErrorRef\.current = true/);
+});

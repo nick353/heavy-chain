@@ -508,6 +508,7 @@ export function FittingPage() {
   const [fittingDraftPersistenceStatus, setFittingDraftPersistenceStatus] = useState<'idle' | 'saved' | 'restored' | 'unavailable' | 'failed'>('idle');
   const [fittingDraftPersistenceMessage, setFittingDraftPersistenceMessage] = useState('');
   const fittingDraftRestoredRef = useRef(false);
+  const fittingDraftPersistenceErrorRef = useRef(false);
   const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [showGallerySelector, setShowGallerySelector] = useState(false);
@@ -522,6 +523,18 @@ export function FittingPage() {
   const garmentFileName = materialReference.fileName;
   const modelReferenceImageUrl = modelReference.imageUrl || undefined;
   const patternCount = selectedBodyTypes.length * selectedAgeGroups.length;
+
+  useEffect(() => {
+    fittingDraftPersistenceErrorRef.current = false;
+    setFittingDraftPersistenceStatus('idle');
+    setFittingDraftPersistenceMessage('');
+  }, [
+    currentBrand?.id,
+    materialReference.imageUrl,
+    materialReference.sourceImageId,
+    materialReference.sourceStoragePath,
+    user?.id,
+  ]);
 
   useEffect(() => {
     if (!resumeJob || !currentBrand?.id || !user?.id) return;
@@ -552,6 +565,7 @@ export function FittingPage() {
           };
         } catch (error) {
           if (!cancelled) {
+            fittingDraftPersistenceErrorRef.current = true;
             setFittingDraftPersistenceStatus('unavailable');
             setFittingDraftPersistenceMessage(
               error instanceof Error
@@ -568,6 +582,8 @@ export function FittingPage() {
         if (persistedCutout) restored = { ...restored, ...persistedCutout };
       } catch (error) {
         if (!cancelled) {
+          fittingDraftPersistenceErrorRef.current = true;
+          setFittingDraftPersistenceStatus('failed');
           setFittingDraftPersistenceMessage(
             error instanceof Error
               ? `保存済み切り抜きの再読込に失敗しました。${error.message}`
@@ -579,12 +595,14 @@ export function FittingPage() {
       if (!cancelled && restored.imageUrl) {
         fittingDraftRestoredRef.current = true;
         setMaterialReference(restored);
-        setFittingDraftPersistenceStatus('restored');
-        setFittingDraftPersistenceMessage(
-          restored.nextStepReady
-            ? '保存済みのFitting素材と切り抜き状態を復元しました。'
-            : '保存済みのFitting素材を復元しました。切り抜き状態は再確認してください。',
-        );
+        if (!fittingDraftPersistenceErrorRef.current) {
+          setFittingDraftPersistenceStatus('restored');
+          setFittingDraftPersistenceMessage(
+            restored.nextStepReady
+              ? '保存済みのFitting素材と切り抜き状態を復元しました。'
+              : '保存済みのFitting素材を復元しました。切り抜き状態は再確認してください。',
+          );
+        }
       }
     };
 
@@ -599,13 +617,14 @@ export function FittingPage() {
     let cancelled = false;
     void saveFittingDraftCutout(currentBrand.id, user.id, materialReference)
       .then(() => {
-        if (!cancelled) {
+        if (!cancelled && !fittingDraftPersistenceErrorRef.current) {
           setFittingDraftPersistenceStatus('saved');
           setFittingDraftPersistenceMessage('Fitting入力と切り抜き状態を保存確認しました。');
         }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
+          fittingDraftPersistenceErrorRef.current = true;
           setFittingDraftPersistenceStatus('failed');
           setFittingDraftPersistenceMessage(
             error instanceof Error
@@ -629,6 +648,7 @@ export function FittingPage() {
 
     const durableImageUrl = preparedMaterialReference.imageUrl ?? '';
     if (!durableImageUrl && !preparedMaterialReference.sourceStoragePath) {
+      fittingDraftPersistenceErrorRef.current = true;
       setFittingDraftPersistenceStatus('unavailable');
       setFittingDraftPersistenceMessage('この素材には再読込可能な保存先がありません。素材を選び直してください。');
       return;
@@ -652,21 +672,24 @@ export function FittingPage() {
     });
 
     if (!persisted.ok) {
+      fittingDraftPersistenceErrorRef.current = true;
       setFittingDraftPersistenceStatus('failed');
       setFittingDraftPersistenceMessage(`Fitting入力の保存確認に失敗しました。${persisted.error.message}`);
       fittingDraftRestoredRef.current = false;
       return;
     }
 
-    const restoredDraft = fittingDraftRestoredRef.current;
-    setFittingDraftPersistenceStatus(restoredDraft ? 'restored' : 'saved');
-    setFittingDraftPersistenceMessage(restoredDraft
-      ? (preparedMaterialReference.nextStepReady
-        ? '保存済みのFitting素材と切り抜き状態を復元しました。'
-        : '保存済みのFitting素材を復元しました。切り抜き状態は再確認してください。')
-      : preparedMaterialReference.nextStepReady
-        ? 'Fitting入力と切り抜き状態を保存確認しました。'
-        : 'Fitting入力を保存確認しました。切り抜き状態は再読込時に再確認します。');
+    if (!fittingDraftPersistenceErrorRef.current) {
+      const restoredDraft = fittingDraftRestoredRef.current;
+      setFittingDraftPersistenceStatus(restoredDraft ? 'restored' : 'saved');
+      setFittingDraftPersistenceMessage(restoredDraft
+        ? (preparedMaterialReference.nextStepReady
+          ? '保存済みのFitting素材と切り抜き状態を復元しました。'
+          : '保存済みのFitting素材を復元しました。切り抜き状態は再確認してください。')
+        : preparedMaterialReference.nextStepReady
+          ? 'Fitting入力と切り抜き状態を保存確認しました。'
+          : 'Fitting入力を保存確認しました。切り抜き状態は再読込時に再確認します。');
+    }
     fittingDraftRestoredRef.current = false;
   }, [currentBrand?.id, materialReference, productDescription, user?.id]);
 
