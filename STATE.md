@@ -8,6 +8,11 @@ Updated: 2026-08-18
 - Fresh `security:audit`, `verify:openai-provider`, `verify:api-less-generation`, `verify:readback`, production `build`, `verify:lightchain-all-features` (`31/31`), and Gallery download boundary tests passed. Lint passed with the existing three warnings and zero errors.
 - The only build failure in the run was a discarded parallel-build race (`ENOTEMPTY dist/models`); the required feature verification was rerun serially and passed. No external API, generation, retry, billing, upload, save, delete, permission, or deploy action occurred.
 
+2026-08-18 production UI verifier boundary readback:
+- Fresh read-only `verify:lightchain-ui` could launch without console/page errors but did not establish authenticated UI proof (`missing=none login=false`); it is not promoted to Chrome Plugin evidence.
+- `verify:lightchain-navigation` and `verify:lightchain-clone-layout` fail closed before browser work because their historical Playwright auth-state artifacts are missing (`prod-auth-dashboard-20260623/auth-state-after-tutorial.json` and `prod-auth-refresh-20260625/auth-state.json`). No Playwright fallback was used for the Chrome Plugin goal.
+- Exact results are recorded in `CURRENT-TURN-20260818.json` field `productionVerificationEntrypointReadback20260818`; the current evidence SHA-256 is `9c3edc5cdf705aa2f6b3d28835a4a7d0ce0f0a440b628cf17643e870640de756` and the Security Review Packet points to that SHA.
+
 2026-08-18 Chrome Plugin canonical safe-control exercise:
 - Same Profile 2 session and Heavy Chain tab `1980902496` freshly loaded the canonical routes `/lightchain/ai-fitting-reference`, `/lightchain/model-library`, and `/lightchain/pattern-vector`; no old raw Lightchain URL was substituted.
 - AI Fitting safe tabs/settings were clicked (`シングルタスク`, `マルチタスク`, `説明生成`, `参考画像`, `モデルのセット写真`, automatic flat-lay conversion). Post-readback left `マルチタスク` + `モデルのセット写真` active and `AI生成` disabled because required assets were absent.
