@@ -309,8 +309,13 @@ function runCheck(check) {
 
 console.log('Release doctor: read-only/local checks only.');
 console.log('禁止: send / submit / publish / delete / auth / payment / PII / DB mutation / deploy');
+const selectedProofSurface = releaseChromePluginEvidenceValid
+  ? 'chrome-plugin'
+  : releaseBrowserUseProofDirValid
+    ? 'browser-use'
+    : 'missing';
 console.log(
-  `Current proof target: release_date=${releaseDate.display} environment=${releaseEnvironment.display} git_commit=${currentGitCommit.display} browser_use_proof_dir=${releaseBrowserUseProofDir || 'missing'}`,
+  `Current proof target: release_date=${releaseDate.display} environment=${releaseEnvironment.display} git_commit=${currentGitCommit.display} proof_surface=${selectedProofSurface}`,
 );
 console.log('');
 
