@@ -17,6 +17,12 @@ Updated: 2026-08-18
 - `assertCompletedModelMatrixResult` now fails closed with `provider_model_result_storage_path_missing` when a completed matrix item lacks a canonical `storagePath`, before local artifact persistence can emit the generic save-confirmation error.
 - Focused verification passed: provider persistence/readback `12/12`, Fitting persistence runtime `5/5`, production build passed, security audit passed, and API-less generation readiness `13/13` with no external API call. This source fix is local and has not been deployed or used to trigger generation.
 
+2026-08-18 Gallery download and recording inventory fresh readback:
+- Same Chrome Plugin Profile 2 Heavy tab `1980902583` opened the first existing Gallery item and clicked `JPEG`, `PNG`, and `WebP`. Each UI status read back `ダウンロードしました`; the local Downloads directory contains verified JPEG/PNG/WebP files at `1024x1536` where reported.
+- Native Chrome-window recording `recordings/chrome-plugin-download-20260818/gallery-download-native-20260818.mov` is media-verified: `35.286667` seconds, `376` H.264 frames, `1440x796`, SHA-256 `e39bdd8be566f3541a809ba4673755ef40534142a35298325d252dd59ddcfa68`. It is Chrome Plugin-controlled native capture, not Extension-emitted video.
+- Fresh inventory counts `21` canonical recording manifests, `2` analysis-only manifests, `18` physical movie files, and `13` completed media-verified recordings (`9` native Chrome-window, `3` Chrome debugger, `1` display, `0` strict Extension). Blocked artifacts are excluded; this supersedes earlier unverified count summaries.
+- Evidence fields are `galleryDownloadFreshReadback20260818` and `recordingLedgerFreshInventory20260818` in `CURRENT-TURN-20260818.json`.
+
 2026-08-18 current production readback R6:
 - Fresh read-only collector output `output/playwright/prod-db-readback-current-20260818-r6/workspace-db-readback.json` uses release date `2026-08-18`, `production`, current commit `93aeb38b0d95b640296cd104b8b64f8455ee898c`, and a bounded `since` of `2026-07-05T08:00:00Z`.
 - The selected window contains `26/26` completed jobs, `33/33` succeeded usage events, `34/34` succeeded Edge runs, and `26/26` signed-URL checks. Release readback still fails closed on the exact integrity error `runs[24] request_id does not match usage readback`; stale cleanup/rate-limit artifacts were not rewritten.
