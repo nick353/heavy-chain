@@ -13,6 +13,10 @@ Updated: 2026-08-18
 - The source contract fails closed when a remote result has no canonical storage path, while the client model-matrix guard does not require `storagePath`; the local Edge Function source does return one. The historical `fitting-background-reference` failure contains only the generic UI message and no low-level receipt, so the cause remains `PENDING_CONFIRMATION` between missing path and local write/readback/quota failure. No generation or retry was used to recreate it.
 - Evidence is `fittingPersistenceStaticBoundaryReadback20260818` in `CURRENT-TURN-20260818.json`; current evidence SHA-256 is `1452b97bcb478e838268f3be4fbfbbddc54e3e101c154ab06e48b63f9450bd9a`, mirrored in the Security Review Packet.
 
+2026-08-18 Fitting model-matrix persistence gate hardening:
+- `assertCompletedModelMatrixResult` now fails closed with `provider_model_result_storage_path_missing` when a completed matrix item lacks a canonical `storagePath`, before local artifact persistence can emit the generic save-confirmation error.
+- Focused verification passed: provider persistence/readback `12/12`, Fitting persistence runtime `5/5`, production build passed, security audit passed, and API-less generation readiness `13/13` with no external API call. This source fix is local and has not been deployed or used to trigger generation.
+
 2026-08-18 current production readback R6:
 - Fresh read-only collector output `output/playwright/prod-db-readback-current-20260818-r6/workspace-db-readback.json` uses release date `2026-08-18`, `production`, current commit `93aeb38b0d95b640296cd104b8b64f8455ee898c`, and a bounded `since` of `2026-07-05T08:00:00Z`.
 - The selected window contains `26/26` completed jobs, `33/33` succeeded usage events, `34/34` succeeded Edge runs, and `26/26` signed-URL checks. Release readback still fails closed on the exact integrity error `runs[24] request_id does not match usage readback`; stale cleanup/rate-limit artifacts were not rewritten.
