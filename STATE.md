@@ -79,6 +79,10 @@ Updated: 2026-08-18
 - The fitting-background persistence boundary now has a runtime regression suite at `scripts/verify-fitting-persistence-runtime.test.mjs`; the focused fitting/provider/persistence set passed `26/26`. It proves canonical storage-path readback clears ephemeral signed URLs, rejects URL-only remote artifacts with the exact error, and accepts path-only durable artifacts. This is test-only evidence; it does not close the live alternate-input cutout/save or release blockers.
 - Fresh reopened Chrome tab `1980902275` selected `lightchain-fabric-image-provider-result`, completed local high-precision cutout successfully, and read back the extracted layer plus exact success status. A visual screenshot was emitted. Plain `/fitting` reload then returned to `素材を追加` with no intermediate cutout state; no explicit intermediate save control was exposed. Treat cutout save/restart as `PENDING_CONFIRMATION` until the existing durable Job/artifact promotion path is exercised under an allowed non-OpenAI flow.
 
+2026-08-18 permission-route safe-control exercise:
+- Same Chrome Plugin tab `1980902321` exercised safe non-generating controls one by one: Models `LOOK確認` / `広告検証`, Fabric `リネン` / `コットン` / `デニム` / `サテン`, Printing `スポット` / `全体`, Line `平置き画像` / `モデル図`, and Image Repair `手足の変形を修正` / `マスクツール`.
+- Exact `権限がありません` remained after the clicks; no permission change, generation, save, upload, provider, or billing action occurred. The tab returned to Canvas.
+
 2026-08-17 current persistence/deployment continuation:
 - Lightchain Workbench durable snapshots now compact only large duplicate remote-result data URLs when a canonical `storagePath` exists; the canonical path remains authoritative and local no-path previews remain resumable. Source: `src/lib/lightchainPersistence.ts` and `src/pages/LightchainWorkbenchPage.tsx`.
 - Focused compaction verification passed `3/3`; combined persistence/readback passed `23/23`; typecheck, build, and `git diff --check` passed. No OpenAI API call, generation, retry, billing, Runway, upload, delete, or save effect occurred.
