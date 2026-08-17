@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { readFittingDraftMaterial, readFittingResumeMaterial } from '../src/lib/fittingResume.ts';
+import { getFittingMaterialIdentity } from '../src/lib/fittingMaterialIdentity.ts';
 
 const artifact = (overrides: Record<string, unknown> = {}) => ({
   id: 'fit-artifact-1',
@@ -151,4 +152,40 @@ test('Fitting save confirmation does not overwrite a cutout persistence failure'
   assert.match(source, /fittingDraftPersistenceErrorRef/);
   assert.match(source, /!fittingDraftPersistenceErrorRef\.current/);
   assert.match(source, /fittingDraftPersistenceErrorRef\.current = true/);
+});
+
+test('Fitting persistence identity ignores Gallery re-sign URL changes but detects new source/cutout', () => {
+  const firstRead = getFittingMaterialIdentity({
+    imageUrl: 'https://signed.example.test/source.png?token=first',
+    sourceImageId: 'gallery-image-1',
+    sourceStoragePath: 'user-a/brand-1/gallery-image-1.png',
+  });
+  const secondRead = getFittingMaterialIdentity({
+    imageUrl: 'https://signed.example.test/source.png?token=second',
+    sourceImageId: 'gallery-image-1',
+    sourceStoragePath: 'user-a/brand-1/gallery-image-1.png',
+  });
+  const differentGallerySource = getFittingMaterialIdentity({
+    imageUrl: 'https://signed.example.test/other.png?token=second',
+    sourceImageId: 'gallery-image-2',
+    sourceStoragePath: 'user-a/brand-1/gallery-image-2.png',
+  });
+  const localUpload = getFittingMaterialIdentity({
+    imageUrl: 'data:image/png;base64,new-upload',
+    sourceImageId: null,
+    sourceStoragePath: null,
+  });
+
+  assert.equal(firstRead, secondRead);
+  assert.notEqual(firstRead, differentGallerySource);
+  assert.notEqual(firstRead, localUpload);
+});
+
+test('Fitting source-change and cutout-change reset handling is explicit', async () => {
+  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
+  assert.match(source, /getFittingMaterialIdentity\(materialReference\)/);
+  assert.match(source, /const cutoutChanged =/);
+  assert.match(source, /if \(sourceChanged \|\| cutoutChanged\) resetFittingDraftPersistenceState\(\);/);
+  assert.match(source, /onChange=\{handleMaterialReferenceChange\}/);
+  assert.doesNotMatch(source, /\}, \[\s*currentBrand\?\.id,\s*materialReference\.imageUrl/);
 });

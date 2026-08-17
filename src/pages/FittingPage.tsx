@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
@@ -33,6 +33,7 @@ import {
 } from '../lib/localWorkspaceArtifacts';
 import { readFittingDraftMaterial, readFittingResumeMaterial } from '../lib/fittingResume';
 import { readFittingDraftCutout, saveFittingDraftCutout } from '../lib/fittingDraftCutoutStore';
+import { getFittingMaterialIdentity } from '../lib/fittingMaterialIdentity';
 import {
   compactFittingMaterialReferenceForPersistence,
   prepareFittingDraftMaterialReferenceForPersistence,
@@ -524,17 +525,22 @@ export function FittingPage() {
   const modelReferenceImageUrl = modelReference.imageUrl || undefined;
   const patternCount = selectedBodyTypes.length * selectedAgeGroups.length;
 
-  useEffect(() => {
+  const resetFittingDraftPersistenceState = useCallback(() => {
     fittingDraftPersistenceErrorRef.current = false;
     setFittingDraftPersistenceStatus('idle');
     setFittingDraftPersistenceMessage('');
-  }, [
-    currentBrand?.id,
-    materialReference.imageUrl,
-    materialReference.sourceImageId,
-    materialReference.sourceStoragePath,
-    user?.id,
-  ]);
+  }, []);
+
+  const handleMaterialReferenceChange = useCallback((nextMaterialReference: MaterialReferenceState) => {
+    const sourceChanged = getFittingMaterialIdentity(materialReference) !== getFittingMaterialIdentity(nextMaterialReference);
+    const cutoutChanged = (materialReference.extractedImageUrl ?? '') !== (nextMaterialReference.extractedImageUrl ?? '');
+    if (sourceChanged || cutoutChanged) resetFittingDraftPersistenceState();
+    setMaterialReference(nextMaterialReference);
+  }, [materialReference, resetFittingDraftPersistenceState]);
+
+  useEffect(() => {
+    resetFittingDraftPersistenceState();
+  }, [currentBrand?.id, resetFittingDraftPersistenceState, user?.id]);
 
   useEffect(() => {
     if (!resumeJob || !currentBrand?.id || !user?.id) return;
@@ -544,10 +550,11 @@ export function FittingPage() {
       setResumeInputReadback('unavailable');
       return;
     }
+    resetFittingDraftPersistenceState();
     setMaterialReference(resumed.materialReference);
     setErrorMessage('');
     setResumeInputReadback('restored');
-  }, [currentBrand?.id, resumeJob, user?.id]);
+  }, [currentBrand?.id, resetFittingDraftPersistenceState, resumeJob, user?.id]);
 
   useEffect(() => {
     if (resumeJob || !currentBrand?.id || !user?.id) return;
@@ -853,6 +860,7 @@ export function FittingPage() {
     imageId: string,
     storagePath?: string,
   ) => {
+    resetFittingDraftPersistenceState();
     setMaterialReference({
       ...initialMaterialReference,
       imageUrl,
@@ -1430,7 +1438,7 @@ export function FittingPage() {
               uploadLabel="衣服画像をアップロード"
               emptyLabel="ここに服の写真を入れてください"
               state={materialReference}
-              onChange={setMaterialReference}
+              onChange={handleMaterialReferenceChange}
               materialKinds={['衣服画像', 'モデル参照', 'ポーズ参照', '背景参照', 'サイズ比較']}
               layerOptions={['衣服', 'モデル', 'ポーズ', '背景', 'サイズ表']}
               placementOptions={['モデル前面', '平置き参照', '横並び比較', '背景全面', 'サイズ表横']}
