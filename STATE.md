@@ -27,7 +27,7 @@ Updated: 2026-08-18
 - Recovered the direct CLI readbacks by disabling telemetry writes for the command process: 33/33 linked migration pairs aligned, `supabase db lint` reported no schema errors, and functions list showed 16/16 ACTIVE with `verify_jwt=false` count 0 and no retired provider names. Authenticated two-user RLS/SECURITY DEFINER runtime proof remains `PENDING_CONFIRMATION` because the connector-backed auth lane was not exercised.
 
 2026-08-18 recording / external role / video-provider blocker readback:
-- Recording inventory found 13 manifest files: 8 completed recordings counted and 5 blocked manifests excluded. Strict Extension completed count remains 0 with exact `chrome_extension_action_not_received`; other blocked manifests are `native_chrome_window_video_duration_invalid` and `capture_target_title_mismatch`.
+- Recording re-audit found 15 manifest files: exactly 8 media-verified recordings counted (7 native Chrome-window captures plus 1 display capture), 5 blocked manifests excluded, and 2 analysis-only manifests excluded. Strict Extension completed count remains 0 with exact `chrome_extension_action_not_received`; other blocked manifests are `native_chrome_window_video_duration_invalid` and `capture_target_title_mismatch`. All 8 counted media files passed ffprobe H.264/duration/frame checks.
 - Video remains fail-closed because Runway MCP same-run admission/readback is unconfirmed, and the Runway runtime is retired. Provider-boundary tests passed 1/1, provider coverage 10/10, and adapter 16/16.
 - Designer, Executor, Reviewer, and Verifier outputs remain rejected with exact transport/metadata/truncated-handoff blockers. No external role was accepted as release approval.
 
