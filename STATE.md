@@ -2,6 +2,12 @@
 
 Updated: 2026-08-18
 
+2026-08-18 latest Fitting persistence race-guard deployment/readback:
+- Commit `93364d0` latches Fitting cutout save/restore failures for the current brand/user/source identity so a later material-save success cannot overwrite the failure state. The latch resets only when the source identity changes.
+- Focused Fitting resume/persistence tests passed `11/11`; typecheck, build, and security audit passed. Lint has 0 errors and 3 warnings.
+- Official Zeabur deployment `6a836d08201aaa81bcfa8298` is `RUNNING`; public root is HTTP `200`; local/public index SHA-256 matches (`d357cc432679ddd7d2675ddf6da95cc1d35b8c2f65a89ab58e899a5aff8b8bd5`); local/public Fitting bundle SHA-256 matches (`a70847c76967964bbd49d4e2c3b14f8f71f582c77f86659781759e5b328dca80`). Zeabur repo/ref/commitSHA remains empty and therefore `PENDING_CONFIRMATION`.
+- A fresh Chrome Plugin `openTabs` readback after the reported recovery still returned `Browser is not available: -c5f0-492b-b19b-aae3b78ed3cc`; no UI action, alternate browser, provider call, generation, retry, billing, or Runway operation was started.
+
 2026-08-18 production quota-copy deployment/readback:
 - Deployed the quota-copy/verifier fix to the authorized Heavy Chain service as Zeabur deployment `6a83408746afbcef424d8843`; Docker build completed and deployment is `RUNNING`. Public HTTP is `200`, and local/public index asset SHA-256 matches (`8335545d49ff9c1ad1f1da33a8d3ea2d68c0b6f4a09dcb736b577fbca583ad38`).
 - Public BrandSettings and errorMessages chunks contain the Heavy Chain quota copy. Same Chrome Plugin tab `1980902314` read Brand Settings with the quota sentence, then returned to Canvas / NiSEN; no generation or save action was clicked.
