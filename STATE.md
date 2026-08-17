@@ -2,6 +2,12 @@
 
 Updated: 2026-08-18
 
+2026-08-18 current non-OpenAI Fitting persistence closure:
+- Added `src/lib/fittingDraftCutoutStore.ts` and wired `FittingPage` to keep only the derived high-precision cutout in browser IndexedDB while preserving the canonical Gallery `sourceStoragePath`/re-signing contract in the local artifact. Commit `311d7c1` passed typecheck, build, and `git diff --check`.
+- Official Zeabur Docker deployment `6a83341a201aaa81bcfa7e99` is `RUNNING`; public HTTP is `200`, public/local `index.gfYHSdfy.js` SHA-256 is `fffdf9c818c7f0a08c4a4940f2e767b3eb3228154b0855fb1bcd856f07a86efa`, and public/local `FittingPage.CZQBlwIo.js` SHA-256 is `439f39e4368ea928bc5b288c94d2211425b689c2388634a4554e06f6961c9a13`. The bundle contains the IndexedDB marker.
+- Fresh same Chrome Plugin tab `1980902279` selected existing `lightchain-fabric-image-provider-result`, completed high-precision cutout, read `抽出済みレイヤー` / `OK` / `高精度AI切り抜き済みです。権利確認後にAI生成できます。`, and read `Fitting入力と切り抜き状態を保存確認しました。` with `AI生成` still disabled. After a plain reload, the same source and extracted layer were restored with the exact success text. A full-page screenshot was emitted in the current turn. This closes the alternate cutout/save live blocker for this durable Gallery asset without OpenAI API, generation, retry, billing, Runway, upload, delete, or permission change.
+- Remaining release blockers are unchanged: connector reauthentication for RLS/Auth/SECURITY DEFINER runtime proof, strict Extension recording, external reviewer/verifier transport, generated-history/full-library freshness, empty Zeabur immutable commit association for the local Docker deployment, and the non-acceptance release gate.
+
 2026-08-18 current non-OpenAI QA continuation:
 - Fresh authenticated Chrome Plugin recovery tab `1980902270` opened production `/fitting`, waited for the Gallery library, selected `campaign-image`, confirmed `この素材を使う`, and read back `素材あり`, `Gallery素材-239503df-8bd6-4d36-ba62-c611036c5a4f`, and the local next step `高精度AIで切り抜く`. `AI生成` stayed disabled; the previously observed same-input cutout failure was not retried.
 - Official Zeabur deployment `6a8321d946afbcef424d7e51` is `RUNNING`; public Fitting bundle SHA-256 matches the local build (`220e62b65192509ea9b91630f7d3e3c5497f937ec5376e2e987897d09e2c2bd7`) and includes the Fitting Gallery `sourceImageId/sourceStoragePath` persistence fix. Commit/ref/repository association remains `PENDING_CONFIRMATION` because Zeabur metadata is empty.
