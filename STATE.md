@@ -2,6 +2,11 @@
 
 Updated: 2026-08-18
 
+2026-08-18 Zeabur immutable source-association readback:
+- Official Zeabur CLI `0.21.0` fresh auth/workspace/project readback succeeded, but the current authenticated workspace exposes only `personal` and project `automation-wiled`; the Heavy Chain project/service is not visible in that owner scope.
+- Exact blocker: immutable commit/ref/repository association for `heavy-chain.zeabur.app` cannot be read or repaired without the owning Zeabur workspace. No deploy, service mutation, restart, config change, or secret operation was performed.
+- Safe restart point: reauthenticate or obtain the owning workspace, then fresh-read the exact project/environment/service IDs before any deployment mutation.
+
 2026-08-18 Chrome Plugin new recording method live verification:
 - Same Chrome Plugin Profile 2 session and Heavy Chain tab `1980902496` were retained. The background `chrome.debugger + Page.startScreencast` route recorded the safe `/lightchain/marketing` -> `/lightchain` navigation and all four Lightchain category tabs while the target tab remained unselected.
 - New accepted artifact: `recordings/heavy-chain-lightchain-new-method-navigation-20260818.mp4`, 19.533392 seconds, 88 H.264 frames, 1920x872, full decode passed, SHA-256 `8f4693063b639f7bc9f99fc2da49ccac8a0f784e2a918bc15a61c8df9e9e91ea`. Manifest is adjacent and records the Chrome Plugin surface and selected-sibling readback.
