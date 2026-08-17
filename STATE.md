@@ -2,6 +2,12 @@
 
 Updated: 2026-08-18
 
+2026-08-18 feature-ledger audit clarity and fresh verification:
+- `scripts/reconcile-lightchain-feature-ledger.mjs` now reports raw outcome evidence entries, distinct representative feature outcomes, and explicit evidence multiplicity instead of presenting expected duplicate evidence as a false `outcomeIdsAreUnique` check.
+- Reconciliation passed with `33` source features / `31` non-video, `30` cards, `15` confirmed successes, `1` confirmed failure, `6` permission routes, and `13` media-verified recordings. The generated ledger now exposes the multiplicity explicitly.
+- Fresh `security:audit`, `verify:openai-provider`, `verify:api-less-generation`, `verify:readback`, production `build`, `verify:lightchain-all-features` (`31/31`), and Gallery download boundary tests passed. Lint passed with the existing three warnings and zero errors.
+- The only build failure in the run was a discarded parallel-build race (`ENOTEMPTY dist/models`); the required feature verification was rerun serially and passed. No external API, generation, retry, billing, upload, save, delete, permission, or deploy action occurred.
+
 2026-08-18 Chrome Plugin canonical safe-control exercise:
 - Same Profile 2 session and Heavy Chain tab `1980902496` freshly loaded the canonical routes `/lightchain/ai-fitting-reference`, `/lightchain/model-library`, and `/lightchain/pattern-vector`; no old raw Lightchain URL was substituted.
 - AI Fitting safe tabs/settings were clicked (`シングルタスク`, `マルチタスク`, `説明生成`, `参考画像`, `モデルのセット写真`, automatic flat-lay conversion). Post-readback left `マルチタスク` + `モデルのセット写真` active and `AI生成` disabled because required assets were absent.
