@@ -20,6 +20,10 @@ Updated: 2026-08-18
 - First Printing pass exposed a real route-transition nuance: shared toolbar `平絵生成` navigates to canonical `/lightchain/line-generation`; the target Printing route was reloaded and its dedicated `スポット`/`全体` controls were then clicked successfully. Evidence is `chromePluginPendingFeatureSafeRouteExercise20260818` in `CURRENT-TURN-20260818.json`; current packet SHA-256 is `7ea88c4c5780b2b4f0fe186acefd81110d8e54fd7de881b5e91b4907ffb81910`, mirrored in the Security Review Packet.
 - Marketing Detail was then revisited: all three assistant presets and all four layer buttons (`背景`, `商品画像`, `見出しテキスト`, `CTAボタン`) were clicked; the final active layer was `CTAボタン`. The assistant update/generation, save, and download buttons were not clicked.
 
+2026-08-18 external Reviewer/Verifier transport readback:
+- The configured read-only OpenCode Reviewer and Verifier routes were each attempted once with the current redacted evidence context; both returned the exact blocker `Transport closed`.
+- No fallback model or alternate reviewer was substituted. No review result was accepted; deterministic local proofs remain authoritative. Evidence field: `externalReviewerVerifierTransportReadback20260818`; current evidence SHA-256 is `b43ee08b05a9cc1f8e2e2d71a2598f77379ebf24b3219c268c97c9074914a67a`, mirrored in the Security Review Packet.
+
 2026-08-18 Chrome Plugin canonical safe-control exercise:
 - Same Profile 2 session and Heavy Chain tab `1980902496` freshly loaded the canonical routes `/lightchain/ai-fitting-reference`, `/lightchain/model-library`, and `/lightchain/pattern-vector`; no old raw Lightchain URL was substituted.
 - AI Fitting safe tabs/settings were clicked (`シングルタスク`, `マルチタスク`, `説明生成`, `参考画像`, `モデルのセット写真`, automatic flat-lay conversion). Post-readback left `マルチタスク` + `モデルのセット写真` active and `AI生成` disabled because required assets were absent.
