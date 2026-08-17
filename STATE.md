@@ -13,6 +13,12 @@ Updated: 2026-08-18
 - `verify:lightchain-navigation` and `verify:lightchain-clone-layout` fail closed before browser work because their historical Playwright auth-state artifacts are missing (`prod-auth-dashboard-20260623/auth-state-after-tutorial.json` and `prod-auth-refresh-20260625/auth-state.json`). No Playwright fallback was used for the Chrome Plugin goal.
 - Exact results are recorded in `CURRENT-TURN-20260818.json` field `productionVerificationEntrypointReadback20260818`; the current evidence SHA-256 is `9c3edc5cdf705aa2f6b3d28835a4a7d0ce0f0a440b628cf17643e870640de756` and the Security Review Packet points to that SHA.
 
+2026-08-18 same-session pending-feature route and safe-control continuation:
+- Heavy Chain canonical `/lightchain/:featureId` route matrix loaded all `15/15` previously lacking direct provider outcome evidence. No old raw Lightchain URL was substituted.
+- Safe controls were clicked for Marketing home/detail, AI Fitting and reference mode, Model Library, Fabric, Line Generation, Line-to-Real, Pattern Vector normal/Pro, Printing, Image Repair, Body Shape, and Model Custom. Generation, retry, upload, save, download, delete, billing, provider, and permission controls were not clicked.
+- Exact `権限がありません` was observed on five current routes in this pass: Model Library, Fabric, Line Generation, Printing, and Image Repair. Enabled generation buttons on permission-free/permission-visible routes were intentionally skipped under the OpenAI-excluded boundary; disabled generation states were separately recorded.
+- First Printing pass exposed a real route-transition nuance: shared toolbar `平絵生成` navigates to canonical `/lightchain/line-generation`; the target Printing route was reloaded and its dedicated `スポット`/`全体` controls were then clicked successfully. Evidence is `chromePluginPendingFeatureSafeRouteExercise20260818` in `CURRENT-TURN-20260818.json`; current SHA-256 is `9b6c0c191429c7263d48c5bb7474d23978139ae3bd77e4ca1e2c2e412539bb85`, mirrored in the Security Review Packet.
+
 2026-08-18 Chrome Plugin canonical safe-control exercise:
 - Same Profile 2 session and Heavy Chain tab `1980902496` freshly loaded the canonical routes `/lightchain/ai-fitting-reference`, `/lightchain/model-library`, and `/lightchain/pattern-vector`; no old raw Lightchain URL was substituted.
 - AI Fitting safe tabs/settings were clicked (`シングルタスク`, `マルチタスク`, `説明生成`, `参考画像`, `モデルのセット写真`, automatic flat-lay conversion). Post-readback left `マルチタスク` + `モデルのセット写真` active and `AI生成` disabled because required assets were absent.
