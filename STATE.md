@@ -83,6 +83,10 @@ Updated: 2026-08-18
 - Same Chrome Plugin tab `1980902321` exercised safe non-generating controls one by one: Models `LOOK確認` / `広告検証`, Fabric `リネン` / `コットン` / `デニム` / `サテン`, Printing `スポット` / `全体`, Line `平置き画像` / `モデル図`, and Image Repair `手足の変形を修正` / `マスクツール`.
 - Exact `権限がありません` remained after the clicks; no permission change, generation, save, upload, provider, or billing action occurred. The tab returned to Canvas.
 
+2026-08-18 release proof and focused verification refresh:
+- Read-only `release:doctor` with sourced production env and explicit Chrome Plugin evidence passed release blockers, git clean, proof target, env:check, and verify:readback, then stopped at `verify:readback:current` because the four default DB/cleanup/rate-limit artifacts retain historical release metadata.
+- Direct Chrome Plugin proof validation accepted the current evidence ledger. Security audit, Supabase static verification, fitting persistence `5/5`, Canvas generation readback `4/4`, provider persistence `12/12`, provider coverage `10/10`, and video-provider boundary `1/1` passed. No OpenAI API, generation, retry, billing, Runway, auth, permission, deploy, migration, upload, save, delete, or provider action occurred.
+
 2026-08-17 current persistence/deployment continuation:
 - Lightchain Workbench durable snapshots now compact only large duplicate remote-result data URLs when a canonical `storagePath` exists; the canonical path remains authoritative and local no-path previews remain resumable. Source: `src/lib/lightchainPersistence.ts` and `src/pages/LightchainWorkbenchPage.tsx`.
 - Focused compaction verification passed `3/3`; combined persistence/readback passed `23/23`; typecheck, build, and `git diff --check` passed. No OpenAI API call, generation, retry, billing, Runway, upload, delete, or save effect occurred.
