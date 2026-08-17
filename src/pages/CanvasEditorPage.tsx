@@ -20,7 +20,6 @@ import {
   Maximize2,
   CopyPlus
 } from 'lucide-react';
-import { InfiniteCanvas } from '../components/canvas/InfiniteCanvas';
 import { CanvasToolbar } from '../components/canvas/CanvasToolbar';
 import { FloatingToolbar } from '../components/canvas/FloatingToolbar';
 import { Minimap } from '../components/canvas/Minimap';
@@ -97,6 +96,9 @@ const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
 const MAX_MODEL_MATRIX_PATTERNS = 3;
 const DerivationTree = lazy(() =>
   import('../components/canvas/DerivationTree').then((module) => ({ default: module.DerivationTree }))
+);
+const InfiniteCanvas = lazy(() =>
+  import('../components/canvas/InfiniteCanvas').then((module) => ({ default: module.InfiniteCanvas }))
 );
 
 const LIGHTCHAIN_EDIT_ACTION_LABELS: Record<LightchainEditAction, string> = {
@@ -3148,7 +3150,14 @@ export function CanvasEditorPage() {
             </div>
 
             {viewMode === 'canvas' ? (
-              <>
+              <Suspense
+                fallback={
+                  <div className="flex h-full items-center justify-center text-sm text-neutral-500 dark:text-neutral-400">
+                    キャンバスを読み込み中...
+                  </div>
+                }
+              >
+                <>
                 <InfiniteCanvas
                   width={canvasSize.width}
                   height={canvasSize.height}
@@ -3184,7 +3193,8 @@ export function CanvasEditorPage() {
                     />
                   </div>
                 </div>
-              </>
+                </>
+              </Suspense>
             ) : (
               <Suspense
                 fallback={

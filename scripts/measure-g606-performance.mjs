@@ -244,14 +244,6 @@ const makeImages = () => {
 };
 
 const makeCanvasObjects = () => {
-  const svg = encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="160" height="160">
-      <rect width="160" height="160" fill="#e7ded2"/>
-      <circle cx="80" cy="70" r="36" fill="#806a54"/>
-      <rect x="48" y="104" width="64" height="34" rx="8" fill="#2f3a40"/>
-    </svg>
-  `);
-  const imageUrl = `data:image/svg+xml,${svg}`;
   return Array.from({ length: CANVAS_OBJECT_COUNT }, (_, index) => ({
     id: `g606-object-${index}`,
     type: index % 4 === 0 ? 'text' : 'image',
@@ -266,7 +258,9 @@ const makeCanvasObjects = () => {
     locked: false,
     visible: true,
     zIndex: index,
-    src: imageUrl,
+    // Use a durable non-data URL so the current Canvas persistence sanitizer
+    // keeps the synthetic stress objects in localStorage for the readback.
+    src: '/favicon.svg',
     text: `G606 ${index}`,
     fontSize: 18,
     fontFamily: 'Inter',
