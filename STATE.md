@@ -26,6 +26,10 @@ Updated: 2026-08-18
 - Attempted read-only advisors, migrations, Edge Functions, table list, `pg_policies`, and SECURITY DEFINER aggregate checks through the Supabase connector.
 - Every connector call failed before execution with the exact blocker: `This app connection requires reauthentication before other actions on this app can succeed.` Two-user RLS and SECURITY DEFINER runtime proof remain `PENDING_CONFIRMATION`; no reauthentication or database action was attempted.
 
+2026-08-18 fresh Fitting persistence readback:
+- Same Chrome Plugin tab `1980902321` on `/fitting` restored existing Gallery source `Gallery素材-6f64e35f-4793-4238-89a4-29152786d4e6` with `素材あり`, `抽出済みレイヤー / OK`, exact high-precision cutout success text, and `Fitting入力と切り抜き状態を保存確認しました。`
+- AI generation remained disabled and untouched. A fresh viewport screenshot was emitted after one bounded full-page screenshot timeout retry; fitting persistence 5/5, provider persistence 12/12, and Canvas generation readback 4/4 remain passed.
+
 2026-08-18 H602 live production read-only readback:
 - Queried `billing_settings`, `billing_test_accounts`, and `billing_purchase_proofs` through Supabase REST SELECT with the service-role value held in process only. No raw email, UUID, token, or secret was printed or persisted.
 - Actual redacted state: one billing-settings row, quota enforcement `false`, production checkout `true`, sandbox no-real-charge flag `true`, one active Apple sandbox tester, latest proof `human_attestation` / `human_attested`, verified no-real-charge proof count `0`, and no transaction/entitlement readback.
