@@ -36,7 +36,7 @@ These are planning targets only. They require approval before any run:
 
 - authenticated users: 25 synthetic/operator-controlled sessions
 - generation jobs: 50 marker-scoped jobs across the 10 major features
-- OpenAI image concurrency: at most 2 image generations in flight unless the user approves a different provider limit
+- Image generation concurrency: at most 2 (OpenAI image concurrency) unless the user approves a different provider limit
 - duration: 30 minutes active window plus 60 minutes post-run monitor
 - cost cap: operator-approved cap recorded before start
 - data scope: one marker prefix, one brand, no broad cleanup
