@@ -21,6 +21,14 @@ export {
   sourceRevisionMatches,
 } from '../features/canvasSourceMetadata';
 
+export interface CanvasLightchainSourceReadback {
+  sourceWorkspace: string;
+  workflowVersion: string;
+  sourceLabel: string;
+  sourceResumePath?: string;
+  sourceMode?: string;
+}
+
 export interface CanvasObject {
   id: string;
   type: 'image' | 'text' | 'shape' | 'frame';
@@ -78,7 +86,13 @@ export interface CanvasObject {
     /** Sanitized provenance for local uploads; never contains paths or bytes. */
     sourceIdentity?: CanvasSourceIdentity;
     sourceRevision?: CanvasSourceRevision;
-    sourceReadback?: CanvasSourceReadback;
+    sourceReadback?: CanvasSourceReadback | CanvasLightchainSourceReadback;
+    sourceWorkspace?: string;
+    workflowVersion?: string;
+    sourceLabel?: string;
+    sourceResumePath?: string;
+    sourceMode?: string;
+    generationIntent?: Record<string, unknown>;
     lightchainEditStages?: Array<{
       stageId: string;
       action: string;

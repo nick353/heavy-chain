@@ -70,9 +70,22 @@ const filteredUsage = filterTelemetryRows(usage, requestIds, sourceEvents);
 const filteredRuns = filterTelemetryRows(runs, requestIds, sourceEvents);
 const filteredLightchainTaskSteps = filterLightchainTaskStepRows(lightchainTaskStepRows, filteredJobs, filteredImages, requestIds);
 const storage = await collectStorageReadback(filteredImages);
+const sourceAttribution = buildSourceAttribution({
+  jobs,
+  images,
+  usage,
+  runs,
+  lightchainTaskSteps: lightchainTaskStepRows,
+  filteredJobs,
+  filteredImages,
+  filteredUsage,
+  filteredRuns,
+  filteredLightchainTaskSteps,
+});
 
 const readback = redactSecrets({
   metadata,
+  sourceAttribution,
   counts: {
     jobs: filteredJobs.length,
     images: filteredImages.length,
@@ -185,6 +198,51 @@ function filterLightchainTaskStepRows(rows, jobRows, imageRows, requestIds) {
     if (isNonEmptyString(row.request_id) && requestIds.has(row.request_id)) return true;
     return false;
   });
+}
+
+function buildSourceAttribution({
+  jobs,
+  images,
+  usage,
+  runs,
+  lightchainTaskSteps,
+  filteredJobs,
+  filteredImages,
+  filteredUsage,
+  filteredRuns,
+  filteredLightchainTaskSteps,
+}) {
+  const tables = [
+    ['jobs', jobs, filteredJobs],
+    ['images', images, filteredImages],
+    ['usage', usage, filteredUsage],
+    ['runs', runs, filteredRuns],
+    ['lightchainTaskSteps', lightchainTaskSteps, filteredLightchainTaskSteps],
+  ];
+  const rawRows = {};
+  const rawRowsWithSourceReadback = {};
+  const filteredRows = {};
+  const filteredRowsWithSourceReadback = {};
+
+  for (const [name, rows, filteredRowsForTable] of tables) {
+    rawRows[name] = rows.length;
+    rawRowsWithSourceReadback[name] = rows.filter(hasSourceReadback).length;
+    filteredRows[name] = filteredRowsForTable.length;
+    filteredRowsWithSourceReadback[name] = filteredRowsForTable.filter(hasSourceReadback).length;
+  }
+
+  return {
+    sourceContract: 'sourceWorkspace+workflowVersion',
+    rawRows,
+    rawRowsWithSourceReadback,
+    filteredRows,
+    filteredRowsWithSourceReadback,
+  };
+}
+
+function hasSourceReadback(row) {
+  const source = sourceInfo(row);
+  return Boolean(source.sourceWorkspace && source.workflowVersion);
 }
 
 function buildSourceEvents(jobRows, imageRows) {

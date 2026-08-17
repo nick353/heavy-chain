@@ -2547,6 +2547,14 @@ export function GeneratePage() {
       ...(image.layerPlan ? { layerPlan: image.layerPlan } : {}),
       ...(image.maskPlan ? { maskPlan: image.maskPlan } : {}),
       ...(image.compositionPreview ? { compositionPreview: image.compositionPreview } : {}),
+      ...(sourceReadback ? {
+        sourceReadback,
+        sourceWorkspace: sourceReadback.sourceWorkspace,
+        workflowVersion: sourceReadback.workflowVersion,
+        sourceLabel: sourceReadback.sourceLabel,
+        sourceResumePath: sourceReadback.sourceResumePath,
+        sourceMode: sourceReadback.sourceMode,
+      } : {}),
     };
     const payload = {
       source: 'generate-results',

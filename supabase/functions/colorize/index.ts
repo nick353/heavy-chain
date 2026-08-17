@@ -6,6 +6,7 @@ import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } fr
 import { generateProviderImage, providerImageArtifact, providerName, providerReferenceImage } from '../_shared/imageProvider.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
+import { buildSourceMetadata } from '../_shared/sourceReadback.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 
 const corsHeaders = {
@@ -29,6 +30,7 @@ serve(async (req) => {
   let observedUserId: string | null = null;
   let observedJobId: string | null = null;
   let observedLightchainMetadata: LightchainCompatMetadata | null = null;
+  let observedSourceMetadata: Record<string, unknown> | null = null;
   let telemetryClient: any = null;
   const functionName = 'colorize';
   const requestId = requestIdFrom(req);
@@ -56,7 +58,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { imageUrl, brandId, colors, count = 3, lightchainCompat } = body;
+    const { imageUrl, brandId, colors, count = 3, lightchainCompat, sourceReadback, generationIntent } = body;
 
     if (!imageUrl || !brandId) {
       throw new Error('Missing required parameters');
@@ -93,6 +95,8 @@ serve(async (req) => {
 
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);
     const materialMetadata = sanitizeMaterialGenerationMetadata(body);
+    const sourceMetadata = buildSourceMetadata(sourceReadback, generationIntent);
+    observedSourceMetadata = sourceMetadata;
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
     observedLightchainMetadata = lightchainMetadata;
     const { data: job, error: jobError } = await supabaseClient
@@ -107,6 +111,7 @@ serve(async (req) => {
           count,
           requestId,
           ...(materialMetadata ?? {}),
+          ...(sourceMetadata ?? {}),
           ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
         } as any,
         status: 'processing',
@@ -125,6 +130,7 @@ serve(async (req) => {
       brandId,
       userId: user.id,
       status: 'processing',
+      sourceMetadata,
       requestId,
     });
 
@@ -196,6 +202,7 @@ serve(async (req) => {
                 source: 'colorize',
                 requestId,
                 ...(materialMetadata ?? {}),
+                ...(sourceMetadata ?? {}),
                 ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
               } as any,
             }).select('id').single();
@@ -208,6 +215,7 @@ serve(async (req) => {
               brandId,
               userId: user.id,
               status: 'completed',
+              sourceMetadata,
               requestId,
               artifactUri: fileName,
             });
@@ -286,6 +294,7 @@ serve(async (req) => {
             brandId: observedBrandId ?? '',
             userId: observedUserId ?? '',
             status: 'retryable',
+            sourceMetadata: observedSourceMetadata,
             requestId,
             errorMessage: sanitizeError(error),
           });

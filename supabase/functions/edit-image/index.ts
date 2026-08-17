@@ -6,6 +6,7 @@ import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } fr
 import { editOpenAiImage, openAiImageArtifact, resolveImageEditCleanupStatus } from '../_shared/openaiImage.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
+import { buildSourceMetadata } from '../_shared/sourceReadback.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 
 const corsHeaders = {
@@ -105,6 +106,7 @@ serve(async (req) => {
   let observedBrandId: string | null = null;
   let observedUserId: string | null = null;
   let observedJobId: string | null = null;
+  let observedSourceMetadata: Record<string, unknown> | null = null;
   let telemetryClient: any = null;
   const uploadedStoragePaths: string[] = [];
   const insertedImageIds: string[] = [];
@@ -152,6 +154,8 @@ serve(async (req) => {
       providerModel,
       inputFidelity,
       quality,
+      sourceReadback,
+      generationIntent,
     } = body;
 
     if (!prompt || !brandId) {
@@ -251,6 +255,8 @@ serve(async (req) => {
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
     const materialMetadata = sanitizeMaterialGenerationMetadata(body);
+    const sourceMetadata = buildSourceMetadata(sourceReadback, generationIntent);
+    observedSourceMetadata = sourceMetadata;
     const requestedCandidateCount = hasMask && !imageEditOptions.isLightchainMaterialRoute ? 4 : 1;
 
     const { data: job, error: jobError } = await supabaseClient
@@ -266,6 +272,7 @@ serve(async (req) => {
           requestedCandidateCount,
           ...partialEditProvenance,
           ...(materialMetadata ?? {}),
+          ...(sourceMetadata ?? {}),
           ...(lightchainMetadata ? { lightchainCompat: lightchainMetadata } : {}),
         } as any,
         status: 'processing',
@@ -284,6 +291,7 @@ serve(async (req) => {
       brandId,
       userId: user.id,
       status: 'processing',
+      sourceMetadata,
       requestId,
     });
 
@@ -380,6 +388,7 @@ serve(async (req) => {
               inputFidelity: result.inputFidelity ?? imageEditOptions.inputFidelity,
               quality: result.quality ?? imageEditOptions.quality,
               ...(materialMetadata ?? {}),
+              ...(sourceMetadata ?? {}),
               ...(completedLightchainMetadata ? { lightchainCompat: completedLightchainMetadata } : {}),
             } as any,
           })
@@ -429,6 +438,7 @@ serve(async (req) => {
       brandId,
       userId: user.id,
       status: 'completed',
+      sourceMetadata,
       requestId,
       artifactUri: firstImage.storagePath,
     });

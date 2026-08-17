@@ -647,12 +647,28 @@ export function CanvasEditorPage() {
   };
 
   const buildLightchainEditMetadata = (objectId: string | null) => {
+    const object = objectId ? objects.find((item) => item.id === objectId) : null;
     const lightchainCompat = getLightchainCompatForObject(objectId);
     const parityRuntime = getParityRuntimeForObject(objectId);
-    return lightchainCompat || parityRuntime
+    const sourceMetadata = object?.metadata;
+    const sourceReadback = sourceMetadata?.sourceReadback || (
+      sourceMetadata?.sourceWorkspace && sourceMetadata?.workflowVersion && sourceMetadata?.sourceLabel
+        ? {
+          sourceWorkspace: sourceMetadata.sourceWorkspace,
+          workflowVersion: sourceMetadata.workflowVersion,
+          sourceLabel: sourceMetadata.sourceLabel,
+          sourceResumePath: sourceMetadata.sourceResumePath,
+          sourceMode: sourceMetadata.sourceMode,
+        }
+        : undefined
+    );
+    const generationIntent = sourceMetadata?.generationIntent;
+    return lightchainCompat || parityRuntime || sourceReadback
       ? {
         ...(lightchainCompat ? { lightchainCompat } : {}),
         ...(parityRuntime ? { parityRuntime } : {}),
+        ...(sourceReadback ? { sourceReadback } : {}),
+        ...(generationIntent ? { generationIntent } : {}),
       }
       : {};
   };
@@ -1335,6 +1351,17 @@ export function CanvasEditorPage() {
       const entries: Array<{ imageUrl: string; label: string; metadata: any }> = [];
       images.forEach((image: any, index: number) => {
         if (typeof image?.imageUrl !== 'string' || !image.imageUrl) return;
+        const sourceReadback = image.sourceReadback || (
+          image.sourceWorkspace && image.workflowVersion && image.sourceLabel
+            ? {
+              sourceWorkspace: image.sourceWorkspace,
+              workflowVersion: image.workflowVersion,
+              sourceLabel: image.sourceLabel,
+              sourceResumePath: image.sourceResumePath,
+              sourceMode: image.sourceMode,
+            }
+            : null
+        );
         entries.push({
           imageUrl: image.imageUrl,
           label: image.label || `生成結果 ${index + 1}`,
@@ -1361,6 +1388,8 @@ export function CanvasEditorPage() {
               maskPlan: image.maskPlan || null,
               compositionPreview: image.compositionPreview || null,
             },
+            ...(sourceReadback ? { sourceReadback, ...sourceReadback } : {}),
+            ...(image.generationIntent ? { generationIntent: image.generationIntent } : {}),
           },
         });
       });
