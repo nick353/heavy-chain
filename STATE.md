@@ -2,6 +2,10 @@
 
 Updated: 2026-08-18
 
+2026-08-18 Chrome Plugin window reopen after release checks:
+- The prior Chrome Plugin tab list emptied during the long read-only release diagnosis. A fresh same-surface tab `1980902314` was reopened at production `/canvas?qa=goal-continuation-20260819`, handoff-marked, and read back as Heavy Chain / brand NiSEN.
+- Fresh Canvas DOM readback showed the unsaved state, rights confirmation, and visible Canvas controls. No generation, save, provider, or external action was clicked. The tab remains open for the next continuation; evidence checkpoint is 82.
+
 2026-08-18 Chrome Plugin release-proof continuation:
 - Added `scripts/verify-chrome-plugin-proof.mjs` and `verify:chrome-plugin-proof`; it strictly checks fresh same-session History/Gallery/Jobs/Canvas readback, filesystem-verified Download/Export PNG hashes, freshness, production host, and no irreversible provider effects. Positive proof passed; missing evidence failed closed.
 - `release:doctor` now accepts exactly one explicit surface: Browser Use or Chrome Plugin. With `RELEASE_CHROME_PLUGIN_EVIDENCE` selected, it passed release blockers, git clean, proof target, env:check, and verify:readback, then stopped at `verify:readback:current` because the default readbacks retain historical `2026-06-18`/`staging`/old-commit metadata. No Browser Use fallback occurred.
