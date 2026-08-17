@@ -2,6 +2,11 @@
 
 Updated: 2026-08-18
 
+2026-08-18 production source-attribution readback and telemetry hardening:
+- Fresh read-only production collector `output/playwright/prod-db-readback-current-20260818-r11/workspace-db-readback.json` now scans all seven source workspaces and read back `31` jobs / `31` images / `39` usage events / `39` Edge runs / `8` Lightchain task-step rows / `31` signed-URL checks. Raw source metadata is present on `31/31` jobs and images, but `0/39` usage, `0/39` runs, and `0/8` task-step rows in the current deployed data; those rows are currently attributable only through request/job linkage. Exact blocker remains `production_telemetry_source_metadata_missing_in_current_deployment`.
+- Added `sourceTelemetryMetadata` and wired sourceWorkspace/workflowVersion into future usage reservations and Edge-run telemetry for all source-aware Edge Functions (`generate-image`, `model-matrix`, `design-gacha`, and Canvas-derived routes). Existing production is unchanged because this is local source only and was not deployed.
+- Focused source-readback `6/6`, typecheck, security audit, and API-less generation `13/13` passed. Commit `ba73dd0`. No OpenAI API, generation, retry, billing, upload, save, delete, auth, permission, migration, deploy, or provider action occurred.
+
 2026-08-18 Lightchain source-attribution gap hardening:
 - The current client workflow contract already defined `marketing` (`marketing-brief-local-v1`) and `fitting` (`fitting-brief-local-v1`), but shared Edge source sanitization, `generate-image`, `model-matrix`, and default production readback coverage omitted them. This could make valid Lightchain jobs appear unattributed.
 - Added the two contracts to the Edge allowlists. Fitting now sends and persists `sourceReadback` through model-matrix, local Fitting History, Canvas handoff metadata, and durable artifact metadata. Production readback collector/verifier defaults now cover `patterns`, `studio`, `video`, `lab`, `models`, `marketing`, and `fitting`, including telemetry attribution candidates.
