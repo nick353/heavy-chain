@@ -7,6 +7,12 @@ Updated: 2026-08-18
 - The fresh Lightchain tab is handoff-marked at `https://jp.linkaigc.com/login?redirect=/designProduction?`, title `Lightchain AI`, with the visible controls `アカウントを入力`, `パスワードを入力する`, `ログイン`. No credentials, OTP, CAPTCHA, or login submit was handled. Live Lightchain post-login UI remains `PENDING_CONFIRMATION` until the user signs in in this tab.
 - Heavy Chain remains the authenticated target; no alternate browser, OpenAI API, generation, retry, billing, Runway, upload, download, delete, save, auth submission, permission change, or provider action was performed in this recovery.
 
+2026-08-18 Lightchain feature ledger reconciliation:
+- Added `scripts/reconcile-lightchain-feature-ledger.mjs` and generated `output/playwright/lightchain-feature-ledger-current-20260818/ledger.json`. It mechanically separates source inventory, catalog/card clicks, permission UI, confirmed outcomes, and media counts.
+- Current source inventory is 33 feature definitions, 31 excluding the two retired-provider video definitions. Existing Chrome Plugin card QA has 30 card records (24 route cards plus 6 case cards), 4 permission-card records, and 2 provider-blocked card records; card QA generation submits remain 0.
+- Confirmed provider outcomes are 15 successes and 1 confirmed failure (`fitting-background-reference`, exact `生成結果の保存確認に失敗しました。予期しないエラーが発生しました。再度お試しください。`; one retry also failed). Fifteen non-video source IDs have no direct outcome evidence and remain `PENDING_CONFIRMATION`; they are not counted as successes or failures.
+- The ledger keeps 6 permission-route readbacks with exact `権限がありません`, 8 media-verified recordings, 5 blocked manifests, 2 analysis-only manifests, 0 strict Extension captures, and 175 valid image files as separate evidence classes.
+
 2026-08-18 Chrome Plugin reconnection and Lightchain authentication readback:
 - A clean Chrome Plugin runtime reset reconnected the Chrome surface with browser instance `-e91e-4dd8-ab80-62fe45b58006`. The same Chrome session opened `https://jp.linkaigc.com/designProduction`, which redirected to `https://jp.linkaigc.com/login` and displayed the exact blocker `ログインの有効期限が切れました。再度ログインしてください`.
 - Lightchain login controls were read only; no account ID, password, OTP, CAPTCHA, or login submission was handled. The next action is user sign-in in the current Chrome tab, then fresh Lightchain readback.
