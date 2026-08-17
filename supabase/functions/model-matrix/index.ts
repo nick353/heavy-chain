@@ -8,6 +8,7 @@ import { generateGeminiImage, hasGeminiImageKey, type GeminiImageResult } from '
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
+import { sourceTelemetryMetadata } from '../_shared/sourceReadback.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -539,6 +540,7 @@ serve(async (req) => {
       requestId,
       idempotencyKey: req.headers.get('idempotency-key'),
       metadata: {
+        ...sourceTelemetryMetadata(requestSourceMetadata),
         provider: 'openai',
         fallbackProvider: hasGeminiImageKey() ? 'gemini' : null,
         providerStrategy: 'openai-primary-gemini-on-quota-v1',
@@ -552,6 +554,7 @@ serve(async (req) => {
       functionName,
       status: 'started',
       requestId,
+      metadata: sourceTelemetryMetadata(requestSourceMetadata),
     });
 
     failedStage = 'job';

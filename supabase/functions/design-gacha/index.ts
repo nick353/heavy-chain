@@ -8,6 +8,7 @@ import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTas
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 import { buildPrintDesignAssetPrompt, sanitizePrintDesignAssetPurpose } from '../_shared/printDesignAssetPurpose.ts';
+import { sourceTelemetryMetadata } from '../_shared/sourceReadback.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -362,6 +363,7 @@ serve(async (req) => {
       units: 1,
       requestId,
       idempotencyKey: req.headers.get('idempotency-key'),
+      metadata: sourceTelemetryMetadata(buildSourceMetadata(sourceReadback, patternContext, productDescription)),
     });
     await recordEdgeFunctionRun(telemetryClient, {
       reservation: usageReservation,
@@ -370,6 +372,7 @@ serve(async (req) => {
       functionName,
       status: 'started',
       requestId,
+      metadata: sourceTelemetryMetadata(buildSourceMetadata(sourceReadback, patternContext, productDescription)),
     });
 
     const requestSourceMetadata = buildSourceMetadata(sourceReadback, patternContext, productDescription);

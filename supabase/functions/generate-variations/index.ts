@@ -6,7 +6,7 @@ import { durationSince, recordEdgeFunctionRun, requestIdFrom, sanitizeError } fr
 import { generateProviderImage, providerImageArtifact, providerName, providerReferenceImage, type ProviderImageResult } from '../_shared/imageProvider.ts';
 import { persistLightchainTaskSteps, sanitizeLightchainCompat, withLightchainTaskStepStatus, type LightchainCompatMetadata } from '../_shared/lightchainCompat.ts';
 import { sanitizeMaterialGenerationMetadata } from '../_shared/materialMetadata.ts';
-import { buildSourceMetadata } from '../_shared/sourceReadback.ts';
+import { buildSourceMetadata, sourceTelemetryMetadata } from '../_shared/sourceReadback.ts';
 import { requireLegalSafetyApproval } from '../_shared/legalSafety.ts';
 
 const corsHeaders = {
@@ -183,6 +183,7 @@ serve(async (req) => {
       units: 1,
       requestId,
       idempotencyKey: req.headers.get('idempotency-key'),
+      metadata: sourceTelemetryMetadata(buildSourceMetadata(sourceReadback, generationIntent)),
     });
     await recordEdgeFunctionRun(telemetryClient, {
       reservation: usageReservation,
@@ -191,6 +192,7 @@ serve(async (req) => {
       functionName,
       status: 'started',
       requestId,
+      metadata: sourceTelemetryMetadata(buildSourceMetadata(sourceReadback, generationIntent)),
     });
 
     const lightchainMetadata = sanitizeLightchainCompat(lightchainCompat);

@@ -9,6 +9,7 @@ import { generateGeminiImage, geminiImageArtifact } from '../_shared/geminiImage
 import { generateOpenAiImage, openAiImageArtifact } from '../_shared/openaiImage.ts';
 import { generateMockImage, mockImageArtifact } from '../_shared/mockImage.ts';
 import { buildPrintDesignAssetPrompt, sanitizePrintDesignAssetPurpose } from '../_shared/printDesignAssetPurpose.ts';
+import { sourceTelemetryMetadata } from '../_shared/sourceReadback.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -229,7 +230,10 @@ serve(async (req) => {
       units: 1,
       requestId,
       idempotencyKey: req.headers.get('idempotency-key'),
-      metadata: { provider: selectedProvider },
+      metadata: {
+        ...sourceTelemetryMetadata(sourceMetadata),
+        provider: selectedProvider,
+      },
     });
     const inputParams = {
       prompt,
@@ -255,6 +259,7 @@ serve(async (req) => {
       functionName,
       status: 'started',
       requestId,
+      metadata: sourceTelemetryMetadata(sourceMetadata),
     });
 
     let optimizedPrompt = prompt

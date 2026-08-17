@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { buildSourceMetadata, sanitizeSourceReadback } from '../supabase/functions/_shared/sourceReadback.ts';
+import { buildSourceMetadata, sanitizeSourceReadback, sourceTelemetryMetadata } from '../supabase/functions/_shared/sourceReadback.ts';
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const read = (relativePath: string) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -62,8 +62,13 @@ test('generation intent is persisted only when it matches the sanitized source',
   const result = buildSourceMetadata(validSource, intent);
   assert.equal(result?.sourceWorkspace, 'patterns');
   assert.deepEqual(result?.generationIntent, intent);
+  assert.deepEqual(sourceTelemetryMetadata(result), {
+    sourceWorkspace: 'patterns',
+    workflowVersion: 'pattern-preview-local-v1',
+  });
   const mismatched = buildSourceMetadata(validSource, { ...intent, sourceWorkspace: 'studio' });
   assert.equal(mismatched?.generationIntent, undefined);
+  assert.deepEqual(sourceTelemetryMetadata({ sourceWorkspace: 'spoofed', workflowVersion: 'unknown' }), {});
 });
 
 test('Canvas handoff and derived actions carry source readback into Edge Functions', () => {
@@ -105,4 +110,10 @@ test('Lightchain generation lanes accept the marketing and fitting source contra
   }
   assert.match(modelMatrix, /fitting-brief-local-v1/);
   assert.match(collector, /'models', 'marketing', 'fitting'/);
+  for (const source of ['edit-image', 'generate-variations', 'remove-background', 'upscale', 'colorize']) {
+    assert.match(read(`supabase/functions/${source}/index.ts`), /sourceTelemetryMetadata/);
+  }
+  assert.match(generateImage, /sourceTelemetryMetadata\(sourceMetadata\)/);
+  assert.match(modelMatrix, /sourceTelemetryMetadata\(requestSourceMetadata\)/);
+  assert.match(read('supabase/functions/design-gacha/index.ts'), /sourceTelemetryMetadata/);
 });

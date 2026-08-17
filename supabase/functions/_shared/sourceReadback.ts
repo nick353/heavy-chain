@@ -94,3 +94,13 @@ export const buildSourceMetadata = (sourceReadback: unknown, generationIntent?: 
     ...(intent ? { generationIntent: intent } : {}),
   };
 };
+
+/** Keep usage and Edge-run telemetry attributable without persisting the full prompt or source payload. */
+export const sourceTelemetryMetadata = (sourceReadback: unknown): Record<string, string> => {
+  const source = sanitizeSourceReadback(sourceReadback);
+  if (!source) return {};
+  return {
+    sourceWorkspace: source.sourceWorkspace,
+    workflowVersion: source.workflowVersion,
+  };
+};
