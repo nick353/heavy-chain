@@ -22,6 +22,10 @@ Updated: 2026-08-18
 - After local commit `c59f3b0`, the explicit Chrome Plugin release doctor passed release blockers, git clean, proof target, env:check, and verify:readback.
 - It stops at `verify:readback:current` because the default readbacks still carry historical release date/environment/commit metadata. This was recorded as a blocker; metadata was not rewritten without fresh proof and no Browser Use fallback was used.
 
+2026-08-18 Supabase connector RLS/Auth readback:
+- Attempted read-only advisors, migrations, Edge Functions, table list, `pg_policies`, and SECURITY DEFINER aggregate checks through the Supabase connector.
+- Every connector call failed before execution with the exact blocker: `This app connection requires reauthentication before other actions on this app can succeed.` Two-user RLS and SECURITY DEFINER runtime proof remain `PENDING_CONFIRMATION`; no reauthentication or database action was attempted.
+
 2026-08-18 H602 live production read-only readback:
 - Queried `billing_settings`, `billing_test_accounts`, and `billing_purchase_proofs` through Supabase REST SELECT with the service-role value held in process only. No raw email, UUID, token, or secret was printed or persisted.
 - Actual redacted state: one billing-settings row, quota enforcement `false`, production checkout `true`, sandbox no-real-charge flag `true`, one active Apple sandbox tester, latest proof `human_attestation` / `human_attested`, verified no-real-charge proof count `0`, and no transaction/entitlement readback.
