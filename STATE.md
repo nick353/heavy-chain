@@ -2,6 +2,12 @@
 
 Updated: 2026-08-18
 
+2026-08-18 Lightchain source-attribution gap hardening:
+- The current client workflow contract already defined `marketing` (`marketing-brief-local-v1`) and `fitting` (`fitting-brief-local-v1`), but shared Edge source sanitization, `generate-image`, `model-matrix`, and default production readback coverage omitted them. This could make valid Lightchain jobs appear unattributed.
+- Added the two contracts to the Edge allowlists. Fitting now sends and persists `sourceReadback` through model-matrix, local Fitting History, Canvas handoff metadata, and durable artifact metadata. Production readback collector/verifier defaults now cover `patterns`, `studio`, `video`, `lab`, `models`, `marketing`, and `fitting`, including telemetry attribution candidates.
+- Verification passed: source-readback `6/6`, typecheck, Fitting lint, security audit, API-less generation `13/13`, Supabase static verification, production build, and Lightchain all-feature workflow `31` features with no failures. Commit `8e872b2`.
+- This is source/readback hardening only; no OpenAI API, generation, retry, billing, upload, save, delete, auth, permission, migration, deploy, or provider action occurred. Production must receive the fix only through an authorized deployment lane with fresh source association.
+
 2026-08-18 fresh Chrome Plugin safe-flow recording continuation:
 - Reopened Heavy Chain and Lightchain in the same Chrome Plugin Profile 2 session after a fresh managed-tab readback returned empty. Heavy tab `1980902590` is authenticated at `/gallery` with `957枚の画像`; Lightchain tab `1980902591` is authenticated at `/designProduction` with `デザインワークスペースへようこそ`, both project-start tabs, four new-project actions, and the project list.
 - Recorded Heavy Chain `/gallery` -> `/history` -> `/jobs` -> `/canvas?qa=fresh-recording-20260818` with the new native Chrome-window capture method. Accepted artifact: `recordings/chrome-plugin-fresh-readback-20260818/heavy-history-jobs-canvas-native-20260818.mov`, `24.623333` seconds, `511` H.264 frames, `1440x796`, SHA-256 `534eb6bd64e6e6314f4e887806f1e0695f975e93a837f43cada8c7927e009f58`; manifest media verification passed.
