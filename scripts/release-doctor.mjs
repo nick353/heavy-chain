@@ -105,10 +105,13 @@ const releaseDate = proofTargetValue('RELEASE_DATE', latestReleaseEvidenceDate()
 const releaseEnvironment = proofTargetValue('RELEASE_ENVIRONMENT', 'staging', validReleaseEnvironment);
 const currentGitCommit = proofTargetValue('RELEASE_GIT_COMMIT', gitCommit(), validGitCommit);
 const releaseBrowserUseProofDir = process.env.RELEASE_BROWSER_USE_PROOF_DIR || '';
+const releaseChromePluginEvidence = process.env.RELEASE_CHROME_PLUGIN_EVIDENCE || '';
 const releaseBrowserUseProofDirValid = releaseBrowserUseProofDir.trim().length > 0;
+const releaseChromePluginEvidenceValid = releaseChromePluginEvidence.trim().length > 0;
+const releaseProofSurfaceCount = Number(releaseBrowserUseProofDirValid) + Number(releaseChromePluginEvidenceValid);
 const proofTargetValid =
   [releaseDate, releaseEnvironment, currentGitCommit].every((target) => target.valid) &&
-  releaseBrowserUseProofDirValid;
+  releaseProofSurfaceCount === 1;
 
 const currentReadbackArgs = ['run', 'verify:readback', '--silent'];
 if (releaseDate.value) currentReadbackArgs.push('--', '--expect-release-date', releaseDate.value);
@@ -125,6 +128,27 @@ const currentBrowserUseArgs = ['run', 'verify:browser-use', '--silent', '--', '-
 if (releaseDate.value) currentBrowserUseArgs.push('--expect-release-date', releaseDate.value);
 if (releaseEnvironment.value) currentBrowserUseArgs.push('--expect-environment', releaseEnvironment.value);
 if (currentGitCommit.value) currentBrowserUseArgs.push('--expect-git-commit', currentGitCommit.value);
+
+const currentChromePluginArgs = ['run', 'verify:chrome-plugin-proof', '--silent', '--', '--evidence', releaseChromePluginEvidence];
+if (releaseDate.value) currentChromePluginArgs.push('--expect-release-date', releaseDate.value);
+if (releaseEnvironment.value) currentChromePluginArgs.push('--expect-environment', releaseEnvironment.value);
+if (currentGitCommit.value) currentChromePluginArgs.push('--expect-git-commit', currentGitCommit.value);
+
+const releaseProofCheck = releaseChromePluginEvidenceValid
+  ? {
+      name: 'verify:chrome-plugin-proof',
+      command: 'npm',
+      args: currentChromePluginArgs,
+      stop: 'Chrome Pluginのfresh proofが足りないか壊れています。',
+      next: '同一Chrome PluginセッションでHistory/Gallery/Jobs/Canvas/Downloadをread-only再確認し、RELEASE_CHROME_PLUGIN_EVIDENCEにCURRENT-TURN証跡を指定してください。',
+    }
+  : {
+      name: 'verify:browser-use',
+      command: 'npm',
+      args: currentBrowserUseArgs,
+      stop: 'Browser Useの画面証跡が足りないか壊れています。',
+      next: 'env-injectedのview-only画面証跡を取り直し、RELEASE_BROWSER_USE_PROOF_DIRに保存先ディレクトリを指定してください。',
+    };
 
 const checks = [
   {
@@ -146,7 +170,7 @@ const checks = [
     command: 'node',
     args: ['-e', 'process.exit(0)'],
     stop: 'release proof target の override 値が不正です。',
-    next: 'RELEASE_DATE は YYYY-MM-DD、RELEASE_ENVIRONMENT は staging/prod/production/preview/development/local、RELEASE_GIT_COMMIT は40桁 hex、RELEASE_BROWSER_USE_PROOF_DIR は今回の Browser Use 証跡ディレクトリを指定してください。',
+    next: 'RELEASE_DATE は YYYY-MM-DD、RELEASE_ENVIRONMENT は staging/prod/production/preview/development/local、RELEASE_GIT_COMMIT は40桁 hex、RELEASE_BROWSER_USE_PROOF_DIR または RELEASE_CHROME_PLUGIN_EVIDENCE のどちらか一方を今回の証跡として指定してください。',
     validate: () => proofTargetValid,
   },
   {
@@ -170,13 +194,7 @@ const checks = [
     stop: 'readback 証跡が現在の release date / environment / git commit と一致していません。',
     next: 'staging の read-only readback を取り直し、各 JSON に release_date / environment / git_commit / captured_at を入れてください。',
   },
-  {
-    name: 'verify:browser-use',
-    command: 'npm',
-    args: currentBrowserUseArgs,
-    stop: 'Browser Use の画面証跡が足りないか壊れています。',
-    next: 'env-injected の view-only 画面証跡を取り直し、RELEASE_BROWSER_USE_PROOF_DIR に保存先ディレクトリを指定してください。',
-  },
+  releaseProofCheck,
   {
     name: 'supabase:verify:static',
     command: 'npm',

@@ -10,7 +10,11 @@ write down the blocker. Do not skip ahead.
 For the safe one-command readiness diagnosis, run:
 
 ```bash
+# Browser Use route (historical)
 RELEASE_BROWSER_USE_PROOF_DIR=<current-browser-use-proof-dir> npm run release:doctor
+
+# Chrome Plugin route (when Chrome Plugin is the explicitly selected surface)
+RELEASE_CHROME_PLUGIN_EVIDENCE=<current-chrome-plugin-evidence.json> npm run release:doctor
 ```
 
 It first checks the release blocker manifest, then runs read-only/local checks
@@ -20,10 +24,14 @@ in order and stops at the first `STOP`: git clean status, proof target,
 `smoke:edge`, `typecheck`, and `lint`. It never runs
 `supabase:verify:db` or `verify:full`, and it shows the first `STOP` with a next
 action.
-Doctor requires `RELEASE_BROWSER_USE_PROOF_DIR` and passes it to
-`verify:browser-use -- --dir` with current release date, environment, and git
-commit expectations. This closes the historical default proof path for current
-release diagnosis.
+Doctor requires exactly one of `RELEASE_BROWSER_USE_PROOF_DIR` or
+`RELEASE_CHROME_PLUGIN_EVIDENCE`. The first is passed to
+`verify:browser-use -- --dir`; the second is checked by
+`verify:chrome-plugin-proof` and must contain a fresh same-session Chrome
+Plugin readback for History, Gallery, Jobs, Canvas, and filesystem-verified
+Download/Export artifacts. Both routes receive the current release date,
+environment, and git-commit expectations. The selected surface is never
+silently replaced by the other route.
 
 - Confirm `git status --short` is empty.
 - Confirm the release evidence file for the day exists.

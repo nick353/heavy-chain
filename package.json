@@ -92,6 +92,7 @@
     "verify:10m-completion:incomplete-ok": "node scripts/verify-10m-completion-audit.mjs --allow-incomplete",
     "verify:g610-retention": "npm run build && node scripts/verify-g610-retention-project-search.mjs",
     "verify:release-gate": "node scripts/verify-release-gate-unified.mjs",
+    "verify:chrome-plugin-proof": "node scripts/verify-chrome-plugin-proof.mjs",
     "verify:generation-scorecard": "node scripts/verify-generation-quality-scorecard.mjs",
     "qa:g617-gemini-live": "node scripts/hc-10m-real-generation-qa.mjs --mode invoke-gemini",
     "qa:g617-openai-live": "node scripts/hc-10m-real-generation-qa.mjs --mode invoke-openai",
