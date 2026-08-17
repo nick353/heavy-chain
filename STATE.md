@@ -2,6 +2,12 @@
 
 Updated: 2026-08-18
 
+2026-08-18 Chrome Plugin reconnection and Lightchain authentication readback:
+- A clean Chrome Plugin runtime reset reconnected the Chrome surface with browser instance `-e91e-4dd8-ab80-62fe45b58006`. The same Chrome session opened `https://jp.linkaigc.com/designProduction`, which redirected to `https://jp.linkaigc.com/login` and displayed the exact blocker `ログインの有効期限が切れました。再度ログインしてください`.
+- Lightchain login controls were read only; no account ID, password, OTP, CAPTCHA, or login submission was handled. The next action is user sign-in in the current Chrome tab, then fresh Lightchain readback.
+- Heavy Chain remained logged in at `/dashboard`. Fresh DOM readback showed `無制限回 / 今月使用47回 / 処理中0回`; Lightchain parity tabs were exercised with counts recommended `9`, planning `7`, fitting `4`, graphics `11`.
+- `/lightchain/fabric-image` settled to the exact disabled `権限がありません` control and the retirement notice. No generation, retry, OpenAI API, billing, Runway, upload, download, delete, save, auth submission, or provider action occurred.
+
 2026-08-18 latest Fitting persistence race-guard deployment/readback:
 - Commit `93364d0` latches Fitting cutout save/restore failures for the current brand/user/source identity so a later material-save success cannot overwrite the failure state. The latch resets only when the source identity changes.
 - Focused Fitting resume/persistence tests passed `11/11`; typecheck, build, and security audit passed. Lint has 0 errors and 3 warnings.
