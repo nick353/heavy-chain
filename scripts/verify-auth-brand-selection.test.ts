@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import type { Brand } from '../src/types/database';
 import { selectCurrentBrand } from '../src/lib/authBrandSelection.ts';
@@ -33,4 +34,9 @@ test('moves to the first accessible brand after a non-empty membership refresh',
 
 test('returns null when no brand has ever been selected and none is accessible', () => {
   assert.equal(selectCurrentBrand(null, []), null);
+});
+
+test('BrandSwitcher uses the shared resilient selection boundary', async () => {
+  const source = await readFile(new URL('../src/components/BrandSwitcher.tsx', import.meta.url), 'utf8');
+  assert.match(source, /selectCurrentBrand\(latestCurrentBrand, brandsData\)/);
 });

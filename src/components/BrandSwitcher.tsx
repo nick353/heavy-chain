@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronDown, Plus, Check, Building2 } from 'lucide-react';
 import { fetchAccessibleBrandsForCurrentUser, useAuthStore } from '../stores/authStore';
+import { selectCurrentBrand } from '../lib/authBrandSelection';
 import type { Brand } from '../types/database';
 
 export function BrandSwitcher() {
@@ -25,13 +26,12 @@ export function BrandSwitcher() {
       if (useAuthStore.getState().user?.id !== userId) return;
       setBrands(brandsData || []);
 
-      // Set first brand as current if none selected
+      // Preserve the selected brand across transient empty refreshes while
+      // still moving to the first brand after a non-empty membership refresh.
       const latestCurrentBrand = useAuthStore.getState().currentBrand;
-      const currentBrandIsAccessible = latestCurrentBrand && brandsData.some((brand) => brand.id === latestCurrentBrand.id);
-      if (latestCurrentBrand && !currentBrandIsAccessible && brandsData.length === 0) {
-        setCurrentBrand(null);
-      } else if ((!latestCurrentBrand || !currentBrandIsAccessible) && brandsData && brandsData.length > 0) {
-        setCurrentBrand(brandsData[0]);
+      const nextBrand = selectCurrentBrand(latestCurrentBrand, brandsData);
+      if (nextBrand !== latestCurrentBrand) {
+        setCurrentBrand(nextBrand);
       }
     } catch (error) {
       console.error('Failed to fetch brands:', error);
