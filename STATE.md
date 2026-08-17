@@ -2,6 +2,13 @@
 
 Updated: 2026-08-18
 
+2026-08-18 fresh Chrome Plugin safe-flow recording continuation:
+- Reopened Heavy Chain and Lightchain in the same Chrome Plugin Profile 2 session after a fresh managed-tab readback returned empty. Heavy tab `1980902590` is authenticated at `/gallery` with `957枚の画像`; Lightchain tab `1980902591` is authenticated at `/designProduction` with `デザインワークスペースへようこそ`, both project-start tabs, four new-project actions, and the project list.
+- Recorded Heavy Chain `/gallery` -> `/history` -> `/jobs` -> `/canvas?qa=fresh-recording-20260818` with the new native Chrome-window capture method. Accepted artifact: `recordings/chrome-plugin-fresh-readback-20260818/heavy-history-jobs-canvas-native-20260818.mov`, `24.623333` seconds, `511` H.264 frames, `1440x796`, SHA-256 `534eb6bd64e6e6314f4e887806f1e0695f975e93a837f43cada8c7927e009f58`; manifest media verification passed.
+- The recording is Chrome Plugin-controlled native ScreenCaptureKit window capture, not Extension-emitted media. The strict Extension preflight remains separately blocked with exact `chrome_extension_action_not_received`; no generation, retry, OpenAI API, billing, upload, save, delete, auth, permission, or provider action occurred.
+- Fresh recording inventory is now `22` canonical manifests / `2` analysis-only manifests / `19` physical movie files / `14` completed media-verified recordings (`10` native Chrome-window / `3` Chrome debugger / `1` display / `0` strict Extension); blocked manifests remain excluded. Evidence: `CURRENT-TURN-20260818.json` key `freshChromePluginSafeReadbackRecording20260818`; Security Review Packet input hash was refreshed and matched.
+- Verification after this continuation: `verify:chrome-plugin-proof` accepted the current evidence, provider persistence `12/12`, Fitting persistence runtime `5/5`, security audit, API-less generation `13/13`, Supabase static verification, G620, and production build passed. The worktree remains clean.
+
 2026-08-18 new native Chrome-window recording method readback:
 - Same Chrome Plugin Profile 2 session and Heavy Chain tab `1980902496` were used to record the safe `/lightchain/fitting-background-reference` controls: `マルチタスク`, `自動変換`, `参考画像`, `モデルのセット写真`, `説明生成`, and the `生成履歴` route, then returned to the canonical route.
 - Accepted media: `recordings/new-window-native-20260818/fitting-background-safe-controls-20260818.mov`; native ScreenCaptureKit independent-window capture, `18.965` seconds, `389` H.264 frames, `1440x796`, SHA-256 `b91afe75b087027d25c4554e162c6d774f88f5e8a538f5db394c2b00a0feb8d8`. Manifest is adjacent and records the Chrome Plugin surface, window identity, and limitations.
