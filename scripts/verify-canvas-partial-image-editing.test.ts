@@ -52,7 +52,8 @@ test('partial edit mask is sent through the client and edge function without sto
     read('../supabase/functions/_shared/openaiImage.ts'),
   ]);
   assert.match(client, /maskDataUrl: options\?\.maskDataUrl/);
-  assert.match(client, /options\?\.maskDataUrl\s*\? await imageBlobToPngDataUrl\(imageBlob\)/);
+  assert.match(client, /requiresPngNormalization\s*=\s*index === 0 && options\?\.maskDataUrl/);
+  assert.match(client, /requiresPngNormalization\s*\? await imageBlobToPngDataUrl\(imageBlob\)/);
   assert.match(edge, /mask: maskDataUrl \? \{ imageUrl: maskDataUrl \} : undefined/);
   assert.match(edge, /Edit mask dimensions must match input image/);
   assert.match(edge, /Edit mask must contain an alpha channel/);
@@ -66,6 +67,19 @@ test('partial edit mask is sent through the client and edge function without sto
   assert.match(edge, /idempotency-key/);
   assert.match(openAi, /formData\.set\('n', String\(requestedCount\)\)/);
   assert.equal((edge.match(/await editOpenAiImage\(/g) ?? []).length, 1);
+});
+
+test('SVG edit references are rasterized before provider submission and unsupported MIME is fail-closed', async () => {
+  const [client, openAi] = await Promise.all([
+    read('../src/lib/imageApi.ts'),
+    read('../supabase/functions/_shared/openaiImage.ts'),
+  ]);
+  assert.match(client, /requiresPngNormalization/);
+  assert.match(client, /\/svg\|xml\/i\.test\(imageBlob\.type/);
+  assert.match(client, /requiresPngNormalization\s*\? await imageBlobToPngDataUrl/);
+  assert.match(openAi, /assertSupportedEditMimeType/);
+  assert.match(openAi, /openai_image_edit_input_unsupported_mime/);
+  assert.match(openAi, /\['image\/jpeg', 'image\/jpg', 'image\/png', 'image\/webp'\]/);
 });
 
 test('partial edit submit makes one four-candidate batch and refuses incomplete persistence', async () => {

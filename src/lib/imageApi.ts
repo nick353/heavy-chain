@@ -361,7 +361,9 @@ export async function editImageWithPrompt(
       if (!response.ok) throw new Error(`image_edit_input_fetch_failed:${index}:${response.status}`);
       const imageBlob = await response.blob();
       if (!imageBlob.type.startsWith('image/')) throw new Error(`image_edit_input_not_image:${index}`);
-      const dataUrl = index === 0 && options?.maskDataUrl
+      const requiresPngNormalization = index === 0 && options?.maskDataUrl
+        || /svg|xml/i.test(imageBlob.type || '');
+      const dataUrl = requiresPngNormalization
         ? await imageBlobToPngDataUrl(imageBlob)
         : await imageBlobToDataUrl(imageBlob);
       return dataUrl;

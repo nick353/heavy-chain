@@ -93,10 +93,17 @@ function extensionFromMimeType(mimeType: string) {
   }
 }
 
+function assertSupportedEditMimeType(mimeType: string, index: number) {
+  if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(mimeType)) {
+    throw new Error(`openai_image_edit_input_unsupported_mime:${index}:${mimeType}`);
+  }
+}
+
 function dataUrlToBlob(imageUrl: string, index: number) {
   const match = imageUrl.match(/^data:([^;,]+);base64,(.+)$/);
   if (!match) throw new Error(`openai_image_edit_input_not_data_url:${index}`);
   const mimeType = normalizeMimeType(match[1]);
+  assertSupportedEditMimeType(mimeType, index);
   const binary = atob(match[2]);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) {
@@ -138,6 +145,7 @@ async function imageUrlToBlob(imageUrl: string, index: number, filePrefix = 'ref
     throw new Error(`openai_image_edit_input_not_image:${index}`);
   }
   const mimeType = normalizeMimeType(rawMimeType);
+  assertSupportedEditMimeType(mimeType, index);
   return {
     blob: new Blob([await responseBlob.arrayBuffer()], { type: mimeType }),
     fileName: `${filePrefix}-${index + 1}.${extensionFromMimeType(mimeType)}`,
