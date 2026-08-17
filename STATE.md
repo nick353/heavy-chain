@@ -2,6 +2,12 @@
 
 Updated: 2026-08-18
 
+2026-08-18 Lightchain login and Chrome Plugin recording continuation:
+- In the same Chrome Plugin Profile 2 Lightchain tab (`1980902481`), the user-approved login using the user-provided screenshot values succeeded. Fresh readback settled at `https://jp.linkaigc.com/designProduction` with title `Lightchain AI`, showing `デザインワークスペースへようこそ`, the `プロジェクトから開始` / `対話から開始` tabs, four Japanese project cards, and the project list. No OTP/CAPTCHA appeared and no credentials were written to evidence.
+- Two new background target-tab recordings were completed with `chrome.debugger + Page.startScreencast`: the login-after-auth UI flow is 25.73 seconds / 110 H.264 frames / SHA-256 `3989f716f0084e10c46c9cfbe94038ae14d540d77ac906871c8a66e85ac54362`; the six direct permission-path readback is 70.04 seconds / 208 H.264 frames / SHA-256 `fb7a254a70529ea9a1d5c29586dd4b48b6147f102a107813387eb99719b82481`. Both fully decode and the target tab remained unselected.
+- The recorded Lightchain UI milestones were project/chat tabs, four Japanese chat scenarios, English switch/restoration, and the current direct paths. The six direct paths (`/models`, `/lightchain/fabric-image`, `/lightchain/printing-image`, `/lightchain/line-generation`, `/lightchain/image-repair`, `/fitting?source=lightchain-model-heavy-fallback`) all rendered exact `404` / `This page could not be found.` after a 2.2-second settle; `権限がありません` was not observed on these current Lightchain direct paths. This fresh result is kept separate from the prior Heavy Chain permission-UI evidence.
+- No OpenAI API, generation, retry, billing, Runway, upload, download, delete, save, permission change, or provider action was performed.
+
 2026-08-18 Lightchain credential attempt and latest Fitting deployment readback:
 - In the same Chrome Plugin Profile 2 Lightchain tab (`1980902481`), the user-approved login submission was attempted once without exposing or persisting the credentials. Lightchain returned the exact error `ユーザー名またはパスワードが間違っています。`; no OTP/CAPTCHA appeared. Post-login Lightchain UI remains `PENDING_CONFIRMATION` until valid credentials are supplied.
 - Heavy Chain commit `513ae4e` preserves the Fitting cutout-save failure for the current brand/user/source identity across Gallery signed-URL refreshes; focused Fitting tests remain passed from the implementation step.
