@@ -2,6 +2,11 @@
 
 Updated: 2026-08-18
 
+2026-08-18 production quota-copy deployment/readback:
+- Deployed the quota-copy/verifier fix to the authorized Heavy Chain service as Zeabur deployment `6a83408746afbcef424d8843`; Docker build completed and deployment is `RUNNING`. Public HTTP is `200`, and local/public index asset SHA-256 matches (`8335545d49ff9c1ad1f1da33a8d3ea2d68c0b6f4a09dcb736b577fbca583ad38`).
+- Public BrandSettings and errorMessages chunks contain the Heavy Chain quota copy. Same Chrome Plugin tab `1980902314` read Brand Settings with the quota sentence, then returned to Canvas / NiSEN; no generation or save action was clicked.
+- H602 local verifier copy assertions all pass; only the missing production billing readback and dependent production proof assertions remain. Zeabur immutable source association is still `PENDING_CONFIRMATION`; evidence checkpoint is 83.
+
 2026-08-18 Chrome Plugin window reopen after release checks:
 - The prior Chrome Plugin tab list emptied during the long read-only release diagnosis. A fresh same-surface tab `1980902314` was reopened at production `/canvas?qa=goal-continuation-20260819`, handoff-marked, and read back as Heavy Chain / brand NiSEN.
 - Fresh Canvas DOM readback showed the unsaved state, rights confirmation, and visible Canvas controls. No generation, save, provider, or external action was clicked. The tab remains open for the next continuation; evidence checkpoint is 82.
