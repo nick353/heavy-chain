@@ -28,6 +28,7 @@ Updated: 2026-08-18
 
 2026-08-18 recording / external role / video-provider blocker readback:
 - Recording re-audit found 15 manifest files: exactly 8 media-verified recordings counted (7 native Chrome-window captures plus 1 display capture), 5 blocked manifests excluded, and 2 analysis-only manifests excluded. Strict Extension completed count remains 0 with exact `chrome_extension_action_not_received`; other blocked manifests are `native_chrome_window_video_duration_invalid` and `capture_target_title_mismatch`. All 8 counted media files passed ffprobe H.264/duration/frame checks.
+- Evidence-root image re-audit found 175 PNG/JPEG/WebP files and all 175 MIME checks passed; screenshot/image totals remain separate from video and recording-analysis totals.
 - Video remains fail-closed because Runway MCP same-run admission/readback is unconfirmed, and the Runway runtime is retired. Provider-boundary tests passed 1/1, provider coverage 10/10, and adapter 16/16.
 - Designer, Executor, Reviewer, and Verifier outputs remain rejected with exact transport/metadata/truncated-handoff blockers. No external role was accepted as release approval.
 
