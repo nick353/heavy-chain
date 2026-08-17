@@ -92,6 +92,11 @@ Updated: 2026-08-18
 - Read-only production monitor found 24 completed generation jobs / 0 failed / 0 stale active, 22 succeeded Edge Function runs, 22 succeeded usage events, and 24/24 storage checks without errors.
 - The authenticated UI probe stopped before route checks with `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`. This Browser Use auth-state gap remains separate from the accepted Chrome Plugin proof and was not bypassed with a fallback.
 
+2026-08-18 currentBrand drift fix and post-deploy readback:
+- Added `src/lib/authBrandSelection.ts` and wired both `authStore` and `BrandSwitcher` so a previously selected brand survives transient empty/failed refreshes while non-empty membership responses still select only an accessible brand. Regression coverage is `5/5`; typecheck and production build passed.
+- Deployed the latest commit to the exact Heavy Chain service as Zeabur deployment `6a834cc746afbcef424d8aee`; status is `RUNNING`, public HTTP `200`, and local/public `assets/index.Du37EOGP.js` SHA-256 matches (`885a980b2bd8b2adbdb025eec9c547c8bc3616e04d783a65270cd2033ef4b1f7`).
+- Fresh same-session Chrome Plugin readback after brand establishment: History `20` timeline / `4` failures / `12` saved, Gallery `957` images / `60` visible before load-more / settled, Jobs `20` completed / `4` failed, Canvas brand `NiSEN` with rights confirmation and generation untouched. No OpenAI API, generation, retry, billing, Runway, auth, permission, upload, save, delete, migration, or provider action occurred.
+
 2026-08-17 current persistence/deployment continuation:
 - Lightchain Workbench durable snapshots now compact only large duplicate remote-result data URLs when a canonical `storagePath` exists; the canonical path remains authoritative and local no-path previews remain resumable. Source: `src/lib/lightchainPersistence.ts` and `src/pages/LightchainWorkbenchPage.tsx`.
 - Focused compaction verification passed `3/3`; combined persistence/readback passed `23/23`; typecheck, build, and `git diff --check` passed. No OpenAI API call, generation, retry, billing, Runway, upload, delete, or save effect occurred.
