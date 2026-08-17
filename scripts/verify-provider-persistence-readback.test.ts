@@ -41,6 +41,7 @@ test('model-matrix promotion requires completed persistence for every matrix ite
       ageGroup: '20s',
       ageGroupName: '20代',
       imageUrl: 'https://example.test/model.png',
+      storagePath: 'user-a/brand-a/model-matrix-1.png',
       persistenceStatus: 'completed' as const,
     }],
   };
@@ -55,6 +56,13 @@ test('model-matrix promotion requires completed persistence for every matrix ite
       matrix: [{ ...result.matrix[0], persistenceStatus: 'failed' as const }],
     }),
     /matrix_incomplete/,
+  );
+  assert.throws(
+    () => assertCompletedModelMatrixResult({
+      ...result,
+      matrix: [{ ...result.matrix[0], storagePath: null }],
+    }),
+    /storage_path_missing/,
   );
 });
 

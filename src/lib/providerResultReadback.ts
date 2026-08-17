@@ -53,6 +53,7 @@ export interface ModelMatrixReadbackResult {
   persistenceStatus?: string;
   matrix?: Array<{
     imageUrl?: string;
+    storagePath?: string | null;
     persistenceStatus?: string;
   }>;
   error?: string;
@@ -81,5 +82,11 @@ export function assertCompletedModelMatrixResult(
     || item.persistenceStatus !== 'completed'
   ))) {
     throw new Error(`${code}_matrix_incomplete`);
+  }
+  if (matrix.some((item) => (
+    typeof item.storagePath !== 'string'
+    || !item.storagePath.trim()
+  ))) {
+    throw new Error(`${code}_storage_path_missing`);
   }
 }
