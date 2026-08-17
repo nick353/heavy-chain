@@ -2,6 +2,13 @@
 
 Updated: 2026-08-18
 
+2026-08-18 Chrome Plugin new recording method live verification:
+- Same Chrome Plugin Profile 2 session and Heavy Chain tab `1980902496` were retained. The background `chrome.debugger + Page.startScreencast` route recorded the safe `/lightchain/marketing` -> `/lightchain` navigation and all four Lightchain category tabs while the target tab remained unselected.
+- New accepted artifact: `recordings/heavy-chain-lightchain-new-method-navigation-20260818.mp4`, 19.533392 seconds, 88 H.264 frames, 1920x872, full decode passed, SHA-256 `8f4693063b639f7bc9f99fc2da49ccac8a0f784e2a918bc15a61c8df9e9e91ea`. Manifest is adjacent and records the Chrome Plugin surface and selected-sibling readback.
+- Two static/incorrect-interaction trials remain explicitly blocked with `chrome_debugger_media_verification_failed` and are not counted as recordings. No native fallback or alternate browser surface was used. Strict `tabCapture` remains separately blocked by `chrome_extension_action_not_received`.
+- Production monitor read-only summary remains healthy for the 24-hour window: 13/13 generation jobs completed, 13/13 Edge Function runs succeeded, 13/13 usage events succeeded, 13/13 storage checks succeeded, 0 stale active jobs, 0 storage errors, with UI probe intentionally skipped and therefore `uiOk: null`. Chrome Plugin is the UI authority.
+- Current local verification: `verify:readback` passed, production build passed, lint passed with three existing warnings and zero errors. No OpenAI API, generation, retry, billing, Runway, upload, save, delete, auth, permission, or provider action occurred.
+
 2026-08-18 Lightchain catalog, permission UI, and Heavy Chain fresh continuation:
 - Same Chrome Plugin Profile 2 was rebound after a bounded kernel restart. Lightchain tab `1980902495` remained authenticated at `/designProduction`; Heavy Chain tab `1980902496` remained authenticated and was used for the fresh QA.
 - The Lightchain catalog was read from its visible category tabs: おすすめHot `9`, 企画デザインツール `6`, AIフィッティング `4`, グラフィックツール `11`, for `24` unique catalog routes. Initial route readback reached 23; `/marketing` recovered on one focused retry and rendered the Marketing Workspace. No catalog link was submitted for generation.
