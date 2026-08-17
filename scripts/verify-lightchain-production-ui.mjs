@@ -80,7 +80,7 @@ const pages = [
   {
     name: 'brand-settings',
     path: '/brand/settings',
-    expected: ['ブランド設定', 'ブランド情報', 'チームメンバー'],
+    expected: ['ブランド設定', 'ブランド情報', 'チームメンバー', '月間 quota は通常アカウントの生成条件'],
   },
 ];
 
