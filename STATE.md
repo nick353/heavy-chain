@@ -18,6 +18,10 @@ Updated: 2026-08-18
 - Video remains fail-closed because Runway MCP same-run admission/readback is unconfirmed, and the Runway runtime is retired. Provider-boundary tests passed 1/1, provider coverage 10/10, and adapter 16/16.
 - Designer, Executor, Reviewer, and Verifier outputs remain rejected with exact transport/metadata/truncated-handoff blockers. No external role was accepted as release approval.
 
+2026-08-18 release doctor recheck:
+- After local commit `c59f3b0`, the explicit Chrome Plugin release doctor passed release blockers, git clean, proof target, env:check, and verify:readback.
+- It stops at `verify:readback:current` because the default readbacks still carry historical release date/environment/commit metadata. This was recorded as a blocker; metadata was not rewritten without fresh proof and no Browser Use fallback was used.
+
 2026-08-18 H602 live production read-only readback:
 - Queried `billing_settings`, `billing_test_accounts`, and `billing_purchase_proofs` through Supabase REST SELECT with the service-role value held in process only. No raw email, UUID, token, or secret was printed or persisted.
 - Actual redacted state: one billing-settings row, quota enforcement `false`, production checkout `true`, sandbox no-real-charge flag `true`, one active Apple sandbox tester, latest proof `human_attestation` / `human_attested`, verified no-real-charge proof count `0`, and no transaction/entitlement readback.
