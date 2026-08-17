@@ -2,6 +2,11 @@
 
 Updated: 2026-08-18
 
+2026-08-18 Chrome Plugin release-proof continuation:
+- Added `scripts/verify-chrome-plugin-proof.mjs` and `verify:chrome-plugin-proof`; it strictly checks fresh same-session History/Gallery/Jobs/Canvas readback, filesystem-verified Download/Export PNG hashes, freshness, production host, and no irreversible provider effects. Positive proof passed; missing evidence failed closed.
+- `release:doctor` now accepts exactly one explicit surface: Browser Use or Chrome Plugin. With `RELEASE_CHROME_PLUGIN_EVIDENCE` selected, it passed release blockers, git clean, proof target, env:check, and verify:readback, then stopped at `verify:readback:current` because the default readbacks retain historical `2026-06-18`/`staging`/old-commit metadata. No Browser Use fallback occurred.
+- Commits: `04b01f7` added the Chrome Plugin route; `fc8c923` reports the selected proof surface. Current evidence is checkpoint 81; release acceptance remains fail-closed.
+
 2026-08-18 current local release-validator continuation:
 - Read-only `npm run lint` passed with 0 errors and 2 existing React Hook warnings (CanvasEditorPage.tsx:635 and DashboardPage.tsx:163); `verify:readback`, `smoke:edge`, and `verify:h601-legal-safety` passed without provider or billing effects.
 - `verify:generation-scorecard` remains `PENDING_CONFIRMATION` because the historical `output/playwright/hc-10m-real-generation-qa-20260626/visual-scorecard.json` file is missing; no generation was run to recreate it.
