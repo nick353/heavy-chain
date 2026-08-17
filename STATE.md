@@ -2,6 +2,11 @@
 
 Updated: 2026-08-18
 
+2026-08-18 new native Chrome-window recording method readback:
+- Same Chrome Plugin Profile 2 session and Heavy Chain tab `1980902496` were used to record the safe `/lightchain/fitting-background-reference` controls: `マルチタスク`, `自動変換`, `参考画像`, `モデルのセット写真`, `説明生成`, and the `生成履歴` route, then returned to the canonical route.
+- Accepted media: `recordings/new-window-native-20260818/fitting-background-safe-controls-20260818.mov`; native ScreenCaptureKit independent-window capture, `18.965` seconds, `389` H.264 frames, `1440x796`, SHA-256 `b91afe75b087027d25c4554e162c6d774f88f5e8a538f5db394c2b00a0feb8d8`. Manifest is adjacent and records the Chrome Plugin surface, window identity, and limitations.
+- The video is media-verified, but the Extension preflight remains separately blocked with exact `chrome_extension_action_not_received`; it is not reported as Extension-emitted video. No generation, retry, billing, upload, save, download, delete, auth, permission, or provider action occurred. Current evidence SHA-256 is `6ca6884d8d3e867545f496a08a71d6f675c6cda274f79c55ed7aaff9cfae1e58`, mirrored in the Security Review Packet.
+
 2026-08-18 feature-ledger audit clarity and fresh verification:
 - `scripts/reconcile-lightchain-feature-ledger.mjs` now reports raw outcome evidence entries, distinct representative feature outcomes, and explicit evidence multiplicity instead of presenting expected duplicate evidence as a false `outcomeIdsAreUnique` check.
 - Reconciliation passed with `33` source features / `31` non-video, `30` cards, `15` confirmed successes, `1` confirmed failure, `6` permission routes, and `13` media-verified recordings. The generated ledger now exposes the multiplicity explicitly.
