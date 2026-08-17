@@ -29,9 +29,22 @@ const add = (name, ok, details = {}) => {
   checks.push({ name, ok: Boolean(ok), details });
 };
 
-const gitTrackedModels = execFileSync('git', ['ls-files', 'public/models'], { encoding: 'utf8' })
-  .split('\n')
-  .filter(Boolean);
+const gitignore = read('.gitignore');
+const sourceModelFiles = fs.existsSync('public/models')
+  ? fs.readdirSync('public/models', { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => `public/models/${entry.name}`)
+  : [];
+const gitTrackedModels = (() => {
+  try {
+    return execFileSync('git', ['ls-files', 'public/models'], { encoding: 'utf8' })
+      .split('\n')
+      .filter(Boolean);
+  } catch {
+    // Production containers receive the source tree without its VCS metadata.
+    return sourceModelFiles;
+  }
+})();
 const bundledModelPath = 'public/models/silueta.onnx';
 const bundledModelBytes = fs.existsSync(bundledModelPath) ? fs.statSync(bundledModelPath).size : 0;
 const stagedClothModelPath = 'public/models/u2net_cloth_seg.onnx';
@@ -41,7 +54,8 @@ const stagedClothModelIsIgnored = (() => {
     execFileSync('git', ['check-ignore', '--quiet', '--no-index', stagedClothModelPath]);
     return true;
   } catch {
-    return false;
+    // Fall back to the checked-in ignore contract when .git is unavailable.
+    return gitignore.includes('public/models/*') && !gitignore.includes(`!${stagedClothModelPath}`);
   }
 })();
 
@@ -58,7 +72,6 @@ const modelIdentityMatches = (identity) => (
   && identity?.sha256 === OFFICIAL_CLOTH_MODEL.sha256
 );
 
-const gitignore = read('.gitignore');
 const source = read('src/lib/workspaceMaterialReferences.ts');
 const runtimeContract = read('src/features/printing/selection/clothModelRuntimeContract.ts');
 const envExample = read('.env.example');
