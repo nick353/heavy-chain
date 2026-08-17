@@ -2,6 +2,13 @@
 
 Updated: 2026-08-18
 
+2026-08-18 Chrome Plugin canonical safe-control exercise:
+- Same Profile 2 session and Heavy Chain tab `1980902496` freshly loaded the canonical routes `/lightchain/ai-fitting-reference`, `/lightchain/model-library`, and `/lightchain/pattern-vector`; no old raw Lightchain URL was substituted.
+- AI Fitting safe tabs/settings were clicked (`シングルタスク`, `マルチタスク`, `説明生成`, `参考画像`, `モデルのセット写真`, automatic flat-lay conversion). Post-readback left `マルチタスク` + `モデルのセット写真` active and `AI生成` disabled because required assets were absent.
+- Model customization safe controls were clicked (`ラベル`, `カスタム`, `男性`, `女性`, `年齢`, `国籍`, `肌の色`, `体型`, `ハーフ`). Exact `権限がありません` remained visible; its control stayed disabled with `aria-disabled="true"`. The enabled `AI生成` control was intentionally not clicked because this is a permission-blocked route.
+- Pattern Vector safe controls (`リセット`, `積み重ね`, `分割`) were clicked; all remained enabled and no generation was submitted. Evidence is recorded in `CURRENT-TURN-20260818.json` field `chromePluginCanonicalSafeUiExercise20260818`; its current SHA-256 is `cda0aaf34d566d3d954132ee068625c536ca16f4aa02511935d1768df82dfca2` and the Security Review Packet was updated to match.
+- This exercise caused no OpenAI API, generation, retry, billing, Runway, upload, delete, save, auth, permission, or provider action.
+
 2026-08-18 Chrome Plugin History/Jobs/Gallery/Canvas recording continuation:
 - Same Profile 2 session and Heavy Chain tab `1980902496` produced two additional media-verified background recordings. The first shows Lightchain catalog -> History -> Jobs -> Gallery (21.608001 seconds / 163 H.264 frames / SHA-256 `96c9fbe2e6be267c72cb788e921ce529cf2256e4095e88403e50404830609c18`); the second shows Canvas safe toolbar/panel/Gallery-picker interactions (29.789492 seconds / 146 H.264 frames / SHA-256 `ad717dc2556cdf8c5795e594bb14f4477b73c6da71fe665212be1e6270398d2e`). Both target tabs remained unselected and fully decode.
 - Timestamped frame review confirms History readiness, Jobs loading/queue, Gallery loading/controls, Canvas workspace, Chat Editor, and Template panel. The first movie stops receiving frames after Gallery while the tab later reaches Canvas; Canvas is therefore counted only from the separate Canvas movie.
