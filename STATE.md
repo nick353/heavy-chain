@@ -2,6 +2,11 @@
 
 Updated: 2026-08-18
 
+2026-08-18 Chrome Plugin History/Jobs/Gallery/Canvas recording continuation:
+- Same Profile 2 session and Heavy Chain tab `1980902496` produced two additional media-verified background recordings. The first shows Lightchain catalog -> History -> Jobs -> Gallery (21.608001 seconds / 163 H.264 frames / SHA-256 `96c9fbe2e6be267c72cb788e921ce529cf2256e4095e88403e50404830609c18`); the second shows Canvas safe toolbar/panel/Gallery-picker interactions (29.789492 seconds / 146 H.264 frames / SHA-256 `ad717dc2556cdf8c5795e594bb14f4477b73c6da71fe665212be1e6270398d2e`). Both target tabs remained unselected and fully decode.
+- Timestamped frame review confirms History readiness, Jobs loading/queue, Gallery loading/controls, Canvas workspace, Chat Editor, and Template panel. The first movie stops receiving frames after Gallery while the tab later reaches Canvas; Canvas is therefore counted only from the separate Canvas movie.
+- Current recording inventory is 18 physical movie files, 22 manifests, 13 media-verified recordings, 9 blocked manifests, 2 analysis-only manifests, and strict Extension `tabCapture` count `0`. No generation, save, delete, download, billing, provider, or permission action was performed in this continuation.
+
 2026-08-18 Zeabur immutable source-association readback:
 - Official Zeabur CLI `0.21.0` fresh auth/workspace/project readback succeeded, but the current authenticated workspace exposes only `personal` and project `automation-wiled`; the Heavy Chain project/service is not visible in that owner scope.
 - Exact blocker: immutable commit/ref/repository association for `heavy-chain.zeabur.app` cannot be read or repaired without the owning Zeabur workspace. No deploy, service mutation, restart, config change, or secret operation was performed.
