@@ -2,10 +2,6 @@ FROM node:22-bookworm-slim
 
 WORKDIR /app
 
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends git ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-
 COPY package.json package-lock.json ./
 RUN npm ci --include=dev
 
@@ -16,4 +12,5 @@ EXPOSE 8080
 
 # Vite embeds Supabase/model configuration at build time, so build after
 # Zeabur injects the service environment and then serve the SPA on PORT.
-CMD ["sh", "-lc", "npm run build:deploy && npm run preview -- --host 0.0.0.0 --port ${PORT:-8080}"]
+# Repository-only readiness checks run in CI before deployment.
+CMD ["sh", "-lc", "npm run build && npm run preview -- --host 0.0.0.0 --port ${PORT:-8080}"]
