@@ -1,4 +1,4 @@
-type SourceWorkspace = 'studio' | 'models' | 'patterns' | 'video' | 'lab';
+type SourceWorkspace = 'studio' | 'models' | 'patterns' | 'video' | 'lab' | 'marketing' | 'fitting';
 
 type SourceConfig = {
   label: string;
@@ -20,6 +20,8 @@ const SOURCE_CONFIG: Record<SourceWorkspace, SourceConfig> = {
   patterns: { label: '柄・グラフィック', resumePaths: ['/patterns', '/patterns/workbench'], versions: ['pattern-preview-local-v1'] },
   video: { label: 'Video Workstation', resumePaths: ['/video'], versions: ['video-storyboard-local-v1'] },
   lab: { label: 'Lab', resumePaths: ['/lab'], versions: ['lab-evaluation-local-v1'] },
+  marketing: { label: 'マーケティングワークスペース', resumePaths: ['/marketing'], versions: ['marketing-brief-local-v1'] },
+  fitting: { label: 'AIフィッティング', resumePaths: ['/fitting'], versions: ['fitting-brief-local-v1'] },
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (

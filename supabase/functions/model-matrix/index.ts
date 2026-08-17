@@ -44,6 +44,7 @@ const SOURCE_CONFIG = {
   patterns: { label: '柄・グラフィック', resumePath: '/patterns', versions: ['pattern-preview-local-v1'] },
   video: { label: 'Video Workstation', resumePath: '/video', versions: ['video-storyboard-local-v1'] },
   lab: { label: 'Lab', resumePath: '/lab', versions: ['lab-evaluation-local-v1'] },
+  fitting: { label: 'AIフィッティング', resumePath: '/fitting', versions: ['fitting-brief-local-v1'] },
 } as const;
 
 type SourceWorkspace = keyof typeof SOURCE_CONFIG;

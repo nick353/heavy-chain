@@ -60,6 +60,15 @@ import type { ParityJsonValue } from '../features/lightchain/parityContract';
 import type { GeneratedImage, Json } from '../types/database';
 
 type Gender = 'female' | 'male';
+const FITTING_SOURCE_READBACK = {
+  sourceWorkspace: 'fitting',
+  workflowVersion: 'fitting-brief-local-v1',
+  sourceLabel: 'AIフィッティング',
+  sourceResumePath: '/fitting',
+  sourceMode: 'local-workflow-intake',
+} as const;
+type FittingSourceReadback = typeof FITTING_SOURCE_READBACK;
+
 type MatrixItem = {
   bodyType: string;
   bodyTypeName: string;
@@ -84,6 +93,7 @@ type LastRequest = {
   layerPlan?: Record<string, Json | undefined>;
   maskPlan?: Record<string, Json | undefined>;
   compositionPreview?: Record<string, Json | undefined>;
+  sourceReadback?: FittingSourceReadback;
 };
 
 const normalizeFittingReferenceImage = async (imageUrl?: string): Promise<string | undefined> => {
@@ -135,6 +145,7 @@ type HistoryItem = {
   layerPlan?: Record<string, Json | undefined>;
   maskPlan?: Record<string, Json | undefined>;
   compositionPreview?: Record<string, Json | undefined>;
+  sourceReadback?: FittingSourceReadback;
   bodyTypes?: string[];
   ageGroups?: string[];
   gender?: Gender;
@@ -184,6 +195,7 @@ export const buildFittingHistoryFromPersistedImages = (
     layerPlan?: Record<string, Json | undefined>;
     maskPlan?: Record<string, Json | undefined>;
     compositionPreview?: Record<string, Json | undefined>;
+    sourceReadback?: FittingSourceReadback;
     bodyTypes: string[];
     ageGroups: string[];
     gender?: Gender;
@@ -231,6 +243,7 @@ export const buildFittingHistoryFromPersistedImages = (
       layerPlan: getGeneratedImageMetadataObject<Record<string, Json | undefined>>(image, 'layerPlan'),
       maskPlan: getGeneratedImageMetadataObject<Record<string, Json | undefined>>(image, 'maskPlan'),
       compositionPreview: getGeneratedImageMetadataObject<Record<string, Json | undefined>>(image, 'compositionPreview'),
+      sourceReadback: getGeneratedImageMetadataObject<FittingSourceReadback>(image, 'sourceReadback'),
       bodyTypes: [],
       ageGroups: [],
       gender: undefined,
@@ -283,6 +296,7 @@ export const buildFittingHistoryFromPersistedImages = (
       layerPlan: group.layerPlan,
       maskPlan: group.maskPlan,
       compositionPreview: group.compositionPreview,
+      sourceReadback: group.sourceReadback,
       bodyTypes: group.bodyTypes,
       ageGroups: group.ageGroups,
       gender: group.gender,
@@ -982,6 +996,7 @@ export function FittingPage() {
         layerPlan: request.layerPlan,
         maskPlan: request.maskPlan,
         compositionPreview: providerCompositionPreview,
+        sourceReadback: request.sourceReadback,
         rightsConfirmed,
       });
     } catch (error) {
@@ -1049,6 +1064,7 @@ export function FittingPage() {
           layerPlan: request.layerPlan,
           maskPlan: request.maskPlan,
           compositionPreview: providerCompositionPreview,
+          sourceReadback: request.sourceReadback ?? FITTING_SOURCE_READBACK,
         },
         sourceJobId: response.jobId ?? undefined,
       });
@@ -1087,6 +1103,7 @@ export function FittingPage() {
         layerPlan: request.layerPlan,
         maskPlan: request.maskPlan,
         compositionPreview: providerCompositionPreview,
+        sourceReadback: request.sourceReadback ?? FITTING_SOURCE_READBACK,
         bodyTypes: request.bodyTypes,
         ageGroups: request.ageGroups,
         gender: request.gender,
@@ -1170,6 +1187,7 @@ export function FittingPage() {
         layerPlan,
         maskPlan,
         compositionPreview,
+        sourceReadback: FITTING_SOURCE_READBACK,
       });
     } finally {
       generationClickLockedRef.current = false;
@@ -1227,6 +1245,7 @@ export function FittingPage() {
             layerPlan: item.layerPlan ?? lastRequest?.layerPlan,
             maskPlan: item.maskPlan ?? lastRequest?.maskPlan,
             compositionPreview: item.compositionPreview ?? lastRequest?.compositionPreview,
+            sourceReadback: item.sourceReadback ?? lastRequest?.sourceReadback ?? FITTING_SOURCE_READBACK,
           },
         },
       });
@@ -1266,6 +1285,7 @@ export function FittingPage() {
             layerPlan: item.layerPlan ?? lastRequest?.layerPlan,
             maskPlan: item.maskPlan ?? lastRequest?.maskPlan,
             compositionPreview: item.compositionPreview ?? lastRequest?.compositionPreview,
+            sourceReadback: item.sourceReadback ?? lastRequest?.sourceReadback ?? FITTING_SOURCE_READBACK,
           },
         },
       });

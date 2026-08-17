@@ -26,6 +26,30 @@ test('source readback sanitizer accepts only known workspace contracts', () => {
   assert.equal(sanitizeSourceReadback({ ...validSource, sourceWorkspace: 'unknown' }), null);
 });
 
+test('Lightchain marketing and fitting source contracts survive shared Edge metadata sanitization', () => {
+  const lightchainSources = [
+    {
+      sourceWorkspace: 'marketing',
+      workflowVersion: 'marketing-brief-local-v1',
+      sourceLabel: 'マーケティングワークスペース',
+      sourceResumePath: '/marketing',
+      sourceMode: 'local-workflow-intake',
+    },
+    {
+      sourceWorkspace: 'fitting',
+      workflowVersion: 'fitting-brief-local-v1',
+      sourceLabel: 'AIフィッティング',
+      sourceResumePath: '/fitting',
+      sourceMode: 'local-workflow-intake',
+    },
+  ] as const;
+
+  for (const source of lightchainSources) {
+    assert.deepEqual(sanitizeSourceReadback(source), source);
+    assert.deepEqual(buildSourceMetadata(source), source);
+  }
+});
+
 test('generation intent is persisted only when it matches the sanitized source', () => {
   const intent = {
     feature: 'design-gacha',
@@ -67,4 +91,18 @@ test('all Canvas-derived generation Edge Functions persist source metadata and d
     assert.match(source, /\.\.\.\(sourceMetadata \?\? \{\}\)/);
     assert.match(source, /sourceMetadata[,)]/);
   }
+});
+
+test('Lightchain generation lanes accept the marketing and fitting source contracts', () => {
+  const generateImage = read('supabase/functions/generate-image/index.ts');
+  const modelMatrix = read('supabase/functions/model-matrix/index.ts');
+  const collector = read('scripts/collect-workspace-live-readback.mjs');
+  const verifier = read('scripts/verify-workspace-generation-readback.mjs');
+
+  for (const source of ['marketing-brief-local-v1', 'fitting-brief-local-v1']) {
+    assert.match(generateImage, new RegExp(source));
+    assert.match(verifier, new RegExp(source));
+  }
+  assert.match(modelMatrix, /fitting-brief-local-v1/);
+  assert.match(collector, /'models', 'marketing', 'fitting'/);
 });

@@ -2,12 +2,15 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 
-const DEFAULT_WORKSPACES = ['patterns', 'studio', 'video', 'lab'];
+const DEFAULT_WORKSPACES = ['patterns', 'studio', 'video', 'lab', 'models', 'marketing', 'fitting'];
 const WORKFLOW_BY_WORKSPACE = {
   patterns: 'pattern-preview-local-v1',
   studio: 'studio-selection-local-v1',
   video: 'video-storyboard-local-v1',
   lab: 'lab-evaluation-local-v1',
+  models: 'model-library-local-v1',
+  marketing: 'marketing-brief-local-v1',
+  fitting: 'fitting-brief-local-v1',
 };
 
 const args = parseArgs(process.argv.slice(2));

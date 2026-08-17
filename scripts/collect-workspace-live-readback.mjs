@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 
-const DEFAULT_WORKSPACES = ['patterns', 'studio', 'video', 'lab'];
+const DEFAULT_WORKSPACES = ['patterns', 'studio', 'video', 'lab', 'models', 'marketing', 'fitting'];
 const GENERATED_IMAGES_BUCKET = 'generated-images';
 const PAGE_SIZE = 1000;
 const MAX_ROWS_PER_TABLE = 10000;
@@ -295,9 +295,9 @@ function inferTelemetrySource(row, events) {
       if (row.brand_id && event.brand_id && row.brand_id !== event.brand_id) return false;
       if (row.user_id && event.user_id && row.user_id !== event.user_id) return false;
       if (functionName === 'design-gacha') return event.sourceWorkspace === 'patterns';
-      if (functionName === 'generate-image') return ['studio', 'video', 'lab'].includes(event.sourceWorkspace);
-      if (functionName === 'model-matrix') return event.sourceWorkspace === 'studio';
-      return ['patterns', 'studio', 'video', 'lab'].includes(event.sourceWorkspace);
+      if (functionName === 'generate-image') return ['studio', 'video', 'lab', 'models', 'marketing', 'fitting'].includes(event.sourceWorkspace);
+      if (functionName === 'model-matrix') return ['studio', 'models', 'fitting'].includes(event.sourceWorkspace);
+      return ['patterns', 'studio', 'video', 'lab', 'models', 'marketing', 'fitting'].includes(event.sourceWorkspace);
     })
     .map((event) => ({ ...event, distance: Math.abs(rowAt - event.at) }))
     .sort((a, b) => a.distance - b.distance);
