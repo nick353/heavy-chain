@@ -2,6 +2,11 @@
 
 Updated: 2026-08-18
 
+2026-08-18 Chrome Plugin transport recovery follow-up:
+- After the reported recovery, the documented Chrome Profile 2 diagnostics passed: Google Chrome is running, the ChatGPT extension is installed/enabled/registered (`1.2.27259.19709_0`), and the `com.openai.codexextension` Native Host/origins are correct. One permitted Chrome window reopen followed by one bounded retry restored the Chrome Plugin connection; a fresh tab was opened in the same Profile 2 session.
+- The fresh Lightchain tab is handoff-marked at `https://jp.linkaigc.com/login?redirect=/designProduction?`, title `Lightchain AI`, with the visible controls `アカウントを入力`, `パスワードを入力する`, `ログイン`. No credentials, OTP, CAPTCHA, or login submit was handled. Live Lightchain post-login UI remains `PENDING_CONFIRMATION` until the user signs in in this tab.
+- Heavy Chain remains the authenticated target; no alternate browser, OpenAI API, generation, retry, billing, Runway, upload, download, delete, save, auth submission, permission change, or provider action was performed in this recovery.
+
 2026-08-18 Chrome Plugin reconnection and Lightchain authentication readback:
 - A clean Chrome Plugin runtime reset reconnected the Chrome surface with browser instance `-e91e-4dd8-ab80-62fe45b58006`. The same Chrome session opened `https://jp.linkaigc.com/designProduction`, which redirected to `https://jp.linkaigc.com/login` and displayed the exact blocker `ログインの有効期限が切れました。再度ログインしてください`.
 - Lightchain login controls were read only; no account ID, password, OTP, CAPTCHA, or login submission was handled. The next action is user sign-in in the current Chrome tab, then fresh Lightchain readback.
