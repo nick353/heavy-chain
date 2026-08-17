@@ -32,6 +32,7 @@ import {
   saveWorkspaceArtifactPersisted,
 } from '../lib/localWorkspaceArtifacts';
 import { readFittingDraftMaterial, readFittingResumeMaterial } from '../lib/fittingResume';
+import { readFittingDraftCutout, saveFittingDraftCutout } from '../lib/fittingDraftCutoutStore';
 import {
   compactFittingMaterialReferenceForPersistence,
   prepareFittingDraftMaterialReferenceForPersistence,
@@ -562,6 +563,19 @@ export function FittingPage() {
         }
       }
 
+      try {
+        const persistedCutout = await readFittingDraftCutout(currentBrand.id, user.id, restored);
+        if (persistedCutout) restored = { ...restored, ...persistedCutout };
+      } catch (error) {
+        if (!cancelled) {
+          setFittingDraftPersistenceMessage(
+            error instanceof Error
+              ? `保存済み切り抜きの再読込に失敗しました。${error.message}`
+              : '保存済み切り抜きを再読込できませんでした。切り抜きを確認してください。',
+          );
+        }
+      }
+
       if (!cancelled && restored.imageUrl) {
         fittingDraftRestoredRef.current = true;
         setMaterialReference(restored);
@@ -579,6 +593,31 @@ export function FittingPage() {
       cancelled = true;
     };
   }, [currentBrand?.id, resumeJob, user?.id]);
+
+  useEffect(() => {
+    if (!currentBrand?.id || !user?.id || !materialReference.nextStepReady) return;
+    let cancelled = false;
+    void saveFittingDraftCutout(currentBrand.id, user.id, materialReference)
+      .then(() => {
+        if (!cancelled) {
+          setFittingDraftPersistenceStatus('saved');
+          setFittingDraftPersistenceMessage('Fitting入力と切り抜き状態を保存確認しました。');
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setFittingDraftPersistenceStatus('failed');
+          setFittingDraftPersistenceMessage(
+            error instanceof Error
+              ? `切り抜き状態の保存確認に失敗しました。${error.message}`
+              : '切り抜き状態の保存確認に失敗しました。',
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBrand?.id, materialReference, user?.id]);
 
   useEffect(() => {
     if (!currentBrand?.id || !user?.id || !materialReference.imageUrl) return;
