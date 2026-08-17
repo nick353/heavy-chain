@@ -5,7 +5,12 @@ Updated: 2026-08-18
 2026-08-18 production quota-copy deployment/readback:
 - Deployed the quota-copy/verifier fix to the authorized Heavy Chain service as Zeabur deployment `6a83408746afbcef424d8843`; Docker build completed and deployment is `RUNNING`. Public HTTP is `200`, and local/public index asset SHA-256 matches (`8335545d49ff9c1ad1f1da33a8d3ea2d68c0b6f4a09dcb736b577fbca583ad38`).
 - Public BrandSettings and errorMessages chunks contain the Heavy Chain quota copy. Same Chrome Plugin tab `1980902314` read Brand Settings with the quota sentence, then returned to Canvas / NiSEN; no generation or save action was clicked.
-- H602 local verifier copy assertions all pass; only the missing production billing readback and dependent production proof assertions remain. Zeabur immutable source association is still `PENDING_CONFIRMATION`; evidence checkpoint is 83.
+- H602 local verifier copy assertions all pass. A live read-only Supabase REST SELECT now records the production billing state in `output/playwright/h602-production-billing-readback-20260630/summary.json`; the missing-readback evidence gap is closed, while H602 remains fail-closed on the actual production settings (`generationQuotaEnforced=false`, `productionCheckoutEnabled=true`) and missing human/operator proof. Zeabur immutable source association is still `PENDING_CONFIRMATION`; evidence checkpoint is 84.
+
+2026-08-18 H602 live production read-only readback:
+- Queried `billing_settings`, `billing_test_accounts`, and `billing_purchase_proofs` through Supabase REST SELECT with the service-role value held in process only. No raw email, UUID, token, or secret was printed or persisted.
+- Actual redacted state: one billing-settings row, quota enforcement `false`, production checkout `true`, sandbox no-real-charge flag `true`, one active Apple sandbox tester, latest proof `human_attestation` / `human_attested`, verified no-real-charge proof count `0`, and no transaction/entitlement readback.
+- The H602 verifier is now `108/111` checks passed and fails only the three expected production-state assertions. No billing mutation, checkout, purchase, OpenAI API, generation, retry, Runway, auth, permission, or publish action was performed.
 
 2026-08-18 Chrome Plugin window reopen after release checks:
 - The prior Chrome Plugin tab list emptied during the long read-only release diagnosis. A fresh same-surface tab `1980902314` was reopened at production `/canvas?qa=goal-continuation-20260819`, handoff-marked, and read back as Heavy Chain / brand NiSEN.

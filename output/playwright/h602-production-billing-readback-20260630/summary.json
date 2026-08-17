@@ -1,0 +1,77 @@
+{
+  "ok": false,
+  "schema": "heavy-chain.h602.production-billing-readback.v2",
+  "checkedAtJst": "2026-08-18T02:16:54+09:00",
+  "projectRef": "ghwjymozrwmcrpjqvbmo",
+  "projectName": "heavy-chain-production",
+  "readbackMode": "live_read_only_supabase_rest_service_role_select",
+  "liveProductionReadbackPerformed": true,
+  "readbackTransport": "Supabase REST SELECT only; service-role value was not printed or persisted",
+  "migration": {
+    "applied": true,
+    "source": "supabase migration list --linked: local and remote aligned",
+    "h602Migration": "20260630102537_enable_billing_enforcement_test_exemptions.sql"
+  },
+  "purchaseProofMigration": {"applied": true, "source": "supabase migration list --linked"},
+  "purchaseProofHardeningMigration": {"applied": true, "source": "supabase migration list --linked"},
+  "purchaseProofHashOnlyMigration": {"applied": true, "source": "supabase migration list --linked"},
+  "purchaseProofArtifactAllowlistMigration": {"applied": true, "source": "supabase migration list --linked"},
+  "billingSettings": {
+    "generationQuotaEnforced": false,
+    "productionCheckoutEnabled": true,
+    "sandboxTestersNoRealCharge": true,
+    "appleBillingMode": "operator_managed",
+    "updatedAt": "2026-07-05T07:51:43.669+00:00",
+    "readbackRowCount": 1
+  },
+  "sandboxTester": {
+    "registered": true,
+    "emailRedacted": true,
+    "activeAppleSandboxCount": 1,
+    "totalBillingTestAccountRows": 2
+  },
+  "purchaseProofReadback": {
+    "latestProofSource": "human_attestation",
+    "latestProofStatus": "human_attested",
+    "humanAttestedProofRegistered": true,
+    "verifiedNoRealChargeProofCount": 0,
+    "transactionOrEntitlementReadback": false,
+    "proofRowCount": 1,
+    "rawValuesPrinted": false
+  },
+  "securityReadback": {
+    "liveConstraintQuery": "not performed; migration/static proof retained",
+    "purchaseProofMetadataRawReceiptLikeBlocked": null,
+    "purchaseProofMetadataBareReceiptPayloadBlocked": null,
+    "purchaseProofHashFieldsSha256HexOnly": null,
+    "purchaseProofMetadataKeysAllowlisted": null,
+    "purchaseProofArtifactUriSafeLocatorOnly": null
+  },
+  "remainingBlockers": [
+    "production_generation_quota_enforced_is_false",
+    "production_checkout_enabled_is_true",
+    "verified_no_real_charge_proof_missing",
+    "transaction_or_entitlement_readback_missing",
+    "operator_final_checkout_public_release_decision_missing",
+    "live_constraint_readback_not_performed"
+  ],
+  "actionsNotPerformedByCodex": [
+    "billing settings mutation",
+    "checkout/payment confirmation",
+    "Apple ID credential entry",
+    "OTP/security prompt handling",
+    "real or sandbox purchase",
+    "external public publishing",
+    "identity verification",
+    "OpenAI API generation/retry/billing"
+  ],
+  "externalEffects": {
+    "selectOnly": true,
+    "writes": false,
+    "generation": false,
+    "retry": false,
+    "billing": false,
+    "runway": false,
+    "secretsPrinted": false
+  }
+}
