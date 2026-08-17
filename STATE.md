@@ -17,12 +17,17 @@ Updated: 2026-08-18
 - Heavy Chain canonical `/lightchain/:featureId` route matrix loaded all `15/15` previously lacking direct provider outcome evidence. No old raw Lightchain URL was substituted.
 - Safe controls were clicked for Marketing home/detail, AI Fitting and reference mode, Model Library, Fabric, Line Generation, Line-to-Real, Pattern Vector normal/Pro, Printing, Image Repair, Body Shape, and Model Custom. Generation, retry, upload, save, download, delete, billing, provider, and permission controls were not clicked.
 - Exact `権限がありません` was observed on five current routes in this pass: Model Library, Fabric, Line Generation, Printing, and Image Repair. Enabled generation buttons on permission-free/permission-visible routes were intentionally skipped under the OpenAI-excluded boundary; disabled generation states were separately recorded.
-- First Printing pass exposed a real route-transition nuance: shared toolbar `平絵生成` navigates to canonical `/lightchain/line-generation`; the target Printing route was reloaded and its dedicated `スポット`/`全体` controls were then clicked successfully. Evidence is `chromePluginPendingFeatureSafeRouteExercise20260818` in `CURRENT-TURN-20260818.json`; current packet SHA-256 is `7ea88c4c5780b2b4f0fe186acefd81110d8e54fd7de881b5e91b4907ffb81910`, mirrored in the Security Review Packet.
+- First Printing pass exposed a real route-transition nuance: shared toolbar `平絵生成` navigates to canonical `/lightchain/line-generation`; the target Printing route was reloaded and its dedicated `スポット`/`全体` controls were then clicked successfully. Evidence is `chromePluginPendingFeatureSafeRouteExercise20260818` in `CURRENT-TURN-20260818.json`; current packet SHA-256 is `95949c2b06a78ab0b8407fd6db0a247ee9e15ee1246c542ddd001460f8815a2d`, mirrored in the Security Review Packet.
 - Marketing Detail was then revisited: all three assistant presets and all four layer buttons (`背景`, `商品画像`, `見出しテキスト`, `CTAボタン`) were clicked; the final active layer was `CTAボタン`. The assistant update/generation, save, and download buttons were not clicked.
 
 2026-08-18 external Reviewer/Verifier transport readback:
 - The configured read-only OpenCode Reviewer and Verifier routes were each attempted once with the current redacted evidence context; both returned the exact blocker `Transport closed`.
-- No fallback model or alternate reviewer was substituted. No review result was accepted; deterministic local proofs remain authoritative. Evidence field: `externalReviewerVerifierTransportReadback20260818`; current evidence SHA-256 is `b43ee08b05a9cc1f8e2e2d71a2598f77379ebf24b3219c268c97c9074914a67a`, mirrored in the Security Review Packet.
+- No fallback model or alternate reviewer was substituted. No review result was accepted; deterministic local proofs remain authoritative. Evidence field: `externalReviewerVerifierTransportReadback20260818`; current evidence SHA-256 is `95949c2b06a78ab0b8407fd6db0a247ee9e15ee1246c542ddd001460f8815a2d`, mirrored in the Security Review Packet.
+
+2026-08-18 canonical route screenshot capture:
+- Same Chrome Plugin session captured `15` Heavy canonical route screens plus `1` Lightchain `/designProduction` screen. The recorder returned JPEG bytes; all files were verified as JPEG and corrected to `.jpg` before manifesting.
+- Screenshot manifest: `screenshots/canonical-safe-routes-20260818/MANIFEST-20260818.json`, SHA-256 `2e041d155fd79dea068985382df6a8ce67e6f88cb72ea3d9d67d1ca78a2cd13b`. No screenshot was counted as a video frame or generation result.
+- Current evidence SHA-256 is `95949c2b06a78ab0b8407fd6db0a247ee9e15ee1246c542ddd001460f8815a2d`, mirrored in the Security Review Packet.
 
 2026-08-18 Chrome Plugin canonical safe-control exercise:
 - Same Profile 2 session and Heavy Chain tab `1980902496` freshly loaded the canonical routes `/lightchain/ai-fitting-reference`, `/lightchain/model-library`, and `/lightchain/pattern-vector`; no old raw Lightchain URL was substituted.
