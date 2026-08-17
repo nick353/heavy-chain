@@ -13,6 +13,16 @@ Updated: 2026-08-18
 - The source contract fails closed when a remote result has no canonical storage path, while the client model-matrix guard does not require `storagePath`; the local Edge Function source does return one. The historical `fitting-background-reference` failure contains only the generic UI message and no low-level receipt, so the cause remains `PENDING_CONFIRMATION` between missing path and local write/readback/quota failure. No generation or retry was used to recreate it.
 - Evidence is `fittingPersistenceStaticBoundaryReadback20260818` in `CURRENT-TURN-20260818.json`; current evidence SHA-256 is `1452b97bcb478e838268f3be4fbfbbddc54e3e101c154ab06e48b63f9450bd9a`, mirrored in the Security Review Packet.
 
+2026-08-18 current production readback R6:
+- Fresh read-only collector output `output/playwright/prod-db-readback-current-20260818-r6/workspace-db-readback.json` uses release date `2026-08-18`, `production`, current commit `93aeb38b0d95b640296cd104b8b64f8455ee898c`, and a bounded `since` of `2026-07-05T08:00:00Z`.
+- The selected window contains `26/26` completed jobs, `33/33` succeeded usage events, `34/34` succeeded Edge runs, and `26/26` signed-URL checks. Release readback still fails closed on the exact integrity error `runs[24] request_id does not match usage readback`; stale cleanup/rate-limit artifacts were not rewritten.
+- Evidence is `productionReadbackCurrentR6_20260818` in `CURRENT-TURN-20260818.json`; current evidence SHA-256 is `402d0fbead243d5f8faf881cf2d343565df4bcee970babfc245b7fc0b96f6fe3`, mirrored in the Security Review Packet.
+
+2026-08-18 production readback collector attribution fix:
+- `scripts/collect-workspace-live-readback.mjs` now preserves `usage_events` linked by the filtered `edge_function_runs.usage_event_id` before independent source/request attribution filtering. This prevents a valid linked usage event with sparse source metadata from being omitted from readback.
+- The read-only R7 diagnostic output `output/playwright/prod-db-readback-current-20260818-r7/workspace-db-readback.json` read back `26/26` completed jobs, `34/34` succeeded usage events, `34/34` succeeded Edge runs, and `26/26` signed-URL checks; request-ID mismatches fell to `0`. The artifact was captured before this source change was committed; a post-commit readback is required for final release metadata alignment.
+- Historical cleanup/rate-limit artifacts remain stale and were not rewritten. No production mutation, generation, retry, billing, upload, save, delete, auth, permission, migration, deploy, or provider action was performed.
+
 2026-08-18 feature-ledger audit clarity and fresh verification:
 - `scripts/reconcile-lightchain-feature-ledger.mjs` now reports raw outcome evidence entries, distinct representative feature outcomes, and explicit evidence multiplicity instead of presenting expected duplicate evidence as a false `outcomeIdsAreUnique` check.
 - Reconciliation passed with `33` source features / `31` non-video, `30` cards, `15` confirmed successes, `1` confirmed failure, `6` permission routes, and `13` media-verified recordings. The generated ledger now exposes the multiplicity explicitly.

@@ -66,8 +66,17 @@ const requestIds = new Set([
   ...filteredJobs.map(requestIdFor).filter(isNonEmptyString),
   ...filteredImages.map(requestIdFor).filter(isNonEmptyString),
 ]);
-const filteredUsage = filterTelemetryRows(usage, requestIds, sourceEvents);
 const filteredRuns = filterTelemetryRows(runs, requestIds, sourceEvents);
+// The run-to-usage foreign key is stronger than source inference. A usage
+// reservation can be reused or carry less source metadata than its run, so
+// keep the linked usage event even when its request_id/source metadata does
+// not independently pass telemetry attribution.
+const linkedUsageEventIds = new Set(
+  filteredRuns.map((run) => run.usage_event_id).filter(isNonEmptyString),
+);
+const filteredUsage = usage.filter(
+  (row) => linkedUsageEventIds.has(row.id) || isTelemetryRowInScope(row, requestIds, sourceEvents),
+);
 const filteredLightchainTaskSteps = filterLightchainTaskStepRows(lightchainTaskStepRows, filteredJobs, filteredImages, requestIds);
 const storage = await collectStorageReadback(filteredImages);
 const sourceAttribution = buildSourceAttribution({
@@ -179,12 +188,14 @@ function filterWorkspaceRows(rows) {
 }
 
 function filterTelemetryRows(rows, requestIds, events) {
-  return rows.filter((row) => {
-    const source = sourceInfo(row);
-    if (source.sourceWorkspace && workspaces.includes(source.sourceWorkspace)) return true;
-    if (isNonEmptyString(row.request_id) && requestIds.has(row.request_id)) return true;
-    return Boolean(inferTelemetrySource(row, events).sourceWorkspace);
-  });
+  return rows.filter((row) => isTelemetryRowInScope(row, requestIds, events));
+}
+
+function isTelemetryRowInScope(row, requestIds, events) {
+  const source = sourceInfo(row);
+  if (source.sourceWorkspace && workspaces.includes(source.sourceWorkspace)) return true;
+  if (isNonEmptyString(row.request_id) && requestIds.has(row.request_id)) return true;
+  return Boolean(inferTelemetrySource(row, events).sourceWorkspace);
 }
 
 function filterLightchainTaskStepRows(rows, jobRows, imageRows, requestIds) {
