@@ -2,6 +2,12 @@
 
 Updated: 2026-08-18
 
+2026-08-18 Lightchain credential attempt and latest Fitting deployment readback:
+- In the same Chrome Plugin Profile 2 Lightchain tab (`1980902481`), the user-approved login submission was attempted once without exposing or persisting the credentials. Lightchain returned the exact error `ユーザー名またはパスワードが間違っています。`; no OTP/CAPTCHA appeared. Post-login Lightchain UI remains `PENDING_CONFIRMATION` until valid credentials are supplied.
+- Heavy Chain commit `513ae4e` preserves the Fitting cutout-save failure for the current brand/user/source identity across Gallery signed-URL refreshes; focused Fitting tests remain passed from the implementation step.
+- Fresh Zeabur deployment `6a8375f3201aaa81bcfa82d0` is `RUNNING`. Public `https://heavy-chain.zeabur.app/` returned HTTP `200`; the served `assets/FittingPage.0NQeQM6S.js` path matches local `dist/assets/FittingPage.0NQeQM6S.js` byte-for-byte (SHA-256 `45fc2514444f5e4026c33283dc3f17ecdd2cb5809b497a678a83a71a3fd757e5`) and contains the durable `sourceImageId`/`sourceStoragePath` and cutout-save error markers. Zeabur commit/ref/repository metadata remains empty and is `PENDING_CONFIRMATION`.
+- No OpenAI API, generation, retry, billing, Runway, upload, delete, save, permission change, or provider action occurred in this readback.
+
 2026-08-18 Chrome Plugin transport recovery follow-up:
 - After the reported recovery, the documented Chrome Profile 2 diagnostics passed: Google Chrome is running, the ChatGPT extension is installed/enabled/registered (`1.2.27259.19709_0`), and the `com.openai.codexextension` Native Host/origins are correct. One permitted Chrome window reopen followed by one bounded retry restored the Chrome Plugin connection; a fresh tab was opened in the same Profile 2 session.
 - The fresh Lightchain tab is handoff-marked at `https://jp.linkaigc.com/login?redirect=/designProduction?`, title `Lightchain AI`, with the visible controls `アカウントを入力`, `パスワードを入力する`, `ログイン`. No credentials, OTP, CAPTCHA, or login submit was handled. Live Lightchain post-login UI remains `PENDING_CONFIRMATION` until the user signs in in this tab.
