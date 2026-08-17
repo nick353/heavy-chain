@@ -33,7 +33,10 @@ const summary = {
   irreversibleActions: { externalApiCall: 'not_touched', generationSubmit: 'not_clicked', migrationApply: 'not_run', deploy: 'not_run' },
   checks,
   ok: checks.every((check) => check.passed),
-  remaining: ['Apply the retirement migration through the authenticated Supabase connector.', 'Deploy Edge Functions and verify production readback.'],
+  proofLimits: [
+    'This static verifier cannot establish whether the retirement migration was applied in production; use the official Supabase readback artifact for that claim.',
+    'This static verifier cannot establish whether Edge Functions are deployed in production; use the official function-status/version readback artifact for that claim.',
+  ],
 };
 console.log(JSON.stringify(summary, null, 2));
 process.exit(summary.ok ? 0 : 1);

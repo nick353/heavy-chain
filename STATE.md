@@ -7,6 +7,7 @@ Updated: 2026-08-18
 - Lightchain login controls were read only; no account ID, password, OTP, CAPTCHA, or login submission was handled. The next action is user sign-in in the current Chrome tab, then fresh Lightchain readback.
 - Heavy Chain remained logged in at `/dashboard`. Fresh DOM readback showed `無制限回 / 今月使用47回 / 処理中0回`; Lightchain parity tabs were exercised with counts recommended `9`, planning `7`, fitting `4`, graphics `11`.
 - `/lightchain/fabric-image` settled to the exact disabled `権限がありません` control and the retirement notice. No generation, retry, OpenAI API, billing, Runway, upload, download, delete, save, auth submission, or provider action occurred.
+- Static goal-readiness output was corrected so production migration/function deployment are reported as explicit proof limits rather than stale claims that the work was not performed; official production readback remains the authority for those claims.
 
 2026-08-18 latest Fitting persistence race-guard deployment/readback:
 - Commit `93364d0` latches Fitting cutout save/restore failures for the current brand/user/source identity so a later material-save success cannot overwrite the failure state. The latch resets only when the source identity changes.
