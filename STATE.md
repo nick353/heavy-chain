@@ -1682,3 +1682,11 @@ Exact blocker / next action / restart point: restore the release environment thr
 - Updated evidence hashes after the IndexedDB regression test: CURRENT-TURN `28ebd030882dd669cc57559e6a205780916bdd803039ae6e4349b436d3f8598b`; Security Review Packet `1686b226ffaaec9232e96bd59b9bd04e54bce818bd2d565ed317887c078b3919`.
 
 Exact blocker / next action / restart point: once the Chrome Plugin session is available, repeat the alternate-input fitting cutout, wait for the saved confirmation, reload, and verify `nextStepReady` plus the extracted layer. Do not submit AI generation.
+
+## 2026-08-18 Goal continuation: goal readiness and lint fresh readback
+
+- `npm run verify:goal-readiness:incomplete-ok --silent` passed with `ok=true`: retired provider runtime removed, OpenAI adapter present, and retirement migration present. The verifier explicitly cannot prove production migration application or production Edge Function deployment.
+- `npm run lint --silent` passed with exit code 0. No external action was performed.
+- Evidence hashes: CURRENT-TURN `9342a80d5c576f98e0fea8d0a24c1c9e0c3769486e517320cfd27ab53f51687b`; Security Review Packet `e14949cb658ae5c7868b09ab15a1dfc35baa6e01692313ca27d7985173cb4af4`.
+
+Exact blocker / next action / restart point: production Supabase migration/function readback and release artifacts remain unproven; continue only through the approved external readback channels.
