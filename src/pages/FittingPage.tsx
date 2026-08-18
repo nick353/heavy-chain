@@ -545,12 +545,29 @@ export function FittingPage() {
     setFittingDraftPersistenceMessage('');
   }, []);
 
-  const handleMaterialReferenceChange = useCallback((nextMaterialReference: MaterialReferenceState) => {
+  const handleMaterialReferenceChange = useCallback(async (nextMaterialReference: MaterialReferenceState) => {
     const sourceChanged = getFittingMaterialIdentity(materialReference) !== getFittingMaterialIdentity(nextMaterialReference);
     const cutoutChanged = (materialReference.extractedImageUrl ?? '') !== (nextMaterialReference.extractedImageUrl ?? '');
     if (sourceChanged || cutoutChanged) resetFittingDraftPersistenceState();
     setMaterialReference(nextMaterialReference);
-  }, [materialReference, resetFittingDraftPersistenceState]);
+    if (!currentBrand?.id || !user?.id || !nextMaterialReference.nextStepReady) return;
+
+    try {
+      await saveFittingDraftCutout(currentBrand.id, user.id, nextMaterialReference);
+      if (!fittingDraftPersistenceErrorRef.current) {
+        setFittingDraftPersistenceStatus('saved');
+        setFittingDraftPersistenceMessage('Fitting入力と切り抜き状態を保存確認しました。');
+      }
+    } catch (error) {
+      fittingDraftPersistenceErrorRef.current = true;
+      setFittingDraftPersistenceStatus('failed');
+      setFittingDraftPersistenceMessage(
+        error instanceof Error
+          ? `切り抜き状態の保存確認に失敗しました。${error.message}`
+          : '切り抜き状態の保存確認に失敗しました。',
+      );
+    }
+  }, [currentBrand?.id, materialReference, resetFittingDraftPersistenceState, user?.id]);
 
   useEffect(() => {
     resetFittingDraftPersistenceState();

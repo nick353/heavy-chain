@@ -15,7 +15,7 @@ type MaterialWorkbenchProps = {
   uploadLabel: string;
   emptyLabel: string;
   state: MaterialReferenceState;
-  onChange: (nextState: MaterialReferenceState) => void;
+  onChange: (nextState: MaterialReferenceState) => void | Promise<void>;
   materialKinds: string[];
   layerOptions: string[];
   placementOptions: string[];
@@ -79,6 +79,10 @@ export function MaterialWorkbench({
   const hasImage = Boolean(state.imageUrl);
   const updateState = (patch: Partial<MaterialReferenceState>) => {
     onChange({ ...state, ...patch });
+  };
+
+  const updateStateAsync = async (patch: Partial<MaterialReferenceState>) => {
+    await onChange({ ...state, ...patch });
   };
 
   const resetExtraction = (patch: Partial<MaterialReferenceState> = {}) => {
@@ -210,7 +214,7 @@ export function MaterialWorkbench({
           mode: 'auto',
           candidate: 'トップス',
         });
-      updateState({
+      await updateStateAsync({
         maskMode: 'auto',
         maskCandidates: defaultMaskCandidates,
         selectedMaskCandidate: 'トップス',

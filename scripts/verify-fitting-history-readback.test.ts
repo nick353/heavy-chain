@@ -156,6 +156,16 @@ test('Fitting draft persistence retains a bounded remote cutout for reload recov
   assert.match(prepared?.extractedImageUrl ?? '', /^data:image\/png/);
 });
 
+test('high-precision Fitting cutout awaits durable local save before the change resolves', async () => {
+  const fittingPage = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
+  const materialWorkbench = await readFile(new URL('../src/components/workspace/MaterialWorkbench.tsx', import.meta.url), 'utf8');
+
+  assert.match(fittingPage, /const handleMaterialReferenceChange = useCallback\(async/);
+  assert.match(fittingPage, /await saveFittingDraftCutout\(currentBrand\.id, user\.id, nextMaterialReference\)/);
+  assert.match(materialWorkbench, /onChange: \(nextState: MaterialReferenceState\) => void \| Promise<void>/);
+  assert.match(materialWorkbench, /await updateStateAsync\(\{/);
+});
+
 test('Lightchain fitting entry persists the selected Gallery source before navigation', async () => {
   const source = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
 
