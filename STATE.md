@@ -1560,3 +1560,12 @@ Exact blocker / next action / restart point: reauthenticate the Supabase app con
 - Completion artifact SHA-256: `f5f5140aaf5648c7b45aa2502bc69f3d62228b6be369bbed5261add23f1254b2`; release artifact SHA-256: `c996de1d7556312b59af9b90cfe0bb47e018a8d1fc6f832f5ab42a9d087fa4e8`; current evidence SHA-256: `5bb0f70c03763b40586aed0229003a86cac8625ebebb57c3412dc0ec5d62e6ff`; packet SHA-256: `701125c6803f9f2ea713f01742a64f4e784cfb826cec9a02bbc0b94f1ce669b8`.
 
 Exact blocker / next action / restart point: do not mark the Goal complete. Resume only with the missing authority/evidence lanes: Lightchain authenticated parity, Supabase reauthentication/runtime checks, owner-approved source/secret association, and human H601/H602/G619/G617 proof inputs.
+
+## 2026-08-18 Goal continuation: Chrome Plugin Download and route proof refreshed
+
+- Correctly supplied the evidence path to `npm run verify:chrome-plugin-proof --silent -- --evidence CURRENT-TURN-20260818.json --max-age-hours 48`; result `accepted=true`, `failures=[]`.
+- Focused tests passed: Gallery download boundary `2/2`, Lightchain image download `4/4`, and Lightchain parity routes `6/6`. Existing Gallery PNG and Canvas export PNG remain filesystem-verified.
+- The earlier no-argument proof failure was input validation (`--evidence is required`), not a product failure. No API, generation, retry, billing, upload, save, delete, migration, deploy, or provider action occurred.
+- Evidence hashes: CURRENT-TURN `936c6f76b50585dc9d828e8776c7cf143cc86db30a8404b71690f808ed658e3d`; Security Review Packet `1995976f3f0fec10aa528d43df54111433ad2b17dba612d8f056e2e44f8758a2`.
+
+Exact blocker / next action / restart point: Download and route proof is now accepted locally; continue with the still-open authenticated Lightchain parity and production authority lanes.
