@@ -1708,3 +1708,11 @@ Exact blocker / next action / restart point: obtain a fresh approved authenticat
 - Evidence hashes: CURRENT-TURN `906c1d83593f8c8c088d0ee47fe9560f03959fc510f4e0f4cffaba2c39e93e20`; Security Review Packet `3cc02dc996698f58a33ce6130e3605c9a2a5e7677c1a6f8431d921efab8ee657`.
 
 Exact blocker / next action / restart point: obtain the required human policy/readback artifacts and a fresh authenticated production authority; do not perform billing, checkout, purchase, or stale-auth replay.
+
+## 2026-08-18 Goal continuation: H602 production completion and billing readback
+
+- `npm run verify:h602-production-completion-readback --silent` refreshed the existing production assessment and failed closed. It did not perform Apple login, checkout/payment, identity verification, or transaction/entitlement lookup. The exact blockers remain: production quota enforcement is false, production checkout is true, verified no-real-charge proof is missing, transaction/entitlement readback is missing, the operator public-release decision is missing, and live constraint readback was not performed.
+- `npm run verify:h602-billing --silent` read the existing production billing state through a read-only Supabase REST SELECT. It returned `ok=false`, `selectOnly=true`, `writes=false`, `generation=false`, `retry=false`, `billing=false`, `runway=false`, and `secretsPrinted=false`. The readback reports zero verified no-real-charge proofs and no transaction/entitlement readback; no purchase or billing action was taken.
+- Updated evidence hashes: CURRENT-TURN `a31cc211d511ce247fbbf643cc1226ddc9ba4f15a32618fd9eb12abdb9de37c9`; Security Review Packet `425e64d3d2bb1d2d4dc71e2705d37e4f011ca406cf2a3e37ed03816556c067af`.
+
+Exact blocker / next action / restart point: H602 remains fail-closed. Obtain the required operator decision and approved production transaction/entitlement evidence through the authorized billing lane; do not enter Apple credentials, perform checkout/purchase, or alter billing settings.
