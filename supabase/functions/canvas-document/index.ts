@@ -41,8 +41,8 @@ type CanonicalSnapshot = {
   projectId?: string | null;
   localProjectId?: string | null;
   name?: string;
-  objects: Array<Record<string, unknown>>;
-  view?: Record<string, unknown>;
+  objects: Array<Record<string, Json>>;
+  view?: Record<string, Json>;
 };
 
 type CanvasDocumentRequest = {
@@ -109,7 +109,7 @@ const canonicalizeSnapshot = (input: unknown): CanonicalSnapshot => {
 
   const canonicalObjects = objects.map((rawObject, index) => {
     if (!isRecord(rawObject)) throw new Error(`snapshot.objects.${index}_invalid`);
-    const output: Record<string, unknown> = {};
+    const output: Record<string, Json> = {};
     for (const key of Object.keys(rawObject).sort()) {
       if (!OBJECT_KEYS.has(key) || FORBIDDEN_KEYS.has(key) || key.toLowerCase().startsWith('on')) {
         throw new Error(`snapshot.objects.${index}.${key}_not_allowed`);
@@ -147,7 +147,7 @@ const canonicalizeSnapshot = (input: unknown): CanonicalSnapshot => {
     for (const key of Object.keys(input.view)) {
       if (!VIEW_KEYS.has(key) || FORBIDDEN_KEYS.has(key)) throw new Error(`snapshot.view.${key}_not_allowed`);
     }
-    result.view = canonicalizeDynamic(input.view, 'snapshot.view', 1) as Record<string, unknown>;
+    result.view = canonicalizeDynamic(input.view, 'snapshot.view', 1) as Record<string, Json>;
   }
 
   const canonicalBytes = new TextEncoder().encode(JSON.stringify(result)).byteLength;
