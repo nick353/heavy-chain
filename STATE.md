@@ -1526,3 +1526,12 @@ Exact blocker / next action / restart point: restore the authenticated Supabase 
 - Evidence hashes after this readback: CURRENT-TURN `6eaff3d96cdef4c3b76b190cf8e4c82980e0f1311d57969e2dbb17a459f5ec5c`; Security Review Packet `203b676d74c85e9e05f66e81f6158784f93eafefe549e332d95821956c277cc5`.
 
 Exact blocker / next action / restart point: obtain owner-authorized source association and a masked secret rotation/readback channel; then fresh-read the exact commit/ref and service health before any deploy or secret mutation.
+
+## 2026-08-18 Goal continuation: fitting-background persistence boundary refreshed
+
+- Non-OpenAI fitting persistence contracts passed: runtime `7/7`, history/resume/compaction `20/20`, and provider coverage `10/10`.
+- Verified behavior: `fitting-background-draft` keeps a canonical storage path, strips signed URLs before durable readback, restores bounded remote cutouts, rejects stale/unrelated remote URLs, and does not overwrite a cutout persistence failure with a false save success.
+- The quota case is represented by stable diagnostic `LOCAL_WORKSPACE_QUOTA_EXCEEDED`; remote persistence remains fail-closed. This is local contract proof only; live authenticated production save/readback is not claimed.
+- Evidence hashes after this verification: CURRENT-TURN `e0bc838f0c8813ebb110420ddac42b280aede56242a52a594083682d096123cf`; Security Review Packet `b4dc2ca71e9d56a80e35245685e105809d216f7cb937958749fa5acc7ea29179`.
+
+Exact blocker / next action / restart point: after the Lightchain authentication boundary is authorized, perform one live fitting-background save/readback and compare the production error text against the local contract; do not generate or retry to obtain it.
