@@ -1722,6 +1722,37 @@ Exact blocker / next action / restart point: H602 remains fail-closed. Obtain th
 - `npm run verify:g618-scale-ops --silent` now passes the local 1200-image/600-canvas fixture, including valid PNG export and cleanup. The prior download timeout is resolved locally.
 - The same verifier remains fail-closed at the read-only production monitor: 42 generation jobs in the 96-hour window, 40 completed and 2 failed (`failureRate=0.047619...`), with zero stale active jobs and zero Storage signed-URL errors. Exact blocker: `recent_generation_jobs_failed`; warnings include two failed Edge Function runs, two failed usage events, and the UI probe being skipped.
 - Added a local pre-reservation guard in `supabase/functions/edit-image/index.ts` so unsupported data-URI MIME types such as SVG are rejected before usage reservation or `generation_jobs` insertion. Updated the partial-edit verifier and regression coverage. Focused contract passed, Canvas partial-edit tests passed `15/15`, build passed, lint passed, and security audit passed. This fix is local and not deployed.
-- Updated evidence hashes: CURRENT-TURN `56a26a82fd1b2b0027c341b9358bdea05cfa29651b8ca80f0685ec26b43828e7`; Security Review Packet `0f6add7dae7e4db9e6e8f3626d7e91ea1680013d976b7cbcc5d49b5d9806af69`.
+- Updated evidence hashes: CURRENT-TURN `c4bc3048deddd0d2f0f1ec0ffb8483b121753425a6b126c08b994b940af1f6a6`; Security Review Packet `ecaac7b41358b9eb20a4233c462698e1fc6c86308b8a4224c4bd0beebc9682e2`.
 
 Exact blocker / next action / restart point: production monitor remains blocked by the existing failed jobs and the source fix has not been deployed. Keep generation excluded; obtain approved production source/deploy authority before applying the guard, then perform only a fresh read-only monitor/readback.
+
+## 2026-08-18 Goal continuation: fresh Chrome Plugin Lightchain UI and permission readback
+
+- Reconnected the explicit Chrome Plugin/Profile 2 surface, claimed the current existing tab `1980902656`, and used that same tab for Heavy public entrypoint → `/lightchain` → workflow → Generate readback. No new tab was created.
+- Fresh capability readback reports browser `viewport` only; tab capabilities are `pageAssets` and `cdp`; `visibility` is not advertised. The new foreground recording gate failed closed with exact blocker `chrome_visibility_capability_not_advertised`; no capture or fallback engine was used.
+- Clicked/read back all four Lightchain category tabs: recommended `9 tools`, planning `6`, fitting `4`, graphics `11`. Opened a recommended case card, read its modal, and followed `同じもの作成` to `/workflows/design-exploration`; the workflow CTA reached the Generate route without submitting.
+- Generate readback showed disabled `生成する`, visible but untouched rights checkbox, existing Gallery selector, and exact permission text `ブランドを選択してからギャラリーを開いてください。` when Gallery was opened without a selected brand. No material selection, upload, save, delete, download, auth, permission acknowledgement, generation, retry, or billing action occurred. Modal close/cancel clicks hit a CDP deadline; same-tab navigation restored the clean Lightchain state.
+
+Exact blocker / next action / restart point: restore Chrome Plugin `visibility` and stable selected-tab/element dispatch, then run one bounded recording and repeat the same safe UI readback. The authenticated Lightchain parity boundary remains unattempted.
+
+## 2026-08-18 Goal continuation: Supabase connector reauthentication boundary
+
+- Fresh read-only calls for project discovery, project details, Edge Function inventory, migration inventory, public table inventory, and security/performance advisors all stopped at the connector boundary with the same exact message: `This app connection requires reauthentication before other actions on this app can succeed.`
+- Structured error is `UNAUTHORIZED`, reason `oauth_refresh_token_rejected`, action `TRIGGER_REAUTHENTICATION`. No remote query, SQL, migration apply, Edge Function deploy, data/auth mutation, or secret readback was performed.
+
+Exact blocker / next action / restart point: reauthenticate the approved Supabase connector, then rerun only the read-only RLS/Auth/SECURITY DEFINER/function readback. Do not apply migrations or deploy functions.
+
+## 2026-08-18 Goal continuation: Zeabur source association fresh readback
+
+- Fresh `npm run zeabur:safe-readback --silent` is authenticated and read-only. Project `automation-wiled`, service `heavy-chain`, Docker deployment `RUNNING`, and `heavy-chain.zeabur.app` `PROVISIONED` were confirmed without reading variables or printing secrets.
+- Local HEAD `0e3f73104fc160ac986f71688968a12d6fb5b614` differs from `origin/main` `ff0c2cce087e41ca0b98fad9ce72a5c0124c9541`; Zeabur reports `sourceMetadataPresent=false`.
+
+Exact blocker / next action / restart point: immutable source/commit association is missing. Do not push, deploy, restart, redeploy, or read secret variables; obtain the owning source/deployment authority first.
+
+## 2026-08-18 Goal continuation: external Reviewer/Verifier fresh readback
+
+- OpenCode Go Reviewer and Verifier transport both recovered for one bounded, pure read-only interpretation. Reviewer preflight passed but returned `BLOCKED`; Verifier preflight passed and found no contradiction in the supplied deterministic evidence.
+- Both identified the same unresolved gaps: Supabase reauthentication, Zeabur source association/deployed-source reconciliation, production monitor `2/42` failed jobs, and Chrome `visibility` capability. Reviewer’s safest next action is Supabase reauthentication before further review.
+- No files were edited by the external roles, and no application API, generation, retry, billing, Runway, deploy, migration, purchase, or provider action was performed.
+
+Exact blocker / next action / restart point: reauthenticate Supabase, then capture successful read-only RLS/Auth/SECURITY DEFINER/function evidence before requesting another review.
