@@ -1481,3 +1481,13 @@ Exact blocker / next action / restart point: the new background recording route 
 - Recording ledger is now accepted strict Chrome Extension `9`, all engines `20`, native/window `11`; blocked entries remain excluded. Evidence hashes: CURRENT-TURN `70fef4575227fcb1234b1385ea8fa51c14da146df9f349812a11e816e22fc85b`; Security Review Packet `46d4e520656d38a8a68bead103aab28fdf4ebbc6b0dd740dd023bb7b3a33acad`; ledger `0722f1391b6c6b77f1296b75fa167330f25a913114ed548a0b5e8d8cd60858f3`.
 
 Exact blocker / next action / restart point: Heavy’s permission and safe route evidence is refreshed. Lightchain authenticated post-login parity, Supabase authenticated RLS proof, Zeabur immutable source association, external Reviewer/Verifier transport, and release acceptance remain authority-bound. Continue from the same Chrome Plugin/Profile 2 session after action-time Lightchain authentication confirmation; keep blocked/provider/generation paths fail-closed.
+
+## 2026-08-18 Goal continuation: fresh release gate remains not accepted
+
+- `npm run verify:release-gate --silent` completed in readback-plus-local-static mode with `ok=false`. Artifact: `output/playwright/10m-product-readiness-g615/release-gate-summary.json`, captured `2026-08-18T10:09:29.959Z`, SHA-256 `225717c6f5a46bc300ba238505f48fde52f23b03b3eba23ecd863ee863a6456b`.
+- 13 readbacks remain failed or missing: production monitor, launch operations, production mass-market QA, production Lightchain all-feature previews, G610, G603, G605, G606, G608, G618, G633, H601, and H602.
+- Three command gates remain failed: generation scorecard (`visual-scorecard.json` missing), G633 (required post-G633 baseline proof missing), and H602 billing readiness. No generation, retry, payment, migration apply, or billing action was used to fill them.
+- Irreversible-action readback remains safe: generation submit not clicked, payment checkout not touched, external publish not touched, destructive cleanup not touched, deploy not run.
+- Evidence hashes: CURRENT-TURN `55a99550cb5391350f70fe439c01942b56ac6fddf47236916f463347c60ca10c`; Security Review Packet `24bd16957e1b6004b3d933c34916dab504a622e4acb5cdbf7b7d757c89f9a0cf`.
+
+Exact blocker / next action / restart point: release acceptance is still not proven. Missing production artifacts require their owning QA/production authorities; generation scorecard cannot be fabricated without an approved generation/readback, G633 needs its production baseline, and H602 needs authorized billing/migration readback. Continue with Lightchain authentication or the corresponding external authority; do not run prohibited effects.
