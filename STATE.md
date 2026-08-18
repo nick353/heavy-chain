@@ -1417,6 +1417,15 @@ Exact blocker / next action / restart point: obtain an admitted video provider a
 
 Exact blocker / next action / restart point: release is not accepted. Refresh only the missing production artifacts with authorized current sessions, fix the G633/H602/scorecard evidence gaps without triggering generation or payment, and obtain Lightchain login/deployment/Supabase authority before any release mutation.
 
+## 2026-08-18 Goal continuation: fresh Lightchain login-boundary screenshot
+
+- Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902672` at `https://jp.linkaigc.com/login?redirect=/?` and rendered a screenshot of the login boundary. Screenshot bytes: 68,500; SHA-256 `000ec4f3f626e6b6cb864af9bdf174146f57749de0744c16070c5a048e3e035b`.
+- Visible UI: `HELLO`, account input, password input, forgot-password link, and login button. Both fields remained empty; no credentials, OTP, CAPTCHA, or login submission occurred.
+- The browser-plugin screenshot API returned bytes and rendered the image in Codex, but did not write the requested local path; this is recorded explicitly as `localFileWritten=false`, not claimed as a filesystem screenshot artifact.
+- Evidence hashes after Lightchain boundary screenshot: CURRENT-TURN `3c77b077e9e59013db4ab3d32a27e0fddc6a5b737fc8626dfd73cadea8e59792`; Security Review Packet `c8fb4ba5387444dd760fbdf858bbc67037ead02ef660a0dcffb654bb53644a6f`.
+
+Exact blocker / next action / restart point: Lightchain post-login UI remains unverified at the authentication boundary. Obtain action-time confirmation, then enter the already-provided credentials in this exact Chrome Plugin/Profile 2 tab and read back the authenticated UI.
+
 ## 2026-08-18 Goal continuation: fresh Lightchain login boundary
 
 - Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902663` at `https://jp.linkaigc.com/login?redirect=/?`.
