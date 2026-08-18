@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { fetchValidatedImageBlob, getImageDownloadFormat } from '../src/lib/imageDownload.ts';
 
 test('infers the requested output format from the download filename', () => {
@@ -46,4 +47,11 @@ test('accepts a non-empty image blob from an OK response', async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('keeps browser format conversion on the non-pending data URL path', async () => {
+  const implementation = readFileSync(new URL('../src/lib/imageDownload.ts', import.meta.url), 'utf8');
+  assert.match(implementation, /canvas\.toDataURL/);
+  assert.match(implementation, /new Blob\(\[bytes\], \{ type: mimeType \}\)/);
+  assert.doesNotMatch(implementation, /canvas\.toBlob/);
 });

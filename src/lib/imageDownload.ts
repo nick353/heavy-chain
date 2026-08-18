@@ -62,10 +62,20 @@ const convertImageBlob = async (
     }
     context.drawImage(bitmap, 0, 0);
 
-    const converted = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, mimeType, format === 'jpeg' ? 0.92 : undefined);
-    });
-    if (!converted || converted.size <= 0 || converted.type !== mimeType) {
+    // Chromium can leave the asynchronous canvas encoding callback pending
+    // indefinitely for large remote images in extension-backed sessions.
+    // Encode synchronously and rebuild a Blob so a requested JPEG/WebP
+    // download cannot report success while no file is actually handed to the
+    // browser download pipeline.
+    const dataUrl = canvas.toDataURL(mimeType, format === 'jpeg' ? 0.92 : undefined);
+    const match = dataUrl.match(/^data:([^;,]+);base64,(.*)$/s);
+    if (!match || match[1].toLowerCase() !== mimeType) {
+      throw new Error(`${errorPrefix}_format_conversion_failed`);
+    }
+    const binary = atob(match[2]);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const converted = new Blob([bytes], { type: mimeType });
+    if (converted.size <= 0 || converted.type !== mimeType) {
       throw new Error(`${errorPrefix}_format_conversion_failed`);
     }
     return converted;
