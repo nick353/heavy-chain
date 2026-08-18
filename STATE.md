@@ -1650,3 +1650,11 @@ Exact blocker / next action / restart point: restore the release environment thr
 - The evidence artifact also contains entries labeled `2026-08-19`; those entries were reconciled as artifact-supported but were not re-executed in this continuation, so any external-runtime claim they contain remains `PENDING_CONFIRMATION` unless independently read back.
 
 Exact blocker / next action / restart point: local non-OpenAI verification is green, but authenticated Supabase proof, immutable Zeabur source association, release environment, strict Chrome Plugin visibility/selected-tab capability, external reviewer transport, and Lightchain authenticated parity remain open. Resume the corresponding fresh readback only after the relevant authority changes; do not replay generation, billing, or deploy.
+
+## 2026-08-18 Goal continuation: Zeabur and source identity fresh readback
+
+- Secret-safe Zeabur readback remains authenticated and shows project `automation-wiled`, service `heavy-chain`, deployment `6a8375f3201aaa81bcfa82d0` `RUNNING`, GitHub provider, and provisioned domain `heavy-chain.zeabur.app`. Variable readback was not called and no secret values were printed.
+- Read-only Git readback shows local HEAD `06f050791e2b8ada39726cba5e1f87132db3b612` differs from `origin/main` `ff0c2cce087e41ca0b98fad9ce72a5c0124c9541`. Zeabur still reports `sourceMetadataPresent=false`.
+- Updated evidence hashes: CURRENT-TURN `4d9810cc6ee1aa13a41a55ffe831a86e611b58bc8d6766eb20f5a361fa3525ec`; Security Review Packet `63185fd66f285b5d2d5ede339704a68765fe064b16dd1939a752a348c3189865`.
+
+Exact blocker / next action / restart point: immutable source association is still missing. Do not push, deploy, restart, redeploy, or read secret variables; obtain the owning source/deployment authority before release work.
