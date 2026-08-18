@@ -1221,3 +1221,12 @@ Exact blocker / next action / restart point: do not fabricate scorecards, produc
 - Evidence JSON is valid. CURRENT-TURN SHA-256 is `d6e13a4673944fdb3d281c5aacc3831c1eecedf17ffb72aca939baab95c60f58`; Security Review Packet SHA-256 is `3f765e5e410c97a59c909b61fdd040b16646baa5c0b9a157ae01ba7bfd506ffb` with matching input hash.
 
 Exact blocker / next action / restart point: recording proof for these routes is now accepted, but authenticated Lightchain post-login UI and full production parity are still pending. Resume at Chrome Plugin Profile 2 fresh readback; credential typing remains pending action-time confirmation, and no other browser surface should be substituted.
+
+## 2026-08-18 Goal continuation: Chrome Plugin reconnected fresh auth-boundary readback
+
+- Chrome Plugin Profile 2 was recovered after the explicitly permitted window reopen. Chrome, Profile 2, the extension, and the native host diagnostics all passed; fresh `openTabs` and exact tab claims succeeded.
+- Lightchain tab 1980902653 is visibly at `https://jp.linkaigc.com/login?redirect=/?` with account/password inputs and login button. No credentials were entered and the tab is marked for handoff pending action-time confirmation.
+- Heavy Chain tab 1980902654 is authenticated at Gallery: 957 images, 60/957 visible, search/sort/detail controls, PNG/JPEG/WebP controls, and History/Jobs navigation are visible. No generation, retry, billing, upload, save, delete, share, favorite, or permission mutation occurred.
+- Fresh evidence JSON SHA-256 is `d757f71bc79d7046227ba0314524b04c39c851c568812ef5cabc8001e46d362`; Security Review Packet SHA-256 is `cb773947e9f506099b0be1401ac9ae81a971486afaf1c4d0911d234f479931c6` with matching CURRENT-TURN input hash.
+
+Exact blocker / next action / restart point: Lightchain post-login parity remains blocked only at the sensitive credential-transmission confirmation because the confirmation request returned no answer. Resume by confirming the exact Lightchain login action, then type the already-provided credentials and read back the authenticated UI in the same Chrome Plugin/Profile 2 session. Do not substitute another browser surface.
