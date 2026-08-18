@@ -1281,3 +1281,14 @@ Exact blocker / next action / restart point: obtain a settled same-session Heavy
 - The gate itself confirms `generationSubmit=not_clicked`, `payment=not_touched`, `destructiveCleanup=not_touched`, and `deploy=not_run`. Syntax/security checks passed where executed.
 
 Exact blocker / next action / restart point: refresh only the missing read-only evidence with an approved current production/session authority. Do not run generation scorecard, billing readiness, cleanup, or deploy in this session merely to make the gate green.
+
+## 2026-08-18 Goal continuation: current Heavy Gallery recording with new Chrome Plugin method
+
+- Fresh Chrome Plugin/Profile 2 readback on Heavy Chain tab `1980902659` shows the settled Gallery route at `https://heavy-chain.zeabur.app/gallery`, `957枚の画像`, search/selection/favorites/sort controls, and the image grid. The target tab remained unselected during capture; selected tab was `1980902656`.
+- Recording attempt r1 was blocked with the exact `chrome_debugger_media_verification_failed` after only one frame. The focused r2 retry completed with `status=completed`, `media_verified=true`, H.264, `18.956807s`, `1440x710`, full decode/tail integrity, and media SHA-256 `8511c2f2ad13b70d7d4092cc9287887775004b4d5e608cad67e2b5c8368de232`.
+- Timestamped review confirms the Gallery top state at `0.000s` and a lower scrolled image-grid state at `9.478403s`. ffprobe reports only `2` decoded source frames over the long-duration movie; this is explicitly retained as a low-density limitation and is not claimed as dense continuous semantic coverage.
+- The authoritative recording ledger now reports accepted all engines `17`, accepted strict Chrome Extension `6`, accepted native/window `11`, blocked all engines `15`, blocked strict `12`, blocked native `3`. No feature count is inferred from the two-frame recording.
+- No credentials, OpenAI API call, generation, retry, billing, upload, save, delete, permission mutation, provider action, migration apply, or deploy occurred.
+- Recorder controller stop completed. Chrome Plugin `tabs.get` returned `Tab not found` for the four known arm IDs, while a subsequent `openTabs` readback still listed stale arm rows; recorder-tab cleanup is therefore `PENDING_CONFIRMATION` at the Chrome Plugin transport boundary.
+
+Exact blocker / next action / restart point: the new Chrome Plugin route now produces a media-verified Gallery artifact, but its low source-frame density limits visual coverage. If dense continuous evidence is required, repair the screencast frame cadence or obtain explicit approval for a separate native Chrome-window capture; do not silently substitute another surface. Lightchain authentication and full production parity remain pending at the prior credential/deployment authority boundaries.
