@@ -1551,3 +1551,12 @@ Exact blocker / next action / restart point: use the safe helper for all future 
 - Evidence hashes: CURRENT-TURN `8771e7a4c9afd1a5ce6954ae4a507cbda92c37e4d80632dfe34a90b543c19611`; Security Review Packet `56c2e54b39b483b9f8b12005f15a57dd2a34730b634b2a5a90584c7c85bb37ad`.
 
 Exact blocker / next action / restart point: reauthenticate the Supabase app connection, then resume with project discovery and read-only authenticated RLS/Auth/SECURITY DEFINER checks; do not retry the same connector call until reauthentication changes its state.
+
+## 2026-08-18 Goal continuation: fresh completion and release audit
+
+- `npm run verify:10m-completion:incomplete-ok --silent` remains `ok=false`: `76/80` required goals accepted, `16` blockers, `0/2` human items closed, and `2/9` required proofs complete. Open items include G617/G619/G669/G670, H601/H602, production Lightchain order previews, production rights/billing readbacks, and release gate failure.
+- `npm run verify:goal-readiness:incomplete-ok --silent` passed only the static retirement/provider checks; its proof limits explicitly exclude production migration/function deployment claims.
+- Fresh `npm run verify:release-gate --silent` remains `ok=false` with 12 failed readbacks and 3 failed commands (generation scorecard, G633, H602). Irreversible actions remain untouched.
+- Completion artifact SHA-256: `f5f5140aaf5648c7b45aa2502bc69f3d62228b6be369bbed5261add23f1254b2`; release artifact SHA-256: `c996de1d7556312b59af9b90cfe0bb47e018a8d1fc6f832f5ab42a9d087fa4e8`; current evidence SHA-256: `5bb0f70c03763b40586aed0229003a86cac8625ebebb57c3412dc0ec5d62e6ff`; packet SHA-256: `701125c6803f9f2ea713f01742a64f4e784cfb826cec9a02bbc0b94f1ce669b8`.
+
+Exact blocker / next action / restart point: do not mark the Goal complete. Resume only with the missing authority/evidence lanes: Lightchain authenticated parity, Supabase reauthentication/runtime checks, owner-approved source/secret association, and human H601/H602/G619/G617 proof inputs.
