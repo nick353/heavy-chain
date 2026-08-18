@@ -1676,9 +1676,9 @@ Exact blocker / next action / restart point: restore the release environment thr
 
 ## 2026-08-18 Goal continuation: fitting cutout persistence race fix
 
-- Fixed the non-OpenAI fitting-background persistence race in commit `d34e81a7f9faabd0bed886be73e801cc9066f845`: high-precision cutout state changes now await the parent IndexedDB cutout save before the action resolves. The existing effect remains as a recovery path.
-- Focused fitting tests passed `25/25`, typecheck passed, production build passed with 2,599 modules transformed, security audit passed without printing secrets, and diff check passed.
+- Fixed the non-OpenAI fitting-background persistence race in commits `d34e81a7f9faabd0bed886be73e801cc9066f845` and `dc112ddd6505b341149d664e160f791566e0c3fc`: high-precision cutout state changes now await the parent IndexedDB cutout save before the action resolves, and the store has a save/readback regression test. The existing effect remains as a recovery path.
+- Focused fitting tests passed `26/26`, including IndexedDB save/readback and durable source identity rejection; typecheck passed, production build passed with 2,599 modules transformed, security audit passed without printing secrets, and diff check passed.
 - This is implementation/local proof only. A fresh Chrome Plugin production cutout → save → reload readback is still required and remains `PENDING_CONFIRMATION` until the live capability/session is available.
-- Updated evidence hashes: CURRENT-TURN `f21c93c184ee98d294e71ef7eb0a434dc9c5c326b1adb091dec273c01658e601`; Security Review Packet `4499214881ca2dfca86e30ce1feb7bc7d65fa090938833dbdfb782a5770d220b`.
+- Updated evidence hashes after the IndexedDB regression test: CURRENT-TURN `28ebd030882dd669cc57559e6a205780916bdd803039ae6e4349b436d3f8598b`; Security Review Packet `1686b226ffaaec9232e96bd59b9bd04e54bce818bd2d565ed317887c078b3919`.
 
 Exact blocker / next action / restart point: once the Chrome Plugin session is available, repeat the alternate-input fitting cutout, wait for the saved confirmation, reload, and verify `nextStepReady` plus the extracted layer. Do not submit AI generation.
