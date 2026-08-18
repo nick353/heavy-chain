@@ -53,7 +53,7 @@ addCheck('dashboard_uses_category_workflow_entry_without_quick_start_noise', (
 ), {});
 
 addCheck('generate_primary_action_is_provider_neutral', (
-  generate.includes("noImageGenerationMode ? '生成する'")
+  generate.includes("noImageGenerationMode ? '企画書を保存' : '生成する'")
   && !generate.includes('Geminiで生成')
 ), {});
 
