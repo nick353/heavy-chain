@@ -1634,3 +1634,11 @@ Exact blocker / next action / restart point: restore the Chrome Plugin backend's
 
 - Fitting persistence runtime `7/7`, fitting resume `9/9`, Lightchain persistence compaction `3/3`, and Gallery download boundary `2/2` passed. The quota test retained the stable diagnostic `LOCAL_WORKSPACE_QUOTA_EXCEEDED`; this confirms fail-closed local behavior, not live authenticated production persistence.
 - No source change was needed in this continuation; verification and browser evidence were the changes. The Goal remains active because authenticated Lightchain parity, Supabase runtime proof, Zeabur source association, production release artifacts, and fresh recording capability remain blocked.
+
+## 2026-08-18 Goal continuation: release doctor and recording gate diagnostics
+
+- Fresh `npm run security:audit --silent` passed without printing secrets. Typecheck passed. The foreground recording helper tests passed `5/5`, including the fail-closed missing-visibility and explicit-display-readback cases; this is static/local proof only.
+- Fresh release doctor with the current commit and Chrome evidence target passed release-blocker, git-clean, and proof-target checks, then stopped at `env:check`. Six required environment keys were absent from the current shell: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `PUBLIC_URL`. Values were not read or printed.
+- Evidence hashes: CURRENT-TURN `2b1c8c449c25be06b5252b37232212c0751cf7b0237e79363340eb862e94cad8`; Security Review Packet `9ef0f2e0efe241b15a444cb817afb60d6cabb7a8ff1218f7243807fdfa582153`.
+
+Exact blocker / next action / restart point: restore the release environment through the approved secret-safe channel and restore the Chrome backend `visibility` capability; then rerun release doctor and one bounded Chrome recording. Do not print or invent the missing values, and do not deploy.
