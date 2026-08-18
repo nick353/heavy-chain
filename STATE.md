@@ -1589,3 +1589,11 @@ Exact blocker / next action / restart point: local preflight is clear; resume wi
 - Current evidence SHA-256: `778511fafa2c6ebcebf5e18cf149a841b92626953a7dad46e92d2ec747ec8448`; Security Review Packet SHA-256: `5e9c9ebfdaf95609e662017d7ad2e3fa9bbb1ef2ee4c89cd758952645a546159`; ledger SHA-256: `b40a72aadc1285e7ff9d018588db690261092c1ce2e04b9ac14f52f98b1d9ced`.
 
 Exact blocker / next action / restart point: public Heavy controls are refreshed. Resume at the Lightchain login boundary only after action-time confirmation to transmit the user-provided credentials; do not substitute another browser surface. Keep OpenAI API, generation, retry, billing, provider calls, migration apply, deploy, and permission mutation excluded.
+
+## 2026-08-18 Goal continuation: Chrome Plugin proof validator refreshed
+
+- `npm run verify:chrome-plugin-proof --silent -- --evidence CURRENT-TURN-20260818.json --max-age-hours 48` passed with `accepted=true` and `failures=[]` after the fresh public-control exercise and blocked recording attempts were added.
+- The validator still counts only previously accepted media; the two current recording attempts remain blocked and excluded from accepted totals.
+- Current evidence SHA-256: `5cc9d9c273aab11a5bb486238e79af8de366193724a10e5a440b49a5fdf28f75`; Security Review Packet SHA-256: `714a180f2f0081f3bcb2a341fdacee7d97d64a0005a5184dfe639c28b8b01721`.
+
+Exact blocker / next action / restart point: validator is clear, but the Goal remains incomplete at Lightchain authenticated parity and external production authority lanes. Do not treat validator success as production or authentication completion.
