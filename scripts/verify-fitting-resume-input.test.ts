@@ -107,6 +107,37 @@ test('fitting draft restores a canonical source path without falsely claiming cu
   assert.equal(result?.materialReference.nextStepReady, false);
 });
 
+test('fitting draft backfills legacy top-level Gallery identity into a signed-URL material reference', () => {
+  const result = readFittingDraftMaterial([
+    artifact({
+      id: 'fitting-draft-legacy-gallery',
+      featureType: 'fitting-background-draft',
+      metadata: {
+        feature: 'fitting-background-draft',
+        sourceImageId: 'gallery-image-legacy',
+        sourceStoragePath: 'user-a/brand-1/gallery-image-legacy.png',
+        materialReference: {
+          imageUrl: 'https://signed.example.test/gallery.png?token=stale',
+          fileName: 'Legacy Gallery素材',
+          materialKind: '衣服画像',
+          maskMode: 'auto',
+          activeLayer: '衣服',
+          placement: 'モデル前面',
+          scale: 72,
+          extractedImageUrl: null,
+          extractedLayerReady: false,
+          nextStepReady: false,
+        },
+      },
+    }),
+  ]);
+
+  assert.equal(result?.materialReference.imageUrl, '');
+  assert.equal(result?.materialReference.sourceImageId, 'gallery-image-legacy');
+  assert.equal(result?.materialReference.sourceStoragePath, 'user-a/brand-1/gallery-image-legacy.png');
+  assert.equal(result?.materialReference.nextStepReady, false);
+});
+
 test('fitting draft restores a small durable cutout when its source and extraction are local', () => {
   const result = readFittingDraftMaterial([
     artifact({

@@ -28,6 +28,15 @@ const readOptionalString = (value: unknown) => (
   typeof value === 'string' && value.trim() ? value.trim() : null
 );
 
+const readFirstOptionalString = (value: unknown, keys: readonly string[]) => {
+  if (!isRecord(value)) return null;
+  for (const key of keys) {
+    const candidate = readOptionalString(value[key]);
+    if (candidate) return candidate;
+  }
+  return null;
+};
+
 const readStringArray = (value: unknown) => (
   Array.isArray(value)
     ? value.filter((item): item is string => typeof item === 'string' && Boolean(item.trim())).map((item) => item.trim())
@@ -36,10 +45,15 @@ const readStringArray = (value: unknown) => (
 
 const readMaterialReference = (
   value: unknown,
-  options: { allowSourceOnly?: boolean } = {},
+  options: {
+    allowSourceOnly?: boolean;
+    fallbackSourceImageId?: string | null;
+    fallbackSourceStoragePath?: string | null;
+  } = {},
 ): MaterialReferenceState | null => {
   if (!isRecord(value)) return null;
-  const sourceStoragePath = readOptionalString(value.sourceStoragePath);
+  const sourceImageId = readOptionalString(value.sourceImageId) ?? options.fallbackSourceImageId ?? null;
+  const sourceStoragePath = readOptionalString(value.sourceStoragePath) ?? options.fallbackSourceStoragePath ?? null;
   const sourceImageUrl = isResumableImageUrl(value.imageUrl) ? value.imageUrl.trim() : '';
   const extractedImageUrl = isResumableImageUrl(value.extractedImageUrl)
     ? value.extractedImageUrl.trim()
@@ -62,7 +76,7 @@ const readMaterialReference = (
   return {
     imageUrl: sourceImageUrl,
     fileName: readString(value.fileName, '衣服素材'),
-    sourceImageId: readOptionalString(value.sourceImageId),
+    sourceImageId,
     sourceStoragePath,
     materialKind: readString(value.materialKind, '衣服'),
     maskMode: value.maskMode === 'manual' || value.maskMode === 'keep' ? value.maskMode : 'auto',
@@ -157,7 +171,15 @@ export const readFittingDraftMaterial = (
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 
   for (const artifact of candidates) {
-    const materialReference = readMaterialReference(artifact.metadata.materialReference, { allowSourceOnly: true });
+    const materialReference = readMaterialReference(artifact.metadata.materialReference, {
+      allowSourceOnly: true,
+      fallbackSourceImageId: readFirstOptionalString(artifact.metadata, ['sourceImageId', 'imageId']),
+      fallbackSourceStoragePath: readFirstOptionalString(artifact.metadata, [
+        'sourceStoragePath',
+        'storagePath',
+        'remoteStoragePath',
+      ]),
+    });
     if (materialReference) return { artifactId: artifact.id, materialReference };
   }
 
