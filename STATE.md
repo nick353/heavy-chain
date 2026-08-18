@@ -1257,3 +1257,11 @@ Exact blocker / next action / restart point: remote schema lint is clear, but th
 - Evidence JSON SHA-256 is `0c67ce0ef25fde31c69b3aa3190031228a312091b7809da06493e92fd5d29563`; Security Review Packet SHA-256 is `4fdceddaedebafdedac573b6634373cdda5b46a3b8a4126e9f9ad290c6e6348a` with matching CURRENT-TURN input hash.
 
 Exact blocker / next action / restart point: release readback refresh, Lightchain authentication, and Heavy same-tab reappearance remain pending. Do not rewrite historical proof or invoke external effects; resume from the current Chrome Plugin Profile 2 tab when login/session authority is available.
+
+## 2026-08-18 Goal continuation: current production workspace readback remains unproven
+
+- The provided read-only collector produced `output/playwright/production-workspace-generation-20260818-r1/workspace-db-readback.json` with valid current metadata (`2026-08-18`, staging, commit `65ecbf2c12d251a5d98a48848c8dfc22286b22af`) and SHA-256 `3df8fd4d68968ed03dbf7bb684ce4840fd1c1f476f4984888fa55ebdee8c31c1`.
+- Current source-attributed counts are jobs/images/usage/runs/lightchainTaskSteps/storage = `0/0/0/0/0/0`. The collector itself passed, but the empty result cannot prove production integrity or release readiness and is classified `PENDING_CONFIRMATION`.
+- No old cleanup/rate-limit proof was rewritten because recreating those artifacts would require external cleanup/rate-limit effects outside the current authorization boundary.
+
+Exact blocker / next action / restart point: obtain a bounded approved live run with source metadata, then rerun the read-only collector and validate non-empty linked jobs/images/usage/runs/storage. Do not claim the empty artifact as release proof.
