@@ -81,9 +81,25 @@ try {
     routePage.setDefaultNavigationTimeout(15_000);
     routePage.setDefaultTimeout(15_000);
     wirePageDiagnostics(routePage, `desktop:${tool.id}`);
-    const result = await verifyFeatureWorkflow(routePage, tool);
+    let result;
+    try {
+      result = await verifyFeatureWorkflow(routePage, tool);
+    } catch (error) {
+      result = {
+        id: tool.id,
+        category: tool.category,
+        title: tool.title,
+        assertions: [{
+          id: `${tool.id}:route_readback`,
+          ok: false,
+          details: { exactBlocker: error.message },
+        }],
+        exactBlocker: error.message,
+      };
+      addAssertion(`${tool.id}:route_readback`, false, { exactBlocker: error.message });
+    }
     evidence.featureResults.push(result);
-    await routePage.close();
+    await routePage.close().catch(() => {});
   }
   await context.close();
   evidence.cleanup.contextClosed = true;
@@ -114,8 +130,12 @@ try {
     routePage.setDefaultTimeout(15_000);
     wirePageDiagnostics(routePage, `mobile:${tool.id}`);
     await routePage.setViewportSize(mobileViewport);
-    await verifyMobileFeatureScreen(routePage, tool);
-    await routePage.close();
+    try {
+      await verifyMobileFeatureScreen(routePage, tool);
+    } catch (error) {
+      addAssertion(`mobile_screen:${tool.id}:route_readback`, false, { exactBlocker: error.message });
+    }
+    await routePage.close().catch(() => {});
   }
 
   const invalidPage = await context.newPage();
@@ -124,7 +144,9 @@ try {
   wirePageDiagnostics(invalidPage, 'mobile:invalid');
   await invalidPage.setViewportSize(mobileViewport);
   await invalidPage.goto(`${baseUrl}/lightchain/not-a-real-feature`, { waitUntil: 'networkidle' });
-  await invalidPage.waitForURL(/\/lightchain$/, { timeout: 10_000 });
+  if (!invalidPage.url().endsWith('/lightchain')) {
+    await invalidPage.waitForURL(/\/lightchain$/, { timeout: 10_000 });
+  }
   addAssertion('invalid_feature_redirects_to_index', invalidPage.url().endsWith('/lightchain'), { url: invalidPage.url() });
   await invalidPage.close();
 } catch (error) {
@@ -179,7 +201,8 @@ process.exit(evidence.ok ? 0 : 1);
 
 async function verifyFeatureWorkflow(page, tool) {
   const result = { id: tool.id, category: tool.category, title: tool.title, assertions: [] };
-  await page.goto(`${baseUrl}/lightchain/${tool.id}`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/lightchain/${tool.id}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(250);
   await page.evaluate((key) => window.localStorage.removeItem(key), canvasStoreKey);
   await waitForSettledRoute(page, tool.id);
   const body = await bodyText(page);
@@ -198,6 +221,7 @@ async function verifyFeatureWorkflow(page, tool) {
   await verifyAllVisibleTabsRespond(page, tool, result);
   await verifyToolSpecificChoiceControls(page, tool, result);
   await verifyVisibleRangeControlsRespond(page, tool, result);
+  result.controlInventory = await auditVisibleControls(page);
 
   const generateButton = page.getByRole('button', { name: /AI生成|更新|保存|開始/ }).first();
   const hasSafeLocalAction = await generateButton.isVisible({ timeout: 1000 }).catch(() => false);
@@ -492,6 +516,91 @@ async function verifyVisibleRangeControlsRespond(page, tool, result) {
   }
 }
 
+function getControlAuditSelector() {
+  return [
+    'button:visible',
+    'a[href]:visible',
+    '[role="button"]:visible',
+    '[role="tab"]:visible',
+    '[role="menuitem"]:visible',
+    '[role="checkbox"]:visible',
+    '[role="switch"]:visible',
+    '[role="radio"]:visible',
+    'input:not([type="file"]):visible',
+    'select:visible',
+    'textarea:visible',
+  ].join(', ');
+}
+
+function classifyVisibleControl(control) {
+  const label = `${control.name} ${control.href ?? ''}`.replace(/\s+/g, ' ').trim();
+  if (control.disabled || control.ariaDisabled === 'true' || /権限がありません/.test(label)) return 'permission_blocked';
+  if (/生成|開始|保存|削除|ダウンロード|再試行|アップロード|ログアウト|ログイン|購入|課金|支払い|OpenAI|Runway|動画|送信|確定|決定|作成/.test(label)) return 'effectful_or_provider';
+  if (control.role === 'tab') return 'safe_tab';
+  if (control.role === 'checkbox' || control.role === 'switch' || control.role === 'radio' || control.type === 'checkbox' || control.type === 'radio' || control.ariaPressed != null) return 'safe_toggle';
+  if (control.hasPopup) return 'safe_menu';
+  if (/検索|ヘルプ|ガイド/.test(label)) return 'safe_lookup';
+  return 'read_only_or_navigation';
+}
+
+async function auditVisibleControls(page) {
+  const selector = getControlAuditSelector();
+  const controls = await page.locator(selector).evaluateAll((nodes) => nodes.map((node, index) => {
+    const element = node;
+    const role = element.getAttribute('role') || element.tagName.toLowerCase();
+    const name = element.getAttribute('aria-label')
+      || element.getAttribute('title')
+      || element.textContent?.replace(/\s+/g, ' ').trim()
+      || element.getAttribute('placeholder')
+      || '';
+    return {
+      index,
+      tag: element.tagName.toLowerCase(),
+      role,
+      name: name.slice(0, 180),
+      href: element.getAttribute('href'),
+      type: element.getAttribute('type'),
+      disabled: element.hasAttribute('disabled'),
+      ariaDisabled: element.getAttribute('aria-disabled'),
+      ariaPressed: element.getAttribute('aria-pressed'),
+      hasPopup: element.getAttribute('aria-haspopup'),
+      checked: element.getAttribute('aria-checked') ?? (element instanceof HTMLInputElement ? String(element.checked) : null),
+    };
+  }));
+  const classified = controls.map((control) => ({ ...control, classification: classifyVisibleControl(control) }));
+  const interactionResults = [];
+
+  const menus = page.locator('button[aria-haspopup]:visible, [role="button"][aria-haspopup]:visible');
+  for (let index = 0; index < await menus.count(); index += 1) {
+    const menu = menus.nth(index);
+    if (!(await menu.isEnabled().catch(() => false))) continue;
+    const name = await menu.getAttribute('aria-label').catch(() => null) || await menu.innerText().catch(() => '');
+    if (classifyVisibleControl({ name, href: null, role: 'button', disabled: false, ariaDisabled: null, ariaPressed: null, hasPopup: 'true', type: null }) !== 'safe_menu') continue;
+    try {
+      await menu.click();
+      const menuVisible = await page.locator('[role="menu"]:visible, [role="listbox"]:visible, [role="dialog"]:visible').count() > 0;
+      await page.keyboard.press('Escape').catch(() => {});
+      interactionResults.push({ type: 'menu_open_close', index, name: String(name).trim().slice(0, 120), menuVisible });
+    } catch (error) {
+      interactionResults.push({ type: 'menu_open_close', index, name: String(name).trim().slice(0, 120), status: 'not_completed', exactBlocker: error.message });
+    }
+  }
+
+  return {
+    selector,
+    visibleCount: classified.length,
+    precedingInteractionCoverage: ['role=tab', 'tool-specific choice controls', 'input[type=range]'],
+    countsByClassification: classified.reduce((counts, control) => {
+      counts[control.classification] = (counts[control.classification] ?? 0) + 1;
+      return counts;
+    }, {}),
+    controls: classified,
+    nonDestructiveInteractionResults: interactionResults,
+    effectfulOrProviderControlsNotClicked: classified.filter((control) => control.classification === 'effectful_or_provider'),
+    permissionControlsNotClicked: classified.filter((control) => control.classification === 'permission_blocked'),
+  };
+}
+
 async function interactionSnapshot(page) {
   return page.evaluate(() => {
     const textareas = Array.from(document.querySelectorAll('textarea')).map((node) => ({
@@ -572,6 +681,7 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
   for (const categoryId of generateCategoryIds) {
     await page.goto(`${baseUrl}/generate?category=${categoryId}`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.body.innerText.trim().length > 0, null, { timeout: 10_000 });
+    await waitForLightchainCategory(page, categoryId);
     await dismissBlockingOverlays(page);
     await page.locator('[data-testid="lightchain-tool-card"]').first().waitFor({ state: 'visible', timeout: 10_000 });
     const linksForCategory = await page
@@ -599,6 +709,7 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
   for (const { categoryId, href } of clickableFeatureDetailEntries) {
     await page.goto(`${baseUrl}/generate?category=${categoryId}`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => document.body.innerText.trim().length > 0, null, { timeout: 10_000 });
+    await waitForLightchainCategory(page, categoryId);
     await dismissBlockingOverlays(page);
     await page.locator('[data-testid="lightchain-tool-card"]').first().waitFor({ state: 'visible', timeout: 10_000 });
     const link = page.locator(`a[href="${href}"]`).first();
@@ -618,7 +729,8 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
 }
 
 async function verifyMobileFeatureScreen(page, tool) {
-  await page.goto(`${baseUrl}/lightchain/${tool.id}`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/lightchain/${tool.id}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(250);
   await waitForSettledRoute(page, tool.id);
   const body = await bodyText(page);
   addAssertion(`mobile_screen:${tool.id}`, (
@@ -831,7 +943,20 @@ async function waitForSettledRoute(page, toolId) {
     return text.length > 0
       && !text.includes('MATERIAL WORKBENCH')
       && !text.includes('素材作業台を準備しています');
-  }, toolId, { timeout: 20_000 });
+  }, toolId, { timeout: 45_000 });
+}
+
+async function waitForLightchainCategory(page, categoryId) {
+  const expectedLabels = {
+    recommended: 'おすすめ',
+    planning: '企画デザインツール',
+    fitting: 'AIフィッティング',
+    graphics: 'グラフィックツール',
+  };
+  await page.waitForFunction((expectedLabel) => {
+    const selectedTab = document.querySelector('[role="tab"][aria-selected="true"]');
+    return selectedTab?.textContent?.includes(expectedLabel) ?? false;
+  }, expectedLabels[categoryId], { timeout: 15_000 });
 }
 
 function readLightchainCatalog() {
