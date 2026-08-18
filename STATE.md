@@ -1829,3 +1829,10 @@ Exact blocker / next action / restart point: Chrome Plugin direct CDP recording 
 - Updated evidence: CURRENT-TURN SHA-256 `31fa4c02a274e756192d12f9e4c9f4db9d2ad5b61d27b13b56f2716cfe046eb7`; Security Review Packet SHA-256 `9b6c7ab1de4fe1f49b70634574bc8e8f87d27eb5c94c7b9651a3bb116e4fd14e`.
 
 Exact blocker / next action / restart point: deploy/read back the local non-OpenAI download fix only after owner-authorized immutable source association; then repeat the same-tab JPEG/WebP downloads. Independently obtain Lightchain action-time auth confirmation, Supabase reauthentication, and production source/release authority. Keep generation, retry, billing, Runway, save, delete, and provider actions excluded.
+
+## 2026-08-18 Goal continuation: static security and bounded release-gate readback
+
+- After the download fix, `npm run security:audit --silent`, `npm run supabase:verify:static --silent`, and `npm run verify:error-messages --silent` passed. Changed-file ESLint also passed for `src/lib/imageDownload.ts` and `scripts/verify-image-download.test.ts`.
+- `npm run verify:release-gate --silent` was started as read-only, remained in its `npm run lint --max-warnings=0` child for more than one minute without a receipt, and was terminated. No generation, provider, billing, migration, or deploy action occurred; full release-gate result remains `PENDING_CONFIRMATION`.
+
+Exact blocker / next action / restart point: rerun the release gate only with a bounded lint/runtime receipt or the owning release environment; do not promote the incomplete readback to release acceptance.
