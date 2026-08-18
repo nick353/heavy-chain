@@ -1658,3 +1658,10 @@ Exact blocker / next action / restart point: local non-OpenAI verification is gr
 - Updated evidence hashes: CURRENT-TURN `4d9810cc6ee1aa13a41a55ffe831a86e611b58bc8d6766eb20f5a361fa3525ec`; Security Review Packet `63185fd66f285b5d2d5ede339704a68765fe064b16dd1939a752a348c3189865`.
 
 Exact blocker / next action / restart point: immutable source association is still missing. Do not push, deploy, restart, redeploy, or read secret variables; obtain the owning source/deployment authority before release work.
+
+## 2026-08-18 Goal continuation: Supabase DB verification boundary
+
+- `npm run supabase:verify:db --silent` stopped before remote verification with the exact message: `Supabase remote verification is not available in this shell; run the connector-backed migration/readback after reauthentication.` No remote query, migration apply, or Edge Function deploy was performed.
+- Evidence hashes after recording this readback: CURRENT-TURN `9feb554235e640a2bb7b8d62f4b2a551f37635f2ab512581936fd897ee5090b8`; Security Review Packet `d5495e1b1e832daa14daf0f9c8c1a69a7557da4f47dfe32e219667025b034e08`.
+
+Exact blocker / next action / restart point: reauthenticate the approved Supabase connector, then perform only the connector-backed read-only RLS/Auth/SECURITY DEFINER/function readback. Do not apply migrations or deploy functions.
