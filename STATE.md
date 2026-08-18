@@ -1273,3 +1273,11 @@ Exact blocker / next action / restart point: obtain a bounded approved live run 
 - This is classified `PENDING_CONFIRMATION` and is not counted as authenticated Gallery/image-count proof. The tab is marked for handoff. No generation, retry, billing, upload, save, delete, auth mutation, migration apply, deploy, or provider action occurred.
 
 Exact blocker / next action / restart point: obtain a settled same-session Heavy readback or the missing backend/session authority; resume from tab `1980902659` without substituting the historical Gallery evidence for current state.
+
+## 2026-08-18 Goal continuation: fresh release-gate current readback
+
+- Fresh `output/playwright/10m-product-readiness-g615/release-gate-summary.json` is `ok=false`, SHA-256 `867b0ba6c65f843164193fa65f85a75bb78c2deca19cfd7d422491c160cb773f`.
+- 13 readbacks remain missing/stale/blocked: production monitor, launch operations, production mass-market QA, production Lightchain all-feature previews, G610, G603, G605, G606, G608, G618, G633, H601, and H602. Failed local commands are generation scorecard, G633 alerting plan, and H602 billing readiness.
+- The gate itself confirms `generationSubmit=not_clicked`, `payment=not_touched`, `destructiveCleanup=not_touched`, and `deploy=not_run`. Syntax/security checks passed where executed.
+
+Exact blocker / next action / restart point: refresh only the missing read-only evidence with an approved current production/session authority. Do not run generation scorecard, billing readiness, cleanup, or deploy in this session merely to make the gate green.
