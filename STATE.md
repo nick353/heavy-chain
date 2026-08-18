@@ -1239,3 +1239,12 @@ Exact blocker / next action / restart point: Lightchain post-login parity remain
 - Fresh evidence JSON SHA-256 is `73a62e06b6ec798ecf25baa90608b2f5d7f838b92f78a5911b3618a0cf4aed20`; Security Review Packet SHA-256 is `9c98f2f12b3c7b73878c16da06a4f9515f9e41d19f0db03280e50609a4d0cf91` with matching CURRENT-TURN input hash.
 
 Exact blocker / next action / restart point: production has not been redeployed because immutable Zeabur source association and deployment authority remain unverified. Resume by obtaining the owning deployment authority, then deploy the already-tested local persistence/error-diagnostic build and perform a fresh production bundle/readback; do not invoke generation to validate it.
+
+## 2026-08-18 Goal continuation: official Supabase fresh readback
+
+- Official Supabase CLI identified `heavy-chain-production` (`ghwjymozrwmcrpjqvbmo`, `ACTIVE_HEALTHY`, ap-southeast-1). Fresh functions readback: 16 ACTIVE, `verify_jwt=false` 0, legacy Runway-named functions 0; `model-matrix` v45, `marketing-workspace-artifact` v25, `edit-image` v14, and `canvas-document` v2.
+- `supabase db lint --linked` passed for `extensions`, `private`, and `public` with `No schema errors found`.
+- Migration alignment is explicit: local security/RLS/index migrations `20260818074224`, `20260818080001`, and `20260818080857` are present locally but absent remotely. No apply was attempted.
+- Some remote function entrypoints still reference a Desktop source tree, so immutable source attribution remains PENDING_CONFIRMATION. Fresh evidence JSON SHA-256 is `247d5cb09d60a25918d38a826fd7181eb25c584f62798e7d6f83a9baf7a8c25e`; Security Review Packet SHA-256 is `b83e69fb24eb2286fbaaf6e0265fd8f68795c50f52f7a2f5b509360fb440880b` with matching CURRENT-TURN input hash.
+
+Exact blocker / next action / restart point: remote schema lint is clear, but the three local hardening migrations still require owning production migration authority and post-apply advisor/RLS readback. Resume with that authority; do not apply migrations from this session.
