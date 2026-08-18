@@ -695,7 +695,7 @@ export function FittingPage() {
     if (!persisted.ok) {
       fittingDraftPersistenceErrorRef.current = true;
       setFittingDraftPersistenceStatus('failed');
-      setFittingDraftPersistenceMessage(`Fitting入力の保存確認に失敗しました。${persisted.error.message}`);
+      setFittingDraftPersistenceMessage(`Fitting入力の保存確認に失敗しました。${getErrorMessage(persisted.error)}`);
       fittingDraftRestoredRef.current = false;
       return;
     }
@@ -1074,7 +1074,7 @@ export function FittingPage() {
         const cleanupMessage = cleanup.ok
           ? ''
           : ` 保存済みの一部成果物も削除確認できませんでした: ${cleanup.error.message}`;
-        setErrorMessage(`生成結果の保存確認に失敗しました。${getErrorMessage(persisted.error.message)}${cleanupMessage}`);
+        setErrorMessage(`生成結果の保存確認に失敗しました。${getErrorMessage(persisted.error)}${cleanupMessage}`);
         return;
       }
       artifactIds.push(persisted.artifact.id);

@@ -29,6 +29,7 @@ const vite = await createServer({
 const persistence = await vite.ssrLoadModule('/src/lib/localWorkspaceArtifacts.ts');
 const fittingPersistence = await vite.ssrLoadModule('/src/lib/fittingPersistence.ts');
 const fittingResume = await vite.ssrLoadModule('/src/lib/fittingResume.ts');
+const errorMessages = await vite.ssrLoadModule('/src/lib/errorMessages.ts');
 after(async () => vite.close());
 
 const makeInput = (overrides = {}) => ({
@@ -70,7 +71,50 @@ test('fitting persistence rejects a remote URL without canonical storage metadat
     result.error.message,
     'Remote image URL requires canonical storage path metadata for local persistence.',
   );
+  assert.equal(result.error.code, 'LOCAL_WORKSPACE_REMOTE_PATH_MISSING');
+  assert.match(
+    errorMessages.getErrorMessage(result.error),
+    /永続Storage pathがないため/,
+  );
   assert.equal(storage.getItem(persistence.getWorkspaceArtifactStorageKey('brand-a')), null);
+});
+
+test('fitting persistence reports browser storage quota as a stable diagnostic code', () => {
+  const storage = {
+    getItem: () => null,
+    setItem: () => {
+      const error = new Error('quota exceeded');
+      error.name = 'QuotaExceededError';
+      throw error;
+    },
+    removeItem: () => {},
+  };
+  globalThis.window = { localStorage: storage };
+
+  const result = persistence.saveWorkspaceArtifactPersisted(makeInput({
+    imageUrl: 'data:image/png;base64,AA==',
+  }));
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'LOCAL_WORKSPACE_QUOTA_EXCEEDED');
+  assert.match(errorMessages.getErrorMessage(result.error), /保存容量が不足/);
+});
+
+test('fitting persistence reports a write/readback mismatch separately from quota', () => {
+  const storage = {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+  };
+  globalThis.window = { localStorage: storage };
+
+  const result = persistence.saveWorkspaceArtifactPersisted(makeInput({
+    imageUrl: 'data:image/png;base64,AA==',
+  }));
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error.code, 'LOCAL_WORKSPACE_SAVE_READBACK_FAILED');
+  assert.match(errorMessages.getErrorMessage(result.error), /再読込確認に失敗/);
 });
 
 test('fitting persistence accepts a path-only artifact when the canonical path is durable', () => {

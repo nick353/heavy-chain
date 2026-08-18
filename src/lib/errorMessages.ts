@@ -53,6 +53,13 @@ export const ERROR_MESSAGES: Record<string, string> = {
   STORAGE_FULL: 'ストレージの容量が不足しています。不要な画像を削除してください。',
   UPLOAD_FAILED: 'アップロードに失敗しました。再度お試しください。',
   DOWNLOAD_FAILED: 'ダウンロードに失敗しました。再度お試しください。',
+  LOCAL_WORKSPACE_STORAGE_UNAVAILABLE: 'ブラウザのローカル保存領域を利用できません。ブラウザ設定とプライベートモードを確認してください。',
+  LOCAL_WORKSPACE_STORAGE_READ_FAILED: 'ブラウザのローカル保存領域を読み取れませんでした。画面を更新して保存状態を確認してください。',
+  LOCAL_WORKSPACE_QUOTA_EXCEEDED: 'ブラウザのローカル保存容量が不足しています。不要な下書きや保存済み素材を整理してから再開してください。',
+  LOCAL_WORKSPACE_STORAGE_WRITE_FAILED: 'ブラウザのローカル保存に失敗しました。保存領域とブラウザ設定を確認してください。',
+  LOCAL_WORKSPACE_REMOTE_PATH_MISSING: '生成結果に永続Storage pathがないため、保存確認できませんでした。結果を昇格せず、配備済みEdge Functionのreadbackを確認してください。',
+  LOCAL_WORKSPACE_SAVE_READBACK_FAILED: '保存後の再読込確認に失敗しました。ブラウザ保存領域の状態を確認してください。',
+  LOCAL_WORKSPACE_DELETE_READBACK_FAILED: '削除後の再読込確認に失敗しました。状態を再確認するまで同じ削除を繰り返しません。',
   
   // Feature-specific errors
   COLORIZE_NEEDS_IMAGE: '色変更には元画像が必要です。',
@@ -203,6 +210,13 @@ export function getFailureRecoveryGuidance(error: unknown): FailureRecoveryGuida
 }
 
 const KNOWN_MESSAGE_MAP: Array<[RegExp, string]> = [
+  [/LOCAL_WORKSPACE_STORAGE_UNAVAILABLE/i, ERROR_MESSAGES.LOCAL_WORKSPACE_STORAGE_UNAVAILABLE],
+  [/LOCAL_WORKSPACE_STORAGE_READ_FAILED/i, ERROR_MESSAGES.LOCAL_WORKSPACE_STORAGE_READ_FAILED],
+  [/LOCAL_WORKSPACE_QUOTA_EXCEEDED/i, ERROR_MESSAGES.LOCAL_WORKSPACE_QUOTA_EXCEEDED],
+  [/LOCAL_WORKSPACE_STORAGE_WRITE_FAILED/i, ERROR_MESSAGES.LOCAL_WORKSPACE_STORAGE_WRITE_FAILED],
+  [/LOCAL_WORKSPACE_REMOTE_PATH_MISSING/i, ERROR_MESSAGES.LOCAL_WORKSPACE_REMOTE_PATH_MISSING],
+  [/LOCAL_WORKSPACE_SAVE_READBACK_FAILED/i, ERROR_MESSAGES.LOCAL_WORKSPACE_SAVE_READBACK_FAILED],
+  [/LOCAL_WORKSPACE_DELETE_READBACK_FAILED/i, ERROR_MESSAGES.LOCAL_WORKSPACE_DELETE_READBACK_FAILED],
   [/email rate limit exceeded/i, ERROR_MESSAGES.AUTH_EMAIL_RATE_LIMIT],
   [/brand usage quota exceeded/i, ERROR_MESSAGES.BRAND_USAGE_QUOTA_EXCEEDED],
   [/user usage rate limit exceeded/i, ERROR_MESSAGES.USER_USAGE_RATE_LIMIT],
@@ -236,6 +250,11 @@ const isSupabaseAuthError = (error: any) => (
 
 // Map API error codes to user-friendly messages
 export function getErrorMessage(error: any): string {
+  if (error && typeof error === 'object' && typeof error.code === 'string') {
+    const codedMessage = ERROR_MESSAGES[error.code];
+    if (codedMessage) return codedMessage;
+  }
+
   // If it's a string, return as-is if it looks user-friendly
   if (typeof error === 'string') {
     if (ERROR_MESSAGES[error]) {
