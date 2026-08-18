@@ -1248,3 +1248,12 @@ Exact blocker / next action / restart point: production has not been redeployed 
 - Some remote function entrypoints still reference a Desktop source tree, so immutable source attribution remains PENDING_CONFIRMATION. Fresh evidence JSON SHA-256 is `247d5cb09d60a25918d38a826fd7181eb25c584f62798e7d6f83a9baf7a8c25e`; Security Review Packet SHA-256 is `b83e69fb24eb2286fbaaf6e0265fd8f68795c50f52f7a2f5b509360fb440880b` with matching CURRENT-TURN input hash.
 
 Exact blocker / next action / restart point: remote schema lint is clear, but the three local hardening migrations still require owning production migration authority and post-apply advisor/RLS readback. Resume with that authority; do not apply migrations from this session.
+
+## 2026-08-18 Goal continuation: safe provider and release verification
+
+- Provider boundaries passed locally: Lightchain coverage 10/10, video fail-closed 1/1, Lab 1/1, provider adapter 16/16, OpenAI readiness 5/5 without external API calls, and security audit passed without printing secrets.
+- Release doctor passed environment and readback checks after loading `.env.production.local` without displaying values. It stops at `verify:readback:current` because six historical artifacts have stale release-date/git-commit metadata; those artifacts were not rewritten.
+- Fresh Chrome Plugin readback still shows Lightchain tab 1980902653 at the login form with no credentials entered. Heavy tab is absent from the latest open-tabs list, so its prior authenticated Gallery readback is not claimed as current.
+- Evidence JSON SHA-256 is `0c67ce0ef25fde31c69b3aa3190031228a312091b7809da06493e92fd5d29563`; Security Review Packet SHA-256 is `4fdceddaedebafdedac573b6634373cdda5b46a3b8a4126e9f9ad290c6e6348a` with matching CURRENT-TURN input hash.
+
+Exact blocker / next action / restart point: release readback refresh, Lightchain authentication, and Heavy same-tab reappearance remain pending. Do not rewrite historical proof or invoke external effects; resume from the current Chrome Plugin Profile 2 tab when login/session authority is available.
