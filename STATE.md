@@ -1390,6 +1390,15 @@ Exact blocker / next action / restart point: obtain the owning Zeabur source ass
 
 Exact blocker / next action / restart point: obtain Supabase migration/DB authority (`SUPABASE_DB_PASSWORD` or owning authenticated session), then run migration alignment and authenticated cross-user/RLS/security-definer readback. Do not apply migrations from this session.
 
+## 2026-08-18 Goal continuation: fresh local release-preflight verification
+
+- Current HEAD remains clean and `git diff --check` passed.
+- `npm run typecheck -- --pretty false`, `npm run security:audit --silent`, `npm run verify:openai-provider --silent` (5/5; externalApiCall not_touched, generationSubmit not_clicked, deploy not_run), `npm run supabase:verify:static --silent`, and `npm run build` all passed. Production build transformed 2599 modules.
+- This proves local implementation/release-preflight readiness only; it does not prove Zeabur source association, production deployment, Supabase migration application, authenticated RLS runtime behavior, or Lightchain post-login parity.
+- Evidence hashes after local release-preflight: CURRENT-TURN `e39ab3982ab74f0f4cd70d7bc63f240c07eacbaf09c352da4c4e9ae5025d2d30`; Security Review Packet `ce717eb5aae99192ebfe960ba8b4b535e9fe41962b776c7a1654ea509c660c08`.
+
+Exact blocker / next action / restart point: obtain Lightchain action-time login confirmation and the external deployment/Supabase authorities, then perform fresh post-login and production readback. Keep OpenAI API generation/retry/billing excluded.
+
 ## 2026-08-18 Goal continuation: fresh Lightchain login boundary
 
 - Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902663` at `https://jp.linkaigc.com/login?redirect=/?`.
