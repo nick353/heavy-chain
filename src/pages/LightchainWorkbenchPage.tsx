@@ -1,4 +1,4 @@
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { type ChangeEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
@@ -31,17 +31,21 @@ import {
   buildMaterialCutoutDataUrl,
   buildPrintDesignCutoutDataUrl,
   buildPrintGarmentCutoutDataUrl,
+  buildMaterialReferenceMetadata,
   type MaterialCutoutBounds,
+  type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
 import {
   getWorkspaceArtifactCanonicalStoragePath,
   listWorkspaceArtifacts,
   saveWorkspaceArtifactBestEffort,
+  saveWorkspaceArtifactPersisted,
   type WorkspaceArtifact,
 } from '../lib/localWorkspaceArtifacts';
 import { hydrateGenerationIntentSource } from '../lib/workspaceHandoff';
 import { readLightchainResumeInput } from '../lib/lightchainResume';
 import { compactLightchainWorkbenchStateForPersistence } from '../lib/lightchainPersistence';
+import { prepareFittingDraftMaterialReferenceForPersistence } from '../lib/fittingPersistence';
 import { persistProviderResultArtifact } from '../lib/providerResultPersistence';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { withSignedImageUrls } from '../lib/storage';
@@ -81,12 +85,21 @@ type MaskCandidate = 'トップス' | '無地部分' | '柄' | '手動範囲';
 type WorkbenchStep = 'asset' | 'mask' | 'extracted' | 'next';
 type MaterialTab = 'upload-history' | 'generation-history' | 'my-library' | 'team-library' | 'platform-assets';
 type MaterialSlotKey = 'primary' | 'secondary';
+type MaterialSlotFile = {
+  name: string;
+  kind: string;
+  imageUrl: string;
+  sourceImageId?: string | null;
+  sourceStoragePath?: string | null;
+};
 type MaterialTabItem = {
   id: string;
   title: string;
   kind: string;
   note: string;
   imageUrl: string;
+  sourceImageId?: string | null;
+  sourceStoragePath?: string | null;
 };
 type ModelPanelVariant = 'uploadPair' | 'body' | 'size' | 'angle' | 'custom';
 type PrintingGenerationStatus = 'idle' | 'pending' | 'processing' | 'success' | 'error';
@@ -842,6 +855,8 @@ const buildMaterialTabItems = (artifacts: WorkspaceArtifact[]): Record<MaterialT
       kind: metadataString(artifact, 'toolTitle') ?? artifact.featureType,
       note: `保存済み / ${new Date(artifact.createdAt).toLocaleDateString('ja-JP')}`,
       imageUrl: artifact.imageUrl,
+      sourceImageId: metadataString(artifact, 'sourceImageId') ?? metadataString(artifact, 'imageId') ?? artifact.id,
+      sourceStoragePath: getWorkspaceArtifactCanonicalStoragePath(artifact.metadata),
     });
   });
   return items;
@@ -1066,7 +1081,7 @@ export function LightchainWorkbenchPage() {
   const [activeMaterialTab, setActiveMaterialTab] = useState<MaterialTab>('upload-history');
   const [activeMaterialSlot, setActiveMaterialSlot] = useState<MaterialSlotKey>('primary');
   const [secondaryUploadResetKey, setSecondaryUploadResetKey] = useState(0);
-  const [materialSlotFiles, setMaterialSlotFiles] = useState<Record<MaterialSlotKey, { name: string; kind: string; imageUrl: string } | null>>({
+  const [materialSlotFiles, setMaterialSlotFiles] = useState<Record<MaterialSlotKey, MaterialSlotFile | null>>({
     primary: null,
     secondary: null,
   });
@@ -1195,6 +1210,8 @@ export function LightchainWorkbenchPage() {
           kind: image.feature_type || 'generated-image',
           note: `Gallery / ${new Date(image.created_at).toLocaleDateString('ja-JP')}`,
           imageUrl: image.image_url,
+          sourceImageId: image.id,
+          sourceStoragePath: image.storage_path || null,
         }];
       });
       if (!cancelled) {
@@ -1635,7 +1652,7 @@ export function LightchainWorkbenchPage() {
     setNextStepConfirmed(false);
   };
 
-  const applyMaterialToSlot = async (slot: MaterialSlotKey, item: { name: string; kind: string; imageUrl: string }) => {
+  const applyMaterialToSlot = async (slot: MaterialSlotKey, item: MaterialSlotFile) => {
     const shouldCutoutForPrinting = selectedTool.id === 'printing-image';
     lightchainGenerationSequenceRef.current += 1;
     setLightchainGenerationRunning(false);
@@ -2043,6 +2060,8 @@ export function LightchainWorkbenchPage() {
           ? slotConfig?.label ?? '追加素材'
           : garmentCategory,
         imageUrl,
+        sourceImageId: null,
+        sourceStoragePath: null,
       });
       if (applied) toast.success('素材画像を読み込み、編集レイヤーを準備しました');
     } catch (error) {
@@ -2058,6 +2077,8 @@ export function LightchainWorkbenchPage() {
         name: item.title,
         kind: item.kind,
         imageUrl: item.imageUrl,
+        sourceImageId: item.sourceImageId ?? null,
+        sourceStoragePath: item.sourceStoragePath ?? null,
       });
       if (applied) {
         setMaterialModalOpen(false);
@@ -2066,6 +2087,67 @@ export function LightchainWorkbenchPage() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '素材画像の背景を透明化できませんでした');
     }
+  };
+
+  const persistFittingActionHandoff = () => {
+    if (!isFittingDetail || !currentBrand?.id || !user?.id) return true;
+    const source = materialSlotFiles.primary;
+    if (!source?.imageUrl) return true;
+
+    const materialState: MaterialReferenceState = {
+      imageUrl: source.imageUrl,
+      fileName: source.name,
+      sourceImageId: source.sourceImageId ?? null,
+      sourceStoragePath: source.sourceStoragePath ?? null,
+      materialKind: selectedTool.id === 'fitting-background-reference'
+        ? '背景参照'
+        : source.kind,
+      maskMode: cutMode,
+      activeLayer: selectedTool.id === 'fitting-background-reference' ? '背景' : activeLayer,
+      placement: selectedTool.id === 'fitting-background-reference' ? '背景全面' : printPlacement,
+      scale: printScale,
+      note: [
+        referenceNote,
+        `Lightchainから${selectedTool.title}の素材を引き継ぎ`,
+      ].filter(Boolean).join(' / '),
+      extractedLayerReady: false,
+      extractedImageUrl: null,
+      nextStepReady: false,
+      maskEngine: null,
+    };
+    const preparedMaterialReference = prepareFittingDraftMaterialReferenceForPersistence(
+      buildMaterialReferenceMetadata(materialState),
+      source.imageUrl,
+    );
+    if (!preparedMaterialReference) return true;
+
+    const persisted = saveWorkspaceArtifactPersisted({
+      id: `fitting-draft-${currentBrand.id}`,
+      brandId: currentBrand.id,
+      scopeId: user.id,
+      featureType: 'fitting-background-draft',
+      title: `AIフィッティング入力 / ${source.name || 'Lightchain素材'}`,
+      imageUrl: preparedMaterialReference.imageUrl ?? '',
+      prompt: brief,
+      metadata: {
+        feature: 'fitting-background-draft',
+        draftVersion: 'fitting-background-draft-v1',
+        sourceImageId: preparedMaterialReference.sourceImageId ?? null,
+        sourceStoragePath: preparedMaterialReference.sourceStoragePath ?? null,
+        sourceWorkspace: 'lightchain-workbench',
+        lightchainFeatureId: selectedTool.id,
+        materialReference: preparedMaterialReference,
+      },
+    });
+    if (!persisted.ok) {
+      toast.error(`Fitting入力の保存確認に失敗しました。${persisted.error.message}`);
+      return false;
+    }
+    return true;
+  };
+
+  const handleFittingActionClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!persistFittingActionHandoff()) event.preventDefault();
   };
 
   const updateModelFormState = <Key extends keyof ModelFormState>(key: Key, value: ModelFormState[Key]) => {
@@ -6572,6 +6654,7 @@ export function LightchainWorkbenchPage() {
                   )}
                   <Link
                     to={selectedToolActionHref}
+                    onClick={isFittingDetail ? handleFittingActionClick : undefined}
                     className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
                   >
                     {isFittingDetail ? 'AIフィッティング画面で作る' : selectedTool.runLabel}

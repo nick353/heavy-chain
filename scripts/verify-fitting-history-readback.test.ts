@@ -155,3 +155,14 @@ test('Fitting draft persistence retains a bounded remote cutout for reload recov
   assert.equal(prepared?.nextStepReady, true);
   assert.match(prepared?.extractedImageUrl ?? '', /^data:image\/png/);
 });
+
+test('Lightchain fitting entry persists the selected Gallery source before navigation', async () => {
+  const source = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /sourceStoragePath: item\.sourceStoragePath \?\? null/);
+  assert.match(source, /sourceImageId: item\.sourceImageId \?\? null/);
+  assert.match(source, /prepareFittingDraftMaterialReferenceForPersistence/);
+  assert.match(source, /featureType: 'fitting-background-draft'/);
+  assert.match(source, /onClick=\{isFittingDetail \? handleFittingActionClick : undefined\}/);
+  assert.match(source, /Fitting入力の保存確認に失敗しました/);
+});
