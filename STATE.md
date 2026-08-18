@@ -1408,6 +1408,15 @@ Exact blocker / next action / restart point: obtain Lightchain action-time login
 
 Exact blocker / next action / restart point: obtain an admitted video provider and restored Reviewer/Verifier transport only if those external authorities are intentionally restored; otherwise keep the fail-closed UI and continue with Lightchain authentication/production source authority.
 
+## 2026-08-18 Goal continuation: fresh release-gate result remains not accepted
+
+- `npm run verify:release-gate --silent` produced `output/playwright/10m-product-readiness-g615/release-gate-summary.json` with SHA-256 `8eacc54b328d6dbef7f4026300abde43543885d1d087326bfd07827076d89c8f` and `ok=false`.
+- 13 production readbacks are missing/stale or failing: monitor, launch operations, production mass-market QA, production Lightchain all-feature previews, G610, G603, G605, G606, G608, G618, G633, H601, and H602. Static command gates also failed for generation scorecard, G633, and H602.
+- G620 security operations, G632 incident-response drill, and chosen public entrypoint readback passed. The gate recorded `generationSubmit=not_clicked`, `purchasePaymentCheckout=not_touched`, `externalPublish=not_touched`, `destructiveCleanup=not_touched`, and `deploy=not_run`.
+- Evidence hashes after fresh release gate: CURRENT-TURN `1010c655de4adad8e550a208dc4bc838948fefaea7a1dacd91885b13c865d1c3`; Security Review Packet `7f0d945e4735715cb6481a950d45eb67df3e5bad7039dfe175c3b3a75cfbe060`.
+
+Exact blocker / next action / restart point: release is not accepted. Refresh only the missing production artifacts with authorized current sessions, fix the G633/H602/scorecard evidence gaps without triggering generation or payment, and obtain Lightchain login/deployment/Supabase authority before any release mutation.
+
 ## 2026-08-18 Goal continuation: fresh Lightchain login boundary
 
 - Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902663` at `https://jp.linkaigc.com/login?redirect=/?`.
