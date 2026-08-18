@@ -1399,6 +1399,15 @@ Exact blocker / next action / restart point: obtain Supabase migration/DB author
 
 Exact blocker / next action / restart point: obtain Lightchain action-time login confirmation and the external deployment/Supabase authorities, then perform fresh post-login and production readback. Keep OpenAI API generation/retry/billing excluded.
 
+## 2026-08-18 Goal continuation: provider boundary and retired-provider readback
+
+- Local current-HEAD provider checks passed: Lightchain coverage `10/10`, video provider boundary `1/1` fail-closed, Lab boundary `1/1`, and Lightchain provider adapter `16/16`.
+- Video routes remain explicitly unsupported until a real video provider is admitted; they do not fallback into image generation. Active runtime/provider boundaries remain Runway-retired. Historical Supabase migration files still contain legacy Runway names and are preserved as migration history, not claimed as live capability.
+- External Reviewer/Verifier transport was not invoked; prior exact blockers remain recorded separately. No provider API, OpenAI API, generation, retry, billing, upload, save, delete, migration apply, or deploy occurred.
+- Evidence hashes after provider-boundary verification: CURRENT-TURN `c21da661dcdce5d98e68a641ae5fe00ab8127477bfa5e8d8fa7166894a8ff04d`; Security Review Packet `287ed403896326b5863dc74fa35d46b49742c4710c31706fa1ced1e0f7c050cd`.
+
+Exact blocker / next action / restart point: obtain an admitted video provider and restored Reviewer/Verifier transport only if those external authorities are intentionally restored; otherwise keep the fail-closed UI and continue with Lightchain authentication/production source authority.
+
 ## 2026-08-18 Goal continuation: fresh Lightchain login boundary
 
 - Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902663` at `https://jp.linkaigc.com/login?redirect=/?`.
