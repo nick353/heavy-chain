@@ -1673,3 +1673,12 @@ Exact blocker / next action / restart point: reauthenticate the approved Supabas
 - Evidence hashes: CURRENT-TURN `93373a3617786cf777600c698d1dd96269b07198a666dd56be8c372eee066a9d`; Security Review Packet `344d1ce93eb599ab3e0455fcd61c0eae4cfbc1c90dbcb9630a6414badac6932a`.
 
 Exact blocker / next action / restart point: restore the release environment through the approved secret-safe channel, rerun release doctor, and only then reassess release artifacts. Do not print/invent values or deploy.
+
+## 2026-08-18 Goal continuation: fitting cutout persistence race fix
+
+- Fixed the non-OpenAI fitting-background persistence race in commit `d34e81a7f9faabd0bed886be73e801cc9066f845`: high-precision cutout state changes now await the parent IndexedDB cutout save before the action resolves. The existing effect remains as a recovery path.
+- Focused fitting tests passed `25/25`, typecheck passed, production build passed with 2,599 modules transformed, security audit passed without printing secrets, and diff check passed.
+- This is implementation/local proof only. A fresh Chrome Plugin production cutout → save → reload readback is still required and remains `PENDING_CONFIRMATION` until the live capability/session is available.
+- Updated evidence hashes: CURRENT-TURN `f21c93c184ee98d294e71ef7eb0a434dc9c5c326b1adb091dec273c01658e601`; Security Review Packet `4499214881ca2dfca86e30ce1feb7bc7d65fa090938833dbdfb782a5770d220b`.
+
+Exact blocker / next action / restart point: once the Chrome Plugin session is available, repeat the alternate-input fitting cutout, wait for the saved confirmation, reload, and verify `nextStepReady` plus the extracted layer. Do not submit AI generation.
