@@ -1517,3 +1517,12 @@ Exact blocker / next action / restart point: provide a fresh authorized auth-sta
 - Evidence hashes after this verification: CURRENT-TURN `06e8d602c0b0cdeaeb228f9dbb80bd1cda6f3561b3d52e720853ecc994f8dd7c`; Security Review Packet `e576b9be2ae096db5fe034f45594f874a0cab93a85812a17ccc7ab6a9b65f359`.
 
 Exact blocker / next action / restart point: restore the authenticated Supabase connector or start the approved local Supabase runtime, then perform read-only authenticated RLS/Auth/SECURITY DEFINER cross-user checks. Do not apply migrations or deploy functions until source and owner authority are read back.
+
+## 2026-08-18 Goal continuation: Zeabur production readback and secret-channel blocker
+
+- Official Zeabur CLI `0.21.0` fresh readback resolved Heavy Chain to project `automation-wiled`, service `heavy-chain`, environment `69df815a5ae0a69725e92048`, and provisioned domain `heavy-chain.zeabur.app`. The current deployment is Docker plan and the public GET checks returned HTTP `200` for `/`, `/lightchain`, and `/gallery`.
+- Source association remains `PENDING_CONFIRMATION`: deployment `6a8375f3201aaa81bcfa82d0` has empty `repoOwner`, `repoName`, `ref`, and `commitSHA`. No deploy, restart, or source mutation was performed.
+- The CLI variable-list readback is unsafe because it can print secret values unmasked. No value was copied into evidence. Secret mutation/rotation was not performed; the exact blocker is `zeabur_cli_variable_list_can_print_secret_values_unmasked`.
+- Evidence hashes after this readback: CURRENT-TURN `6eaff3d96cdef4c3b76b190cf8e4c82980e0f1311d57969e2dbb17a459f5ec5c`; Security Review Packet `203b676d74c85e9e05f66e81f6158784f93eafefe549e332d95821956c277cc5`.
+
+Exact blocker / next action / restart point: obtain owner-authorized source association and a masked secret rotation/readback channel; then fresh-read the exact commit/ref and service health before any deploy or secret mutation.
