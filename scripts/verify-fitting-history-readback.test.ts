@@ -175,4 +175,5 @@ test('Lightchain fitting entry persists the selected Gallery source before navig
   assert.match(source, /featureType: 'fitting-background-draft'/);
   assert.match(source, /onClick=\{isFittingDetail \? handleFittingActionClick : undefined\}/);
   assert.match(source, /Fitting入力の保存確認に失敗しました/);
+  assert.match(source, /getErrorMessage\(persisted\.error\)/);
 });

@@ -46,6 +46,7 @@ import { hydrateGenerationIntentSource } from '../lib/workspaceHandoff';
 import { readLightchainResumeInput } from '../lib/lightchainResume';
 import { compactLightchainWorkbenchStateForPersistence } from '../lib/lightchainPersistence';
 import { prepareFittingDraftMaterialReferenceForPersistence } from '../lib/fittingPersistence';
+import { getErrorMessage } from '../lib/errorMessages';
 import { persistProviderResultArtifact } from '../lib/providerResultPersistence';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { withSignedImageUrls } from '../lib/storage';
@@ -2140,7 +2141,7 @@ export function LightchainWorkbenchPage() {
       },
     });
     if (!persisted.ok) {
-      toast.error(`Fitting入力の保存確認に失敗しました。${persisted.error.message}`);
+      toast.error(`Fitting入力の保存確認に失敗しました。${getErrorMessage(persisted.error)}`);
       return false;
     }
     return true;
