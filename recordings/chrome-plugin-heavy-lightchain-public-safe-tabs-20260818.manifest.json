@@ -1,0 +1,84 @@
+{
+  "schema": "screen_recording_manifest.v2",
+  "status": "blocked",
+  "exact_blocker": "chrome_debugger_recording_hard_timeout",
+  "surface": "chrome-extension-profile2",
+  "capture_engine": "chrome.debugger+Page.startScreencast",
+  "scope": "tab",
+  "recording_path": "/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/recordings/chrome-plugin-heavy-lightchain-public-safe-tabs-20260818.mp4",
+  "target": {
+    "tab_id": "1980902681",
+    "window_id": 1980902655,
+    "url": "https://heavy-chain.zeabur.app/lightchain?category=graphics",
+    "title": "Heavy Chain | AI制作ワークスペース"
+  },
+  "browser_surface": {
+    "provider": "Google Chrome",
+    "extension_control": true,
+    "recorder_extension": {
+      "id": "khfpkfkckaikmmfllabdnglapomgnomc",
+      "user_gesture": false,
+      "api": "chrome.debugger",
+      "cdp_method": "Page.startScreencast"
+    },
+    "user_gesture_required": false,
+    "target_tab_selected": false,
+    "selected_tab_id": 1980902656,
+    "frontmost_required": false
+  },
+  "capture": {
+    "requested_duration_seconds": 30,
+    "frame_rate": 8,
+    "encoding_frame_rate": 4.783659,
+    "frame_count": 113,
+    "frame_request_count": 113,
+    "frame_rejections": [],
+    "bytes_received": 8765441,
+    "first_cdp_timestamp": 1787050038.737255,
+    "last_cdp_timestamp": 1787050062.359342,
+    "sha256": null,
+    "media": null
+  },
+  "recording_requested_at": "2026-08-18T10:47:18.050680Z",
+  "recording_started_at": "2026-08-18T10:47:18.787Z",
+  "completed_at": null,
+  "extension_events": [
+    {
+      "event": "extension_debugger_attached",
+      "at": "2026-08-18T10:47:18.695300Z"
+    },
+    {
+      "session_id": "cdcfe55f551f4ad6b285f145a4b2813127280006",
+      "event": "screencast_started",
+      "started_at": "2026-08-18T10:47:18.787Z",
+      "at": "2026-08-18T10:47:18.789506Z"
+    },
+    {
+      "session_id": "cdcfe55f551f4ad6b285f145a4b2813127280006",
+      "event": "target_selection_readback",
+      "target_selected": false,
+      "selected_tab_id": 1980902656,
+      "at": "2026-08-18T10:47:19.001410Z"
+    },
+    {
+      "event": "extension_recording_done",
+      "session_id": "cdcfe55f551f4ad6b285f145a4b2813127280006",
+      "reason": "controller_stop",
+      "frame_count": 113,
+      "bytes_sent": 8765441,
+      "finished_at": "2026-08-18T10:48:03.387Z",
+      "at": "2026-08-18T10:48:03.389116Z"
+    }
+  ],
+  "verification": {
+    "extension_started": true,
+    "media_verified": false,
+    "visual_only": true,
+    "audio_captured": false
+  },
+  "limitations": [
+    "This proof-of-concept captures page pixels only; audio is not included.",
+    "The target tab must remain open and debugger attachment must remain available.",
+    "The Extension must be reloaded once after the manifest/background change."
+  ]
+}
