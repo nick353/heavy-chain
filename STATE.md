@@ -1491,3 +1491,12 @@ Exact blocker / next action / restart point: Heavy’s permission and safe route
 - Evidence hashes: CURRENT-TURN `55a99550cb5391350f70fe439c01942b56ac6fddf47236916f463347c60ca10c`; Security Review Packet `24bd16957e1b6004b3d933c34916dab504a622e4acb5cdbf7b7d757c89f9a0cf`.
 
 Exact blocker / next action / restart point: release acceptance is still not proven. Missing production artifacts require their owning QA/production authorities; generation scorecard cannot be fabricated without an approved generation/readback, G633 needs its production baseline, and H602 needs authorized billing/migration readback. Continue with Lightchain authentication or the corresponding external authority; do not run prohibited effects.
+
+## 2026-08-18 Goal continuation: G606 current synthetic performance rerun
+
+- `G606_OUT_DIR=output/playwright/g830-g606-performance-current-r1 npm run verify:g606-performance --silent` completed with `ok=true` at `2026-08-18T10:14:27.593Z` UTC. The fixture covered 500 images and 180 Canvas objects; `/`, `/gallery`, and `/canvas/g606-canvas-project` became ready in 904ms, 614ms, and 512ms. Export was a valid PNG `3348x9948` / `3901628` bytes; actionable browser diagnostics were `0`; preview/browser cleanup completed.
+- The subsequent `npm run verify:release-gate --silent` completed with `ok=false`, but G606 is no longer in the failed readback list. Remaining failures are production monitor, launch operations, production mass-market QA, production Lightchain all-feature previews, G610, G603, G605, G608, G618, G633, H601, H602, plus generation scorecard, G633, and H602 command gates.
+- This is local synthetic performance evidence only, not production load proof. No OpenAI API, generation, retry, billing, upload, save, delete, migration apply, provider action, or deploy was performed.
+- Current evidence SHA-256: `0a8bf280350a1c46aee99811b7b2d63e9518df652b84d232a85f3cf50432d276`; Security Review Packet SHA-256: `80bb7e7ea94a2e1f6469db3f09572c8855c84b35360a6e5361006318bc77079b`.
+
+Exact blocker / next action / restart point: do not manufacture production evidence from this local pass. Resume with authenticated Lightchain post-login readback after action-time credential confirmation, or with the owning production/Supabase/Zeabur authorities for the remaining readbacks.
