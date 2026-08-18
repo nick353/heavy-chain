@@ -1326,3 +1326,11 @@ Exact blocker / next action / restart point: the permission UI parity surface is
 
 Exact blocker / next action / restart point: current Gallery detail and PNG Download are now confirmed. JPEG/WebP were observed but not clicked; Lightchain authentication, exact permission-error UI, and production parity remain pending.
 - After returning from the detail route, Gallery briefly showed its loading placeholder and settled back after an additional 5 seconds to `957枚の画像`, empty search, `新しい順`, with no console warning/error logs.
+
+## 2026-08-18 Goal continuation: fitting persistence verification and production bundle drift recheck
+
+- Current HEAD focused fitting/persistence suite is `37 pass / 0 fail`; typecheck, security audit, OpenAI provider boundary (`5/5`, no external API/generation/deploy), and Supabase static verification also passed.
+- Fresh public HTTPS asset hashes remain `FittingPage=45fc2514...`, `localWorkspaceArtifacts=c2f64ee4...`, and `errorMessages=7995a921...`. Production still contains generic save/readback text but lacks the structured `LOCAL_WORKSPACE_*` and provider storage-path mappings present in the local build.
+- Classification remains `production_bundle_stale_persistence_diagnostics`: the local non-OpenAI fix is verified, but the production bundle has not been updated or proven from the owning deploy source.
+
+Exact blocker / next action / restart point: obtain the owning Zeabur/source association and deployment authority, then deploy the already-tested bundle and perform a fresh asset/readback check without invoking generation. Do not treat local green tests as production completion.
