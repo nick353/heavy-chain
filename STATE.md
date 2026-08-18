@@ -1690,3 +1690,12 @@ Exact blocker / next action / restart point: once the Chrome Plugin session is a
 - Evidence hashes: CURRENT-TURN `9342a80d5c576f98e0fea8d0a24c1c9e0c3769486e517320cfd27ab53f51687b`; Security Review Packet `e14949cb658ae5c7868b09ab15a1dfc35baa6e01692313ca27d7985173cb4af4`.
 
 Exact blocker / next action / restart point: production Supabase migration/function readback and release artifacts remain unproven; continue only through the approved external readback channels.
+
+## 2026-08-18 Goal continuation: UX and provider-boundary fresh readback
+
+- Corrected the stale internal UX assertion in commit `cee8f9f`: the provider-neutral primary CTA now checks the current `企画書を保存` / `生成する` contract without accepting provider names. `npm run verify:internal-ux --silent` passed with `ok=true`.
+- G620 security operations passed; video boundary `1/1`, lab boundary `1/1`, and Lightchain provider coverage `10/10` passed. No irreversible action was performed.
+- Launch operations stopped before browser mutation with the exact blocker `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`.
+- Evidence hashes: CURRENT-TURN `60847d3a36a61fa90708b498cbc9339d8844d15c077523325f6b4fc5690bca32`; Security Review Packet `77af4ff7dd132d7f75b26270d5d8faf3f496fcee027a4f2c143d51e55937a791`.
+
+Exact blocker / next action / restart point: obtain a fresh approved authenticated Chrome/production authority before launch-ops or authenticated Lightchain QA; do not fabricate or copy stale auth state.
