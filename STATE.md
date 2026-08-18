@@ -1459,3 +1459,14 @@ Exact blocker / next action / restart point: obtain action-time confirmation for
 - No credentials or effectful controls were used.
 
 Exact blocker / next action / restart point: retain tab `1980902663` as the Lightchain auth boundary and tab `1980902664` as the current Heavy authority. Do not use stale tab IDs or historical openTabs rows for parity claims.
+
+## 2026-08-18 Goal continuation: Lightchain login boundary recorded with the new Chrome Plugin method
+
+- Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902674` at `https://jp.linkaigc.com/login?redirect=/?`; the target remained unselected during capture.
+- Background Chrome Extension recording completed with `chrome.debugger+Page.startScreencast`: H.264 1920x946, 15.407181 seconds, 10 decoded frames, full decode/tail integrity, media SHA-256 `6bcfd5e6102019e6c3d87e29dee4f4a0e7149f62058a125890db7ef751c52fcb`.
+- The recording visibly traversed login → `/forget-password` → login. The reset form showed account, verification-code, new-password, confirmation-password, reset, and return controls; no credential, OTP, reset submission, or login submission was performed.
+- Review artifacts: `recordings/review-lightchain-login-boundary-new-method-20260818/analysis.md`, `timeline.json`, and the video-frame-reader manifest. Effective source frame density was `0.649048 fps` rather than requested `8 fps`, so reduced temporal density remains an explicit limitation.
+- Recording ledger was updated to accepted strict Chrome Extension `8`, all engines `19`, native/window `11`; blocked entries remain excluded. The source readback immediately before evidence bookkeeping reported local HEAD `8f84508531a11127d5c62dfdb47e99223c67faa6`; origin/main was `ff0c2cce087e41ca0b98fad9ce72a5c0124c9541`.
+- Evidence hashes: CURRENT-TURN `90fa73d894e7c90bacb3fb5546ecc3a6fa2d53ca959dcb35bd0ae48693916fc7`; Security Review Packet `414468d8c27a8343f52096b474686fe23f96378e342996de0937788f9c908c80`; recording ledger `a9b22ad8e928dcf846dc6f6ee710bae524d0d167b084a6a6225afb934f1f425b`.
+
+Exact blocker / next action / restart point: the new background recording route is operational, but Lightchain post-login parity still requires action-time credential confirmation. Continue only after that confirmation in this exact Chrome Plugin/Profile 2 tab; keep OpenAI API generation/retry/billing, provider calls, deploy, migration apply, and permission mutation excluded.
