@@ -1362,6 +1362,25 @@ Exact blocker / next action / restart point: security source scan is clear. Rema
 
 Exact blocker / next action / restart point: the new recording route works, but current Lightchain authentication, production bundle/deploy association, Supabase migration authentication, external Reviewer/Verifier transport, and release-readback gaps remain. Resume from the exact current Chrome Plugin/Profile 2 tab or obtain the corresponding external authority; do not infer Lightchain parity from Heavy Gallery recording alone.
 
+## 2026-08-18 Goal continuation: fresh Gallery JPEG/WebP Download readback
+
+- Same Chrome Plugin/Profile 2 session reopened Heavy Gallery tab `1980902670`, opened the first existing `model-matrix` Gallery detail (`1 / 957`, ID prefix `66941eec`), and clicked `JPEG` and `WebP` once each.
+- Filesystem verification succeeded: JPEG `/Users/nichikatanaka/Downloads/heavy-chain-66941eec-81b3-4bf0-8be8-95e919f80df7 (6).jpeg`, 1024x1536, SHA-256 `fc7a17b781641f7db0270fec7c039e6918f4958f263f6474c58dfc5a247de8d1`; WebP `/Users/nichikatanaka/Downloads/heavy-chain-66941eec-81b3-4bf0-8be8-95e919f80df7 (5).webp`, SHA-256 `fbd4d856690eddd9540f0a595189a2b52ad01a933a788e76f8cbb472ee59ea15`.
+- Returned to Gallery and waited for settled readback: `957枚の画像`, `さらに表示 (60/957)`, Console warn/error empty. This closes the fresh Download verification for PNG (prior pass), JPEG, and WebP from an existing Gallery asset.
+- No OpenAI API call, generation, retry, billing, upload, save, delete, permission mutation, migration apply, deploy, or provider action occurred.
+- Evidence hashes after Download readback: CURRENT-TURN `f2e725ece51c25db89b1c72eb17f1d8d8182d0710c36c1003529aa31b05e4478`; Security Review Packet `6ef47e0bbe5e0ae184e42acf5f44df302eacd7c8fd245fa8896a1d18f8ddc004`.
+
+Exact blocker / next action / restart point: Download is now fresh-confirmed across all three formats. Continue with the remaining authority-bound items: Lightchain authentication, production bundle/deploy association, Supabase migration/authenticated RLS proof, external Reviewer/Verifier transport, and release readbacks.
+
+## 2026-08-18 Goal continuation: fresh Zeabur source/deployment readback
+
+- Official Zeabur CLI `0.21.0` fresh readback targeted project `automation-wiled` (`69df815a554543d46b0f2485`), Heavy Chain service `heavy-chain` (`6a318803302ffbcd03a92935`), environment `69df815a5ae0a69725e92048`.
+- Latest deployment `6a8375f3201aaa81bcfa82d0` is `RUNNING` with `planType=docker`, but `commitSHA`, `ref`, `repoOwner`, `repoName`, and `commitMessage` are all empty. Four of five listed historical deployments are `REMOVED`; one is `RUNNING`.
+- Exact blocker remains `zeabur_commit_association_missing`: runtime/deployment health is not proof that the current Heavy Chain HEAD is the deployed source. No deploy, restart, redeploy, delete, secret/environment mutation, API, generation, retry, billing, or provider action occurred.
+- Evidence hashes after Zeabur readback: CURRENT-TURN `3f74fa105d6afd7aee8a29d4dc09c4f57490e326e54257983f8b27dd7bef36f8`; Security Review Packet `141cf6f92a02c26a95cc83ec5979a6ce8fb2fc0b96dc3c6ddcae050ae3f5e54f`.
+
+Exact blocker / next action / restart point: obtain the owning Zeabur source association/deployment authority, then deploy the already-tested local bundle only with explicit target/rollback/readback proof. Resume with source attribution before any production mutation.
+
 ## 2026-08-18 Goal continuation: fresh Lightchain login boundary
 
 - Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902663` at `https://jp.linkaigc.com/login?redirect=/?`.
