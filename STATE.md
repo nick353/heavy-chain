@@ -1791,3 +1791,13 @@ Exact blocker / next action / restart point: restore the Chrome recorder arm/vis
 - Evidence hashes: CURRENT-TURN `55d623fddd0b7cbff7b5f9e0b43206a07917e7b59c3df55b12b53a382cb34c21`; Security Review Packet `2defc7b6463e2ed206d84c14efeff405bc19d26528f5679f9cafe95d203d7534`.
 
 Exact blocker / next action / restart point: obtain ownership/reload authority for the recorder arm tab and reauthenticate Supabase; then perform the same-tab background-reference save and History readback. No provider generation, retry, billing, Runway, migration, or deploy should be replayed.
+
+## 2026-08-18 Goal continuation: Chrome Plugin new-method retry and local all-feature audit
+
+- Fresh local preview audit completed with `npm run verify:lightchain-all-features --silent`: `ok=true`, `featureCount=31`, `featureResults=31/31`, `screenshots=33`, `failed=[]`. Artifact: `output/playwright/lightchain-all-feature-workflows-20260818T122636Z/SUMMARY.json`, SHA-256 `c0cf9591bcb957090f50d4f72a406426ef2906a6bb093eb2963f05d1f7a7b81b`.
+- Reconnected Chrome Plugin/Profile 2 and fresh-read the same Heavy target tab `1980902656` at `/fitting#fitting-history`. Started the new background recorder through a Chrome Plugin-created localhost arm tab. The controller ended before capture with exact blocker `chrome_debugger_arm_not_received`; Extension start and frame count were both zero. Manifest `/tmp/lightchain-new-method-20260818.json`, SHA-256 `6baaeaaef863736e724c443360874f7ee4cdbf05db923fb954a09daf84a8f66e`.
+- The failed attempt was added to the recording ledger as blocked and excluded from counts. Accepted count remains `20` total (`9` strict Chrome Extension, `11` native-window/display). No native or older tabCapture fallback was substituted.
+- No OpenAI API, generation, retry, billing, Runway, upload, save, delete, permission mutation, migration apply, function deploy, or production deploy occurred.
+- Evidence hashes after this continuation: CURRENT-TURN `61d50a81cf73af377a7c8eaed28f8df1dec6c0156afc74005f5ccf33d3ce11a5`; Security Review Packet `6a2f9f51621d2a323e2b99763635ce41448f9dc8f4ebb2efe4d8ffe80a5fa723`; recording ledger `ad91f48784ae4e9519206ebbcfbba2023e835757b7a9e5f11de96a1ad373e85c`.
+
+Exact blocker / next action / restart point: the intended new Chrome Extension arm path still does not deliver a live receipt; obtain the recorder Extension reload/installation or arm-tab ownership authority, then retry one bounded recording and the fitting-background History/save readback. Preserve the 20 accepted-recording count and keep all provider effects excluded.
