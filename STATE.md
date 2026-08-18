@@ -1543,3 +1543,11 @@ Exact blocker / next action / restart point: after the Lightchain authentication
 - Helper SHA-256: `301ee73375d04659235c6b18daf5a19e4d550b8ebf1dbe0dd7691fce87ae0fbd`. Evidence hashes: CURRENT-TURN `78e42b4951eca50593c0b06b51ed6d700f72d30410a11743489d4d107950d219`; Security Review Packet `100c2faf70c12150e45bd92c72f2c7edf5750b19dbaa08b96561d1075dc3c607`.
 
 Exact blocker / next action / restart point: use the safe helper for all future Zeabur readbacks; obtain owner-authorized secret rotation through a masked channel and source association before any deploy or secret mutation.
+
+## 2026-08-18 Goal continuation: Supabase connector reauthentication boundary rechecked
+
+- Fresh read-only `supabase_list_projects` returned `UNAUTHORIZED` with the exact message `This app connection requires reauthentication before other actions on this app can succeed.` and reason `oauth_refresh_token_rejected`.
+- No remote project discovery, SQL, RLS/Auth readback, migration apply, or Edge Function deploy was claimed after the failure. The blocker is connector authentication, not a database result.
+- Evidence hashes: CURRENT-TURN `8771e7a4c9afd1a5ce6954ae4a507cbda92c37e4d80632dfe34a90b543c19611`; Security Review Packet `56c2e54b39b483b9f8b12005f15a57dd2a34730b634b2a5a90584c7c85bb37ad`.
+
+Exact blocker / next action / restart point: reauthenticate the Supabase app connection, then resume with project discovery and read-only authenticated RLS/Auth/SECURITY DEFINER checks; do not retry the same connector call until reauthentication changes its state.
