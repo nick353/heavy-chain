@@ -1343,6 +1343,25 @@ Exact blocker / next action / restart point: obtain the owning Zeabur/source ass
 
 Exact blocker / next action / restart point: obtain valid owning Supabase DB/migration authority or correct `SUPABASE_DB_PASSWORD`, then rerun migration alignment and post-apply RLS/security-definer readback. Do not apply migrations from this session.
 
+## 2026-08-18 Goal continuation: fresh security and API-key exposure audit
+
+- Current HEAD `npm run security:audit --silent` passed. Secret-shaped scans over tracked source, `dist`, and `public` found zero OpenAI-style keys, Google API keys, GitHub tokens, Slack tokens, or private-key headers; values were not printed.
+- Source references to runtime environment/key names remain explicit in the application and Supabase function boundary, but this read-only scan found no embedded secret value. No credential was used.
+- No OpenAI API call, generation, retry, billing, upload, save, delete, migration apply, deploy, or provider action occurred. Evidence is recorded in `CURRENT-TURN-20260818.json` and `SECURITY-REVIEW-PACKET-20260817.json` as `securityApiKeyExposureFreshAudit20260818`.
+- Evidence hashes after this audit: CURRENT-TURN `f4f6499c93e4ccb5356ee9ef6fcf250aa6b34091d6cb3064525b7cf96e4ff6c8`; Security Review Packet `080911dce434fa76dc0c251e5c6bd691336f2cc47478fd2d2af8c81efe78817f`.
+
+Exact blocker / next action / restart point: security source scan is clear. Remaining work is authority-bound: Lightchain credential confirmation, Zeabur source/deploy association, Supabase DB/migration authentication, external Reviewer/Verifier transport, and missing release readbacks. Resume with one of those authorities; do not treat a clean static scan as production-release proof.
+
+## 2026-08-18 Goal continuation: reopened Heavy Gallery recording with the new method
+
+- Same Chrome Plugin/Profile 2 session reopened Heavy Chain tab `1980902667`, navigated to `https://heavy-chain.zeabur.app/gallery`, and confirmed the title `Heavy Chain | AI制作ワークスペース` before capture.
+- The background Chrome Extension recorder completed with `chrome.debugger+Page.startScreencast`: H.264 1920x946, 12.386295 seconds, 28 decoded frames, full decode/tail integrity, media SHA-256 `2b98b0defc4a1e9ff7a3d69ff3df15807260f073637f7d15c4106e738fb5de9f`. The target tab remained unselected.
+- Review artifacts: `recordings/review-heavy-gallery-reopened-new-method-20260818/analysis.md`, `timeline.json`, and the video-frame-reader manifest. The recording shows Gallery top and lower-scroll states; `さらに表示 (60/954)` is visible. Source frame density is 2.260563 fps rather than requested 12 fps, so this is accepted media with reduced temporal density.
+- Accepted recording counts are now strict Chrome Extension `7`, all engines `18`, native/window `11`; blocked entries remain excluded. No credential, OpenAI API call, generation, retry, billing, upload, save, delete, permission mutation, provider action, migration apply, or deploy occurred.
+- Evidence hashes after this recording: CURRENT-TURN `d40d4e8e8b63761e13e082956f730ea059930f0ab0fca4ba07e4220fe71834b8`; Security Review Packet `81ad41fb17ab39271ab8c68e37fc50df68143613135b9320b8dd8b9b4ee54384`; recording ledger `2a9e0c9cdf0a0941227e0ed7a3e8df5118004fe6a1f1cc838579f154b6feacb5`.
+
+Exact blocker / next action / restart point: the new recording route works, but current Lightchain authentication, production bundle/deploy association, Supabase migration authentication, external Reviewer/Verifier transport, and release-readback gaps remain. Resume from the exact current Chrome Plugin/Profile 2 tab or obtain the corresponding external authority; do not infer Lightchain parity from Heavy Gallery recording alone.
+
 ## 2026-08-18 Goal continuation: fresh Lightchain login boundary
 
 - Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902663` at `https://jp.linkaigc.com/login?redirect=/?`.
