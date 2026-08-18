@@ -1230,3 +1230,12 @@ Exact blocker / next action / restart point: recording proof for these routes is
 - Fresh evidence JSON SHA-256 is `d757f71bc79d7046227ba0314524b04c39c851c568812ef5cabc8001e46d362`; Security Review Packet SHA-256 is `cb773947e9f506099b0be1401ac9ae81a971486afaf1c4d0911d234f479931c6` with matching CURRENT-TURN input hash.
 
 Exact blocker / next action / restart point: Lightchain post-login parity remains blocked only at the sensitive credential-transmission confirmation because the confirmation request returned no answer. Resume by confirming the exact Lightchain login action, then type the already-provided credentials and read back the authenticated UI in the same Chrome Plugin/Profile 2 session. Do not substitute another browser surface.
+
+## 2026-08-18 Goal continuation: production fitting persistence bundle drift isolated
+
+- Read-only HTTPS asset comparison found the live production `FittingPage`, `localWorkspaceArtifacts`, and `errorMessages` chunks differ from the current local build. Production `localWorkspaceArtifacts` still returns generic `Error` values and production `errorMessages` lacks `LOCAL_WORKSPACE_*` and `PROVIDER_MODEL_RESULT_STORAGE_PATH_MISSING` mappings.
+- This explains the observed `生成結果の保存確認に失敗しました。予期しないエラーが発生しました。` wording: the deployed diagnostic layer is stale. The underlying save failure remains fail-closed and was not retried.
+- Current local verification passed 37/37 fitting history, persistence runtime, provider persistence, resume, and error-mapping checks. No OpenAI API, generation, retry, billing, upload, save, delete, migration apply, deploy, or provider action occurred.
+- Fresh evidence JSON SHA-256 is `73a62e06b6ec798ecf25baa90608b2f5d7f838b92f78a5911b3618a0cf4aed20`; Security Review Packet SHA-256 is `9c98f2f12b3c7b73878c16da06a4f9515f9e41d19f0db03280e50609a4d0cf91` with matching CURRENT-TURN input hash.
+
+Exact blocker / next action / restart point: production has not been redeployed because immutable Zeabur source association and deployment authority remain unverified. Resume by obtaining the owning deployment authority, then deploy the already-tested local persistence/error-diagnostic build and perform a fresh production bundle/readback; do not invoke generation to validate it.
