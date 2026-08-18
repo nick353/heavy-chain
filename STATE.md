@@ -1665,3 +1665,11 @@ Exact blocker / next action / restart point: immutable source association is sti
 - Evidence hashes after recording this readback: CURRENT-TURN `9feb554235e640a2bb7b8d62f4b2a551f37635f2ab512581936fd897ee5090b8`; Security Review Packet `d5495e1b1e832daa14daf0f9c8c1a69a7557da4f47dfe32e219667025b034e08`.
 
 Exact blocker / next action / restart point: reauthenticate the approved Supabase connector, then perform only the connector-backed read-only RLS/Auth/SECURITY DEFINER/function readback. Do not apply migrations or deploy functions.
+
+## 2026-08-18 Goal continuation: release doctor aligned to current HEAD
+
+- Release doctor was rerun against current HEAD `5a39889e2ac9becc69e36518a2e3e046b0ecf84b`. Release blockers, git cleanliness, and proof-target checks passed; it stopped before mutation at `env:check`.
+- Exact missing required keys remain `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `PUBLIC_URL` (0/6 present). Values were not read or printed; OpenAI server-key presence was only reported as yes.
+- Evidence hashes: CURRENT-TURN `93373a3617786cf777600c698d1dd96269b07198a666dd56be8c372eee066a9d`; Security Review Packet `344d1ce93eb599ab3e0455fcd61c0eae4cfbc1c90dbcb9630a6414badac6932a`.
+
+Exact blocker / next action / restart point: restore the release environment through the approved secret-safe channel, rerun release doctor, and only then reassess release artifacts. Do not print/invent values or deploy.
