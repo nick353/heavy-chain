@@ -634,7 +634,7 @@ export function CanvasEditorPage() {
     if (remoteDocumentIdRef.current && canvasPersistenceStatus === 'saved') {
       setCanvasPersistenceStatus('unsaved');
     }
-  }, [objects, currentProjectName]);
+  }, [canvasPersistenceStatus, currentProjectName, objects]);
 
   const getLightchainCompatForObject = (objectId: string | null) => {
     if (!objectId) return undefined;

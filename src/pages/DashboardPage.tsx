@@ -160,7 +160,7 @@ export function DashboardPage() {
         setIsLoading(false);
       }
     }
-  }, [currentBrand, user?.id]);
+  }, [currentBrand]);
 
   const fetchActivity = useCallback(async (brandOverride?: Brand | null) => {
     const targetBrand = brandOverride ?? currentBrand;

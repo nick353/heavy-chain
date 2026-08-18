@@ -106,7 +106,6 @@ serve(async (req) => {
   let observedBrandId: string | null = null;
   let observedUserId: string | null = null;
   let observedJobId: string | null = null;
-  let observedSourceMetadata: Record<string, unknown> | null = null;
   let telemetryClient: any = null;
   const uploadedStoragePaths: string[] = [];
   const insertedImageIds: string[] = [];
@@ -258,7 +257,6 @@ serve(async (req) => {
     const completedLightchainMetadata = withLightchainTaskStepStatus(lightchainMetadata, 'completed');
     const materialMetadata = sanitizeMaterialGenerationMetadata(body);
     const sourceMetadata = buildSourceMetadata(sourceReadback, generationIntent);
-    observedSourceMetadata = sourceMetadata;
     const requestedCandidateCount = hasMask && !imageEditOptions.isLightchainMaterialRoute ? 4 : 1;
 
     const { data: job, error: jobError } = await supabaseClient
