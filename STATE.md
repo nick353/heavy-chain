@@ -1597,3 +1597,12 @@ Exact blocker / next action / restart point: public Heavy controls are refreshed
 - Current evidence SHA-256: `5cc9d9c273aab11a5bb486238e79af8de366193724a10e5a440b49a5fdf28f75`; Security Review Packet SHA-256: `714a180f2f0081f3bcb2a341fdacee7d97d64a0005a5184dfe639c28b8b01721`.
 
 Exact blocker / next action / restart point: validator is clear, but the Goal remains incomplete at Lightchain authenticated parity and external production authority lanes. Do not treat validator success as production or authentication completion.
+
+## 2026-08-18 Goal continuation: existing Gallery asset and non-OpenAI cutout preview
+
+- In the same Chrome Plugin Heavy tab, opened the `デザインアレンジ` generation UI without submitting generation. The page exposed the existing Gallery selector, five material-library tabs, rights checkbox, disabled `生成する`, and model label `GPT Image 1 mini`.
+- Selected existing Gallery asset `campaign-image` (`Gallery素材-239503df-8bd6-4d36-ba62-c611036c5a4f`), clicked `自動で切り抜く`, and read back a local preview with `抽出済みレイヤー` visible.
+- Exact local status: `確認用プレビューを作りました。生成には高精度AI切り抜きが必要です。`; after one `次へ進む` click, exact status was `高精度AI切り抜きが必要です`. `生成する` remained disabled. No OpenAI API, generation, retry, billing, save, download, upload, or provider action occurred.
+- Current evidence SHA-256: `5adb937f1adedb789d994a23f35d78b079e04d664bc3be9f5f8cd86c5e057559`; Security Review Packet SHA-256: `ef15e8af2474f808c42359b94c884d3e33952ffa7bd8409fe0acb50ec230600d`.
+
+Exact blocker / next action / restart point: non-OpenAI cutout preview is verified, but high-precision provider generation remains intentionally excluded and the Lightchain login boundary still needs action-time credential confirmation.
