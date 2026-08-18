@@ -21,6 +21,93 @@ class MemoryStorage {
   }
 }
 
+class FakeRequest {
+  result;
+  error = null;
+  onsuccess = null;
+  onerror = null;
+  onupgradeneeded = null;
+}
+
+class FakeObjectStore {
+  constructor(records, complete = () => undefined) {
+    this.records = records;
+    this.complete = complete;
+  }
+
+  put(value) {
+    this.records.set(value.key, value);
+    queueMicrotask(this.complete);
+  }
+
+  get(key) {
+    const request = new FakeRequest();
+    queueMicrotask(() => {
+      request.result = this.records.get(key);
+      request.onsuccess?.({ target: request });
+      this.complete();
+    });
+    return request;
+  }
+}
+
+class FakeTransaction {
+  oncomplete = null;
+  onerror = null;
+
+  constructor(records) {
+    this.records = records;
+  }
+
+  objectStore() {
+    return new FakeObjectStore(this.records, () => queueMicrotask(() => this.oncomplete?.()));
+  }
+}
+
+class FakeDatabase {
+  constructor() {
+    this.stores = new Map();
+    this.objectStoreNames = { contains: (name) => this.stores.has(name) };
+  }
+
+  createObjectStore(name) {
+    const records = new Map();
+    this.stores.set(name, records);
+    return new FakeObjectStore(records);
+  }
+
+  transaction(name) {
+    const records = this.stores.get(name);
+    if (!records) throw new Error(`missing_store:${name}`);
+    return new FakeTransaction(records);
+  }
+
+  close() {}
+}
+
+class FakeIndexedDb {
+  constructor() {
+    this.databases = new Map();
+  }
+
+  open(name) {
+    const request = new FakeRequest();
+    queueMicrotask(() => {
+      let database = this.databases.get(name);
+      if (!database) {
+        database = new FakeDatabase();
+        this.databases.set(name, database);
+        request.result = database;
+        request.onupgradeneeded?.({ target: request });
+      } else {
+        request.result = database;
+      }
+      request.onsuccess?.({ target: request });
+    });
+    return request;
+  }
+}
+
 const vite = await createServer({
   appType: 'custom',
   logLevel: 'silent',
@@ -29,6 +116,7 @@ const vite = await createServer({
 const persistence = await vite.ssrLoadModule('/src/lib/localWorkspaceArtifacts.ts');
 const fittingPersistence = await vite.ssrLoadModule('/src/lib/fittingPersistence.ts');
 const fittingResume = await vite.ssrLoadModule('/src/lib/fittingResume.ts');
+const fittingCutoutStore = await vite.ssrLoadModule('/src/lib/fittingDraftCutoutStore.ts');
 const errorMessages = await vite.ssrLoadModule('/src/lib/errorMessages.ts');
 after(async () => vite.close());
 
@@ -218,4 +306,46 @@ test('fitting draft save and readback restores a bounded remote cutout', () => {
   );
   assert.equal(restored?.materialReference.nextStepReady, true);
   assert.equal(restored?.materialReference.extractedImageUrl, cutout);
+});
+
+test('fitting cutout IndexedDB save and readback preserves the durable source identity', async () => {
+  const previousWindow = globalThis.window;
+  globalThis.window = { indexedDB: new FakeIndexedDb() };
+  const material = {
+    imageUrl: 'https://signed.example.test/gallery.png?token=ephemeral',
+    fileName: 'Gallery素材-gallery-image-1',
+    sourceImageId: 'gallery-image-1',
+    sourceStoragePath: 'user-a/brand-a/gallery-image-1.png',
+    materialKind: '衣服画像',
+    maskMode: 'auto',
+    activeLayer: '衣服',
+    placement: 'モデル前面',
+    scale: 72,
+    note: 'indexeddb cutout',
+    extractedLayerReady: true,
+    extractedImageUrl: 'data:image/png;base64,cutout',
+    cutoutBounds: { x: 1, y: 2, width: 30, height: 40 },
+    cutoutOutputSize: { width: 30, height: 40 },
+    cutoutDataUrlBytes: 26,
+    cutoutMaxDataUrlBytes: 750_000,
+    cutoutStoragePolicy: 'bounded-local-ai-cutout-data-url-v1',
+    maskEngine: 'browser-local-ai-cutout-v1',
+    nextStepReady: true,
+  };
+
+  try {
+    await fittingCutoutStore.saveFittingDraftCutout('brand-a', 'user-a', material);
+    const restored = await fittingCutoutStore.readFittingDraftCutout('brand-a', 'user-a', material);
+    assert.equal(restored?.extractedImageUrl, material.extractedImageUrl);
+    assert.equal(restored?.nextStepReady, true);
+    assert.equal(restored?.maskEngine, material.maskEngine);
+
+    await assert.rejects(
+      fittingCutoutStore.saveFittingDraftCutout('brand-a', 'user-a', { ...material, sourceStoragePath: null, sourceImageId: null }),
+      /素材IDまたは保存先がありません/,
+    );
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+  }
 });
