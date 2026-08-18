@@ -1500,3 +1500,11 @@ Exact blocker / next action / restart point: release acceptance is still not pro
 - Current evidence SHA-256: `0a8bf280350a1c46aee99811b7b2d63e9518df652b84d232a85f3cf50432d276`; Security Review Packet SHA-256: `80bb7e7ea94a2e1f6469db3f09572c8855c84b35360a6e5361006318bc77079b`.
 
 Exact blocker / next action / restart point: do not manufacture production evidence from this local pass. Resume with authenticated Lightchain post-login readback after action-time credential confirmation, or with the owning production/Supabase/Zeabur authorities for the remaining readbacks.
+
+## 2026-08-18 Goal continuation: G603 authentication boundary and release refresh
+
+- The safe local G603 verifier was attempted once and failed closed at `output/playwright/g603-garment-layer-canvas-20260818T101940Z/SUMMARY.json` (SHA-256 `c2475feda775c880d95013febbbd88eb6954ff0a47704f9b7bc2a91056014f58`) with the exact blocker `auth_state_missing:output/playwright/prod-auth-refresh-20260625/auth-state.json`. Preview stop was observed; no browser/provider workflow started.
+- A fresh `npm run verify:release-gate --silent` at `2026-08-18T10:16:15.614Z` UTC remains `ok=false` at `output/playwright/10m-product-readiness-g615/release-gate-summary.json` (SHA-256 `aa85c09378257a9a065c558f848eb86d5f5358a3b1689ef2d28246af285081a8`). G606 is cleared from the failed readbacks; the remaining list is production monitor, launch operations, production mass-market QA, production Lightchain all-feature previews, G610, G603, G605, G608, G618, G633, H601, H602, plus generation scorecard, G633, and H602 command gates.
+- Current evidence SHA-256: `7b7c599b91fb52b8c12674b11ebf6adceb15de0ffbb0b86cbee209957b3fc95b`; Security Review Packet SHA-256: `ae3125cf2a489c691aa429c082c7377e61358112b5f4717c38b37850c01bfa44`.
+
+Exact blocker / next action / restart point: provide a fresh authorized auth-state/readback boundary or authenticate Lightchain in the same Chrome Plugin/Profile 2 session with action-time confirmation. Do not fabricate an auth state or replay G605/G610 without that prerequisite.
