@@ -1292,3 +1292,37 @@ Exact blocker / next action / restart point: refresh only the missing read-only 
 - Recorder controller stop completed. Chrome Plugin `tabs.get` returned `Tab not found` for the four known arm IDs, while a subsequent `openTabs` readback still listed stale arm rows; recorder-tab cleanup is therefore `PENDING_CONFIRMATION` at the Chrome Plugin transport boundary.
 
 Exact blocker / next action / restart point: the new Chrome Plugin route now produces a media-verified Gallery artifact, but its low source-frame density limits visual coverage. If dense continuous evidence is required, repair the screencast frame cadence or obtain explicit approval for a separate native Chrome-window capture; do not silently substitute another surface. Lightchain authentication and full production parity remain pending at the prior credential/deployment authority boundaries.
+
+## 2026-08-18 Goal continuation: Heavy Gallery safe-control final QA
+
+- Fresh Chrome Plugin readback on Heavy tab `1980902659` exercised search, sort, favorites filter, all filter, selection mode, duplicate-name selection-closure controls, and local search-history clear one at a time.
+- Search was entered and then cleared; sort was changed `新しい順 -> 古い順 -> 新しい順`; Favorites showed `0枚の画像` and the empty-state message; All restored the Gallery; selection mode showed `0枚選択中` with bulk download/delete disabled; selection was closed with an explicit first-match locator after two visible `選択解除` matches; temporary search history was cleared.
+- Final fresh state is `https://heavy-chain.zeabur.app/gallery`, `957枚の画像`, empty search, `新しい順`, selection closed, 0 selected. Console warning/error readback is empty. No generation, retry, billing, upload, save, delete, download, permission mutation, migration apply, deploy, or provider action occurred.
+
+Exact blocker / next action / restart point: safe Gallery controls are now fresh-confirmed. Continue with fresh History/Jobs/Canvas/Download controls and permission UI readback in the same Chrome Plugin/Profile 2 session; keep Lightchain credential entry and effectful/provider controls at their existing authorization boundaries.
+
+## 2026-08-18 Goal continuation: fresh History / Jobs / Canvas safe readback
+
+- Same Chrome Plugin/Profile 2 Heavy tab fresh-read `/history`: `生成履歴`, resume/failure/saved-result routes, `保存済み 0件`, and empty Timeline.
+- Fresh `/jobs`: `制作キュー`, Queue summary `0`, disabled `更新`, and read-only links for resumable, stopped, and completed work.
+- Fresh `/canvas`: loaded Canvas with brand `NiSEN` and `未保存の変更`; safely exercised Canvas/派生ツリー tabs, zoom in/out, grid, snap, Chat Editor, and Template panels. Provider/generation, rights, save, export, upload, and destructive controls were not activated.
+- Console warn/error readback was empty on all three routes. Current Gallery download was not repeated; Download remains `PENDING_CONFIRMATION` for this fresh pass.
+
+Exact blocker / next action / restart point: History, Jobs, and Canvas safe UI evidence is fresh. Next safe step is permission UI readback and a bounded current Gallery detail/download check if the download boundary is explicitly retained; do not invoke generation/provider or alter Canvas state.
+
+## 2026-08-18 Goal continuation: fresh Heavy permission-route readback
+
+- Same Chrome Plugin/Profile 2 Heavy tab read six routes: fitting fallback, models, fabric-image, printing-image, line-generation, and image-repair.
+- Current production renders preparation placeholders rather than the exact `権限がありません` control: `AIフィッティング画面を準備しています`, `モデルライブラリを準備しています`, or `制作入口を準備しています`, with visible login/reload/upload/mask/Canvas placeholder text as applicable. No blocked/provider control was executed.
+- Console warn/error logs were empty across the six routes. Returning to Gallery and waiting 5 seconds settled back to `957枚の画像`, `60/957` visible, and `さらに表示 (60/957)`.
+
+Exact blocker / next action / restart point: the permission UI parity surface is not currently rendered by production, so exact `権限がありません` wording cannot be fresh-confirmed there; retain this as PENDING_CONFIRMATION and do not infer it from local/static parity. Download/detail evidence remains the next bounded readback.
+
+## 2026-08-18 Goal continuation: current Gallery detail and PNG download
+
+- Fresh Gallery detail opened in the same Chrome Plugin/Profile 2 Heavy tab at item `1 / 957`, provider `model-matrix`, ID prefix `66941eec`. PNG/JPEG/WebP options were visible; share was disabled; favorite/delete were not activated.
+- Clicked `PNG` once. UI status readback was `ダウンロードしました`.
+- Local verification found `/Users/nichikatanaka/Downloads/heavy-chain-66941eec-81b3-4bf0-8be8-95e919f80df7 (7).png`, SHA-256 `ac4092b8fa85efd40f4f2b0fc74bff59355a2611c5e7a207ca63f40a1dcff456`, PNG 1024x1536 RGB. No generation or provider action occurred.
+
+Exact blocker / next action / restart point: current Gallery detail and PNG Download are now confirmed. JPEG/WebP were observed but not clicked; Lightchain authentication, exact permission-error UI, and production parity remain pending.
+- After returning from the detail route, Gallery briefly showed its loading placeholder and settled back after an additional 5 seconds to `957枚の画像`, empty search, `新しい順`, with no console warning/error logs.
