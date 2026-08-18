@@ -1334,3 +1334,11 @@ Exact blocker / next action / restart point: current Gallery detail and PNG Down
 - Classification remains `production_bundle_stale_persistence_diagnostics`: the local non-OpenAI fix is verified, but the production bundle has not been updated or proven from the owning deploy source.
 
 Exact blocker / next action / restart point: obtain the owning Zeabur/source association and deployment authority, then deploy the already-tested bundle and perform a fresh asset/readback check without invoking generation. Do not treat local green tests as production completion.
+
+## 2026-08-18 Goal continuation: Supabase functions and migration readback
+
+- Fresh Supabase CLI readback for project `ghwjymozrwmcrpjqvbmo`: 16 functions ACTIVE, `verify_jwt=false` count 0, legacy Runway-named functions 0; `model-matrix` v45, `marketing-workspace-artifact` v25, `edit-image` v14, `canvas-document` v2.
+- `supabase db lint --linked` passed for `extensions`, `private`, and `public` with no schema errors.
+- `supabase migration list --linked` remains blocked before readback by temp-role authentication: `cli_login_postgres` password failure SQLSTATE 28P01, followed by ECIRCUITBREAKER. Local unapplied migrations remain `20260818074224`, `20260818080001`, `20260818080857`; no apply was attempted.
+
+Exact blocker / next action / restart point: obtain valid owning Supabase DB/migration authority or correct `SUPABASE_DB_PASSWORD`, then rerun migration alignment and post-apply RLS/security-definer readback. Do not apply migrations from this session.
