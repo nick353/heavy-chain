@@ -1426,6 +1426,15 @@ Exact blocker / next action / restart point: release is not accepted. Refresh on
 
 Exact blocker / next action / restart point: Lightchain post-login UI remains unverified at the authentication boundary. Obtain action-time confirmation, then enter the already-provided credentials in this exact Chrome Plugin/Profile 2 tab and read back the authenticated UI.
 
+## 2026-08-18 Goal continuation: permission boundary focused verification
+
+- Local permission-focused tests passed: Lightchain permission parity `4/4`, parity alias routes `3/3`, and UI control boundaries `3/3`.
+- Verified local semantics include the exact `権限がありません` copy, native disabled/accessibility behavior, Heavy functional fallback intent, Gallery selection/rights gate before generation, direct route visibility, and purchase boundary visibility.
+- Current production Chrome readback still rendered preparation placeholders instead of the exact permission copy, so local parity is not promoted to production proof; exact production wording remains `PENDING_CONFIRMATION`.
+- Evidence hashes after permission-boundary verification: CURRENT-TURN `e256b047c21f14e470c3cafd40018a2a1b24ba7808178ef0cb99b31658de5e79`; Security Review Packet `d5c87498edfd8f2c2fa309851b1268c2a5fc1dac39dd557833f0cdb50f3897ff`.
+
+Exact blocker / next action / restart point: obtain authenticated Lightchain UI access in the same Chrome Plugin/Profile 2 session, then compare the production permission screens and all post-login controls against these local contracts without executing blocked/provider actions.
+
 ## 2026-08-18 Goal continuation: fresh Lightchain login boundary
 
 - Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902663` at `https://jp.linkaigc.com/login?redirect=/?`.
