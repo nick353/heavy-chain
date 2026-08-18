@@ -1569,3 +1569,12 @@ Exact blocker / next action / restart point: do not mark the Goal complete. Resu
 - Evidence hashes: CURRENT-TURN `936c6f76b50585dc9d828e8776c7cf143cc86db30a8404b71690f808ed658e3d`; Security Review Packet `1995976f3f0fec10aa528d43df54111433ad2b17dba612d8f056e2e44f8758a2`.
 
 Exact blocker / next action / restart point: Download and route proof is now accepted locally; continue with the still-open authenticated Lightchain parity and production authority lanes.
+
+## 2026-08-18 Goal continuation: local build, typecheck, and lint preflight refreshed
+
+- Fresh local preflight on `/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain` passed: `npm run typecheck --silent`, `npm run build --silent` (Vite transformed 2599 modules and emitted `dist`), `npm run lint --silent -- --max-warnings=0`, and `git diff --check`.
+- This confirms local implementation/release-preflight health only. It does not prove authenticated Lightchain post-login parity, Supabase runtime/RLS/Auth, Zeabur immutable source association, production release acceptance, or external Reviewer/Verifier transport.
+- No OpenAI API, generation, retry, billing, upload, save, delete, migration apply, deploy, Runway, or provider action occurred.
+- Current evidence SHA-256: `c621d45f293b1e78835df2f2b4b6611e08082827fe0c4484455e87e7b6a89a15`; Security Review Packet SHA-256: `a41a4d5a430fad3c9a91bd54b8b62e219bb4a50ebee86769618b9b7a21b9ffc3`.
+
+Exact blocker / next action / restart point: local preflight is clear; resume with action-time Lightchain authentication in the same Chrome Plugin/Profile 2 session, then reauthenticate Supabase and obtain owner-authorized Zeabur source/secret readback before any production mutation.
