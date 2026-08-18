@@ -1350,3 +1350,11 @@ Exact blocker / next action / restart point: obtain valid owning Supabase DB/mig
 - Credentials, OTP/CAPTCHA, and login submission were not performed. The tab is marked for handoff at the authentication boundary.
 
 Exact blocker / next action / restart point: obtain action-time confirmation for transmitting the already-provided Lightchain credentials in this exact Chrome Plugin/Profile 2 tab, then perform fresh post-login readback. Do not substitute another browser or infer authenticated parity from Heavy Chain.
+
+## 2026-08-18 Goal continuation: Chrome Plugin actual-tab transport recovery
+
+- Fresh `chrome.tabs.list()` showed only Lightchain login tab `1980902663`; historical Heavy/Zeabur/recorder-arm rows from `openTabs()` were stale and were not reused.
+- A new Heavy Gallery tab `1980902664` was opened in the same Profile 2 session. After 15 seconds it settled to `957枚の画像`, `60/957` visible, with search/sort/filter controls and image grid. Console warn/error logs were empty.
+- No credentials or effectful controls were used.
+
+Exact blocker / next action / restart point: retain tab `1980902663` as the Lightchain auth boundary and tab `1980902664` as the current Heavy authority. Do not use stale tab IDs or historical openTabs rows for parity claims.
