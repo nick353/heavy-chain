@@ -1435,6 +1435,15 @@ Exact blocker / next action / restart point: Lightchain post-login UI remains un
 
 Exact blocker / next action / restart point: obtain authenticated Lightchain UI access in the same Chrome Plugin/Profile 2 session, then compare the production permission screens and all post-login controls against these local contracts without executing blocked/provider actions.
 
+## 2026-08-18 Goal continuation: source identity and Zeabur association blocker refined
+
+- Local repository `main` is at `79aad958626922569ec2961cd98e208280704a2f`; read-only `origin/main` is `ff0c2cce087e41ca0b98fad9ce72a5c0124c9541`, so local source and remote main are not identical.
+- Zeabur latest deployment `6a8375f3201aaa81bcfa82d0` still reports empty `commitSHA`, `ref`, `repoOwner`, and `repoName`.
+- Exact blocker is refined to `source_identity_not_immutable_and_zeabur_commit_association_missing`. No push or deploy was performed.
+- Evidence hashes after source identity readback: CURRENT-TURN `9ee1a9309e48637770effcf5c0725e0a306210cdd32333cdeaec2432de8afa89`; Security Review Packet `1509e6c6c1a9ebfe728a6a29ee3c7761da6f7b8edd177f35bc24f4d54093419d`.
+
+Exact blocker / next action / restart point: an owner must choose and authorize the canonical source commit, push/associate it through the supported deployment path, and provide rollback/readback authority. Resume with that source decision; do not deploy local HEAD blindly.
+
 ## 2026-08-18 Goal continuation: fresh Lightchain login boundary
 
 - Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902663` at `https://jp.linkaigc.com/login?redirect=/?`.
