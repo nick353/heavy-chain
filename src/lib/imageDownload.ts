@@ -91,6 +91,9 @@ export const downloadValidatedImage = async (
     anchor.click();
   } finally {
     document.body.removeChild(anchor);
-    window.URL.revokeObjectURL(objectUrl);
+    // Keep the object URL alive long enough for Chromium to dispatch the
+    // download. Revoking it in the same task can cancel the download event,
+    // especially in extension-backed browser sessions.
+    window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
   }
 };

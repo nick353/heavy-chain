@@ -258,9 +258,9 @@ const makeCanvasObjects = () => {
     locked: false,
     visible: true,
     zIndex: index,
-    // Use a durable non-data URL so the current Canvas persistence sanitizer
-    // keeps the synthetic stress objects in localStorage for the readback.
-    src: '/favicon.svg',
+    // Use an absolute same-origin URL. Relative paths are intentionally not
+    // accepted as generated-image references by the storage safety boundary.
+    src: `${BASE_URL}/favicon.svg`,
     text: `G606 ${index}`,
     fontSize: 18,
     fontFamily: 'Inter',
@@ -602,7 +602,30 @@ const countColoredPixels = ({ width, rgba }, startY, endY) => {
 const exportCanvasPng = async (page) => {
   const downloadPromise = page.waitForEvent('download', { timeout: 15000 });
   await page.getByTitle('エクスポート').first().click();
-  const download = await downloadPromise;
+  let download;
+  try {
+    download = await downloadPromise;
+  } catch (error) {
+    const debug = await page.evaluate(() => ({
+      url: location.href,
+      exportState: document.body.dataset.canvasExportLastResult ?? null,
+      renderState: document.body.dataset.canvasRenderState ?? null,
+      persistedObjectCount: (() => {
+        try {
+          return JSON.parse(localStorage.getItem('heavy-chain-canvas') || '{}')?.state?.objects?.length ?? null;
+        } catch {
+          return null;
+        }
+      })(),
+      buttons: Array.from(document.querySelectorAll('[title="エクスポート"]')).map((button) => ({
+        disabled: button instanceof HTMLButtonElement ? button.disabled : null,
+        text: button.textContent?.trim() ?? '',
+      })),
+      canvasCount: document.querySelectorAll('canvas').length,
+    })).catch(() => null);
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${message} canvas_export_debug=${JSON.stringify(debug)}`);
+  }
   const filePath = path.join(OUT_DIR, 'canvas-stress-export.png');
   await download.saveAs(filePath);
   const dimensions = await readPngDimensions(filePath);

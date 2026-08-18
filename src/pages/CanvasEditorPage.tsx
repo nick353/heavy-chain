@@ -1971,7 +1971,9 @@ export function CanvasEditorPage() {
         toast.success('CanvasをPNGで書き出しました');
       } finally {
         document.body.removeChild(link);
-        window.URL.revokeObjectURL(objectUrl);
+        // Chromium may dispatch the download asynchronously. Revoking the
+        // blob URL in the same task can cancel the download event.
+        window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
       }
     } catch (error) {
       setExportReadback(`error:${error instanceof Error ? error.message : 'unknown'}`);
