@@ -1782,3 +1782,12 @@ Exact blocker / next action / restart point: keep the release fail-closed; resol
 - Evidence hashes: CURRENT-TURN `30d5d9664e0566e3dfcb641e12b4a63d4711d1f0154b7569961f1b0301cfbab5`; Security Review Packet `df04d0c0299f72029326aa0af305240d16894e441ceb30c93f8082205bb76f02`.
 
 Exact blocker / next action / restart point: restore the Chrome recorder arm/visibility capability and authenticated Supabase connector; then repeat the bounded background-reference History/save readback. Keep provider generation, retry, billing, Runway, and deploy excluded.
+
+## 2026-08-18 Goal continuation: fresh external boundary retry
+
+- A fresh same-session Chrome readback kept target tab `1980902656` at `/fitting#fitting-history` with browser capability `viewport` only and tab capabilities `pageAssets`/`cdp`; `visibility` remains absent.
+- The new recorder controller was started once more, but the fresh `about:blank` arm tab was already owned by another browser session and could not be claimed. The exact controller result remained `chrome_debugger_arm_not_received`; no media was created and accepted recording counts did not change.
+- Fresh Supabase `list_projects` stopped before query with `UNAUTHORIZED`, `oauth_refresh_token_rejected`, `TRIGGER_REAUTHENTICATION`. No query, migration, function deploy, or secret readback occurred.
+- Evidence hashes: CURRENT-TURN `55d623fddd0b7cbff7b5f9e0b43206a07917e7b59c3df55b12b53a382cb34c21`; Security Review Packet `2defc7b6463e2ed206d84c14efeff405bc19d26528f5679f9cafe95d203d7534`.
+
+Exact blocker / next action / restart point: obtain ownership/reload authority for the recorder arm tab and reauthenticate Supabase; then perform the same-tab background-reference save and History readback. No provider generation, retry, billing, Runway, migration, or deploy should be replayed.
