@@ -124,6 +124,8 @@
     "supabase:verify": "bash scripts/supabase-prod-verify.sh",
     "supabase:verify:static": "SUPABASE_VERIFY_MODE=static bash scripts/supabase-prod-verify.sh",
     "supabase:verify:db": "SUPABASE_VERIFY_MODE=db bash scripts/supabase-prod-verify.sh",
+    "zeabur:safe-readback": "node scripts/zeabur-safe-readback.mjs",
+    "test:zeabur-safe-readback": "node --test scripts/verify-zeabur-safe-readback.test.mjs",
     "supabase:deploy:functions": "bash scripts/deploy-edge-functions.sh",
     "smoke:edge": "node scripts/smoke-edge-functions.mjs"
   },

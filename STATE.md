@@ -1535,3 +1535,11 @@ Exact blocker / next action / restart point: obtain owner-authorized source asso
 - Evidence hashes after this verification: CURRENT-TURN `e0bc838f0c8813ebb110420ddac42b280aede56242a52a594083682d096123cf`; Security Review Packet `b4dc2ca71e9d56a80e35245685e105809d216f7cb937958749fa5acc7ea29179`.
 
 Exact blocker / next action / restart point: after the Lightchain authentication boundary is authorized, perform one live fitting-background save/readback and compare the production error text against the local contract; do not generate or retry to obtain it.
+
+## 2026-08-18 Goal continuation: secret-safe Zeabur readback helper
+
+- Added `scripts/zeabur-safe-readback.mjs` and `npm run zeabur:safe-readback`. It calls only auth/project/service/deployment/domain read-only endpoints, whitelists output fields, and intentionally never calls Zeabur variable readback.
+- Added `scripts/verify-zeabur-safe-readback.test.mjs`; `1/1` passed. The helper ran successfully against the current personal workspace, resolved Heavy Chain as `RUNNING`, showed `sourceMetadataPresent=false`, and returned the provisioned domain without printing secret values. `npm run security:audit --silent` also passed.
+- Helper SHA-256: `301ee73375d04659235c6b18daf5a19e4d550b8ebf1dbe0dd7691fce87ae0fbd`. Evidence hashes: CURRENT-TURN `78e42b4951eca50593c0b06b51ed6d700f72d30410a11743489d4d107950d219`; Security Review Packet `100c2faf70c12150e45bd92c72f2c7edf5750b19dbaa08b96561d1075dc3c607`.
+
+Exact blocker / next action / restart point: use the safe helper for all future Zeabur readbacks; obtain owner-authorized secret rotation through a masked channel and source association before any deploy or secret mutation.
