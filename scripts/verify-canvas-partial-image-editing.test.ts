@@ -52,7 +52,7 @@ test('partial edit mask is sent through the client and edge function without sto
     read('../supabase/functions/_shared/openaiImage.ts'),
   ]);
   assert.match(client, /maskDataUrl: options\?\.maskDataUrl/);
-  assert.match(client, /requiresPngNormalization\s*=\s*index === 0 && options\?\.maskDataUrl/);
+  assert.match(client, /requiresPngNormalization\s*=\s*Boolean\(/);
   assert.match(client, /requiresPngNormalization\s*\? await imageBlobToPngDataUrl\(imageBlob\)/);
   assert.match(edge, /mask: maskDataUrl \? \{ imageUrl: maskDataUrl \} : undefined/);
   assert.match(edge, /Edit mask dimensions must match input image/);
@@ -75,7 +75,8 @@ test('SVG edit references are rasterized before provider submission and unsuppor
     read('../supabase/functions/_shared/openaiImage.ts'),
   ]);
   assert.match(client, /requiresPngNormalization/);
-  assert.match(client, /\/svg\|xml\/i\.test\(imageBlob\.type/);
+  assert.match(client, /response\.headers\.get\('content-type'\)/);
+  assert.match(client, /isSvgOrXml/);
   assert.match(client, /requiresPngNormalization\s*\? await imageBlobToPngDataUrl/);
   assert.match(openAi, /assertSupportedEditMimeType/);
   assert.match(openAi, /openai_image_edit_input_unsupported_mime/);

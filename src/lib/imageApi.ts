@@ -361,8 +361,11 @@ export async function editImageWithPrompt(
       if (!response.ok) throw new Error(`image_edit_input_fetch_failed:${index}:${response.status}`);
       const imageBlob = await response.blob();
       if (!imageBlob.type.startsWith('image/')) throw new Error(`image_edit_input_not_image:${index}`);
-      const requiresPngNormalization = index === 0 && options?.maskDataUrl
-        || /svg|xml/i.test(imageBlob.type || '');
+      const responseMimeType = response.headers.get('content-type') || '';
+      const isSvgOrXml = /svg|xml/i.test(`${responseMimeType} ${imageBlob.type}`);
+      const requiresPngNormalization = Boolean(
+        (index === 0 && options?.maskDataUrl) || isSvgOrXml,
+      );
       const dataUrl = requiresPngNormalization
         ? await imageBlobToPngDataUrl(imageBlob)
         : await imageBlobToDataUrl(imageBlob);
