@@ -1773,3 +1773,12 @@ Exact blocker / next action / restart point: obtain a live recorder-extension ar
 - Final evidence hashes for this continuation: CURRENT-TURN `250eff0bdd39f0b575b118f2dab88ef1c405f292ea31c80b649b5da29ff7d1f8`; Security Review Packet `ce9d23bfd96186f02299856d490d58813e51f27e459ff81ab2638eeffeadf5c1`.
 
 Exact blocker / next action / restart point: keep the release fail-closed; resolve Supabase reauthentication, immutable Zeabur source association, Chrome recorder arm/visibility, production failed-job root cause, and missing release artifacts through their owning authorities before any deploy or provider action.
+
+## 2026-08-18 Goal continuation: fitting readback and local contract refresh
+
+- Fresh same-tab Chrome readback reached `/lightchain/fitting-background-reference` and confirmed the shared AI Fitting shell, unchecked rights gate, `0/4` material state, and disabled AI generation. The safe History link reached `/fitting#fitting-history`; its panel readback and the `自動変換` toggle click remain `PENDING_CONFIRMATION` after CDP Runtime.evaluate timeouts. No generation or persistence action was executed.
+- Refreshed local non-OpenAI contracts: security audit passed; Supabase static verification passed; provider persistence `12/12`; Canvas persistence `6/6`; fitting history `9/9`; fitting runtime `8/8`; Lightchain material `10/10`; provider coverage `10/10`; parity routes `6/6`; provider adapter `16/16`; video boundary `1/1`; lab boundary `1/1`; download contract `4/4`. Remote Supabase DB verification remains blocked before query by reauthentication/unavailable shell authority.
+- Reconciled the current evidence root's recording count to the authoritative ledger: accepted all engines `20` (Strict Chrome Extension `9`, native window/display `11`), blocked all engines `17`; new failed arm attempts remain excluded.
+- Evidence hashes: CURRENT-TURN `30d5d9664e0566e3dfcb641e12b4a63d4711d1f0154b7569961f1b0301cfbab5`; Security Review Packet `df04d0c0299f72029326aa0af305240d16894e441ceb30c93f8082205bb76f02`.
+
+Exact blocker / next action / restart point: restore the Chrome recorder arm/visibility capability and authenticated Supabase connector; then repeat the bounded background-reference History/save readback. Keep provider generation, retry, billing, Runway, and deploy excluded.
