@@ -1809,3 +1809,13 @@ Exact blocker / next action / restart point: the intended new Chrome Extension a
 - Evidence hashes after this retry: CURRENT-TURN `f701f8c6b16c4d85a99f52dc07dcea20f3803b74d0915d2a5cd2e82d5d03030f`; Security Review Packet `64bc60a0d6e6cbe36de42436cba849800f93b1a9809a9d0819b13f492d2379de`; recording ledger `615edfdae54d271c2852ba7a03ac9bf8d6c956a6d680a429af5b25bf551e2e36`.
 
 Exact blocker / next action / restart point: restore the recorder Extension arm/reload capability and stable Chrome Plugin CDP readback; then perform the remaining fitting-background History/save verification. Do not add another unchanged recording attempt or switch capture engines.
+
+## 2026-08-18 Goal continuation: direct Chrome Plugin CDP recording succeeded
+
+- The reopened Heavy Chain tab `1980902753` was claimed through the same Chrome Plugin/Profile 2 session. The tab-scoped `cdp` capability was fresh-read and its documented `send`/`readEvents` API was available.
+- `Page.startScreencast` produced no events, so the supported tab CDP path used bounded `Page.captureScreenshot` sampling. Seven JPEG frames were captured over six seconds and encoded to H.264 MP4: `recordings/chrome-plugin-cdp-20260818/heavy-chain-fitting-history-cdp.mp4`.
+- Media proof passed: `2880x1420`, `5.833333` seconds, `7` frames, full-stream decode and tail integrity verified. This is counted as one accepted `Chrome Plugin Direct CDP` recording, separate from the companion Extension count. Accepted totals are now `21` overall (`9` strict companion Extension, `11` native-window/display, `1` direct Chrome Plugin CDP).
+- No effectful UI control was clicked. OpenAI API, generation, retry, billing, Runway, upload, save, delete, permission mutation, migration apply, function deploy, and production deploy remained untouched.
+- Evidence hashes after the direct CDP recording: CURRENT-TURN `41b39f987238eed4e427d64766b860903a298891eb381f51142e183d0943b5ca`; Security Review Packet `9154fa2a6920edd31da9701b5698a66532397f83c7e7673815885436cf5ee085`; recording ledger `25d984ba76a8b8614501bdfefdb29dafb2157994bce01733ab64804a07be9cb8`.
+
+Exact blocker / next action / restart point: Chrome Plugin direct CDP recording is now available for safe page-pixel evidence. Keep strict companion-Extension arm as a separately blocked capability; next work is the fitting-background History/save readback and the still-external Supabase/Zeabur/release gates.
