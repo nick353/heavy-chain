@@ -1381,6 +1381,15 @@ Exact blocker / next action / restart point: Download is now fresh-confirmed acr
 
 Exact blocker / next action / restart point: obtain the owning Zeabur source association/deployment authority, then deploy the already-tested local bundle only with explicit target/rollback/readback proof. Resume with source attribution before any production mutation.
 
+## 2026-08-18 Goal continuation: fresh Supabase functions and schema-lint readback
+
+- Official Supabase CLI readback for project `ghwjymozrwmcrpjqvbmo` returned 16 ACTIVE Edge Functions, `verify_jwt=false` count 0, and legacy Runway-named function count 0. Notable versions: `model-matrix` v45, `marketing-workspace-artifact` v25, `edit-image` v14, `canvas-document` v2.
+- `supabase db lint --linked` passed for `extensions`, `private`, and `public` with `No schema errors found`.
+- Fresh function entrypoints still mix `/tmp/user_fn_<project>_<id>_<version>/source/...` and `/Users/nichikatanaka/Desktop/...` paths, so immutable source attribution remains `PENDING_CONFIRMATION`. No migration apply or function deploy occurred.
+- Evidence hashes after Supabase functions/schema readback: CURRENT-TURN `fe89147eae60211079e27b289148f1342af22b874934e3771218e5034663a970`; Security Review Packet `bd8e6a62d80fdebff5f12bcf3ef50407763a771e42871c5ea2142631c11e6fb2`.
+
+Exact blocker / next action / restart point: obtain Supabase migration/DB authority (`SUPABASE_DB_PASSWORD` or owning authenticated session), then run migration alignment and authenticated cross-user/RLS/security-definer readback. Do not apply migrations from this session.
+
 ## 2026-08-18 Goal continuation: fresh Lightchain login boundary
 
 - Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902663` at `https://jp.linkaigc.com/login?redirect=/?`.
