@@ -1342,3 +1342,11 @@ Exact blocker / next action / restart point: obtain the owning Zeabur/source ass
 - `supabase migration list --linked` remains blocked before readback by temp-role authentication: `cli_login_postgres` password failure SQLSTATE 28P01, followed by ECIRCUITBREAKER. Local unapplied migrations remain `20260818074224`, `20260818080001`, `20260818080857`; no apply was attempted.
 
 Exact blocker / next action / restart point: obtain valid owning Supabase DB/migration authority or correct `SUPABASE_DB_PASSWORD`, then rerun migration alignment and post-apply RLS/security-definer readback. Do not apply migrations from this session.
+
+## 2026-08-18 Goal continuation: fresh Lightchain login boundary
+
+- Same Chrome Plugin/Profile 2 session opened Lightchain tab `1980902663` at `https://jp.linkaigc.com/login?redirect=/?`.
+- Fresh visible UI: `HELLO`, account textbox, password textbox, forgot-password link, and `ログイン` button. Console warn/error logs were empty.
+- Credentials, OTP/CAPTCHA, and login submission were not performed. The tab is marked for handoff at the authentication boundary.
+
+Exact blocker / next action / restart point: obtain action-time confirmation for transmitting the already-provided Lightchain credentials in this exact Chrome Plugin/Profile 2 tab, then perform fresh post-login readback. Do not substitute another browser or infer authenticated parity from Heavy Chain.
