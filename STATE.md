@@ -1508,3 +1508,12 @@ Exact blocker / next action / restart point: do not manufacture production evide
 - Current evidence SHA-256: `7b7c599b91fb52b8c12674b11ebf6adceb15de0ffbb0b86cbee209957b3fc95b`; Security Review Packet SHA-256: `ae3125cf2a489c691aa429c082c7377e61358112b5f4717c38b37850c01bfa44`.
 
 Exact blocker / next action / restart point: provide a fresh authorized auth-state/readback boundary or authenticate Lightchain in the same Chrome Plugin/Profile 2 session with action-time confirmation. Do not fabricate an auth state or replay G605/G610 without that prerequisite.
+
+## 2026-08-18 Goal continuation: Supabase and provider-boundary fresh verification
+
+- Supabase CLI `2.106.0` static verification passed: retired provider runtime paths are absent; no migration apply, Edge Function deploy, API call, generation, retry, billing, upload, save, delete, or provider action occurred.
+- Correct repository-defined focused tests passed: Lightchain provider adapter `16/16`, provider persistence readback `12/12`, SECURITY DEFINER boundary `1/1`, Lightchain provider coverage `10/10`, video provider boundary `1/1` fail-closed, Lab provider boundary `1/1`, and security audit passed without printing secrets.
+- Runtime readback remains unavailable: `supabase status` could not connect to Docker at `unix:///Users/nichikatanaka/.colima/default/docker.sock`; `.mcp.json` is absent and the authenticated Supabase connector still needs reauthentication. No remote SQL/RLS/Auth/SECURITY DEFINER query was claimed as verified.
+- Evidence hashes after this verification: CURRENT-TURN `06e8d602c0b0cdeaeb228f9dbb80bd1cda6f3561b3d52e720853ecc994f8dd7c`; Security Review Packet `e576b9be2ae096db5fe034f45594f874a0cab93a85812a17ccc7ab6a9b65f359`.
+
+Exact blocker / next action / restart point: restore the authenticated Supabase connector or start the approved local Supabase runtime, then perform read-only authenticated RLS/Auth/SECURITY DEFINER cross-user checks. Do not apply migrations or deploy functions until source and owner authority are read back.
