@@ -1606,3 +1606,12 @@ Exact blocker / next action / restart point: validator is clear, but the Goal re
 - Current evidence SHA-256: `5adb937f1adedb789d994a23f35d78b079e04d664bc3be9f5f8cd86c5e057559`; Security Review Packet SHA-256: `ef15e8af2474f808c42359b94c884d3e33952ffa7bd8409fe0acb50ec230600d`.
 
 Exact blocker / next action / restart point: non-OpenAI cutout preview is verified, but high-precision provider generation remains intentionally excluded and the Lightchain login boundary still needs action-time credential confirmation.
+
+## 2026-08-18 Goal continuation: fresh external readback and completion audit
+
+- `npm run zeabur:safe-readback --silent` passed secret-safely: Heavy Chain deployment `6a8375f3201aaa81bcfa82d0` is `RUNNING`, domain `heavy-chain.zeabur.app` is `PROVISIONED`, `sourceMetadataPresent=false`, `variableReadbackCalled=false`, and `secretValuesPrinted=false`. The source association blocker remains unchanged.
+- `supabase status` failed closed at the local Docker boundary: `Cannot connect to the Docker daemon at unix:///Users/nichikatanaka/.colima/default/docker.sock`. No remote query, migration apply, or function deploy was claimed.
+- Fresh completion audit remains `ok=false`: `76/80` accepted goals, `16` blockers, `0/2` human items closed, and `2/9` proofs complete. Fresh release gate remains `ok=false` with 12 readback failures and 3 command failures; irreversible actions remain untouched.
+- Current evidence SHA-256: `c0d9dc35fcb815448979bbac113cadd515f9af174fdea4894acc8ec1ca2ab95a`; Security Review Packet SHA-256: `dc998830d143bc2017f3f55db8ab384bedf33a2c0cd944cd3fa7dd5df86bdbc0`.
+
+Exact blocker / next action / restart point: authenticated Supabase runtime proof, immutable Zeabur source association, release artifacts, human H601/H602, and Lightchain authenticated parity remain open. Resume only after the relevant external authority changes; do not replay generation/billing/deploy to manufacture proof.
