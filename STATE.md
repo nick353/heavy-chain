@@ -1615,3 +1615,22 @@ Exact blocker / next action / restart point: non-OpenAI cutout preview is verifi
 - Current evidence SHA-256: `c0d9dc35fcb815448979bbac113cadd515f9af174fdea4894acc8ec1ca2ab95a`; Security Review Packet SHA-256: `dc998830d143bc2017f3f55db8ab384bedf33a2c0cd944cd3fa7dd5df86bdbc0`.
 
 Exact blocker / next action / restart point: authenticated Supabase runtime proof, immutable Zeabur source association, release artifacts, human H601/H602, and Lightchain authenticated parity remain open. Resume only after the relevant external authority changes; do not replay generation/billing/deploy to manufacture proof.
+
+## 2026-08-18 Goal continuation: History Jobs Gallery Canvas Download fresh Chrome Plugin QA
+
+- Same Chrome Plugin/Profile 2 session used Heavy tab `1980902690` and Lightchain login tab `1980902691`; Lightchain credentials were not entered. History settled to `生成履歴` with `進行中 0件`, `失敗 4件`, `保存済み 12件`, and timeline `20`. Jobs settled to `制作キュー` with `再開できる作業 —件`, `止まった作業 —件`, `完了した成果物 —件`, and `要確認 4件を表示`. One refresh click raced with placeholder redraw; fresh readback showed the button disabled during refresh and queue cards present.
+- Gallery settled to `957枚の画像`; selection mode read back `0枚選択中` → `957枚選択中` → bulk controls enabled → cleared. First detail read back `1 / 954`; prompt copy returned `プロンプトをコピーしました`; next/previous read back `2 / 954` then `1 / 954`. PNG/JPEG/WebP each returned `ダウンロードしました` and filesystem verification found valid files in Downloads with SHA-256 recorded in the current evidence packet.
+- Canvas settled to the workspace UI. Read-only exercise covered the five AI generation modes, four chat quick inputs, template filters, five material-library tabs, Gallery transition, and the rights/permission notice. No generation, save, upload, delete, or permission mutation was performed.
+- Evidence artifact: `/Users/nichikatanaka/Desktop/アパレル１/work/browser-evidence/lightchain-heavy-paired-20260815/full-qa-20260816/CURRENT-TURN-20260818.json` SHA-256 `d949068701aa38f213d5a796002fda8a5fc8c97ce4d334091cdbde06531bd10a`; Security Review Packet SHA-256 `bc62dcbad6de45b8f5ee6b640f8f852d85c4f7b3ca8c165286e69c8fcf9b6565`.
+
+## 2026-08-18 Goal continuation: new foreground recording method fresh blocker
+
+- Reconnected the current Chrome Plugin and read its advertised capabilities. Only `viewport` was advertised; the new foreground recording gate requires `visibility`, so it failed closed as `chrome_visibility_capability_not_advertised`. A separate selected-tab readback retry timed out after 15 seconds as `chrome_selected_tab_readback_timeout`.
+- No capture was started and accepted/blocked recording counts were not changed. The old background/native capture engines were not substituted, preserving the explicit Chrome Plugin surface boundary. The exact blocker is recorded in `chromePluginRecordingCapabilityFresh20260818` and `freshCapabilityReadbacks20260818`.
+
+Exact blocker / next action / restart point: restore the Chrome Plugin backend's public `visibility` capability and selected-tab readback, then start one bounded recording against the same Heavy tab and verify the media. Until then, the current accepted counts remain `20` all engines / `9` strict Chrome Extension / `11` native-window-or-display; do not call the new method available based on static code alone.
+
+## 2026-08-18 Goal continuation: focused non-OpenAI verification
+
+- Fitting persistence runtime `7/7`, fitting resume `9/9`, Lightchain persistence compaction `3/3`, and Gallery download boundary `2/2` passed. The quota test retained the stable diagnostic `LOCAL_WORKSPACE_QUOTA_EXCEEDED`; this confirms fail-closed local behavior, not live authenticated production persistence.
+- No source change was needed in this continuation; verification and browser evidence were the changes. The Goal remains active because authenticated Lightchain parity, Supabase runtime proof, Zeabur source association, production release artifacts, and fresh recording capability remain blocked.
