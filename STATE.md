@@ -1699,3 +1699,12 @@ Exact blocker / next action / restart point: production Supabase migration/funct
 - Evidence hashes: CURRENT-TURN `60847d3a36a61fa90708b498cbc9339d8844d15c077523325f6b4fc5690bca32`; Security Review Packet `77af4ff7dd132d7f75b26270d5d8faf3f496fcee027a4f2c143d51e55937a791`.
 
 Exact blocker / next action / restart point: obtain a fresh approved authenticated Chrome/production authority before launch-ops or authenticated Lightchain QA; do not fabricate or copy stale auth state.
+
+## 2026-08-18 Goal continuation: operator and scale readback
+
+- H601 legal-safety static guard passed, but H601 operator readiness remains open because final Terms/Privacy/policy locators and operator decision are absent.
+- H602 operator readiness remains open: production quota enforcement is false, checkout is true, verified no-real-charge proof and transaction/entitlement readback are missing, and no final checkout/public-release decision is attached. No billing or purchase action was performed.
+- G633 remains blocked by missing baseline proof. G618 was left `PENDING_CONFIRMATION` after its local 1200-image/600-canvas performance fixture timed out waiting for a download event; no external mutation was performed.
+- Evidence hashes: CURRENT-TURN `906c1d83593f8c8c088d0ee47fe9560f03959fc510f4e0f4cffaba2c39e93e20`; Security Review Packet `3cc02dc996698f58a33ce6130e3605c9a2a5e7677c1a6f8431d921efab8ee657`.
+
+Exact blocker / next action / restart point: obtain the required human policy/readback artifacts and a fresh authenticated production authority; do not perform billing, checkout, purchase, or stale-auth replay.
