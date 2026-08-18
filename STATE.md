@@ -1765,3 +1765,11 @@ Exact blocker / next action / restart point: reauthenticate Supabase, then captu
 - Evidence hashes after this readback: CURRENT-TURN `a52615eeb6b2b78b78108ccb8f46bcc90892b87e8089774c4f00e26d4a882b07`; Security Review Packet `e669aaea27feb7a8e7e8cd5fd3354839171db15112217f8cc77fedc43b9d3129`.
 
 Exact blocker / next action / restart point: obtain a live recorder-extension arm receipt or approved extension reload path, then repeat one bounded Chrome recording and the background-reference DOM readback. Keep OpenAI API, generation, retry, billing, Runway, and fallback capture engines excluded.
+
+## 2026-08-18 Goal continuation: release gate after evidence commit
+
+- Re-ran `npm run verify:release-gate --silent` after committing the evidence STATE update. It failed closed with `gitDirty=false`; the earlier bookkeeping blocker is cleared.
+- Remaining gate failures are production/readback and release-readiness gaps: production monitor, launch operations, production mass-market and Lightchain order previews, G610/G603/G605/G608/G618/G633, H601/H602, generation scorecard, and the G633/H602 readiness commands. No external mutation was performed.
+- Final evidence hashes for this continuation: CURRENT-TURN `250eff0bdd39f0b575b118f2dab88ef1c405f292ea31c80b649b5da29ff7d1f8`; Security Review Packet `ce9d23bfd96186f02299856d490d58813e51f27e459ff81ab2638eeffeadf5c1`.
+
+Exact blocker / next action / restart point: keep the release fail-closed; resolve Supabase reauthentication, immutable Zeabur source association, Chrome recorder arm/visibility, production failed-job root cause, and missing release artifacts through their owning authorities before any deploy or provider action.
