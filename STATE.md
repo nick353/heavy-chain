@@ -1716,3 +1716,12 @@ Exact blocker / next action / restart point: obtain the required human policy/re
 - Updated evidence hashes: CURRENT-TURN `a31cc211d511ce247fbbf643cc1226ddc9ba4f15a32618fd9eb12abdb9de37c9`; Security Review Packet `425e64d3d2bb1d2d4dc71e2705d37e4f011ca406cf2a3e37ed03816556c067af`.
 
 Exact blocker / next action / restart point: H602 remains fail-closed. Obtain the required operator decision and approved production transaction/entitlement evidence through the authorized billing lane; do not enter Apple credentials, perform checkout/purchase, or alter billing settings.
+
+## 2026-08-18 Goal continuation: G618 scale readback and SVG input boundary
+
+- `npm run verify:g618-scale-ops --silent` now passes the local 1200-image/600-canvas fixture, including valid PNG export and cleanup. The prior download timeout is resolved locally.
+- The same verifier remains fail-closed at the read-only production monitor: 42 generation jobs in the 96-hour window, 40 completed and 2 failed (`failureRate=0.047619...`), with zero stale active jobs and zero Storage signed-URL errors. Exact blocker: `recent_generation_jobs_failed`; warnings include two failed Edge Function runs, two failed usage events, and the UI probe being skipped.
+- Added a local pre-reservation guard in `supabase/functions/edit-image/index.ts` so unsupported data-URI MIME types such as SVG are rejected before usage reservation or `generation_jobs` insertion. Updated the partial-edit verifier and regression coverage. Focused contract passed, Canvas partial-edit tests passed `15/15`, build passed, lint passed, and security audit passed. This fix is local and not deployed.
+- Updated evidence hashes: CURRENT-TURN `56a26a82fd1b2b0027c341b9358bdea05cfa29651b8ca80f0685ec26b43828e7`; Security Review Packet `0f6add7dae7e4db9e6e8f3626d7e91ea1680013d976b7cbcc5d49b5d9806af69`.
+
+Exact blocker / next action / restart point: production monitor remains blocked by the existing failed jobs and the source fix has not been deployed. Keep generation excluded; obtain approved production source/deploy authority before applying the guard, then perform only a fresh read-only monitor/readback.

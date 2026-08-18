@@ -20,6 +20,7 @@ const MAX_TOTAL_INPUT_IMAGE_URL_LENGTH = 48_000_000;
 const LIGHTCHAIN_MATERIAL_FEATURE_IDS = new Set(['fabric-image', 'printing-image']);
 const LIGHTCHAIN_MATERIAL_EDIT_MODELS = new Set(['gpt-image-1']);
 const IMAGE_EDIT_QUALITIES = new Set(['low', 'medium', 'high', 'auto']);
+const SUPPORTED_EDIT_INPUT_MIME_TYPES = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
 function resolveLightchainImageEditOptions({
   featureId,
@@ -71,7 +72,11 @@ function normalizeEditImageInputs(imageUrl: unknown, imageUrls: unknown) {
     throw new Error('Edit input images are too large');
   }
   for (const [index, value] of normalized.entries()) {
-    const isDataImage = /^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/i.test(value);
+    const dataImageMatch = value.match(/^data:(image\/[a-z0-9.+-]+);base64,[A-Za-z0-9+/=]+$/i);
+    if (dataImageMatch && !SUPPORTED_EDIT_INPUT_MIME_TYPES.has(dataImageMatch[1].toLowerCase())) {
+      throw new Error(`Unsupported edit input image type:${index}:${dataImageMatch[1].toLowerCase()}`);
+    }
+    const isDataImage = Boolean(dataImageMatch);
     const isHttpsImage = /^https:\/\/[^\s]+$/i.test(value);
     if (!isDataImage && !isHttpsImage) {
       throw new Error(`Invalid edit input image:${index}`);

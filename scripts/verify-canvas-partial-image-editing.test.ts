@@ -83,6 +83,20 @@ test('SVG edit references are rasterized before provider submission and unsuppor
   assert.match(openAi, /\['image\/jpeg', 'image\/jpg', 'image\/png', 'image\/webp'\]/);
 });
 
+test('edit-image rejects unsupported data URI MIME before reserving usage or creating a job', async () => {
+  const edge = await read('../supabase/functions/edit-image/index.ts');
+  const validationStart = edge.indexOf('function normalizeEditImageInputs');
+  const validationEnd = edge.indexOf('\n\nfunction pngDataUrlInfo');
+  assert.ok(validationStart >= 0 && validationEnd > validationStart);
+  const validation = edge.slice(validationStart, validationEnd);
+  assert.match(validation, /SUPPORTED_EDIT_INPUT_MIME_TYPES/);
+  assert.match(validation, /dataImageMatch/);
+  assert.match(validation, /Unsupported edit input image type/);
+  assert.ok(validation.indexOf('Unsupported edit input image type') < validation.indexOf('return normalized'));
+  assert.ok(edge.indexOf('const editInputImages = normalizeEditImageInputs') < edge.indexOf('usageReservation = await reserveBrandUsage'));
+  assert.ok(edge.indexOf('const editInputImages = normalizeEditImageInputs') < edge.indexOf(".from('generation_jobs')"));
+});
+
 test('partial edit submit makes one four-candidate batch and refuses incomplete persistence', async () => {
   const source = await read('../src/pages/CanvasEditorPage.tsx');
   const handlerStart = source.indexOf('const handlePartialEditSubmit');

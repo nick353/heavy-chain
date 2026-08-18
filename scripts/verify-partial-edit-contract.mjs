@@ -25,10 +25,11 @@ const checks = [
   ['page marker counts partial edit results', /partialEditResultCount/.test(sources.page) && /heavyCanvasPartialEditState/.test(sources.page)],
   ['client sends mask payload', /maskDataUrl: options\?\.maskDataUrl/.test(sources.api)],
   ['helper accepts remote HTTPS input', /parsedUrl\.protocol !== 'https:'/.test(sources.helper) && /responseBlob\.arrayBuffer/.test(sources.helper)],
+  ['edge rejects unsupported data URI input before reservation', /SUPPORTED_EDIT_INPUT_MIME_TYPES/.test(sources.function) && /Unsupported edit input image type/.test(sources.function) && /dataImageMatch/.test(sources.function)],
   ['helper appends multipart mask', /formData\.append\('mask'/.test(sources.helper)],
   ['edge function persists inpaint provenance', /feature_type: hasMask \? 'inpaint'/.test(sources.function) && /backendProvider: 'supabase-edge-function'/.test(sources.function)],
   ['edge function returns mask result readback', /maskApplied: hasMask/.test(sources.function) && /parentObjectId: safeParentObjectId/.test(sources.function)],
-  ['partial edit requests one four-candidate backend batch', /const requestedCandidateCount = hasMask \? 4 : 1/.test(sources.function) && /count: requestedCandidateCount/.test(sources.function) && /result\.requestedCandidateCount === 4/.test(sources.page)],
+  ['partial edit requests one four-candidate backend batch when not on Lightchain material route', /const requestedCandidateCount = hasMask && !imageEditOptions\.isLightchainMaterialRoute \? 4 : 1/.test(sources.function) && /count: requestedCandidateCount/.test(sources.function) && /result\.requestedCandidateCount === 4/.test(sources.page)],
   ['edit-image is deployable by allowlist', /  edit-image\n/.test(sources.deploy)],
 ];
 
