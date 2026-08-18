@@ -1801,3 +1801,11 @@ Exact blocker / next action / restart point: obtain ownership/reload authority f
 - Evidence hashes after this continuation: CURRENT-TURN `61d50a81cf73af377a7c8eaed28f8df1dec6c0156afc74005f5ccf33d3ce11a5`; Security Review Packet `6a2f9f51621d2a323e2b99763635ce41448f9dc8f4ebb2efe4d8ffe80a5fa723`; recording ledger `ad91f48784ae4e9519206ebbcfbba2023e835757b7a9e5f11de96a1ad373e85c`.
 
 Exact blocker / next action / restart point: the intended new Chrome Extension arm path still does not deliver a live receipt; obtain the recorder Extension reload/installation or arm-tab ownership authority, then retry one bounded recording and the fitting-background History/save readback. Preserve the 20 accepted-recording count and keep all provider effects excluded.
+
+## 2026-08-18 Goal continuation: reopened Heavy target and bounded recorder retry
+
+- The Heavy Chain target was reopened in the same Chrome Plugin/Profile 2 session as tab `1980902753` at `https://heavy-chain.zeabur.app/fitting#fitting-history`; URL/title readback succeeded. DOM and screenshot readback both failed closed on a CDP timeout, so visual route state remains `PENDING_CONFIRMATION`.
+- The new background recorder was retried once against that reopened target using arm tab `1980902754`. It stopped before Extension start with exact blocker `chrome_debugger_arm_not_received`, frame count `0`, and no media. This attempt is recorded as blocked and excluded; accepted count remains `20` (`9` strict Chrome Extension, `11` native-window/display).
+- Evidence hashes after this retry: CURRENT-TURN `f701f8c6b16c4d85a99f52dc07dcea20f3803b74d0915d2a5cd2e82d5d03030f`; Security Review Packet `64bc60a0d6e6cbe36de42436cba849800f93b1a9809a9d0819b13f492d2379de`; recording ledger `615edfdae54d271c2852ba7a03ac9bf8d6c956a6d680a429af5b25bf551e2e36`.
+
+Exact blocker / next action / restart point: restore the recorder Extension arm/reload capability and stable Chrome Plugin CDP readback; then perform the remaining fitting-background History/save verification. Do not add another unchanged recording attempt or switch capture engines.
