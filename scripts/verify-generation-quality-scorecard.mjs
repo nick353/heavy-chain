@@ -60,10 +60,34 @@ if (!scorecardPath) {
 }
 
 const absolutePath = path.resolve(process.cwd(), String(scorecardPath));
-const scorecard = JSON.parse(await fs.readFile(absolutePath, 'utf8'));
+let scorecard;
+try {
+  scorecard = JSON.parse(await fs.readFile(absolutePath, 'utf8'));
+} catch (error) {
+  const issue = artifactReadIssue('scorecard', absolutePath, error);
+  console.log(JSON.stringify({
+    schema: 'heavy-chain.generation-quality-scorecard-verification.v1',
+    verifiedAt: new Date().toISOString(),
+    scorecardPath: path.relative(process.cwd(), absolutePath),
+    readbackPath: readbackPath ? path.relative(process.cwd(), path.resolve(process.cwd(), String(readbackPath))) : null,
+    rows: 0,
+    summary: { pass: 0, needsPolish: 0, fail: 0 },
+    passed: false,
+    issues: [issue],
+  }, null, 2));
+  process.exit(1);
+}
 const rows = normalizeRows(scorecard);
 const issues = [];
-const readback = readbackPath ? JSON.parse(await fs.readFile(path.resolve(process.cwd(), String(readbackPath)), 'utf8')) : null;
+let readback = null;
+if (readbackPath) {
+  const absoluteReadbackPath = path.resolve(process.cwd(), String(readbackPath));
+  try {
+    readback = JSON.parse(await fs.readFile(absoluteReadbackPath, 'utf8'));
+  } catch (error) {
+    issues.push(artifactReadIssue('readback', absoluteReadbackPath, error));
+  }
+}
 
 if (!rows.length) {
   issues.push('scorecard_rows_missing');
@@ -286,6 +310,12 @@ function parseArgs(argv) {
 function parseExpectedFeatures(value) {
   if (!value || value === true) return [];
   return String(value).split(',').map((item) => item.trim()).filter(Boolean);
+}
+
+function artifactReadIssue(kind, absolutePath, error) {
+  const relativePath = path.relative(process.cwd(), absolutePath);
+  const code = error?.code === 'ENOENT' ? 'missing' : 'invalid';
+  return `${kind}_artifact_${code}:${relativePath}`;
 }
 
 function runDefaultScorecards() {
