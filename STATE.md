@@ -1265,3 +1265,11 @@ Exact blocker / next action / restart point: release readback refresh, Lightchai
 - No old cleanup/rate-limit proof was rewritten because recreating those artifacts would require external cleanup/rate-limit effects outside the current authorization boundary.
 
 Exact blocker / next action / restart point: obtain a bounded approved live run with source metadata, then rerun the read-only collector and validate non-empty linked jobs/images/usage/runs/storage. Do not claim the empty artifact as release proof.
+
+## 2026-08-18 Goal continuation: Heavy replacement tab Gallery loading blocker
+
+- The original Heavy tab was absent from the latest Chrome Plugin open-tabs list, so a replacement tab `1980902659` was opened in the same Profile 2/session for read-only inspection.
+- Heavy Chain shell, History/Jobs/category/Account links, Gallery search/sort controls, and `再読み込み` were visible, but Gallery remained `ギャラリーを読み込み中` after 7.5 seconds, one read-only reload, and another 5 seconds. Console warning/error logs were empty.
+- This is classified `PENDING_CONFIRMATION` and is not counted as authenticated Gallery/image-count proof. The tab is marked for handoff. No generation, retry, billing, upload, save, delete, auth mutation, migration apply, deploy, or provider action occurred.
+
+Exact blocker / next action / restart point: obtain a settled same-session Heavy readback or the missing backend/session authority; resume from tab `1980902659` without substituting the historical Gallery evidence for current state.
