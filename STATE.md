@@ -1756,3 +1756,12 @@ Exact blocker / next action / restart point: immutable source/commit association
 - No files were edited by the external roles, and no application API, generation, retry, billing, Runway, deploy, migration, purchase, or provider action was performed.
 
 Exact blocker / next action / restart point: reauthenticate Supabase, then capture successful read-only RLS/Auth/SECURITY DEFINER/function evidence before requesting another review.
+
+## 2026-08-18 Goal continuation: new Chrome recording arm probe and fitting route readback
+
+- Retried the new background Chrome Extension recorder on the same Chrome Plugin/Profile 2 Lightchain tab `1980902656`. Three bounded attempts reached the controller but stopped before capture with the exact blocker `chrome_debugger_arm_not_received`; no media was created and the accepted recording count remains unchanged at 20 total / 9 strict Chrome Extension / 11 native-window-or-display.
+- On `/lightchain/fitting-clothing-reference`, exercised the safe task tabs `シングルタスク` / `マルチタスク` and input tabs `説明生成` / `参考画像` / `モデルのセット写真`, then restored the defaults. The rights checkbox remained unchecked, the AI generation button remained disabled, and no literal `権限がありません` control was rendered on this route.
+- A navigation/readback attempt for `/lightchain/fitting-background-reference` hit a CDP Runtime.evaluate timeout followed by a kernel reset; final DOM/URL and save persistence remain `PENDING_CONFIRMATION`. No generation, upload, save, delete, download, auth, permission, billing, or provider action occurred.
+- Evidence hashes after this readback: CURRENT-TURN `a52615eeb6b2b78b78108ccb8f46bcc90892b87e8089774c4f00e26d4a882b07`; Security Review Packet `e669aaea27feb7a8e7e8cd5fd3354839171db15112217f8cc77fedc43b9d3129`.
+
+Exact blocker / next action / restart point: obtain a live recorder-extension arm receipt or approved extension reload path, then repeat one bounded Chrome recording and the background-reference DOM readback. Keep OpenAI API, generation, retry, billing, Runway, and fallback capture engines excluded.
