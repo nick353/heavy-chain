@@ -1001,7 +1001,7 @@ export function FittingPage() {
       });
     } catch (error) {
       setIsGenerating(false);
-      setErrorMessage(getErrorMessage(error instanceof Error ? error.message : 'モデルセット写真を生成できませんでした。'));
+      setErrorMessage(getErrorMessage(error instanceof Error ? error : 'モデルセット写真を生成できませんでした。'));
       return;
     }
 
@@ -1010,7 +1010,7 @@ export function FittingPage() {
     try {
       assertCompletedModelMatrixResult(response, 'model_matrix_result');
     } catch (error) {
-      setErrorMessage(getErrorMessage(error instanceof Error ? error.message : 'モデルセット写真を生成できませんでした。'));
+      setErrorMessage(getErrorMessage(error instanceof Error ? error : 'モデルセット写真を生成できませんでした。'));
       return;
     }
     const matrix = response.matrix;

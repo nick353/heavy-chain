@@ -60,6 +60,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   LOCAL_WORKSPACE_REMOTE_PATH_MISSING: '生成結果に永続Storage pathがないため、保存確認できませんでした。結果を昇格せず、配備済みEdge Functionのreadbackを確認してください。',
   LOCAL_WORKSPACE_SAVE_READBACK_FAILED: '保存後の再読込確認に失敗しました。ブラウザ保存領域の状態を確認してください。',
   LOCAL_WORKSPACE_DELETE_READBACK_FAILED: '削除後の再読込確認に失敗しました。状態を再確認するまで同じ削除を繰り返しません。',
+  PROVIDER_MODEL_RESULT_STORAGE_PATH_MISSING: 'AIフィッティング結果の永続Storage pathを確認できないため、保存・履歴化しませんでした。配備済みmodel-matrixのStorage readbackを確認してください。',
   
   // Feature-specific errors
   COLORIZE_NEEDS_IMAGE: '色変更には元画像が必要です。',
@@ -217,6 +218,7 @@ const KNOWN_MESSAGE_MAP: Array<[RegExp, string]> = [
   [/LOCAL_WORKSPACE_REMOTE_PATH_MISSING/i, ERROR_MESSAGES.LOCAL_WORKSPACE_REMOTE_PATH_MISSING],
   [/LOCAL_WORKSPACE_SAVE_READBACK_FAILED/i, ERROR_MESSAGES.LOCAL_WORKSPACE_SAVE_READBACK_FAILED],
   [/LOCAL_WORKSPACE_DELETE_READBACK_FAILED/i, ERROR_MESSAGES.LOCAL_WORKSPACE_DELETE_READBACK_FAILED],
+  [/provider_model_result_storage_path_missing/i, ERROR_MESSAGES.PROVIDER_MODEL_RESULT_STORAGE_PATH_MISSING],
   [/email rate limit exceeded/i, ERROR_MESSAGES.AUTH_EMAIL_RATE_LIMIT],
   [/brand usage quota exceeded/i, ERROR_MESSAGES.BRAND_USAGE_QUOTA_EXCEEDED],
   [/user usage rate limit exceeded/i, ERROR_MESSAGES.USER_USAGE_RATE_LIMIT],

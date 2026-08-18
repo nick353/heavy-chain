@@ -10,6 +10,7 @@ const cases = [
   ['LOCAL_WORKSPACE_REMOTE_PATH_MISSING', '永続Storage pathがないため'],
   ['LOCAL_WORKSPACE_QUOTA_EXCEEDED', '保存容量が不足'],
   [{ code: 'LOCAL_WORKSPACE_SAVE_READBACK_FAILED', message: 'Local workspace artifact save could not be verified.' }, '再読込確認に失敗'],
+  ['provider_model_result_storage_path_missing', '永続Storage pathを確認できないため'],
 ];
 const failures = [];
 for (const [input, expected] of cases) {
