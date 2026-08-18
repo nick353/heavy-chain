@@ -1642,3 +1642,11 @@ Exact blocker / next action / restart point: restore the Chrome Plugin backend's
 - Evidence hashes: CURRENT-TURN `2b1c8c449c25be06b5252b37232212c0751cf7b0237e79363340eb862e94cad8`; Security Review Packet `9ef0f2e0efe241b15a444cb817afb60d6cabb7a8ff1218f7243807fdfa582153`.
 
 Exact blocker / next action / restart point: restore the release environment through the approved secret-safe channel and restore the Chrome backend `visibility` capability; then rerun release doctor and one bounded Chrome recording. Do not print or invent the missing values, and do not deploy.
+
+## 2026-08-18 Goal continuation: fresh local verification and evidence reconciliation
+
+- Re-ran the current worktree checks without external side effects: production build passed with 2,599 modules transformed; typecheck passed; security audit passed without printing secrets; API-less generation readiness passed with 13/13 checks and 10 mock artifacts; Supabase static verification passed with retired provider runtime paths absent; provider persistence readback passed 12/12; Lightchain parity routes passed 6/6; and the Lightchain provider adapter suite passed 16/16.
+- Updated the CURRENT-TURN and Security Review Packet to include this readback. New SHA-256 values are CURRENT-TURN `7c072397215143151ac77d2d13aa74ba62d35cbb909155f1ad76db88617cf38e` and Packet `39cdc30b48a19600478a395680218ef8eba0dd0899b8be8bf30ae148a2e9d8e8`.
+- The evidence artifact also contains entries labeled `2026-08-19`; those entries were reconciled as artifact-supported but were not re-executed in this continuation, so any external-runtime claim they contain remains `PENDING_CONFIRMATION` unless independently read back.
+
+Exact blocker / next action / restart point: local non-OpenAI verification is green, but authenticated Supabase proof, immutable Zeabur source association, release environment, strict Chrome Plugin visibility/selected-tab capability, external reviewer transport, and Lightchain authenticated parity remain open. Resume the corresponding fresh readback only after the relevant authority changes; do not replay generation, billing, or deploy.
