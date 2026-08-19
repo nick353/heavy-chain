@@ -2,6 +2,13 @@
 
 Updated: 2026-08-20
 
+2026-08-20 beta readiness gate:
+- H601 legal-safety static guard: `ok=true`; internal UX consistency: `ok=true`.
+- G619 real-beta readiness: `acceptance=not_claimed`, `sessions=0/3`, required workflow evidence absent.
+- H601 operator readiness: `operator_final_h601_decision_missing`; Terms/Privacy, retention, upload-rights, brand/reference, likeness, claims, commercial wording, and review artifacts remain human-owned.
+- Launch operations: `auth_state_missing` for the required local auth artifact.
+- No synthetic beta sessions, legal decisions, credentials, OTP/CAPTCHA, public publishing, or payment actions were created or attempted.
+
 2026-08-20 latest local parity regression recovery:
 - Updated `scripts/verify-printing-composition-interactions.test.ts` to assert the current Lightchain two-column parity shell and explicitly reject the removed 112px Heavy-only rail.
 - Verification: printing foundation `244/244`, provider persistence `12/12`, AI fitting input contract `16/16`, non-video workflows `featureCount=31 / failed=[]`, typecheck, and `git diff --check` all passed.

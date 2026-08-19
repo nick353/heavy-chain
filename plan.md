@@ -63,6 +63,8 @@
 
 ## 現在の状態（2026-08-20）
 
+- 2026-08-20、β readiness static checksを再実行した。H601 legal-safety guardは`ok=true`、internal UXは`ok=true`。しかしG619実β受入れは`acceptance=not_claimed`、実セッション`0/3`、必要workflow証跡なしで未完了。H601 operator readinessも`operator_final_h601_decision_missing`とTerms／Privacy／保持削除／upload rights／brand・likeness／claims／commercial wording／reviewの未添付で未完了。launch-opsは`auth_state_missing`で未完了。これらは人手承認・実セッション・認証artifactが必要で、Codexは偽の証跡を作成しない。
+
 - 2026-08-20、現行Lightchain shellに合わせてprinting parity回帰テストの古い112px Heavy-onlyレール期待値を修正した。現行2列の`lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]`と旧レール不在を検証し、printing foundation `244/244`、provider persistence `12/12`、AI fitting input contract `16/16`、非動画31機能 `featureCount=31 / failed=[]`、typecheck、diff checkをPASSした。commit `67d5df8`。これはlocal implementation proofであり、production provider生成・保存再利用のproofではない。
 
 - 2026-08-20、source commit `797afd54f133068cdd1c4b19845116dfd8633952` のZeabur deployment `6a85fb012a82f8973377761f`が`RUNNING`になった。デプロイ後のfresh official Chrome Plugin／Profile 2 target-scoped readbackでHeavy `/lightchain`を確認し、7件の非動画ランチャー、4カテゴリ、`video_text_present=false`、`video_route_present=false`、`login_text_present=false`を同一runで確認した。作成タブは`cleanup ok=true`で閉じた。証跡は `work/heavy-production-video-hidden-readback-20260820-r1.md`。これは非動画UI反映と認証済み画面の証明であり、provider生成・保存・再利用・β受入れの完了証明ではない。
