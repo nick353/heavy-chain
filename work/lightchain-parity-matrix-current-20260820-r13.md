@@ -1,8 +1,24 @@
-# Lightchain / Heavy parity matrix — current rev6 checkpoint r13
+# Lightchain / Heavy parity matrix — current rev6 checkpoint r13 with r14 overlay
 
 更新日: 2026-08-20
 
-## 1. current Lightchain source-of-truth readback
+## 1. latest Lightchain source-of-truth overlay r14
+
+- Fresh official Chrome Plugin / Profile 2 target-scoped homepage readback:
+  browser-client `-ada4-4997-8241-a6447bcb922e`, task tab `1980903824`.
+- URL/title: `https://jp.linkaigc.com/` / `Lightchain AI`.
+- Accessibility snapshot: four category tabs (`おすすめ Hot`, `企画デザインツール`, `AIフィッティング`, `グラフィックツール`).
+- Default recommended panel: 8 visible cards, 7 non-video and 1 video (`動画ワークステーション`).
+- Case-share tabs: 6 visible tabs; the default panel includes one video case.
+- Cleanup: `cleanup_verified=true`, closed only task-owned tab `1980903824`, no close failures.
+- No category switching or business/external effect occurred.
+- Full category-panel routes and per-feature behavior remain `PENDING_CONFIRMATION`.
+- Detail artifact: `work/lightchain-parity-baseline-20260820-r14.md`.
+
+The r13 homepage readback below remains historical within this file for
+provenance; the r14 overlay is the current homepage baseline.
+
+## 2. prior current Lightchain source-of-truth readback (r13)
 
 - surface: official Chrome Plugin / Profile 2 / `signed_chrome_extension_profile2`
 - selector: `backend=chrome_plugin`, revision `6`
@@ -28,13 +44,13 @@ The current rev6 priority-route evidence remains:
 
 Source artifact: `work/lightchain-profile2-current-parity-readback-20260820-r4.md`.
 
-## 2. card-ledger provenance
+## 3. card-ledger provenance
 
 The prior fresh card ledger at `/Users/nichikatanaka/Documents/Codex/2026-08-17/new-chat/work/lightchain-profile2-non-video-card-ledger-20260819T082439.json` recorded 26 non-video card occurrences, 2 excluded video cards, and 19 distinct routes under selector revision 30. It is retained as a historical reference only. It is not silently promoted to current revision-6 proof.
 
 The current revision-6 full category-card enumeration and complete accessibility snapshot are `PENDING_CONFIRMATION` because the target-scoped read-only run observed the homepage category controls but did not mutate category selection or claim/focus a foreground tab.
 
-## 3. 31 non-video feature contract ledger
+## 4. 31 non-video feature contract ledger
 
 All rows below have current Heavy local route/contract coverage from the latest `featureCount=31 / failed=[]` verifier. A local contract does not prove Lightchain live behavior or Heavy production business completion; those layers remain explicitly separate.
 
@@ -77,7 +93,7 @@ Excluded rows:
 - `video-workstation`
 - `video-detail`
 
-## 4. behavioral parity dimensions
+## 5. behavioral parity dimensions
 
 | dimension | current Lightchain evidence | Heavy evidence | status |
 | --- | --- | --- | --- |
@@ -91,7 +107,7 @@ Excluded rows:
 | performance | current target readback transport/hydration only | local desktop 228/228 | PENDING_CONFIRMATION for production parity |
 | video | visible in Lightchain baseline, explicitly excluded from Heavy scope | Heavy video provider fail-closed and hidden from non-video launcher | verified scope exclusion |
 
-## 5. current Heavy gate
+## 6. current Heavy gate
 
 - Heavy `/tools/fabric` semantic hydration: verified in `work/heavy-chain-semantic-hydration-readback-20260820-r8.md`.
 - Local non-video and desktop contracts: verified in `work/heavy-chain-local-acceptance-r4-20260820.md`.
