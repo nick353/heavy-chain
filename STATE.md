@@ -2,6 +2,11 @@
 
 Updated: 2026-08-20
 
+2026-08-20 latest Chrome source-thread handoff:
+- Shared Chrome Plugin/Profile 2 transport and target-scoped readback are reported restored. The reported current Heavy stop is `heavy_target_workspace_authentication_not_ready`: the workspace is still at preparation/authentication/brand-setting confirmation and textile assets are not visible.
+- Do not repeat Chrome close/reopen, selected(), about:blank, claim, focus, or foreground lease recovery. After the user completes Heavy authentication/workspace preparation, use one new official Profile 2 browser-client and one target-scoped `/tools/fabric` readback.
+- Artifact reference: `work/heavy-chain-target-scoped-canary-20260820-r2.md`. This is an authentication/readiness stop, not a provider-generation or persistence proof.
+
 2026-08-20 beta readiness gate:
 - H601 legal-safety static guard: `ok=true`; internal UX consistency: `ok=true`.
 - G619 real-beta readiness: `acceptance=not_claimed`, `sessions=0/3`, required workflow evidence absent.

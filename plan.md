@@ -63,6 +63,8 @@
 
 ## 現在の状態（2026-08-20）
 
+- Chrome Plugin/Profile 2の共有スレッドから、transport／target-scoped readback／cleanupは復旧済みで、現行の作業停止点は`heavy_target_workspace_authentication_not_ready`（Heavy画面がworkspace準備・認証／ブランド設定確認で停止）との報告を受領した。selected／about:blank／claim／focus／foreground leaseの復旧やclose/reopenは再実行しない。ユーザーのHeavy認証・workspace準備完了後、新規Profile 2 browser-clientで`openTabs()`→正確な`/tools/fabric` descriptor→target-scoped readbackを1回行う。共有証跡 `work/heavy-chain-target-scoped-canary-20260820-r2.md` はこの停止点の参照であり、provider生成・保存・再利用の証明ではない。
+
 - 2026-08-20、β readiness static checksを再実行した。H601 legal-safety guardは`ok=true`、internal UXは`ok=true`。しかしG619実β受入れは`acceptance=not_claimed`、実セッション`0/3`、必要workflow証跡なしで未完了。H601 operator readinessも`operator_final_h601_decision_missing`とTerms／Privacy／保持削除／upload rights／brand・likeness／claims／commercial wording／reviewの未添付で未完了。launch-opsは`auth_state_missing`で未完了。これらは人手承認・実セッション・認証artifactが必要で、Codexは偽の証跡を作成しない。
 
 - 2026-08-20、現行Lightchain shellに合わせてprinting parity回帰テストの古い112px Heavy-onlyレール期待値を修正した。現行2列の`lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]`と旧レール不在を検証し、printing foundation `244/244`、provider persistence `12/12`、AI fitting input contract `16/16`、非動画31機能 `featureCount=31 / failed=[]`、typecheck、diff checkをPASSした。commit `67d5df8`。これはlocal implementation proofであり、production provider生成・保存再利用のproofではない。

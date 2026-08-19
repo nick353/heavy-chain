@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 58,
+  "checkpoint_seq": 59,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -96,6 +96,7 @@
     ,"Source commit 797afd5 was deployed as Zeabur deployment 6a85fb012a82f8973377761f; fresh Profile 2 target-scoped /lightchain readback confirmed the authenticated 7-tool non-video launcher with video and login markers absent, and cleanup passed"
     ,"Printing parity regression was aligned to the current Lightchain two-column shell; printing foundation passed 244/244, provider persistence 12/12, AI fitting input contract 16/16, non-video workflows featureCount=31 with failed=[], typecheck and diff check passed"
     ,"Beta readiness static checks: H601 legal-safety ok=true and internal UX ok=true; G619 acceptance remains not_claimed with 0/3 real sessions, H601 operator decision artifacts missing, and launch-ops auth_state_missing; no synthetic evidence was created"
+    ,"Chrome source-thread handoff recorded: transport and target-scoped lane restored, current Heavy stop reported as heavy_target_workspace_authentication_not_ready; foreground recovery was not repeated"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -180,19 +181,20 @@
     ,"output/playwright/g619-real-beta-evidence/readiness-summary.json: acceptance not_claimed, sessions 0/3, manifest missing/unparseable"
     ,"output/playwright/g779-h601-legal-safety-current-r1/summary.json: H601 static legal-safety guard passed"
     ,"output/playwright/launch-operations-readiness-20260819/summary.json: auth_state_missing"
+    ,"work/heavy-chain-target-scoped-canary-20260820-r2.md: source-thread authentication/workspace-readiness stop with target-scoped transport and cleanup PASS"
   ],
-  "next_action": "Establish a fresh official foreground owner/selected-tab proof, then select one approved product-owned Gallery input and execute the bounded fabric flow through provider result, save, Gallery/Canvas/History/Jobs, and reuse; source-associated beta-unlock UI proof is complete but is not a foreground or provider substitute.",
+  "next_action": "After Heavy Profile 2 authentication/workspace preparation is complete, create one new official Profile 2 browser-client and perform one target-scoped /tools/fabric URL/title/DOM readback; if hydrated, continue with one approved product-owned Gallery input through provider result, save, Gallery/Canvas/History/Jobs, and reuse. Do not repeat foreground recovery or reuse the old binding.",
   "blocker": {
     "category": "external_wait",
-    "exact_blocker": "chrome_selected_tab_readback_invalid",
-    "recovery_condition": "Authentication, Heavy /tools/fabric hydration, fresh Lightchain priority-route readbacks, and the current deployed direct material frame pass in Profile 2. The remaining gate is a fresh foreground owner with selected-tab proof for current category enumeration, approved material selection, and generation; the official extension still advertises no foreground activation capability. Product-owned Gallery selection and rights confirmation are also pending.",
+    "exact_blocker": "heavy_target_workspace_authentication_not_ready",
+    "recovery_condition": "The user completes Heavy Profile 2 login and workspace/brand preparation. Then use a new official Profile 2 browser-client, one openTabs() call, exact Heavy /tools/fabric descriptor, and one target-scoped URL/title/DOM readback. Do not invoke selected(), claim, focus, foreground lease, or close/reopen recovery.",
     "restart_stage": "verify",
-    "next_action": "Establish a fresh official foreground owner/selected-tab proof, then perform the bounded fabric sample with approved product-owned Gallery input and rights gate. Do not use old bindings or switch surfaces.",
-    "evidence": "work/heavy-production-deployment-readback-20260820-r2.md",
-    "operation_exact_blocker": "chrome_selected_tab_readback_invalid",
+    "next_action": "Wait for user-confirmed Heavy authentication/workspace readiness, then perform one fresh target-scoped /tools/fabric readback before any provider or save operation.",
+    "evidence": "work/heavy-chain-target-scoped-canary-20260820-r2.md",
+    "operation_exact_blocker": "chrome_foreground_activation_capability_unavailable",
     "capability_blocker": "chrome_foreground_activation_capability_unavailable",
     "capability_blocker": "chrome_foreground_activation_capability_unavailable",
-    "recorded_at": "2026-08-20T03:08:00+09:00"
+    "recorded_at": "2026-08-20T04:10:00+09:00"
   },
   "same_blocker_count": 1,
   "resume_admission": "eligible_after_recovery_evidence",
