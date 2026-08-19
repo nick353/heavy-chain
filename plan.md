@@ -63,6 +63,8 @@
 
 ## 現在の状態（2026-08-20）
 
+- 2026-08-20、共通Lightchain Workbenchのprovider再試行を改善した。再試行中または失敗時は直前の成功結果を保持し、素材入力が変わった場合だけ入力境界で結果を無効化する。provider coverage 11/11、material 16/16、provider persistence/readback 12/12、workspace handoff 2/2、unified shell 4/4、非動画31機能、typecheck、diff checkをPASSした。これはlocal復旧契約の証明であり、production provider生成・保存再利用の証明ではない。commit `cb46fa5`。
+
 - 2026-08-20、Lightchain本番のfreshカード台帳に合わせ、統合ランチャーの表示契約を修正した。カテゴリ別の非動画カードはおすすめ7／企画デザインツール9／AIフィッティング5／グラフィックツール5（合計26出現）とし、カテゴリ間で重複するデザインワークスペース・AIフィッティング系カードもLightchainと同じ構成にした。動画カードは除外し、`生成対応`／`作業台`／`検証済み`などHeavy内部状態の表示バッジはランチャーから除去した。31機能の内部契約は別カタログとして保持している。これはlocal UI parityの反映であり、production provider生成・保存再利用の証明ではない。
 - この変更の検証は `scripts/verify-lightchain-launcher-parity.test.ts` 3/3、entry routing 5/5、internal UX consistency `ok=true`、全非動画ワークフロー `featureCount=31 / failed=[]`、typecheck、build 2606 modules、diff checkをPASSした。全機能検証の最新サマリーは `output/playwright/lightchain-all-feature-workflows-20260819T192220Z/SUMMARY.json`。未デプロイで、Chrome／録画／AOS／provider／外部効果は行っていない。
 
