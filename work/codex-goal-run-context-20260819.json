@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 50,
+  "checkpoint_seq": 51,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -86,6 +86,8 @@
     ,"Fresh current-Turn rev6 Profile 2 target-scoped Heavy /tools/fabric readback r5 showed the authenticated hydrated Lightchain-shaped fabric workspace; task-owned provisioning cleanup passed and no effectful operation was performed"
     ,"Current source commit 6831f36 was pushed to nick353/heavy-chain main and source-associated deployment 6a85f3012a82f89733777475 reached RUNNING with docker plan"
     ,"Fresh post-deployment Profile 2 target-scoped Heavy /tools/fabric readback r6 showed Lightchain markers and no Heavy-only chrome; HTTP/container 200 and task-owned cleanup passed"
+    ,"Removed the hardcoded legacy plan-lock affordance from integrated non-video beta surfaces; focused permission/material tests, typecheck, build 2606 modules, and diff check passed"
+    ,"Source commit 633ddf7 was pushed and Zeabur deployment 6a85f5bcf1ea67ebf4ea683b reached RUNNING; fresh target-scoped /tools/fabric readback showed legacy permission-lock count 0 and task-owned cleanup passed"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -158,8 +160,9 @@
     ,"Focused persistence/auth/material regressions passed: workspace activity 12/12, provider persistence 12/12, Canvas generation 5/5, Supabase session recovery 3/3, Lightchain material contract 16/16"
     ,"work/heavy-chain-authenticated-target-readback-20260820-r5.md: fresh browser-client -293e-41e2-90d3-fde6bc077e70, same-run hydrated /tools/fabric readback, and cleanup_verified=true"
     ,"work/heavy-production-deployment-readback-20260820-r2.md: deployment 6a85f3012a82f89733777475 at nick353/heavy-chain@6831f36, HTTP/container 200, fresh Profile 2 UI readback, and cleanup_verified=true"
+    ,"work/heavy-production-beta-unlock-readback-20260820-r1.md: deployment 6a85f5bcf1ea67ebf4ea683b at nick353/heavy-chain@633ddf7, fresh Profile 2 target-scoped readback with legacy permission-lock count 0, and cleanup_verified=true"
   ],
-  "next_action": "Establish a fresh official foreground owner/selected-tab proof, then select one approved product-owned Gallery input and execute the bounded fabric flow through provider result, save, Gallery/Canvas/History/Jobs, and reuse; source-associated deployment/UI proof is complete but is not a foreground or provider substitute.",
+  "next_action": "Establish a fresh official foreground owner/selected-tab proof, then select one approved product-owned Gallery input and execute the bounded fabric flow through provider result, save, Gallery/Canvas/History/Jobs, and reuse; source-associated beta-unlock UI proof is complete but is not a foreground or provider substitute.",
   "blocker": {
     "category": "external_wait",
     "exact_blocker": "chrome_selected_tab_readback_invalid",

@@ -2,6 +2,13 @@
 
 Updated: 2026-08-19
 
+2026-08-20 03:31 JST latest source-associated beta-unlock deployment/readback:
+- The legacy hardcoded `権限がありません` plan-lock affordance was removed from the integrated non-video beta surfaces. Actual brand, rights, provider, input, and persistence checks remain in place.
+- Commit `633ddf79faedf81fb304ca194a2f4a623bac1c29` was pushed to `nick353/heavy-chain` `main` and deployed as Zeabur deployment `6a85f5bcf1ea67ebf4ea683b` (`RUNNING`).
+- Fresh official Chrome Plugin/Profile 2 browser-client `-c908-488d-8e01-14b32f702eac` opened a new task-owned readback tab `1980903664` at an allowlisted `/tools/fabric` route. Same-run hydrated DOM readback showed Lightchain-shaped inputs, rights attestation, `AI生成`, and `生成履歴`; legacy permission-lock count was `0`.
+- The new tab was closed through official cleanup with `cleanup_verified=true`. No existing tab navigation, selected/claim/focus, upload, rights mutation, provider generation, save/reuse, recording, AOS, or external effect occurred.
+- Artifact: `work/heavy-production-beta-unlock-readback-20260820-r1.md`.
+
 2026-08-20 03:08 JST latest authenticated target-scoped readback:
 - Fresh official Chrome Plugin/Profile 2 browser-client `-293e-41e2-90d3-fde6bc077e70` used revision 6 and provisioned task-owned Heavy `/tools/fabric` tab `1980903653` because it was absent from the fresh inventory.
 - Same-run readback after `1566ms` hydration showed the Lightchain-shaped `生地イメージ` workspace with model/design and textile inputs, Gallery selectors, aspect ratio, textile variants, rights attestation, `AI生成`, and `生成履歴`. The login/preparation shell was not present.
