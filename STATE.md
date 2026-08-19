@@ -3270,3 +3270,9 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact card names are recorded in `work/lightchain-category-ledger-20260820-r15.md`. Route/href mapping and per-feature live business behavior remain `PENDING_CONFIRMATION`.
 - Only task-owned tab `1980903826` was closed; cleanup passed. Heavy's visible surface must keep the 26 non-video occurrences and exclude both video occurrences.
 - Heavy local launcher parity focused test passed `3/3`: category counts 7/9/5/5, repeated shared cards preserved, video excluded, and internal readiness labels hidden.
+
+## 2026-08-20 Lightchain card route surface readback r16
+
+- Fresh category-panel readback confirmed all visible card ancestors are clickable divs without exposed `href`, `data-route`, `data-tool-id`, `onclick`, or explicit route/action attributes.
+- Exact route mapping is therefore `PENDING_CONFIRMATION`; old revision-30 routes are not promoted to current proof.
+- Artifact: `work/lightchain-card-route-surface-readback-20260820-r16.md`. Target-owned cleanup passed and no card was opened.

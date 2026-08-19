@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 92,
+  "checkpoint_seq": 93,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -116,7 +116,8 @@
     "Fresh official Profile 2 Heavy target-scoped readback r9 showed the workspace hydrate from preparation state to the authenticated Lightchain-shaped fabric workbench without a login click; fabric inputs, Gallery selectors, rights confirmation, AI生成, and 生成履歴 were visible, and task-owned cleanup passed. The Heavy authentication/workspace blocker is cleared for this run; provider generation/save/reuse remains blocked by chrome_foreground_activation_capability_unavailable",
     "Fresh current Lightchain Profile 2 homepage target-scoped readback r14 exposed a full accessibility snapshot with four category tabs, eight recommended cards (seven non-video and one video), and six case-share tabs. Task-owned cleanup passed; category-panel route mapping and per-feature business-flow proof remain PENDING_CONFIRMATION",
     "Fresh current Lightchain Profile 2 target-scoped category-panel readback r15 selected all four exact tabs and enumerated 28 category occurrences: 26 non-video and 2 video. Task-owned cleanup passed; exact route mapping and per-feature business behavior remain PENDING_CONFIRMATION",
-    "Heavy local launcher parity focused test passed 3/3 against the current Lightchain category ledger: counts 7/9/5/5, repeated shared cards preserved, video excluded, and internal readiness labels hidden. This is local UI proof; live business behavior and production provider proof remain open"
+    "Heavy local launcher parity focused test passed 3/3 against the current Lightchain category ledger: counts 7/9/5/5, repeated shared cards preserved, video excluded, and internal readiness labels hidden. This is local UI proof; live business behavior and production provider proof remain open",
+    "Fresh Lightchain category-panel route-surface readback r16 confirmed visible cards are cursor-pointer divs without href/data-route/data-tool-id/onclick; exact route mapping remains PENDING_CONFIRMATION rather than being inferred from historical data"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -234,6 +235,7 @@
     ,"work/lightchain-parity-baseline-20260820-r14.md: fresh Profile 2 Lightchain homepage accessibility snapshot, current category tabs, card names, video exclusion baseline, and cleanup"
     ,"work/lightchain-category-ledger-20260820-r15.md: fresh Profile 2 category-panel card names and counts for all four categories, video exclusion baseline, and cleanup"
     ,"scripts/verify-lightchain-launcher-parity.test.ts: focused launcher parity 3/3 against current non-video category counts and video exclusion"
+    ,"work/lightchain-card-route-surface-readback-20260820-r16.md: fresh category-panel DOM route-surface inspection and cleanup"
   ],
   "next_action": "After the required official foreground capability is advertised, create a fresh Profile 2 owner and run one bounded approved fabric-print provider flow. Verify result, save, Gallery/Canvas/History/Jobs lineage, reuse, and reload before starting AI fitting. Do not reuse the provisioning tab, old binding, or old run.",
   "blocker": {
@@ -293,8 +295,9 @@
     ,"Fresh current Lightchain Profile 2 homepage target-scoped readback r14 exposed a full accessibility snapshot with four category tabs, eight recommended cards (seven non-video and one video), and six case-share tabs; task-owned cleanup passed and category-panel route mapping remains PENDING_CONFIRMATION"
     ,"Fresh current Lightchain Profile 2 target-scoped category-panel readback r15 selected all four exact tabs and enumerated 28 occurrences: 26 non-video and 2 video; task-owned cleanup passed and exact route mapping/per-feature behavior remain PENDING_CONFIRMATION"
     ,"Heavy local launcher parity focused test passed 3/3 against the current Lightchain category ledger: counts 7/9/5/5, repeated shared cards preserved, video excluded, and internal readiness labels hidden"
+    ,"Fresh Lightchain category-panel route-surface readback r16 confirmed visible cards are cursor-pointer divs without href/data-route/data-tool-id/onclick; exact route mapping remains PENDING_CONFIRMATION rather than being inferred from historical data"
     ],
-    "artifact": "work/lightchain-category-ledger-20260820-r15.md",
+    "artifact": "work/lightchain-card-route-surface-readback-20260820-r16.md",
     "recorded_at": "2026-08-20T06:45:00+09:00"
   },
   "exit_check": null,
@@ -1079,6 +1082,15 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T06:45:00+09:00",
       "note": "Heavy local launcher parity focused test passed 3/3 against the current Lightchain category ledger: category counts 7/9/5/5, repeated shared cards preserved, video excluded, and internal readiness labels hidden. This strengthens local UI parity only; live per-card business behavior and production provider generation remain PENDING_CONFIRMATION, with foreground blocker chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 93,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T06:45:00+09:00",
+      "note": "Fresh Lightchain category-panel route-surface readback r16 confirmed visible cards are cursor-pointer divs without href/data-route/data-tool-id/onclick. Exact route mapping remains PENDING_CONFIRMATION and was not inferred from historical revision-30 data. Heavy provider generation remains blocked by chrome_foreground_activation_capability_unavailable."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
