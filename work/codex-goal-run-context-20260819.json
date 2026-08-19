@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 86,
+  "checkpoint_seq": 87,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -110,7 +110,8 @@
     ,"Fresh post-user-report Profile 2 target-scoped readback r5 passed browser handshake, Heavy /tools/fabric URL/title/DOM readback, and task-owned cleanup, but the workspace remained in authentication/brand preparation with no textile assets; exact blocker heavy_target_workspace_authentication_not_ready"
     ,"Aligned Lightchain direct-route shell classification for /creator, /model, /tools/fabric, /designProduction, /asset-center, and /flow/orientedDesign; updated the stale legacy plan-lock parity assertion to the all-employee beta contract. Parity alias/entry routing 8/8, typecheck, and diff check passed"
     ,"Fresh current Lightchain Profile 2 parity readback r4 covered homepage, /tools/fabric, /tools/printing, and /model with URL/title/DOM hydration, current toolbar/input/history markers, and official task-owned cleanup; no business or external effect"
-    ,"Current deployed Heavy semantic hydration proof r8: fresh Profile 2 target-scoped /tools/fabric readback exposed the actual Lightchain-shaped workbench with workbench marker hydrated, loading fallback false, material/fabric/rights/generate/history controls present, and task-owned cleanup passed; the prior authentication/workspace-readiness classification is cleared, while provider foreground capability remains separately blocked"
+    ,"Current deployed Heavy semantic hydration proof r8: fresh Profile 2 target-scoped /tools/fabric readback exposed the actual Lightchain-shaped workbench with workbench marker hydrated, loading fallback false, material/fabric/rights/generate/history controls present, and task-owned cleanup passed; the prior authentication/workspace-readiness classification is cleared, while provider foreground capability remains separately blocked",
+    "Current-source local acceptance recheck r4 passed non-video 31/31, unified desktop 228/228 with no failures or cleanup leftovers, material/UI 16/16, provider coverage 11/11, persistence 12/12, fitting history/resume 10/10, Canvas generation 5/5, Canvas view 3/3, and local upload/resume 6/6; production and beta gates remain separate"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -222,6 +223,7 @@
     ,"Post-cleanup local quality checks passed npm run lint -- --max-warnings=0 and npm run build with 2606 modules; production/provider gates remain separate"
     ,"Fresh post-deployment Profile 2 target-scoped Heavy /tools/fabric readback r7 passed openTabs(), exact URL/title/DOM readback, and task-owned cleanup; the new RUNNING deployment still exposed authentication/brand preparation with no textile assets, so heavy_target_workspace_authentication_not_ready remains"
     ,"work/lightchain-profile2-current-parity-readback-20260820-r4.md: fresh Profile 2 homepage and priority-route parity baseline with hydration and cleanup PASS; Heavy production provider/save/reuse remains separate"
+    ,"work/heavy-chain-local-acceptance-r4-20260820.md: current-source non-video 31/31, unified desktop 228/228 with no failures or cleanup leftovers, focused provider/persistence/fitting/Canvas contracts PASS; production and beta gates remain separate"
   ],
   "next_action": "After the required official foreground capability is advertised, create a fresh Profile 2 owner and run one bounded approved fabric-print provider flow. Verify result, save, Gallery/Canvas/History/Jobs lineage, reuse, and reload before starting AI fitting. Do not reuse the provisioning tab, old binding, or old run.",
   "blocker": {
@@ -235,7 +237,7 @@
     "capability_blocker": "chrome_foreground_activation_capability_unavailable",
     "recorded_at": "2026-08-20T06:24:00+09:00"
   },
-  "same_blocker_count": 1,
+  "same_blocker_count": 2,
   "resume_admission": "eligible_after_recovery_evidence",
   "latest_continuation": {
     "stage": "verify",
@@ -278,8 +280,8 @@
     ,"Local verification r2 passed focused 36/36, non-video featureCount=31 / failed=[], and build 2606 modules; G619, H601 operator, and launch-ops gates remain incomplete"
     ,"Fresh current Lightchain Profile 2 parity readback r4 passed homepage plus /tools/fabric, /tools/printing, and /model URL/title/DOM hydration and cleanup; Heavy business-flow proof remains pending"
     ],
-    "artifact": "work/heavy-chain-semantic-hydration-readback-20260820-r8.md",
-    "recorded_at": "2026-08-20T06:24:00+09:00"
+    "artifact": "work/heavy-chain-local-acceptance-r4-20260820.md",
+    "recorded_at": "2026-08-20T06:31:00+09:00"
   },
   "exit_check": null,
   "history": [
@@ -1012,5 +1014,5 @@
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T06:24:00+09:00"
+  "updated_at": "2026-08-20T06:31:00+09:00"
 }

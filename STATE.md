@@ -3224,3 +3224,11 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Current provider gate remains `chrome_foreground_activation_capability_unavailable`; target-scoped readback does not require selected/focus/claim/foreground lease, but provider generation does.
 - Next action: after the required official foreground capability is advertised and a fresh owner is established, run one bounded approved fabric-print provider flow and verify result, save, Gallery/Canvas/History/Jobs lineage, reuse, and reload. Then run the equivalent AI-fitting flow.
 - Restart point: fresh Profile 2 owner after capability state changes; do not reuse the provisioning tab, old binding, or old run.
+
+## 2026-08-20 local acceptance recheck r4
+
+- Current source passed non-video workflow verification `31/31` with `failed=[]` at `output/playwright/lightchain-all-feature-workflows-20260819T212557Z/SUMMARY.json`.
+- Unified desktop verification passed `228/228` across 1280／1440／1920／2560px, `failed=0`, `globalTimedOut=false`, and `cleanupLeftovers=0` at `output/playwright/unified-desktop-layout-current/SUMMARY.json`.
+- Focused contracts passed material/UI 16/16, provider coverage 11/11, provider persistence/readback 12/12, workspace handoff 2/2, fitting history/resume 10/10, Canvas generation 5/5, Canvas view 3/3, and local upload/resume 6/6.
+- Artifact: `work/heavy-chain-local-acceptance-r4-20260820.md`.
+- These are local proofs only. Production provider generation/save/reuse, Mac／Windows real Chrome, G619 sessions, and H601 operator decisions remain open.
