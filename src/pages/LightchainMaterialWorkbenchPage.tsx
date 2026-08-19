@@ -4362,7 +4362,12 @@ export function LightchainMaterialWorkbenchPage() {
   const activeMaterialInputs = LIGHTCHAIN_MATERIAL_INPUTS[isPrinting ? 'printing-image' : 'fabric-image'];
 
   return (
-    <div className="min-h-screen bg-[#0b1113] text-white">
+    <div
+      data-testid="lightchain-material-workbench"
+      data-workbench-mode={isPrinting ? 'printing' : 'fabric'}
+      data-workbench-state="hydrated"
+      className="min-h-screen bg-[#0b1113] text-white"
+    >
       <div className="hidden">
         <aside
           aria-label="Light Chainグラフィックツール"

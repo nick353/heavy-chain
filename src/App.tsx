@@ -168,7 +168,11 @@ function WorkspaceLoadingFallback({ authRecovery = false }: { authRecovery?: boo
   const copy = getLoadingCopy(location.pathname);
 
   return (
-    <div className="min-h-screen bg-surface-50 px-4 py-8 dark:bg-surface-950">
+    <div
+      data-testid="workspace-loading-fallback"
+      data-loading-state={authRecovery ? 'auth-recovery' : 'lazy-page'}
+      className="min-h-screen bg-surface-50 px-4 py-8 dark:bg-surface-950"
+    >
       <div className="mx-auto flex min-h-[60vh] max-w-5xl flex-col justify-center">
         <div className="max-w-2xl">
           <div className="mb-5 flex items-center gap-3">

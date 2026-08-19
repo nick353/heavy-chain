@@ -100,6 +100,9 @@ test('Gallery keeps a loading shell while auth and brand state are initializing'
 
 test('fabric uses the Light-style parity shell while retaining the real generation path', () => {
   const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+  assert.match(page, /data-testid="lightchain-material-workbench"/);
+  assert.match(page, /data-workbench-mode=\{isPrinting \? 'printing' : 'fabric'\}/);
+  assert.match(page, /data-workbench-state="hydrated"/);
   assert.match(page, /data-testid="lightchain-fabric-parity-view"/);
   assert.match(page, /data-testid="lightchain-fabric-design-input"/);
   assert.match(page, /data-testid="lightchain-fabric-input"/);
