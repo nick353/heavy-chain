@@ -2,6 +2,11 @@
 
 Updated: 2026-08-20
 
+2026-08-20 latest local verification r2:
+- Current source recheck passed material/UI `16/16`, model-matrix `3/3`, provider persistence/readback `12/12`, Canvas generation/readback `5/5` (`36/36` focused), non-video `featureCount=31 / failed=[]`, and build `2606 modules transformed`.
+- Read-only remote asset diagnostic returned Heavy HTML `200`, the `LightchainMaterialWorkbenchPage` chunk `200`, and no missing response among its 30 referenced assets. This is not a browser production hydration proof.
+- G619 remains `acceptance=not_claimed` with real sessions `0/3`; H601 operator readiness has `missingCount=10`; launch operations remains `auth_state_missing`. Artifact: `work/heavy-chain-local-verification-20260820-r2.md`.
+
 2026-08-20 latest fresh Heavy target-scoped canary r7:
 - After deployment `6a8617b42a82f897337778cf` reached `RUNNING` for `nick353/heavy-chain@9b1428a7dce5256411ebb94a1dae0a410466f1b7`, a new official Chrome Plugin/Profile 2 browser-client `-ba97-43a6-b43c-7a6f738e5036` passed selector revision `6` and the `openTabs()` handshake.
 - The fresh inventory contained three unrelated tabs and no Heavy target. Official target-scoped provisioning created Heavy `/tools/fabric` tab `1980903768`; same-run URL/title/DOM readback passed and only that task-owned tab was closed. `cleanup_verified=true`.
