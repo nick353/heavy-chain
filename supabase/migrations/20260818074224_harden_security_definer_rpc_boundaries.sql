@@ -7,7 +7,12 @@ BEGIN;
 -- the Data API.
 
 ALTER FUNCTION public.create_brand(TEXT, TEXT, TEXT) SET SCHEMA private;
-ALTER FUNCTION public.get_brand_usage_summary(UUID) SET SCHEMA private;
+-- A legacy private helper with the same signature already exists for the
+-- service-only usage summary. Keep the authenticated public RPC in place and
+-- make that public entrypoint invoker-safe instead of attempting a conflicting
+-- schema move.
+ALTER FUNCTION public.get_brand_usage_summary(UUID) SECURITY INVOKER;
+ALTER FUNCTION public.get_brand_usage_summary(UUID) SET search_path = public, pg_temp;
 ALTER FUNCTION public.get_billing_purchase_proof_summary(UUID) SET SCHEMA private;
 ALTER FUNCTION public.update_canvas_document_snapshot(UUID, UUID, TEXT, JSONB, INTEGER) SET SCHEMA private;
 
@@ -22,27 +27,6 @@ SECURITY INVOKER
 SET search_path = public, pg_temp
 AS $$
   SELECT private.create_brand(p_name, p_tone_description, p_target_audience);
-$$;
-
-CREATE OR REPLACE FUNCTION public.get_brand_usage_summary(p_brand_id UUID)
-RETURNS TABLE (
-  brand_id UUID,
-  plan_code TEXT,
-  monthly_quota INTEGER,
-  used_units INTEGER,
-  reserved_units INTEGER,
-  remaining_units INTEGER,
-  period_start TIMESTAMPTZ,
-  period_end TIMESTAMPTZ,
-  billing_test_account_quota_bypass BOOLEAN,
-  apple_sandbox_tester_no_real_charge BOOLEAN
-)
-LANGUAGE sql
-STABLE
-SECURITY INVOKER
-SET search_path = public, pg_temp
-AS $$
-  SELECT * FROM private.get_brand_usage_summary(p_brand_id);
 $$;
 
 CREATE OR REPLACE FUNCTION public.get_billing_purchase_proof_summary(p_brand_id UUID)
