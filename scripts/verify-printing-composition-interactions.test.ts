@@ -342,7 +342,8 @@ test('read-only composition keeps artwork but omits every placement mutator and 
 
 test('desktop printing keeps the primary composition and generate action pinned beside scrolling history', () => {
   assert.match(page, /data-testid="lightchain-print-parity-view"/);
-  assert.match(page, /lg:grid-cols-\[112px_minmax\(0,1\.08fr\)_minmax\(360px,0\.92fr\)\]/);
+  assert.match(page, /lg:grid-cols-\[minmax\(0,1\.08fr\)_minmax\(360px,0\.92fr\)\]/);
+  assert.doesNotMatch(page, /lg:grid-cols-\[112px_minmax\(0,1\.08fr\)_minmax\(360px,0\.92fr\)\]/);
   assert.match(page, /data-testid="lightchain-print-reference-input"/);
   assert.match(page, /参考画像をアップロード/);
   assert.match(page, /プリントをアップロード/);
