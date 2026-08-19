@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 80,
+  "checkpoint_seq": 81,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -213,6 +213,7 @@
     ,"Fresh Profile 2 advertisement recovered in browser-client -68be-4a7c-998c-491938908661; openTabs() succeeded, Heavy /tools/fabric was provisioned and read back in the same target-scoped run, and task-owned cleanup passed. Current DOM remained in workspace authentication/brand preparation with no textile assets; exact blocker heavy_target_workspace_authentication_not_ready"
     ,"Local completion-contract recheck passed focused 110/110, typecheck, diff check, non-video featureCount=31 / failed=[], and unified desktop 228/228 across 1280/1440/1920/2560px with cleanupLeftovers=0; production provider/save/reuse and beta acceptance remain unproven"
     ,"Completion audit r1 mapped every Goal acceptance criterion to current evidence and preserved production, real-Chrome, operator, and beta gaps as incomplete; artifact work/heavy-chain-completion-audit-20260820-r1.md"
+    ,"Removed the current-Lightchain-absent LIGHTCHAIN MATERIAL WORKBENCH eyebrow from fabric/printing; focused material/UI control contract 16/16, typecheck, and diff check passed"
   ],
   "next_action": "After the user completes Heavy Profile 2 login and workspace/brand preparation, create one new official browser-client, perform one openTabs() handshake and target-scoped Heavy /tools/fabric readback. Continue to provider work only if the workspace is hydrated and foreground capabilities are advertised. Do not reuse this client, an old binding, tab, or receipt.",
   "blocker": {
@@ -263,6 +264,7 @@
       ,"fresh Profile 2 advertisement recovered; openTabs() and Heavy /tools/fabric target-scoped readback succeeded, but current workspace remained in authentication/brand preparation with textile assets absent"
       ,"local completion-contract recheck passed focused 110/110, non-video 31/31, and unified desktop 228/228; G619/H601/launch readiness gates remain incomplete"
       ,"completion audit r1 mapped the full Goal acceptance criteria; no same-fingerprint Chrome retry was launched because Heavy authentication/workspace state did not change"
+      ,"UI parity cleanup removed the internal-only LIGHTCHAIN MATERIAL WORKBENCH eyebrow while preserving required Library/rights/generation/history controls; focused material/UI contract 16/16 passed"
     ],
     "artifact": "work/heavy-chain-target-scoped-canary-20260820-r4.md",
     "recorded_at": "2026-08-20T05:33:56+09:00"
@@ -941,8 +943,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T05:41:41+09:00",
       "note": "Completion audit r1 mapped each Goal acceptance criterion to current evidence. Local implementation and contract checks are verified, while production fabric/printing and AI-fitting generation/save/reuse, Mac/Windows real-Chrome acceptance, G619 beta sessions, and H601 operator decision remain incomplete. No Chrome retry was launched because the Heavy authentication/workspace state-change condition was not reported."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 81,
+      "stage": "execute",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T05:42:59+09:00",
+      "note": "Removed the internal-only LIGHTCHAIN MATERIAL WORKBENCH eyebrow from the fabric/printing shared screen because it is absent from the current Lightchain direct-route readback. Focused material/UI control contract 16/16, typecheck, and diff check passed. Required beta controls remain intact; production readback and provider work remain behind the unchanged Heavy authentication/workspace blocker."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T05:41:41+09:00"
+  "updated_at": "2026-08-20T05:42:59+09:00"
 }

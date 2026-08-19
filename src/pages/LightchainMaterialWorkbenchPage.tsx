@@ -4403,7 +4403,6 @@ export function LightchainMaterialWorkbenchPage() {
             <ArrowLeft className="w-4 h-4" />
             生成一覧へ
           </button>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-cyan-200/70">LIGHTCHAIN MATERIAL WORKBENCH</p>
           <h1 className="mt-2 text-2xl font-display font-semibold text-white sm:text-3xl">
             {activeMaterialTab.label}
           </h1>

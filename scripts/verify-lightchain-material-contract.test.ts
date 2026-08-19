@@ -32,6 +32,7 @@ test('priority material routes expose the current Lightchain direct-route toolba
   assert.match(page, /label: 'フィッティングツール'/);
   assert.doesNotMatch(page, /data-testid="lightchain-category-toolbar"/);
   assert.doesNotMatch(page, /lightchainCategories\.map/);
+  assert.doesNotMatch(page, /LIGHTCHAIN MATERIAL WORKBENCH/);
 });
 
 test('fabric and print keep the same required-input order as the Light recording', () => {
