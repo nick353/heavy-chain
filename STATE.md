@@ -3210,3 +3210,17 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_selected_tab_readback_invalid`.
 - Next action: user clicks the existing Profile 2 `about:blank` tab once and confirms; then obtain one fresh same-run `openTabs()+selected()` proof.
 - Restart point: after a non-null selected tab and owner-lineage proof, resume Heavy production `/tools/fabric` and `/model` readback, then the bounded provider/save/reuse flows.
+
+## 2026-08-20 Heavy semantic hydration proof after current deployment
+
+- Fresh official Chrome Plugin/Profile 2 target-scoped readback used selector revision 6 and browser-client `-3329-4412-b891-1d92268fdfcd`. Official provisioning created task-owned Heavy `/tools/fabric` tab `1980903800`; same-run URL/title/DOM readback passed and cleanup closed only that tab.
+- The deployed current bundle exposed the semantic workbench marker: `lightchain-material-workbench=true`, `data-workbench-mode=fabric`, `data-workbench-state=hydrated`, and `workspace-loading-fallback=false`. Material view, fabric input, rights control, AI生成, and 生成履歴 were present.
+- Artifact: `work/heavy-chain-semantic-hydration-readback-20260820-r8.md`.
+- No click, credential input, upload, rights confirmation, provider generation, save, reuse, download, recording, AOS change, or external effect occurred.
+
+### Current exact blocker / next action / restart point
+
+- The prior `heavy_target_workspace_authentication_not_ready` is cleared by this semantic proof.
+- Current provider gate remains `chrome_foreground_activation_capability_unavailable`; target-scoped readback does not require selected/focus/claim/foreground lease, but provider generation does.
+- Next action: after the required official foreground capability is advertised and a fresh owner is established, run one bounded approved fabric-print provider flow and verify result, save, Gallery/Canvas/History/Jobs lineage, reuse, and reload. Then run the equivalent AI-fitting flow.
+- Restart point: fresh Profile 2 owner after capability state changes; do not reuse the provisioning tab, old binding, or old run.
