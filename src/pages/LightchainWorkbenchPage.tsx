@@ -58,7 +58,6 @@ import {
   type PrintArtworkTransform,
   PrintingImageComposer,
 } from '../components/lightchain/PrintingImageComposer';
-import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import { LIGHTCHAIN_MATERIAL_LIBRARY_TABS } from '../lib/lightchainMaterialContract';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
@@ -2853,10 +2852,6 @@ export function LightchainWorkbenchPage() {
         </label>
       ) : (
         <>
-          <PermissionLockedButton
-            testId={`lightchain-${selectedTool.id}-provider-locked`}
-            title="この機能のプロバイダは現在利用できません"
-          />
           <p className="rounded-xl border border-amber-300/20 bg-amber-300/[0.08] px-3 py-2 text-xs font-semibold leading-5 text-amber-100" data-testid="lightchain-special-provider-error">
             この機能のプロバイダが未接続のため、生成は開始されません。
           </p>
@@ -5341,9 +5336,6 @@ export function LightchainWorkbenchPage() {
                       <span className="mt-1 block text-[11px] text-cyan-100/60">確認後のみ実プロバイダを実行します。未確認時は結果を作成しません。</span>
                     </span>
                   </label>
-                  {['line-generation', 'image-repair'].includes(selectedTool.id) && (
-                    <PermissionLockedButton testId={`lightchain-${selectedTool.id}-permission-locked`} />
-                  )}
                   {lightchainGenerationRunning && (
                     <p className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-2 text-xs font-semibold text-cyan-50" data-testid="lightchain-generation-running">
                       AI生成を実行中です。
@@ -5378,9 +5370,6 @@ export function LightchainWorkbenchPage() {
                 />
                 <span>アップロードした画像・人物について、AI生成に利用する権利または許諾を確認済みです。<span className="mt-1 block text-[11px] text-cyan-100/60">確認後のみ実プロバイダを実行します。</span></span>
               </label>
-              {selectedTool.id === 'model-library' && (
-                <PermissionLockedButton testId="lightchain-model-library-workbench-permission-locked" />
-              )}
               {lightchainGenerationRunning && (
                 <p className="mt-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-2 text-xs font-semibold text-cyan-50" data-testid="lightchain-generation-running">
                   AI生成を実行中です。

@@ -5,7 +5,6 @@ import { Check, ChevronRight, Save, Shirt, SlidersHorizontal, Sparkles, UserRoun
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
-import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
@@ -593,7 +592,6 @@ export function ModelLibraryPage() {
             </div>
           </div>
           <div data-testid="model-library-next-actions" className="grid gap-2">
-            <PermissionLockedButton testId="lightchain-model-library-permission-locked" marginClass="" />
             <Link
               to={directModelMatrixHref}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"

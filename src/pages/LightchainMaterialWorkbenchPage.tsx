@@ -23,7 +23,6 @@ import { motion } from 'framer-motion';
 import { Button, ImageCompare } from '../components/ui';
 import { Modal } from '../components/ui/Modal';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
-import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import { PrintingCompositionStage } from '../components/workspace/PrintingCompositionStage';
 import { PrintMaskCandidatePicker } from '../components/workspace/PrintMaskCandidatePicker';
 import { PrintMaskEditor } from '../components/workspace/PrintMaskEditor';
@@ -5547,8 +5546,6 @@ export function LightchainMaterialWorkbenchPage() {
                   <span>入力素材の利用権限を確認しました。AIプロバイダーへ送信して生成します。</span>
                 </label>
 
-                <PermissionLockedButton testId="lightchain-printing-permission-locked" />
-
                 <Button
                   onClick={handleGenerate}
                   isLoading={isGenerating}
@@ -5699,8 +5696,6 @@ export function LightchainMaterialWorkbenchPage() {
                     今すぐ体験
                   </Link>
                 </p>
-
-                <PermissionLockedButton testId="lightchain-fabric-permission-locked" marginClass="mt-0" />
 
                 <section data-testid="lightchain-fabric-design-input" className="rounded-xl border border-white/10 bg-[#202629] p-3">
                   <p className="mb-2 text-sm font-semibold text-white">モデル/デザイン画像 *</p>
