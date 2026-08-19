@@ -155,10 +155,11 @@ const invokeCanvasDocument = async (body: Record<string, unknown>) => {
     // only the server's bounded error code so Canvas can report the real
     // rejection reason without leaking headers, tokens, or the raw response.
     const context = (error as { context?: unknown }).context;
-    if (context) {
+    const responseContext = context instanceof Response ? context : null;
+    if (responseContext) {
       let serverMessage: string | null = null;
       try {
-        const payload = await context.clone().json() as { error?: unknown };
+        const payload = await responseContext.clone().json() as { error?: unknown };
         if (typeof payload.error === 'string' && payload.error.trim()) {
           serverMessage = payload.error.trim().slice(0, 160);
         }
@@ -169,8 +170,8 @@ const invokeCanvasDocument = async (body: Record<string, unknown>) => {
     }
     const errorName = error instanceof Error ? error.name : 'CanvasFunctionError';
     const errorMessage = error instanceof Error ? error.message : 'Canvas persistence request failed';
-    const contextDetail = context instanceof Response
-      ? `http_${context.status}`
+    const contextDetail = responseContext
+      ? `http_${responseContext.status}`
       : context instanceof Error
         ? `${context.name}:${context.message}`
         : null;
