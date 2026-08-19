@@ -63,7 +63,7 @@
 
 ## 現在の状態（2026-08-20）
 
-- Chrome Plugin/Profile 2の共有スレッドから、transport／target-scoped readback／cleanupは復旧済みで、現行の作業停止点は`heavy_target_workspace_authentication_not_ready`（Heavy画面がworkspace準備・認証／ブランド設定確認で停止）との報告を受領した。selected／about:blank／claim／focus／foreground leaseの復旧やclose/reopenは再実行しない。ユーザーのHeavy認証・workspace準備完了後、新規Profile 2 browser-clientで`openTabs()`→正確な`/tools/fabric` descriptor→target-scoped readbackを1回行う。共有証跡 `work/heavy-chain-target-scoped-canary-20260820-r2.md` はこの停止点の参照であり、provider生成・保存・再利用の証明ではない。
+- Chrome Plugin/Profile 2の共有スレッドから、transport／target-scoped readback／cleanupは復旧済みで、現行の作業停止点は`heavy_target_workspace_authentication_not_ready`（Heavy画面がworkspace準備・認証／ブランド設定確認で停止）との報告を受領した。selected／about:blank／claim／focus／foreground leaseの復旧やclose/reopenは再実行しない。ユーザーのHeavy認証・workspace準備完了後、新規Profile 2 browser-clientで`openTabs()`→正確な`/tools/fabric` descriptor→target-scoped readbackを1回行う。実測r3でもログイン表示と準備中状態が継続し、textile assetは未表示だった。証跡は `work/heavy-chain-target-scoped-canary-20260820-r3.md`（r2は共有スレッドの停止点参照）であり、provider生成・保存・再利用の証明ではない。
 
 - 2026-08-20、β readiness static checksを再実行した。H601 legal-safety guardは`ok=true`、internal UXは`ok=true`。しかしG619実β受入れは`acceptance=not_claimed`、実セッション`0/3`、必要workflow証跡なしで未完了。H601 operator readinessも`operator_final_h601_decision_missing`とTerms／Privacy／保持削除／upload rights／brand・likeness／claims／commercial wording／reviewの未添付で未完了。launch-opsは`auth_state_missing`で未完了。これらは人手承認・実セッション・認証artifactが必要で、Codexは偽の証跡を作成しない。
 

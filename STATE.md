@@ -5,7 +5,13 @@ Updated: 2026-08-20
 2026-08-20 latest Chrome source-thread handoff:
 - Shared Chrome Plugin/Profile 2 transport and target-scoped readback are reported restored. The reported current Heavy stop is `heavy_target_workspace_authentication_not_ready`: the workspace is still at preparation/authentication/brand-setting confirmation and textile assets are not visible.
 - Do not repeat Chrome close/reopen, selected(), about:blank, claim, focus, or foreground lease recovery. After the user completes Heavy authentication/workspace preparation, use one new official Profile 2 browser-client and one target-scoped `/tools/fabric` readback.
-- Artifact reference: `work/heavy-chain-target-scoped-canary-20260820-r2.md`. This is an authentication/readiness stop, not a provider-generation or persistence proof.
+- Artifact reference: `work/heavy-chain-target-scoped-canary-20260820-r3.md` (r2 is the source-thread handoff reference). This is an authentication/readiness stop, not a provider-generation or persistence proof.
+
+2026-08-20 latest Heavy target-scoped canary:
+- Fresh official Profile 2 browser-client `-86b7-4558-9585-9281112b0117` completed `openTabs()`, provisioned one task-owned `/tools/fabric` tab, and completed same-run URL/title/DOM readback plus cleanup.
+- The visible state still showed `ログイン`, `ワークスペースを準備しています`, and `認証状態とブランド設定を確認しています。`; textile/fabric assets were not visible. No selected/claim/focus/foreground lease, provider, save/reuse, recording, AOS UI, or external effect was used.
+- Exact blocker remains `heavy_target_workspace_authentication_not_ready`. Do not repeat the same fingerprint; restart only after Heavy authentication/workspace preparation changes in Profile 2.
+- Artifact: `work/heavy-chain-target-scoped-canary-20260820-r3.md`.
 
 2026-08-20 beta readiness gate:
 - H601 legal-safety static guard: `ok=true`; internal UX consistency: `ok=true`.

@@ -182,6 +182,7 @@
     ,"output/playwright/g779-h601-legal-safety-current-r1/summary.json: H601 static legal-safety guard passed"
     ,"output/playwright/launch-operations-readiness-20260819/summary.json: auth_state_missing"
     ,"work/heavy-chain-target-scoped-canary-20260820-r2.md: source-thread authentication/workspace-readiness stop with target-scoped transport and cleanup PASS"
+    ,"work/heavy-chain-target-scoped-canary-20260820-r3.md: fresh same-run Profile 2 target-scoped readback still showed login/workspace preparation and no textile assets; cleanup PASS"
   ],
   "next_action": "After Heavy Profile 2 authentication/workspace preparation is complete, create one new official Profile 2 browser-client and perform one target-scoped /tools/fabric URL/title/DOM readback; if hydrated, continue with one approved product-owned Gallery input through provider result, save, Gallery/Canvas/History/Jobs, and reuse. Do not repeat foreground recovery or reuse the old binding.",
   "blocker": {
@@ -190,11 +191,11 @@
     "recovery_condition": "The user completes Heavy Profile 2 login and workspace/brand preparation. Then use a new official Profile 2 browser-client, one openTabs() call, exact Heavy /tools/fabric descriptor, and one target-scoped URL/title/DOM readback. Do not invoke selected(), claim, focus, foreground lease, or close/reopen recovery.",
     "restart_stage": "verify",
     "next_action": "Wait for user-confirmed Heavy authentication/workspace readiness, then perform one fresh target-scoped /tools/fabric readback before any provider or save operation.",
-    "evidence": "work/heavy-chain-target-scoped-canary-20260820-r2.md",
+    "evidence": "work/heavy-chain-target-scoped-canary-20260820-r3.md",
     "operation_exact_blocker": "chrome_foreground_activation_capability_unavailable",
     "capability_blocker": "chrome_foreground_activation_capability_unavailable",
     "capability_blocker": "chrome_foreground_activation_capability_unavailable",
-    "recorded_at": "2026-08-20T04:10:00+09:00"
+    "recorded_at": "2026-08-20T04:20:00+09:00"
   },
   "same_blocker_count": 1,
   "resume_admission": "eligible_after_recovery_evidence",
