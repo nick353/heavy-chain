@@ -63,6 +63,8 @@
 
 ## 現在の状態（2026-08-20）
 
+- 2026-08-20、現行Lightchain shellに合わせてprinting parity回帰テストの古い112px Heavy-onlyレール期待値を修正した。現行2列の`lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]`と旧レール不在を検証し、printing foundation `244/244`、provider persistence `12/12`、AI fitting input contract `16/16`、非動画31機能 `featureCount=31 / failed=[]`、typecheck、diff checkをPASSした。commit `67d5df8`。これはlocal implementation proofであり、production provider生成・保存再利用のproofではない。
+
 - 2026-08-20、source commit `797afd54f133068cdd1c4b19845116dfd8633952` のZeabur deployment `6a85fb012a82f8973377761f`が`RUNNING`になった。デプロイ後のfresh official Chrome Plugin／Profile 2 target-scoped readbackでHeavy `/lightchain`を確認し、7件の非動画ランチャー、4カテゴリ、`video_text_present=false`、`video_route_present=false`、`login_text_present=false`を同一runで確認した。作成タブは`cleanup ok=true`で閉じた。証跡は `work/heavy-production-video-hidden-readback-20260820-r1.md`。これは非動画UI反映と認証済み画面の証明であり、provider生成・保存・再利用・β受入れの完了証明ではない。
 
 - 2026-08-20、fresh target-scoped readbackでHeavy `/tools/fabric`を確認した。ログイン／準備中シェルではなく、`生地イメージ`、モデル／生地入力、Gallery選択、画像比率、生地バリエーション、権利確認、`AI生成`、生成履歴が表示された。現行同一runで`login_text_present=false`かつhydrated workspaceとして確認済み。クリック・アップロード・生成は行っていない。

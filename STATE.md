@@ -2,6 +2,11 @@
 
 Updated: 2026-08-20
 
+2026-08-20 latest local parity regression recovery:
+- Updated `scripts/verify-printing-composition-interactions.test.ts` to assert the current Lightchain two-column parity shell and explicitly reject the removed 112px Heavy-only rail.
+- Verification: printing foundation `244/244`, provider persistence `12/12`, AI fitting input contract `16/16`, non-video workflows `featureCount=31 / failed=[]`, typecheck, and `git diff --check` all passed.
+- Commit `67d5df8` was pushed to `origin/main`. No Chrome common layer, recording, AOS, provider generation, or external effect was performed.
+
 2026-08-20 latest production non-video launcher readback:
 - Source commit `797afd54f133068cdd1c4b19845116dfd8633952` is deployed in Zeabur deployment `6a85fb012a82f8973377761f` with status `RUNNING` and plan `docker`.
 - Fresh official Chrome Plugin/Profile 2 target-scoped browser-client `-42ca-4419-b14a-7a8784a35d2b` provisioned task-owned Heavy `/lightchain` tab `1980903703` and read the authenticated hydrated launcher in the same run.
