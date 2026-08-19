@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 65,
+  "checkpoint_seq": 66,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -103,6 +103,7 @@
     ,"Removed internal Lightchain workbench status pills from visible cards and detail panes while keeping readiness gates internal; commit 68c9123 and local non-video regressions passed"
     ,"Removed the Heavy-specific HC placement placeholder from the Canvas/workbench preview and retained neutral print placement metadata; commit ccc82d9 and focused/local regressions passed"
     ,"Provider coverage recheck passed 10/10 for explicit routes across all 31 non-video rows; video rows remain unsupported and workspace-to-Canvas persistence boundary passed 2/2"
+    ,"Unified desktop continuation completed 228/228 checks across 1280/1440/1920/2560px with failed=0, globalTimedOut=false, and cleanupLeftovers=0"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -197,6 +198,7 @@
     ,"src/pages/LightchainWorkbenchPage.tsx commit 68c9123: internal status pills removed from visible workbench; typecheck, internal UX, video boundary 1/1, diff check, build 2606 modules, and full local non-video featureCount=31 / failed=[]"
     ,"src/pages/LightchainWorkbenchPage.tsx commit ccc82d9: HC placeholder replaced with neutral プリント label; material contract 16/16, video boundary 1/1, typecheck, diff check, build 2606 modules, and full local non-video featureCount=31 / failed=[]"
     ,"test:lightchain-provider-coverage 10/10: 31 non-video rows explicitly admitted to edit-image/model-matrix, video rows unsupported, rights/promotion guards present; test:workspace-handoff-persistence 2/2"
+    ,"output/playwright/unified-desktop-layout-current-continuation/SUMMARY.json: scheduled=228, completed=228, failed=0, globalTimedOut=false, cleanupLeftovers=0"
   ],
   "next_action": "After Heavy Profile 2 authentication/workspace preparation is complete, create one new official Profile 2 browser-client and perform one target-scoped /tools/fabric URL/title/DOM readback; if hydrated, continue with one approved product-owned Gallery input through provider result, save, Gallery/Canvas/History/Jobs, and reuse. Do not repeat foreground recovery or reuse the old binding.",
   "blocker": {
@@ -214,8 +216,8 @@
   "same_blocker_count": 1,
   "resume_admission": "eligible_after_recovery_evidence",
   "latest_continuation": {
-    "stage": "recover_or_replan",
-    "exact_blocker": "chrome_selected_tab_readback_invalid",
+    "stage": "verify",
+    "exact_blocker": "heavy_target_workspace_authentication_not_ready",
     "attempted_once": true,
     "independent_progress": [
       "verified Kimi Designer handoff recorded",
@@ -242,9 +244,10 @@
     "fresh Profile 2 openTabs handshake succeeded after shared-layer repair; selected() returned null and bridge fail-closed as chrome_selected_tab_readback_invalid",
       "current-source desktop verifier recovered with local network boundary and concurrent viewports: 228/228, failed=0, cleanup complete"
       ,"current-source non-video workflow verifier passed featureCount=31, failed=[], desktop/mobile coverage and cleanup complete"
+      ,"unified desktop continuation passed 228/228 with no cleanup leftovers"
     ],
-    "artifact": "work/heavy-chain-profile2-recovery-20260820-r3.md",
-    "recorded_at": "2026-08-20T01:50:29+09:00"
+    "artifact": "work/heavy-chain-target-scoped-canary-20260820-r3.md",
+    "recorded_at": "2026-08-20T04:39:48+09:00"
   },
   "exit_check": null,
   "history": [
@@ -785,8 +788,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T03:47:00+09:00",
       "note": "Fresh Profile 2 capability readback advertised viewport only; foreground_activation and management were absent. Selected/claim/focus was not called. Target-scoped read-only remains available; foreground exact blockers remain chrome_foreground_activation_capability_unavailable and chrome_selected_tab_readback_invalid."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 66,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T04:39:48+09:00",
+      "note": "Local unified desktop continuation completed 228/228 checks across 1280/1440/1920/2560px with failed=0, globalTimedOut=false, and cleanupLeftovers=0. Heavy target-scoped authentication/workspace readiness remains the external restart condition; no Chrome or effectful operation was retried."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T03:47:00+09:00"
+  "updated_at": "2026-08-20T04:39:48+09:00"
 }

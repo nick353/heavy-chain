@@ -2,6 +2,10 @@
 
 Updated: 2026-08-20
 
+2026-08-20 latest unified desktop continuation:
+- The fresh local unified desktop verifier completed all 228 scheduled checks across 1280/1440/1920/2560px with `failed=0`, `globalTimedOut=false`, and `cleanupLeftovers=0`.
+- Artifact: `output/playwright/unified-desktop-layout-current-continuation/SUMMARY.json`. This is local layout/readiness proof only; it does not clear the Heavy authentication/readiness blocker or prove provider generation/save/reuse.
+
 2026-08-20 latest Chrome source-thread handoff:
 - Shared Chrome Plugin/Profile 2 transport and target-scoped readback are reported restored. The reported current Heavy stop is `heavy_target_workspace_authentication_not_ready`: the workspace is still at preparation/authentication/brand-setting confirmation and textile assets are not visible.
 - Do not repeat Chrome close/reopen, selected(), about:blank, claim, focus, or foreground lease recovery. After the user completes Heavy authentication/workspace preparation, use one new official Profile 2 browser-client and one target-scoped `/tools/fabric` readback.
