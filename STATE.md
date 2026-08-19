@@ -2,6 +2,12 @@
 
 Updated: 2026-08-20
 
+2026-08-20 latest fresh Heavy target-scoped canary r7:
+- After deployment `6a8617b42a82f897337778cf` reached `RUNNING` for `nick353/heavy-chain@9b1428a7dce5256411ebb94a1dae0a410466f1b7`, a new official Chrome Plugin/Profile 2 browser-client `-ba97-43a6-b43c-7a6f738e5036` passed selector revision `6` and the `openTabs()` handshake.
+- The fresh inventory contained three unrelated tabs and no Heavy target. Official target-scoped provisioning created Heavy `/tools/fabric` tab `1980903768`; same-run URL/title/DOM readback passed and only that task-owned tab was closed. `cleanup_verified=true`.
+- The new deployment still showed `ワークスペースを準備しています`／`認証状態とブランド設定を確認しています。` with `ログイン確認`／`状態を確認`; textile/fabric assets and practical controls were absent. Exact blocker remains `heavy_target_workspace_authentication_not_ready`.
+- Artifact: `work/heavy-chain-target-scoped-canary-20260820-r7.md`. No selected/claim/focus/foreground lease, click, credential entry, provider generation, save/reuse, recording, AOS UI, or external effect was used. Foreground/provider work separately remains blocked by `chrome_foreground_activation_capability_unavailable` because only `viewport`/tab-level `pageAssets`/`cdp` were advertised.
+
 2026-08-20 latest fresh Heavy target-scoped canary r5:
 - After the user reported login, a new official Chrome Plugin/Profile 2 browser-client `-7ca4-4eb1-a676-fcaff203e639` passed the selector revision `6` / signed extension / profile ordering `2` checks and `openTabs()` handshake. The fresh inventory had three unrelated tabs and no Heavy target.
 - The allowlisted target-scoped provisioning path created Heavy `/tools/fabric` tab `1980903766`, read URL/title/DOM in the same owner-bound run, and closed only that task-owned tab. `cleanup_verified=true`; no writer lease, selected, claim, focus, recording, AOS UI, or external effect was used.

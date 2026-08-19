@@ -218,6 +218,7 @@
     ,"Completion audit r1 mapped every Goal acceptance criterion to current evidence and preserved production, real-Chrome, operator, and beta gaps as incomplete; artifact work/heavy-chain-completion-audit-20260820-r1.md"
     ,"Removed the current-Lightchain-absent LIGHTCHAIN MATERIAL WORKBENCH eyebrow from fabric/printing; focused material/UI control contract 16/16, typecheck, and diff check passed"
     ,"Post-cleanup local quality checks passed npm run lint -- --max-warnings=0 and npm run build with 2606 modules; production/provider gates remain separate"
+    ,"Fresh post-deployment Profile 2 target-scoped Heavy /tools/fabric readback r7 passed openTabs(), exact URL/title/DOM readback, and task-owned cleanup; the new RUNNING deployment still exposed authentication/brand preparation with no textile assets, so heavy_target_workspace_authentication_not_ready remains"
   ],
   "next_action": "After the Heavy Profile 2 page visibly leaves authentication/brand preparation and shows workspace assets, create one new official browser-client, perform one openTabs() handshake and target-scoped Heavy /tools/fabric readback. Continue to provider work only if hydrated and foreground capabilities are advertised. Do not reuse this client, an old binding, tab, or receipt.",
   "blocker": {
@@ -226,12 +227,12 @@
     "recovery_condition": "The user completes the visible Heavy login and workspace/brand preparation in Profile 2. Then create a new browser-client, call openTabs() once, resolve the exact Heavy /tools/fabric descriptor, and perform target-scoped URL/title/DOM readback. Do not invoke selected(), claim, focus, foreground lease, close/reopen recovery, or reuse this client. After hydration, foreground provider work still requires foreground_activation and management capabilities.",
     "restart_stage": "verify",
     "next_action": "Wait for the user-owned Heavy authentication/workspace state change, then perform one new official Profile 2 openTabs() and target-scoped readback before any provider or save operation.",
-    "evidence": "work/heavy-chain-target-scoped-canary-20260820-r5.md",
+    "evidence": "work/heavy-chain-target-scoped-canary-20260820-r7.md",
     "operation_exact_blocker": "chrome_foreground_activation_capability_unavailable",
     "capability_blocker": "chrome_foreground_activation_capability_unavailable",
     "recorded_at": "2026-08-20T06:02:00+09:00"
   },
-  "same_blocker_count": 1,
+  "same_blocker_count": 2,
   "resume_admission": "eligible_after_recovery_evidence",
   "latest_continuation": {
     "stage": "verify",
@@ -270,9 +271,10 @@
       ,"completion audit r1 mapped the full Goal acceptance criteria; no same-fingerprint Chrome retry was launched because Heavy authentication/workspace state did not change"
       ,"UI parity cleanup removed the internal-only LIGHTCHAIN MATERIAL WORKBENCH eyebrow while preserving required Library/rights/generation/history controls; focused material/UI contract 16/16 passed"
       ,"Post-cleanup lint and production build passed locally; no deployment or Chrome retry was performed"
+      ,"Fresh post-deployment Profile 2 target-scoped Heavy /tools/fabric readback r7 passed openTabs(), exact URL/title/DOM readback, and task-owned cleanup; the new RUNNING deployment still exposed authentication/brand preparation with no textile assets"
     ],
-    "artifact": "work/heavy-chain-target-scoped-canary-20260820-r4.md",
-    "recorded_at": "2026-08-20T05:33:56+09:00"
+    "artifact": "work/heavy-chain-target-scoped-canary-20260820-r7.md",
+    "recorded_at": "2026-08-20T06:10:00+09:00"
   },
   "exit_check": null,
   "history": [
@@ -975,8 +977,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T06:02:00+09:00",
       "note": "After the user reported login, a new official Profile 2 target-scoped run passed openTabs(), provisioned Heavy /tools/fabric, completed same-run URL/title/DOM readback, and cleaned task-owned tab 1980903766. The workspace still showed authentication/brand preparation with no textile assets, so the exact blocker remains heavy_target_workspace_authentication_not_ready. Local direct-route parity was also corrected for six observed routes; parity alias/entry routing passed 8/8, typecheck and diff check passed."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 84,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T06:10:00+09:00",
+      "note": "After Zeabur deployment 6a8617b42a82f897337778cf for nick353/heavy-chain@9b1428a reached RUNNING, a new official Profile 2 browser-client -ba97-43a6-b43c-7a6f738e5036 passed openTabs(), provisioned Heavy /tools/fabric tab 1980903768, completed same-run URL/title/DOM readback and cleanup. The new deployment still showed authentication/brand preparation with no textile assets; exact blocker remains heavy_target_workspace_authentication_not_ready. Advertised capabilities were viewport and tab-level pageAssets/cdp only, so provider generation remains separately blocked by chrome_foreground_activation_capability_unavailable."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T06:02:00+09:00"
+  "updated_at": "2026-08-20T06:10:00+09:00"
 }
