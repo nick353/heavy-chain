@@ -168,11 +168,18 @@ import type { GeneratedImage, Json } from '../types/database';
 type WorkbenchMode = 'fabric' | 'printing';
 type PrintCoverageMode = 'spot' | 'full';
 
+const MATERIAL_TOOLBAR_ROUTES: Record<string, string> = {
+  'デザインツール': '/lightchain?category=planning',
+  'フィッティングツール': '/lightchain?category=fitting',
+  'グラフィックデザインツール': '/lightchain?category=graphics',
+  '衣類生産ツール': '/designProduction',
+};
+
 const LIGHTCHAIN_MATERIAL_TOOLBAR_ITEMS = [
-  { label: 'デザインツール', path: '/lightchain?category=planning', icon: Laptop },
-  { label: 'フィッティングツール', path: '/fitting', icon: Users },
-  { label: 'グラフィックデザインツール', path: '/patterns/workbench', icon: Layers3 },
-  { label: '衣類生産ツール', path: '/designProduction', icon: Scissors },
+  { label: 'デザインツール', icon: Laptop },
+  { label: 'フィッティングツール', icon: Users },
+  { label: 'グラフィックデザインツール', icon: Layers3 },
+  { label: '衣類生産ツール', icon: Scissors },
 ] as const;
 
 function LightchainMaterialToolbar() {
@@ -185,11 +192,12 @@ function LightchainMaterialToolbar() {
       className="mb-4 flex flex-wrap items-center gap-4 border-b border-white/10 px-1 pb-4 text-white/60"
     >
       <span className="shrink-0 text-xs font-semibold tracking-[0.16em] text-white/80">ツールバー</span>
-      {LIGHTCHAIN_MATERIAL_TOOLBAR_ITEMS.map(({ label, path, icon: Icon }) => (
+      {LIGHTCHAIN_MATERIAL_TOOLBAR_ITEMS.map(({ label, icon: Icon }) => (
         <button
           key={label}
           type="button"
-          onClick={() => navigate(path)}
+          onClick={() => navigate(MATERIAL_TOOLBAR_ROUTES[label] ?? '/lightchain')}
+          data-testid={`lightchain-material-toolbar-${String(label)}`}
           className="inline-flex items-center gap-2 text-xs font-semibold transition hover:text-white sm:text-sm"
         >
           <Icon className="h-4 w-4 text-white/45" aria-hidden="true" />

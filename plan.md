@@ -64,6 +64,7 @@
 ## 現在の状態（2026-08-20）
 
 - 2026-08-20 05:19 JST、Lightchain `/tools/fabric` のfresh direct-route readbackで確認した現行toolbar（`ツールバー`、デザインツール、フィッティングツール、グラフィックデザインツール、衣類生産ツール）に合わせ、Heavyのfabric／printing画面から旧4カテゴリ帯を除去し、同じtoolbar構成へ更新した。Library／Gallery、権利確認、`AI生成`、`生成履歴`、統合βの結果系譜は保持している。material contract 64/64、typecheck、全非動画31機能、desktop 228/228（1280／1440／1920／2560px）、diff checkをPASS。証跡は `output/playwright/lightchain-all-feature-workflows-20260819T201515Z/SUMMARY.json` と `output/playwright/unified-desktop-layout-current-rerun-after-toolbar/SUMMARY.json`。local UI parityの証明であり、未デプロイ・provider生成／保存／再利用は未実施。
+- 2026-08-20 05:27 JST、toolbar各ボタンのroute契約を既存Lightchainカテゴリroute（planning／fitting／graphics／designProduction）へ固定し、各ボタンのreadback用test-idを追加した。material/UI control contract 16/16、typecheck、diff check、全非動画31機能、desktop 228/228をPASS。fresh Chrome Plugin readbackはProfile 2拡張の広告が空で`chrome_plugin_profile2_inventory_empty`となったため、Lightchainリンク実体の再取得はPENDING_CONFIRMATION。証跡は `work/chrome-plugin-profile2-inventory-empty-20260820-r1.md`。
 
 - 2026-08-20、共通Lightchain Workbenchのprovider再試行を改善した。再試行中または失敗時は直前の成功結果を保持し、素材入力が変わった場合だけ入力境界で結果を無効化する。provider coverage 11/11、material 16/16、provider persistence/readback 12/12、workspace handoff 2/2、unified shell 4/4、非動画31機能、typecheck、diff checkをPASSした。これはlocal復旧契約の証明であり、production provider生成・保存再利用の証明ではない。commit `cb46fa5`。
 
@@ -110,13 +111,14 @@
 - Same-run Heavy/Lightchain direct-route comparison: PASS。両targetのURL/title/DOM readbackと公式cleanupを確認した。Heavyの統合β入力・権利・生成ゲートは意図した内部β差分だが、タイトル・toolbar文言・詳細入力構成の完全一致はPENDING_CONFIRMATION。
 - Priority route ledger: PASS。`/tools/printing`と`/model`のHeavy／Lightchain readbackを同一fresh runで取得し、入力・権利・生成・履歴差分を記録した。既存provider結果は履歴データであり、新規生成proofではない。
 - Foreground capability readback: BLOCKED。fresh browser-clientの公式広告は`viewport`のみで、`foreground_activation`／`management`は未提供。target-scoped read-onlyは継続可能。
+- Fresh Profile 2 inventory readback: BLOCKED。新規browser-clientにProfile 2 signed extension candidateが広告されず、`chrome_plugin_profile2_inventory_empty`。旧binding／旧tab／旧readbackは再利用していない。target-scoped readbackとprovider操作は新しい公式広告まで停止する。
 - Production non-video launcher readback: PASS。deployment `6a85fb012a82f8973377761f`が`797afd5`で`RUNNING`。fresh Profile 2 target-scoped `/lightchain` readbackで7件の非動画ランチャーと動画導線0件を確認。証跡は`work/heavy-production-video-hidden-readback-20260820-r1.md`。
 - Authentication gate: PASS。r6 fresh target-scoped readbackでログイン／無料で始める表示がなく、Lightchain型の`生地イメージ` workspace、素材入力、Gallery選択、権利確認、`AI生成`、`生成履歴`を確認した。r3は履歴上の未認証状態として保持する。provider生成・保存・再利用は未実施。
 - Common route readback: PASS。fresh同一runで`/lightchain`、`/gallery`、`/canvas/new`、`/history`、`/jobs`を15秒hydration後に確認した。Galleryは961枚、Historyは保存済み12件・失敗4件、Jobsは完了20件・失敗4件を表示した。新規provider生成からの同一run保存・再利用は未証明。
-- Exact blocker: `chrome_foreground_activation_capability_unavailable`。r6 fresh Profile 2広告は`viewport`とtab-level `cdp`のみで、`foreground_activation`／`management`を提供しなかった。target-scoped readbackはPASSだが、UI上の権利確認・provider生成・保存・再利用はforeground capabilityが揃うまでPENDING_CONFIRMATION。
+- Exact blocker: `chrome_plugin_profile2_inventory_empty`。2026-08-20 05:27 JSTのfresh browser-clientでProfile 2 signed extension candidateが広告されなかった。直前のr6では`viewport`とtab-level `cdp`のみで、`foreground_activation`／`management`を提供しなかったため、広告復旧後もprovider操作は`chrome_foreground_activation_capability_unavailable`で別途停止する。
 - Local desktop verification: PASS。31機能台帳と`1280/1440/1920/2560px`の228セルを再実行で全件確認した。これはlocal previewのUI契約証跡であり、Mac／Windowsの実Chrome実機受入れやproduction provider完了の代用ではない。
 - Foreground operation blocker（read-only target admissionとは分離）: `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`。
-- Next action: 公式Profile 2拡張が`foreground_activation`または`management`を広告した状態で、新規browser-clientの`openTabs()`→正確な`/tools/fabric` descriptor→target-scoped readbackを1回行い、その同一runで承認済みGallery素材1件の権利確認→fabric生成→結果→保存→Gallery/Canvas/History/Jobs→再利用を確認する。
+- Next action: 公式Profile 2拡張が再び広告された後、新規browser-clientの`openTabs()`→正確なLightchain／Heavy descriptor→target-scoped readbackを1回行う。Heavyがhydratedなら、foreground capability広告も確認してから、承認済みGallery素材1件の権利確認→fabric生成→結果→保存→Gallery/Canvas/History/Jobs→再利用へ進む。
 - Restart point: 署名済み拡張が`foreground_activation`／`management`を広告した後のfresh Profile 2 owner。同一runでHeavy `/tools/fabric`をtarget-scoped readbackし、owner／承認を確認してから、承認済みproduct-owned Gallery入力→権利確認→provider生成→保存→Gallery／Canvas／History／Jobs→再利用を1回だけ進める。認証／workspace hydrationはr6でPASS。selected／claim／focus／foreground lease復旧や別surface fallbackは行わない。
 - provider生成、録画、AOS、effectfulなUI操作はselected/owner proofが揃うまで開始しない。deployは別のsource・runtime・fresh target readback gateで扱い、今回のdeployment `6a85ecc3f1ea67ebf4ea67bc` はそのreadbackまで確認済み。
 

@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 76,
+  "checkpoint_seq": 77,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -208,24 +208,26 @@
     ,"Provider coverage 11/11 including retry result retention; material 16/16; provider persistence/readback 12/12; workspace handoff 2/2; unified shell 4/4; typecheck and diff check PASS"
     ,"Lightchain direct-route toolbar parity cleanup replaced the old Heavy four-category strip on fabric/printing with the fresh Lightchain toolbar contract while preserving Library/Gallery, rights, generation, history, and unified beta lineage"
     ,"After the toolbar change, material contract 64/64, typecheck, git diff --check, non-video featureCount=31 / failed=[], and unified desktop 228/228 across 1280/1440/1920/2560px passed; no production or external effect"
+    ,"Toolbar route contract was restored to the current Lightchain category routes with stable per-button test IDs; material/UI control contract 16/16 passed"
+    ,"Fresh official Chrome Plugin/Profile 2 read-only attempt exposed no matching signed Profile 2 extension candidate; exact blocker chrome_plugin_profile2_inventory_empty was recorded without reusing the old binding"
   ],
-  "next_action": "Wait for the signed Chrome extension to advertise foreground_activation and management. Then create one new official Profile 2 browser-client, perform one target-scoped Heavy /tools/fabric URL/title/DOM readback, and if hydrated continue with one approved product-owned Gallery input through rights confirmation, provider result, save, Gallery/Canvas/History/Jobs, and reuse. Do not repeat selected/focus/claim recovery or reuse an old binding.",
+  "next_action": "Wait for the signed Chrome Profile 2 extension to be advertised again. Then create one new official browser-client, perform one openTabs() handshake and target-scoped Lightchain/Heavy readback, and only if the foreground capabilities are also advertised continue with the approved fabric provider/save/reuse flow. Do not reuse this client, an old binding, tab, or receipt.",
   "blocker": {
     "category": "external_wait",
-    "exact_blocker": "chrome_foreground_activation_capability_unavailable",
-    "recovery_condition": "The signed Chrome Plugin/Profile 2 extension advertises foreground_activation and management. Then use a new official Profile 2 browser-client, one openTabs() call, exact Heavy /tools/fabric descriptor, and one target-scoped URL/title/DOM readback before the approved provider flow. Do not invoke selected(), claim, focus, foreground lease, or close/reopen recovery.",
+    "exact_blocker": "chrome_plugin_profile2_inventory_empty",
+    "recovery_condition": "The official signed Chrome Plugin/Profile 2 extension is advertised again. Then create a new browser-client, call openTabs() once, and resolve exact target descriptors for target-scoped readback. Do not invoke selected(), claim, focus, foreground lease, close/reopen recovery, or reuse the failed client. After advertisement returns, foreground provider work still requires foreground_activation and management capabilities.",
     "restart_stage": "verify",
-    "next_action": "Wait for the official capability advertisement, then obtain a fresh same-run Heavy target readback and run the bounded approved fabric provider/save/reuse flow once.",
-    "evidence": "work/heavy-chain-authenticated-target-readback-20260820-r6.md",
+    "next_action": "Wait for the official Profile 2 extension advertisement, then perform one new openTabs() and target-scoped readback before any provider or save operation.",
+    "evidence": "work/chrome-plugin-profile2-inventory-empty-20260820-r1.md",
     "operation_exact_blocker": "chrome_foreground_activation_capability_unavailable",
     "capability_blocker": "chrome_foreground_activation_capability_unavailable",
-    "recorded_at": "2026-08-20T05:19:00+09:00"
+    "recorded_at": "2026-08-20T05:27:39+09:00"
   },
   "same_blocker_count": 1,
   "resume_admission": "eligible_after_recovery_evidence",
   "latest_continuation": {
     "stage": "verify",
-    "exact_blocker": "chrome_foreground_activation_capability_unavailable",
+    "exact_blocker": "chrome_plugin_profile2_inventory_empty",
     "attempted_once": true,
     "independent_progress": [
       "verified Kimi Designer handoff recorded",
@@ -256,8 +258,8 @@
       ,"fresh r6 target-scoped Heavy readback cleared authentication/workspace hydration and confirmed the Lightchain-shaped fabric workspace"
       ,"post-toolbar local verifier passed material 64/64, non-video 31/31, and unified desktop 228/228"
     ],
-    "artifact": "work/heavy-chain-authenticated-target-readback-20260820-r6.md",
-    "recorded_at": "2026-08-20T05:19:00+09:00"
+    "artifact": "work/chrome-plugin-profile2-inventory-empty-20260820-r1.md",
+    "recorded_at": "2026-08-20T05:27:39+09:00"
   },
   "exit_check": null,
   "history": [
@@ -897,8 +899,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T05:19:00+09:00",
       "note": "Aligned Heavy fabric/printing to the fresh Lightchain direct-route toolbar by removing the old four-category strip and preserving Library/Gallery, rights, generation, history, and unified beta lineage. Material contract 64/64, typecheck, diff check, non-video featureCount=31 / failed=[], and unified desktop 228/228 across 1280/1440/1920/2560px passed. Authentication/workspace hydration is already clear from r6; the remaining live blocker is chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 77,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T05:27:39+09:00",
+      "note": "Restored the toolbar route contract to the current Lightchain category routes and added stable per-button readback IDs. Material/UI control contract 16/16, non-video featureCount=31 / failed=[], and unified desktop 228/228 passed. A new official Chrome Plugin/Profile 2 read-only attempt then exposed no matching signed Profile 2 extension candidate, so the current transport blocker is chrome_plugin_profile2_inventory_empty; no old binding or external effect was reused."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T05:19:00+09:00"
+  "updated_at": "2026-08-20T05:27:39+09:00"
 }
