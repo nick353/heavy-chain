@@ -636,7 +636,11 @@ const statusTone: Record<ToolStatus, string> = {
   'coming-soon': 'bg-neutral-100 text-neutral-600 ring-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:ring-neutral-700',
 };
 
-const totalToolCount = tools.length;
+// Keep legacy video definitions available to the provider-boundary tests, but
+// never expose them through the Lightchain non-video beta workbench.
+const visibleTools = tools.filter((tool) => !tool.id.startsWith('video-'));
+const visibleCategories = categories.filter((category) => category.id !== 'video');
+const totalToolCount = visibleTools.length;
 
 const categoryWorkbenchLabels: Record<ToolCategory, {
   uploadLabel: string;
@@ -1324,7 +1328,7 @@ export function LightchainWorkbenchPage() {
 
   const filteredTools = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return tools.filter((tool) => {
+    return visibleTools.filter((tool) => {
       const categoryMatch = tool.category === activeCategory || activeCategory === 'home' && tool.category === 'home';
       if (!categoryMatch) return false;
       if (!normalized) return true;
@@ -1339,15 +1343,15 @@ export function LightchainWorkbenchPage() {
   }, [activeCategory, query]);
 
   const lightchainReadiness = useMemo(() => {
-    const ready = tools.filter((tool) => tool.status === 'ready').length;
-    const workspace = tools.filter((tool) => tool.status === 'workspace').length;
-    const needsImage = tools.filter((tool) => tool.status === 'needs-image').length;
-    return { ready, workspace, needsImage, total: tools.length };
+    const ready = visibleTools.filter((tool) => tool.status === 'ready').length;
+    const workspace = visibleTools.filter((tool) => tool.status === 'workspace').length;
+    const needsImage = visibleTools.filter((tool) => tool.status === 'needs-image').length;
+    return { ready, workspace, needsImage, total: visibleTools.length };
   }, []);
 
   const quickStartTools = useMemo(() => (
     ['marketing-home', 'ai-fitting', 'model-library', 'image-repair']
-      .map((id) => tools.find((tool) => tool.id === id))
+      .map((id) => visibleTools.find((tool) => tool.id === id))
       .filter((tool): tool is CompatTool => Boolean(tool))
   ), []);
 
@@ -1364,12 +1368,12 @@ export function LightchainWorkbenchPage() {
 
   const isModelRoute = location.pathname === '/model';
   const routeTool = toolId
-    ? tools.find((tool) => tool.id === toolId) ?? null
+    ? visibleTools.find((tool) => tool.id === toolId) ?? null
     : isModelRoute
-      ? tools.find((tool) => tool.id === 'ai-fitting') ?? null
+      ? visibleTools.find((tool) => tool.id === 'ai-fitting') ?? null
       : null;
   const isFeatureDetail = Boolean(toolId || isModelRoute);
-  const selectedTool = routeTool ?? tools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? tools[0];
+  const selectedTool = routeTool ?? visibleTools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? visibleTools[0];
   const lightchainProviderRoute = getLightchainProviderRoute(selectedTool.id);
   const lightchainProviderSupported = isLightchainProviderSupported(selectedTool.id);
   const isPrintingImageGenerationRunning = printingGenerationStatus === 'pending' || printingGenerationStatus === 'processing';
@@ -1400,25 +1404,25 @@ export function LightchainWorkbenchPage() {
       const coreGraphicToolIds = ['fabric-image', 'printing-image', 'line-to-real', 'line-generation'];
       if (coreGraphicToolIds.includes(selectedTool.id)) {
         return coreGraphicToolIds
-          .map((id) => tools.find((tool) => tool.id === id))
+          .map((id) => visibleTools.find((tool) => tool.id === id))
           .filter((tool): tool is CompatTool => Boolean(tool));
       }
       if (selectedTool.id === 'pattern-vector' || selectedTool.id === 'pattern-vector-pro') {
         return ['pattern-vector', 'pattern-vector-pro']
-          .map((id) => tools.find((tool) => tool.id === id))
+          .map((id) => visibleTools.find((tool) => tool.id === id))
           .filter((tool): tool is CompatTool => Boolean(tool));
       }
       if (selectedTool.id === 'svg-convert') {
         return ['svg-convert']
-          .map((id) => tools.find((tool) => tool.id === id))
+          .map((id) => visibleTools.find((tool) => tool.id === id))
           .filter((tool): tool is CompatTool => Boolean(tool));
       }
       if (selectedTool.category === 'model' || selectedTool.id === 'model-library') {
         return modelToolOrder
-          .map((id) => tools.find((tool) => tool.id === id))
+          .map((id) => visibleTools.find((tool) => tool.id === id))
           .filter((tool): tool is CompatTool => Boolean(tool));
       }
-      return tools.filter((tool) => tool.category === selectedTool.category);
+      return visibleTools.filter((tool) => tool.category === selectedTool.category);
     },
     [selectedTool.category, selectedTool.id],
   );
@@ -1439,10 +1443,10 @@ export function LightchainWorkbenchPage() {
   useEffect(() => {
     if (toolId) return;
     const categoryParam = searchParams.get('category');
-    if (!categoryParam || !categories.some((category) => category.id === categoryParam)) return;
+    if (!categoryParam || !visibleCategories.some((category) => category.id === categoryParam)) return;
     const categoryId = categoryParam as ToolCategory;
     setActiveCategory(categoryId);
-    const firstTool = tools.find((tool) => tool.category === categoryId);
+    const firstTool = visibleTools.find((tool) => tool.category === categoryId);
     if (firstTool) setSelectedToolId(firstTool.id);
   }, [searchParams, toolId]);
   const flowTabs =
@@ -1902,7 +1906,7 @@ export function LightchainWorkbenchPage() {
     setActiveCategory(categoryId);
     setQuery('');
     setMobileToolsExpanded(false);
-    setSelectedToolId(tools.find((tool) => tool.category === categoryId)?.id ?? tools[0].id);
+    setSelectedToolId(visibleTools.find((tool) => tool.category === categoryId)?.id ?? visibleTools[0].id);
   };
 
   const yieldNextTick = () => new Promise<void>((resolve) => {
@@ -5241,10 +5245,10 @@ export function LightchainWorkbenchPage() {
           {!isFeatureDetail && (
           <div className="rounded-2xl border border-neutral-200 bg-white p-2 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
             <div className="flex gap-1.5 overflow-x-auto">
-              {categories.map((category) => {
+              {visibleCategories.map((category) => {
                 const Icon = category.icon;
                 const active = category.id === activeCategory;
-                const count = tools.filter((tool) => tool.category === category.id).length;
+                const count = visibleTools.filter((tool) => tool.category === category.id).length;
                 return (
                   <button
                     key={category.id}
