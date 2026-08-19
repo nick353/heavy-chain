@@ -22,6 +22,7 @@ Updated: 2026-08-20
 - Commit `7ddb8f4` passed typecheck, diff check, internal UX consistency, video provider boundary `1/1`, launcher parity `3/3`, and full local non-video workflow verification `featureCount=31 / failed=[]` with build `2606 modules`.
 - The same workbench no longer renders the internal status pills (`生成導線あり`／`企画/Canvas対応`／`画像入力必須`／`設計中`) on cards or detail panes. Generation readiness remains an internal gate, while the visible surface follows the Lightchain card presentation. Commit `68c9123`; typecheck, internal UX, video boundary `1/1`, and full local non-video verification `31/31` passed.
 - Canvas/workbench placement preview no longer displays the Heavy-specific `HC` placeholder; it uses the neutral Lightchain-compatible `プリント` label while retaining the placement layer and lineage metadata. Commit `ccc82d9`; material contract 16/16, typecheck, video boundary 1/1, and full non-video feature verification 31/31 passed.
+- Provider coverage recheck passed 10/10: all 31 non-video catalog rows resolve to an explicit `edit-image` or `model-matrix` route, both video rows remain `unsupported`, rights gates remain on provider-backed early-return screens, and direct promotion remains behind durable lineage guards. Workspace-to-Canvas persistence boundary passed 2/2.
 
 2026-08-20 latest Heavy target-scoped canary:
 - Fresh official Profile 2 browser-client `-86b7-4558-9585-9281112b0117` completed `openTabs()`, provisioned one task-owned `/tools/fabric` tab, and completed same-run URL/title/DOM readback plus cleanup.
