@@ -157,6 +157,13 @@
 
 fresh official Profile 2 ownerでforeground capabilityが広告された後、承認済みのfabric-print 1件を、生成→結果→保存→Gallery／Canvas／History／Jobs→再利用→reloadの同一runで確認する。その後にAIフィッティングを同じ契約で確認する。旧binding、旧tab、旧Runは再利用しない。
 
+## Lightchain現行homepage baseline（2026-08-20 r14）
+
+- Fresh official Profile 2 target-scoped readbackで、現行homepageの4カテゴリ、8件のおすすめカード（非動画7件・動画1件）、事例共有6タブを確認した。
+- 現行おすすめカードは、デザインワークスペース、マーケティングワークスペース、AIフィッティング、ウェアデザインラボ、動画ワークステーション、モデル企画ライブラリ、ファッションスタジオ、デザインエージェント。
+- カテゴリ切替後の全カード、正確なroute/href、機能別の生成・結果・保存・再利用・エラー・性能は未確認。`PENDING_CONFIRMATION`のまま扱う。
+- 証跡: `work/lightchain-parity-baseline-20260820-r14.md`。Heavyでは動画カード・動画導線を引き続き除外する。
+
 ## 2026-08-20 再読み込み後の入力復帰修正
 
 - JobsからWorkBenchへ戻る際、provider結果artifactの`materialSlotFiles`形式もresume入力として読めるようにした。

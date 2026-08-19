@@ -3254,3 +3254,11 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`.
 - Next action: after the official Profile 2 foreground capability is advertised, create a fresh owner and run the bounded fabric-print provider → result → save → Gallery/Canvas/History/Jobs → reuse → reload flow, then AI fitting.
 - Restart point: fresh official Profile 2 owner after capability state change. Do not reuse the r9 provisioning tab, old binding, or old run.
+
+## 2026-08-20 latest Lightchain homepage parity baseline r14
+
+- Fresh official Profile 2 target-scoped readback used browser-client `-ada4-4997-8241-a6447bcb922e` and target tab `1980903824` for `https://jp.linkaigc.com/`.
+- The current accessibility snapshot exposed four category tabs and eight recommended cards: seven non-video cards plus `動画ワークステーション`. It also exposed six case-share tabs, including one video case in the default panel.
+- No category switching or business action was performed. Only task-owned tab `1980903824` was closed; cleanup passed.
+- Artifact: `work/lightchain-parity-baseline-20260820-r14.md`.
+- Full category-panel card routes and per-feature generation/save/reuse/error/performance remain `PENDING_CONFIRMATION`. Heavy continues to exclude video.
