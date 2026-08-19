@@ -17,6 +17,10 @@ Updated: 2026-08-20
 - Printing foundation passed 244/244 with `ok=true`, including input candidate identity, mask confirmation, placement/transform, exact/fabric result pairing, bounded history, retry/invalidation, and Canvas handoff gates. Typecheck and diff check also passed.
 - These are local implementation and safety-boundary proofs. They do not establish a fresh production provider result, same-run save/reload/reuse, or internal beta acceptance.
 
+2026-08-20 latest non-video workbench boundary:
+- The legacy Lightchain workbench now filters `video-*` definitions and the `video` category from all visible tools, counts, category selection, quick-start, and route selection. The video provider-boundary definitions remain internal for fail-closed regression coverage; they are not exposed in the non-video beta UI.
+- Commit `7ddb8f4` passed typecheck, diff check, internal UX consistency, video provider boundary `1/1`, launcher parity `3/3`, and full local non-video workflow verification `featureCount=31 / failed=[]` with build `2606 modules`.
+
 2026-08-20 latest Heavy target-scoped canary:
 - Fresh official Profile 2 browser-client `-86b7-4558-9585-9281112b0117` completed `openTabs()`, provisioned one task-owned `/tools/fabric` tab, and completed same-run URL/title/DOM readback plus cleanup.
 - The visible state still showed `ログイン`, `ワークスペースを準備しています`, and `認証状態とブランド設定を確認しています。`; textile/fabric assets were not visible. No selected/claim/focus/foreground lease, provider, save/reuse, recording, AOS UI, or external effect was used.
