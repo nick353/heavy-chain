@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 68,
+  "checkpoint_seq": 72,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -849,8 +849,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T04:58:00+09:00",
       "note": "Static beta gates were refreshed: H601 legal-safety ok=true and internal UX ok=true. G619 remains acceptance=not_claimed with zero real sessions and no manifest; H601 operator readiness remains missing final policy locators and operator decision JSON. No synthetic evidence was created. Heavy target-scoped authentication/workspace readiness remains the production restart condition."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 72,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T04:59:49+09:00",
+      "note": "Cross-route result lineage regression passed: Workspace Activity/Jobs/History 12/12, provider persistence/readback 12/12, Library-to-Canvas 1/1, Canvas generation/readback 5/5. Desktop layout verification passed 228/228 across 1280/1440/1920/2560px with global timeout false. This remains local/preview proof; fresh Heavy authentication/workspace readback and production provider/save/reuse remain pending."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T04:55:37+09:00"
+  "updated_at": "2026-08-20T04:59:49+09:00"
 }

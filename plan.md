@@ -132,3 +132,8 @@
 - G619は`acceptance=not_claimed`、実セッション0件、manifest未作成。実参加者の同意・観察・赤字確認なしに受入れ扱いへ進めない。
 - H601 operator readinessは、最終Terms／Privacy、保持削除・upload rights・brand/reference・person likeness・claims・commercial wording、operator decision JSONの添付待ち。
 - 現時点の本番再開条件は、Heavy Profile 2の認証／workspace準備完了後のfresh target-scoped readback。録画・外部効果・課金・公開・OTP/CAPTCHAは対象外のまま維持する。
+
+## 2026-08-20 共通結果系譜・デスクトップ回帰
+
+- Workspace Activity／Jobs・History routing 12/12、provider persistence/readback 12/12、Library→Canvas 1/1、Canvas generation/readback 5/5をPASS。
+- desktop layout 228/228を1280／1440／1920／2560pxで再確認し、global timeoutなし。local previewの確認であり、Mac／Windows実Chrome受入れの証明ではない。
