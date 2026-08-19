@@ -369,7 +369,7 @@ export function DashboardPage() {
                   制作の入口をひとまとめにしました
                 </h1>
                 <p className="mt-4 max-w-4xl text-sm leading-6 text-neutral-300 sm:text-base">
-                  画像生成、フィッティング、グラフィック、動画までを Heavy Chain の導線として整理し、迷わず開ける入口にしています。
+                  画像生成、フィッティング、グラフィックを Heavy Chain の導線として整理し、迷わず開ける入口にしています。
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">

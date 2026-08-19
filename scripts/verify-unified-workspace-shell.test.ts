@@ -40,8 +40,10 @@ test('first complete apparel flows use the unified workspace shell', () => {
   assert.match(app, /path="\/history"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<HistoryPage \/>[\s\S]*?<\/LightchainUnifiedWorkspaceShell>/);
   assert.match(app, /path="\/jobs"[\s\S]*?<LightchainUnifiedWorkspaceShell>[\s\S]*?<JobsPage \/>[\s\S]*?<\/LightchainUnifiedWorkspaceShell>/);
   const catalog = fs.readFileSync('src/lib/lightchainParityCatalog.ts', 'utf8');
+  const navigation = fs.readFileSync('src/components/layout/navigation.ts', 'utf8');
   assert.match(catalog, /duplicateRoute/);
   assert.match(catalog, /params\.set\('lcFeature', feature\.id\)/);
+  assert.doesNotMatch(navigation, /path: '\/video'/);
   const fitting = fs.readFileSync('src/pages/FittingPage.tsx', 'utf8');
   const material = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
   const generate = fs.readFileSync('src/pages/GeneratePage.tsx', 'utf8');

@@ -7,7 +7,6 @@ import {
   Layers3,
   PackageOpen,
   Palette,
-  PlayCircle,
   Search,
   Shirt,
   Sparkles,
@@ -38,7 +37,6 @@ const routeIcon: Record<string, typeof Sparkles> = {
   '/marketing': PackageOpen,
   '/fitting': Shirt,
   '/lab': WandSparkles,
-  '/video': PlayCircle,
   '/models': UserRound,
   '/studio': Images,
   '/patterns/workbench': Palette,
@@ -76,7 +74,8 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
     const normalizedQuery = query.trim().toLowerCase();
     const filtered = lightchainFeatureCatalog.filter((feature) => {
       const inCategory = feature.category === activeCategory;
-      if (!normalizedQuery) return inCategory;
+      const isBetaFeature = feature.betaIncluded !== false;
+      if (!normalizedQuery) return isBetaFeature && inCategory;
       const haystack = [
         feature.title,
         feature.lightchainName,
@@ -84,10 +83,12 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
         feature.capability,
         feature.tags.join(' '),
       ].join(' ').toLowerCase();
-      return inCategory && haystack.includes(normalizedQuery);
+      return isBetaFeature && inCategory && haystack.includes(normalizedQuery);
     });
 
-    return filtered.length ? filtered : lightchainFeatureCatalog.filter((feature) => feature.category === activeCategory);
+    return filtered.length
+      ? filtered
+      : lightchainFeatureCatalog.filter((feature) => feature.category === activeCategory && feature.betaIncluded !== false);
   }, [activeCategory, query]);
 
   const handleCategoryChange = (categoryId: LightchainCategoryId) => {
@@ -106,7 +107,7 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
             制作入口
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-400 sm:text-base">
-            商品素材から、販促、着用画像、柄、編集、動画までを目的別に選んで始められます。
+            商品素材から、販促、着用画像、柄、編集までを目的別に選んで始められます。
           </p>
         </div>
 

@@ -7,7 +7,6 @@ import {
   Layers3,
   PackageOpen,
   Palette,
-  PlayCircle,
   Shirt,
   Sparkles,
   UserRound,
@@ -26,7 +25,6 @@ const routeIcon: Record<string, typeof Sparkles> = {
   '/marketing': PackageOpen,
   '/fitting': Shirt,
   '/lab': WandSparkles,
-  '/video': PlayCircle,
   '/models': UserRound,
   '/studio': Images,
   '/patterns/workbench': Palette,
@@ -96,13 +94,6 @@ const galleryCases = [
     step: 'ファッションスタジオ → 素材確認 → 撮影セット → Canvas',
     featureId: 'fashion-studio',
   },
-  {
-    id: 'video-promotion',
-    title: 'ファッションスタジオ＋動画ワークステーション：白背景の商品画像からシーン動画を生成',
-    description: '商品画像、シーン、CTAを短尺プロモーションの構成にまとめます。',
-    step: '動画ワークステーション → storyboard → CTA → 保存',
-    featureId: 'video-workstation',
-  },
 ] as const;
 
 const getRouteBase = (route: string) => route.split('?')[0];
@@ -122,7 +113,6 @@ const findFeatureFromPrompt = (prompt: string) => {
     { keywords: ['モデル', '体型', 'サイズ'], featureId: 'model-body-shape' },
     { keywords: ['生地', 'fabric', '布'], featureId: 'fabric-simulation' },
     { keywords: ['柄', 'ロゴ', 'グラフィック'], featureId: 'graphic-design' },
-    { keywords: ['動画', 'sns動画', 'storyboard'], featureId: 'video-workstation' },
     { keywords: ['バナー', '販促', 'sns', 'ec'], featureId: 'marketing-workspace' },
   ].find((item) => item.keywords.some((keyword) => normalizedPrompt.includes(keyword)));
 
@@ -165,7 +155,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   const commandFeature = findFeatureFromPrompt(command);
   const commandHref = buildLightchainFeatureHref(commandFeature);
   const galleryItems = galleryTab === 'recommended'
-    ? galleryCases.filter((item) => item.featureId !== 'video-workstation')
+    ? galleryCases
     : [];
 
   const handleCategoryChange = (categoryId: LightchainCategoryId) => {
