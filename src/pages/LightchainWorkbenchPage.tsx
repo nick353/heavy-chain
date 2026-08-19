@@ -622,20 +622,6 @@ for (const [index, tool] of tools.entries()) {
   };
 }
 
-const statusLabel: Record<ToolStatus, string> = {
-  ready: '生成導線あり',
-  workspace: '企画/Canvas対応',
-  'needs-image': '画像入力必須',
-  'coming-soon': '設計中',
-};
-
-const statusTone: Record<ToolStatus, string> = {
-  ready: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-200 dark:ring-emerald-400/20',
-  workspace: 'bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-400/10 dark:text-sky-200 dark:ring-sky-400/20',
-  'needs-image': 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20',
-  'coming-soon': 'bg-neutral-100 text-neutral-600 ring-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:ring-neutral-700',
-};
-
 // Keep legacy video definitions available to the provider-boundary tests, but
 // never expose them through the Lightchain non-video beta workbench.
 const visibleTools = tools.filter((tool) => !tool.id.startsWith('video-'));
@@ -5483,9 +5469,6 @@ export function LightchainWorkbenchPage() {
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-semibold text-neutral-900 dark:text-white">{tool.title}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${statusTone[tool.status]}`}>
-                            {statusLabel[tool.status]}
-                          </span>
                         </span>
                         <span className="mt-2 line-clamp-2 block text-sm leading-6 text-neutral-500 dark:text-neutral-400">
                           {tool.description}
@@ -6288,9 +6271,6 @@ export function LightchainWorkbenchPage() {
                     </p>
                     <h3 className="mt-1 text-xl font-semibold text-neutral-900 dark:text-white">{selectedTool.title}</h3>
                   </div>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ${statusTone[selectedTool.status]}`}>
-                    {statusLabel[selectedTool.status]}
-                  </span>
                 </div>
 
                 <p className="mt-3 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
