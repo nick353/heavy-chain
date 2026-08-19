@@ -150,7 +150,25 @@ const mapDocument = (document: any): CanvasDocumentRecord => ({
 
 const invokeCanvasDocument = async (body: Record<string, unknown>) => {
   const { data, error } = await supabase.functions.invoke('canvas-document', { body });
-  if (error) throw error;
+  if (error) {
+    // Supabase FunctionsHttpError keeps the response in `context`. Preserve
+    // only the server's bounded error code so Canvas can report the real
+    // rejection reason without leaking headers, tokens, or the raw response.
+    const context = (error as { context?: Response }).context;
+    if (context) {
+      let serverMessage: string | null = null;
+      try {
+        const payload = await context.clone().json() as { error?: unknown };
+        if (typeof payload.error === 'string' && payload.error.trim()) {
+          serverMessage = payload.error.trim().slice(0, 160);
+        }
+      } catch {
+        // Keep the SDK error when the response is not JSON.
+      }
+      if (serverMessage) throw new Error(serverMessage);
+    }
+    throw error;
+  }
   if (!data?.success || !data.document) throw new Error(data?.error || 'canvas_document_request_failed');
   return mapDocument(data.document);
 };

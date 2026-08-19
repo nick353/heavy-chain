@@ -990,7 +990,19 @@ export function CanvasEditorPage() {
       if (documentId) retainCanvasCacheAfterFailedReadback(user.id, brandId, documentId, snapshot);
       const message = String(error?.message || error || '');
       setCanvasPersistenceStatus(/conflict|revision|409/i.test(message) ? 'conflict' : 'failed');
-      toast.error(/conflict|revision|409/i.test(message) ? '他の編集と競合しました。最新状態を読み直してください' : 'Canvasをサーバーへ保存できませんでした');
+      const safeServerDetail = message.length > 0
+        && message.length <= 160
+        && !/[<>\n\r]/.test(message)
+        && !/https?:\/\//i.test(message)
+        ? message
+        : null;
+      toast.error(
+        /conflict|revision|409/i.test(message)
+          ? '他の編集と競合しました。最新状態を読み直してください'
+          : safeServerDetail
+            ? `Canvasをサーバーへ保存できませんでした（${safeServerDetail}）`
+            : 'Canvasをサーバーへ保存できませんでした',
+      );
     }
   };
 
