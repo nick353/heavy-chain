@@ -3120,7 +3120,7 @@ export function LightchainWorkbenchPage() {
         activeLayer: lightchainWorkbenchState.activeLayer,
         placement: lightchainWorkbenchState.printPlacement,
         scale: lightchainWorkbenchState.printScale,
-        overlayLabel: 'HC',
+        overlayLabel: 'プリント',
         objectRole: 'design-overlay',
         stack: lightchainWorkbenchState.extractedLayerReady ? ['original-base', 'extracted-cutout', 'design-overlay'] : ['material-reference', 'design-overlay'],
         extractedLayer: lightchainWorkbenchState.extractedLayerReady ? {
@@ -3383,7 +3383,7 @@ export function LightchainWorkbenchPage() {
             opacity: 1,
             locked: false,
             visible: true,
-            text: 'HC',
+            text: 'プリント',
             fontSize: Math.max(24, Math.round(printScale * 0.9)),
             fontFamily: 'Inter',
             fill: '#0f172a',
@@ -6589,7 +6589,7 @@ export function LightchainWorkbenchPage() {
                                 transform: `translate(-50%, ${printPlacement.includes('背面') ? '-16%' : printPlacement.includes('袖') ? '-72%' : '-50%'})`,
                               }}
                             >
-                              HC
+                              プリント
                             </div>
                           )}
                           {nextStepConfirmed && (

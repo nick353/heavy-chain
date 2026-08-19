@@ -169,7 +169,7 @@ test('current /model route uses the provider-capable AI fitting workbench', () =
   assert.match(modelRoute, /<LightchainWorkbenchPage \/>/);
   assert.doesNotMatch(modelRoute, /LightchainModelPage/);
   assert.match(workbench, /const isModelRoute = location\.pathname === '\/model';/);
-  assert.match(workbench, /tools\.find\(\(tool\) => tool\.id === 'ai-fitting'\)/);
+  assert.match(workbench, /visibleTools\.find\(\(tool\) => tool\.id === 'ai-fitting'\)/);
   assert.doesNotMatch(workbench, />Heavy Chain<\/p>/);
   assert.doesNotMatch(workbench, />HEAVY CHAIN ORDER SHEET<\/text>/);
 });
