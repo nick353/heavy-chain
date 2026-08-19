@@ -159,7 +159,7 @@ export function buildLightchainProviderPrompt(input: PromptInput) {
       case 'design-agent':
         return `Create a polished design-planning visual from the brand, collection, and item brief. Use ${primary} as context when supplied, preserve the requested design direction, and return a coherent series concept without inventing unrelated products.`;
       case 'lab':
-        return `Run the requested Heavy Chain Lab transformation from ${primary}. Preserve the source subject and make the requested conversion, quality check, and adoption signal clear in a production-ready result.`;
+        return `Run the requested Lightchain Lab transformation from ${primary}. Preserve the source subject and make the requested conversion, quality check, and adoption signal clear in a production-ready result.`;
       case 'custom-style':
         return `Create a coherent custom-style reference board/image based on the supplied source material and workflow summary. Keep the source subject recognizable and consistent across the result.`;
       default:

@@ -2,6 +2,12 @@
 
 Updated: 2026-08-20
 
+2026-08-20 latest Lightchain naming parity cleanup:
+- The remaining user/provider-facing `Heavy Chain Lab transformation` wording was changed to `Lightchain Lab transformation` so the Lab prompt and any persisted provider/history metadata follow the current Lightchain naming contract.
+- Focused Lab/provider coverage passed 12/12, typecheck and `git diff --check` passed, and the full non-video verifier passed `featureCount=31 / failed=[]` on a separate preview port.
+- Artifact: `output/playwright/lightchain-all-feature-workflows-current-provider-label/SUMMARY.json`.
+- This is local UI/provider-contract proof only. It does not clear the current production authentication/workspace blocker or prove provider generation, save/reuse, recording, or beta acceptance.
+
 2026-08-20 latest provider retry resilience:
 - The shared Lightchain Workbench generation path now retains the last completed provider result while a retry is running or fails; changing source inputs still clears the result at the input boundary.
 - Added focused regression coverage for normal provider and printing provider retries. Commit `cb46fa5`.

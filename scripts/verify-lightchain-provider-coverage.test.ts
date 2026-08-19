@@ -160,7 +160,7 @@ test('keeps non-model catalog prompts feature-specific instead of using the gene
     ['fitting-clothing-reference', /clean clothing reference for AI fitting/],
     ['fitting-background-reference', /clean background reference for AI fitting/],
     ['design-agent', /design-planning visual/],
-    ['lab', /Heavy Chain Lab transformation/],
+    ['lab', /Lightchain Lab transformation/],
   ]);
 
   for (const [rowId, marker] of expected) {

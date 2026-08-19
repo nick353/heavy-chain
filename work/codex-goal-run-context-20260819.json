@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 72,
+  "checkpoint_seq": 73,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -858,8 +858,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T04:59:49+09:00",
       "note": "Cross-route result lineage regression passed: Workspace Activity/Jobs/History 12/12, provider persistence/readback 12/12, Library-to-Canvas 1/1, Canvas generation/readback 5/5. Desktop layout verification passed 228/228 across 1280/1440/1920/2560px with global timeout false. This remains local/preview proof; fresh Heavy authentication/workspace readback and production provider/save/reuse remain pending."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 73,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T05:05:10+09:00",
+      "note": "Lightchain naming parity cleanup changed the remaining user/provider-facing Heavy Chain Lab transformation wording to Lightchain Lab transformation. Focused Lab/provider coverage passed 12/12, typecheck and diff check passed, and the full non-video verifier passed featureCount=31 / failed=[] on a separate preview port. Production authentication/workspace readiness and provider/save/reuse proof remain pending."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T04:59:49+09:00"
+  "updated_at": "2026-08-20T05:05:10+09:00"
 }
