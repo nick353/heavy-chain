@@ -2,6 +2,11 @@
 
 Updated: 2026-08-19
 
+2026-08-20 03:47 JST latest foreground capability readback:
+- The same fresh Profile 2 browser-client `-4d88-4f63-a2e9-f4267acc60d4` advertised only `viewport`; `foreground_activation` and `management` were absent.
+- No selected/claim/focus/foreground lease call was made. Target-scoped read-only remains available, while foreground/provider work stays fail-closed with `chrome_foreground_activation_capability_unavailable` and `chrome_selected_tab_readback_invalid`.
+- Artifact: `work/chrome-plugin-foreground-capability-readback-20260820-r1.md`.
+
 2026-08-20 03:46 JST latest priority route ledger:
 - Fresh official Profile 2 browser-client `-4d88-4f63-a2e9-f4267acc60d4` read Heavy and Lightchain `/tools/printing` and `/model` through target-scoped URL/title/DOM readback. Four task-owned tabs were cleaned up with `ok=true`.
 - Heavy printing exposed garment/pattern inputs, spot/full controls, rights attestation, AI生成, history, and Canvas保存. Heavy model exposed AI-fitting task/input controls, rights attestation, AI生成, and history.

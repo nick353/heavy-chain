@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 54,
+  "checkpoint_seq": 55,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -92,6 +92,7 @@
     ,"Fresh local 31-feature verification passed featureCount=31 with no failures; bounded unified desktop rerun passed 228/228 at 1280/1440/1920/2560px with cleanup complete"
     ,"Same-run fresh Profile 2 target-scoped Heavy/Lightchain /tools/fabric comparison passed URL/title/DOM and official cleanup; direct-route parity differences were recorded as PENDING_CONFIRMATION without provider or effectful operations"
     ,"Fresh same-run Heavy/Lightchain priority route ledger covered /tools/printing and /model with URL/title/DOM and cleanup PASS; existing Heavy provider result was retained as historical readback, not a new generation proof"
+    ,"Fresh Profile 2 capability readback advertised viewport only; foreground_activation and management were absent, so selected/foreground operations remained fail-closed"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -170,6 +171,7 @@
     ,"output/playwright/unified-desktop-layout-current-rerun/SUMMARY.json: scheduled=228, completed=228, failed=0, cleanup complete"
     ,"work/heavy-lightchain-target-parity-readback-20260820-r1.md: same-run Heavy/Lightchain direct-route URL/title/DOM comparison, parity classification, and cleanup"
     ,"work/lightchain-heavy-priority-route-ledger-20260820-r1.md: same-run /tools/printing and /model input, rights, generation, history, and cleanup ledger"
+    ,"work/chrome-plugin-foreground-capability-readback-20260820-r1.md: fresh capability advertisement and exact foreground blockers"
   ],
   "next_action": "Establish a fresh official foreground owner/selected-tab proof, then select one approved product-owned Gallery input and execute the bounded fabric flow through provider result, save, Gallery/Canvas/History/Jobs, and reuse; source-associated beta-unlock UI proof is complete but is not a foreground or provider substitute.",
   "blocker": {
@@ -749,8 +751,17 @@
       "clear_blocker": true,
       "recorded_at": "2026-08-20T03:46:00+09:00",
       "note": "Fresh same-run target-scoped Heavy/Lightchain /tools/printing and /model route ledger passed URL/title/DOM and cleanup. Heavy all-user rights/generation gates were visible; Lightchain permission locks were observed. Existing Heavy provider output was classified historical, not a new generation receipt. Foreground blocker remains unchanged."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 55,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T03:47:00+09:00",
+      "note": "Fresh Profile 2 capability readback advertised viewport only; foreground_activation and management were absent. Selected/claim/focus was not called. Target-scoped read-only remains available; foreground exact blockers remain chrome_foreground_activation_capability_unavailable and chrome_selected_tab_readback_invalid."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T03:46:00+09:00"
+  "updated_at": "2026-08-20T03:47:00+09:00"
 }
