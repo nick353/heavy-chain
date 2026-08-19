@@ -15,9 +15,12 @@ test('exposes the observed Light Chain direct routes in Heavy App', () => {
 });
 
 test('keeps permission and purchase boundaries visible in the parity screens', () => {
-  assert.match(parityPagesSource, /PermissionLockedButton/);
+  // The internal beta is available to all employees; the legacy plan lock was
+  // intentionally removed. Generation still has rights confirmation gates in
+  // the provider-backed workbenches covered by their focused contracts.
+  assert.doesNotMatch(parityPagesSource, /PermissionLockedButton/);
   assert.match(permissionComponentSource, /権限がありません/);
-  assert.match(parityPagesSource, /このモジュールは購入後に使用可能/);
+  assert.match(parityPagesSource, /AIフィッティングを開く/);
   assert.match(parityPagesSource, /生成履歴/);
   assert.match(parityPagesSource, /キーワード辞典/);
 });

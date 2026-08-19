@@ -2,11 +2,11 @@
 
 Updated: 2026-08-20
 
-2026-08-20 latest fresh Heavy target-scoped canary r4:
-- Official Chrome Plugin/Profile 2 advertisement recovered in a new browser-client `-68be-4a7c-998c-491938908661`; selector revision `6`, extension `hehggadaopoacecdllhhajmbjkdcmajg`, profile ordering `2`. `openTabs()` succeeded with three unrelated current tabs and no Heavy target.
-- The allowlisted target-scoped provisioning path created Heavy `/tools/fabric` tab `1980903758`, read URL/title/DOM in the same owner-bound run, and closed only that task-owned tab. `cleanup_verified=true`; no writer lease, selected, claim, focus, navigation after provisioning, recording, AOS UI, or external effect was used.
-- Current DOM: `ワークスペースを準備しています` and `認証状態とブランド設定を確認しています。`; visible controls include `ログイン確認` and `状態を確認`; textile/fabric assets are absent. Exact blocker: `heavy_target_workspace_authentication_not_ready`.
-- Artifact: `work/heavy-chain-target-scoped-canary-20260820-r4.md`. The earlier r6 hydrated readback remains historical and does not override this latest current state. Foreground/provider work separately remains blocked by `chrome_foreground_activation_capability_unavailable` because only `viewport`/tab-level `cdp` were advertised.
+2026-08-20 latest fresh Heavy target-scoped canary r5:
+- After the user reported login, a new official Chrome Plugin/Profile 2 browser-client `-7ca4-4eb1-a676-fcaff203e639` passed the selector revision `6` / signed extension / profile ordering `2` checks and `openTabs()` handshake. The fresh inventory had three unrelated tabs and no Heavy target.
+- The allowlisted target-scoped provisioning path created Heavy `/tools/fabric` tab `1980903766`, read URL/title/DOM in the same owner-bound run, and closed only that task-owned tab. `cleanup_verified=true`; no writer lease, selected, claim, focus, recording, AOS UI, or external effect was used.
+- Current DOM still shows `ワークスペースを準備しています` and `認証状態とブランド設定を確認しています。`; textile/fabric assets are absent. Exact blocker: `heavy_target_workspace_authentication_not_ready`.
+- Artifact: `work/heavy-chain-target-scoped-canary-20260820-r5.md`. Earlier hydrated readbacks remain historical and do not override this latest state. Foreground/provider work separately remains blocked by `chrome_foreground_activation_capability_unavailable` because only `viewport`/tab-level `cdp` were advertised.
 
 2026-08-20 latest local completion-contract recheck:
 - Focused fabric/printing/AI-fitting/persistence/Canvas/History/Jobs/unified-shell suite passed `110/110`; `npm run typecheck --silent` and `git diff --check` passed.
@@ -27,6 +27,10 @@ Updated: 2026-08-20
 - `npm run lint -- --max-warnings=0` passed.
 - `npm run build` passed with `2606 modules transformed`.
 - This is local build/lint evidence only; production deployment/readback and provider business completion remain separate gates.
+
+2026-08-20 latest direct-route parity contract verification:
+- Lightchain direct routes (`/creator`, `/model`, `/tools/fabric`, `/designProduction`, `/asset-center`, `/flow/orientedDesign`) are explicitly included in the Lightchain shell判定. The legacy plan-lock assertion was updated to the current all-employee beta contract while preserving rights confirmation in provider-backed workbenches.
+- Parity alias/entry routing passed `8/8`, typecheck and `git diff --check` passed. This is local contract proof only; production UI, provider generation/save/reuse, and beta acceptance remain separate.
 
 2026-08-20 latest local direct-route toolbar parity cleanup:
 - Heavy fabric／printingの旧4カテゴリ帯を、fresh Lightchain `/tools/fabric` readbackで確認した現行toolbar（`ツールバー`、デザインツール、フィッティングツール、グラフィックデザインツール、衣類生産ツール）へ置換した。Library／Gallery、権利確認、`AI生成`、`生成履歴`、統合βの結果系譜は保持している。

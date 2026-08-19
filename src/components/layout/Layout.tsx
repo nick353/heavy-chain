@@ -28,9 +28,18 @@ export function Layout() {
     .flatMap((feature) => [feature.route, ...getLightchainUnifiedRouteAliases(feature.id)])
     .filter((route) => route !== '/brand/settings')
     .concat(['/generate', '/editor/changeColor']);
+  const lightchainDirectRoutes = [
+    '/creator',
+    '/model',
+    '/tools/fabric',
+    '/designProduction',
+    '/asset-center',
+    '/flow/orientedDesign',
+  ] as const;
   const lightchainWorkspaceRoutes = ['/gallery', '/history', '/jobs'] as const;
   const isLightchainRoute = location.pathname.startsWith('/lightchain')
     || lightchainParityAliases.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`))
+    || lightchainDirectRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`))
     || lightchainWorkspaceRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
   const isLightchainPrintRoute = location.pathname === '/lightchain/printing-image';
 

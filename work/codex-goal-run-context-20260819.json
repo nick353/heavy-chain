@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 82,
+  "checkpoint_seq": 83,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -107,6 +107,8 @@
     ,"Current-source focused recheck passed material 16/16, provider coverage 10/10, provider persistence/readback 12/12, workspace handoff 2/2, unified workspace shell 4/4, typecheck, diff check, and non-video featureCount=31 / failed=[]"
     ,"Reconciled Plan.md historical authenticated readbacks with the latest r3 authentication/workspace-readiness blocker; stale PASS evidence is no longer treated as current proof"
     ,"Provider retry resilience fixed in the shared Lightchain Workbench: the last completed result is retained during retry/failure while source-input changes still invalidate it; commit cb46fa5 and focused regression passed"
+    ,"Fresh post-user-report Profile 2 target-scoped readback r5 passed browser handshake, Heavy /tools/fabric URL/title/DOM readback, and task-owned cleanup, but the workspace remained in authentication/brand preparation with no textile assets; exact blocker heavy_target_workspace_authentication_not_ready"
+    ,"Aligned Lightchain direct-route shell classification for /creator, /model, /tools/fabric, /designProduction, /asset-center, and /flow/orientedDesign; updated the stale legacy plan-lock parity assertion to the all-employee beta contract. Parity alias/entry routing 8/8, typecheck, and diff check passed"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -117,6 +119,7 @@
   ],
   "evidence": [
     "work/heavy-production-print-provider-readback-20260819-r1.md",
+    "work/heavy-chain-target-scoped-canary-20260820-r5.md",
     "Canvas save failed twice and reload showed 未保存の変更",
     "Jobs showed QUEUE SUMMARY 0 while History showed completed inpaint",
     "work/heavy-production-fabric-platform-asset-static-readback-20260819.md"
@@ -216,17 +219,17 @@
     ,"Removed the current-Lightchain-absent LIGHTCHAIN MATERIAL WORKBENCH eyebrow from fabric/printing; focused material/UI control contract 16/16, typecheck, and diff check passed"
     ,"Post-cleanup local quality checks passed npm run lint -- --max-warnings=0 and npm run build with 2606 modules; production/provider gates remain separate"
   ],
-  "next_action": "After the user completes Heavy Profile 2 login and workspace/brand preparation, create one new official browser-client, perform one openTabs() handshake and target-scoped Heavy /tools/fabric readback. Continue to provider work only if the workspace is hydrated and foreground capabilities are advertised. Do not reuse this client, an old binding, tab, or receipt.",
+  "next_action": "After the Heavy Profile 2 page visibly leaves authentication/brand preparation and shows workspace assets, create one new official browser-client, perform one openTabs() handshake and target-scoped Heavy /tools/fabric readback. Continue to provider work only if hydrated and foreground capabilities are advertised. Do not reuse this client, an old binding, tab, or receipt.",
   "blocker": {
     "category": "authentication_wait",
     "exact_blocker": "heavy_target_workspace_authentication_not_ready",
     "recovery_condition": "The user completes the visible Heavy login and workspace/brand preparation in Profile 2. Then create a new browser-client, call openTabs() once, resolve the exact Heavy /tools/fabric descriptor, and perform target-scoped URL/title/DOM readback. Do not invoke selected(), claim, focus, foreground lease, close/reopen recovery, or reuse this client. After hydration, foreground provider work still requires foreground_activation and management capabilities.",
     "restart_stage": "verify",
     "next_action": "Wait for the user-owned Heavy authentication/workspace state change, then perform one new official Profile 2 openTabs() and target-scoped readback before any provider or save operation.",
-    "evidence": "work/heavy-chain-target-scoped-canary-20260820-r4.md",
+    "evidence": "work/heavy-chain-target-scoped-canary-20260820-r5.md",
     "operation_exact_blocker": "chrome_foreground_activation_capability_unavailable",
     "capability_blocker": "chrome_foreground_activation_capability_unavailable",
-    "recorded_at": "2026-08-20T05:33:56+09:00"
+    "recorded_at": "2026-08-20T06:02:00+09:00"
   },
   "same_blocker_count": 1,
   "resume_admission": "eligible_after_recovery_evidence",
@@ -963,8 +966,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T05:44:09+09:00",
       "note": "Post-cleanup local quality checks passed npm run lint -- --max-warnings=0 and npm run build with 2606 modules. This improves local readiness only; production deployment/readback, provider generation/save/reuse, and the unchanged Heavy authentication/workspace state remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 83,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T06:02:00+09:00",
+      "note": "After the user reported login, a new official Profile 2 target-scoped run passed openTabs(), provisioned Heavy /tools/fabric, completed same-run URL/title/DOM readback, and cleaned task-owned tab 1980903766. The workspace still showed authentication/brand preparation with no textile assets, so the exact blocker remains heavy_target_workspace_authentication_not_ready. Local direct-route parity was also corrected for six observed routes; parity alias/entry routing passed 8/8, typecheck and diff check passed."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T05:44:09+09:00"
+  "updated_at": "2026-08-20T06:02:00+09:00"
 }
