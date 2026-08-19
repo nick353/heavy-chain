@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 55,
+  "checkpoint_seq": 56,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -93,6 +93,7 @@
     ,"Same-run fresh Profile 2 target-scoped Heavy/Lightchain /tools/fabric comparison passed URL/title/DOM and official cleanup; direct-route parity differences were recorded as PENDING_CONFIRMATION without provider or effectful operations"
     ,"Fresh same-run Heavy/Lightchain priority route ledger covered /tools/printing and /model with URL/title/DOM and cleanup PASS; existing Heavy provider result was retained as historical readback, not a new generation proof"
     ,"Fresh Profile 2 capability readback advertised viewport only; foreground_activation and management were absent, so selected/foreground operations remained fail-closed"
+    ,"Source commit 797afd5 was deployed as Zeabur deployment 6a85fb012a82f8973377761f; fresh Profile 2 target-scoped /lightchain readback confirmed the authenticated 7-tool non-video launcher with video and login markers absent, and cleanup passed"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -172,6 +173,7 @@
     ,"work/heavy-lightchain-target-parity-readback-20260820-r1.md: same-run Heavy/Lightchain direct-route URL/title/DOM comparison, parity classification, and cleanup"
     ,"work/lightchain-heavy-priority-route-ledger-20260820-r1.md: same-run /tools/printing and /model input, rights, generation, history, and cleanup ledger"
     ,"work/chrome-plugin-foreground-capability-readback-20260820-r1.md: fresh capability advertisement and exact foreground blockers"
+    ,"work/heavy-production-video-hidden-readback-20260820-r1.md: source-associated deployment RUNNING, fresh target-scoped /lightchain readback, authenticated non-video launcher, and task-owned cleanup"
   ],
   "next_action": "Establish a fresh official foreground owner/selected-tab proof, then select one approved product-owned Gallery input and execute the bounded fabric flow through provider result, save, Gallery/Canvas/History/Jobs, and reuse; source-associated beta-unlock UI proof is complete but is not a foreground or provider substitute.",
   "blocker": {

@@ -1,6 +1,13 @@
 # Heavy Chain Current State
 
-Updated: 2026-08-19
+Updated: 2026-08-20
+
+2026-08-20 latest production non-video launcher readback:
+- Source commit `797afd54f133068cdd1c4b19845116dfd8633952` is deployed in Zeabur deployment `6a85fb012a82f8973377761f` with status `RUNNING` and plan `docker`.
+- Fresh official Chrome Plugin/Profile 2 target-scoped browser-client `-42ca-4419-b14a-7a8784a35d2b` provisioned task-owned Heavy `/lightchain` tab `1980903703` and read the authenticated hydrated launcher in the same run.
+- The launcher showed `7 tools`, four non-video categories, `video_text_present=false`, `video_route_present=false`, and `login_text_present=false`. Cleanup closed only the task-owned tab with `ok=true`.
+- Artifact: `work/heavy-production-video-hidden-readback-20260820-r1.md`.
+- This confirms the deployed non-video launcher and authentication state only. Provider generation, save/reload/reuse, Mac/Windows acceptance, and internal beta rollout remain incomplete.
 
 2026-08-20 03:47 JST latest foreground capability readback:
 - The same fresh Profile 2 browser-client `-4d88-4f63-a2e9-f4267acc60d4` advertised only `viewport`; `foreground_activation` and `management` were absent.

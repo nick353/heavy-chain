@@ -63,6 +63,12 @@
 
 ## 現在の状態（2026-08-20）
 
+- 2026-08-20、source commit `797afd54f133068cdd1c4b19845116dfd8633952` のZeabur deployment `6a85fb012a82f8973377761f`が`RUNNING`になった。デプロイ後のfresh official Chrome Plugin／Profile 2 target-scoped readbackでHeavy `/lightchain`を確認し、7件の非動画ランチャー、4カテゴリ、`video_text_present=false`、`video_route_present=false`、`login_text_present=false`を同一runで確認した。作成タブは`cleanup ok=true`で閉じた。証跡は `work/heavy-production-video-hidden-readback-20260820-r1.md`。これは非動画UI反映と認証済み画面の証明であり、provider生成・保存・再利用・β受入れの完了証明ではない。
+
+- 2026-08-20、fresh target-scoped readbackでHeavy `/tools/fabric`を確認した。ログイン／準備中シェルではなく、`生地イメージ`、モデル／生地入力、Gallery選択、画像比率、生地バリエーション、権利確認、`AI生成`、生成履歴が表示された。現行同一runで`login_text_present=false`かつhydrated workspaceとして確認済み。クリック・アップロード・生成は行っていない。
+
+- foreground capabilityは引き続き`viewport`のみで、`foreground_activation`／`management`は未広告。target-scoped read-onlyは成功しているが、provider生成を伴うforeground操作は開始していない。
+
 - 2026-08-20 03:47 JST、同一fresh Profile 2 browser-clientの公式capability広告を確認した。`viewport`のみで、`foreground_activation`／`management`は未広告。selected／claim／focusは呼ばず、foreground blockerを`chrome_foreground_activation_capability_unavailable`として維持した。証跡は `work/chrome-plugin-foreground-capability-readback-20260820-r1.md`。
 - 2026-08-20 03:46 JST、同一fresh Profile 2 target-scoped runでHeavy／Lightchainの`/tools/printing`と`/model`を比較した。Heavy printingは入力、スポット／全体、権利確認、AI生成、生成履歴、Canvas保存導線を表示し、Heavy modelはAIフィッティング、衣服入力、参考画像、権利確認、AI生成、生成履歴を表示した。Lightchain両routeは権限ロックを表示するため、Heavyのロック除去は社内全員利用要件に沿う意図的差分。Heavyに見えた既存provider resultは新規生成証拠に昇格しない。証跡は `work/lightchain-heavy-priority-route-ledger-20260820-r1.md`。
 - 2026-08-20 03:43 JST、同一fresh Profile 2 browser-clientでHeavy `/tools/fabric`とLightchain `/tools/fabric`をtarget-scoped read-only比較した。両方のURL/title/DOM readbackとtask-owned cleanupはPASS。Lightchain direct routeにも旧終了案内が存在するため、Heavy側の同文言はHeavy-only余計表示ではない。一方、Heavyの統合workspaceはGallery／権利確認／AI生成を追加した内部β仕様で、タイトル・toolbar文言・詳細入力構成は直接routeと差が残る。完全parityはPENDING_CONFIRMATION。証跡は `work/heavy-lightchain-target-parity-readback-20260820-r1.md`。
@@ -85,6 +91,7 @@
 - Same-run Heavy/Lightchain direct-route comparison: PASS。両targetのURL/title/DOM readbackと公式cleanupを確認した。Heavyの統合β入力・権利・生成ゲートは意図した内部β差分だが、タイトル・toolbar文言・詳細入力構成の完全一致はPENDING_CONFIRMATION。
 - Priority route ledger: PASS。`/tools/printing`と`/model`のHeavy／Lightchain readbackを同一fresh runで取得し、入力・権利・生成・履歴差分を記録した。既存provider結果は履歴データであり、新規生成proofではない。
 - Foreground capability readback: BLOCKED。fresh browser-clientの公式広告は`viewport`のみで、`foreground_activation`／`management`は未提供。target-scoped read-onlyは継続可能。
+- Production non-video launcher readback: PASS。deployment `6a85fb012a82f8973377761f`が`797afd5`で`RUNNING`。fresh Profile 2 target-scoped `/lightchain` readbackで7件の非動画ランチャーと動画導線0件を確認。証跡は`work/heavy-production-video-hidden-readback-20260820-r1.md`。
 - Authentication gate: PASS。fresh `/login` readbackはhydration後に`/lightchain`へ自動遷移し、`アカウント`、4カテゴリ、31非動画Libraryを確認した。最新のsource-associated beta-unlock readbackでも、ログイン／準備中シェルではなく、`生地イメージ`、素材入力、権利文言、`AI生成`、`生成履歴`を含むhydrated workspaceを確認した。最新証跡は `work/heavy-production-beta-unlock-readback-20260820-r1.md`。
 - Common route readback: PASS。fresh同一runで`/lightchain`、`/gallery`、`/canvas/new`、`/history`、`/jobs`を15秒hydration後に確認した。Galleryは961枚、Historyは保存済み12件・失敗4件、Jobsは完了20件・失敗4件を表示した。新規provider生成からの同一run保存・再利用は未証明。
 - Exact blocker: `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`（foreground操作）。target-scoped readback自体は成功している。製品所有のgarment/textile platform assetは実装・focused testで確認済みだが、同一runのUI選択・権利確認・生成・保存・再利用はforeground ownerが揃うまでPENDING_CONFIRMATION。Lightchainカテゴリ内全カードも現行readbackではPENDING_CONFIRMATION。
