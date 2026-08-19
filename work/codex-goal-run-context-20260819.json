@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 67,
+  "checkpoint_seq": 68,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -106,6 +106,7 @@
     ,"Unified desktop continuation completed 228/228 checks across 1280/1440/1920/2560px with failed=0, globalTimedOut=false, and cleanupLeftovers=0"
     ,"Current-source focused recheck passed material 16/16, provider coverage 10/10, provider persistence/readback 12/12, workspace handoff 2/2, unified workspace shell 4/4, typecheck, diff check, and non-video featureCount=31 / failed=[]"
     ,"Reconciled Plan.md historical authenticated readbacks with the latest r3 authentication/workspace-readiness blocker; stale PASS evidence is no longer treated as current proof"
+    ,"Provider retry resilience fixed in the shared Lightchain Workbench: the last completed result is retained during retry/failure while source-input changes still invalidate it; commit cb46fa5 and focused regression passed"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -203,6 +204,8 @@
     ,"output/playwright/unified-desktop-layout-current-continuation/SUMMARY.json: scheduled=228, completed=228, failed=0, globalTimedOut=false, cleanupLeftovers=0"
     ,"output/playwright/lightchain-all-feature-workflows-20260819T194332Z/SUMMARY.json: featureCount=31, ok=true, failed=[]"
     ,"Focused current-source recheck: material 16/16; provider coverage 10/10; provider persistence/readback 12/12; workspace handoff 2/2; unified shell 4/4; typecheck and diff check PASS"
+    ,"output/playwright/lightchain-all-feature-workflows-20260819T194809Z/SUMMARY.json: featureCount=31, ok=true, failed=[] after provider retry resilience fix"
+    ,"Provider coverage 11/11 including retry result retention; material 16/16; provider persistence/readback 12/12; workspace handoff 2/2; unified shell 4/4; typecheck and diff check PASS"
   ],
   "next_action": "After Heavy Profile 2 authentication/workspace preparation is complete, create one new official Profile 2 browser-client and perform one target-scoped /tools/fabric URL/title/DOM readback; if hydrated, continue with one approved product-owned Gallery input through provider result, save, Gallery/Canvas/History/Jobs, and reuse. Do not repeat foreground recovery or reuse the old binding.",
   "blocker": {
@@ -810,8 +813,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T04:45:07+09:00",
       "note": "Current-source focused recheck passed material 16/16, provider coverage 10/10, provider persistence/readback 12/12, workspace handoff 2/2, unified shell 4/4, typecheck, diff check, and non-video featureCount=31 / failed=[]. Plan.md was reconciled so historical authenticated readbacks cannot override the latest r3 authentication/workspace-readiness blocker."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 68,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T04:48:09+09:00",
+      "note": "Provider retry resilience was fixed in the shared Lightchain Workbench: the last completed result remains available during retry/failure while source-input changes still invalidate it. Focused provider coverage passed 11/11 and the full non-video verifier passed featureCount=31 / failed=[]. Production provider generation and current Chrome authentication remain pending."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T04:45:07+09:00"
+  "updated_at": "2026-08-20T04:48:09+09:00"
 }

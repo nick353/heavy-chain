@@ -2,6 +2,12 @@
 
 Updated: 2026-08-20
 
+2026-08-20 latest provider retry resilience:
+- The shared Lightchain Workbench generation path now retains the last completed provider result while a retry is running or fails; changing source inputs still clears the result at the input boundary.
+- Added focused regression coverage for normal provider and printing provider retries. Commit `cb46fa5`.
+- Verification: provider coverage 11/11, material contract 16/16, provider persistence/readback 12/12, workspace handoff 2/2, unified shell 4/4, non-video featureCount=31 / failed=[], typecheck, and diff check PASS.
+- This is local recovery-contract proof only; no production provider generation, save/reuse, Chrome retry, or external effect was performed.
+
 2026-08-20 current evidence reconciliation:
 - Plan.md now marks earlier authenticated/hydrated readbacks as historical and keeps the latest source-thread r3 readback as the current authentication blocker. This prevents a stale PASS from being used as current proof.
 - Focused current-source recheck passed: material 16/16, provider coverage 10/10, provider persistence/readback 12/12, workspace-to-Canvas handoff 2/2, unified workspace shell 4/4, typecheck, diff check, and non-video workflow verification `featureCount=31 / failed=[]`.
