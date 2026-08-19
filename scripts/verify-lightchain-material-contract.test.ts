@@ -35,6 +35,15 @@ test('priority material routes expose the current Lightchain direct-route toolba
   assert.doesNotMatch(page, /LIGHTCHAIN MATERIAL WORKBENCH/);
 });
 
+test('priority material routes use the current Lightchain vertical toolbar frame', () => {
+  const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+
+  assert.match(page, /lg:grid-cols-\[76px_minmax\(0,1fr\)\]/);
+  assert.match(page, /lg:flex-col lg:gap-3/);
+  assert.match(page, /lg:\[writing-mode:vertical-rl\]/);
+  assert.match(page, /className="flex min-h-14 flex-1 flex-col items-center/);
+});
+
 test('fabric and print keep the same required-input order as the Light recording', () => {
   assert.deepEqual(
     LIGHTCHAIN_MATERIAL_INPUTS['fabric-image'].map((slot) => slot.label),

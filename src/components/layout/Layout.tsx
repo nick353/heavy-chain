@@ -12,7 +12,7 @@ import {
   lightchainUnifiedFeatureCatalog,
 } from '../../lib/lightchainUnifiedFeatureCatalog';
 import { HeavyChainLogo } from '../icons';
-import { HelpCircle, History, UserCircle } from 'lucide-react';
+import { ChevronDown, Globe2, HelpCircle, History, UserCircle } from 'lucide-react';
 
 export function Layout() {
   const { user } = useAuthStore();
@@ -62,7 +62,7 @@ export function Layout() {
       <SkipLink />
       
       {/* Keyboard Shortcuts Help */}
-      {showSidebar && <KeyboardShortcuts shortcuts={defaultShortcuts} />}
+      {showSidebar && !isLightchainRoute && <KeyboardShortcuts shortcuts={defaultShortcuts} />}
       
       {showSidebar ? (
         <div className="dark min-h-screen bg-[#070b0d] text-white">
@@ -96,9 +96,15 @@ export function Layout() {
               </div>
               <div className="flex items-center gap-2 text-neutral-300">
                 {isLightchainRoute && (
-                  <span className="hidden rounded-full px-3 py-2 text-sm text-neutral-300 sm:inline-flex">
+                  <button
+                    type="button"
+                    className="hidden items-center gap-1 rounded-full px-3 py-2 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
+                    aria-label="日本語"
+                  >
+                    <Globe2 className="h-4 w-4" />
                     日本語
-                  </span>
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
                 )}
                 {!isLightchainRoute && (
                   <Link to="/history" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
@@ -107,10 +113,14 @@ export function Layout() {
                   </Link>
                 )}
                 {isLightchainRoute ? (
-                  <span className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm text-neutral-300 sm:inline-flex">
+                  <button
+                    type="button"
+                    className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
+                    aria-label="ヘルプセンター"
+                  >
                     <HelpCircle className="h-4 w-4" />
                     ヘルプセンター
-                  </span>
+                  </button>
                 ) : (
                   <Link to="/jobs" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
                     <HelpCircle className="h-4 w-4" />

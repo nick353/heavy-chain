@@ -4,6 +4,48 @@ import test from 'node:test';
 
 const workbenchSourcePath = new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url);
 const materialSourcePath = new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url);
+const layoutSourcePath = new URL('../src/components/layout/Layout.tsx', import.meta.url);
+const appSourcePath = new URL('../src/App.tsx', import.meta.url);
+const publicHeaderSourcePath = new URL('../src/components/layout/Header.tsx', import.meta.url);
+const loginSourcePath = new URL('../src/pages/LoginPage.tsx', import.meta.url);
+
+test('public and auth recovery shells use the Lightchain identity without extra Heavy chrome', async () => {
+  const [app, header, login] = await Promise.all([
+    readFile(appSourcePath, 'utf8'),
+    readFile(publicHeaderSourcePath, 'utf8'),
+    readFile(loginSourcePath, 'utf8'),
+  ]);
+  const fallback = app.slice(app.indexOf('function WorkspaceLoadingFallback'), app.indexOf('function PageLoading'));
+
+  assert.match(header, /aria-label="Lightchain AI"/);
+  assert.match(header, /LIGHTCHAIN/);
+  assert.match(header, /aria-label="日本語"/);
+  assert.match(header, /aria-label="ヘルプセンター"/);
+  assert.doesNotMatch(header, /HeavyChainLogo|HEAVY CHAIN|darkMode/);
+
+  assert.match(fallback, /LIGHTCHAIN/);
+  assert.match(fallback, /ログイン状態を確認しています/);
+  assert.doesNotMatch(fallback, /ログイン画面へ|読み込み後にこの導線|grid gap-3 sm:grid-cols-3/);
+
+  assert.match(login, /LIGHTCHAIN AI \/ LOGIN/);
+  assert.match(login, /placeholder="アカウントを入力"/);
+  assert.match(login, /placeholder="パスワードを入力する"/);
+  assert.doesNotMatch(login, /HEAVY CHAIN|Heavy Chain/);
+});
+
+test('Lightchain routes do not expose the Heavy global keyboard shortcut affordance', async () => {
+  const source = await readFile(layoutSourcePath, 'utf8');
+
+  assert.match(source, /showSidebar && !isLightchainRoute && <KeyboardShortcuts shortcuts=\{defaultShortcuts\} \/>/);
+});
+
+test('Lightchain header exposes the current language and help button controls', async () => {
+  const source = await readFile(layoutSourcePath, 'utf8');
+
+  assert.match(source, /<Globe2 className="h-4 w-4" \/>/);
+  assert.match(source, /aria-label="日本語"/);
+  assert.match(source, /aria-label="ヘルプセンター"/);
+});
 
 test('fitting and line-to-real settings are stateful and persisted into the workbench contract', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');

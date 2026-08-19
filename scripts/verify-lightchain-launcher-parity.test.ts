@@ -40,3 +40,49 @@ test('launcher uses Lightchain display labels instead of internal readiness labe
   assert.equal(getLightchainLauncherBadge(getLightchainLauncherFeatures('recommended').find((feature) => feature.id === 'marketing-workspace')!), 'Beta');
   assert.equal(getLightchainLauncherBadge(fitting.find((feature) => feature.id === 'remove-background')!), 'まもなく提供終了');
 });
+
+test('launcher preserves the current Lightchain card order and display names', () => {
+  const titlesByCategory = Object.fromEntries(
+    lightchainCategories.map((category) => [
+      category.id,
+      getLightchainLauncherFeatures(category.id).map((feature) => getLightchainLauncherTitle(feature)),
+    ]),
+  );
+
+  assert.deepEqual(titlesByCategory, {
+    recommended: [
+      'デザインワークスペース',
+      'マーケティングワークスペース',
+      'AIフィッティング',
+      'ウェアデザインラボ',
+      'モデル企画ライブラリ',
+      'ファッションスタジオ',
+      'デザインエージェント',
+    ],
+    planning: [
+      'デザインワークスペース',
+      'インスピレーション',
+      'ウェアデザインラボ',
+      'デザインエージェント',
+      '生地プリントの試着シミュレーション',
+      '線画から実写へ変換',
+      '色変更',
+      '平絵をベクター化',
+      'カスタムスタイル',
+    ],
+    fitting: [
+      'AIフィッティング',
+      'モデル企画ライブラリ',
+      'ファッションスタジオ',
+      'Lightchain Lab',
+      '画像修正',
+    ],
+    graphics: [
+      'デザインワークスペース',
+      'AIグラフィックデザイン',
+      'パターンをベクター画像に変換（プロフェッショナル版）',
+      'デザインアレンジ',
+      'プリントデザイン',
+    ],
+  });
+});

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Chrome, Eye, LockKeyhole, Mail } from 'lucide-react';
+import { Chrome, Eye, Globe2, HelpCircle, LockKeyhole, Mail } from 'lucide-react';
 import { Button } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
 import toast from 'react-hot-toast';
@@ -62,16 +62,21 @@ export function LoginPage() {
   return (
     <main className="min-h-screen px-4 py-8 text-white">
       <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1500px] flex-col">
-        <header className="flex items-center justify-between">
-          <Link to="/" className="inline-flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/10 text-xs font-semibold tracking-[0.28em] text-cyan-200">
-              HC
-            </span>
-            <span className="text-sm font-semibold tracking-[0.32em] text-white">HEAVY CHAIN</span>
+        <header className="flex items-center justify-between border-b border-white/10 pb-5">
+          <Link to="/" aria-label="Lightchain AI" className="inline-flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/80 bg-white text-[11px] font-black tracking-normal text-neutral-950">◌</span>
+            LIGHTCHAIN
           </Link>
-          <Link to="/" className="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-neutral-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/10 hover:text-white">
-            トップへ
-          </Link>
+          <div className="flex items-center gap-1 text-sm text-neutral-300 sm:gap-2">
+            <button type="button" aria-label="日本語" className="hidden items-center gap-1 rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-white sm:inline-flex">
+              <Globe2 className="h-4 w-4" />
+              日本語
+            </button>
+            <button type="button" aria-label="ヘルプセンター" className="hidden items-center gap-2 rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-white sm:inline-flex">
+              <HelpCircle className="h-4 w-4" />
+              ヘルプセンター
+            </button>
+          </div>
         </header>
 
         {user && (
@@ -93,19 +98,19 @@ export function LoginPage() {
 
         <section className="grid flex-1 items-center gap-8 py-10 lg:grid-cols-[minmax(0,1fr)_560px]">
           <div className="hidden lg:block">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">APPAREL AI WORKSPACE</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">LIGHTCHAIN AI</p>
             <h1 className="mt-5 max-w-3xl text-6xl font-semibold leading-none tracking-normal">
-              Heavy Chainを、もっと軽く。
+              アパレル制作を、もっと軽く。
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-400">
-              背景、カード、入力、CTAの見た目を刷新して、すぐに別物だと分かるワークスペースへ寄せています。
+              生地、プリント、フィッティング、グラフィック制作をひとつのワークスペースで進めます。
             </p>
           </div>
 
           <div className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(8,12,13,0.96),rgba(11,15,18,0.92))] p-7 shadow-[0_28px_90px_rgba(0,0,0,0.5)] sm:p-10">
             <div className="mb-8">
-              <p className="text-sm font-semibold tracking-[0.26em] text-cyan-300">HEAVY CHAIN / LIGHT UI</p>
-              <h2 className="mt-6 text-2xl font-semibold">新しい見た目のログイン画面です。</h2>
+              <p className="text-sm font-semibold tracking-[0.26em] text-cyan-300">LIGHTCHAIN AI / LOGIN</p>
+              <h2 className="mt-6 text-2xl font-semibold">ログイン</h2>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -117,7 +122,7 @@ export function LoginPage() {
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    placeholder="office@example.com"
+                    placeholder="アカウントを入力"
                     autoComplete="email"
                     disabled={isLoading}
                     className="min-w-0 flex-1 border-0 bg-transparent text-white outline-none placeholder:text-neutral-500"
@@ -134,7 +139,7 @@ export function LoginPage() {
                     type="password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="password"
+                    placeholder="パスワードを入力する"
                     autoComplete="current-password"
                     disabled={isLoading}
                     className="min-w-0 flex-1 border-0 bg-transparent text-white outline-none placeholder:text-neutral-500"

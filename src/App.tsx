@@ -171,54 +171,39 @@ function WorkspaceLoadingFallback({ authRecovery = false }: { authRecovery?: boo
     <div
       data-testid="workspace-loading-fallback"
       data-loading-state={authRecovery ? 'auth-recovery' : 'lazy-page'}
-      className="min-h-screen bg-surface-50 px-4 py-8 dark:bg-surface-950"
+      className="min-h-screen bg-[#05090b] px-4 py-8 text-white dark:bg-[#05090b]"
     >
-      <div className="mx-auto flex min-h-[60vh] max-w-5xl flex-col justify-center">
-        <div className="max-w-2xl">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="spinner" />
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-primary-600 dark:text-primary-300">
-              {copy.eyebrow}
-            </p>
+      <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1800px] flex-col">
+        <header className="flex items-center justify-between border-b border-white/10 pb-5">
+          <a href="/" aria-label="Lightchain AI" className="inline-flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/80 bg-white text-[11px] font-black tracking-normal text-neutral-950">◌</span>
+            LIGHTCHAIN
+          </a>
+          <div className="hidden items-center gap-2 text-sm text-neutral-300 sm:flex">
+            <span className="inline-flex items-center gap-1 rounded-full px-3 py-2"><span aria-hidden="true">◎</span>日本語</span>
+            <span className="inline-flex items-center gap-2 rounded-full px-3 py-2">ヘルプセンター</span>
           </div>
-          <h1 className="text-2xl font-display font-semibold text-neutral-950 dark:text-white sm:text-3xl">
-            {copy.title}
-          </h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-            {copy.description}
-          </p>
-          {authRecovery ? (
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => window.location.reload()}
-                className="rounded-xl bg-neutral-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-              >
-                再読み込み
-              </button>
-              <a
-                href="/login"
-                className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 dark:border-neutral-800 dark:bg-white/[0.06] dark:text-neutral-200 dark:hover:bg-white/[0.1]"
-              >
-                ログイン画面へ
+        </header>
+
+        <main className="flex flex-1 items-center justify-center py-12">
+          <div className="w-full max-w-xl text-center">
+            <div className="mb-5 flex items-center justify-center gap-3">
+            <div className="spinner" />
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">{authRecovery ? 'LIGHTCHAIN AI' : copy.eyebrow}</p>
+            </div>
+            <h1 className="text-2xl font-display font-semibold text-white sm:text-3xl">
+              {authRecovery ? 'ログイン状態を確認しています' : copy.title}
+            </h1>
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-neutral-400">
+              {authRecovery ? 'ログイン後にLightchainの制作ワークスペースへ進めます。' : copy.description}
+            </p>
+            {authRecovery ? (
+              <a href="/login" className="mt-6 inline-flex rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200">
+                ログイン
               </a>
-            </div>
-          ) : null}
-        </div>
-        <div className="mt-8 grid gap-3 sm:grid-cols-3">
-          {copy.actions.map((label) => (
-            <div
-              key={label}
-              className="rounded-2xl border border-neutral-200 bg-white/70 p-4 shadow-sm dark:border-neutral-800 dark:bg-white/[0.06]"
-            >
-              <div className="mb-3 h-8 w-8 rounded-xl bg-primary-100 dark:bg-primary-900/40" />
-              <p className="text-sm font-semibold text-neutral-900 dark:text-white">{label}</p>
-              <p className="mt-2 text-xs leading-5 text-neutral-500 dark:text-neutral-400">
-                読み込み後にこの導線をそのまま使えます。
-              </p>
-            </div>
-          ))}
-        </div>
+            ) : null}
+          </div>
+        </main>
       </div>
     </div>
   );
