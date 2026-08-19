@@ -151,7 +151,6 @@ import {
   LIGHTCHAIN_MATERIAL_TABS,
   getLightchainMaterialTab,
 } from '../lib/lightchainMaterialContract';
-import { lightchainCategories } from '../lib/lightchainParityCatalog';
 import { buildLightchainProviderPrompt } from '../features/lightchain/providerAdapter';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import {
@@ -169,26 +168,32 @@ import type { GeneratedImage, Json } from '../types/database';
 type WorkbenchMode = 'fabric' | 'printing';
 type PrintCoverageMode = 'spot' | 'full';
 
-function LightchainCategoryToolbar() {
+const LIGHTCHAIN_MATERIAL_TOOLBAR_ITEMS = [
+  { label: 'デザインツール', path: '/lightchain?category=planning', icon: Laptop },
+  { label: 'フィッティングツール', path: '/fitting', icon: Users },
+  { label: 'グラフィックデザインツール', path: '/patterns/workbench', icon: Layers3 },
+  { label: '衣類生産ツール', path: '/designProduction', icon: Scissors },
+] as const;
+
+function LightchainMaterialToolbar() {
   const navigate = useNavigate();
 
   return (
     <nav
-      aria-label="Lightchainカテゴリ"
-      data-testid="lightchain-category-toolbar"
-      className="mb-4 flex flex-wrap gap-1 rounded-xl border border-white/10 bg-[#111719] p-1"
+      aria-label="Lightchainツールバー"
+      data-testid="lightchain-material-toolbar"
+      className="mb-4 flex flex-wrap items-center gap-4 border-b border-white/10 px-1 pb-4 text-white/60"
     >
-      {lightchainCategories.map((category) => (
+      <span className="shrink-0 text-xs font-semibold tracking-[0.16em] text-white/80">ツールバー</span>
+      {LIGHTCHAIN_MATERIAL_TOOLBAR_ITEMS.map(({ label, path, icon: Icon }) => (
         <button
-          key={category.id}
+          key={label}
           type="button"
-          onClick={() => navigate(`/lightchain?category=${category.id}`)}
-          className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm ${category.id === 'graphics'
-            ? 'bg-[#737d84] text-white shadow-lg shadow-black/20'
-            : 'text-white/55 hover:bg-white/[0.06] hover:text-white/85'}`}
+          onClick={() => navigate(path)}
+          className="inline-flex items-center gap-2 text-xs font-semibold transition hover:text-white sm:text-sm"
         >
-          <span>{category.label}</span>
-          {category.id === 'recommended' && <span className="text-[10px] font-medium text-white/45">{category.eyebrow}</span>}
+          <Icon className="h-4 w-4 text-white/45" aria-hidden="true" />
+          <span>{label}</span>
         </button>
       ))}
     </nav>
@@ -5406,7 +5411,7 @@ export function LightchainMaterialWorkbenchPage() {
           className="min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
         >
           <div className="mx-auto max-w-[1680px]">
-            <LightchainCategoryToolbar />
+            <LightchainMaterialToolbar />
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
 
             <section className="min-w-0 rounded-2xl border border-white/10 bg-[#171d20] p-4 shadow-2xl shadow-black/20 lg:p-5">
@@ -5654,7 +5659,7 @@ export function LightchainMaterialWorkbenchPage() {
           className="min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
         >
           <div className="mx-auto max-w-[1680px]">
-            <LightchainCategoryToolbar />
+            <LightchainMaterialToolbar />
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
 
             <section className="min-w-0 rounded-2xl border border-white/10 bg-[#171d20] p-4 shadow-2xl shadow-black/20 lg:p-5">

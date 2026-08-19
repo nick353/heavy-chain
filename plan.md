@@ -63,12 +63,14 @@
 
 ## 現在の状態（2026-08-20）
 
+- 2026-08-20 05:19 JST、Lightchain `/tools/fabric` のfresh direct-route readbackで確認した現行toolbar（`ツールバー`、デザインツール、フィッティングツール、グラフィックデザインツール、衣類生産ツール）に合わせ、Heavyのfabric／printing画面から旧4カテゴリ帯を除去し、同じtoolbar構成へ更新した。Library／Gallery、権利確認、`AI生成`、`生成履歴`、統合βの結果系譜は保持している。material contract 64/64、typecheck、全非動画31機能、desktop 228/228（1280／1440／1920／2560px）、diff checkをPASS。証跡は `output/playwright/lightchain-all-feature-workflows-20260819T201515Z/SUMMARY.json` と `output/playwright/unified-desktop-layout-current-rerun-after-toolbar/SUMMARY.json`。local UI parityの証明であり、未デプロイ・provider生成／保存／再利用は未実施。
+
 - 2026-08-20、共通Lightchain Workbenchのprovider再試行を改善した。再試行中または失敗時は直前の成功結果を保持し、素材入力が変わった場合だけ入力境界で結果を無効化する。provider coverage 11/11、material 16/16、provider persistence/readback 12/12、workspace handoff 2/2、unified shell 4/4、非動画31機能、typecheck、diff checkをPASSした。これはlocal復旧契約の証明であり、production provider生成・保存再利用の証明ではない。commit `cb46fa5`。
 
 - 2026-08-20、Lightchain本番のfreshカード台帳に合わせ、統合ランチャーの表示契約を修正した。カテゴリ別の非動画カードはおすすめ7／企画デザインツール9／AIフィッティング5／グラフィックツール5（合計26出現）とし、カテゴリ間で重複するデザインワークスペース・AIフィッティング系カードもLightchainと同じ構成にした。動画カードは除外し、`生成対応`／`作業台`／`検証済み`などHeavy内部状態の表示バッジはランチャーから除去した。31機能の内部契約は別カタログとして保持している。これはlocal UI parityの反映であり、production provider生成・保存再利用の証明ではない。
 - この変更の検証は `scripts/verify-lightchain-launcher-parity.test.ts` 3/3、entry routing 5/5、internal UX consistency `ok=true`、全非動画ワークフロー `featureCount=31 / failed=[]`、typecheck、build 2606 modules、diff checkをPASSした。全機能検証の最新サマリーは `output/playwright/lightchain-all-feature-workflows-20260819T192220Z/SUMMARY.json`。未デプロイで、Chrome／録画／AOS／provider／外部効果は行っていない。
 
-- Chrome Plugin/Profile 2の共有スレッドから、transport／target-scoped readback／cleanupは復旧済みで、現行の作業停止点は`heavy_target_workspace_authentication_not_ready`（Heavy画面がworkspace準備・認証／ブランド設定確認で停止）との報告を受領した。selected／about:blank／claim／focus／foreground leaseの復旧やclose/reopenは再実行しない。ユーザーのHeavy認証・workspace準備完了後、新規Profile 2 browser-clientで`openTabs()`→正確な`/tools/fabric` descriptor→target-scoped readbackを1回行う。実測r3でもログイン表示と準備中状態が継続し、textile assetは未表示だった。証跡は `work/heavy-chain-target-scoped-canary-20260820-r3.md`（r2は共有スレッドの停止点参照）であり、provider生成・保存・再利用の証明ではない。
+- 【履歴】Chrome Plugin/Profile 2の共有スレッドでは、transport／target-scoped readback／cleanup復旧後の停止点として`heavy_target_workspace_authentication_not_ready`が報告されていた。r6 fresh readbackで認証済みworkspaceが確認できたため、現在の停止点はforeground capabilityへ更新している。selected／about:blank／claim／focus／foreground leaseの復旧やclose/reopenは再実行しない。
 
 - 2026-08-20、β readiness static checksを再実行した。H601 legal-safety guardは`ok=true`、internal UXは`ok=true`。しかしG619実β受入れは`acceptance=not_claimed`、実セッション`0/3`、必要workflow証跡なしで未完了。H601 operator readinessも`operator_final_h601_decision_missing`とTerms／Privacy／保持削除／upload rights／brand・likeness／claims／commercial wording／reviewの未添付で未完了。launch-opsは`auth_state_missing`で未完了。これらは人手承認・実セッション・認証artifactが必要で、Codexは偽の証跡を作成しない。
 
@@ -86,7 +88,7 @@
 
 - foreground capabilityは引き続き`viewport`のみで、`foreground_activation`／`management`は未広告。target-scoped read-onlyは成功しているが、provider生成を伴うforeground操作は開始していない。
 
-- 2026-08-20 03:47 JST、同一fresh Profile 2 browser-clientの公式capability広告を確認した。`viewport`のみで、`foreground_activation`／`management`は未広告。selected／claim／focusは呼ばず、foreground blockerを`chrome_foreground_activation_capability_unavailable`として維持した。証跡は `work/chrome-plugin-foreground-capability-readback-20260820-r1.md`。
+- 2026-08-20 03:47 JSTおよびr6同一runの公式capability広告を確認した。`viewport`とtab-level `cdp`のみで、`foreground_activation`／`management`は未広告。selected／claim／focusは呼ばず、foreground blockerを`chrome_foreground_activation_capability_unavailable`として維持した。証跡は `work/chrome-plugin-foreground-capability-readback-20260820-r1.md` と `work/heavy-chain-authenticated-target-readback-20260820-r6.md`。
 - 2026-08-20 03:46 JST、同一fresh Profile 2 target-scoped runでHeavy／Lightchainの`/tools/printing`と`/model`を比較した。Heavy printingは入力、スポット／全体、権利確認、AI生成、生成履歴、Canvas保存導線を表示し、Heavy modelはAIフィッティング、衣服入力、参考画像、権利確認、AI生成、生成履歴を表示した。Lightchain両routeは権限ロックを表示するため、Heavyのロック除去は社内全員利用要件に沿う意図的差分。Heavyに見えた既存provider resultは新規生成証拠に昇格しない。証跡は `work/lightchain-heavy-priority-route-ledger-20260820-r1.md`。
 - 2026-08-20 03:43 JST、同一fresh Profile 2 browser-clientでHeavy `/tools/fabric`とLightchain `/tools/fabric`をtarget-scoped read-only比較した。両方のURL/title/DOM readbackとtask-owned cleanupはPASS。Lightchain direct routeにも旧終了案内が存在するため、Heavy側の同文言はHeavy-only余計表示ではない。一方、Heavyの統合workspaceはGallery／権利確認／AI生成を追加した内部β仕様で、タイトル・toolbar文言・詳細入力構成は直接routeと差が残る。完全parityはPENDING_CONFIRMATION。証跡は `work/heavy-lightchain-target-parity-readback-20260820-r1.md`。
 - 2026-08-20 03:39 JST、現行Lightchain本番をfresh official Chrome Plugin／Profile 2のtarget-scoped read-only laneで再確認した。homepageのURL/title/DOM readbackに成功し、4カテゴリ（おすすめ／企画デザインツール／AIフィッティング／グラフィックツール）と非動画ラベル（デザイン修正／柄・プリント）を確認した。task-owned tabは公式cleanup済み。証跡は `work/lightchain-profile2-fresh-readback-20260820-r2.md`。これは現行基準のreadbackであり、Heavyのprovider生成・保存・再利用の証明ではない。
@@ -115,7 +117,7 @@
 - Local desktop verification: PASS。31機能台帳と`1280/1440/1920/2560px`の228セルを再実行で全件確認した。これはlocal previewのUI契約証跡であり、Mac／Windowsの実Chrome実機受入れやproduction provider完了の代用ではない。
 - Foreground operation blocker（read-only target admissionとは分離）: `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`。
 - Next action: 公式Profile 2拡張が`foreground_activation`または`management`を広告した状態で、新規browser-clientの`openTabs()`→正確な`/tools/fabric` descriptor→target-scoped readbackを1回行い、その同一runで承認済みGallery素材1件の権利確認→fabric生成→結果→保存→Gallery/Canvas/History/Jobs→再利用を確認する。
-- Restart point: `chrome_foreground_activation_capability_unavailable`が解消したfresh Profile 2 owner。認証／workspace hydrationはr6でPASSだが、provider生成・保存・再利用はforeground capability、owner／承認、同一run gateが揃うまで開始しない。
+- Restart point: 署名済み拡張が`foreground_activation`／`management`を広告した後のfresh Profile 2 owner。同一runでHeavy `/tools/fabric`をtarget-scoped readbackし、owner／承認を確認してから、承認済みproduct-owned Gallery入力→権利確認→provider生成→保存→Gallery／Canvas／History／Jobs→再利用を1回だけ進める。認証／workspace hydrationはr6でPASS。selected／claim／focus／foreground lease復旧や別surface fallbackは行わない。
 - provider生成、録画、AOS、effectfulなUI操作はselected/owner proofが揃うまで開始しない。deployは別のsource・runtime・fresh target readback gateで扱い、今回のdeployment `6a85ecc3f1ea67ebf4ea67bc` はそのreadbackまで確認済み。
 
 ## 2026-08-20 再読み込み後の入力復帰修正

@@ -19,18 +19,19 @@ test('material and print tools share the Light Chain tab contract', () => {
   );
 });
 
-test('priority material routes expose the current Lightchain four-category toolbar without Heavy-only rails', () => {
+test('priority material routes expose the current Lightchain direct-route toolbar without Heavy-only rails', () => {
   const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
 
   assert.deepEqual(
     lightchainCategories.map((category) => category.label),
     ['おすすめ', '企画デザインツール', 'AIフィッティング', 'グラフィックツール'],
   );
-  assert.match(page, /data-testid="lightchain-category-toolbar"/);
-  assert.match(page, /lightchainCategories\.map/);
-  assert.doesNotMatch(page, /data-testid=\{`lightchain-material-toolbar-/);
-  assert.doesNotMatch(page, /label: 'ツールバー'/);
-  assert.doesNotMatch(page, /label: '衣類生産ツール'/);
+  assert.match(page, /data-testid="lightchain-material-toolbar"/);
+  assert.match(page, />ツールバー<\/span>/);
+  assert.match(page, /label: '衣類生産ツール'/);
+  assert.match(page, /label: 'フィッティングツール'/);
+  assert.doesNotMatch(page, /data-testid="lightchain-category-toolbar"/);
+  assert.doesNotMatch(page, /lightchainCategories\.map/);
 });
 
 test('fabric and print keep the same required-input order as the Light recording', () => {

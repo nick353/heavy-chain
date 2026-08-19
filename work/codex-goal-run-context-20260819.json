@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 75,
+  "checkpoint_seq": 76,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -206,25 +206,26 @@
     ,"Focused current-source recheck: material 16/16; provider coverage 10/10; provider persistence/readback 12/12; workspace handoff 2/2; unified shell 4/4; typecheck and diff check PASS"
     ,"output/playwright/lightchain-all-feature-workflows-20260819T194809Z/SUMMARY.json: featureCount=31, ok=true, failed=[] after provider retry resilience fix"
     ,"Provider coverage 11/11 including retry result retention; material 16/16; provider persistence/readback 12/12; workspace handoff 2/2; unified shell 4/4; typecheck and diff check PASS"
+    ,"Lightchain direct-route toolbar parity cleanup replaced the old Heavy four-category strip on fabric/printing with the fresh Lightchain toolbar contract while preserving Library/Gallery, rights, generation, history, and unified beta lineage"
+    ,"After the toolbar change, material contract 64/64, typecheck, git diff --check, non-video featureCount=31 / failed=[], and unified desktop 228/228 across 1280/1440/1920/2560px passed; no production or external effect"
   ],
-  "next_action": "After Heavy Profile 2 authentication/workspace preparation is complete, create one new official Profile 2 browser-client and perform one target-scoped /tools/fabric URL/title/DOM readback; if hydrated, continue with one approved product-owned Gallery input through provider result, save, Gallery/Canvas/History/Jobs, and reuse. Do not repeat foreground recovery or reuse the old binding.",
+  "next_action": "Wait for the signed Chrome extension to advertise foreground_activation and management. Then create one new official Profile 2 browser-client, perform one target-scoped Heavy /tools/fabric URL/title/DOM readback, and if hydrated continue with one approved product-owned Gallery input through rights confirmation, provider result, save, Gallery/Canvas/History/Jobs, and reuse. Do not repeat selected/focus/claim recovery or reuse an old binding.",
   "blocker": {
     "category": "external_wait",
-    "exact_blocker": "heavy_target_workspace_authentication_not_ready",
-    "recovery_condition": "The user completes Heavy Profile 2 login and workspace/brand preparation. Then use a new official Profile 2 browser-client, one openTabs() call, exact Heavy /tools/fabric descriptor, and one target-scoped URL/title/DOM readback. Do not invoke selected(), claim, focus, foreground lease, or close/reopen recovery.",
+    "exact_blocker": "chrome_foreground_activation_capability_unavailable",
+    "recovery_condition": "The signed Chrome Plugin/Profile 2 extension advertises foreground_activation and management. Then use a new official Profile 2 browser-client, one openTabs() call, exact Heavy /tools/fabric descriptor, and one target-scoped URL/title/DOM readback before the approved provider flow. Do not invoke selected(), claim, focus, foreground lease, or close/reopen recovery.",
     "restart_stage": "verify",
-    "next_action": "Wait for user-confirmed Heavy authentication/workspace readiness, then perform one fresh target-scoped /tools/fabric readback before any provider or save operation.",
-    "evidence": "work/heavy-chain-target-scoped-canary-20260820-r3.md",
+    "next_action": "Wait for the official capability advertisement, then obtain a fresh same-run Heavy target readback and run the bounded approved fabric provider/save/reuse flow once.",
+    "evidence": "work/heavy-chain-authenticated-target-readback-20260820-r6.md",
     "operation_exact_blocker": "chrome_foreground_activation_capability_unavailable",
     "capability_blocker": "chrome_foreground_activation_capability_unavailable",
-    "capability_blocker": "chrome_foreground_activation_capability_unavailable",
-    "recorded_at": "2026-08-20T04:20:00+09:00"
+    "recorded_at": "2026-08-20T05:19:00+09:00"
   },
   "same_blocker_count": 1,
   "resume_admission": "eligible_after_recovery_evidence",
   "latest_continuation": {
     "stage": "verify",
-    "exact_blocker": "heavy_target_workspace_authentication_not_ready",
+    "exact_blocker": "chrome_foreground_activation_capability_unavailable",
     "attempted_once": true,
     "independent_progress": [
       "verified Kimi Designer handoff recorded",
@@ -252,9 +253,11 @@
       "current-source desktop verifier recovered with local network boundary and concurrent viewports: 228/228, failed=0, cleanup complete"
       ,"current-source non-video workflow verifier passed featureCount=31, failed=[], desktop/mobile coverage and cleanup complete"
       ,"unified desktop continuation passed 228/228 with no cleanup leftovers"
+      ,"fresh r6 target-scoped Heavy readback cleared authentication/workspace hydration and confirmed the Lightchain-shaped fabric workspace"
+      ,"post-toolbar local verifier passed material 64/64, non-video 31/31, and unified desktop 228/228"
     ],
-    "artifact": "work/heavy-chain-target-scoped-canary-20260820-r3.md",
-    "recorded_at": "2026-08-20T04:39:48+09:00"
+    "artifact": "work/heavy-chain-authenticated-target-readback-20260820-r6.md",
+    "recorded_at": "2026-08-20T05:19:00+09:00"
   },
   "exit_check": null,
   "history": [
@@ -885,8 +888,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T05:11:08+09:00",
       "note": "The same fresh Profile 2 browser-client read the current Lightchain homepage after hydration: Lightchain AI title, four categories, seven recommended cards, and example tabs. One visible recommended card is 動画ワークステーション; Heavy's video exclusion remains an explicit non-goal. Task-owned cleanup passed and no external effect occurred. Foreground provider blocker remains chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 76,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T05:19:00+09:00",
+      "note": "Aligned Heavy fabric/printing to the fresh Lightchain direct-route toolbar by removing the old four-category strip and preserving Library/Gallery, rights, generation, history, and unified beta lineage. Material contract 64/64, typecheck, diff check, non-video featureCount=31 / failed=[], and unified desktop 228/228 across 1280/1440/1920/2560px passed. Authentication/workspace hydration is already clear from r6; the remaining live blocker is chrome_foreground_activation_capability_unavailable."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T05:11:08+09:00"
+  "updated_at": "2026-08-20T05:19:00+09:00"
 }

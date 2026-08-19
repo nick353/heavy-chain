@@ -2,6 +2,11 @@
 
 Updated: 2026-08-20
 
+2026-08-20 latest local direct-route toolbar parity cleanup:
+- Heavy fabric／printingの旧4カテゴリ帯を、fresh Lightchain `/tools/fabric` readbackで確認した現行toolbar（`ツールバー`、デザインツール、フィッティングツール、グラフィックデザインツール、衣類生産ツール）へ置換した。Library／Gallery、権利確認、`AI生成`、`生成履歴`、統合βの結果系譜は保持している。
+- Verification: material contract 64/64、typecheck、全非動画 workflow `featureCount=31 / failed=[]`、unified desktop `228/228` across `1280/1440/1920/2560px`、`git diff --check` PASS。Artifacts: `output/playwright/lightchain-all-feature-workflows-20260819T201515Z/SUMMARY.json`, `output/playwright/unified-desktop-layout-current-rerun-after-toolbar/SUMMARY.json`.
+- This is local UI parity proof only. No deploy, provider generation, save/reuse, recording, AOS change, or external effect occurred. The current live blocker remains `chrome_foreground_activation_capability_unavailable`.
+
 2026-08-20 latest authenticated Heavy target-scoped readback r6:
 - Fresh official Chrome Plugin/Profile 2 browser-client `-f847-469f-930f-f0182d3f3024` used selector revision 6, provisioned one task-owned `/tools/fabric` tab `1980903747`, and completed same-run URL/title/DOM readback.
 - The page no longer showed login or signup controls. It showed the Lightchain-shaped `生地イメージ` workspace, four categories, model/design and fabric inputs, Gallery selectors, material variants, rights confirmation, `AI生成`, and `生成履歴`.
@@ -35,10 +40,10 @@ Updated: 2026-08-20
 - The fresh local unified desktop verifier completed all 228 scheduled checks across 1280/1440/1920/2560px with `failed=0`, `globalTimedOut=false`, and `cleanupLeftovers=0`.
 - Artifact: `output/playwright/unified-desktop-layout-current-continuation/SUMMARY.json`. This is local layout/readiness proof only; it does not clear the Heavy authentication/readiness blocker or prove provider generation/save/reuse.
 
-2026-08-20 latest Chrome source-thread handoff:
-- Shared Chrome Plugin/Profile 2 transport and target-scoped readback are reported restored. The reported current Heavy stop is `heavy_target_workspace_authentication_not_ready`: the workspace is still at preparation/authentication/brand-setting confirmation and textile assets are not visible.
-- Do not repeat Chrome close/reopen, selected(), about:blank, claim, focus, or foreground lease recovery. After the user completes Heavy authentication/workspace preparation, use one new official Profile 2 browser-client and one target-scoped `/tools/fabric` readback.
-- Artifact reference: `work/heavy-chain-target-scoped-canary-20260820-r3.md` (r2 is the source-thread handoff reference). This is an authentication/readiness stop, not a provider-generation or persistence proof.
+2026-08-20 historical Chrome source-thread handoff:
+- Shared Chrome Plugin/Profile 2 transport and target-scoped readback are reported restored. An earlier source-thread canary stopped at `heavy_target_workspace_authentication_not_ready`; the later r6 fresh target-scoped readback cleared that authentication/workspace hydration gate.
+- Do not repeat Chrome close/reopen, selected(), about:blank, claim, focus, or foreground lease recovery. The current stop is the separately recorded `chrome_foreground_activation_capability_unavailable` because the signed extension advertised no `foreground_activation`／`management` capability.
+- Artifact reference: `work/heavy-chain-target-scoped-canary-20260820-r3.md` is historical; current authenticated proof is `work/heavy-chain-authenticated-target-readback-20260820-r6.md`.
 
 2026-08-20 latest Lightchain launcher parity implementation:
 - The integrated launcher now mirrors the current fresh Lightchain non-video card surface: recommended 7, planning/design 9, AI fitting 5, graphics 5 (26 category occurrences), including the same repeated shared cards across categories and no video card. Heavy-internal readiness/status badges were removed from the visible launcher; the separate 31-feature internal catalog remains intact for workflow contracts.
