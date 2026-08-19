@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 62,
+  "checkpoint_seq": 63,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -100,6 +100,7 @@
     ,"Lightchain launcher parity aligned to the current non-video card ledger: category occurrences 7/9/5/5, video excluded, repeated shared cards preserved, Heavy-internal readiness badges removed; launcher parity 3/3 and local 31-feature verification passed"
     ,"Practical-flow local contract sweep passed: material 16/16, provider adapter 16/16, persistence 12/12, library-to-Canvas 1/1, Canvas view 3/3, Canvas generation/readback 5/5, workspace handoff 2/2, fitting resilience/history/resume 23/23, and printing foundation 244/244"
     ,"Legacy Lightchain workbench now hides video tools and category from the visible non-video beta UI while preserving the fail-closed video boundary; commit 7ddb8f4 and focused/local regressions passed"
+    ,"Removed internal Lightchain workbench status pills from visible cards and detail panes while keeping readiness gates internal; commit 68c9123 and local non-video regressions passed"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -191,6 +192,7 @@
     ,"local internal UX ok=true; entry routing 5/5; typecheck, build 2606 modules, and diff check PASS"
     ,"local practical-flow contract sweep: material 16/16; provider adapter 16/16; provider persistence 12/12; library-to-Canvas 1/1; Canvas view 3/3; Canvas generation/readback 5/5; workspace handoff 2/2; fitting resilience/history/resume 23/23; printing foundation 244/244; typecheck and diff check PASS"
     ,"src/pages/LightchainWorkbenchPage.tsx commit 7ddb8f4: video-* tools/category filtered from visible workbench; video provider boundary 1/1, internal UX ok=true, launcher parity 3/3, full local non-video featureCount=31 / failed=[] and build 2606 modules"
+    ,"src/pages/LightchainWorkbenchPage.tsx commit 68c9123: internal status pills removed from visible workbench; typecheck, internal UX, video boundary 1/1, diff check, build 2606 modules, and full local non-video featureCount=31 / failed=[]"
   ],
   "next_action": "After Heavy Profile 2 authentication/workspace preparation is complete, create one new official Profile 2 browser-client and perform one target-scoped /tools/fabric URL/title/DOM readback; if hydrated, continue with one approved product-owned Gallery input through provider result, save, Gallery/Canvas/History/Jobs, and reuse. Do not repeat foreground recovery or reuse the old binding.",
   "blocker": {
