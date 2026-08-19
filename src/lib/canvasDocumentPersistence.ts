@@ -154,7 +154,7 @@ const invokeCanvasDocument = async (body: Record<string, unknown>) => {
     // Supabase FunctionsHttpError keeps the response in `context`. Preserve
     // only the server's bounded error code so Canvas can report the real
     // rejection reason without leaking headers, tokens, or the raw response.
-    const context = (error as { context?: Response }).context;
+    const context = (error as { context?: unknown }).context;
     if (context) {
       let serverMessage: string | null = null;
       try {
