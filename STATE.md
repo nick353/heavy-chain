@@ -2,6 +2,158 @@
 
 Updated: 2026-08-19
 
+2026-08-20 03:08 JST latest authenticated target-scoped readback:
+- Fresh official Chrome Plugin/Profile 2 browser-client `-293e-41e2-90d3-fde6bc077e70` used revision 6 and provisioned task-owned Heavy `/tools/fabric` tab `1980903653` because it was absent from the fresh inventory.
+- Same-run readback after `1566ms` hydration showed the Lightchain-shaped `生地イメージ` workspace with model/design and textile inputs, Gallery selectors, aspect ratio, textile variants, rights attestation, `AI生成`, and `生成履歴`. The login/preparation shell was not present.
+- Only the task-owned tab was closed; `cleanup_verified=true`. No selected/claim/focus/foreground lease, login credential entry, rights confirmation, upload, provider generation, save/reuse, recording, AOS, or external effect occurred.
+- `権限がありません` and empty required inputs remain visible, so this clears the authentication/workspace hydration gate only. Foreground blocker remains `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`.
+- Artifact: `work/heavy-chain-authenticated-target-readback-20260820-r5.md`.
+
+2026-08-20 02:54 JST latest Heavy production deployment/readback:
+- Zeabur deployment `6a85ecc3f1ea67ebf4ea67bc` for service `heavy-chain` reached `RUNNING`; build logs ended with `build completed`.
+- Fresh official Chrome Plugin/Profile 2 selector revision `6` browser-client `-3fb3-4439-b4d0-9c463e2fd61f` provisioned Heavy `/tools/fabric` because it was absent from the fresh inventory, read URL/title/DOM after hydration, and closed only task-owned tab `1980903628` (`cleanup_verified=true`).
+- The deployed direct material route renders the Lightchain-shaped frame with `LIGHTCHAIN`, four category tabs, material tabs, inputs, rights checkbox, disabled `AI生成`, and `生成履歴`. It does not expose Heavy-only `Apparel Beta` or cross-route Gallery/Canvas/History/Jobs inside this direct route; those remain separate route/readback contracts.
+- Artifact: `work/heavy-production-deployment-readback-20260820-r1.md`.
+- No selected/focus/claim/foreground lease, upload, rights confirmation, provider generation, save/reuse, download, recording, AOS operation, or external effect was performed. Foreground exact blocker remains `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`.
+
+2026-08-20 02:57 JST common-route readback:
+- Fresh Profile 2 target-scoped readback covered `/lightchain`, `/gallery`, `/canvas/new`, `/history`, and `/jobs` on browser-client `-bded-4e57-af7b-687cc1527e92`; all five URL/title/DOM reads and task-owned cleanup passed.
+- `/lightchain` showed the four categories and 7 non-video entries. `/gallery` was still loading saved images; `/history` showed saved `0`; `/jobs` showed queue `0`; `/canvas/new` showed the editor, rights gate, save, and Gallery-add controls.
+- Artifact: `work/heavy-production-common-routes-readback-20260820-r1.md`. Provider result lineage and durable Gallery/Canvas/History/Jobs persistence remain unproven.
+
+2026-08-20 03:02 JST hydrated common-route readback supersedes the short-wait state:
+- Fresh Profile 2 target-scoped browser-client `-c760-493a-8dc3-673ac5a24f77` waited 15 seconds after provisioning each route and reached `readyState=complete`.
+- `/gallery`: `961枚の画像` and `さらに表示 (60/961)`; `/history`: active `0`, failed `4`, saved `12`, timeline `20`; `/jobs`: active `0`, stopped `4`, completed `20`, queue summary `20`.
+- Completed printing and model-matrix entries were visible in both History and Jobs. Artifact: `work/heavy-production-common-routes-readback-20260820-r2.md`.
+- The prior 3-second `loading`/`0` observation is timing history, not the current hydrated state. New provider generation and same-run save/reuse proof remain pending behind the foreground gate.
+
+2026-08-19 23:40 JST resumed Goal fresh attempt:
+- Fresh official browser-client setup briefly advertised a Chrome extension entry, but the new Chrome handle failed with `Browser is not available: -0d35-48dc-a282-4a15127ad30c`; the next fresh session returned no browser entries.
+- IAB was observed but not used. No old binding/tab/receipt, navigation, deployment, provider action, recording, or external effect occurred.
+- Bridge file remains stopped/blocked with `chrome_extension_bridge_stopped`.
+- Resumed-audit blocker count is 1 under `chrome_plugin_browser_handle_unavailable_after_fresh_advertisement`; Goal remains active after user resume.
+
+2026-08-19 23:31 JST fresh connection-layer diagnostics:
+- Chrome process is running, Profile 2 extension is installed/enabled, and Native Host manifest is correct; the official browser-client inventory remains empty.
+- Shared v2 bridge remains `status=stopped`, `operation_status=blocked`, `refresh_status=blocked`, exact blocker `chrome_extension_bridge_stopped`.
+- The connection-owner handoff was attempted but did not return within the bounded wait. Heavy Chain did not modify shared connection/recording code, switch surfaces, reuse old bindings, or perform external effects.
+- Same blocker recurrence count in the active Goal is now 2; keep the Goal active and wait for a state change.
+
+2026-08-19 23:34 JST local verification while bridge is stopped:
+- `npm run typecheck` PASS.
+- Focused shell contract `4/4`, flow persistence `9/9`, material contract `8/8`, and Canvas persistence `3/3` PASS.
+- `npm run build` PASS (`2607 modules transformed`).
+- These are local implementation checks only; they do not clear the Chrome bridge, production UI parity, provider generation, or save/reuse gates.
+- The same exact connection blocker has now recurred for 3 consecutive Goal turns; Goal is being marked blocked until the official Profile 2 bridge state changes.
+
+2026-08-19 23:24 JST current connection retry:
+- After the user reopened Chrome, a fresh official Chrome Plugin/Profile 2 browser-client setup completed, but `agent.browsers.list()` returned an empty inventory.
+- No old browser binding/tab/receipt was reused, and no alternate surface, navigation, login, deployment, provider action, recording, or external effect was performed.
+- Exact current connection condition: `chrome_plugin_browser_client_unavailable_after_fresh_binding`. The previous successful production readback remains the latest valid UI proof: production still served the legacy Heavy frame, while local parity remains implemented and verified.
+- Artifact: `work/heavy-lightchain-ui-parity-production-readback-20260819.md`.
+
+2026-08-19 current continuation — Chrome recovered; production still serves legacy Heavy frame:
+- Fresh official Chrome Plugin/Profile 2 binding `-d310-47db-a555-dfc9165ed99a` succeeded. Task-owned `/tools/fabric` tab `1980903439` read URL/title/DOM and screenshot successfully.
+- Production readback showed Lightchain header but `lightchain-parity-shell=false` and Heavy-only chrome count `7`: Heavy/Apparel Beta, Gallery/Canvas/History/Jobs, Library, Context, common-flow, and beta-status elements remain.
+- The current local parity implementation is therefore not deployed. Task-owned tab cleanup was verified; foreign Heavy `/model` remained untouched.
+- Exact production blocker: `heavy_production_ui_still_legacy_candidate; deploy_not_authorized_and_current_source_provenance_unproven`. Artifact: `work/heavy-lightchain-ui-parity-production-readback-20260819.md`.
+- No provider generation, rights mutation, save/reuse, deploy, recording, or external effect was performed.
+
+2026-08-19 resumed continuation — dependency-free local contract recheck:
+- After the Chrome binding timeout, the local material contract `11/11`, provider adapter `16/16`, provider persistence/readback `12/12`, and Canvas view persistence `3/3` all passed.
+- These checks confirm the Lightchain visual-frame change did not break the fabric/printing provider contract or durable result handoff contracts. They do not replace production generation/save/reuse proof.
+
+2026-08-19 resumed continuation — Chrome Plugin fresh binding timeout:
+- A new official Chrome Plugin/Profile 2 browser-client initialization was attempted without reusing the prior binding or task tab. The setup/list call timed out and reset the kernel: `js execution timed out; kernel reset, rerun your request`.
+- No new tab, navigation, claim, cleanup attempt, provider action, deployment, recording, AOS action, or external effect occurred.
+- The same Chrome connection condition has now recurred twice in the resumed audit. Production Lightchain/Heavy same-run readback and cleanup remain `PENDING_CONFIRMATION`.
+- Exact blocker: `chrome_plugin_browser_client_unavailable_after_fresh_binding: js execution timed out; kernel reset`. Artifact: `work/heavy-lightchain-ui-parity-production-readback-20260819.md`.
+
+2026-08-19 current continuation — Lightchain visual frame implemented:
+- Verified Kimi Designer handoff was received through `opencode-go/kimi-k3` with preflight passed, route identity validated, bridge `0.3.3`, read-only mode, and bounded usage metadata. Artifact: `work/heavy-lightchain-ui-parity-designer-handoff-20260819.md`.
+- `src/components/workspace/LightchainUnifiedWorkspaceShell.tsx` now keeps the scoped flow/persistence provider but renders only a transparent parity boundary; Heavy/Apparel Beta header, Library, Gallery/Canvas/History/Jobs, Context, common-flow, and beta-status chrome were removed from the shared visual frame.
+- `/agent` now uses the canonical `LightchainCreatorPage` instead of redirecting through `WorkflowBoardPage`, closing the alias parity failure.
+- Focused shell contract `4/4`, flow persistence `9/9`, typecheck, build (`2607 modules`), and diff check passed. Non-video local workflow verifier passed `31/31`; unified desktop layout passed `228/228` across 1280/1440/1920/2560px with `heavyChrome=0`, cleanup complete. Artifact: `output/playwright/unified-desktop-layout-current/SUMMARY.json`.
+- Fresh production readback was attempted through the official Chrome Plugin/Profile 2 lane. `openTabs()` succeeded, but the task-owned `/tools/fabric` navigation ended with `native pipe closed before response`; a new binding then advertised no browsers. Artifact: `work/heavy-lightchain-ui-parity-production-readback-20260819.md`.
+- Production exact blocker: `chrome_plugin_browser_client_unavailable_after_fresh_binding`; task-owned tab cleanup is `PENDING_CONFIRMATION`. No alternate browser, provider, deploy, recording, or external effect was used.
+
+2026-08-19 current resumed continuation — Designer transport circuit remains open:
+- One bounded retry of the required read-only `opencode-go/kimi-k3` Designer was attempted after the prior timeout. It failed closed with `opencode_go_transport_cooldown_active: Kimi K3 transport circuit is open` and a reported 60-second cooldown.
+- No alternate Designer/native model, source implementation, provider retry, deployment, recording retry, AOS action, or external effect was performed. The cooldown was not bypassed with another retry.
+- The same root transport availability condition has now recurred twice in this resumed audit. The Lightchain-identical UI gap remains open and Heavy-only chrome is still present in `LightchainUnifiedWorkspaceShell.tsx`.
+- Current exact blocker: `opencode_go_transport_cooldown_active: Kimi K3 transport circuit is open`. Restart condition: the required route returns verified provider/model metadata and a bounded DesignHandoff.
+
+2026-08-19 current resumed continuation — required Designer timeout:
+- Fresh `opencode-go/kimi-k3` Designer call was attempted once after the Goal resumed. The call timed out after 300 seconds: `timed out awaiting tools/call after 300s`.
+- No alternate Designer/native model, source implementation, provider retry, deployment, recording retry, AOS action, or external effect was performed.
+- Current source inspection confirms `LightchainUnifiedWorkspaceShell.tsx` still combines the flow provider with Heavy-only visible chrome. The exact measured gap and approved boundary remain in `work/heavy-lightchain-ui-parity-visual-diff-20260819.md` and `work/heavy-lightchain-ui-parity-implementation-map-20260819.md`.
+- Independent local proof remains valid but insufficient for production parity: non-video `31/31`, desktop `228/228`, and prior focused contracts are green. Production exact UI parity remains `PENDING_CONFIRMATION`.
+- Resumed-audit exact blocker: `opencode_go_kimi3_designer_timeout: timed out awaiting tools/call after 300s`. Restart condition: the same required route returns verified provider/model metadata and a bounded DesignHandoff.
+
+2026-08-19 latest continuation — local non-video acceptance recheck:
+- Current build completed with `2607 modules`.
+- Fresh local non-video workflow verifier: `featureCount=31`, `ok=true`, `failed=[]`, cleanup complete. Videos remained excluded.
+- Fresh unified desktop layout verifier: `57 routes × 4 widths = 228/228`, `failed=0`, `globalTimedOut=false`, cleanup leftovers `0`; widths were 1280, 1440, 1920, and 2560px.
+- Artifacts: `output/playwright/lightchain-all-feature-workflows-20260819T120402Z/SUMMARY.json` and `output/playwright/unified-desktop-layout-current/SUMMARY.json`.
+- This is local implementation/layout proof only. Production Lightchain exact UI parity, provider generation, same-run persistence/reuse, real Mac/Windows Chrome, and internal beta acceptance remain open.
+
+2026-08-19 latest continuation — beta/operator readiness audit:
+- G619 readiness is `ok=false`, `acceptance=not_claimed`, with zero real beta sessions and `manifest_missing_or_unparseable`.
+- H601 operator readiness is `ok=false`; static safety guard passes, but ten operator/legal decision items remain unattached.
+- Static provider-retirement readiness is `ok=true` only within its stated static scope; it does not prove production deployment or provider execution.
+- Audit artifact: `work/heavy-chain-beta-readiness-audit-20260819-r2.md`.
+- No human approval, real beta session, legal decision, provider retry, deploy, secret/auth action, payment, or public effect was performed.
+
+2026-08-19 latest continuation — Zeabur provenance r6:
+- Fresh official CLI target resolution confirms project `automation-wiled`, service `heavy-chain`, and latest running deployment `6a854c127bdd315d2c839f1c` (`docker`).
+- The latest deployment has empty repository/ref/commit metadata (`sourceMetadataPresent=false`). Local `HEAD` is `6ac78c1045d6aeb068b18815498995994cd861c9`, but the worktree is dirty, so the running service cannot prove the current candidate.
+- Artifact: `work/heavy-chain-zeabur-source-provenance-readback-20260819-r6.md`.
+- No deploy or service mutation was performed. Exact blocker remains `zeabur_deployment_source_metadata_empty_for_current_candidate`.
+
+2026-08-19 latest continuation — parity implementation gate rechecked:
+- The required read-only `opencode-go/kimi-k3` Designer was called once on this fresh continuation with the current same-route comparison artifact and returned `opencode_go_transport_error: Go endpoint did not return JSON`. No alternate Designer or native model was used.
+- Local contracts remain green while the design handoff is unavailable: material contract `11/11`, fabric synthesis `3/3`, Lightchain provider adapter `16/16`, provider persistence/readback `12/12`, parity routes `6/6`, and `npm run typecheck` PASS.
+- No source implementation, provider retry, deployment, recording retry, AOS action, or external effect was performed in this continuation.
+- The exact Lightchain-identical UI acceptance remains open. The implementation boundary is recorded in `work/heavy-lightchain-ui-parity-visual-diff-20260819.md`; the current route still renders the Heavy-only chrome listed there until the required Designer handoff is available.
+- Source-level implementation map recorded in `work/heavy-lightchain-ui-parity-implementation-map-20260819.md`: split the flow provider from the Heavy visual frame, then select a Lightchain appearance for all parity routes while preserving provider/rights/persistence contracts.
+
+2026-08-19 latest continuation — provider fetch diagnosis:
+- Fresh read-only Supabase inventory confirms `edit-image` is `ACTIVE`, version `14`, `verify_jwt=true`; OPTIONS preflight returns HTTP 200 with the expected CORS headers.
+- Remote `edit-image` source is older than local: it lacks the local MIME allowlist and source telemetry metadata, while the common CORS/auth/provider path is present in both. This proves source drift but not the cause of the browser-level `FunctionsFetchError`.
+- Diagnosis artifact: `work/heavy-provider-edge-function-fetch-diagnosis-20260819.md`.
+- No provider replay, log reauthentication, secret read, deployment, or external effect was performed. Exact provider blocker remains `heavy_provider_edge_function_fetch_failed`.
+
+2026-08-19 latest continuation — exact Lightchain UI/UX parity comparison:
+- Fresh same-route Chrome Plugin/Profile 2 readback compared Lightchain `/tools/fabric` (`1980903421`, `Lightchain AI`) with Heavy `/tools/fabric` (`1980903422`, `Heavy Chain | AI制作ワークスペース`). Screenshots and DOM readback were obtained without provider generation or external effects.
+- Heavy currently renders extra visible chrome that is not present in Lightchain: Heavy/Apparel Beta header, Gallery/Canvas/History/Jobs navigation, Library/search/category rail, extra toolbars/material navigation, right Context/common-flow/beta-status rail, and Heavy-specific labels/placeholders/rights/generation/history presentation.
+- Required parity rule: use the fresh Lightchain route shell, labels, control order, states, and spacing as canonical; keep internal beta/provider/persistence contracts behind that boundary and remove Heavy-only visible chrome from parity routes. Evidence: `work/heavy-lightchain-ui-parity-visual-diff-20260819.md`.
+- Recording was attempted through the official Chrome Plugin/Profile 2 route but produced no MP4. Exact blocker: `chrome_debugger_frame_upload_not_received:page_events=1;controller_frame_requests=0`; manifest: `work/lightchain-ui-parity-20260819.manifest.json`.
+- Current Graph run `run_fcee32ac78b945b0` is blocked at Designer because required `opencode-go/kimi-k3` returned `opencode_go_transport_error: Go endpoint did not return JSON`. No alternate Designer route was substituted. Provider failure remains separate: `FunctionsFetchError: Failed to send a request to the Edge Function`.
+
+2026-08-19 latest Goal continuation — Heavy authentication is confirmed; AI-fitting asset gate is wired:
+- Fresh official Chrome Plugin / Profile 2 browser-client `-556b-4745-b6f0-c5278074c8f0` created task-owned `/tools/fabric` target `1980903397` and read the hydrated Heavy workspace in the current owner lineage.
+- The fresh page showed the integrated 31-feature non-video workspace, Gallery/Canvas/History/Jobs, and the right-side account control; no login button or preparation/authentication shell was present. The prior same-account readback showed `マイアカウント` / `ログアウト` and owner account details. This supersedes older historical unauthenticated entries below.
+- The target was screenshot-read and then closed with official cleanup `ok=true`; foreign Heavy `/model` tab `1980903220` was not claimed or operated.
+- Local AI-fitting library wiring now passes `platformAssetRole="garment"` to both the material workbench and its Gallery selector, so the bundled platform picker cannot expose textile inputs in the fitting flow.
+- Current exact blocker remains `heavy_provider_generation_not_run_rights_confirmation_pending`: no rights attestation or provider generation was performed.
+- Verification after the wiring fix: material contract `11/11`, provider persistence/readback `12/12`, and `npm run typecheck` PASS; `git diff --check` PASS.
+- Additional focused verification: printing foundation `244/244`, Lightchain provider adapter `16/16`, and model-matrix verification `3/3` PASS.
+
+2026-08-19 current Heavy persistence recovery r25:
+- Fresh official Chrome Plugin / Profile 2 browser-client `-9042-49ce-ac68-1b4385a9a749` used current `openTabs()` to read Heavy tab `1980903220`. Gallery rendered `961枚の画像` with image cards and the unified Library/4-category/Gallery/Canvas/History/Jobs shell.
+- Fixed the authenticated usage-summary boundary. Public `get_brand_usage_summary` is `SECURITY INVOKER`; private `get_brand_usage_summary_for_authenticated_user` is `SECURITY DEFINER` with authenticated EXECUTE. Migration `20260819090000_restore_authenticated_usage_summary_boundary.sql` is applied to the linked Supabase database. This removed the common `credit summary` failure from current Jobs/History readback.
+- Same-run fresh page readback after the DB fix: Jobs shows 20 completed and 4 failed jobs with Queue summary 20; History shows Timeline 20, failed 4, saved 12. Previous console warnings are historical pre-fix output and are not reused as current failure proof.
+- Existing completed printing output was selected from the Canvas Gallery picker and added once. No provider was rerun. Canvas `保存` was clicked once and showed `キャンバス · サーバー確認済み`; fresh `openTabs()` returned `/canvas/5d30423c-ade0-4840-93d2-a502104fcc76`. Same-run reload returned `サーバー確認済み` with the image restored. Linked DB readback shows the latest NiSEN document has `object_count=1`.
+- Focused verification: Supabase session recovery `3/3`, workspace activity `9/9`, Canvas generation/readback `5/5`, security boundary `1/1`, typecheck and `git diff --check` PASS. Recording, AOS, alternate surfaces, provider rerun, upload, download, publishing, and billing were not performed.
+- Current blocker: `heavy_production_fabric_provider_permission_and_approved_product_owned_sample_unavailable`. The current fabric route shows `権限がありません`, empty required inputs, and disabled `AI生成`; visible fabric entries are prior generated results and are not reused as new input. Existing result save/reload and Gallery/History/Jobs readback are confirmed. Continue only when an explicitly approved product-owned fabric sample and provider permission are available, then AI fitting and beta QA. Artifact: `work/heavy-production-fabric-library-readback-20260819-r1.md`. Goal remains active.
+
+2026-08-19 Heavy open/readback r23 — production bundle recovery:
+- Fresh official Chrome Plugin / Profile 2 browser-client `-8a26-4b07-841c-4580ad0cd43e` used the exact current Heavy tab `1980903220` at `https://heavy-chain.zeabur.app/tools/printing`. After the service recovered, a same-run reload returned the Heavy Chain / Apparel Beta unified workspace DOM, 4 categories, non-video Library entries, Gallery / Canvas / History / Jobs, printing inputs and rights/provider gates, and the completed printing result lineage.
+- The previous production crash was diagnosed from runtime logs as TypeScript errors in `src/lib/canvasDocumentPersistence.ts` during `tsc -b`. Commits `e1c17b1` and `6ac78c1` were source-associated to GitHub `main`; the final deployment `6a853efc3f743f07b5220d4e` is `RUNNING` / `docker`, service is `RUNNING`, domain is `PROVISIONED`, and an independent HTTP check returned `200`.
+- Focused verification: typecheck PASS, provider persistence/readback `12/12`, Canvas view persistence `2/2`, `git diff --check` PASS. Artifact: `work/heavy-chain-open-readback-20260819-r2.md`.
+- The same tab was opened in the Codex browser panel at the user's request. No upload, rights confirmation, provider generation, save, reuse, download, recording, AOS, or other external effect was performed in this readback.
+- Current exact blocker remains `canvas_save_failed_after_one_retry`; strict production Gallery / Canvas / History / Jobs persistence and reuse of a new result remains `PENDING_CONFIRMATION`. Restart point is existing completed printing result → Canvas save → reload readback, without replaying provider generation.
+
 2026-08-19 source provenance再分類とdesktop QA r22:
 - Fresh Zeabur `service get`でHeavy serviceのGitTriggerを確認した。provider=`GITHUB`、repo ID=`1109090250`、branch=`main`、repository=`nick353/heavy-chain`で、service-level source associationは`CONFIRMED`。fresh repository searchと`git ls-remote origin refs/heads/main`も確認した。
 - 最新deployment `6a84ff2e88b3a41fff371d81`は`RUNNING` / `docker`だが、repoOwner/repoName/ref/commitSHA/commitMessageが空で、current local candidateとのprovenanceは未確認。exact blockerは`zeabur_deployment_source_metadata_empty_for_current_candidate`へ更新。証跡: `work/heavy-chain-source-provenance-readback-20260819-r1.md`。
@@ -2424,3 +2576,446 @@ Exact blocker / next action / restart point: `chrome_plugin_browser_control_tool
 - local proofのみであり、未deployのため本番provider生成、結果保存、Gallery/Canvas/History/Jobs同一run再利用、reload/retry、Mac/Windows実Chromeの完了証明にはしない。
 
 Exact blocker / next action / restart point: `chrome_plugin_browser_control_tool_unavailable_current_thread` と `zeabur_source_association_missing`。Chrome Plugin/Profile 2の新規browser-clientでHeavy exact descriptorのfresh target readbackを取得し、source-associated deploymentが確認できた後に承認済みfabric/printing provider gateを再開する。旧bundleの同一fingerprint再実行、旧binding、別surface、録画、AOSは使わない。
+
+## 2026-08-19 continuation: source-associated printing provider readback r1
+
+- Source-associated Zeabur deployment `6a8531163f743f07b5220bda` is `RUNNING` with commit `def2a82d87e581eb51b0320355f874981a03535d`.
+- Fresh official Chrome Plugin/Profile 2 browser-client `-4de7-4a2a-a342-c0183157b5d0` read Heavy tab `1980903220` at `/tools/printing`. The bounded production sample used the bundled product-owned blank tee plus authorized `S1-01/artwork.png`, checked rights once, and clicked `AI生成` exactly once.
+- Same-run production result completed as `プリントイメージ 1（最新）`, `OpenAI画像編集`, `1024 × 1536px`, job `1edea92c-5d01-47de-bfe6-47d45a62f74b`. History later showed the newest `inpaint` entry as completed.
+- Gallery favorite save action succeeded with `お気に入り追加済み` and the personal-space saved toast. Durable Gallery listing remained loading, so listing-level persistence is `PENDING_CONFIRMATION`.
+- Canvas save failed, one bounded retry also failed, and reloading `/canvas/nj3xiviz4vb` showed `未保存の変更` with no restored image. Jobs readback showed `QUEUE SUMMARY 0`; this conflicts with the completed History entry and is not a completed Jobs proof.
+- Artifact: `work/heavy-production-print-provider-readback-20260819-r1.md`.
+- The current Team Library had no approved fabric swatch; old generated fabric results were not reused as new input. No fabric provider generation was issued.
+
+### Current blocker / next action / restart point
+
+- Primary blocker: `canvas_save_failed_after_one_retry`.
+- Supporting blockers: `heavy_jobs_readback_empty_after_completed_history`, `gallery_listing_readback_stuck_loading`, and `approved_product_owned_fabric_asset_unavailable_in_current_library`.
+- Next action: diagnose the source-associated Canvas save / Jobs persistence path, redeploy, and fresh-read the same production bundle. Do not replay the completed printing provider generation. After persistence is fixed, resume fabric only with an explicitly approved product-owned swatch.
+
+## 2026-08-19 continuation: Heavy opened and Canvas persistence recheck r24
+
+- Fresh official Chrome Plugin / Profile 2 browser-client `-8a26-4b07-841c-4580ad0cd43e` read Heavy tab `1980903220` and opened it in the Codex browser panel. The current exact URL was `/canvas/gqzd3kpfd4c`; the existing generated black T-shirt print remained visible in Canvas.
+- Canvas `保存` was retried once after the prior bounded failure. The UI remained `キャンバス · 保存失敗・再試行`; the database remained at `33` NiSEN Canvas documents, so no durable document was created.
+- Same-run readback of `/gallery`, `/history`, and `/jobs` stayed in the loading/error paths. After the bounded wait, History showed `読み込み失敗` with `0` active/failed/saved/timeline items; Jobs showed `読み込み失敗` with queue summary `0`; Gallery did not expose the completed result as a durable listing.
+- Remote `canvas-document` is active (version `3`, `verify_jwt=true`); unauthenticated `GET` returned the expected `401` and CORS `OPTIONS` returned `200`. This separates endpoint reachability from the authenticated browser failure.
+- Artifact: `work/heavy-production-canvas-save-readback-20260819-r24.md`.
+
+### Current exact blocker / next action / restart point
+
+- `canvas_save_failed_after_one_retry` remains the primary production blocker, with `heavy_gallery_history_jobs_authenticated_readback_failed` as the supporting blocker. The current browser session renders the existing result but does not currently prove authenticated Supabase persistence.
+- Next action: reauthenticate the Supabase-backed Heavy session, then fresh-read the same Profile 2 target and perform one bounded Canvas save/readback using the existing result only. Do not replay provider generation, use old bindings/runs, change browser surface, or touch recording/AOS.
+- After Canvas/Gallery/History/Jobs persistence is proven, resume the approved fabric sample only with an explicitly approved product-owned swatch, then continue AI fitting and beta QA.
+
+## 2026-08-19 continuation: product-owned fabric library asset and production static readback
+
+- Added `public/assets/fabric/cotton-knit-neutral.svg` as an explicit product-owned platform textile. `GallerySelector` / `ImageSelector` now filter bundled garment/textile inputs by `platformAssetRole`; generated history is not used as a substitute.
+- Focused material/fitting contract `11/11`, typecheck, build (`2606 modules transformed`), and diff check passed.
+- Deployment `6a854c127bdd315d2c839f1c` is `RUNNING` / `docker`. Production returned HTTP `200` for the textile SVG, and served chunks contain the new platform asset ID, role filter, and fitting garment-role wiring.
+- `/tools/fabric` was sent to the Codex browser panel. Chrome Profile 2 UI selection, rights confirmation, provider generation, and same-run persistence remain unverified because this thread has no callable Chrome Plugin `openTabs()` / target-scoped tool.
+
+Current blocker / next action / restart point: `chrome_plugin_browser_control_tool_unavailable_current_thread`. Resume with a fresh official Chrome Plugin/Profile 2 browser-client `openTabs()` and owner-bound `/tools/fabric` target readback; verify the platform-assets textile read-only before provider action. `zeabur_source_association_missing` remains a separate provenance limitation because repository/ref/commit fields are empty.
+
+## 2026-08-19 continuation: fresh Profile 2 fabric canary blocked in workspace preparation
+
+- Source thread `01a00fe4-9c5e-7d00-8b6a-09811c03df36` completed one fresh official Chrome Plugin/Profile 2 target-scoped canary with browser `-d42f-4d5c-9e7c-8d9adcf546c5`, selector revision `6`, and target `https://heavy-chain.zeabur.app/tools/fabric`.
+- The target was absent from the fresh inventory, so the official read-only provisioning contract created task-owned tab `1980903223`, confirmed URL/title/DOM and `hydration_ready=true`, then closed only that tab. `cleanup_verified=true`; no selected/claim/foreign-tab/recording/AOS/provider/save/rights/external action occurred.
+- At the same-run readback (`hydration_wait_ms=1507`), the body remained `ワークスペースを準備しています` / `認証状態とブランド設定を確認しています`; platform-assets textile elements were `0`. This is not provider or business-flow proof.
+- Exact blocker: `heavy_target_dom_platform_assets_textile_not_visible`.
+- Do not retry the same fingerprint or reuse the closed tab/run. Restart only after the current Profile 2 authenticated workspace/brand state changes, then perform one fresh target canary and confirm the textile input before the bounded fabric flow.
+
+## 2026-08-19 continuation: local-preview auth harness isolated and 31-feature verification restored
+
+- `scripts/verify-lightchain-all-feature-workflows.mjs` now keeps the intentionally unsigned local-proof JWT inside the local-preview harness by stubbing only local-preview Supabase REST/Auth requests. This prevents expected 401/refresh 400 responses from causing a false `/login` redirect.
+- Verification: `node --check scripts/verify-lightchain-all-feature-workflows.mjs`, `npm run verify:lightchain-all-features --silent`, and `git diff --check` passed. Result: `featureCount=31`, `ok=true`, `failed=[]`.
+- Artifact: `output/playwright/lightchain-all-feature-workflows-20260819T063811Z/SUMMARY.json`. Fabric-image and printing-image screenshots were produced in the same run.
+- This is local-preview implementation/UI proof only. It does not clear the production Chrome/Profile 2 blocker, provider generation, persistence/reuse, Mac/Windows Chrome, or internal-beta acceptance.
+
+## 2026-08-19 continuation: fresh Profile 2 state check found no target/state change
+
+- The Chrome Plugin source thread performed a new official Profile 2 read-only state check with browser `-9217-49a9-8753-606199f468b1`; `openTabs()` succeeded and `/tools/fabric` was absent from the current inventory.
+- No `selected()`, claim, navigation, foreign-tab mutation, provider, save, recording, AOS, or external effect was performed. Because the target was absent and no auth/brand/workspace state change was observed, the source thread correctly did not run another canary.
+- Current exact blocker: `heavy_target_state_change_not_observed_target_absent`.
+- Restart point: after the authenticated Heavy workspace/brand state changes and `/tools/fabric` appears in a fresh Profile 2 inventory, create a new owner/session and run one fresh target canary; until then keep the same fingerprint stopped.
+
+## 2026-08-19 continuation: local material and printing contract recheck
+
+- `npm run test:lightchain-material-contract --silent`: `11/11` passed.
+- `npm run test:printing-foundation --silent`: `244/244` passed.
+- `npm run typecheck --silent` and `git diff --check` passed.
+- These checks cover the product-owned garment/textile role contract, material inputs, printable-surface and placement invariants. They do not prove production provider output, authenticated persistence/reuse, or Chrome/Profile 2 acceptance.
+
+## 2026-08-19 continuation: latest beta-readiness gate and restart boundary
+
+- Static goal-readiness check passed (`ok=true`); it does not prove production migration or deployed Edge Functions.
+- G619 verifier remains `ok=false` with `readySessions=0` and `missingCount=1`; no real internal-beta session evidence is accepted.
+- H601 operator-readiness remains `ok=false` with `missingCount=10`; the listed legal, rights, retention, commercial-use, and operator/counsel decisions remain human-owned and open.
+- Fresh official Chrome Plugin/Profile 2 state check found no Heavy `/tools/fabric` target. Current exact blocker: `heavy_target_state_change_not_observed_target_absent`.
+- Local implementation proof remains separate: 31-feature verifier `ok=true` / `failed=[]`, material `11/11`, printing foundation `244/244`, typecheck, and diff check passed.
+
+### Current exact blocker / next action / restart point
+
+- Do not start another same-fingerprint canary, reuse the closed task tab/run, or switch to another browser surface.
+- Restart after the authenticated Heavy workspace/brand state changes and `/tools/fabric` appears in a fresh Profile 2 inventory; then run one new read-only target canary before any provider action.
+
+## 2026-08-19 continuation: owner-thread latest state readback
+
+- Fresh official Profile 2 owner-thread readback succeeded at transport level with browser `-9217-49a9-8753-606199f468b1`, but Heavy `/tools/fabric` was absent from `openTabs()`.
+- No selected/claim/navigation/foreign-tab/provider/rights/save/reuse/recording/AOS/external-effect operation was performed; the prior canary was not reused.
+- Artifact: `work/heavy-chain-profile2-latest-state-readback-20260819.md`.
+- Exact blocker remains `heavy_target_state_change_not_observed_target_absent`; wait for authenticated workspace/brand state change and fresh target presence before a new canary.
+
+## 2026-08-19 continuation: current-owner authentication recovery readback
+
+- Fresh current-owner official Profile 2 browser-client `-a2d5-4317-b9a0-12b76ec3a576` used selector revision `30` and read `openTabs()` successfully.
+- Existing Heavy `/model` tab `1980903220` was foreign-session-owned; it was not reclaimed or operated.
+- Official provisioning created task-owned `/tools/fabric` tab `1980903318`; same-run readback showed public `ログイン` / `無料で始める`, not authenticated workspace/brand/textile state. Cleanup was verified after closing only that tab.
+- Artifact: `work/heavy-chain-profile2-auth-recovery-readback-20260819.md`.
+- Current exact blocker for the resumed audit: `auth_not_confirmed`. User must authenticate in Profile 2 before the next fresh readback; Codex will not enter credentials, OTP, CAPTCHA, or secrets.
+
+## 2026-08-19 continuation: fresh executor owner readback after auth recovery checkpoint
+
+- Graph run `run_ddde9688e1764003` used one bounded native Executor stage with selector revision `30` and fresh Profile 2 browser `-c1b6-413d-9fae-0209720f5fbe`.
+- Fresh `openTabs()` returned Heavy `/model` descriptor `1980903220`; target-scoped readback failed closed because the descriptor was foreign-session-owned: `chrome_extension_target_readback_target_session_not_owned`.
+- No selected/claim/reclaim/provisioning/navigation/recording/AOS/provider/save/reuse/external-effect operation occurred. No credential, password, OTP, CAPTCHA, or secret was entered. Cleanup was not required because no tab was claimed or created.
+- Artifact: `work/heavy-chain-profile2-auth-readback-continuation-20260819.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_extension_target_readback_target_session_not_owned`; authentication remains `auth_not_confirmed`.
+- Next action: authenticate Heavy manually in Chrome Profile 2, then start one new official Profile 2 owner session and obtain fresh target-scoped readback.
+- Restart point: authenticated Heavy workspace/brand state appears in fresh inventory. Do not reclaim the foreign tab or start provider work before that proof.
+
+## 2026-08-19 continuation: workspace activity auth recovery boundary
+
+- Fixed `src/lib/workspaceActivity.ts` so credit, Jobs, outputs, and task-step reads each use `withSupabaseSessionRecovery` before `Promise.allSettled` aggregates failures.
+- This preserves the original auth failure signal long enough for the shared refresh-and-retry path to run; non-auth aggregate failures remain fail-closed.
+- Artifact: `work/heavy-chain-workspace-activity-auth-recovery-20260819.md`.
+- Verification: workspace activity routing `10/10`, Supabase session recovery `3/3`, typecheck PASS, diff check PASS.
+
+This local client fix does not clear the production browser/auth blocker or prove durable Canvas/Gallery/History/Jobs persistence. Fresh authenticated Profile 2 readback remains required.
+
+## 2026-08-19 continuation: Canvas save/readback recovery improvement
+
+- Canvas retains the server document ID/revision before verification readback, so a write-success/readback-failure retry updates the same document rather than creating a duplicate.
+- Added `最新状態を再読込` for known remote documents in `conflict`/`failed`; it hydrates the remote snapshot/view and revision only after owner/brand-scoped readback succeeds.
+- Artifact: `work/heavy-chain-canvas-save-recovery-20260819.md`.
+- Verification: Canvas view/recovery `3/3`, Canvas brand readback `1/1`, workspace activity routing `10/10`, typecheck PASS, diff check PASS.
+
+Production Canvas save/reload remains PENDING_CONFIRMATION pending fresh authenticated Profile 2 readback.
+
+## 2026-08-19 continuation: latest 31-feature local UI verification
+
+- Current source rebuilt successfully with `2606 modules transformed`.
+- Fresh local authenticated-preview verifier passed `featureCount=31`, `ok=true`, `failed=[]`; cleanup passed for context, browser, and preview server.
+- Artifact: `output/playwright/lightchain-all-feature-workflows-20260819T091219Z/SUMMARY.json`.
+
+This confirms local non-video UI coverage only. Production authenticated readback, provider generation, durable persistence/reuse, Mac/Windows Chrome, and beta acceptance remain open.
+
+## 2026-08-19 continuation: task-step authentication recovery v2 and fresh local verification
+
+- Review found that `fetchLightchainTaskSteps` swallowed authentication failures as `[]`, preventing the existing refresh/retry wrapper from seeing the expired-token signal.
+- Added `src/lib/workspaceReadRecovery.ts` so optional reads retain the ordinary-failure fallback but rethrow Supabase auth failures. Added behavioral coverage for one coordinated refresh/retry and for the non-auth fallback.
+- Artifact: `work/heavy-chain-workspace-activity-auth-recovery-v2-20260819.md`.
+- Verification: workspace activity routing `12/12`, Supabase session recovery `3/3`, Canvas persistence `3/3`, Canvas brand readback `1/1`, typecheck PASS, build PASS (`2607 modules transformed`), diff check PASS.
+- Fresh local verifier: `output/playwright/lightchain-all-feature-workflows-20260819T093430Z/SUMMARY.json`; `ok=true`, `featureCount=31`, `failed=[]`, assertions `432`, cleanup complete.
+
+This closes the identified local auth-recovery gap only. Production authenticated readback, provider generation, durable persistence/reuse, Mac/Windows Chrome acceptance, and internal-beta acceptance remain PENDING_CONFIRMATION.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_extension_target_readback_target_session_not_owned` with `auth_not_confirmed`.
+- Next action: authenticate Heavy manually in Chrome Profile 2, then start one new official Profile 2 owner session and obtain fresh target-scoped URL/title/DOM readback.
+- Restart point: authenticated Heavy workspace/brand state appears in fresh inventory. Do not reclaim the foreign tab, reuse old runs, or start provider work before owner-bound readback.
+
+## 2026-08-19 continuation: AI fitting previous-result retention
+
+- Removed the `FittingPage` generation-start clear that hid the previous successful fitting result during a retry or failed attempt.
+- Added a status message only when `isGenerating && resultMatrix.length > 0`, while preserving provider admission, rights, high-precision cutout, full persistence, cleanup, and result/history promotion order.
+- Added `scripts/verify-fitting-resilience.test.ts` for retention, status conditions, persistence ordering, and initial-generation behavior.
+- Verification: fitting resilience `4/4`, provider persistence/readback `12/12`, fitting history `10/10`, typecheck PASS, build PASS (`2607 modules transformed`), and `git diff --check` PASS.
+- Artifact: `work/heavy-chain-fitting-result-retention-20260819.md`.
+
+This is local implementation and test proof only. Fresh official Profile 2 `openTabs()` transport succeeded, but Heavy `/model` tab `1980903220` was not available to the current target readback owner (`chrome_extension_target_readback_target_session_not_owned`); Lightchain was absent from the fresh inventory and authentication remains `auth_not_confirmed`. Production generation, persistence/reuse, cross-platform Chrome acceptance, and internal-beta acceptance remain PENDING_CONFIRMATION.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_extension_target_readback_target_session_not_owned` with `auth_not_confirmed`.
+- Next action: authenticate Heavy manually in Chrome Profile 2, then start one new official Profile 2 owner session and obtain fresh Heavy and Lightchain target-scoped readback before provider work.
+- Restart point: authenticated Heavy workspace/brand state appears in fresh inventory. Do not reclaim the foreign tab, reuse the current binding, or enter credentials/OTP/CAPTCHA.
+
+## 2026-08-19 continuation: local lint and dependency recovery
+
+- Fixed the fitting resilience test's lint violation without weakening its source-order assertions.
+- Added `platformAssetRole` to `GallerySelector`'s data-fetch callback dependencies to keep platform-asset filtering current.
+- Verification: fitting resilience `4/4`, printing/Gallery contracts `51/51`, lint `0 errors / 0 warnings`, build PASS (`2607 modules transformed`). Artifact: `work/heavy-chain-local-lint-recovery-20260819.md`.
+
+Production authenticated readback, provider generation, persistence/reuse, Mac/Windows Chrome acceptance, and internal-beta acceptance remain PENDING_CONFIRMATION.
+
+## 2026-08-19 continuation: fresh Profile 2 readback after local recovery
+
+- Fresh `openTabs()` succeeded and listed Heavy `/model` tab `1980903220`, but target-scoped readback failed closed with `chrome_extension_target_readback_target_session_not_owned`; Lightchain was absent from the inventory.
+- No tab claim/reclaim, navigation, provisioning, provider, rights, save/reuse, recording, AOS, or external effect occurred.
+- Artifact: `work/heavy-chain-profile2-fresh-readback-20260819-r2.md`.
+
+Current restart condition remains manual Heavy authentication in Profile 2 followed by a new owner-bound Heavy/Lightchain readback.
+
+## 2026-08-19 continuation: desktop layout verifier remains pending
+
+- Current unified desktop verification was attempted across 31 features, 57 routes, and four desktop widths.
+- It was stopped after a bounded wait because route-level external-data requests did not settle. Cleanup of the preview and headless browser was confirmed.
+- Artifact: `work/heavy-chain-unified-desktop-layout-20260819-r1.md`.
+- Do not promote the historical 228/228 summary to current proof; desktop acceptance remains PENDING_CONFIRMATION.
+
+## 2026-08-19 continuation: desktop verifier recovery and fresh Profile 2 auth readback
+
+- Implemented the verifier-only recovery in `scripts/verify-unified-desktop-layout.mjs` plus `scripts/verify-unified-desktop-layout.test.mjs`. The fresh local run `output/playwright/unified-desktop-layout-run-20260819T103000Z` passed `scheduled/completed/failed=228/228/0` across 31 features, 57 routes, and four widths.
+- Fresh verifier cleanup passed: `browserClosed=true`, `contextClosed=true`, `previewExited=true`, `cleanupLeftovers=0`. Progress was valid bounded NDJSON, 459 lines with maximum 131 UTF-8 bytes. Focused tests `4/4`, `node --check`, and `git diff --check` passed. Historical summary was not reused. Full evidence: `work/heavy-chain-unified-desktop-layout-recovery-20260819.md`.
+- Fresh official Chrome Plugin/Profile 2 target-scoped provisioning created Heavy `/tools/fabric` tab `1980903356` under browser `-1363-4252-abc2-cb5ad049f1a2`, read URL/title/DOM, and closed only the task-owned tab with cleanup `ok=true`. The page remained in `ワークスペースを準備しています` / `認証状態とブランド設定を確認しています`; one visible `アカウント` locator attempt timed out. Full evidence: `work/heavy-chain-profile2-auth-button-readback-20260819.md`.
+
+### Current exact blocker / next action / restart point
+
+- Production exact blocker: `heavy_workspace_preparation_auth_state_not_ready`; authenticated Heavy workspace/brand/textile state is not confirmed. Provider generation, persistence/reuse, Mac/Windows Chrome acceptance, and internal-beta acceptance remain `PENDING_CONFIRMATION`.
+- Integrated review exact blocker: `opencode_go_transport_error: Go endpoint did not return JSON` from `opencode-go/qwen3.8-max`. The review stage is blocked; no silent model substitution was made.
+- Next action: user completes Heavy authentication in the visible Profile 2 Chrome window; then run one new owner-bound fresh Heavy/Lightchain readback before provider work. Credentials, OTP, CAPTCHA, and secrets remain outside Codex execution.
+- Restart point: fresh authenticated Heavy `/tools/fabric` URL/title/DOM readback with matching owner lineage and cleanup proof. Do not reclaim the foreign `/model` tab or reuse old bindings/runs.
+
+## 2026-08-19 continuation: Heavy visual screenshot and scoped workspace isolation
+
+- Fresh official Chrome Plugin/Profile 2 read-only provisioning used browser `-1363-4252-abc2-cb5ad049f1a2`, created task-owned `/tools/fabric` tab `1980903366`, and captured `work/heavy-chain-profile2-screenshot-20260819.png`.
+- The screenshot visibly shows the unified apparel workspace shell: feature Library, fabric-image workbench, generation history, Gallery/Canvas/History/Jobs, common flow, context, and internal-beta status.
+- Same-run DOM readback remained in `ワークスペースを準備しています` / `認証状態とブランド設定を確認しています`; this is not authenticated textile/provider/save/reuse proof. The temporary task tab was closed with cleanup `ok=true`; foreign tabs and external effects were untouched.
+- Implemented and verified the approved local v2 scoped persistence slice in only `src/lib/unifiedWorkspaceFlowPersistence.ts`, `src/components/workspace/LightchainUnifiedWorkspaceShell.tsx`, and `scripts/verify-unified-flow-persistence.test.ts`: user+brand+feature isolation, v1 ignore, no Storage API before scope, stale-snapshot protection, and malformed/storage fail-open.
+- Verification: focused test `9/9 PASS`, `npm run typecheck PASS`, `git diff --check PASS`, Security Review `APPROVED`, integrated read-only OpenCode Go review `PASS` with verified `opencode-go/qwen3.8-max` via official Anthropic-compatible `/messages` route.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `heavy_workspace_preparation_auth_state_not_ready`.
+- Next action: user completes Heavy authentication in visible Profile 2 Chrome; then obtain one new owner-bound fresh `/tools/fabric` URL/title/DOM readback. Credentials, OTP, CAPTCHA, and secrets remain outside Codex execution.
+- Restart point: fresh authenticated workspace/brand/textile state with matching owner lineage. Do not reuse tab `1980903366`, old bindings/runs, or reclaim foreign tabs.
+
+## 2026-08-19 continuation: fresh 31-feature local integration verification
+
+- Rebuilt the current source and reran the non-video integrated UI verifier after the scoped flow-persistence change.
+- Result: `featureCount=31`, `ok=true`, `failed=[]`, `assertions=432`; desktop and mobile route screens, visible control inventories, safe tab/range interactions, and cleanup all passed.
+- Fabric and printing route screens were included with permission-gated provider controls left untouched. This is local UI proof only, not production provider generation or authenticated Gallery/Canvas/History/Jobs persistence.
+- Artifact: `output/playwright/lightchain-all-feature-workflows-20260819T105826Z/SUMMARY.json`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker remains `heavy_workspace_preparation_auth_state_not_ready`.
+- Next action: user completes Heavy authentication in Profile 2, then obtain one new owner-bound fresh Heavy/Lightchain readback confirming workspace, brand, and textile visibility before provider work.
+- Restart point: fresh authenticated Heavy `/tools/fabric` readback with matching owner lineage. Do not reuse old bindings/runs or reclaim foreign tabs.
+
+## 2026-08-19 continuation: current Profile 2 inventory after local verification
+
+- Fresh official `user.openTabs()` on Chrome Plugin/Profile 2 returned Heavy `/model` tab `1980903220` and `chrome://newtab/`; `/tools/fabric` was absent.
+- The Heavy tab was foreign to this readback task, so no claim, navigation, provisioning, login, input, generation, save/reuse, recording, AOS, or external effect occurred.
+- Artifact: `work/heavy-chain-profile2-open-tabs-continuation-20260819.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker remains `heavy_workspace_preparation_auth_state_not_ready`.
+- Next action: after Heavy authentication/workspace state changes, obtain one new owner-bound target readback. Do not reuse the foreign `/model` tab or repeat target provisioning without a state change.
+- Restart point: the exact Heavy target appears in a fresh Profile 2 inventory with matching owner lineage.
+
+## 2026-08-19 continuation: authenticated Heavy workspace and account readback
+
+- Fresh official Chrome Plugin/Profile 2 task-owned readback reached `/tools/fabric` after hydration. The DOM exposed the integrated workspace, all 31 non-video library entries, fabric-image inputs, rights confirmation gate, `AI生成`, and Gallery/Canvas/History/Jobs.
+- The same run opened the account menu and account page. Readback showed `田仲二千(あなた)`, `okinawa2000823@gmail.com`, and `オーナー`; Heavy authentication is confirmed. The former preparation/auth blocker is cleared for this readback.
+- The visual `権限がありません` label is a separate Lightchain compatibility surface, not proof of logout. No assets were selected, the rights checkbox was not changed, and provider generation/save/reuse were not executed.
+- Artifact: `work/heavy-authenticated-fabric-readback-20260819.md`.
+- A follow-up task-owned library provisioning attempt hit `chrome_plugin_cdp_operation_deadline_before_command_dispatch`; the created tab was closed through the official tab surface and fresh `openTabs()` confirmed cleanup. Foreign Heavy `/model` remained untouched.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `heavy_provider_generation_not_run_assets_and_rights_pending`.
+- Next action: use a fresh official Profile 2 owner to read the approved internal Gallery garment/textile assets, then proceed only after explicit rights confirmation.
+- Restart point: authenticated account/brand state is confirmed; do not reuse the closed target, foreign tab, or screenshot as provider/save/reuse proof.
+
+## 2026-08-19 continuation: product-owned library inputs selected
+
+- A new official Profile 2 browser-client `-556b-4745-b6f0-c5278074c8f0` was initialized after the prior CDP timeout; fresh `openTabs()` succeeded.
+- Fresh task-owned `/tools/fabric` target `1980903386` hydrated successfully. The platform library exposed one product-owned garment asset and one product-owned textile asset.
+- Selected and applied in the same run: `blank-white-tshirt.svg` as the garment and `cotton-knit-neutral.svg` as the textile. Textile background separation completed and the workflow reached the generation-ready state.
+- The rights checkbox remained unchecked and `lightchain-fabric-generate` remained disabled. No provider call or persistence write was executed.
+- Artifact: `work/heavy-fabric-library-input-readback-20260819.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `heavy_provider_generation_not_run_rights_confirmation_pending`.
+- Next action: user confirms the selected internal assets' rights by checking the visible rights confirmation control; then run one bounded fabric provider generation and same-run result/save/reuse readback.
+- Restart point: the prior task-owned tab was cleaned up. User must explicitly confirm rights in a current Heavy workspace; then create one fresh owner target and re-read the gate before provider generation.
+
+## 2026-08-19 current Chrome Plugin shared-layer handoff
+
+- The authorized source thread completed the shared Chrome Plugin/Profile 2 transport repair. Fresh `browsers.get()` now requires a bounded same-run `openTabs()` handshake before ready/lease/bridge identity admission; normal, recovery, and bridge identity paths use the same contract.
+- Focused verification passed: Profile 2 transport `66/66`, common target/readback/tab-lease suite `95/95`, `node --check`, and diff check. Heavy, recording, and alternate-surface code were not changed.
+- Fresh live proof: browser `-70a9-451a-b2f5-3a907b9b7747`, Profile 2 extension, `openTabs()` returned 4 tabs, owner lineage matched, and official bridge cleanup succeeded. Artifact: `/Users/nichikatanaka/Documents/New project/work/chrome-plugin-profile2-transport-fresh-proof-revision30-20260819.json`.
+- Transport is repaired, but the foreground gate remains fail-closed because `tabs.selected()` returned `null`: `chrome_selected_tab_readback_invalid`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_selected_tab_readback_invalid`.
+- Next action: user closes Chrome/Profile 2 and confirms `running=false`; then use the official Chrome open entry, wait for the extension advertisement, and run one new Profile 2 browser-client `openTabs()+selected()` proof. No old binding/tab/run, alternate surface, shell/AppleScript fallback, or recording path.
+- Restart point: a fresh same-run `selected()` descriptor plus `openTabs()` and owner-lineage proof, followed by Heavy readback only after the foreground gate is ready.
+
+## 2026-08-20 current-source desktop verifier recovery
+
+- Updated only the local layout verifier: external non-local requests are aborted at the browser-context boundary, and the four independent desktop viewports run concurrently. This keeps the check limited to local preview layout and avoids treating remote Supabase/model/font latency as UI failure.
+- Focused verifier contract tests: `6/6 PASS`; `node --check` and `git diff --check` PASS.
+- Fresh current-source run: `228/228`, `failed=0`, `globalTimedOut=false`, `contextClosed=true`, `previewExited=true`, `cleanupLeftovers=0`. Artifact: `output/playwright/unified-desktop-layout-current/SUMMARY.json`.
+- This proves local desktop layout coverage only; it does not clear the Chrome selected-tab gate, production parity, provider generation, persistence/reuse, or beta acceptance.
+
+## 2026-08-20 current-source non-video workflow verification
+
+- Fresh build completed with `2607 modules transformed`.
+- Fresh local UI workflow verifier passed `featureCount=31`, `ok=true`, `failed=[]`, including desktop/mobile route screens, visible controls, safe tab/range checks, and cleanup.
+- Artifact: `output/playwright/lightchain-all-feature-workflows-20260819T152446Z/SUMMARY.json`.
+- This remains local implementation proof only; it does not prove production Lightchain parity, provider generation, durable persistence/reuse, Mac/Windows Chrome acceptance, or internal-beta rollout.
+
+## 2026-08-20 current-source parity/provider contract recheck
+
+- Focused local regression rechecked the Lightchain parity shell, 31-feature route aliases, material/fabric/printing input contract, product-owned asset role filtering, provider adapter and mask boundaries, provider persistence/readback guards, print-result history, AI-fitting retry retention, and Canvas remote recovery.
+- Result: `50/50 PASS`. This is current-source implementation proof only. It does not prove production Lightchain/Heavy same-run UI parity, provider generation, durable production save/reuse, Mac/Windows Chrome acceptance, or internal beta acceptance.
+- No Chrome Plugin retry, production navigation, provider call, rights confirmation, save/reuse, deployment, recording, AOS action, or external effect was performed because the foreground gate remains `chrome_selected_tab_readback_invalid`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_selected_tab_readback_invalid`.
+- Next action: user closes Chrome/Profile 2 and confirms `running=false`; then the official Chrome open entry must re-advertise Profile 2 and one fresh same-run `openTabs()+selected()` proof must be obtained.
+- Restart point: only after a fresh selected-tab descriptor and matching owner lineage are valid, resume Heavy/Lightchain production readback. Keep provider, deployment, recording, and beta blockers separate.
+
+## 2026-08-20 Lightchain category toolbar alignment
+
+- Updated only `src/pages/LightchainMaterialWorkbenchPage.tsx` so the fabric and printing parity views use the current four-category Lightchain toolbar: `おすすめ`, `企画デザインツール`, `AIフィッティング`, `グラフィックツール`.
+- Removed the visible vertical auxiliary toolbar and its Heavy-specific `ツールバー` / `衣類生産ツール` entries from those priority views. Provider generation, rights, result persistence, and Canvas handoff logic were not changed.
+- Added regression coverage for the category labels, toolbar boundary, and Lightchain header identity. Focused shell/material tests passed `13/13`; typecheck and diff check passed.
+- Fresh local non-video workflow verification passed `31/31`, and the current-source desktop verifier passed `228/228` with no timeout and complete cleanup. These remain local proof only; production deployment/readback and provider business-flow proof are still pending.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_selected_tab_readback_invalid`.
+- Next action: user closes Chrome/Profile 2 and confirms `running=false`; reopen through the official entry and obtain one fresh same-run `openTabs()+selected()` proof.
+- Restart point: after the foreground gate is valid, compare the deployed fabric/printing visuals against the fresh Lightchain route before any provider generation or production persistence action.
+
+## 2026-08-20 current-source provider and persistence regression audit
+
+- Re-ran the provider/persistence regression set covering fabric, printing, AI fitting, model-matrix, provider rights gates, remote artifact ownership, History, Gallery, Canvas promotion, retry retention, reload recovery, and Canvas placement/readback.
+- Result: `73/73 PASS`. The quota diagnostic emitted by the intentional storage-limit case was handled as an expected test condition; no test failed.
+- This is local implementation proof only. No Chrome Plugin retry, production navigation, provider call, rights confirmation, save/reuse, deployment, recording, or external effect was performed.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_selected_tab_readback_invalid` (official bridge currently stopped after the prior selected-null proof).
+- Next action: user closes Chrome/Profile 2 and confirms `running=false`; reopen through the official entry and obtain one fresh same-run `openTabs()+selected()` proof.
+- Restart point: after the foreground gate is valid, obtain Heavy `/tools/fabric` and `/model` production readback, then execute the bounded approved provider/save/reuse flows.
+
+## 2026-08-20 Lightchain fitting surface cleanup and route regression fix
+
+- Removed the visible legacy Heavy fallback banner from `/fitting` while retaining the real model-matrix provider, rights, persistence, retry, History, Gallery, and Canvas flow. Gallery selection remains garment-role constrained and the compatibility query can still open the picker automatically.
+- Fixed same-path `/generate` SPA navigation so a catalog link with `feature=...` resolves its feature during render instead of redirecting back to the category list. This restores the direct entrypoint contract for query-routed Lightchain features.
+- Focused Lightchain material/UI contract passed `11/11`; typecheck and diff check passed.
+- Fresh local non-video verifier passed `31/31`, `ok=true`, `failed=[]`, with build `2607 modules`. Artifact: `output/playwright/lightchain-all-feature-workflows-20260819T161811Z/SUMMARY.json`.
+- These are local implementation proofs only. Chrome selected-tab recovery, production Lightchain/Heavy readback, provider generation/save/reuse, deployment, and internal beta acceptance remain separate.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_selected_tab_readback_invalid`; recovery is currently stopped at `chrome_profile2_close_lifecycle_unavailable` until the user closes Chrome/Profile 2.
+- Next action: user fully closes Chrome/Profile 2 and confirms `running=false`; then use the official open entry and obtain one fresh same-run Profile 2 `openTabs()+selected()` proof.
+- Restart point: after the foreground gate is valid, resume fresh Heavy `/tools/fabric` and `/model` production readback, then the bounded provider/save/reuse flows.
+
+## 2026-08-20 Chrome Plugin/Profile 2 recovery attempt
+
+- Used a fresh official Chrome Plugin/Profile 2 browser-client session after the shared-layer repair. Selector remained `backend=chrome_plugin`, Profile 2, `signed_chrome_extension_profile2`, revision `30`.
+- Fresh `get()` and same-run `openTabs()` handshake passed. Four user tabs were read. Same-run `tabs.selected()` returned `null`.
+- The official browser API exposed only `viewport`; no official Chrome close lifecycle was advertised. No shell, AppleScript, process kill, extra window, alternate surface, old binding, or old tab was used.
+- Artifact: `work/heavy-chain-profile2-recovery-attempt-20260820.md`.
+
+### Current exact blocker / next action / restart point
+
+- Recovery blocker: `chrome_profile2_close_lifecycle_unavailable`; underlying foreground blocker remains `chrome_selected_tab_readback_invalid`.
+- Next action: user fully closes Chrome/Profile 2 and confirms `chrome-is-running --browser chrome --json` reports `running=false`.
+- Restart point: after that confirmation, use the official open entry once, then obtain one fresh same-run Profile 2 `openTabs()+selected()` proof. Keep Heavy production readback, provider generation, save/reuse, deployment, and recording gated until the selected-tab and owner-lineage proof is valid.
+
+## 2026-08-20 current-source Lightchain frame cleanup and AI fitting route connection
+
+- Connected `/model` to the provider-capable `LightchainWorkbenchPage` AI-fitting flow instead of the former stub route. The flow retains library inputs, rights gate, provider adapter, result, persistence, retry, and Canvas handoff contracts.
+- Unified Lightchain header detection from the current catalog aliases, including `/tools/printing`, `/generate`, and `/editor/changeColor`; removed the obsolete `/lightchain/fashion-studio` not-found header suppression.
+- Removed visible Heavy-only inner labels from the Lightchain workbench, lab, material modal, order-sheet preview, and generation entrypoints. The fabric/printing views continue to use the four current categories: `おすすめ`, `企画デザインツール`, `AIフィッティング`, `グラフィックツール`.
+- Verification: focused parity/material/shell/route contracts `15/15 PASS`, typecheck PASS, build `2607 modules`, fresh local non-video workflow `31/31` with `failed=[]` and cleanup complete at `output/playwright/lightchain-all-feature-workflows-20260819T160356Z/SUMMARY.json`, and desktop QA `228/228` with cleanup complete at `output/playwright/unified-desktop-layout-current/SUMMARY.json`.
+- This is current-source/local proof only. No Chrome Plugin retry, production navigation, provider generation, rights confirmation, save/reuse, recording, deployment, or external effect was performed.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_selected_tab_readback_invalid`.
+- Next action: user closes Chrome/Profile 2 and confirms `running=false`; reopen through the official entry and obtain one fresh same-run `openTabs()+selected()` proof.
+- Restart point: after the foreground gate is valid, obtain fresh Heavy `/tools/fabric` and `/model` production readback, then run the bounded fabric-print and AI-fitting provider/save/reuse flows. Keep deploy, recording, and beta acceptance separate.
+
+## 2026-08-20 Lightchain-only surface branding cleanup
+
+- Removed the remaining visible Heavy fallback copy from `LightchainParityPages`, while preserving the compatibility transition into the real generation and AI-fitting workspaces.
+- Renamed the visible lab catalog title to `ラボ`, made the Gallery unavailable-state copy environment-neutral, and changed the printing preview footer to `LIGHTCHAIN`.
+- Focused Lightchain contract passed `11/11`; typecheck and diff check passed.
+- Fresh local non-video verifier passed `31/31`, `ok=true`, `failed=[]`. Artifact: `output/playwright/lightchain-all-feature-workflows-20260819T162233Z/SUMMARY.json`.
+- Remaining Heavy references in the parity catalog are internal evidence fields (`owningSurface` / `heavyCurrentBehavior`), not rendered UI.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_selected_tab_readback_invalid`; current recovery blocker remains `chrome_profile2_close_lifecycle_unavailable` until Chrome/Profile 2 is fully closed by the user.
+- Next action: user confirms Chrome is fully closed and `running=false`; then perform one official reopen and fresh same-run `openTabs()+selected()` proof.
+- Restart point: after a valid selected-tab/owner-lineage proof, resume production Lightchain/Heavy readback and the bounded fabric-print / AI-fitting generation-save-reuse flows.
+
+## 2026-08-20 Chrome Plugin/Profile 2 user-assisted recovery branch
+
+- Created a fresh official Chrome Plugin/Profile 2 browser-client session with the current selector (`revision=30`). The same-run `openTabs()` handshake succeeded and returned 3 user tabs; `tabs.selected()` returned `null`.
+- The current inventory contains one exact existing `about:blank` tab (`1980903560`) in the dedicated auth group. No tab was claimed, focused, navigated, closed, or otherwise operated.
+- Artifact: `work/heavy-chain-profile2-recovery-20260820-r2.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_selected_tab_readback_invalid`.
+- Next action: user brings the Profile 2 Chrome window to the front and clicks the existing `about:blank` tab once.
+- Restart point: after the user confirms that click, discard the current binding and obtain one fresh same-run `openTabs()+selected()` proof. Do not simulate the click, reuse the binding, or switch surfaces.
+
+## 2026-08-20 Lightchain visible-label contract cleanup
+
+- Updated the Lab surface's visible CTAs and generation-intent label from `Heavy Chain Lab` wording to `ラボで試す` / `ラボで生成`, while preserving the admitted `toolId: 'lab'` provider route and handoff metadata.
+- Updated the permission-parity tests to assert the current Lightchain-native Creator handoff (`生成条件を開く`) and AI-fitting Gallery/rights contract, and to reject the removed Heavy fallback banner.
+- Focused permission parity passed `4/4`; Lab boundary and provider coverage passed `11/11`. Typecheck and diff check passed.
+- Fresh local non-video workflow verification passed `featureCount=31`, `failed=[]`. Artifact: `output/playwright/lightchain-all-feature-workflows-20260819T163027Z/SUMMARY.json`.
+- This is local source/UI proof only. Chrome foreground recovery, production readback, provider generation/save/reuse, deployment, recording, and beta acceptance remain separate.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_selected_tab_readback_invalid`.
+- Next action: user clicks the existing Profile 2 `about:blank` tab once and confirms; then obtain one fresh same-run `openTabs()+selected()` proof.
+- Restart point: after a non-null selected tab and owner-lineage proof, resume Heavy production `/tools/fabric` and `/model` readback, then the bounded provider/save/reuse flows.
+
+## 2026-08-20 Lightchain parity-route identity cleanup
+
+- Removed Heavy-only visible identity/default prompt copy from the authenticated parity routes `/studio`, `/patterns`, `/models`, and `/lab`; the routes now render Lightchain identity or neutral apparel prompts while retaining their provider and handoff logic.
+- Updated the clone-layout verifier so authenticated `/generate` checks the `LIGHTCHAIN` header and the comparison ledger no longer treats Heavy branding as an intentional parity mismatch. Public landing/login branding remains outside the authenticated parity shell.
+- Focused material, permission, Lab, and provider contracts passed `27/27`; typecheck, clone-layout syntax, and diff check passed.
+- Fresh local non-video workflow verification passed `featureCount=31`, `failed=[]`. Artifact: `output/playwright/lightchain-all-feature-workflows-20260819T163436Z/SUMMARY.json`.
+- This remains local source/UI proof only. Production Lightchain/Heavy readback, provider generation/save/reuse, deployment, recording, and beta acceptance remain separate.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_selected_tab_readback_invalid`.
+- Next action: user clicks the existing Profile 2 `about:blank` tab once and confirms; then obtain one fresh same-run `openTabs()+selected()` proof.
+- Restart point: after a non-null selected tab and owner-lineage proof, resume Heavy production `/tools/fabric` and `/model` readback, then the bounded provider/save/reuse flows.
+
+## 2026-08-20 Lightchain History/Jobs identity cleanup
+
+- Changed persisted lineage labels from visible `Heavy Chain機能` / `Heavy Chain task` / `Heavy Chain steps` / `Heavy Chain状態` to the Lightchain equivalents. Legacy labels remain readable in filters and queue lookup so older records are not lost.
+- Added Gallery, History, and Jobs to the authenticated Lightchain header route set; Canvas remains the intended full-screen continuation surface.
+- Focused material, workspace activity, and unified shell contracts passed `29/29`; typecheck and diff check passed.
+- Fresh local non-video workflow verification passed `featureCount=31`, `failed=[]`. Artifact: `output/playwright/lightchain-all-feature-workflows-20260819T164124Z/SUMMARY.json`.
+- This remains local source/UI proof only. Production Lightchain/Heavy readback, provider generation/save/reuse, deployment, recording, and beta acceptance remain separate.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_selected_tab_readback_invalid`.
+- Next action: user clicks the existing Profile 2 `about:blank` tab once and confirms; then obtain one fresh same-run `openTabs()+selected()` proof.
+- Restart point: after a non-null selected tab and owner-lineage proof, resume Heavy production `/tools/fabric` and `/model` readback, then the bounded provider/save/reuse flows.

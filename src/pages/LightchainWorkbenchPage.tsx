@@ -1,5 +1,5 @@
 import { type ChangeEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
   Bot,
@@ -356,7 +356,7 @@ const tools: CompatTool[] = [
   },
   {
     id: 'lab',
-    title: 'Heavy Chain Lab',
+    title: 'ラボ',
     lightchainRoute: '/flow/laboratory',
     category: 'lab',
     status: 'workspace',
@@ -754,7 +754,7 @@ const buildOrderSheetPreview = ({
       <rect width="1200" height="900" fill="#f8fafc"/>
       <rect x="70" y="64" width="1060" height="772" rx="34" fill="#ffffff" stroke="#d4d4d8" stroke-width="3"/>
       <rect x="70" y="64" width="1060" height="156" rx="34" fill="#0f172a"/>
-      <text x="112" y="126" fill="#67e8f9" font-family="Arial, sans-serif" font-size="28" font-weight="700">HEAVY CHAIN ORDER SHEET</text>
+      <text x="112" y="126" fill="#67e8f9" font-family="Arial, sans-serif" font-size="28" font-weight="700">LIGHTCHAIN WORKSHEET</text>
       <text x="112" y="178" fill="#ffffff" font-family="Arial, sans-serif" font-size="48" font-weight="800">${title}</text>
       <text x="112" y="276" fill="#0f172a" font-family="Arial, sans-serif" font-size="28" font-weight="700">Selected tool</text>
       <text x="112" y="316" fill="#334155" font-family="Arial, sans-serif" font-size="26">${escapeSvgText(tool.id)} / ${escapeSvgText(tool.lightchainRoute)}</text>
@@ -1022,7 +1022,7 @@ const workspaceStyleConfig: Record<string, {
   },
   lab: {
     kind: 'lab',
-    title: 'Heavy Chain Lab',
+    title: 'ラボ',
     subtitle: '参考事例',
     prompt: '物マーケティング画像への変換',
   },
@@ -1048,6 +1048,7 @@ const maskCandidateLayer: Record<MaskCandidate, string> = {
 
 export function LightchainWorkbenchPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toolId } = useParams<{ toolId?: string }>();
   const [searchParams] = useSearchParams();
   const { user, currentBrand } = useAuthStore();
@@ -1362,8 +1363,13 @@ export function LightchainWorkbenchPage() {
       ? { label: '生成準備', detail: '入力を確認してAI生成へ進めます。', tone: 'ready' as const }
       : { label: '入力待ち', detail: 'まず素材か依頼内容を追加します。', tone: 'waiting' as const };
 
-  const routeTool = toolId ? tools.find((tool) => tool.id === toolId) ?? null : null;
-  const isFeatureDetail = Boolean(toolId);
+  const isModelRoute = location.pathname === '/model';
+  const routeTool = toolId
+    ? tools.find((tool) => tool.id === toolId) ?? null
+    : isModelRoute
+      ? tools.find((tool) => tool.id === 'ai-fitting') ?? null
+      : null;
+  const isFeatureDetail = Boolean(toolId || isModelRoute);
   const selectedTool = routeTool ?? tools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? tools[0];
   const lightchainProviderRoute = getLightchainProviderRoute(selectedTool.id);
   const lightchainProviderSupported = isLightchainProviderSupported(selectedTool.id);
@@ -3764,9 +3770,6 @@ export function LightchainWorkbenchPage() {
     if (workspaceStyle.kind === 'lab') {
       return (
         <main className="dark min-h-[calc(100vh-70px)] bg-[#111111] px-4 py-4 text-white" data-testid="lightchain-lab-home">
-          <Link to="/dashboard" className="mb-4 inline-flex text-sm font-semibold tracking-[0.18em] text-white">
-            HEAVYCHAIN
-          </Link>
           <h1 className="text-base font-semibold">{workspaceStyle.title}</h1>
           {renderLightchainProviderGate()}
           <section className="mt-5 grid max-w-[520px] gap-5">
@@ -3894,9 +3897,6 @@ export function LightchainWorkbenchPage() {
       <main className="dark min-h-[calc(100vh-70px)] bg-[#101313] text-white" data-testid={`lightchain-workspace-${workspaceStyle.kind}`}>
         <section className="relative min-h-[calc(100vh-70px)] overflow-hidden px-4 py-14 sm:px-8">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_52%_20%,rgba(101,211,207,0.22),transparent_38%),linear-gradient(90deg,rgba(15,23,42,0.15),rgba(34,197,94,0.1),rgba(59,130,246,0.12))]" />
-          <Link to="/dashboard" className="absolute left-5 top-5 z-10 text-sm font-semibold tracking-[0.18em] text-white">
-            HEAVYCHAIN
-          </Link>
           {workspaceStyle.kind === 'marketing' && (
             <div className="absolute right-4 top-4 rounded-lg border border-white/10 bg-[#1b2125] px-4 py-3 text-sm font-semibold text-neutral-200">
               ✦ 33607
@@ -5538,8 +5538,7 @@ export function LightchainWorkbenchPage() {
                 {isFeatureDetail && currentModelPanel ? (
 	                  <section className="flex h-[calc(100vh-104px)] min-h-[520px] flex-col overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(14,17,19,0.98),rgba(9,13,15,0.96))]" data-testid="lightchain-model-panel">
 	                    <div className="px-4 pb-3 pt-5">
-	                      <p className="text-xs font-semibold uppercase tracking-[0.26em] text-cyan-300">Heavy Chain</p>
-	                      <h1 className="mt-2 text-base font-semibold text-white">{currentModelPanel.title}</h1>
+	                      <h1 className="text-base font-semibold text-white">{currentModelPanel.title}</h1>
                         {currentModelPanel.subtitle && (
                           <p className="mt-2 text-xs font-semibold text-neutral-400">{currentModelPanel.subtitle}</p>
                         )}
@@ -6805,8 +6804,7 @@ export function LightchainWorkbenchPage() {
           <div className="max-h-[88vh] w-full overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(13,17,20,0.98),rgba(9,12,14,0.96))] shadow-2xl sm:max-w-4xl">
             <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Heavy Chain</p>
-                <h2 className="mt-1 text-base font-semibold text-white">素材選択</h2>
+                <h2 className="text-base font-semibold text-white">素材選択</h2>
                 <p className="mt-0.5 text-xs text-neutral-400">素材から選びます。</p>
               </div>
               <button

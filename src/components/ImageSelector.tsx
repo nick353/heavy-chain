@@ -61,6 +61,7 @@ interface ImageSelectorProps {
   galleryConfirmLabel?: string;
   selectionTestId?: string;
   galleryAssetPurpose?: PrintDesignAssetPurpose;
+  platformAssetRole?: 'garment' | 'textile' | 'artwork';
 }
 
 export function ImageSelector({
@@ -86,6 +87,7 @@ export function ImageSelector({
   galleryConfirmLabel = '素材を追加',
   selectionTestId,
   galleryAssetPurpose,
+  platformAssetRole,
 }: ImageSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -339,6 +341,7 @@ export function ImageSelector({
           confirmedSingle={confirmGallerySelection}
           confirmLabel={galleryConfirmLabel}
           assetPurpose={galleryAssetPurpose}
+          platformAssetRole={platformAssetRole}
         />
       </div>
     );
@@ -486,6 +489,7 @@ export function ImageSelector({
         confirmedSingle={confirmGallerySelection}
         confirmLabel={galleryConfirmLabel}
         assetPurpose={galleryAssetPurpose}
+        platformAssetRole={platformAssetRole}
       />
     </div>
   );

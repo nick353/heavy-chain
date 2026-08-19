@@ -180,7 +180,7 @@ export const buildPrintingImagePreviewDataUrl = ({
       <text x="760" y="474" fill="#94a3b8" font-family="Arial, sans-serif" font-size="18">rotation: ${Math.round(transform.rotation)}°</text>
       <text x="760" y="556" fill="#e5e7eb" font-family="Arial, sans-serif" font-size="16" font-weight="700">Result</text>
       <text x="760" y="590" fill="#94a3b8" font-family="Arial, sans-serif" font-size="16">Clipped to the garment silhouette</text>
-      <text x="124" y="790" fill="#64748b" font-family="Arial, sans-serif" font-size="16">Heavy Chain / printing-image / direct canvas manipulation</text>
+      <text x="124" y="790" fill="#64748b" font-family="Arial, sans-serif" font-size="16">LIGHTCHAIN / printing-image / direct canvas manipulation</text>
     </svg>
   `);
 };

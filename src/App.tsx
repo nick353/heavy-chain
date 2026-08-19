@@ -35,7 +35,6 @@ const GalleryPage = lazy(() => import('./pages/GalleryPage').then((module) => ({
 const CanvasEditorPage = lazy(() => import('./pages/CanvasEditorPage').then((module) => ({ default: module.CanvasEditorPage })));
 const LightchainMaterialWorkbenchPage = lazy(() => import('./pages/LightchainMaterialWorkbenchPage').then((module) => ({ default: module.LightchainMaterialWorkbenchPage })));
 const LightchainCreatorPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainCreatorPage })));
-const LightchainModelPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainModelPage })));
 const LightchainDesignProductionPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainDesignProductionPage })));
 const LightchainAssetCenterPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainAssetCenterPage })));
 const LightchainOrientedDesignPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainOrientedDesignPage })));
@@ -810,7 +809,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainModelPage />
+                    <LightchainWorkbenchPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -1020,7 +1019,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <WorkflowBoardPage />
+                    <LightchainCreatorPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>

@@ -11,7 +11,6 @@ import {
   Layers3,
   Laptop,
   Loader2,
-  Palette,
   Plus,
   Scissors,
   Sparkles,
@@ -153,6 +152,7 @@ import {
   LIGHTCHAIN_MATERIAL_TABS,
   getLightchainMaterialTab,
 } from '../lib/lightchainMaterialContract';
+import { lightchainCategories } from '../lib/lightchainParityCatalog';
 import { buildLightchainProviderPrompt } from '../features/lightchain/providerAdapter';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import {
@@ -169,13 +169,32 @@ import type { GeneratedImage, Json } from '../types/database';
 
 type WorkbenchMode = 'fabric' | 'printing';
 type PrintCoverageMode = 'spot' | 'full';
-const MATERIAL_TOOLBAR_ROUTES: Record<string, string> = {
-  'ツールバー': '/lightchain',
-  'デザインツール': '/lightchain?category=planning',
-  'フィッティングツール': '/lightchain?category=fitting',
-  'グラフィックデザインツール': '/lightchain?category=graphics',
-  '衣類生産ツール': '/lightchain/printing-image',
-};
+
+function LightchainCategoryToolbar() {
+  const navigate = useNavigate();
+
+  return (
+    <nav
+      aria-label="Lightchainカテゴリ"
+      data-testid="lightchain-category-toolbar"
+      className="mb-4 flex flex-wrap gap-1 rounded-xl border border-white/10 bg-[#111719] p-1"
+    >
+      {lightchainCategories.map((category) => (
+        <button
+          key={category.id}
+          type="button"
+          onClick={() => navigate(`/lightchain?category=${category.id}`)}
+          className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm ${category.id === 'graphics'
+            ? 'bg-[#737d84] text-white shadow-lg shadow-black/20'
+            : 'text-white/55 hover:bg-white/[0.06] hover:text-white/85'}`}
+        >
+          <span>{category.label}</span>
+          {category.id === 'recommended' && <span className="text-[10px] font-medium text-white/45">{category.eyebrow}</span>}
+        </button>
+      ))}
+    </nav>
+  );
+}
 const PRINT_COVERAGE_OPTIONS: Array<{ value: PrintCoverageMode; label: string }> = [
   { value: 'spot', label: 'スポット' },
   { value: 'full', label: '全体' },
@@ -4494,6 +4513,7 @@ export function LightchainMaterialWorkbenchPage() {
                 onChange={setFabricDesign}
                 allowedReferenceTypes={['base', 'pattern']}
                 defaultReferenceType="base"
+                platformAssetRole="garment"
                 hint="柄やロゴをそのまま重ねるか、切り抜いて重ねます"
               />
               <ImageSelector
@@ -4504,6 +4524,7 @@ export function LightchainMaterialWorkbenchPage() {
                 onChange={setFabricBase}
                 allowedReferenceTypes={['base']}
                 defaultReferenceType="base"
+                platformAssetRole="textile"
                 hint="土台となる生地の写真を入れます"
               />
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -5385,37 +5406,9 @@ export function LightchainMaterialWorkbenchPage() {
           data-testid="lightchain-print-parity-view"
           className="min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
         >
-          <div className="mx-auto grid max-w-[1680px] gap-4 lg:grid-cols-[112px_minmax(0,1.08fr)_minmax(360px,0.92fr)]">
-            <aside
-              aria-label="Light Chainツールバー"
-              className="rounded-2xl border border-white/10 bg-[#111719] p-2 shadow-2xl shadow-black/20"
-            >
-              <div className="flex flex-row gap-2 overflow-x-auto lg:sticky lg:top-[88px] lg:flex-col">
-                <div className="hidden items-center justify-center rounded-xl bg-cyan-300/15 p-2 text-cyan-100 lg:flex">
-                  <Layers3 className="h-8 w-8" aria-hidden="true" />
-                </div>
-                {[
-                  { label: 'ツールバー', Icon: Layers3 },
-                  { label: 'デザインツール', Icon: Layers3 },
-                  { label: 'フィッティングツール', Icon: Sparkles },
-                  { label: 'グラフィックデザインツール', Icon: Palette },
-                  { label: '衣類生産ツール', Icon: Scissors },
-                ].map(({ label, Icon }) => (
-                  <button
-                    key={String(label)}
-                    type="button"
-                    onClick={() => navigate(MATERIAL_TOOLBAR_ROUTES[label] ?? '/lightchain')}
-                    data-testid={`lightchain-material-toolbar-${String(label)}`}
-                    className={`flex min-w-[8rem] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-[10px] font-semibold leading-4 transition lg:min-w-0 ${label === 'デザインツール'
-                      ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30'
-                      : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
-                  >
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                    <span>{label}</span>
-                  </button>
-                ))}
-              </div>
-            </aside>
+          <div className="mx-auto max-w-[1680px]">
+            <LightchainCategoryToolbar />
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
 
             <section className="min-w-0 rounded-2xl border border-white/10 bg-[#171d20] p-4 shadow-2xl shadow-black/20 lg:p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -5464,6 +5457,7 @@ export function LightchainMaterialWorkbenchPage() {
                     onChange={selectPrintGarment}
                     allowedReferenceTypes={['base']}
                     defaultReferenceType="base"
+                    platformAssetRole="garment"
                     hint="服・商品画像をプリントの基準にします"
                     processing={printGarmentCutoutState === 'processing'}
                     hideSelectedPreviewWhileProcessing
@@ -5652,6 +5646,7 @@ export function LightchainMaterialWorkbenchPage() {
                 ))}
               </div>
             </aside>
+            </div>
           </div>
         </div>
       )}
@@ -5661,37 +5656,9 @@ export function LightchainMaterialWorkbenchPage() {
           data-testid="lightchain-fabric-parity-view"
           className="min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
         >
-          <div className="mx-auto grid max-w-[1680px] gap-4 lg:grid-cols-[112px_minmax(0,1.08fr)_minmax(360px,0.92fr)]">
-            <aside
-              aria-label="Light Chainツールバー"
-              className="rounded-2xl border border-white/10 bg-[#111719] p-2 shadow-2xl shadow-black/20"
-            >
-              <div className="flex flex-row gap-2 overflow-x-auto lg:sticky lg:top-[88px] lg:flex-col">
-                <div className="hidden items-center justify-center rounded-xl bg-cyan-300/15 p-2 text-cyan-100 lg:flex">
-                  <Layers3 className="h-8 w-8" aria-hidden="true" />
-                </div>
-                {[
-                  { label: 'ツールバー', Icon: Layers3 },
-                  { label: 'デザインツール', Icon: Layers3 },
-                  { label: 'フィッティングツール', Icon: Sparkles },
-                  { label: 'グラフィックデザインツール', Icon: Palette },
-                  { label: '衣類生産ツール', Icon: Scissors },
-                ].map(({ label, Icon }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => navigate(MATERIAL_TOOLBAR_ROUTES[label] ?? '/lightchain')}
-                    data-testid={`lightchain-material-toolbar-${String(label)}`}
-                    className={`flex min-w-[8rem] flex-1 flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-center text-[10px] font-semibold leading-4 transition lg:min-w-0 ${label === 'デザインツール'
-                      ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30'
-                      : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
-                  >
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                    <span>{label}</span>
-                  </button>
-                ))}
-              </div>
-            </aside>
+          <div className="mx-auto max-w-[1680px]">
+            <LightchainCategoryToolbar />
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
 
             <section className="min-w-0 rounded-2xl border border-white/10 bg-[#171d20] p-4 shadow-2xl shadow-black/20 lg:p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -5749,6 +5716,7 @@ export function LightchainMaterialWorkbenchPage() {
                     onChange={setFabricDesign}
                     allowedReferenceTypes={['base', 'pattern']}
                     defaultReferenceType="base"
+                    platformAssetRole="garment"
                     hint="商品・モデル・デザインの基準画像を入れます"
                   />
                 </section>
@@ -5767,6 +5735,7 @@ export function LightchainMaterialWorkbenchPage() {
                     onChange={setFabricBase}
                     allowedReferenceTypes={['base']}
                     defaultReferenceType="base"
+                    platformAssetRole="textile"
                     hint="布・編地・光沢などの質感素材を入れます"
                   />
                 </section>
@@ -5938,6 +5907,7 @@ export function LightchainMaterialWorkbenchPage() {
                 </div>
               )}
             </aside>
+            </div>
           </div>
         </div>
       )}

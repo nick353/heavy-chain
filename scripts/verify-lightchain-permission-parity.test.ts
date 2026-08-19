@@ -41,22 +41,21 @@ test('fabric direct route exposes the permission state before the input placehol
   assert.ok(permissionIndex < inputIndex);
 });
 
-test('Creator permission surface has a Heavy functional fallback with captured intent', async () => {
+test('Creator permission surface keeps a Lightchain-native handoff with captured intent', async () => {
   const source = await readFile(parityPagesSourcePath, 'utf8');
 
   assert.match(source, /source:\s*'lightchain-creator-heavy-fallback'/);
   assert.match(source, /feature=design-gacha/);
   assert.match(source, /category:\s*selectedCategory \|\| 'ユニセックス'/);
-  assert.match(source, /Heavy Chainで続ける/);
+  assert.match(source, /生成条件を開く/);
 });
 
-test('Heavy fallback exposes Gallery selection and the same rights gate before generation', async () => {
+test('AI fitting exposes Gallery selection and the rights gate before generation', async () => {
   const source = await readFile(fittingSourcePath, 'utf8');
 
-  assert.match(source, /data-testid="heavy-native-fallback-banner"/);
-  assert.match(source, /Lightchainの「権限がありません」はプラン規制として維持/);
-  assert.match(source, /PermissionLockedButton/);
-  assert.match(source, /testId="heavy-lightchain-permission-locked"/);
-  assert.match(source, /Gallery素材を選ぶ/);
+  assert.doesNotMatch(source, /data-testid="heavy-native-fallback-banner"/);
+  assert.doesNotMatch(source, /Lightchainの「権限がありません」はプラン規制として維持/);
+  assert.match(source, /Gallery素材を選択/);
+  assert.match(source, /data-testid="fitting-model-gallery-select"/);
   assert.match(source, /UPLOAD_RIGHTS_CONFIRMATION_LABEL/);
 });

@@ -1,4 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
+import {
+  withSupabaseSessionRecovery as withSessionRecovery,
+} from './supabaseSessionRecovery';
+
+export { isSupabaseAuthFailure } from './supabaseSessionRecovery';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -14,6 +20,27 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
   },
 });
+
+let refreshSessionInFlight: Promise<Session | null> | null = null;
+
+/** Refresh once per browser client so parallel Gallery/Jobs/Canvas failures do not rotate tokens repeatedly. */
+export const refreshSupabaseSession = async () => {
+  if (!refreshSessionInFlight) {
+    refreshSessionInFlight = supabase.auth.refreshSession()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return data.session;
+      })
+      .finally(() => {
+        refreshSessionInFlight = null;
+      });
+  }
+  return refreshSessionInFlight;
+};
+
+export const withSupabaseSessionRecovery = <T>(operation: () => Promise<T>) => (
+  withSessionRecovery(operation, refreshSupabaseSession)
+);
 
 // Helper function to get current user
 export const getCurrentUser = async () => {

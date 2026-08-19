@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { readOptionalWorkspaceValue } from '../src/lib/workspaceReadRecovery.ts';
+import { withSupabaseSessionRecovery } from '../src/lib/supabaseSessionRecovery.ts';
 
 const read = (path: string) => readFile(new URL(path, import.meta.url), 'utf8');
 
@@ -10,6 +12,58 @@ test('workspace activity unwraps artifact metadata for shared Jobs and History r
   assert.match(source, /const embedded = root\.metadata/);
   assert.match(source, /return \{ \.\.\.root, \.\.\.\(embedded as Record<string, Json \| undefined>\) \} as Json/);
   assert.match(source, /buildSourceContextSummaryRows\(getWorkspaceActivityMetadata\(metadata\)\)/);
+});
+
+test('workspace activity recovers each settled Supabase read before aggregating failures', async () => {
+  const source = await read('../src/lib/workspaceActivity.ts');
+  const recovery = await read('../src/lib/workspaceReadRecovery.ts');
+  assert.match(source, /withSupabaseSessionRecovery\(\(\) => fetchCreditSummary\(brandId\)\)/);
+  assert.match(source, /withSupabaseSessionRecovery\(\(\) => fetchJobs\(brandId\)\)/);
+  assert.match(source, /withSupabaseSessionRecovery\(\(\) => fetchOutputs\(brandId\)\)/);
+  assert.match(source, /withSupabaseSessionRecovery\(\(\) => fetchLightchainTaskSteps\(brandId\)\)/);
+  assert.match(source, /Promise\.allSettled\(\[[\s\S]*original 401\/expired-token signal/);
+  assert.match(recovery, /if \(isSupabaseAuthFailure\(error\)\) throw error/);
+});
+
+test('optional task-step reads preserve auth failures for one coordinated refresh and retry', async () => {
+  let operationCalls = 0;
+  let refreshCalls = 0;
+  const logged: unknown[] = [];
+
+  const result = await withSupabaseSessionRecovery(
+    () => readOptionalWorkspaceValue(
+      async () => {
+        operationCalls += 1;
+        if (operationCalls === 1) throw { status: 401, message: 'JWT expired' };
+        return [{ id: 'step-after-refresh' }];
+      },
+      [],
+      (error) => logged.push(error),
+    ),
+    async () => {
+      refreshCalls += 1;
+      return { access_token: 'refreshed' };
+    },
+  );
+
+  assert.deepEqual(result, [{ id: 'step-after-refresh' }]);
+  assert.equal(operationCalls, 2);
+  assert.equal(refreshCalls, 1);
+  assert.equal(logged.length, 1);
+});
+
+test('optional workspace reads still use their fallback for non-auth failures', async () => {
+  const logged: unknown[] = [];
+  const result = await readOptionalWorkspaceValue(
+    async () => {
+      throw new Error('temporary network failure');
+    },
+    [],
+    (error) => logged.push(error),
+  );
+
+  assert.deepEqual(result, []);
+  assert.equal(logged.length, 1);
 });
 
 test('Lightchain Jobs resume on their tool route with persisted brief and reference note', async () => {

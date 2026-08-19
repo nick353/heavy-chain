@@ -21,7 +21,7 @@ const statusIcon = {
 function JobRow({ job }: { job: WorkspaceJob }) {
   const StatusIcon = statusIcon[job.status];
   const href = job.status === 'failed' ? job.retryHref : '/gallery';
-  // Keep legacy Lightchain metadata readable while accepting the current Heavy Chain labels.
+  // Keep older persisted labels readable while rendering the current Lightchain labels.
   const lightchainRows = job.sourceSummaryRows.filter((row) => (
     row.label.startsWith('Heavy Chain') || row.label.startsWith('Lightchain')
   ));

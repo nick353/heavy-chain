@@ -22,7 +22,7 @@ import {
   Share2,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
-import { supabase } from '../lib/supabase';
+import { supabase, withSupabaseSessionRecovery } from '../lib/supabase';
 import { withSignedImageUrls } from '../lib/storage';
 import { clearCanonicalRemoteImageUrls } from '../lib/storagePathSafety';
 import {
@@ -215,42 +215,42 @@ export function GalleryPage() {
         }
       };
       const signedLocalImages = await resolveLocalImages(localImages);
-      let query = supabase
-        .from('generated_images')
-        .select('*')
-        .eq('brand_id', brandId);
+      const fetchRemoteImages = async () => {
+        let query = supabase
+          .from('generated_images')
+          .select('*')
+          .eq('brand_id', brandId);
 
-      if (filter === 'favorites') {
-        query = query.eq('is_favorite', true);
-      }
+        if (filter === 'favorites') {
+          query = query.eq('is_favorite', true);
+        }
 
-      if (sortBy === 'newest') {
-        query = query.order('created_at', { ascending: false });
-      } else if (sortBy === 'oldest') {
-        query = query.order('created_at', { ascending: true });
-      }
+        if (sortBy === 'newest') {
+          query = query.order('created_at', { ascending: false });
+        } else if (sortBy === 'oldest') {
+          query = query.order('created_at', { ascending: true });
+        }
 
-      const { data, error } = await withTimeout(
-        query,
-        GALLERY_REMOTE_TIMEOUT_MS,
-        'gallery_remote_images_timeout',
-      );
+        const { data, error } = await withTimeout(
+          query,
+          GALLERY_REMOTE_TIMEOUT_MS,
+          'gallery_remote_images_timeout',
+        );
+        if (error) throw error;
+        return data || [];
+      };
 
       let remoteImages: GeneratedImage[] = [];
-      if (error) {
+      const remoteRows = await withSupabaseSessionRecovery(fetchRemoteImages);
+      try {
+        remoteImages = await withTimeout(
+          withSignedImageUrls(remoteRows),
+          GALLERY_REMOTE_TIMEOUT_MS,
+          'gallery_signed_urls_timeout',
+        );
+      } catch {
         if (!isCurrentRequest()) return;
-      } else {
-        const remoteRows = data || [];
-        try {
-          remoteImages = await withTimeout(
-            withSignedImageUrls(remoteRows),
-            GALLERY_REMOTE_TIMEOUT_MS,
-            'gallery_signed_urls_timeout',
-          );
-        } catch {
-          if (!isCurrentRequest()) return;
-          remoteImages = clearCanonicalRemoteImageUrls(remoteRows);
-        }
+        remoteImages = clearCanonicalRemoteImageUrls(remoteRows);
       }
 
       const mergedImages = mergeGeneratedImagesByCanonicalIdentity(remoteImages, signedLocalImages)

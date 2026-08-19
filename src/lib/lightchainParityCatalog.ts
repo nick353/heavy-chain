@@ -147,8 +147,8 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
   },
   {
     id: 'heavychain-lab',
-    title: 'Heavy Chain Lab',
-    lightchainName: 'Heavy Chain Lab',
+    title: 'ラボ',
+    lightchainName: 'laboratory',
     description: '仮説を生成前に検証します。',
     route: '/flow/laboratory',
     category: 'recommended',

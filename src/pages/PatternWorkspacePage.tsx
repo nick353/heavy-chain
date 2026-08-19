@@ -40,11 +40,11 @@ type HistoryItem = {
 const motifPresets = [
   {
     label: '鎖モチーフ',
-    value: 'Heavy Chainの鎖モチーフ、細い線画、Tシャツ胸元向けの静かなグラフィック',
+    value: '鎖モチーフ、細い線画、Tシャツ胸元向けの静かなグラフィック',
   },
   {
     label: 'ロゴ中心',
-    value: 'Heavy Chainロゴを中心にした単色エンブレム、刺繍とシルクスクリーン向け',
+    value: 'ロゴを中心にした単色エンブレム、刺繍とシルクスクリーン向け',
   },
   {
     label: '和柄ミックス',
@@ -272,7 +272,7 @@ export function PatternWorkspacePage() {
   const [selectedPreviewId, setSelectedPreviewId] = useState('graphic-emblem');
   const [progress, setProgress] = useState(32);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [motifPrompt, setMotifPrompt] = useState('Heavy Chainの鎖モチーフ、細い線画、Tシャツ胸元向けの静かなグラフィック');
+  const [motifPrompt, setMotifPrompt] = useState('鎖モチーフ、細い線画、Tシャツ胸元向けの静かなグラフィック');
   const [repeatStyle, setRepeatStyle] = useState('ハーフドロップ、余白多め、遠目でうるさくならない密度');
   const [garmentTarget, setGarmentTarget] = useState('ブラックのヘビーウェイトTシャツ / 胸元ワンポイントと背面総柄');
   const [paletteNotes, setPaletteNotes] = useState('墨黒、オフホワイト、くすんだシルバー、差し色に深い赤');

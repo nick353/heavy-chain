@@ -14,6 +14,7 @@ const desktopViewport = { width: 1440, height: 1050 };
 const mobileViewport = { width: 390, height: 844 };
 
 const categoryLabels = ['おすすめ', '企画デザインツール', 'AIフィッティング', 'グラフィックツール'];
+const authenticatedLightchainBrand = 'LIGHTCHAIN';
 const directFeatures = [
   { key: 'planning-color', url: '/generate?feature=colorize&lcFeature=change-color', title: '色変更', category: '企画デザインツール' },
   { key: 'fitting-model', url: '/generate?feature=model-matrix&lcFeature=model-body-shape', title: '体型・サイズ変更', category: 'AIフィッティング' },
@@ -152,7 +153,7 @@ async function verifyHome(context, viewport, key) {
   try {
     await gotoAndSettle(page, '/generate');
     await captureBaseState(page, routeEvidence, {
-      expected: ['HEAVY CHAIN AI', ...categoryLabels, 'マーケティングワークスペース', 'AIフィッティング'],
+      expected: [authenticatedLightchainBrand, ...categoryLabels, 'マーケティングワークスペース', 'AIフィッティング'],
     });
     await assertHomeLayout(page, routeEvidence);
     await clickCategories(page, routeEvidence);
@@ -173,7 +174,7 @@ async function verifyPublicRoute(context, viewport, spec) {
     await gotoAndSettle(page, spec.route);
     await captureBaseState(page, routeEvidence, { expected: spec.expected, allowLoginRoute: spec.route === '/login' });
     const body = await bodyText(page);
-    addAssertion(routeEvidence, 'lightchain_public_shell_visible', body.includes('HEAVYCHAIN') || body.includes('HEAVY CHAIN AI'));
+    addAssertion(routeEvidence, 'lightchain_public_shell_visible', body.includes('HEAVYCHAIN') || body.includes('HEAVY CHAIN AI') || body.includes(authenticatedLightchainBrand));
     addAssertion(routeEvidence, 'legacy_light_shell_absent', !/Heavy Chain互換\s+履歴\s+ジョブ\s+チーム/.test(body));
     routeEvidence.screenshot = await screenshot(page, `${spec.key}.png`);
   } catch (error) {
@@ -190,7 +191,7 @@ async function verifyFeatureFromHome(context, viewport) {
   try {
     await gotoAndSettle(page, '/generate');
     await captureBaseState(page, routeEvidence, {
-      expected: ['HEAVY CHAIN AI', ...categoryLabels, 'マーケティングワークスペース', 'AIフィッティング'],
+      expected: [authenticatedLightchainBrand, ...categoryLabels, 'マーケティングワークスペース', 'AIフィッティング'],
     });
     const initialBody = await bodyText(page);
     addAssertion(routeEvidence, 'home_has_no_generation_input_panel_before_feature_click', !initialBody.includes('入力素材') && !initialBody.includes('AIアシスタント'));
@@ -352,7 +353,7 @@ async function assertHomeLayout(page, routeEvidence) {
   const buttons = await page.locator('button').evaluateAll((nodes) => nodes.map((node) => node.textContent?.trim() ?? ''));
   const categoriesPresent = categoryLabels.every((label) => buttons.some((text) => text.includes(label)));
   addAssertion(routeEvidence, 'four_lightchain_categories_present', categoriesPresent, { buttons });
-  const cardCount = await page.locator('a[href]').filter({ hasText: /マーケティング|AIフィッティング|ウェア|動画|モデル|ファッション|デザイン|Heavy Chain Lab/ }).count();
+  const cardCount = await page.locator('a[href]').filter({ hasText: /マーケティング|AIフィッティング|ウェア|動画|モデル|ファッション|デザイン|ラボ/ }).count();
   addAssertion(routeEvidence, 'lightchain_like_workspace_cards_present', cardCount >= 4, { cardCount });
   const nestedSidebarText = await page.locator('body').innerText();
   addAssertion(routeEvidence, 'no_duplicate_vertical_sidebar_labels', !/動画\s+ラボ\s+Heavy Chain互換\s+履歴\s+ジョブ\s+チーム/.test(nestedSidebarText));
@@ -687,15 +688,15 @@ function buildComparisonLedger(result) {
       lightchainReference: 'category-first home before detailed generation input',
       heavyChainProof: 'desktop-home / mobile-home',
       matchStatus: matched(['desktop-home', 'mobile-home']) ? 'matched' : 'missing-proof',
-      intentionalHeavyChainAddition: 'Heavy Chain branding and provider readiness remain visible.',
-      remainingMismatch: 'not pixel-identical; richer Heavy Chain workspace cards are intentionally retained.',
+      intentionalHeavyChainAddition: 'Provider readiness remains visible while the authenticated shell uses the Lightchain identity.',
+      remainingMismatch: 'No Heavy-only branding is intentionally retained in the authenticated parity shell.',
     },
     {
       area: 'categories',
       lightchainReference: categoryLabels.join(' / '),
       heavyChainProof: 'desktop-home category clicks / home-click-to-feature',
       matchStatus: matched(['desktop-home', 'home-click-to-feature']) ? 'matched' : 'missing-proof',
-      intentionalHeavyChainAddition: 'Feature links include Heavy Chain lcFeature metadata for readback.',
+      intentionalHeavyChainAddition: 'Feature links preserve lcFeature metadata for readback.',
       remainingMismatch: 'none found in verified route set.',
     },
     {
@@ -757,7 +758,7 @@ function buildComparisonLedger(result) {
       lightchainReference: 'same category/detail/history/canvas flow remains usable at 390px',
       heavyChainProof: 'mobile-home / mobile-graphics-remove-bg / mobile-history / mobile-canvas',
       matchStatus: matched(['mobile-home', 'mobile-graphics-remove-bg', 'mobile-history', 'mobile-canvas']) ? 'matched' : 'missing-proof',
-      intentionalHeavyChainAddition: 'Mobile shell keeps Heavy Chain navigation labels.',
+      intentionalHeavyChainAddition: 'Mobile shell keeps the same Lightchain category/navigation structure.',
       remainingMismatch: 'only representative graphics detail is covered on mobile to keep the proof bounded.',
     },
   ];

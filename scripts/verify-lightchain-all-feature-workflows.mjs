@@ -797,7 +797,7 @@ function matchesLightchainSignature(tool, body) {
   if (tool.id === 'fashion-studio') return body.includes('ファッションスタジオ') && body.includes('スタジオ案履歴') && body.includes('360度表示');
   if (tool.id === 'marketing-home') return body.includes('マーケティングワークスペース') && body.includes('おすすめのシーン');
   if (tool.id === 'design-agent') return body.includes('Hello') && body.includes('企画案') && body.includes('AIグラフィックデザイン');
-  if (tool.id === 'lab') return body.includes('Heavy Chain Lab') && body.includes('参考事例');
+  if (tool.id === 'lab') return body.includes('ラボ') && body.includes('参考事例');
   if (tool.id === 'wear-design-lab') return body.includes('新規ファイル') && body.includes('参考事例');
   if (tool.id === 'wear-design-detail') return body.includes('ガイドを見る') && body.includes('ガイドを表示しない');
   if (tool.id === 'print-design-project') return body.includes('柄・グラフィック') && body.includes('新規ファイル');
@@ -1105,6 +1105,48 @@ async function installLocalProofAuth(browserContext) {
   const userId = '00000000-0000-4000-8000-000000000033';
   const email = 'lightchain-all-feature-local-proof@example.test';
   const token = makeLocalJwt(userId, email);
+  const localProofUser = {
+    id: userId,
+    aud: 'authenticated',
+    role: 'authenticated',
+    email,
+    user_metadata: { name: 'Local Proof User' },
+    app_metadata: {},
+  };
+
+  // The local-proof JWT is intentionally unsigned and must never be sent to the
+  // real Supabase project. Keeping local preview auth entirely in this harness
+  // prevents an expected 401 from triggering session refresh and a redirect to
+  // /login while still exercising the authenticated application shell.
+  await browserContext.route(`${supabaseUrl}/rest/v1/**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      body: '[]',
+    });
+  });
+  await browserContext.route(`${supabaseUrl}/auth/v1/token**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        access_token: token,
+        token_type: 'bearer',
+        expires_in: 3600,
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        refresh_token: 'local-proof-refresh',
+        user: localProofUser,
+      }),
+    });
+  });
+  await browserContext.route(`${supabaseUrl}/auth/v1/user**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(localProofUser),
+    });
+  });
+
   await browserContext.addInitScript(({ userId, email, projectRef, token }) => {
     const key = `sb-${projectRef}-auth-token`;
     window.localStorage.setItem(key, JSON.stringify({

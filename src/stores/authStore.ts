@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, withSupabaseSessionRecovery } from '../lib/supabase';
 import type { User as DbUser, Brand } from '../types/database';
 import { selectCurrentBrand } from '../lib/authBrandSelection';
 
@@ -25,7 +25,7 @@ interface AuthState {
   setCurrentBrand: (brand: Brand | null) => void;
 }
 
-export const fetchAccessibleBrandsForCurrentUser = async (userId: string): Promise<Brand[]> => {
+const fetchAccessibleBrandsRequest = async (userId: string): Promise<Brand[]> => {
   const { data: ownedBrands, error: ownedError } = await supabase
     .from('brands')
     .select('*')
@@ -61,6 +61,10 @@ export const fetchAccessibleBrandsForCurrentUser = async (userId: string): Promi
   }
   return Array.from(byId.values()).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
 };
+
+export const fetchAccessibleBrandsForCurrentUser = async (userId: string): Promise<Brand[]> => (
+  withSupabaseSessionRecovery(() => fetchAccessibleBrandsRequest(userId))
+);
 
 const isRecoverableNetworkError = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error || '');

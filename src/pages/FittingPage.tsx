@@ -49,7 +49,6 @@ import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
 import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
-import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceMetadata,
@@ -550,10 +549,6 @@ export function FittingPage() {
   const [showModelGallerySelector, setShowModelGallerySelector] = useState(false);
   const resumeJob = searchParams.get('resumeJob');
   const heavyFallbackSource = searchParams.get('source') === 'lightchain-model-heavy-fallback';
-  const heavyFallbackEntryPoint = searchParams.get('entryPoint') || 'permission';
-  const heavyFallbackPreset = searchParams.get('modelPreset') || 'Smart';
-  const heavyFallbackPose = searchParams.get('posePreset') || '正面';
-  const heavyFallbackLighting = searchParams.get('lightingPreset') || '自然光';
   const garmentImageUrl = materialReference.imageUrl || undefined;
   const extractedGarmentImageUrl = materialReference.extractedImageUrl || undefined;
   const garmentFileName = materialReference.fileName;
@@ -959,7 +954,7 @@ export function FittingPage() {
       sourceImageId: imageId,
       sourceStoragePath: storagePath ?? null,
       fileName: `Gallery素材-${imageId.slice(0, 8)}`,
-      note: `Gallery素材をHeavy Chainの${heavyFallbackPreset} / ${heavyFallbackPose} / ${heavyFallbackLighting}生成へ引き継ぎました。`,
+      note: 'Gallery素材をAIフィッティングの設定へ引き継ぎました。',
     });
     setShowGallerySelector(false);
     setErrorMessage('');
@@ -1023,7 +1018,6 @@ export function FittingPage() {
 
     setIsGenerating(true);
     setErrorMessage('');
-    setResultMatrix([]);
 
     if (!rightsConfirmed) {
       setIsGenerating(false);
@@ -1479,28 +1473,6 @@ export function FittingPage() {
             />
           </div>
 
-          {heavyFallbackSource && (
-            <div className="mt-5 rounded-2xl border border-cyan-200 bg-cyan-50/80 p-4 dark:border-cyan-400/30 dark:bg-cyan-400/10" data-testid="heavy-native-fallback-banner">
-              <p className="text-sm font-semibold text-cyan-950 dark:text-cyan-50">Heavy Chainの自前生成ロジック</p>
-              <p className="mt-1 text-xs leading-5 text-cyan-900/80 dark:text-cyan-100/80">
-                Lightchainの「権限がありません」はプラン規制として維持し、Heavyでは既存Gallery素材をこの画面で切り抜き、設定済みのmodel-matrix APIへ渡します。
-              </p>
-              <PermissionLockedButton
-                testId="heavy-lightchain-permission-locked"
-                marginClass="mt-3"
-              />
-              <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-cyan-950 dark:text-cyan-50">
-                <span className="rounded-full bg-white/70 px-2.5 py-1 dark:bg-black/20">入口: {heavyFallbackEntryPoint}</span>
-                <span className="rounded-full bg-white/70 px-2.5 py-1 dark:bg-black/20">モデル: {heavyFallbackPreset}</span>
-                <span className="rounded-full bg-white/70 px-2.5 py-1 dark:bg-black/20">ポーズ: {heavyFallbackPose}</span>
-                <span className="rounded-full bg-white/70 px-2.5 py-1 dark:bg-black/20">光: {heavyFallbackLighting}</span>
-              </div>
-              <button type="button" onClick={() => setShowGallerySelector(true)} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-3 py-2 text-xs font-semibold text-neutral-950 hover:bg-cyan-200">
-                <Images className="h-4 w-4" /> Gallery素材を選ぶ
-              </button>
-            </div>
-          )}
-
           <details className="mt-6 rounded-2xl border border-neutral-200 bg-white/55 p-4 dark:border-white/10 dark:bg-surface-900/40">
             <summary className="cursor-pointer text-base font-semibold text-neutral-950 dark:text-white">
               用途を変える
@@ -1625,6 +1597,7 @@ export function FittingPage() {
               layerOptions={['衣服', 'モデル', 'ポーズ', '背景', 'サイズ表']}
               placementOptions={['モデル前面', '平置き参照', '横並び比較', '背景全面', 'サイズ表横']}
               simpleMode
+              platformAssetRole="garment"
             />
 
             <div className="rounded-2xl border border-white/60 bg-white/50 p-4 dark:border-white/10 dark:bg-surface-900/40">
@@ -1914,6 +1887,16 @@ export function FittingPage() {
                 <div>
                   <p className="text-sm font-semibold text-primary-900 dark:text-primary-100">モデルセット写真を生成中</p>
                   <p className="text-xs text-primary-700/80 dark:text-primary-200/80">選択した体型と年齢グループの組み合わせを処理しています。</p>
+                  {resultMatrix.length > 0 && (
+                    <p
+                      className="mt-1 text-xs font-semibold text-primary-800 dark:text-primary-100"
+                      role="status"
+                      aria-label="前回の成功結果を保持中（新しい生成を処理しています）"
+                      data-testid="fitting-previous-result-retained-status"
+                    >
+                      前回の成功結果を保持中（新しい生成を処理しています）
+                    </p>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -1999,7 +1982,8 @@ export function FittingPage() {
           isOpen={showGallerySelector}
           onClose={() => setShowGallerySelector(false)}
           onSelect={handleSelectFittingGalleryImage}
-          title="Heavy Chainで使うGallery素材"
+          title="Gallery素材を選択"
+          platformAssetRole="garment"
           confirmLabel="この素材を使う"
         />
         <GallerySelector

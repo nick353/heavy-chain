@@ -512,7 +512,7 @@ export function ModelLibraryPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-              HEAVY CHAIN / MODELS
+              LIGHTCHAIN / MODELS
             </p>
             <h1 className="mt-2 font-display text-3xl font-semibold text-white">
               モデルライブラリ

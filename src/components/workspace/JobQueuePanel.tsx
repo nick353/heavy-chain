@@ -15,11 +15,11 @@ const formatTime = (dateString: string) => {
 };
 
 const getLightchainTaskRow = (job: WorkspaceJob) => {
-  return job.sourceSummaryRows.find((row) => row.label === 'Heavy Chain task');
+  return job.sourceSummaryRows.find((row) => row.label === 'Lightchain task' || row.label === 'Heavy Chain task');
 };
 
 const getLightchainStepsRow = (job: WorkspaceJob) => {
-  return job.sourceSummaryRows.find((row) => row.label === 'Heavy Chain steps');
+  return job.sourceSummaryRows.find((row) => row.label === 'Lightchain steps' || row.label === 'Heavy Chain steps');
 };
 
 export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }: JobQueuePanelProps) {

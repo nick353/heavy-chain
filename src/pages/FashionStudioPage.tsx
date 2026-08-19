@@ -224,7 +224,7 @@ export function FashionStudioPage() {
   const [pose, setPose] = useState('正面立ち、片手をポケット、自然な肩線');
   const [background, setBackground] = useState('白背景の自然光スタジオ、薄い影');
   const [props, setProps] = useState('シルバーアクセサリー、ミニバッグ');
-  const [productLine, setProductLine] = useState('Heavy Chain 2026 SS シアージャケット');
+  const [productLine, setProductLine] = useState('2026 SS シアージャケット');
   const [referenceImage, setReferenceImage] = useState('参照画像: lookbook_ref_01.jpg / fabric_ref_02.png');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialStudioMaterial);
   const [savedArtifactId, setSavedArtifactId] = useState<string | null>(null);
@@ -468,7 +468,7 @@ export function FashionStudioPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-              HEAVY CHAIN / STUDIO
+              LIGHTCHAIN / STUDIO
             </p>
             <h1 className="mt-2 font-display text-3xl font-semibold text-white">
               Fashion Studio

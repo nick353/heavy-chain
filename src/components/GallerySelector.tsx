@@ -39,6 +39,7 @@ interface GallerySelectorProps {
   maxSelect?: number;
   onMultipleSelect?: (images: { url: string; id: string }[]) => void;
   assetPurpose?: PrintDesignAssetPurpose;
+  platformAssetRole?: 'garment' | 'textile' | 'artwork';
 }
 
 type FilterType = 'all' | 'recent' | 'favorites';
@@ -69,6 +70,27 @@ const PLATFORM_GALLERY_ASSETS: GeneratedImage[] = [
     model_used: null,
     generation_params: null,
     metadata: { assetOrigin: 'platform', assetRole: 'garment' },
+  },
+  {
+    id: 'platform-cotton-knit-neutral-v1',
+    job_id: null,
+    brand_id: 'platform',
+    user_id: 'platform',
+    storage_path: '/assets/fabric/cotton-knit-neutral.svg',
+    image_url: '/assets/fabric/cotton-knit-neutral.svg',
+    thumbnail_path: '/assets/fabric/cotton-knit-neutral.svg',
+    version: 1,
+    parent_image_id: null,
+    is_favorite: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    expires_at: null,
+    prompt: '自社標準コットンニット（ニュートラル）',
+    negative_prompt: null,
+    feature_type: 'platform-asset',
+    style_preset: null,
+    model_used: null,
+    generation_params: null,
+    metadata: { assetOrigin: 'platform', assetRole: 'textile', material: 'cotton-knit' },
   },
 ];
 
@@ -104,6 +126,7 @@ export function GallerySelector({
   maxSelect = 5,
   onMultipleSelect,
   assetPurpose,
+  platformAssetRole,
 }: GallerySelectorProps) {
   const {
     currentBrand,
@@ -179,7 +202,17 @@ export function GallerySelector({
       // The bundled garment is valid for the reference-image picker. A
       // garment must never appear in the print-design picker, so that mode
       // remains an honest empty state until a platform artwork asset exists.
-      setImages(assetPurpose === PRINT_DESIGN_ASSET_PURPOSE ? [] : PLATFORM_GALLERY_ASSETS);
+      setImages(
+        assetPurpose === PRINT_DESIGN_ASSET_PURPOSE
+          ? []
+          : PLATFORM_GALLERY_ASSETS.filter((asset) => {
+              if (!platformAssetRole) return true;
+              const role = asset.metadata && typeof asset.metadata === 'object' && !Array.isArray(asset.metadata)
+                ? asset.metadata.assetRole
+                : null;
+              return role === platformAssetRole;
+            }),
+      );
       setFolders([]);
       setFolderMemberships([]);
       setLoadedBrandId(currentBrand.id);
@@ -261,7 +294,7 @@ export function GallerySelector({
         setIsLoading(false);
       }
     }
-  }, [activeLibraryTab, assetPurpose, authInitialized, authLoading, currentBrand, filter, user]);
+  }, [activeLibraryTab, assetPurpose, authInitialized, authLoading, currentBrand, filter, platformAssetRole, user]);
 
   useEffect(() => {
     if (isOpen) {
@@ -491,7 +524,7 @@ export function GallerySelector({
           >
             {assetPurpose === PRINT_DESIGN_ASSET_PURPOSE
               ? 'プリントデザイン用のプラットフォームアセットは、まだ配布されていません。アップロード履歴・生成履歴・ライブラリーから選択してください。'
-              : 'プラットフォームアセットは、このHeavy Chain環境ではまだ配布されていません。アップロード履歴・生成履歴・ライブラリーから選択してください。'}
+              : 'プラットフォームアセットは、まだ配布されていません。アップロード履歴・生成履歴・ライブラリーから選択してください。'}
           </div>
         )}
 

@@ -35,6 +35,7 @@
     "test:canvas-view-persistence": "node --experimental-strip-types --test scripts/verify-canvas-view-persistence.test.ts",
     "test:print-input-artifacts-runtime": "node --experimental-strip-types --test scripts/verify-print-input-artifacts-runtime.test.ts",
     "test:canvas-brand-readback": "node --test scripts/verify-canvas-brand-readback.test.mjs",
+    "test:supabase-session-recovery": "node --experimental-strip-types --test scripts/verify-supabase-session-recovery.test.ts",
     "test:print-mask-candidates": "node --experimental-strip-types --test scripts/verify-print-mask-candidates.test.ts",
     "test:fabric-material-synthesis": "node --experimental-strip-types --test scripts/verify-fabric-material-synthesis.test.ts",
     "test:lightchain-asset-anchored-preview": "node --experimental-strip-types --test scripts/verify-lightchain-asset-anchored-preview.test.ts",

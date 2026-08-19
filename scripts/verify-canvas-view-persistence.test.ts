@@ -16,3 +16,16 @@ test('remote Canvas load and verified save readback restore the persisted view',
   assert.match(page, /view: restoreCanvasView\(document\.snapshot\)/);
   assert.match(page, /view: restoreCanvasView\(readback\.snapshot\)/);
 });
+
+test('Canvas retains the server identity before readback and exposes remote recovery', () => {
+  const writeIndex = page.indexOf('const document = remoteDocumentIdRef.current');
+  const retainIndex = page.indexOf('remoteDocumentIdRef.current = document.id', writeIndex);
+  const verifyIndex = page.indexOf("setCanvasPersistenceStatus('verifying')", retainIndex);
+  assert.ok(writeIndex >= 0);
+  assert.ok(retainIndex > writeIndex);
+  assert.ok(verifyIndex > retainIndex);
+  assert.match(page, /const handleReloadRemote = async \(\)/);
+  assert.match(page, /data-testid="canvas-reload-remote"/);
+  assert.match(page, /getCanvasDocument\(documentId, brandId\)/);
+  assert.match(page, /最新のCanvas状態を再読み込みしました/);
+});

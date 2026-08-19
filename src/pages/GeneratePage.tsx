@@ -996,7 +996,7 @@ export function GeneratePage() {
   const initialFeatureRef = useRef<Feature | null>(getInitialFeatureFromLocation());
   const categoryParam = searchParams.get('category');
   
-  const [selectedFeature, setSelectedFeature] = useState<Feature | null>(() => initialFeatureRef.current);
+  const [selectedFeatureState, setSelectedFeature] = useState<Feature | null>(() => initialFeatureRef.current);
   const [activeWorkflow, setActiveWorkflow] = useState<WorkflowMetadata | null>(null);
   const [prompt, setPrompt] = useState('');
   const [showPromptHistory, setShowPromptHistory] = useState(false);
@@ -1063,6 +1063,13 @@ export function GeneratePage() {
   const [customColor, setCustomColor] = useState('#000000');
   const [selectedPattern, setSelectedPattern] = useState('solid');
   const [upscaleScale, setUpscaleScale] = useState<2 | 4>(2);
+
+  // `/generate` stays mounted while the Lightchain catalog changes its
+  // query-only feature route. Resolve the query feature during render so a
+  // same-path SPA navigation cannot briefly fall back to the category list.
+  const featureParam = searchParams.get('feature');
+  const locationFeature = featureParam ? findFeatureFromQuery(featureParam) : null;
+  const selectedFeature = locationFeature ?? (featureParam ? null : selectedFeatureState);
   const [variationStrength, setVariationStrength] = useState(50);
   
   // Upscale options
@@ -3888,7 +3895,7 @@ export function GeneratePage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-              HEAVY CHAIN / ENTRY
+                  LIGHTCHAIN
                 </p>
                 <h2 className="mt-2 text-3xl font-semibold tracking-normal text-white sm:text-4xl">生成ワークスペース</h2>
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-neutral-300">
@@ -3957,7 +3964,7 @@ export function GeneratePage() {
                 <CreditCard className="h-4 w-4" />
                 利用量管理
               </div>
-              <p className="mt-1 text-neutral-500 dark:text-neutral-400">Heavy Chain usage</p>
+              <p className="mt-1 text-neutral-500 dark:text-neutral-400">Lightchain usage</p>
             </div>
             <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
               <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">
@@ -4475,7 +4482,7 @@ export function GeneratePage() {
                   <CreditCard className="h-4 w-4" />
                   利用量管理
                 </div>
-                <p className="mt-1 text-neutral-500 dark:text-neutral-400">Heavy Chain usage</p>
+                <p className="mt-1 text-neutral-500 dark:text-neutral-400">Lightchain usage</p>
               </div>
               <div className="rounded-xl bg-white/75 p-3 dark:bg-neutral-900/70">
                 <div className="flex items-center gap-2 font-semibold text-neutral-800 dark:text-white">

@@ -123,7 +123,7 @@ const entries: Record<NonVideoGoalCandidateRowId, Omit<LightchainFeature, 'id' |
     tags: ['トレンド', 'シリーズ', '企画'],
   },
   lab: {
-    title: 'Heavy Chain Lab',
+    title: 'ラボ',
     lightchainName: 'laboratory',
     description: '生成前の仮説、素材、店舗・キャンペーン適性を確認します。',
     category: 'planning',

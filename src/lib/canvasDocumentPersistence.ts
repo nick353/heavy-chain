@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, withSupabaseSessionRecovery } from './supabase';
 import type { CanvasObject } from '../stores/canvasStore';
 import { buildLocalCanvasAssetReference, hasLocalCanvasAsset } from './canvasLocalAssets';
 
@@ -148,7 +148,7 @@ const mapDocument = (document: any): CanvasDocumentRecord => ({
   updatedAt: String(document.updatedAt ?? document.updated_at ?? ''),
 });
 
-const invokeCanvasDocument = async (body: Record<string, unknown>) => {
+const invokeCanvasDocumentRequest = async (body: Record<string, unknown>) => {
   const { data, error } = await supabase.functions.invoke('canvas-document', { body });
   if (error) {
     // Supabase FunctionsHttpError keeps the response in `context`. Preserve
@@ -181,6 +181,10 @@ const invokeCanvasDocument = async (body: Record<string, unknown>) => {
   if (!data?.success || !data.document) throw new Error(data?.error || 'canvas_document_request_failed');
   return mapDocument(data.document);
 };
+
+const invokeCanvasDocument = async (body: Record<string, unknown>) => (
+  withSupabaseSessionRecovery(() => invokeCanvasDocumentRequest(body))
+);
 
 export const getCanvasDocument = async (documentId: string, brandId: string) => (
   invokeCanvasDocument({ action: 'get', documentId, brandId })

@@ -7,6 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FeedbackButton } from '../ui/FeedbackForm';
 import { SkipLink, KeyboardShortcuts, defaultShortcuts } from '../ui';
 import { lightchainCategories } from '../../lib/lightchainParityCatalog';
+import {
+  getLightchainUnifiedRouteAliases,
+  lightchainUnifiedFeatureCatalog,
+} from '../../lib/lightchainUnifiedFeatureCatalog';
 import { HeavyChainLogo } from '../icons';
 import { HelpCircle, History, UserCircle } from 'lucide-react';
 
@@ -20,11 +24,15 @@ export function Layout() {
   // Exclude public pages and auth pages
   const isPublicPage = ['/login', '/signup', '/forgot-password', '/'].includes(location.pathname);
   const showSidebar = user && !isPublicPage;
-  const lightchainParityAliases = ['/creator', '/model', '/tools/fabric', '/designProduction', '/asset-center', '/flow/orientedDesign'];
+  const lightchainParityAliases = lightchainUnifiedFeatureCatalog
+    .flatMap((feature) => [feature.route, ...getLightchainUnifiedRouteAliases(feature.id)])
+    .filter((route) => route !== '/brand/settings')
+    .concat(['/generate', '/editor/changeColor']);
+  const lightchainWorkspaceRoutes = ['/gallery', '/history', '/jobs'] as const;
   const isLightchainRoute = location.pathname.startsWith('/lightchain')
-    || lightchainParityAliases.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
+    || lightchainParityAliases.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`))
+    || lightchainWorkspaceRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
   const isLightchainPrintRoute = location.pathname === '/lightchain/printing-image';
-  const isLightchainNotFoundRoute = location.pathname === '/lightchain/fashion-studio';
 
   // Handle scroll for header transparency effects
   useEffect(() => {
@@ -49,7 +57,7 @@ export function Layout() {
       
       {showSidebar ? (
         <div className="dark min-h-screen bg-[#070b0d] text-white">
-          {!isLightchainNotFoundRoute && <header className={`sticky top-0 z-40 border-b border-white/10 bg-[#070b0d]/95 backdrop-blur-xl ${isLightchainPrintRoute ? 'lightchain-route-header' : ''}`}>
+          <header className={`sticky top-0 z-40 border-b border-white/10 bg-[#070b0d]/95 backdrop-blur-xl ${isLightchainPrintRoute ? 'lightchain-route-header' : ''}`}>
             <div className="mx-auto flex h-[70px] max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 lightchain-route-header-inner">
               <div className="flex items-center gap-7">
                 {isLightchainRoute ? (
@@ -143,9 +151,9 @@ export function Layout() {
                 ))}
               </div>
             )}
-          </header>}
+          </header>
 
-          <main id="main-content" className={`${isLightchainNotFoundRoute ? 'min-h-screen bg-white' : isLightchainPrintRoute ? 'min-h-[calc(100vh-48px)] bg-[#070b0d]' : 'min-h-[calc(100vh-70px)] bg-[#070b0d]'} ${isLightchainRoute ? 'px-0 py-0' : 'px-3 py-5 sm:px-5 lg:px-8'}`} tabIndex={-1}>
+          <main id="main-content" className={`${isLightchainPrintRoute ? 'min-h-[calc(100vh-48px)] bg-[#070b0d]' : 'min-h-[calc(100vh-70px)] bg-[#070b0d]'} ${isLightchainRoute ? 'px-0 py-0' : 'px-3 py-5 sm:px-5 lg:px-8'}`} tabIndex={-1}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}

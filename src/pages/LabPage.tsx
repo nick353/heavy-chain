@@ -57,7 +57,7 @@ const labExperimentCandidates: LabExperimentCandidate[] = [
     id: 'retail-readiness',
     label: 'Retail Readiness',
     hypothesis: 'Smoke retail shelf test: gray background keeps garment edges readable',
-    promptDraft: 'Heavy Chain retail display, sheer jacket, neutral gray studio shelf, crisp edge light',
+    promptDraft: 'アパレル小売ディスプレイ、シアージャケット、ニュートラルグレーのスタジオ棚、エッジライト',
     evaluationAxis: 'edge clarity / material sheen / campaign reuse / buyer confidence',
     candidate: 'Candidate B: gray retail shelf with crisp edge light',
     score: 88,
@@ -70,13 +70,13 @@ const labExperimentCandidates: LabExperimentCandidate[] = [
     id: 'campaign-transfer',
     label: 'Campaign Transfer',
     hypothesis: '同じ商品画像をEC詳細とSNS縦長訴求へ転用できる',
-    promptDraft: 'Heavy Chain campaign image, close crop, product texture, vertical social layout',
+    promptDraft: 'アパレルキャンペーン画像、クローズアップ、商品テクスチャ、縦型ソーシャルレイアウト',
     evaluationAxis: 'SNS視認性 / 商品識別性 / CTA余白 / 再利用しやすさ',
     candidate: '候補C: 4:5 close crop with quiet CTA space',
     score: 79,
     scoreSignature: 'quality-79-campaign-transfer',
     experimentMode: 'campaign-reuse',
-    decision: 'CTA余白を残してHeavy Chain Labの販促転用候補へ渡す',
+    decision: 'CTA余白を残してラボの販促転用候補へ渡す',
     risk: '寄りすぎるとシルエット判断が弱くなる',
   },
 ];
@@ -370,7 +370,7 @@ export function LabPage() {
             referenceNote: materialReferenceSummary,
             ...generationSource,
           }),
-          label: 'Heavy Chain Labで生成',
+          label: 'ラボで生成',
           ...generationSource,
           materialReferences: [materialReferenceMetadata],
           layerPlan: {
@@ -585,7 +585,7 @@ export function LabPage() {
             className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
           >
             <Sparkles className="h-4 w-4" />
-            Heavy Chain Labで試す
+            ラボで試す
           </Link>
           <button
             type="button"

@@ -24,6 +24,7 @@ type MaterialWorkbenchProps = {
   compactSummary?: boolean;
   enableGallerySelection?: boolean;
   galleryTitle?: string;
+  platformAssetRole?: 'garment' | 'textile' | 'artwork';
 };
 
 const maskModes: Array<{ id: MaterialReferenceState['maskMode']; label: string }> = [
@@ -72,6 +73,7 @@ export function MaterialWorkbench({
   compactSummary = false,
   enableGallerySelection = true,
   galleryTitle = '既存Gallery素材を選択',
+  platformAssetRole,
 }: MaterialWorkbenchProps) {
   const [cutoutError, setCutoutError] = useState('');
   const [isCutoutProcessing, setIsCutoutProcessing] = useState(false);
@@ -670,6 +672,7 @@ export function MaterialWorkbench({
           title={galleryTitle}
           confirmedSingle
           confirmLabel="この素材を使う"
+          platformAssetRole={platformAssetRole}
         />
       )}
     </section>

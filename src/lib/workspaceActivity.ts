@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+import { supabase, withSupabaseSessionRecovery } from './supabase';
+import { readOptionalWorkspaceValue } from './workspaceReadRecovery';
 import {
   listWorkspaceArtifacts,
   listWorkspaceGeneratedImages,
@@ -458,18 +459,20 @@ const buildSourceSummaryRows = (
 ) => {
   const rows = buildSourceContextSummaryRows(getWorkspaceActivityMetadata(metadata));
   if (!status || !hasLightchainCompat(metadata)) return rows;
-  const hasStepRow = rows.some((row) => row.label === 'Heavy Chain steps');
+  const hasStepRow = rows.some((row) => row.label === 'Lightchain steps' || row.label === 'Heavy Chain steps');
   const taskCodes = getLightchainTaskCodes(metadata);
   const durableStepValue = buildDurableLightchainStepValue(durableLightchainTaskSteps);
-  const baseRows = durableStepValue ? rows.filter((row) => row.label !== 'Heavy Chain steps') : rows;
+  const baseRows = durableStepValue
+    ? rows.filter((row) => row.label !== 'Lightchain steps' && row.label !== 'Heavy Chain steps')
+    : rows;
   return [
     ...baseRows,
     ...(durableStepValue
-      ? [{ label: 'Heavy Chain steps', value: durableStepValue }]
+      ? [{ label: 'Lightchain steps', value: durableStepValue }]
       : !hasStepRow && taskCodes.length
-        ? [{ label: 'Heavy Chain steps', value: taskCodes.map((taskCode) => `${taskCode}=${lightchainStatusLabel[status]}`).join(' / ') }]
+        ? [{ label: 'Lightchain steps', value: taskCodes.map((taskCode) => `${taskCode}=${lightchainStatusLabel[status]}`).join(' / ') }]
         : []),
-    { label: 'Heavy Chain状態', value: lightchainStatusLabel[status] },
+    { label: 'Lightchain状態', value: lightchainStatusLabel[status] },
   ];
 };
 
@@ -658,23 +661,24 @@ const fetchOutputs = async (brandId: string): Promise<GeneratedImage[]> => {
 };
 
 const fetchLightchainTaskSteps = async (brandId: string): Promise<LightchainTaskStep[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('lightchain_task_steps')
-      .select('*')
-      .eq('brand_id', brandId)
-      .order('step_index', { ascending: true })
-      .limit(500);
+  return readOptionalWorkspaceValue(
+    async () => {
+      const { data, error } = await supabase
+        .from('lightchain_task_steps')
+        .select('*')
+        .eq('brand_id', brandId)
+        .order('step_index', { ascending: true })
+        .limit(500);
 
-    if (error) {
-      throw error;
-    }
+      if (error) {
+        throw error;
+      }
 
-    return data ?? [];
-  } catch (error) {
-    logWorkspaceActivityFetchError('Failed to fetch Heavy Chain task steps:', error);
-    return [];
-  }
+      return data ?? [];
+    },
+    [],
+    (error) => logWorkspaceActivityFetchError('Failed to fetch Lightchain task steps:', error),
+  );
 };
 
 const groupLightchainStepsByJob = (steps: LightchainTaskStep[]) => {
@@ -706,14 +710,17 @@ const throwWorkspaceActivityFetchError = (failedSources: string[]) => {
   throw new Error(`Failed to fetch workspace activity: ${failedSources.join(', ')}`);
 };
 
-export async function fetchWorkspaceActivity(brandId: string, scopeId?: string): Promise<WorkspaceActivity> {
+async function fetchWorkspaceActivityRequest(brandId: string, scopeId?: string): Promise<WorkspaceActivity> {
   if (!brandId) return emptyWorkspaceActivity;
 
   const [creditResult, jobsResult, outputsResult, lightchainStepsResult] = await Promise.allSettled([
-    fetchCreditSummary(brandId),
-    fetchJobs(brandId),
-    fetchOutputs(brandId),
-    fetchLightchainTaskSteps(brandId),
+    // Keep auth recovery at the individual request boundary. Promise.allSettled
+    // intentionally aggregates failures below, which would otherwise erase the
+    // original 401/expired-token signal before the shared recovery wrapper sees it.
+    withSupabaseSessionRecovery(() => fetchCreditSummary(brandId)),
+    withSupabaseSessionRecovery(() => fetchJobs(brandId)),
+    withSupabaseSessionRecovery(() => fetchOutputs(brandId)),
+    withSupabaseSessionRecovery(() => fetchLightchainTaskSteps(brandId)),
   ]);
 
   throwWorkspaceActivityFetchError([
@@ -756,4 +763,8 @@ export async function fetchWorkspaceActivity(brandId: string, scopeId?: string):
     recentOutputs,
     timelineItems: buildTimelineItems(mappedJobs, recentOutputs),
   };
+}
+
+export async function fetchWorkspaceActivity(brandId: string, scopeId?: string): Promise<WorkspaceActivity> {
+  return withSupabaseSessionRecovery(() => fetchWorkspaceActivityRequest(brandId, scopeId));
 }

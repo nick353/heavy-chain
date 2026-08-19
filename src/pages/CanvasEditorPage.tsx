@@ -930,6 +930,48 @@ export function CanvasEditorPage() {
     }
   };
 
+  const handleReloadRemote = async () => {
+    if (!remoteDocumentIdRef.current || !currentBrand?.id || !user?.id) {
+      setCanvasPersistenceStatus('failed');
+      toast.error('再読み込みできる保存済みCanvasがありません');
+      return;
+    }
+
+    const brandId = currentBrand.id;
+    const documentId = remoteDocumentIdRef.current;
+    setCanvasPersistenceStatus('loading');
+    try {
+      const document = await getCanvasDocument(documentId, brandId);
+      if (document.id !== documentId || document.brandId !== brandId) {
+        throw new Error('canvas_document_readback_mismatch');
+      }
+
+      remoteDocumentIdRef.current = document.id;
+      remoteRevisionRef.current = document.revision;
+      hydrateProject({
+        id: document.id,
+        name: document.title,
+        objects: restoreCanvasObjects(document.snapshot),
+        view: restoreCanvasView(document.snapshot),
+        createdAt: document.createdAt,
+        updatedAt: document.updatedAt,
+        brandId: document.brandId,
+      });
+      suppressPersistenceDirtyRef.current = true;
+      saveCurrentProject();
+      acknowledgeCanvasRemoteReadback(user.id, brandId, document.id, document.snapshot);
+      if (projectId !== document.id) navigate(`/canvas/${document.id}`, { replace: true });
+      setCanvasPersistenceStatus('saved');
+      toast.success('最新のCanvas状態を再読み込みしました');
+    } catch (error: any) {
+      setCanvasPersistenceStatus('failed');
+      const message = String(error?.message || error || '');
+      toast.error(message === 'canvas_document_readback_mismatch'
+        ? 'Canvasの保存先が一致しません。最新状態を確認できませんでした'
+        : 'Canvasの最新状態を再読み込みできませんでした');
+    }
+  };
+
   const handleSave = async () => {
     if (!currentBrand?.id || !user?.id) {
       setCanvasPersistenceStatus('failed');
@@ -961,6 +1003,11 @@ export function CanvasEditorPage() {
         })
         : await createCanvasDocument({ brandId, title, snapshot });
 
+      // Retain the server identity before the verification readback. If the
+      // write succeeded but the immediate readback fails, retry/reload must
+      // update the same document instead of creating a duplicate.
+      remoteDocumentIdRef.current = document.id;
+      remoteRevisionRef.current = document.revision;
       setCanvasPersistenceStatus('verifying');
       const readback = await getCanvasDocument(document.id, brandId);
       if (readback.id !== document.id || readback.brandId !== brandId || readback.revision !== document.revision) {
@@ -3016,6 +3063,18 @@ export function CanvasEditorPage() {
             <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1.5" />
             <span className="hidden sm:inline">保存</span>
           </Button>
+          {(canvasPersistenceStatus === 'conflict' || canvasPersistenceStatus === 'failed') && remoteDocumentIdRef.current && (
+            <Button
+              variant="secondary"
+              size="sm"
+              data-testid="canvas-reload-remote"
+              className="text-xs sm:text-sm px-2 sm:px-3"
+              onClick={() => void handleReloadRemote()}
+            >
+              <span className="hidden sm:inline">最新状態を再読込</span>
+              <span className="sm:hidden">再読込</span>
+            </Button>
+          )}
         </div>
       </header>
 
