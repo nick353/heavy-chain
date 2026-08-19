@@ -3240,3 +3240,17 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - The old revision-30 ledger (26 non-video occurrences / 19 routes) is now explicitly historical and is not promoted to current rev6 proof.
 - Current parity matrix: `work/lightchain-parity-matrix-current-20260820-r13.md`.
 - The matrix lists all 31 non-video rows and separates Lightchain live input/operation/result/save/reuse evidence from Heavy local contracts and Heavy production proof. Local Heavy contracts remain verified; production provider and same-run business layers remain open.
+
+## 2026-08-20 latest authenticated Heavy target-scoped readback r9
+
+- Fresh official Chrome Plugin/Profile 2 browser-client `-ada4-4997-8241-a6447bcb922e` used selector revision 6 and official allowlisted provisioning for Heavy `/tools/fabric`. The initial preparation shell hydrated in the same run without a login click.
+- The hydrated page showed the Lightchain-shaped fabric workspace, `生地イメージ`, `生成履歴`, model/design and fabric inputs, Gallery selectors, material variants, rights confirmation, and `AI生成`.
+- Task-owned tab `1980903820` was the only tab closed; `cleanup_verified=true`, with no close failures. No upload, rights acknowledgment, provider generation, save/reuse, selected/focus/claim/foreground lease, recording, AOS UI, or external effect occurred.
+- Artifact: `work/heavy-chain-target-scoped-authenticated-readback-20260820-r9.md`.
+
+### Current exact blocker / next action / restart point
+
+- Heavy target-scoped authentication/workspace readiness: PASS for this fresh run; `heavy_target_workspace_authentication_not_ready` is cleared.
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: after the official Profile 2 foreground capability is advertised, create a fresh owner and run the bounded fabric-print provider → result → save → Gallery/Canvas/History/Jobs → reuse → reload flow, then AI fitting.
+- Restart point: fresh official Profile 2 owner after capability state change. Do not reuse the r9 provisioning tab, old binding, or old run.

@@ -145,6 +145,18 @@
 - Restart point: ユーザーによるHeavy認証・workspace／brand準備の状態変化後のfresh Profile 2 owner。同一runで`/tools/fabric`の認証済みworkspaceとtextile assetを確認してから次へ進む。selected／claim／focus／foreground lease復旧、旧binding再利用、別surface fallbackは行わない。
 - provider生成、録画、AOS、effectfulなUI操作はselected/owner proofが揃うまで開始しない。deployは別のsource・runtime・fresh target readback gateで扱い、今回のdeployment `6a85ecc3f1ea67ebf4ea67bc` はそのreadbackまで確認済み。
 
+## 最新確認（2026-08-20、authenticated target-scoped readback r9）
+
+- ユーザー申告どおり、Heavyのログインボタンを押す必要はなかった。新規公式Profile 2 browser-client `-ada4-4997-8241-a6447bcb922e`で`/tools/fabric`を公式provisionし、同一run内で準備中表示からhydratedなワークスペースへ遷移した。
+- `生地イメージ`、`生成履歴`、モデル／生地入力、Gallery選択、素材バリエーション、権利確認、`AI生成`が表示された。これにより`heavy_target_workspace_authentication_not_ready`は今回のfresh runについて解消した。
+- 作成したtask-owned tab `1980903820`だけを公式cleanupし、`cleanup_verified=true`。クリック、認証情報入力、アップロード、権利承認、provider生成、保存、再利用、録画、AOS変更、外部効果は行っていない。
+- 証跡: `work/heavy-chain-target-scoped-authenticated-readback-20260820-r9.md`。
+- 現在の停止点は`chrome_foreground_activation_capability_unavailable`。foreground capabilityが広告されるまでprovider生成・保存・再利用へ進めない。
+
+## 最新の再開点
+
+fresh official Profile 2 ownerでforeground capabilityが広告された後、承認済みのfabric-print 1件を、生成→結果→保存→Gallery／Canvas／History／Jobs→再利用→reloadの同一runで確認する。その後にAIフィッティングを同じ契約で確認する。旧binding、旧tab、旧Runは再利用しない。
+
 ## 2026-08-20 再読み込み後の入力復帰修正
 
 - JobsからWorkBenchへ戻る際、provider結果artifactの`materialSlotFiles`形式もresume入力として読めるようにした。
