@@ -119,3 +119,9 @@
 - `data:`／`blob:`／`local:`／相対URLだけを復元し、署名付きremote URLは復元しない。期限切れURLの再利用を防ぎ、Libraryからの再選択へ戻す。
 - resume input 4/4、provider coverage 11/11、Canvas handoff 2/2、typecheck、全非動画31機能（`featureCount=31 / failed=[]`）、diff checkをPASS。commit `ace5c4c`。
 - これはlocal実装証跡。Heavy本番の認証／workspace準備、provider生成、保存・再利用、録画、β受入れは未確認。
+
+## 2026-08-20 AIフィッティング再開契約の確認
+
+- Fitting resilience 4/4、resume input 9/9、history readback 10/10、material contract 13/13をPASS。
+- 失敗時の直前結果保持、全件永続化後の結果／履歴昇格、canonical source path復元、署名付きremote URLの再利用拒否を確認した。
+- local契約はfabric／printingと同じ共通結果系譜へ接続済み。Heavy本番の認証、provider生成、Gallery／Canvas／History／Jobs保存再利用は認証gate解除後に同一runで確認する。

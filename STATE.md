@@ -3104,6 +3104,8 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Next action: after the user completes Heavy Profile 2 authentication and workspace/brand preparation, perform one new official Profile 2 browser-client `openTabs()` → exact `/tools/fabric` descriptor → target-scoped URL/title/DOM readback. Do not repeat foreground recovery or reuse the old binding.
 - Restart point: hydrated Heavy `/tools/fabric` readback. Then, only with the required owner/approval gate, resume the bounded fabric provider → result → save → Gallery/Canvas/History/Jobs → reuse flow, followed by AI fitting.
 
+- AIフィッティング側の再読み込み・履歴・失敗リトライ契約も再確認した。fitting resilience 4/4、resume input 9/9、history readback 10/10、material contract 13/13をPASS。Fittingは署名付きremote URLを再利用せず、canonical source pathまたは新しいLibrary選択へ戻す既存境界を維持している。これはlocal proofであり、本番provider生成・保存再利用のproofではない。
+
 ## 2026-08-20 Lightchain parity-route identity cleanup
 
 - Removed Heavy-only visible identity/default prompt copy from the authenticated parity routes `/studio`, `/patterns`, `/models`, and `/lab`; the routes now render Lightchain identity or neutral apparel prompts while retaining their provider and handoff logic.

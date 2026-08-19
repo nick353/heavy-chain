@@ -831,6 +831,15 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T04:55:37+09:00",
       "note": "Fixed Workbench reload/resume compatibility: provider-result artifacts now write normalized materialSlots for printing and all non-video provider routes, and the reader accepts keyed materialSlotFiles while restoring only local/non-expiring data/blob/local/relative inputs. Resume input 4/4, provider coverage 11/11, Canvas handoff 2/2, typecheck, diff check, and full non-video featureCount=31 / failed=[] passed. Commit ace5c4c. Latest Heavy target-scoped authentication/workspace blocker remains unchanged."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 70,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T04:56:10+09:00",
+      "note": "AI fitting reload/history/retry contracts were rechecked: fitting resilience 4/4, resume input 9/9, history readback 10/10, and material contract 13/13 passed. Canonical source restoration and stale signed-URL rejection remain fail-closed. Production authentication/workspace readiness and provider/save/reuse proof remain pending."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
