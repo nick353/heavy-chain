@@ -9,6 +9,11 @@ Updated: 2026-08-20
 - Artifact: `work/heavy-chain-authenticated-target-readback-20260820-r6.md`.
 - This clears the current target-scoped authentication/workspace hydration gate. The remaining provider-flow blocker is `chrome_foreground_activation_capability_unavailable`.
 
+2026-08-20 latest Lightchain source homepage readback r3:
+- The same fresh Profile 2 browser-client read `https://jp.linkaigc.com/` after hydration and confirmed title `Lightchain AI`, the four category tabs, seven recommended cards, and the example tabs.
+- Current Lightchain visibly includes one `動画ワークステーション` card; Heavy's explicit video exclusion must therefore remain a deliberate scope difference, not an accidental missing card.
+- Artifact: `work/lightchain-profile2-fresh-readback-20260820-r3.md`. Cleanup of the task-owned tab passed; no click, upload, generation, save/reuse, recording, or external effect occurred.
+
 2026-08-20 latest Lightchain naming parity cleanup:
 - The remaining user/provider-facing `Heavy Chain Lab transformation` wording was changed to `Lightchain Lab transformation` so the Lab prompt and any persisted provider/history metadata follow the current Lightchain naming contract.
 - Focused Lab/provider coverage passed 12/12, typecheck and `git diff --check` passed, and the full non-video verifier passed `featureCount=31 / failed=[]` on a separate preview port.

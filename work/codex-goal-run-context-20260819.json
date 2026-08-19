@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 74,
+  "checkpoint_seq": 75,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -876,8 +876,17 @@
       "clear_blocker": true,
       "recorded_at": "2026-08-20T05:09:02+09:00",
       "note": "Fresh official Profile 2 target-scoped readback r6 provisioned Heavy /tools/fabric once, confirmed an authenticated Lightchain-shaped fabric workspace with inputs, Gallery selectors, rights confirmation, AI generation, and history, and verified cleanup of the task-owned tab. Authentication/workspace hydration is cleared for this run. Provider generation/save/reuse remains pending because the fresh extension advertised viewport and tab-level cdp only; exact foreground blocker is chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 75,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T05:11:08+09:00",
+      "note": "The same fresh Profile 2 browser-client read the current Lightchain homepage after hydration: Lightchain AI title, four categories, seven recommended cards, and example tabs. One visible recommended card is 動画ワークステーション; Heavy's video exclusion remains an explicit non-goal. Task-owned cleanup passed and no external effect occurred. Foreground provider blocker remains chrome_foreground_activation_capability_unavailable."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T05:09:02+09:00"
+  "updated_at": "2026-08-20T05:11:08+09:00"
 }

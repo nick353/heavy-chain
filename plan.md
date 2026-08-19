@@ -78,6 +78,8 @@
 
 - 2026-08-20、fresh official Profile 2 target-scoped readback r6でHeavy `/tools/fabric`の認証済みworkspaceを確認した。ログイン／無料で始める表示はなく、Lightchain型の生地入力、Gallery、素材バリエーション、権利確認、`AI生成`、`生成履歴`が同一runで表示され、task-owned cleanupもPASSした。証跡は `work/heavy-chain-authenticated-target-readback-20260820-r6.md`。認証／workspace hydrationはPASSへ更新するが、provider生成・保存・再利用は未実施。fresh広告に`foreground_activation`／`management`がなく、実用フローのexact blockerは`chrome_foreground_activation_capability_unavailable`。
 
+- 2026-08-20、同じfresh Profile 2 browser-clientでLightchain homepageをhydration後に再確認した。`Lightchain AI`、4カテゴリ、7件のおすすめ、事例タブを確認し、現行Lightchainには`動画ワークステーション`カードが1件表示された。動画除外はHeavy側の明示non-goalとして維持する。証跡は `work/lightchain-profile2-fresh-readback-20260820-r3.md`。Heavyの非動画UIに動画カードを戻す根拠にはしない。
+
 - 2026-08-20、source commit `797afd54f133068cdd1c4b19845116dfd8633952` のZeabur deployment `6a85fb012a82f8973377761f`が`RUNNING`になった。デプロイ後のfresh official Chrome Plugin／Profile 2 target-scoped readbackでHeavy `/lightchain`を確認し、7件の非動画ランチャー、4カテゴリ、`video_text_present=false`、`video_route_present=false`、`login_text_present=false`を同一runで確認した。作成タブは`cleanup ok=true`で閉じた。証跡は `work/heavy-production-video-hidden-readback-20260820-r1.md`。これは非動画UI反映と認証済み画面の証明であり、provider生成・保存・再利用・β受入れの完了証明ではない。
 
 - 【履歴】2026-08-20、fresh target-scoped readbackでHeavy `/tools/fabric`を確認した際には、ログイン／準備中シェルではなく、`生地イメージ`、モデル／生地入力、Gallery選択、画像比率、生地バリエーション、権利確認、`AI生成`、生成履歴が表示された。これは当時のhydrated workspace証跡であり、最新r3の状態を上書きしない。クリック・アップロード・生成は行っていない。
