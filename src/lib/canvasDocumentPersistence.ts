@@ -167,7 +167,15 @@ const invokeCanvasDocument = async (body: Record<string, unknown>) => {
       }
       if (serverMessage) throw new Error(serverMessage);
     }
-    throw error;
+    const errorName = error instanceof Error ? error.name : 'CanvasFunctionError';
+    const errorMessage = error instanceof Error ? error.message : 'Canvas persistence request failed';
+    const contextDetail = context instanceof Response
+      ? `http_${context.status}`
+      : context instanceof Error
+        ? `${context.name}:${context.message}`
+        : null;
+    const detail = contextDetail ? ` (${contextDetail})` : '';
+    throw new Error(`${errorName}: ${errorMessage}${detail}`.slice(0, 160));
   }
   if (!data?.success || !data.document) throw new Error(data?.error || 'canvas_document_request_failed');
   return mapDocument(data.document);
