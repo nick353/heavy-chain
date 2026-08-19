@@ -718,8 +718,17 @@
       "clear_blocker": true,
       "recorded_at": "2026-08-20T03:20:07+09:00",
       "note": "Source-associated deployment 6a85f3012a82f89733777475 reached RUNNING for nick353/heavy-chain@6831f36. HTTP/container returned 200, and fresh rev6 Profile 2 target-scoped Heavy /tools/fabric readback showed Lightchain markers with no Heavy-only chrome; task-owned cleanup passed."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 52,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-20T03:39:00+09:00",
+      "note": "Fresh rev6 Profile 2 target-scoped Lightchain homepage readback r2 confirmed four categories and non-video labels デザイン修正／柄・プリント; task-owned cleanup passed. Heavy local verification passed featureCount=31 and unified desktop rerun 228/228 at 1280/1440/1920/2560px with failed=0 and cleanup complete. Foreground/provider gate remains unchanged."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T03:20:07+09:00"
+  "updated_at": "2026-08-20T03:39:00+09:00"
 }
