@@ -2,12 +2,18 @@
 
 Updated: 2026-08-20
 
+2026-08-20 latest fresh Heavy target-scoped canary r4:
+- Official Chrome Plugin/Profile 2 advertisement recovered in a new browser-client `-68be-4a7c-998c-491938908661`; selector revision `6`, extension `hehggadaopoacecdllhhajmbjkdcmajg`, profile ordering `2`. `openTabs()` succeeded with three unrelated current tabs and no Heavy target.
+- The allowlisted target-scoped provisioning path created Heavy `/tools/fabric` tab `1980903758`, read URL/title/DOM in the same owner-bound run, and closed only that task-owned tab. `cleanup_verified=true`; no writer lease, selected, claim, focus, navigation after provisioning, recording, AOS UI, or external effect was used.
+- Current DOM: `ワークスペースを準備しています` and `認証状態とブランド設定を確認しています。`; visible controls include `ログイン確認` and `状態を確認`; textile/fabric assets are absent. Exact blocker: `heavy_target_workspace_authentication_not_ready`.
+- Artifact: `work/heavy-chain-target-scoped-canary-20260820-r4.md`. The earlier r6 hydrated readback remains historical and does not override this latest current state. Foreground/provider work separately remains blocked by `chrome_foreground_activation_capability_unavailable` because only `viewport`/tab-level `cdp` were advertised.
+
 2026-08-20 latest local direct-route toolbar parity cleanup:
 - Heavy fabric／printingの旧4カテゴリ帯を、fresh Lightchain `/tools/fabric` readbackで確認した現行toolbar（`ツールバー`、デザインツール、フィッティングツール、グラフィックデザインツール、衣類生産ツール）へ置換した。Library／Gallery、権利確認、`AI生成`、`生成履歴`、統合βの結果系譜は保持している。
 - Verification: material contract 64/64、typecheck、全非動画 workflow `featureCount=31 / failed=[]`、unified desktop `228/228` across `1280/1440/1920/2560px`、`git diff --check` PASS。Artifacts: `output/playwright/lightchain-all-feature-workflows-20260819T201515Z/SUMMARY.json`, `output/playwright/unified-desktop-layout-current-rerun-after-toolbar/SUMMARY.json`.
 - This is local UI parity proof only. No deploy, provider generation, save/reuse, recording, AOS change, or external effect occurred. The prior provider-stage blocker is `chrome_foreground_activation_capability_unavailable`; the latest Chrome transport attempt is now blocked earlier by `chrome_plugin_profile2_inventory_empty`.
 
-2026-08-20 latest toolbar route-contract and Chrome inventory readback:
+2026-08-20 historical toolbar route-contract and Chrome inventory readback:
 - Toolbar buttons now use the existing Lightchain category routes (`planning`, `fitting`, `graphics`, `designProduction`) and expose stable per-button readback test IDs. Material/UI control contract 16/16, typecheck, diff check, non-video 31/31, and desktop 228/228 passed.
 - A new official Chrome Plugin/Profile 2 read-only session did not advertise a matching signed Profile 2 extension candidate. Exact blocker: `chrome_plugin_profile2_inventory_empty`. No old binding, tab, target, click, navigation, provider, save/reuse, or external effect was used.
 - Artifact: `work/chrome-plugin-profile2-inventory-empty-20260820-r1.md`. After the official Profile 2 advertisement returns, the next application-stage blocker remains the separately recorded `chrome_foreground_activation_capability_unavailable`.
