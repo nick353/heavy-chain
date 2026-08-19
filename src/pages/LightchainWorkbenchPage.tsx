@@ -1925,7 +1925,8 @@ export function LightchainWorkbenchPage() {
     setLightchainGenerationError(null);
     setPrintingGenerationStatus('pending');
     setPrintingNotice('');
-    setLightchainResult(null);
+    // A retry should not erase the last completed provider result. Material
+    // changes invalidate it earlier in applyMaterialToSlot/useEffect.
     setLightchainResultPreviewOpen(false);
     let committed = false;
     let failed = false;
@@ -2033,7 +2034,7 @@ export function LightchainWorkbenchPage() {
         failed = true;
         setPrintingGenerationError(message);
         setPrintingGenerationStatus('error');
-        setLightchainResult(null);
+        // Keep the previous result available for inspection and retry.
         setLightchainResultPreviewOpen(false);
         toast.error(message);
       }
@@ -2320,7 +2321,9 @@ export function LightchainWorkbenchPage() {
     const requestId = ++lightchainGenerationSequenceRef.current;
     setLightchainGenerationRunning(true);
     setLightchainGenerationError(null);
-    setLightchainResult(null);
+    // Keep the last successful result visible while a retry is running. Input
+    // changes reset the result at their source boundary; a provider failure
+    // must not discard the last recoverable artifact.
     setLightchainResultPreviewOpen(false);
     if (selectedTool.id === 'image-repair') setImageRepairGenerating(true);
     try {
@@ -2465,7 +2468,8 @@ export function LightchainWorkbenchPage() {
       if (lightchainGenerationSequenceRef.current !== requestId) return;
       const message = error instanceof Error ? error.message : 'provider_generation_failed';
       setLightchainGenerationError(message);
-      setLightchainResult(null);
+      // Preserve the previous result so the user can inspect it or retry
+      // without losing the last completed artifact.
       toast.error(message);
     } finally {
       if (lightchainGenerationSequenceRef.current === requestId) {

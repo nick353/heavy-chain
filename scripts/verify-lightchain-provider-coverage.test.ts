@@ -227,3 +227,27 @@ test('allows a durable brief-only provider result onto Canvas without inventing 
   assert.ok(sourceLayerPlacement >= 0, 'source layer placement remains separately guarded');
   assert.ok(resultPlacement > sourceLayerPlacement, 'result placement must follow source-layer setup');
 });
+
+test('provider retries retain the last completed workbench result until inputs change', () => {
+  const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+
+  const previewStart = workbench.indexOf('setLightchainGenerationRunning(true);');
+  const previewTry = workbench.indexOf('try {', previewStart);
+  const previewCatch = workbench.indexOf('} catch (error) {', previewTry);
+  const previewFinally = workbench.indexOf('} finally {', previewCatch);
+  assert.ok(previewStart >= 0 && previewTry > previewStart && previewCatch > previewTry && previewFinally > previewCatch);
+  assert.doesNotMatch(workbench.slice(previewStart, previewTry), /setLightchainResult\(null\)/);
+  assert.doesNotMatch(workbench.slice(previewCatch, previewFinally), /setLightchainResult\(null\)/);
+
+  const printingStart = workbench.indexOf("setPrintingGenerationStatus('pending');");
+  const printingTry = workbench.indexOf('try {', printingStart);
+  const printingCatch = workbench.indexOf('} catch (error) {', printingTry);
+  const printingFinally = workbench.indexOf('} finally {', printingCatch);
+  assert.ok(printingStart >= 0 && printingTry > printingStart && printingCatch > printingTry && printingFinally > printingCatch);
+  assert.doesNotMatch(workbench.slice(printingStart, printingTry), /setLightchainResult\(null\)/);
+  assert.doesNotMatch(workbench.slice(printingCatch, printingFinally), /setLightchainResult\(null\)/);
+
+  const inputReset = workbench.indexOf('const applyMaterialToSlot');
+  assert.ok(inputReset >= 0);
+  assert.match(workbench.slice(inputReset, inputReset + 2400), /setLightchainResult\(null\)/);
+});
