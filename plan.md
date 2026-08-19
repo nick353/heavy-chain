@@ -111,3 +111,11 @@
 - Next action: ユーザー側でHeavy Profile 2の認証・workspace／brand準備を完了した後、新規official Profile 2 browser-clientで`openTabs()`→正確なHeavy `/tools/fabric` descriptor→target-scoped URL/title/DOM readbackを1回行う。hydratedになった場合のみ、foreground owner gateを確認してから承認済みGallery素材1件の権利確認→fabric生成→結果→保存→Gallery/Canvas/History/Jobs→再利用を同一runで確認する。
 - Restart point: `heavy_target_workspace_authentication_not_ready`が解消したfresh Profile 2 readback。provider生成・保存・再利用はworkspace hydration、owner／承認、foreground capability、同一run gateが揃うまで開始しない。
 - provider生成、録画、AOS、effectfulなUI操作はselected/owner proofが揃うまで開始しない。deployは別のsource・runtime・fresh target readback gateで扱い、今回のdeployment `6a85ecc3f1ea67ebf4ea67bc` はそのreadbackまで確認済み。
+
+## 2026-08-20 再読み込み後の入力復帰修正
+
+- JobsからWorkBenchへ戻る際、provider結果artifactの`materialSlotFiles`形式もresume入力として読めるようにした。
+- 印刷画像と全非動画providerルートの結果artifactへ、同じ入力を再現できる正規化`materialSlots`を保存する。
+- `data:`／`blob:`／`local:`／相対URLだけを復元し、署名付きremote URLは復元しない。期限切れURLの再利用を防ぎ、Libraryからの再選択へ戻す。
+- resume input 4/4、provider coverage 11/11、Canvas handoff 2/2、typecheck、全非動画31機能（`featureCount=31 / failed=[]`）、diff checkをPASS。commit `ace5c4c`。
+- これはlocal実装証跡。Heavy本番の認証／workspace準備、provider生成、保存・再利用、録画、β受入れは未確認。

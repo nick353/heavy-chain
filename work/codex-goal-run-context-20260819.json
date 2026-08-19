@@ -822,8 +822,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T04:48:09+09:00",
       "note": "Provider retry resilience was fixed in the shared Lightchain Workbench: the last completed result remains available during retry/failure while source-input changes still invalidate it. Focused provider coverage passed 11/11 and the full non-video verifier passed featureCount=31 / failed=[]. Production provider generation and current Chrome authentication remain pending."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 69,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T04:55:37+09:00",
+      "note": "Fixed Workbench reload/resume compatibility: provider-result artifacts now write normalized materialSlots for printing and all non-video provider routes, and the reader accepts keyed materialSlotFiles while restoring only local/non-expiring data/blob/local/relative inputs. Resume input 4/4, provider coverage 11/11, Canvas handoff 2/2, typecheck, diff check, and full non-video featureCount=31 / failed=[] passed. Commit ace5c4c. Latest Heavy target-scoped authentication/workspace blocker remains unchanged."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T04:48:09+09:00"
+  "updated_at": "2026-08-20T04:55:37+09:00"
 }

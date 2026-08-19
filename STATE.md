@@ -3091,6 +3091,19 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Next action: user clicks the existing Profile 2 `about:blank` tab once and confirms; then obtain one fresh same-run `openTabs()+selected()` proof.
 - Restart point: after a non-null selected tab and owner-lineage proof, resume Heavy production `/tools/fabric` and `/model` readback, then the bounded provider/save/reuse flows.
 
+## 2026-08-20 Workbench resume compatibility
+
+- Fixed a concrete reload/resume gap in the shared Lightchain Workbench. Provider-result artifacts already persisted `materialSlotFiles`, but the resume reader only accepted `materialSlots`/`lightchainWorkbenchState`, so a Jobs retry could lose locally uploaded inputs after reload. The reader now accepts both array and keyed slot formats, and provider persistence writes a normalized `materialSlots` array for printing and all non-video Workbench provider routes.
+- Safety boundary is preserved: only local/non-expiring `data:`, `blob:`, `local:` or relative inputs are restored. Signed remote URLs remain rejected and require fresh library selection.
+- Verification: resume input 4/4, provider coverage 11/11, Canvas handoff 2/2, typecheck PASS, full non-video verifier `featureCount=31 / failed=[]` at `output/playwright/lightchain-all-feature-workflows-20260819T195330Z/SUMMARY.json`, diff check PASS. Commit `ace5c4c`.
+- This is local implementation and regression proof only; Heavy production authentication/workspace readiness, provider generation, save/reuse, recording, and beta acceptance remain unverified.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `heavy_target_workspace_authentication_not_ready` from the latest fresh target-scoped Heavy `/tools/fabric` readback; the DOM remains at login/workspace preparation and textile assets are absent.
+- Next action: after the user completes Heavy Profile 2 authentication and workspace/brand preparation, perform one new official Profile 2 browser-client `openTabs()` → exact `/tools/fabric` descriptor → target-scoped URL/title/DOM readback. Do not repeat foreground recovery or reuse the old binding.
+- Restart point: hydrated Heavy `/tools/fabric` readback. Then, only with the required owner/approval gate, resume the bounded fabric provider → result → save → Gallery/Canvas/History/Jobs → reuse flow, followed by AI fitting.
+
 ## 2026-08-20 Lightchain parity-route identity cleanup
 
 - Removed Heavy-only visible identity/default prompt copy from the authenticated parity routes `/studio`, `/patterns`, `/models`, and `/lab`; the routes now render Lightchain identity or neutral apparel prompts while retaining their provider and handoff logic.
