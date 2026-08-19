@@ -2,6 +2,12 @@
 
 Updated: 2026-08-19
 
+2026-08-20 03:46 JST latest priority route ledger:
+- Fresh official Profile 2 browser-client `-4d88-4f63-a2e9-f4267acc60d4` read Heavy and Lightchain `/tools/printing` and `/model` through target-scoped URL/title/DOM readback. Four task-owned tabs were cleaned up with `ok=true`.
+- Heavy printing exposed garment/pattern inputs, spot/full controls, rights attestation, AI生成, history, and Canvas保存. Heavy model exposed AI-fitting task/input controls, rights attestation, AI生成, and history.
+- Lightchain direct routes retained `権限がありません`; Heavy's all-user beta intentionally keeps the rights/generation path available. An existing Heavy provider result was observed, but it is not a new same-run generation receipt.
+- Artifact: `work/lightchain-heavy-priority-route-ledger-20260820-r1.md`.
+
 2026-08-20 03:43 JST latest same-run Heavy/Lightchain direct-route comparison:
 - Fresh official Profile 2 browser-client `-79dc-4ed4-ab07-009281949b30` completed `openTabs()` and target-scoped URL/title/DOM readback for Heavy `/tools/fabric` and Lightchain `/tools/fabric`; task-owned tabs `1980903671` and `1980903673` were both cleaned up with `ok=true`.
 - Heavy rendered the integrated Lightchain-shaped workspace with Gallery selectors, textile/garment inputs, rights attestation, AI生成, and 生成履歴. Lightchain rendered the direct route with toolbar inputs and its own rights lock.
