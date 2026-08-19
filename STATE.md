@@ -21,6 +21,7 @@ Updated: 2026-08-20
 - The legacy Lightchain workbench now filters `video-*` definitions and the `video` category from all visible tools, counts, category selection, quick-start, and route selection. The video provider-boundary definitions remain internal for fail-closed regression coverage; they are not exposed in the non-video beta UI.
 - Commit `7ddb8f4` passed typecheck, diff check, internal UX consistency, video provider boundary `1/1`, launcher parity `3/3`, and full local non-video workflow verification `featureCount=31 / failed=[]` with build `2606 modules`.
 - The same workbench no longer renders the internal status pills (`生成導線あり`／`企画/Canvas対応`／`画像入力必須`／`設計中`) on cards or detail panes. Generation readiness remains an internal gate, while the visible surface follows the Lightchain card presentation. Commit `68c9123`; typecheck, internal UX, video boundary `1/1`, and full local non-video verification `31/31` passed.
+- Canvas/workbench placement preview no longer displays the Heavy-specific `HC` placeholder; it uses the neutral Lightchain-compatible `プリント` label while retaining the placement layer and lineage metadata. Commit `ccc82d9`; material contract 16/16, typecheck, video boundary 1/1, and full non-video feature verification 31/31 passed.
 
 2026-08-20 latest Heavy target-scoped canary:
 - Fresh official Profile 2 browser-client `-86b7-4558-9585-9281112b0117` completed `openTabs()`, provisioned one task-owned `/tools/fabric` tab, and completed same-run URL/title/DOM readback plus cleanup.
