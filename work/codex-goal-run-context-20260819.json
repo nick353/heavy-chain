@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 66,
+  "checkpoint_seq": 67,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -104,6 +104,8 @@
     ,"Removed the Heavy-specific HC placement placeholder from the Canvas/workbench preview and retained neutral print placement metadata; commit ccc82d9 and focused/local regressions passed"
     ,"Provider coverage recheck passed 10/10 for explicit routes across all 31 non-video rows; video rows remain unsupported and workspace-to-Canvas persistence boundary passed 2/2"
     ,"Unified desktop continuation completed 228/228 checks across 1280/1440/1920/2560px with failed=0, globalTimedOut=false, and cleanupLeftovers=0"
+    ,"Current-source focused recheck passed material 16/16, provider coverage 10/10, provider persistence/readback 12/12, workspace handoff 2/2, unified workspace shell 4/4, typecheck, diff check, and non-video featureCount=31 / failed=[]"
+    ,"Reconciled Plan.md historical authenticated readbacks with the latest r3 authentication/workspace-readiness blocker; stale PASS evidence is no longer treated as current proof"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -199,6 +201,8 @@
     ,"src/pages/LightchainWorkbenchPage.tsx commit ccc82d9: HC placeholder replaced with neutral プリント label; material contract 16/16, video boundary 1/1, typecheck, diff check, build 2606 modules, and full local non-video featureCount=31 / failed=[]"
     ,"test:lightchain-provider-coverage 10/10: 31 non-video rows explicitly admitted to edit-image/model-matrix, video rows unsupported, rights/promotion guards present; test:workspace-handoff-persistence 2/2"
     ,"output/playwright/unified-desktop-layout-current-continuation/SUMMARY.json: scheduled=228, completed=228, failed=0, globalTimedOut=false, cleanupLeftovers=0"
+    ,"output/playwright/lightchain-all-feature-workflows-20260819T194332Z/SUMMARY.json: featureCount=31, ok=true, failed=[]"
+    ,"Focused current-source recheck: material 16/16; provider coverage 10/10; provider persistence/readback 12/12; workspace handoff 2/2; unified shell 4/4; typecheck and diff check PASS"
   ],
   "next_action": "After Heavy Profile 2 authentication/workspace preparation is complete, create one new official Profile 2 browser-client and perform one target-scoped /tools/fabric URL/title/DOM readback; if hydrated, continue with one approved product-owned Gallery input through provider result, save, Gallery/Canvas/History/Jobs, and reuse. Do not repeat foreground recovery or reuse the old binding.",
   "blocker": {
@@ -797,8 +801,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T04:39:48+09:00",
       "note": "Local unified desktop continuation completed 228/228 checks across 1280/1440/1920/2560px with failed=0, globalTimedOut=false, and cleanupLeftovers=0. Heavy target-scoped authentication/workspace readiness remains the external restart condition; no Chrome or effectful operation was retried."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 67,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T04:45:07+09:00",
+      "note": "Current-source focused recheck passed material 16/16, provider coverage 10/10, provider persistence/readback 12/12, workspace handoff 2/2, unified shell 4/4, typecheck, diff check, and non-video featureCount=31 / failed=[]. Plan.md was reconciled so historical authenticated readbacks cannot override the latest r3 authentication/workspace-readiness blocker."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T04:39:48+09:00"
+  "updated_at": "2026-08-20T04:45:07+09:00"
 }

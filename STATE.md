@@ -2,6 +2,11 @@
 
 Updated: 2026-08-20
 
+2026-08-20 current evidence reconciliation:
+- Plan.md now marks earlier authenticated/hydrated readbacks as historical and keeps the latest source-thread r3 readback as the current authentication blocker. This prevents a stale PASS from being used as current proof.
+- Focused current-source recheck passed: material 16/16, provider coverage 10/10, provider persistence/readback 12/12, workspace-to-Canvas handoff 2/2, unified workspace shell 4/4, typecheck, diff check, and non-video workflow verification `featureCount=31 / failed=[]`.
+- Artifact: `output/playwright/lightchain-all-feature-workflows-20260819T194332Z/SUMMARY.json`. No Chrome retry, provider generation, save/reuse, deploy, recording, or external effect was performed.
+
 2026-08-20 latest unified desktop continuation:
 - The fresh local unified desktop verifier completed all 228 scheduled checks across 1280/1440/1920/2560px with `failed=0`, `globalTimedOut=false`, and `cleanupLeftovers=0`.
 - Artifact: `output/playwright/unified-desktop-layout-current-continuation/SUMMARY.json`. This is local layout/readiness proof only; it does not clear the Heavy authentication/readiness blocker or prove provider generation/save/reuse.
