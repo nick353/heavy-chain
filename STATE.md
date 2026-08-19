@@ -12,6 +12,11 @@ Updated: 2026-08-20
 - Focused verification passed: launcher parity 3/3, entry routing 5/5, internal UX `ok=true`, all non-video workflows `featureCount=31 / failed=[]`, typecheck, build `2606 modules`, and `git diff --check`. Latest full-feature summary: `output/playwright/lightchain-all-feature-workflows-20260819T192220Z/SUMMARY.json`.
 - This is local UI-parity proof only. No Chrome live retry, recording, AOS change, provider generation, save/reuse, deploy, or external effect was performed.
 
+2026-08-20 latest practical-flow contract sweep:
+- Fabric/printing and AI-fitting local contracts are green: material contract 16/16, provider adapter 16/16, provider persistence/readback 12/12, library→Canvas handoff 1/1, Canvas view persistence 3/3, Canvas generation/readback 5/5, workspace handoff persistence 2/2, and fitting resilience/history/resume 23/23.
+- Printing foundation passed 244/244 with `ok=true`, including input candidate identity, mask confirmation, placement/transform, exact/fabric result pairing, bounded history, retry/invalidation, and Canvas handoff gates. Typecheck and diff check also passed.
+- These are local implementation and safety-boundary proofs. They do not establish a fresh production provider result, same-run save/reload/reuse, or internal beta acceptance.
+
 2026-08-20 latest Heavy target-scoped canary:
 - Fresh official Profile 2 browser-client `-86b7-4558-9585-9281112b0117` completed `openTabs()`, provisioned one task-owned `/tools/fabric` tab, and completed same-run URL/title/DOM readback plus cleanup.
 - The visible state still showed `ログイン`, `ワークスペースを準備しています`, and `認証状態とブランド設定を確認しています。`; textile/fabric assets were not visible. No selected/claim/focus/foreground lease, provider, save/reuse, recording, AOS UI, or external effect was used.
