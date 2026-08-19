@@ -2,11 +2,18 @@
 
 Updated: 2026-08-20
 
+2026-08-20 latest authenticated Heavy target-scoped readback r6:
+- Fresh official Chrome Plugin/Profile 2 browser-client `-f847-469f-930f-f0182d3f3024` used selector revision 6, provisioned one task-owned `/tools/fabric` tab `1980903747`, and completed same-run URL/title/DOM readback.
+- The page no longer showed login or signup controls. It showed the Lightchain-shaped `生地イメージ` workspace, four categories, model/design and fabric inputs, Gallery selectors, material variants, rights confirmation, `AI生成`, and `生成履歴`.
+- Cleanup was verified after closing only the created tab. No upload, rights acknowledgment, provider generation, save/reuse, selected/focus/claim, recording, AOS UI, or other external effect occurred.
+- Artifact: `work/heavy-chain-authenticated-target-readback-20260820-r6.md`.
+- This clears the current target-scoped authentication/workspace hydration gate. The remaining provider-flow blocker is `chrome_foreground_activation_capability_unavailable`.
+
 2026-08-20 latest Lightchain naming parity cleanup:
 - The remaining user/provider-facing `Heavy Chain Lab transformation` wording was changed to `Lightchain Lab transformation` so the Lab prompt and any persisted provider/history metadata follow the current Lightchain naming contract.
 - Focused Lab/provider coverage passed 12/12, typecheck and `git diff --check` passed, and the full non-video verifier passed `featureCount=31 / failed=[]` on a separate preview port.
 - Artifact: `output/playwright/lightchain-all-feature-workflows-current-provider-label/SUMMARY.json`.
-- This is local UI/provider-contract proof only. It does not clear the current production authentication/workspace blocker or prove provider generation, save/reuse, recording, or beta acceptance.
+- This is local UI/provider-contract proof only. Fresh r6 target-scoped readback now clears the authentication/workspace hydration gate, but provider generation, save/reuse, recording, or beta acceptance remain unproven.
 
 2026-08-20 latest provider retry resilience:
 - The shared Lightchain Workbench generation path now retains the last completed provider result while a retry is running or fails; changing source inputs still clears the result at the input boundary.

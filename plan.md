@@ -76,6 +76,8 @@
 
 - 2026-08-20、provider入力に残っていたユーザー／履歴表示へ流れ得る`Heavy Chain Lab transformation`を`Lightchain Lab transformation`へ修正し、Lightchainの命名契約へ統一した。Lab/provider coverage `12/12`、typecheck、diff check、および別preview portでの全非動画検証 `featureCount=31 / failed=[]` をPASSした。証跡は `output/playwright/lightchain-all-feature-workflows-current-provider-label/SUMMARY.json`。これはlocal UI/provider契約の証明であり、production provider生成・保存再利用・β受入れの証明ではない。
 
+- 2026-08-20、fresh official Profile 2 target-scoped readback r6でHeavy `/tools/fabric`の認証済みworkspaceを確認した。ログイン／無料で始める表示はなく、Lightchain型の生地入力、Gallery、素材バリエーション、権利確認、`AI生成`、`生成履歴`が同一runで表示され、task-owned cleanupもPASSした。証跡は `work/heavy-chain-authenticated-target-readback-20260820-r6.md`。認証／workspace hydrationはPASSへ更新するが、provider生成・保存・再利用は未実施。fresh広告に`foreground_activation`／`management`がなく、実用フローのexact blockerは`chrome_foreground_activation_capability_unavailable`。
+
 - 2026-08-20、source commit `797afd54f133068cdd1c4b19845116dfd8633952` のZeabur deployment `6a85fb012a82f8973377761f`が`RUNNING`になった。デプロイ後のfresh official Chrome Plugin／Profile 2 target-scoped readbackでHeavy `/lightchain`を確認し、7件の非動画ランチャー、4カテゴリ、`video_text_present=false`、`video_route_present=false`、`login_text_present=false`を同一runで確認した。作成タブは`cleanup ok=true`で閉じた。証跡は `work/heavy-production-video-hidden-readback-20260820-r1.md`。これは非動画UI反映と認証済み画面の証明であり、provider生成・保存・再利用・β受入れの完了証明ではない。
 
 - 【履歴】2026-08-20、fresh target-scoped readbackでHeavy `/tools/fabric`を確認した際には、ログイン／準備中シェルではなく、`生地イメージ`、モデル／生地入力、Gallery選択、画像比率、生地バリエーション、権利確認、`AI生成`、生成履歴が表示された。これは当時のhydrated workspace証跡であり、最新r3の状態を上書きしない。クリック・アップロード・生成は行っていない。
@@ -105,13 +107,13 @@
 - Priority route ledger: PASS。`/tools/printing`と`/model`のHeavy／Lightchain readbackを同一fresh runで取得し、入力・権利・生成・履歴差分を記録した。既存provider結果は履歴データであり、新規生成proofではない。
 - Foreground capability readback: BLOCKED。fresh browser-clientの公式広告は`viewport`のみで、`foreground_activation`／`management`は未提供。target-scoped read-onlyは継続可能。
 - Production non-video launcher readback: PASS。deployment `6a85fb012a82f8973377761f`が`797afd5`で`RUNNING`。fresh Profile 2 target-scoped `/lightchain` readbackで7件の非動画ランチャーと動画導線0件を確認。証跡は`work/heavy-production-video-hidden-readback-20260820-r1.md`。
-- Authentication gate: CURRENT BLOCKED。過去のfresh `/login`／hydrated workspace readbackでは`/lightchain`、`アカウント`、4カテゴリ、31非動画Library、`生地イメージ`、素材入力、権利文言、`AI生成`、`生成履歴`を確認できたが、最新source-threadのr3 fresh readbackでは再びログイン／workspace準備／ブランド設定確認シェルとtextile asset未表示を確認した。現在の正本は `work/heavy-chain-target-scoped-canary-20260820-r3.md` であり、ユーザー報告だけではPASSへ戻さない。
+- Authentication gate: PASS。r6 fresh target-scoped readbackでログイン／無料で始める表示がなく、Lightchain型の`生地イメージ` workspace、素材入力、Gallery選択、権利確認、`AI生成`、`生成履歴`を確認した。r3は履歴上の未認証状態として保持する。provider生成・保存・再利用は未実施。
 - Common route readback: PASS。fresh同一runで`/lightchain`、`/gallery`、`/canvas/new`、`/history`、`/jobs`を15秒hydration後に確認した。Galleryは961枚、Historyは保存済み12件・失敗4件、Jobsは完了20件・失敗4件を表示した。新規provider生成からの同一run保存・再利用は未証明。
-- Exact blocker: `heavy_target_workspace_authentication_not_ready`（最新r3のtarget-scoped admission）。target-scoped transport/readback自体は成功しているが、workspace準備・認証／ブランド設定確認が完了せずtextile assetが見えない。認証後のforeground操作には別途`chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`が残る。製品所有のgarment/textile platform assetは実装・focused testで確認済みだが、同一runのUI選択・権利確認・生成・保存・再利用は各gateが揃うまでPENDING_CONFIRMATION。
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。r6 fresh Profile 2広告は`viewport`とtab-level `cdp`のみで、`foreground_activation`／`management`を提供しなかった。target-scoped readbackはPASSだが、UI上の権利確認・provider生成・保存・再利用はforeground capabilityが揃うまでPENDING_CONFIRMATION。
 - Local desktop verification: PASS。31機能台帳と`1280/1440/1920/2560px`の228セルを再実行で全件確認した。これはlocal previewのUI契約証跡であり、Mac／Windowsの実Chrome実機受入れやproduction provider完了の代用ではない。
 - Foreground operation blocker（read-only target admissionとは分離）: `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`。
-- Next action: ユーザー側でHeavy Profile 2の認証・workspace／brand準備を完了した後、新規official Profile 2 browser-clientで`openTabs()`→正確なHeavy `/tools/fabric` descriptor→target-scoped URL/title/DOM readbackを1回行う。hydratedになった場合のみ、foreground owner gateを確認してから承認済みGallery素材1件の権利確認→fabric生成→結果→保存→Gallery/Canvas/History/Jobs→再利用を同一runで確認する。
-- Restart point: `heavy_target_workspace_authentication_not_ready`が解消したfresh Profile 2 readback。provider生成・保存・再利用はworkspace hydration、owner／承認、foreground capability、同一run gateが揃うまで開始しない。
+- Next action: 公式Profile 2拡張が`foreground_activation`または`management`を広告した状態で、新規browser-clientの`openTabs()`→正確な`/tools/fabric` descriptor→target-scoped readbackを1回行い、その同一runで承認済みGallery素材1件の権利確認→fabric生成→結果→保存→Gallery/Canvas/History/Jobs→再利用を確認する。
+- Restart point: `chrome_foreground_activation_capability_unavailable`が解消したfresh Profile 2 owner。認証／workspace hydrationはr6でPASSだが、provider生成・保存・再利用はforeground capability、owner／承認、同一run gateが揃うまで開始しない。
 - provider生成、録画、AOS、effectfulなUI操作はselected/owner proofが揃うまで開始しない。deployは別のsource・runtime・fresh target readback gateで扱い、今回のdeployment `6a85ecc3f1ea67ebf4ea67bc` はそのreadbackまで確認済み。
 
 ## 2026-08-20 再読み込み後の入力復帰修正
