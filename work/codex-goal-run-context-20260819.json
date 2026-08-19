@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 81,
+  "checkpoint_seq": 82,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -214,6 +214,7 @@
     ,"Local completion-contract recheck passed focused 110/110, typecheck, diff check, non-video featureCount=31 / failed=[], and unified desktop 228/228 across 1280/1440/1920/2560px with cleanupLeftovers=0; production provider/save/reuse and beta acceptance remain unproven"
     ,"Completion audit r1 mapped every Goal acceptance criterion to current evidence and preserved production, real-Chrome, operator, and beta gaps as incomplete; artifact work/heavy-chain-completion-audit-20260820-r1.md"
     ,"Removed the current-Lightchain-absent LIGHTCHAIN MATERIAL WORKBENCH eyebrow from fabric/printing; focused material/UI control contract 16/16, typecheck, and diff check passed"
+    ,"Post-cleanup local quality checks passed npm run lint -- --max-warnings=0 and npm run build with 2606 modules; production/provider gates remain separate"
   ],
   "next_action": "After the user completes Heavy Profile 2 login and workspace/brand preparation, create one new official browser-client, perform one openTabs() handshake and target-scoped Heavy /tools/fabric readback. Continue to provider work only if the workspace is hydrated and foreground capabilities are advertised. Do not reuse this client, an old binding, tab, or receipt.",
   "blocker": {
@@ -265,6 +266,7 @@
       ,"local completion-contract recheck passed focused 110/110, non-video 31/31, and unified desktop 228/228; G619/H601/launch readiness gates remain incomplete"
       ,"completion audit r1 mapped the full Goal acceptance criteria; no same-fingerprint Chrome retry was launched because Heavy authentication/workspace state did not change"
       ,"UI parity cleanup removed the internal-only LIGHTCHAIN MATERIAL WORKBENCH eyebrow while preserving required Library/rights/generation/history controls; focused material/UI contract 16/16 passed"
+      ,"Post-cleanup lint and production build passed locally; no deployment or Chrome retry was performed"
     ],
     "artifact": "work/heavy-chain-target-scoped-canary-20260820-r4.md",
     "recorded_at": "2026-08-20T05:33:56+09:00"
@@ -952,8 +954,17 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T05:42:59+09:00",
       "note": "Removed the internal-only LIGHTCHAIN MATERIAL WORKBENCH eyebrow from the fabric/printing shared screen because it is absent from the current Lightchain direct-route readback. Focused material/UI control contract 16/16, typecheck, and diff check passed. Required beta controls remain intact; production readback and provider work remain behind the unchanged Heavy authentication/workspace blocker."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 82,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T05:44:09+09:00",
+      "note": "Post-cleanup local quality checks passed npm run lint -- --max-warnings=0 and npm run build with 2606 modules. This improves local readiness only; production deployment/readback, provider generation/save/reuse, and the unchanged Heavy authentication/workspace state remain incomplete."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T05:42:59+09:00"
+  "updated_at": "2026-08-20T05:44:09+09:00"
 }

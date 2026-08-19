@@ -23,6 +23,11 @@ Updated: 2026-08-20
 - Removed the internal-only `LIGHTCHAIN MATERIAL WORKBENCH` eyebrow from the fabric/printing shared screen because it is not present in the current Lightchain direct-route readback.
 - Focused material/UI control contract passed `16/16`, typecheck and diff check passed. Required beta controls (Library, rights confirmation, generation, history) remain intact.
 
+2026-08-20 latest parity cleanup build verification:
+- `npm run lint -- --max-warnings=0` passed.
+- `npm run build` passed with `2606 modules transformed`.
+- This is local build/lint evidence only; production deployment/readback and provider business completion remain separate gates.
+
 2026-08-20 latest local direct-route toolbar parity cleanup:
 - Heavy fabric／printingの旧4カテゴリ帯を、fresh Lightchain `/tools/fabric` readbackで確認した現行toolbar（`ツールバー`、デザインツール、フィッティングツール、グラフィックデザインツール、衣類生産ツール）へ置換した。Library／Gallery、権利確認、`AI生成`、`生成履歴`、統合βの結果系譜は保持している。
 - Verification: material contract 64/64、typecheck、全非動画 workflow `featureCount=31 / failed=[]`、unified desktop `228/228` across `1280/1440/1920/2560px`、`git diff --check` PASS。Artifacts: `output/playwright/lightchain-all-feature-workflows-20260819T201515Z/SUMMARY.json`, `output/playwright/unified-desktop-layout-current-rerun-after-toolbar/SUMMARY.json`.
