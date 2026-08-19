@@ -70,6 +70,8 @@
 
 - 2026-08-20 local completion-contract recheckでは、fabric／printing／AI fitting／保存再利用／Canvas／History／Jobs／統合shellのfocused suite `110/110`、typecheck、diff checkをPASS。全非動画ワークフローは`featureCount=31 / failed=[]`、unified desktopは`228/228`（1280／1440／1920／2560px、cleanupLeftovers 0）をPASSした。証跡は `work/heavy-chain-local-verification-20260820-r1.md`。production provider生成・同一run保存再利用・実Chrome Mac/Windows・β受入れは未確認。
 
+- 2026-08-20 completion audit r1でGoalの各受入れ条件を現行証跡へ照合した。local実装／契約は進捗済みだが、production provider生成・同一run保存再利用、Mac/Windows実Chrome、G619実β、H601 operator decisionが未完了。監査表は `work/heavy-chain-completion-audit-20260820-r1.md`。Goalは完了扱いにしない。
+
 - 2026-08-20、共通Lightchain Workbenchのprovider再試行を改善した。再試行中または失敗時は直前の成功結果を保持し、素材入力が変わった場合だけ入力境界で結果を無効化する。provider coverage 11/11、material 16/16、provider persistence/readback 12/12、workspace handoff 2/2、unified shell 4/4、非動画31機能、typecheck、diff checkをPASSした。これはlocal復旧契約の証明であり、production provider生成・保存再利用の証明ではない。commit `cb46fa5`。
 
 - 2026-08-20、Lightchain本番のfreshカード台帳に合わせ、統合ランチャーの表示契約を修正した。カテゴリ別の非動画カードはおすすめ7／企画デザインツール9／AIフィッティング5／グラフィックツール5（合計26出現）とし、カテゴリ間で重複するデザインワークスペース・AIフィッティング系カードもLightchainと同じ構成にした。動画カードは除外し、`生成対応`／`作業台`／`検証済み`などHeavy内部状態の表示バッジはランチャーから除去した。31機能の内部契約は別カタログとして保持している。これはlocal UI parityの反映であり、production provider生成・保存再利用の証明ではない。
