@@ -63,6 +63,34 @@ test('resume input rejects remote signed URLs and unrelated jobs', () => {
   assert.equal(result, null);
 });
 
+test('resume input restores local slots from provider result materialSlotFiles', () => {
+  const result = readLightchainResumeInput([
+    artifact({
+      featureType: 'lightchain-printing-image-provider-result',
+      metadata: {
+        providerResultArtifact: true,
+        materialSlotFiles: {
+          primary: {
+            name: 'garment.png',
+            kind: 'フーディー',
+            imageUrl: 'data:image/png;base64,AAAA',
+          },
+          secondary: {
+            name: 'print.png',
+            kind: 'プリント',
+            imageUrl: 'blob:https://example.test/print',
+          },
+        },
+      },
+    }),
+  ], 'job-1');
+
+  assert.deepEqual(result?.slots, [
+    { key: 'primary', name: 'garment.png', kind: 'フーディー', imageUrl: 'data:image/png;base64,AAAA' },
+    { key: 'secondary', name: 'print.png', kind: 'プリント', imageUrl: 'blob:https://example.test/print' },
+  ]);
+});
+
 test('resume hydration is declared after the tool reset effect', async () => {
   const source = await readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   const resetIndex = source.indexOf("setMaterialSlotFiles({ primary: null, secondary: null });");

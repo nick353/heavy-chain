@@ -46,6 +46,20 @@ const readModelFormState = (value: unknown): Record<string, string | number> | n
   return Object.keys(result).length > 0 ? result : null;
 };
 
+const readSlotCollection = (value: unknown): unknown[] => {
+  if (Array.isArray(value)) return value;
+  if (!isRecord(value)) return [];
+  return Object.entries(value).flatMap(([key, slot]) => {
+    if (!isRecord(slot)) return [];
+    return [{
+      ...slot,
+      key: slot.key ?? key,
+      fileName: slot.fileName ?? slot.name,
+      materialKind: slot.materialKind ?? slot.kind,
+    }];
+  });
+};
+
 const resumeArtifactMatchesJob = (artifact: WorkspaceArtifact, jobId: string) => (
   artifact.sourceJobId === jobId
   || artifact.metadata.sourceJobId === jobId
@@ -76,12 +90,11 @@ export const readLightchainResumeInput = (
     const state = isRecord(artifact.metadata.lightchainWorkbenchState)
       ? artifact.metadata.lightchainWorkbenchState
       : artifact.metadata;
-    const rawSlots = Array.isArray(state.materialSlots)
-      ? state.materialSlots
-      : Array.isArray(artifact.metadata.materialSlots)
-        ? artifact.metadata.materialSlots
-        : [];
-    const slots = rawSlots
+    const rawSlotSource = state.materialSlots
+      ?? artifact.metadata.materialSlots
+      ?? state.materialSlotFiles
+      ?? artifact.metadata.materialSlotFiles;
+    const slots = readSlotCollection(rawSlotSource)
       .map(readSlot)
       .filter((slot): slot is LightchainResumeSlot => Boolean(slot));
     const modelFormState = readModelFormState(state.modelFormState ?? artifact.metadata.modelFormState);
