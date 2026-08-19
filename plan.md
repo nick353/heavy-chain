@@ -28,7 +28,7 @@
 
 1. 公式Chrome Plugin／Profile 2で、Lightchain本番のhomepage、4カテゴリ、全非動画カード、優先routeをfresh readbackする。
 2. 入力、操作、生成、結果、保存、再利用、エラー、リトライ、性能を機能単位で記録する。
-3. `work/lightchain-profile2-non-video-card-ledger-20260819T082439.json` と parity matrix を現行証跡として更新する。
+3. `work/lightchain-parity-matrix-current-20260820-r13.md` を現行証跡として更新する。旧revision 30のカード台帳は参照証跡として分離し、現行revision 6のfresh readbackと混同しない。
 
 ### 2. Heavy共通ワークスペース
 

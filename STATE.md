@@ -3232,3 +3232,11 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Focused contracts passed material/UI 16/16, provider coverage 11/11, provider persistence/readback 12/12, workspace handoff 2/2, fitting history/resume 10/10, Canvas generation 5/5, Canvas view 3/3, and local upload/resume 6/6.
 - Artifact: `work/heavy-chain-local-acceptance-r4-20260820.md`.
 - These are local proofs only. Production provider generation/save/reuse, Mac／Windows real Chrome, G619 sessions, and H601 operator decisions remain open.
+
+## 2026-08-20 current Lightchain rev6 parity matrix r13
+
+- Fresh official Chrome Plugin/Profile 2 target-scoped homepage readback used selector revision 6 and browser-client `-2018-4d21-90a6-b0e78b43c518`. It confirmed `Lightchain AI`, four category labels, seven default recommended cards including one video card, and cleanup of task-owned tab `1980903811`.
+- The current readback did not mutate category selection and the homepage AX snapshot was alert-only. Therefore full rev6 category-card enumeration remains `PENDING_CONFIRMATION`.
+- The old revision-30 ledger (26 non-video occurrences / 19 routes) is now explicitly historical and is not promoted to current rev6 proof.
+- Current parity matrix: `work/lightchain-parity-matrix-current-20260820-r13.md`.
+- The matrix lists all 31 non-video rows and separates Lightchain live input/operation/result/save/reuse evidence from Heavy local contracts and Heavy production proof. Local Heavy contracts remain verified; production provider and same-run business layers remain open.
