@@ -820,6 +820,51 @@ const conformSurfaceInternal = (
   const garmentSize = { width: input.garment.width, height: input.garment.height, pixels: garmentPixels };
   const clipSize = { width: input.clip.width, height: input.clip.height, pixels: clipPixels };
 
+  // Tiny printable surfaces cannot satisfy the production minimum and must
+  // not enter the full-resolution blur/composition loops. This also protects
+  // malformed or adversarial aspect ratios such as a 1px x 1,000,000px
+  // surface from turning a visible validation failure into runaway work.
+  if (garmentSize.width < 96 || garmentSize.height < 96) {
+    const sourceReferenceWidth = input.sourceReferenceSize?.width ?? input.source.width;
+    const sourceReferenceHeight = input.sourceReferenceSize?.height ?? input.source.height;
+    const diagnostics = freezeDiagnostics({
+      version: 'surface-conformer-diagnostics-v1',
+      source: Object.freeze(sourceSize),
+      design: Object.freeze(designSize),
+      garment: Object.freeze(garmentSize),
+      clip: Object.freeze(clipSize),
+      surfaceBounds: Object.freeze({
+        left: 0,
+        top: 0,
+        right: Math.max(0, garmentSize.width - 1),
+        bottom: Math.max(0, garmentSize.height - 1),
+        width: garmentSize.width,
+        height: garmentSize.height,
+      }),
+      sourceTooSmall: Math.max(sourceReferenceWidth, sourceReferenceHeight) < MIN_SOURCE_LONG_EDGE
+        || Math.min(sourceReferenceWidth, sourceReferenceHeight) < 512,
+      effectiveDesignVisiblePixels: designPixels,
+      designVisiblePixels: designPixels,
+      surfaceVisiblePixels: garmentPixels,
+      surfaceTouchesFrame: false,
+      surfaceEdgeRatio: 0,
+      clippedLumaRatio: 0,
+      meanAbsHigh: 0,
+      p95AbsHigh: 0,
+      maxDisplacement: 0,
+      panelWarpApplied: false,
+      panelProfileCoverage: 0,
+      panelWidthVariation: 0,
+      maxPanelDisplacement: 0,
+      panelVerticalDisplacement: 0,
+      surfaceWarpMode: input.surfaceWarpMode ?? 'legacy',
+      shadeMin: 1,
+      shadeMax: 1,
+    });
+    const domain = evaluateDomain(diagnostics) ?? 'SURFACE_TOO_SMALL';
+    return Object.freeze({ kind: 'ood', domain, diagnostics });
+  }
+
   const sourceLuma = new Float32Array(sourcePixels);
   const sourceWeights = new Float32Array(sourcePixels);
   for (let index = 0; index < sourcePixels; index += 1) {

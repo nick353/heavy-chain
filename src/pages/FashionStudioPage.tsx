@@ -4,17 +4,20 @@ import toast from 'react-hot-toast';
 import { Check, ChevronRight, Images, Layers3, Save, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
+import { listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
 import {
   buildGenerationIntentHref,
   handoffWorkspaceToCanvas,
   restoreWorkspaceHandoffHistory,
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
+import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 
 const choices = ['ライン企画', '素材確認', 'EC準備'];
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
@@ -210,6 +213,7 @@ const buildStudioPreviewSvg = ({
 export function FashionStudioPage() {
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
+  const { setFlowState } = useUnifiedWorkspaceFlow();
   const [activeChoice, setActiveChoice] = useState(choices[0]);
   const [progress, setProgress] = useState(35);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -223,6 +227,7 @@ export function FashionStudioPage() {
   const [productLine, setProductLine] = useState('Heavy Chain 2026 SS シアージャケット');
   const [referenceImage, setReferenceImage] = useState('参照画像: lookbook_ref_01.jpg / fabric_ref_02.png');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialStudioMaterial);
+  const [savedArtifactId, setSavedArtifactId] = useState<string | null>(null);
   const nextHistoryId = useRef(1);
   const selectedStudioSetup = useMemo<StudioSetup>(() => ({
     model: modelOptions.find((option) => option.id === selectedModelId) ?? modelOptions[0],
@@ -238,12 +243,31 @@ export function FashionStudioPage() {
     productLine,
     selectedStudioSetup,
   }), [activeChoice, background, modelProfile, pose, productLine, props, selectedStudioSetup]);
+  const studioFlowState = deriveUnifiedWorkspaceFlowState({
+    inputReady: Boolean(productLine.trim() && modelProfile.trim() && pose.trim() && background.trim()),
+    rightsReady: true,
+    generating: false,
+    completed: Boolean(savedArtifactId),
+    failed: false,
+    persisted: Boolean(savedArtifactId),
+  });
 
   useEffect(() => {
+    setFlowState(studioFlowState);
+  }, [setFlowState, studioFlowState]);
+
+  useEffect(() => {
+    const savedArtifact = currentBrand?.id
+      ? listWorkspaceArtifacts(currentBrand.id, user?.id).find((artifact) => artifact.featureType === 'fashion-studio')
+      : null;
+    setSavedArtifactId(savedArtifact?.id ?? null);
     setHistory(restoreWorkspaceHandoffHistory(currentBrand?.id, 'fashion-studio', user?.id));
   }, [currentBrand?.id, user?.id]);
 
+  const markWorkflowDirty = () => setSavedArtifactId(null);
+
   const recordProgress = (choice: string) => {
+    markWorkflowDirty();
     const historyItem = {
       id: `fashion-history-${nextHistoryId.current++}`,
       label: `${choice}をローカル履歴に追加`,
@@ -255,16 +279,19 @@ export function FashionStudioPage() {
   };
 
   const selectModel = (option: StudioOption) => {
+    markWorkflowDirty();
     setSelectedModelId(option.id);
     setModelProfile(option.value);
   };
 
   const selectPose = (option: StudioOption) => {
+    markWorkflowDirty();
     setSelectedPoseId(option.id);
     setPose(option.value);
   };
 
   const selectBackground = (option: StudioOption) => {
+    markWorkflowDirty();
     setSelectedBackgroundId(option.id);
     setBackground(option.value);
   };
@@ -327,7 +354,7 @@ export function FashionStudioPage() {
       `Next step: ${nextStep}`,
     ].join('\n');
     try {
-    const { projectId } = handoffWorkspaceToCanvas({
+    const { artifact, projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
       scopeId: user?.id,
       featureType: 'fashion-studio',
@@ -425,6 +452,7 @@ export function FashionStudioPage() {
       },
     });
 
+    setSavedArtifactId(artifact.id);
     toast.success('Fashion Studioを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
     } catch (error) {
@@ -435,7 +463,7 @@ export function FashionStudioPage() {
   };
 
   return (
-    <div className="space-y-6 text-white">
+    <div className="space-y-6 text-white" data-flow-state={studioFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[studioFlowState]}>
       <section className="overflow-hidden rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -566,7 +594,10 @@ export function FashionStudioPage() {
 	                  uploadLabel="衣服・背景・小物をアップロード"
 	                  emptyLabel="実素材を置くと、Canvasに撮影セットの参照画像として残ります"
 	                  state={materialReference}
-	                  onChange={setMaterialReference}
+                  onChange={(next) => {
+                    markWorkflowDirty();
+                    setMaterialReference(next);
+                  }}
 	                  materialKinds={['衣服', '背景', '小物', 'モデル参照', 'LOOK参考']}
 	                  layerOptions={['衣服', 'モデル', '背景', '小物', '影']}
 	                  placementOptions={['モデル前面', '背景全面', '左手小物', '足元', '横並び比較']}
@@ -664,27 +695,27 @@ export function FashionStudioPage() {
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-sm font-semibold text-white">
               モデル
-              <input value={modelProfile} onChange={(event) => setModelProfile(event.target.value)} className={fieldClass} />
+              <input value={modelProfile} onChange={(event) => { markWorkflowDirty(); setModelProfile(event.target.value); }} className={fieldClass} />
             </label>
             <label className="text-sm font-semibold text-white">
               ポーズ
-              <input value={pose} onChange={(event) => setPose(event.target.value)} className={fieldClass} />
+              <input value={pose} onChange={(event) => { markWorkflowDirty(); setPose(event.target.value); }} className={fieldClass} />
             </label>
             <label className="text-sm font-semibold text-white">
               背景
-              <input value={background} onChange={(event) => setBackground(event.target.value)} className={fieldClass} />
+              <input value={background} onChange={(event) => { markWorkflowDirty(); setBackground(event.target.value); }} className={fieldClass} />
             </label>
             <label className="text-sm font-semibold text-white">
               小物
-              <input value={props} onChange={(event) => setProps(event.target.value)} className={fieldClass} />
+              <input value={props} onChange={(event) => { markWorkflowDirty(); setProps(event.target.value); }} className={fieldClass} />
             </label>
             <label className="text-sm font-semibold text-white">
               商品ライン
-              <input value={productLine} onChange={(event) => setProductLine(event.target.value)} className={fieldClass} />
+              <input value={productLine} onChange={(event) => { markWorkflowDirty(); setProductLine(event.target.value); }} className={fieldClass} />
             </label>
             <label className="text-sm font-semibold text-white">
               参照画像
-              <input value={referenceImage} onChange={(event) => setReferenceImage(event.target.value)} className={fieldClass} />
+              <input value={referenceImage} onChange={(event) => { markWorkflowDirty(); setReferenceImage(event.target.value); }} className={fieldClass} />
             </label>
           </div>
         </div>

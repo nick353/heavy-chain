@@ -14,6 +14,16 @@ test('Canvas generation waits for image placement before reporting success', asy
   assert.match(source, /canvas_generation_no_results/);
 });
 
+test('Canvas persistence promotes provider storage paths nested in generation parameters', async () => {
+  const source = await readFile(new URL('../src/lib/canvasDocumentPersistence.ts', import.meta.url), 'utf8');
+
+  assert.match(source, /const parameters = metadata\?\.parameters && typeof metadata\.parameters === 'object'/);
+  assert.match(source, /parameters\.remoteStoragePath/);
+  assert.match(source, /parameters\.sourceStoragePath/);
+  assert.match(source, /const storagePath = \[/);
+  assert.match(source, /if \(storagePath\) return storagePath;/);
+});
+
 test('Generate-to-Canvas handoff reports only actually placed results', async () => {
   const source = await readFile(new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url), 'utf8');
   const handoffStart = source.indexOf('const raw = window.sessionStorage.getItem(GENERATED_CANVAS_HANDOFF_KEY)');

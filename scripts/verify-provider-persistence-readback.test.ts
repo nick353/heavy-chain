@@ -160,6 +160,10 @@ test('material provider parity runtime survives result, remote artifact, History
   assert.match(material, /const parityRuntimeJson = serializeLightchainParityRuntime\(parityRuntime\)/);
   assert.match(material, /fixtureId: \[\s*isPrinting \? printGarment!\.url : fabricDesign!\.url/);
   assert.match(material, /parityRuntime: parityRuntimeJson/);
+  assert.match(material, /const inputLineage: MaterialInputLineage\[\] = isPrinting/);
+  assert.match(material, /sourceImageId: printGarment\?\.galleryImageId \?\? null/);
+  assert.match(material, /sourceStoragePath: fabricBase\?\.storagePath \?\? null/);
+  assert.match(material, /inputLineage: result\.inputLineage \?\? \[\]/);
   assert.match(material, /const parityRuntimeJson = result\.parityRuntime \?\?/);
   const canvasPromotion = material.lastIndexOf("feature: 'lightchain-material-provider'");
   assert.ok(canvasPromotion >= 0);

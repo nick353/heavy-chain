@@ -22,7 +22,7 @@ test('keeps print-image try-on beside fabric simulation in graphics', async () =
   const featureEnd = source.indexOf("id: 'lineart-to-real'", featureStart);
   const feature = source.slice(featureStart, featureEnd === -1 ? source.length : featureEnd);
   assert.match(feature, /category: 'graphics'/);
-  assert.match(feature, /route: '\/lightchain\/printing-image'/);
+  assert.match(feature, /route: '(?:\/tools\/printing|\/lightchain\/printing-image)'/);
 });
 
 test('routes fabric search prompts to the simulation entry', async () => {

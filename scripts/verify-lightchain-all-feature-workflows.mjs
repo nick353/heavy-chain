@@ -101,6 +101,7 @@ try {
     evidence.featureResults.push(result);
     await routePage.close().catch(() => {});
   }
+
   await context.close();
   evidence.cleanup.contextClosed = true;
   context = null;
@@ -692,11 +693,17 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
   const skippedVideoHrefs = featureLinkEntries
     .map((entry) => entry.href)
     .filter((href) => isVideoHref(href));
-  const uniqueFeatureLinkEntries = [...new Map(
-    featureLinkEntries
-      .filter(({ href }) => isFeatureEntrypointHref(href) && !isVideoHref(href))
-      .map((entry) => [entry.href, entry]),
-  ).values()];
+  // Keep the first category in which a link is rendered. Some routes are also
+  // exposed from shared case/navigation surfaces, so letting a Map overwrite
+  // earlier entries can associate a recommended card with a later category
+  // and make the click assertion inspect the wrong screen.
+  const uniqueFeatureLinkEntries = [];
+  const seenFeatureHrefs = new Set();
+  for (const entry of featureLinkEntries) {
+    if (!isFeatureEntrypointHref(entry.href) || isVideoHref(entry.href) || seenFeatureHrefs.has(entry.href)) continue;
+    seenFeatureHrefs.add(entry.href);
+    uniqueFeatureLinkEntries.push(entry);
+  }
   const clickableFeatureDetailEntries = uniqueFeatureLinkEntries
     .filter((entry) => entry.href.startsWith('/lightchain/') || entry.href.startsWith('/generate?feature='))
     .slice(0, 3);
@@ -862,6 +869,13 @@ function directFeatureDestinationLoaded(href, body) {
 }
 
 async function waitForDirectFeatureDestination(page, href) {
+  if (href.startsWith('/lightchain/')) {
+    // React Router keeps the unified shell mounted while the lazy feature
+    // page resolves. Wait for the feature-owned DOM before reading the body;
+    // otherwise a fast click can be judged against the shell-only frame.
+    await page.locator('[data-testid^="lightchain-"]').first().waitFor({ state: 'attached', timeout: 10_000 }).catch(() => undefined);
+    return;
+  }
   if (href === '/canvas/new') {
     await page.getByText('画像を置いて、機能を選ぶ').first().waitFor({ state: 'visible', timeout: 15_000 }).catch(() => undefined);
     return;
@@ -897,6 +911,7 @@ function wirePageDiagnostics(page, route) {
   page.on('console', (message) => {
     if (['error', 'warning'].includes(message.type())) {
       if (localPreview && /Failed to load resource: the server responded with a status of 401/.test(message.text())) return;
+      if (localPreview && /Failed to load resource:.*fonts\.gstatic\.com/iu.test(message.text())) return;
       if (/Remote workspace artifact save failed; falling back to localStorage/.test(message.text())) return;
       if (/Falling back to table usage summary/.test(message.text())) return;
       evidence.consoleMessages.push({ route, type: message.type(), text: message.text() });
@@ -906,6 +921,7 @@ function wirePageDiagnostics(page, route) {
   page.on('requestfailed', (request) => {
     const failure = request.failure()?.errorText ?? 'unknown';
     if (failure === 'net::ERR_ABORTED') return;
+    if (localPreview && request.url().startsWith('https://fonts.gstatic.com/')) return;
     evidence.requestFailures.push({
       route,
       url: request.url(),
@@ -954,7 +970,7 @@ async function waitForLightchainCategory(page, categoryId) {
     graphics: 'グラフィックツール',
   };
   await page.waitForFunction((expectedLabel) => {
-    const selectedTab = document.querySelector('[role="tab"][aria-selected="true"]');
+    const selectedTab = document.querySelector('[role="tablist"][aria-label="Light Chainカテゴリ"] [role="tab"][aria-selected="true"]');
     return selectedTab?.textContent?.includes(expectedLabel) ?? false;
   }, expectedLabels[categoryId], { timeout: 15_000 });
 }

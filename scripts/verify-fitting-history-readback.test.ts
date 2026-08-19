@@ -48,6 +48,21 @@ test('Canvas resume uses only persisted material-reference URLs after reload', a
   assert.match(source, /modelReferenceImageUrl: request\.modelReferenceImageUrl \? '\[provided\]' : null/);
 });
 
+test('Fitting supports a library-first model reference and preserves its canonical lineage', async () => {
+  const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /data-testid="fitting-model-gallery-select"/);
+  assert.match(source, /Gallery \/ モデルライブラリから選ぶ/);
+  assert.match(source, /handleSelectModelGalleryImage/);
+  assert.match(source, /sourceImageId: imageId/);
+  assert.match(source, /sourceStoragePath: storagePath \?\? null/);
+  assert.match(source, /modelReferenceSourceImageId: request\.modelReferenceSourceImageId \?\? null/);
+  assert.match(source, /modelReferenceSourceStoragePath: request\.modelReferenceSourceStoragePath \?\? null/);
+  assert.match(source, /getGeneratedImageMetadataString\(image, 'modelReferenceSourceStoragePath'\)/);
+  assert.match(source, /feature: 'model-matrix-model-reference'/);
+  assert.match(source, /resolveGeneratedImageUrl\(item\.modelReferenceSourceStoragePath\)/);
+});
+
 test('Fitting compacts large cutout data for durable Gallery and platform sources before local readback', async () => {
   const source = await readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8');
 

@@ -47,6 +47,15 @@ test('Heavy Chain task steps survive remote-image to local-artifact fallback', a
   assert.match(activity, /return mapOutput\(output, outputSteps\)/);
 });
 
+test('provider artifacts reconstruct a completed Jobs entry when no generation_jobs row exists', async () => {
+  const activity = await read('../src/lib/workspaceActivity.ts');
+  assert.match(activity, /const buildLocalWorkspaceJobs =/);
+  assert.match(activity, /listWorkspaceArtifacts\(brandId, scopeId\)/);
+  assert.match(activity, /artifact\.sourceJobId \?\? getMetadataString\(artifact\.metadata, 'remoteJobId'\)/);
+  assert.match(activity, /const localJobs = buildLocalWorkspaceJobs\(localArtifacts, new Set\(jobs\.map\(\(job\) => job\.id\)\)\)/);
+  assert.match(activity, /\[\.\.\.jobs, \.\.\.localJobs\]\.map/);
+});
+
 test('Lightchain workbench accepts a resumeJob readback without a legacy source handoff', async () => {
   const source = await read('../src/pages/LightchainWorkbenchPage.tsx');
   assert.match(source, /const resumeJob = searchParams\.get\('resumeJob'\)/);

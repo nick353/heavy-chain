@@ -307,22 +307,58 @@ async function imageBlobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-async function imageBlobToPngDataUrl(blob: Blob): Promise<string> {
-  const bitmap = await createImageBitmap(blob);
+async function rasterSourceToPngDataUrl(
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+): Promise<string> {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, width);
+  canvas.height = Math.max(1, height);
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('image_edit_png_canvas_unavailable');
+  context.drawImage(source, 0, 0, canvas.width, canvas.height);
+  const png = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((result) => result ? resolve(result) : reject(new Error('image_edit_png_encode_failed')), 'image/png');
+  });
+  return await imageBlobToDataUrl(png);
+}
+
+async function imageElementBlobToPngDataUrl(blob: Blob): Promise<string> {
+  const objectUrl = URL.createObjectURL(blob);
   try {
-    const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('image_edit_png_canvas_unavailable');
-    context.drawImage(bitmap, 0, 0);
-    const png = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((result) => result ? resolve(result) : reject(new Error('image_edit_png_encode_failed')), 'image/png');
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('image_edit_svg_rasterize_failed'));
+      element.src = objectUrl;
     });
-    return await imageBlobToDataUrl(png);
+    return await rasterSourceToPngDataUrl(
+      image,
+      image.naturalWidth || image.width,
+      image.naturalHeight || image.height,
+    );
   } finally {
-    bitmap.close();
+    URL.revokeObjectURL(objectUrl);
   }
+}
+
+async function imageBlobToPngDataUrl(blob: Blob): Promise<string> {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(blob);
+      try {
+        return await rasterSourceToPngDataUrl(bitmap, bitmap.width, bitmap.height);
+      } finally {
+        bitmap.close();
+      }
+    } catch {
+      // Chromium may display an SVG but still reject its Blob in
+      // createImageBitmap. Retry through an object URL and HTMLImageElement
+      // so product-owned SVG assets reach the provider as PNG data.
+    }
+  }
+  return await imageElementBlobToPngDataUrl(blob);
 }
 
 export async function editImageWithPrompt(

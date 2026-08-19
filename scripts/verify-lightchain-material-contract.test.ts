@@ -73,6 +73,7 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState !== 'done' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0 \|\| !providerRightsConfirmed\}/);
   assert.match(page, /data-testid="lightchain-material-rights-confirmation"/);
   assert.match(page, /AIプロバイダーへ送信して生成します/);
+  assert.match(page, /<Link to="\/designProduction"[^>]*>\s*今すぐ体験\s*<\/Link>/);
   assert.match(page, /切り抜き済み生地を衣服領域へ適用した参考/);
   assert.match(page, /buildFabricModelGarmentMask/);
   assert.match(page, /buildHighPrecisionMaterialCutoutDataUrl/);

@@ -1,5 +1,8 @@
 import { supabase } from './supabase';
-import { listWorkspaceGeneratedImages } from './localWorkspaceArtifacts';
+import {
+  listWorkspaceArtifacts,
+  listWorkspaceGeneratedImages,
+} from './localWorkspaceArtifacts';
 import {
   getGeneratedImageSelectionKey,
   mergeGeneratedImagesByCanonicalIdentity,
@@ -493,6 +496,53 @@ const buildOutputCounts = (images: GeneratedImage[]) => {
   }, {});
 };
 
+/**
+ * Provider-backed feature pages persist a durable artifact even when the
+ * provider does not create a row in Heavy Chain's generation_jobs table.
+ * Reconstruct a completed local job from that artifact so Jobs and History
+ * share the same cross-route readback contract as Gallery.
+ */
+const buildLocalWorkspaceJobs = (
+  artifacts: ReturnType<typeof listWorkspaceArtifacts>,
+  existingJobIds: Set<string>,
+): GenerationJob[] => {
+  const grouped = new Map<string, typeof artifacts>();
+
+  artifacts.forEach((artifact) => {
+    const jobId = artifact.sourceJobId ?? getMetadataString(artifact.metadata, 'remoteJobId');
+    if (!jobId || existingJobIds.has(jobId)) return;
+    const current = grouped.get(jobId) ?? [];
+    current.push(artifact);
+    grouped.set(jobId, current);
+  });
+
+  return [...grouped.entries()].map(([jobId, entries]) => {
+    const ordered = [...entries].sort((a, b) => (
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    ));
+    const first = ordered[0];
+    const latest = ordered[ordered.length - 1];
+    const inputParams = JSON.parse(JSON.stringify({
+      ...latest.metadata,
+      metadata: latest.metadata,
+      sourceLabel: getMetadataString(latest.metadata, 'sourceLabel') ?? 'AIフィッティング',
+      sourceResumePath: getMetadataString(latest.metadata, 'sourceResumePath') ?? '/fitting',
+    })) as Json;
+    return {
+      id: jobId,
+      brand_id: latest.brandId,
+      user_id: latest.scopeId ?? 'local-workspace',
+      feature_type: latest.featureType,
+      input_params: inputParams,
+      optimized_prompt: latest.prompt,
+      status: 'completed',
+      error_message: null,
+      created_at: first.createdAt,
+      completed_at: latest.createdAt,
+    } satisfies GenerationJob;
+  });
+};
+
 const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[]): TimelineItem[] => {
   const jobItems: TimelineItem[] = jobs.map((job) => ({
     id: `job-${job.id}`,
@@ -678,11 +728,13 @@ export async function fetchWorkspaceActivity(brandId: string, scopeId?: string):
   const lightchainTaskSteps = lightchainStepsResult.status === 'fulfilled' ? lightchainStepsResult.value : [];
   const lightchainStepsByJob = groupLightchainStepsByJob(lightchainTaskSteps);
   const lightchainStepsByImage = groupLightchainStepsByImage(lightchainTaskSteps);
+  const localArtifacts = listWorkspaceArtifacts(brandId, scopeId);
   const localOutputs = await withSignedImageUrls(listWorkspaceGeneratedImages(brandId, scopeId));
   const outputs = mergeGeneratedImagesByCanonicalIdentity(remoteOutputs, localOutputs)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const outputCounts = buildOutputCounts(outputs);
-  const mappedJobs = jobs.map((job) => mapJob(job, outputCounts[job.id] ?? 0, lightchainStepsByJob[job.id] ?? []));
+  const localJobs = buildLocalWorkspaceJobs(localArtifacts, new Set(jobs.map((job) => job.id)));
+  const mappedJobs = [...jobs, ...localJobs].map((job) => mapJob(job, outputCounts[job.id] ?? 0, lightchainStepsByJob[job.id] ?? []));
   const activeJobs = mappedJobs.filter((job) => job.status === 'pending' || job.status === 'processing').slice(0, 20);
   const failedJobs = mappedJobs.filter((job) => job.status === 'failed').slice(0, 20);
   const completedJobs = mappedJobs.filter((job) => job.status === 'completed').slice(0, 20);

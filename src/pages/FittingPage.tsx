@@ -32,6 +32,7 @@ import {
   saveWorkspaceArtifactPersisted,
 } from '../lib/localWorkspaceArtifacts';
 import { readFittingDraftMaterial, readFittingResumeMaterial } from '../lib/fittingResume';
+import { buildGenerationIntentHref } from '../lib/workspaceHandoff';
 import { readFittingDraftCutout, saveFittingDraftCutout } from '../lib/fittingDraftCutoutStore';
 import { getFittingMaterialIdentity } from '../lib/fittingMaterialIdentity';
 import {
@@ -45,6 +46,9 @@ import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
 import { GallerySelector } from '../components/GallerySelector';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
+import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
+import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import {
   buildMaterialReferenceMetadata,
@@ -84,6 +88,8 @@ type LastRequest = {
   imageUrl?: string;
   modelReferenceImageUrl?: string;
   modelReferenceFileName?: string;
+  modelReferenceSourceImageId?: string | null;
+  modelReferenceSourceStoragePath?: string | null;
   sourceMaterialImageUrl?: string;
   bodyTypes: string[];
   ageGroups: string[];
@@ -140,6 +146,8 @@ type HistoryItem = {
   sourceMaterialImageUrl?: string;
   modelReferenceImageUrl?: string;
   modelReferenceFileName?: string;
+  modelReferenceSourceImageId?: string | null;
+  modelReferenceSourceStoragePath?: string | null;
   materialReference?: MaterialReferenceMetadata;
   materialReferences?: MaterialReferenceMetadata[];
   layerPlan?: Record<string, Json | undefined>;
@@ -190,6 +198,8 @@ export const buildFittingHistoryFromPersistedImages = (
     sourceMaterialImageUrl?: string;
     modelReferenceImageUrl?: string;
     modelReferenceFileName?: string;
+    modelReferenceSourceImageId?: string | null;
+    modelReferenceSourceStoragePath?: string | null;
     materialReference?: MaterialReferenceMetadata;
     materialReferences?: MaterialReferenceMetadata[];
     layerPlan?: Record<string, Json | undefined>;
@@ -236,8 +246,13 @@ export const buildFittingHistoryFromPersistedImages = (
       remoteImageIds: [],
       remoteStoragePaths: [],
       sourceMaterialImageUrl: persistedSourceMaterialImageUrl,
-      modelReferenceImageUrl: getGeneratedImageMetadataString(image, 'modelReferenceImageUrl') ?? undefined,
+      modelReferenceImageUrl: (() => {
+        const value = getGeneratedImageMetadataString(image, 'modelReferenceImageUrl');
+        return value && value !== '[provided]' ? value : undefined;
+      })(),
       modelReferenceFileName: getGeneratedImageMetadataString(image, 'modelReferenceFileName') ?? undefined,
+      modelReferenceSourceImageId: getGeneratedImageMetadataString(image, 'modelReferenceSourceImageId'),
+      modelReferenceSourceStoragePath: getGeneratedImageMetadataString(image, 'modelReferenceSourceStoragePath'),
       materialReference,
       materialReferences,
       layerPlan: getGeneratedImageMetadataObject<Record<string, Json | undefined>>(image, 'layerPlan'),
@@ -291,6 +306,8 @@ export const buildFittingHistoryFromPersistedImages = (
       sourceMaterialImageUrl: group.sourceMaterialImageUrl,
       modelReferenceImageUrl: group.modelReferenceImageUrl,
       modelReferenceFileName: group.modelReferenceFileName,
+      modelReferenceSourceImageId: group.modelReferenceSourceImageId,
+      modelReferenceSourceStoragePath: group.modelReferenceSourceStoragePath,
       materialReference: group.materialReference,
       materialReferences: group.materialReferences,
       layerPlan: group.layerPlan,
@@ -381,6 +398,8 @@ const initialMaterialReference: MaterialReferenceState = {
 type ModelReferenceState = {
   imageUrl: string;
   fileName: string;
+  sourceImageId?: string | null;
+  sourceStoragePath?: string | null;
 };
 
 const isLocalCanvasMaskEngine = (maskEngine?: string | null) => (
@@ -502,6 +521,7 @@ const buildFittingPreviewSvg = ({
 
 export function FittingPage() {
   const navigate = useNavigate();
+  const { setFlowState } = useUnifiedWorkspaceFlow();
   const [searchParams] = useSearchParams();
   const { user, currentBrand } = useAuthStore();
   const { createProject, addObject, saveCurrentProject } = useCanvasStore();
@@ -527,6 +547,7 @@ export function FittingPage() {
   const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [showGallerySelector, setShowGallerySelector] = useState(false);
+  const [showModelGallerySelector, setShowModelGallerySelector] = useState(false);
   const resumeJob = searchParams.get('resumeJob');
   const heavyFallbackSource = searchParams.get('source') === 'lightchain-model-heavy-fallback';
   const heavyFallbackEntryPoint = searchParams.get('entryPoint') || 'permission';
@@ -538,6 +559,18 @@ export function FittingPage() {
   const garmentFileName = materialReference.fileName;
   const modelReferenceImageUrl = modelReference.imageUrl || undefined;
   const patternCount = selectedBodyTypes.length * selectedAgeGroups.length;
+  const fittingFlowState = deriveUnifiedWorkspaceFlowState({
+    inputReady: Boolean(garmentImageUrl),
+    rightsReady: Boolean(rightsConfirmed),
+    generating: isGenerating,
+    completed: resultMatrix.length > 0,
+    failed: Boolean(errorMessage),
+    persisted: history.length > 0,
+  });
+
+  useEffect(() => {
+    setFlowState(fittingFlowState);
+  }, [fittingFlowState, setFlowState]);
 
   const resetFittingDraftPersistenceState = useCallback(() => {
     fittingDraftPersistenceErrorRef.current = false;
@@ -857,6 +890,17 @@ export function FittingPage() {
     materialReference,
     patternCount,
   }), [activeWorkflow.title, genderLabel, materialReference, patternCount, selectedAgeGroupLabels, selectedBodyTypeLabels]);
+  const fittingGenerationHref = useMemo(() => buildGenerationIntentHref({
+    feature: 'model-matrix',
+    prompt: productDescription,
+    aspectRatio: '4:5',
+    ...FITTING_SOURCE_READBACK,
+    ...(materialReference.sourceImageId ? { sourceImageId: materialReference.sourceImageId } : {}),
+    ...(materialReference.sourceStoragePath ? { sourceStoragePath: materialReference.sourceStoragePath } : {}),
+    ...(materialReference.fileName ? { sourceFileName: materialReference.fileName } : {}),
+    bodyTypes: selectedBodyTypes,
+    ageGroups: selectedAgeGroups,
+  }), [materialReference.fileName, materialReference.sourceImageId, materialReference.sourceStoragePath, productDescription, selectedAgeGroups, selectedBodyTypes]);
 
   const handleDownloadFittingImage = async (imageUrl: string, filename: string) => {
     try {
@@ -879,11 +923,28 @@ export function FittingPage() {
       setModelReference({
         imageUrl: await readWorkspaceImageAsDataUrl(file),
         fileName: file.name,
+        sourceImageId: null,
+        sourceStoragePath: null,
       });
       setErrorMessage('');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'モデル画像を読み込めませんでした。');
     }
+  };
+
+  const handleSelectModelGalleryImage = (
+    imageUrl: string,
+    imageId: string,
+    storagePath?: string,
+  ) => {
+    setModelReference({
+      imageUrl,
+      fileName: `Galleryモデル-${imageId.slice(0, 8)}`,
+      sourceImageId: imageId,
+      sourceStoragePath: storagePath ?? null,
+    });
+    setShowModelGallerySelector(false);
+    setErrorMessage('');
   };
 
   const handleSelectFittingGalleryImage = (
@@ -898,7 +959,7 @@ export function FittingPage() {
       sourceImageId: imageId,
       sourceStoragePath: storagePath ?? null,
       fileName: `Gallery素材-${imageId.slice(0, 8)}`,
-      note: `Gallery素材をHeavy Chainの${heavyFallbackPreset} / ${heavyFallbackPose} / ${heavyFallbackLighting}生成へ引き継ぎました。${storagePath ? ` storage:${storagePath}` : ''}`,
+      note: `Gallery素材をHeavy Chainの${heavyFallbackPreset} / ${heavyFallbackPose} / ${heavyFallbackLighting}生成へ引き継ぎました。`,
     });
     setShowGallerySelector(false);
     setErrorMessage('');
@@ -1074,10 +1135,19 @@ export function FittingPage() {
           remotePersistenceStatus: item.persistenceStatus ?? response.persistenceStatus ?? null,
           sourceArtifactId: artifactId,
           sourceStoragePath: item.storagePath ?? null,
+          sourceWorkspace: request.sourceReadback?.sourceWorkspace ?? 'fitting',
+          workflowVersion: request.sourceReadback?.workflowVersion ?? 'fitting-brief-local-v1',
+          sourceLabel: request.sourceReadback?.sourceLabel ?? 'AIフィッティング',
+          sourceResumePath: request.sourceReadback?.sourceResumePath ?? '/fitting',
+          sourceMode: request.sourceReadback?.sourceMode ?? 'local-workflow-intake',
+          bodyTypes: request.bodyTypes,
+          ageGroups: request.ageGroups,
           materialReference: persistedMaterialReference,
           materialReferences: persistedMaterialReferences,
           modelReferenceImageUrl: request.modelReferenceImageUrl ? '[provided]' : null,
           modelReferenceFileName: request.modelReferenceFileName ?? null,
+          modelReferenceSourceImageId: request.modelReferenceSourceImageId ?? null,
+          modelReferenceSourceStoragePath: request.modelReferenceSourceStoragePath ?? null,
           layerPlan: request.layerPlan,
           maskPlan: request.maskPlan,
           compositionPreview: providerCompositionPreview,
@@ -1117,6 +1187,8 @@ export function FittingPage() {
         materialReferences: request.materialReferences,
         modelReferenceImageUrl: request.modelReferenceImageUrl,
         modelReferenceFileName: request.modelReferenceFileName,
+        modelReferenceSourceImageId: request.modelReferenceSourceImageId ?? null,
+        modelReferenceSourceStoragePath: request.modelReferenceSourceStoragePath ?? null,
         layerPlan: request.layerPlan,
         maskPlan: request.maskPlan,
         compositionPreview: providerCompositionPreview,
@@ -1195,6 +1267,8 @@ export function FittingPage() {
         imageUrl: normalizedGarmentImageUrl,
         modelReferenceImageUrl: normalizedModelReferenceImageUrl,
         modelReferenceFileName: modelReference.fileName || undefined,
+        modelReferenceSourceImageId: modelReference.sourceImageId ?? null,
+        modelReferenceSourceStoragePath: modelReference.sourceStoragePath ?? null,
         sourceMaterialImageUrl: garmentImageUrl,
         bodyTypes: selectedBodyTypes,
         ageGroups: selectedAgeGroups,
@@ -1221,8 +1295,17 @@ export function FittingPage() {
     }
   };
 
-  const handleEditHistory = (item: HistoryItem) => {
+  const handleEditHistory = async (item: HistoryItem) => {
     if (!currentBrand || !item.previewUrl) return;
+
+    let modelReferenceImageUrl = item.modelReferenceImageUrl;
+    if (!modelReferenceImageUrl && item.modelReferenceSourceStoragePath) {
+      try {
+        modelReferenceImageUrl = await resolveGeneratedImageUrl(item.modelReferenceSourceStoragePath);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? `モデル参照画像を復元できませんでした。${error.message}` : 'モデル参照画像を復元できませんでした。');
+      }
+    }
 
     const projectId = createProject(`Fitting: ${item.title}`, currentBrand.id);
     const imageUrls = item.imageUrls?.length ? item.imageUrls : [item.previewUrl];
@@ -1262,6 +1345,37 @@ export function FittingPage() {
             layerPlan: item.layerPlan ?? lastRequest?.layerPlan,
             maskPlan: item.maskPlan ?? lastRequest?.maskPlan,
             compositionPreview: item.compositionPreview ?? lastRequest?.compositionPreview,
+            sourceReadback: item.sourceReadback ?? lastRequest?.sourceReadback ?? FITTING_SOURCE_READBACK,
+          },
+        },
+      });
+    }
+    if (modelReferenceImageUrl) {
+      addObject({
+        type: 'image',
+        x: 40,
+        y: 380,
+        width: 220,
+        height: 280,
+        rotation: 0,
+        scaleX: 1,
+        scaleY: 1,
+        opacity: 0.82,
+        locked: false,
+        visible: true,
+        src: modelReferenceImageUrl,
+        label: `${item.modelReferenceFileName ?? 'モデル参照'} / ライブラリ素材`,
+        metadata: {
+          feature: 'model-matrix-model-reference',
+          prompt,
+          generation: 0,
+          parameters: {
+            source: 'fitting-model-reference',
+            sourceImageId: item.modelReferenceSourceImageId ?? null,
+            sourceStoragePath: item.modelReferenceSourceStoragePath ?? null,
+            sourceGalleryImageId: item.modelReferenceSourceImageId ?? null,
+            sourceGalleryStoragePath: item.modelReferenceSourceStoragePath ?? null,
+            prompt,
             sourceReadback: item.sourceReadback ?? lastRequest?.sourceReadback ?? FITTING_SOURCE_READBACK,
           },
         },
@@ -1312,7 +1426,7 @@ export function FittingPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-flow-state={fittingFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[fittingFlowState]}>
       <section className="grid gap-5">
         <div className="glass-panel rounded-2xl p-5 sm:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1332,6 +1446,37 @@ export function FittingPage() {
               <Sparkles className="h-4 w-4" />
               画像を入れて作る
             </button>
+          </div>
+
+          <div className="mt-5" data-testid="fitting-common-flow-readiness">
+            <WorkspaceReadinessStrip
+              eyebrow="共通フロー / AIフィッティング"
+              title="素材を選び、条件を整えて着用結果へ"
+              description="Galleryまたはアップロードから衣服とモデル参照を選び、権利確認後に生成します。生成後は履歴からGallery・Canvasへ戻れます。"
+              steps={[
+                {
+                  label: '衣服・モデル素材',
+                  detail: garmentImageUrl ? (modelReferenceImageUrl ? '衣服とモデル参照を選択済み' : '衣服を選択済み。モデル参照は条件から生成できます') : '衣服をGalleryまたはアップロードから選択',
+                  ready: Boolean(garmentImageUrl),
+                },
+                {
+                  label: '条件・権利確認',
+                  detail: rightsConfirmed ? '商品説明と権利確認が完了' : '商品説明を確認し、権利確認に同意',
+                  ready: Boolean(productDescription.trim()) && rightsConfirmed,
+                },
+                {
+                  label: '生成・結果確認',
+                  detail: isGenerating ? 'モデル着用結果を生成中' : resultMatrix.length > 0 ? `${resultMatrix.length}件の結果を確認できます` : '入力が整うと生成を開始できます',
+                  ready: resultMatrix.length > 0,
+                },
+                {
+                  label: '保存・再利用',
+                  detail: history.length > 0 ? 'HistoryからGallery・Canvasへ再利用できます' : '生成後にHistoryへ保存されます',
+                  ready: history.length > 0,
+                },
+              ]}
+              nextAction={isGenerating ? '生成中' : resultMatrix.length > 0 ? '結果を確認して保存' : garmentImageUrl ? '条件と権利確認を完了' : 'まず衣服素材を選択'}
+            />
           </div>
 
           {heavyFallbackSource && (
@@ -1440,7 +1585,7 @@ export function FittingPage() {
                 過去の画像を見る
               </Link>
               <Link
-                to="/generate?feature=model-matrix"
+                to={fittingGenerationHref}
                 className="btn-secondary inline-flex items-center justify-center gap-2 text-sm"
               >
                 <ArrowRight className="h-4 w-4" />
@@ -1509,14 +1654,25 @@ export function FittingPage() {
                   {modelReference.imageUrl && (
                     <button
                       type="button"
-                      onClick={() => setModelReference({ imageUrl: '', fileName: '' })}
+                      onClick={() => setModelReference({ imageUrl: '', fileName: '', sourceImageId: null, sourceStoragePath: null })}
                       className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-700 ring-1 ring-neutral-200 dark:bg-neutral-950 dark:text-neutral-200 dark:ring-white/10"
                     >
                       解除
                     </button>
                   )}
                 </div>
-                <label className="mt-3 flex min-h-32 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-cyan-300 bg-white/75 p-3 transition hover:border-cyan-500 dark:border-cyan-400/30 dark:bg-surface-950/60">
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowModelGallerySelector(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/50 bg-cyan-100/70 px-3 py-2 text-xs font-semibold text-cyan-950 transition hover:border-cyan-500 hover:bg-cyan-100 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-50"
+                    data-testid="fitting-model-gallery-select"
+                    aria-label="Galleryまたはモデルライブラリからモデル参照を選ぶ"
+                  >
+                    <Images className="h-4 w-4" />
+                    Gallery / モデルライブラリから選ぶ
+                  </button>
+                  <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-cyan-300 bg-white/75 px-3 py-2 transition hover:border-cyan-500 dark:border-cyan-400/30 dark:bg-surface-950/60">
                   <input type="file" accept="image/*" className="sr-only" onChange={handleModelReferenceUpload} />
                   {modelReference.imageUrl ? (
                     <>
@@ -1532,7 +1688,8 @@ export function FittingPage() {
                       <span className="text-sm font-semibold text-neutral-900 dark:text-white">モデル画像を追加</span>
                     </>
                   )}
-                </label>
+                  </label>
+                </div>
               </div>
               {fittingDraftPersistenceStatus !== 'idle' && (
                 <p
@@ -1814,7 +1971,7 @@ export function FittingPage() {
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => handleEditHistory(item)} disabled={!item.previewUrl} className="btn-secondary inline-flex items-center justify-center gap-1 text-xs disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" onClick={() => { void handleEditHistory(item); }} disabled={!item.previewUrl} className="btn-secondary inline-flex items-center justify-center gap-1 text-xs disabled:cursor-not-allowed disabled:opacity-50">
                     <Pencil className="h-3.5 w-3.5" />
                     編集
                   </button>
@@ -1844,6 +2001,13 @@ export function FittingPage() {
           onSelect={handleSelectFittingGalleryImage}
           title="Heavy Chainで使うGallery素材"
           confirmLabel="この素材を使う"
+        />
+        <GallerySelector
+          isOpen={showModelGallerySelector}
+          onClose={() => setShowModelGallerySelector(false)}
+          onSelect={handleSelectModelGalleryImage}
+          title="モデル参照をGallery / モデルライブラリから選択"
+          confirmLabel="このモデルを使う"
         />
       </section>
     </div>

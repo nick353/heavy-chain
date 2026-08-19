@@ -22,11 +22,13 @@ import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
 import { listWorkspaceArtifacts, saveWorkspaceArtifactBestEffort, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
+import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 
 const channels = [
   { id: 'ec', label: 'EC', icon: ShoppingBag },
@@ -155,12 +157,14 @@ const buildMarketingProjectHref = (artifact: WorkspaceArtifact) => {
 export function MarketingWorkspacePage() {
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
+  const { setFlowState } = useUnifiedWorkspaceFlow();
   const [activeChannel, setActiveChannel] = useState<ChannelId>('ec');
   const [selectedTemplate, setSelectedTemplate] = useState<string>(templatesByChannel.ec[0]);
   const [campaignCopy, setCampaignCopy] = useState('軽やかなリネンセットで、静かな夏をはじめる。');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
   const [uploadError, setUploadError] = useState('');
   const [job, setJob] = useState<MarketingJob>(initialJob);
+  const [savedArtifactId, setSavedArtifactId] = useState<string | null>(null);
   const [isHandingOff, setIsHandingOff] = useState(false);
 
   const { createProject, deleteProject, addObject, saveCurrentProject } = useCanvasStore();
@@ -175,6 +179,12 @@ export function MarketingWorkspacePage() {
       : [],
     [currentBrandId, user?.id],
   );
+
+  useEffect(() => {
+    setSavedArtifactId(persistedProjects[0]?.id ?? null);
+  }, [persistedProjects]);
+
+  const markWorkflowDirty = () => setSavedArtifactId(null);
 
   const activeLabel = useMemo(
     () => channels.find((channel) => channel.id === activeChannel)?.label ?? 'EC',
@@ -193,6 +203,18 @@ export function MarketingWorkspacePage() {
     productImageUrl &&
     (job.status === 'running' || job.status === 'stalled' || job.status === 'succeeded')
   );
+  const marketingFlowState = deriveUnifiedWorkspaceFlowState({
+    inputReady: canStart,
+    rightsReady: true,
+    generating: job.status === 'running',
+    completed: Boolean(savedArtifactId),
+    failed: job.status === 'failed' || job.status === 'stalled',
+    persisted: Boolean(savedArtifactId),
+  });
+
+  useEffect(() => {
+    setFlowState(marketingFlowState);
+  }, [marketingFlowState, setFlowState]);
 
   useEffect(() => {
     setSelectedTemplate((current) => (
@@ -233,6 +255,7 @@ export function MarketingWorkspacePage() {
   }, [productImageUrl, uploadError]);
 
   const handleChannelChange = (channelId: ChannelId) => {
+    markWorkflowDirty();
     setActiveChannel(channelId);
   };
 
@@ -242,6 +265,7 @@ export function MarketingWorkspacePage() {
       return;
     }
 
+    markWorkflowDirty();
     setUploadError('');
     setJob({
       id: `local-marketing-${Date.now()}`,
@@ -337,6 +361,7 @@ export function MarketingWorkspacePage() {
       }
       persistedArtifactId = result.artifact.id;
       persistedSourceJobId = result.artifact.sourceJobId ?? result.remote?.jobId ?? job.id;
+      setSavedArtifactId(result.artifact.id);
       toast.success('Canvasへ保存しました');
     } catch (error) {
       deleteProject(projectId);
@@ -435,7 +460,7 @@ export function MarketingWorkspacePage() {
   }[job.status];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-flow-state={marketingFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[marketingFlowState]}>
       <section className="rounded-[28px] border border-white/10 bg-[#050707] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-9">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
@@ -549,7 +574,7 @@ export function MarketingWorkspacePage() {
               <button
                 key={template}
                 type="button"
-                onClick={() => setSelectedTemplate(template)}
+                onClick={() => { markWorkflowDirty(); setSelectedTemplate(template); }}
                 aria-pressed={selectedTemplate === template}
                 className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-semibold transition ${
                   selectedTemplate === template
@@ -643,7 +668,10 @@ export function MarketingWorkspacePage() {
                   uploadLabel="商品・ロゴ・背景素材をアップロード"
                   emptyLabel="素材を置くと、Canvasへ販促レイヤーとして渡せます"
                   state={materialReference}
-                  onChange={setMaterialReference}
+                  onChange={(next) => {
+                    markWorkflowDirty();
+                    setMaterialReference(next);
+                  }}
                   materialKinds={['商品画像', 'ロゴ', '背景', '小物', 'テキスト下地']}
                   layerOptions={['商品', 'ロゴ', '背景', 'コピー', 'CTA']}
                   placementOptions={['メインビジュアル', '左寄せ', '右寄せ', '背景全面', 'CTA周辺']}
@@ -658,7 +686,7 @@ export function MarketingWorkspacePage() {
                 <textarea
                   id="campaign-copy"
                   value={campaignCopy}
-                  onChange={(event) => setCampaignCopy(event.target.value)}
+                  onChange={(event) => { markWorkflowDirty(); setCampaignCopy(event.target.value); }}
                   rows={6}
                   className="w-full rounded-2xl border border-white/10 bg-[#050707] p-4 text-sm leading-6 text-white shadow-inner outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
                 />

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { buildLocalCanvasAssetReference, hasLocalCanvasAsset } from '../lib/canvasLocalAssets';
+import { normalizeCanvasView, type CanvasView } from '../lib/canvasView';
 import type { Json } from '../types/database';
 import type {
   CanvasSourceIdentity,
@@ -14,6 +15,8 @@ export type {
   CanvasSourceReadback,
   CanvasSourceRevision,
 } from '../features/canvasSourceMetadata';
+export { normalizeCanvasView } from '../lib/canvasView';
+export type { CanvasView } from '../lib/canvasView';
 export {
   buildLocalUploadSourceMetadata,
   sanitizeCanvasSourceMetadata,
@@ -78,6 +81,12 @@ export interface CanvasObject {
     galleryStoragePath?: string;
     galleryImageId?: string;
     galleryImageUrl?: string;
+    inputLineage?: Array<{
+      role: string;
+      sourceImageId?: string | null;
+      sourceStoragePath?: string | null;
+      referenceType?: string | null;
+    }>;
     source?: string;
     parityRuntime?: Json;
     legalSafety?: {
@@ -112,6 +121,7 @@ export interface CanvasProject {
   id: string;
   name: string;
   objects: CanvasObject[];
+  view?: CanvasView;
   thumbnail?: string;
   createdAt: string;
   updatedAt: string;
@@ -260,6 +270,7 @@ export const useCanvasStore = create<CanvasState>()(
           id,
           name,
           objects: initialObjects,
+          view: { zoom: 1, panX: 0, panY: 0 },
           createdAt: now,
           updatedAt: now,
           brandId,
@@ -286,6 +297,7 @@ export const useCanvasStore = create<CanvasState>()(
         const project = projects.find(p => p.id === projectId);
         
         if (project) {
+          const view = normalizeCanvasView(project.view);
           set({
             currentProjectId: project.id,
             currentProjectName: project.name,
@@ -293,37 +305,40 @@ export const useCanvasStore = create<CanvasState>()(
             selectedIds: [],
             history: [project.objects],
             historyIndex: 0,
-            zoom: 1,
-            panX: 0,
-            panY: 0,
+            zoom: view.zoom,
+            panX: view.panX,
+            panY: view.panY,
           });
         }
       },
 
       hydrateProject: (project) => {
+        const view = normalizeCanvasView(project.view);
+        const hydratedProject = { ...project, view };
         set((state) => ({
-          projects: [project, ...state.projects.filter((item) => item.id !== project.id)],
-          currentProjectId: project.id,
-          currentProjectName: project.name,
-          objects: project.objects,
+          projects: [hydratedProject, ...state.projects.filter((item) => item.id !== project.id)],
+          currentProjectId: hydratedProject.id,
+          currentProjectName: hydratedProject.name,
+          objects: hydratedProject.objects,
           selectedIds: [],
-          history: [project.objects],
+          history: [hydratedProject.objects],
           historyIndex: 0,
-          zoom: 1,
-          panX: 0,
-          panY: 0,
+          zoom: view.zoom,
+          panX: view.panX,
+          panY: view.panY,
         }));
       },
 
       saveCurrentProject: () => {
-        const { currentProjectId, currentProjectName, objects, projects } = get();
+        const { currentProjectId, currentProjectName, objects, projects, zoom, panX, panY } = get();
+        const view = normalizeCanvasView({ zoom, panX, panY });
         
         if (!currentProjectId) {
           // Create new project if none exists
           const id = get().createProject(currentProjectName);
           set((state) => ({
             projects: state.projects.map(p =>
-              p.id === id ? { ...p, objects, updatedAt: new Date().toISOString() } : p
+              p.id === id ? { ...p, objects, view, updatedAt: new Date().toISOString() } : p
             ),
           }));
           return;
@@ -332,7 +347,7 @@ export const useCanvasStore = create<CanvasState>()(
         set({
           projects: projects.map(p =>
             p.id === currentProjectId
-              ? { ...p, name: currentProjectName, objects, updatedAt: new Date().toISOString() }
+              ? { ...p, name: currentProjectName, objects, view, updatedAt: new Date().toISOString() }
               : p
           ),
         });

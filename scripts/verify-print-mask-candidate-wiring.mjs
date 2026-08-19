@@ -171,7 +171,8 @@ const checks = {
     && library.includes('conformBoundedSurfaceRoi({')
     && !page.includes('高解像度出力では「布面追従（試験）」を省略'),
   png_download_has_stable_dimensions_and_filename: page.includes('PNGをダウンロード')
-    && page.includes('download={`heavy-chain-${result.id}-${result.outputSize.width}x${result.outputSize.height}.png`}'),
+    && page.includes('downloadValidatedImage(')
+    && page.includes('`heavy-chain-${result.id}-${result.outputSize?.width ?? \'result\'}x${result.outputSize?.height ?? \'image\'}.png`'),
   preview_surface_mask_stays_at_legacy_resolution: page.includes('stageSize: printPreviewStageSize'),
   printable_suggestion_requires_explicit_review_and_manual_apply: page.includes('印刷面の候補を作る（試験）')
     && page.includes('印刷可能面の候補を確認・修正')

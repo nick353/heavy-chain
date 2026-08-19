@@ -117,3 +117,23 @@ test('Lightchain generation lanes accept the marketing and fitting source contra
   assert.match(modelMatrix, /sourceTelemetryMetadata\(requestSourceMetadata\)/);
   assert.match(read('supabase/functions/design-gacha/index.ts'), /sourceTelemetryMetadata/);
 });
+
+test('Fitting-to-generation handoff preserves canonical Gallery identity and re-signs it after navigation', () => {
+  const handoff = read('src/lib/workspaceHandoff.ts');
+  const fitting = read('src/pages/FittingPage.tsx');
+  const generate = read('src/pages/GeneratePage.tsx');
+
+  assert.match(handoff, /sourceImageId\?: string/);
+  assert.match(handoff, /sourceStoragePath\?: string/);
+  assert.match(handoff, /params\.set\('sourceImageId', sourceImageId\)/);
+  assert.match(handoff, /params\.set\('sourceStoragePath', sourceStoragePath\)/);
+  assert.match(handoff, /params\.get\('sourceStoragePath'\)/);
+  assert.match(fitting, /const fittingGenerationHref = useMemo\(\(\) => buildGenerationIntentHref/);
+  assert.match(fitting, /sourceImageId: materialReference\.sourceImageId/);
+  assert.match(fitting, /sourceStoragePath: materialReference\.sourceStoragePath/);
+  assert.match(fitting, /to=\{fittingGenerationHref\}/);
+  assert.doesNotMatch(fitting, /storage:\$\{storagePath\}/);
+  assert.match(generate, /resolveGeneratedImageUrl\(sourceReadback\.sourceStoragePath/);
+  assert.match(generate, /galleryImageId: sourceReadback\.sourceImageId/);
+  assert.match(generate, /sourceStoragePath: sourceReadback\.sourceStoragePath/);
+});

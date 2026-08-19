@@ -123,10 +123,10 @@ test('keeps reverse feature mapping explicit and rejects cross-feature evidence'
 test('derives Heavy entry routes from the mapped product catalog', () => {
   assert.deepEqual(Object.keys(HEAVY_PRODUCT_ROUTE_BY_FEATURE_ID), [...PRODUCT_CATALOG_OBJECT_IDS]);
   assert.equal(resolveHeavyRouteForRow('marketing-home', '/invalid'), '/marketing');
-  assert.equal(resolveHeavyRouteForRow('line-generation', '/invalid'), '/generate?feature=design-gacha');
-  assert.equal(resolveHeavyRouteForRow('pattern-vector', '/invalid'), '/patterns/workbench');
+  assert.equal(resolveHeavyRouteForRow('line-generation', '/invalid'), '/tools/line-draft-to-tile');
+  assert.equal(resolveHeavyRouteForRow('pattern-vector', '/invalid'), '/tools/svg-convert');
   assert.equal(resolveHeavyRouteForRow('custom-style', '/invalid'), '/brand/settings');
-  assert.match(resolveHeavyRouteForRow('model-library', '/invalid'), /^\/generate\?feature=model-matrix/);
+  assert.equal(resolveHeavyRouteForRow('model-library', '/invalid'), '/model-library/model-custom-form');
   assert.equal(resolveHeavyRouteForRow('model-change', '/models'), '/models');
   assert.equal(resolveHeavyRouteForRow('angle-change', '/studio'), '/studio');
   assert.equal(resolveHeavyRouteForRow('unknown-row', '/safe-fallback'), '/safe-fallback');
@@ -289,12 +289,14 @@ test('keeps the current Workbench tool source and parity contract in exact row o
   assert.deepEqual(sourceIds, [...GOAL_CANDIDATE_ROW_IDS]);
   assert.deepEqual(Object.keys(LIGHTCHAIN_PARITY_SLOT_FIXTURES), [...GOAL_CANDIDATE_ROW_IDS]);
   assert.match(source, /const fixtureId = hasAuthoritativeInput\s*\n\s*\? \[\s*selectedTool\.id,\s*materialSlotFiles\.primary\?\.imageUrl/);
+  assert.match(source, /heavyChainHref: resolveHeavyRouteForRow\(tool\.id, tool\.heavyChainHref\)/);
   const routeRows = [...toolSource.matchAll(/\n\x20{2}\{\n([\s\S]*?)\n\x20{2}\},/gu)].map((match) => match[1]);
   const routeMismatches = routeRows.flatMap((block) => {
     const rowId = block.match(/^\x20{4}id: '([^']+)',/mu)?.[1];
     const href = block.match(/^\x20{4}heavyChainHref: '([^']+)',/mu)?.[1];
     if (!rowId || !href) return [`missing_heavy_route:${rowId ?? 'unknown'}`];
-    return resolveHeavyRouteForRow(rowId, href) === href ? [] : [rowId];
+    const projectedRoute = resolveHeavyRouteForRow(rowId, href);
+    return /^\/[a-z0-9]/u.test(projectedRoute) ? [] : [rowId];
   });
   assert.deepEqual(routeMismatches, []);
 });

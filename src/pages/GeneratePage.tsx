@@ -47,11 +47,13 @@ import {
 } from '../lib/workspaceMaterialReferences';
 import { generateImage } from '../lib/imageApi';
 import {
+  buildGenerationIntentHref,
   hydrateGenerationIntentSource,
   hydratePatternGenerationContext,
   type GenerationIntent,
-  type PatternGenerationContext,
 } from '../lib/workspaceHandoff';
+import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
+import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import { buildProductionImagePrompt, mergeProductionNegativePrompt } from '../lib/productPromptQuality';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
@@ -70,6 +72,7 @@ import {
   type LightchainCategoryId,
 } from '../lib/lightchainParityCatalog';
 import { normalizeModelMatrixSemanticVerification, type ModelMatrixSemanticVerification } from '../lib/modelMatrixVerification';
+import { resolveGeneratedImageUrl } from '../lib/storage';
 import {
   createTrustedPatternsResultProvenance,
   isTrustedPatternsResultProvenance,
@@ -819,45 +822,6 @@ const createPlanningCardDataUrl = ({
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.trim())}`;
 };
 
-const buildGenerationIntentHref = (
-  feature: string,
-  prompt: string,
-  ratio: string,
-  sourceReadback: NonNullable<ReturnType<typeof hydrateGenerationIntentSource>>,
-  modelMatrixParams?: Pick<GenerationIntent, 'bodyTypes' | 'ageGroups' | 'skinTone' | 'hairStyle' | 'modelCandidateLabel'>,
-  patternContext?: PatternGenerationContext | null
-) => {
-  const params = new URLSearchParams({
-    feature,
-    prompt,
-    ratio,
-    sourceWorkspace: sourceReadback.sourceWorkspace,
-    workflowVersion: sourceReadback.workflowVersion,
-    sourceLabel: sourceReadback.sourceLabel,
-    sourceResumePath: sourceReadback.sourceResumePath,
-    sourceMode: sourceReadback.sourceMode,
-  });
-  if (modelMatrixParams?.bodyTypes?.length) params.set('bodyTypes', modelMatrixParams.bodyTypes.join(','));
-  if (modelMatrixParams?.ageGroups?.length) params.set('ageGroups', modelMatrixParams.ageGroups.join(','));
-  if (modelMatrixParams?.skinTone) params.set('skinTone', modelMatrixParams.skinTone);
-  if (modelMatrixParams?.hairStyle) params.set('hairStyle', modelMatrixParams.hairStyle);
-  if (modelMatrixParams?.modelCandidateLabel) params.set('modelCandidateLabel', modelMatrixParams.modelCandidateLabel);
-  if (patternContext) {
-    params.set('patternPreviewId', patternContext.selectedPatternPreview.id);
-    params.set('patternPreviewLabel', patternContext.selectedPatternPreview.label);
-    params.set('patternPreviewMode', patternContext.selectedPatternPreview.mode);
-    params.set('repeatSignature', patternContext.selectedPatternPreview.repeatSignature);
-    params.set('vectorSignature', patternContext.selectedPatternPreview.vectorSignature);
-    params.set('paletteSignature', patternContext.selectedPatternPreview.paletteSignature);
-    params.set('motifPrompt', patternContext.motifPrompt);
-    params.set('repeatStyle', patternContext.repeatStyle);
-    params.set('garmentTarget', patternContext.garmentTarget);
-    params.set('paletteNotes', patternContext.paletteNotes);
-    params.set('vectorIntent', patternContext.vectorIntent);
-    params.set('referenceAssets', patternContext.referenceAssets);
-  }
-  return `/generate?${params.toString()}`;
-};
 function getModelMatrixVerificationState(image: GeneratedResult) {
   const semanticVerification = normalizeModelMatrixSemanticVerification(image);
   const referenceSummary = image.referenceSummary ?? image.prompt ?? null;
@@ -1027,6 +991,7 @@ export function GeneratePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, currentBrand } = useAuthStore();
+  const { setFlowState } = useUnifiedWorkspaceFlow();
   const { addToHistory } = usePromptHistory();
   const initialFeatureRef = useRef<Feature | null>(getInitialFeatureFromLocation());
   const categoryParam = searchParams.get('category');
@@ -1245,6 +1210,44 @@ export function GeneratePage() {
       setSelectedRatio(ratioParam);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (renderedFeatureId !== 'model-matrix' || !sourceReadback?.sourceStoragePath) return;
+    let cancelled = false;
+    const restoreSourceReference = async () => {
+      try {
+        const imageUrl = await resolveGeneratedImageUrl(sourceReadback.sourceStoragePath!);
+        if (cancelled) return;
+        const selectedSource: SelectedImage = {
+          url: imageUrl,
+          referenceType: 'base',
+          fromGallery: true,
+          galleryImageId: sourceReadback.sourceImageId,
+          storagePath: sourceReadback.sourceStoragePath,
+        };
+        setReferenceImage(selectedSource);
+        setMaterialReference((current) => ({
+          ...current,
+          imageUrl,
+          fileName: sourceReadback.sourceFileName || current.fileName || 'Gallery素材',
+          sourceImageId: sourceReadback.sourceImageId ?? null,
+          sourceStoragePath: sourceReadback.sourceStoragePath ?? null,
+          note: current.note || 'Fittingから引き継いだGallery素材',
+        }));
+        setGenerationError('');
+      } catch (error) {
+        if (!cancelled) {
+          setGenerationError(error instanceof Error
+            ? `Fitting素材の再署名に失敗しました。${error.message}`
+            : 'Fitting素材を再読み込みできませんでした。Galleryから選び直してください。');
+        }
+      }
+    };
+    void restoreSourceReference();
+    return () => {
+      cancelled = true;
+    };
+  }, [renderedFeatureId, sourceReadback?.sourceFileName, sourceReadback?.sourceImageId, sourceReadback?.sourceStoragePath]);
 
   const resetSharedInputs = () => {
     setPrompt('');
@@ -1668,7 +1671,12 @@ export function GeneratePage() {
         const generationIntent: GenerationIntent = {
           feature: feature.id,
           prompt: intentPrompt,
-          href: buildGenerationIntentHref(feature.id, intentPrompt, ratio, sourceReadback),
+              href: buildGenerationIntentHref({
+                feature: feature.id,
+                prompt: intentPrompt,
+                aspectRatio: ratio,
+                ...sourceReadback,
+              }),
           label: `${feature.name}で生成`,
           aspectRatio: ratio,
           ...sourceReadback,
@@ -2361,14 +2369,14 @@ export function GeneratePage() {
             const generationIntent: GenerationIntent = {
               feature: selectedFeature.id,
               prompt: intentPrompt,
-              href: buildGenerationIntentHref(
-                selectedFeature.id,
-                intentPrompt,
-                selectedRatio,
-                sourceReadback,
-                modelMatrixParams,
-                generatedPatternContext
-              ),
+              href: buildGenerationIntentHref({
+                feature: selectedFeature.id,
+                prompt: intentPrompt,
+                aspectRatio: selectedRatio,
+                ...sourceReadback,
+                ...modelMatrixParams,
+                patternContext: generatedPatternContext ?? undefined,
+              }),
               label: `${selectedFeature.name}で生成`,
               aspectRatio: selectedRatio,
               ...sourceReadback,
@@ -3801,6 +3809,18 @@ export function GeneratePage() {
       description: 'エラー内容を直して、同じ入力からもう一度送れます。',
     },
   }[generationFlowStage];
+  const unifiedFlowState = deriveUnifiedWorkspaceFlowState({
+    inputReady: generationFlowStage === 'ready' || generationFlowStage === 'generating' || generationFlowStage === 'complete',
+    rightsReady: noImageGenerationMode || rightsConfirmed,
+    generating: isGenerating,
+    completed: generatedImages.length > 0 || Boolean(optimizedPromptResult),
+    failed: Boolean(generationError),
+  });
+
+  useEffect(() => {
+    setFlowState(unifiedFlowState);
+  }, [setFlowState, unifiedFlowState]);
+
   const primaryActionLabel = isGenerating
     ? '生成中...'
     : generationFlowStage === 'failed'
@@ -3965,7 +3985,12 @@ export function GeneratePage() {
 
   // Feature detail view
   return (
-    <div className="mx-auto max-w-[1720px] px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+    <div
+      className="mx-auto max-w-[1720px] px-4 py-4 sm:px-6 sm:py-6 lg:px-8"
+      data-testid="heavy-generate-workspace"
+      data-flow-state={unifiedFlowState}
+      data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
+    >
       <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/95 text-white shadow-soft">
         <div className="flex flex-col gap-3 px-4 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">

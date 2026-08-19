@@ -1213,38 +1213,40 @@ test.describe('workspace activity pages', () => {
     await page.goto('/dashboard');
 
     await expect(page.getByRole('heading', { name: '今日の作業状況' })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('heading', { name: /Lightchainで慣れた入口/ })).toBeVisible();
-    await expect(page.getByText('Lightchain互換ホーム')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '制作入口' })).toBeVisible();
+    await expect(page.getByText('商品素材から、販促、着用画像、柄、編集、動画までを目的別に選んで始められます。')).toBeVisible();
     await expect(page.getByRole('link', { name: /マーケティングワークスペース/ })).toHaveAttribute('href', '/marketing');
-    await expect(page.getByRole('link', { name: /AIフィッティング/ }).first()).toHaveAttribute('href', '/fitting');
+    await expect(page.getByRole('link', { name: 'AIフィッティング', exact: true })).toHaveAttribute('href', '/lightchain?category=fitting');
+    await expect(page.getByRole('link', { name: /AIフィッティング 保存まで対応/ })).toHaveAttribute('href', '/model');
 
     await page.getByRole('button', { name: /グラフィックツール/ }).click();
-    await expect(page.getByRole('link', { name: /AIグラフィックデザイン/ })).toHaveAttribute('href', '/patterns');
+    await expect(page.getByRole('link', { name: /AIグラフィックデザイン/ })).toHaveAttribute('href', '/patterns/workbench');
     await expect(page.getByRole('link', { name: /デザインアレンジ/ })).toHaveAttribute('href', /\/generate\?feature=generate-variations&lcFeature=design-arrange/);
     await expect(page.getByRole('link', { name: /類似バリエーション生成/ })).toHaveAttribute('href', /\/generate\?feature=generate-variations&lcFeature=image-variations/);
 
-    await page.getByPlaceholder('機能名で検索').fill('ベクター');
+    await page.getByPlaceholder('ツールを検索').fill('ベクター');
     await expect(page.getByRole('link', { name: /パターンをベクター画像に変換/ })).toBeVisible();
-    await page.getByPlaceholder('機能名で検索').fill('');
+    await page.getByPlaceholder('ツールを検索').fill('');
 
     await page.getByRole('button', { name: /グラフィックツール/ }).click();
     await expect(page.getByRole('link', { name: /背景削除・切り抜き/ })).toHaveAttribute('href', /\/generate\?feature=remove-bg&lcFeature=remove-background/);
     await expect(page.getByRole('link', { name: /Canvasで編集・管理/ })).toHaveAttribute('href', '/canvas/new');
 
     await page.getByRole('button', { name: /企画デザインツール/ }).click();
-    await expect(page.getByRole('link', { name: /部分修正・対話編集/ })).toHaveAttribute('href', /\/generate\?feature=chat-edit&lcFeature=partial-fix/);
+    await expect(page.getByRole('link', { name: /対話編集/ })).toHaveAttribute('href', /\/generate\?feature=chat-edit&lcFeature=partial-fix/);
     await page.getByRole('button', { name: /グラフィックツール/ }).click();
 
     await page.getByRole('link', { name: /背景削除・切り抜き/ }).click();
     await expect(page).toHaveURL(/\/generate\?feature=remove-bg&lcFeature=remove-background/);
-    await expect(page.getByText('Lightchain互換')).toBeVisible();
+    await page.locator('details').filter({ hasText: '詳細情報' }).locator('summary').click();
+    await expect(page.getByText('制作連携')).toBeVisible();
     await expect(page.getByText('CutOut / RemoveBackground').first()).toBeVisible();
 
     await page.goto('/dashboard');
     await page.getByRole('button', { name: /グラフィックツール/ }).click();
 
     await page.getByRole('link', { name: /パターンをベクター画像に変換/ }).click();
-    await expect(page).toHaveURL(/\/patterns$/);
+    await expect(page).toHaveURL(/\/patterns\/workbench$/);
 
     expect(functionRequests).toEqual([]);
     expect(storageRequests).toEqual([]);
@@ -1269,7 +1271,7 @@ test.describe('workspace activity pages', () => {
     await page.goto(`/generate?${params.toString()}`);
 
     await expect(page.getByRole('heading', { name: 'キャンペーン画像' })).toBeVisible();
-    await expect(page.getByText('Lightchain互換')).toBeVisible();
+    await expect(page.getByText('制作連携')).toBeVisible();
     await expect(page.getByText('FashionStudio / Video Workstation')).toBeVisible();
 
     await page.getByRole('button', { name: '生成' }).click();
@@ -1300,7 +1302,7 @@ test.describe('workspace activity pages', () => {
     });
     await page.goto(`/generate?${params.toString()}`);
 
-    await expect(page.getByText('Lightchain互換')).toBeVisible();
+    await expect(page.getByText('制作連携')).toBeVisible();
     await expect(page.getByText('CutOut / RemoveBackground')).toBeVisible();
     await expect(page.getByRole('heading', { name: '背景削除' })).toBeVisible();
 
@@ -1687,8 +1689,8 @@ test.describe('workspace activity pages', () => {
     await expect(page.getByRole('heading', { name: '今日の作業状況' })).toBeVisible();
     await expect(page.getByRole('heading', { name: '進行中のジョブ' })).toBeVisible();
     await expect(page.getByText('失敗から再開')).toBeVisible();
-    await expect(page.getByText('Lightchain task: FashionStudio / Video Workstation')).toBeVisible();
-    await expect(page.getByText('Lightchain steps: FashionStudio=処理中 / Video Workstation=処理中')).toBeVisible();
+    await expect(page.getByText('制作: FashionStudio / Video Workstation')).toBeVisible();
+    await expect(page.getByText('進行ステップ: FashionStudio=処理中 / Video Workstation=処理中')).toBeVisible();
   });
 
   test('dashboard quick workflow opens SNS campaign board and advances to generator without remote writes', async ({ page }) => {
@@ -1734,12 +1736,13 @@ test.describe('workspace activity pages', () => {
 
     await page.goto('/jobs');
 
-    await expect(page.getByRole('heading', { name: 'ジョブ' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '制作キュー' })).toBeVisible();
     await expect(page.getByText('Premium summer sale apparel campaign image')).toBeVisible();
+    await page.getByRole('button', { name: '要確認 1件を表示' }).click();
     await expect(page.getByText('テスト用の生成失敗')).toBeVisible();
-    await expect(page.getByText('Lightchain task:', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Heavy Chain task:', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('CutOut / RemoveBackground')).toBeVisible();
-    await expect(page.getByText('Lightchain状態:', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Heavy Chain状態:', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('失敗・再試行可', { exact: true }).first()).toBeVisible();
   });
 
@@ -1904,7 +1907,7 @@ test.describe('workspace activity pages', () => {
     await expect(page.getByText('Premium summer sale apparel campaign image')).toBeVisible();
   });
 
-  test('gallery detail creates share links for saved images', async ({ page }) => {
+  test('gallery detail keeps public sharing locked for non-local images', async ({ page }) => {
     const shareLinkRequests: unknown[] = [];
     await mockSupabase(page, { shareLinkRequests });
     await completeOnboardingForMockUser(page);
@@ -1915,16 +1918,9 @@ test.describe('workspace activity pages', () => {
 
     const detailModal = page.locator('.fixed.inset-0');
     await expect(detailModal.getByText('画像の詳細')).toBeVisible({ timeout: 15_000 });
-    await detailModal.getByRole('button', { name: '共有リンクを作成' }).click();
-
-    await expect.poll(() => shareLinkRequests.length).toBe(1);
-    expect(shareLinkRequests[0]).toMatchObject({
-      imageId: '00000000-0000-4000-8000-000000000201',
-      expiresInDays: 7,
-    });
-    await expect(detailModal.getByText('共有リンク', { exact: true })).toBeVisible();
-    await expect(detailModal.getByText('https://heavy-chain.example/share/mock-00000000-0000-4000-8000-000000000201')).toBeVisible();
-    await expect(detailModal.getByText(/有効期限:/)).toBeVisible();
+    const shareButton = detailModal.getByRole('button', { name: '共有リンクは未有効' });
+    await expect(shareButton).toBeDisabled();
+    expect(shareLinkRequests).toEqual([]);
   });
 
   test('public share page renders a shared image without onboarding', async ({ page }) => {

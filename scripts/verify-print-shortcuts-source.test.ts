@@ -35,7 +35,7 @@ test('Patterns result cards expose a guarded print handoff and the printing page
   assert.match(generateSource, /replaceGeneratedImages\(geminiResults\)/);
   assert.match(generateSource, /const materializedDesignGachaResults = await Promise\.all/);
   assert.match(generateSource, /replaceGeneratedImages\(materializedDesignGachaResults\)/);
-  assert.match(generateSource, /setGeneratedImages\(\(prev\) => \[\.\.\.importedResults, \.\.\.prev\]\)/);
+  assert.match(generateSource, /prependGeneratedImages\(data\.images\.map/);
   assert.match(generateSource, /Boolean\(image\.jobId\)/);
   assert.match(generateSource, /Boolean\(image\.imageId \|\| image\.storagePath\)/);
   assert.match(generateSource, /image\.imageUrl\.startsWith\('https:\/\/'\)/);

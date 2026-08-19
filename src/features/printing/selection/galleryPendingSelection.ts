@@ -1,4 +1,4 @@
-import { classifyGeneratedImageReference } from '../../../lib/storagePathSafety';
+import { classifyGeneratedImageReference } from '../../../lib/storagePathSafety.ts';
 
 export interface GalleryPendingImage {
   id: string;

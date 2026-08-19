@@ -4,18 +4,21 @@ import toast from 'react-hot-toast';
 import { Check, ChevronRight, ImagePlus, Palette, Repeat2, Save, Shapes, Shirt, Upload, WandSparkles } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
 import type { PatternGenerationContext, PatternPreviewContext } from '../lib/workspaceHandoff';
+import { listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
 import {
   buildGenerationIntentHref,
   handoffWorkspaceToCanvas,
   restoreWorkspaceHandoffHistory,
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
+import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 
 const modes = ['グラフィック', '総柄', 'ベクター化'] as const;
 
@@ -264,6 +267,7 @@ const buildPatternPreviewSvg = ({
 export function PatternWorkspacePage() {
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
+  const { setFlowState } = useUnifiedWorkspaceFlow();
   const [activeMode, setActiveMode] = useState<Mode>(modes[0]);
   const [selectedPreviewId, setSelectedPreviewId] = useState('graphic-emblem');
   const [progress, setProgress] = useState(32);
@@ -275,6 +279,7 @@ export function PatternWorkspacePage() {
   const [vectorIntent, setVectorIntent] = useState('刺繍とシルクスクリーンに使える2色ベクターへ整理');
   const [referenceAssets, setReferenceAssets] = useState('chain_mark_ref.svg, vintage_bandana_grid.png, tee_mockup_front.jpg');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
+  const [savedArtifactId, setSavedArtifactId] = useState<string | null>(null);
   const nextHistoryId = useRef(1);
   const previewCandidates = useMemo<PatternPreviewCandidate[]>(() => {
     const candidates = [
@@ -321,7 +326,23 @@ export function PatternWorkspacePage() {
   const selectedPreview = previewCandidates.find((candidate) => candidate.id === selectedPreviewId) ?? previewCandidates[0];
   const primaryInput = `${motifPrompt} / ${garmentTarget}`;
   const nextStep = `${repeatStyle}をpattern-design-briefとして、${vectorIntent}へ進める`;
+  const patternFlowState = deriveUnifiedWorkspaceFlowState({
+    inputReady: Boolean(motifPrompt.trim() && repeatStyle.trim() && garmentTarget.trim()),
+    rightsReady: true,
+    generating: false,
+    completed: Boolean(savedArtifactId),
+    failed: false,
+    persisted: Boolean(savedArtifactId),
+  });
+
   useEffect(() => {
+    setFlowState(patternFlowState);
+  }, [patternFlowState, setFlowState]);
+  useEffect(() => {
+    const savedArtifact = currentBrand?.id
+      ? listWorkspaceArtifacts(currentBrand.id, user?.id).find((artifact) => artifact.featureType === 'graphic-pattern-workspace')
+      : null;
+    setSavedArtifactId(savedArtifact?.id ?? null);
     setHistory(restoreWorkspaceHandoffHistory(currentBrand?.id, 'graphic-pattern-workspace', user?.id));
   }, [currentBrand?.id, user?.id]);
   const directPatternGenerationHref = buildGenerationIntentHref({
@@ -358,6 +379,7 @@ export function PatternWorkspacePage() {
   });
 
   const recordProgress = (mode: Mode) => {
+    setSavedArtifactId(null);
     const historyItem = {
       id: `pattern-history-${nextHistoryId.current++}`,
       label: `${mode}をローカル履歴に追加`,
@@ -371,6 +393,7 @@ export function PatternWorkspacePage() {
   };
 
   const toggleReferenceAsset = (asset: string) => {
+    setSavedArtifactId(null);
     const currentAssets = referenceAssets
       .split(',')
       .map((item) => item.trim())
@@ -437,7 +460,7 @@ export function PatternWorkspacePage() {
       `Next step: ${nextStep}`,
     ].join('\n');
     try {
-    const { projectId } = handoffWorkspaceToCanvas({
+    const { artifact, projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
       scopeId: user?.id,
       featureType: 'graphic-pattern-workspace',
@@ -535,8 +558,9 @@ export function PatternWorkspacePage() {
 	        selectedPatternPreview,
 	        materialReference: materialReferenceMetadata,
 	      },
-	    });
+    });
 
+    setSavedArtifactId(artifact.id);
     toast.success('柄・グラフィックを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
     } catch (error) {
@@ -547,7 +571,7 @@ export function PatternWorkspacePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-flow-state={patternFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[patternFlowState]}>
       <section className="glass-panel rounded-2xl p-5 sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -683,7 +707,10 @@ export function PatternWorkspacePage() {
 	                uploadLabel="柄・ロゴ・服モックをアップロード"
 	                emptyLabel="素材を置くと、保存時にCanvasへ実画像レイヤーとして渡せます"
 	                state={materialReference}
-	                onChange={setMaterialReference}
+	                onChange={(next) => {
+	                  setSavedArtifactId(null);
+	                  setMaterialReference(next);
+	                }}
 	                materialKinds={['柄画像', 'ロゴ', '服モック', '刺繍版下', '生地テクスチャ']}
 	                layerOptions={['プリント', 'マスク', '服', 'ロゴ', '版下']}
 	                placementOptions={['胸中央', '背面大判', '袖', '全面総柄', '小物ワンポイント']}
@@ -730,7 +757,7 @@ export function PatternWorkspacePage() {
                       <button
                         key={preset.label}
                         type="button"
-                        onClick={() => setMotifPrompt(preset.value)}
+                        onClick={() => { setSavedArtifactId(null); setMotifPrompt(preset.value); }}
                         className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
                           motifPrompt === preset.value
                             ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
@@ -753,7 +780,7 @@ export function PatternWorkspacePage() {
                       <button
                         key={preset.label}
                         type="button"
-                        onClick={() => setRepeatStyle(preset.value)}
+                        onClick={() => { setSavedArtifactId(null); setRepeatStyle(preset.value); }}
                         className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
                           repeatStyle === preset.value
                             ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
@@ -776,7 +803,7 @@ export function PatternWorkspacePage() {
                       <button
                         key={preset.label}
                         type="button"
-                        onClick={() => setGarmentTarget(preset.value)}
+                        onClick={() => { setSavedArtifactId(null); setGarmentTarget(preset.value); }}
                         className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
                           garmentTarget === preset.value
                             ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
@@ -799,7 +826,7 @@ export function PatternWorkspacePage() {
                       <button
                         key={preset.label}
                         type="button"
-                        onClick={() => setPaletteNotes(preset.value)}
+                        onClick={() => { setSavedArtifactId(null); setPaletteNotes(preset.value); }}
                         className={`rounded-full px-3 py-2 text-xs font-semibold transition ${
                           paletteNotes === preset.value
                             ? 'bg-neutral-950 text-white dark:bg-white dark:text-neutral-950'
@@ -824,7 +851,7 @@ export function PatternWorkspacePage() {
                   版下
                   <select
                     value={vectorIntent}
-                    onChange={(event) => setVectorIntent(event.target.value)}
+                    onChange={(event) => { setSavedArtifactId(null); setVectorIntent(event.target.value); }}
                     className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
                   >
                     {vectorPresets.map((preset) => (
@@ -861,6 +888,7 @@ export function PatternWorkspacePage() {
                   key={candidate.id}
                   type="button"
                   onClick={() => {
+                    setSavedArtifactId(null);
                     setSelectedPreviewId(candidate.id);
                     setActiveMode(candidate.mode);
                   }}

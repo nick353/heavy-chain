@@ -107,10 +107,12 @@ const galleryCases = [
 
 const getRouteBase = (route: string) => route.split('?')[0];
 const getRouteIcon = (feature: LightchainFeature) => routeIcon[getRouteBase(feature.route)] ?? Sparkles;
+const isBetaFeature = (feature: LightchainFeature | undefined): feature is LightchainFeature => Boolean(feature && feature.betaIncluded !== false);
 
 const findFeatureFromPrompt = (prompt: string) => {
   const normalizedPrompt = prompt.trim().toLowerCase();
-  if (!normalizedPrompt) return lightchainFeatureCatalog[0];
+  const fallbackFeature = lightchainFeatureCatalog.find(isBetaFeature) ?? lightchainFeatureCatalog[0];
+  if (!normalizedPrompt) return fallbackFeature;
 
   const keywordRoute = [
     { keywords: ['背景削除', '切り抜き', 'remove background', 'remove-bg'], featureId: 'remove-background' },
@@ -125,15 +127,15 @@ const findFeatureFromPrompt = (prompt: string) => {
   ].find((item) => item.keywords.some((keyword) => normalizedPrompt.includes(keyword)));
 
   if (keywordRoute) {
-    return lightchainFeatureCatalog.find((feature) => feature.id === keywordRoute.featureId) ?? lightchainFeatureCatalog[0];
+    return lightchainFeatureCatalog.find((feature) => feature.id === keywordRoute.featureId && isBetaFeature(feature)) ?? fallbackFeature;
   }
 
   return lightchainFeatureCatalog.find((feature) => {
     const haystack = [feature.title, feature.lightchainName, feature.description, feature.capability, feature.tags.join(' ')]
       .join(' ')
       .toLowerCase();
-    return haystack.includes(normalizedPrompt) || normalizedPrompt.includes(feature.title.toLowerCase());
-  }) ?? lightchainFeatureCatalog[0];
+    return isBetaFeature(feature) && (haystack.includes(normalizedPrompt) || normalizedPrompt.includes(feature.title.toLowerCase()));
+  }) ?? fallbackFeature;
 };
 
 interface GenerateLightchainEntryProps {
@@ -157,12 +159,14 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
 
   const activeCategoryMeta = lightchainCategories.find((category) => category.id === activeCategory) ?? lightchainCategories[0];
   const visibleFeatures = useMemo(
-    () => lightchainFeatureCatalog.filter((feature) => feature.category === activeCategory),
+    () => lightchainFeatureCatalog.filter((feature) => feature.category === activeCategory && isBetaFeature(feature)),
     [activeCategory],
   );
   const commandFeature = findFeatureFromPrompt(command);
   const commandHref = buildLightchainFeatureHref(commandFeature);
-  const galleryItems = galleryTab === 'recommended' ? galleryCases : [];
+  const galleryItems = galleryTab === 'recommended'
+    ? galleryCases.filter((item) => item.featureId !== 'video-workstation')
+    : [];
 
   const handleCategoryChange = (categoryId: LightchainCategoryId) => {
     setActiveCategory(categoryId);

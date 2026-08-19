@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import { Layout } from './components/layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { LightchainUnifiedWorkspaceShell } from './components/workspace/LightchainUnifiedWorkspaceShell';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
   GENERATION_LEGAL_COPY,
@@ -561,7 +562,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<GeneratePage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <GeneratePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -571,7 +576,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<WorkflowBoardPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <WorkflowBoardPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -581,7 +590,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<FittingPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <FittingPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -591,7 +604,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<MarketingWorkspacePage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <MarketingWorkspacePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -601,7 +618,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<FashionStudioPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <FashionStudioPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -611,7 +632,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<ModelLibraryPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <ModelLibraryPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -621,7 +646,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<PatternWorkspacePage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <PatternWorkspacePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -631,7 +660,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<PatternWorkspacePage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <PatternWorkspacePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -651,7 +684,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<LabPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LabPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -662,9 +699,11 @@ function AppRoutes() {
             <ProtectedRoute>
               <ErrorBoundary>
                 {lazyPage(
-                  <div className="py-10">
-                    <GenerateLightchainEntry />
-                  </div>
+                  <LightchainUnifiedWorkspaceShell>
+                    <div className="py-10">
+                      <GenerateLightchainEntry />
+                    </div>
+                  </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
             </ProtectedRoute>
@@ -675,7 +714,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<LightchainWorkbenchPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -685,7 +728,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<HistoryPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <HistoryPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -695,7 +742,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<JobsPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <JobsPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -715,7 +766,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<LightchainMaterialWorkbenchPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainMaterialWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -725,7 +780,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<LightchainMaterialWorkbenchPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainMaterialWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -734,7 +793,13 @@ function AppRoutes() {
           path="/creator"
           element={
             <ProtectedRoute>
-              <ErrorBoundary>{lazyPage(<LightchainCreatorPage />)}</ErrorBoundary>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainCreatorPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -742,7 +807,13 @@ function AppRoutes() {
           path="/model"
           element={
             <ProtectedRoute>
-              <ErrorBoundary>{lazyPage(<LightchainModelPage />)}</ErrorBoundary>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainModelPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -750,7 +821,209 @@ function AppRoutes() {
           path="/tools/fabric"
           element={
             <ProtectedRoute>
-              <ErrorBoundary>{lazyPage(<LightchainMaterialWorkbenchPage />)}</ErrorBoundary>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainMaterialWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/printing"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainMaterialWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/line-draft-to-tile"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/svg-convert"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/vector-special"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <PatternWorkspacePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/reactor"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/printing"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <PatternWorkspacePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/editor/pattern"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <PatternWorkspacePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/editor/patternDesign"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <PatternWorkspacePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/editor/changeColor"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <GeneratePage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/model-library/model-custom-form"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <ModelLibraryPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/model-base/style"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <BrandSettingsPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/flow/integration"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <FashionStudioPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/flow/laboratory"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LabPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agent"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <WorkflowBoardPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -758,7 +1031,13 @@ function AppRoutes() {
           path="/designProduction"
           element={
             <ProtectedRoute>
-              <ErrorBoundary>{lazyPage(<LightchainDesignProductionPage />)}</ErrorBoundary>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainDesignProductionPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -766,7 +1045,13 @@ function AppRoutes() {
           path="/designProduction/detail"
           element={
             <ProtectedRoute>
-              <ErrorBoundary>{lazyPage(<LightchainWorkbenchPage />)}</ErrorBoundary>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -774,7 +1059,13 @@ function AppRoutes() {
           path="/asset-center"
           element={
             <ProtectedRoute>
-              <ErrorBoundary>{lazyPage(<LightchainAssetCenterPage />)}</ErrorBoundary>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainAssetCenterPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -782,7 +1073,13 @@ function AppRoutes() {
           path="/flow/orientedDesign"
           element={
             <ProtectedRoute>
-              <ErrorBoundary>{lazyPage(<LightchainOrientedDesignPage />)}</ErrorBoundary>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainOrientedDesignPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />
@@ -791,7 +1088,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<GalleryPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <GalleryPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }
@@ -801,7 +1102,11 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ErrorBoundary>
-                {lazyPage(<BrandSettingsPage />)}
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <BrandSettingsPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
               </ErrorBoundary>
             </ProtectedRoute>
           }

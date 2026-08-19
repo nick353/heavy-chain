@@ -56,6 +56,13 @@ const readRecordFromMetadataOrIntent = (metadata: JsonRecord, intent: JsonRecord
   return isRecord(intentValue) ? intentValue : null;
 };
 
+const readRecordListFromMetadataOrIntent = (metadata: JsonRecord, intent: JsonRecord | null, key: string) => {
+  const metadataValue = metadata[key];
+  if (Array.isArray(metadataValue)) return metadataValue.filter(isRecord);
+  const intentValue = intent?.[key];
+  return Array.isArray(intentValue) ? intentValue.filter(isRecord) : undefined;
+};
+
 const pushIfValue = (rows: SourceContextSummaryRow[], label: string, value: string | undefined) => {
   if (value) rows.push({ label, value });
 };
@@ -105,6 +112,117 @@ const buildModelRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
   return rows;
 };
 
+const fittingGenderLabels: Record<string, string> = {
+  female: '女性',
+  male: '男性',
+};
+
+const fittingRoleLabels: Record<string, string> = {
+  garment: '衣服素材',
+  'print-artwork': 'プリント素材',
+  'model-or-design': 'モデル/デザイン素材',
+  textile: '生地素材',
+};
+
+const buildFittingRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
+  const rows: SourceContextSummaryRow[] = [];
+  const materialReference = readRecordFromMetadataOrIntent(metadata, intent, 'materialReference');
+  const modelReferenceFileName = readFromMetadataOrIntent(metadata, intent, 'modelReferenceFileName');
+  const bodyTypes = readListFromMetadataOrIntent(metadata, intent, 'bodyTypes');
+  const ageGroups = readListFromMetadataOrIntent(metadata, intent, 'ageGroups');
+  const gender = readFromMetadataOrIntent(metadata, intent, 'gender');
+  const modelValues = [
+    bodyTypes?.join('/'),
+    ageGroups?.join('/'),
+    gender ? fittingGenderLabels[gender] ?? gender : undefined,
+  ].filter((value): value is string => Boolean(value));
+
+  if (materialReference) {
+    pushIfValue(
+      rows,
+      '衣服素材',
+      readNonEmptyString(materialReference, 'fileName')
+        ?? readNonEmptyString(materialReference, 'materialKind')
+        ?? (materialReference.hasImage === true ? '選択済み' : undefined),
+    );
+    const layerValues = [
+      readNonEmptyString(materialReference, 'activeLayer'),
+      readNonEmptyString(materialReference, 'placement'),
+    ].filter((value): value is string => Boolean(value));
+    if (layerValues.length) rows.push({ label: '素材レイヤー', value: layerValues.join(' / ') });
+    if (materialReference.extractedLayerReady === true || materialReference.nextStepReady === true) {
+      rows.push({ label: '切り抜き', value: materialReference.nextStepReady === true ? '生成準備完了' : '確認済み' });
+    }
+  }
+
+  pushIfValue(rows, 'モデル参照', modelReferenceFileName ?? '条件からモデルを生成');
+  if (modelValues.length) rows.push({ label: 'モデル条件', value: modelValues.join(' / ') });
+
+  return rows;
+};
+
+const buildMaterialWorkbenchRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
+  const rows: SourceContextSummaryRow[] = [];
+  const toolId = readFromMetadataOrIntent(metadata, intent, 'toolId');
+  const materialReferences = readRecordListFromMetadataOrIntent(metadata, intent, 'materialReferences') ?? [];
+  const inputLineage = readRecordListFromMetadataOrIntent(metadata, intent, 'inputLineage') ?? [];
+  const selectedRoles = [...materialReferences, ...inputLineage]
+    .map((reference) => readNonEmptyString(reference, 'role'))
+    .filter((role): role is string => Boolean(role))
+    .filter((role, index, roles) => roles.indexOf(role) === index)
+    .map((role) => fittingRoleLabels[role] ?? role);
+
+  pushIfValue(rows, '対象', toolId === 'printing-image' ? 'プリントイメージ' : toolId === 'fabric-image' ? '生地イメージ' : toolId);
+  if (selectedRoles.length) rows.push({ label: '入力素材', value: selectedRoles.join(' / ') });
+
+  const generationIntent = readRecordFromMetadataOrIntent(metadata, intent, 'generationIntent');
+  pushIfValue(rows, '配置範囲', readFromMetadataOrIntent(generationIntent ?? {}, null, 'coverageMode'));
+  pushIfValue(rows, '生地比率', readFromMetadataOrIntent(generationIntent ?? {}, null, 'imageRatio'));
+  const designCount = generationIntent?.designCount;
+  if (typeof designCount === 'number') rows.push({ label: 'プリント数', value: String(designCount) });
+
+  const maskPlan = readRecordFromMetadataOrIntent(metadata, intent, 'maskPlan');
+  if (maskPlan?.providerMaskReady === true) rows.push({ label: '衣服領域', value: 'providerマスク確認済み' });
+  if (maskPlan?.garmentCutoutReady === true || maskPlan?.modelGarmentMaskReady === true) {
+    rows.push({ label: '切り抜き', value: '確認済み' });
+  }
+
+  return rows;
+};
+
+const buildLightchainWorkbenchRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
+  const rows: SourceContextSummaryRow[] = [];
+  const materialReferences = readRecordListFromMetadataOrIntent(metadata, intent, 'materialReferences') ?? [];
+  const modelFormState = readRecordFromMetadataOrIntent(metadata, intent, 'modelFormState');
+  const materialLabels = materialReferences
+    .map((reference) => (
+      readNonEmptyString(reference, 'fileName')
+        ?? readNonEmptyString(reference, 'materialKind')
+        ?? readNonEmptyString(reference, 'slotKey')
+    ))
+    .filter((label): label is string => Boolean(label))
+    .filter((label, index, labels) => labels.indexOf(label) === index);
+  const modelValues = [
+    readNonEmptyString(modelFormState, 'gender'),
+    readNonEmptyString(modelFormState, 'bodyGender'),
+    readNonEmptyString(modelFormState, 'age'),
+    readNonEmptyString(modelFormState, 'nationality'),
+    readNonEmptyString(modelFormState, 'bodyType'),
+    readNonEmptyString(modelFormState, 'garmentType'),
+    readNonEmptyString(modelFormState, 'sourceSize') && readNonEmptyString(modelFormState, 'targetSize')
+      ? `${readNonEmptyString(modelFormState, 'sourceSize')}→${readNonEmptyString(modelFormState, 'targetSize')}`
+      : undefined,
+  ].filter((value): value is string => Boolean(value));
+
+  pushIfValue(rows, 'ツール', readFromMetadataOrIntent(metadata, intent, 'toolTitle'));
+  pushIfValue(rows, '生成条件', readFromMetadataOrIntent(metadata, intent, 'generationSummary'));
+  pushIfValue(rows, '依頼', readFromMetadataOrIntent(metadata, intent, 'brief'));
+  if (materialLabels.length) rows.push({ label: '入力素材', value: materialLabels.join(' / ') });
+  if (modelValues.length) rows.push({ label: 'モデル条件', value: modelValues.join(' / ') });
+
+  return rows;
+};
+
 const buildStudioRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
   const rows: SourceContextSummaryRow[] = [];
   const selectedStudioSetup = readRecordFromMetadataOrIntent(metadata, intent, 'selectedStudioSetup');
@@ -150,6 +268,21 @@ const buildLabRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
   return rows;
 };
 
+const buildDesignProductionRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
+  const rows: SourceContextSummaryRow[] = [];
+  const prompt = readFromMetadataOrIntent(metadata, intent, 'brief')
+    ?? readFromMetadataOrIntent(metadata, intent, 'prompt');
+  const referenceAssets = readFromMetadataOrIntent(metadata, intent, 'referenceAssets')
+    ?? readFromMetadataOrIntent(metadata, intent, 'referenceNote');
+
+  pushIfValue(rows, '制作シーン', readFromMetadataOrIntent(metadata, intent, 'activeScene'));
+  pushIfValue(rows, '依頼', prompt);
+  pushIfValue(rows, '参考素材', referenceAssets);
+  pushIfValue(rows, 'プロジェクト', readFromMetadataOrIntent(metadata, intent, 'projectName'));
+
+  return rows;
+};
+
 const buildLightchainRows = (metadata: JsonRecord, intent: JsonRecord | null) => {
   const rows: SourceContextSummaryRow[] = [];
   const lightchainCompat = readRecordFromMetadataOrIntent(metadata, intent, 'lightchainCompat');
@@ -174,22 +307,68 @@ const buildLightchainRows = (metadata: JsonRecord, intent: JsonRecord | null) =>
   return rows;
 };
 
+const buildWorkspaceLineageRows = (metadata: JsonRecord) => {
+  const lineage = metadata.workspaceLineage;
+  if (!isRecord(lineage) || readNonEmptyString(lineage, 'schemaVersion') !== 'heavy-chain-workspace-lineage.v1') {
+    return [];
+  }
+
+  const role = readNonEmptyString(lineage, 'role');
+  const providerGeneration = readNonEmptyString(lineage, 'providerGeneration');
+  const destinations = isRecord(lineage.destinations) ? lineage.destinations : null;
+  const destinationLabels = [
+    readNonEmptyString(destinations, 'galleryArtifactId') ? 'Gallery' : null,
+    readNonEmptyString(destinations, 'historyArtifactId') ? 'History' : null,
+    readNonEmptyString(destinations, 'canvasProjectId') ? 'Canvas' : null,
+    readNonEmptyString(destinations, 'jobsJobId') ? 'Jobs' : null,
+  ].filter((value): value is string => Boolean(value));
+
+  const roleLabel = role === 'generated-result'
+    ? 'provider結果'
+    : role === 'workspace-handoff'
+      ? 'workspace handoff'
+      : role === 'source-material'
+        ? '入力素材'
+        : role;
+  const providerLabel = providerGeneration === 'completed'
+    ? '実provider結果'
+    : providerGeneration === 'not-run'
+      ? 'provider未実行'
+      : providerGeneration;
+
+  const rows: SourceContextSummaryRow[] = [];
+  pushIfValue(rows, '成果物系譜', roleLabel);
+  pushIfValue(rows, '生成状態', providerLabel);
+  if (destinationLabels.length) rows.push({ label: '再利用先', value: destinationLabels.join(' / ') });
+  return rows;
+};
+
 export const buildSourceContextSummaryRows = (metadata: Json | null | undefined): SourceContextSummaryRow[] => {
   if (!isRecord(metadata)) return [];
   const intent = getIntent(metadata);
   const sourceWorkspace = readNonEmptyString(metadata, 'sourceWorkspace') ?? readNonEmptyString(intent, 'sourceWorkspace');
   const lightchainRows = buildLightchainRows(metadata, intent);
+  const workspaceLineageRows = buildWorkspaceLineageRows(metadata);
 
   const withLightchainRows = (rows: SourceContextSummaryRow[]) => [
     ...lightchainRows,
+    ...workspaceLineageRows,
     ...rows,
   ];
 
   if (sourceWorkspace === 'patterns') return withLightchainRows(buildPatternRows(metadata, intent));
   if (sourceWorkspace === 'models') return withLightchainRows(buildModelRows(metadata, intent));
+  if (sourceWorkspace === 'fitting') return withLightchainRows(buildFittingRows(metadata, intent));
   if (sourceWorkspace === 'studio') return withLightchainRows(buildStudioRows(metadata, intent));
   if (sourceWorkspace === 'video') return withLightchainRows(buildVideoRows(metadata, intent));
   if (sourceWorkspace === 'lab') return withLightchainRows(buildLabRows(metadata, intent));
+  if (sourceWorkspace === 'design-production') return withLightchainRows(buildDesignProductionRows(metadata, intent));
+  if (sourceWorkspace === 'lightchain-material-workbench-provider-result') {
+    return withLightchainRows(buildMaterialWorkbenchRows(metadata, intent));
+  }
+  if (sourceWorkspace === 'lightchain-workbench-provider-result' || sourceWorkspace === 'lightchain-workbench') {
+    return withLightchainRows(buildLightchainWorkbenchRows(metadata, intent));
+  }
 
-  return lightchainRows;
+  return [...lightchainRows, ...workspaceLineageRows];
 };

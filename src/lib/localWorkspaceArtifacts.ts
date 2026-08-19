@@ -2,6 +2,7 @@ import type { GeneratedImage, Json } from '../types/database';
 import { supabase } from './supabase';
 import { normalizeGeneratedImageStoragePath } from './storagePathSafety';
 import { shouldClearWorkspaceArtifactImageUrl } from './generatedImageIdentity';
+import { buildWorkspaceArtifactLineage } from './workspaceArtifactLineage';
 
 const STORE_PREFIX = 'heavy-chain-workspace-artifacts:v1';
 const SCOPED_STORE_PREFIX = 'heavy-chain-workspace-artifacts:v2';
@@ -400,6 +401,14 @@ export const saveWorkspaceArtifactPersisted = (
         ...input.metadata,
       },
     };
+    artifact.metadata.workspaceLineage = buildWorkspaceArtifactLineage({
+      id: artifact.id,
+      featureType: artifact.featureType,
+      canvasProjectId: artifact.canvasProjectId,
+      sourceJobId: artifact.sourceJobId,
+      canonicalStoragePath: getWorkspaceArtifactCanonicalStoragePath(artifact.metadata),
+      metadata: artifact.metadata,
+    });
     const preservesLegacyUrlOnlyEntry = Boolean(
       existingArtifact &&
       !getWorkspaceArtifactCanonicalStoragePath(existingArtifact.metadata) &&
@@ -452,6 +461,14 @@ export const saveWorkspaceArtifact = (input: WorkspaceArtifactInput): WorkspaceA
     prompt: input.prompt ?? null,
     metadata: input.metadata ?? {},
   };
+  artifact.metadata.workspaceLineage = buildWorkspaceArtifactLineage({
+    id: artifact.id,
+    featureType: artifact.featureType,
+    canvasProjectId: artifact.canvasProjectId,
+    sourceJobId: artifact.sourceJobId,
+    canonicalStoragePath: getWorkspaceArtifactCanonicalStoragePath(artifact.metadata),
+    metadata: artifact.metadata,
+  });
 
   if (!isBrowser()) return artifact;
 

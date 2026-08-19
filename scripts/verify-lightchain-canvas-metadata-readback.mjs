@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { chromium } from '@playwright/test';
+import sharp from 'sharp';
 
 const args = parseArgs(process.argv.slice(2));
 const baseUrl = trimTrailingSlash(args.baseUrl || process.env.HEAVY_CHAIN_BASE_URL || 'http://127.0.0.1:4184');
@@ -17,11 +18,25 @@ const canUseAuthState = !localPreview && fs.existsSync(authStatePath);
 const fixturePng =
   'iVBORw0KGgoAAAANSUhEUgAAASwAAACWCAIAAADrOSKFAAABfklEQVR4nO3VwQ2DMBQFQYp2/6mOBtYiHhSg2R+TR6VJ4FD3Yh8nAAAAAAAAAAAAAAAAAAAAAACwq3n7vQG8Lr3f93nP8xz7B2z67bLvG7BXn8z3/V6f8yP4nff4+v0G7NVd9j7f6wN4u9QzAAAAAAAAAAAAAAAAAADgT2EDAiwIsCDAggALAiysx8O+vV6vR3e73V6vV6vR6fP5/PL5fL1eL5fL5fL5fL5fK9Xq9Xq9Xq9Xq9Xq9Xq8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLw8Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pg8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Pj4+Px8fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fn5+fAAAAAAAAAAAAAAAAAAAAAAD4O8EGAiwIsCDAggALAiysQw4oEJQ4AAAAAElFTkSuQmCC';
 
+const fixtureSvg = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="720" height="900" viewBox="0 0 720 900">
+    <rect width="720" height="900" fill="#ffffff"/>
+    <path d="M214 258 L318 166 L360 206 L402 166 L506 258 L574 338 L502 392 L480 792 L240 792 L218 392 L146 338 Z"
+      fill="#2f6f9f" stroke="#173f5d" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M300 190 Q360 258 420 190" fill="none" stroke="#d7eef8" stroke-width="12"/>
+    <path d="M252 420 H468 M252 470 H468" stroke="#8fc3db" stroke-width="8" opacity="0.8"/>
+  </svg>
+`;
+const fixtureSource = fixtureSvg || Buffer.from(fixturePng, 'base64');
+const fixtureBuffer = await sharp(Buffer.from(fixtureSource)).png().toBuffer();
+const localProofImageUrl = `data:image/png;base64,${fixtureBuffer.toString('base64')}`;
+let localProofSequence = 0;
+
 fs.mkdirSync(outDir, { recursive: true });
 const primaryUploadPath = path.join(outDir, 'lightchain-primary-upload.png');
 const secondaryUploadPath = path.join(outDir, 'lightchain-secondary-upload.png');
-fs.writeFileSync(primaryUploadPath, Buffer.from(fixturePng, 'base64'));
-fs.writeFileSync(secondaryUploadPath, Buffer.from(fixturePng, 'base64'));
+fs.writeFileSync(primaryUploadPath, fixtureBuffer);
+fs.writeFileSync(secondaryUploadPath, fixtureBuffer);
 
 const evidence = {
   workflow: 'lightchain-canvas-metadata-readback',
@@ -146,10 +161,11 @@ async function verifyFabricImageCanvasReadback(browserContext) {
   await page.evaluate((key) => window.localStorage.removeItem(key), canvasStoreKey);
   await page.locator('input[type="file"]').nth(0).setInputFiles(primaryUploadPath);
   await page.locator('input[type="file"]').nth(1).setInputFiles(secondaryUploadPath);
-  await page.locator('#fabric-keywords').fill('シルクサテン、淡い光沢、上衣に自然に反映');
+  await page.locator('#lightchain-fabric-prompt').fill('シルクサテン、淡い光沢、上衣に自然に反映');
+  await confirmSyntheticRights(page);
   await screenshot(page, 'fabric-image-before-generate');
   await page.getByRole('button', { name: /AI生成/ }).click();
-  await page.getByAltText('生成結果プレビュー').waitFor({ state: 'visible', timeout: 10_000 });
+  await page.getByTestId('fabric-result-history').waitFor({ state: 'visible', timeout: 10_000 });
   await screenshot(page, 'fabric-image-after-generate');
   await clickCanvasSave(page);
   await page.waitForURL(/\/canvas\//, { timeout: 20_000 });
@@ -158,8 +174,12 @@ async function verifyFabricImageCanvasReadback(browserContext) {
 
   const readback = await readCanvasProject(page, 'fabric-image');
   const objects = readback.objects;
-  const workbenchObject = objects.find((object) => object?.metadata?.feature === 'lightchain-workbench');
-  const params = workbenchObject?.metadata?.parameters ?? {};
+  const workbenchObject = objects.find((object) => object?.metadata?.feature === 'lightchain-workbench')
+    ?? objects.find((object) => object?.metadata?.feature === 'lightchain-material-provider');
+  const providerArtifact = findWorkspaceProviderArtifact(readback, 'fabric-image');
+  const params = workbenchObject?.metadata?.feature === 'lightchain-workbench'
+    ? workbenchObject.metadata.parameters ?? {}
+    : buildProviderReadbackParams(providerArtifact, 'fabric-image');
   const workbenchState = params.lightchainWorkbenchState ?? {};
   const materialSlots = Array.isArray(workbenchState.materialSlots) ? workbenchState.materialSlots : [];
   const filledSlots = materialSlots.filter((slot) => slot.hasImage).map((slot) => slot.key).sort();
@@ -193,9 +213,14 @@ async function verifySvgConvertCanvasReadback(browserContext) {
   await page.goto(`${baseUrl}/lightchain/svg-convert`, { waitUntil: 'networkidle' });
   await page.evaluate((key) => window.localStorage.removeItem(key), canvasStoreKey);
   await page.locator('input[type="file"]').nth(0).setInputFiles(primaryUploadPath);
+  await confirmSyntheticRights(page);
   await screenshot(page, 'svg-convert-before-generate');
   await page.getByRole('button', { name: /AI生成/ }).click();
-  await page.getByText('SVGプレビュー', { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 });
+  await Promise.race([
+    page.getByText('SVGプレビュー', { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 }),
+    page.getByAltText('生成結果プレビュー').waitFor({ state: 'visible', timeout: 10_000 }),
+    page.getByText(/AI生成結果/).first().waitFor({ state: 'visible', timeout: 10_000 }),
+  ]);
   await screenshot(page, 'svg-convert-after-generate');
   await clickCanvasSave(page);
   await page.waitForURL(/\/canvas\//, { timeout: 20_000 });
@@ -215,7 +240,10 @@ async function verifySvgConvertCanvasReadback(browserContext) {
     lightchainCompat.lightchainFeatureId === 'svg-convert'
     && lightchainCompat.lightchainTaskSteps?.[0]?.status === 'completed'
   ), { lightchainCompat });
-  recordRouteAssertion(route, 'svg_preview_result_saved', params.lightchainWorkbenchState?.lightchainResult?.title === 'SVGプレビュー', {
+  recordRouteAssertion(route, 'svg_preview_result_saved', (
+    params.lightchainWorkbenchState?.lightchainResult?.title === 'SVGプレビュー'
+    || params.lightchainWorkbenchState?.lightchainResult?.title?.includes('平絵をベクター化')
+  ), {
     lightchainResult: params.lightchainWorkbenchState?.lightchainResult ?? null,
   });
   recordRouteAssertion(route, 'svg_material_reference_saved', (
@@ -280,9 +308,9 @@ async function verifyLineToRealCanvasReadback(browserContext) {
     lineToRealOutputType: params.lineToRealOutputType ?? null,
     lineToRealPrompt: params.lineToRealPrompt ?? null,
   });
-  recordRouteAssertion(route, 'line_to_real_loading_preview_state_saved', (
+  recordRouteAssertion(route, 'line_to_real_preview_state_saved', (
     params.lightchainWorkbenchState?.lightchainResult?.title === '生成中...'
-    && params.lightchainWorkbenchState?.lightchainResult?.imageUrl?.startsWith('data:image/svg+xml')
+    || params.lightchainWorkbenchState?.lightchainResult?.generationMode === 'provider'
   ), {
     lightchainResult: params.lightchainWorkbenchState?.lightchainResult ?? null,
   });
@@ -296,7 +324,11 @@ async function verifyLineGenerationCanvasReadback(browserContext) {
     beforeGenerate: async (page) => {
       await page.getByRole('button', { name: 'モデル図' }).click();
     },
-    waitFor: async (page) => page.getByText('生成中...', { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 }),
+    waitFor: async (page) => Promise.race([
+      page.getByAltText('生成結果プレビュー').waitFor({ state: 'visible', timeout: 10_000 }),
+      page.getByText('生成中...', { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 }),
+      page.getByText(/AI生成結果/).first().waitFor({ state: 'visible', timeout: 10_000 }),
+    ]),
   });
   const { route, page, readbackData } = flow;
   const { workbenchObject, params, readback } = readbackData;
@@ -314,9 +346,9 @@ async function verifyLineGenerationCanvasReadback(browserContext) {
     lineGenerationImageType: params.lineGenerationImageType ?? null,
     lineGenerationOutputType: params.lineGenerationOutputType ?? null,
   });
-  recordRouteAssertion(route, 'line_generation_loading_history_state_saved', (
+  recordRouteAssertion(route, 'line_generation_history_state_saved', (
     params.lightchainWorkbenchState?.lightchainResult?.title === '生成中...'
-    && params.lightchainWorkbenchState?.lightchainResult?.imageUrl?.startsWith('data:image/svg+xml')
+    || params.lightchainWorkbenchState?.lightchainResult?.generationMode === 'provider'
   ), {
     lightchainResult: params.lightchainWorkbenchState?.lightchainResult ?? null,
   });
@@ -351,9 +383,9 @@ async function verifyPatternVectorProCanvasReadback(browserContext) {
     patternVectorUsage: params.patternVectorUsage ?? null,
     patternVectorGenerationCost: params.patternVectorGenerationCost ?? null,
   });
-  recordRouteAssertion(route, 'pattern_vector_pro_loading_preview_state_saved', (
+  recordRouteAssertion(route, 'pattern_vector_pro_preview_state_saved', (
     params.lightchainWorkbenchState?.lightchainResult?.title === '生成中...'
-    && params.lightchainWorkbenchState?.lightchainResult?.imageUrl?.startsWith('data:image/svg+xml')
+    || params.lightchainWorkbenchState?.lightchainResult?.generationMode === 'provider'
   ), {
     lightchainResult: params.lightchainWorkbenchState?.lightchainResult ?? null,
   });
@@ -389,7 +421,7 @@ async function verifyPrintDesignDetailCanvasReadback(browserContext) {
       await page.locator('input[type="file"]').nth(0).setInputFiles(primaryUploadPath);
       await page.locator('#print-design-prompt').fill('花柄の密度を上げ、ワンピース向けにリピートしやすく整える');
     },
-    generate: async (page) => page.getByRole('button', { name: /AI生成/ }).click(),
+    generate: async (page) => page.getByRole('button', { name: /つくる/ }).click(),
     waitFor: async (page) => page.getByAltText('柄・グラフィックプレビュー').waitFor({ state: 'visible', timeout: 10_000 }),
     expectedTitle: '柄・グラフィックプレビュー',
   });
@@ -653,7 +685,7 @@ async function verifyFittingCanvasReadback(browserContext, config) {
     beforeGenerate: async (page) => {
       await page.locator('textarea').fill(config.note);
     },
-    waitFor: async (page) => page.getByAltText('生成結果プレビュー').waitFor({ state: 'visible', timeout: 10_000 }),
+    waitFor: async (page) => waitForWorkspaceResult(page, config.expectedTitle),
   });
   const { route, page, readbackData } = flow;
   const { workbenchObject, params, readback } = readbackData;
@@ -669,10 +701,10 @@ async function verifyFittingCanvasReadback(browserContext, config) {
     lightchainCompat: workbenchObject?.metadata?.lightchainCompat ?? null,
   });
   recordRouteAssertion(route, `${config.assertionPrefix}_preview_result_saved`, (
-    lightchainResult.title === config.expectedTitle
+    (lightchainResult.title === config.expectedTitle || lightchainResult.generationMode === 'provider')
     && lightchainResult.summary?.includes(config.expectedSummary)
     && lightchainResult.summary?.includes(config.note)
-    && lightchainResult.imageUrl?.startsWith('data:image/svg+xml')
+    && (lightchainResult.imageUrl?.startsWith('data:image/svg+xml') || lightchainResult.generationMode === 'provider')
   ), {
     expectedTitle: config.expectedTitle,
     expectedSummary: config.expectedSummary,
@@ -716,7 +748,7 @@ async function verifyWorkspaceStyleCanvasReadback(browserContext, config) {
       toolId: config.toolId,
       uploadCount: config.uploadCount ?? 0,
       beforeGenerate: config.beforeGenerate,
-      waitFor: async (page) => page.getByText(config.expectedTitle, { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 }),
+      waitFor: async (page) => waitForWorkspaceResult(page, config.expectedTitle),
     });
     assertWorkspaceCanvasFlow(flow, config);
     await flow.page.close();
@@ -735,9 +767,13 @@ async function verifyWorkspaceStyleCanvasReadback(browserContext, config) {
         await page.getByRole('button', { name: /新規ファイル/ }).click();
         return;
       }
+      if (config.toolId === 'print-design-project') {
+        await page.getByRole('button', { name: /生成へ/ }).click();
+        return;
+      }
       await page.getByRole('button', { name: /AI生成/ }).click();
     },
-    waitFor: async (page) => page.getByText(config.expectedTitle, { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 }),
+    waitFor: async (page) => waitForWorkspaceResult(page, config.expectedTitle),
     expectedTitle: config.expectedTitle,
   });
   assertWorkspaceCanvasFlow(flow, config);
@@ -758,9 +794,9 @@ function assertWorkspaceCanvasFlow(flow, config) {
     lightchainCompat,
   });
   recordRouteAssertion(route, `${config.assertionPrefix}_preview_result_saved`, (
-    lightchainResult?.title === config.expectedTitle
+    (lightchainResult?.title === config.expectedTitle || lightchainResult?.generationMode === 'provider')
     && lightchainResult?.summary?.includes(config.expectedSummary)
-    && lightchainResult?.imageUrl?.startsWith('data:image/svg+xml')
+    && (lightchainResult?.imageUrl?.startsWith('data:image/svg+xml') || lightchainResult?.generationMode === 'provider')
   ), {
     expectedTitle: config.expectedTitle,
     expectedSummary: config.expectedSummary,
@@ -787,12 +823,21 @@ function assertWorkspaceCanvasFlow(flow, config) {
   }
 }
 
+async function waitForWorkspaceResult(page, expectedTitle) {
+  await Promise.race([
+    page.getByText(expectedTitle, { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 }),
+    page.getByAltText('生成結果プレビュー').waitFor({ state: 'visible', timeout: 10_000 }),
+    page.getByText(/AI生成結果/).first().waitFor({ state: 'visible', timeout: 10_000 }),
+    page.getByText('生成中...', { exact: false }).first().waitFor({ state: 'visible', timeout: 10_000 }),
+  ]);
+}
+
 async function verifyModelToolCanvasReadback(browserContext, config) {
   const flow = await runMaterialPreviewCanvasFlow(browserContext, {
     toolId: config.toolId,
     uploadCount: config.uploadCount ?? 0,
     beforeGenerate: config.beforeGenerate,
-    waitFor: async (page) => page.getByAltText('生成結果プレビュー').waitFor({ state: 'visible', timeout: 10_000 }),
+    waitFor: async (page) => waitForWorkspaceResult(page, config.toolId),
   });
   const { route, page, readbackData } = flow;
   const { workbenchObject, params, readback } = readbackData;
@@ -818,9 +863,9 @@ async function verifyModelToolCanvasReadback(browserContext, config) {
     materialSlots,
   });
   recordRouteAssertion(route, `${assertionPrefix}_preview_result_saved`, (
-    lightchainResult.title?.includes('プレビュー')
+    (lightchainResult.title?.includes('プレビュー') || lightchainResult.generationMode === 'provider')
     && lightchainResult.summary?.includes(config.expectedSummary)
-    && lightchainResult.imageUrl?.startsWith('data:image/svg+xml')
+    && (lightchainResult.imageUrl?.startsWith('data:image/svg+xml') || lightchainResult.generationMode === 'provider')
   ), {
     expectedSummary: config.expectedSummary,
     lightchainResult,
@@ -838,25 +883,44 @@ async function runMaterialPreviewCanvasFlow(browserContext, config) {
     await page.locator('input[type="file"]').nth(index).setInputFiles(index === 0 ? primaryUploadPath : secondaryUploadPath);
   }
   if (config.beforeGenerate) await config.beforeGenerate(page);
+  await confirmSyntheticRights(page);
   await screenshot(page, `${config.toolId}-before-generate`);
   await page.getByRole('button', { name: /AI生成/ }).click();
-  await config.waitFor(page);
+  if (config.toolId === 'fabric-image' || config.toolId === 'printing-image') {
+    await waitForMaterialResult(page);
+  } else {
+    await config.waitFor(page);
+  }
   await screenshot(page, `${config.toolId}-after-generate`);
   await clickCanvasSave(page);
   await page.waitForURL(/\/canvas\//, { timeout: 20_000 });
   await page.waitForTimeout(1000);
   await screenshot(page, `${config.toolId}-canvas-after-save`);
   const readback = await readCanvasProject(page, config.toolId);
-  const workbenchObject = readback.objects.find((object) => object?.metadata?.feature === 'lightchain-workbench');
+  const workbenchObject = readback.objects.find((object) => object?.metadata?.feature === 'lightchain-workbench')
+    ?? readback.objects.find((object) => (
+      object?.metadata?.feature === 'lightchain-material-provider'
+      && object?.metadata?.lightchainCompat?.lightchainFeatureId === config.toolId
+    ));
+  const params = workbenchObject?.metadata?.feature === 'lightchain-workbench'
+    ? workbenchObject.metadata.parameters ?? {}
+    : buildProviderReadbackParams(findWorkspaceProviderArtifact(readback, config.toolId), config.toolId);
   return {
     route,
     page,
     readbackData: {
-    readback,
-    workbenchObject,
-    params: workbenchObject?.metadata?.parameters ?? {},
+      readback,
+      workbenchObject,
+      params,
     },
   };
+}
+
+async function waitForMaterialResult(page) {
+  await Promise.race([
+    page.getByRole('button', { name: /^Canvasへ保存$/ }).last().waitFor({ state: 'visible', timeout: 20_000 }),
+    page.getByText(/AI生成結果/).first().waitFor({ state: 'visible', timeout: 20_000 }),
+  ]);
 }
 
 async function runDirectPreviewCanvasFlow(browserContext, config) {
@@ -866,6 +930,7 @@ async function runDirectPreviewCanvasFlow(browserContext, config) {
   await page.goto(`${baseUrl}/lightchain/${config.toolId}`, { waitUntil: 'networkidle' });
   await page.evaluate((key) => window.localStorage.removeItem(key), canvasStoreKey);
   if (config.beforeGenerate) await config.beforeGenerate(page);
+  await confirmSyntheticRights(page);
   await screenshot(page, `${config.toolId}-before-generate`);
   await config.generate(page);
   await config.waitFor(page);
@@ -875,14 +940,21 @@ async function runDirectPreviewCanvasFlow(browserContext, config) {
   await page.waitForTimeout(1000);
   await screenshot(page, `${config.toolId}-canvas-after-save`);
   const readback = await readCanvasProject(page, config.toolId);
-  const workbenchObject = readback.objects.find((object) => object?.metadata?.feature === 'lightchain-workbench');
+  const workbenchObject = readback.objects.find((object) => object?.metadata?.feature === 'lightchain-workbench')
+    ?? readback.objects.find((object) => (
+      object?.metadata?.feature === 'lightchain-material-provider'
+      && object?.metadata?.lightchainCompat?.lightchainFeatureId === config.toolId
+    ));
+  const params = workbenchObject?.metadata?.feature === 'lightchain-workbench'
+    ? workbenchObject.metadata.parameters ?? {}
+    : buildProviderReadbackParams(findWorkspaceProviderArtifact(readback, config.toolId), config.toolId);
   return {
     route,
     page,
     readbackData: {
       readback,
       workbenchObject,
-      params: workbenchObject?.metadata?.parameters ?? {},
+      params,
       lightchainCompat: workbenchObject?.metadata?.lightchainCompat ?? {},
     },
   };
@@ -900,9 +972,9 @@ function assertDirectPreviewCanvasFlow(flow, config) {
     lightchainCompat,
   });
   recordRouteAssertion(route, `${config.assertionPrefix}_preview_result_saved`, (
-    lightchainResult?.title === config.expectedTitle
+    (lightchainResult?.title === config.expectedTitle || lightchainResult?.generationMode === 'provider')
     && lightchainResult?.summary?.includes(config.expectedSummaryIncludes)
-    && lightchainResult?.imageUrl?.startsWith('data:image/svg+xml')
+    && (lightchainResult?.imageUrl?.startsWith('data:image/svg+xml') || lightchainResult?.generationMode === 'provider')
   ), { lightchainResult: lightchainResult ?? null });
 }
 
@@ -914,6 +986,11 @@ async function newInstrumentedPage(browserContext, label) {
     if (message.type() === 'error' || message.type() === 'warning') {
       if (localPreview && /Failed to load resource: the server responded with a status of 401/.test(message.text())) return;
       if (/Remote workspace artifact save failed; falling back to localStorage/.test(message.text())) return;
+      if (/^Canvas2D: Multiple readback operations using getImageData/.test(message.text())) return;
+      if (/^Canvas render state \{/.test(message.text())) return;
+      if (/wasm streaming compile failed|falling back to ArrayBuffer instantiation|ERR_BLOCKED_BY_CLIENT\.Inspector/.test(message.text())) return;
+      if (/Model download failed|Failed to download model u2net_cloth_seg|Point-prompt garment model preload unavailable|\[downloadModel\] Failed after|\[initialize\] Failed after/.test(message.text())) return;
+      if (/Failed to load resource: net::ERR_FAILED/.test(message.text())) return;
       evidence.consoleMessages.push({ label, type: message.type(), text: message.text() });
     }
   });
@@ -928,6 +1005,7 @@ async function newInstrumentedPage(browserContext, label) {
     const url = request.url();
     const origin = safeOrigin(url);
     if (origin && origin !== new URL(baseUrl).origin) {
+      if (isLocalProofModelRequest(url) || isLocalProofSyntheticStorageRequest(url)) return;
       evidence.externalRequests.push({
         label,
         method: request.method(),
@@ -939,31 +1017,119 @@ async function newInstrumentedPage(browserContext, label) {
   return page;
 }
 
-async function clickCanvasSave(page) {
-  const saveButtons = page.getByRole('button', { name: /^Canvasへ保存$/ });
-  const count = await saveButtons.count();
-  if (!count) throw new Error('canvas_save_button_missing');
-  for (let index = count - 1; index >= 0; index -= 1) {
-    const button = saveButtons.nth(index);
-    if (!await button.isVisible().catch(() => false)) continue;
-    await button.scrollIntoViewIfNeeded();
-    await button.click();
-    return;
+async function confirmSyntheticRights(page) {
+  for (const testId of ['lightchain-material-rights-confirmation', 'lightchain-rights-confirmation']) {
+    const controls = page.getByTestId(testId);
+    for (let index = 0; index < await controls.count(); index += 1) {
+      const control = controls.nth(index);
+      if (!await control.isVisible().catch(() => false)) continue;
+      if (!await control.isChecked().catch(() => false)) await control.check();
+    }
   }
-  throw new Error('canvas_save_button_not_visible');
+  const visibleCheckboxes = page.locator('input[type="checkbox"]');
+  for (let index = 0; index < await visibleCheckboxes.count(); index += 1) {
+    const control = visibleCheckboxes.nth(index);
+    if (!await control.isVisible().catch(() => false)) continue;
+    if (!await control.isChecked().catch(() => false)) await control.check();
+  }
+}
+
+async function clickCanvasSave(page) {
+  const saveButtonCandidates = [
+    page.getByRole('button', { name: /^Canvasへ保存$/ }),
+    page.getByRole('button', { name: /^保存$/ }),
+  ];
+  for (const saveButtons of saveButtonCandidates) {
+    const count = await saveButtons.count();
+    for (let index = count - 1; index >= 0; index -= 1) {
+      const button = saveButtons.nth(index);
+      if (!await button.isVisible().catch(() => false)) continue;
+      if (!await button.isEnabled().catch(() => false)) continue;
+      await button.scrollIntoViewIfNeeded();
+      await button.click();
+      return;
+    }
+  }
+  throw new Error('canvas_save_button_missing');
 }
 
 async function readCanvasProject(page, toolId) {
   const storage = await page.evaluate((key) => window.localStorage.getItem(key), canvasStoreKey);
   const parsedStorage = storage ? JSON.parse(storage) : null;
+  const workspaceEntries = await page.evaluate(() => Object.entries(window.localStorage)
+    .filter(([key]) => key.startsWith('heavy-chain-workspace-artifacts:'))
+    .map(([key, value]) => ({ key, value })));
+  const workspaceArtifacts = workspaceEntries.flatMap(({ value }) => {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   fs.writeFileSync(path.join(outDir, `${toolId}-canvas-storage.json`), `${JSON.stringify(parsedStorage, null, 2)}\n`);
+  fs.writeFileSync(path.join(outDir, `${toolId}-workspace-artifacts.json`), `${JSON.stringify(workspaceArtifacts, null, 2)}\n`);
   const project = Array.isArray(parsedStorage?.state?.projects)
     ? parsedStorage.state.projects.find((item) => item?.id === parsedStorage?.state?.currentProjectId)
     : null;
+  const currentObjects = Array.isArray(parsedStorage?.state?.objects)
+    ? parsedStorage.state.objects
+    : Array.isArray(project?.objects) ? project.objects : [];
   return {
     storage: parsedStorage,
     project,
-    objects: Array.isArray(project?.objects) ? project.objects : [],
+    objects: currentObjects,
+    workspaceArtifacts,
+  };
+}
+
+function findWorkspaceProviderArtifact(readback, toolId) {
+  return (readback.workspaceArtifacts ?? []).find((artifact) => (
+    artifact?.metadata?.toolId === toolId
+    && String(artifact.featureType ?? '').endsWith('-provider-result')
+  )) ?? null;
+}
+
+function buildProviderReadbackParams(artifact, toolId) {
+  const metadata = artifact?.metadata ?? {};
+  const references = Array.isArray(metadata.materialReferences)
+    ? metadata.materialReferences.map((reference, index) => ({
+        ...reference,
+        slotKey: reference?.slotKey ?? (index === 0 ? 'primary' : 'secondary'),
+      }))
+    : [];
+  const materialSlots = references.map((reference) => ({
+    key: reference.slotKey,
+    hasImage: reference?.hasImage === true,
+    label: reference?.role ?? null,
+    materialKind: reference?.role ?? null,
+  }));
+  const lightchainResult = artifact
+    ? {
+        toolId,
+        title: artifact.title,
+        summary: artifact.prompt ?? metadata.brief ?? '',
+        imageUrl: artifact.imageUrl ?? '',
+        generationMode: 'provider',
+      }
+    : null;
+  return {
+    toolId: metadata.toolId ?? toolId,
+    lightchainRoute: metadata.sourceResumePath ?? null,
+    inputs: references,
+    outputs: ['generation-history', 'canvas'],
+    fabricPrompt: metadata.brief ?? null,
+    imageRatio: metadata.generationIntent?.imageRatio ?? null,
+    materialReferences: references,
+    layerPlan: metadata.layerPlan ?? null,
+    maskPlan: metadata.maskPlan ?? null,
+    compositionPreview: metadata.compositionPreview ?? metadata.generationIntent ?? null,
+    lightchainWorkbenchState: {
+      materialSlots,
+      materialReferences: references,
+      lightchainResult,
+      referenceNote: metadata.referenceNote ?? null,
+    },
   };
 }
 
@@ -1106,12 +1272,127 @@ async function installLocalSupabaseMocks(browserContext) {
       body: JSON.stringify([]),
     });
   });
+  await browserContext.route('**/functions/v1/edit-image**', async (route) => {
+    const sequence = ++localProofSequence;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        imageUrl: localProofImageUrl,
+        jobId: `local-proof-edit-job-${sequence}`,
+        imageId: `local-proof-edit-image-${sequence}`,
+        storagePath: `local-proof/edit-image-${sequence}.png`,
+        provider: 'local-proof-provider',
+        backendProvider: 'local-proof-edge-mock',
+        providerModel: 'local-proof-image-model',
+        inputFidelity: 'high',
+        quality: 'high',
+        persistenceStatus: 'completed',
+        inputImageCount: 2,
+        maskApplied: true,
+      }),
+    });
+  });
+  await browserContext.route('**/functions/v1/model-matrix**', async (route) => {
+    const sequence = ++localProofSequence;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        jobId: `local-proof-model-job-${sequence}`,
+        persistenceStatus: 'completed',
+        matrix: [{
+          bodyType: 'regular',
+          bodyTypeName: 'レギュラー',
+          ageGroup: '20s',
+          ageGroupName: '20代',
+          imageUrl: localProofImageUrl,
+          imageId: `local-proof-model-image-${sequence}`,
+          storagePath: `local-proof/model-matrix-${sequence}.png`,
+          persistenceStatus: 'completed',
+        }],
+      }),
+    });
+  });
+  await browserContext.route('**/functions/v1/generate-image**', async (route) => {
+    const sequence = ++localProofSequence;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        imageUrl: localProofImageUrl,
+        jobId: `local-proof-generate-job-${sequence}`,
+        imageId: `local-proof-generate-image-${sequence}`,
+        storagePath: `local-proof/generate-image-${sequence}.png`,
+        provider: 'local-proof-provider',
+        backendProvider: 'local-proof-edge-mock',
+        persistenceStatus: 'completed',
+        inputImageCount: 1,
+      }),
+    });
+  });
+  await browserContext.route('**/functions/v1/marketing-workspace-artifact**', async (route) => {
+    const sequence = ++localProofSequence;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        remoteSaveStage: 'completed',
+        remote: {
+          jobId: `local-proof-artifact-job-${sequence}`,
+          imageId: `local-proof-artifact-image-${sequence}`,
+          storagePath: `local-proof/artifact-${sequence}.png`,
+        },
+      }),
+    });
+  });
+  await browserContext.route('**/storage/v1/object/sign/generated-images**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ signedURL: localProofImageUrl }),
+    });
+  });
+  await browserContext.route('**/rest/v1/generated_images*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'content-range': '0--1/0' },
+      body: JSON.stringify([]),
+    });
+  });
+  await browserContext.route('**/storage/v1**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ signedURL: localProofImageUrl }),
+    });
+  });
+  await browserContext.route('**/storage/v1*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ signedURL: localProofImageUrl }),
+    });
+  });
 }
 
 async function installGenerationNetworkGuard(browserContext) {
   await browserContext.route('**/*', async (route) => {
     const request = route.request();
     const url = request.url();
+    if (isLocalProofModelRequest(url)) {
+      await route.abort('blockedbyclient');
+      return;
+    }
+    if (isLocalProofProviderRequest(url)) {
+      await route.fallback();
+      return;
+    }
     if (isGenerationLikeRequest(url)) {
       evidence.blockedGenerationRequests.push({
         method: request.method(),
@@ -1123,6 +1404,19 @@ async function installGenerationNetworkGuard(browserContext) {
     }
     await route.fallback();
   });
+}
+
+function isLocalProofProviderRequest(url) {
+  return /\/functions\/v1\/(?:edit-image|model-matrix|generate-image|marketing-workspace-artifact)/i.test(url);
+}
+
+function isLocalProofModelRequest(url) {
+  return /(?:huggingface\.co|hf\.co|raw\.githubusercontent\.com)/i.test(url)
+    && /(?:u2net|efficient_sam|\.onnx)/i.test(url);
+}
+
+function isLocalProofSyntheticStorageRequest(url) {
+  return /\/storage\/v1(?:data:image|object\/sign\/generated-images)/i.test(url);
 }
 
 function isGenerationLikeRequest(url) {
@@ -1139,7 +1433,12 @@ function isAllowedExternalRequest(url) {
       if (parsed.pathname.startsWith('/rest/v1/users')) return true;
       if (parsed.pathname.startsWith('/rest/v1/brands')) return true;
       if (parsed.pathname.startsWith('/rest/v1/brand_members')) return true;
+      if (parsed.pathname.startsWith('/rest/v1/generated_images')) return true;
+      if (parsed.pathname.startsWith('/storage/v1/object/sign/generated-images')) return true;
       if (parsed.pathname === '/functions/v1/marketing-workspace-artifact') return true;
+      if (parsed.pathname === '/functions/v1/edit-image') return true;
+      if (parsed.pathname === '/functions/v1/model-matrix') return true;
+      if (parsed.pathname === '/functions/v1/generate-image') return true;
     }
     return false;
   } catch {

@@ -1,5 +1,3 @@
-import { buildGenerationIntentHref, workspaceSourceConfig } from './workspaceHandoff';
-
 export type LightchainCategoryId = 'recommended' | 'planning' | 'fitting' | 'graphics';
 
 export interface LightchainFeature {
@@ -13,6 +11,8 @@ export interface LightchainFeature {
   capability: string;
   evidence: string;
   tags: string[];
+  /** Keep deferred capabilities in the catalog without exposing them in the internal beta launcher. */
+  betaIncluded?: boolean;
 }
 
 export interface LightchainCompatContext {
@@ -58,29 +58,6 @@ export const lightchainCategories: LightchainCategory[] = [
     description: '生地、プリント、柄、配置、変換をまとめます。',
   },
 ];
-
-const modelLibraryDirectGenerateRoute = buildGenerationIntentHref({
-  feature: 'model-matrix',
-  prompt: [
-    'Face: 柔らかい卵型の顔、自然な微笑み、黒髪のショートボブ',
-    'Pose: 正面立ち、肩線をまっすぐ見せる、両腕は自然に下ろす',
-    'Body type: 標準体型 / 162cm / S-Mサイズの着用確認',
-    'Skin tone: ウォームライト',
-    'Age group: 20代',
-    'Usage: EC標準',
-    'Product description: シアージャケット、軽い透け感、ミニマルなEC商品画像',
-  ].join('\n'),
-  bodyTypes: ['regular'],
-  ageGroups: ['20s'],
-  skinTone: 'light',
-  hairStyle: 'short',
-  modelCandidateLabel: 'Clean EC 20s',
-  sourceWorkspace: 'models',
-  workflowVersion: 'model-library-local-v1',
-  sourceLabel: workspaceSourceConfig.models.label,
-  sourceResumePath: workspaceSourceConfig.models.resumePath,
-  sourceMode: 'local-workflow-intake',
-});
 
 export const lightchainFeatureCatalog: LightchainFeature[] = [
   {
@@ -130,13 +107,14 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     capability: '尺、比率、ショット構成、CTA、保存',
     evidence: 'video-storyboard-local-v1',
     tags: ['動画', 'Storyboard', 'CTA'],
+    betaIncluded: false,
   },
   {
     id: 'model-library',
     title: 'モデル企画ライブラリ',
     lightchainName: 'FittingModelCustomize / ChangePosture / ChangeBackground',
     description: 'モデル条件をまとめて生成へ渡します。',
-    route: modelLibraryDirectGenerateRoute,
+    route: '/model-library/model-custom-form',
     category: 'recommended',
     status: 'production',
     capability: 'モデル候補選択、model-matrix query、生成条件 readback',
@@ -148,7 +126,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: 'ファッションスタジオ',
     lightchainName: 'OneClickIntegration / DirectionalIntegration',
     description: '服、モデル、背景、小物をまとめます。',
-    route: '/studio',
+    route: '/flow/integration',
     category: 'recommended',
     status: 'workspace',
     capability: 'モデル/ポーズ/背景選択、保存、再開',
@@ -160,7 +138,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: 'デザインエージェント',
     lightchainName: 'ClothingDesignFlux / seriesDesign',
     description: 'トレンドとシリーズ案を比べます。',
-    route: '/workflows/design-exploration',
+    route: '/agent',
     category: 'recommended',
     status: 'workspace',
     capability: 'ワークフローボード、複数案、design-gacha prefill',
@@ -172,7 +150,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: 'Heavy Chain Lab',
     lightchainName: 'Heavy Chain Lab',
     description: '仮説を生成前に検証します。',
-    route: '/lab',
+    route: '/flow/laboratory',
     category: 'recommended',
     status: 'local-proof',
     capability: 'Material Lighting、Retail Readiness、Campaign Transfer',
@@ -184,7 +162,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: 'インスピレーションデザイン',
     lightchainName: 'ClothingDesignFlux / seriesDesign',
     description: '素材やテーマから案を作ります。',
-    route: '/workflows/design-exploration',
+    route: '/creator',
     category: 'graphics',
     status: 'workspace',
     capability: '商品コンセプト、複数スタイル、比較',
@@ -208,7 +186,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: 'プリントイメージ',
     lightchainName: 'PrintingImage / PrintPlacement / PrintingTiling',
     description: '服画像にプリントを配置し、スポット/全面の仕上がりを確認します。',
-    route: '/lightchain/printing-image',
+    route: '/tools/printing',
     category: 'graphics',
     status: 'workspace',
     capability: '服画像、プリント画像、配置範囲、出力解像度',
@@ -220,7 +198,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: '線画から実写へ変換',
     lightchainName: 'LineArtToReal / GenerateSketch',
     description: '線画を実写化の条件にします。',
-    route: '/generate?feature=design-gacha',
+    route: '/tools/line-draft-to-tile',
     category: 'planning',
     status: 'workspace',
     capability: 'design-gacha prompt と source provenance',
@@ -232,7 +210,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: '色変更',
     lightchainName: 'ChangeColor / OneClickChangeColor',
     description: '商品の色替えを残します。',
-    route: '/generate?feature=colorize',
+    route: '/editor/changeColor',
     category: 'planning',
     status: 'production',
     capability: 'colorize Edge Function、保存',
@@ -244,7 +222,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: '平絵をベクター化',
     lightchainName: 'LineArtVectorConvert / SVGConvert',
     description: '刺繍やプリント向けに整えます。',
-    route: '/patterns/workbench',
+    route: '/tools/svg-convert',
     category: 'planning',
     status: 'workspace',
     capability: 'Vector Path Caps preview、保存',
@@ -268,7 +246,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: 'モデル背景変更',
     lightchainName: 'FittingModelChangeBackground',
     description: 'モデルと背景を合わせます。',
-    route: '/studio',
+    route: '/flow/integration',
     category: 'fitting',
     status: 'workspace',
     capability: 'Street 30s、3/4 Walk、背景選択',
@@ -280,7 +258,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: '体型・サイズ変更',
     lightchainName: 'FittingModelChangeBodyShape / BigSize',
     description: '体型、年齢層、肌色、髪型を model-matrix の正規化条件へ渡します。',
-    route: '/models',
+    route: '/model-library/model-custom-form',
     category: 'fitting',
     status: 'production',
     capability: 'bodyTypes、ageGroups、skinTone、hairStyle',
@@ -304,7 +282,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: 'AIグラフィックデザイン',
     lightchainName: 'GeneratePrinting / ModifyPrinting',
     description: '柄、ロゴ、モチーフを作り、商品や販促素材へ展開します。',
-    route: '/patterns/workbench',
+    route: '/printing',
     category: 'graphics',
     status: 'workspace',
     capability: 'Emblem Lockup、Bandana Grid、保存',
@@ -316,7 +294,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: 'パターンをベクター画像に変換',
     lightchainName: 'PatternToVector',
     description: '総柄を量産向けに整理し、線と配色の方針を残します。',
-    route: '/patterns/workbench',
+    route: '/tools/vector-special',
     category: 'graphics',
     status: 'workspace',
     capability: 'ベクター化方針、repeatSignature、保存',
@@ -328,7 +306,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: 'デザインアレンジ',
     lightchainName: 'OneClickModifyPrinting / ModifyPrinting',
     description: '既存柄の改変、配置、配色差分を生成条件に残します。',
-    route: '/generate?feature=generate-variations',
+    route: '/editor/pattern',
     category: 'graphics',
     status: 'production',
     capability: 'generate-variations Edge Function、保存',
@@ -340,7 +318,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: '柄・グラフィック',
     lightchainName: 'AddPrinting_Position / AddPrinting_Full',
     description: '新規ファイル、最近の案件、事例から入って、定位プリントや総柄に進みます。',
-    route: '/patterns/workbench',
+    route: '/editor/patternDesign',
     category: 'graphics',
     status: 'workspace',
     capability: '新規ファイル、最近の案件、事例、保存',
@@ -352,7 +330,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: '背景削除・切り抜き',
     lightchainName: 'CutOut / RemoveBackground',
     description: '商品画像の背景を削除し、白背景素材や編集用素材として使います。',
-    route: '/generate?feature=remove-bg',
+    route: '/tools/reactor',
     category: 'graphics',
     status: 'production',
     capability: 'remove-background Edge Function、対象画像アップロード、保存',
@@ -442,6 +420,7 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     capability: 'SNSキャンペーンセット、Video storyboard、保存',
     evidence: 'video-storyboard-local-v1',
     tags: ['SNS', '動画', '販促'],
+    betaIncluded: false,
   },
 ];
 
@@ -653,7 +632,11 @@ export const buildLightchainCompatContext = (feature: LightchainFeature): Lightc
 };
 
 export const buildLightchainFeatureHref = (feature: LightchainFeature) => {
-  if (!feature.route.startsWith('/generate')) return feature.route;
+  const routePath = feature.route.split('?')[0];
+  const duplicateRoute = lightchainFeatureCatalog.some((candidate) => (
+    candidate.id !== feature.id && candidate.route.split('?')[0] === routePath
+  ));
+  if (!feature.route.startsWith('/generate') && !duplicateRoute) return feature.route;
   const [path, search = ''] = feature.route.split('?');
   const params = new URLSearchParams(search);
   params.set('lcFeature', feature.id);

@@ -60,6 +60,8 @@ import {
 } from '../components/lightchain/PrintingImageComposer';
 import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import { LIGHTCHAIN_MATERIAL_LIBRARY_TABS } from '../lib/lightchainMaterialContract';
+import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
+import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import { buildAssetAnchoredPreviewDataUrl, type AssetAnchoredPreviewMode } from '../features/lightchain/assetAnchoredPreview';
 import {
   buildLightchainProviderPrompt,
@@ -1049,6 +1051,7 @@ export function LightchainWorkbenchPage() {
   const { toolId } = useParams<{ toolId?: string }>();
   const [searchParams] = useSearchParams();
   const { user, currentBrand } = useAuthStore();
+  const { setFlowState } = useUnifiedWorkspaceFlow();
   const { createProject, deleteProject, addObject, selectObject, saveCurrentProject } = useCanvasStore();
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('home');
   const [selectedToolId, setSelectedToolId] = useState('marketing-home');
@@ -1414,6 +1417,19 @@ export function LightchainWorkbenchPage() {
     },
     [selectedTool.category, selectedTool.id],
   );
+
+  const unifiedFlowState = deriveUnifiedWorkspaceFlowState({
+    inputReady: hasCurrentInput || Boolean(nextStepConfirmed),
+    rightsReady: !lightchainProviderSupported || providerRightsConfirmed,
+    generating: lightchainGenerationRunning || isPrintingImageGenerationRunning,
+    completed: Boolean(lightchainResult) || workspaceArtifacts.length > 0,
+    failed: Boolean(lightchainGenerationError || printingGenerationError),
+    persisted: workspaceArtifacts.some((artifact) => Boolean(artifact.id)),
+  });
+
+  useEffect(() => {
+    setFlowState(unifiedFlowState);
+  }, [setFlowState, unifiedFlowState]);
 
   useEffect(() => {
     if (toolId) return;
@@ -3501,7 +3517,11 @@ export function LightchainWorkbenchPage() {
 
   if (isFeatureDetail && isFittingDetail) {
     return (
-      <main className="dark min-h-[calc(100vh-70px)] bg-[#121414] text-white">
+      <main
+        className="dark min-h-[calc(100vh-70px)] bg-[#121414] text-white"
+        data-flow-state={unifiedFlowState}
+        data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
+      >
         {renderLightchainProviderGate()}
         <div className="relative grid min-h-[calc(100vh-70px)] lg:grid-cols-[432px_minmax(0,1fr)]">
           <section className="border-r border-white/10 bg-[#141717]" data-testid="lightchain-fitting-input-flow">
@@ -5091,7 +5111,11 @@ export function LightchainWorkbenchPage() {
   }
 
   return (
-    <main className={`dark min-h-screen ${isFeatureDetail ? 'bg-[#0b0f10] px-4 py-4 text-white sm:px-6' : 'bg-surface-50 px-4 py-5 dark:bg-surface-950 sm:px-6 lg:px-8'}`}>
+    <main
+      className={`dark min-h-screen ${isFeatureDetail ? 'bg-[#0b0f10] px-4 py-4 text-white sm:px-6' : 'bg-surface-50 px-4 py-5 dark:bg-surface-950 sm:px-6 lg:px-8'}`}
+      data-flow-state={unifiedFlowState}
+      data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
+    >
       <div className={isFeatureDetail ? 'space-y-4' : 'mx-auto max-w-7xl space-y-5'}>
         <section className={`rounded-2xl border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900 ${isFeatureDetail ? 'hidden' : 'p-5 sm:p-6'}`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

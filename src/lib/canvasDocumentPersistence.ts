@@ -39,7 +39,7 @@ const REMOTE_METADATA_KEYS = new Set([
   'feature', 'prompt', 'parentId', 'generation', 'parameters', 'parentObjectId', 'maskApplied',
   'protectedRegionComposited', 'backendProvider', 'provider', 'status', 'jobId', 'imageId',
   'storagePath', 'persistenceStatus', 'lightchainCompat', 'galleryStoragePath', 'galleryImageId',
-  'galleryImageUrl', 'parityRuntime', 'legalSafety', 'sourceIdentity', 'sourceRevision',
+  'galleryImageUrl', 'inputLineage', 'parityRuntime', 'legalSafety', 'sourceIdentity', 'sourceRevision',
   'sourceReadback', 'lightchainEditStages', 'timestamp',
 ]);
 
@@ -70,8 +70,19 @@ const stripUnsafeData = (value: unknown): unknown => {
 
 const getRemoteSource = (object: CanvasObject) => {
   const metadata = object.metadata;
-  if (metadata?.galleryStoragePath) return metadata.galleryStoragePath;
-  if (metadata?.storagePath) return metadata.storagePath;
+  const parameters = metadata?.parameters && typeof metadata.parameters === 'object'
+    ? metadata.parameters as Record<string, unknown>
+    : {};
+  const storagePath = [
+    metadata?.galleryStoragePath,
+    metadata?.storagePath,
+    parameters.galleryStoragePath,
+    parameters.storagePath,
+    parameters.remoteStoragePath,
+    parameters.sourceStoragePath,
+    parameters.backendStoragePath,
+  ].find((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  if (storagePath) return storagePath;
   const sourceRevision = metadata?.sourceRevision?.revision || metadata?.sourceRevision?.hash;
   if (sourceRevision && hasLocalCanvasAsset(sourceRevision)) return buildLocalCanvasAssetReference(sourceRevision);
   if (typeof object.src === 'string' && !/^(?:data|blob):/i.test(object.src)) return object.src;

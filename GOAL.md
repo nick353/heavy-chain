@@ -1,5 +1,11 @@
 # GOAL.md
 
+## Current Active Product Plan
+
+The current Heavy Chain product Goal is the internal apparel integrated beta defined in [`Plan.md`](./Plan.md). `Plan.md` is the detailed execution plan and current ordering authority for this Goal: fresh Lightchain baseline and inventory first, then the shared workspace, fabric-print imagery, AI fitting, the remaining non-video features, cross-platform QA, and internal beta rollout.
+
+The active acceptance boundary is also recorded in [`PROJECT_DESIGN.md`](./PROJECT_DESIGN.md) and [`STATE.md`](./STATE.md). Historical readiness goals in this file remain historical evidence unless they are explicitly reactivated; they must not reorder or broaden the current Plan. Video, public release, billing, checkout, payment, OTP/CAPTCHA, identity verification, secret entry, and external publishing remain out of scope.
+
 ## Current Scope Override: Runway retirement / OpenAI path
 
 The current continuation retires the legacy third-party image provider from Heavy Chain. Active UI, Edge Functions, worker/bridge scripts, configuration, provider types, monitoring, and operator docs use the OpenAI image path or a generic provider boundary. The retirement migration is prepared for remote Supabase apply; OpenAI API calls, generation, billing, and deploy are excluded until separately verified.
@@ -68,7 +74,7 @@ Current G781 action packet: `work/g781-final-blockers-operator-action-packet-202
 - upload -> recognition -> cut/mask -> layer -> design placement -> Canvas/export の直感操作 proof。
 - production monitor / launch-ops / mass-market QA / security audit / performance checks / build/lint/typecheck / Codex review。
 - 法務/安全/外部公開/課金系の未決定事項は `goals/HUMAN_NEEDED.md` に分離。
-- `STATE.md`, `plan.md`, `GOAL.md` が最新証跡を指し、push済みはrelease gate summaryではなくgit status/remote readbackで別途確認する。
+- `STATE.md`, `Plan.md`, `GOAL.md` が最新証跡を指し、push済みはrelease gate summaryではなくgit status/remote readbackで別途確認する。
 
 ## Quality Bar
 

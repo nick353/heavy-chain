@@ -4,17 +4,20 @@ import toast from 'react-hot-toast';
 import { BarChart3, Check, ChevronRight, FlaskConical, Images, Layers3, Lightbulb, Save, Sparkles, Target } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import { WorkspaceReadinessStrip } from '../components/workspace/WorkspaceReadinessStrip';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
+import { listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
 import {
   buildLightchainToolHref,
   handoffWorkspaceToCanvas,
   restoreWorkspaceHandoffHistory,
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
+import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 
 const choices = ['プロンプト実験', '品質評価', '採用候補'];
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
@@ -192,6 +195,7 @@ const buildLabExperimentPreviewSvg = ({
 export function LabPage() {
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
+  const { setFlowState } = useUnifiedWorkspaceFlow();
   const [activeChoice, setActiveChoice] = useState(choices[0]);
   const [progress, setProgress] = useState(28);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -201,6 +205,7 @@ export function LabPage() {
   const [evaluationAxis, setEvaluationAxis] = useState('素材感 / 顔の自然さ / 商品識別性 / EC転用しやすさ');
   const [candidate, setCandidate] = useState('候補A: 白背景スタジオ、候補B: グレー背景寄り');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
+  const [savedArtifactId, setSavedArtifactId] = useState<string | null>(null);
   const nextHistoryId = useRef(1);
   const selectedExperiment = labExperimentCandidates.find((item) => item.id === selectedExperimentId) ?? labExperimentCandidates[0];
   const axisItems = evaluationAxis.split('/').map((item) => item.trim()).filter(Boolean);
@@ -212,6 +217,10 @@ export function LabPage() {
     ? `${materialReferenceMetadata.materialKind}: ${materialReferenceMetadata.fileName ?? 'uploaded'} / ${materialReferenceMetadata.activeLayer} / ${materialReferenceMetadata.placement} / ${materialReferenceMetadata.scale}%`
     : '素材を追加するとここに反映されます';
   useEffect(() => {
+    const savedArtifact = currentBrand?.id
+      ? listWorkspaceArtifacts(currentBrand.id, user?.id).find((artifact) => artifact.featureType === 'lab-workflow')
+      : null;
+    setSavedArtifactId(savedArtifact?.id ?? null);
     setHistory(restoreWorkspaceHandoffHistory(currentBrand?.id, 'lab-workflow', user?.id));
   }, [currentBrand?.id, user?.id]);
   const previewImageUrl = useMemo(() => buildLabExperimentPreviewSvg({
@@ -222,8 +231,21 @@ export function LabPage() {
     evaluationAxis,
     candidate,
   }), [activeChoice, candidate, evaluationAxis, hypothesis, promptDraft, selectedExperiment]);
+  const labFlowState = deriveUnifiedWorkspaceFlowState({
+    inputReady: Boolean(hypothesis.trim() && promptDraft.trim() && evaluationAxis.trim()),
+    rightsReady: true,
+    generating: false,
+    completed: Boolean(savedArtifactId),
+    failed: false,
+    persisted: Boolean(savedArtifactId),
+  });
+
+  useEffect(() => {
+    setFlowState(labFlowState);
+  }, [labFlowState, setFlowState]);
 
   const recordProgress = (choice: string) => {
+    setSavedArtifactId(null);
     const historyItem = {
       id: `lab-history-${nextHistoryId.current++}`,
       label: `${choice}をローカル履歴に追加`,
@@ -235,6 +257,7 @@ export function LabPage() {
   };
 
   const selectExperiment = (experiment: LabExperimentCandidate) => {
+    setSavedArtifactId(null);
     setSelectedExperimentId(experiment.id);
     setHypothesis(experiment.hypothesis);
     setPromptDraft(experiment.promptDraft);
@@ -296,7 +319,7 @@ export function LabPage() {
       `Next step: ${nextStep}`,
     ].join('\n');
     try {
-    const { projectId } = handoffWorkspaceToCanvas({
+    const { artifact, projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
       scopeId: user?.id,
       featureType: 'lab-workflow',
@@ -395,6 +418,7 @@ export function LabPage() {
       },
     });
 
+    setSavedArtifactId(artifact.id);
     toast.success('Labを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
     } catch (error) {
@@ -405,7 +429,7 @@ export function LabPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-flow-state={labFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[labFlowState]}>
       <section className="glass-panel rounded-2xl p-5 sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -587,7 +611,10 @@ export function LabPage() {
             uploadLabel="実験素材・生成候補をアップロード"
             emptyLabel="素材を置くと、Canvasへ評価対象の実画像レイヤーとして渡せます"
             state={materialReference}
-            onChange={setMaterialReference}
+            onChange={(next) => {
+              setSavedArtifactId(null);
+              setMaterialReference(next);
+            }}
             materialKinds={['実験素材', '生成候補', '物撮り', '参考LOOK', '失敗例']}
             layerOptions={['比較A', '比較B', '採用候補', '除外候補', '評価メモ']}
             placementOptions={['評価左', '評価右', '中央比較', '採用枠', '再実験枠']}
@@ -601,19 +628,19 @@ export function LabPage() {
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               仮説
-              <textarea value={hypothesis} onChange={(event) => setHypothesis(event.target.value)} rows={3} className={fieldClass} />
+              <textarea value={hypothesis} onChange={(event) => { setSavedArtifactId(null); setHypothesis(event.target.value); }} rows={3} className={fieldClass} />
             </label>
             <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               プロンプト案
-              <textarea value={promptDraft} onChange={(event) => setPromptDraft(event.target.value)} rows={3} className={fieldClass} />
+              <textarea value={promptDraft} onChange={(event) => { setSavedArtifactId(null); setPromptDraft(event.target.value); }} rows={3} className={fieldClass} />
             </label>
             <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               評価軸
-              <textarea value={evaluationAxis} onChange={(event) => setEvaluationAxis(event.target.value)} rows={3} className={fieldClass} />
+              <textarea value={evaluationAxis} onChange={(event) => { setSavedArtifactId(null); setEvaluationAxis(event.target.value); }} rows={3} className={fieldClass} />
             </label>
             <label className="text-sm font-semibold text-neutral-900 dark:text-white">
               採用候補
-              <textarea value={candidate} onChange={(event) => setCandidate(event.target.value)} rows={3} className={fieldClass} />
+              <textarea value={candidate} onChange={(event) => { setSavedArtifactId(null); setCandidate(event.target.value); }} rows={3} className={fieldClass} />
             </label>
           </div>
         </div>

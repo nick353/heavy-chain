@@ -21,7 +21,10 @@ const statusIcon = {
 function JobRow({ job }: { job: WorkspaceJob }) {
   const StatusIcon = statusIcon[job.status];
   const href = job.status === 'failed' ? job.retryHref : '/gallery';
-  const lightchainRows = job.sourceSummaryRows.filter((row) => row.label.startsWith('Lightchain'));
+  // Keep legacy Lightchain metadata readable while accepting the current Heavy Chain labels.
+  const lightchainRows = job.sourceSummaryRows.filter((row) => (
+    row.label.startsWith('Heavy Chain') || row.label.startsWith('Lightchain')
+  ));
   const actionLabel = job.status === 'failed'
     ? job.retryLabel
     : job.status === 'completed'

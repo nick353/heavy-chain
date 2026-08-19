@@ -4,17 +4,20 @@ import toast from 'react-hot-toast';
 import { Check, ChevronRight, Save, Shirt, SlidersHorizontal, Sparkles, UserRound } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
+import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import { PermissionLockedButton } from '../components/lightchain/PermissionLockedButton';
 import {
   buildMaterialReferenceMetadata,
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
+import { listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
 import {
   buildGenerationIntentHref,
   handoffWorkspaceToCanvas,
   restoreWorkspaceHandoffHistory,
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
+import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 
 const intents = ['EC標準', 'LOOK確認', '広告検証'] as const;
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
@@ -215,6 +218,7 @@ const buildModelLibraryPreviewSvg = ({
 export function ModelLibraryPage() {
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
+  const { setFlowState } = useUnifiedWorkspaceFlow();
   const [activeIntent, setActiveIntent] = useState<Intent>(intents[0]);
   const [selectedCandidateId, setSelectedCandidateId] = useState(modelCandidates[0].id);
   const [progress, setProgress] = useState(34);
@@ -227,11 +231,16 @@ export function ModelLibraryPage() {
   const [usage, setUsage] = useState<Intent>(modelCandidates[0].usage);
   const [productDescription, setProductDescription] = useState(modelCandidates[0].productDescription);
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialModelMaterial);
+  const [savedArtifactId, setSavedArtifactId] = useState<string | null>(null);
   const nextHistoryId = useRef(1);
   const selectedCandidate = modelCandidates.find((candidate) => candidate.id === selectedCandidateId) ?? modelCandidates[0];
   const primaryInput = `${face} / ${pose} / ${bodyType} / ${skinTone} / ${ageGroup} / ${usage} / ${productDescription}`;
   const nextStep = `${usage}向けモデル候補 ${selectedCandidate.label} をmodel-library-workspaceとしてモデルマトリクスへ渡す`;
   useEffect(() => {
+    const savedArtifact = currentBrand?.id
+      ? listWorkspaceArtifacts(currentBrand.id, user?.id).find((artifact) => artifact.featureType === 'model-library-workspace')
+      : null;
+    setSavedArtifactId(savedArtifact?.id ?? null);
     setHistory(restoreWorkspaceHandoffHistory(currentBrand?.id, 'model-library-workspace', user?.id));
   }, [currentBrand?.id, user?.id]);
   const directModelMatrixHref = buildGenerationIntentHref({
@@ -269,6 +278,18 @@ export function ModelLibraryPage() {
     nextStep,
   }), [ageGroup, bodyType, face, nextStep, pose, primaryInput, productDescription, selectedCandidate, skinTone, usage]);
   const activeIntentMeta = intentMeta[activeIntent];
+  const modelLibraryFlowState = deriveUnifiedWorkspaceFlowState({
+    inputReady: Boolean(face.trim() && pose.trim() && bodyType.trim() && skinTone.trim() && ageGroup.trim() && productDescription.trim()),
+    rightsReady: true,
+    generating: false,
+    completed: Boolean(savedArtifactId),
+    failed: false,
+    persisted: Boolean(savedArtifactId),
+  });
+
+  useEffect(() => {
+    setFlowState(modelLibraryFlowState);
+  }, [modelLibraryFlowState, setFlowState]);
   const selectedProfileRows = [
     { label: '顔', value: face },
     { label: 'ポーズ', value: pose },
@@ -277,7 +298,10 @@ export function ModelLibraryPage() {
     { label: '年齢層', value: ageGroup },
   ];
 
+  const markWorkflowDirty = () => setSavedArtifactId(null);
+
   const recordProgress = (intent: Intent) => {
+    markWorkflowDirty();
     const historyItem = {
       id: `model-library-history-${nextHistoryId.current++}`,
       label: `${intent}をローカル履歴に追加`,
@@ -290,6 +314,7 @@ export function ModelLibraryPage() {
   };
 
   const selectCandidate = (candidate: ModelCandidate) => {
+    markWorkflowDirty();
     setSelectedCandidateId(candidate.id);
     setActiveIntent(candidate.usage);
     setUsage(candidate.usage);
@@ -357,7 +382,7 @@ export function ModelLibraryPage() {
       `Next step: ${nextStep}`,
     ].join('\n');
     try {
-    const { projectId } = handoffWorkspaceToCanvas({
+    const { artifact, projectId } = handoffWorkspaceToCanvas({
       brandId: currentBrand.id,
       scopeId: user?.id,
       featureType: 'model-library-workspace',
@@ -471,6 +496,7 @@ export function ModelLibraryPage() {
       },
     });
 
+    setSavedArtifactId(artifact.id);
     toast.success('モデルライブラリを保存し、Canvasへ渡しました');
     navigate(`/canvas/${projectId}`);
     } catch (error) {
@@ -481,7 +507,7 @@ export function ModelLibraryPage() {
   };
 
   return (
-    <div className="space-y-6 text-white">
+    <div className="space-y-6 text-white" data-flow-state={modelLibraryFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[modelLibraryFlowState]}>
       <section className="overflow-hidden rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -657,7 +683,10 @@ export function ModelLibraryPage() {
 	                uploadLabel="顔・ポーズ・商品参照をアップロード"
 	                emptyLabel="参照画像を置くとCanvasにモデル条件の実素材として残ります"
 	                state={materialReference}
-	                onChange={setMaterialReference}
+	                onChange={(next) => {
+	                  markWorkflowDirty();
+	                  setMaterialReference(next);
+	                }}
 	                materialKinds={['モデル参照', '顔参照', 'ポーズ参照', '商品写真', '背景参照']}
 	                layerOptions={['顔', 'ポーズ', '体型', '衣服', '背景']}
 	                placementOptions={['正面', '斜め45度', '全身', '上半身', '商品横']}
@@ -666,19 +695,19 @@ export function ModelLibraryPage() {
 	            <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className="text-sm font-semibold text-white">
                 顔
-                <textarea value={face} onChange={(event) => setFace(event.target.value)} rows={2} className={fieldClass} />
+                <textarea value={face} onChange={(event) => { markWorkflowDirty(); setFace(event.target.value); }} rows={2} className={fieldClass} />
               </label>
               <label className="text-sm font-semibold text-white">
                 ポーズ
-                <textarea value={pose} onChange={(event) => setPose(event.target.value)} rows={2} className={fieldClass} />
+                <textarea value={pose} onChange={(event) => { markWorkflowDirty(); setPose(event.target.value); }} rows={2} className={fieldClass} />
               </label>
               <label className="text-sm font-semibold text-white">
                 体型
-                <textarea value={bodyType} onChange={(event) => setBodyType(event.target.value)} rows={2} className={fieldClass} />
+                <textarea value={bodyType} onChange={(event) => { markWorkflowDirty(); setBodyType(event.target.value); }} rows={2} className={fieldClass} />
               </label>
               <label className="text-sm font-semibold text-white">
                 商品説明
-                <textarea value={productDescription} onChange={(event) => setProductDescription(event.target.value)} rows={2} className={fieldClass} />
+                <textarea value={productDescription} onChange={(event) => { markWorkflowDirty(); setProductDescription(event.target.value); }} rows={2} className={fieldClass} />
               </label>
             </div>
           </div>

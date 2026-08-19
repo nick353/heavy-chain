@@ -26,7 +26,7 @@ export interface GenerationIntent extends Record<string, Json | undefined> {
   prompt: string;
   href: string;
   label: string;
-  sourceWorkspace: 'studio' | 'video' | 'lab' | 'patterns' | 'models' | 'marketing' | 'fitting';
+  sourceWorkspace: 'studio' | 'video' | 'lab' | 'patterns' | 'models' | 'marketing' | 'fitting' | 'design-production';
   workflowVersion?: string;
   sourceLabel?: string;
   sourceResumePath?: string;
@@ -77,6 +77,10 @@ export interface GenerationIntentSourceMetadata {
   sourceLabel: string;
   sourceResumePath: string;
   sourceMode: WorkspaceHandoffKind;
+  /** Stable Gallery identity used to re-sign the source after route changes. */
+  sourceImageId?: string;
+  sourceStoragePath?: string;
+  sourceFileName?: string;
 }
 
 export interface WorkspaceWorkflowMetadata {
@@ -136,6 +140,7 @@ export const workspaceSourceConfig: Record<WorkspaceSource, { label: string; res
   lab: { label: 'Lab', resumePath: '/lab' },
   marketing: { label: 'マーケティングワークスペース', resumePath: '/marketing' },
   fitting: { label: 'AIフィッティング', resumePath: '/fitting' },
+  'design-production': { label: 'デザインワークスペース', resumePath: '/designProduction' },
 };
 
 /**
@@ -169,12 +174,13 @@ const workspaceAllowedWorkflowVersions: Record<WorkspaceSource, readonly string[
   lab: ['lab-evaluation-local-v1'],
   marketing: ['marketing-brief-local-v1'],
   fitting: ['fitting-brief-local-v1'],
+  'design-production': ['design-production-brief-local-v1'],
 };
 
 const allowedSourceModes = new Set<WorkspaceHandoffKind>(['local-workflow-intake']);
 
 const isWorkspaceSource = (value: string | null): value is WorkspaceSource => {
-  return value === 'studio' || value === 'models' || value === 'patterns' || value === 'video' || value === 'lab' || value === 'marketing' || value === 'fitting';
+  return value === 'studio' || value === 'models' || value === 'patterns' || value === 'video' || value === 'lab' || value === 'marketing' || value === 'fitting' || value === 'design-production';
 };
 
 const isWorkspaceHandoffKind = (value: string | null): value is WorkspaceHandoffKind => {
@@ -190,6 +196,9 @@ export const buildGenerationIntentHref = ({
   sourceLabel,
   sourceResumePath,
   sourceMode,
+  sourceImageId,
+  sourceStoragePath,
+  sourceFileName,
   bodyTypes,
   ageGroups,
   skinTone,
@@ -216,6 +225,9 @@ export const buildGenerationIntentHref = ({
     sourceResumePath,
     sourceMode,
   });
+  if (sourceImageId) params.set('sourceImageId', sourceImageId);
+  if (sourceStoragePath) params.set('sourceStoragePath', sourceStoragePath);
+  if (sourceFileName) params.set('sourceFileName', sourceFileName);
   if (aspectRatio) params.set('ratio', aspectRatio);
   if (bodyTypes?.length) params.set('bodyTypes', bodyTypes.join(','));
   if (ageGroups?.length) params.set('ageGroups', ageGroups.join(','));
@@ -282,6 +294,9 @@ export const hydrateGenerationIntentSource = (params: URLSearchParams): Generati
     sourceLabel,
     sourceResumePath,
     sourceMode,
+    ...(params.get('sourceImageId') ? { sourceImageId: params.get('sourceImageId')! } : {}),
+    ...(params.get('sourceStoragePath') ? { sourceStoragePath: params.get('sourceStoragePath')! } : {}),
+    ...(params.get('sourceFileName') ? { sourceFileName: params.get('sourceFileName')! } : {}),
   };
 };
 

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Layers,
@@ -27,7 +27,7 @@ import { PropertiesPanel } from '../components/canvas/PropertiesPanel';
 import { ImageEditModal } from '../components/canvas/ImageEditModal';
 import { PartialEditModal, type PartialEditPayload } from '../components/canvas/PartialEditModal';
 import { CanvasGuide, useCanvasGuide } from '../components/canvas/CanvasGuide';
-import { useCanvasStore, type CanvasObject } from '../stores/canvasStore';
+import { normalizeCanvasView, useCanvasStore, type CanvasObject } from '../stores/canvasStore';
 import { ChatEditor } from '../components/ChatEditor';
 import { GallerySelector } from '../components/GallerySelector';
 import { TemplateSelector, type DesignTemplate, type SizeTemplate } from '../components/TemplateSelector';
@@ -35,6 +35,7 @@ import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
 import { supabase } from '../lib/supabase';
 import { resolveGeneratedImageUrl } from '../lib/storage';
+import { getWorkspaceArtifactCanonicalStoragePath, listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import {
   isLocalCanvasAssetReference,
@@ -172,6 +173,11 @@ const restoreCanvasObjects = (snapshot: unknown): CanvasObject[] => {
   }));
 };
 
+const restoreCanvasView = (snapshot: unknown) => {
+  const view = snapshot && typeof snapshot === 'object' ? (snapshot as any).view : undefined;
+  return normalizeCanvasView(view);
+};
+
 const LOCAL_UPLOAD_READ_TIMEOUT_MS = 15_000;
 type LocalUploadPayload = { bytes: ArrayBuffer; dataUrl: string };
 
@@ -262,6 +268,8 @@ const loadLocalUploadImage = (source: string) => new Promise<HTMLImageElement>((
 export function CanvasEditorPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sourceArtifactId = searchParams.get('sourceArtifactId');
   const containerRef = useRef<HTMLDivElement>(null);
   const projectNameInputRef = useRef<HTMLInputElement>(null);
   const localUploadInputRef = useRef<HTMLInputElement>(null);
@@ -324,6 +332,7 @@ export function CanvasEditorPage() {
     missingCount: 0,
   });
   const localUploadEventKeysRef = useRef<Set<string>>(new Set());
+  const importedLibraryArtifactRef = useRef<string | null>(null);
 
   // Reference image states for generate modal
   const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
@@ -516,6 +525,7 @@ export function CanvasEditorPage() {
           id: document.id,
           name: document.title,
           objects: restoreCanvasObjects(document.snapshot),
+          view: restoreCanvasView(document.snapshot),
           createdAt: document.createdAt,
           updatedAt: document.updatedAt,
           brandId: document.brandId,
@@ -540,6 +550,94 @@ export function CanvasEditorPage() {
       cancelled = true;
     };
   }, [projectId, user?.id, currentBrand?.id, loadProject, hydrateProject, clearCanvas]);
+
+  useEffect(() => {
+    if (projectId !== 'new' || !sourceArtifactId || !currentBrand?.id) return;
+    if (importedLibraryArtifactRef.current === sourceArtifactId) return;
+
+    const artifact = listWorkspaceArtifacts(currentBrand.id, user?.id)
+      .find((candidate) => candidate.id === sourceArtifactId);
+    if (!artifact) return;
+
+    importedLibraryArtifactRef.current = sourceArtifactId;
+    let cancelled = false;
+    const source = artifact.imageUrl || getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
+    if (!source) {
+      toast.error('ライブラリー素材の保存先を復元できません');
+      return;
+    }
+
+    void (async () => {
+      try {
+        const resolvedSource = await resolveGeneratedImageUrl(source);
+        const image = await loadLocalUploadImage(resolvedSource);
+        if (cancelled) return;
+
+        const sourceWorkspace = typeof artifact.metadata.sourceWorkspace === 'string'
+          ? artifact.metadata.sourceWorkspace
+          : undefined;
+        const workflowVersion = typeof artifact.metadata.workflowVersion === 'string'
+          ? artifact.metadata.workflowVersion
+          : undefined;
+        const sourceLabel = typeof artifact.metadata.sourceLabel === 'string'
+          ? artifact.metadata.sourceLabel
+          : undefined;
+        const sourceResumePath = typeof artifact.metadata.sourceResumePath === 'string'
+          ? artifact.metadata.sourceResumePath
+          : undefined;
+        const sourceMode = typeof artifact.metadata.sourceMode === 'string'
+          ? artifact.metadata.sourceMode
+          : undefined;
+        const newId = addObject({
+          type: 'image',
+          x: Math.max(80, canvasSize.width / 2 - 220),
+          y: Math.max(100, canvasSize.height / 2 - 220),
+          width: Math.min(image.naturalWidth || image.width || 440, 440),
+          height: Math.min(image.naturalHeight || image.height || 440, 440),
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          opacity: 1,
+          locked: false,
+          visible: true,
+          src: resolvedSource,
+          label: artifact.title,
+          metadata: {
+            feature: 'library-import',
+            generation: 0,
+            prompt: artifact.prompt ?? undefined,
+            galleryImageId: typeof artifact.metadata.imageId === 'string' ? artifact.metadata.imageId : undefined,
+            galleryStoragePath: getWorkspaceArtifactCanonicalStoragePath(artifact.metadata) ?? undefined,
+            galleryImageUrl: artifact.imageUrl || undefined,
+            sourceWorkspace,
+            workflowVersion,
+            sourceReadback: sourceWorkspace && workflowVersion && sourceLabel
+              ? {
+                sourceWorkspace,
+                workflowVersion,
+                sourceLabel,
+                sourceResumePath,
+                sourceMode,
+              }
+              : undefined,
+            parameters: {
+              sourceArtifactId: artifact.id,
+              sourceFeatureType: artifact.featureType,
+              sourceCreatedAt: artifact.createdAt,
+            },
+          },
+        });
+        selectObject(newId);
+        toast.success('ライブラリー素材をCanvasへ追加しました');
+      } catch (error) {
+        if (!cancelled) toast.error(error instanceof Error ? error.message : 'ライブラリー素材を復元できませんでした');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addObject, canvasSize.height, canvasSize.width, currentBrand?.id, projectId, selectObject, sourceArtifactId, user?.id]);
 
   const selectedObject = selectedIds.length === 1
     ? objects.find((obj) => obj.id === selectedIds[0]) || null
@@ -875,6 +973,7 @@ export function CanvasEditorPage() {
         id: readback.id,
         name: readback.title,
         objects: restoreCanvasObjects(readback.snapshot),
+        view: restoreCanvasView(readback.snapshot),
         createdAt: readback.createdAt,
         updatedAt: readback.updatedAt,
         brandId: readback.brandId,

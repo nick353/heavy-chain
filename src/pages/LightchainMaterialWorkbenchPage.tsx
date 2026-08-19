@@ -29,6 +29,7 @@ import { PrintingCompositionStage } from '../components/workspace/PrintingCompos
 import { PrintMaskCandidatePicker } from '../components/workspace/PrintMaskCandidatePicker';
 import { PrintMaskEditor } from '../components/workspace/PrintMaskEditor';
 import { PrintGarmentSelectionEditor } from '../components/workspace/PrintGarmentSelectionEditor';
+import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
 import {
   armPrintDesignReturnIntent,
   bindPrintDesignReturnIntent,
@@ -153,6 +154,7 @@ import {
   getLightchainMaterialTab,
 } from '../lib/lightchainMaterialContract';
 import { buildLightchainProviderPrompt } from '../features/lightchain/providerAdapter';
+import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import {
   buildLightchainParityRuntime,
   serializeLightchainParityRuntime,
@@ -245,7 +247,15 @@ type WorkbenchResult = {
   protectedRegionComposited?: boolean;
   persistenceStatus?: string | null;
   artifactId?: string | null;
+  inputLineage?: MaterialInputLineage[];
   parityRuntime?: ReturnType<typeof serializeLightchainParityRuntime>;
+};
+
+type MaterialInputLineage = {
+  role: 'garment' | 'print-artwork' | 'model-or-design' | 'textile';
+  sourceImageId: string | null;
+  sourceStoragePath: string | null;
+  referenceType: string | null;
 };
 
 const FABRIC_PROVIDER_RESULT_FEATURE_TYPE = 'lightchain-fabric-image-provider-result';
@@ -267,6 +277,23 @@ const jsonNumber = (value: Json | undefined): number | null => (
 const jsonBoolean = (value: Json | undefined): boolean | null => (
   typeof value === 'boolean' ? value : null
 );
+
+const restoredMaterialInputLineage = (value: Json | undefined): MaterialInputLineage[] => {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const record = jsonRecord(item);
+    const role = jsonString(record.role);
+    if (role !== 'garment' && role !== 'print-artwork' && role !== 'model-or-design' && role !== 'textile') {
+      return [];
+    }
+    return [{
+      role,
+      sourceImageId: jsonString(record.sourceImageId),
+      sourceStoragePath: jsonString(record.sourceStoragePath),
+      referenceType: jsonString(record.referenceType),
+    }];
+  });
+};
 
 const restoredMaterialOutputSize = (value: Json | undefined): { width: number; height: number } | undefined => {
   const record = jsonRecord(value);
@@ -324,6 +351,7 @@ const restoredFabricProviderResult = (image: GeneratedImage): WorkbenchResult | 
     protectedRegionComposited: jsonBoolean(metadata.protectedRegionComposited) ?? false,
     persistenceStatus: jsonString(metadata.persistenceStatus),
     artifactId: image.id,
+    inputLineage: restoredMaterialInputLineage(metadata.inputLineage),
     parityRuntime: metadata.parityRuntime,
   };
 };
@@ -1280,6 +1308,7 @@ function LayerPreview({
 }
 
 export function LightchainMaterialWorkbenchPage() {
+  const { setFlowState } = useUnifiedWorkspaceFlow();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, currentBrand, isInitialized: isAuthInitialized, isLoading: isAuthLoading } = useAuthStore();
@@ -2827,6 +2856,35 @@ export function LightchainMaterialWorkbenchPage() {
         },
       });
       const parityRuntimeJson = serializeLightchainParityRuntime(parityRuntime);
+      const inputLineage: MaterialInputLineage[] = isPrinting
+        ? [
+            {
+              role: 'garment',
+              sourceImageId: printGarment?.galleryImageId ?? null,
+              sourceStoragePath: printGarment?.storagePath ?? null,
+              referenceType: printGarment?.referenceType ?? null,
+            },
+            ...printDesigns.map((design) => ({
+              role: 'print-artwork' as const,
+              sourceImageId: design.galleryImageId ?? null,
+              sourceStoragePath: design.storagePath ?? null,
+              referenceType: design.referenceType ?? null,
+            })),
+          ]
+        : [
+            {
+              role: 'model-or-design',
+              sourceImageId: fabricDesign?.galleryImageId ?? null,
+              sourceStoragePath: fabricDesign?.storagePath ?? null,
+              referenceType: fabricDesign?.referenceType ?? null,
+            },
+            {
+              role: 'textile',
+              sourceImageId: fabricBase?.galleryImageId ?? null,
+              sourceStoragePath: fabricBase?.storagePath ?? null,
+              referenceType: fabricBase?.referenceType ?? null,
+            },
+          ];
       const providerResult = await withTimeout(
         isPrinting
           ? editImageWithPrompt(
@@ -2984,6 +3042,7 @@ export function LightchainMaterialWorkbenchPage() {
         quality: providerResult.quality ?? 'high',
         protectedRegionComposited: true,
         persistenceStatus: providerResult.persistenceStatus ?? null,
+        inputLineage,
         parityRuntime: parityRuntimeJson,
       };
       const persistedProviderArtifact = await persistProviderResultArtifact({
@@ -3028,6 +3087,61 @@ export function LightchainMaterialWorkbenchPage() {
           maskApplied: result.maskApplied ?? false,
           maskCoveragePercent: result.maskCoveragePercent ?? null,
           generationInputSignature: generationInputSignatureRef.current,
+          generationIntent: isPrinting
+            ? {
+                feature: 'printing-image',
+                coverageMode: printCoverageMode,
+                designCount: printReferenceUrls.length,
+              }
+            : {
+                feature: 'fabric-image',
+                imageRatio: fabricImageRatio,
+                selectedPresets: fabricPresetIds,
+              },
+          materialReferences: isPrinting
+            ? [
+                { role: 'garment', referenceType: printGarment?.referenceType ?? null, hasImage: true },
+                ...printDesigns.map((design, index) => ({
+                  role: 'print-artwork',
+                  index,
+                  referenceType: design.referenceType,
+                  hasImage: true,
+                })),
+              ]
+            : [
+                { role: 'model-or-design', referenceType: fabricDesign?.referenceType ?? null, hasImage: true },
+                { role: 'textile', referenceType: fabricBase?.referenceType ?? null, hasImage: true },
+              ],
+          layerPlan: isPrinting
+            ? {
+                primary: 'garment',
+                secondary: 'print-artwork',
+                placement: printPlacementSummary,
+              }
+            : {
+                primary: 'model-or-design',
+                secondary: 'textile',
+                materialTransfer: 'garment-only',
+              },
+          maskPlan: isPrinting
+            ? {
+                garmentCutoutReady: Boolean(printGarmentProcessed),
+                garmentMaskCandidate: selectedPrintGarmentMaskCandidateId,
+                garmentMaskRevision: printGarmentMaskRevision,
+                providerMaskReady: true,
+                providerMaskOrientation: providerGarmentMask.orientation,
+                providerMaskCoveragePercent: providerGarmentMask.coveragePercent,
+                providerMaskSourceEngine: providerGarmentMask.sourceEngine,
+              }
+            : {
+                modelGarmentMaskReady: true,
+                textileReferenceMaskReady: Boolean(fabricPreviewOverlayUrl),
+                providerMaskReady: true,
+                providerMaskOrientation: providerGarmentMask.orientation,
+                providerMaskCoveragePercent: providerGarmentMask.coveragePercent,
+                providerMaskSourceEngine: providerGarmentMask.sourceEngine,
+              },
+          inputLineage: result.inputLineage ?? [],
           parityRuntime: parityRuntimeJson,
         },
       });
@@ -3989,6 +4103,7 @@ export function LightchainMaterialWorkbenchPage() {
         inputFidelity: result.inputFidelity ?? null,
         quality: result.quality ?? null,
         protectedRegionComposited: result.protectedRegionComposited ?? false,
+        inputLineage: result.inputLineage ?? [],
         printResultKind: result.resultKind ?? null,
         printResultNote: result.note,
         printResultOutputSize: result.outputSize ?? null,
@@ -4029,6 +4144,7 @@ export function LightchainMaterialWorkbenchPage() {
         galleryImageUrl: result.imageUrl,
         status: 'completed',
         protectedRegionComposited: result.protectedRegionComposited ?? false,
+        inputLineage: result.inputLineage ?? [],
         parityRuntime: parityRuntimeJson,
         lightchainCompat: {
           lightchainFeatureId: isPrinting ? 'printing-image' : 'fabric-image',
@@ -4176,6 +4292,20 @@ export function LightchainMaterialWorkbenchPage() {
     },
   ] : [];
   const printingReadinessCompleteCount = printingReadinessSteps.filter((step) => step.complete).length;
+  const materialFlowState = deriveUnifiedWorkspaceFlowState({
+    inputReady: isPrinting
+      ? printingReadinessCompleteCount === printingReadinessSteps.length
+      : Boolean(fabricDesign && fabricBase),
+    rightsReady: Boolean(providerRightsConfirmed),
+    generating: isGenerating,
+    completed: generatedResults.length > 0,
+    failed: Boolean(generationError),
+    persisted: generatedResults.some((result) => result.persistenceStatus === 'completed'),
+  });
+
+  useEffect(() => {
+    setFlowState(materialFlowState);
+  }, [materialFlowState, setFlowState]);
   const printingNextAction = !currentBrand?.id
     ? 'ブランドを選択してください'
     : !printGarment
@@ -4232,7 +4362,7 @@ export function LightchainMaterialWorkbenchPage() {
           </div>
         </aside>
 
-        <main className="min-w-0">
+        <main className="min-w-0" data-flow-state={materialFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[materialFlowState]}>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <button
@@ -5447,7 +5577,10 @@ export function LightchainMaterialWorkbenchPage() {
                   </p>
                 )}
                 <p className="rounded-lg border border-amber-300/20 bg-amber-950/20 px-3 py-2 text-[11px] leading-relaxed text-amber-100/80">
-                  この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
+                  この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください{' '}
+                  <Link to="/designProduction" className="font-semibold underline underline-offset-2 hover:text-white">
+                    今すぐ体験
+                  </Link>
                 </p>
               </div>
             </section>
@@ -5594,7 +5727,10 @@ export function LightchainMaterialWorkbenchPage() {
 
               <div className="space-y-4">
                 <p className="rounded-xl border border-emerald-300/25 bg-emerald-300/[0.08] px-3 py-2 text-[11px] leading-relaxed text-emerald-100">
-                  この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください
+                  この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください{' '}
+                  <Link to="/designProduction" className="font-semibold underline underline-offset-2 hover:text-white">
+                    今すぐ体験
+                  </Link>
                 </p>
 
                 <PermissionLockedButton testId="lightchain-fabric-permission-locked" marginClass="mt-0" />
