@@ -164,6 +164,12 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - カテゴリ切替後の全カード、正確なroute/href、機能別の生成・結果・保存・再利用・エラー・性能は未確認。`PENDING_CONFIRMATION`のまま扱う。
 - 証跡: `work/lightchain-parity-baseline-20260820-r14.md`。Heavyでは動画カード・動画導線を引き続き除外する。
 
+## Lightchainカテゴリ台帳確定（2026-08-20 r15）
+
+- Fresh target-scoped readbackでカテゴリパネルを順番に確認した。おすすめ8（非動画7）、企画デザイン9、AIフィッティング6（非動画5）、グラフィック5で、非動画のカテゴリ出現は合計26、動画は2。
+- 重複カードはカテゴリごとの出現としてLightchainに合わせる。Heavyのlauncher/workbenchはこの26非動画出現を維持し、動画2出現を除外する。
+- 証跡: `work/lightchain-category-ledger-20260820-r15.md`。正確なhref/routeと、カードごとの生成・結果・保存・再利用・エラー・性能は引き続き`PENDING_CONFIRMATION`。
+
 ## 2026-08-20 再読み込み後の入力復帰修正
 
 - JobsからWorkBenchへ戻る際、provider結果artifactの`materialSlotFiles`形式もresume入力として読めるようにした。

@@ -18,6 +18,20 @@
 The r13 homepage readback below remains historical within this file for
 provenance; the r14 overlay is the current homepage baseline.
 
+## 1.1 latest category-panel overlay r15
+
+- Fresh target-scoped category readback used browser-client
+  `-ada4-4997-8241-a6447bcb922e` and task tab `1980903826`.
+- Category occurrences: `おすすめ` 8 (7 non-video + 1 video),
+  `企画デザインツール` 9, `AIフィッティング` 6 (5 non-video + 1 video),
+  `グラフィックツール` 5.
+- Current non-video occurrence total: 26; current video occurrence total: 2.
+- The exact card names are recorded in
+  `work/lightchain-category-ledger-20260820-r15.md`.
+- Category selection remained on the homepage and task-owned cleanup passed.
+- Exact card href/route mapping and per-card business behavior remain
+  `PENDING_CONFIRMATION`.
+
 ## 2. prior current Lightchain source-of-truth readback (r13)
 
 - surface: official Chrome Plugin / Profile 2 / `signed_chrome_extension_profile2`

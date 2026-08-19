@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 90,
+  "checkpoint_seq": 91,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -114,7 +114,8 @@
     "Current-source local acceptance recheck r4 passed non-video 31/31, unified desktop 228/228 with no failures or cleanup leftovers, material/UI 16/16, provider coverage 11/11, persistence 12/12, fitting history/resume 10/10, Canvas generation 5/5, Canvas view 3/3, and local upload/resume 6/6; production and beta gates remain separate",
     "Fresh current selector revision 6 Lightchain homepage target-scoped readback r13 confirmed Lightchain AI, four category labels, seven default recommended cards including one video card, and cleanup. Full rev6 category-card enumeration remains PENDING_CONFIRMATION; the revision-30 26-card/19-route ledger is historical only. Current parity matrix work/lightchain-parity-matrix-current-20260820-r13.md records all 31 non-video rows and separates live Lightchain behavior from Heavy local and production proof",
     "Fresh official Profile 2 Heavy target-scoped readback r9 showed the workspace hydrate from preparation state to the authenticated Lightchain-shaped fabric workbench without a login click; fabric inputs, Gallery selectors, rights confirmation, AI生成, and 生成履歴 were visible, and task-owned cleanup passed. The Heavy authentication/workspace blocker is cleared for this run; provider generation/save/reuse remains blocked by chrome_foreground_activation_capability_unavailable",
-    "Fresh current Lightchain Profile 2 homepage target-scoped readback r14 exposed a full accessibility snapshot with four category tabs, eight recommended cards (seven non-video and one video), and six case-share tabs. Task-owned cleanup passed; category-panel route mapping and per-feature business-flow proof remain PENDING_CONFIRMATION"
+    "Fresh current Lightchain Profile 2 homepage target-scoped readback r14 exposed a full accessibility snapshot with four category tabs, eight recommended cards (seven non-video and one video), and six case-share tabs. Task-owned cleanup passed; category-panel route mapping and per-feature business-flow proof remain PENDING_CONFIRMATION",
+    "Fresh current Lightchain Profile 2 target-scoped category-panel readback r15 selected all four exact tabs and enumerated 28 category occurrences: 26 non-video and 2 video. Task-owned cleanup passed; exact route mapping and per-feature business behavior remain PENDING_CONFIRMATION"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -230,6 +231,7 @@
     ,"work/lightchain-parity-matrix-current-20260820-r13.md: current revision-6 homepage/category baseline, 31-row behavioral parity ledger, and explicit PENDING_CONFIRMATION boundaries"
     ,"work/heavy-chain-target-scoped-authenticated-readback-20260820-r9.md: fresh Profile 2 Heavy preparation-to-hydrated workspace readback, URL/title/DOM, visible fabric controls, and task-owned cleanup"
     ,"work/lightchain-parity-baseline-20260820-r14.md: fresh Profile 2 Lightchain homepage accessibility snapshot, current category tabs, card names, video exclusion baseline, and cleanup"
+    ,"work/lightchain-category-ledger-20260820-r15.md: fresh Profile 2 category-panel card names and counts for all four categories, video exclusion baseline, and cleanup"
   ],
   "next_action": "After the required official foreground capability is advertised, create a fresh Profile 2 owner and run one bounded approved fabric-print provider flow. Verify result, save, Gallery/Canvas/History/Jobs lineage, reuse, and reload before starting AI fitting. Do not reuse the provisioning tab, old binding, or old run.",
   "blocker": {
@@ -287,8 +289,9 @@
     ,"Fresh current Lightchain Profile 2 parity readback r4 passed homepage plus /tools/fabric, /tools/printing, and /model URL/title/DOM hydration and cleanup; Heavy business-flow proof remains pending"
     ,"Fresh official Profile 2 Heavy target-scoped readback r9 showed preparation-to-hydrated workspace transition without a login click, visible fabric workflow controls, and cleanup of task-owned tab 1980903820; authentication/workspace readiness is clear for this run while foreground provider capability remains blocked"
     ,"Fresh current Lightchain Profile 2 homepage target-scoped readback r14 exposed a full accessibility snapshot with four category tabs, eight recommended cards (seven non-video and one video), and six case-share tabs; task-owned cleanup passed and category-panel route mapping remains PENDING_CONFIRMATION"
+    ,"Fresh current Lightchain Profile 2 target-scoped category-panel readback r15 selected all four exact tabs and enumerated 28 occurrences: 26 non-video and 2 video; task-owned cleanup passed and exact route mapping/per-feature behavior remain PENDING_CONFIRMATION"
     ],
-    "artifact": "work/lightchain-parity-baseline-20260820-r14.md",
+    "artifact": "work/lightchain-category-ledger-20260820-r15.md",
     "recorded_at": "2026-08-20T06:45:00+09:00"
   },
   "exit_check": null,
@@ -1055,6 +1058,15 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T06:45:00+09:00",
       "note": "Fresh current Lightchain Profile 2 homepage target-scoped readback r14 exposed the current accessibility snapshot: four category tabs, eight recommended cards with seven non-video and one video, and six case-share tabs. Task-owned tab cleanup passed. Category-panel route mapping and Lightchain per-feature generation/save/reuse/error/performance remain PENDING_CONFIRMATION; Heavy provider generation remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 91,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T06:45:00+09:00",
+      "note": "Fresh current Lightchain Profile 2 target-scoped category-panel readback r15 selected all four exact category tabs and enumerated 28 category occurrences: おすすめ8（非動画7／動画1）、企画デザイン9、AIフィッティング6（非動画5／動画1）、グラフィック5. Task-owned cleanup passed. Exact href/route mapping and per-feature generation/save/reuse/error/performance remain PENDING_CONFIRMATION; Heavy provider generation remains blocked by chrome_foreground_activation_capability_unavailable."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",

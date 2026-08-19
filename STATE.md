@@ -3262,3 +3262,10 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - No category switching or business action was performed. Only task-owned tab `1980903824` was closed; cleanup passed.
 - Artifact: `work/lightchain-parity-baseline-20260820-r14.md`.
 - Full category-panel card routes and per-feature generation/save/reuse/error/performance remain `PENDING_CONFIRMATION`. Heavy continues to exclude video.
+
+## 2026-08-20 latest Lightchain category ledger r15
+
+- Fresh official Profile 2 target-scoped readback selected each exact category tab and returned populated panels without leaving the Lightchain homepage.
+- Counts: おすすめ8（非動画7／動画1）、企画デザインツール9、AIフィッティング6（非動画5／動画1）、グラフィックツール5。Current non-video category occurrences total 26; video occurrences total 2.
+- Exact card names are recorded in `work/lightchain-category-ledger-20260820-r15.md`. Route/href mapping and per-feature live business behavior remain `PENDING_CONFIRMATION`.
+- Only task-owned tab `1980903826` was closed; cleanup passed. Heavy's visible surface must keep the 26 non-video occurrences and exclude both video occurrences.
