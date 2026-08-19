@@ -65,17 +65,19 @@
 
 - localのLightchain parity／material／provider／persistence契約と31機能・desktop QAは検証済み。Zeabur deployment `6a85ecc3f1ea67ebf4ea67bc` は `RUNNING` となり、fresh Profile 2 target-scoped readbackで `/tools/fabric` のLightchain-shaped direct material frameを確認した。ただしprovider生成・保存再利用のproduction完了ではない。
 - 2026-08-20 03:08 JSTのfresh Profile 2 target-scoped readbackでは、Heavy `/tools/fabric` がログイン／準備中シェルではなく、hydratedなLightchain-shaped `生地イメージ`ワークスペースを表示した。認証ゲートと画面hydrationはPASS。ただし `権限がありません`、入力未選択、foreground操作未実施のため、provider生成・権利確認・保存再利用の完了証明ではない。証跡は `work/heavy-chain-authenticated-target-readback-20260820-r5.md`。
+- 2026-08-20 03:20 JST、source-associated deployment `6a85f3012a82f89733777475` が commit `6831f365b489ec35a8bafce11e96cfc4c88cd0b7` で `RUNNING`。HTTP `200`、container localhost `200`、fresh Profile 2 `/tools/fabric` readbackでLightchain markersとHeavy-only chromeなしを確認した。証跡は `work/heavy-production-deployment-readback-20260820-r2.md`。provider生成・保存再利用は未実施。
 - Goalの正本はこの `Plan.md`、Goal stateは `work/codex-goal-run-context-20260819.json`、詳細な履歴は `plan.md` に保持する。
 - 現行Chrome Plugin／Profile 2はfresh `openTabs()`後も`selected()=null`で、署名済み拡張は`viewport`のみを広告している。foreground activation capabilityは未広告である。
 
 ## Exact blocker / next action / restart point
 
 - Target-scoped canary transport: PASS。rev6のfresh browser-clientでHeavy `/tools/fabric`を公式provisionし、同一runのURL/title/DOM readbackとtask-owned cleanupを確認した。
+- Source-associated deployment/runtime/UI gate: PASS。deployment `6a85f3012a82f89733777475` は `nick353/heavy-chain@6831f36`、`docker`、`RUNNING`。HTTP/container/fresh Profile 2 UI readbackを同一の反映後状態で確認した。
 - Lightchain current parity readback: PASS。rev6のfresh Profile 2でhomepage、4カテゴリタブ、非動画おすすめ7件／動画除外1件、事例23件／動画除外2件、`/tools/fabric`、`/tools/printing`、`/model`の入力・権限・終了導線を確認した。カテゴリ内全カードはLoadingのためPENDING_CONFIRMATION。
 - Authentication gate: PASS。fresh `/login` readbackはhydration後に`/lightchain`へ自動遷移し、`アカウント`、4カテゴリ、31非動画Libraryを確認した。さらに現行Turnのfresh target-scoped `/tools/fabric` readbackでも、ログイン／準備中シェルではなく、`生地イメージ`、素材入力、権利文言、`AI生成`、`生成履歴`を含むhydrated workspaceを確認した。最新証跡は `work/heavy-chain-authenticated-target-readback-20260820-r5.md`。
 - Common route readback: PASS。fresh同一runで`/lightchain`、`/gallery`、`/canvas/new`、`/history`、`/jobs`を15秒hydration後に確認した。Galleryは961枚、Historyは保存済み12件・失敗4件、Jobsは完了20件・失敗4件を表示した。新規provider生成からの同一run保存・再利用は未証明。
 - Exact blocker: `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`（foreground操作）。target-scoped readback自体は成功している。製品所有のgarment/textile platform assetは実装・focused testで確認済みだが、同一runのUI選択・権利確認・生成・保存・再利用はforeground ownerが揃うまでPENDING_CONFIRMATION。Lightchainカテゴリ内全カードも現行readbackではPENDING_CONFIRMATION。
 - Foreground operation blocker（read-only target admissionとは分離）: `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`。
-- Next action: current Profile 2のforeground capability／selected-tab gateが解消したfresh ownerで、承認済みの製品所有Gallery素材を1件ずつ選び、権利確認→fabric生成→結果→保存→Gallery/Canvas/History/Jobs→再利用を同一runで確認する。今回確認した認証済みtarget-scoped readbackをforeground proofの代用にはしない。
+- Next action: current Profile 2のforeground capability／selected-tab gateが解消したfresh ownerで、承認済みの製品所有Gallery素材を1件ずつ選び、権利確認→fabric生成→結果→保存→Gallery/Canvas/History/Jobs→再利用を同一runで確認する。今回のsource-associated deployment/UI readbackをforeground proofやprovider完了の代用にはしない。
 - Restart point: fresh foreground owner/selected proof。そこでLightchainカテゴリ内カードを補完し、Heavyのapproved Gallery素材選択→権利確認→fabric生成→保存・再利用へ進む。provider生成・保存・再利用はowner／承認／同一run gateが揃うまで開始しない。
 - provider生成、録画、AOS、effectfulなUI操作はselected/owner proofが揃うまで開始しない。deployは別のsource・runtime・fresh target readback gateで扱い、今回のdeployment `6a85ecc3f1ea67ebf4ea67bc` はそのreadbackまで確認済み。

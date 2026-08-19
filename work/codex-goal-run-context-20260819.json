@@ -1,0 +1,717 @@
+{
+  "schema": "codex_goal_run_context.v1",
+  "state_path": "/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/work/codex-goal-run-context-20260819.json",
+  "goal_id": "01a01576-c224-7d81-902f-561719dc45a5",
+  "objective": "Heavy Chainを現行Lightchain本番基準の動画除外・社内アパレル統合β版へ進め、fresh parity、fabric-print、AI fitting、31非動画機能、保存再利用、Mac/Windows Chrome、社内βQAを完了する",
+  "plan_path": "/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/Plan.md",
+  "run_id": null,
+  "source_thread_id": null,
+  "status": "running",
+  "current_stage": "verify",
+  "plan": [
+    "research",
+    "plan",
+    "execute",
+    "verify",
+    "recover_or_replan",
+    "audit",
+    "cleanup"
+  ],
+  "acceptance_criteria": [
+    "Fresh official Chrome Plugin/Profile 2 Lightchain readback establishes the current non-video feature/card/input baseline and parity ledger",
+    "Heavy has one integrated desktop workspace with library, workbench, context/state, Gallery, Canvas, History, and Jobs lineage",
+    "Fabric-print imagery completes approved library input -> rights gate -> provider generation -> result -> save -> Gallery/Canvas/History/Jobs -> reuse and retry/reload readback",
+    "AI fitting completes approved library input -> rights gate -> provider generation -> result -> save -> Gallery/Canvas/History/Jobs -> reuse and retry/reload readback",
+    "The shared contract is wired across all 31 local non-video feature routes without video functionality",
+    "Mac and Windows current Chrome plus wide desktop widths have fresh acceptance evidence",
+    "Internal beta has representative-user evidence, safety/readiness gates, operational readback, and no unclosed required acceptance blocker"
+  ],
+  "authorization_boundaries": [
+    "One bounded fabric sample and one bounded printing sample using the approved internal Gallery garment and product-owned test assets",
+    "Provider generation/save/reuse only after fresh official Profile 2 owner and same-run readback are valid",
+    "No secrets, OTP/CAPTCHA, payment, public publishing, destructive cleanup, or permission changes"
+  ],
+  "non_goals": [
+    "Video features and video workflow parity",
+    "Public release, billing, checkout, payment, and monetization",
+    "Secret entry, OTP/CAPTCHA, identity verification, and destructive cleanup",
+    "Treating local mocks, queued state, old runs, or service RUNNING status as production completion proof"
+  ],
+  "max_attempts": 3,
+  "attempt_no": 0,
+  "checkpoint_seq": 50,
+  "completed": [
+    "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
+    "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
+    "Source-associated deployment metadata matched def2a82",
+    "31-feature regression ok=true failed=[]",
+    "Unified desktop QA 228/228 failed=[] after 10s cold lazy-load readiness",
+    "Build 2605 modules and focused persistence/handoff suites PASS",
+    "Supabase authenticated usage-summary boundary restored and linked migration applied",
+    "Heavy Gallery/History/Jobs fresh readback and existing-result Canvas save/reload confirmed",
+    "Product-owned textile platform asset wired to role-filtered Gallery/ImageSelector and production static delivery confirmed"
+    ,"Local-preview 31-feature verification restored after isolating unsigned local-proof auth from Supabase"
+    ,"Local material contract 11/11 and printing foundation 244/244 rechecked with typecheck and diff check"
+    ,"Workspace activity auth recovery boundary fixed; routing 10/10, session recovery 3/3, typecheck and diff check PASS"
+    ,"Canvas save/readback recovery improved; Canvas recovery 3/3, brand readback 1/1, typecheck and diff check PASS"
+    ,"Fresh local non-video UI verifier passed featureCount=31, failed=[], cleanup complete after current build"
+    ,"Task-step auth recovery gap closed; workspace routing 12/12 with behavioral refresh/retry and non-auth fallback coverage"
+    ,"Fresh post-fix local non-video verifier passed featureCount=31, failed=[], assertions=432, cleanup complete"
+    ,"AI fitting retry resilience fixed; prior successful result retained during in-flight attempt with explicit status; resilience 4/4"
+    ,"Local lint recovery completed; fitting resilience and Gallery dependency contracts clean; build PASS"
+    ,"Fresh Profile 2 openTabs listed Heavy 1980903220 but target readback failed closed; Lightchain absent"
+    ,"Unified desktop verifier attempt bounded-stopped after route-level external-data waits; desktop acceptance remains pending"
+    ,"Fresh unified desktop verifier recovery passed 228/228 with bounded progress and cleanup proof"
+    ,"Fresh task-owned Heavy fabric readback completed but workspace remained in preparation/auth state; account locator timed out once and cleanup passed"
+    ,"Fresh task-owned Heavy screenshot captured after the unified workspace rendered; DOM auth/brand preparation remained unconfirmed and cleanup passed"
+    ,"Unified flow persistence scoped by userId+brandId+feature; focused 9/9, typecheck, diff check, Security Review, and integrated read-only review passed"
+    ,"Fresh non-video local integration verifier passed featureCount=31, assertions=432, failed=[], and cleanup complete after the scoped persistence change"
+    ,"Fresh Profile 2 inventory after local verification returned only foreign Heavy /model and new-tab descriptors; no target mutation was performed"
+    ,"Current-source parity/provider contract recheck passed 50/50 across shell, 31-route aliases, material inputs, provider adapter/persistence, print history, fitting resilience, and Canvas recovery"
+    ,"Fabric/printing priority views aligned to the current four-category Lightchain toolbar; visible auxiliary Heavy toolbar removed without changing provider/persistence logic"
+    ,"Current-source Lightchain frame cleanup connected /model to the provider-capable AI-fitting workbench, unified catalog route aliases and generation entrypoints under the Lightchain header, removed visible Heavy-only inner labels, and passed focused 15/15, local non-video 31/31, and desktop 228/228; production gate remains separate"
+    ,"Provider/persistence regression set rechecked at 73/73 across fabric, printing, AI fitting, model-matrix, remote artifact ownership, History, Gallery, Canvas promotion, retry, reload, and placement/readback; Chrome production gate remains separate"
+    ,"Fresh official Profile 2 recovery attempt recorded: openTabs() passed, selected() remained null, and the official browser API exposed no close lifecycle; no alternate surface or external effect was used"
+    ,"Removed the visible legacy Heavy fallback banner from /fitting and fixed same-path /generate query navigation; focused Lightchain contract 11/11 and fresh local non-video verifier 31/31 passed"
+    ,"Removed remaining visible Heavy fallback copy from Lightchain parity surfaces, renamed the visible lab catalog title to ラボ, neutralized Gallery unavailable-state copy, and passed Lightchain contract 11/11 plus fresh local non-video 31/31"
+    ,"Fresh official Profile 2 recovery session -a4f7-4949-9aef-9c64ed9d4db0 passed openTabs() with 3 tabs but selected() remained null; an existing about:blank tab was found for the bounded user-assisted recovery branch, with no tab operation or external effect"
+    ,"Removed visible Heavy Chain Lab labels from Lab CTAs and updated permission-parity expectations to the current Lightchain-native Creator/AI-fitting surfaces; focused contracts and local 31-feature verification passed"
+    ,"Removed Heavy-only identity/default prompt copy from authenticated parity routes /studio, /patterns, /models, and /lab; updated clone-layout expectations to LIGHTCHAIN and reverified focused contracts plus local 31-feature workflows"
+    ,"Changed visible History/Jobs lineage labels to Lightchain equivalents with legacy-label read compatibility, and added Gallery/History/Jobs to the authenticated Lightchain header route set; focused contracts and local 31-feature verification passed"
+    ,"Restored the Goal-referenced canonical Plan.md with the full beta scope, phase order, proof boundaries, and current restart contract"
+    ,"Fresh rev6 target-scoped canary r3 provisioned Heavy /tools/fabric in browser-client -86b7-4558-9585-9281112b0117, read URL/title/DOM, and cleaned up task-owned tab 1980903594; workspace still exposed login/preparation shell"
+    ,"Fresh Profile 2 authentication proof r4: Heavy /login auto-redirected after hydration to /lightchain with account control, four categories, and 31 non-video library links; fresh /tools/fabric hydration then exposed the authenticated Lightchain fabric workspace and rights-gated AI generation controls"
+    ,"Fresh rev6 Lightchain current parity readback r1 covered homepage, four category tabs, recommended non-video/video exclusion, case items, and priority routes /tools/fabric, /tools/printing, /model; category-panel card enumeration remains pending because the read-only DOM stayed partially Loading"
+    ,"Zeabur Docker deployment 6a85ecc3f1ea67ebf4ea67bc reached RUNNING; fresh rev6 Profile 2 target-scoped Heavy /tools/fabric readback succeeded after official provisioning and cleanup, confirming the deployed Lightchain-shaped material frame"
+    ,"Fresh current-Turn rev6 Profile 2 target-scoped Heavy /tools/fabric readback r5 showed the authenticated hydrated Lightchain-shaped fabric workspace; task-owned provisioning cleanup passed and no effectful operation was performed"
+    ,"Current source commit 6831f36 was pushed to nick353/heavy-chain main and source-associated deployment 6a85f3012a82f89733777475 reached RUNNING with docker plan"
+    ,"Fresh post-deployment Profile 2 target-scoped Heavy /tools/fabric readback r6 showed Lightchain markers and no Heavy-only chrome; HTTP/container 200 and task-owned cleanup passed"
+  ],
+  "unfinished": [
+    "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
+    "Production Canvas durable reload and visual-quality comparison",
+    "Production failure/retry/reload recovery",
+    "Mac/Windows real Chrome beta readback",
+    "Internal beta rollout"
+  ],
+  "evidence": [
+    "work/heavy-production-print-provider-readback-20260819-r1.md",
+    "Canvas save failed twice and reload showed 未保存の変更",
+    "Jobs showed QUEUE SUMMARY 0 while History showed completed inpaint",
+    "work/heavy-production-fabric-platform-asset-static-readback-20260819.md"
+    ,"output/playwright/lightchain-all-feature-workflows-20260819T063811Z/SUMMARY.json: featureCount=31, ok=true, failed=[]"
+    ,"local material contract 11/11; printing foundation 244/244; typecheck and diff check PASS"
+    ,"work/heavy-chain-workspace-activity-auth-recovery-20260819.md"
+    ,"work/heavy-chain-canvas-save-recovery-20260819.md"
+    ,"output/playwright/lightchain-all-feature-workflows-20260819T091219Z/SUMMARY.json"
+    ,"work/heavy-chain-workspace-activity-auth-recovery-v2-20260819.md"
+    ,"output/playwright/lightchain-all-feature-workflows-20260819T093430Z/SUMMARY.json: featureCount=31, ok=true, failed=[], assertions=432, cleanup complete"
+    ,"work/heavy-chain-fitting-result-retention-20260819.md"
+    ,"work/heavy-chain-local-lint-recovery-20260819.md"
+    ,"work/heavy-chain-profile2-fresh-readback-20260819-r2.md"
+    ,"work/heavy-chain-unified-desktop-layout-20260819-r1.md"
+    ,"work/heavy-chain-unified-desktop-layout-recovery-20260819.md"
+    ,"work/heavy-chain-profile2-auth-button-readback-20260819.md"
+    ,"work/heavy-chain-profile2-screenshot-20260819.png"
+    ,"local scoped persistence slice: 9/9 focused, typecheck PASS, diff check PASS"
+    ,"output/playwright/lightchain-all-feature-workflows-20260819T105826Z/SUMMARY.json: featureCount=31, assertions=432, failed=[], cleanup complete"
+    ,"work/heavy-chain-profile2-open-tabs-continuation-20260819.md: fresh inventory, foreign Heavy /model not touched"
+    ,"work/heavy-authenticated-fabric-readback-20260819.md: authenticated account/owner and hydrated 31-feature Heavy fabric workspace readback"
+    ,"work/heavy-fabric-library-input-readback-20260819.md: fresh owner selected product-owned garment/textile assets and reached rights-gated generation-ready state"
+    ,"work/heavy-fabric-library-input-readback-20260819.md: follow-up fresh probe found no current rights attestation; task-owned probe cleanup confirmed"
+    ,"Fresh task-owned Profile 2 readback target 1980903397 showed authenticated hydrated Heavy workspace with account control and no login/preparation shell; cleanup confirmed"
+    ,"AI fitting platform asset role wiring fixed with focused material contract 11/11, provider persistence/readback 12/12, typecheck, and diff check PASS"
+    ,"Focused printing foundation 244/244, Lightchain provider adapter 16/16, and model-matrix verification 3/3 PASS"
+    ,"Fresh same-route Lightchain/Heavy Chrome Plugin Profile 2 UI comparison recorded in work/heavy-lightchain-ui-parity-visual-diff-20260819.md"
+    ,"Source-level parity implementation map recorded in work/heavy-lightchain-ui-parity-implementation-map-20260819.md"
+    ,"Read-only provider fetch diagnosis recorded in work/heavy-provider-edge-function-fetch-diagnosis-20260819.md; edit-image ACTIVE v14 and OPTIONS 200, root cause still unproven"
+    ,"Fresh local non-video verifier featureCount=31 failed=[] and unified desktop QA 228/228 failed=0 recorded in current output artifacts"
+    ,"Fresh G619/H601 beta readiness audit recorded in work/heavy-chain-beta-readiness-audit-20260819-r2.md; real beta sessions and operator decisions remain absent"
+    ,"Fresh Zeabur source provenance readback r6 recorded in work/heavy-chain-zeabur-source-provenance-readback-20260819-r6.md; latest running deployment metadata is empty"
+    ,"Verified Kimi Designer handoff recorded in work/heavy-lightchain-ui-parity-designer-handoff-20260819.md"
+    ,"Lightchain visual frame/provider boundary implemented; Heavy-only shared chrome removed"
+    ,"Fresh production Chrome Plugin/Profile 2 readback reached openTabs but navigation ended with native pipe closed before response; fresh binding advertised no browsers"
+    ,"Latest official Profile 2 browser-client retry returned an empty inventory and the shared bridge readback is stopped with exact blocker chrome_extension_bridge_stopped"
+    ,"Fresh Chrome/Profile 2 diagnostics show Chrome running, extension enabled, and Native Host correct while browser-client inventory remains empty; connection-owner handoff timed out"
+    ,"Local verification while the bridge is stopped: typecheck PASS, shell 4/4, flow 9/9, material 8/8, Canvas 3/3, and build PASS with 2607 modules"
+    ,"User resumed the Goal; fresh Chrome extension advertisement was followed by Browser is not available during handle acquisition, and the next fresh session had an empty inventory"
+    ,"Focused current-source parity/provider contract recheck passed 50/50; Chrome foreground gate was not retried and production/provider/beta blockers remain separate"
+    ,"Fresh local non-video verifier passed 31/31 and current-source desktop verifier passed 228/228 after the category-toolbar alignment"
+    ,"Current-source Lightchain frame cleanup and AI-fitting route connection verified with focused 15/15, fresh local non-video 31/31 at output/playwright/lightchain-all-feature-workflows-20260819T160356Z/SUMMARY.json, and desktop 228/228; no Chrome or external effect was performed"
+    ,"Current-source provider/persistence regression audit passed 73/73; expected quota diagnostic was contained to the intentional test case, with no Chrome retry or external effect"
+    ,"work/heavy-chain-profile2-recovery-attempt-20260820.md: fresh browser id -aceb-40bf-8960-b3eed6b59da7, openTabs=4, selected=null, close lifecycle unavailable, no external effect"
+    ,"output/playwright/lightchain-all-feature-workflows-20260819T161811Z/SUMMARY.json: featureCount=31, ok=true, failed=[] after fitting surface cleanup and GeneratePage query-route fix"
+    ,"output/playwright/lightchain-all-feature-workflows-20260819T162233Z/SUMMARY.json: featureCount=31, ok=true, failed=[] after Lightchain-only surface branding cleanup"
+    ,"work/heavy-chain-profile2-recovery-20260820-r2.md: fresh browser id -a4f7-4949-9aef-9c64ed9d4db0, openTabs=3, selected=null, existing about:blank user-assisted branch, no external effect"
+    ,"output/playwright/lightchain-all-feature-workflows-20260819T163027Z/SUMMARY.json: featureCount=31, ok=true, failed=[] after Lightchain visible-label cleanup"
+    ,"output/playwright/lightchain-all-feature-workflows-20260819T163436Z/SUMMARY.json: featureCount=31, ok=true, failed=[] after parity-route identity cleanup"
+    ,"output/playwright/lightchain-all-feature-workflows-20260819T164124Z/SUMMARY.json: featureCount=31, ok=true, failed=[] after History/Jobs identity cleanup"
+    ,"work/heavy-chain-profile2-recovery-20260820-r3.md: fresh browser id -a4c0-4aea-b244-0adcf0151696, openTabs=4, user clicked about:blank, selected=null, no target or external effect"
+    ,"/Users/nichikatanaka/Documents/New project/work/chrome-plugin-profile2-close-free-recovery-live-20260820.json: shared layer fresh openTabs succeeded, selected=null, viewport-only capability, anchor=0, foreground activation capability unavailable; no Heavy/AOS/external effect"
+    ,"work/heavy-chain-target-scoped-canary-20260820-r2.md: rev6 fresh browser target-scoped Heavy /tools/fabric provisioning, URL/title/DOM readback PASS, cleanup_verified=true, workspace authentication not ready"
+    ,"work/heavy-chain-target-scoped-canary-20260820-r3.md: rev6 fresh browser target-scoped Heavy /tools/fabric provisioning, URL/title/DOM readback PASS, cleanup_verified=true, workspace authentication still not ready despite user-reported login"
+    ,"work/heavy-chain-authenticated-target-readback-20260820-r4.md: fresh Profile 2 authentication and hydrated /tools/fabric target readback PASS; product-owned Gallery selection and foreground generation remain pending"
+    ,"work/lightchain-profile2-current-parity-readback-20260820-r1.md: fresh rev6 Lightchain homepage and priority route input/permission/retirement contracts; current category-card enumeration is PENDING_CONFIRMATION"
+    ,"work/heavy-production-deployment-readback-20260820-r1.md: deployment 6a85ecc3f1ea67ebf4ea67bc RUNNING; fresh target-scoped Heavy /tools/fabric URL/title/DOM readback and task-owned cleanup verified"
+    ,"work/heavy-production-common-routes-readback-20260820-r1.md: fresh target-scoped /lightchain, /gallery, /canvas/new, /history, and /jobs route readbacks plus cleanup passed; Gallery loading and History/Jobs empty persistence remain PENDING_CONFIRMATION"
+    ,"work/heavy-production-common-routes-readback-20260820-r2.md: fresh 15-second hydrated readback showed Gallery 961 images, History saved 12/failed 4/timeline 20, and Jobs completed 20/stopped 4/queue 20; cleanup passed"
+    ,"Focused persistence/auth/material regressions passed: workspace activity 12/12, provider persistence 12/12, Canvas generation 5/5, Supabase session recovery 3/3, Lightchain material contract 16/16"
+    ,"work/heavy-chain-authenticated-target-readback-20260820-r5.md: fresh browser-client -293e-41e2-90d3-fde6bc077e70, same-run hydrated /tools/fabric readback, and cleanup_verified=true"
+    ,"work/heavy-production-deployment-readback-20260820-r2.md: deployment 6a85f3012a82f89733777475 at nick353/heavy-chain@6831f36, HTTP/container 200, fresh Profile 2 UI readback, and cleanup_verified=true"
+  ],
+  "next_action": "Establish a fresh official foreground owner/selected-tab proof, then select one approved product-owned Gallery input and execute the bounded fabric flow through provider result, save, Gallery/Canvas/History/Jobs, and reuse; source-associated deployment/UI proof is complete but is not a foreground or provider substitute.",
+  "blocker": {
+    "category": "external_wait",
+    "exact_blocker": "chrome_selected_tab_readback_invalid",
+    "recovery_condition": "Authentication, Heavy /tools/fabric hydration, fresh Lightchain priority-route readbacks, and the current deployed direct material frame pass in Profile 2. The remaining gate is a fresh foreground owner with selected-tab proof for current category enumeration, approved material selection, and generation; the official extension still advertises no foreground activation capability. Product-owned Gallery selection and rights confirmation are also pending.",
+    "restart_stage": "verify",
+    "next_action": "Establish a fresh official foreground owner/selected-tab proof, then perform the bounded fabric sample with approved product-owned Gallery input and rights gate. Do not use old bindings or switch surfaces.",
+    "evidence": "work/heavy-production-deployment-readback-20260820-r2.md",
+    "operation_exact_blocker": "chrome_selected_tab_readback_invalid",
+    "capability_blocker": "chrome_foreground_activation_capability_unavailable",
+    "capability_blocker": "chrome_foreground_activation_capability_unavailable",
+    "recorded_at": "2026-08-20T03:08:00+09:00"
+  },
+  "same_blocker_count": 1,
+  "resume_admission": "eligible_after_recovery_evidence",
+  "latest_continuation": {
+    "stage": "recover_or_replan",
+    "exact_blocker": "chrome_selected_tab_readback_invalid",
+    "attempted_once": true,
+    "independent_progress": [
+      "verified Kimi Designer handoff recorded",
+      "Lightchain visual frame/provider boundary implemented",
+      "shell contract 4/4",
+      "flow persistence 9/9",
+      "non-video workflow 31/31",
+      "unified desktop layout 228/228",
+      "build 2607 modules",
+      "material contract 11/11",
+      "provider adapter 16/16",
+      "provider persistence/readback 12/12",
+      "Canvas view persistence 3/3",
+      "fresh Chrome Plugin/Profile 2 Heavy /tools/fabric readback and cleanup",
+      "fabric synthesis 3/3",
+      "Lightchain provider adapter 16/16",
+      "provider persistence/readback 12/12",
+      "parity routes 6/6",
+      "typecheck PASS",
+      "fresh Profile 2 browser-client retry returned an empty inventory",
+      "bridge readback status=stopped, operation_status=blocked, exact_blocker=chrome_extension_bridge_stopped",
+      "typecheck PASS; focused shell 4/4, flow 9/9, material 8/8, Canvas 3/3; build PASS with 2607 modules",
+      "fresh Chrome extension advertisement followed by Browser is not available during handle acquisition; second fresh session returned empty inventory",
+    "fresh Profile 2 openTabs handshake succeeded after shared-layer repair; selected() returned null and bridge fail-closed as chrome_selected_tab_readback_invalid",
+      "current-source desktop verifier recovered with local network boundary and concurrent viewports: 228/228, failed=0, cleanup complete"
+      ,"current-source non-video workflow verifier passed featureCount=31, failed=[], desktop/mobile coverage and cleanup complete"
+    ],
+    "artifact": "work/heavy-chain-profile2-recovery-20260820-r3.md",
+    "recorded_at": "2026-08-20T01:50:29+09:00"
+  },
+  "exit_check": null,
+  "history": [
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 1,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T00:50:00.599Z"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 2,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T00:50:17.762Z"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 3,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T01:48:20.000Z"
+    },
+    {
+      "type": "blocker",
+      "category": "external_wait",
+      "exact_blocker": "zeabur_source_association_missing",
+      "fingerprint": "sha256:8b7905d7db1690df4b7e6c841022e65082030214cf882a7cfcbfa887db4489c8",
+      "same_blocker_count": 1,
+      "resume_admission": "eligible_after_recovery_evidence",
+      "recorded_at": "2026-08-19T00:50:31.428Z"
+    },
+    {
+      "type": "blocker",
+      "category": "external_wait",
+      "exact_blocker": "chrome_selected_tab_readback_invalid",
+      "fingerprint": "chrome_selected_tab_readback_invalid",
+      "same_blocker_count": 1,
+      "resume_admission": "awaiting_user_state_change",
+      "recorded_at": "2026-08-19T01:57:03.000Z"
+    },
+    {
+      "type": "blocker",
+      "category": "external_wait",
+      "exact_blocker": "chrome_profile2_close_lifecycle_unavailable",
+      "fingerprint": "chrome_profile2_close_lifecycle_unavailable",
+      "same_blocker_count": 2,
+      "resume_admission": "awaiting_user_state_change",
+      "recorded_at": "2026-08-19T02:03:30.000Z"
+    },
+    {
+      "type": "recovery",
+      "category": "browser_readback",
+      "exact_blocker": "chrome_heavy_target_absent_from_fresh_open_tabs",
+      "recovery_condition": "fresh Heavy target opened and target-scoped owner-bound URL/title/DOM readback succeeded",
+      "evidence_hash": "/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/work/heavy-chain-open-readback-20260819.md",
+      "recorded_at": "2026-08-19T02:27:15.300Z"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 4,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T04:13:54.500Z"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 5,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T04:32:13.623Z"
+    },
+    {
+      "type": "blocker",
+      "category": "local_repairable",
+      "exact_blocker": "canvas_save_failed_after_one_retry",
+      "fingerprint": "sha256:fcdb52f17bb26782b507e438622eea283acbf2c5614892551256eb8d53922a21",
+      "same_blocker_count": 1,
+      "resume_admission": "eligible_after_recovery_evidence",
+      "recorded_at": "2026-08-19T04:52:16.932Z"
+    },
+    {
+      "type": "blocker",
+      "category": "external_wait",
+      "exact_blocker": "heavy_target_dom_platform_assets_textile_not_visible",
+      "fingerprint": "heavy_target_dom_platform_assets_textile_not_visible",
+      "same_blocker_count": 1,
+      "resume_admission": "awaiting_user_state_change",
+      "evidence": "/Users/nichikatanaka/Documents/New project/work/chrome-plugin-heavy-fabric-canary-20260819.json",
+      "recorded_at": "2026-08-19T06:30:22.112Z"
+    },
+    {
+      "type": "blocker",
+      "category": "external_wait",
+      "exact_blocker": "heavy_target_state_change_not_observed_target_absent",
+      "fingerprint": "heavy_target_state_change_not_observed_target_absent",
+      "same_blocker_count": 1,
+      "resume_admission": "awaiting_user_state_change",
+      "evidence": "source thread 01a00fe4-9c5e-7d00-8b6a-09811c03df36; browser_id -9217-49a9-8753-606199f468b1; /tools/fabric absent from fresh openTabs",
+      "recorded_at": "2026-08-19T06:42:58.000Z"
+    },
+    {
+      "type": "blocker",
+      "category": "external_wait",
+      "exact_blocker": "chrome_extension_target_readback_target_session_not_owned",
+      "fingerprint": "chrome_extension_target_readback_target_session_not_owned",
+      "same_blocker_count": 1,
+      "resume_admission": "awaiting_user_state_change",
+      "evidence": "/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/work/heavy-chain-profile2-auth-readback-continuation-20260819.md; graph run run_ddde9688e1764003",
+      "recorded_at": "2026-08-19T18:02:35+09:00"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 7,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T18:53:43+09:00",
+      "note": "Local AI fitting retry resilience slice verified; production blocker unchanged"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 8,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T18:59:23+09:00",
+      "note": "Local lint and Gallery dependency recovery verified; production blocker unchanged"
+    },
+    {
+      "type": "blocker",
+      "category": "external_wait",
+      "exact_blocker": "chrome_extension_target_readback_target_session_not_owned",
+      "fingerprint": "chrome_extension_target_readback_target_session_not_owned",
+      "same_blocker_count": 3,
+      "resume_admission": "awaiting_user_state_change",
+      "evidence": "work/heavy-chain-profile2-fresh-readback-20260819-r2.md; Lightchain absent; Heavy descriptor 1980903220 not owned",
+      "recorded_at": "2026-08-19T19:01:01+09:00"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 9,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T19:05:55+09:00",
+      "note": "Current desktop layout verifier bounded-stopped; historical summary not promoted"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 10,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T19:42:00+09:00",
+      "note": "Fresh desktop verifier passed 228/228 with cleanup; Heavy task-owned readback remains in preparation/auth state; integrated Go review blocked"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 11,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T19:55:00+09:00",
+      "note": "Heavy screenshot captured from task-owned Profile 2 tab and cleaned up; scoped persistence slice passed focused/security/integrated review; production auth/brand preparation remains the blocker"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 12,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T20:02:00+09:00",
+      "note": "Fresh non-video local integration verifier passed 31 features and 432 assertions with cleanup; production auth/brand/textile preparation remains the blocker"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 13,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T20:05:00+09:00",
+      "note": "Fresh Profile 2 inventory returned only foreign Heavy /model and new-tab descriptors; no target mutation occurred and the authenticated state-change restart condition remains"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 14,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-19T20:20:00+09:00",
+      "note": "Fresh task-owned Heavy fabric readback hydrated the 31-feature workspace and account page confirmed the signed-in owner; old auth blocker cleared, provider assets/rights remain pending"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 15,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-19T20:20:01+09:00",
+      "note": "Fresh browser owner selected product-owned garment/textile platform assets, textile preprocessing completed, and provider generation remains gated by explicit rights confirmation"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 16,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T20:20:02+09:00",
+      "note": "Held task tab was absent; a fresh probe showed no current rights attestation and was cleaned up without provider work"
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 17,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-19T20:35:00+09:00",
+      "note": "Fresh task-owned target 1980903397 showed the hydrated authenticated workspace without login/preparation shell; AI fitting garment-only platform picker wiring was fixed and focused verification passed. Rights/provider gate remains pending."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 18,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-19T20:40:00+09:00",
+      "note": "Printing foundation 244/244, provider adapter 16/16, and model-matrix 3/3 passed after the AI-fitting garment-only asset gate fix; rights/provider external gate remains pending."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 19,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T23:24:00+09:00",
+      "note": "After Chrome was reopened, the fresh official Profile 2 browser-client inventory was empty and the shared bridge readback was stopped with exact blocker chrome_extension_bridge_stopped; no alternate surface or external effect was used."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 20,
+      "stage": "recover_or_replan",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T23:31:12+09:00",
+      "note": "Chrome running, Profile 2 extension enabled, and Native Host correct; official browser-client inventory remained empty and the connection-owner handoff timed out. Same exact bridge blocker recurred; no shared-layer or external-effect change was made."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 21,
+      "stage": "recover_or_replan",
+      "status": "blocked",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T23:34:12+09:00",
+      "note": "Same chrome_extension_bridge_stopped condition reached 3 consecutive Goal turns. Local typecheck, focused contracts, and build passed, but no further production/readback progress is possible until the official Profile 2 bridge changes state."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 22,
+      "stage": "recover_or_replan",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-19T23:40:45+09:00",
+      "note": "User resumed the previously blocked Goal. Fresh Chrome extension advertisement was followed by Browser is not available during handle acquisition; the next fresh session had an empty inventory. Resumed-audit blocker count reset to 1; IAB and old bindings were not used."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 23,
+      "stage": "recover_or_replan",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-19T23:57:59+09:00",
+      "note": "Authorized Chrome Plugin shared-layer repair passed focused suites and fresh openTabs handshake. New narrower blocker is selected()=null with chrome_selected_tab_readback_invalid; official bridge cleanup succeeded. User must close/reopen Chrome before the next fresh proof."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 24,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T00:19:40+09:00",
+      "note": "Local layout verifier was repaired without changing product code: non-local waits are blocked and independent viewport contexts run concurrently. Fresh current-source desktop result is 228/228 with failed=0 and cleanup complete; Chrome selected-tab blocker remains separate."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 25,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T00:30:58+09:00",
+      "note": "Fresh build and local non-video workflow verifier passed featureCount=31, failed=[], with desktop/mobile coverage and cleanup. This is local proof only; production readback and Chrome foreground gate remain pending."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 26,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T00:34:42+09:00",
+      "note": "Focused current-source parity/provider contract recheck passed 50/50 across shell, 31-route aliases, material inputs, provider adapter/persistence, print history, fitting resilience, and Canvas recovery. Chrome selected-tab blocker was not retried."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 27,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T00:46:00+09:00",
+      "note": "Fabric/printing priority views were aligned to the four current Lightchain categories and the visible auxiliary Heavy toolbar was removed. Focused shell/material tests passed 13/13, local non-video 31/31, and desktop 228/228; production gate remains separate."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 28,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T01:06:00+09:00",
+      "note": "Current-source Lightchain frame cleanup connected /model to the provider-capable AI-fitting workbench, unified catalog route aliases and generation entrypoints under the Lightchain header, removed visible Heavy-only inner labels, and passed focused 15/15, local non-video 31/31, and desktop 228/228. Chrome selected-tab blocker and production/provider/beta gates remain separate."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 29,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T01:08:39+09:00",
+      "note": "Provider/persistence regression set passed 73/73 across fabric, printing, AI fitting, model-matrix, remote artifact ownership, History, Gallery, Canvas promotion, retry, reload, and placement/readback. Chrome bridge remains stopped with the selected-null gate unresolved; production/provider/beta gates remain separate."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 30,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T01:20:00+09:00",
+      "note": "Removed the visible legacy Heavy fallback banner from /fitting and fixed same-path /generate query navigation. Focused contract 11/11 and fresh local non-video verifier 31/31 passed; Chrome selected-tab, production/provider, deployment, and beta gates remain separate."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 31,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T01:30:00+09:00",
+      "note": "Removed remaining visible Heavy fallback copy from Lightchain parity surfaces and verified the full local non-video route set at 31/31 with no failures. Chrome selected-tab, production/provider, deployment, and beta gates remain separate."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 32,
+      "stage": "recover_or_replan",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T01:28:27+09:00",
+      "note": "Fresh official Profile 2 recovery session passed openTabs() with 3 tabs but selected() remained null. An existing about:blank tab is available for the bounded user-assisted branch; no tab operation, bridge refresh, alternate surface, or external effect was used."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 33,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T01:32:03+09:00",
+      "note": "Removed visible Heavy Chain Lab wording from the Lab surface, updated the Lightchain permission-parity contracts, and verified focused permission/Lab/provider suites plus the fresh local non-video feature set at 31/31. Chrome foreground and production gates remain separate."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 34,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T01:36:39+09:00",
+      "note": "Removed Heavy-only identity/default prompt copy from authenticated parity routes /studio, /patterns, /models, and /lab; clone-layout expectations now use LIGHTCHAIN for the authenticated shell. Focused contracts passed 27/27 and local non-video verification passed 31/31. Chrome foreground and production gates remain separate."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 35,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T01:43:24+09:00",
+      "note": "Changed visible History/Jobs lineage labels to Lightchain equivalents with legacy-label read compatibility, added Gallery/History/Jobs to the authenticated Lightchain header route set, and verified focused contracts 29/29 plus local non-video 31/31. Chrome foreground and production gates remain separate."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 37,
+      "stage": "recover_or_replan",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T01:50:29+09:00",
+      "note": "User-assisted about:blank click completed, but fresh same-run openTabs() succeeded and selected() remained null. Recovery r3 recorded; no tab operation or external effect was performed."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 38,
+      "stage": "recover_or_replan",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T02:00:00+09:00",
+      "note": "Shared Chrome layer close-free recovery is prepared, but fresh live proof advertises viewport only with anchor=0 and chrome_foreground_activation_capability_unavailable. Foreground work is held until the signed extension capability update."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 39,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T02:29:37+09:00",
+      "note": "Rev6 target-scoped canary provisioned Heavy /tools/fabric once, read URL/title/DOM in the same run, and cleaned up the created tab. Readback showed login/workspace preparation with no textile asset; foreground selected remains a separate blocker."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 40,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T02:36:00+09:00",
+      "note": "Fresh rev6 target-scoped canary r3 used browser-client -86b7-4558-9585-9281112b0117, provisioned task-owned Heavy /tools/fabric tab 1980903594, read URL/title/DOM, and cleaned it up. The DOM still exposed login/workspace preparation and no textile asset; exact blocker remains heavy_target_workspace_authentication_not_ready."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 41,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-20T02:50:00+09:00",
+      "note": "Fresh Profile 2 login route auto-redirected to authenticated /lightchain after hydration with account control, four categories, and 31 non-video library links. A separate fresh /tools/fabric target-scoped readback hydrated into the Lightchain fabric workspace with material inputs, rights checkbox, and disabled AI generation. Authentication gate cleared; foreground selected and approved Gallery input gates remain."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 42,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T02:43:38+09:00",
+      "note": "Fresh rev6 Lightchain target-scoped readbacks covered homepage and /tools/fabric, /tools/printing, /model. Homepage exposed four category tabs, 7 non-video recommended cards, 1 excluded video card, and 23 non-video/2 video case items; priority routes exposed current input, rights, history, and retirement contracts. Current category-card enumeration remains PENDING_CONFIRMATION. Fresh foreground proof returned invalid selected state with viewport-only capability; no foreground or external effect was used."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 44,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T02:54:00+09:00",
+      "note": "Zeabur deployment 6a85ecc3f1ea67ebf4ea67bc reached RUNNING. A fresh rev6 Profile 2 target-scoped Heavy /tools/fabric canary provisioned task-owned tab 1980903628, read URL/title/DOM after hydration, and cleaned it up. The deployed direct material frame matches the Lightchain-shaped route; foreground selected and provider/persistence gates remain separate."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 45,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T02:57:00+09:00",
+      "note": "Fresh same-owner target-scoped readback covered Heavy /lightchain, /gallery, /canvas/new, /history, and /jobs. All five task-owned tabs were cleaned up. Gallery remained loading, History showed saved 0, and Jobs showed queue 0; common route presence is proven, durable result lineage is not."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 46,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-20T03:02:00+09:00",
+      "note": "A fresh Profile 2 target-scoped run waited 15 seconds after provisioning /gallery, /history, and /jobs. Hydrated readback showed 961 Gallery images, 12 saved History items with 4 failures, and 20 completed Jobs with 4 stopped items. The earlier short-wait loading/0 state is superseded; provider generation and same-run reuse remain pending."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 47,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-20T03:07:00+09:00",
+      "note": "Focused local persistence/auth/material checks passed: workspace activity 12/12, provider persistence 12/12, Canvas generation 5/5, Supabase session recovery 3/3, and Lightchain material contract 16/16. No browser foreground retry was issued; provider business completion remains pending."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 48,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-20T03:08:00+09:00",
+      "note": "Fresh current-Turn rev6 Profile 2 target-scoped Heavy /tools/fabric readback r5 showed the authenticated hydrated Lightchain-shaped fabric workspace. Task-owned provisioning cleanup passed; no selected/foreground or effectful operation was used. Foreground and provider permission gates remain."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 49,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-20T03:15:00+09:00",
+      "note": "Fresh current build verification passed non-video featureCount=31 with failed=[] and unified desktop layout 228/228 across 1280/1440/1920/2560px with cleanupLeftovers=0. Focused material 16/16, provider persistence 12/12, workspace activity 12/12, and fitting resilience 4/4 also passed."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 50,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-20T03:20:07+09:00",
+      "note": "Source-associated deployment 6a85f3012a82f89733777475 reached RUNNING for nick353/heavy-chain@6831f36. HTTP/container returned 200, and fresh rev6 Profile 2 target-scoped Heavy /tools/fabric readback showed Lightchain markers with no Heavy-only chrome; task-owned cleanup passed."
+    }
+  ],
+  "created_at": "2026-08-19T00:49:44.381Z",
+  "updated_at": "2026-08-20T03:20:07+09:00"
+}

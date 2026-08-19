@@ -9,6 +9,13 @@ Updated: 2026-08-19
 - `権限がありません` and empty required inputs remain visible, so this clears the authentication/workspace hydration gate only. Foreground blocker remains `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`.
 - Artifact: `work/heavy-chain-authenticated-target-readback-20260820-r5.md`.
 
+2026-08-20 03:20 JST latest source-associated production deployment/readback:
+- Commit `6831f365b489ec35a8bafce11e96cfc4c88cd0b7` was pushed to `nick353/heavy-chain` `main` and deployed to existing service `heavy-chain` as deployment `6a85f3012a82f89733777475` (`docker`, `RUNNING`).
+- `https://heavy-chain.zeabur.app/` returned HTTP `200`; container PID 63 served Vite preview on `0.0.0.0:8080` and a local container request returned `200`.
+- Fresh official Chrome Plugin/Profile 2 browser-client `-0dfb-44bb-b854-8a5cd12513e9` read Heavy `/tools/fabric` after hydration. The page showed `LIGHTCHAIN`, the four categories, fabric inputs, Gallery selectors, rights text, `AI生成`, and `生成履歴`; Heavy-only chrome markers were absent.
+- Task-owned tab `1980903660` was closed with `cleanup_verified=true`. No selected/claim/focus/foreground lease, upload, rights confirmation, provider generation, save/reuse, recording, AOS, or external effect occurred.
+- Artifact: `work/heavy-production-deployment-readback-20260820-r2.md`.
+
 2026-08-20 02:54 JST latest Heavy production deployment/readback:
 - Zeabur deployment `6a85ecc3f1ea67ebf4ea67bc` for service `heavy-chain` reached `RUNNING`; build logs ended with `build completed`.
 - Fresh official Chrome Plugin/Profile 2 selector revision `6` browser-client `-3fb3-4439-b4d0-9c463e2fd61f` provisioned Heavy `/tools/fabric` because it was absent from the fresh inventory, read URL/title/DOM after hydration, and closed only task-owned tab `1980903628` (`cleanup_verified=true`).
