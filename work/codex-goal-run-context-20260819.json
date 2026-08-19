@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 52,
+  "checkpoint_seq": 53,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -90,6 +90,7 @@
     ,"Source commit 633ddf7 was pushed and Zeabur deployment 6a85f5bcf1ea67ebf4ea683b reached RUNNING; fresh target-scoped /tools/fabric readback showed legacy permission-lock count 0 and task-owned cleanup passed"
     ,"Fresh official Profile 2 Lightchain homepage readback r2 passed target-scoped URL/title/DOM, confirmed four categories and non-video labels デザイン修正／柄・プリント, and closed task-owned tab 1980903668"
     ,"Fresh local 31-feature verification passed featureCount=31 with no failures; bounded unified desktop rerun passed 228/228 at 1280/1440/1920/2560px with cleanup complete"
+    ,"Same-run fresh Profile 2 target-scoped Heavy/Lightchain /tools/fabric comparison passed URL/title/DOM and official cleanup; direct-route parity differences were recorded as PENDING_CONFIRMATION without provider or effectful operations"
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -166,6 +167,7 @@
     ,"work/lightchain-profile2-fresh-readback-20260820-r2.md: fresh Profile 2 Lightchain homepage URL/title/DOM readback, four categories, non-video labels, and official cleanup"
     ,"output/playwright/lightchain-all-feature-workflows-20260819T183601Z/SUMMARY.json: featureCount=31, ok=true, failed=[]"
     ,"output/playwright/unified-desktop-layout-current-rerun/SUMMARY.json: scheduled=228, completed=228, failed=0, cleanup complete"
+    ,"work/heavy-lightchain-target-parity-readback-20260820-r1.md: same-run Heavy/Lightchain direct-route URL/title/DOM comparison, parity classification, and cleanup"
   ],
   "next_action": "Establish a fresh official foreground owner/selected-tab proof, then select one approved product-owned Gallery input and execute the bounded fabric flow through provider result, save, Gallery/Canvas/History/Jobs, and reuse; source-associated beta-unlock UI proof is complete but is not a foreground or provider substitute.",
   "blocker": {
@@ -727,8 +729,17 @@
       "clear_blocker": true,
       "recorded_at": "2026-08-20T03:39:00+09:00",
       "note": "Fresh rev6 Profile 2 target-scoped Lightchain homepage readback r2 confirmed four categories and non-video labels デザイン修正／柄・プリント; task-owned cleanup passed. Heavy local verification passed featureCount=31 and unified desktop rerun 228/228 at 1280/1440/1920/2560px with failed=0 and cleanup complete. Foreground/provider gate remains unchanged."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 53,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-20T03:43:00+09:00",
+      "note": "Same-run fresh Profile 2 target-scoped Heavy and Lightchain /tools/fabric readbacks passed URL/title/DOM and official cleanup. The retirement notice matched both screens; Heavy integrated beta input/rights/generation differences and direct-route title/toolbar/input parity gaps were recorded without effectful operations."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T03:39:00+09:00"
+  "updated_at": "2026-08-20T03:43:00+09:00"
 }

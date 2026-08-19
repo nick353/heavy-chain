@@ -63,6 +63,7 @@
 
 ## 現在の状態（2026-08-20）
 
+- 2026-08-20 03:43 JST、同一fresh Profile 2 browser-clientでHeavy `/tools/fabric`とLightchain `/tools/fabric`をtarget-scoped read-only比較した。両方のURL/title/DOM readbackとtask-owned cleanupはPASS。Lightchain direct routeにも旧終了案内が存在するため、Heavy側の同文言はHeavy-only余計表示ではない。一方、Heavyの統合workspaceはGallery／権利確認／AI生成を追加した内部β仕様で、タイトル・toolbar文言・詳細入力構成は直接routeと差が残る。完全parityはPENDING_CONFIRMATION。証跡は `work/heavy-lightchain-target-parity-readback-20260820-r1.md`。
 - 2026-08-20 03:39 JST、現行Lightchain本番をfresh official Chrome Plugin／Profile 2のtarget-scoped read-only laneで再確認した。homepageのURL/title/DOM readbackに成功し、4カテゴリ（おすすめ／企画デザインツール／AIフィッティング／グラフィックツール）と非動画ラベル（デザイン修正／柄・プリント）を確認した。task-owned tabは公式cleanup済み。証跡は `work/lightchain-profile2-fresh-readback-20260820-r2.md`。これは現行基準のreadbackであり、Heavyのprovider生成・保存・再利用の証明ではない。
 - 同じ継続作業でHeavyのローカル検証を完了した。31機能台帳は`featureCount=31`／`failed=[]`でPASS。デスクトップ幅検証は再実行で`228/228`セル、`failed=0`、`1280/1440/1920/2560px`、preview cleanup完了を確認した。初回の4件は並列負荷による一時的な`operation_timeout`で、再実行では再現しなかった。証跡は `output/playwright/unified-desktop-layout-current-rerun/SUMMARY.json`。
 - 2026-08-20 03:31 JST、社内βの全員利用要件と矛盾するハードコード済み旧プランロック表示を統合ワークスペースから除去し、commit `633ddf79faedf81fb304ca194a2f4a623bac1c29` をZeabur deployment `6a85f5bcf1ea67ebf4ea683b` として`RUNNING`反映した。fresh Profile 2 target-scoped readbackで新bundleの `/tools/fabric` を確認し、`権限がありません`／`permission-locked` は0件、Lightchain-shaped入力・権利確認・AI生成・生成履歴は表示された。証跡は `work/heavy-production-beta-unlock-readback-20260820-r1.md`。これはUI反映のPASSであり、provider生成・保存再利用の完了証明ではない。
@@ -79,6 +80,7 @@
 - Beta unlock UI gate: PASS。deployment `6a85f5bcf1ea67ebf4ea683b` は `nick353/heavy-chain@633ddf7`、`docker`、`RUNNING`。fresh target-scoped readbackで旧プランロック表示0件を確認した。実際のブランド・権利・provider・保存の安全ゲートは維持している。
 - Lightchain current parity readback: PASS。rev6のfresh Profile 2でhomepage、4カテゴリタブ、非動画おすすめ7件／動画除外1件、事例23件／動画除外2件、`/tools/fabric`、`/tools/printing`、`/model`の入力・権限・終了導線を確認した。カテゴリ内全カードはLoadingのためPENDING_CONFIRMATION。
 - Lightchain current homepage refresh: PASS。2026-08-20 03:39 JSTのfresh readbackで4カテゴリと非動画ラベル（デザイン修正／柄・プリント）を同一runで確認した。完全なカテゴリ内カード台帳は引き続きPENDING_CONFIRMATION。
+- Same-run Heavy/Lightchain direct-route comparison: PASS。両targetのURL/title/DOM readbackと公式cleanupを確認した。Heavyの統合β入力・権利・生成ゲートは意図した内部β差分だが、タイトル・toolbar文言・詳細入力構成の完全一致はPENDING_CONFIRMATION。
 - Authentication gate: PASS。fresh `/login` readbackはhydration後に`/lightchain`へ自動遷移し、`アカウント`、4カテゴリ、31非動画Libraryを確認した。最新のsource-associated beta-unlock readbackでも、ログイン／準備中シェルではなく、`生地イメージ`、素材入力、権利文言、`AI生成`、`生成履歴`を含むhydrated workspaceを確認した。最新証跡は `work/heavy-production-beta-unlock-readback-20260820-r1.md`。
 - Common route readback: PASS。fresh同一runで`/lightchain`、`/gallery`、`/canvas/new`、`/history`、`/jobs`を15秒hydration後に確認した。Galleryは961枚、Historyは保存済み12件・失敗4件、Jobsは完了20件・失敗4件を表示した。新規provider生成からの同一run保存・再利用は未証明。
 - Exact blocker: `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`（foreground操作）。target-scoped readback自体は成功している。製品所有のgarment/textile platform assetは実装・focused testで確認済みだが、同一runのUI選択・権利確認・生成・保存・再利用はforeground ownerが揃うまでPENDING_CONFIRMATION。Lightchainカテゴリ内全カードも現行readbackではPENDING_CONFIRMATION。

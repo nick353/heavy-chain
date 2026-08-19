@@ -2,6 +2,12 @@
 
 Updated: 2026-08-19
 
+2026-08-20 03:43 JST latest same-run Heavy/Lightchain direct-route comparison:
+- Fresh official Profile 2 browser-client `-79dc-4ed4-ab07-009281949b30` completed `openTabs()` and target-scoped URL/title/DOM readback for Heavy `/tools/fabric` and Lightchain `/tools/fabric`; task-owned tabs `1980903671` and `1980903673` were both cleaned up with `ok=true`.
+- Heavy rendered the integrated Lightchain-shaped workspace with Gallery selectors, textile/garment inputs, rights attestation, AI生成, and 生成履歴. Lightchain rendered the direct route with toolbar inputs and its own rights lock.
+- The same retirement notice exists on Lightchain, so it is not Heavy-only chrome. Direct-route title, toolbar wording, and detailed input composition remain a parity gap classified as PENDING_CONFIRMATION until the complete live ledger and interaction proof are complete.
+- Artifact: `work/heavy-lightchain-target-parity-readback-20260820-r1.md`.
+
 2026-08-20 03:39 JST latest Lightchain fresh readback and Heavy local verification:
 - Fresh official Chrome Plugin/Profile 2 target-scoped readback used selector revision `6`, browser-client `-d82b-4b58-80e1-9b16075d723a`, and task-owned tab `1980903668` at `https://jp.linkaigc.com/`. Same-run URL/title/DOM readback succeeded for `Lightchain AI`; the four category labels and non-video labels `デザイン修正`／`柄・プリント` were visible. No video labels were observed.
 - The task-owned tab was closed with the official target-scoped cleanup contract (`ok=true`). No selected/claim/focus/foreground lease, provider generation, save/reuse, recording, AOS, or external effect occurred.
