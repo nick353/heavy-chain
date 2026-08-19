@@ -63,6 +63,8 @@
 
 ## 現在の状態（2026-08-20）
 
+- 2026-08-20 06:09 JST、現行Lightchain本番のfresh Profile 2 target-scoped parity readback r4を取得した。同一browser-client `-ba97-43a6-b43c-7a6f738e5036`でhomepage、`/tools/fabric`、`/tools/printing`、`/model`を確認し、4カテゴリ、現行toolbar、生地イメージ、プリントイメージ、AIフィッティングの入力・履歴導線をreadbackした。4 routeともURL/title/DOMと`hydration_ready=true`、task-owned tab cleanupをPASS。動画ワークステーションはLightchain側に表示されるが、Heavyでは明示的な動画除外を維持する。証跡は `work/lightchain-profile2-current-parity-readback-20260820-r4.md`。これはLightchain基準の更新であり、Heavy本番の生成・保存・再利用証明ではない。
+
 - 2026-08-20、Heavy本番認証待ちの間に現行sourceのlocal verification r2を再実行した。material/UI `16/16`、model-matrix `3/3`、provider persistence/readback `12/12`、Canvas generation/readback `5/5`（focused `36/36`）、非動画workflow `featureCount=31 / failed=[]`、build `2606 modules transformed`をPASS。remote asset診断はHeavy HTML `200`、`LightchainMaterialWorkbenchPage` chunk `200`、参照30 assetの欠落なしを確認したが、これはChromeのproduction hydration証跡ではない。G619は`acceptance=not_claimed`・実セッション`0/3`、H601 operator readinessは`missingCount=10`、launch operationsは`auth_state_missing`のまま。証跡は`work/heavy-chain-local-verification-20260820-r2.md`。
 
 - 2026-08-20 05:57 JST、Zeabur deployment `6a8617b42a82f897337778cf`（`nick353/heavy-chain@9b1428a7dce5256411ebb94a1dae0a410466f1b7`）が`RUNNING`になった後、新規公式Chrome Plugin／Profile 2 browser-client `-ba97-43a6-b43c-7a6f738e5036`でHeavy `/tools/fabric`をtarget-scoped read-only確認した。fresh `openTabs()`は3件でHeavy targetなし、公式provisioningで作成したtab `1980903768`のURL/title/DOM/hydration（1106ms）を同一runで確認し、作成tabだけcleanupした。画面は依然`ワークスペースを準備しています`／`認証状態とブランド設定を確認しています。`、`ログイン確認`／`状態を確認`で、textile/fabric asset、`AI生成`、`生成履歴`、Gallery、権利確認は未表示。exact blockerは`heavy_target_workspace_authentication_not_ready`。証跡は`work/heavy-chain-target-scoped-canary-20260820-r7.md`。

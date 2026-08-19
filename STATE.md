@@ -2,6 +2,12 @@
 
 Updated: 2026-08-20
 
+2026-08-20 latest Lightchain current parity readback r4:
+- Fresh official Chrome Plugin/Profile 2 target-scoped readback used browser-client `-ba97-43a6-b43c-7a6f738e5036` with selector revision `6` and covered the Lightchain homepage plus `/tools/fabric`, `/tools/printing`, and `/model` in the same owner-bound lane.
+- All four routes passed URL/title/DOM readback with `hydration_ready=true`. Homepage showed the four categories and current source descriptions; fabric showed the current toolbar, fabric input and history; printing showed print input and history; model showed AI fitting modes, garment/reference inputs, smart/1K choices and history.
+- Target tabs were provisioned only when absent from fresh `openTabs()` and all created tabs were closed through official cleanup. No click, credential entry, upload, rights confirmation, provider generation, save/reuse, selected/focus/claim/foreground lease, recording, AOS change, or external effect occurred.
+- Artifact: `work/lightchain-profile2-current-parity-readback-20260820-r4.md`. This updates the Lightchain source baseline; it does not clear Heavy production generation/save/reuse or beta gates.
+
 2026-08-20 latest local verification r2:
 - Current source recheck passed material/UI `16/16`, model-matrix `3/3`, provider persistence/readback `12/12`, Canvas generation/readback `5/5` (`36/36` focused), non-video `featureCount=31 / failed=[]`, and build `2606 modules transformed`.
 - Read-only remote asset diagnostic returned Heavy HTML `200`, the `LightchainMaterialWorkbenchPage` chunk `200`, and no missing response among its 30 referenced assets. This is not a browser production hydration proof.
