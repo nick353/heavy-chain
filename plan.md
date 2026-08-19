@@ -63,6 +63,8 @@
 
 ## 現在の状態（2026-08-20）
 
+- 2026-08-20 03:39 JST、現行Lightchain本番をfresh official Chrome Plugin／Profile 2のtarget-scoped read-only laneで再確認した。homepageのURL/title/DOM readbackに成功し、4カテゴリ（おすすめ／企画デザインツール／AIフィッティング／グラフィックツール）と非動画ラベル（デザイン修正／柄・プリント）を確認した。task-owned tabは公式cleanup済み。証跡は `work/lightchain-profile2-fresh-readback-20260820-r2.md`。これは現行基準のreadbackであり、Heavyのprovider生成・保存・再利用の証明ではない。
+- 同じ継続作業でHeavyのローカル検証を完了した。31機能台帳は`featureCount=31`／`failed=[]`でPASS。デスクトップ幅検証は再実行で`228/228`セル、`failed=0`、`1280/1440/1920/2560px`、preview cleanup完了を確認した。初回の4件は並列負荷による一時的な`operation_timeout`で、再実行では再現しなかった。証跡は `output/playwright/unified-desktop-layout-current-rerun/SUMMARY.json`。
 - 2026-08-20 03:31 JST、社内βの全員利用要件と矛盾するハードコード済み旧プランロック表示を統合ワークスペースから除去し、commit `633ddf79faedf81fb304ca194a2f4a623bac1c29` をZeabur deployment `6a85f5bcf1ea67ebf4ea683b` として`RUNNING`反映した。fresh Profile 2 target-scoped readbackで新bundleの `/tools/fabric` を確認し、`権限がありません`／`permission-locked` は0件、Lightchain-shaped入力・権利確認・AI生成・生成履歴は表示された。証跡は `work/heavy-production-beta-unlock-readback-20260820-r1.md`。これはUI反映のPASSであり、provider生成・保存再利用の完了証明ではない。
 - localのLightchain parity／material／provider／persistence契約と31機能・desktop QAは検証済み。Zeabur deployment `6a85ecc3f1ea67ebf4ea67bc` は `RUNNING` となり、fresh Profile 2 target-scoped readbackで `/tools/fabric` のLightchain-shaped direct material frameを確認した。ただしprovider生成・保存再利用のproduction完了ではない。
 - 2026-08-20 03:08 JSTのfresh Profile 2 target-scoped readbackでは、Heavy `/tools/fabric` がログイン／準備中シェルではなく、hydratedなLightchain-shaped `生地イメージ`ワークスペースを表示した。認証ゲートと画面hydrationはPASS。ただし `権限がありません`、入力未選択、foreground操作未実施のため、provider生成・権利確認・保存再利用の完了証明ではない。証跡は `work/heavy-chain-authenticated-target-readback-20260820-r5.md`。
@@ -76,9 +78,11 @@
 - Source-associated deployment/runtime/UI gate: PASS。deployment `6a85f3012a82f89733777475` は `nick353/heavy-chain@6831f36`、`docker`、`RUNNING`。HTTP/container/fresh Profile 2 UI readbackを同一の反映後状態で確認した。
 - Beta unlock UI gate: PASS。deployment `6a85f5bcf1ea67ebf4ea683b` は `nick353/heavy-chain@633ddf7`、`docker`、`RUNNING`。fresh target-scoped readbackで旧プランロック表示0件を確認した。実際のブランド・権利・provider・保存の安全ゲートは維持している。
 - Lightchain current parity readback: PASS。rev6のfresh Profile 2でhomepage、4カテゴリタブ、非動画おすすめ7件／動画除外1件、事例23件／動画除外2件、`/tools/fabric`、`/tools/printing`、`/model`の入力・権限・終了導線を確認した。カテゴリ内全カードはLoadingのためPENDING_CONFIRMATION。
+- Lightchain current homepage refresh: PASS。2026-08-20 03:39 JSTのfresh readbackで4カテゴリと非動画ラベル（デザイン修正／柄・プリント）を同一runで確認した。完全なカテゴリ内カード台帳は引き続きPENDING_CONFIRMATION。
 - Authentication gate: PASS。fresh `/login` readbackはhydration後に`/lightchain`へ自動遷移し、`アカウント`、4カテゴリ、31非動画Libraryを確認した。最新のsource-associated beta-unlock readbackでも、ログイン／準備中シェルではなく、`生地イメージ`、素材入力、権利文言、`AI生成`、`生成履歴`を含むhydrated workspaceを確認した。最新証跡は `work/heavy-production-beta-unlock-readback-20260820-r1.md`。
 - Common route readback: PASS。fresh同一runで`/lightchain`、`/gallery`、`/canvas/new`、`/history`、`/jobs`を15秒hydration後に確認した。Galleryは961枚、Historyは保存済み12件・失敗4件、Jobsは完了20件・失敗4件を表示した。新規provider生成からの同一run保存・再利用は未証明。
 - Exact blocker: `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`（foreground操作）。target-scoped readback自体は成功している。製品所有のgarment/textile platform assetは実装・focused testで確認済みだが、同一runのUI選択・権利確認・生成・保存・再利用はforeground ownerが揃うまでPENDING_CONFIRMATION。Lightchainカテゴリ内全カードも現行readbackではPENDING_CONFIRMATION。
+- Local desktop verification: PASS。31機能台帳と`1280/1440/1920/2560px`の228セルを再実行で全件確認した。これはlocal previewのUI契約証跡であり、Mac／Windowsの実Chrome実機受入れやproduction provider完了の代用ではない。
 - Foreground operation blocker（read-only target admissionとは分離）: `chrome_selected_tab_readback_invalid` / `chrome_foreground_activation_capability_unavailable`。
 - Next action: current Profile 2のforeground capability／selected-tab gateが解消したfresh ownerで、承認済みの製品所有Gallery素材を1件ずつ選び、権利確認→fabric生成→結果→保存→Gallery/Canvas/History/Jobs→再利用を同一runで確認する。今回のsource-associated deployment/UI readbackをforeground proofやprovider完了の代用にはしない。
 - Restart point: fresh foreground owner/selected proof。そこでLightchainカテゴリ内カードを補完し、Heavyのapproved Gallery素材選択→権利確認→fabric生成→保存・再利用へ進む。provider生成・保存・再利用はowner／承認／同一run gateが揃うまで開始しない。

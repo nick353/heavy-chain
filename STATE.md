@@ -2,6 +2,12 @@
 
 Updated: 2026-08-19
 
+2026-08-20 03:39 JST latest Lightchain fresh readback and Heavy local verification:
+- Fresh official Chrome Plugin/Profile 2 target-scoped readback used selector revision `6`, browser-client `-d82b-4b58-80e1-9b16075d723a`, and task-owned tab `1980903668` at `https://jp.linkaigc.com/`. Same-run URL/title/DOM readback succeeded for `Lightchain AI`; the four category labels and non-video labels `デザイン修正`／`柄・プリント` were visible. No video labels were observed.
+- The task-owned tab was closed with the official target-scoped cleanup contract (`ok=true`). No selected/claim/focus/foreground lease, provider generation, save/reuse, recording, AOS, or external effect occurred.
+- Artifact: `work/lightchain-profile2-fresh-readback-20260820-r2.md`.
+- `npm run verify:lightchain-all-features --silent` passed with `featureCount=31` and no failures. The bounded rerun of `npm run verify:unified-desktop-layout --silent -- output/playwright/unified-desktop-layout-current-rerun` passed `228/228` cells across `1280/1440/1920/2560px`, with preview cleanup complete. The previous four timeouts did not reproduce.
+
 2026-08-20 03:31 JST latest source-associated beta-unlock deployment/readback:
 - The legacy hardcoded `権限がありません` plan-lock affordance was removed from the integrated non-video beta surfaces. Actual brand, rights, provider, input, and persistence checks remain in place.
 - Commit `633ddf79faedf81fb304ca194a2f4a623bac1c29` was pushed to `nick353/heavy-chain` `main` and deployed as Zeabur deployment `6a85f5bcf1ea67ebf4ea683b` (`RUNNING`).
