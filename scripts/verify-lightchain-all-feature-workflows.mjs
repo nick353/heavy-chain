@@ -705,7 +705,13 @@ async function verifyGenerateEntrypointUsesFeatureDetail(page) {
     uniqueFeatureLinkEntries.push(entry);
   }
   const clickableFeatureDetailEntries = uniqueFeatureLinkEntries
-    .filter((entry) => entry.href.startsWith('/lightchain/') || entry.href.startsWith('/generate?feature='))
+    // The current Lightchain launcher uses the same direct product routes as
+    // production (/marketing, /model, /flow/*, ...); only the old verifier
+    // required every card to be rewritten as /lightchain/*.
+    .filter((entry) => (
+      entry.href.startsWith('/lightchain/')
+      || (isDirectFeatureHref(entry.href) && !entry.href.startsWith('/generate?category='))
+    ))
     .slice(0, 3);
   addAssertion('generate_entrypoint_has_direct_feature_links', clickableFeatureDetailEntries.length >= 3, {
     count: clickableFeatureDetailEntries.length,
@@ -824,13 +830,21 @@ function isDirectFeatureHref(href) {
   if (!href || href.startsWith('/lightchain/')) return false;
   return [
     '/generate',
+    '/designProduction',
     '/marketing',
+    '/model',
+    '/model-library',
     '/fitting',
+    '/flow',
+    '/agent',
     '/lab',
     '/video',
     '/models',
     '/studio',
     '/patterns',
+    '/tools',
+    '/editor',
+    '/printing',
     '/brand/settings',
     '/canvas',
     '/workflows',

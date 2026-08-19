@@ -15,23 +15,13 @@ import {
 } from 'lucide-react';
 import {
   buildLightchainFeatureHref,
+  getLightchainLauncherDescription,
+  getLightchainLauncherFeatures,
+  getLightchainLauncherTitle,
   lightchainCategories,
-  lightchainFeatureCatalog,
   type LightchainCategoryId,
   type LightchainFeature,
 } from '../lib/lightchainParityCatalog';
-
-const statusTone: Record<LightchainFeature['status'], string> = {
-  production: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-200 dark:ring-emerald-400/20',
-  workspace: 'bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-400/10 dark:text-sky-200 dark:ring-sky-400/20',
-  'local-proof': 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/20',
-};
-
-const statusLabel: Record<LightchainFeature['status'], string> = {
-  production: '保存まで対応',
-  workspace: 'ワークスペース',
-  'local-proof': '検証中',
-};
 
 const routeIcon: Record<string, typeof Sparkles> = {
   '/marketing': PackageOpen,
@@ -72,23 +62,22 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
 
   const visibleFeatures = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    const filtered = lightchainFeatureCatalog.filter((feature) => {
-      const inCategory = feature.category === activeCategory;
+    const filtered = getLightchainLauncherFeatures(activeCategory).filter((feature) => {
       const isBetaFeature = feature.betaIncluded !== false;
-      if (!normalizedQuery) return isBetaFeature && inCategory;
+      if (!normalizedQuery) return isBetaFeature;
       const haystack = [
-        feature.title,
+        getLightchainLauncherTitle(feature),
         feature.lightchainName,
-        feature.description,
+        getLightchainLauncherDescription(feature),
         feature.capability,
         feature.tags.join(' '),
       ].join(' ').toLowerCase();
-      return isBetaFeature && inCategory && haystack.includes(normalizedQuery);
+      return isBetaFeature && haystack.includes(normalizedQuery);
     });
 
     return filtered.length
       ? filtered
-      : lightchainFeatureCatalog.filter((feature) => feature.category === activeCategory && feature.betaIncluded !== false);
+      : getLightchainLauncherFeatures(activeCategory).filter((feature) => feature.betaIncluded !== false);
   }, [activeCategory, query]);
 
   const handleCategoryChange = (categoryId: LightchainCategoryId) => {
@@ -182,13 +171,10 @@ export function LightchainParityHub({ compactOnMobile = false }: LightchainParit
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="text-base font-semibold text-white">{feature.title}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${statusTone[feature.status]}`}>
-                            {statusLabel[feature.status]}
-                          </span>
+                          <span className="text-base font-semibold text-white">{getLightchainLauncherTitle(feature)}</span>
                         </span>
                         <span className="mt-3 line-clamp-3 block text-sm leading-6 text-neutral-400">
-                          {feature.description}
+                          {getLightchainLauncherDescription(feature)}
                         </span>
                       </span>
                     </div>

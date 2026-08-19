@@ -15,6 +15,10 @@ import {
 } from 'lucide-react';
 import {
   buildLightchainFeatureHref,
+  getLightchainLauncherBadge,
+  getLightchainLauncherDescription,
+  getLightchainLauncherFeatures,
+  getLightchainLauncherTitle,
   lightchainCategories,
   lightchainFeatureCatalog,
   type LightchainCategoryId,
@@ -35,18 +39,6 @@ const routeIcon: Record<string, typeof Sparkles> = {
   '/flow/orientedDesign': WandSparkles,
   '/brand/settings': CheckCircle2,
   '/canvas/new': Layers3,
-};
-
-const statusLabel: Record<LightchainFeature['status'], string> = {
-  production: '生成対応',
-  workspace: '作業台',
-  'local-proof': '検証済み',
-};
-
-const statusTone: Record<LightchainFeature['status'], string> = {
-  production: 'border-emerald-300/35 bg-emerald-300/10 text-emerald-100',
-  workspace: 'border-sky-300/35 bg-sky-300/10 text-sky-100',
-  'local-proof': 'border-amber-300/35 bg-amber-300/10 text-amber-100',
 };
 
 const galleryTabs = [
@@ -149,7 +141,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
 
   const activeCategoryMeta = lightchainCategories.find((category) => category.id === activeCategory) ?? lightchainCategories[0];
   const visibleFeatures = useMemo(
-    () => lightchainFeatureCatalog.filter((feature) => feature.category === activeCategory && isBetaFeature(feature)),
+    () => getLightchainLauncherFeatures(activeCategory).filter(isBetaFeature),
     [activeCategory],
   );
   const commandFeature = findFeatureFromPrompt(command);
@@ -236,14 +228,13 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   <div className="relative flex h-28 items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_35%_30%,rgba(121,239,255,0.26),transparent_28%),linear-gradient(135deg,#273337,#111719)]">
                     <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(115deg,transparent_20%,rgba(255,255,255,0.12)_20.5%,transparent_21%)] [background-size:20px_20px]" />
                     <Icon className="relative h-12 w-12 text-cyan-100 transition group-hover:scale-110" strokeWidth={1.2} />
-                    {feature.id === 'marketing-workspace' && <span className="absolute right-2 top-2 rounded-full bg-fuchsia-500 px-2 py-1 text-[10px] font-bold">Beta</span>}
+                    {getLightchainLauncherBadge(feature) && <span className="absolute right-2 top-2 rounded-full bg-fuchsia-500 px-2 py-1 text-[10px] font-bold">{getLightchainLauncherBadge(feature)}</span>}
                   </div>
                   <div className="p-4">
                     <div className="flex items-center gap-2">
-                      <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{feature.title}</h3>
-                      {feature.id !== 'marketing-workspace' && <span className={`rounded-full border px-2 py-0.5 text-[10px] ${statusTone[feature.status]}`}>{statusLabel[feature.status]}</span>}
+                      <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{getLightchainLauncherTitle(feature)}</h3>
                     </div>
-                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-neutral-400">{feature.description}</p>
+                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-neutral-400">{getLightchainLauncherDescription(feature)}</p>
                   </div>
                 </Link>
               );

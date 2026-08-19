@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight, ImagePlus, Palette, Shirt, Sparkles, WandSparkles } from 'lucide-react';
-import { lightchainCategories, lightchainFeatureCatalog } from '../lib/lightchainParityCatalog';
+import { getLightchainLauncherFeatures, lightchainCategories } from '../lib/lightchainParityCatalog';
 
 const heroCards = [
   {
@@ -110,7 +110,7 @@ export function LandingPage() {
         <div className="grid gap-4 md:grid-cols-4">
           {lightchainCategories.map((category, index) => {
             const Icon = icons[index] ?? ImagePlus;
-            const count = lightchainFeatureCatalog.filter((feature) => feature.category === category.id).length;
+            const count = getLightchainLauncherFeatures(category.id).length;
             return (
               <section id={category.id} key={category.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
                 <Icon className="h-6 w-6 text-cyan-300" />

@@ -424,6 +424,125 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
   },
 ];
 
+/**
+ * The production Lightchain home is a curated launcher, not a flat dump of
+ * every compatibility route. Keep that surface mapping separate from the
+ * 31-function internal compatibility catalog so repeated Lightchain cards
+ * can appear in the same categories as production while detail routes remain
+ * available through the unified catalog.
+ */
+const lightchainLauncherDesignWorkspace: LightchainFeature = {
+  id: 'design-workspace',
+  title: 'デザインワークスペース',
+  lightchainName: 'ProductionDesign',
+  description: 'スマート対話、高解像度画像生成、部分修正、AI試着、生地差し替え、ベクター変換を一つのワークスペースで作成します。',
+  route: '/designProduction',
+  category: 'recommended',
+  status: 'production',
+  capability: '対話、生成、部分修正、生地差し替え、ベクター変換',
+  evidence: 'fresh Lightchain non-video card ledger',
+  tags: ['デザイン', '生成', '編集'],
+};
+
+const lightchainLauncherFeatureIdsByCategory: Record<LightchainCategoryId, readonly string[]> = {
+  recommended: [
+    'design-workspace',
+    'marketing-workspace',
+    'virtual-fitting',
+    'wear-design-lab',
+    'model-library',
+    'fashion-studio',
+    'design-agent',
+  ],
+  planning: [
+    'design-workspace',
+    'inspiration-design',
+    'wear-design-lab',
+    'design-agent',
+    'fabric-simulation',
+    'lineart-to-real',
+    'change-color',
+    'flat-vector',
+    'custom-style',
+  ],
+  fitting: [
+    'virtual-fitting',
+    'model-library',
+    'fashion-studio',
+    'heavychain-lab',
+    'remove-background',
+  ],
+  graphics: [
+    'design-workspace',
+    'graphic-design',
+    'pattern-vector-pro',
+    'design-arrange',
+    'print-design',
+  ],
+};
+
+const lightchainLauncherTitleOverrides: Record<string, string> = {
+  'inspiration-design': 'インスピレーション',
+  'heavychain-lab': 'Lightchain Lab',
+  'pattern-vector-pro': 'パターンをベクター画像に変換（プロフェッショナル版）',
+  'print-design': 'プリントデザイン',
+  'remove-background': '画像修正',
+};
+
+const lightchainLauncherDescriptionOverrides: Record<string, string> = {
+  'marketing-workspace': '販促コンテンツをまとめて作成します。バナー、キャッチコピー、商品ページまで対応します。',
+  'virtual-fitting': '場所を選ばず、高品質なモデル着用画像を生成します。',
+  'wear-design-lab': 'ディテールを細部まで調整し、独自の一着を作ります。',
+  'model-library': '顔立ち、ポーズ、体格、肌の色までモデルを設定します。',
+  'fashion-studio': '衣服、シーン、小物を組み合わせてコーディネート案を作ります。',
+  'design-agent': 'トレンドを企画書やデザイン案へつなげます。',
+  'heavychain-lab': '仮説を生成前に検証します。',
+  'inspiration-design': '生地やインスピレーションからデザイン案を作ります。',
+  'fabric-simulation': '柄、生地、プリントの着用感を確認します。',
+  'lineart-to-real': '線画と製品イメージを相互変換します。',
+  'change-color': '商品の色をカスタマイズします。',
+  'flat-vector': 'デザイン線画をベクターデータへ変換します。',
+  'custom-style': 'ブランドのスタイルを設定し、一貫した世界観を維持します。',
+  'remove-background': '画像の修正を行います。',
+  'graphic-design': 'AIグラフィックデザインを作成します。',
+  'pattern-vector-pro': 'パターンをベクター画像へ変換します。',
+  'design-arrange': '既存デザインをアレンジします。',
+  'print-design': 'プリントデザインを作成します。',
+};
+
+const lightchainLauncherBadges: Record<string, 'Beta' | 'まもなく提供終了'> = {
+  'design-workspace': 'Beta',
+  'marketing-workspace': 'Beta',
+  'fabric-simulation': 'まもなく提供終了',
+  'lineart-to-real': 'まもなく提供終了',
+  'flat-vector': 'まもなく提供終了',
+  'remove-background': 'まもなく提供終了',
+};
+
+export const lightchainLauncherFeatureCatalog: readonly LightchainFeature[] = Object.freeze([
+  lightchainLauncherDesignWorkspace,
+  ...lightchainFeatureCatalog,
+]);
+
+export const getLightchainLauncherFeatures = (category: LightchainCategoryId): LightchainFeature[] => {
+  const featureById = new Map(lightchainLauncherFeatureCatalog.map((feature) => [feature.id, feature]));
+  return lightchainLauncherFeatureIdsByCategory[category]
+    .map((featureId) => featureById.get(featureId))
+    .filter((feature): feature is LightchainFeature => Boolean(feature));
+};
+
+export const getLightchainLauncherTitle = (feature: LightchainFeature): string => (
+  lightchainLauncherTitleOverrides[feature.id] ?? feature.title
+);
+
+export const getLightchainLauncherDescription = (feature: LightchainFeature): string => (
+  lightchainLauncherDescriptionOverrides[feature.id] ?? feature.description
+);
+
+export const getLightchainLauncherBadge = (feature: LightchainFeature): 'Beta' | 'まもなく提供終了' | null => (
+  lightchainLauncherBadges[feature.id] ?? null
+);
+
 export type LightchainParityPriority = 'P0' | 'P1' | 'P2';
 export type LightchainParityGoalStatus = 'queued' | 'in_progress' | 'done';
 
@@ -603,7 +722,7 @@ export const lightchainParityGoalIds = lightchainParityGoals.map((goal) => goal.
 
 export const lightchainFeaturesByCategory = lightchainCategories.map((category) => ({
   ...category,
-  features: lightchainFeatureCatalog.filter((feature) => feature.category === category.id),
+  features: getLightchainLauncherFeatures(category.id),
 }));
 
 export const getLightchainFeature = (featureId: string | null) => {

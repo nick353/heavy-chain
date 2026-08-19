@@ -63,6 +63,9 @@
 
 ## 現在の状態（2026-08-20）
 
+- 2026-08-20、Lightchain本番のfreshカード台帳に合わせ、統合ランチャーの表示契約を修正した。カテゴリ別の非動画カードはおすすめ7／企画デザインツール9／AIフィッティング5／グラフィックツール5（合計26出現）とし、カテゴリ間で重複するデザインワークスペース・AIフィッティング系カードもLightchainと同じ構成にした。動画カードは除外し、`生成対応`／`作業台`／`検証済み`などHeavy内部状態の表示バッジはランチャーから除去した。31機能の内部契約は別カタログとして保持している。これはlocal UI parityの反映であり、production provider生成・保存再利用の証明ではない。
+- この変更の検証は `scripts/verify-lightchain-launcher-parity.test.ts` 3/3、entry routing 5/5、internal UX consistency `ok=true`、全非動画ワークフロー `featureCount=31 / failed=[]`、typecheck、build 2606 modules、diff checkをPASSした。全機能検証の最新サマリーは `output/playwright/lightchain-all-feature-workflows-20260819T192220Z/SUMMARY.json`。未デプロイで、Chrome／録画／AOS／provider／外部効果は行っていない。
+
 - Chrome Plugin/Profile 2の共有スレッドから、transport／target-scoped readback／cleanupは復旧済みで、現行の作業停止点は`heavy_target_workspace_authentication_not_ready`（Heavy画面がworkspace準備・認証／ブランド設定確認で停止）との報告を受領した。selected／about:blank／claim／focus／foreground leaseの復旧やclose/reopenは再実行しない。ユーザーのHeavy認証・workspace準備完了後、新規Profile 2 browser-clientで`openTabs()`→正確な`/tools/fabric` descriptor→target-scoped readbackを1回行う。実測r3でもログイン表示と準備中状態が継続し、textile assetは未表示だった。証跡は `work/heavy-chain-target-scoped-canary-20260820-r3.md`（r2は共有スレッドの停止点参照）であり、provider生成・保存・再利用の証明ではない。
 
 - 2026-08-20、β readiness static checksを再実行した。H601 legal-safety guardは`ok=true`、internal UXは`ok=true`。しかしG619実β受入れは`acceptance=not_claimed`、実セッション`0/3`、必要workflow証跡なしで未完了。H601 operator readinessも`operator_final_h601_decision_missing`とTerms／Privacy／保持削除／upload rights／brand・likeness／claims／commercial wording／reviewの未添付で未完了。launch-opsは`auth_state_missing`で未完了。これらは人手承認・実セッション・認証artifactが必要で、Codexは偽の証跡を作成しない。

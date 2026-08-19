@@ -7,6 +7,11 @@ Updated: 2026-08-20
 - Do not repeat Chrome close/reopen, selected(), about:blank, claim, focus, or foreground lease recovery. After the user completes Heavy authentication/workspace preparation, use one new official Profile 2 browser-client and one target-scoped `/tools/fabric` readback.
 - Artifact reference: `work/heavy-chain-target-scoped-canary-20260820-r3.md` (r2 is the source-thread handoff reference). This is an authentication/readiness stop, not a provider-generation or persistence proof.
 
+2026-08-20 latest Lightchain launcher parity implementation:
+- The integrated launcher now mirrors the current fresh Lightchain non-video card surface: recommended 7, planning/design 9, AI fitting 5, graphics 5 (26 category occurrences), including the same repeated shared cards across categories and no video card. Heavy-internal readiness/status badges were removed from the visible launcher; the separate 31-feature internal catalog remains intact for workflow contracts.
+- Focused verification passed: launcher parity 3/3, entry routing 5/5, internal UX `ok=true`, all non-video workflows `featureCount=31 / failed=[]`, typecheck, build `2606 modules`, and `git diff --check`. Latest full-feature summary: `output/playwright/lightchain-all-feature-workflows-20260819T192220Z/SUMMARY.json`.
+- This is local UI-parity proof only. No Chrome live retry, recording, AOS change, provider generation, save/reuse, deploy, or external effect was performed.
+
 2026-08-20 latest Heavy target-scoped canary:
 - Fresh official Profile 2 browser-client `-86b7-4558-9585-9281112b0117` completed `openTabs()`, provisioned one task-owned `/tools/fabric` tab, and completed same-run URL/title/DOM readback plus cleanup.
 - The visible state still showed `ログイン`, `ワークスペースを準備しています`, and `認証状態とブランド設定を確認しています。`; textile/fabric assets were not visible. No selected/claim/focus/foreground lease, provider, save/reuse, recording, AOS UI, or external effect was used.
