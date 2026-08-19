@@ -125,3 +125,10 @@
 - Fitting resilience 4/4、resume input 9/9、history readback 10/10、material contract 13/13をPASS。
 - 失敗時の直前結果保持、全件永続化後の結果／履歴昇格、canonical source path復元、署名付きremote URLの再利用拒否を確認した。
 - local契約はfabric／printingと同じ共通結果系譜へ接続済み。Heavy本番の認証、provider生成、Gallery／Canvas／History／Jobs保存再利用は認証gate解除後に同一runで確認する。
+
+## 2026-08-20 β静的ゲート監査
+
+- H601 legal-safety `ok=true`、internal UX `ok=true`。
+- G619は`acceptance=not_claimed`、実セッション0件、manifest未作成。実参加者の同意・観察・赤字確認なしに受入れ扱いへ進めない。
+- H601 operator readinessは、最終Terms／Privacy、保持削除・upload rights・brand/reference・person likeness・claims・commercial wording、operator decision JSONの添付待ち。
+- 現時点の本番再開条件は、Heavy Profile 2の認証／workspace準備完了後のfresh target-scoped readback。録画・外部効果・課金・公開・OTP/CAPTCHAは対象外のまま維持する。

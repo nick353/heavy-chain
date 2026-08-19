@@ -3105,6 +3105,7 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Restart point: hydrated Heavy `/tools/fabric` readback. Then, only with the required owner/approval gate, resume the bounded fabric provider → result → save → Gallery/Canvas/History/Jobs → reuse flow, followed by AI fitting.
 
 - AIフィッティング側の再読み込み・履歴・失敗リトライ契約も再確認した。fitting resilience 4/4、resume input 9/9、history readback 10/10、material contract 13/13をPASS。Fittingは署名付きremote URLを再利用せず、canonical source pathまたは新しいLibrary選択へ戻す既存境界を維持している。これはlocal proofであり、本番provider生成・保存再利用のproofではない。
+- β静的ゲートを再確認した。H601 legal-safety `ok=true`、internal UX `ok=true`。G619は`acceptance=not_claimed`、実セッション0件、manifest未作成で未完了。H601 operator readinessも最終Terms／Privacy、保持・権利・ブランド・人物 likeness・claims・commercial wording、operator decision JSONが未添付。これらは人手の同意・運用判断が必要で、Codexは合成証跡を作成しない。
 
 ## 2026-08-20 Lightchain parity-route identity cleanup
 

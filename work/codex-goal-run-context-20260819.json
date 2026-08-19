@@ -840,6 +840,15 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T04:56:10+09:00",
       "note": "AI fitting reload/history/retry contracts were rechecked: fitting resilience 4/4, resume input 9/9, history readback 10/10, and material contract 13/13 passed. Canonical source restoration and stale signed-URL rejection remain fail-closed. Production authentication/workspace readiness and provider/save/reuse proof remain pending."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 71,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T04:58:00+09:00",
+      "note": "Static beta gates were refreshed: H601 legal-safety ok=true and internal UX ok=true. G619 remains acceptance=not_claimed with zero real sessions and no manifest; H601 operator readiness remains missing final policy locators and operator decision JSON. No synthetic evidence was created. Heavy target-scoped authentication/workspace readiness remains the production restart condition."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
