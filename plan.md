@@ -169,6 +169,7 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Fresh target-scoped readbackでカテゴリパネルを順番に確認した。おすすめ8（非動画7）、企画デザイン9、AIフィッティング6（非動画5）、グラフィック5で、非動画のカテゴリ出現は合計26、動画は2。
 - 重複カードはカテゴリごとの出現としてLightchainに合わせる。Heavyのlauncher/workbenchはこの26非動画出現を維持し、動画2出現を除外する。
 - 証跡: `work/lightchain-category-ledger-20260820-r15.md`。正確なhref/routeと、カードごとの生成・結果・保存・再利用・エラー・性能は引き続き`PENDING_CONFIRMATION`。
+- Heavy local launcherとの照合はfocused test `3/3` PASS（カテゴリ7/9/5/5、重複カード、動画除外、内部状態ラベル非表示）。これはlocal UI契約であり、production業務挙動の証明ではない。
 
 ## 2026-08-20 再読み込み後の入力復帰修正
 

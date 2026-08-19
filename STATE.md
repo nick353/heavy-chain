@@ -3269,3 +3269,4 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Counts: おすすめ8（非動画7／動画1）、企画デザインツール9、AIフィッティング6（非動画5／動画1）、グラフィックツール5。Current non-video category occurrences total 26; video occurrences total 2.
 - Exact card names are recorded in `work/lightchain-category-ledger-20260820-r15.md`. Route/href mapping and per-feature live business behavior remain `PENDING_CONFIRMATION`.
 - Only task-owned tab `1980903826` was closed; cleanup passed. Heavy's visible surface must keep the 26 non-video occurrences and exclude both video occurrences.
+- Heavy local launcher parity focused test passed `3/3`: category counts 7/9/5/5, repeated shared cards preserved, video excluded, and internal readiness labels hidden.
