@@ -266,6 +266,14 @@ const loadLocalUploadImage = (source: string) => new Promise<HTMLImageElement>((
 });
 
 export function CanvasEditorPage() {
+  useEffect(() => {
+    const previousTitle = document.title;
+    document.title = 'Lightchain AI';
+    return () => {
+      document.title = previousTitle;
+    };
+  }, []);
+
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const workbenchSourcePath = new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url);
 const materialSourcePath = new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url);
+const canvasSourcePath = new URL('../src/pages/CanvasEditorPage.tsx', import.meta.url);
 const layoutSourcePath = new URL('../src/components/layout/Layout.tsx', import.meta.url);
 const appSourcePath = new URL('../src/App.tsx', import.meta.url);
 const publicHeaderSourcePath = new URL('../src/components/layout/Header.tsx', import.meta.url);
@@ -63,13 +64,17 @@ test('Lightchain header uses the avatar identity instead of Heavy account chrome
 });
 
 test('Lightchain routes use the current Lightchain browser title', async () => {
-  const source = await readFile(layoutSourcePath, 'utf8');
+  const [source, canvas] = await Promise.all([
+    readFile(layoutSourcePath, 'utf8'),
+    readFile(canvasSourcePath, 'utf8'),
+  ]);
 
   assert.match(source, /document\.title = isLightchainRoute \? 'Lightchain AI' : 'Heavy Chain \| AI制作ワークスペース'/);
   assert.match(source, /'\/canvas\/new'/);
   assert.match(source, /'\/workflows\/design-exploration'/);
   assert.match(source, /'\/workflows\/ec-product-set'/);
   assert.match(source, /'\/workflows\/sns-campaign'/);
+  assert.match(canvas, /document\.title = 'Lightchain AI'/);
 });
 
 test('fitting and line-to-real settings are stateful and persisted into the workbench contract', async () => {
