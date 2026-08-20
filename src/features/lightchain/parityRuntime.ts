@@ -108,6 +108,18 @@ function expectedRuntimeRoles(rowId: GoalCandidateRowId): readonly string[] {
     : Object.freeze(['brief']);
 }
 
+/**
+ * Expose the canonical input contract to the unified feature workflow.
+ * Fabric and printing use semantic roles even though the UI material slots
+ * remain `primary`/`secondary`; keeping this projection here prevents the
+ * catalog and runtime from drifting apart.
+ */
+export function getLightchainParityExpectedInputRoles(
+  rowId: GoalCandidateRowId,
+): readonly string[] {
+  return expectedRuntimeRoles(rowId);
+}
+
 function fail(code: string, details?: string): never {
   throw new Error(details ? `${code}:${details}` : code);
 }

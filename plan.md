@@ -1346,3 +1346,18 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blocker for this read-only lane: `chrome_extension_target_readback_target_session_not_owned`. The provider lane remains separately blocked by `chrome_foreground_activation_capability_unavailable`.
 - Next action: after a supported Chrome Plugin/session state change, create one new official Profile 2 owner and repeat only the current-selector target-scoped homepage readback. Do not reuse the failed binding/tab/run.
 - Restart point: supported state change plus fresh official owner; target-scoped read-only only.
+
+## 2026-08-20 Unified non-video workflow contract r70
+
+- Added `src/features/lightchain/unifiedFeatureWorkflowContract.ts` as the single local contract for all 31 video-excluded features.
+- Each feature now has an explicit provider route, canonical library-or-upload input roles, shared Gallery/Canvas/History/Jobs destinations, the `draft → ready → generating → completed / failed → retry` lifecycle, and retry lineage/duplicate-submit invariants.
+- `LightchainWorkbenchPage` consumes the contract for provider admission and exposes the contract version, feature, input roles, and result destinations in the live workspace DOM for deterministic readback.
+- The existing custom-style route assertion was aligned to the current Heavy source route `/model-base/style`; no historical Lightchain card evidence was promoted.
+- Verification: unified contract `3/3`, parity runtime `14/14`, provider coverage `18/18`, `typecheck` passed, production build passed (`2608` modules), and the 31-feature local workflow verifier passed (`277` assertions, `failed=[]`, zero console/page/request failures, cleanup passed).
+
+### Current exact blocker / next action / restart point
+
+- This is local contract/runtime evidence only. It does not prove current Lightchain production card parity, provider output quality, production save/reuse/reload, or Mac/Windows Chrome acceptance.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable` for production provider stages and `chrome_extension_target_readback_target_session_not_owned` for the current-selector card enumeration attempt.
+- Next action: after an official capability or supported target-session state change, create a fresh Profile 2 owner. If foreground capability is advertised, run fabric/printing provider → result → save → Gallery/Canvas/History/Jobs → reuse → reload, then AI fitting; otherwise continue target-scoped/local QA only.
+- Restart point: changed official/session state plus a new owner; do not reuse prior browser, binding, tab, run, or artifact as current proof.

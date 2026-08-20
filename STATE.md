@@ -4344,3 +4344,15 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker for current card readback: `chrome_extension_target_readback_target_session_not_owned`; provider work remains blocked separately by `chrome_foreground_activation_capability_unavailable`.
 - Next action: after a supported state change, use a new official Profile 2 owner for one current-selector target-scoped homepage readback; do not reuse this binding/tab/run.
 - Restart point: supported state change plus fresh official owner; target-scoped read-only only.
+
+## 2026-08-20 Unified non-video workflow contract r70
+
+- The 31 video-excluded Lightchain features now share `src/features/lightchain/unifiedFeatureWorkflowContract.ts` for provider route, canonical input roles, Gallery/Canvas/History/Jobs destinations, lifecycle, and retry invariants.
+- `LightchainWorkbenchPage` consumes the contract and emits contract metadata in the workspace DOM. This is a local runtime/readback boundary, not production parity proof.
+- Verification passed: unified contract `3/3`, parity runtime `14/14`, provider coverage `18/18`, `typecheck`, production build (`2608` modules), and all-feature workflow verification (`31` features / `277` assertions / zero failures / cleanup passed).
+
+### Current exact blocker / next action / restart point
+
+- Production provider generation/save/reuse/reload remains blocked by `chrome_foreground_activation_capability_unavailable`.
+- Current-selector Lightchain card enumeration remains blocked by `chrome_extension_target_readback_target_session_not_owned`.
+- Next action: wait for an official capability or supported target-session state change, then start a fresh Profile 2 owner and continue the remaining same-run production proof. Keep old browser/binding/tab/run/artifact out of current proof.

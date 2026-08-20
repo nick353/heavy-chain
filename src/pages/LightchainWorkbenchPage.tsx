@@ -64,9 +64,11 @@ import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifi
 import { buildAssetAnchoredPreviewDataUrl, type AssetAnchoredPreviewMode } from '../features/lightchain/assetAnchoredPreview';
 import {
   buildLightchainProviderPrompt,
-  getLightchainProviderRoute,
-  isLightchainProviderSupported,
 } from '../features/lightchain/providerAdapter';
+import {
+  UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
+  getLightchainUnifiedFeatureWorkflowContract,
+} from '../features/lightchain/unifiedFeatureWorkflowContract';
 import {
   buildLightchainParityInputRoles,
   buildLightchainParityRuntime,
@@ -1413,8 +1415,9 @@ export function LightchainWorkbenchPage() {
         : null;
   const isFeatureDetail = Boolean(toolId || isModelRoute || pathToolId);
   const selectedTool = routeTool ?? visibleTools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? visibleTools[0];
-  const lightchainProviderRoute = getLightchainProviderRoute(selectedTool.id);
-  const lightchainProviderSupported = isLightchainProviderSupported(selectedTool.id);
+  const selectedFeatureWorkflow = getLightchainUnifiedFeatureWorkflowContract(selectedTool.id);
+  const lightchainProviderRoute = selectedFeatureWorkflow?.providerRoute ?? 'unsupported';
+  const lightchainProviderSupported = selectedFeatureWorkflow !== null;
   const isPrintingImageGenerationRunning = printingGenerationStatus === 'pending' || printingGenerationStatus === 'processing';
   const isPrintingImageGenerationLocked = isPrintingImageGenerationRunning || printingGenerationRequestRef.current !== null;
   const isPrintingCutoutProcessing = selectedTool.id === 'printing-image'
@@ -3761,6 +3764,10 @@ export function LightchainWorkbenchPage() {
         className="dark min-h-[calc(100vh-70px)] bg-[#121414] text-white"
         data-flow-state={unifiedFlowState}
         data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
+        data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+        data-workflow-feature={selectedTool.id}
+        data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
+        data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
       >
         {renderLightchainProviderGate()}
         <div className="relative grid min-h-[calc(100vh-70px)] lg:grid-cols-[432px_minmax(0,1fr)]">
@@ -5331,6 +5338,10 @@ export function LightchainWorkbenchPage() {
       className={`dark min-h-screen ${isFeatureDetail ? 'bg-[#0b0f10] px-4 py-4 text-white sm:px-6' : 'bg-surface-50 px-4 py-5 dark:bg-surface-950 sm:px-6 lg:px-8'}`}
       data-flow-state={unifiedFlowState}
       data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
+      data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+      data-workflow-feature={selectedTool.id}
+      data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
+      data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
     >
       <div className={isFeatureDetail ? 'space-y-4' : 'mx-auto max-w-7xl space-y-5'}>
         <section className={`rounded-2xl border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900 ${isFeatureDetail ? 'hidden' : 'p-5 sm:p-6'}`}>

@@ -125,7 +125,7 @@ test('derives Heavy entry routes from the mapped product catalog', () => {
   assert.equal(resolveHeavyRouteForRow('marketing-home', '/invalid'), '/marketing');
   assert.equal(resolveHeavyRouteForRow('line-generation', '/invalid'), '/tools/line-draft-to-tile');
   assert.equal(resolveHeavyRouteForRow('pattern-vector', '/invalid'), '/tools/svg-convert');
-  assert.equal(resolveHeavyRouteForRow('custom-style', '/invalid'), '/brand/settings');
+  assert.equal(resolveHeavyRouteForRow('custom-style', '/invalid'), '/model-base/style');
   assert.equal(resolveHeavyRouteForRow('model-library', '/invalid'), '/model-library/model-custom-form');
   assert.equal(resolveHeavyRouteForRow('model-change', '/models'), '/models');
   assert.equal(resolveHeavyRouteForRow('angle-change', '/studio'), '/studio');
