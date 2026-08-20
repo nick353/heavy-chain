@@ -36,10 +36,12 @@ entries below remain historical provenance and are not current proof.
 
 ### Current Heavy implementation and production readback
 
-- Local case-tab parity r89 and route/layout regression r91 passed. The local
-  non-video verifier reports `31/31`; route parity is `8/8`; unified desktop
-  layout is `228/228` at `1280/1440/1920/2560px` with zero failures. These are
-  local contract proofs, not provider or cross-OS completion proofs.
+- Local current verification r98 passed the non-video verifier (`ok=true`,
+  `featureCount=31`, `failed=[]`, build `2608 modules`), route parity `8/8`,
+  and typecheck. The prior route/layout regression remains `228/228` at
+  `1280/1440/1920/2560px` with zero failures. These are local contract proofs,
+  not provider or cross-OS completion proofs. Artifact:
+  `work/heavy-local-feature-verification-20260820-r98.md`.
 - Production launcher readback r90 confirmed the deployed Heavy `/lightchain`
   page exposes the Lightchain-shaped hero, four categories, eight non-video
   launcher cards, and all six case tabs. Target-scoped cleanup passed.

@@ -10,6 +10,7 @@
 - Artifact: `work/chrome-plugin-profile2-capability-fresh-20260820-r96.md`。
 - Parity Matrixのcurrent revision-6 overlayをr96へ更新し、Lightchain source、Heavy production route、local verification、beta gates、Chrome capabilityをrequirement layer別に再整理した。Artifact: `work/lightchain-parity-matrix-current-20260820-r13.md`。
 - Fresh rev6 Lightchain target-scoped route ledger r97で非動画候補19/19のURL/title/non-empty DOMを確認し、2 routeはfocused hydration settle後に`readyState=complete`となった。Artifact: `work/lightchain-profile2-current-selector-rev6-non-video-route-ledger-20260820-r97.md`。これはroute/read-only proofであり、生成・保存・再利用の証明ではない。
+- Local current verification r98で`verify:lightchain-all-features`（`ok=true`、`featureCount=31`、`failed=[]`、build `2608 modules`）、route parity `8/8`、typecheckを再確認した。Artifact: `work/heavy-local-feature-verification-20260820-r98.md`。これはlocal contract proofであり、production provider生成・保存・再利用の代替ではない。
 
 ### Current exact blocker / next action / restart point
 
