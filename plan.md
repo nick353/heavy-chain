@@ -47,6 +47,29 @@
 - Restart point: fresh official owner after capability state change. Continue
   target-scoped read-only without selected/focus/claim in the meantime.
 
+## Current local beta acceptance checkpoint r52 (2026-08-20)
+
+- Current local gates pass: typecheck, zero-warning lint, build (`2607 modules`),
+  material/printing contract `20/20`, non-video `31/31`, and unified desktop
+  `228/228` at 1280/1440/1920/2560px with zero failed cells and zero cleanup
+  leftovers. H601 static legal-safety guard is also `ok=true`.
+- Artifact: `work/heavy-chain-beta-local-acceptance-checkpoint-20260820-r52.md`。
+- G619 real beta evidence remains `acceptance=not_claimed` with zero ready
+  sessions. H601 operator readiness remains open with 10 missing decisions, and
+  launch-ops remains blocked by missing authorized auth state.
+
+### Current exact blocker / next action / restart point
+
+- Exact blockers: `chrome_foreground_activation_capability_unavailable`,
+  `manifest_missing_or_unparseable`, and
+  `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`;
+  H601 also requires human/operator decisions.
+- Next action: keep local parity and target-scoped read-only green; after official
+  capability/auth-state/operator evidence changes, run the corresponding fresh
+  production and beta gates. Do not fabricate beta sessions or legal approval.
+- Restart point: the first changed dependency, using a fresh official Profile 2
+  owner for browser work and fresh operator/auth artifacts for beta gates.
+
 ## Current completion audit r3 (2026-08-20)
 
 - The requirement-by-requirement audit is recorded in `work/heavy-chain-completion-audit-20260820-r3.md`.

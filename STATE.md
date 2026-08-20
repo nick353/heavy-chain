@@ -4124,3 +4124,24 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`。
 - Next action: official capability広告後のfresh ownerでprinting provider flow、続いてAI fittingの生成・保存・再利用・reloadを同一runで確認する。
 - Restart point: capability state change後のfresh official Profile 2 owner。旧binding／旧Run／旧tab、selected／focus／claim、別surface fallbackは再利用しない。
+
+## 2026-08-20 Local beta acceptance checkpoint r52
+
+- Fresh local verification passed typecheck, zero-warning lint, build (`2607 modules`),
+  material/printing contract `20/20`, non-video workflow `31/31`, and unified desktop
+  `228/228` across 1280/1440/1920/2560px (`failed=0`, timeout=false, cleanup=0).
+- H601 static legal-safety guard passed. G619 remains `acceptance=not_claimed` with
+  `readySessions=0` and a missing manifest-level evidence set. H601 operator readiness
+  remains `missingCount=10`; launch-ops remains blocked by missing authorized auth state.
+- Artifact: `work/heavy-chain-beta-local-acceptance-checkpoint-20260820-r52.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blockers: `chrome_foreground_activation_capability_unavailable`,
+  `manifest_missing_or_unparseable`, and
+  `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`;
+  H601 human/operator decisions are also outstanding.
+- Next action: continue only local parity and target-scoped read-only until the relevant
+  official capability, auth-state, manifest, or operator evidence changes.
+- Restart point: the first changed dependency, with a fresh official Profile 2 owner and
+  fresh beta/operator artifacts; do not reuse old browser runs or fabricate evidence.
