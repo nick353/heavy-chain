@@ -5819,7 +5819,7 @@ export function LightchainMaterialWorkbenchPage() {
                     galleryConfirmLabel="適用"
                     selectionTestId="fabric-design-selector"
                     onChange={setFabricDesign}
-                    allowedReferenceTypes={['base', 'pattern']}
+                    allowedReferenceTypes={['base']}
                     defaultReferenceType="base"
                     platformAssetRole="garment"
                     hint="商品・モデル・デザインの基準画像を入れます"

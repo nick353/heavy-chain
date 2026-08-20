@@ -240,3 +240,15 @@ test('History and Jobs lineage labels use the Lightchain identity', () => {
   assert.match(activity, /'Lightchain steps'/);
   assert.match(activity, /'Lightchain状態'/);
 });
+
+test('direct fabric route keeps the Lightchain single-input surface without an extra reference-type toggle', () => {
+  const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+  const start = page.indexOf('data-testid="lightchain-fabric-design-input"');
+  const end = page.indexOf('data-testid="lightchain-fabric-input"', start);
+  assert.ok(start >= 0 && end > start, 'direct fabric input sections are required');
+  const directFabricDesign = page.slice(start, end);
+
+  assert.match(directFabricDesign, /label="モデル\/デザイン画像"/);
+  assert.match(directFabricDesign, /allowedReferenceTypes=\{\['base'\]\}/);
+  assert.doesNotMatch(directFabricDesign, /allowedReferenceTypes=\{\['base', 'pattern'\]\}/);
+});

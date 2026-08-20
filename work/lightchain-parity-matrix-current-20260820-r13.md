@@ -2,12 +2,21 @@
 
 更新日: 2026-08-20
 
+## 0.current hydrated source and Heavy overlay r45
+
+- Fresh official Chrome Plugin/Profile 2 browser-client `-b12c-4d29-9bd6-04f48f77b5b3` used the current selector revision `30` and a same-run target-scoped lane.
+- Lightchain homepage, `/tools/fabric`, `/tools/printing`, and `/model` all reached `readyState=complete` after a bounded hydration wait. URL/title/body/visible-control readback is recorded in `work/heavy-lightchain-fresh-target-scoped-readback-20260820-r45.md`.
+- The homepage showed the four current categories and six case tabs. Fabric, printing, and model inputs/controls are now current source evidence under revision 30.
+- Heavy `/tools/fabric` and `/model` were also hydrated in the same owner-bound read-only run. No login shell or workspace-preparation state was present; material and fitting inputs, generation-history controls, and permission boundaries were visible.
+- Provider output, save/reuse/reload, and full per-feature behavior remain `PENDING_CONFIRMATION` because foreground capability is still unavailable.
+- Task-owned route tabs were closed. A separate unowned `about:blank` tab appeared and was preserved; overall cleanup is `PENDING_CONFIRMATION` only for that ownership boundary.
+
 > Current selector correction: the authoritative selector file currently reports
 > `backend=chrome_plugin`, `Profile 2`, `signed_chrome_extension_profile2`,
 > `revision=30`. The rev6/r14/r15 observations below remain historical
 > provenance until a fresh run under the current selector returns hydrated DOM.
 
-## 0. current selector overlay r19
+## 0.1 current selector overlay r19
 
 - Fresh official Profile 2 browser-client `-0653-4987-a61b-fa3ad9c97e33` passed `openTabs_ok` and exact target provisioning for `https://jp.linkaigc.com/`.
 - Same-run target URL/title matched (`https://jp.linkaigc.com/` / `Lightchain AI`) and task-owned cleanup passed (`cleanup_verified=true`, task tab `1980903843` closed).

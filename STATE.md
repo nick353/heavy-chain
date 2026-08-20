@@ -2,6 +2,31 @@
 
 Updated: 2026-08-20
 
+## Current local Lightchain direct fabric input parity r46
+
+- The fresh r45 production readback showed Heavy `/tools/fabric` exposing extra `ベース画像`／`パターン参考` reference-type buttons that were absent from the current Lightchain direct route.
+- The Heavy direct fabric `モデル/デザイン画像` selector now exposes only the Lightchain-compatible base input while retaining Gallery selection, garment ownership role, fabric input, generation, rights, history, and retry contracts.
+- Focused material contract `15/15`, typecheck, and diff check passed. Artifact: `work/heavy-local-lightchain-direct-fabric-input-parity-20260820-r46.md`。
+
+### Proof boundary
+
+- This is local source/UI proof only; production deployment and post-deploy readback are `PENDING_CONFIRMATION`.
+- Provider generation/save/reuse/reload remains blocked by `chrome_foreground_activation_capability_unavailable`.
+
+## Current fresh Lightchain / Heavy target-scoped readback r45
+
+- Fresh official Chrome Plugin/Profile 2 browser-client `-b12c-4d29-9bd6-04f48f77b5b3` used the current selector revision 30 and owner session/thread/turn `01a01576-c224-7d81-902f-561719dc45a5` / `01a01576-c224-7d81-902f-561719dc45a5` / `01a01d78-f322-71f1-b67f-0aa2c40fe8f0`.
+- Lightchain homepage, `/tools/fabric`, `/tools/printing`, and `/model` reached hydrated `readyState=complete` readback. The current categories, case tabs, material inputs, printing controls, and AI-fitting controls are recorded as the fresh source baseline.
+- Heavy `/tools/fabric` and `/model` reached hydrated authenticated readback in the same owner-bound target-scoped run. Material/fitting inputs, Library/Gallery selectors, variants, `AI生成`, and `生成履歴` were visible; no login/preparation shell remained.
+- Artifact: `work/heavy-lightchain-fresh-target-scoped-readback-20260820-r45.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。provider generation、保存、Gallery／Canvas／History／Jobs連携、再利用、reloadは未確認。
+- Task-owned route tabs were closed successfully. A separate `about:blank` tab `1980904154` appeared with unknown ownership and was preserved; cleanup ownership for that tab is `PENDING_CONFIRMATION`.
+- Next action: official capability update後、新規Profile 2 ownerでfabric/printing production same-run proof、続いてAI fitting proof。`1980904154`は所有権がfreshに確認できるまで操作しない。
+- Restart point: capability state change後のfresh official owner。r45 browser／binding／Run、別surface fallback、unowned blank tabは再利用しない。
+
 2026-08-20 latest Lightchain current parity readback r4:
 - Fresh official Chrome Plugin/Profile 2 target-scoped readback used browser-client `-ba97-43a6-b43c-7a6f738e5036` with selector revision `6` and covered the Lightchain homepage plus `/tools/fabric`, `/tools/printing`, and `/model` in the same owner-bound lane.
 - All four routes passed URL/title/DOM readback with `hydration_ready=true`. Homepage showed the four categories and current source descriptions; fabric showed the current toolbar, fabric input and history; printing showed print input and history; model showed AI fitting modes, garment/reference inputs, smart/1K choices and history.

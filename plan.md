@@ -28,7 +28,20 @@
 
 1. 公式Chrome Plugin／Profile 2で、Lightchain本番のhomepage、4カテゴリ、全非動画カード、優先routeをfresh readbackする。
 2. 入力、操作、生成、結果、保存、再利用、エラー、リトライ、性能を機能単位で記録する。
-3. `work/lightchain-parity-matrix-current-20260820-r13.md` を現行証跡として更新する。旧revision 30のカード台帳は参照証跡として分離し、現行revision 6のfresh readbackと混同しない。
+3. `work/lightchain-parity-matrix-current-20260820-r13.md` を現行証跡として更新する。旧カード台帳は参照証跡として分離し、現行selector revision 30のfresh readbackと混同しない。
+
+### 2026-08-20 fresh Lightchain / Heavy target-scoped readback r45
+
+- Fresh current Profile 2 owner `-b12c-4d29-9bd6-04f48f77b5b3` completed bounded hydration readback for Lightchain homepage, `/tools/fabric`, `/tools/printing`, `/model`, and Heavy `/tools/fabric`, `/model`.
+- Current Lightchain category/input evidence and authenticated Heavy fabric/fitting input evidence are recorded in `work/heavy-lightchain-fresh-target-scoped-readback-20260820-r45.md`.
+- Task-owned route tabs were closed. A separate unowned `about:blank` was preserved; cleanup ownership for that tab remains `PENDING_CONFIRMATION`.
+- Production generation/save/reuse/reload remains fail-closed at `chrome_foreground_activation_capability_unavailable`.
+
+### 2026-08-20 local direct fabric input parity r46
+
+- Fresh r45 comparison found Heavy-only `ベース画像`／`パターン参考` toggles on the direct fabric garment input. The local route now mirrors Lightchain with a single `モデル/デザイン画像` input while preserving Gallery selection and the practical generation contract.
+- Focused material contract `15/15`, typecheck, and diff check passed. Artifact: `work/heavy-local-lightchain-direct-fabric-input-parity-20260820-r46.md`。
+- Production deployment/readback remains `PENDING_CONFIRMATION`; do not treat this local change as production parity until a fresh post-deploy target readback confirms it.
 
 ### 2. Heavy共通ワークスペース
 
