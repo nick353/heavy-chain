@@ -1457,3 +1457,15 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - This improves the local implementation contract but does not prove live production output quality, remote save/reuse/reload, current Lightchain card parity, or paired Mac/Windows Chrome acceptance.
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
 - Next action: after the required official state changes, run the fresh Profile 2 same-run production proof against the r78 receipt contract.
+
+## 2026-08-20 Local all-feature regression after provenance continuity r79
+
+- Re-ran the current build's video-excluded workflow verifier after r78: 31 features, 277 assertions, `failed=[]`, zero unexpected console/page/request failures, and browser/context/preview cleanup passed.
+- The production build transformed 2608 modules. Raw summary: `output/playwright/lightchain-all-feature-workflows-20260820T073341Z/SUMMARY.json`.
+- Artifact: `work/heavy-local-all-feature-regression-20260820-r79.md`.
+
+### Proof boundary / current exact blocker
+
+- The regression confirms local route/input/interaction continuity only. Current Lightchain production card parity, live provider output quality, production save/reuse/reload, Gallery/Canvas/History/Jobs same-run persistence, and paired Mac/Windows Chrome acceptance remain `PENDING_CONFIRMATION`.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
+- Next action: after the required official capability/session/auth/human state changes, create a fresh Profile 2 owner and continue the production fabric/printing and AI-fitting proof. Do not reuse old browser, binding, tab, run, or artifact as current proof.
