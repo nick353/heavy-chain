@@ -405,7 +405,14 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={lazyPage(<LandingPage />)} />
+      <Route
+        path="/"
+        element={(
+          <PublicRoute>
+            {lazyPage(<LandingPage />)}
+          </PublicRoute>
+        )}
+      />
       <Route
         path="/login"
         element={
