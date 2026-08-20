@@ -37,6 +37,14 @@ test('priority material routes keep the current Lightchain source toolbar', () =
   assert.doesNotMatch(page, /LIGHTCHAIN MATERIAL WORKBENCH/);
 });
 
+test('provider provenance stays behind an opt-in result detail disclosure', () => {
+  const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+
+  assert.match(page, /<details className="mt-1 rounded-lg border border-white\/10/);
+  assert.match(page, /<summary className="cursor-pointer select-none font-semibold text-white\/65">生成情報<\/summary>/);
+  assert.match(page, /data-testid=\{`provider-result-provenance-\$\{result\.id\}`\}/);
+});
+
 test('priority material routes keep the current Lightchain content frame without a Heavy-only rail', () => {
   const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
 

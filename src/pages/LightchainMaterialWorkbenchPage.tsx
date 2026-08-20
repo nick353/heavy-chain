@@ -443,16 +443,19 @@ function WorkbenchResultCard({
             <p className="mt-1 text-xs text-cyan-200">{result.outputSize.width} × {result.outputSize.height}px</p>
           )}
           {result.generationMode === 'provider' && (
-            <p data-testid={`provider-result-provenance-${result.id}`} className="mt-1 text-[11px] leading-relaxed text-emerald-200/80">
-              {result.provider ?? 'provider'} / {result.backendProvider ?? 'edge-function'}
-              {result.inputImageCount ? ` / 入力${result.inputImageCount}枚` : ''}
-              {result.providerModel ? ` / ${result.providerModel}` : ''}
-              {result.inputFidelity ? ` / fidelity=${result.inputFidelity}` : ''}
-              {result.quality ? ` / quality=${result.quality}` : ''}
-              {result.maskApplied ? ` / mask=${result.maskCoveragePercent?.toFixed(1) ?? '?'}%` : ''}
-              {result.protectedRegionComposited ? ' / protected=source-outside-mask' : ''}
-              {result.jobId ? ` / job ${result.jobId}` : ''}
-            </p>
+            <details className="mt-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[11px] text-emerald-200/80">
+              <summary className="cursor-pointer select-none font-semibold text-white/65">生成情報</summary>
+              <p data-testid={`provider-result-provenance-${result.id}`} className="mt-2 leading-relaxed">
+                {result.provider ?? 'provider'} / {result.backendProvider ?? 'edge-function'}
+                {result.inputImageCount ? ` / 入力${result.inputImageCount}枚` : ''}
+                {result.providerModel ? ` / ${result.providerModel}` : ''}
+                {result.inputFidelity ? ` / fidelity=${result.inputFidelity}` : ''}
+                {result.quality ? ` / quality=${result.quality}` : ''}
+                {result.maskApplied ? ` / mask=${result.maskCoveragePercent?.toFixed(1) ?? '?'}%` : ''}
+                {result.protectedRegionComposited ? ' / protected=source-outside-mask' : ''}
+                {result.jobId ? ` / job ${result.jobId}` : ''}
+              </p>
+            </details>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
