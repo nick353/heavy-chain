@@ -934,6 +934,12 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Next action: after a capability/auth state change, perform fresh Profile 2 target readback and then production proof. In parallel, an authorized operator must supply H601 decisions, real G619 participant sessions, and launch auth state; do not claim those gates complete without them.
 - Restart point: fresh official owner after the capability or Heavy state change. Do not reuse the r38 browser, tab, binding, run, or another surface.
 
+## 2026-08-20 Current local UI parity recheck r43
+
+- Internal UX consistency passed `ok=true`, `failed=[]`; Lightchain catalog/entry routing passed `8/8`; unified desktop verifier contract passed `6/6`; Lightchain UI control boundaries passed `7/7`.
+- Current source-level UI checks found no new local parity contract failure. Artifact: `work/heavy-local-ui-parity-recheck-20260820-r43.md`.
+- These checks do not replace fresh production visual equality, provider output quality, production persistence/reuse, Mac／Windows Chrome acceptance, or G619/H601 beta/operator evidence.
+
 ## 2026-08-20 Current local Goal recheck r41
 
 - Current focused material/fitting/library/provider/persistence/activity contract suite: `74/74 PASS`.

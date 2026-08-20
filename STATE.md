@@ -4006,6 +4006,12 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Next action: capabilityまたはHeavy認証状態の変化後、新規Profile 2 ownerで広告→`openTabs()`→Heavy target-scoped readbackを1回行い、hydrated workbenchが確認できた場合にのみfabric／printing production proof、続いてAI fittingへ進む。
 - Restart point: capabilityまたはHeavy認証状態が変化した後のfresh official owner。r38 browser／tab／binding／Run、別surface fallbackは再利用しない。
 
+## 2026-08-20 Current local UI parity recheck r43
+
+- Internal UX consistency passed `ok=true`, `failed=[]`; Lightchain catalog/entry routing passed `8/8`; unified desktop verifier contract passed `6/6`; Lightchain UI control boundaries passed `7/7`.
+- Current source-level UI checks found no new local parity contract failure. Artifact: `work/heavy-local-ui-parity-recheck-20260820-r43.md`。
+- These checks do not replace fresh production visual equality, provider output quality, production persistence/reuse, Mac／Windows Chrome acceptance, or G619/H601 beta/operator evidence.
+
 ## 2026-08-20 Current local acceptance-gates recheck r42
 
 - H601 static legal-safety guard passed (`ok=true`), including protected-brand／likeness blocking and generation-path safety checks. H601 operator readiness remains `ok=false`, `acceptance=not_claimed`, with 10 human/operator decision artifacts missing.
