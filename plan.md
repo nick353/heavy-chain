@@ -1401,4 +1401,16 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - This closes the local desktop QA diagnostic gate only. Production provider generation, result quality, save/reuse/reload, current Lightchain card parity, and paired Mac/Windows acceptance remain unverified.
 - Exact blocker remains `chrome_foreground_activation_capability_unavailable` for the production provider lane; current-selector card enumeration separately remains `chrome_extension_target_readback_target_session_not_owned`.
 - Next action: continue local parity/beta-gate work; after official Chrome capability or supported target-session state changes, start a fresh Profile 2 owner for the production fabric/printing and AI-fitting proof.
+@@
 - Restart point: changed official/session state plus fresh owner; do not reuse prior browser, binding, tab, run, or artifact.
+
+## 2026-08-20 Local beta gate recheck r74
+
+- Fresh local gate readback confirms H601 static safety guard passes, but operator/legal acceptance is not claimed with 10 missing human-owned decisions; G619 has `readySessions=0` and `missingCount=1`; launch-ops is blocked by missing production auth state.
+- Artifact: `work/heavy-local-beta-gates-recheck-20260820-r74.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blockers: `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`, `operator_final_h601_decision_missing`, G619 acceptance not claimed, plus the separate Chrome capability and current-selector target-session blockers.
+- Next action: authorized operator supplies the safe H601/G619/launch inputs; meanwhile continue only local parity/contract QA and do not fabricate approval or auth evidence.
+- Restart point: required human/auth input changes and, for production provider work, an official Chrome capability or supported target-session state change followed by a fresh Profile 2 owner.

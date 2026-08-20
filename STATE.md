@@ -4393,4 +4393,16 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - This advances local QA only. Production provider generation/persistence/reuse, current Lightchain card parity, and paired Mac/Windows acceptance remain unverified.
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable` and `chrome_extension_target_readback_target_session_not_owned` for their separate production/browser lanes.
 - Next action: continue dependency-independent local parity and beta-gate work; after the required official/session state change, create a fresh Profile 2 owner for the remaining production proof.
+@@
 - Restart point: changed official/session state plus fresh owner; do not reuse prior browser, binding, tab, run, or artifact.
+
+## 2026-08-20 Local beta gate recheck r74
+
+- Fresh gate readback: H601 static legal safety `ok=true`; H601 operator acceptance `not_claimed` with `missingCount=10`; G619 `not_claimed` with `readySessions=0` and `missingCount=1`; launch-ops exact blocker is `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`.
+- No gate/auth/product/external state was changed. Artifact: `work/heavy-local-beta-gates-recheck-20260820-r74.md`.
+
+### Current exact blocker / next action / restart point
+
+- Human/operator decisions and authorized production auth state are missing; do not synthesize them. Chrome production provider and current-selector card-readback blockers remain separate.
+- Next action: attach the safe operator/legal/launch inputs, then rerun the corresponding gates; continue dependency-independent local parity QA in the meantime.
+- Restart point: changed required human/auth state plus fresh official Profile 2 owner after any Chrome capability/session change.
