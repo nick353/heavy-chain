@@ -22,6 +22,7 @@
 - Fresh production priority-route readback r92 obtained URL/title/DOM for `/tools/fabric`、`/tools/printing`、`/model`, but expected workbench controls were absent in all three routes; cleanup passed. `heavy_priority_route_expected_controls_absent` remains PENDING_CONFIRMATION and is not generation/auth proof. Artifact: `work/heavy-production-priority-routes-readback-20260820-r92.md`。
 - Settled production priority-route readback r93 supersedes the immediate r92 probe: after an 8-second auth/workspace settle, `/tools/fabric`、`/tools/printing`、`/model` all exposed expected controls and cleanup passed. Artifact: `work/heavy-production-priority-routes-readback-20260820-r93.md`。provider生成・保存・Gallery/Canvas/History/Jobs同一run系譜・再利用/reload、Mac/Windows実機受入れは未確認。
 - Current beta gate readback r94: H601 static legal-safety guard `ok=true`; G619 real beta acceptance `not_claimed` with `readySessions=0`; H601 operator decision `missingCount=10`; launch operations exact blocker `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`. Artifact: `work/heavy-beta-gate-readback-20260820-r94.md`。
+- UX QA readback r95: internal UX consistency `ok=true`; beginner UXとmass-market QAはともに`auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`で停止し、cleanupは完了。Artifact: `work/heavy-ux-qa-readback-20260820-r95.md`。
 
 ### Current exact blocker / next action / restart point
 
