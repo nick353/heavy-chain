@@ -1191,3 +1191,17 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`。
 - Next action: capabilityまたは認証／権限状態変化後、新規Profile 2 ownerでfabric／printingの生成→結果→保存→連携→再利用→reload、その後AI fittingを実証する。
 - Restart point: 状態変化後のfresh official owner。r55のbrowser／tab／binding／Runは再利用しない。
+
+## 2026-08-20 Chrome更新後 capability + Heavy target-scoped readback r56
+
+- Fresh official Profile 2 browser-client `-3c21-4cdb-ad2b-b76dfca619ca`を現行selector revision 4で確認し、同一run `openTabs()`とowner lineageが成功した。
+- capability広告は`viewport`のみで、`foreground_activation`／`management`は未広告。したがってforeground操作は再開せず、target-scoped laneへ継続した。
+- Heavy `/tools/fabric`、`/tools/printing`、`/model`を同一fresh ownerでURL/title/DOM readbackし、3件とも`readyState=complete`、task-owned tab cleanup PASS。
+- `/tools/printing`の`ベース画像`／`パターン参考`と結果操作は、Heavy側の保存済み入力・生成履歴の復元による現在状態として観測された。Lightchain r54の空状態との差は、現時点ではaccount/state parityの`PENDING_CONFIRMATION`であり、保存・再利用機能を削らない。
+- Artifact: `work/chrome-plugin-profile2-capability-heavy-target-readback-20260820-r56.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式capabilityまたは関連認証／権限状態の変化後、fresh Profile 2 ownerで広告→`openTabs()`→lineage確認を1回行い、広告済みならforeground実用フローへ進む。未広告ならtarget-scoped read-onlyのみ継続する。
+- Restart point: 変化した依存状態＋fresh official owner。r56のbrowser／tab／binding／Runは再利用しない。

@@ -4193,3 +4193,16 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Next action: capabilityまたは認証／権限状態変化後にfresh Profile 2 ownerで
   Heavy production proofへ進む。
 - Restart point: 変更された依存状態＋fresh official owner。r55のbrowser／tab／Runは再利用しない。
+
+## 2026-08-20 Chrome更新後 capability + Heavy target-scoped readback r56
+
+- Current selector revision 4でfresh Profile 2 browser-clientを作成し、`openTabs()`、owner lineage、capability advertisementを同一runで確認した。browser idは`-3c21-4cdb-ad2b-b76dfca619ca`。
+- `viewport`のみ広告され、`foreground_activation`／`management`は未広告。Heavyのforeground生成・保存・再利用・reloadはfail-closedのまま、target-scoped read-onlyを継続した。
+- Heavy優先3 routeはURL/title/DOM readbackとtask-owned cleanupがPASS。Artifact: `work/chrome-plugin-profile2-capability-heavy-target-readback-20260820-r56.md`。
+- Printingの保存済み入力・生成結果復元は現行Persistence契約として保持し、Lightchain r54空状態との見た目差はaccount/state parity `PENDING_CONFIRMATION`に分離した。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式capabilityまたは認証／権限状態変化後のfresh ownerで、広告→`openTabs()`→lineage確認を1回行う。未広告ならtarget-scoped read-onlyのみ継続する。
+- Restart point: 状態変化後のfresh official owner。r56のbrowser／tab／binding／Runは再利用しない。

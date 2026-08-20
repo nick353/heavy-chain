@@ -686,3 +686,16 @@ Excluded rows:
   → save → Gallery/Canvas/History/Jobs → reuse → reload, then AI fitting.
 - Restart point: the changed dependency followed by a fresh official owner;
   do not reuse r55 browser ids, tabs, bindings, or runs.
+
+## 2026-08-20 Current Heavy target-scoped parity overlay r56
+
+- Fresh current-selector Profile 2 capability readback succeeded with browser `-3c21-4cdb-ad2b-b76dfca619ca`; only `viewport` was advertised.
+- Heavy `/tools/fabric`, `/tools/printing`, and `/model` each passed same-run URL/title/DOM readback and task-owned cleanup under the target-scoped contract. Artifact: `work/chrome-plugin-profile2-capability-heavy-target-readback-20260820-r56.md`。
+- Printing displayed persisted input/result state while the Lightchain r54 sample was empty; this is retained as account/state parity `PENDING_CONFIRMATION`, not promoted to a source-level extra-control defect.
+- Foreground provider generation, result quality, save, Gallery/Canvas/History/Jobs reconciliation, reuse, and reload remain `PENDING_CONFIRMATION`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: changed official capability or authorization state後のfresh Profile 2 ownerで広告→`openTabs()`→lineageを確認し、広告済みの場合のみforeground production proofへ進む。
+- Restart point: changed dependency followed by a fresh official owner; do not reuse r56 browser/tab/binding/run.
