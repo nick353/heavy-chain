@@ -1205,3 +1205,21 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`。
 - Next action: 公式capabilityまたは関連認証／権限状態の変化後、fresh Profile 2 ownerで広告→`openTabs()`→lineage確認を1回行い、広告済みならforeground実用フローへ進む。未広告ならtarget-scoped read-onlyのみ継続する。
 - Restart point: 変化した依存状態＋fresh official owner。r56のbrowser／tab／binding／Runは再利用しない。
+
+## 2026-08-20 Chrome update capability readback r57
+
+- After the Chrome update, a fresh official Profile 2 browser-client `-92f8-481c-aee9-55d6c8c3e702` was created under the current selector revision 4. Same-run `openTabs()` returned 6 tabs and owner session/thread/turn lineage matched.
+- The signed distribution still advertised only browser `viewport` and tab `pageAssets`/`cdp`; `foreground_activation` and `management` were not advertised. No Heavy foreground operation or external effect was attempted.
+- Artifact: `work/chrome-plugin-profile2-capability-readback-20260820-r57.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: keep foreground generation/save/reuse/reload fail-closed. Continue target-scoped read-only and local parity QA; after an official capability change, use a new Profile 2 owner for one capability → `openTabs()` → lineage check before production proof.
+- Restart point: official capability state change followed by a fresh owner. Do not reuse r57 browser/binding/tab/run.
+
+## 2026-08-20 Local unified desktop layout recheck r58
+
+- The focused recheck of the previous one-cell flake passed all 228 desktop checks across 1280/1440/1920/2560px: `failed=0`, `globalTimedOut=false`, `cleanupLeftovers=0`.
+- The prior `1280px / alias-model-library-models` `operation_timeout` did not reproduce; no product source change was required. Artifact: `work/heavy-local-unified-desktop-layout-recheck-20260820-r58.md`.
+- This closes the current local layout-flake checkpoint only. It does not close production provider proof, real Chrome Mac/Windows acceptance, or G619/H601/operator gates.

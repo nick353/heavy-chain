@@ -4206,3 +4206,21 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`。
 - Next action: 公式capabilityまたは認証／権限状態変化後のfresh ownerで、広告→`openTabs()`→lineage確認を1回行う。未広告ならtarget-scoped read-onlyのみ継続する。
 - Restart point: 状態変化後のfresh official owner。r56のbrowser／tab／binding／Runは再利用しない。
+
+## 2026-08-20 Chrome update capability readback r57
+
+- Fresh official Chrome Plugin/Profile 2 readback after the Chrome update: browser-client `-92f8-481c-aee9-55d6c8c3e702`, selector revision 4, `openTabs()` 6 tabs, owner session/thread/turn lineage matched.
+- Capability advertisement remains read-only (`viewport`, `pageAssets`, `cdp`); `foreground_activation` and `management` remain absent. No Heavy operation or external effect was performed.
+- Artifact: `work/chrome-plugin-profile2-capability-readback-20260820-r57.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: target-scoped read-only may continue; production generation/save/reuse/reload waits for an official capability change and a new owner-bound proof.
+- Restart point: capability state change plus fresh Profile 2 owner; do not reuse r57 browser/binding/tab/run.
+
+## 2026-08-20 Local unified desktop layout recheck r58
+
+- Unified desktop layout verifier passed `228/228` across 1280/1440/1920/2560px with `failed=0`, `globalTimedOut=false`, and `cleanupLeftovers=0`.
+- The earlier single `1280px / alias-model-library-models` timeout did not reproduce; no source change was made. Artifact: `work/heavy-local-unified-desktop-layout-recheck-20260820-r58.md`.
+- Production provider generation/save/reuse/reload, real Chrome Mac/Windows acceptance, and human beta/operator gates remain open.

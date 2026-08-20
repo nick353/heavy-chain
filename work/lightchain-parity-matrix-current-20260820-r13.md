@@ -699,3 +699,9 @@ Excluded rows:
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`。
 - Next action: changed official capability or authorization state後のfresh Profile 2 ownerで広告→`openTabs()`→lineageを確認し、広告済みの場合のみforeground production proofへ進む。
 - Restart point: changed dependency followed by a fresh official owner; do not reuse r56 browser/tab/binding/run.
+
+## r57 overlay — 2026-08-20 Chrome update capability readback
+
+- Fresh official Profile 2 browser-client `-92f8-481c-aee9-55d6c8c3e702` under selector revision 4 passed same-run `openTabs()` and owner lineage checks.
+- The official advertisement remains `viewport` plus `pageAssets`/`cdp`; `foreground_activation` and `management` are absent. Heavy production provider generation, save, reuse, and reload remain `PENDING_CONFIRMATION`.
+- Artifact: `work/chrome-plugin-profile2-capability-readback-20260820-r57.md`.
