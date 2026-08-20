@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import {
   withSupabaseSessionRecovery as withSessionRecovery,
 } from './supabaseSessionRecovery';
+import { createBoundedSupabaseAuthLock } from './supabaseAuthLock';
 
 export { isSupabaseAuthFailure } from './supabaseSessionRecovery';
 
@@ -18,6 +19,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    lock: createBoundedSupabaseAuthLock(),
   },
 });
 

@@ -8,6 +8,7 @@
     "test:video-provider-boundary": "node --experimental-strip-types --test scripts/verify-video-provider-boundary.test.ts",
     "test:lab-provider-boundary": "node --experimental-strip-types --test scripts/verify-lab-provider-boundary.test.ts",
     "test:workspace-handoff-persistence": "node --experimental-strip-types --test scripts/verify-workspace-handoff-persistence.test.ts",
+    "test:supabase-auth-lock": "node --experimental-strip-types --test scripts/verify-supabase-auth-lock.test.ts",
     "automation-kernel:validate": "/Users/nichikatanaka/.codex/skills/automation-kernel-run/scripts/kernel-run.mjs validate --manifest '/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/.codex/automation-kernel/manifests/heavy-chain.json' --run-id heavy-chain-entrypoint",
     "automation-kernel:run": "node scripts/heavy-chain-kernel-entrypoint.mjs --manifest '/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/.codex/automation-kernel/manifests/heavy-chain.json' --run-id heavy-chain-entrypoint",
     "automation-kernel:dry-run": "node scripts/heavy-chain-kernel-entrypoint.mjs --dry-run --manifest '/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/.codex/automation-kernel/manifests/heavy-chain.json' --run-id heavy-chain-entrypoint-dry-run",
