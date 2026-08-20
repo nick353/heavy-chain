@@ -2,6 +2,11 @@
 
 更新日: 2026-08-20
 
+## Current completion audit r3 (2026-08-20)
+
+- The requirement-by-requirement audit is recorded in `work/heavy-chain-completion-audit-20260820-r3.md`.
+- Local implementation and layout gates are complete; production provider/persistence, real Mac/Windows acceptance, launch auth proof, and human beta acceptance are not complete.
+
 ## Current beta gate checkpoint r48 (2026-08-20)
 
 - Fresh local gate readback: internal UX `ok=true`; H601 legal-safety guard passed.

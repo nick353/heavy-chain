@@ -2,6 +2,11 @@
 
 Updated: 2026-08-20
 
+## Current completion audit r3
+
+- Current requirement-by-requirement audit is `work/heavy-chain-completion-audit-20260820-r3.md`.
+- Local implementation/layout requirements are PASS, while production generation/persistence, real Mac/Windows acceptance, launch auth proof, and human beta acceptance remain `PENDING_CONFIRMATION`.
+
 ## Current beta gate readback r48
 
 - Internal UX consistency is `ok=true`, and the H601 legal-safety guard passed its code-level checks. Artifact: `work/heavy-beta-gate-readback-20260820-r48.md`.
