@@ -2,6 +2,29 @@
 
 更新日: 2026-08-20
 
+## Current dependency-independent beta QA checkpoint r115
+
+- Focused material/provider/persistence/handoff contracts passed `102/102`.
+- All `31/31` non-video local feature workflows passed via
+  `verify:lightchain-all-features`.
+- Unified desktop layout passed `228/228` checks across 57 targets and
+  1280/1440/1920/2560px, with zero failures, no global timeout, and zero
+  cleanup leftovers.
+- Artifacts:
+  `work/heavy-local-beta-qa-readback-20260820-r115.md`,
+  `output/playwright/lightchain-all-feature-workflows-20260820T111441Z/SUMMARY.json`,
+  `output/playwright/unified-desktop-layout-current/SUMMARY.json`.
+
+### Boundary / next action
+
+The local contract and desktop QA gates are green, but production provider
+generation through save, Gallery/Canvas/History/Jobs, reuse/reload, paired
+Mac/Windows acceptance, and internal operator acceptance remain unproven.
+The exact blocker remains
+`chrome_foreground_activation_capability_unavailable`; after its official
+resolution, create a fresh Profile 2 owner and prove fabric/printing first,
+then AI fitting. Do not reuse the current read-only binding or artifact.
+
 ## Current Lightchain visual parity completion checkpoint r114
 
 - Removed the generic Lightchain feature-detail vertical toolbar that was not

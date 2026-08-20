@@ -2,6 +2,39 @@
 
 Updated: 2026-08-20
 
+## Current dependency-independent beta QA completion r115
+
+- Focused material/provider/persistence/handoff contracts passed `102/102`.
+  The local contracts cover fabric/print inputs, AI fitting state, durable
+  result promotion, Gallery identity, Canvas handoff, History/Jobs lineage,
+  resume, and fail-closed recovery.
+- `npm run --silent verify:lightchain-all-features` passed all `31/31`
+  non-video feature workflows. Summary:
+  `output/playwright/lightchain-all-feature-workflows-20260820T111441Z/SUMMARY.json`.
+- `npm run --silent verify:unified-desktop-layout` passed `228/228` checks
+  across 57 targets and 1280/1440/1920/2560px, with zero failures, no global
+  timeout, and zero cleanup leftovers. Summary:
+  `output/playwright/unified-desktop-layout-current/SUMMARY.json`.
+- Artifact:
+  `work/heavy-local-beta-qa-readback-20260820-r115.md`。
+
+### Boundary
+
+These are dependency-independent local proofs. They do not promote production
+provider generation, result/save, Gallery/Canvas/History/Jobs readback,
+reuse/reload, Mac/Windows paired acceptance, or internal operator acceptance.
+
+### Current exact blocker / next action / restart point
+
+- `chrome_foreground_activation_capability_unavailable` remains current. Fresh
+  Profile 2 capability readback advertises `viewport` only; foreground
+  generation and external-effect stages remain fail-closed.
+- Next action: after the official capability advertisement changes, run the
+  mandatory Profile 2 preflight and a new same-owner `list -> get -> openTabs()`
+  boundary, then prove fabric/printing end to end followed by AI fitting.
+- Restart point: do not reuse the current read-only binding, tab, run, or
+  artifact for foreground work.
+
 ## Current Lightchain visual parity completion r114
 
 - Removed the generic Lightchain feature-detail vertical toolbar that was not
