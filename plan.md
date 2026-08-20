@@ -12,6 +12,7 @@
 - 同一fresh runでHeavy `/lightchain`を公式target-scoped provisioningし、`LIGHTCHAIN AI`、横並び説明、prompt、4カテゴリ、タブ直下3列カード、事例共有をDOM・スクリーンショットで確認した。task-owned tabだけを閉じ、`cleanup_verified=true`。
 - Artifact: `work/chrome-plugin-profile2-capability-refresh-20260820-r83.json`、`work/lightchain-home-visual-parity-20260820-r83.md`、`work/lightchain-production-ui-readback-20260820-r84.json`。Visual evidence: `work/lightchain-production-ui-readback-20260820-r84.png`、`output/playwright/lightchain-all-feature-workflows-20260820T075813Z/desktop-index.png`。
 - Verification: `npm run verify:lightchain-all-features`、`featureCount=31`、`failed=[]`、build `2608 modules transformed`、`git diff --check` PASS、Zeabur build/runtime `RUNNING`、production target-scoped URL/title/DOM readback PASS。これはUI/routeとデプロイのproofであり、production provider生成・保存・再利用・β受入れの完了証明ではない。
+- Priority local regression r85 passed `25/25` across fabric material synthesis, provider persistence/result promotion, AI fitting model-matrix normalization, Canvas generation/Gallery handoff, and print input restoration. Artifact: `work/heavy-priority-local-regression-20260820-r85.md`。これはproduction provider実行の代替ではない。
 
 ### Current exact blocker / next action / restart point
 

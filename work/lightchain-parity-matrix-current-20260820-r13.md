@@ -2,6 +2,32 @@
 
 更新日: 2026-08-20
 
+## 0.0 current revision-6 production overlay r84
+
+- Current selector source of truth is `backend=chrome_plugin`, `Profile 2`,
+  `signed_chrome_extension_profile2`, revision `6`. The older revision-30
+  card-count evidence below remains historical provenance and is not promoted
+  to the current selector.
+- Heavy source commit `01e6e40dd5daf2d491b106098dbd0e33e5615606` was deployed
+  only to the existing Zeabur `heavy-chain` service. Deployment
+  `6a86b56499ff31c1168ac130` and service `RUNNING` were confirmed.
+- A fresh official Profile 2 target-scoped run provisioned Heavy
+  `https://heavy-chain.zeabur.app/lightchain` and read back the same-run
+  URL/title/DOM. The production page exposes `LIGHTCHAIN AI`, the inline
+  apparel subtitle, prompt, four category tabs, direct three-column cards,
+  and the case-sharing section. The seven current non-video recommended cards
+  are: デザインワークスペース、マーケティングワークスペース、AIフィッティング、
+  ウェアデザインラボ、モデル企画ライブラリ、ファッションスタジオ、
+  デザインエージェント. Video cards remain excluded by scope.
+- Target tab cleanup passed with `cleanup_verified=true`; no click, upload,
+  rights confirmation, provider generation, save/reuse, selected/focus/claim,
+  recording, or other external effect occurred. Artifact:
+  `work/lightchain-production-ui-readback-20260820-r84.json`.
+- The production launcher visual/route parity is now verified. Priority-route
+  provider generation, result quality, save/reuse/reload, Gallery/Canvas/
+  History/Jobs lineage, Mac/Windows acceptance, and internal beta acceptance
+  remain `PENDING_CONFIRMATION`.
+
 ## 0.current hydrated source and Heavy overlay r45
 
 - Fresh official Chrome Plugin/Profile 2 browser-client `-b12c-4d29-9bd6-04f48f77b5b3` used the current selector revision `30` and a same-run target-scoped lane.

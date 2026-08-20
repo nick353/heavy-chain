@@ -11,6 +11,7 @@ Updated: 2026-08-20
 - Local source commit `01e6e40dd5daf2d491b106098dbd0e33e5615606` was deployed only to Zeabur project `automation-wiled`, service `heavy-chain`; deployment `6a86b56499ff31c1168ac130` and service `RUNNING` were confirmed.
 - Fresh official target-scoped `/lightchain` readback confirmed the production page has `LIGHTCHAIN AI`, inline subtitle, prompt, four category tabs, direct three-column cards, and case sharing. The task-owned provisioned tab was closed and `cleanup_verified=true`.
 - Artifacts: `work/chrome-plugin-profile2-capability-refresh-20260820-r83.json`, `work/lightchain-home-visual-parity-20260820-r83.md`, `work/lightchain-production-ui-readback-20260820-r84.json`, and screenshot `work/lightchain-production-ui-readback-20260820-r84.png`.
+- Priority local regression r85 passed `25/25` for fabric material, provider persistence/result promotion, AI fitting model-matrix, Canvas/Gallery handoff, and print input restoration. Artifact: `work/heavy-priority-local-regression-20260820-r85.md`.
 
 ### Current exact blocker / next action / restart point
 
