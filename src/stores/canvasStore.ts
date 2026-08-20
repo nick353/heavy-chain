@@ -72,6 +72,8 @@ export interface CanvasObject {
     protectedRegionComposited?: boolean;
     backendProvider?: string | null;
     provider?: string | null;
+    providerModel?: string | null;
+    providerTaskId?: string | null;
     status?: string | null;
     jobId?: string | null;
     imageId?: string | null;

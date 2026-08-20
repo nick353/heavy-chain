@@ -117,6 +117,8 @@ type LightchainResult = {
   generationMode?: 'provider' | 'preview';
   provider?: string | null;
   backendProvider?: string | null;
+  providerModel?: string | null;
+  providerTaskId?: string | null;
   jobId?: string | null;
   imageId?: string | null;
   storagePath?: string | null;
@@ -2208,6 +2210,8 @@ export function LightchainWorkbenchPage() {
         generationMode: 'provider',
         provider: providerResult.provider ?? 'openai',
         backendProvider: providerResult.backendProvider ?? 'supabase-edge-function',
+        providerModel: providerResult.providerModel ?? null,
+        providerTaskId: providerResult.jobId ?? null,
         jobId: persistedResult.remote?.jobId ?? providerResult.jobId ?? null,
         imageId: persistedResult.remote?.imageId ?? providerResult.imageId ?? null,
         storagePath: persistedResult.remote?.storagePath ?? providerResult.storagePath ?? null,
@@ -2553,6 +2557,8 @@ export function LightchainWorkbenchPage() {
       let providerStoragePath: string | undefined;
       let providerName = 'openai';
       let backendProvider = 'supabase-edge-function';
+      let providerModel = effectiveProviderRoute;
+      let providerTaskId: string | null = null;
 
       if (effectiveProviderRoute === 'model-matrix') {
         const bodyType = modelFormState.bodyType.includes('スマート') ? 'slim' : modelFormState.bodyType.includes('プラス') ? 'plus' : 'regular';
@@ -2575,6 +2581,9 @@ export function LightchainWorkbenchPage() {
         providerJobId = modelResult.jobId;
         providerImageId = modelResult.matrix[0].imageId ?? null;
         providerStoragePath = modelResult.matrix[0].storagePath;
+        providerName = modelResult.matrix[0].provider ?? providerName;
+        providerModel = modelResult.matrix[0].modelUsed ?? providerModel;
+        providerTaskId = modelResult.matrix[0].providerTaskId ?? null;
         backendProvider = 'supabase-edge-function:model-matrix';
       } else if (effectiveProviderRoute === 'edit-image') {
         if (!providerSourceImageUrl) throw new Error(`provider_input_missing:${selectedTool.id}`);
@@ -2592,6 +2601,8 @@ export function LightchainWorkbenchPage() {
         providerStoragePath = editResult.storagePath;
         providerName = editResult.provider ?? providerName;
         backendProvider = editResult.backendProvider ?? backendProvider;
+        providerModel = editResult.providerModel ?? providerModel;
+        providerTaskId = editResult.jobId ?? null;
         assertCompletedImageEditResult(editResult, 'provider_edit_result');
       } else {
         const generatedResult = await generateImage(providerPrompt, currentBrand.id, {
@@ -2608,6 +2619,8 @@ export function LightchainWorkbenchPage() {
         providerStoragePath = generatedResult.storagePath;
         providerName = generatedResult.provider ?? providerName;
         backendProvider = generatedResult.backendProvider ?? backendProvider;
+        providerModel = generatedResult.providerModel ?? providerModel;
+        providerTaskId = generatedResult.jobId ?? null;
         assertCompletedImageEditResult(generatedResult, 'provider_generate_result');
       }
 
@@ -2636,7 +2649,8 @@ export function LightchainWorkbenchPage() {
           provider: providerName,
           backendProvider,
           imageId: providerImageId ?? null,
-          providerModel: effectiveProviderRoute,
+          providerModel,
+          providerTaskId,
           materialReferences,
           materialSlots: Object.entries(materialSlotFiles).flatMap(([key, file]) => file ? [{
             key,
@@ -2658,6 +2672,8 @@ export function LightchainWorkbenchPage() {
         generationMode: 'provider',
         provider: providerName,
         backendProvider,
+        providerModel,
+        providerTaskId,
         jobId: persistedResult.remote?.jobId ?? providerJobId ?? null,
         imageId: persistedResult.remote?.imageId ?? providerImageId ?? null,
         storagePath: persistedResult.remote?.storagePath ?? providerStoragePath ?? null,
@@ -3304,6 +3320,8 @@ export function LightchainWorkbenchPage() {
         generationMode: lightchainResult?.generationMode ?? null,
         provider: lightchainResult?.provider ?? null,
         backendProvider: lightchainResult?.backendProvider ?? null,
+        providerModel: lightchainResult?.providerModel ?? null,
+        providerTaskId: lightchainResult?.providerTaskId ?? null,
         generationJobId: lightchainResult?.jobId ?? null,
         generatedImageId: lightchainResult?.imageId ?? null,
         generatedStoragePath: lightchainResult?.storagePath ?? null,
@@ -3685,6 +3703,8 @@ export function LightchainWorkbenchPage() {
             generation: 1,
             provider: lightchainResult.provider ?? null,
             backendProvider: lightchainResult.backendProvider ?? null,
+            providerModel: lightchainResult.providerModel ?? null,
+            providerTaskId: lightchainResult.providerTaskId ?? null,
             status: lightchainResult.generationMode === 'provider' ? 'completed' : 'preview',
             jobId: lightchainResult.jobId ?? null,
             imageId: lightchainResult.imageId ?? null,
@@ -3703,6 +3723,8 @@ export function LightchainWorkbenchPage() {
               generationMode: lightchainResult.generationMode ?? 'preview',
               provider: lightchainResult.provider ?? null,
               backendProvider: lightchainResult.backendProvider ?? null,
+              providerModel: lightchainResult.providerModel ?? null,
+              providerTaskId: lightchainResult.providerTaskId ?? null,
               generationJobId: lightchainResult.jobId ?? null,
               generatedImageId: lightchainResult.imageId ?? null,
               generatedStoragePath: lightchainResult.storagePath ?? null,

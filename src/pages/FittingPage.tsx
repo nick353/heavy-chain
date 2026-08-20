@@ -82,6 +82,9 @@ type MatrixItem = {
   storagePath?: string;
   imageId?: string;
   persistenceStatus?: 'completed' | 'failed';
+  provider?: string;
+  modelUsed?: string | null;
+  providerTaskId?: string | null;
 };
 type LastRequest = {
   productDescription: string;
@@ -143,6 +146,10 @@ type HistoryItem = {
   remoteJobId?: string | null;
   remoteImageIds?: Array<string | null>;
   remoteStoragePaths?: Array<string | null>;
+  providerNames?: Array<string | null>;
+  providerModels?: Array<string | null>;
+  providerTaskIds?: Array<string | null>;
+  backendProvider?: string | null;
   sourceMaterialImageUrl?: string;
   modelReferenceImageUrl?: string;
   modelReferenceFileName?: string;
@@ -195,6 +202,10 @@ export const buildFittingHistoryFromPersistedImages = (
     artifactIds: string[];
     remoteImageIds: Array<string | null>;
     remoteStoragePaths: Array<string | null>;
+    providerNames: Array<string | null>;
+    providerModels: Array<string | null>;
+    providerTaskIds: Array<string | null>;
+    backendProvider: string | null;
     sourceMaterialImageUrl?: string;
     modelReferenceImageUrl?: string;
     modelReferenceFileName?: string;
@@ -245,6 +256,10 @@ export const buildFittingHistoryFromPersistedImages = (
       artifactIds: [],
       remoteImageIds: [],
       remoteStoragePaths: [],
+      providerNames: [],
+      providerModels: [],
+      providerTaskIds: [],
+      backendProvider: 'supabase-edge-function:model-matrix',
       sourceMaterialImageUrl: persistedSourceMaterialImageUrl,
       modelReferenceImageUrl: (() => {
         const value = getGeneratedImageMetadataString(image, 'modelReferenceImageUrl');
@@ -273,6 +288,9 @@ export const buildFittingHistoryFromPersistedImages = (
     group.remoteStoragePaths.push(
       getGeneratedImageMetadataString(image, 'remoteStoragePath') ?? image.storage_path ?? null,
     );
+    group.providerNames.push(getGeneratedImageMetadataString(image, 'provider'));
+    group.providerModels.push(image.model_used ?? getGeneratedImageMetadataString(image, 'providerModel'));
+    group.providerTaskIds.push(getGeneratedImageMetadataString(image, 'providerTaskId'));
     const bodyType = getGeneratedImageMetadataString(image, 'bodyType');
     const ageGroup = getGeneratedImageMetadataString(image, 'ageGroup');
     const gender = getGeneratedImageMetadataString(image, 'gender');
@@ -303,6 +321,10 @@ export const buildFittingHistoryFromPersistedImages = (
       remoteJobId: group.remoteJobId,
       remoteImageIds: group.remoteImageIds,
       remoteStoragePaths: group.remoteStoragePaths,
+      providerNames: group.providerNames,
+      providerModels: group.providerModels,
+      providerTaskIds: group.providerTaskIds,
+      backendProvider: group.backendProvider,
       sourceMaterialImageUrl: group.sourceMaterialImageUrl,
       modelReferenceImageUrl: group.modelReferenceImageUrl,
       modelReferenceFileName: group.modelReferenceFileName,
@@ -1180,6 +1202,10 @@ export function FittingPage() {
           remoteJobId: response.jobId ?? null,
           remoteImageId: item.imageId ?? null,
           remoteStoragePath: item.storagePath ?? null,
+          provider: item.provider ?? null,
+          providerModel: item.modelUsed ?? null,
+          providerTaskId: item.providerTaskId ?? null,
+          backendProvider: 'supabase-edge-function:model-matrix',
           remotePersistenceStatus: item.persistenceStatus ?? response.persistenceStatus ?? null,
           sourceArtifactId: artifactId,
           sourceStoragePath: item.storagePath ?? null,
@@ -1230,6 +1256,10 @@ export function FittingPage() {
         remoteJobId: response.jobId ?? null,
         remoteImageIds: matrix.map((item) => item.imageId ?? null),
         remoteStoragePaths: matrix.map((item) => item.storagePath ?? null),
+        providerNames: matrix.map((item) => item.provider ?? null),
+        providerModels: matrix.map((item) => item.modelUsed ?? null),
+        providerTaskIds: matrix.map((item) => item.providerTaskId ?? null),
+        backendProvider: 'supabase-edge-function:model-matrix',
         sourceMaterialImageUrl: request.sourceMaterialImageUrl ?? request.imageUrl,
         materialReference: request.materialReference,
         materialReferences: request.materialReferences,
@@ -1459,6 +1489,10 @@ export function FittingPage() {
             remoteJobId: item.remoteJobId ?? null,
             remoteImageId: item.remoteImageIds?.[index] ?? null,
             remoteStoragePath: item.remoteStoragePaths?.[index] ?? null,
+            provider: item.providerNames?.[index] ?? null,
+            providerModel: item.providerModels?.[index] ?? null,
+            providerTaskId: item.providerTaskIds?.[index] ?? null,
+            backendProvider: item.backendProvider ?? 'supabase-edge-function:model-matrix',
             materialReference: item.materialReference ?? lastRequest?.materialReference,
             materialReferences: item.materialReferences ?? lastRequest?.materialReferences,
             layerPlan: item.layerPlan ?? lastRequest?.layerPlan,

@@ -1445,3 +1445,15 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - No application code changed in r77. This is local source/contract evidence only; it does not prove live production output quality, same-run remote save/reuse/reload, current Lightchain card enumeration, or paired Mac/Windows Chrome acceptance.
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
 - Next action: after the required official capability/session/auth/human state changes, create a fresh Profile 2 owner and run the remaining production parity and provider proof. Keep provider generation fail-closed until then.
+
+## 2026-08-20 AI-fitting provider provenance continuity r78
+
+- Closed a local lineage gap: model-matrix provider, model, and task ID now flow from the Edge Function response into `/model`, `/fitting`, durable fitting artifacts, hydrated History, and Canvas reuse. Canvas metadata types now formally admit the same provenance.
+- Verification: provider persistence/readback `13/13`, provider coverage `18/18`, fitting history/resilience/unified persistence `18/18`, material contract `20/20`, production build (`2608` modules), and diff check passed.
+- Artifact: `work/heavy-local-model-matrix-provenance-20260820-r78.md`.
+
+### Proof boundary / current exact blocker
+
+- This improves the local implementation contract but does not prove live production output quality, remote save/reuse/reload, current Lightchain card parity, or paired Mac/Windows Chrome acceptance.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
+- Next action: after the required official state changes, run the fresh Profile 2 same-run production proof against the r78 receipt contract.

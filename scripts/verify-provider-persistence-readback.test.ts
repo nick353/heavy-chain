@@ -153,6 +153,22 @@ test('derived protected composites keep provider provenance separate from Galler
   assert.match(persistence, /storagePath: reuseCanonicalRemoteArtifact \? providerStoragePath : null/);
 });
 
+test('model-matrix provider provenance survives the Edge response, Fitting history, and Canvas reuse', async () => {
+  const [imageApi, edge, fitting, workbench] = await Promise.all([
+    readFile(new URL('../src/lib/imageApi.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../supabase/functions/model-matrix/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/FittingPage.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8'),
+  ]);
+  assert.match(imageApi, /providerTaskId/);
+  assert.match(edge, /providerTaskId: generatedImage\.taskId/);
+  assert.match(fitting, /providerModel: item\.modelUsed \?\? null/);
+  assert.match(fitting, /providerTaskId: item\.providerTaskId \?\? null/);
+  assert.match(fitting, /providerModels: matrix\.map\(\(item\) => item\.modelUsed \?\? null\)/);
+  assert.match(workbench, /providerModel = modelResult\.matrix\[0\]\.modelUsed/);
+  assert.match(workbench, /providerTaskId: lightchainResult\.providerTaskId \?\? null/);
+});
+
 test('material provider parity runtime survives result, remote artifact, History, and Canvas promotion', async () => {
   const material = await readFile(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
   const history = await readFile(new URL('../src/lib/printResultHistoryPersistence.ts', import.meta.url), 'utf8');

@@ -568,6 +568,9 @@ export interface ModelMatrixResult {
     storagePath?: string;
     imageId?: string;
     persistenceStatus?: 'completed' | 'failed';
+    provider?: string;
+    modelUsed?: string | null;
+    providerTaskId?: string | null;
   }>;
   error?: string;
 }

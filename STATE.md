@@ -4437,3 +4437,14 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - This is local implementation evidence only. Live production generation/output quality/save/reuse/reload, current Lightchain card enumeration, and paired Mac/Windows Chrome acceptance remain `PENDING_CONFIRMATION`.
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
 - Next action: after an official capability/session/auth/human state change, create a fresh Profile 2 owner and run the remaining same-run production proof. Do not reuse old browser, binding, tab, run, or capability fingerprint.
+
+## 2026-08-20 AI-fitting provider provenance continuity r78
+
+- Model-matrix provider/model/task provenance now crosses the Edge response, `/model`, `/fitting`, durable fitting artifacts, hydrated History, and Canvas reuse. The Canvas metadata type explicitly includes provider model and task ID.
+- Focused evidence: provider persistence/readback `13/13`, provider coverage `18/18`, fitting history/resilience/unified persistence `18/18`, material contract `20/20`, build with `2608` modules, and diff check passed. Artifact: `work/heavy-local-model-matrix-provenance-20260820-r78.md`.
+
+### Current exact blocker / next action / restart point
+
+- This is local implementation/build evidence only; live production generation/output quality/save/reuse/reload, current Lightchain card enumeration, and paired Mac/Windows acceptance remain `PENDING_CONFIRMATION`.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
+- Next action: after official capability/session/auth/human state changes, create a fresh Profile 2 owner and verify the live provider receipt and full reuse flow against r78. Do not reuse old browser, binding, tab, run, or artifact.

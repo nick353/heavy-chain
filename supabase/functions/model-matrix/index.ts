@@ -773,6 +773,7 @@ serve(async (req) => {
             prompt: finalDescription,
             modelUsed: generatedImage.model,
             provider: generatedImage.provider,
+            providerTaskId: generatedImage.taskId,
             referenceSummary: finalDescription,
             semanticVerification,
             verifier: semanticVerification,
