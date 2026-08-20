@@ -47,6 +47,14 @@ test('Lightchain header exposes the current language and help button controls', 
   assert.match(source, /aria-label="ヘルプセンター"/);
 });
 
+test('Lightchain header uses the avatar identity instead of Heavy account chrome', async () => {
+  const source = await readFile(layoutSourcePath, 'utf8');
+
+  assert.match(source, /aria-label="avatar"/);
+  assert.match(source, /alt="avatar"/);
+  assert.doesNotMatch(source, /aria-label="アカウント"[\s\S]{0,220}isLightAccountMenuOpen/);
+});
+
 test('fitting and line-to-real settings are stateful and persisted into the workbench contract', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');
 

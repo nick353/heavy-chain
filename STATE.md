@@ -3929,6 +3929,19 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Other PENDING_CONFIRMATION gates: Mac／Windows実Chrome、G619、H601、launch-ops、Zeabur source association。
 - Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
 
+## 2026-08-20 Heavy / Lightchain target-scoped readback r36
+
+- 新規公式Chrome Plugin／Profile 2 browser-client `-b030-44db-953f-4481afcccf4d`で、current selector（`chrome_plugin`／Profile 2／`signed_chrome_extension_profile2`／revision 30）をfresh確認した。browser capabilityは`viewport`のみで、`foreground_activation`／`management`は未広告のまま。
+- Lightchain `/tools/fabric`をtask-owned provisioningし、tab `1980904106`のURL/title/DOMを同一runでreadbackした。現行の`ツールバー`、4カテゴリ、`生地イメージ`、`プリントイメージ`、`線画の実写化`、`平絵生成`、`生成履歴`を確認し、cleanupをPASSした。
+- Heavy `/tools/fabric`をtask-owned provisioningし、tab `1980904108`のURL/title/DOMを同一runでreadbackした。認証／workspace準備中表示はなく、素材入力、Gallery選択、権利確認、`AI生成`、`生成履歴`、比率、生地バリエーション、入力待ち状態を確認し、cleanupをPASSした。
+- Artifact: `work/heavy-lightchain-target-scoped-readback-20260820-r36.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。target-scoped read-only transport、認証済みworkspace、URL/title/DOM、cleanupはPASSだが、foreground-onlyのprovider生成・保存・再利用・reloadは未確認。
+- Next action: 公式signed extension/backendが`foreground_activation`／`management`を広告した後、新規Profile 2 ownerでfabric／printingの生成→結果→保存→Gallery／Canvas／History／Jobs→再利用→reloadを同一runで確認し、その後AIフィッティングへ進む。広告がない間はtarget-scoped read-onlyとlocal parity改善を継続する。
+- Restart point: capability state change後のfresh official owner。r36 browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
 ## 2026-08-20 Heavy production deployment readback r2
 
 - Source commit `426d6289f312df4c792c05d5fd754aeaf8eab32c` was pushed to `origin/main` and the current parity workspace was deployed to the verified Heavy service.

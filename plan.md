@@ -910,6 +910,19 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Next action: 公式配布更新後、fresh revision-30 Profile 2 ownerでfabric／printingのprovider→保存→Gallery／Canvas／History／Jobs→再利用→reload、続いてAIフィッティングを実行する。
 - Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは再利用しない。
 
+## 2026-08-20 Target-scoped current parity readback r36
+
+- Fresh official Chrome Plugin／Profile 2（selector revision 30）の同一runで、Lightchain `/tools/fabric`とHeavy `/tools/fabric`をtarget-scoped provisioningして確認した。
+- Lightchainは`Lightchain AI`、現行toolbar、4カテゴリ、material tabs、`生成履歴`をreadback。Heavyは認証済みhydrated state、base／pattern／fabric inputs、ratio、fabric variants、Gallery選択、rights gate、`AI生成`、`生成履歴`をreadbackした。
+- 両task-owned tabのcleanupはPASS。selected／focus／claim／foreground lease、provider生成、保存、再利用、録画、外部効果は未実施。
+- Artifact: `work/heavy-lightchain-target-scoped-readback-20260820-r36.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式広告は`viewport`のみで、`foreground_activation`／`management`は未提供。
+- Next action: capability更新後の新規Profile 2 ownerでfabric／printing production same-run proof、その後AI fitting proofへ進む。更新前はtarget-scoped read-onlyとlocal parity改善を継続する。
+- Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
 ## 2026-08-20 Heavy production deployment readback r2
 
 - Current Heavy parity workspace was deployed to the verified `automation-wiled / heavy-chain` target as deployment `6a867ab9f1ea67ebf4ea6eec` (`RUNNING`).

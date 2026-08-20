@@ -15,10 +15,13 @@ import { HeavyChainLogo } from '../icons';
 import { ChevronDown, Globe2, HelpCircle, History, UserCircle } from 'lucide-react';
 
 export function Layout() {
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [isLightAccountMenuOpen, setIsLightAccountMenuOpen] = useState(false);
+  const lightchainAvatarUrl = profile?.avatar_url
+    || (typeof user?.user_metadata?.avatar_url === 'string' ? user.user_metadata.avatar_url : null)
+    || (typeof user?.user_metadata?.picture === 'string' ? user.user_metadata.picture : null);
   
   // Determine if we should show sidebar (only for authenticated users on dashboard pages)
   // Exclude public pages and auth pages
@@ -147,11 +150,15 @@ export function Layout() {
                     <button
                       type="button"
                       className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15"
-                      aria-label="アカウント"
+                      aria-label="avatar"
                       aria-expanded={isLightAccountMenuOpen}
                       onClick={() => setIsLightAccountMenuOpen((open) => !open)}
                     >
-                      <UserCircle className="h-5 w-5" />
+                      {lightchainAvatarUrl ? (
+                        <img src={lightchainAvatarUrl} alt="avatar" className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        <UserCircle className="h-5 w-5" aria-hidden="true" />
+                      )}
                     </button>
                     {isLightAccountMenuOpen && (
                       <div className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-2xl border border-neutral-200 bg-white py-2 text-sm text-neutral-800 shadow-2xl">
