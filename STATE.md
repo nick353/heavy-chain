@@ -2,6 +2,13 @@
 
 Updated: 2026-08-20
 
+## Current desktop verification after source UI cleanup r108
+
+- `npm run --silent verify:unified-desktop-layout` passed after the r106/r107
+  fabric UI cleanup: `scheduled=228`, `completed=228`, `failed=0`, global
+  timeout false, cleanup leftovers 0, across 1280/1440/1920/2560px.
+- Artifact: `work/heavy-local-desktop-parity-after-source-cleanup-20260820-r108.md`。
+
 ## Current production source UI cleanup readback r107
 
 - Commit `144087e` removed the confirmed Heavy-only visible fabric preset

@@ -2,6 +2,20 @@
 
 更新日: 2026-08-20
 
+## 0.0 current desktop parity overlay r108
+
+- After r106/r107 source-aligned fabric UI cleanup, the unified desktop
+  verifier passed `228/228` cells at `1280/1440/1920/2560px`; failures,
+  global timeout, and cleanup leftovers were all zero.
+- Artifact:
+  `work/heavy-local-desktop-parity-after-source-cleanup-20260820-r108.md`。
+
+| Requirement layer | Current status | Current evidence / gap |
+|---|---|---|
+| Wide desktop layout contract | `verified` locally | 228/228 across four widths |
+| Real Mac/Windows Chrome acceptance | `PENDING_CONFIRMATION` | local verifier is not OS acceptance |
+| Provider generation/save/reuse/reload | `PENDING_CONFIRMATION` | foreground capability unavailable |
+
 ## 0.0 current production source UI overlay r107
 
 - Commit `144087e` removed Heavy's visible fabric preset picker; deployment

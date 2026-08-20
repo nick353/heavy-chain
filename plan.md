@@ -2,6 +2,13 @@
 
 更新日: 2026-08-20
 
+## Current desktop verification checkpoint r108
+
+- After the source-aligned UI cleanup and r107 deployment, the unified desktop
+  verifier passed `228/228` cells at `1280/1440/1920/2560px`, with zero
+  failures, no global timeout, and zero cleanup leftovers.
+- Artifact: `work/heavy-local-desktop-parity-after-source-cleanup-20260820-r108.md`。
+
 ## Current production UI cleanup checkpoint r107
 
 - Source-aligned fabric UI cleanup commit `144087e` was deployed to the
