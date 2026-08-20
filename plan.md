@@ -2,6 +2,31 @@
 
 更新日: 2026-08-20
 
+## Current production fabric parity checkpoint r50 (2026-08-20)
+
+- The rendered Heavy `/tools/fabric` branch was corrected from
+  `allowedReferenceTypes={['base', 'pattern']}` to the Lightchain-compatible
+  base-only garment input. The focused regression now covers this rendered
+  branch as well as the direct parity branch.
+- Commit `1730099315cddca1bfcb3ff2f350a0bb8d33e9bc` was pushed to
+  `origin/main` and the Heavy Zeabur service was redeployed.
+- Fresh official Chrome Plugin/Profile 2 target-scoped readback after the
+  runtime switch confirmed `生地イメージ`, hydrated controls, and no
+  `ベース画像`／`パターン参考` toggle. Artifact:
+  `work/heavy-chain-production-fabric-parity-readback-20260820-r50.md`.
+- This resolves the production fabric UI mismatch. It does not prove provider
+  generation, save/reuse/reload, or AI-fitting production completion.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: when the signed Profile 2 distribution advertises
+  `foreground_activation` or `management`, use a new target-scoped/foreground
+  owner as appropriate to prove the fabric/printing practical flow, then AI
+  fitting. Until then, keep foreground-dependent operations fail-closed.
+- Restart point: fresh official Profile 2 browser-client after capability state
+  changes. Target-scoped read-only remains permitted without `selected()`.
+
 ## Current completion audit r3 (2026-08-20)
 
 - The requirement-by-requirement audit is recorded in `work/heavy-chain-completion-audit-20260820-r3.md`.

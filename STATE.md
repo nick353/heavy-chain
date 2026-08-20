@@ -2,6 +2,32 @@
 
 Updated: 2026-08-20
 
+## Current production fabric parity r50
+
+- The local fabric input fix is now live in Heavy production. Source commit
+  `1730099315cddca1bfcb3ff2f350a0bb8d33e9bc` is on `origin/main`; the final
+  observed Zeabur deployment is `RUNNING` and serves the new runtime bundle.
+- Fresh official Chrome Plugin/Profile 2 target-scoped readback used browser
+  `-9ac5-4802-851c-b1d299fe7490` and task-owned tab `1980904183`. The hydrated
+  `/tools/fabric` DOM contains the Lightchain garment input and no
+  `ベース画像`／`パターン参考` toggle. `cleanup_verified=true`.
+- Artifact: `work/heavy-chain-production-fabric-parity-readback-20260820-r50.md`.
+- The resolved production UI mismatch is separate from the remaining
+  foreground blocker `chrome_foreground_activation_capability_unavailable`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+  Fresh capability advertisement still contains only browser `viewport` and
+  tab `pageAssets`／`cdp`; `foreground_activation`／`management` are absent.
+- Next action: after the official capability is advertised, create a new
+  Profile 2 browser-client and prove fabric/printing provider generation,
+  result, save, Gallery／Canvas／History／Jobs lineage, reuse, and reload in
+  one run; then repeat for AI fitting.
+- Restart point: capability-state change plus a fresh official owner. Keep
+  target-scoped read-only available, but do not use selected/focus/claim,
+  another surface, old binding, old tab, old run, or old receipt.
+
 ## Current completion audit r3
 
 - Current requirement-by-requirement audit is `work/heavy-chain-completion-audit-20260820-r3.md`.
