@@ -20,6 +20,7 @@ Updated: 2026-08-20
 - Local regression r91 passed route parity `8/8` and unified desktop layout `228/228` with zero failures at `1280/1440/1920/2560px`; the stale icon-map assertion was aligned to the current catalog/App route contract. Artifact: `work/heavy-local-case-tabs-regression-20260820-r91.md`.
 - Fresh production priority-route readback r92 obtained URL/title/DOM for `/tools/fabric`, `/tools/printing`, and `/model`, but the expected workbench controls were absent in all three routes; cleanup passed. Keep `heavy_priority_route_expected_controls_absent` as PENDING_CONFIRMATION and do not promote this to authenticated or generation proof. Artifact: `work/heavy-production-priority-routes-readback-20260820-r92.md`.
 - Settled production priority-route readback r93 supersedes the immediate r92 probe: after an 8-second auth/workspace settle, `/tools/fabric`, `/tools/printing`, and `/model` all exposed their expected controls and cleanup passed. Artifact: `work/heavy-production-priority-routes-readback-20260820-r93.md`. Provider generation/save/reuse/reload and same-run result lineage remain PENDING_CONFIRMATION.
+- Current beta gate readback r94: H601 static legal-safety guard `ok=true`; G619 real beta acceptance `not_claimed` with `readySessions=0`; H601 operator decision `missingCount=10`; launch operations exact blocker `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`. Artifact: `work/heavy-beta-gate-readback-20260820-r94.md`.
 
 ### Current exact blocker / next action / restart point
 
