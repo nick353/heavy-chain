@@ -2,6 +2,36 @@
 
 更新日: 2026-08-20
 
+## Current production checkpoint r104
+
+- Mandatory Profile 2 preflight passed: `status=ready`, current selector
+  `chrome_plugin` / Profile 2 / `signed_chrome_extension_profile2` / revision
+  `30`, `exact_blocker=null`.
+- Fresh browser-client `-96c9-48fe-83ea-8cdf8bebe6c7` passed list → get →
+  `openTabs()` with matching owner lineage.
+- Heavy `/tools/fabric` target-scoped provisioning/readback passed after
+  hydration. The page is the Lightchain-shaped fabric workbench with the
+  required model/design and fabric inputs, ratio, fabric variants, Gallery
+  handoff, `AI生成`, and `生成履歴`; the authentication/workspace shell is
+  absent.
+- Task-owned tab `1980904560` was closed and `cleanup_verified=true`.
+- Artifact: `work/heavy-production-target-scoped-readback-20260820-r104.md`。
+
+### Boundary
+
+The read-only production workspace gate is now verified. Provider generation,
+result/save/reuse/reload, selected/focus/claim, recording, AOS changes, and
+external effects remain stopped because the official signed extension still
+does not advertise `foreground_activation` or `management`.
+
+### Restart point
+
+After an official capability advertisement change, run the mandatory Profile 2
+preflight and create a new owner. Then execute the approved fabric/printing
+same-run provider proof through result, save, Gallery/Canvas/History/Jobs,
+reuse, and reload, followed by AI fitting. Do not reuse r104's browser, tab,
+run, or artifact for foreground work.
+
 ## Current Chrome distribution checkpoint r103
 
 - The official Chrome/Profile 2 distribution changed to Chrome

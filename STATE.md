@@ -2,6 +2,43 @@
 
 Updated: 2026-08-20
 
+## Current production target-scoped readback r104
+
+- Mandatory Profile 2 preflight passed with `status=ready`, selector
+  `chrome_plugin` / Profile 2 / `signed_chrome_extension_profile2` / revision
+  `30`, and `exact_blocker=null`.
+- A fresh browser-client `-96c9-48fe-83ea-8cdf8bebe6c7` completed the same-run
+  list → get → `openTabs()` handshake. Owner session/thread/turn matched the
+  current run; the session boundary is
+  `6362f14c-990b-4ede-9e76-fc9e44faaf37`.
+- Heavy `/tools/fabric` was absent from the fresh inventory. Allowlisted
+  target-scoped provisioning created task-owned tab `1980904560`; after
+  hydration, same-run URL/title/DOM readback showed the Lightchain-shaped
+  fabric workbench with model/design and fabric image inputs, keyword, ratio,
+  fabric variants, `AI生成`, Gallery handoff, and `生成履歴`.
+- The authentication/workspace preparation shell was absent. `readyState` was
+  `complete`, and the generation button remained correctly disabled until
+  required inputs were supplied.
+- Only tab `1980904560` was closed and `cleanup_verified=true`. No selected,
+  focus, claim, foreground, upload, provider generation, save, reuse, reload,
+  recording, AOS change, or external effect occurred.
+- Artifact: `work/heavy-production-target-scoped-readback-20260820-r104.md`。
+
+### Current exact blocker / next action / restart point
+
+- Authentication/workspace readiness is verified for this fresh proof. The
+  remaining production blocker is
+  `chrome_foreground_activation_capability_unavailable`; the signed
+  distribution still does not advertise `foreground_activation` or
+  `management`.
+- Next action: keep target-scoped parity/read-only work available. After an
+  official capability advertisement change, create a new Profile 2 owner and
+  prove fabric/printing generation → result → save → Gallery/Canvas/History/
+  Jobs → reuse → reload, then repeat for AI fitting.
+- Restart point: official capability-state change, followed by the mandatory
+  Profile 2 preflight and a fresh list → get → `openTabs()` owner boundary.
+  Do not reuse r104's browser, tab, run, or artifact for foreground work.
+
 ## Current Chrome distribution capability canary r103
 
 - Official read-only diagnostics show Chrome `151.0.7922.170` and signed

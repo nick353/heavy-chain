@@ -2,6 +2,34 @@
 
 更新日: 2026-08-20
 
+## 0.0 current revision-30 production target overlay r104
+
+- Mandatory Profile 2 preflight passed with `status=ready` and
+  `exact_blocker=null` under selector revision `30`.
+- Fresh browser-client `-96c9-48fe-83ea-8cdf8bebe6c7` completed list → get →
+  `openTabs()` with current owner lineage. Session boundary:
+  `6362f14c-990b-4ede-9e76-fc9e44faaf37`.
+- Heavy `/tools/fabric` target-scoped provisioning created tab `1980904560`;
+  same-run URL/title/DOM readback reached `readyState=complete` and exposed
+  the Lightchain-shaped fabric workbench. Auth/workspace preparation was not
+  visible. Cleanup closed only the task-owned tab and verified its absence.
+- Artifact: `work/heavy-production-target-scoped-readback-20260820-r104.md`。
+
+| Requirement layer | Current status | Current evidence / gap |
+|---|---|---|
+| Profile 2 preflight/transport/openTabs/owner lineage | `verified` | fresh r104 same-run proof |
+| Heavy authenticated workspace and fabric assets | `verified` for current read-only proof | hydrated Lightchain-shaped fabric workbench |
+| Fabric/printing provider generation → result → save → reuse → reload | `PENDING_CONFIRMATION` | foreground capability unavailable; no effectful run |
+| Gallery/Canvas/History/Jobs same-run lineage | `PENDING_CONFIRMATION` | provider result not generated in this run |
+| AI-fitting production generation/save/reuse | `PENDING_CONFIRMATION` | scheduled after fabric/printing and capability gate |
+| Foreground-only execution | `PENDING_CONFIRMATION` | `foreground_activation`/`management` remain unadvertised |
+
+### r104 restart point
+
+After an official foreground-capability advertisement change, apply the
+mandatory Profile 2 preflight and use a new owner for foreground-dependent
+provider proof. Do not reuse r104's browser, tab, run, or artifact.
+
 ## 0.0 current revision-30 production target overlay r101
 
 - The auth-lock fix commit is `4a1cce4`; Zeabur deployment
