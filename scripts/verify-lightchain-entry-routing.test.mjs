@@ -28,6 +28,8 @@ test('keeps print-image try-on beside fabric simulation in graphics', async () =
 
 test('routes fabric search prompts to the simulation entry', async () => {
   const source = await readFile(entryPath, 'utf8');
+  const catalog = await readFile(catalogPath, 'utf8');
+  const app = await readFile(appPath, 'utf8');
   assert.match(source, /keywords: \['生地', 'fabric', '布'\], featureId: 'fabric-simulation'/);
   assert.match(source, /keywords: \['プリント', 'print image', 'print design'\], featureId: 'printing-image'/);
   assert.ok(
@@ -38,9 +40,10 @@ test('routes fabric search prompts to the simulation entry', async () => {
     source.indexOf("featureId: 'printing-image'") < source.indexOf("featureId: 'canvas-editing'"),
     'print prompts must be classified before generic editing prompts',
   );
-  assert.match(source, /'\/lightchain\/fabric-image': Shirt/);
-  assert.match(source, /'\/tools\/fabric': Shirt/);
-  assert.match(source, /'\/lightchain\/printing-image': Palette/);
+  assert.match(catalog, /id: 'fabric-simulation',[\s\S]*?route: '\/tools\/fabric'/);
+  assert.match(catalog, /id: 'printing-image',[\s\S]*?route: '\/tools\/printing'/);
+  assert.match(app, /path="\/lightchain\/fabric-image"/);
+  assert.match(app, /path="\/lightchain\/printing-image"/);
 });
 
 test('does not expose the compact hub count as the detailed workbench count', async () => {
