@@ -4156,3 +4156,40 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`。
 - Next action: 公式capability広告後に新規Profile 2 ownerで広告→`openTabs()`→owner lineageを1回確認する。
 - Restart point: capability state change後のfresh official owner。r53のbinding／tab／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Current Lightchain selector-rev4 fresh parity readback r54
+
+- Fresh current-selector Lightchain homepage and priority-route readback passed
+  under official Chrome Plugin/Profile 2. Homepage categories/cards and
+  `/tools/fabric`, `/tools/printing`, `/model` URL/title/DOM/visible controls are
+  recorded in `work/lightchain-profile2-current-selector-rev4-readback-20260820-r54.md`.
+- Target-owned tabs `1980904218`, `1980904227`, `1980904230`, `1980904232` were
+  cleaned up. No selected/focus/claim, upload, provider generation, save,
+  reuse, reload, recording, or external effect occurred.
+- Current Lightchain live per-feature behavior and Heavy production provider
+  proof remain `PENDING_CONFIRMATION`; local Heavy contract/layout evidence is
+  not promoted to production completion.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: after the official capability or relevant authorization state
+  changes, create a fresh Profile 2 owner and continue Heavy production proof.
+- Restart point: changed dependency plus fresh official owner; do not reuse r54
+  bindings, tabs, runs, or alternate surfaces.
+
+## 2026-08-20 Current Lightchain selector-rev4 non-video route ledger r55
+
+- Current selector revision4で候補非動画19 routeのURL/title/DOM readbackを
+  fresh確認。初回10件に加え、未hydrated 9件をfocused 5秒 retryし、19/19が
+  `readyState=complete`・body取得まで到達した。
+- Artifact: `work/lightchain-profile2-current-selector-rev4-non-video-route-ledger-20260820-r55.md`。
+- route台帳はread-only画面証跡であり、生成、結果品質、保存、再利用、reload、
+  error/retry、production性能、β受入の完了を意味しない。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: capabilityまたは認証／権限状態変化後にfresh Profile 2 ownerで
+  Heavy production proofへ進む。
+- Restart point: 変更された依存状態＋fresh official owner。r55のbrowser／tab／Runは再利用しない。

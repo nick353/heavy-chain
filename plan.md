@@ -1166,3 +1166,28 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`。
 - Next action: 公式署名済み拡張／backendがforeground capabilityを広告した後、新規Profile 2 ownerで広告→`openTabs()`→owner lineageを1回確認し、foreground workを再開する。更新前はtarget-scoped read-onlyのみ継続する。
 - Restart point: capability state change後のfresh official owner。r53のbinding／tab／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Current Lightchain selector-rev4 fresh parity readback r54
+
+- Current selector revision 4でLightchain homepageと優先3 route
+  (`/tools/fabric`, `/tools/printing`, `/model`)をfresh target-scoped readbackした。
+- Homepageは4カテゴリ、動画除外対象を含む現行カード、hydration完了を確認。優先routeは安定待ち後に`readyState=complete`、入力／権限／履歴／生成ボタンの可視状態を確認した。
+- Artifact: `work/lightchain-profile2-current-selector-rev4-readback-20260820-r54.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。Lightchainのread-only画面証跡は更新できたが、生成・結果比較・保存・再利用・reloadは未確認。
+- Next action: 公式capabilityまたは認証／権限状態が変わった後、新規Profile 2 ownerでHeavyのfabric／printing実用フローを一度確認し、その後AI fittingへ進む。
+- Restart point: 状態変化後のfresh official owner。r54のbinding／tab／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Current Lightchain selector-rev4 non-video route ledger r55
+
+- 現行selector revision4で候補非動画19 routeをfresh target-scoped readbackした。初回10件＋focused hydration retry 9件で、19/19がURL/title/DOM取得済み。
+- Artifact: `work/lightchain-profile2-current-selector-rev4-non-video-route-ledger-20260820-r55.md`。
+- これはroute画面台帳であり、生成・結果品質・保存・Gallery/Canvas/History/Jobs・再利用・reload・エラー・性能の完了証跡ではない。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: capabilityまたは認証／権限状態変化後、新規Profile 2 ownerでfabric／printingの生成→結果→保存→連携→再利用→reload、その後AI fittingを実証する。
+- Restart point: 状態変化後のfresh official owner。r55のbrowser／tab／binding／Runは再利用しない。

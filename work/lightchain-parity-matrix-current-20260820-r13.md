@@ -1,4 +1,4 @@
-# Lightchain / Heavy parity matrix — current rev6 checkpoint r13 with r14 overlay
+# Lightchain / Heavy parity matrix — current-selector checkpoint r54 (historical overlays retained)
 
 更新日: 2026-08-20
 
@@ -600,3 +600,89 @@ Excluded rows:
 - Current parity source commit `426d6289f312df4c792c05d5fd754aeaf8eab32c` is pushed to `origin/main`.
 - Zeabur deployment `6a867ab9f1ea67ebf4ea6eec` is `RUNNING`; local and remote runtime bundle SHA-256 match.
 - The runtime deployment does not close the provider or beta acceptance rows. `chrome_foreground_activation_capability_unavailable`, real Chrome visual readback after deployment, Mac／Windows acceptance, G619, H601, launch-ops, and immutable source metadata remain `PENDING_CONFIRMATION`.
+
+## 2026-08-20 Current Lightchain selector-rev4 fresh parity overlay r54
+
+- Current selector source is `backend=chrome_plugin`, `Profile 2`,
+  `signed_chrome_extension_profile2`, `revision=4`; older revision-30/rev6
+  entries in this file remain historical provenance rather than current proof.
+- Fresh Lightchain homepage readback under the current selector passed URL/title,
+  hydration, and DOM. The four current categories and the video workstation
+  card were visible; video remains excluded from Heavy scope.
+- Fresh priority-route readback after a bounded stability wait passed
+  `readyState=complete` and visible-control readback for `/tools/fabric`,
+  `/tools/printing`, and `/model`. The current evidence is recorded in
+  `work/lightchain-profile2-current-selector-rev4-readback-20260820-r54.md`.
+- Fabric exposed `生地イメージ`, `モデル/デザイン画像`, `キーワード`,
+  `生成履歴`, and `権限がありません`; printing exposed `プリントイメージ`,
+  `参考画像をアップロード`, `スポット`, `全体`, `AI生成`, and `生成履歴`;
+  model exposed the AI-fitting task tabs and clothing/reference/model-set inputs,
+  with `権限がありません` and no visible `AI生成` in this readback.
+- All four task-owned tabs (`1980904218`, `1980904227`, `1980904230`,
+  `1980904232`) were cleaned up successfully. No selected/focus/claim,
+  authentication click/input, upload, provider generation, save, reuse, reload,
+  retry, recording, or external effect occurred.
+
+### Current behavioral parity boundary
+
+- Current Lightchain route/input/visible-control evidence: `verified` for the
+  homepage and the three priority route readbacks above.
+- Current Lightchain live per-feature generation/result/save/reuse/error and
+  production performance: `PENDING_CONFIRMATION`.
+- Heavy local non-video contract: `31/31`; unified desktop layout:
+  `228/228` at 1280/1440/1920/2560px; local acceptance evidence is recorded in
+  `work/heavy-chain-beta-local-acceptance-checkpoint-20260820-r52.md`.
+- Heavy target-scoped printing/model UI readback remains in
+  `work/heavy-chain-current-target-scoped-readback-20260820-r51.md`. It is a
+  separate same-surface read-only run, not production provider completion.
+- Production provider generation → result → save → Gallery/Canvas/History/Jobs
+  → reuse → reload, and the equivalent AI-fitting flow, remain
+  `PENDING_CONFIRMATION`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+  Current fresh capability advertisement is still `viewport` only; the
+  required `foreground_activation`／`management` capabilities are absent.
+- Separate open beta gates remain: G619 real sessions, H601 operator decisions,
+  authorized launch auth state, and Mac/Windows real-Chrome acceptance.
+- Next action: continue local parity and target-scoped read-only. After an
+  official capability or relevant authorization state change, create a fresh
+  Profile 2 owner and run the bounded printing/fabric production proof, then
+  AI fitting.
+- Restart point: the first changed dependency followed by a fresh official
+  Profile 2 owner. Do not reuse old bindings, tabs, runs, receipts, or another
+  browser surface.
+
+## 2026-08-20 Current Lightchain selector-rev4 non-video route ledger r55
+
+- Fresh current-selector target-scoped readback reached all 19 candidate
+  non-video routes. The first bounded pass had 10 complete DOM reads; the
+  remaining 9 were given one focused 5-second hydration retry in a new owner,
+  after which all 19 had `readyState=complete` and non-empty body readback.
+- The route list, current body markers, browser boundaries, and cleanup
+  evidence are recorded in
+  `work/lightchain-profile2-current-selector-rev4-non-video-route-ledger-20260820-r55.md`.
+- All task-owned provisioning tabs were closed successfully. No foreign tab,
+  selected/focus/claim, category mutation, upload, provider generation, save,
+  reuse, reload, recording, or external effect occurred.
+
+### Current parity boundary
+
+- Current Lightchain route reachability and read-only screen baseline:
+  `verified` for 19/19 candidate non-video routes.
+- Current Lightchain card-to-route mapping, per-feature generation/result/save/
+  reuse/retry/error/performance: `PENDING_CONFIRMATION`.
+- Heavy local non-video contract remains `31/31`; Heavy production provider
+  behavior remains separate and unverified.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable` for
+  foreground-only generation and persistence. The current signed extension
+  still does not advertise `foreground_activation`／`management`.
+- Next action: after a capability or relevant authorization state change,
+  create a fresh Profile 2 owner and prove fabric/printing generation → result
+  → save → Gallery/Canvas/History/Jobs → reuse → reload, then AI fitting.
+- Restart point: the changed dependency followed by a fresh official owner;
+  do not reuse r55 browser ids, tabs, bindings, or runs.
