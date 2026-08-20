@@ -262,17 +262,16 @@ test('focused placement requires an explicit decision before generation and supp
   assert.doesNotMatch(cancelBlock, /setPrintPlacementConfirmed\(true\)/);
 });
 
-test('printing exposes one ordered readiness funnel before generation', () => {
-  assert.match(page, /data-testid="printing-readiness-summary"/);
-  assert.match(page, /data-testid="printing-readiness-summary"[\s\S]*?aria-live="polite"[\s\S]*?className="sr-only"/);
-  assert.match(page, /data-testid="printing-readiness-count"/);
-  assert.match(page, /data-testid="printing-next-action" role="status"/);
-  assert.match(page, /入力 → マスク → 配置 → 生成/);
+test('printing keeps readiness state internal and does not add Heavy-only visible chrome', () => {
+  assert.doesNotMatch(page, /data-testid="printing-readiness-summary"/);
+  assert.doesNotMatch(page, /data-testid="printing-readiness-count"/);
+  assert.doesNotMatch(page, /data-testid="printing-next-action"/);
+  assert.match(page, /const printingReadinessSteps = isPrinting \? \[/);
+  assert.match(page, /const printingReadinessCompleteCount = printingReadinessSteps\.filter/);
   assert.match(page, /printGarmentCutoutState === 'processing'/);
   assert.match(page, /const printDesignsReady = placedPrintDesignLayers\.length > 0[\s\S]*layer\.cutoutState === 'done'[\s\S]*Boolean\(layer\.originalUrl\)[\s\S]*Boolean\(layer\.displayUrl\)/);
   assert.match(page, /complete: printDesignsReady/);
   assert.match(page, /printPlacementConfirmed && !printPlacementSessionOpen/);
-  const readiness = page.indexOf('data-testid="printing-readiness-summary"');
   const details = page.indexOf('data-testid={isPrinting ? \'printing-control-rail-details\' : undefined}');
   // The workbench handler accepts a request-local rights-confirmation option,
   // so the pinned button intentionally invokes it through a no-argument
@@ -282,7 +281,7 @@ test('printing exposes one ordered readiness funnel before generation', () => {
     page.indexOf('onClick={handleGenerate}'),
   );
   assert.ok(generate >= 0, 'printing must expose a pinned generate action');
-  assert.ok(details < readiness && readiness < generate, 'readiness must appear before the pinned generate action');
+  assert.ok(details >= 0 && details < generate, 'printing controls must remain before the pinned generate action');
 });
 
 test('printing keeps accessible coverage controls available at 5/5 readiness and preserves the payload mode', () => {

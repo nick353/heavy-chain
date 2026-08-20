@@ -4440,27 +4440,6 @@ export function LightchainMaterialWorkbenchPage() {
   useEffect(() => {
     setFlowState(materialFlowState);
   }, [materialFlowState, setFlowState]);
-  const printingNextAction = !currentBrand?.id
-    ? 'ブランドを選択してください'
-    : !printGarment
-      ? '参考画像を追加してください'
-      : printGarmentCutoutState === 'processing'
-        ? '服の認識範囲を作成中です'
-          : (!printGarmentProcessed || printGarmentCutoutState !== 'done')
-            ? '服を選択してAIマスクを確認してください'
-          : printDesignLayers.length === 0
-            ? 'デザイン画像を追加してください'
-            : !printDesignsReady
-              ? printDesignsProcessing
-                ? 'デザインの透明化完了を待ってください'
-                : printDesignsErrored
-                  ? '透明化に失敗したデザインを削除または再選択してください'
-                  : 'デザインの表示準備を完了してください'
-            : !hasConfirmedPrintGarmentMask
-              ? '青い認識範囲を確認して確定してください'
-              : (!printPlacementConfirmed || printPlacementSessionOpen)
-                ? '配置を開いて「決定」を押してください'
-                : '生成できます';
   const activeMaterialTab = getLightchainMaterialTab(isPrinting ? 'printing-image' : 'fabric-image');
   const activeMaterialInputs = LIGHTCHAIN_MATERIAL_INPUTS[isPrinting ? 'printing-image' : 'fabric-image'];
 
@@ -4566,51 +4545,6 @@ export function LightchainMaterialWorkbenchPage() {
               ? 'xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-contain xl:pr-1 xl:[scrollbar-gutter:stable]'
               : ''}`}
           >
-          {isPrinting && (
-            <section
-              data-testid="printing-readiness-summary"
-              aria-label="プリント生成前の準備状況"
-              aria-live="polite"
-              className="sr-only"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200/75">生成前の準備</p>
-                  <p className="mt-1 text-sm font-semibold text-white">入力 → マスク → 配置 → 生成</p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-cyan-100/65">Lightchainの入口と同じ順番で、未完了の手順を一つにまとめています。</p>
-                </div>
-                <span
-                  data-testid="printing-readiness-count"
-                  className="shrink-0 rounded-full border border-cyan-200/30 bg-cyan-200/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-50"
-                >
-                  {printingReadinessCompleteCount}/{printingReadinessSteps.length} 完了
-                </span>
-              </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                {printingReadinessSteps.map((step, index) => (
-                  <div
-                    key={step.id}
-                    className={`flex items-start gap-2 rounded-xl border px-2.5 py-2 ${step.complete ? 'border-emerald-300/25 bg-emerald-300/[0.08]' : 'border-white/10 bg-black/15'}`}
-                  >
-                    <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${step.complete ? 'bg-emerald-300 text-emerald-950' : 'border border-white/20 text-white/55'}`}>
-                      {step.complete ? <Check className="h-3 w-3" /> : index + 1}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="flex items-center gap-2 text-xs font-semibold text-white">
-                        {step.label}
-                        <span className={step.complete ? 'text-emerald-200' : 'text-white/45'}>{step.complete ? '完了' : '未完了'}</span>
-                      </span>
-                      <span className="mt-0.5 block text-[10px] leading-relaxed text-white/55">{step.detail}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p data-testid="printing-next-action" role="status" className="mt-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[11px] leading-relaxed text-cyan-50">
-                次の操作: <span className="font-semibold">{printingNextAction}</span>
-              </p>
-            </section>
-          )}
-
           <div className="flex items-start gap-3">
             <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-500/20 text-primary-200">
               {isPrinting ? <Scissors className="h-5 w-5" /> : <Layers3 className="h-5 w-5" />}

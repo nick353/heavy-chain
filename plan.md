@@ -1238,3 +1238,15 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Readback blocker: `chrome_extension_target_readback_timeout` (fresh target-scoped DOM call; do not reuse its binding).
 - Next action: after a browser/runtime state change, use a new Profile 2 owner for one target-scoped DOM readback. If the official extension advertises `foreground_activation` or `management`, first perform the same-run capability/lineage check, then resume fabric/printing provider → save → Gallery/Canvas/History/Jobs → reuse → reload and AI fitting.
 - Restart point: new official Profile 2 browser-client after the relevant state change; do not reuse r60 browser, binding, tab, or run.
+
+## 2026-08-20 Exact Lightchain printing surface cleanup r61
+
+- Removed the readiness panel from the rendered and accessibility tree entirely; only the internal readiness calculation remains for flow-state and generation guards. This makes the `/tools/printing` shell closer to the current Lightchain production surface instead of retaining hidden Heavy-only copy.
+- Focused printing interaction contract passed `51/51`; material contract `17/17`; typecheck, zero-warning lint, production build (`2607 modules transformed`), and unified desktop layout (`228/228`, failed `0`, cleanup leftovers `0`) passed.
+- Artifact: `work/heavy-local-lightchain-extra-ui-removal-20260820-r61.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_extension_target_readback_timeout` for the latest fresh target-scoped DOM proof; `chrome_foreground_activation_capability_unavailable` for provider work.
+- Next action: push this source change, wait for its source-associated deployment to reach `RUNNING`, then use a new official Profile 2 browser-client for one target-scoped `/tools/printing` DOM readback. Do not reuse the timed-out binding.
+- Restart point: new deployment plus fresh official owner; only after visual readback passes can this UI cleanup be promoted to production parity proof.

@@ -4237,3 +4237,15 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable` for provider generation/save/reuse/reload; `chrome_extension_target_readback_timeout` for the latest visual DOM proof.
 - Next action: after a browser/runtime state change, create a new official Profile 2 owner and perform one target-scoped DOM readback. After official foreground capability advertisement, resume the same-run fabric/printing production flow and then AI fitting.
 - Restart point: new official owner after the relevant state change; do not reuse r60 browser/binding/tab/run.
+
+## 2026-08-20 Exact Lightchain printing surface cleanup r61
+
+- Removed the Heavy-only printing readiness panel from both rendered and accessibility output. Internal readiness state still drives flow status and generation safety; persistence, mask, placement, rights, history, and reuse contracts remain.
+- Current local proof: printing interaction `51/51`, material contract `17/17`, typecheck/lint/build (`2607 modules`), and desktop `228/228` with zero failures and zero cleanup leftovers. Artifact: `work/heavy-local-lightchain-extra-ui-removal-20260820-r61.md`.
+- A fresh production visual readback is still required after the new deployment; the previous target-scoped DOM call timed out at `Runtime.evaluate` and is not promoted.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_extension_target_readback_timeout` for visual DOM proof; `chrome_foreground_activation_capability_unavailable` for provider generation/save/reuse/reload.
+- Next action: push and verify the source-associated deployment, then create a new official Profile 2 owner and run one target-scoped `/tools/printing` DOM readback. Keep foreground provider work fail-closed.
+- Restart point: new deployment plus fresh official owner; do not reuse r60 browser/binding/tab/run.
