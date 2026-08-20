@@ -2,6 +2,35 @@
 
 Updated: 2026-08-20
 
+## Current Chrome distribution capability canary r103
+
+- Official read-only diagnostics show Chrome `151.0.7922.170` and signed
+  Profile 2 extension `1.2.27267.15375_0`; the extension is installed/enabled
+  and the native host manifest is correct.
+- After the mandatory preflight (`status=ready`, current selector revision
+  `30`, `exact_blocker=null`), a fresh browser-client
+  `-30b9-4094-9522-7723e870f423` completed list → get → `openTabs()` with
+  2 tabs and owner lineage matching the current turn.
+- The new distribution still advertises only browser `viewport` and tab
+  `pageAssets`/`cdp`; `foreground_activation`/`management` remain unadvertised.
+- One target-scoped Heavy provisioning attempt created task-owned tab
+  `1980904554`, but the inline DOM extractor itself failed with an
+  `instanceof` evaluator error. Official cleanup then closed that tab and a
+  fresh `openTabs()` verified `cleanup_verified=true`.
+- Artifact: `work/chrome-plugin-profile2-capability-canary-20260820-r103.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker remains `chrome_foreground_activation_capability_unavailable`.
+  The r103 target DOM is `PENDING_CONFIRMATION` because the local extractor
+  failed; this does not invalidate the earlier successful hydrated r101 Heavy
+  readback.
+- Next action: wait for an official distribution that advertises
+  `foreground_activation` or `management`. Do not repeat the same capability
+  fingerprint or use the failed r103 target attempt as business proof.
+- Restart point: a new official distribution state, followed by the mandatory
+  Profile 2 preflight and one fresh list → get → `openTabs()` owner boundary.
+
 ## Current local completion audit r102
 
 - Current HEAD passed `verify:lightchain-all-features` with

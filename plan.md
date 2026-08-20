@@ -2,6 +2,25 @@
 
 更新日: 2026-08-20
 
+## Current Chrome distribution checkpoint r103
+
+- The official Chrome/Profile 2 distribution changed to Chrome
+  `151.0.7922.170` with signed extension `1.2.27267.15375_0`; installed/enabled
+  and native-host checks pass.
+- Mandatory Profile 2 preflight passed, and a fresh browser-client completed
+  list → get → `openTabs()` under selector revision `30`.
+- The distribution still does not advertise `foreground_activation` or
+  `management`. One target-scoped Heavy provisioning attempt was cleaned up
+  successfully, but its inline DOM extractor failed locally with an
+  `instanceof` evaluator error, so that target DOM is `PENDING_CONFIRMATION`.
+- Artifact: `work/chrome-plugin-profile2-capability-canary-20260820-r103.md`。
+
+### Boundary
+
+Keep provider generation, save/reuse/reload, selected/focus/claim, recording,
+AOS changes, and external effects stopped. The next valid restart point is a
+new official capability advertisement followed by a fresh Profile 2 owner.
+
 ## Current local checkpoint r102
 
 - The current HEAD passed `verify:lightchain-all-features` with all 31
