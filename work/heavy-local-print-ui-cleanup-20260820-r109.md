@@ -24,15 +24,32 @@ the inputs.
 - `npm run --silent test:printing-foundation`: 244/244 PASS
 - `npm run --silent typecheck`: PASS
 
+## deployment and fresh readback
+
+- commit: `93a2d9beb797b48b1d702c0b0e8d2732fcfbb05b`
+- deployment: `6a86cfbaacafc201d503219c`
+- deployment status: `RUNNING`
+- selector: `chrome_plugin` / Profile 2 / `signed_chrome_extension_profile2` /
+  revision `30`
+- browser-client: `-ea87-4fa5-89f8-5e71eebaba72`
+- target descriptor: tab `1980904576`
+- target URL/title: `https://heavy-chain.zeabur.app/tools/printing` /
+  `Heavy Chain | AI制作ワークスペース`
+- `readyState=complete`
+- extra controls absent: `画像のプリント領域を調整=false`, `↻ リセット=false`
+- Lightchain controls present: `参考画像をアップロード`, `プリントをアップロード`,
+  `スポット`, `全体`, `AI生成`, `生成履歴`
+- `cleanup_verified=true`
+
 ## remaining blocker
 
-This local UI change is not yet deployed or fresh-read from Heavy production.
 Provider generation → save → reuse → reload remains
-`chrome_foreground_activation_capability_unavailable` until the official
-Profile 2 lane advertises the required foreground capability.
+`PENDING_CONFIRMATION` under
+`chrome_foreground_activation_capability_unavailable`. The readback above is
+read-only and did not upload, generate, save, reuse, or change external state.
 
 ## next action
 
-Build, deploy the tracked UI change to the existing Heavy service, then run one
-fresh Profile 2 target-scoped read-only readback of `/tools/printing` and
-confirm the extra controls are absent while the Lightchain controls remain.
+Continue with the foreground-capability gate for the fabric/printing practical
+flow. Do not repeat this UI readback fingerprint unless the production bundle
+or current source changes again.
