@@ -4366,4 +4366,17 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 ### Current exact blocker / next action / restart point
 
 - `chrome_foreground_activation_capability_unavailable` remains the production provider blocker; `chrome_extension_target_readback_target_session_not_owned` remains the current-selector card readback blocker.
+@@
 - Next action: wait for official capability or supported target-session state change, then use a fresh owner for the remaining production proof. Do not reuse old binding/tab/run/artifact.
+
+## 2026-08-20 Fresh Chrome update capability proof r72
+
+- A fresh official Chrome Plugin/Profile 2 browser-client `-1eed-4e4d-b215-ddfbc6d322ad` passed same-run capability advertisement and `openTabs()` under selector revision 4. The current signed extension instance is `f48b15fe-59a8-4443-8369-44b169a4da68`.
+- Advertised capabilities are browser `viewport` and tab `pageAssets/cdp`; `foreground_activation` and `management` remain unadvertised. The same-run inventory had no Heavy or Lightchain target descriptor, so target-scoped readback was not attempted.
+- Current thread/session/turn lineage matched. No selected/focus/claim/foreground lease, provisioning, navigation, generation, save/reuse, recording, or external effect occurred. Artifact: `work/chrome-plugin-capability-open-tabs-20260820-r6.json`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: preserve foreground provider and persistence fail-closed; continue target-scoped read-only only from a fresh exact target descriptor, or local parity QA. Do not repeat this capability fingerprint until official distribution state changes.
+- Restart point: official foreground capability advertisement, then fresh Profile 2 owner → capability → `openTabs()` → lineage proof. Do not reuse the r72 browser/binding/tab/run/artifact.

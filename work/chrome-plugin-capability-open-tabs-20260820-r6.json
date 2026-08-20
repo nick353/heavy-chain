@@ -1,0 +1,67 @@
+{
+  "schema": "heavy-chain.chrome-plugin-capability-proof.v1",
+  "recorded_at": "2026-08-20T07:04:47.000Z",
+  "selector": {
+    "backend": "chrome_plugin",
+    "revision": 4,
+    "chrome_profile": {
+      "id": "profile2",
+      "name": "Profile 2",
+      "surface": "signed_chrome_extension_profile2"
+    }
+  },
+  "browser_client": {
+    "browser_id": "-1eed-4e4d-b215-ddfbc6d322ad",
+    "family": "chrome",
+    "type": "extension",
+    "extension_id": "hehggadaopoacecdllhhajmbjkdcmajg",
+    "extension_instance_id": "f48b15fe-59a8-4443-8369-44b169a4da68",
+    "profile_name": "Nicky",
+    "profile_ordering": "2",
+    "same_run": {
+      "call_id": "exec-074df307-6a16-4fb2-952b-2a30492ca942",
+      "thread_id": "01a01576-c224-7d81-902f-561719dc45a5",
+      "session_id": "01a01576-c224-7d81-902f-561719dc45a5",
+      "turn_id": "01a01dfc-93fd-7740-ae73-58eb37921e56"
+    }
+  },
+  "capability_advertisement": {
+    "browser": ["viewport"],
+    "tab": ["pageAssets", "cdp"],
+    "foreground_activation": false,
+    "management": false
+  },
+  "open_tabs": [
+    {
+      "id": "1980904103",
+      "title": "拡張機能 - ChatGPT",
+      "url": "chrome://extensions/?id=hehggadaopoacecdllhhajmbjkdcmajg"
+    },
+    {
+      "id": "1980904033",
+      "title": "非アクティブ期間があったため、あなたのデータを保護するためにこのフォームが閉じられました。再度応募プロセスを開始するには下のボタンをクリックしてください。",
+      "url": "https://jobs.smartrecruiters.com/oneclick-ui/session/expired?redir_uri=%2Foneclick-ui%2Fcompany%2FCanva%2Fpublication%2F33f10510-32d6-43d1-95f7-e87c83dcb234%3Fdcr_ci%3DCanva"
+    },
+    {
+      "id": "1980904034",
+      "title": "Japan SEO Content Specialist , Tokyo, Tokyo, Japan | Canva Careers",
+      "url": "https://www.lifeatcanva.com/en/jobs/6000000001269952/japan-seo-content-specialist/"
+    }
+  ],
+  "target_inventory": {
+    "heavy_chain": "absent",
+    "lightchain": "absent",
+    "exact_target_scoped_readback": "not_attempted_no_target_descriptor"
+  },
+  "foreground": {
+    "selected": "not_called",
+    "focus": "not_called",
+    "claim": "not_called",
+    "foreground_lease": "not_called"
+  },
+  "external_effect_executed": false,
+  "cleanup_verified": true,
+  "exact_blocker": "chrome_foreground_activation_capability_unavailable",
+  "next_action": "Wait for official foreground_activation or management advertisement, then create a new Profile 2 owner and repeat capability -> openTabs -> lineage proof.",
+  "restart_point": "Official capability state change; do not reuse this browser client, binding, tab, run, or artifact."
+}

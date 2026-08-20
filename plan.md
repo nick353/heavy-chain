@@ -1372,5 +1372,19 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 ### Current exact blocker / next action / restart point
 
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`; the current-selector card readback blocker remains `chrome_extension_target_readback_target_session_not_owned`.
+@@
 - Next action: do not retry this capability fingerprint. After official capability or supported target-session state change, create a new Profile 2 owner and resume the remaining production proof.
 - Restart point: changed official distribution/session state plus fresh same-run owner lineage; old binding, tab, run, and artifact remain historical.
+
+## 2026-08-20 Fresh Chrome update capability proof r72
+
+- After the user's Chrome update, a new official Chrome Plugin/Profile 2 browser-client `-1eed-4e4d-b215-ddfbc6d322ad` was initialized from current selector revision 4. Same-run capability advertisement and `openTabs()` succeeded.
+- The signed extension instance `f48b15fe-59a8-4443-8369-44b169a4da68` advertised browser `viewport` and tab `pageAssets/cdp` only. `foreground_activation` and `management` were absent.
+- The current same-run inventory contained only the Chrome extensions page and two Canva job pages; no Heavy Chain or Lightchain target descriptor was present. No selected/focus/claim/foreground lease, provisioning, navigation, generation, save, reuse, recording, or external effect occurred.
+- Browser-client lineage matched the current thread/session/turn. Artifact: `work/chrome-plugin-capability-open-tabs-20260820-r6.json`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: keep foreground provider generation and persistence fail-closed; continue only target-scoped read-only when a fresh exact target descriptor is available, or local parity QA. Do not retry this capability fingerprint without an official capability/distribution state change.
+- Restart point: official `foreground_activation` or `management` advertisement, then a new Profile 2 owner and one same-run capability → `openTabs()` → lineage check. Do not reuse r72 browser/binding/tab/run/artifact.
