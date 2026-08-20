@@ -2,6 +2,40 @@
 
 Updated: 2026-08-20
 
+## Current Heavy fabric production readback r119
+
+- Fresh current-selector target-scoped read-only readback completed in a new
+  Profile 2 owner: selector revision `30`, preflight `status=ready`,
+  `exact_blocker=null`.
+- Boundary `2352e2cb-9a95-4189-96cb-8cf9593a7538`, browser id
+  `-9cb2-499b-b4f6-315c7a18ffc1`, and same-run `list -> get -> openTabs` were
+  recorded before target admission.
+- Heavy `/tools/fabric` target `1980904694` returned URL
+  `https://heavy-chain.zeabur.app/tools/fabric`, title `Lightchain AI`,
+  `readyState=complete`, body length `512`, and `36` visible controls.
+- Fresh UI showed fabric/print/line-art/flat-sketch entries, model/design and
+  fabric inputs, Gallery entry points, ratio controls, `AI生成`, and
+  `生成履歴`. Task-owned cleanup was verified.
+- Artifact:
+  `work/heavy-chain-current-fabric-target-scoped-readback-20260820-r119.md`。
+
+### Boundary
+
+The authenticated fabric workbench is currently present and ready at the UI
+contract level. This read-only proof does not prove provider generation,
+durable save, Gallery/Canvas/History/Jobs lineage, reuse/reload, or internal
+beta acceptance.
+
+### Current exact blocker / next action / restart point
+
+- `chrome_foreground_activation_capability_unavailable` remains the blocker for
+  provider generation and persistence stages; the official extension still
+  advertises only read-only capabilities.
+- Next action: after the official capability changes, run a new Profile 2
+  owner and prove fabric/printing end to end, then AI fitting.
+- Restart point: discard this read-only binding, tab, run, and artifact for
+  foreground work; do not reuse them.
+
 ## Current Lightchain fresh source baseline r118
 
 - Fresh current-selector read-only source confirmation completed with the

@@ -2,6 +2,30 @@
 
 更新日: 2026-08-20
 
+## Current Heavy fabric production readback checkpoint r119
+
+- Fresh Profile 2 target-scoped read-only readback completed under selector
+  revision `30` with preflight `status=ready` and `exact_blocker=null`.
+- New browser boundary `2352e2cb-9a95-4189-96cb-8cf9593a7538`, browser id
+  `-9cb2-499b-b4f6-315c7a18ffc1`, and same-run `list -> get -> openTabs` were
+  used. Heavy `/tools/fabric` target `1980904694` returned `Lightchain AI`,
+  `readyState=complete`, body length `512`, and `36` visible controls.
+- The fresh workbench exposed model/design and fabric library inputs, Gallery
+  entry points, material/print/line-art/flat-sketch choices, ratios, `AI生成`,
+  and `生成履歴`. Task-owned cleanup was verified.
+- Artifact:
+  `work/heavy-chain-current-fabric-target-scoped-readback-20260820-r119.md`。
+
+### Boundary / next action
+
+This closes the current authenticated fabric UI-readiness check only. It does
+not prove provider generation, result quality, durable save,
+Gallery/Canvas/History/Jobs lineage, reuse/reload, Mac/Windows acceptance, or
+internal-user beta acceptance. The exact provider blocker remains
+`chrome_foreground_activation_capability_unavailable`. After its official
+resolution, create a new Profile 2 owner and prove fabric/printing first,
+then AI fitting; do not reuse this read-only binding, tab, run, or artifact.
+
 ## Current Lightchain fresh source baseline checkpoint r118
 
 - Fresh current-selector Profile 2 target-scoped read-only source readback
