@@ -2,6 +2,31 @@
 
 Updated: 2026-08-20
 
+## Current target-scoped action dispatch readback r124
+
+- Fresh Profile 2 read-only admission succeeded for Heavy `/tools/printing`.
+  A target-scoped click was then attempted against the exact
+  `use-trusted-blank-garment` control with `effectMode=authorized_target_scoped`.
+- A new task tab and fresh descriptor were used with the correct official
+  `timeoutMs` callback option, but dispatch still returned
+  `chrome_extension_target_action_dispatch_failed`. Direct post-failure
+  readback showed no state change, so the click was not replayed.
+- Artifact:
+  `work/heavy-target-action-dispatch-readback-20260820-r124.md`。
+
+### Boundary / current exact blockers / next action
+
+- Read-only target-scoped parity remains healthy.
+- Mutating target-scoped workflow entry is currently blocked by
+  `chrome_extension_target_action_dispatch_failed`; raw cause diagnosis is
+  delegated to the shared Chrome Plugin thread. Foreground-only operations
+  remain separately blocked by
+  `chrome_foreground_activation_capability_unavailable`.
+- Next action: after the shared action lane's raw cause is resolved, create a
+  fresh owner and execute the approved fabric/printing action sequence once,
+  with same-tab post-readbacks. Do not reuse tab `1980904727`, its binding, or
+  its failed action receipt.
+
 ## Current provider-result presentation readback r123
 
 - Commit `298232b` is deployed as Zeabur Docker deployment

@@ -2,6 +2,26 @@
 
 更新日: 2026-08-20
 
+## Current target-scoped action dispatch readback r124
+
+- Fresh target-scoped read-only Heavy `/tools/printing` admission succeeded.
+- The first approved input-preparation click was attempted once using a new
+  task-owned tab and the corrected `timeoutMs` callback contract, but the
+  official action lane returned
+  `chrome_extension_target_action_dispatch_failed`.
+- The state was read back without replay; no click effect was observed and the
+  task tab was cleaned up. Artifact:
+  `work/heavy-target-action-dispatch-readback-20260820-r124.md`。
+
+### Boundary / next action
+
+Read-only parity work can continue. Mutating target-scoped work must wait for
+the shared Chrome thread to expose and resolve the raw dispatch cause. The
+foreground capability blocker remains relevant only to foreground-only
+operations. After the shared action lane is healthy, start a fresh owner and
+prove fabric/printing generation → persistence → Gallery/Canvas/History/Jobs →
+reuse, then AI fitting, without reusing the failed action tab or receipt.
+
 ## Current provider-result presentation readback r123
 
 - Commit `298232b` was deployed to the verified Heavy Chain service as Docker
