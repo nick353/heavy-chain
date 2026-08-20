@@ -4283,3 +4283,15 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blockers: `chrome_foreground_activation_capability_unavailable`; `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`; human-owned H601/G619 decisions.
 - Next action: await official foreground capability and authorized beta/operator inputs, then run the remaining production business-flow and acceptance gates.
 - Restart point: fresh official Profile 2 owner after capability change; rerun human/launch gates only after required inputs change.
+
+## 2026-08-20 Chrome update capability readback r65
+
+- The source thread performed the requested post-Chrome-update fresh official Profile 2 check using selector revision 4. New browser-client `-6708-4cbb-aa93-c98af5348cd7` passed `capabilities.list()` and `openTabs()` with 11 tabs.
+- The signed distribution advertised `viewport` only. `foreground_activation` and `management` were both absent. Same-run owner/session/thread/turn lineage matched; selected/focus/claim/foreground lease and external effects were not attempted.
+- Fresh artifact: `/Users/nichikatanaka/Documents/New project/work/chrome-plugin-capability-open-tabs-20260820-r4.json`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: keep Heavy provider generation, save, Gallery/Canvas/History/Jobs reuse, and reload fail-closed. Continue target-scoped read-only and local parity QA only, without retrying the same capability fingerprint.
+- Restart point: official capability advertisement state change, then a new Profile 2 owner for one capability → `openTabs()` → lineage proof. Do not reuse the r65 browser/binding/tab/run.

@@ -1286,3 +1286,15 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blockers: `chrome_foreground_activation_capability_unavailable`, `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`, and human-owned H601/G619 acceptance decisions.
 - Next action: official Chrome capability advertisement for provider proof; authorized operator supplies H601/G619/launch inputs. Do not fabricate evidence or cross human-only gates.
 - Restart point: capability state change plus fresh Profile 2 owner for business flow; separately rerun gates only after their required inputs change.
+
+## 2026-08-20 Chrome update capability readback r65
+
+- After the user's Chrome update, a new official Chrome Plugin/Profile 2 browser-client was created from the current selector revision 4. Same-run `capabilities.list()` succeeded, advertising `viewport` only; `foreground_activation` and `management` remained unadvertised.
+- Same-run `openTabs()` succeeded with 11 tabs and owner/session/thread/turn lineage matched. `selected()`, focus, claim, foreground lease, Heavy operations, and external effects were not used.
+- Fresh source-thread artifact: `/Users/nichikatanaka/Documents/New project/work/chrome-plugin-capability-open-tabs-20260820-r4.json`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: keep provider generation, result save, Gallery/Canvas/History/Jobs reuse, and reload proof fail-closed; continue only target-scoped read-only or local parity work. Do not retry this capability fingerprint without an official distribution/capability state change.
+- Restart point: official `foreground_activation` or `management` advertisement, followed by a new Profile 2 owner and one same-run capability → `openTabs()` → lineage check. Do not reuse the r65 browser, binding, tab, or run.
