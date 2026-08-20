@@ -2,6 +2,24 @@
 
 Updated: 2026-08-20
 
+## Current local completion audit r102
+
+- Current HEAD passed `verify:lightchain-all-features` with
+  `featureCount=31`, `failed=[]`.
+- Current HEAD passed the unified desktop verifier with `228/228` completed,
+  `failed=0`, `globalTimedOut=false`, and `cleanupLeftovers=0`.
+- Focused contracts passed: material `3/3`, provider persistence `13/13`,
+  provider coverage `18/18`, workspace handoff `2/2`, material/printing
+  contract `20/20`, Library/Canvas `5/5`, and workspace activity `12/12`.
+- Artifact: `work/heavy-local-completion-audit-20260820-r4.md`。
+
+### Current boundary
+
+The local non-video and desktop contract gates are green. They do not replace
+production provider generation/result/save/reuse/reload, real Mac/Windows
+acceptance, or internal beta acceptance. The production provider stage remains
+fail-closed on `chrome_foreground_activation_capability_unavailable`.
+
 ## Current production target-scoped readback r101
 
 - Auth-lock fix commit `4a1cce4` was deployed to the existing Heavy Chain
