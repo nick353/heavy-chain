@@ -62,6 +62,12 @@ test('Lightchain header uses the avatar identity instead of Heavy account chrome
   assert.doesNotMatch(source, /aria-label="アカウント"[\s\S]{0,220}isLightAccountMenuOpen/);
 });
 
+test('Lightchain routes use the current Lightchain browser title', async () => {
+  const source = await readFile(layoutSourcePath, 'utf8');
+
+  assert.match(source, /document\.title = isLightchainRoute \? 'Lightchain AI' : 'Heavy Chain \| AI制作ワークスペース'/);
+});
+
 test('fitting and line-to-real settings are stateful and persisted into the workbench contract', async () => {
   const source = await readFile(workbenchSourcePath, 'utf8');
 

@@ -74,6 +74,14 @@ export function Layout() {
     setIsLightAccountMenuOpen(false);
   }, [location.pathname, location.search]);
 
+  useEffect(() => {
+    const previousTitle = document.title;
+    document.title = isLightchainRoute ? 'Lightchain AI' : 'Heavy Chain | AI制作ワークスペース';
+    return () => {
+      document.title = previousTitle;
+    };
+  }, [isLightchainRoute]);
+
   return (
     <div className="min-h-screen bg-surface-50 dark:bg-surface-950 text-neutral-800 dark:text-neutral-100 font-sans transition-colors duration-700 overflow-x-clip selection:bg-primary-200 selection:text-primary-900">
       {/* Skip Link for Accessibility */}
