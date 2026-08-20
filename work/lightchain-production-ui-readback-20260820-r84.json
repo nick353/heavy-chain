@@ -1,0 +1,79 @@
+{
+  "schema": "heavy_chain_lightchain_production_ui_readback.v1",
+  "captured_at": "2026-08-20T08:10:40.277Z",
+  "deployment": {
+    "project_id": "69df815a554543d46b0f2485",
+    "service_id": "6a318803302ffbcd03a92935",
+    "service_name": "heavy-chain",
+    "deployment_id": "6a86b56499ff31c1168ac130",
+    "deployment_status": "RUNNING",
+    "source_commit": "01e6e40dd5daf2d491b106098dbd0e33e5615606"
+  },
+  "selector": {
+    "backend": "chrome_plugin",
+    "profile": "Profile 2",
+    "surface": "signed_chrome_extension_profile2",
+    "revision": 6
+  },
+  "browser": {
+    "browser_id": "-f572-45ae-86c3-7eab9bd82ccd",
+    "family": "chrome",
+    "type": "extension",
+    "extension_id": "hehggadaopoacecdllhhajmbjkdcmajg",
+    "extension_instance_id": "f48b15fe-59a8-4443-8369-44b169a4da68",
+    "profile_ordering": "2",
+    "open_tabs_count": 3,
+    "open_tabs_handshake": "PASS",
+    "owner_lineage": {
+      "session_id": "01a01576-c224-7d81-902f-561719dc45a5",
+      "thread_id": "01a01576-c224-7d81-902f-561719dc45a5",
+      "turn_id": "01a01e31-4533-7ac3-8853-5430a9b71f14",
+      "match": true
+    },
+    "advertised_capabilities": {
+      "browser": ["viewport"],
+      "tab": ["pageAssets", "cdp"],
+      "foreground_activation": false,
+      "management": false,
+      "exact_blocker": "chrome_foreground_activation_capability_unavailable"
+    }
+  },
+  "target": {
+    "provisioned": true,
+    "tab_id": "1980904397",
+    "url": "https://heavy-chain.zeabur.app/lightchain",
+    "title": "Heavy Chain | AI制作ワークスペース",
+    "ready_state": "complete",
+    "hydration_ready": true,
+    "visible_ui": {
+      "header": "LIGHTCHAIN",
+      "hero": "LIGHTCHAIN AI",
+      "subtitle": "アパレル特化のAIデザインワークスペース",
+      "prompt": "指示を入力してください",
+      "categories": ["おすすめHot", "企画デザインツール", "AIフィッティング", "グラフィックツール"],
+      "cards": [
+        "デザインワークスペース",
+        "マーケティングワークスペース",
+        "AIフィッティング",
+        "ウェアデザインラボ",
+        "モデル企画ライブラリ",
+        "ファッションスタジオ",
+        "デザインエージェント"
+      ],
+      "extra_category_heading_removed": true,
+      "video_cards_excluded": true,
+      "case_share_section": true
+    },
+    "screenshot": "/Users/nichikatanaka/Documents/Codex/external-repos/heavy-chain/work/lightchain-production-ui-readback-20260820-r84.png"
+  },
+  "cleanup": {
+    "created_tab_closed": true,
+    "cleanup_verified": true,
+    "external_action_executed": false,
+    "generation": false,
+    "save": false,
+    "reuse": false,
+    "recording": false,
+    "selected_focus_claim": false
+  }
+}

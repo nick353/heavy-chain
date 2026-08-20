@@ -2,14 +2,16 @@
 
 更新日: 2026-08-20
 
-## Current Chrome capability and launcher visual parity checkpoint r83 (2026-08-20)
+## Current Chrome capability and launcher production parity checkpoint r84 (2026-08-20)
 
-- Chrome本体更新後、現行selector（`chrome_plugin`／Profile 2／`signed_chrome_extension_profile2`／revision 1）で新規browser-client `-f528-4c7a-aee9-9c260d240c70`を作成した。同一runの`openTabs()`は5件で成功し、owner lineageは現session/thread/turnと一致した。
+- Chrome本体更新後、現行selector（`chrome_plugin`／Profile 2／`signed_chrome_extension_profile2`／revision 6）で新規browser-client `-f572-45ae-86c3-7eab9bd82ccd`を作成した。同一runの`openTabs()`は3件で成功し、owner lineageは現session/thread/turnと一致した。
 - 公式広告はbrowser=`viewport`、tab=`pageAssets`／`cdp`のみ。`foreground_activation`／`management`は未広告で、exact blockerは`chrome_foreground_activation_capability_unavailable`。foreground操作、selected、claim、focus、navigation、外部効果は行っていない。
 - Heavy `/lightchain` rootの現行入口を`src/components/GenerateLightchainEntry.tsx`で修正した。Lightchain本番の`LIGHTCHAIN AI`＋横並び説明、prompt、4カテゴリ、タブ直下の3列カードを再現し、rootの余計なカテゴリ見出し・説明を除去した。動画カードは非動画βの対象外として引き続き除外している。
 - カードは現行非動画7件の順序（デザインワークスペース、マーケティングワークスペース、AIフィッティング、ウェアデザインラボ、モデル企画ライブラリ、ファッションスタジオ、デザインエージェント）に揃え、ローカル決定的SVGサムネイルを使用した。production画像の直接コピーや外部取得は行っていない。
-- Artifact: `work/chrome-plugin-profile2-capability-refresh-20260820-r83.json`、`work/lightchain-home-visual-parity-20260820-r83.md`。Visual evidence: `output/playwright/lightchain-all-feature-workflows-20260820T075813Z/desktop-index.png`。
-- Verification: `npm run verify:lightchain-all-features`、`featureCount=31`、`failed=[]`、build `2608 modules transformed`、`git diff --check` PASS。これはlocal UI/route proofであり、production provider生成・保存・再利用・β受入れの完了証明ではない。
+- ローカルの対象コミット`01e6e40dd5daf2d491b106098dbd0e33e5615606`を、Zeabur `automation-wiled / heavy-chain`の既存サービスへ限定デプロイした。deployment `6a86b56499ff31c1168ac130`とservice `RUNNING`を確認した。
+- 同一fresh runでHeavy `/lightchain`を公式target-scoped provisioningし、`LIGHTCHAIN AI`、横並び説明、prompt、4カテゴリ、タブ直下3列カード、事例共有をDOM・スクリーンショットで確認した。task-owned tabだけを閉じ、`cleanup_verified=true`。
+- Artifact: `work/chrome-plugin-profile2-capability-refresh-20260820-r83.json`、`work/lightchain-home-visual-parity-20260820-r83.md`、`work/lightchain-production-ui-readback-20260820-r84.json`。Visual evidence: `work/lightchain-production-ui-readback-20260820-r84.png`、`output/playwright/lightchain-all-feature-workflows-20260820T075813Z/desktop-index.png`。
+- Verification: `npm run verify:lightchain-all-features`、`featureCount=31`、`failed=[]`、build `2608 modules transformed`、`git diff --check` PASS、Zeabur build/runtime `RUNNING`、production target-scoped URL/title/DOM readback PASS。これはUI/routeとデプロイのproofであり、production provider生成・保存・再利用・β受入れの完了証明ではない。
 
 ### Current exact blocker / next action / restart point
 

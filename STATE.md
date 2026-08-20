@@ -2,13 +2,15 @@
 
 Updated: 2026-08-20
 
-## Current Chrome capability and launcher visual parity r83
+## Current Chrome capability and launcher production parity r84
 
-- Fresh official Chrome Plugin/Profile 2 capability proof after the Chrome update used browser-client `-f528-4c7a-aee9-9c260d240c70`; `openTabs()` returned 5 tabs and current owner lineage matched the active session/thread/turn.
+- Fresh official Chrome Plugin/Profile 2 capability proof after the Chrome update used browser-client `-f572-45ae-86c3-7eab9bd82ccd`; `openTabs()` returned 3 tabs and current owner lineage matched the active session/thread/turn.
 - Advertisement remains browser=`viewport`, tab=`pageAssets`／`cdp`; `foreground_activation`／`management` are absent. Exact blocker: `chrome_foreground_activation_capability_unavailable`. No selected/claim/focus/navigation/foreground action or external effect was executed.
 - The `/lightchain` root visual was corrected in `src/components/GenerateLightchainEntry.tsx` to match the fresh Lightchain homepage structure: `LIGHTCHAIN AI` hero with inline subtitle, prompt input, four category tabs, and direct three-column non-video cards. The extra category heading/description was removed.
 - Local deterministic proof passed: `npm run verify:lightchain-all-features`, `featureCount=31`, `failed=[]`, build `2608 modules transformed`, `git diff --check`; screenshot `output/playwright/lightchain-all-feature-workflows-20260820T075813Z/desktop-index.png`.
-- Artifacts: `work/chrome-plugin-profile2-capability-refresh-20260820-r83.json` and `work/lightchain-home-visual-parity-20260820-r83.md`.
+- Local source commit `01e6e40dd5daf2d491b106098dbd0e33e5615606` was deployed only to Zeabur project `automation-wiled`, service `heavy-chain`; deployment `6a86b56499ff31c1168ac130` and service `RUNNING` were confirmed.
+- Fresh official target-scoped `/lightchain` readback confirmed the production page has `LIGHTCHAIN AI`, inline subtitle, prompt, four category tabs, direct three-column cards, and case sharing. The task-owned provisioned tab was closed and `cleanup_verified=true`.
+- Artifacts: `work/chrome-plugin-profile2-capability-refresh-20260820-r83.json`, `work/lightchain-home-visual-parity-20260820-r83.md`, `work/lightchain-production-ui-readback-20260820-r84.json`, and screenshot `work/lightchain-production-ui-readback-20260820-r84.png`.
 
 ### Current exact blocker / next action / restart point
 
