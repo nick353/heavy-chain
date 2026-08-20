@@ -24,6 +24,15 @@ entries below remain historical provenance and are not current proof.
   behavior mapping is still `PENDING_CONFIRMATION`.
 - Artifact: `work/lightchain-source-home-readback-20260820-r88.md` and
   `work/lightchain-source-home-readback-20260820-r88.png`.
+- Fresh rev6 target-scoped readback reached all 19 non-video candidate routes
+  with exact URL/title/non-empty DOM. Two routes needed one bounded hydration
+  settle and then reached `readyState=complete`; all 21 task-owned tabs were
+  cleaned up. Artifact:
+  `work/lightchain-profile2-current-selector-rev6-non-video-route-ledger-20260820-r97.md`.
+- The same fresh homepage readback showed the card names but no card `href`,
+  button role, `data-testid`, or equivalent route attribute. Exact homepage
+  card-to-route binding remains `PENDING_CONFIRMATION` because no card click
+  or navigation was performed.
 
 ### Current Heavy implementation and production readback
 
@@ -50,7 +59,7 @@ entries below remain historical provenance and are not current proof.
 | Requirement layer | Current status | Current evidence / gap |
 |---|---|---|
 | Lightchain homepage IA, categories, non-video launcher, case tabs | `verified` | r88 source readback and r90 Heavy production readback |
-| 31 non-video local feature contracts | `verified` locally | local verifier `31/31`; current rev6 source route behavior still needs fresh per-feature mapping |
+| 31 non-video local feature contracts | `verified` locally | local verifier `31/31`; current rev6 source route baseline is `19/19`, but card-to-route binding and per-feature behavior remain separate |
 | Fabric/printing/AI-fitting route inputs and visible controls | `verified` read-only | r93 settled production route readback |
 | Provider generation and result quality | `PENDING_CONFIRMATION` | no current same-run provider generation proof |
 | Save and result persistence | `PENDING_CONFIRMATION` | no current same-run save/readback proof |
