@@ -2,6 +2,13 @@
 
 更新日: 2026-08-20
 
+## Current beta gate checkpoint r48 (2026-08-20)
+
+- Fresh local gate readback: internal UX `ok=true`; H601 legal-safety guard passed.
+- G619 real internal beta acceptance is still `acceptance=not_claimed` with `readySessions=0`.
+- Launch operations is still blocked by `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`.
+- These are separate from the production generation blocker `chrome_foreground_activation_capability_unavailable`; neither gate is promoted to completion by local checks.
+
 ## Current execution checkpoint r47 (2026-08-20)
 
 - Local implementation verification is complete for the current source slice: non-video feature workflows `31/31`, and unified desktop layout `228/228` across `1280/1440/1920/2560px`; failures and cleanup leftovers are zero.
