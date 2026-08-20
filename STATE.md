@@ -4425,3 +4425,15 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Local preview Chromium performance is verified, while production/provider and paired Mac/Windows performance remain unverified.
 - Chrome capability/target-session, launch auth-state, and human/operator acceptance blockers remain unchanged.
 - Next action: rerun production-bound performance only after the required official/session/auth/human state changes, using a fresh owner.
+
+## 2026-08-20 Local provider/persistence boundary audit r77
+
+- Source inspection confirms the priority implementation is provider-backed: material/print sends masked multi-image edit requests and promotes a protected derived result only after completed provider and durable remote artifact readback; AI fitting calls `model-matrix`, whose Edge Function persists Storage, `generated_images`, and `generation_jobs` before returning completed per-item paths.
+- Fitting result/history promotion is gated on completed model-matrix readback, canonical storage paths, and local artifact readback. History hydration and Canvas reuse preserve remote storage, job/image IDs, source references, and parity metadata.
+- Focused evidence: provider persistence/readback `12/12`, provider adapter `16/16`, provider coverage `18/18`, material contract `20/20`, fitting history/resilience/unified persistence `18/18`, and typecheck passed. Artifact: `work/heavy-local-provider-persistence-audit-20260820-r77.md`.
+
+### Current exact blocker / next action / restart point
+
+- This is local implementation evidence only. Live production generation/output quality/save/reuse/reload, current Lightchain card enumeration, and paired Mac/Windows Chrome acceptance remain `PENDING_CONFIRMATION`.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
+- Next action: after an official capability/session/auth/human state change, create a fresh Profile 2 owner and run the remaining same-run production proof. Do not reuse old browser, binding, tab, run, or capability fingerprint.

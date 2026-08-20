@@ -1433,3 +1433,15 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - This is local preview Chromium evidence only, not production provider latency or paired Mac/Windows Chrome proof.
 - Exact blockers remain the official Chrome capability/target-session state, missing production auth state, and human-owned beta/legal acceptance.
 - Next action: preserve local gains; after required state changes, rerun production-bound provider, persistence, and cross-platform performance proof with a fresh Profile 2 owner.
+
+## 2026-08-20 Local provider/persistence boundary audit r77
+
+- Audited the actual provider and persistence boundaries for the priority flows. Fabric/printing use the masked multi-image edit provider and require a durable remote artifact for the protected derived result. AI fitting uses the `model-matrix` Edge Function, which persists the provider output to Storage, `generated_images`, and `generation_jobs` before returning completed readback; the client requires every matrix item to have a completed status and canonical storage path before promoting result/history.
+- Focused verification passed: provider persistence/readback `12/12`, provider adapter `16/16`, provider coverage `18/18`, material contract `20/20`, fitting history/resilience/unified persistence `18/18`, and `typecheck`.
+- Artifact: `work/heavy-local-provider-persistence-audit-20260820-r77.md`.
+
+### Proof boundary / current exact blocker
+
+- No application code changed in r77. This is local source/contract evidence only; it does not prove live production output quality, same-run remote save/reuse/reload, current Lightchain card enumeration, or paired Mac/Windows Chrome acceptance.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
+- Next action: after the required official capability/session/auth/human state changes, create a fresh Profile 2 owner and run the remaining production parity and provider proof. Keep provider generation fail-closed until then.
