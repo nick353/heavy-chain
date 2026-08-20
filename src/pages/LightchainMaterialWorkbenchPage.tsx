@@ -3473,31 +3473,6 @@ export function LightchainMaterialWorkbenchPage() {
     return { ok: true };
   };
 
-  const resetPrintingInputs = useCallback(() => {
-    if (!isPrinting) return;
-    setPrintGarment(null);
-    setPrintDesigns([]);
-    setPrintDesignLayers([]);
-    setPrintDesignProcessedUrls({});
-    setPrintDesignCutoutResults({});
-    setPrintDesignMaskRevisions({});
-    setPrintDesignCutoutStates({});
-    setPrintDesignCutoutErrors({});
-    setPrintGarmentMaskExplicitlyConfirmed(false);
-    setPrintGarmentSelectionSource('automatic');
-    setPrintGarmentCutoutSourceUrl(null);
-    setPrintGarmentSelectionMaskUrl(null);
-    setPrintGarmentCutoutState('idle');
-    setPrintGarmentProcessed(null);
-    setPrintPlacementConfirmed(false);
-    setPrintPlacementSessionOpen(false);
-    printPlacementSessionOpenRef.current = false;
-    setPrintCoverageMode('spot');
-    setPrintOutputScale(1);
-    setGenerationError(null);
-    setSurfaceConformStatus(null);
-  }, [isPrinting]);
-
   useEffect(() => {
     if (
       !isPrinting
@@ -5490,29 +5465,10 @@ export function LightchainMaterialWorkbenchPage() {
                     previewUrl={printGarmentCutoutState === 'done' ? printGarmentProcessed : null}
                     processingLabel="画像を処理中"
                   />
-                  {printGarment && printGarmentCutoutState === 'done' && (
-                    <button
-                      type="button"
-                      onClick={() => setPrintGarmentSelectionOpen(true)}
-                      className="mt-3 inline-flex items-center gap-2 rounded-lg border border-cyan-300/25 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-300/10"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                      画像のプリント領域を調整
-                    </button>
-                  )}
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-[#202629] p-3">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-white">プリントをアップロード</p>
-                    <button
-                      type="button"
-                      onClick={resetPrintingInputs}
-                      className="text-xs text-white/55 transition hover:text-cyan-100"
-                    >
-                      ↻ リセット
-                    </button>
-                  </div>
+                  <p className="mb-3 text-sm font-semibold text-white">プリントをアップロード</p>
                   <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-neutral-900 p-1" role="group" aria-label="プリント範囲">
                     {PRINT_COVERAGE_OPTIONS.map((coverage) => (
                       <button
@@ -5549,17 +5505,6 @@ export function LightchainMaterialWorkbenchPage() {
                     previewUrl={printDesignCutoutStates[0] === 'done' ? printDesignProcessedUrls[0] : null}
                     processingLabel="プリントを処理中"
                   />
-                  {printDesigns[0] && printDesignCutoutStates[0] === 'done' && (
-                    <button
-                      type="button"
-                      onClick={() => openDesignMaskEditor(0)}
-                      className="mt-3 inline-flex items-center gap-2 rounded-lg border border-cyan-300/25 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-300/10"
-                      data-testid="lightchain-print-design-mask-editor"
-                    >
-                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                      画像のプリント領域を調整
-                    </button>
-                  )}
                 </div>
 
                 <Button

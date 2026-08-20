@@ -354,7 +354,8 @@ test('desktop printing keeps the primary composition and generate action pinned 
   assert.match(page, /data-testid="lightchain-print-reference-input"/);
   assert.match(page, /参考画像をアップロード/);
   assert.match(page, /プリントをアップロード/);
-  assert.match(page, /↻ リセット/);
+  assert.doesNotMatch(page, /↻ リセット/);
+  assert.doesNotMatch(page, /画像のプリント領域を調整/);
   assert.match(page, /data-testid=\{`print-coverage-\$\{coverage\.value\}`\}/);
   assert.match(page, /data-testid="print-result-run-history"/);
   assert.doesNotMatch(page, /この機能はまもなく終了します/);
@@ -783,8 +784,9 @@ test('repeat design changes reuse completed cutouts and prioritize the new activ
   assert.match(page, /const processingFallbackLayerId = selectLatestProcessingPrintDesignLayerId\(fallbackLayers\)/);
   assert.match(page, /current === activePrintDesignLayerId \? readyFallbackLayerId : current/);
   const addDesignsStart = page.indexOf('const addDesigns');
-  const resetInputsStart = page.indexOf('const resetPrintingInputs');
-  const addDesignsBlock = page.slice(addDesignsStart, resetInputsStart);
+  const addDesignsEnd = page.indexOf('\n  useEffect(() => {', addDesignsStart);
+  const addDesignsBlock = page.slice(addDesignsStart, addDesignsEnd);
+  assert.ok(addDesignsEnd > addDesignsStart, 'addDesigns must end before the following effect');
   assert.doesNotMatch(addDesignsBlock, /setPrintDesignProcessedUrls\(\{\}\)/);
   assert.doesNotMatch(addDesignsBlock, /setPrintDesignCutoutResults\(\{\}\)/);
 });
