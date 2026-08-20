@@ -3928,3 +3928,16 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Next action: 公式signed extension/backendが`foreground_activation`／`management`を広告した後、fresh revision-30 ownerでfabric／printingのproduction same-run proof、次にAI fittingを実施する。
 - Other PENDING_CONFIRMATION gates: Mac／Windows実Chrome、G619、H601、launch-ops、Zeabur source association。
 - Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 Heavy production deployment readback r2
+
+- Source commit `426d6289f312df4c792c05d5fd754aeaf8eab32c` was pushed to `origin/main` and the current parity workspace was deployed to the verified Heavy service.
+- Deployment `6a867ab9f1ea67ebf4ea6eec` is `RUNNING`; remote bundle hash matches local build hash `710fe202a0b963b56fb91de654a3204188d9a53ee2e135c95052b01109f8945e`.
+- Artifact: `work/heavy-chain-production-deployment-20260820-r2.md`。
+- This deployment is runtime-verified but its GitHub commit metadata is empty because it is a local-upload deployment; immutable source provenance remains PENDING_CONFIRMATION.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: official capability update後、新規Profile 2 ownerでtarget readbackを取り直し、fabric／printing provider flow、AI fitting、保存／再利用／reloadのsame-run proofへ進む。
+- Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。

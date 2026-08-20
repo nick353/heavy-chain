@@ -909,3 +909,17 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Separate gates: Mac／Windows実Chrome、G619実ユーザーβ、H601 operator/legal decision、launch-ops認証、Zeabur source associationはPENDING_CONFIRMATION。
 - Next action: 公式配布更新後、fresh revision-30 Profile 2 ownerでfabric／printingのprovider→保存→Gallery／Canvas／History／Jobs→再利用→reload、続いてAIフィッティングを実行する。
 - Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Heavy production deployment readback r2
+
+- Current Heavy parity workspace was deployed to the verified `automation-wiled / heavy-chain` target as deployment `6a867ab9f1ea67ebf4ea6eec` (`RUNNING`).
+- Source commit `426d6289f312df4c792c05d5fd754aeaf8eab32c` is on `origin/main`; local preflight typecheck/lint/build and diff check passed.
+- Remote runtime bundle SHA-256 matches local `dist/assets/index.2_QTnZl7.js`: `710fe202a0b963b56fb91de654a3204188d9a53ee2e135c95052b01109f8945e`.
+- Artifact: `work/heavy-chain-production-deployment-20260820-r2.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。本番provider実行は公式Profile 2 capability更新待ち。
+- Deployment provenance is `PENDING_CONFIRMATION` because local-upload deployment metadata has no GitHub commit fields and the same-commit source-associated entry was canceled.
+- Next action: capability update後、fresh Profile 2 ownerで新規target readbackを取得してからfabric／printing、AI fittingの同一run proofへ進む。
+- Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは再利用しない。

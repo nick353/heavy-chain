@@ -39,7 +39,7 @@
   ],
   "max_attempts": 3,
   "attempt_no": 0,
-  "checkpoint_seq": 93,
+  "checkpoint_seq": 148,
   "completed": [
     "Fresh service-level GitTrigger source association confirmed for nick353/heavy-chain main",
     "Controlled Heavy source/test commit def2a82 pushed to linked origin/main",
@@ -117,7 +117,26 @@
     "Fresh current Lightchain Profile 2 homepage target-scoped readback r14 exposed a full accessibility snapshot with four category tabs, eight recommended cards (seven non-video and one video), and six case-share tabs. Task-owned cleanup passed; category-panel route mapping and per-feature business-flow proof remain PENDING_CONFIRMATION",
     "Fresh current Lightchain Profile 2 target-scoped category-panel readback r15 selected all four exact tabs and enumerated 28 category occurrences: 26 non-video and 2 video. Task-owned cleanup passed; exact route mapping and per-feature business behavior remain PENDING_CONFIRMATION",
     "Heavy local launcher parity focused test passed 3/3 against the current Lightchain category ledger: counts 7/9/5/5, repeated shared cards preserved, video excluded, and internal readiness labels hidden. This is local UI proof; live business behavior and production provider proof remain open",
-    "Fresh Lightchain category-panel route-surface readback r16 confirmed visible cards are cursor-pointer divs without href/data-route/data-tool-id/onclick; exact route mapping remains PENDING_CONFIRMATION rather than being inferred from historical data"
+      "Fresh Lightchain category-panel route-surface readback r16 confirmed visible cards are cursor-pointer divs without href/data-route/data-tool-id/onclick; exact route mapping remains PENDING_CONFIRMATION rather than being inferred from historical data",
+      "Heavy local launcher parity regression now fixes the current Lightchain category display names and order for recommended/planning/fitting/graphics; focused test passed 4/4 while provider capability remains blocked",
+    "Fresh current Profile 2 target-scoped Heavy /tools/fabric readback r11 passed browser-client handshake, URL/title/DOM hydration, official task-owned provisioning cleanup, and post-cleanup absence verification. The live page still exposed login/workspace-preparation shell, so heavy_target_workspace_authentication_not_ready remains current. Foreground provider work separately remains blocked by chrome_foreground_activation_capability_unavailable.",
+    "Fresh current-selector revision-30 Lightchain homepage card readback r21 passed openTabs(), URL/title, readyState=complete, seven non-video default cards, one excluded video card, four categories, six case-share tabs, and task-owned cleanup. Category-panel counts/routes and per-feature behavior remain PENDING_CONFIRMATION; no card opening or external effect occurred. Artifact: work/lightchain-profile2-home-card-readback-20260820-r21.json."
+    ,"Fresh current-selector revision-30 Lightchain priority-route readback r22 passed target-scoped URL/title/DOM hydration for /tools/fabric, /tools/printing, and /model, with Lightchain input/history/permission controls visible and all three task-owned tabs cleaned up. No card opening, credential input, generation, save/reuse, recording, or external effect occurred. Artifact: work/lightchain-profile2-priority-route-readback-20260820-r22.json."
+    ,"Fresh current-selector revision-30 Lightchain non-video candidate route readback r23 passed for all 19 candidate routes: Lightchain AI title, readyState=complete, non-empty DOM and route-specific markers. All 19 task-owned tabs were cleaned up; card-to-route mapping and per-feature generation/save/reuse/error/performance remain PENDING_CONFIRMATION. Artifact: work/lightchain-profile2-non-video-route-readback-20260820-r23.json."
+    ,"Local Lightchain generic rights-modal parity r13 removed the persistent Heavy-specific rights cards from the generic workbench and opened an on-demand rights modal at AI generation time. Provider coverage 11/11, material contract 17/17, printing foundation 244/244, provider persistence 12/12, Library/Canvas handoff 3/3, typecheck, lint, build 2607 modules, non-video featureCount=31 / failed=[], and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+    ,"Local Lightchain result resume recovery r14 restores the same-job persisted provider result after reload through canonical storage identity and fresh signing, rejects stale bearer URL-only history, and preserves provider/job/image/parity provenance. Resume 6/6, provider persistence/readback 12/12, workspace activity/routing 12/12, typecheck, lint, build 2607 modules, non-video 31/31, and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+    ,"Local Lightchain duplicate-submit guard r15 adds a request ref to the generic provider lane so rapid clicks cannot start two provider requests before the first state update. Material/tool-reset/unmount invalidation is covered. Provider coverage 12/12, resume 6/6, provider persistence/readback 12/12, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+    ,"Local Lightchain result destination links r16 expose Canvas save plus direct Gallery/History/Jobs links from feature result cards while preserving artifact/project/result lineage. Provider coverage 13/13, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], context/browser/preview cleanup complete, and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+    ,"Local Lightchain rights confirmation continuation r17 resumes the exact printing or generic provider generation that opened the rights modal after confirmation, once and only once. Cancellation, close, material changes, tool reset, and unmount clear the pending request. Provider coverage 15/15, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+    ,"Local Lightchain result destination links r18 add explicit Gallery/History/Jobs destinations to material result cards and the AI fitting result preview, and make the existing durable history-to-Canvas reuse path explicit. Provider coverage 16/16, provider adapter 16/16, provider persistence/readback 12/12, material contract 17/17, fitting history/resilience/resume 23/23, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+    ,"Local Lightchain material rights confirmation continuation r19 resumes the exact dedicated fabric/printing generation that opened the rights modal after confirmation, once and only once. The request-local confirmation value is passed to both material provider routes; cancel, close, input changes, tool reset, and unmount clear the pending request. Provider coverage 17/17, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-material-rights-confirmation-continue-20260820-r19.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable.",
+    "Fresh r20 official Profile 2 target-scoped readback confirmed hydrated Heavy /tools/fabric plus Lightchain homepage, /tools/printing, and /model in one owner-bound run; URL/title/DOM hydration, task-tab cleanup, and owner lineage matched. No selected/focus/claim/foreground operation or external effect was used. Artifact: work/heavy-lightchain-current-target-readback-20260820-r20.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable.",
+    "Local parity/completion audit r21 corrected a stale focused material-contract assertion for the once-only rights-confirmation continuation signature. Focused material/mask 17/17, provider coverage 17/17, provider adapter 16/16, provider persistence/readback 12/12, Library/Canvas 3/3, workspace activity/routing 12/12, parity/entry routes 8/8 and 6/6, synthesis 3/3, Canvas view 3/3, typecheck, lint, build 2607 modules, non-video 31/31, and unified desktop 228/228 with no cleanup leftovers. Artifact: work/heavy-local-parity-audit-20260820-r21.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable.",
+    "Fresh r22 official Profile 2 capability readback passed openTabs() for browser-client -d256-4d52-8ac6-eeb5b1f2d312 with no Heavy/Lightchain target operation; advertised capabilities remain viewport/pageAssets/cdp and foreground activation/management are absent. Local beginner UX verifier now reports auth_state_missing as the sole gate when auth state is unavailable and marks uncreated resources clean. Artifact: work/heavy-profile2-capability-and-beginner-ux-gate-20260820-r22.md.",
+    "Local printing readiness contract r23 repaired the stale focused ordering assertion for the current rights-confirmation-aware generation closure. Printing foundation/composition 244/244, provider coverage 17/17, material contract 17/17, provider adapter 16/16, persistence/readback 12/12, Library/Canvas 3/3, workspace routing 12/12, entry/parity routes 8/8, resume input 6/6, typecheck, lint, build 2607 modules, non-video 31/31, unified desktop 228/228, and internal UX passed. Artifact: work/heavy-local-printing-readiness-contract-20260820-r23.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable.",
+    "Fresh r24 official Profile 2 capability readback passed the current revision-30 openTabs() handshake for browser-client -64b2-4670-b78d-4e30a761188f. The signed extension still advertises only viewport/pageAssets/cdp; foreground_activation and management are absent, and the two-tab inventory contained no Heavy/Lightchain target. No target operation or external effect was performed. Artifact: work/heavy-profile2-capability-readback-20260820-r24.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable.",
+    "Local result-destination continuity r25 added the shared Gallery/History/Jobs/Canvas action group to the generic result modal and all special Lightchain-shaped result surfaces while preserving existing Save/Download actions. Provider coverage 18/18, non-video workflow featureCount=31 with failed=[], internal UX ok=true, typecheck, lint, build 2607 modules, and diff check passed. Artifact: work/heavy-local-result-destination-continuity-20260820-r25.md. Chrome common layer, recording, AOS, provider backend, deployment, and external effects were not changed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable.",
+    "Local Library all-feature handoff r26 added a single non-video feature selector for all 31 catalog rows, priority routing for AI fitting/fabric/printing, and canonical artifact hydration for generic Lightchain workbenches. Library/Canvas/handoff 5/5, provider/result continuity 18/18, non-video workflow featureCount=31 with failed=[], internal UX ok=true, typecheck, lint, build 2607 modules, and diff check passed. Artifact: work/heavy-local-library-all-feature-handoff-20260820-r26.md. Chrome common layer, recording, AOS, provider backend, deployment, and external effects were not changed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
   ],
   "unfinished": [
     "Fabric/printing production provider generation and strict same-browser-client persistence/reuse",
@@ -236,18 +255,30 @@
     ,"work/lightchain-category-ledger-20260820-r15.md: fresh Profile 2 category-panel card names and counts for all four categories, video exclusion baseline, and cleanup"
     ,"scripts/verify-lightchain-launcher-parity.test.ts: focused launcher parity 3/3 against current non-video category counts and video exclusion"
     ,"work/lightchain-card-route-surface-readback-20260820-r16.md: fresh category-panel DOM route-surface inspection and cleanup"
+    ,"work/heavy-local-lightchain-rights-confirmation-continue-20260820-r17.md: local rights-confirmation continuation, provider coverage 15/15, typecheck, lint, build, non-video verifier 31/31, and cleanup"
+    ,"output/playwright/lightchain-all-feature-workflows-20260820T014828Z/SUMMARY.json: featureCount=31, ok=true, failed=[]"
+    ,"work/heavy-local-lightchain-result-destination-links-20260820-r18.md: material and AI fitting result destinations, provider coverage 16/16, provider adapter 16/16, persistence/readback 12/12, material 17/17, fitting 23/23, and cleanup"
+    ,"work/heavy-local-lightchain-material-rights-confirmation-continue-20260820-r19.md: dedicated material rights-confirmation continuation and provider coverage 17/17"
+    ,"output/playwright/lightchain-all-feature-workflows-20260820T020124Z/SUMMARY.json: featureCount=31, ok=true, failed=[]"
+    ,"work/heavy-lightchain-current-target-readback-20260820-r20.md: fresh official Profile 2 target-scoped Heavy/Lightchain URL-title-DOM hydration and cleanup proof"
+    ,"work/heavy-local-parity-audit-20260820-r21.md: focused parity contract repair and local 31-feature/228-layout verification"
+    ,"work/heavy-profile2-capability-and-beginner-ux-gate-20260820-r22.md: fresh Profile 2 capability readback and authenticated beginner-UX gate"
+    ,"work/heavy-local-printing-readiness-contract-20260820-r23.md: printing readiness ordering repair and local focused/full-route verification"
+    ,"work/heavy-local-lightchain-home-spacing-parity-20260820-r33.md: launcher parity 9/9 and local homepage spacing parity repair"
+    ,"work/heavy-local-lightchain-current-recheck-20260820-r34.md: current non-video 31/31 and unified desktop 228/228 recheck after r33"
+    ,"work/heavy-chain-target-scoped-authenticated-readback-20260820-r35.md: fresh authenticated hydrated Heavy /tools/fabric target-scoped readback and cleanup"
   ],
   "next_action": "After the required official foreground capability is advertised, create a fresh Profile 2 owner and run one bounded approved fabric-print provider flow. Verify result, save, Gallery/Canvas/History/Jobs lineage, reuse, and reload before starting AI fitting. Do not reuse the provisioning tab, old binding, or old run.",
   "blocker": {
     "category": "provider_capability_wait",
     "exact_blocker": "chrome_foreground_activation_capability_unavailable",
-    "recovery_condition": "The current Heavy target-scoped semantic readback is hydrated and the authentication/workspace-readiness gate is cleared. Provider generation remains fail-closed until the official Profile 2 surface advertises the required foreground_activation and management capabilities and a fresh owner lineage is established.",
+    "recovery_condition": "Fresh target-scoped Heavy /tools/fabric readback r35 is hydrated and the authentication/workspace-readiness gate is cleared. Provider generation remains fail-closed until the official Profile 2 surface advertises the required foreground_activation and management capabilities and a fresh owner lineage is established.",
     "restart_stage": "verify",
     "next_action": "After capability advertisement/state change, create one fresh official Profile 2 owner and run the bounded approved fabric-print provider flow with same-run result/save/reuse/reload readback.",
-    "evidence": "work/heavy-chain-target-scoped-authenticated-readback-20260820-r9.md",
+    "evidence": "work/heavy-chain-target-scoped-authenticated-readback-20260820-r35.md",
     "operation_exact_blocker": "chrome_foreground_activation_capability_unavailable",
     "capability_blocker": "chrome_foreground_activation_capability_unavailable",
-    "recorded_at": "2026-08-20T06:24:00+09:00"
+    "recorded_at": "2026-08-20T12:46:47+09:00"
   },
   "same_blocker_count": 2,
   "resume_admission": "eligible_after_recovery_evidence",
@@ -296,9 +327,34 @@
     ,"Fresh current Lightchain Profile 2 target-scoped category-panel readback r15 selected all four exact tabs and enumerated 28 occurrences: 26 non-video and 2 video; task-owned cleanup passed and exact route mapping/per-feature behavior remain PENDING_CONFIRMATION"
     ,"Heavy local launcher parity focused test passed 3/3 against the current Lightchain category ledger: counts 7/9/5/5, repeated shared cards preserved, video excluded, and internal readiness labels hidden"
     ,"Fresh Lightchain category-panel route-surface readback r16 confirmed visible cards are cursor-pointer divs without href/data-route/data-tool-id/onclick; exact route mapping remains PENDING_CONFIRMATION rather than being inferred from historical data"
+    ,"Priority fabric-print and AI-fitting local recheck passed 69/69 across material/provider persistence/fitting resilience/resume/history/workspace handoff/activity/source readback; Chrome provider work remains blocked by foreground capability"
+    ,"Current local all-feature verifier passed featureCount=31 with failed=[] and unified desktop layout passed 228/228 across 1280/1440/1920/2560px with globalTimedOut=false and cleanupLeftovers=0"
+    ,"Removed the Heavy global keyboard-shortcut floating affordance from Lightchain routes only; UI control contract 4/4, typecheck, build 2606 modules, and post-build non-video verifier 31/31 passed"
+      ,"Lightchain lazy-loading fallback now uses LIGHTCHAIN AI instead of the Heavy identity; entry routing 6/6, typecheck, lint, build 2606 modules, and non-video featureCount=31 / failed=[] with cleanup complete. Production remains blocked by chrome_foreground_activation_capability_unavailable"
+      ,"Routed /asset-center now has functional Library upload, workspace-artifact persistence, user/brand-scoped custom groups, filtering, selected-asset details, and Canvas sourceArtifactId handoff. Library/Canvas focused 2/2, typecheck, lint, build 2607 modules, and non-video featureCount=31 / failed=[] with cleanup complete passed. Production provider and beta operations remain gated."
+      ,"Library r6 hydrates signed remote generated-image history as read-only cards, excludes video rows, and provides explicit remote-result registration into the durable workspace artifact contract with remote/source identity before Canvas handoff. Library/Canvas focused 2/2, typecheck, lint, build 2607 modules, non-video featureCount=31 / failed=[], cleanup complete, and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Library r7 adds an AI fitting handoff for local assets and remote-result registration before navigation. Fitting re-signs canonical source paths, preserves source identity, and suppresses automatic draft overwrite during the handoff. Library/Canvas 2/2, Fitting history 10/10, resume 9/9, source readback 7/7, material 17/17, provider persistence 12/12, typecheck, lint, build 2607 modules, non-video 31/31, cleanup complete, and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Library r8 adds direct local/remote Library handoff to the fabric-image and print-image workbenches through libraryArtifactId/librarySlot. The material workbench re-signs canonical storage paths and prevents persisted printing-input hydration from overwriting an active handoff. Handoff 3/3, material 17/17, provider persistence 12/12, typecheck, lint, build 2607 modules, non-video 31/31, cleanup complete, and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Local beta gate refresh r9 passed unified desktop 228/228 across 1280/1440/1920/2560px with failed=0, globalTimedOut=false, and cleanupLeftovers=0 after the Library material handoff. Provider coverage 11/11, workspace handoff 2/2, Library/material handoff 3/3, material contract 17/17, and provider persistence/readback 12/12 passed. Historical Playwright production verifiers remain untrusted because their auth-state inputs are missing; current Chrome Plugin proof remains separately blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Library URL safety r10 makes canonical remote Library artifacts fail closed on signing failure instead of restoring a stale bearer URL. Local/data/blob/relative references remain usable. Library/Canvas/material handoff 3/3, provider persistence/readback 12/12, typecheck, lint, build 2607 modules, and non-video featureCount=31 / failed=[] with cleanup complete passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Local Lightchain rights-modal parity r11 removed the always-visible Heavy-specific rights card from the fabric/printing initial frames. AI generation now opens an on-demand rights modal; draft checkbox and confirmed provider permission are separate, and cancel/close does not authorize submission. Material contract 17/17, Library/Canvas/material handoff 3/3, typecheck, lint, build 2607 modules, non-video featureCount=31 / failed=[], and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Local Lightchain retirement-banner cleanup r12 removed the shared legacy retirement notice from the Lightchain workbench while retaining input, provider, Library, mask, persistence, History, Canvas, and retry contracts. Printing foundation/composition 244/244, material contract 17/17, entry routing 6/6, provider persistence 12/12, Library/Canvas/material handoff 3/3, typecheck, lint, build 2607 modules, and non-video featureCount=31 / failed=[] passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Local Lightchain generic rights-modal parity r13 removed the persistent Heavy-specific rights cards from the generic workbench and opened an on-demand rights modal at AI generation time. Provider coverage 11/11, material contract 17/17, printing foundation 244/244, provider persistence 12/12, Library/Canvas handoff 3/3, typecheck, lint, build 2607 modules, non-video featureCount=31 / failed=[], and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Local Lightchain result resume recovery r14 restores the same-job persisted provider result after reload through canonical storage identity and fresh signing, rejects stale bearer URL-only history, and preserves provider/job/image/parity provenance. Resume 6/6, provider persistence/readback 12/12, workspace activity/routing 12/12, typecheck, lint, build 2607 modules, non-video 31/31, and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Local Lightchain duplicate-submit guard r15 adds a request ref to the generic provider lane so rapid clicks cannot start two provider requests before the first state update. Material/tool-reset/unmount invalidation is covered. Provider coverage 12/12, resume 6/6, provider persistence/readback 12/12, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Local Lightchain result destination links r16 expose Canvas save plus direct Gallery/History/Jobs links from feature result cards while preserving artifact/project/result lineage. Provider coverage 13/13, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], context/browser/preview cleanup complete, and diff check passed. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Local Lightchain rights confirmation continuation r17 resumes the exact printing or generic provider generation that opened the rights modal after confirmation, once and only once. Cancellation, close, material changes, tool reset, and unmount clear the pending request. Provider coverage 15/15, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-rights-confirmation-continue-20260820-r17.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Local Lightchain result destination links r18 add explicit Gallery/History/Jobs destinations to material result cards and the AI fitting result preview, and make the existing durable history-to-Canvas reuse path explicit. Provider coverage 16/16, provider adapter 16/16, provider persistence/readback 12/12, material contract 17/17, fitting history/resilience/resume 23/23, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-result-destination-links-20260820-r18.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Local Lightchain result destination links r18 add explicit Gallery/History/Jobs destinations to material result cards and the AI fitting result preview, and make the existing durable history-to-Canvas reuse path explicit. Provider coverage 16/16, provider adapter 16/16, provider persistence/readback 12/12, material contract 17/17, fitting history/resilience/resume 23/23, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-result-destination-links-20260820-r18.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable."
+      ,"Local Lightchain material rights confirmation continuation r19 resumes the exact dedicated fabric/printing generation that opened the rights modal after confirmation, once and only once. The request-local confirmation value is passed to both material provider routes; cancel, close, input changes, tool reset, and unmount clear the pending request. Provider coverage 17/17, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-material-rights-confirmation-continue-20260820-r19.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable.",
+      "Local parity/completion audit r21 corrected the stale focused material-contract assertion for the once-only rights-confirmation continuation signature; focused material/mask 17/17, provider coverage 17/17, provider adapter 16/16, provider persistence/readback 12/12, Library/Canvas 3/3, workspace activity/routing 12/12, parity/entry routes 8/8 and 6/6, synthesis 3/3, Canvas view 3/3, typecheck, lint, build 2607 modules, non-video 31/31, and unified desktop 228/228 passed with no cleanup leftovers. Artifact: work/heavy-local-parity-audit-20260820-r21.md.",
+      "Local printing readiness contract r23 repaired the stale focused ordering assertion for the current rights-confirmation-aware generation closure. Printing foundation/composition 244/244, provider coverage 17/17, material contract 17/17, provider adapter 16/16, persistence/readback 12/12, Library/Canvas 3/3, workspace routing 12/12, entry/parity routes 8/8, resume input 6/6, typecheck, lint, build 2607 modules, non-video 31/31, unified desktop 228/228, and internal UX passed. Artifact: work/heavy-local-printing-readiness-contract-20260820-r23.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable.",
+    "Fresh r24 official Profile 2 capability readback passed the current revision-30 openTabs() handshake for browser-client -64b2-4670-b78d-4e30a761188f. The signed extension still advertises only viewport/pageAssets/cdp; foreground_activation and management are absent, and the two-tab inventory contained no Heavy/Lightchain target. No target operation or external effect was performed. Artifact: work/heavy-profile2-capability-readback-20260820-r24.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable.",
+    "Local result-destination continuity r25 passed provider coverage 18/18, non-video workflow featureCount=31 with failed=[], internal UX ok=true, typecheck, lint, production build 2607 modules, and diff check. Special result surfaces now expose Gallery/History/Jobs/Canvas navigation; production provider generation/save/reuse/reload and AI fitting remain PENDING_CONFIRMATION under chrome_foreground_activation_capability_unavailable. Artifact: work/heavy-local-result-destination-continuity-20260820-r25.md.",
+    "Local Library all-feature handoff r26 passed Library/Canvas/handoff 5/5, provider/result continuity 18/18, non-video workflow featureCount=31 with failed=[], internal UX ok=true, typecheck, lint, production build 2607 modules, and diff check. Library now routes a selected canonical asset to any of the 31 non-video features; production generation/save/reuse/reload remains PENDING_CONFIRMATION under chrome_foreground_activation_capability_unavailable. Artifact: work/heavy-local-library-all-feature-handoff-20260820-r26.md."
     ],
-    "artifact": "work/lightchain-card-route-surface-readback-20260820-r16.md",
-    "recorded_at": "2026-08-20T06:45:00+09:00"
+    "artifact": "work/heavy-local-library-all-feature-handoff-20260820-r26.md",
+    "recorded_at": "2026-08-20T16:00:00+09:00"
   },
   "exit_check": null,
   "history": [
@@ -494,7 +550,7 @@
       "checkpoint_seq": 14,
       "stage": "verify",
       "status": "running",
-      "clear_blocker": true,
+      "clear_blocker": false,
       "recorded_at": "2026-08-19T20:20:00+09:00",
       "note": "Fresh task-owned Heavy fabric readback hydrated the 31-feature workspace and account page confirmed the signed-in owner; old auth blocker cleared, provider assets/rights remain pending"
     },
@@ -1091,8 +1147,467 @@
       "clear_blocker": false,
       "recorded_at": "2026-08-20T06:45:00+09:00",
       "note": "Fresh Lightchain category-panel route-surface readback r16 confirmed visible cards are cursor-pointer divs without href/data-route/data-tool-id/onclick. Exact route mapping remains PENDING_CONFIRMATION and was not inferred from historical revision-30 data. Heavy provider generation remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 96,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T06:58:10+09:00",
+      "note": "Priority local contracts passed 69/69; current local all-feature verification passed featureCount=31 with failed=[]; unified desktop layout passed 228/228 across 1280/1440/1920/2560px with globalTimedOut=false and cleanupLeftovers=0. Chrome provider generation remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 97,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T07:06:10+09:00",
+      "note": "Removed the Heavy global keyboard-shortcut floating affordance from Lightchain routes only. UI control contract passed 4/4, typecheck/build passed, and post-build local non-video verification passed 31/31. Chrome provider generation remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 98,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": true,
+      "recorded_at": "2026-08-20T07:09:52+09:00",
+      "note": "Fresh current Profile 2 target-scoped Heavy /tools/fabric readback r10 passed openTabs(), task-owned provisioning, same-run URL/title/DOM, and cleanup_verified=true. The authenticated Lightchain-shaped fabric workbench showed fabric inputs, Gallery selectors, rights confirmation, AI生成, and 生成履歴. The prior workspace-authentication preparation observation is cleared for this run; provider generation/save/reuse remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 99,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T07:19:04+09:00",
+      "note": "Fresh current Profile 2 Lightchain homepage and /tools/fabric readback r17 passed same-browser-client URL/title/DOM and task-owned cleanup. Current four categories, fabric vertical toolbar, four material tabs, required inputs, permission control, and generation history were recorded. Heavy local fabric/printing parity frame was aligned to the vertical toolbar; focused material 14/14, UI 4/4, launcher 4/4, typecheck/build/lint, non-video 31/31, and desktop 228/228 passed. Production provider generation/save/reuse remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 100,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T07:19:04+09:00",
+      "note": "Fresh current Profile 2 Lightchain /model readback r18 passed hydration, URL/title/DOM, and task-owned cleanup. The current AI-fitting baseline exposes single/multi task, garment input, description/reference/model-set tabs, quality controls, permission control, and generation history. Provider generation/save/reuse remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 101,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T07:26:10+09:00",
+      "note": "Aligned the Lightchain header language/help controls to current production buttons and aligned fabric/printing to the current vertical toolbar frame. UI control 5/5, material 14/14, typecheck, build 2606 modules, lint passed. Final post-build non-video verification passed featureCount=31 failed=[] and unified desktop verification passed 228/228 across 1280/1440/1920/2560px with globalTimedOut=false and cleanupLeftovers=0. Production provider generation/save/reuse remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 102,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T07:29:20+09:00",
+      "note": "Fresh current Profile 2 target-scoped Heavy /tools/fabric readback r11 passed new browser-client boundary, openTabs handshake, official task-owned provisioning, same-run URL/title/DOM hydration, cleanup, and post-cleanup target absence verification. The live page still exposed ログイン／無料で始める and workspace preparation/authentication text, so heavy_target_workspace_authentication_not_ready remains current. Foreground provider generation/save/reuse remains separately blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 103,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T07:45:10+09:00",
+      "note": "Committed and deployed Lightchain auth-shell parity as 912772e; Zeabur deployment 6a8630da2a82f89733777b64 reached RUNNING. Fresh official Profile 2 target-scoped readback passed openTabs_ok, Heavy /tools/fabric URL/title/DOM, and task-owned cleanup. Live DOM shows the Lightchain auth shell but still shows login-state text and no textile asset, so heavy_target_workspace_authentication_not_ready remains current. Foreground provider generation/save/reuse remains separately blocked by chrome_foreground_activation_capability_unavailable. Artifact: work/heavy-chain-target-scoped-auth-shell-readback-20260820-r1.json."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 104,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T07:48:20+09:00",
+      "note": "Fresh official Profile 2 Lightchain homepage target-scoped run passed openTabs_ok, URL/title, exact provisioning, and cleanup, but same-run DOM body was empty (body_length=0); category/card parity remains PENDING_CONFIRMATION under lightchain_target_dom_not_hydrated. Heavy authentication and foreground provider blockers remain separate. Artifact: work/lightchain-profile2-home-readback-20260820-r19.json."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 105,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T07:52:00+09:00",
+      "note": "Fresh official Profile 2 Heavy target-scoped readback with a bounded 12-second hydration wait reached the authenticated /tools/fabric workbench. Login shell disappeared; textile inputs, material variants, rights confirmation, AI generation, and generation history were visible. openTabs_ok, URL/title, exact target identity, and task-owned cleanup passed. Authentication blocker is cleared; provider generation/save/reuse remains blocked by chrome_foreground_activation_capability_unavailable because only viewport/pageAssets/cdp are advertised. Artifact: work/heavy-chain-target-scoped-authenticated-readback-20260820-r12.json."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 106,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T07:55:20+09:00",
+      "note": "Fresh official Profile 2 Lightchain homepage target-scoped run with a bounded 12-second hydration wait passed openTabs_ok, URL/title, hydrated DOM, four categories, eight primary workspace titles, six case-share tabs, and task-owned cleanup. Video workstation visibility is recorded but remains excluded from Heavy scope. Full current-selector card/route/business parity remains PENDING_CONFIRMATION; Heavy production generation remains blocked by chrome_foreground_activation_capability_unavailable. Artifact: work/lightchain-profile2-home-readback-20260820-r20.json."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 107,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T08:01:00+09:00",
+      "note": "Chrome common-layer investigation confirmed the foreground_activation/management receiver and fail-close contract are already implemented; focused transport/capability regression passed 67/67. Current signed Profile 2 advertisement remains viewport/pageAssets/cdp only, so chrome_foreground_activation_capability_unavailable is an official distribution boundary. No Heavy/AOS/recording code or external effect was changed."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 108,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T08:00:39+09:00",
+      "note": "Fresh current-selector revision-30 Lightchain homepage card readback r21 passed openTabs(), URL/title, readyState=complete, hydrated DOM, seven non-video default cards, one excluded video card, four categories, six case-share tabs, and task-owned cleanup. Category-panel counts/routes and per-feature behavior remain PENDING_CONFIRMATION. Heavy production remains blocked by chrome_foreground_activation_capability_unavailable. Artifact: work/lightchain-profile2-home-card-readback-20260820-r21.json."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 109,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T08:02:30+09:00",
+      "note": "Fresh current-selector revision-30 Lightchain priority-route readback r22 passed target-scoped URL/title/DOM hydration for /tools/fabric, /tools/printing, and /model. Lightchain input/history/permission controls were visible; task-owned tabs 1980903851, 1980903853, and 1980903855 were cleaned up. No credential input, generation, save/reuse, recording, or external effect occurred. Heavy production remains blocked by chrome_foreground_activation_capability_unavailable. Artifact: work/lightchain-profile2-priority-route-readback-20260820-r22.json."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 110,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T08:10:11+09:00",
+      "note": "Fresh current-selector revision-30 Lightchain non-video candidate route readback r23 passed for all 19 candidate routes: Lightchain AI title, readyState=complete, non-empty DOM, route-specific markers, and task-owned cleanup. Card-to-route mapping and per-feature generation/save/reuse/error/performance remain PENDING_CONFIRMATION. Heavy production remains blocked by chrome_foreground_activation_capability_unavailable. Artifact: work/lightchain-profile2-non-video-route-readback-20260820-r23.json."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 111,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T08:20:39+09:00",
+      "note": "Fresh current-selector revision-30 Heavy target-scoped route readback r24 passed for all 19 non-video candidate routes with Heavy title, readyState=complete, DOM markers, and cleanup_verified=true. Concrete parity gaps were recorded: editor/changeColor redirected to /lightchain, model-base/style rendered brand settings, line/SVG/reactor rendered the unified launcher, and printing/vector/pattern routes rendered the integrated graphics workbench. Heavy source projection was corrected for these routes; post-change fresh browser readback, visual exact parity, card mapping, generation/save/reuse, error/retry, and performance remain PENDING_CONFIRMATION. Production remains blocked by chrome_foreground_activation_capability_unavailable. Artifact: work/heavy-profile2-non-video-route-readback-20260820-r24.json."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 112,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T08:27:34+09:00",
+      "note": "Post-change local verification passed: non-video featureCount=31 with failed=[], and unified desktop layout passed 228/228 with failed=0, globalTimedOut=false, cleanupLeftovers=0 across 1280/1440/1920/2560px. These are local regression proofs only; fresh post-change Heavy browser parity, production provider generation/save/reuse, and exact visual parity remain PENDING_CONFIRMATION. Artifacts: output/playwright/lightchain-all-feature-workflows-20260819T232442Z/SUMMARY.json and output/playwright/unified-desktop-layout-current/SUMMARY.json."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 113,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T08:40:07+09:00",
+      "note": "Local route-boundary cleanup r1 removed the Heavy identity and keyboard-shortcut surface from the previously leaking /editor/pattern direct route and aligned the current non-video direct-route allowlist. Focused route readback passed; typecheck, lint, parity route tests 7/7, build 2606 modules, and non-video featureCount=31 failed=[] passed. The latest desktop harness completed 228 cells but returned 208/228 because 20 API-backed model/repair cells reported operation_failed; this remains failed/PENDING_CONFIRMATION and is not treated as a desktop pass. Artifact: work/heavy-local-lightchain-route-boundary-20260820-r1.md. Production remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 114,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T08:50:50+09:00",
+      "note": "Lightchain direct color-route cleanup r1 removed the Heavy-internal P0 IMPLEMENTATION / まず直す3つの軸 panel from the shared Generate detail surface while retaining /editor/changeColor colorize hydration, route-preserving back navigation, upload, rights, and generation controls. Local authenticated readback kept /editor/changeColor and reduced body length from 1504 to 935 with P0 text absent. Typecheck, lint, build 2606 modules, and non-video featureCount=31 failed=[] passed. Artifact: work/heavy-local-lightchain-color-route-cleanup-20260820-r1.md; verifier: output/playwright/lightchain-all-feature-workflows-20260819T234919Z/SUMMARY.json. Production remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 115,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T08:55:12+09:00",
+      "note": "Lightchain direct-route title alignment r2 applied current display titles to /tools/line-draft-to-tile, /printing, /editor/pattern, and /editor/patternDesign without changing internal tool IDs, provider routes, persistence, or generation contracts. Fresh local authenticated readback kept all four URLs, matched expected titles, and showed no HEAVY CHAIN identity. Typecheck, lint, parity route tests 7/7, and build 2606 modules passed. Artifact: work/heavy-local-lightchain-direct-title-alignment-20260820-r2.md. Production remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 116,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T09:05:00+09:00",
+      "note": "Lightchain material retry and surface cleanup r3 removed the local-only retirement banner from visible fabric/printing parity surfaces and added bounded retry controls that reuse the current input through handleGenerate. Provider, mask, rights, persistence, History, Canvas, and lineage contracts were unchanged. Material contract 17/17, provider persistence 12/12, AI fitting resilience/resume/history 23/23, typecheck, lint, build 2606 modules, non-video featureCount=31 failed=[], visual local readback, and diff check passed. Artifact: work/heavy-local-lightchain-material-retry-cleanup-20260820-r3.md. Production remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 117,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T09:13:52+09:00",
+      "note": "Lightchain lazy-loading fallback now uses LIGHTCHAIN AI instead of the Heavy identity, with entry-routing regression 6/6. Typecheck, lint, build 2606 modules, and one clean non-video verifier run featureCount=31 / failed=[] with cleanup complete passed. The first verifier invocation was stopped at the local 4183 port-conflict boundary; no product stage ran. Artifact: work/heavy-local-lightchain-loading-brand-cleanup-20260820-r4.md. Production remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 118,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T09:21:38+09:00",
+      "note": "Routed /asset-center now has functional Library upload, workspace-artifact persistence, user/brand-scoped custom groups, filtering, selected-asset details, and Canvas sourceArtifactId handoff. Library/Canvas focused 2/2, typecheck, lint, build 2607 modules, and non-video featureCount=31 / failed=[] with cleanup complete passed. Artifact: work/heavy-local-lightchain-library-workflow-20260820-r5.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 119,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T09:29:52+09:00",
+      "note": "Library r6 hydrates signed remote generated-image history as read-only cards, excludes video rows, and provides explicit remote-result registration into the durable workspace artifact contract with remote/source identity before Canvas handoff. Library/Canvas focused 2/2, typecheck, lint, build 2607 modules, non-video featureCount=31 / failed=[], cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-library-workflow-20260820-r6.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 120,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T09:38:36+09:00",
+      "note": "Library r7 adds an AI fitting handoff for local assets and remote-result registration before navigation. Fitting re-signs canonical source paths, preserves source identity, and suppresses automatic draft overwrite during the handoff. Library/Canvas 2/2, Fitting history 10/10, resume 9/9, source readback 7/7, material 17/17, provider persistence 12/12, typecheck, lint, build 2607 modules, non-video 31/31, cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-library-fitting-handoff-20260820-r7.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 121,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T09:45:41+09:00",
+      "note": "Library r8 adds direct local/remote Library handoff to the fabric-image and print-image workbenches through libraryArtifactId/librarySlot. The material workbench re-signs canonical storage paths and prevents persisted printing-input hydration from overwriting an active handoff. Handoff 3/3, material 17/17, provider persistence 12/12, typecheck, lint, build 2607 modules, non-video 31/31, cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-library-material-handoff-20260820-r8.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 122,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T09:51:22+09:00",
+      "note": "Local beta gate refresh r9 passed unified desktop 228/228 across 1280/1440/1920/2560px with failed=0, globalTimedOut=false, and cleanupLeftovers=0 after the Library material handoff. Provider coverage 11/11, workspace handoff 2/2, Library/material handoff 3/3, material contract 17/17, and provider persistence/readback 12/12 passed. Historical Playwright production verifiers remain untrusted because their auth-state inputs are missing; current Chrome Plugin proof remains separately blocked by chrome_foreground_activation_capability_unavailable. Artifact: work/heavy-local-lightchain-beta-gate-refresh-20260820-r9.md."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 123,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T09:56:58+09:00",
+      "note": "Library URL safety r10 makes canonical remote Library artifacts fail closed on signing failure instead of restoring a stale bearer URL. Local/data/blob/relative references remain usable. Library/Canvas/material handoff 3/3, provider persistence/readback 12/12, typecheck, lint, build 2607 modules, and non-video featureCount=31 / failed=[] with cleanup complete passed. Artifact: work/heavy-local-lightchain-library-url-safety-20260820-r10.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 124,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T10:18:00+09:00",
+      "note": "Local Lightchain rights-modal parity r11 removed the always-visible Heavy-specific rights card from the fabric/printing initial frames. AI generation now opens an on-demand rights modal; draft checkbox and confirmed provider permission are separate, and cancel/close does not authorize submission. Material contract 17/17, Library/Canvas/material handoff 3/3, typecheck, lint, build 2607 modules, non-video featureCount=31 / failed=[], and diff check passed. Artifact: work/heavy-local-lightchain-rights-modal-parity-20260820-r11.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 126,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T10:25:00+09:00",
+      "note": "Local Lightchain generic rights-modal parity r13 removed persistent Heavy-specific rights cards from the generic workbench and opened an on-demand rights modal at AI generation time. Provider coverage 11/11, material contract 17/17, printing foundation 244/244, provider persistence 12/12, Library/Canvas handoff 3/3, typecheck, lint, build 2607 modules, non-video featureCount=31 / failed=[], and diff check passed. Artifact: work/heavy-local-lightchain-generic-rights-modal-parity-20260820-r13.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 127,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T10:40:00+09:00",
+      "note": "Local Lightchain result resume recovery r14 restores the same-job persisted provider result after reload through canonical storage identity and fresh signing, rejects stale bearer URL-only history, and preserves provider/job/image/parity provenance. Resume 6/6, provider persistence/readback 12/12, workspace activity/routing 12/12, typecheck, lint, build 2607 modules, non-video 31/31, and diff check passed. Artifact: work/heavy-local-lightchain-result-resume-recovery-20260820-r14.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 128,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T11:05:00+09:00",
+      "note": "Local Lightchain duplicate-submit guard r15 adds a request ref to the generic provider lane so rapid clicks cannot start two provider requests before the first state update. Material/tool-reset/unmount invalidation is covered. Provider coverage 12/12, resume 6/6, provider persistence/readback 12/12, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-duplicate-submit-20260820-r15.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 129,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T11:30:00+09:00",
+      "note": "Local Lightchain result destination links r16 expose Canvas save plus direct Gallery/History/Jobs links from feature result cards while preserving artifact/project/result lineage. Provider coverage 13/13, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], context/browser/preview cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-result-destination-links-20260820-r16.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 130,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T12:00:00+09:00",
+      "note": "Local Lightchain rights confirmation continuation r17 resumes the exact printing or generic provider generation that opened the rights modal after confirmation, once and only once. Cancellation, close, material changes, tool reset, and unmount clear the pending request. Provider coverage 15/15, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-rights-confirmation-continue-20260820-r17.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 131,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T12:30:00+09:00",
+      "note": "Local Lightchain result destination links r18 add explicit Gallery/History/Jobs destinations to material result cards and the AI fitting result preview, and make the existing durable history-to-Canvas reuse path explicit. Provider coverage 16/16, provider adapter 16/16, provider persistence/readback 12/12, material contract 17/17, fitting history/resilience/resume 23/23, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-result-destination-links-20260820-r18.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 132,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T13:00:00+09:00",
+      "note": "Local Lightchain material rights confirmation continuation r19 resumes the exact dedicated fabric/printing generation that opened the rights modal after confirmation, once and only once. The request-local confirmation value is passed to both material provider routes; cancel, close, input changes, tool reset, and unmount clear the pending request. Provider coverage 17/17, typecheck, lint, build 2607 modules, non-video verifier ok=true / featureCount=31 / failed=[], cleanup complete, and diff check passed. Artifact: work/heavy-local-lightchain-material-rights-confirmation-continue-20260820-r19.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 133,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T13:30:00+09:00",
+      "note": "Fresh r20 official Profile 2 target-scoped readback confirmed hydrated Heavy /tools/fabric plus Lightchain homepage, /tools/printing, and /model in one owner-bound run; URL/title/DOM hydration, task-tab cleanup, and owner lineage matched. No selected/focus/claim/foreground operation or external effect was used. Artifact: work/heavy-lightchain-current-target-readback-20260820-r20.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 134,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T14:00:00+09:00",
+      "note": "Local parity/completion audit r21 corrected a stale focused material-contract assertion for the once-only rights-confirmation continuation signature. Focused material/mask 17/17, provider coverage 17/17, provider adapter 16/16, provider persistence/readback 12/12, Library/Canvas 3/3, workspace activity/routing 12/12, parity/entry routes 8/8 and 6/6, synthesis 3/3, Canvas view 3/3, typecheck, lint, build 2607 modules, non-video 31/31, and unified desktop 228/228 passed with no cleanup leftovers. Artifact: work/heavy-local-parity-audit-20260820-r21.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 135,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T14:30:00+09:00",
+      "note": "Fresh r22 official Profile 2 capability readback passed openTabs() for browser-client -d256-4d52-8ac6-eeb5b1f2d312 with no Heavy/Lightchain target operation; advertised capabilities remain viewport/pageAssets/cdp and foreground activation/management are absent. The local beginner UX verifier now reports auth_state_missing as the sole gate when auth state is unavailable and marks uncreated resources clean. Artifact: work/heavy-profile2-capability-and-beginner-ux-gate-20260820-r22.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 136,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T14:45:00+09:00",
+      "note": "Local printing readiness contract r23 repaired the stale focused ordering assertion for the current rights-confirmation-aware generation closure. Printing foundation/composition 244/244, provider coverage 17/17, material contract 17/17, provider adapter 16/16, persistence/readback 12/12, Library/Canvas 3/3, workspace routing 12/12, entry/parity routes 8/8, resume input 6/6, typecheck, lint, build 2607 modules, non-video 31/31, unified desktop 228/228, and internal UX passed. Artifact: work/heavy-local-printing-readiness-contract-20260820-r23.md. Production provider remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 142,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T16:20:00+09:00",
+      "note": "Fresh official Chrome Plugin/Profile 2 target-scoped readback r27 passed in one browser-client run for the current Lightchain homepage and /tools/fabric, /tools/printing, and /model. URL/title/DOM readback succeeded; task-owned tabs 1980903941, 1980903942, 1980903944, and 1980903946 were closed and pre-existing unrelated job tabs were untouched. Artifact: work/lightchain-profile2-fresh-parity-readback-20260820-r27.md. No selected/focus/claim, foreground operation, provider generation, save/reuse, recording, or external effect was performed. The official signed extension still lacks foreground_activation/management, so production provider/result/save/reuse/reload remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 141,
+      "stage": "execute",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T16:35:00+09:00",
+      "note": "Local non-video copy parity r28 aligned the homepage case-share tab to 生産 and removed video from the generic non-video workbench homepage description. Launcher parity 6/6, typecheck, and git diff check passed. Artifact: work/heavy-local-lightchain-non-video-copy-parity-20260820-r28.md. No Chrome common layer, recording, AOS, provider backend, deployment, or external effect was changed. Production provider proof remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 142,
+      "stage": "execute",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T16:50:00+09:00",
+      "note": "Local Lightchain homepage heading parity r29 aligned the Heavy main heading to アパレル特化のAIデザインワークスペース while retaining the separate header logo. Launcher parity 7/7, typecheck, lint, and the prior r28 build passed. Artifact: work/heavy-local-lightchain-home-heading-parity-20260820-r29.md. No Chrome common layer, recording, AOS, provider backend, deployment, or external effect was changed. Production provider proof remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 143,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T17:05:00+09:00",
+      "note": "Isolated unified desktop verification after r29 completed 228/228 cases across 1280/1440/1920/2560px with 0 failures, no global timeout, and cleanupLeftovers=0. The earlier concurrent operation-failure run is not used as current proof. Production build transformed 2607 modules; git diff check and Goal context JSON validation passed. Artifact: work/heavy-local-lightchain-desktop-parity-20260820-r30.md. Production provider generation/save/reuse/reload remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 144,
+      "stage": "execute",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T17:25:00+09:00",
+      "note": "Local Lightchain extra-count cleanup r31 removed the Heavy-only homepage category tool-count indicator and added a focused regression. Launcher parity 8/8, typecheck, lint, build 2607 modules, and git diff check passed. Artifact: work/heavy-local-lightchain-extra-count-cleanup-20260820-r31.md. Chrome common layer, recording, AOS, provider backend, deployment, and external effects were not changed. Production provider proof remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 145,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T12:32:00+09:00",
+      "note": "Current Heavy source recheck r32 passed the non-video workflow verifier at 31/31 with ok=true and failed=[], plus isolated unified desktop layout 228/228 across 1280/1440/1920/2560px with 0 failures, no global timeout, and cleanupLeftovers=0. Artifacts: output/playwright/lightchain-all-feature-workflows-20260820T032822Z/SUMMARY.json, output/playwright/unified-desktop-layout-extra-count-r31/SUMMARY.json, and work/heavy-local-lightchain-current-recheck-20260820-r32.md. Production provider generation/save/reuse/reload remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 146,
+      "stage": "execute",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T12:45:00+09:00",
+      "note": "Local Lightchain home spacing parity r33 removed the Heavy-only py-10 wrapper around GenerateLightchainEntry and added a regression. Launcher parity 9/9, typecheck, lint, build 2607 modules, and git diff check passed. Artifact: work/heavy-local-lightchain-home-spacing-parity-20260820-r33.md. Priority workbench routes and all external surfaces were not changed. Production provider proof remains blocked by chrome_foreground_activation_capability_unavailable."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 147,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T12:41:18+09:00",
+      "note": "Current Heavy source recheck r34 passed the non-video workflow verifier at 31/31 with ok=true and failed=[], plus unified desktop layout 228/228 across 1280/1440/1920/2560px with 0 failures, no global timeout, browser/context/preview cleanup complete, and cleanupLeftovers=0. Artifacts: output/playwright/lightchain-all-feature-workflows-20260820T033753Z/SUMMARY.json, output/playwright/unified-desktop-layout-home-spacing-r33/SUMMARY.json, and work/heavy-local-lightchain-current-recheck-20260820-r34.md. Production provider generation/save/reuse/reload remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 148,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T12:46:47+09:00",
+      "note": "Fresh official Chrome Plugin/Profile 2 target-scoped Heavy /tools/fabric readback r35 passed with browser -864b-4bca-af5f-8619b1b2537e, target 1980903951, selector revision 30, URL/title/DOM and readyState=complete. Login and workspace/auth-preparation blockers were absent; fabric inputs, ratios, rights confirmation, AI generation, and generation history were visible. Task-owned cleanup was verified and unrelated tabs were untouched. No foreground operation, upload, rights confirmation, provider generation, save/reuse, recording, or external effect occurred. Authentication/workspace hydration is clear; production provider proof remains blocked by chrome_foreground_activation_capability_unavailable; G619/H601/launch-ops gates remain incomplete."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 149,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T13:05:00+09:00",
+      "note": "Current Heavy source was re-audited after authenticated target-scoped r35. Focused practical-flow suite passed 74/74 across fabric/printing, AI fitting, provider persistence/readback, Library-to-Canvas, workspace activity routing, retry, and resume. Current non-video workflow verifier remains 31/31, unified desktop remains 228/228 across 1280/1440/1920/2560px with cleanup leftovers 0, and launcher parity is 9/9. No Chrome common layer, recording, AOS, deployment, or external effect changed. Production provider generation/save/reuse/reload remains fail-closed on chrome_foreground_activation_capability_unavailable; Mac/Windows, G619, H601, launch-ops, and source association remain PENDING_CONFIRMATION. Artifact: work/heavy-chain-completion-audit-20260820-r2.md."
+    },
+    {
+      "type": "checkpoint",
+      "checkpoint_seq": 150,
+      "stage": "verify",
+      "status": "running",
+      "clear_blocker": false,
+      "recorded_at": "2026-08-20T13:05:01+09:00",
+      "note": "Heavy parity source commit 426d6289f312df4c792c05d5fd754aeaf8eab32c was pushed to origin/main and deployed to the verified Zeabur project/environment/service. Deployment 6a867ab9f1ea67ebf4ea6eec is RUNNING with Docker plan; runtime HTTP 200 and remote index bundle SHA-256 matches local dist at 710fe202a0b963b56fb91de654a3204188d9a53ee2e135c95052b01109f8945e. This was a Heavy-only deployment; recording, Chrome common layer, AOS, secrets, provider generation, and external business effects were not changed. The deployment's GitHub commit metadata is empty because it is a local-upload lane and the same-commit source-associated entry was canceled; immutable source provenance and post-deploy fresh Chrome target readback remain PENDING_CONFIRMATION. Exact provider blocker remains chrome_foreground_activation_capability_unavailable. Artifact: work/heavy-chain-production-deployment-20260820-r2.md."
     }
   ],
   "created_at": "2026-08-19T00:49:44.381Z",
-  "updated_at": "2026-08-20T06:45:00+09:00"
+  "updated_at": "2026-08-20T13:05:01+09:00"
 }
