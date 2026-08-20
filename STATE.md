@@ -11,6 +11,7 @@ Updated: 2026-08-20
 - Parity Matrixのcurrent revision-6 overlayをr96へ更新し、r88 Lightchain source、r90/r93 Heavy production readback、r91 local gates、r94/r95 beta gates、r96 Chrome capabilityをRequirement layer別に整理した。Artifact: `work/lightchain-parity-matrix-current-20260820-r13.md`。
 - Fresh rev6 Lightchain target-scoped route ledger r97で非動画候補19/19のURL/title/non-empty DOMを確認し、hydrationが必要だった2 routeもfocused settle後に`readyState=complete`、task-owned 21 tabのcleanupを確認した。Artifact: `work/lightchain-profile2-current-selector-rev6-non-video-route-ledger-20260820-r97.md`。これはroute/read-only proofであり、生成・保存・再利用の証明ではない。
 - Local current verification r98 passed `verify:lightchain-all-features` (`ok=true`, `featureCount=31`, `failed=[]`, build `2608 modules`), route parity `8/8`, and typecheck. Artifact: `work/heavy-local-feature-verification-20260820-r98.md`。これはlocal contract proofであり、production provider生成・保存・再利用・Mac/Windows・β受入れの代替ではない。
+- 同じfresh rev6 source runで`/tools/printing`も追加readbackし、`プリントイメージ`、`プリントをアップロード`、`スポット`、`全体`、`AI生成`、`生成履歴`、`readyState=complete`を確認してtask-owned tabをcleanupした。r97 artifactに追記済み。3 priority source routeはread-only verifiedだが、production生成・保存・再利用の証明ではない。
 
 ### Current exact blocker / next action / restart point
 

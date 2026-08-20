@@ -35,6 +35,17 @@
   `PENDING_CONFIRMATION`; no card was clicked or navigated as part of this
   ledger.
 
+## Priority source route supplement
+
+- The same fresh browser-client also provisioned and read
+  `/tools/printing`: `readyState=complete`, title `Lightchain AI`,
+  `プリントイメージ`, `プリントをアップロード`, `スポット`, `全体`,
+  `AI生成`, and `生成履歴` were visible; the task-owned tab was closed.
+- Together with `/tools/fabric` and `/model` in the 19-route pass, the three
+  priority source routes now have current rev6 URL/title/DOM control evidence.
+- This remains read-only route evidence. Provider generation, result, save,
+  Gallery/Canvas/History/Jobs lineage, reuse, and reload remain unverified.
+
 ## Current non-video route baseline
 
 | Lightchain feature | route | representative fresh markers |
