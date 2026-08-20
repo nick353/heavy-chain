@@ -15,6 +15,13 @@ Updated: 2026-08-20
   across 57 targets and 1280/1440/1920/2560px, with zero failures, no global
   timeout, and zero cleanup leftovers. Summary:
   `output/playwright/unified-desktop-layout-current/SUMMARY.json`.
+- `verify:h601-legal-safety` passed its static guard checks, but
+  `verify:h601-operator-readiness` remains not ready with 10 human/operator
+  evidence items missing. `verify:g619-beta-readiness` reports
+  `readySessions=0`; `verify:g619-beta-evidence` is missing its real-beta
+  manifest at `output/playwright/g619-real-beta-evidence/manifest.json`.
+- `verify:launch-ops` remains blocked by
+  `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`.
 - Artifact:
   `work/heavy-local-beta-qa-readback-20260820-r115.md`。
 
@@ -23,6 +30,7 @@ Updated: 2026-08-20
 These are dependency-independent local proofs. They do not promote production
 provider generation, result/save, Gallery/Canvas/History/Jobs readback,
 reuse/reload, Mac/Windows paired acceptance, or internal operator acceptance.
+The static H601 guard is not a human/legal approval.
 
 ### Current exact blocker / next action / restart point
 

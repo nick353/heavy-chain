@@ -10,6 +10,10 @@
 - Unified desktop layout passed `228/228` checks across 57 targets and
   1280/1440/1920/2560px, with zero failures, no global timeout, and zero
   cleanup leftovers.
+- Static H601 safety guard passed, but operator readiness remains open with 10
+  human/operator evidence items missing. G619 has `readySessions=0` and no
+  real-beta manifest; launch operations is blocked by the missing production
+  auth-state artifact.
 - Artifacts:
   `work/heavy-local-beta-qa-readback-20260820-r115.md`,
   `output/playwright/lightchain-all-feature-workflows-20260820T111441Z/SUMMARY.json`,
@@ -19,7 +23,8 @@
 
 The local contract and desktop QA gates are green, but production provider
 generation through save, Gallery/Canvas/History/Jobs, reuse/reload, paired
-Mac/Windows acceptance, and internal operator acceptance remain unproven.
+Mac/Windows acceptance, and internal operator acceptance remain unproven. The
+static H601 guard is not a human/legal approval.
 The exact blocker remains
 `chrome_foreground_activation_capability_unavailable`; after its official
 resolution, create a fresh Profile 2 owner and prove fabric/printing first,
