@@ -2,6 +2,46 @@
 
 Updated: 2026-08-20
 
+## Current production target-scoped readback r101
+
+- Auth-lock fix commit `4a1cce4` was deployed to the existing Heavy Chain
+  Zeabur service as deployment `6a86c594488619a6c553f0f4`, which reached
+  `RUNNING`.
+- Before the new browser boundary, the mandatory Profile 2 preflight returned
+  `status=ready`, current selector `chrome_plugin` / Profile 2 /
+  `signed_chrome_extension_profile2` / revision `30`, and
+  `exact_blocker=null`.
+- A fresh official browser-client `-b911-45ef-a9a2-503edfc74eb7` completed the
+  same-run list → get → `openTabs()` handshake. The advertisement still has
+  `viewport` and tab `pageAssets`/`cdp`, but no `foreground_activation` or
+  `management` capability.
+- Heavy `/tools/fabric` was absent from the fresh inventory. Allowlisted
+  target-scoped provisioning created task-owned tab `1980904546`; URL/title/
+  DOM readback reached the hydrated Lightchain-shaped fabric workbench with
+  `生地イメージ`, model/design and fabric inputs, ratio, material variants,
+  `AI生成`, and `生成履歴`. The previous auth/workspace preparation shell was
+  absent.
+- Only task-owned tab `1980904546` was closed and `cleanup_verified=true`.
+  No login click, upload, rights confirmation, provider generation, save,
+  reuse, recording, AOS change, or external effect occurred.
+- Artifact: `work/heavy-production-target-scoped-readback-20260820-r101.md`。
+
+### Current exact blocker / next action / restart point
+
+- `heavy_target_workspace_authentication_not_ready` is cleared by this fresh
+  proof. The remaining provider-flow blocker is
+  `chrome_foreground_activation_capability_unavailable`; the official signed
+  extension still does not advertise `foreground_activation`/`management`.
+- Next action: keep target-scoped read-only parity work available. After the
+  official capability advertisement changes, create one new Profile 2 owner
+  and prove fabric/printing generation → result → save → Gallery/Canvas/
+  History/Jobs → reuse → reload, then repeat for AI fitting. Do not use the
+  same capability fingerprint as a retry.
+- Restart point: official capability-state change followed by the mandatory
+  Profile 2 preflight and a fresh list → get → `openTabs()` owner boundary.
+  Do not reuse browser `-b911-45ef-a9a2-503edfc74eb7`, tab `1980904546`, old
+  runs, or old artifacts as current proof.
+
 ## Current production target-scoped readback r100
 
 - Deployment `6a86c236c87cdf6b9c27dc3e` reached `RUNNING` for the existing Heavy Chain service. A fresh official Chrome Plugin/Profile 2 browser-client `-5232-4100-a603-f93486760f5c` used the current selector source of truth: `chrome_plugin` / Profile 2 / `signed_chrome_extension_profile2` / revision `30`.

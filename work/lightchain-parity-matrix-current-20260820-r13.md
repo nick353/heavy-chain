@@ -1,6 +1,34 @@
-# Lightchain / Heavy parity matrix — current-selector checkpoint r100 (historical overlays retained)
+# Lightchain / Heavy parity matrix — current-selector checkpoint r101 (historical overlays retained)
 
 更新日: 2026-08-20
+
+## 0.0 current revision-30 production target overlay r101
+
+- The auth-lock fix commit is `4a1cce4`; Zeabur deployment
+  `6a86c594488619a6c553f0f4` reached `RUNNING`.
+- Mandatory Profile 2 preflight returned `status=ready` with
+  `exact_blocker=null`. Fresh browser-client
+  `-b911-45ef-a9a2-503edfc74eb7` passed list → get → `openTabs()` under the
+  current selector revision `30`.
+- Target-scoped provisioning/readback of Heavy `/tools/fabric` reached the
+  hydrated Lightchain-shaped fabric workbench. Auth/workspace preparation is
+  cleared for this current proof. Task-owned tab `1980904546` was closed and
+  `cleanup_verified=true`.
+- Artifact: `work/heavy-production-target-scoped-readback-20260820-r101.md`。
+
+| Requirement layer | Current status | Current evidence / gap |
+|---|---|---|
+| Deployment/runtime availability | `verified` | deployment `6a86c594488619a6c553f0f4` is `RUNNING` |
+| Profile 2 preflight/transport/openTabs/owner lineage | `verified` | fresh r101 preflight and same-run handshake |
+| Heavy authenticated workspace and fabric assets | `verified` for current read-only proof | hydrated fabric workbench and controls visible in r101 |
+| Provider generation/save/reuse/reload | `PENDING_CONFIRMATION` | no effectful same-run provider proof |
+| Foreground-only execution | `PENDING_CONFIRMATION` | official `foreground_activation`/`management` capability remains unadvertised |
+
+### r101 restart point
+
+After an official foreground-capability advertisement change, apply the
+mandatory Profile 2 preflight and use a new owner for foreground-dependent
+provider proof. Do not reuse the r101 browser, tab, run, or artifact.
 
 ## 0.0 current revision-30 production target overlay r100
 

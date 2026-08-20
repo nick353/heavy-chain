@@ -2,6 +2,31 @@
 
 更新日: 2026-08-20
 
+## Current production checkpoint r101
+
+- Auth-lock fix commit `4a1cce4` was deployed to the existing Heavy Chain
+  service as Zeabur deployment `6a86c594488619a6c553f0f4`, and the new
+  deployment reached `RUNNING`.
+- Mandatory Profile 2 preflight passed: `status=ready`, current selector
+  `chrome_plugin` / Profile 2 / `signed_chrome_extension_profile2` / revision
+  `30`, `exact_blocker=null`.
+- Fresh browser-client `-b911-45ef-a9a2-503edfc74eb7` passed the same-run
+  list → get → `openTabs()` handshake. Target-scoped provisioning/readback of
+  `/tools/fabric` reached the hydrated Lightchain-shaped fabric workbench;
+  the former authentication/workspace preparation shell is no longer present.
+- The fresh page exposed model/design and fabric inputs, keyword, ratio,
+  fabric variants, `AI生成`, and `生成履歴`. Task-owned tab cleanup passed for
+  tab `1980904546`.
+- Artifact: `work/heavy-production-target-scoped-readback-20260820-r101.md`。
+
+### Restart point
+
+Authentication/workspace hydration is cleared. Keep provider generation,
+save/reuse/reload, recording, AOS UI changes, and external effects stopped
+until the official signed extension advertises `foreground_activation` or
+`management`. Then use a fresh Profile 2 owner to prove the fabric/printing
+flow and the AI-fitting flow end to end.
+
 ## Current production checkpoint r100
 
 - Zeabur deployment `6a86c236c87cdf6b9c27dc3e` is `RUNNING`.
