@@ -17,6 +17,7 @@
 - Fresh target-scoped priority-route readback r87 confirmed current production `/tools/fabric`, `/tools/printing`, and `/model` hydration and Lightchain-shaped controls. Artifact: `work/heavy-priority-routes-readback-20260820-r87.md`。プリントに表示された既存履歴は今回のrunで生成していないためcurrent generation proofには昇格していない。
 - Fresh Lightchain source homepage readback r88 confirmed the current logo/hero/prompt/category/card/case-tab baseline. Heavy's case-sharing area was expanded to non-video items across all six source tabs; the source video card/cases remain excluded by scope. Artifact: `work/lightchain-source-home-readback-20260820-r88.md`、visual `work/lightchain-source-home-readback-20260820-r88.png`。
 - Local case-tabs parity verification r89 passed `verify:lightchain-all-features` (`ok=true`, `failed=[]`, `featureCount=31`), build (`2608 modules`), typecheck, lint, and diff check. Artifact: `work/heavy-local-case-tabs-parity-20260820-r89.md`。これはlocal proofであり、production provider生成・保存再利用・Mac/Windows実機受入れの代替ではない。
+- Production case-tabs readback r90 confirmed deployment `6a86bb1d99ff31c1168ac1e7` is `RUNNING`; Heavy `/lightchain` showed the Lightchain-shaped hero, four categories, eight non-video launcher cards, and all six case tabs, with target-scoped cleanup verified. Artifact: `work/heavy-production-case-tabs-readback-20260820-r90.md`。provider生成・保存・Gallery/Canvas/History/Jobs系譜・再利用/reload、Mac/Windows実機受入れは未確認。
 
 ### Current exact blocker / next action / restart point
 

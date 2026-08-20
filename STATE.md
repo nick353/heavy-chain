@@ -16,6 +16,7 @@ Updated: 2026-08-20
 - Fresh target-scoped r87 readback confirmed hydrated production `/tools/fabric`, `/tools/printing`, and `/model` controls with cleanup verified. Artifact: `work/heavy-priority-routes-readback-20260820-r87.md`. An existing printing history item was observed but not promoted as current same-run generation proof.
 - Fresh Lightchain source homepage r88 confirmed the current source hero, categories, recommended card set, and six case tabs. Heavy now supplies non-video case items across all six tabs; video card/cases remain excluded by scope. Artifact: `work/lightchain-source-home-readback-20260820-r88.md` and screenshot `work/lightchain-source-home-readback-20260820-r88.png`.
 - Local case-tabs parity verification r89 passed the 31-feature workflow verifier (`ok=true`, `failed=[]`), build (`2608 modules`), typecheck, lint, and diff check. Artifact: `work/heavy-local-case-tabs-parity-20260820-r89.md`. This remains local proof only.
+- Production case-tabs readback r90 confirmed deployment `6a86bb1d99ff31c1168ac1e7` is RUNNING and Heavy `/lightchain` renders the Lightchain-shaped hero, four categories, eight non-video launcher cards, and all six case tabs. Target-scoped cleanup passed. Artifact: `work/heavy-production-case-tabs-readback-20260820-r90.md`. Provider generation/save/reuse/reload and real Mac/Windows acceptance remain PENDING_CONFIRMATION.
 
 ### Current exact blocker / next action / restart point
 
