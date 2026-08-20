@@ -923,16 +923,28 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Next action: capability更新後の新規Profile 2 ownerでfabric／printing production same-run proof、その後AI fitting proofへ進む。更新前はtarget-scoped read-onlyとlocal parity改善を継続する。
 - Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
 
-## 2026-08-20 Heavy production deployment readback r2
+## 2026-08-20 Heavy production avatar parity readback r37
 
-- Current Heavy parity workspace was deployed to the verified `automation-wiled / heavy-chain` target as deployment `6a867ab9f1ea67ebf4ea6eec` (`RUNNING`).
-- Source commit `426d6289f312df4c792c05d5fd754aeaf8eab32c` is on `origin/main`; local preflight typecheck/lint/build and diff check passed.
-- Remote runtime bundle SHA-256 matches local `dist/assets/index.2_QTnZl7.js`: `710fe202a0b963b56fb91de654a3204188d9a53ee2e135c95052b01109f8945e`.
-- Artifact: `work/heavy-chain-production-deployment-20260820-r2.md`。
+- Avatar parity修正のsource commit `f861c73`がGitHub source-associated deployment `6a867e772a82f89733778c0f`として`RUNNING`になり、root HTTP 200、remote/local bundle hash一致を確認した。
+- 新規Profile 2 target-scoped readbackで、Heavy `/tools/fabric`のheaderにLightchain同様の`avatar`表示を確認。旧`アカウント`ラベルはなく、fabric inputs、rights gate、`AI生成`、`生成履歴`は維持された。
+- task-owned tab cleanupはPASS。Artifact: `work/heavy-production-avatar-parity-readback-20260820-r37.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式広告は`viewport`のみで、provider生成→保存→再利用→reloadのproduction proofは未確認。
+- Next action: capability更新後、新規Profile 2 ownerでfabric／printing same-run proof、その後AI fitting proofへ進む。更新前はtarget-scoped read-onlyとlocal parity改善を継続する。
+- Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 Heavy production deployment readback r3
+
+- Current Heavy parity workspace was deployed to the verified `automation-wiled / heavy-chain` target as source-associated deployment `6a867e772a82f89733778c0f` (`RUNNING`).
+- Source commit `f861c73c8f58e2930e3ed357af3fc42754369ec0` is on `origin/main`; local typecheck/lint/build and diff check passed.
+- Remote runtime bundle SHA-256 matches local `dist/assets/index.CKx-RaX1.js`: `d5fb622c93fd280fc585600dcdf01945692222f7adc0b62225312d4c458ba0a6`.
+- Artifact: `work/heavy-production-avatar-parity-readback-20260820-r37.md`。
 
 ### Current exact blocker / next action / restart point
 
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`。本番provider実行は公式Profile 2 capability更新待ち。
-- Deployment provenance is `PENDING_CONFIRMATION` because local-upload deployment metadata has no GitHub commit fields and the same-commit source-associated entry was canceled.
+- Deployment provenance: source-associated GitHub metadata, `RUNNING` status, HTTP 200, and remote/local bundle hash match are confirmed.
 - Next action: capability update後、fresh Profile 2 ownerで新規target readbackを取得してからfabric／printing、AI fittingの同一run proofへ進む。
 - Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは再利用しない。

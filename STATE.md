@@ -3942,15 +3942,28 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Next action: 公式signed extension/backendが`foreground_activation`／`management`を広告した後、新規Profile 2 ownerでfabric／printingの生成→結果→保存→Gallery／Canvas／History／Jobs→再利用→reloadを同一runで確認し、その後AIフィッティングへ進む。広告がない間はtarget-scoped read-onlyとlocal parity改善を継続する。
 - Restart point: capability state change後のfresh official owner。r36 browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
 
-## 2026-08-20 Heavy production deployment readback r2
+## 2026-08-20 Heavy production deployment readback r3
 
-- Source commit `426d6289f312df4c792c05d5fd754aeaf8eab32c` was pushed to `origin/main` and the current parity workspace was deployed to the verified Heavy service.
-- Deployment `6a867ab9f1ea67ebf4ea6eec` is `RUNNING`; remote bundle hash matches local build hash `710fe202a0b963b56fb91de654a3204188d9a53ee2e135c95052b01109f8945e`.
-- Artifact: `work/heavy-chain-production-deployment-20260820-r2.md`。
-- This deployment is runtime-verified but its GitHub commit metadata is empty because it is a local-upload deployment; immutable source provenance remains PENDING_CONFIRMATION.
+- Source commit `f861c73c8f58e2930e3ed357af3fc42754369ec0` was pushed to `origin/main` and the current parity workspace was deployed to the verified Heavy service.
+- Source-associated deployment `6a867e772a82f89733778c0f` is `RUNNING`; remote bundle hash matches local build hash `d5fb622c93fd280fc585600dcdf01945692222f7adc0b62225312d4c458ba0a6`.
+- Artifact: `work/heavy-production-avatar-parity-readback-20260820-r37.md`。
+- Source-associated GitHub metadata, HTTP 200 runtime, and remote/local bundle hash match are confirmed.
 
 ### Current exact blocker / next action / restart point
 
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`。
 - Next action: official capability update後、新規Profile 2 ownerでtarget readbackを取り直し、fabric／printing provider flow、AI fitting、保存／再利用／reloadのsame-run proofへ進む。
 - Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 Heavy production avatar parity readback r37
+
+- Avatar parity修正を含むsource commit `f861c73c8f58e2930e3ed357af3fc42754369ec0`がGitHub source-associated deployment `6a867e772a82f89733778c0f`として`RUNNING`になった。
+- `https://heavy-chain.zeabur.app/`はHTTP 200、remote `/assets/index.CKx-RaX1.js`のSHA-256はlocal bundleと一致した。
+- 新規公式Profile 2 owner `-3254-4920-8656-2f06326b52bc`でHeavy `/tools/fabric`をprovisionし、同一runのURL/title/DOMをreadbackした。Lightchain同様の`button "avatar"`を確認し、旧`アカウント`ラベルは消失した。hydrated fabric inputs、権利ゲート、`AI生成`、`生成履歴`も維持された。
+- task-owned tab `1980904119`のcleanupをPASSした。Artifact: `work/heavy-production-avatar-parity-readback-20260820-r37.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。source/runtime/UI parityは更新済みだが、provider生成・保存・再利用・reloadのproduction same-run proofは未確認。
+- Next action: 公式`foreground_activation`／`management`広告後、新規Profile 2 ownerでfabric／printing実用フローを1回通し、その後AIフィッティングへ進む。広告がない間はtarget-scoped read-onlyとlocal parityを継続する。
+- Restart point: capability state change後のfresh official owner。r37 browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
