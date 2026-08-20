@@ -18,6 +18,7 @@ Updated: 2026-08-20
 - Local case-tabs parity verification r89 passed the 31-feature workflow verifier (`ok=true`, `failed=[]`), build (`2608 modules`), typecheck, lint, and diff check. Artifact: `work/heavy-local-case-tabs-parity-20260820-r89.md`. This remains local proof only.
 - Production case-tabs readback r90 confirmed deployment `6a86bb1d99ff31c1168ac1e7` is RUNNING and Heavy `/lightchain` renders the Lightchain-shaped hero, four categories, eight non-video launcher cards, and all six case tabs. Target-scoped cleanup passed. Artifact: `work/heavy-production-case-tabs-readback-20260820-r90.md`. Provider generation/save/reuse/reload and real Mac/Windows acceptance remain PENDING_CONFIRMATION.
 - Local regression r91 passed route parity `8/8` and unified desktop layout `228/228` with zero failures at `1280/1440/1920/2560px`; the stale icon-map assertion was aligned to the current catalog/App route contract. Artifact: `work/heavy-local-case-tabs-regression-20260820-r91.md`.
+- Fresh production priority-route readback r92 obtained URL/title/DOM for `/tools/fabric`, `/tools/printing`, and `/model`, but the expected workbench controls were absent in all three routes; cleanup passed. Keep `heavy_priority_route_expected_controls_absent` as PENDING_CONFIRMATION and do not promote this to authenticated or generation proof. Artifact: `work/heavy-production-priority-routes-readback-20260820-r92.md`.
 
 ### Current exact blocker / next action / restart point
 
