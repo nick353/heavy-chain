@@ -2,6 +2,35 @@
 
 Updated: 2026-08-20
 
+## Current Lightchain source readback and local UI cleanup r105/r106
+
+- Fresh current-selector Lightchain source readback r105 used a new Profile 2
+  owner under revision `30` and confirmed homepage plus `/tools/fabric`,
+  `/tools/printing`, and `/model` at `readyState=complete`; all task-owned
+  tabs were cleaned up.
+- The current source `/tools/fabric` does not visibly show Heavy's
+  `コットン` / `デニム` / `サテン` / `リネン` preset picker. It also shows
+  the source account's deprecation/rights state, which is kept separate from
+  Heavy's internal-beta provider capability state.
+- Removed the visible Heavy-only fabric preset picker from both Heavy fabric
+  render paths while retaining the internal deterministic renderer profile.
+- Added a regression for the absence of that visible picker. Artifact:
+  `work/heavy-local-lightchain-source-ui-cleanup-20260820-r106.md`。
+- Source artifact:
+  `work/lightchain-profile2-current-selector-rev30-source-readback-20260820-r105.md`。
+
+### Current exact blocker / next action / restart point
+
+- Local UI parity progress is verified. Production provider generation remains
+  blocked by `chrome_foreground_activation_capability_unavailable`; do not
+  copy the source account's rights-disabled state into the internal beta
+  completion claim.
+- Next action: continue source-driven visual parity cleanup for only confirmed
+  Heavy-only controls, then after official foreground capability advertisement
+  run the authorized fabric/printing and AI-fitting production proof.
+- Restart point for foreground work: mandatory Profile 2 preflight followed by
+  a new list → get → `openTabs()` owner boundary. Do not reuse old bindings.
+
 ## Current production target-scoped readback r104
 
 - Mandatory Profile 2 preflight passed with `status=ready`, selector

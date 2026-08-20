@@ -165,6 +165,14 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.ok(page.includes("URL.createObjectURL(blob)"));
 });
 
+test('fabric direct UI does not add a Heavy-only visible preset picker', () => {
+  const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+
+  assert.doesNotMatch(page, /onClick=\{\(\) => updateFabricPreset\(/);
+  assert.doesNotMatch(page, /<span className="block text-xs font-semibold text-white\/75">生地バリエーション<\/span>/);
+  assert.match(page, /const fabricVariants = \[/);
+});
+
 test('Lightchain parity routes use the Lightchain header identity', () => {
   const layout = fs.readFileSync('src/components/layout/Layout.tsx', 'utf8');
   const lightchainHeader = layout.slice(

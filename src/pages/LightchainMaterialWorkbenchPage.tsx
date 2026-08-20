@@ -1430,7 +1430,7 @@ export function LightchainMaterialWorkbenchPage() {
   const [fabricPreviewState, setFabricPreviewState] = useState<CutoutState>('idle');
   const [fabricPreviewError, setFabricPreviewError] = useState<string | null>(null);
   const [fabricLayer, setFabricLayer] = useState<AssetLayer | null>(null);
-  const [fabricPresetIds, setFabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
+  const [fabricPresetIds] = useState<string[]>(['cotton', 'denim', 'satin']);
   const [fabricPrompt, setFabricPrompt] = useState('');
   const [fabricImageRatio, setFabricImageRatio] = useState('画像比率自動');
   const [printGarment, setPrintGarment] = useState<SelectedImage | null>(null);
@@ -3259,14 +3259,6 @@ export function LightchainMaterialWorkbenchPage() {
     }
   };
 
-  const updateFabricPreset = (presetId: string) => {
-    setFabricPresetIds((prev) =>
-      prev.includes(presetId)
-        ? prev.filter((id) => id !== presetId)
-        : [...prev, presetId]
-    );
-  };
-
   const addDesigns = async (images: SelectedImage[]): Promise<{
     ok: true;
   } | {
@@ -4581,27 +4573,6 @@ export function LightchainMaterialWorkbenchPage() {
                 platformAssetRole="textile"
                 hint="土台となる生地の写真を入れます"
               />
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">生地バリエーション</p>
-                    <p className="text-xs text-white/50">出したい生地だけを選んで生成します。</p>
-                  </div>
-                  <Sparkles className="h-4 w-4 text-primary-200" />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {fabricVariants.map((variant) => (
-                    <button
-                      key={variant.id}
-                      type="button"
-                      onClick={() => updateFabricPreset(variant.id)}
-                      className={`rounded-full border px-3 py-1.5 text-sm transition-all ${fabricPresetIds.includes(variant.id) ? 'border-primary-400 bg-primary-500/20 text-white' : 'border-white/10 bg-white/5 text-white/70 hover:text-white'}`}
-                    >
-                      {variant.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -5806,24 +5777,6 @@ export function LightchainMaterialWorkbenchPage() {
                       <option>横長 16:9</option>
                     </select>
                   </label>
-                  <div className="rounded-xl border border-white/10 bg-[#202629] p-3">
-                    <span className="block text-xs font-semibold text-white/75">生地バリエーション</span>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {fabricVariants.map((variant) => (
-                        <button
-                          key={variant.id}
-                          type="button"
-                          onClick={() => updateFabricPreset(variant.id)}
-                          aria-pressed={fabricPresetIds.includes(variant.id)}
-                          className={`rounded-full border px-2.5 py-1 text-[11px] transition ${fabricPresetIds.includes(variant.id)
-                            ? 'border-cyan-300/50 bg-cyan-300/15 text-cyan-50'
-                            : 'border-white/10 text-white/55 hover:text-white'}`}
-                        >
-                          {variant.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
 
                 <div ref={stageRef} data-testid="lightchain-fabric-preview" className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-neutral-900">

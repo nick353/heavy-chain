@@ -2,6 +2,27 @@
 
 更新日: 2026-08-20
 
+## Current source parity checkpoint r105 / local cleanup r106
+
+- Fresh current-selector Lightchain source readback under revision `30`
+  confirmed `/`, `/tools/fabric`, `/tools/printing`, and `/model` with
+  same-run URL/title/DOM readback and task-owned cleanup.
+- The source `/tools/fabric` route does not expose the visible fabric preset
+  picker that Heavy had added. The current Heavy workbench no longer renders
+  that picker; the practical internal renderer keeps its default profile
+  internally.
+- Regression, typecheck, build, and all 31 local feature workflows remain
+  green. Artifacts:
+  `work/lightchain-profile2-current-selector-rev30-source-readback-20260820-r105.md`
+  and `work/heavy-local-lightchain-source-ui-cleanup-20260820-r106.md`。
+
+### Boundary
+
+This closes one confirmed source-UI mismatch. It does not promote the
+source-account deprecation/rights state into the internal beta contract, and
+it does not replace production provider generation/save/reuse/reload or
+cross-platform acceptance.
+
 ## Current production checkpoint r104
 
 - Mandatory Profile 2 preflight passed: `status=ready`, current selector

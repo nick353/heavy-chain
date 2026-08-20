@@ -2,6 +2,36 @@
 
 更新日: 2026-08-20
 
+## 0.0 current revision-30 source/Heavy overlay r105/r106
+
+- Fresh Lightchain source readback under the current selector revision `30`
+  used browser-client `-f254-4b2a-89ba-a4df740b2b71` and a new owner boundary.
+  Homepage plus `/tools/fabric`, `/tools/printing`, and `/model` reached
+  `readyState=complete`; task-owned tabs were cleaned up.
+- Artifact:
+  `work/lightchain-profile2-current-selector-rev30-source-readback-20260820-r105.md`。
+- The current source `/tools/fabric` does not visibly expose a fabric preset
+  picker. Heavy's visible `コットン` / `デニム` / `サテン` / `リネン` picker
+  was removed from both render paths. The internal deterministic renderer
+  profile remains for the practical beta flow.
+- Artifact:
+  `work/heavy-local-lightchain-source-ui-cleanup-20260820-r106.md`。
+
+| Requirement layer | Current status | Current evidence / gap |
+|---|---|---|
+| Current Lightchain source route/UI baseline | `verified` for homepage and 3 priority routes | fresh r105 source readback |
+| Heavy visible fabric preset parity | `verified` for the confirmed mismatch | r106 local cleanup + 21/21 focused contract |
+| Current source account rights/deprecation state | `observed`, not beta completion state | source account shows rights/deprecation controls; Heavy internal beta state remains separate |
+| Provider generation/result/save/reuse/reload | `PENDING_CONFIRMATION` | foreground capability unavailable; no effectful production run |
+| Mac/Windows real-Chrome acceptance | `PENDING_CONFIRMATION` | no current cross-OS proof |
+
+### r105/r106 restart point
+
+Continue source-driven read-only parity and local cleanup only for confirmed
+Heavy-only controls. After an official foreground capability advertisement,
+create a new owner and run the approved fabric/printing then AI-fitting
+production proofs. Do not reuse old browser bindings or tabs.
+
 ## 0.0 current revision-30 production target overlay r104
 
 - Mandatory Profile 2 preflight passed with `status=ready` and
