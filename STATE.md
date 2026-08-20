@@ -14,6 +14,8 @@ Updated: 2026-08-20
 - Priority local regression r85 passed `25/25` for fabric material, provider persistence/result promotion, AI fitting model-matrix, Canvas/Gallery handoff, and print input restoration. Artifact: `work/heavy-priority-local-regression-20260820-r85.md`.
 - Desktop layout regression r86 passed `228/228` at `1280/1440/1920/2560px`; failed `0`, global timeout `false`, cleanup leftovers `0`. Artifact: `work/heavy-desktop-layout-regression-20260820-r86.md`. This is local width evidence, not Windows/macOS runtime acceptance.
 - Fresh target-scoped r87 readback confirmed hydrated production `/tools/fabric`, `/tools/printing`, and `/model` controls with cleanup verified. Artifact: `work/heavy-priority-routes-readback-20260820-r87.md`. An existing printing history item was observed but not promoted as current same-run generation proof.
+- Fresh Lightchain source homepage r88 confirmed the current source hero, categories, recommended card set, and six case tabs. Heavy now supplies non-video case items across all six tabs; video card/cases remain excluded by scope. Artifact: `work/lightchain-source-home-readback-20260820-r88.md` and screenshot `work/lightchain-source-home-readback-20260820-r88.png`.
+- Local case-tabs parity verification r89 passed the 31-feature workflow verifier (`ok=true`, `failed=[]`), build (`2608 modules`), typecheck, lint, and diff check. Artifact: `work/heavy-local-case-tabs-parity-20260820-r89.md`. This remains local proof only.
 
 ### Current exact blocker / next action / restart point
 

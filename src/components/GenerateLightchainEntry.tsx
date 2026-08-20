@@ -26,43 +26,197 @@ const galleryTabs = [
   { id: 'production', label: '生産' },
 ] as const;
 
-const galleryCases = [
-  {
-    id: 'series-design',
-    title: 'AIファッションデザイン：シリーズデザインを一括生成',
-    description: '参考素材とブランドスタイルを統合し、シリーズ案を比較しながら企画へ進みます。',
-    step: 'インスピレーション → デザインエージェント → シリーズ案を比較',
-    featureId: 'inspiration-design',
-  },
-  {
-    id: 'fitting-reference',
-    title: '【AIフィッティング】— アパレルデザイン画とモデルの顔・ポーズ参考画像を組み合わせ、リアルなモデル着用画像を瞬時に生成',
-    description: '服の画像、顔写真、ポーズ参考画像を組み合わせて着用イメージを作ります。',
-    step: 'AIフィッティング → 参考画像 → モデル条件 → 生成',
-    featureId: 'virtual-fitting',
-  },
-  {
-    id: 'fabric-replace',
-    title: '生地イメージ：ワンクリックで生地差し替えできます。',
-    description: 'モデル画像と生地画像を配置し、サンプルレスで上身効果を確認します。',
-    step: '生地プリントの試着シミュレーション → モデル画像＋生地画像',
-    featureId: 'fabric-simulation',
-  },
-  {
-    id: 'marketing-set',
-    title: '【マーケティングワークスペース】既存画像から販促素材を一括生成',
-    description: '商品画像やモデル着用画像を活用し、EC・SNS向けの販促案へ展開します。',
-    step: 'マーケティング → 商品画像 → EC / SNS / コピー → 保存',
-    featureId: 'marketing-workspace',
-  },
-  {
-    id: 'fashion-studio',
-    title: '【ファッションスタジオ】— 服・モデル・背景・小物をまとめて撮影',
-    description: '素材、モデル、シーンを一つの作業台で組み合わせ、生成かCanvasへ進みます。',
-    step: 'ファッションスタジオ → 素材確認 → 撮影セット → Canvas',
-    featureId: 'fashion-studio',
-  },
-] as const;
+const galleryCasesByTab = {
+  recommended: [
+    {
+      id: 'series-design',
+      title: 'AIファッションデザイン：シリーズデザインを一括生成',
+      description: '参考素材とブランドスタイルを統合し、シリーズ案を比較しながら企画へ進みます。',
+      step: 'インスピレーション → デザインエージェント → シリーズ案を比較',
+      featureId: 'inspiration-design',
+    },
+    {
+      id: 'fitting-reference',
+      title: '【AIフィッティング】— アパレルデザイン画とモデルの顔・ポーズ参考画像を組み合わせ、リアルなモデル着用画像を瞬時に生成',
+      description: '服の画像、顔写真、ポーズ参考画像を組み合わせて着用イメージを作ります。',
+      step: 'AIフィッティング → 参考画像 → モデル条件 → 生成',
+      featureId: 'virtual-fitting',
+    },
+    {
+      id: 'fabric-replace',
+      title: '生地イメージ：ワンクリックで生地差し替えできます。',
+      description: 'モデル画像と生地画像を配置し、サンプルレスで着用効果を確認します。',
+      step: '生地プリントの試着シミュレーション → モデル画像＋生地画像',
+      featureId: 'fabric-simulation',
+    },
+    {
+      id: 'marketing-set',
+      title: '【マーケティングワークスペース】既存画像から販促素材を一括生成',
+      description: '商品画像やモデル着用画像を活用し、EC・SNS向けの販促案へ展開します。',
+      step: 'マーケティング → 商品画像 → EC / SNS / コピー → 保存',
+      featureId: 'marketing-workspace',
+    },
+    {
+      id: 'fashion-studio',
+      title: '【ファッションスタジオ】— 服・モデル・背景・小物をまとめて撮影',
+      description: '素材、モデル、シーンを一つの作業台で組み合わせ、生成かCanvasへ進みます。',
+      step: 'ファッションスタジオ → 素材確認 → 撮影セット → Canvas',
+      featureId: 'fashion-studio',
+    },
+  ],
+  edit: [
+    {
+      id: 'detail-recreate',
+      title: '【ファッションスタジオ】— ディテールをワンクリックで再現',
+      description: '服のディテールを参照画像から保ち、対象箇所を調整します。',
+      step: 'ウェアデザインラボ → 対象箇所 → 候補比較 → 保存',
+      featureId: 'wear-design-lab',
+    },
+    {
+      id: 'inspiration-knit',
+      title: 'インスピレーション｜インスピレーションデザイン：クリエイティブなニットコレクション設計',
+      description: '素材やテーマから複数のデザイン案を作り、企画へつなげます。',
+      step: 'インスピレーション → テーマ → 複数案 → デザインエージェント',
+      featureId: 'inspiration-design',
+    },
+    {
+      id: 'body-proportion',
+      title: '【ファッションスタジオ】— モデルの体型・プロポーションをワンクリックで調整',
+      description: '衣服と構図を保ちながら、モデル条件の差分を比較します。',
+      step: 'モデル企画ライブラリ → 体型・サイズ → 比較 → 保存',
+      featureId: 'model-body-shape',
+    },
+    {
+      id: 'line-to-product',
+      title: '【ファッションスタジオ】— 線画から商品画像・モデル着用画像までを瞬時に生成',
+      description: '線画のsource provenanceを保ちながら、商品と着用の候補へ展開します。',
+      step: '平絵生成 → 線画の実写化 → AIフィッティング → 保存',
+      featureId: 'lineart-to-real',
+    },
+  ],
+  print: [
+    {
+      id: 'print-fabric',
+      title: 'ファッションスタジオ：平絵＋生地',
+      description: '平絵と生地を組み合わせ、質感と服の見え方を確認します。',
+      step: '生地イメージ → 生地選択 → 結果比較 → Canvas',
+      featureId: 'fabric-simulation',
+    },
+    {
+      id: 'print-placement',
+      title: 'プリントイメージ：服画像へプリントを配置',
+      description: 'スポットと全体のプリント範囲を切り替え、配置結果を比較します。',
+      step: 'プリントイメージ → 範囲調整 → AI生成 → Gallery / History',
+      featureId: 'printing-image',
+    },
+    {
+      id: 'print-vector',
+      title: 'パターンをベクター化し量産用データへつなげる',
+      description: '総柄、リピート、配色の方針を保持して生産工程へ渡します。',
+      step: '柄・グラフィック → ベクター化 → repeat確認 → 保存',
+      featureId: 'pattern-vector-pro',
+    },
+    {
+      id: 'graphic-motif',
+      title: 'AIグラフィックデザイン：柄・ロゴ・モチーフを作成',
+      description: 'グラフィック案を商品、プリント、販促素材へ展開します。',
+      step: 'グラフィックツール → モチーフ → 配置 → 保存',
+      featureId: 'graphic-design',
+    },
+  ],
+  visual: [
+    {
+      id: 'flat-to-fitting',
+      title: '【ファッションスタジオ】— 平置き商品画像をモデル着用画像へ変換',
+      description: '平置き画像を標準モデルの着用イメージへ変換します。',
+      step: 'AIフィッティング → 衣服画像 → モデル条件 → 生成',
+      featureId: 'flat-to-model',
+    },
+    {
+      id: 'multi-angle',
+      title: 'ファッションスタジオの360度マルチアングル表示',
+      description: '正面・側面・背面など複数の角度でシルエットと素材感を確認します。',
+      step: 'ファッションスタジオ → 撮影セット → アングル比較 → Canvas',
+      featureId: 'fashion-studio',
+    },
+    {
+      id: 'styling-try-on',
+      title: '【ファッションスタジオ】— 多彩なコーディネート試着',
+      description: '服、モデル、背景、小物を組み合わせて着用候補を比較します。',
+      step: 'ファッションスタジオ → 素材選択 → コーディネート → 保存',
+      featureId: 'fashion-studio',
+    },
+    {
+      id: 'pose-visual',
+      title: '【ファッションスタジオ】— ポーズ指定ワンクリック生成',
+      description: '衣服とモデルを保ったまま、ポーズだけを比較します。',
+      step: 'AIフィッティング → ポーズ参考 → 結果比較 → 保存',
+      featureId: 'virtual-fitting',
+    },
+  ],
+  marketing: [
+    {
+      id: 'marketing-lingerie',
+      title: '【マーケティングワークスペース】既存画像から多様な販促ビジュアルを生成',
+      description: '既存の商品画像やモデル着用画像から、複数ターゲット向け素材を作ります。',
+      step: 'マーケティング → 商品画像 → EC / SNS → 保存',
+      featureId: 'marketing-workspace',
+    },
+    {
+      id: 'fitting-poster',
+      title: 'AIフィッティング：多様な体型・人種に対応したランジェリーポスター',
+      description: 'モデル条件を変えた販促用着用ビジュアルを比較します。',
+      step: 'AIフィッティング → モデル企画 → ポスター → 保存',
+      featureId: 'virtual-fitting',
+    },
+    {
+      id: 'agent-styling',
+      title: 'デザインエージェント＋ファッションスタジオ：多様なスタイリング展開',
+      description: '企画案から複数のスタイリングと販促素材へ連続して展開します。',
+      step: 'デザインエージェント → シリーズ比較 → ファッションスタジオ → 保存',
+      featureId: 'design-agent',
+    },
+    {
+      id: 'text-style',
+      title: 'ファッションスタジオ（テキスト生成）：スタイルDNAを保ったバリエーション',
+      description: '人気デザインのトーンを保ちながら、企画のバリエーションを作ります。',
+      step: 'ファッションスタジオ → テキスト指示 → バリエーション → 保存',
+      featureId: 'fashion-studio',
+    },
+  ],
+  production: [
+    {
+      id: 'outdoor-line',
+      title: 'ファッションスタジオ：実物から線画化',
+      description: '商品画像から生産・企画用の線画とsource provenanceを作ります。',
+      step: '線画生成 → 線画確認 → ベクター化 → 保存',
+      featureId: 'lineart-to-real',
+    },
+    {
+      id: 'garment-detail',
+      title: 'ファッションスタジオ：服の着せ替えからデザイン制作まで',
+      description: '衣服、モデル、背景をつないで企画から制作へ進みます。',
+      step: 'AIフィッティング → デザイン修正 → 生地／プリント → Canvas',
+      featureId: 'virtual-fitting',
+    },
+    {
+      id: 'multiple-models',
+      title: '【ファッションスタジオ】— 複数モデルによるシーンを生成',
+      description: '同じ衣服を複数モデルとシーンで比較し、量産前の判断へつなげます。',
+      step: 'モデル企画ライブラリ → シーン → 複数案 → 保存',
+      featureId: 'fashion-studio',
+    },
+    {
+      id: 'three-dimensional-display',
+      title: '【ファッションスタジオ】— 3Dビジュアル展示',
+      description: '商品デザインの見え方を立体的に確認し、企画・確認・販促へ渡します。',
+      step: 'ファッションスタジオ → 撮影セット → マルチアングル → Canvas',
+      featureId: 'fashion-studio',
+    },
+  ],
+} as const;
+
+type GalleryCase = (typeof galleryCasesByTab)[keyof typeof galleryCasesByTab][number];
 
 const isBetaFeature = (feature: LightchainFeature | undefined): feature is LightchainFeature => Boolean(feature && feature.betaIncluded !== false);
 
@@ -156,7 +310,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   const [activeCategory, setActiveCategory] = useState<LightchainCategoryId>('recommended');
   const [command, setCommand] = useState('');
   const [galleryTab, setGalleryTab] = useState<(typeof galleryTabs)[number]['id']>('recommended');
-  const [selectedCase, setSelectedCase] = useState<(typeof galleryCases)[number] | null>(null);
+  const [selectedCase, setSelectedCase] = useState<GalleryCase | null>(null);
   const categoryParam = searchParams.get('category');
 
   useEffect(() => {
@@ -171,9 +325,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   );
   const commandFeature = findFeatureFromPrompt(command);
   const commandHref = buildLightchainFeatureHref(commandFeature);
-  const galleryItems = galleryTab === 'recommended'
-    ? galleryCases
-    : [];
+  const galleryItems: readonly GalleryCase[] = galleryCasesByTab[galleryTab];
 
   const handleCategoryChange = (categoryId: LightchainCategoryId) => {
     setActiveCategory(categoryId);

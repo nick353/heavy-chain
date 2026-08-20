@@ -15,6 +15,8 @@
 - Priority local regression r85 passed `25/25` across fabric material synthesis, provider persistence/result promotion, AI fitting model-matrix normalization, Canvas generation/Gallery handoff, and print input restoration. Artifact: `work/heavy-priority-local-regression-20260820-r85.md`。これはproduction provider実行の代替ではない。
 - Desktop layout regression r86 passed `228/228` at `1280/1440/1920/2560px`, with zero failures, zero global timeout, and zero cleanup leftovers. Artifact: `work/heavy-desktop-layout-regression-20260820-r86.md`。Windows/macOS実機受入れは別証跡で未確認。
 - Fresh target-scoped priority-route readback r87 confirmed current production `/tools/fabric`, `/tools/printing`, and `/model` hydration and Lightchain-shaped controls. Artifact: `work/heavy-priority-routes-readback-20260820-r87.md`。プリントに表示された既存履歴は今回のrunで生成していないためcurrent generation proofには昇格していない。
+- Fresh Lightchain source homepage readback r88 confirmed the current logo/hero/prompt/category/card/case-tab baseline. Heavy's case-sharing area was expanded to non-video items across all six source tabs; the source video card/cases remain excluded by scope. Artifact: `work/lightchain-source-home-readback-20260820-r88.md`、visual `work/lightchain-source-home-readback-20260820-r88.png`。
+- Local case-tabs parity verification r89 passed `verify:lightchain-all-features` (`ok=true`, `failed=[]`, `featureCount=31`), build (`2608 modules`), typecheck, lint, and diff check. Artifact: `work/heavy-local-case-tabs-parity-20260820-r89.md`。これはlocal proofであり、production provider生成・保存再利用・Mac/Windows実機受入れの代替ではない。
 
 ### Current exact blocker / next action / restart point
 
