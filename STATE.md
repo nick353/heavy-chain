@@ -4320,3 +4320,15 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`.
 - Next action: after an official capability state change, use a new official Profile 2 owner for one same-run capability advertisement → `openTabs()` → lineage proof. If advertised, resume fabric/printing provider → result → save/reuse/reload, then AI fitting. If not, keep provider work fail-closed and continue only target-scoped read-only/local QA.
 - Restart point: changed official capability state plus fresh owner; do not reuse prior browser, binding, tab, or run.
+
+## 2026-08-20 Current parity matrix separation r68
+
+- Current parity evidence is now explicitly separated in `work/lightchain-parity-matrix-current-20260820-r68.md`: revision-30 card enumeration is historical reference, while the current-selector revision-4 route ledger confirms 19/19 non-video routes at the read-only URL/title/body/marker layer.
+- Heavy local inventory remains 31 non-video features. r66 all-feature workflow proof is 277 assertions with zero failures; r67 priority contract suites are 43/43.
+- Current-selector Lightchain card enumeration, provider output, production persistence/reuse/reload, and paired Mac/Windows acceptance remain `PENDING_CONFIRMATION`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable` for production provider stages.
+- Next action: after an official capability state change, use a new official Profile 2 owner for capability → `openTabs()` → lineage, then resume fabric/printing provider → result → save/reuse/reload and AI fitting if the capability is advertised.
+- Restart point: changed official capability state plus fresh owner; do not reuse old browser, binding, tab, run, or revision-30 card proof.

@@ -1322,3 +1322,15 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`.
 - Next action: after an official capability state change, create a new Profile 2 owner and run one same-run capability advertisement → `openTabs()` → owner-lineage check. If `foreground_activation` or `management` is advertised, continue fabric/printing provider → result → save/reuse/reload, then AI fitting. Otherwise keep provider work fail-closed and continue only target-scoped read-only/local QA.
 - Restart point: changed official capability state plus fresh owner; do not reuse prior browser, binding, tab, or run.
+
+## 2026-08-20 Current parity matrix separation r68
+
+- Added `work/lightchain-parity-matrix-current-20260820-r68.md` to separate the historical revision-30 Lightchain card ledger from the current-selector revision-4 route ledger.
+- Current route readback is 19/19 non-video routes. Heavy local implementation is 31 features; r66 all-feature workflow proof is 277/277 assertions and r67 priority contracts are 43/43.
+- Card enumeration after the latest selector state change is still `PENDING_CONFIRMATION`; the old 26-card revision-30 artifact is retained as historical reference only.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable` for production provider stages.
+- Next action: after an official capability state change, create a new Profile 2 owner and perform one same-run capability → `openTabs()` → lineage check. If advertised, continue fabric/printing provider → result → save/reuse/reload, then AI fitting.
+- Restart point: changed official capability state plus fresh owner; do not reuse old browser, binding, tab, run, or the revision-30 card ledger as current proof.
