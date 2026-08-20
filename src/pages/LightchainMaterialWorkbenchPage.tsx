@@ -4570,7 +4570,8 @@ export function LightchainMaterialWorkbenchPage() {
             <section
               data-testid="printing-readiness-summary"
               aria-label="プリント生成前の準備状況"
-              className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.06] p-4"
+              aria-live="polite"
+              className="sr-only"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>

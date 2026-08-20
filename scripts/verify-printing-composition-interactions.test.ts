@@ -264,6 +264,7 @@ test('focused placement requires an explicit decision before generation and supp
 
 test('printing exposes one ordered readiness funnel before generation', () => {
   assert.match(page, /data-testid="printing-readiness-summary"/);
+  assert.match(page, /data-testid="printing-readiness-summary"[\s\S]*?aria-live="polite"[\s\S]*?className="sr-only"/);
   assert.match(page, /data-testid="printing-readiness-count"/);
   assert.match(page, /data-testid="printing-next-action" role="status"/);
   assert.match(page, /入力 → マスク → 配置 → 生成/);
