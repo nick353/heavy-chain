@@ -171,47 +171,6 @@ import type { GeneratedImage, Json } from '../types/database';
 type WorkbenchMode = 'fabric' | 'printing';
 type PrintCoverageMode = 'spot' | 'full';
 
-const MATERIAL_TOOLBAR_ROUTES: Record<string, string> = {
-  'デザインツール': '/lightchain?category=planning',
-  'フィッティングツール': '/lightchain?category=fitting',
-  'グラフィックデザインツール': '/lightchain?category=graphics',
-  '衣類生産ツール': '/designProduction',
-};
-
-const LIGHTCHAIN_MATERIAL_TOOLBAR_ITEMS = [
-  { label: 'デザインツール', icon: Laptop },
-  { label: 'フィッティングツール', icon: Users },
-  { label: 'グラフィックデザインツール', icon: Layers3 },
-  { label: '衣類生産ツール', icon: Scissors },
-] as const;
-
-function LightchainMaterialToolbar() {
-  const navigate = useNavigate();
-
-  return (
-    <nav
-      aria-label="Lightchainツールバー"
-      data-testid="lightchain-material-toolbar"
-      className="flex flex-row items-stretch gap-2 rounded-2xl border border-white/10 bg-[#111719] p-2 text-white/60 lg:sticky lg:top-[86px] lg:flex-col lg:gap-3"
-    >
-      <span className="flex shrink-0 items-center justify-center px-2 py-1 text-[11px] font-semibold tracking-[0.16em] text-white/80 lg:min-h-12 lg:flex-col lg:gap-1 lg:px-0">
-        <span className="lg:[writing-mode:vertical-rl]">ツールバー</span>
-      </span>
-      {LIGHTCHAIN_MATERIAL_TOOLBAR_ITEMS.map(({ label, icon: Icon }) => (
-        <button
-          key={label}
-          type="button"
-          onClick={() => navigate(MATERIAL_TOOLBAR_ROUTES[label] ?? '/lightchain')}
-          data-testid={`lightchain-material-toolbar-${String(label)}`}
-          className="flex min-h-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold leading-4 transition hover:bg-white/[0.06] hover:text-white lg:w-full lg:flex-none"
-        >
-          <Icon className="h-5 w-5 text-white/45" aria-hidden="true" />
-          <span className="text-center">{label}</span>
-        </button>
-      ))}
-    </nav>
-  );
-}
 const PRINT_COVERAGE_OPTIONS: Array<{ value: PrintCoverageMode; label: string }> = [
   { value: 'spot', label: 'スポット' },
   { value: 'full', label: '全体' },
@@ -5432,9 +5391,7 @@ export function LightchainMaterialWorkbenchPage() {
           className="min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
         >
           <div className="mx-auto max-w-[1680px]">
-            <div className="grid gap-4 lg:grid-cols-[76px_minmax(0,1fr)]">
-              <LightchainMaterialToolbar />
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
 
             <section className="min-w-0 rounded-2xl border border-white/10 bg-[#171d20] p-4 shadow-2xl shadow-black/20 lg:p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -5645,7 +5602,6 @@ export function LightchainMaterialWorkbenchPage() {
             </div>
           </div>
           </div>
-        </div>
       )}
 
       {!isPrinting && (
@@ -5654,9 +5610,7 @@ export function LightchainMaterialWorkbenchPage() {
           className="min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
         >
           <div className="mx-auto max-w-[1680px]">
-            <div className="grid gap-4 lg:grid-cols-[76px_minmax(0,1fr)]">
-              <LightchainMaterialToolbar />
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
 
             <section className="min-w-0 rounded-2xl border border-white/10 bg-[#171d20] p-4 shadow-2xl shadow-black/20 lg:p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -5881,7 +5835,6 @@ export function LightchainMaterialWorkbenchPage() {
             </div>
           </div>
           </div>
-        </div>
       )}
 
       <Modal

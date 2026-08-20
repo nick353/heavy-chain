@@ -68,15 +68,12 @@ test('fitting and line-to-real settings are stateful and persisted into the work
   assert.doesNotMatch(source, /role="combobox"[\s\S]{0,240}画像比率/);
 });
 
-test('material workbench toolbar entries navigate to current catalog routes', async () => {
+test('material workbench does not add a Heavy-only toolbar to direct Lightchain routes', async () => {
   const source = await readFile(materialSourcePath, 'utf8');
 
-  assert.match(source, /MATERIAL_TOOLBAR_ROUTES/);
-  assert.match(source, /'デザインツール': '\/lightchain\?category=planning'/);
-  assert.match(source, /'フィッティングツール': '\/lightchain\?category=fitting'/);
-  assert.match(source, /'グラフィックデザインツール': '\/lightchain\?category=graphics'/);
-  assert.match(source, /onClick=\{\(\) => navigate\(MATERIAL_TOOLBAR_ROUTES\[label\] \?\? '\/lightchain'\)\}/);
-  assert.match(source, /data-testid=\{`lightchain-material-toolbar-\$\{String\(label\)\}`\}/);
+  assert.doesNotMatch(source, /MATERIAL_TOOLBAR_ROUTES/);
+  assert.doesNotMatch(source, /LightchainMaterialToolbar/);
+  assert.doesNotMatch(source, /data-testid="lightchain-material-toolbar"/);
 });
 
 test('parity runtime captures feature-specific settings in the comparison key', async () => {

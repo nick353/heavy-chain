@@ -19,29 +19,27 @@ test('material and print tools share the Light Chain tab contract', () => {
   );
 });
 
-test('priority material routes expose the current Lightchain direct-route toolbar without Heavy-only rails', () => {
+test('priority material routes do not add a Heavy-only toolbar to the Lightchain screen', () => {
   const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
 
   assert.deepEqual(
     lightchainCategories.map((category) => category.label),
     ['おすすめ', '企画デザインツール', 'AIフィッティング', 'グラフィックツール'],
   );
-  assert.match(page, /data-testid="lightchain-material-toolbar"/);
-  assert.match(page, />ツールバー<\/span>/);
-  assert.match(page, /label: '衣類生産ツール'/);
-  assert.match(page, /label: 'フィッティングツール'/);
+  assert.doesNotMatch(page, /data-testid="lightchain-material-toolbar"/);
+  assert.doesNotMatch(page, /LightchainMaterialToolbar/);
+  assert.doesNotMatch(page, /label: '衣類生産ツール'/);
+  assert.doesNotMatch(page, /label: 'フィッティングツール'/);
   assert.doesNotMatch(page, /data-testid="lightchain-category-toolbar"/);
   assert.doesNotMatch(page, /lightchainCategories\.map/);
   assert.doesNotMatch(page, /LIGHTCHAIN MATERIAL WORKBENCH/);
 });
 
-test('priority material routes use the current Lightchain vertical toolbar frame', () => {
+test('priority material routes keep the current Lightchain content frame without a Heavy-only rail', () => {
   const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
 
-  assert.match(page, /lg:grid-cols-\[76px_minmax\(0,1fr\)\]/);
-  assert.match(page, /lg:flex-col lg:gap-3/);
-  assert.match(page, /lg:\[writing-mode:vertical-rl\]/);
-  assert.match(page, /className="flex min-h-14 flex-1 flex-col items-center/);
+  assert.doesNotMatch(page, /lg:grid-cols-\[76px_minmax\(0,1fr\)\]/);
+  assert.doesNotMatch(page, /lg:\[writing-mode:vertical-rl\]/);
 });
 
 test('fabric and print keep the same required-input order as the Light recording', () => {
