@@ -1298,3 +1298,15 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`.
 - Next action: keep provider generation, result save, Gallery/Canvas/History/Jobs reuse, and reload proof fail-closed; continue only target-scoped read-only or local parity work. Do not retry this capability fingerprint without an official distribution/capability state change.
 - Restart point: official `foreground_activation` or `management` advertisement, followed by a new Profile 2 owner and one same-run capability → `openTabs()` → lineage check. Do not reuse the r65 browser, binding, tab, or run.
+
+## 2026-08-20 Local non-video all-feature workflow proof r66
+
+- The current local build passed the video-excluded Lightchain workflow verifier for all 31 features after a focused verifier-only fix for a `marketing-home` lazy-route readiness race.
+- Verification: `npm run verify:lightchain-all-features`; 2607 modules transformed, 31 features, 277 assertions, `failed=[]`, console/page/request failures all zero, and local browser/preview cleanup passed.
+- Artifact: `work/heavy-local-lightchain-all-feature-workflows-20260820-r66.md`; raw summary: `output/playwright/lightchain-all-feature-workflows-20260820T064037Z/SUMMARY.json`.
+
+### Proof boundary / current exact blocker
+
+- This closes the local non-video route/input/interaction-contract checkpoint only. It does not prove production provider generation, output quality, save/reuse, Gallery/Canvas/History/Jobs linkage, current Lightchain production parity, or Mac/Windows Chrome acceptance.
+- Exact blocker remains `chrome_foreground_activation_capability_unavailable` for production provider work.
+- Next action: continue dependency-independent parity/contract QA; after official capability advertisement, use a new Profile 2 owner for fabric/printing provider → result → save/reuse → AI-fitting proof.

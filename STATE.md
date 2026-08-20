@@ -4295,3 +4295,16 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`.
 - Next action: keep Heavy provider generation, save, Gallery/Canvas/History/Jobs reuse, and reload fail-closed. Continue target-scoped read-only and local parity QA only, without retrying the same capability fingerprint.
 - Restart point: official capability advertisement state change, then a new Profile 2 owner for one capability → `openTabs()` → lineage proof. Do not reuse the r65 browser/binding/tab/run.
+
+## 2026-08-20 Local non-video all-feature workflow proof r66
+
+- Current local verifier passed all 31 video-excluded features after a focused fix that waits for the `marketing-home` route-owned heading before reading its signature. The product runtime was not changed by this fix.
+- `npm run verify:lightchain-all-features` passed: build 2607 modules, 277 assertions, `failed=[]`, console/page/request failures 0, and context/browser/preview cleanup all true.
+- Artifact: `work/heavy-local-lightchain-all-feature-workflows-20260820-r66.md`; raw summary: `output/playwright/lightchain-all-feature-workflows-20260820T064037Z/SUMMARY.json`.
+
+### Current exact blocker / next action / restart point
+
+- This is local UI/route/input contract evidence only. Production Lightchain visual parity, provider generation/output quality, save/reuse, Gallery/Canvas/History/Jobs linkage, and Mac/Windows Chrome acceptance remain separate and unverified.
+- Exact blocker: `chrome_foreground_activation_capability_unavailable` for provider generation and persistence proof.
+- Next action: keep foreground business work fail-closed; continue local parity QA, then after official capability advertisement start a new Profile 2 owner for the provider-to-reuse proof.
+- Restart point: official capability state change plus fresh owner; do not reuse r65 browser/binding/tab/run.

@@ -206,6 +206,17 @@ async function verifyFeatureWorkflow(page, tool) {
   await page.waitForTimeout(250);
   await page.evaluate((key) => window.localStorage.removeItem(key), canvasStoreKey);
   await waitForSettledRoute(page, tool.id);
+  // The marketing entry can briefly remount its shared Lightchain loading
+  // shell after the lazy page has resolved. Wait for the route-owned heading
+  // before taking the signature/readback so a transient fallback is not
+  // recorded as a product parity failure.
+  if (tool.id === 'marketing-home') {
+    await page.waitForFunction(
+      () => document.body?.innerText.includes('マーケティングワークスペース'),
+      undefined,
+      { timeout: 15_000 },
+    );
+  }
   const body = await bodyText(page);
   recordFeatureAssertion(result, 'route_loaded_without_login', !page.url().includes('/login') && !body.includes('ログイン'), {
     url: page.url(),
