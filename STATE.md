@@ -2,6 +2,33 @@
 
 Updated: 2026-08-20
 
+## Current provider-result presentation readback r123
+
+- Commit `298232b` is deployed as Zeabur Docker deployment
+  `6a86ebc4a158dec405723f68`, freshly confirmed `RUNNING`.
+- A mandatory Profile 2 preflight passed with selector revision `30` and
+  `exact_blocker=null`. The same current-turn owner completed
+  `list -> get -> openTabs`, then used target-scoped read-only admission for
+  Heavy `/tools/printing`.
+- Fresh DOM now presents the prior provider result as user-facing `AI生成`
+  with `配置したプリントを服の形状に沿って反映`. The technical `PROVIDER`
+  label and technical provider/job/mask text are absent from visible body text.
+  `生成情報` remains available as a collapsed opt-in disclosure for audit.
+- Artifact:
+  `work/heavy-provider-result-presentation-readback-20260820-r123.md`。
+
+### Boundary / current exact blocker / next action
+
+- The presentation correction is deployed and runtime-verified. It does not
+  prove provider generation quality, durable save, Gallery/Canvas/History/Jobs
+  lineage, reuse/reload, or beta acceptance.
+- Exact blocker for those live provider stages remains
+  `chrome_foreground_activation_capability_unavailable`.
+- Next action: after official foreground capability advertisement, create a
+  fresh Profile 2 owner and use the authorized target-scoped action lane where
+  applicable to prove fabric/printing end to end, then AI fitting. Do not reuse
+  this read-only binding, tab, run, or artifact.
+
 ## Current Lightchain / Heavy priority comparison r122
 
 - Fresh current-turn Profile 2 owner `-6537-48dd-a4ec-3f5a128601a2` passed the

@@ -2,6 +2,29 @@
 
 更新日: 2026-08-20
 
+## Current provider-result presentation readback r123
+
+- Commit `298232b` was deployed to the verified Heavy Chain service as Docker
+  deployment `6a86ebc4a158dec405723f68` and reached `RUNNING`.
+- Fresh Profile 2 target-scoped readback of `/tools/printing` confirmed that
+  the result card no longer exposes the technical `PROVIDER` label in visible
+  UI. It shows `AI生成` and the user-facing note
+  `配置したプリントを服の形状に沿って反映` instead.
+- Technical provenance remains available only inside collapsed `生成情報`.
+  Artifact:
+  `work/heavy-provider-result-presentation-readback-20260820-r123.md`。
+
+### Boundary / next action
+
+This completes one confirmed Heavy-side UI presentation correction. It does
+not complete provider generation, save, Gallery/Canvas/History/Jobs lineage,
+reuse/reload, AI fitting, paired-platform acceptance, or internal-beta
+operator acceptance. Keep those stages fail-closed at
+`chrome_foreground_activation_capability_unavailable` until the official
+foreground capability is advertised. Then start a new Profile 2 owner and use
+the authorized target-scoped action lane for the approved fabric/printing flow
+before AI fitting; do not reuse this read-only binding.
+
 ## Current priority-route parity comparison r122
 
 - Fresh Profile 2 target-scoped readbackでLightchain/Heavyの`/tools/printing`
