@@ -2,6 +2,37 @@
 
 Updated: 2026-08-20
 
+## Current Lightchain / Heavy priority comparison r122
+
+- Fresh current-turn Profile 2 owner `-6537-48dd-a4ec-3f5a128601a2` passed the
+  mandatory preflight and same-run `list -> get -> openTabs` handshake.
+- Lightchain and Heavy `/tools/printing` plus `/model` were compared through the
+  target-scoped read-only lane. Four task-owned tabs were provisioned and
+  cleaned up successfully.
+- Common visible structure now matches: source toolbar/material tabs for
+  printing, and fitting task/input tabs plus smart/1K/history controls for
+  model. Heavy additionally shows the approved internal-beta practical input,
+  result, and reuse destinations.
+- Lightchain's fresh account is currently restricted/retirement-state: printing
+  exposes no file input and model exposes `権限がありません`. Heavy's extra
+  practical controls therefore cannot be removed without breaking the goal of
+  an all-internal-user beta. This distinction is recorded as
+  `PENDING_CONFIRMATION`, not treated as a confirmed Heavy-only UI defect.
+- Artifact:
+  `work/lightchain-heavy-priority-route-comparison-20260820-r122.md`。
+
+### Boundary / current exact blocker / next action
+
+- Exact blocker for live provider generation/save/reuse remains
+  `chrome_foreground_activation_capability_unavailable`.
+- No code or external state was changed in r122; this was a fresh parity
+  comparison and cleanup proof.
+- Next action: obtain a Lightchain source readback under the intended
+  production permission state if available; independently, after official
+  foreground capability advertisement, prove fabric/printing end to end and
+  then AI fitting. Do not delete Heavy's practical controls based only on the
+  current restricted source account.
+
 ## Current Heavy production source-toolbar readback r121
 
 - The corrected material route is deployed and running as Zeabur Docker deployment

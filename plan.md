@@ -2,6 +2,26 @@
 
 更新日: 2026-08-20
 
+## Current priority-route parity comparison r122
+
+- Fresh Profile 2 target-scoped readbackでLightchain/Heavyの`/tools/printing`
+  と`/model`を同一owner内で比較した。
+- 共通のsource toolbar、material tabs、fitting task/input tabs、smart/1K、
+  history導線は一致している。
+- Lightchain側は現在のアカウント権限・終了案内の状態で、printingのfile input
+  とmodelのprovider生成操作が露出していない。Heavy側の追加入力・結果・
+  Gallery/Canvas/History/Jobs導線は、社内βで全員が使える実用フローのために
+  必要な機能であり、現時点では削除しない。
+- Artifact:
+  `work/lightchain-heavy-priority-route-comparison-20260820-r122.md`。
+
+### Boundary / next action
+
+この比較で、未確認の差分を「Heavyの余計なUI」と断定するのを避け、
+sourceの権限状態差分と実用β機能を分離した。意図したproduction permission
+状態のLightchain readbackが得られた場合に再比較する。foreground capabilityが
+広告されたら、fabric/printingの生成→結果→保存→再利用を先に実証する。
+
 ## Current Heavy production source-toolbar readback r121
 
 - Commit `6a087b8`のmaterial route修正を、確認済みのHeavy Chain Zeabur
