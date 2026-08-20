@@ -8,6 +8,7 @@ Updated: 2026-08-20
 - 公式広告はbrowser=`viewport`のみ。inventoryではtab=`pageAssets`／`cdp`も広告されたが、`foreground_activation`／`management`は未広告。exact blockerは`chrome_foreground_activation_capability_unavailable`。
 - 公式v2 bridge readbackは`status=blocked`、`exact_blocker=chrome_selected_tab_readback_invalid`、owner lineage nullのため、writer refreshやbridge ready昇格は行っていない。
 - selected／focus／claim／navigation／Heavy本体操作／録画／旧binding・旧Run再利用／外部効果はなし。Artifact: `work/chrome-plugin-profile2-capability-fresh-20260820-r96.md`。
+- Parity Matrixのcurrent revision-6 overlayをr96へ更新し、r88 Lightchain source、r90/r93 Heavy production readback、r91 local gates、r94/r95 beta gates、r96 Chrome capabilityをRequirement layer別に整理した。Artifact: `work/lightchain-parity-matrix-current-20260820-r13.md`。
 
 ### Current exact blocker / next action / restart point
 

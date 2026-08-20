@@ -8,6 +8,7 @@
 - Fresh広告はbrowser=`viewport`のみ。inventoryではtab=`pageAssets`／`cdp`も広告されたが、`foreground_activation`／`management`は未広告。exact blockerは`chrome_foreground_activation_capability_unavailable`。
 - 公式v2 bridgeは`status=blocked`、`exact_blocker=chrome_selected_tab_readback_invalid`、owner lineage nullのため、writer refreshやbridge ready昇格は行っていない。selected／focus／claim／navigation／Heavy本体／録画／外部効果はなし。
 - Artifact: `work/chrome-plugin-profile2-capability-fresh-20260820-r96.md`。
+- Parity Matrixのcurrent revision-6 overlayをr96へ更新し、Lightchain source、Heavy production route、local verification、beta gates、Chrome capabilityをrequirement layer別に再整理した。Artifact: `work/lightchain-parity-matrix-current-20260820-r13.md`。
 
 ### Current exact blocker / next action / restart point
 

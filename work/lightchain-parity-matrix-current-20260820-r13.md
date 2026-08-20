@@ -1,6 +1,91 @@
-# Lightchain / Heavy parity matrix — current-selector checkpoint r54 (historical overlays retained)
+# Lightchain / Heavy parity matrix — current-selector checkpoint r96 (historical overlays retained)
 
 更新日: 2026-08-20
+
+## 0.0 current revision-6 production overlay r96
+
+This is the current overlay. Older revision-4, revision-30, and earlier
+entries below remain historical provenance and are not current proof.
+
+### Current source baseline — Lightchain r88
+
+- Current selector: `backend=chrome_plugin`, Profile 2,
+  `signed_chrome_extension_profile2`, revision `6`.
+- Fresh Lightchain homepage readback: `https://jp.linkaigc.com/`, title
+  `Lightchain AI`, hydrated DOM, `cleanup_verified=true`.
+- Current information architecture: `LIGHTCHAIN AI` hero, apparel subtitle,
+  prompt input, four categories (`おすすめ`, `企画デザインツール`,
+  `AIフィッティング`, `グラフィックツール`), and six case tabs
+  (`おすすめの事例`, `デザイン修正`, `柄・プリント`, `ビジュアル素材`,
+  `マーケティングコンテンツ`, `生産`).
+- Homepage cards: 8 visible, 7 non-video and 1 video. Heavy scope excludes
+  `動画ワークステーション`; the current Heavy launcher uses the seven
+  non-video recommended cards. Full current rev6 card-to-route and per-card
+  behavior mapping is still `PENDING_CONFIRMATION`.
+- Artifact: `work/lightchain-source-home-readback-20260820-r88.md` and
+  `work/lightchain-source-home-readback-20260820-r88.png`.
+
+### Current Heavy implementation and production readback
+
+- Local case-tab parity r89 and route/layout regression r91 passed. The local
+  non-video verifier reports `31/31`; route parity is `8/8`; unified desktop
+  layout is `228/228` at `1280/1440/1920/2560px` with zero failures. These are
+  local contract proofs, not provider or cross-OS completion proofs.
+- Production launcher readback r90 confirmed the deployed Heavy `/lightchain`
+  page exposes the Lightchain-shaped hero, four categories, eight non-video
+  launcher cards, and all six case tabs. Target-scoped cleanup passed.
+- Settled production priority-route readback r93 confirmed current controls:
+  `/tools/fabric` exposes fabric/model-design/keyword/ratio/material/history
+  controls; `/tools/printing` exposes print image, generation/history, and
+  Gallery/History/Jobs/Canvas handoffs; `/model` exposes AI fitting clothing,
+  model, reference, generation, and history controls. This is read-only
+  route/workspace proof only.
+- Artifacts: `work/heavy-local-case-tabs-parity-20260820-r89.md`,
+  `work/heavy-local-case-tabs-regression-20260820-r91.md`,
+  `work/heavy-production-case-tabs-readback-20260820-r90.md`, and
+  `work/heavy-production-priority-routes-readback-20260820-r93.md`.
+
+### Requirement-by-requirement boundary
+
+| Requirement layer | Current status | Current evidence / gap |
+|---|---|---|
+| Lightchain homepage IA, categories, non-video launcher, case tabs | `verified` | r88 source readback and r90 Heavy production readback |
+| 31 non-video local feature contracts | `verified` locally | local verifier `31/31`; current rev6 source route behavior still needs fresh per-feature mapping |
+| Fabric/printing/AI-fitting route inputs and visible controls | `verified` read-only | r93 settled production route readback |
+| Provider generation and result quality | `PENDING_CONFIRMATION` | no current same-run provider generation proof |
+| Save and result persistence | `PENDING_CONFIRMATION` | no current same-run save/readback proof |
+| Gallery/Canvas/History/Jobs same-result lineage | `PENDING_CONFIRMATION` | UI handoff controls are visible, but business lineage is unproven |
+| Reuse, reload, retry, duplicate-generation behavior | `PENDING_CONFIRMATION` | requires authenticated foreground/provider run |
+| Error, rights, and recovery behavior in production | `PENDING_CONFIRMATION` | static/local guards exist; production action proof is missing |
+| Mac/Windows current Chrome acceptance | `PENDING_CONFIRMATION` | local widths only; real OS/browser acceptance missing |
+| Internal beta acceptance and H601/G619 gates | `PENDING_CONFIRMATION` | r94/r95: human decisions, beta sessions, and authorized auth state remain open |
+| Video functionality | `excluded` | explicit non-video beta scope |
+
+### Current Chrome and bridge boundary — r96
+
+- Fresh post-Chrome-update browser-client `-ab93-4c4f-9060-5a671317f48a`
+  passed `browsers.get()` and same-run `openTabs()` with 4 tabs. Browser
+  owner lineage matched the current thread/session/turn.
+- Official advertisement remains browser=`viewport`; inventory tab
+  capabilities are `pageAssets`/`cdp`. `foreground_activation` and
+  `management` remain unadvertised.
+- The v2 bridge readback is separately `status=blocked` with
+  `exact_blocker=chrome_selected_tab_readback_invalid` and null owner
+  lineage. No writer refresh, selected/focus/claim, navigation, Heavy action,
+  recording, or external effect was executed.
+- Artifact: `work/chrome-plugin-profile2-capability-fresh-20260820-r96.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: keep eligible read-only parity work on the target-scoped lane;
+  after an official signed extension/backend advertises foreground capability,
+  start a new Profile 2 owner and run the fabric/printing production flow
+  (generate → result → save → Gallery/Canvas/History/Jobs → reuse → reload),
+  then repeat for AI fitting.
+- Restart point: official capability state change followed by a fresh
+  browser-client and current owner lineage. Do not reuse old bindings, tabs,
+  runs, receipts, or another browser surface.
 
 ## 0.0 current revision-6 production overlay r84
 
