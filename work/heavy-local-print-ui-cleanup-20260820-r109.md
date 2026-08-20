@@ -23,6 +23,10 @@ the inputs.
 
 - `npm run --silent test:printing-foundation`: 244/244 PASS
 - `npm run --silent typecheck`: PASS
+- `npm run --silent verify:lightchain-all-features`: `ok=true`,
+  `featureCount=31`, `failed=[]`
+- Full-feature artifact:
+  `output/playwright/lightchain-all-feature-workflows-20260820T100303Z/SUMMARY.json`
 
 ## deployment and fresh readback
 
