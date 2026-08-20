@@ -1469,3 +1469,16 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - The regression confirms local route/input/interaction continuity only. Current Lightchain production card parity, live provider output quality, production save/reuse/reload, Gallery/Canvas/History/Jobs same-run persistence, and paired Mac/Windows Chrome acceptance remain `PENDING_CONFIRMATION`.
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
 - Next action: after the required official capability/session/auth/human state changes, create a fresh Profile 2 owner and continue the production fabric/printing and AI-fitting proof. Do not reuse old browser, binding, tab, run, or artifact as current proof.
+
+## 2026-08-20 Heavy target-scoped authentication canary r80
+
+- Fresh official Profile 2 target-scoped readback reached `https://heavy-chain.zeabur.app/tools/fabric` with exact title `Heavy Chain | AI制作ワークスペース`.
+- Same-run DOM still shows `ログイン状態を確認しています` and `ログイン後にLightchainの制作ワークスペースへ進めます。`; textile/material markers are absent.
+- Provisioned task-owned tab `1980904371` only, then closed it successfully. No login click, upload, generation, save, reuse, recording, or external effect occurred.
+- Artifact: `work/heavy-chain-target-scoped-canary-20260820-r80.md`.
+
+### Proof boundary / current exact blocker
+
+- URL/title/DOM transport proof is fresh and valid, but authenticated workspace/assets, production generation, result quality, save/reuse/reload, and Gallery/Canvas/History/Jobs same-run proof remain `PENDING_CONFIRMATION`.
+- Exact blocker: `heavy_target_workspace_authentication_not_ready`; the separate foreground blocker remains `chrome_foreground_activation_capability_unavailable`.
+- Next action: after the authenticated Heavy workspace becomes visibly ready, create a new official Profile 2 owner and repeat one target-scoped `/tools/fabric` readback. Do not reuse this browser, tab, binding, or canary.

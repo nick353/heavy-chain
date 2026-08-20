@@ -4449,6 +4449,18 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
 - Next action: after official capability/session/auth/human state changes, create a fresh Profile 2 owner and verify the live provider receipt and full reuse flow against r78. Do not reuse old browser, binding, tab, run, or artifact.
 
+## 2026-08-20 Heavy target-scoped authentication canary r80
+
+- Fresh official Profile 2 target-scoped readback reached the exact Heavy `/tools/fabric` target, but the DOM remained at `ログイン状態を確認しています` / `ログイン後にLightchainの制作ワークスペースへ進めます。`; textile/material markers were absent.
+- Browser `-f428-42e9-a4b7-cbad54b8b7c2`, task-owned tab `1980904371`, and same-run owner lineage are recorded in `work/heavy-chain-target-scoped-canary-20260820-r80.md`.
+- Provisioned tab cleanup passed; no login, upload, generation, save, reuse, recording, or external effect occurred.
+
+### Proof boundary / current exact blocker / next action
+
+- Transport and URL/title/DOM readback are fresh, while authenticated workspace/assets and all production provider/persistence proof remain `PENDING_CONFIRMATION`.
+- Exact blocker: `heavy_target_workspace_authentication_not_ready`; foreground provider work is separately blocked by `chrome_foreground_activation_capability_unavailable`.
+- Next action: after the authenticated workspace state changes, create a new official Profile 2 owner and repeat one target-scoped `/tools/fabric` readback without reusing the current browser, tab, binding, or canary.
+
 ## 2026-08-20 Local all-feature regression after provenance continuity r79
 
 - The current build's video-excluded workflow verifier passed after r78: 31 features, 277 assertions, `failed=[]`, zero unexpected console/page/request failures, and browser/context/preview cleanup passed.
