@@ -1,0 +1,42 @@
+{
+  "schema": "heavy_chain.chrome_plugin_profile2_capability_refresh.v1",
+  "captured_at": "2026-08-20T07:45:24.000Z",
+  "surface": {
+    "backend": "chrome_plugin",
+    "profile": "Profile 2",
+    "browser_surface": "signed_chrome_extension_profile2",
+    "selector_revision": 1
+  },
+  "browser_client": {
+    "browser_id": "-f528-4c7a-aee9-9c260d240c70",
+    "family": "chrome",
+    "type": "extension",
+    "extension_id": "hehggadaopoacecdllhhajmbjkdcmajg",
+    "extension_instance_id": "f48b15fe-59a8-4443-8369-44b169a4da68",
+    "profile_ordering": "2",
+    "open_tabs_handshake": "passed",
+    "open_tabs_count": 5
+  },
+  "capability_advertisement": {
+    "browser": ["viewport"],
+    "tab": ["pageAssets", "cdp"],
+    "foreground_activation": false,
+    "management": false,
+    "exact_blocker": "chrome_foreground_activation_capability_unavailable"
+  },
+  "owner_lineage": {
+    "session_id": "01a01576-c224-7d81-902f-561719dc45a5",
+    "thread_id": "01a01576-c224-7d81-902f-561719dc45a5",
+    "turn_id": "01a01e21-c278-7471-b3a2-412766d919b2",
+    "lineage_match": true
+  },
+  "operation_boundary": {
+    "selected_tab_read": "not_called",
+    "foreground_activation_called": false,
+    "navigation": false,
+    "external_action_executed": false,
+    "old_binding_reused": false,
+    "cleanup": "no_task_owned_tab_created"
+  },
+  "next_action": "continue target-scoped read-only; wait for official signed extension/backend capability advertisement before foreground work"
+}

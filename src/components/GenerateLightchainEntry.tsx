@@ -2,15 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
-  CheckCircle2,
-  Images,
-  Layers3,
-  PackageOpen,
-  Palette,
-  Shirt,
   Sparkles,
-  UserRound,
-  WandSparkles,
   X,
 } from 'lucide-react';
 import {
@@ -24,22 +16,6 @@ import {
   type LightchainCategoryId,
   type LightchainFeature,
 } from '../lib/lightchainParityCatalog';
-
-const routeIcon: Record<string, typeof Sparkles> = {
-  '/marketing': PackageOpen,
-  '/fitting': Shirt,
-  '/lab': WandSparkles,
-  '/models': UserRound,
-  '/studio': Images,
-  '/patterns/workbench': Palette,
-  '/lightchain/fabric-image': Shirt,
-  '/lightchain/printing-image': Palette,
-  '/tools/fabric': Shirt,
-  '/model': UserRound,
-  '/flow/orientedDesign': WandSparkles,
-  '/brand/settings': CheckCircle2,
-  '/canvas/new': Layers3,
-};
 
 const galleryTabs = [
   { id: 'recommended', label: 'おすすめの事例' },
@@ -88,9 +64,59 @@ const galleryCases = [
   },
 ] as const;
 
-const getRouteBase = (route: string) => route.split('?')[0];
-const getRouteIcon = (feature: LightchainFeature) => routeIcon[getRouteBase(feature.route)] ?? Sparkles;
 const isBetaFeature = (feature: LightchainFeature | undefined): feature is LightchainFeature => Boolean(feature && feature.betaIncluded !== false);
+
+const launcherFeatureVisuals: Record<string, { background: string; accent: string; detail: string }> = {
+  'design-workspace': { background: '#213b3c', accent: '#b3ddd0', detail: '#e7f2e9' },
+  'marketing-workspace': { background: '#5d3830', accent: '#e9b4a2', detail: '#f8e5d7' },
+  'virtual-fitting': { background: '#355167', accent: '#c9ddea', detail: '#f5e8d3' },
+  'wear-design-lab': { background: '#7a493d', accent: '#f0c0aa', detail: '#f9e8ce' },
+  'model-library': { background: '#a87861', accent: '#f1cfb4', detail: '#fff0dc' },
+  'fashion-studio': { background: '#4c4e67', accent: '#d1cfee', detail: '#f6e9da' },
+  'design-agent': { background: '#31545a', accent: '#b5dfd7', detail: '#f3eee1' },
+};
+
+const encodeSvgDataUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.trim())}`;
+
+const buildLauncherFeatureImage = (featureId: string) => {
+  const visual = launcherFeatureVisuals[featureId] ?? launcherFeatureVisuals['design-workspace'];
+  return encodeSvgDataUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
+      <defs>
+        <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="${visual.background}"/>
+          <stop offset="1" stop-color="#11191b"/>
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#081012" flood-opacity=".35"/>
+        </filter>
+      </defs>
+      <rect width="960" height="560" fill="url(#background)"/>
+      <circle cx="820" cy="90" r="170" fill="${visual.accent}" opacity=".16"/>
+      <circle cx="120" cy="520" r="210" fill="${visual.detail}" opacity=".08"/>
+      <path d="M0 416 C180 356 274 470 458 416 S770 344 960 424 V560 H0Z" fill="#0d1618" opacity=".55"/>
+      <g filter="url(#shadow)">
+        <rect x="74" y="72" width="300" height="384" rx="28" fill="${visual.detail}" opacity=".95"/>
+        <rect x="108" y="108" width="232" height="18" rx="9" fill="${visual.background}" opacity=".55"/>
+        <rect x="108" y="145" width="154" height="12" rx="6" fill="${visual.background}" opacity=".26"/>
+        <path d="M185 206 L135 255 L163 286 L192 263 L192 385 L288 385 L288 263 L317 286 L345 255 L295 206 L256 187 L224 187Z" fill="${visual.accent}"/>
+        <path d="M215 188 C220 228 261 228 266 188" fill="none" stroke="${visual.background}" stroke-width="10" opacity=".72"/>
+        <rect x="108" y="408" width="118" height="10" rx="5" fill="${visual.background}" opacity=".38"/>
+        <rect x="238" y="408" width="74" height="10" rx="5" fill="${visual.background}" opacity=".2"/>
+      </g>
+      <g opacity=".92">
+        <rect x="492" y="112" width="362" height="52" rx="18" fill="#f3f0e8" opacity=".12"/>
+        <rect x="526" y="130" width="168" height="14" rx="7" fill="${visual.detail}" opacity=".72"/>
+        <rect x="714" y="130" width="92" height="14" rx="7" fill="${visual.accent}" opacity=".55"/>
+        <rect x="492" y="202" width="164" height="224" rx="24" fill="${visual.accent}" opacity=".42"/>
+        <rect x="680" y="202" width="174" height="104" rx="24" fill="${visual.detail}" opacity=".2"/>
+        <rect x="680" y="322" width="174" height="104" rx="24" fill="${visual.accent}" opacity=".2"/>
+        <circle cx="574" cy="316" r="58" fill="${visual.detail}" opacity=".82"/>
+        <path d="M526 374 Q574 302 622 374" fill="${visual.background}" opacity=".72"/>
+      </g>
+    </svg>
+  `);
+};
 
 const findFeatureFromPrompt = (prompt: string) => {
   const normalizedPrompt = prompt.trim().toLowerCase();
@@ -139,7 +165,6 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
     }
   }, [categoryParam]);
 
-  const activeCategoryMeta = lightchainCategories.find((category) => category.id === activeCategory) ?? lightchainCategories[0];
   const visibleFeatures = useMemo(
     () => getLightchainLauncherFeatures(activeCategory).filter(isBetaFeature),
     [activeCategory],
@@ -162,9 +187,10 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
       <section className="relative overflow-hidden px-5 pb-12 pt-12 sm:px-8 lg:px-10 lg:pt-14">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_55%_6%,rgba(24,78,83,0.22),transparent_40%),linear-gradient(180deg,rgba(5,10,12,0.1),rgba(5,7,8,0.92))]" />
         <div className="relative mx-auto max-w-[1400px]">
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
-            アパレル特化のAIデザインワークスペース
-          </h1>
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <h1 className="text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">LIGHTCHAIN AI</h1>
+            <p className="text-sm font-medium text-neutral-300 sm:text-base">アパレル特化のAIデザインワークスペース</p>
+          </div>
 
           <form
             className="mt-7 flex max-w-[520px] items-center rounded-full border border-cyan-300/75 bg-white/[0.035] px-4 py-2 shadow-[0_0_22px_rgba(56,189,248,0.12)] focus-within:border-indigo-300"
@@ -205,16 +231,8 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
             })}
           </div>
 
-          <div className="mt-4 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-white">{activeCategoryMeta.label}</h2>
-              <p className="mt-1 text-sm text-neutral-400">{activeCategoryMeta.description}</p>
-            </div>
-          </div>
-
-          <div className="mt-3 grid gap-2.5 md:grid-cols-2 xl:grid-cols-3" data-testid="lightchain-tool-grid">
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="lightchain-tool-grid">
             {visibleFeatures.map((feature, index) => {
-              const Icon = getRouteIcon(feature);
               const hiddenOnMobile = compactOnMobile && index > 5;
               return (
                 <Link
@@ -223,10 +241,12 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   data-testid="lightchain-tool-card"
                   className={`${hiddenOnMobile ? 'hidden md:block' : ''} group overflow-hidden rounded-2xl border border-white/10 bg-[#171b1d] transition hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-[#1b2022]`}
                 >
-                  <div className="relative flex h-28 items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_35%_30%,rgba(121,239,255,0.26),transparent_28%),linear-gradient(135deg,#273337,#111719)]">
-                    <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(115deg,transparent_20%,rgba(255,255,255,0.12)_20.5%,transparent_21%)] [background-size:20px_20px]" />
-                    <Icon className="relative h-12 w-12 text-cyan-100 transition group-hover:scale-110" strokeWidth={1.2} />
+                  <div className="relative aspect-[1.72] overflow-hidden bg-[#263235]">
+                    <img src={buildLauncherFeatureImage(feature.id)} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]" />
                     {getLightchainLauncherBadge(feature) && <span className="absolute right-2 top-2 rounded-full bg-fuchsia-500 px-2 py-1 text-[10px] font-bold">{getLightchainLauncherBadge(feature)}</span>}
+                    <span className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/25 text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
                   </div>
                   <div className="p-4">
                     <div className="flex items-center gap-2">

@@ -2,6 +2,20 @@
 
 Updated: 2026-08-20
 
+## Current Chrome capability and launcher visual parity r83
+
+- Fresh official Chrome Plugin/Profile 2 capability proof after the Chrome update used browser-client `-f528-4c7a-aee9-9c260d240c70`; `openTabs()` returned 5 tabs and current owner lineage matched the active session/thread/turn.
+- Advertisement remains browser=`viewport`, tab=`pageAssets`／`cdp`; `foreground_activation`／`management` are absent. Exact blocker: `chrome_foreground_activation_capability_unavailable`. No selected/claim/focus/navigation/foreground action or external effect was executed.
+- The `/lightchain` root visual was corrected in `src/components/GenerateLightchainEntry.tsx` to match the fresh Lightchain homepage structure: `LIGHTCHAIN AI` hero with inline subtitle, prompt input, four category tabs, and direct three-column non-video cards. The extra category heading/description was removed.
+- Local deterministic proof passed: `npm run verify:lightchain-all-features`, `featureCount=31`, `failed=[]`, build `2608 modules transformed`, `git diff --check`; screenshot `output/playwright/lightchain-all-feature-workflows-20260820T075813Z/desktop-index.png`.
+- Artifacts: `work/chrome-plugin-profile2-capability-refresh-20260820-r83.json` and `work/lightchain-home-visual-parity-20260820-r83.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`; do not repeat the same capability fingerprint.
+- Next action: keep eligible read-only work on the target-scoped lane. After an official signed distribution advertises foreground activation/management, start a fresh Profile 2 owner and prove fabric/printing generation, persistence, reuse/reload, then AI fitting.
+- Restart point: official capability state change followed by a new browser-client. Do not reuse old binding/run/tab/receipt or modify the recording owner.
+
 ## Current production fabric parity r50
 
 - The local fabric input fix is now live in Heavy production. Source commit
