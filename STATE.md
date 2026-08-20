@@ -2,6 +2,32 @@
 
 Updated: 2026-08-20
 
+## Current source-toolbar parity correction r120
+
+- Fresh same-owner Lightchain `/tools/fabric` readback confirmed the current
+  source toolbar labels `ツールバー`, `デザインツール`,
+  `フィッティングツール`, `グラフィックデザインツール`, and
+  `衣類生産ツール`.
+- Heavy now renders those five source-aligned labels above feature-detail
+  controls and maps the four groups into its non-video catalog categories.
+- Focused workspace/route/provider suite passed `27/27`; typecheck and build
+  passed. Implementation commit: `e0c0d1e`.
+- Source artifact:
+  `work/lightchain-profile2-fabric-direct-readback-20260820-r120.md`。
+- Zeabur deployment was submitted to the verified existing `heavy-chain`
+  service as Docker deployment `6a86e631acafc201d503239b`; runtime readback is
+  pending while status is `BUILDING`.
+
+### Boundary / next action
+
+This closes one confirmed source-toolbar UI difference only. It does not prove
+provider generation, result quality, durable persistence, Gallery/Canvas/
+History/Jobs lineage, reuse/reload, or beta acceptance. Continue to keep the
+provider lane fail-closed at
+`chrome_foreground_activation_capability_unavailable` until the official
+foreground capability is advertised. After deployment reaches `RUNNING`,
+perform a fresh Heavy target-scoped readback and verify the five toolbar labels.
+
 ## Current Heavy fabric production readback r119
 
 - Fresh current-selector target-scoped read-only readback completed in a new

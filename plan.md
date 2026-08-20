@@ -2,6 +2,30 @@
 
 更新日: 2026-08-20
 
+## Current source-toolbar parity correction checkpoint r120
+
+- Fresh same-owner Lightchain `/tools/fabric` source readback exposed the
+  current five-label toolbar: `ツールバー`, `デザインツール`,
+  `フィッティングツール`, `グラフィックデザインツール`, and
+  `衣類生産ツール`.
+- Heavy feature-detail routes now render the same source labels and map the
+  four category links into the video-excluded Heavy catalog.
+- Focused route/workspace/provider suite: `27/27 PASS`; typecheck and build:
+  pass. Commit: `e0c0d1e`.
+- Deployment `6a86e631acafc201d503239b` was submitted to the verified existing
+  `heavy-chain` service with Docker plan; it is still `BUILDING` at this
+  checkpoint.
+- Artifact:
+  `work/lightchain-profile2-fabric-direct-readback-20260820-r120.md`。
+
+### Boundary / next action
+
+This is a UI parity correction, not a provider or business-flow completion.
+After deployment is `RUNNING`, run a fresh Heavy target-scoped readback and
+verify the toolbar labels. Keep generation/save/reuse fail-closed at
+`chrome_foreground_activation_capability_unavailable`; after its official
+resolution, prove fabric/printing first and AI fitting second.
+
 ## Current Heavy fabric production readback checkpoint r119
 
 - Fresh Profile 2 target-scoped read-only readback completed under selector
