@@ -2,6 +2,30 @@
 
 更新日: 2026-08-20
 
+## 0.0 current production source UI overlay r107
+
+- Commit `144087e` removed Heavy's visible fabric preset picker; deployment
+  `6a86cc9aacafc201d50320b0` reached `RUNNING` with Docker plan type.
+- Fresh revision-30 target-scoped Heavy `/tools/fabric` readback confirmed
+  `preset_picker_visible=false`, retained the required fabric inputs and
+  history, and verified cleanup of task-owned tab `1980904570`.
+- Artifact:
+  `work/heavy-production-source-ui-cleanup-readback-20260820-r107.md`。
+
+| Requirement layer | Current status | Current evidence / gap |
+|---|---|---|
+| Confirmed Heavy-only fabric preset mismatch | `verified` | deployed r107 readback, picker absent |
+| Heavy fabric core UI availability | `verified` for read-only state | inputs, ratio, AI生成, history visible |
+| Provider generation/result/save/reuse/reload | `PENDING_CONFIRMATION` | foreground capability unavailable |
+| AI-fitting production flow | `PENDING_CONFIRMATION` | scheduled after fabric/printing gate |
+| Mac/Windows real-Chrome acceptance | `PENDING_CONFIRMATION` | not yet read back on both OSes |
+
+### r107 restart point
+
+After official foreground capability advertisement, use a new Profile 2 owner
+for effectful fabric/printing proof, then AI fitting. Do not reuse r107's
+browser, tab, or run for foreground work.
+
 ## 0.0 current revision-30 source/Heavy overlay r105/r106
 
 - Fresh Lightchain source readback under the current selector revision `30`

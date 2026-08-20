@@ -2,6 +2,31 @@
 
 Updated: 2026-08-20
 
+## Current production source UI cleanup readback r107
+
+- Commit `144087e` removed the confirmed Heavy-only visible fabric preset
+  picker and kept the internal renderer profile.
+- Deployment `6a86cc9aacafc201d50320b0` for the existing `heavy-chain` service
+  reached `RUNNING` with Docker plan type.
+- Fresh revision-30 Profile 2 target-scoped readback confirmed Heavy
+  `/tools/fabric` at `readyState=complete`, with
+  `preset_picker_visible=false` while model/design input, fabric input, ratio,
+  `AI生成`, and `生成履歴` remained visible.
+- Only task-owned tab `1980904570` was closed; `cleanup_verified=true`.
+- Artifact: `work/heavy-production-source-ui-cleanup-readback-20260820-r107.md`。
+
+### Current exact blocker / next action / restart point
+
+- UI cleanup and runtime deployment are verified. Production provider
+  generation/save/reuse/reload remains blocked by
+  `chrome_foreground_activation_capability_unavailable`.
+- Next action: continue source-driven UI parity for confirmed mismatches. When
+  the official capability is advertised, run a new owner-bound fabric/printing
+  production proof, then AI fitting.
+- Restart point: mandatory Profile 2 preflight followed by a new
+  list → get → `openTabs()` owner boundary after the official capability state
+  changes.
+
 ## Current Lightchain source readback and local UI cleanup r105/r106
 
 - Fresh current-selector Lightchain source readback r105 used a new Profile 2

@@ -2,6 +2,22 @@
 
 更新日: 2026-08-20
 
+## Current production UI cleanup checkpoint r107
+
+- Source-aligned fabric UI cleanup commit `144087e` was deployed to the
+  existing `heavy-chain` service as deployment
+  `6a86cc9aacafc201d50320b0`; plan type `docker`, status `RUNNING`.
+- Fresh revision-30 Profile 2 target-scoped readback confirmed
+  `preset_picker_visible=false` after deployment while the core fabric
+  inputs, ratio, `AI生成`, and `生成履歴` remained available.
+- Artifact: `work/heavy-production-source-ui-cleanup-readback-20260820-r107.md`。
+
+### Boundary
+
+The confirmed Heavy-only visible preset mismatch is closed in production. This
+does not prove production provider generation/result/save/reuse/reload or
+cross-platform beta acceptance; those remain separate gates.
+
 ## Current source parity checkpoint r105 / local cleanup r106
 
 - Fresh current-selector Lightchain source readback under revision `30`
