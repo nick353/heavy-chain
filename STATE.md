@@ -13,6 +13,7 @@ Updated: 2026-08-20
 - Artifacts: `work/chrome-plugin-profile2-capability-refresh-20260820-r83.json`, `work/lightchain-home-visual-parity-20260820-r83.md`, `work/lightchain-production-ui-readback-20260820-r84.json`, and screenshot `work/lightchain-production-ui-readback-20260820-r84.png`.
 - Priority local regression r85 passed `25/25` for fabric material, provider persistence/result promotion, AI fitting model-matrix, Canvas/Gallery handoff, and print input restoration. Artifact: `work/heavy-priority-local-regression-20260820-r85.md`.
 - Desktop layout regression r86 passed `228/228` at `1280/1440/1920/2560px`; failed `0`, global timeout `false`, cleanup leftovers `0`. Artifact: `work/heavy-desktop-layout-regression-20260820-r86.md`. This is local width evidence, not Windows/macOS runtime acceptance.
+- Fresh target-scoped r87 readback confirmed hydrated production `/tools/fabric`, `/tools/printing`, and `/model` controls with cleanup verified. Artifact: `work/heavy-priority-routes-readback-20260820-r87.md`. An existing printing history item was observed but not promoted as current same-run generation proof.
 
 ### Current exact blocker / next action / restart point
 
