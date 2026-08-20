@@ -43,6 +43,8 @@ test('provider provenance stays behind an opt-in result detail disclosure', () =
   assert.match(page, /<details className="mt-1 rounded-lg border border-white\/10/);
   assert.match(page, /<summary className="cursor-pointer select-none font-semibold text-white\/65">生成情報<\/summary>/);
   assert.match(page, /data-testid=\{`provider-result-provenance-\$\{result\.id\}`\}/);
+  assert.doesNotMatch(page, /eyebrow: 'PROVIDER'/);
+  assert.match(page, /配置したプリントを服の形状に沿って反映/);
 });
 
 test('priority material routes keep the current Lightchain content frame without a Heavy-only rail', () => {
