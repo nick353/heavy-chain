@@ -4023,3 +4023,15 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable` for production provider work; separate human/operational gates remain open as recorded above.
 - Next action: capability/auth state change後にfresh Profile 2 target readbackを行い、production proofへ進む。同時に、権限のあるoperatorがH601決定・G619実参加者セッション・launch auth stateを別途提供するまで、それらを完了扱いにしない。
 - Restart point: capabilityまたはHeavy認証状態が変化した後のfresh official owner。r38 browser／tab／binding／Run、別surface fallbackは再利用しない。
+
+## 2026-08-20 Chrome Plugin/Profile 2 capability readback r44
+
+- Fresh official Chrome Plugin/Profile 2 browser-client `-f449-4864-b61d-50882c3d6742` passed current selector revision 30, exact extension `get()`, documentation, named-session setup, and same-run `openTabs()` handshake. Current session/thread/turn lineage was `01a01576-c224-7d81-902f-561719dc45a5` / `01a01576-c224-7d81-902f-561719dc45a5` / `01a01d75-f4d9-7743-8f49-2347a623ab84`.
+- The official advertisement remains browser `viewport` only and tab `pageAssets`／`cdp` only. `foreground_activation` and `management` remain unadvertised. The inventory contained 6 unrelated tabs and no Heavy target; no target operation or external effect was performed.
+- Artifact: `work/chrome-plugin-profile2-capability-readback-20260820-r44.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: after an official signed extension/backend capability update, create a new Profile 2 owner and repeat advertisement → `openTabs()` → owner-lineage verification once. Until then, use only target-scoped read-only where applicable.
+- Restart point: capability state change後のfresh official owner。r44 browser／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。

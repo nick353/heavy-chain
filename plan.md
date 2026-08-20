@@ -922,6 +922,18 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Next action: after an official capability or Heavy authentication state change, create a new Profile 2 owner and perform advertisement → `openTabs()` → Heavy target-scoped readback once. Proceed to fabric/printing production proof and then AI fitting only if the workbench is hydrated.
 - Restart point: fresh official owner after the capability or Heavy state change. Do not reuse the r38 browser, tab, binding, run, or another surface.
 
+## 2026-08-20 Chrome Plugin/Profile 2 capability readback r44
+
+- Fresh official Profile 2 browser-client `-f449-4864-b61d-50882c3d6742` passed exact selector/readback admission and same-run `openTabs()` with 6 tabs. Current owner session/thread/turn lineage matched the active Codex turn.
+- Capability advertisement is unchanged: browser `viewport`; tab `pageAssets`／`cdp`; no `foreground_activation` or `management`. Heavy target was absent, so no provisioning or Heavy operation was started.
+- Artifact: `work/chrome-plugin-profile2-capability-readback-20260820-r44.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: after the official signed distribution advertises the missing capability, create a fresh Profile 2 owner and repeat the bounded advertisement → `openTabs()` → lineage check, then resume Heavy fabric/printing production proof and AI fitting.
+- Restart point: capability update後のfresh official owner。r44 browser／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
 ## 2026-08-20 Current local acceptance-gates recheck r42
 
 - H601 static legal-safety guard passed (`ok=true`), including protected-brand／likeness blocking and generation-path safety checks. H601 operator readiness remains `ok=false`, `acceptance=not_claimed`, with 10 human/operator decision artifacts missing.
