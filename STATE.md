@@ -2,6 +2,27 @@
 
 Updated: 2026-08-20
 
+## Current local beta QA and post-fix action gate r125
+
+- Fresh local non-video feature verification passed `31/31`; fresh unified
+  desktop layout passed `228/228` across 57 targets and 1280/1440/1920/2560px.
+- Focused material/provider/persistence/model-matrix/workspace-handoff tests
+  passed `22/22`, `13/13`, `3/3`, and `2/2`.
+- After the shared action-lane cause-chain fix, a Node/browser-client reset and
+  fresh session boundary `d76ecaf7-6ce4-4909-be21-97f84bbef634` were created.
+  The same-run inventory advertised only IAB, not the official Chrome
+  Plugin/Profile 2 extension. No fallback or Heavy action was performed.
+- Artifact:
+  `work/heavy-beta-local-qa-and-action-gate-20260820-r125.md`。
+
+### Boundary / next action
+
+Local contracts and desktop breadth are green, but target-scoped mutating
+proof cannot resume until the official Chrome Plugin/Profile 2 surface is
+advertised in a fresh owner. Then run one approved target action to collect
+the new bounded cause chain if it fails; otherwise proceed to the practical
+fabric/printing flow. Foreground-only operations remain separately gated.
+
 ## Current target-scoped action dispatch readback r124
 
 - Fresh Profile 2 read-only admission succeeded for Heavy `/tools/printing`.

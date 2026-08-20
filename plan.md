@@ -2,6 +2,27 @@
 
 更新日: 2026-08-20
 
+## Current local beta QA and post-fix action gate r125
+
+- Fresh local verification passed all `31/31` non-video feature routes and
+  `228/228` unified desktop layout checks across 57 targets and four desktop
+  widths. Focused material/provider/persistence/model-matrix/workspace-handoff
+  suites also passed `22/22`, `13/13`, `3/3`, and `2/2`.
+- After the shared action-lane cause-chain update, a new browser-client session
+  boundary was created, but its same-run inventory advertised IAB only; the
+  required Chrome Plugin/Profile 2 extension was absent. No fallback or action
+  was attempted.
+- Artifact:
+  `work/heavy-beta-local-qa-and-action-gate-20260820-r125.md`。
+
+### Boundary / next action
+
+Local breadth and contracts are verified. The next critical path is a fresh
+official Chrome Plugin/Profile 2 advertisement, followed by one authorized
+target action and same-tab post-readback. If it fails, preserve the new
+bounded cause chain; if it succeeds, continue fabric/printing generation,
+persistence, Gallery/Canvas/History/Jobs, reuse, and then AI fitting.
+
 ## Current target-scoped action dispatch readback r124
 
 - Fresh target-scoped read-only Heavy `/tools/printing` admission succeeded.
