@@ -2,6 +2,14 @@
 
 更新日: 2026-08-20
 
+## Current execution checkpoint r47 (2026-08-20)
+
+- Local implementation verification is complete for the current source slice: non-video feature workflows `31/31`, and unified desktop layout `228/228` across `1280/1440/1920/2560px`; failures and cleanup leftovers are zero.
+- r46 direct `/tools/fabric` input parity is included in this verification. The extra Heavy-only reference-type toggle was removed from the direct fabric surface while Gallery, rights, generation, history, retry, and internal beta contracts remain.
+- This is not a completion claim. Production provider generation/save/reuse/reload, post-deploy r46 readback, real Mac/Windows Chrome acceptance, and internal beta acceptance remain `PENDING_CONFIRMATION`.
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`. The fresh official Profile 2 capability readback advertises `viewport` and tab-level `pageAssets`/`cdp` only; `foreground_activation` and `management` are absent.
+- Next action: after an official capability or explicitly authorized deployment state change, use a new Profile 2 browser-client for the fabric-print same-run production proof, then AI fitting. Do not reuse old binding/run/tab or the unowned `about:blank` tab from r45.
+
 ## 目的
 
 現行Lightchain本番を正本として、動画を除く全機能を、社内アパレル担当全員が使える1画面の統合ワークスペースへ揃える。まず生地プリントイメージとAIフィッティングを、ライブラリ選択から生成・結果確認・保存・再利用まで実用化し、その共通契約を残りの非動画機能へ展開する。

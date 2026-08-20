@@ -2,6 +2,13 @@
 
 Updated: 2026-08-20
 
+## Current local verification r47
+
+- The post-r46 local non-video workflow verifier passed `ok=true`, `featureCount=31`, `failed=[]`. Artifact: `work/heavy-local-lightchain-beta-verification-20260820-r47.md`.
+- The unified desktop verifier passed `ok=true`, `scheduled=228`, `completed=228`, `failed=0`, `globalTimedOut=false`, and `cleanupLeftovers=0` across `1280/1440/1920/2560px`.
+- This confirms local UI/route/layout contracts only. It does not prove production provider generation, save/reuse/reload, real Mac/Windows Chrome acceptance, or internal beta acceptance.
+- Current production blocker remains `chrome_foreground_activation_capability_unavailable`; fresh r44 capability evidence still advertises only `viewport` plus tab-level `pageAssets`/`cdp`, with no `foreground_activation` or `management`.
+
 ## Current local Lightchain direct fabric input parity r46
 
 - The fresh r45 production readback showed Heavy `/tools/fabric` exposing extra `ベース画像`／`パターン参考` reference-type buttons that were absent from the current Lightchain direct route.
