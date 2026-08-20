@@ -1482,3 +1482,16 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - URL/title/DOM transport proof is fresh and valid, but authenticated workspace/assets, production generation, result quality, save/reuse/reload, and Gallery/Canvas/History/Jobs same-run proof remain `PENDING_CONFIRMATION`.
 - Exact blocker: `heavy_target_workspace_authentication_not_ready`; the separate foreground blocker remains `chrome_foreground_activation_capability_unavailable`.
 - Next action: after the authenticated Heavy workspace becomes visibly ready, create a new official Profile 2 owner and repeat one target-scoped `/tools/fabric` readback. Do not reuse this browser, tab, binding, or canary.
+
+## 2026-08-20 Lightchain current homepage hydration readback r81
+
+- Fresh official Profile 2 target-scoped readback reached `https://jp.linkaigc.com/` with title `Lightchain AI` and `readyState=complete` after one bounded hydration retry.
+- The same-run page exposed the current four categories: `おすすめ`, `企画デザインツール`, `AIフィッティング`, and `グラフィックツール`; visible cards included the video workstation, which remains excluded from Heavy scope.
+- Task-owned tab cleanup passed; no login, upload, generation, save, reuse, recording, or external effect occurred.
+- Artifact: `work/lightchain-profile2-homepage-target-scoped-20260820-r81.md`.
+
+### Proof boundary / current exact blocker
+
+- Homepage URL/title/DOM hydration is now fresh evidence. Complete current href/route card enumeration, per-feature production semantics, and Heavy-side production parity remain `PENDING_CONFIRMATION`.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `heavy_target_workspace_authentication_not_ready`, current card-ledger target-session uncertainty, missing production auth state, and human-owned beta/legal acceptance inputs.
+- Next action: after official capability or supported target-session state change, create a fresh Profile 2 owner and enumerate the current Lightchain card ledger once, excluding video rows from Heavy scope.

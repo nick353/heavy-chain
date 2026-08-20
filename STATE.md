@@ -4461,6 +4461,18 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `heavy_target_workspace_authentication_not_ready`; foreground provider work is separately blocked by `chrome_foreground_activation_capability_unavailable`.
 - Next action: after the authenticated workspace state changes, create a new official Profile 2 owner and repeat one target-scoped `/tools/fabric` readback without reusing the current browser, tab, binding, or canary.
 
+## 2026-08-20 Lightchain current homepage hydration readback r81
+
+- Fresh official Profile 2 target-scoped readback reached the current Lightchain homepage with title `Lightchain AI`, URL `https://jp.linkaigc.com/`, and `readyState=complete` after one bounded hydration retry.
+- Current visible categories are `おすすめ`, `企画デザインツール`, `AIフィッティング`, and `グラフィックツール`; the homepage also exposes a video workstation card that remains excluded from Heavy scope.
+- Browser `-f428-42e9-a4b7-cbad54b8b7c2`, task-owned tab `1980904375`, owner lineage, and cleanup are recorded in `work/lightchain-profile2-homepage-target-scoped-20260820-r81.md`.
+
+### Proof boundary / current exact blocker / next action
+
+- Homepage hydration proof is fresh, while the complete href/route card ledger, per-feature production semantics, and Heavy production parity remain `PENDING_CONFIRMATION`.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `heavy_target_workspace_authentication_not_ready`, current card-ledger target-session uncertainty, missing production auth state, and human-owned beta/legal acceptance inputs.
+- Next action: after official capability or supported target-session state change, create a fresh Profile 2 owner and enumerate the current Lightchain card ledger once, excluding video rows.
+
 ## 2026-08-20 Local all-feature regression after provenance continuity r79
 
 - The current build's video-excluded workflow verifier passed after r78: 31 features, 277 assertions, `failed=[]`, zero unexpected console/page/request failures, and browser/context/preview cleanup passed.
