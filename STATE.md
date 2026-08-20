@@ -3967,3 +3967,53 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`。source/runtime/UI parityは更新済みだが、provider生成・保存・再利用・reloadのproduction same-run proofは未確認。
 - Next action: 公式`foreground_activation`／`management`広告後、新規Profile 2 ownerでfabric／printing実用フローを1回通し、その後AIフィッティングへ進む。広告がない間はtarget-scoped read-onlyとlocal parityを継続する。
 - Restart point: capability state change後のfresh official owner。r37 browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Chrome Plugin/Profile 2 capability and Heavy target-scoped readback r38
+
+- 新規公式Chrome Plugin/Profile 2 browser-client `-ea09-4a6a-8511-f17d9b09a499`で、現行selector（`chrome_plugin`／Profile 2／`signed_chrome_extension_profile2`／revision 30）をfresh確認した。`get()`後のdocumentation、named session、`openTabs()` handshakeはPASSし、owner lineageはcurrent session/thread/turnと一致した。
+- 公式広告はbrowser `viewport`のみ、tab `pageAssets`／`cdp`のみ。`foreground_activation`／`management`は未広告のまま。
+- Heavy `/tools/fabric`はfresh inventoryに無かったため、allowlist済みの公式provisioningでtask-owned tab `1980904126`を1件作成し、同一runでURL/title/DOMをreadbackした。URL/titleは一致したが、DOMは`ログイン状態を確認しています`／`ログイン後にLightchainの制作ワークスペースへ進めます。`の認証シェルで、fabric workbench assetは未表示だった。
+- task-owned tabのみcleanupし、cleanup PASS。selected／focus／claim／foreground lease、認証クリック／入力、upload、provider生成、権利確認、保存／再利用、録画、AOS、別surface、外部効果は未実施。Artifact: `work/chrome-plugin-profile2-capability-target-readback-20260820-r38.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。本番provider生成・保存・再利用・reloadは公式配布側の`foreground_activation`／`management`広告までfail-closedする。Heavy target-scopedの認証済みhydrationも今回fresh DOMでは`PENDING_CONFIRMATION`。
+- Next action: 公式署名済み拡張／backendのcapability更新後、新規Profile 2 ownerで広告→`openTabs()`→Heavy target-scoped readbackを1回取り直し、認証済みworkbenchが確認できた場合だけfabric／printingのprovider→保存→Gallery／Canvas／History／Jobs→再利用→reload、続いてAI fittingへ進む。
+- Restart point: capabilityまたはHeavy認証状態が変化した後のfresh official owner。r38 browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Goal continuation checkpoint r39
+
+- r38のfresh official Chrome Plugin/Profile 2 proofを現行Goalの最新停止点として採用する。browser `-ea09-4a6a-8511-f17d9b09a499`、selector revision 30、同一run `openTabs()`、owner lineage、Heavy `/tools/fabric` URL/title/DOM、task-owned cleanupを確認済み。
+- 公式capability広告は`viewport`／`pageAssets`／`cdp`のみで、`foreground_activation`／`management`は未広告。Heavyのfresh DOMはログイン状態確認シェルで、認証済みfabric workbenchは今回`PENDING_CONFIRMATION`。
+- 依存しない現行ソース監査（31非動画、共通保存再利用、デスクトップ幅、launcher parity）は継続する。provider生成・保存・再利用・reloadとAI fitting本番同一runはcapability／認証状態変化までfail-closed。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式capabilityまたはHeavy認証状態の変化後、新規Profile 2 ownerで広告→`openTabs()`→Heavy target-scoped readbackを1回取り直す。hydrated workbenchが確認できた場合のみfabric／printing production proof、続いてAI fittingへ進む。
+- Restart point: capabilityまたはHeavy認証状態が変化した後のfresh official owner。r38 browser／tab／binding／Runと別surfaceは再利用しない。
+
+## 2026-08-20 Current local Goal recheck r41
+
+- Current source focused contract suite passed `74/74`.
+- Current 31-feature desktop/mobile workflow verifier passed `ok=true`, `featureCount=31`, `failed=[]`; current unified desktop layout passed `228/228` across 1280／1440／1920／2560px with `failed=0`, `globalTimedOut=false`, and `cleanupLeftovers=0`.
+- Current typecheck, zero-warning lint, and production build (`2607 modules transformed`) passed. Artifacts: `output/playwright/lightchain-all-feature-workflows-current-20260820/SUMMARY.json`, `output/playwright/unified-desktop-layout-current-20260820/SUMMARY.json`, and `work/heavy-local-goal-recheck-20260820-r41.md`。
+- This is local route/contract evidence only. Provider generation, production save/reuse/reload, authenticated Heavy hydration in the latest official run, Mac／Windows real Chrome, and internal beta acceptance remain `PENDING_CONFIRMATION`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: capabilityまたはHeavy認証状態の変化後、新規Profile 2 ownerで広告→`openTabs()`→Heavy target-scoped readbackを1回行い、hydrated workbenchが確認できた場合にのみfabric／printing production proof、続いてAI fittingへ進む。
+- Restart point: capabilityまたはHeavy認証状態が変化した後のfresh official owner。r38 browser／tab／binding／Run、別surface fallbackは再利用しない。
+
+## 2026-08-20 Current local acceptance-gates recheck r42
+
+- H601 static legal-safety guard passed (`ok=true`), including protected-brand／likeness blocking and generation-path safety checks. H601 operator readiness remains `ok=false`, `acceptance=not_claimed`, with 10 human/operator decision artifacts missing.
+- G619 beta readiness remains `ok=false`, `acceptance=not_claimed`, `readySessions=0`; no real participant session or fabricated consent/evidence was created. Launch-ops remains blocked by `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`.
+- G606 performance passed (`ok=true`): 500-image Gallery stress, 180-object Canvas stress, valid PNG export, route/bundle/heap thresholds, and no actionable console/request errors. Artifact: `work/heavy-local-acceptance-gates-recheck-20260820-r42.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable` for production provider work; separate human/operational gates remain open as recorded above.
+- Next action: capability/auth state change後にfresh Profile 2 target readbackを行い、production proofへ進む。同時に、権限のあるoperatorがH601決定・G619実参加者セッション・launch auth stateを別途提供するまで、それらを完了扱いにしない。
+- Restart point: capabilityまたはHeavy認証状態が変化した後のfresh official owner。r38 browser／tab／binding／Run、別surface fallbackは再利用しない。
