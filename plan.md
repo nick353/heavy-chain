@@ -2,6 +2,18 @@
 
 更新日: 2026-08-20
 
+## Current production checkpoint r100
+
+- Zeabur deployment `6a86c236c87cdf6b9c27dc3e` is `RUNNING`.
+- Fresh target-scoped Chrome Plugin/Profile 2 readback used selector revision `30`, browser `-5232-4100-a603-f93486760f5c`, and Heavy `/tools/fabric` task tab `1980904536`.
+- Transport/openTabs/owner lineage/URL/title/DOM/cleanup passed. The target remained in `ログイン状態を確認しています` / `ワークスペースを準備しています`; textile/fabric assets were absent.
+- Current production blocker: `heavy_target_workspace_authentication_not_ready`. Foreground provider execution also remains blocked by `chrome_foreground_activation_capability_unavailable`; the fresh advertisement still lacks `foreground_activation` and `management`.
+- Artifact: `work/heavy-production-target-scoped-readback-20260820-r100.md`。
+
+### Restart point
+
+After Heavy authentication/workspace state visibly changes, create a new official Profile 2 browser-client and perform one target-scoped readback. Keep provider generation, save/reuse, recording, AOS UI changes, and external effects stopped until their dedicated same-run authority and UI proof are available.
+
 ## Current Chrome capability fresh proof checkpoint r96 (2026-08-20)
 
 - Chrome本体更新後、現行selector（`chrome_plugin`／Profile 2／`signed_chrome_extension_profile2`／revision 6）で新規browser-client `-ab93-4c4f-9060-5a671317f48a`を作成した。同一runの`openTabs()`は4件で成功し、owner lineageは現thread/session/turnと一致した。

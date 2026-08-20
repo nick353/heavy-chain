@@ -1,8 +1,47 @@
-# Lightchain / Heavy parity matrix — current-selector checkpoint r96 (historical overlays retained)
+# Lightchain / Heavy parity matrix — current-selector checkpoint r100 (historical overlays retained)
 
 更新日: 2026-08-20
 
-## 0.0 current revision-6 production overlay r96
+## 0.0 current revision-30 production target overlay r100
+
+- The current selector source of truth is now `backend=chrome_plugin`,
+  Profile 2, `signed_chrome_extension_profile2`, revision `30`. The older
+  revision-6 overlay below remains historical provenance and is not current
+  proof.
+- Zeabur deployment `6a86c236c87cdf6b9c27dc3e` reached `RUNNING`.
+- Fresh official browser-client `-5232-4100-a603-f93486760f5c` passed the
+  same-run `openTabs()` handshake and owner lineage checks. The official
+  advertisement contains browser `viewport` and tab `pageAssets`/`cdp`, but
+  not `foreground_activation` or `management`.
+- Heavy `/tools/fabric` was absent from the fresh inventory. Allowlisted
+  target-scoped provisioning created tab `1980904536`; same-run URL/title/DOM
+  readback succeeded and cleanup closed only that task-owned tab.
+- The page remained in `ログイン状態を確認しています` /
+  `ワークスペースを準備しています` / `認証状態とブランド設定を確認しています。`;
+  textile/fabric assets and practical controls were not visible.
+- Current production target blocker is
+  `heavy_target_workspace_authentication_not_ready`. Foreground provider
+  work separately remains blocked by
+  `chrome_foreground_activation_capability_unavailable`.
+- Artifact: `work/heavy-production-target-scoped-readback-20260820-r100.md`。
+
+### r100 requirement boundary
+
+| Requirement layer | Current status | Current evidence / gap |
+|---|---|---|
+| Deployment/runtime availability | `verified` | deployment `6a86c236c87cdf6b9c27dc3e` is `RUNNING` |
+| Profile 2 transport/openTabs/owner lineage | `verified` | fresh browser-client r100, same-run handshake |
+| Heavy authenticated workspace and fabric assets | `PENDING_CONFIRMATION` | authentication/workspace preparation shell remains visible |
+| Provider generation/save/reuse/reload | `PENDING_CONFIRMATION` | blocked before authenticated practical controls |
+| Foreground-only execution | `PENDING_CONFIRMATION` | official `foreground_activation`/`management` capability unadvertised |
+
+### r100 restart point
+
+After Heavy authentication/workspace state visibly changes, use a new
+official Profile 2 browser-client and one target-scoped readback. Do not
+reuse the r100 browser, tab, run, or artifact as current proof.
+
+## 0.0 historical revision-6 production overlay r96
 
 This is the current overlay. Older revision-4, revision-30, and earlier
 entries below remain historical provenance and are not current proof.

@@ -2,6 +2,20 @@
 
 Updated: 2026-08-20
 
+## Current production target-scoped readback r100
+
+- Deployment `6a86c236c87cdf6b9c27dc3e` reached `RUNNING` for the existing Heavy Chain service. A fresh official Chrome Plugin/Profile 2 browser-client `-5232-4100-a603-f93486760f5c` used the current selector source of truth: `chrome_plugin` / Profile 2 / `signed_chrome_extension_profile2` / revision `30`.
+- Same-run `openTabs()` succeeded with 2 tabs and current owner session/thread/turn lineage. The official advertisement contains browser `viewport` and tab `pageAssets`/`cdp`; `foreground_activation`/`management` remain absent. `selected()` was not called.
+- Heavy `/tools/fabric` was absent from that fresh inventory. Allowlisted target-scoped provisioning created task-owned tab `1980904536`; URL/title/DOM readback succeeded, then only that tab was closed with `cleanup_verified=true`.
+- The page is still in the authentication/workspace preparation shell: `ログイン状態を確認しています`, `ワークスペースを準備しています`, and `認証状態とブランド設定を確認しています。` Textile/fabric assets and practical controls were not visible.
+- Artifact: `work/heavy-production-target-scoped-readback-20260820-r100.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blockers: `heavy_target_workspace_authentication_not_ready` and, for foreground-only provider work, `chrome_foreground_activation_capability_unavailable`.
+- Next action: after Heavy authentication/workspace state visibly changes, run one new target-scoped Profile 2 readback. Do not click login, generate, save, or reuse through the current read-only lane. Provider generation remains gated until the official signed extension advertises foreground activation/management or an approved equivalent execution capability is available.
+- Restart point: a new official Profile 2 browser-client after the Heavy workspace state changes; do not reuse browser `-5232-4100-a603-f93486760f5c`, tab `1980904536`, old runs, or old artifacts as current proof.
+
 ## Current Chrome capability fresh proof r96
 
 - Chrome本体更新後、現行selector（`chrome_plugin`／Profile 2／`signed_chrome_extension_profile2`／revision 6）で新規browser-client `-ab93-4c4f-9060-5a671317f48a`を作成した。同一runの`openTabs()`は4件で成功し、request metadataのowner lineageは現thread/session/turnと一致した。
