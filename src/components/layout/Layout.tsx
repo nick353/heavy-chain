@@ -53,6 +53,10 @@ export function Layout() {
     '/flow/laboratory',
     '/flow/orientedDesign',
     '/asset-center',
+    '/canvas/new',
+    '/workflows/design-exploration',
+    '/workflows/ec-product-set',
+    '/workflows/sns-campaign',
   ] as const;
   const lightchainWorkspaceRoutes = ['/gallery', '/history', '/jobs'] as const;
   const isLightchainRoute = location.pathname.startsWith('/lightchain')

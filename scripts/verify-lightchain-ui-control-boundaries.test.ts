@@ -66,6 +66,10 @@ test('Lightchain routes use the current Lightchain browser title', async () => {
   const source = await readFile(layoutSourcePath, 'utf8');
 
   assert.match(source, /document\.title = isLightchainRoute \? 'Lightchain AI' : 'Heavy Chain \| AI制作ワークスペース'/);
+  assert.match(source, /'\/canvas\/new'/);
+  assert.match(source, /'\/workflows\/design-exploration'/);
+  assert.match(source, /'\/workflows\/ec-product-set'/);
+  assert.match(source, /'\/workflows\/sns-campaign'/);
 });
 
 test('fitting and line-to-real settings are stateful and persisted into the workbench contract', async () => {
