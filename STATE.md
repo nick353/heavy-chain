@@ -2,6 +2,19 @@
 
 Updated: 2026-08-20
 
+## Current Chrome capability fresh proof r96
+
+- Chrome本体更新後、現行selector（`chrome_plugin`／Profile 2／`signed_chrome_extension_profile2`／revision 6）で新規browser-client `-ab93-4c4f-9060-5a671317f48a`を作成した。同一runの`openTabs()`は4件で成功し、request metadataのowner lineageは現thread/session/turnと一致した。
+- 公式広告はbrowser=`viewport`のみ。inventoryではtab=`pageAssets`／`cdp`も広告されたが、`foreground_activation`／`management`は未広告。exact blockerは`chrome_foreground_activation_capability_unavailable`。
+- 公式v2 bridge readbackは`status=blocked`、`exact_blocker=chrome_selected_tab_readback_invalid`、owner lineage nullのため、writer refreshやbridge ready昇格は行っていない。
+- selected／focus／claim／navigation／Heavy本体操作／録画／旧binding・旧Run再利用／外部効果はなし。Artifact: `work/chrome-plugin-profile2-capability-fresh-20260820-r96.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。同一capability fingerprintの再試行は行わない。
+- Next action: target-scoped read-onlyを継続し、公式署名済みChrome拡張/backendが`foreground_activation`または`management`を広告した後だけ、新規Profile 2 ownerでcapability・`openTabs()`・owner lineageを再確認し、foreground-dependent Heavy proofへ進む。
+- Restart point: 公式配布状態の変化後のfresh browser-client。旧binding／旧Run／旧artifact／別surfaceは再利用しない。
+
 ## Current Chrome capability and launcher production parity r84
 
 - Fresh official Chrome Plugin/Profile 2 capability proof after the Chrome update used browser-client `-f572-45ae-86c3-7eab9bd82ccd`; `openTabs()` returned 3 tabs and current owner lineage matched the active session/thread/turn.
