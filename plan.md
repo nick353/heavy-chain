@@ -1262,3 +1262,14 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blocker for production business flow: `chrome_foreground_activation_capability_unavailable` (foreground/management remains unadvertised).
 - Next action: after official capability advertisement, create a fresh Profile 2 owner and perform the same-run fabric/printing provider → result → save → Gallery/Canvas/History/Jobs → reuse → reload proof, then AI fitting. The printing UI parity proof itself is now current.
 - Restart point: official capability state change plus fresh owner; do not reuse the r62 browser/binding/tab/run.
+
+## 2026-08-20 Fresh production fabric and AI-fitting UI parity proof r63
+
+- Fresh target-scoped Profile 2 readback now covers Heavy `/tools/fabric` and `/model` in one owner-bound run. Fabric markers (`生地イメージ`, `モデル/デザイン画像`, `キーワード`, `生成履歴`) and AI-fitting markers (`AIフィッティング`, `衣服の画像`, `参考画像`, `モデルのセット写真`, `生成履歴`) were all present.
+- Both task-owned tabs were provisioned through the official allowlist and cleaned up successfully. No foreground or external-effect operation occurred. Artifact: `work/heavy-production-lightchain-fabric-model-parity-readback-20260820-r63.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable` remains only for provider generation/save/reuse/reload; no target-scoped blocker remains for the priority UI readbacks.
+- Next action: after official `foreground_activation` or `management` advertisement, run the fabric/printing provider-to-reuse proof, then AI fitting, using a new owner-bound Profile 2 run.
+- Restart point: capability state change plus fresh official owner; do not reuse r63 browser/binding/tabs/run.

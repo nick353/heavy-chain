@@ -4261,3 +4261,14 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable` for foreground provider work; no target-scoped blocker remains for this printing readback.
 - Next action: capability advertisement後のfresh ownerで printing/fabric production flow, then AI fitting, and only then beta acceptance gates.
 - Restart point: new official Profile 2 owner after capability state change; do not reuse r62 browser/binding/tab/run.
+
+## 2026-08-20 Fresh production fabric and AI-fitting UI parity proof r63
+
+- Fresh target-scoped Profile 2 readback passed for Heavy `/tools/fabric` and `/model`; all current Lightchain input/history markers were present and both task-owned tabs were cleaned up. Artifact: `work/heavy-production-lightchain-fabric-model-parity-readback-20260820-r63.md`.
+- This closes the priority UI/input marker read-only layer for printing, fabric, and AI fitting. Provider generation, result quality, save/reuse/reload, Gallery/Canvas/History/Jobs same-run linkage, and beta acceptance remain separate.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable` for foreground provider work; target-scoped read-only is currently healthy.
+- Next action: official capability advertisement後、fresh ownerで fabric/printing provider flow, then AI fitting, followed by beta/operator gates.
+- Restart point: new official Profile 2 owner after capability state change; do not reuse r63 browser/binding/tabs/run.
