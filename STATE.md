@@ -4366,7 +4366,6 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 ### Current exact blocker / next action / restart point
 
 - `chrome_foreground_activation_capability_unavailable` remains the production provider blocker; `chrome_extension_target_readback_target_session_not_owned` remains the current-selector card readback blocker.
-@@
 - Next action: wait for official capability or supported target-session state change, then use a fresh owner for the remaining production proof. Do not reuse old binding/tab/run/artifact.
 
 ## 2026-08-20 Fresh Chrome update capability proof r72
@@ -4378,7 +4377,6 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 ### Current exact blocker / next action / restart point
 
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`.
-@@
 - Next action: preserve foreground provider and persistence fail-closed; continue target-scoped read-only only from a fresh exact target descriptor, or local parity QA. Do not repeat this capability fingerprint until official distribution state changes.
 - Restart point: official foreground capability advertisement, then fresh Profile 2 owner → capability → `openTabs()` → lineage proof. Do not reuse the r72 browser/binding/tab/run/artifact.
 
@@ -4393,7 +4391,6 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - This advances local QA only. Production provider generation/persistence/reuse, current Lightchain card parity, and paired Mac/Windows acceptance remain unverified.
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable` and `chrome_extension_target_readback_target_session_not_owned` for their separate production/browser lanes.
 - Next action: continue dependency-independent local parity and beta-gate work; after the required official/session state change, create a fresh Profile 2 owner for the remaining production proof.
-@@
 - Restart point: changed official/session state plus fresh owner; do not reuse prior browser, binding, tab, run, or artifact.
 
 ## 2026-08-20 Local beta gate recheck r74
@@ -4405,7 +4402,6 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 
 - Human/operator decisions and authorized production auth state are missing; do not synthesize them. Chrome production provider and current-selector card-readback blockers remain separate.
 - Next action: attach the safe operator/legal/launch inputs, then rerun the corresponding gates; continue dependency-independent local parity QA in the meantime.
-@@
 - Restart point: changed required human/auth state plus fresh official Profile 2 owner after any Chrome capability/session change.
 
 ## 2026-08-20 Local all-feature workflow proof r75
@@ -4417,4 +4413,16 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 
 - This closes the local workflow contract checkpoint only. Production generation/persistence/reuse, current Lightchain card parity, and paired Mac/Windows Chrome acceptance remain unverified.
 - Chrome capability/target-session blockers and the fresh r74 beta/auth/operator blockers remain unchanged.
+@@
 - Next action: continue local parity QA and wait for the required official/session/human state changes before production proof.
+
+## 2026-08-20 Local performance and scale gate r76
+
+- G606 passed current local performance/scale verification (`ok=true`, `issues=[]`). Gallery stress covered 500 images/60 initial tiles; Canvas stress covered 180 persisted objects and a valid 3348×9948 export. Thresholds passed.
+- Browser events had zero console/page errors and zero actionable request failures; cleanup passed. Artifact: `work/heavy-local-performance-scale-gate-20260820-r76.md`.
+
+### Proof boundary / current exact blocker
+
+- Local preview Chromium performance is verified, while production/provider and paired Mac/Windows performance remain unverified.
+- Chrome capability/target-session, launch auth-state, and human/operator acceptance blockers remain unchanged.
+- Next action: rerun production-bound performance only after the required official/session/auth/human state changes, using a fresh owner.

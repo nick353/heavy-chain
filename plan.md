@@ -1372,7 +1372,6 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 ### Current exact blocker / next action / restart point
 
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`; the current-selector card readback blocker remains `chrome_extension_target_readback_target_session_not_owned`.
-@@
 - Next action: do not retry this capability fingerprint. After official capability or supported target-session state change, create a new Profile 2 owner and resume the remaining production proof.
 - Restart point: changed official distribution/session state plus fresh same-run owner lineage; old binding, tab, run, and artifact remain historical.
 
@@ -1386,7 +1385,6 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 ### Current exact blocker / next action / restart point
 
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`.
-@@
 - Next action: keep foreground provider generation and persistence fail-closed; continue only target-scoped read-only when a fresh exact target descriptor is available, or local parity QA. Do not retry this capability fingerprint without an official capability/distribution state change.
 - Restart point: official `foreground_activation` or `management` advertisement, then a new Profile 2 owner and one same-run capability → `openTabs()` → lineage check. Do not reuse r72 browser/binding/tab/run/artifact.
 
@@ -1401,7 +1399,6 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - This closes the local desktop QA diagnostic gate only. Production provider generation, result quality, save/reuse/reload, current Lightchain card parity, and paired Mac/Windows acceptance remain unverified.
 - Exact blocker remains `chrome_foreground_activation_capability_unavailable` for the production provider lane; current-selector card enumeration separately remains `chrome_extension_target_readback_target_session_not_owned`.
 - Next action: continue local parity/beta-gate work; after official Chrome capability or supported target-session state changes, start a fresh Profile 2 owner for the production fabric/printing and AI-fitting proof.
-@@
 - Restart point: changed official/session state plus fresh owner; do not reuse prior browser, binding, tab, run, or artifact.
 
 ## 2026-08-20 Local beta gate recheck r74
@@ -1413,7 +1410,6 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 
 - Exact blockers: `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`, `operator_final_h601_decision_missing`, G619 acceptance not claimed, plus the separate Chrome capability and current-selector target-session blockers.
 - Next action: authorized operator supplies the safe H601/G619/launch inputs; meanwhile continue only local parity/contract QA and do not fabricate approval or auth evidence.
-@@
 - Restart point: required human/auth input changes and, for production provider work, an official Chrome capability or supported target-session state change followed by a fresh Profile 2 owner.
 
 ## 2026-08-20 Local all-feature workflow proof r75
@@ -1425,4 +1421,16 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 
 - This is local route/input/interaction-contract evidence only; production provider output, save/reuse/reload, current Lightchain card enumeration, Gallery/Canvas/History/Jobs same-run persistence, and paired Mac/Windows acceptance remain unverified.
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
+@@
 - Next action: continue dependency-independent QA; after the required official/session state changes, create a fresh Profile 2 owner for production parity and provider proof.
+
+## 2026-08-20 Local performance and scale gate r76
+
+- G606 local performance/scale verification passed with `ok=true` and no issues. Ready/assets/heap thresholds passed; Gallery stress covered 500 images with an initial 60-tile cap, and Canvas stress covered 180 persisted objects with a valid 3348×9948 PNG export.
+- Browser diagnostics had zero console/page errors and zero actionable request failures; cleanup passed. Artifact: `work/heavy-local-performance-scale-gate-20260820-r76.md`.
+
+### Proof boundary / current exact blocker
+
+- This is local preview Chromium evidence only, not production provider latency or paired Mac/Windows Chrome proof.
+- Exact blockers remain the official Chrome capability/target-session state, missing production auth state, and human-owned beta/legal acceptance.
+- Next action: preserve local gains; after required state changes, rerun production-bound provider, persistence, and cross-platform performance proof with a fresh Profile 2 owner.
