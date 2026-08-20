@@ -5525,7 +5525,7 @@ export function LightchainWorkbenchPage() {
           )}
 
           {isFeatureDetail && !isModelToolDetail && (
-            <div className={`rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,13,15,0.98),rgba(13,17,20,0.94))] p-3 shadow-soft lg:ml-[92px] lg:max-w-[636px] ${lightchainToolPanelConfig || selectedTool.id === 'printing-image' ? 'pb-3' : ''}`}>
+            <div className={`rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,13,15,0.98),rgba(13,17,20,0.94))] p-3 shadow-soft lg:max-w-[636px] ${lightchainToolPanelConfig || selectedTool.id === 'printing-image' ? 'pb-3' : ''}`}>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
                   <Link
@@ -5591,41 +5591,7 @@ export function LightchainWorkbenchPage() {
             </p>
           )}
 
-          <div className={isFeatureDetail ? isModelToolDetail ? 'grid gap-4 lg:grid-cols-[80px_432px_minmax(0,1fr)]' : 'grid gap-4 lg:grid-cols-[84px_596px_minmax(0,1fr)]' : 'grid gap-5 xl:grid-cols-[1fr_420px]'}>
-            {isFeatureDetail && (
-              <aside className="hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(12,16,18,0.98),rgba(10,13,15,0.96))] p-3 lg:block">
-                <div className="flex flex-col items-center gap-5">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400/15 text-cyan-200">
-                    <Bot className="h-6 w-6" />
-                  </div>
-                  {(isModelToolDetail
-                    ? selectedCategoryTools.map((tool) => [tool.title, UserRound, tool.id] as const)
-                    : [
-                      ['デザインツール', Palette, 'planning'],
-                      ['フィッティングツール', Shirt, 'fitting'],
-                      ['グラフィックツール', ImagePlus, 'graphics'],
-                    ] as const
-                  ).map(([label, Icon, id]) => (
-                    <Link
-                      key={label as string}
-                      to={isModelToolDetail ? `/lightchain/${id}` : `/lightchain?category=${id}`}
-                      className={`flex w-full flex-col items-center gap-2 rounded-2xl px-2 py-3 text-[11px] font-semibold leading-4 transition ${
-                        isModelToolDetail && selectedTool.id === id
-                          ? 'bg-cyan-400/15 text-cyan-200'
-                          : selectedTool.category === 'graphics' && label === 'グラフィックツール'
-                          ? 'bg-cyan-400/15 text-cyan-200'
-                          : selectedTool.category === 'fitting' && label === 'フィッティングツール'
-                            ? 'bg-cyan-400/15 text-cyan-200'
-                            : 'text-neutral-400 hover:bg-white/5 hover:text-white'
-                      }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      <span>{label as string}</span>
-                    </Link>
-                  ))}
-                </div>
-              </aside>
-            )}
+          <div className={isFeatureDetail ? isModelToolDetail ? 'grid gap-4 lg:grid-cols-[432px_minmax(0,1fr)]' : 'grid gap-4 lg:grid-cols-[596px_minmax(0,1fr)]' : 'grid gap-5 xl:grid-cols-[1fr_420px]'}>
             {!isFeatureDetail && (
             <section className="space-y-4">
               <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">

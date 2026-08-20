@@ -86,11 +86,17 @@ test('fitting and line-to-real settings are stateful and persisted into the work
 });
 
 test('material workbench does not add a Heavy-only toolbar to direct Lightchain routes', async () => {
-  const source = await readFile(materialSourcePath, 'utf8');
+  const [source, workbench] = await Promise.all([
+    readFile(materialSourcePath, 'utf8'),
+    readFile(workbenchSourcePath, 'utf8'),
+  ]);
 
   assert.doesNotMatch(source, /MATERIAL_TOOLBAR_ROUTES/);
   assert.doesNotMatch(source, /LightchainMaterialToolbar/);
   assert.doesNotMatch(source, /data-testid="lightchain-material-toolbar"/);
+  assert.doesNotMatch(workbench, /デザインツール/);
+  assert.doesNotMatch(workbench, /フィッティングツール/);
+  assert.doesNotMatch(workbench, /グラフィックツール/);
 });
 
 test('parity runtime captures feature-specific settings in the comparison key', async () => {
