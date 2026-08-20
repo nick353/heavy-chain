@@ -5,6 +5,7 @@ Updated: 2026-08-20
 ## Current beta gate readback r48
 
 - Internal UX consistency is `ok=true`, and the H601 legal-safety guard passed its code-level checks. Artifact: `work/heavy-beta-gate-readback-20260820-r48.md`.
+- Beginner UX build completed and lint passed; its route check remains blocked by the same authorized `auth_state_missing` artifact, not by a reported UI assertion failure.
 - G619 real internal beta acceptance remains `acceptance=not_claimed` with `readySessions=0`.
 - Launch operations remains blocked by `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`; no authentication proof was fabricated.
 - These human/authorization gates are separate from the production provider blocker `chrome_foreground_activation_capability_unavailable`.
