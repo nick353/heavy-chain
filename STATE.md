@@ -4308,3 +4308,15 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable` for provider generation and persistence proof.
 - Next action: keep foreground business work fail-closed; continue local parity QA, then after official capability advertisement start a new Profile 2 owner for the provider-to-reuse proof.
 - Restart point: official capability state change plus fresh owner; do not reuse r65 browser/binding/tab/run.
+
+## 2026-08-20 Local priority contract suite r67
+
+- Four focused local priority suites passed: material/print `17/17`, provider persistence/readback `12/12`, fitting resume/input `9/9`, and Library → Canvas handoff `5/5` (`43/43` total).
+- Artifact: `work/heavy-local-priority-contract-suite-20260820-r67.md`.
+- This is local contract evidence only and does not promote production provider generation, output quality, save/reuse/reload, Gallery/Canvas/History/Jobs same-run linkage, or real Mac/Windows Chrome acceptance to complete.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: after an official capability state change, use a new official Profile 2 owner for one same-run capability advertisement → `openTabs()` → lineage proof. If advertised, resume fabric/printing provider → result → save/reuse/reload, then AI fitting. If not, keep provider work fail-closed and continue only target-scoped read-only/local QA.
+- Restart point: changed official capability state plus fresh owner; do not reuse prior browser, binding, tab, or run.

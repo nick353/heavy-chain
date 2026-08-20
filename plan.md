@@ -1310,3 +1310,15 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - This closes the local non-video route/input/interaction-contract checkpoint only. It does not prove production provider generation, output quality, save/reuse, Gallery/Canvas/History/Jobs linkage, current Lightchain production parity, or Mac/Windows Chrome acceptance.
 - Exact blocker remains `chrome_foreground_activation_capability_unavailable` for production provider work.
 - Next action: continue dependency-independent parity/contract QA; after official capability advertisement, use a new Profile 2 owner for fabric/printing provider → result → save/reuse → AI-fitting proof.
+
+## 2026-08-20 Local priority contract suite r67
+
+- The dependency-independent priority contracts passed in four focused suites: material/print `17/17`, provider persistence/readback `12/12`, AI-fitting resume/input `9/9`, and Library → Canvas handoff `5/5` (`43/43` total).
+- Artifact: `work/heavy-local-priority-contract-suite-20260820-r67.md`.
+- This advances local contract evidence only. Production provider generation, output quality, save/reuse/reload, Gallery/Canvas/History/Jobs same-run linkage, and real Mac/Windows Chrome acceptance remain unverified.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: after an official capability state change, create a new Profile 2 owner and run one same-run capability advertisement → `openTabs()` → owner-lineage check. If `foreground_activation` or `management` is advertised, continue fabric/printing provider → result → save/reuse/reload, then AI fitting. Otherwise keep provider work fail-closed and continue only target-scoped read-only/local QA.
+- Restart point: changed official capability state plus fresh owner; do not reuse prior browser, binding, tab, or run.
