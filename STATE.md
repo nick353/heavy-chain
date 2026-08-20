@@ -4106,3 +4106,21 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`。
 - Next action: after an official signed extension/backend capability update, create a new Profile 2 owner and repeat advertisement → `openTabs()` → owner-lineage verification once. Until then, use only target-scoped read-only where applicable.
 - Restart point: capability state change後のfresh official owner。r44 browser／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Heavy target-scoped parity readback r51
+
+- Fresh official Profile 2 browser-client `-04ed-4e13-ada5-ebf6113b30ff`で、
+  `/tools/printing`と`/model`を同一runのtarget-scoped provisioning/readbackした。
+- PrintingはLightchain同型の参考画像＋プリント画像、スポット／全体、AI生成、
+  生成履歴、Gallery/History/Jobs導線を確認し、`ベース画像`／`パターン参考`の
+  余計な可視トグルは確認されなかった。
+- `/model`は502ではなく、AIフィッティングのシングル／マルチタスク、衣服入力、
+  説明生成／参考画像／モデルのセット写真、AI生成、履歴を確認した。
+- Zeabur service/deploymentはRUNNING、主要4 routeのHTTP readbackは200、task-owned
+  tab cleanupはPASS。Artifact: `work/heavy-chain-current-target-scoped-readback-20260820-r51.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: official capability広告後のfresh ownerでprinting provider flow、続いてAI fittingの生成・保存・再利用・reloadを同一runで確認する。
+- Restart point: capability state change後のfresh official Profile 2 owner。旧binding／旧Run／旧tab、selected／focus／claim、別surface fallbackは再利用しない。

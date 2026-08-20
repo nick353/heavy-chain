@@ -27,6 +27,26 @@
 - Restart point: fresh official Profile 2 browser-client after capability state
   changes. Target-scoped read-only remains permitted without `selected()`.
 
+## Current target-scoped parity readback checkpoint r51 (2026-08-20)
+
+- Fresh target-scoped readback confirmed Heavy `/tools/printing` exposes the
+  Lightchain-shaped two-input surface without visible `ベース画像`／`パターン参考`
+  toggles, and Heavy `/model` returned the hydrated AI fitting workbench rather
+  than the transient 502 observed in the prior run.
+- Artifact: `work/heavy-chain-current-target-scoped-readback-20260820-r51.md`。
+- A focused regression now protects the printing garment=`base` and print
+  design=`pattern` reference contracts.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable` for
+  foreground-only provider generation and persistence proof.
+- Next action: after official capability advertisement, use a fresh Profile 2
+  owner to prove printing generation → result → save → Gallery/Canvas/History/Jobs
+  → reuse → reload, then repeat for AI fitting.
+- Restart point: fresh official owner after capability state change. Continue
+  target-scoped read-only without selected/focus/claim in the meantime.
+
 ## Current completion audit r3 (2026-08-20)
 
 - The requirement-by-requirement audit is recorded in `work/heavy-chain-completion-audit-20260820-r3.md`.

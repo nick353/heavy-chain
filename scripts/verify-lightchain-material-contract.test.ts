@@ -269,3 +269,31 @@ test('unified fabric workbench keeps the rendered garment input on the Lightchai
   assert.match(garmentSelector, /allowedReferenceTypes=\{\['base'\]\}/);
   assert.doesNotMatch(garmentSelector, /allowedReferenceTypes=\{\['base', 'pattern'\]\}/);
 });
+
+test('unified printing workbench keeps garment and print inputs on Lightchain reference contracts', () => {
+  const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+  const fabricBranchStart = page.indexOf('{!isPrinting ? (');
+  const printingBranchStart = page.indexOf(') : (', fabricBranchStart);
+  const printingBranchEnd = page.indexOf('{isPrinting && (', printingBranchStart);
+  assert.ok(fabricBranchStart >= 0 && printingBranchStart > fabricBranchStart, 'unified printing branch is required');
+  assert.ok(printingBranchEnd > printingBranchStart, 'printing branch boundary is required');
+
+  const printingBranch = page.slice(printingBranchStart, printingBranchEnd);
+  const garmentStart = printingBranch.indexOf('selectionTestId="print-garment-selector"');
+  const designStart = printingBranch.indexOf('selectionTestId="print-design-selector"');
+  assert.ok(garmentStart >= 0 && designStart > garmentStart, 'printing garment and design selectors are required');
+
+  const garmentSelector = printingBranch.slice(
+    printingBranch.lastIndexOf('<ImageSelector', garmentStart),
+    designStart,
+  );
+  assert.match(garmentSelector, /allowedReferenceTypes=\{\['base'\]\}/);
+  assert.doesNotMatch(garmentSelector, /allowedReferenceTypes=\{\['base', 'pattern'\]\}/);
+
+  const designSelector = printingBranch.slice(
+    printingBranch.lastIndexOf('<ImageSelector', designStart),
+    printingBranch.indexOf('/>', designStart) + 2,
+  );
+  assert.match(designSelector, /allowedReferenceTypes=\{\['pattern'\]\}/);
+  assert.doesNotMatch(designSelector, /allowedReferenceTypes=\{\['base', 'pattern'\]\}/);
+});
