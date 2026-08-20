@@ -19,17 +19,19 @@ test('material and print tools share the Light Chain tab contract', () => {
   );
 });
 
-test('priority material routes do not add a Heavy-only toolbar to the Lightchain screen', () => {
+test('priority material routes keep the current Lightchain source toolbar', () => {
   const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
 
   assert.deepEqual(
     lightchainCategories.map((category) => category.label),
     ['おすすめ', '企画デザインツール', 'AIフィッティング', 'グラフィックツール'],
   );
-  assert.doesNotMatch(page, /data-testid="lightchain-material-toolbar"/);
-  assert.doesNotMatch(page, /LightchainMaterialToolbar/);
-  assert.doesNotMatch(page, /label: '衣類生産ツール'/);
-  assert.doesNotMatch(page, /label: 'フィッティングツール'/);
+  assert.match(page, /data-testid="lightchain-source-toolbar"/);
+  assert.match(page, /label: 'ツールバー'/);
+  assert.match(page, /label: 'デザインツール'/);
+  assert.match(page, /label: 'フィッティングツール'/);
+  assert.match(page, /label: 'グラフィックデザインツール'/);
+  assert.match(page, /label: '衣類生産ツール'/);
   assert.doesNotMatch(page, /data-testid="lightchain-category-toolbar"/);
   assert.doesNotMatch(page, /lightchainCategories\.map/);
   assert.doesNotMatch(page, /LIGHTCHAIN MATERIAL WORKBENCH/);

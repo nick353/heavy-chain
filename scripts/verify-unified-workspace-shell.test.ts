@@ -54,6 +54,12 @@ test('first complete apparel flows use the unified workspace shell', () => {
   assert.match(workbench, /フィッティングツール/);
   assert.match(workbench, /グラフィックデザインツール/);
   assert.match(workbench, /衣類生産ツール/);
+  assert.match(material, /data-testid="lightchain-source-toolbar"/);
+  assert.match(material, /ツールバー/);
+  assert.match(material, /デザインツール/);
+  assert.match(material, /フィッティングツール/);
+  assert.match(material, /グラフィックデザインツール/);
+  assert.match(material, /衣類生産ツール/);
   const auxiliaryPages = [
     'src/pages/MarketingWorkspacePage.tsx',
     'src/pages/FashionStudioPage.tsx',

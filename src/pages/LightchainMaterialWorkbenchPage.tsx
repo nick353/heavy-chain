@@ -171,6 +171,17 @@ import type { GeneratedImage, Json } from '../types/database';
 type WorkbenchMode = 'fabric' | 'printing';
 type PrintCoverageMode = 'spot' | 'full';
 
+// The current Lightchain production material routes keep this compact source
+// toolbar above the feature controls. Keep the labels and grouping aligned
+// with the source while routing into Heavy's non-video compatibility catalog.
+const lightchainSourceToolbarItems: ReadonlyArray<{ label: string; to: string }> = Object.freeze([
+  { label: 'ツールバー', to: '/lightchain' },
+  { label: 'デザインツール', to: '/lightchain?category=planning' },
+  { label: 'フィッティングツール', to: '/lightchain?category=fitting' },
+  { label: 'グラフィックデザインツール', to: '/lightchain?category=graphics' },
+  { label: '衣類生産ツール', to: '/lightchain?category=lab' },
+]);
+
 const PRINT_COVERAGE_OPTIONS: Array<{ value: PrintCoverageMode; label: string }> = [
   { value: 'spot', label: 'スポット' },
   { value: 'full', label: '全体' },
@@ -4401,6 +4412,21 @@ export function LightchainMaterialWorkbenchPage() {
       data-workbench-state="hydrated"
       className="min-h-screen bg-[#0b1113] text-white"
     >
+      <nav
+        aria-label="ツールバー"
+        data-testid="lightchain-source-toolbar"
+        className="mb-4 flex flex-wrap items-center gap-1.5 rounded-xl border border-white/10 bg-[#111719] px-2 py-2 text-sm font-semibold text-neutral-300"
+      >
+        {lightchainSourceToolbarItems.map((item, index) => (
+          <Link
+            key={item.label}
+            to={item.to}
+            className={`rounded-lg px-3 py-2 transition hover:bg-white/[0.08] hover:text-white ${index === 0 ? 'bg-white/[0.08] text-white' : ''}`}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
       <div className="hidden">
         <aside
           aria-label="Light Chainグラフィックツール"
