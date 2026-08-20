@@ -30,6 +30,9 @@ Updated: 2026-08-20
   fixed so raw Playwright text/URLs remain process-local and only bounded
   categories reach progress/summary output. The focused route/provider/workspace
   suite now passes `35/35`.
+- Post-fix execution of `verify:unified-desktop-layout` passed `228/228` with
+  `failed=0`, no global timeout, and zero cleanup leftovers. Artifact:
+  `work/heavy-local-verifier-sanitization-readback-20260820-r117.md`。
 - Artifact:
   `work/heavy-local-beta-qa-readback-20260820-r115.md`。
   The scaffold boundary is recorded in

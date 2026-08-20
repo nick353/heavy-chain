@@ -19,6 +19,9 @@
   and redacted behavior artifacts are still required.
 - Fixed the unified desktop verifier's raw diagnostic access boundary; its
   focused route/provider/workspace regression suite is now `35/35` passing.
+- Post-fix execution passed `228/228` desktop checks with zero failures, no
+  global timeout, and zero cleanup leftovers. Artifact:
+  `work/heavy-local-verifier-sanitization-readback-20260820-r117.md`.
 - Artifacts:
   `work/heavy-local-beta-qa-readback-20260820-r115.md`,
   `work/heavy-beta-evidence-scaffold-readback-20260820-r116.md`,
