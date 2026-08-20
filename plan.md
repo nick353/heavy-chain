@@ -2,6 +2,24 @@
 
 更新日: 2026-08-20
 
+## Current Lightchain visual parity checkpoint r113
+
+- Removed the Heavy-only material toolbar from `/tools/fabric` and
+  `/tools/printing` after same-run comparison with current Lightchain.
+- Authenticated `/` now redirects to `/lightchain`; Lightchain routes use the
+  current browser title `Lightchain AI`.
+- Latest Docker deployment `6a86d909acafc201d5032279` is `RUNNING`.
+- Fresh Profile 2 target-scoped readback confirmed root/fabric/printing/model,
+  no extra material toolbar, `リセット` present on printing, and print-area
+  adjustment absent. Artifact:
+  `work/heavy-lightchain-visual-parity-readback-20260820-r113.md`。
+
+### Boundary
+
+The visible parity correction is verified in production. Provider
+generation/result/save/Gallery/Canvas/History/Jobs/reuse/reload and AI-fitting
+provider proof remain gated by the missing official foreground capability.
+
 ## Current Lightchain source correction checkpoint r110
 
 - Fresh current-selector readback showed that the current Lightchain printing

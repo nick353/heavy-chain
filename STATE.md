@@ -2,6 +2,31 @@
 
 Updated: 2026-08-20
 
+## Current Lightchain visual parity readback r113
+
+- Removed the Heavy-only material toolbar from fabric and printing direct
+  routes.
+- Authenticated `/` now enters `/lightchain` instead of the Heavy landing
+  page, and Lightchain routes set the browser title to `Lightchain AI`.
+- Fresh Profile 2 target-scoped readback confirmed `/` → `/lightchain`,
+  `/tools/fabric`, `/tools/printing`, and `/model` with no Heavy-only toolbar.
+  Printing kept `リセット`, `スポット`, `全体`, `AI生成`, and `生成履歴`,
+  while `画像のプリント領域を調整` remained absent.
+- Latest deployment `6a86d909acafc201d5032279` is `RUNNING`; task-owned tabs
+  `1980904620`–`1980904623` were cleaned with `cleanup_verified=true`.
+- Artifact: `work/heavy-lightchain-visual-parity-readback-20260820-r113.md`。
+
+### Current exact blocker / next action / restart point
+
+- Production provider generation/save/reuse/reload remains
+  `chrome_foreground_activation_capability_unavailable`; only read-only
+  capabilities are advertised.
+- Next action: continue dependency-independent parity and beta QA; after the
+  official capability state changes, create a fresh Profile 2 owner and run
+  the fabric/printing proof, then AI fitting.
+- Restart point: mandatory Profile 2 preflight followed by fresh
+  `list -> get -> openTabs()` after the capability state changes.
+
 ## Current Lightchain source parity correction r110
 
 - Fresh current-selector Profile 2 readback of Lightchain `/tools/printing`
