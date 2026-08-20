@@ -4413,7 +4413,6 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 
 - This closes the local workflow contract checkpoint only. Production generation/persistence/reuse, current Lightchain card parity, and paired Mac/Windows Chrome acceptance remain unverified.
 - Chrome capability/target-session blockers and the fresh r74 beta/auth/operator blockers remain unchanged.
-@@
 - Next action: continue local parity QA and wait for the required official/session/human state changes before production proof.
 
 ## 2026-08-20 Local performance and scale gate r76

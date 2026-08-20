@@ -1421,7 +1421,6 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 
 - This is local route/input/interaction-contract evidence only; production provider output, save/reuse/reload, current Lightchain card enumeration, Gallery/Canvas/History/Jobs same-run persistence, and paired Mac/Windows acceptance remain unverified.
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
-@@
 - Next action: continue dependency-independent QA; after the required official/session state changes, create a fresh Profile 2 owner for production parity and provider proof.
 
 ## 2026-08-20 Local performance and scale gate r76
