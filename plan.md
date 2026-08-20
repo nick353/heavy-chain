@@ -1334,3 +1334,15 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blocker: `chrome_foreground_activation_capability_unavailable` for production provider stages.
 - Next action: after an official capability state change, create a new Profile 2 owner and perform one same-run capability → `openTabs()` → lineage check. If advertised, continue fabric/printing provider → result → save/reuse/reload, then AI fitting.
 - Restart point: changed official capability state plus fresh owner; do not reuse old browser, binding, tab, run, or the revision-30 card ledger as current proof.
+
+## 2026-08-20 Current-selector Lightchain card enumeration attempt r69
+
+- A fresh revision-4 Profile 2 owner provisioned the Lightchain homepage, but target-scoped `tabs.get` failed with `chrome_extension_target_readback_target_session_not_owned` before DOM/card enumeration. The task-owned tab was cleaned up successfully and no foreign tab or external effect was touched.
+- Artifact: `work/lightchain-card-enumeration-current-selector-20260820-r69.md`; source artifact: `/Users/nichikatanaka/Documents/New project/work/lightchain-card-enumeration-chrome-plugin-20260820.json`.
+- The current-selector card count, category breakdown, route/href, and video exclusion remain `PENDING_CONFIRMATION`; the older revision-30 card ledger remains historical only.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker for this read-only lane: `chrome_extension_target_readback_target_session_not_owned`. The provider lane remains separately blocked by `chrome_foreground_activation_capability_unavailable`.
+- Next action: after a supported Chrome Plugin/session state change, create one new official Profile 2 owner and repeat only the current-selector target-scoped homepage readback. Do not reuse the failed binding/tab/run.
+- Restart point: supported state change plus fresh official owner; target-scoped read-only only.
