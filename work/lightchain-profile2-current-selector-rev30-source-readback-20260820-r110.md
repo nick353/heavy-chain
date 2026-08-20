@@ -48,6 +48,24 @@ visible source controls and non-empty DOM.
 - task-owned tabs: `1980904578`, `1980904579`, `1980904580`, `1980904581`
 - `cleanup_verified=true`
 
+## production correction readback
+
+- Commit: `e7d58b1` (`align reset control with current Lightchain source`)
+- Deployment: `6a86d290acafc201d50321e3`, plan type `docker`, status
+  `RUNNING`, existing `heavy-chain` service
+- Mandatory Profile 2 preflight: `status=ready`, current revision-30 selector,
+  `exact_blocker=null`
+- Same-run browser-client `-ea87-4fa5-89f8-5e71eebaba72` completed
+  `list -> get -> openTabs()` with two pre-existing tabs
+- Target-scoped Heavy tab: `1980904586`,
+  `https://heavy-chain.zeabur.app/tools/printing`, title
+  `Heavy Chain | AI制作ワークスペース`
+- Visible DOM checks: `リセット=true`, `画像のプリント領域を調整=false`,
+  `スポット=true`, `全体=true`, `AI生成=true`, `生成履歴=true`
+- `cleanup_verified=true`; only the task-owned target tab was closed
+- No selected/focus/claim, upload, generation, save, reuse, recording, or
+  external effect was used
+
 ## remaining blocker
 
 Provider generation → save → reuse → reload remains
@@ -56,6 +74,7 @@ Profile 2 distribution does not advertise the required foreground capability.
 
 ## next action
 
-Build and deploy the corrected reset parity, then run one fresh Heavy
-`/tools/printing` target-scoped readback. Keep generation/persistence proof
-gated until the official capability advertisement changes.
+Keep generation/persistence proof gated until the official capability
+advertisement changes. After that state change, run the approved fresh
+fabric/printing provider proof through result, save, reuse, and reload, then
+AI fitting; do not reuse this read-only browser binding or target tab.

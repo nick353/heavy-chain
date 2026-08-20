@@ -13,8 +13,11 @@
 ### Boundary
 
 The source correction is local and still needs build, deployment, and fresh
-Heavy readback. Production provider generation/save/reuse/reload remains gated
-by the missing official foreground capability.
+Heavy readback. That release gate is now satisfied: commit `e7d58b1` is
+deployment `6a86d290acafc201d50321e3` (`RUNNING`), and fresh Heavy printing
+readback confirmed `リセット` present and `画像のプリント領域を調整` absent
+with task-owned cleanup. Production provider generation/save/reuse/reload
+remains gated by the missing official foreground capability.
 
 ## Current production print UI parity checkpoint r109
 

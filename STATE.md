@@ -14,15 +14,21 @@ Updated: 2026-08-20
   `readyState=complete`; homepage and model returned the expected controls at
   the bounded interactive readback point. All task-owned tabs were cleaned.
 - Artifact: `work/lightchain-profile2-current-selector-rev30-source-readback-20260820-r110.md`。
+- Commit `e7d58b1` was deployed as Docker deployment
+  `6a86d290acafc201d50321e3`, which reached `RUNNING` on the existing
+  `heavy-chain` service.
+- Fresh same-run Heavy `/tools/printing` readback used task tab `1980904586`:
+  `リセット=true`, `画像のプリント領域を調整=false`, and the core
+  `スポット` / `全体` / `AI生成` / `生成履歴` controls were present.
+  `cleanup_verified=true`.
 
 ### Current exact blocker / next action / restart point
 
 - Provider generation → save → reuse → reload remains
   `chrome_foreground_activation_capability_unavailable`; the current official
   advertisement still has only viewport/pageAssets/cdp.
-- Next action: build/deploy the reset correction and fresh-read Heavy printing;
-  after official capability change, prove printing/fabric then AI fitting
-  end-to-end.
+- Next action: after the official capability change, prove printing/fabric
+  generation, save, reuse, reload, then AI fitting end-to-end.
 - Restart point: mandatory Profile 2 preflight followed by a fresh
   list → get → `openTabs()` boundary after the capability state changes.
 
