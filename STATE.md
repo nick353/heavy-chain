@@ -3276,3 +3276,655 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Fresh category-panel readback confirmed all visible card ancestors are clickable divs without exposed `href`, `data-route`, `data-tool-id`, `onclick`, or explicit route/action attributes.
 - Exact route mapping is therefore `PENDING_CONFIRMATION`; old revision-30 routes are not promoted to current proof.
 - Artifact: `work/lightchain-card-route-surface-readback-20260820-r16.md`. Target-owned cleanup passed and no card was opened.
+
+## 2026-08-20 Lightchain launcher display contract regression
+
+- 最新r15のfreshカテゴリ台帳に合わせ、Heavy統合ランチャーのカテゴリ別表示名・順序を回帰契約へ固定した。
+- `scripts/verify-lightchain-launcher-parity.test.ts` はカテゴリ別配列（7／9／5／5）を検証し、focused test `4/4` PASS。
+- これはlocal UI parity proofであり、Lightchainのroute mapping、production provider生成、保存・再利用の完了proofではない。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。target-scoped read-onlyは成功しているが、公式Profile 2のforeground capabilityが未広告。
+- Next action: capability広告後、fresh ownerでfabric-printの生成→結果→保存→Gallery／Canvas／History／Jobs→再利用→reloadを同一runで確認し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh owner。旧binding・旧tab・旧Runとselected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 priority flow local recheck r1
+
+- 生地プリント／AIフィッティング優先フローのlocal回帰を再実行し、合計69/69 PASS（material 13、provider persistence 12、fitting resilience 4、resume 9、history 10、handoff 2、activity 12、source readback 7）。
+- Artifact: `work/heavy-chain-priority-flow-local-recheck-20260820-r1.md`。
+- これはlocal契約証跡であり、Chrome本番provider生成・保存・再利用、実Chrome受入れ、β受入れの代替ではない。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。fresh広告は`viewport`のみ。
+- Next action: capability広告後、fresh ownerでfabric-printの同一run業務フローを実施し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official Profile 2 owner。旧binding・旧tab・旧Runと別surface fallbackは使わない。
+
+## 2026-08-20 Lightchain direct color-route cleanup r1
+
+- `/editor/changeColor`の共有Generate detail surfaceから、Heavy内部向けの`P0 IMPLEMENTATION / まず直す3つの軸`パネルを削除した。`colorize`のroute hydration、色変更ワークベンチ、upload、rights、generation controlsは維持した。
+- local authenticated readbackではURLを`/editor/changeColor`に維持し、body lengthは1504から935へ減少、`P0 IMPLEMENTATION`は非表示になった。
+- typecheck、lint、build2606、非動画feature verifier31/31をPASS。Artifact: `work/heavy-local-lightchain-color-route-cleanup-20260820-r1.md`、`output/playwright/lightchain-all-feature-workflows-20260819T234919Z/SUMMARY.json`。
+- これはlocal UI proofのみ。Lightchain完全visual parity、本番provider生成・保存・再利用、Mac/Windows実Chrome acceptanceはPENDING_CONFIRMATION。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式capability広告後、fresh Profile 2 ownerでfabric-print同一runの生成→結果→保存→Gallery/Canvas/History/Jobs→再利用→reloadを確認し、その後AI fittingへ進む。
+- Restart point: capability状態変化後のfresh official Profile 2 owner。旧binding・旧tab・旧Run、selected/claim/focus、別surface fallbackは使わない。
+
+## 2026-08-20 Lightchain direct-route title alignment r2
+
+- 統合Lightchain workbenchの直リンク表示タイトルを現行台帳へ整列した。`/tools/line-draft-to-tile`は`線画から実写へ変換`、`/printing`は`AIグラフィックデザイン`、`/editor/pattern`は`デザインアレンジ`、`/editor/patternDesign`は`プリントデザイン`。
+- 内部tool ID、provider route、保存系譜、生成契約は変更していない。4 routeのfresh local authenticated readbackでURL維持、期待タイトル表示、Heavy identity非表示を確認した。
+- typecheck、lint、parity route tests 7/7、build2606をPASS。Artifact: `work/heavy-local-lightchain-direct-title-alignment-20260820-r2.md`。
+- Exact Lightchain visual parity、本番provider生成・保存・再利用、Mac/Windows実Chrome acceptanceはPENDING_CONFIRMATION。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式capability広告後、fresh ownerでfabric-printの生成→結果→保存→Gallery/Canvas/History/Jobs→再利用→reloadを確認し、その後AI fittingへ進む。
+- Restart point: capability状態変化後のfresh official Profile 2 owner。旧binding・旧tab・旧Run、selected/claim/focus、別surface fallbackは使わない。
+
+## 2026-08-20 direct-route Lightchain boundary cleanup r1
+
+- Local Previewで現行の非動画direct routeをreadbackし、`/editor/pattern`にHeavyのヘッダー、カテゴリ、キーボードショートカット表示が残っている差分を確認した。
+- `src/components/layout/Layout.tsx`のLightchain direct-route判定を、marketing／agent／model library／studio／lab／fabric／printing／vector／repair／color／pattern／custom-styleを含む現行非動画routeへ拡張した。通常のHeavy routeは変更していない。
+- focused readbackでは`/editor/pattern`、`/editor/patternDesign`、`/model-library/model-custom-form`、`/flow/laboratory`のURLを維持し、Lightchain headerを表示、Heavy identity／shortcutを非表示にした。証跡: `work/heavy-local-lightchain-route-boundary-20260820-r1.md`。
+- typecheck PASS、lint PASS、Parity route `7/7` PASS、build `2606 modules` PASS、non-video verifier `31/31` PASS。
+- desktop verifierは228セル完了したが、API-backed model／repair routeの20セルが`operation_failed`となり`208/228`。この結果はPASSへ昇格せず、current harness failureとして保持する。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。署名済みProfile 2拡張はread-only capabilityのみを広告している。
+- Next action: 公式capability広告後、fresh Profile 2 ownerでHeavyの変更routeをtarget-scoped readbackし、fabric-printの生成→保存→Gallery／Canvas／History／Jobs→再利用→reloadを同一runで確認する。
+- Restart point: 公式署名済み拡張/backendの状態変化後の新規Profile 2 owner。旧binding／旧tab／旧Run、selected／focus復旧、別surface fallbackは使わない。
+
+## 2026-08-20 Heavy current non-video route parity readback r24
+
+- Fresh revision-30 Profile 2 target-scoped read-only readbackで、Heavy非動画候補19ルートのURL/title/DOM/readyState/cleanupを同一ownerで確認した。
+- Current concrete parity gaps: `/editor/changeColor`の`/lightchain` redirect、`/model-base/style`のBrandSettings誤結合、線画／SVG／画像修正の統合ランチャー化、印刷／ベクター／パターン系の統合グラフィック作業台化。
+- Artifact: `work/heavy-profile2-non-video-route-readback-20260820-r24.json`。生成、保存、再利用、録画、外部効果は実施していない。
+
+### r24 source changes
+
+- `editor/changeColor`はdirect `colorize` featureとして初期化し、Lightchain routeを維持する。
+- `model-base/style`は既存custom-style workbenchへ接続し、brand settingsは`/brand/settings`へ分離する。
+- 主要な線画／SVG／修正／Proベクター／印刷／パターン routeは、統合launcherではなく対応する既存feature workbenchを直接選択する。
+- typecheck、lint、build（2606 modules）、diff check、r24 JSON validationをPASS。
+- 変更後のlocal verifierは`featureCount=31 / failed=[]`、desktop verifierは`228/228 / failed=0 / globalTimedOut=false / cleanupLeftovers=0`。Artifacts: `output/playwright/lightchain-all-feature-workflows-20260819T232442Z/SUMMARY.json`、`output/playwright/unified-desktop-layout-current/SUMMARY.json`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式signed extension/backendがforeground capabilityを広告した後、fresh Profile 2 ownerでfabric-printのproduction same-run proofを実施する。
+- Restart point: capability状態変化後のfresh official Profile 2 owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 Lightchain result destination links r18
+
+- 生地／プリント結果カードとAIフィッティング結果プレビューへGallery／History／Jobsの明示導線を追加した。AIフィッティングのCanvas再利用は既存のdurable history処理を使う。
+- Verification: provider coverage 16/16、provider adapter 16/16、provider persistence/readback 12/12、material contract 17/17、fitting history/resilience/resume 23/23、typecheck、lint、build 2607 modules、非動画verifier `ok=true / featureCount=31 / failed=[]`、cleanup完了、diff check PASS。
+- Artifact: `work/heavy-local-lightchain-result-destination-links-20260820-r18.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式signed Profile 2配布物がforeground activation／managementを広告していないため、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingのproduction same-run proofを取得し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official Profile 2 owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 local Lightchain beta gate refresh r9
+
+- Library handoff変更後のlocal unified desktop QAを1280／1440／1920／2560pxで再実行し、228/228、failed=0、globalTimedOut=false、cleanupLeftovers=0を確認した。
+- provider coverage 11/11、workspace handoff 2/2、Library/material handoff 3/3、material contract 17/17、provider persistence/readback 12/12もPASS。
+- 旧Playwright production verifierは過去の認証state不足で停止しているため、現行Chrome Plugin readbackの代替にはしない。
+- Artifact: `work/heavy-local-lightchain-beta-gate-refresh-20260820-r9.md`。
+
+## 2026-08-20 Library canonical URL safety r10
+
+- canonical remote storage pathの再署名に失敗したLibrary素材について、古いbearer URLを表示へ戻さず空表示へfail-closeするよう修正した。local/data/blob/relative参照は維持する。
+- Verification: Library/Canvas/material handoff 3/3、provider persistence/readback 12/12、typecheck、lint、build 2607 modules、非動画31/31、cleanup complete。
+- Artifact: `work/heavy-local-lightchain-library-url-safety-20260820-r10.md`。Verifier: `output/playwright/lightchain-all-feature-workflows-20260820T005533Z/SUMMARY.json`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: official signed Profile 2 capability更新後、fresh revision-30 ownerでfabric／printing production same-run proofを取得し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式署名済みProfile 2 capability更新後、fresh revision-30 ownerでfabric／printingの本番生成→保存→再利用→reloadを確認し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Library → material workbench handoff r8
+
+- Libraryのlocal／remote素材から、生地イメージとプリント画像へ直接渡す`libraryArtifactId`／`librarySlot` handoffを追加した。remote素材はworkspace artifactへ登録してから遷移する。
+- material workbenchはcanonical storage pathを再署名して入力を復元し、printingの既存入力復元がLibrary handoffを上書きしないようにした。
+- Verification: handoff 3/3、material 17/17、provider persistence 12/12、typecheck、lint、build 2607 modules、非動画31/31、cleanup complete。
+- Artifact: `work/heavy-local-lightchain-library-material-handoff-20260820-r8.md`。Verifier: `output/playwright/lightchain-all-feature-workflows-20260820T004413Z/SUMMARY.json`。
+- This remains local/source proof only. Production provider generation/save/reuse/reload, Mac/Windows real-Chrome acceptance, G619 beta, H601 operator decisions, and launch-ops auth remain `PENDING_CONFIRMATION`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: official signed capability update後、fresh revision-30 Profile 2 ownerでfabric／printing production proofを行い、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Lightchain Library remote history workflow r6
+
+- `/asset-center` now reads signed remote generated-image history into the Library without persisting expiring URLs. Video rows are excluded.
+- Remote results can be explicitly registered into the durable workspace-artifact contract with source identity (`remoteImageId`, `sourceImageId`, `sourceStoragePath`) and then sent to Canvas via `sourceArtifactId`.
+- Verification: Library/Canvas 2/2, typecheck, lint, build 2607 modules, non-video 31/31 with cleanup complete, and diff check PASS.
+- Artifact: `work/heavy-local-lightchain-library-workflow-20260820-r6.md`; verifier: `output/playwright/lightchain-all-feature-workflows-20260820T002813Z/SUMMARY.json`.
+
+### Current exact blocker / next action / restart point
+
+- `chrome_foreground_activation_capability_unavailable` remains the production provider blocker because the signed Profile 2 distribution advertises only read-only capabilities.
+- G619 real beta sessions `0/3`, H601 operator/legal decisions, and launch-ops auth artifact remain incomplete and are not synthesized.
+- Next action: after official capability advertisement, fresh revision-30 Profile 2 owner; execute the bounded fabric/printing provider flow through save/reuse/reload, then AI fitting.
+- Restart point: capability state change followed by a fresh official owner; do not reuse old binding/tab/run or switch surface.
+
+## 2026-08-20 Lightchain Library → AI fitting handoff r7
+
+- Libraryのローカル素材から`/fitting?libraryArtifactId=...`へ遷移できるようにし、remote結果は登録後に同じ導線へ渡す。
+- Fittingはcanonical storage pathを再署名し、source identityを保持したまま切り抜き・権利確認を要求する。Library handoff中は自動draft復元で入力を上書きしない。
+- Verification: Library/Canvas 2/2、Fitting history 10/10、resume 9/9、source readback 7/7、material 17/17、provider persistence 12/12、typecheck、lint、build 2607、非動画31/31、diff check PASS。
+- Artifact: `work/heavy-local-lightchain-library-fitting-handoff-20260820-r7.md`; verifier: `output/playwright/lightchain-all-feature-workflows-20260820T003608Z/SUMMARY.json`。
+
+### Current exact blocker / next action / restart point
+
+- `chrome_foreground_activation_capability_unavailable` remains unchanged; official signed Profile 2 capability distribution is required for provider operations.
+- Next action: capability update後、fresh revision-30 ownerでfabric/printing provider proofを閉じてから、Library handoff経由のAI fitting proofへ進む。
+- Restart point: capability状態変化後のfresh official owner。古いbinding／tab／runと別surfaceは使わない。
+
+## 2026-08-20 Lightchain current-selector homepage card readback r21
+
+- Fresh official Profile 2 target-scoped read-only run under selector revision 30 passed `openTabs()`, URL/title, hydrated DOM, and `readyState=complete` for `https://jp.linkaigc.com/` / `Lightchain AI`.
+- The homepage exposed four categories, seven non-video default cards, one explicitly excluded video card, six case-share tabs, and the visible category/search controls. Artifact: `work/lightchain-profile2-home-card-readback-20260820-r21.json`.
+- Task-owned tab `1980903849` was the only tab closed and cleanup verified. No category switching, card opening, generation, save/reuse, recording, or external effect occurred.
+- Category-panel full card counts, route mapping, and per-feature business behavior remain `PENDING_CONFIRMATION`; historical rev6/rev30 card ledgers are not promoted to current proof.
+
+## 2026-08-20 Lightchain priority route readback r22
+
+- Fresh current-selector revision-30 target-scoped readback passed for `/tools/fabric`, `/tools/printing`, and `/model` with URL/title, hydrated DOM, and Lightchain input/history/permission controls visible.
+- Task-owned tabs `1980903851`, `1980903853`, and `1980903855` were each closed through the official cleanup path; all three cleanup checks passed.
+- No selected/focus/claim, credential input, card opening, generation, save/reuse, recording, or external effect occurred. Artifact: `work/lightchain-profile2-priority-route-readback-20260820-r22.json`.
+- Live generation/result-quality/save/reuse behavior remains `PENDING_CONFIRMATION`; Heavy provider work remains blocked by `chrome_foreground_activation_capability_unavailable`.
+
+## 2026-08-20 Lightchain non-video candidate route readback r23
+
+- Fresh current-selector revision-30 target-scoped readback passed for all 19 non-video candidate routes derived from the historical ledger. Every route returned `Lightchain AI`, `readyState=complete`, and a non-empty DOM with route-specific markers.
+- The route set covered launcher, marketing, fitting, fabric/printing, model library, studio, agent, graphic, vector, repair, and customization surfaces. Artifact: `work/lightchain-profile2-non-video-route-readback-20260820-r23.json`.
+- All 19 task-owned tabs were cleaned up. No selected/focus/claim, credential input, generation, save/reuse, recording, or external effect occurred.
+- Card-to-route mapping and live business behavior remain `PENDING_CONFIRMATION`; Heavy provider work remains blocked by `chrome_foreground_activation_capability_unavailable`.
+
+## 2026-08-20 Lightchain auth shell deployment and fresh target readback r1
+
+- Local UI parity changes were committed as `912772e` and pushed to `origin/main`; Zeabur Heavy Chain deployment `6a8630da2a82f89733777b64` is `RUNNING`.
+- Fresh Chrome Plugin/Profile 2 target-scoped readback passed with browser client `-1b80-4717-9168-538b8865a6d5`, `openTabs_ok`, target `1980903841`, and same-run Heavy `/tools/fabric` URL/title/DOM. The live DOM now shows the Lightchain-style auth shell and compact login-state message.
+- Official cleanup closed the task-owned target and verified it absent afterward (`cleanup_verified=true`). No click, credential entry, generation, save, reuse, recording, AOS mutation, or external effect was performed.
+- Artifact: `work/heavy-chain-target-scoped-auth-shell-readback-20260820-r1.json`.
+
+### Current exact blocker / next action / restart point
+
+- `heavy_target_workspace_authentication_not_ready`: current live DOM is still the login shell, not the authenticated textile workspace.
+- `chrome_foreground_activation_capability_unavailable`: foreground provider work remains fail-closed; target-scoped readback remains available.
+- Next action: after user authentication/workspace state changes, one fresh target-scoped readback; after official foreground capability advertisement, run the production fabric-print proof, then AI fitting.
+- Restart point: fresh official Profile 2 owner after a user-visible state or capability change. Do not reuse old bindings, tabs, runs, selected/focus recovery, or another surface.
+
+## 2026-08-20 Lightchain homepage fresh readback r19
+
+- Current selector is `chrome_plugin / Profile 2 / signed_chrome_extension_profile2 / revision=30`.
+- Fresh browser-client transport, `openTabs_ok`, exact homepage provisioning, URL/title readback, and task-owned cleanup passed for `https://jp.linkaigc.com/` (`Lightchain AI`).
+- The same-run DOM body was empty (`body_length=0`), so current category/card parity remains `PENDING_CONFIRMATION`. No selected/focus/claim, generation, save, or external effect was used.
+- Artifact: `work/lightchain-profile2-home-readback-20260820-r19.json`.
+
+### Current exact blocker / next action / restart point
+
+- `lightchain_target_dom_not_hydrated` is the current Lightchain parity blocker.
+- After a visible Lightchain load/state change, create one fresh official Profile 2 browser-client and repeat the homepage target-scoped readback once. Do not reuse this binding or tab.
+- Heavy remains separately gated by `heavy_target_workspace_authentication_not_ready` and `chrome_foreground_activation_capability_unavailable`.
+
+## 2026-08-20 Heavy authenticated workbench readback r12
+
+- Bounded 12-second hydration wait was used in a new official Profile 2 target-scoped run. Heavy `/tools/fabric` reached the authenticated workbench: login disappeared and fabric input, print-image/history tabs, material inputs, rights confirmation, AI generation, and material variants were visible.
+- URL/title, `openTabs_ok`, exact target identity, and task-owned cleanup passed (`1980903845`, `cleanup_verified=true`). No provider generation, save, reuse, recording, or external effect was performed.
+- Fresh capabilities remain read-only: browser `viewport`; tab `pageAssets` and `cdp`; no `foreground_activation` or `management`.
+- Artifact: `work/heavy-chain-target-scoped-authenticated-readback-20260820-r12.json`.
+
+### Current exact blocker / next action / restart point
+
+- `heavy_target_workspace_authentication_not_ready` is cleared by this readback.
+- Current blocker is `chrome_foreground_activation_capability_unavailable`.
+- Next action: after capability advertisement, fresh Profile 2 owner and bounded fabric-print generation/save/reuse proof, then AI fitting.
+- Restart point: capability state change followed by a fresh official owner; do not reuse old bindings, tabs, runs, or another surface.
+
+## 2026-08-20 Lightchain hydrated homepage readback r20
+
+- Fresh official Profile 2 target-scoped run with a bounded 12-second hydration wait passed for `https://jp.linkaigc.com/` / `Lightchain AI`.
+- Four category labels, eight primary workspace titles, and six case-share tabs were visible. `動画ワークステーション` remains visible in Lightchain but is explicitly excluded from Heavy scope.
+- URL/title, `openTabs_ok`, and task-owned cleanup passed (`1980903847`, `cleanup_verified=true`). Route mapping and per-feature generation/save/reuse remain `PENDING_CONFIRMATION`.
+- Artifact: `work/lightchain-profile2-home-readback-20260820-r20.json`.
+
+### Current exact blocker / next action / restart point
+
+- Lightchain hydration blocker is cleared.
+- Current parity work is category/card and priority-route behavioral readback under selector revision 30.
+- Heavy production remains blocked by `chrome_foreground_activation_capability_unavailable`.
+- Next action: complete read-only parity evidence, then after capability advertisement run fresh Heavy fabric-print generation/save/reuse.
+
+## 2026-08-20 foreground capability distribution boundary
+
+- Chrome common-layer investigation confirmed the browser-client receiver and fail-close contract are already implemented; focused transport and capability regression passed 67/67.
+- The signed Profile 2 extension currently advertises only browser `viewport` and tab `pageAssets`/`cdp`. No Heavy/AOS/recording code was changed, and no local fake advertisement, re-signing, or direct replacement was attempted.
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: wait for an official signed extension/backend distribution update, then fresh revision-30 Profile 2 list→get→openTabs capability proof.
+
+## 2026-08-20 Heavy authentication readback r11
+
+- Fresh official Profile 2 browser-client `-8b72-4f45-b4ac-7e2aaf2b4cf6`（selector revision 6）で、Heavy `/tools/fabric`のtask-owned target provisioningと同一run URL/title/DOM readbackを実施した。
+- `ログイン`、`無料で始める`、`ワークスペースを準備しています`、`認証状態とブランド設定を確認しています。`が残り、認証済みの生地／textile workbenchは未表示。Exact blockerは`heavy_target_workspace_authentication_not_ready`。
+- 作成タブ`1980903839`を公式cleanupで閉じ、post-cleanup inventoryでも対象残存なし。`cleanup_verified=true`。
+- Artifact: `work/heavy-chain-target-scoped-authenticated-readback-20260820-r11.md`。クリック、credential入力、生成、保存、再利用、録画、AOS変更、外部効果は0件。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `heavy_target_workspace_authentication_not_ready`。Foreground provider gateは別に`chrome_foreground_activation_capability_unavailable`（viewport／pageAssets／cdpのみ広告）として維持する。
+- Next action: ユーザー側でHeavyのログイン／workspace準備を完了し画面状態が変化した後、新規公式 Profile 2 browser-clientでtarget-scoped readbackを1回。状態変化まで同一fingerprintを再発射しない。
+- Restart point: 状態変化後のfresh official Profile 2 owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 AIフィッティング current parity readback r18
+
+- Fresh Profile 2のLightchain `/model`でAIフィッティングの現行入力・状態・権限・履歴UIをread-only確認した。デフォルトはシングルタスクで、task-owned tab cleanup_verified=true。
+- Artifact: `work/lightchain-profile2-model-parity-readback-20260820-r18.md`。provider生成・保存・再利用は未実施。
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+
+## 2026-08-20 current Lightchain frame cleanup / final local verification r5-r4
+
+- Lightchain headerの言語・ヘルプをbutton controlへ整列し、fabric／printingの縦型ツールバーと合わせた。
+- UI5/5、material14/14、typecheck、build2606、lintをPASS。最終build後の非動画31/31とdesktop228/228（4幅、global timeoutなし、cleanup leftovers 0）もPASS。
+- Artifacts: `output/playwright/lightchain-all-feature-workflows-current-goal-r5/SUMMARY.json`、`output/playwright/unified-desktop-layout-current-goal-r4/SUMMARY.json`。
+- Exact blockerは`chrome_foreground_activation_capability_unavailable`のまま。production provider生成・保存・再利用は未確認。
+
+## 2026-08-20 Lightchain current parity readback r17 / vertical frame alignment
+
+- Fresh Profile 2でLightchainホームと`/tools/fabric`をread-only確認し、現行4カテゴリ、fabricの縦型ツールバー、4つの素材タブ、入力・権限・生成履歴のDOMを取得した。task-owned tabsはcleanup済み。
+- Heavy localのfabric／printing parity frameをLightchain現行の縦型ツールバーへ整列した。provider契約や保存系譜は変更していない。
+- Artifact: `work/lightchain-profile2-current-parity-readback-20260820-r17.md`。
+- Verification: material 14/14、UI4/4、launcher4/4、typecheck、build2606、lint、非動画31/31、desktop228/228。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。foreground capability未広告のためprovider操作は開始しない。
+- Next action: capability広告後、fresh ownerでfabric-printの本番同一run業務フローを確認し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official Profile 2 owner。旧binding・旧tab・旧Runと別surface fallbackは使わない。
+
+追加確認:
+
+- 現行local全非動画verifier: `featureCount=31 / failed=[]`。
+- 現行unified desktop verifier: `228/228`（1280／1440／1920／2560px）、`globalTimedOut=false`、`cleanupLeftovers=0`。
+- Artifacts: `output/playwright/lightchain-all-feature-workflows-current-goal-r1/SUMMARY.json`、`output/playwright/unified-desktop-layout-current-goal-r1/SUMMARY.json`。
+- local proofのみであり、Mac/Windows実Chromeと本番provider業務完了の代替ではない。
+
+## 2026-08-20 Lightchain-only UI cleanup
+
+- Lightchain routeではHeavy共通のキーボードショートカット浮遊ボタンを描画しないように修正した。Heavy通常画面のショートカットは維持する。
+- UI control contract `4/4`、typecheck、build `2606 modules`、build後の非動画verifier `31/31`をPASS。
+- Artifact: `output/playwright/lightchain-all-feature-workflows-current-goal-r3/SUMMARY.json`。local visual/DOM proofであり、本番Lightchainとの完全比較の代替ではない。
+- lint（`--max-warnings=0`）もPASS。
+
+## 2026-08-20 fresh authenticated target readback r10
+
+- 現行Profile 2の新規browser-clientでHeavy `/tools/fabric`をprovisionし、同一runのURL/title/DOM readbackをPASS。認証済みLightchain形ワークベンチ、生地入力、Gallery選択、権限確認、AI生成、生成履歴の表示を確認した。
+- task-owned tab cleanupは`cleanup_verified=true`。provider生成・保存・再利用、録画、AOS変更、外部効果はなし。
+- Artifact: `work/heavy-chain-target-scoped-authenticated-readback-20260820-r10.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。foreground capability未広告のためprovider操作は開始しない。
+- Next action: capability広告後、fresh ownerでfabric-print同一run業務フローを確認し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official Profile 2 owner。旧binding・旧tab・旧Runと別surface fallbackは使わない。
+
+## 2026-08-20 Lightchain material retry and surface cleanup r3
+
+- 可視のfabric／printing parity画面から、現行Lightchain priority-route readbackに存在しない終了予告バナーを除去した。
+- fabric／printingの生成失敗表示に、現在の入力を保持して既存の生成契約を再実行する`再試行`を追加した。provider、mask、rights、保存、History、Canvasの系譜は変更していない。
+- material contract 17/17、provider persistence 12/12、AI fitting resilience/resume/history 23/23、typecheck、lint、build 2606 modules、全非動画31/31、diff checkをPASS。
+- Artifact: `work/heavy-local-lightchain-material-retry-cleanup-20260820-r3.md`。全非動画証跡: `output/playwright/lightchain-all-feature-workflows-20260820T000224Z/SUMMARY.json`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式署名済みProfile 2拡張がforeground capabilityを広告していないため、本番provider生成・保存・再利用は未確認。
+- Next action: 公式配布更新後、新規Profile 2 ownerでfabric-printの生成→結果→保存→Gallery／Canvas／History／Jobs→再利用→reloadを同一runで確認し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official Profile 2 owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 Lightchain loading-brand cleanup r4
+
+- `/lightchain`のlazy-loading fallbackに残っていた`Heavy Chain`表示を`LIGHTCHAIN AI`へ修正し、Lightchainルートの開き直し時にもHeavy identityが出ないようにした。
+- `npm run test:lightchain-entry-routing --silent` 6/6、typecheck、lint、build 2606 modules、非動画31/31（cleanup完了）をPASS。
+- Artifact: `work/heavy-local-lightchain-loading-brand-cleanup-20260820-r4.md`。全非動画証跡: `output/playwright/lightchain-all-feature-workflows-20260820T001115Z/SUMMARY.json`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式foreground capability広告後、fresh Profile 2 ownerでfabric-printの入力→生成→結果→保存→Gallery／Canvas／History／Jobs→再利用→reloadを確認し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official Profile 2 owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 Lightchain Library workflow r5
+
+- `/asset-center`を機能するLibraryルートへ切り替え、画像アップロード、workspace artifact保存、ユーザー・ブランド単位のグループ保持、検索／お気に入り、Canvas handoffを実装した。
+- Library/Canvas focused test 2/2、typecheck、lint、build 2607 modules、非動画31/31（cleanup完了）をPASS。
+- Artifact: `work/heavy-local-lightchain-library-workflow-20260820-r5.md`。全非動画証跡: `output/playwright/lightchain-all-feature-workflows-20260820T002010Z/SUMMARY.json`。
+
+### Current exact blocker / next action / restart point
+
+- Exact provider blocker: `chrome_foreground_activation_capability_unavailable`。
+- G619 real beta sessionsは0/3、H601 operator/legal decisionは未添付、launch-ops auth artifactも未提供。未確認の運用証跡は合成しない。
+- Next action: 公式foreground capability広告後、fresh Profile 2 ownerでfabric-print production proofを実施し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official Profile 2 owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 Lightchain rights-modal parity r11
+
+- fabric／printingのLightchain型初期画面から、Heavy固有の常時表示権利確認カードを除去した。
+- AI生成開始時のみ`権利確認`モーダルを開き、draft checkboxとprovider送信を許可するconfirmed stateを分離した。キャンセル／閉じるでは権利確認を付与しない。
+- Verification: material contract 17/17、Library/Canvas/material handoff 3/3、typecheck、lint、build 2607 modules、非動画31/31、diff check PASS。
+- Artifact: `work/heavy-local-lightchain-rights-modal-parity-20260820-r11.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式署名済みProfile 2配布物がforeground activation／managementを広告していないため、本番provider生成は開始しない。
+- Next action: 公式配布更新後、fresh revision-30 Profile 2 ownerでfabric／printingの生成→結果→保存→Gallery／Canvas／History／Jobs→再利用→reloadを同一runで確認し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Lightchain retirement-banner cleanup r12
+
+- 共通Lightchain workbenchに残っていた旧式の「この機能はまもなく終了します」表示を除去した。
+- 入力、provider、Library、mask、保存、History、Canvas、retryの機能契約は維持した。
+- Verification: Printing foundation/composition 244/244、material contract 17/17、entry routing 6/6、provider persistence 12/12、Library/Canvas/material handoff 3/3、typecheck、lint、build 2607 modules、非動画31/31 PASS。
+- Artifact: `work/heavy-local-lightchain-retirement-banner-cleanup-20260820-r12.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式署名済みProfile 2配布物がforeground activation／managementを広告していないため、本番provider生成は開始しない。
+- Next action: 公式配布更新後、fresh revision-30 Profile 2 ownerでfabric／printingの生成→結果→保存→Gallery／Canvas／History／Jobs→再利用→reloadを同一runで確認し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Lightchain generic rights-modal parity r13
+
+- Generic Lightchain workbenchの初期画面から、Heavy固有の常設権利確認カードを除去した。
+- `AI生成`押下時だけ`権利確認`モーダルを開き、draft checkboxとconfirmed stateを分離した。キャンセル／閉じるではprovider送信を許可しない。
+- Marketing、汎用feature、model、AI fittingの重複表示を共通契約へ統合し、動画providerのfail-closed表示、生成中／失敗表示、provider payload、保存、History、Canvas、retryは維持した。
+- Verification: provider coverage 11/11、material contract 17/17、printing foundation 244/244、provider persistence 12/12、Library/Canvas handoff 3/3、typecheck、lint、build 2607 modules、非動画31/31、diff check PASS。
+- Artifact: `work/heavy-local-lightchain-generic-rights-modal-parity-20260820-r13.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式署名済みProfile 2 capability更新後、fresh revision-30 ownerでfabric／printingのproduction same-run proofを取得し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Lightchain result resume recovery r14
+
+- `resumeJob`復帰を入力素材・モデル設定だけでなく、同一jobの保存済みprovider結果まで復元する契約へ拡張した。canonical storage pathを再署名し、stale bearer URLだけの履歴は復元しない。
+- Verification: resume 6/6、provider persistence/readback 12/12、workspace activity/routing 12/12、typecheck、lint、build 2607 modules、非動画31/31、diff check PASS。
+- Artifact: `work/heavy-local-lightchain-result-resume-recovery-20260820-r14.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式signed Profile 2配布物がforeground activation／managementを広告していないため、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingのproduction same-run proofを取得し、その後Library handoff経由のAIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+
+## 2026-08-20 Lightchain material rights confirmation continuation r19
+
+- Dedicated fabric/printing generation now resumes the exact request that opened the rights confirmation modal after confirmation, once and only once. The request-local confirmation value is passed to both material provider routes; cancel, close, input changes, tool reset, and unmount clear the pending request.
+- Verification: provider coverage 17/17, typecheck, lint, build 2607 modules, non-video verifier `ok=true / featureCount=31 / failed=[]`, task-owned cleanup, and diff check PASS.
+- Artifact: `work/heavy-local-lightchain-material-rights-confirmation-continue-20260820-r19.md`。Verifier: `output/playwright/lightchain-all-feature-workflows-20260820T020124Z/SUMMARY.json`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式署名済みProfile 2配布物が`foreground_activation`／`management`を広告していないため、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingのproduction same-run proofを取得し、その後Library handoff経由のAIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 Heavy/Lightchain current target-scoped readback r20
+
+- Fresh official Profile 2 owner `-3292-4a90-bb82-4dc99afde823` confirmed Heavy `/tools/fabric` hydrated with the Lightchain-shaped fabric workbench, and Lightchain homepage plus `/tools/printing` and `/model` in the same target-scoped read-only run.
+- Heavy visible markers: material/design inputs, Gallery selection, rights confirmation, AI生成, and 生成履歴. Lightchain current categories and priority-route controls were read back; video remains excluded from Heavy scope.
+- Verification: URL/title/DOM hydration complete for all four targets, task-owned tabs `1980903933`, `1980903935`, `1980903937`, and `1980903939` cleaned up, owner lineage matched, and no selected/focus/claim/foreground lease or external effect was used.
+- Artifact: `work/heavy-lightchain-current-target-readback-20260820-r20.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式Profile 2拡張が`viewport`／`pageAssets`／`cdp`のみを広告し、foreground capabilityを広告していない。
+- Next action: capability更新後、fresh revision-30 ownerでfabric／printingのproduction same-run proofを行い、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。今回のbrowser binding／task tab／旧Run、selected／focus、別surfaceは再利用しない。
+
+## 2026-08-20 Lightchain rights confirmation continuation r17
+
+- 権利確認後に、元のプリントイメージまたは汎用provider生成を同じ入力で一度だけ自動継続するrequest-local flowを追加した。キャンセル／閉じる／素材変更／tool reset／unmountでは保留要求を破棄する。
+- Verification: provider coverage 15/15、typecheck、lint、build 2607 modules、非動画verifier `ok=true / featureCount=31 / failed=[]`、cleanup完了、diff check PASS。
+- Artifact: `work/heavy-local-lightchain-rights-confirmation-continue-20260820-r17.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式signed Profile 2配布物がforeground activation／managementを広告していないため、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingのproduction same-run proofを取得し、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official Profile 2 owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 Lightchain duplicate-submit guard r15
+
+- 共通Lightchain workbenchの汎用provider生成にrequest refによる二重送信防止を追加した。React state更新前の連続クリックでも、同一workbenchからprovider requestを2本開始しない。
+- 素材変更、tool reset、unmountではrequest refを無効化し、古いrequestの結果を採用しない。既存の結果保持・retry・保存系譜は維持した。
+- Verification: provider coverage 12/12、resume 6/6、provider persistence/readback 12/12、typecheck、lint、build 2607 modules、非動画verifier `ok=true / featureCount=31 / failed=[]`、cleanup完了、diff check PASS。
+- Artifact: `work/heavy-local-lightchain-duplicate-submit-guard-20260820-r15.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式signed Profile 2配布物がforeground activation／managementを広告していないため、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingのproduction same-run proofを取得し、その後Library handoff経由のAIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 Lightchain result destination links r16
+
+- Lightchain型feature detailの生成結果カードから、Canvas保存操作に加えてGallery／History／Jobsへ直接遷移できるようにした。Canvasは既存の保存処理を使い、artifact・project・result lineageを保持する。
+- Verification: provider coverage 13/13、typecheck、lint、build 2607 modules、非動画verifier `ok=true / featureCount=31 / failed=[]`、context/browser/preview cleanup完了、diff check PASS。
+- Artifact: `work/heavy-local-lightchain-result-destination-links-20260820-r16.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式signed Profile 2配布物がforeground activation／managementを広告していないため、production provider生成・保存・実データ再利用は未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingのproduction same-run proofを取得し、その後Library handoff経由のAIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。
+
+## 2026-08-20 Local parity/completion audit r21
+
+- Corrected the stale focused material-contract assertion to match the implemented once-only rights-confirmation continuation signature `handleGenerate(options?: { rightsAlreadyConfirmed?: boolean })`.
+- Local verification is green: material/mask 17/17, provider coverage 17/17, provider adapter 16/16, provider persistence/readback 12/12, Library/Canvas 3/3, workspace activity/routing 12/12, parity/entry routes 8/8 and 6/6, synthesis 3/3, Canvas view 3/3, typecheck, lint, build 2607 modules, non-video 31/31, and unified desktop 228/228 with no cleanup leftovers.
+- Artifact: `work/heavy-local-parity-audit-20260820-r21.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。署名済みProfile 2拡張はread-only capabilityのみを広告しているため、本番provider生成・保存・再利用・reloadは未確認。
+- Separate beta gates: G619 real sessions、H601 operator/legal decision、launch-ops authentication artifact remain open; payment/billing is outside this apparel beta scope.
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric/printingの本番同一run proofを完了してからAIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／focus、別surfaceは再利用しない。
+
+## 2026-08-20 Profile 2 capability and beginner UX gate r22
+
+- Fresh official Profile 2 browser-client `-d256-4d52-8ac6-eeb5b1f2d312` passed the `openTabs()` handshake with two unrelated job tabs; no Heavy or Lightchain target was touched.
+- Current advertised capabilities remain browser `viewport`, tab `pageAssets`/`cdp`; `foreground_activation`/`management` are absent.
+- The beginner-UX verifier now stops only on `auth_state_missing` when its authenticated storage state is unavailable, and correctly records `contextClosed=true`, `browserClosed=true`, `previewStopped=true` when no browser resources were created.
+- Verification: internal UX consistency PASS and `node --check scripts/verify-lightchain-beginner-ux.mjs` PASS. Artifact: `work/heavy-profile2-capability-and-beginner-ux-gate-20260820-r22.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`; production provider work remains fail-closed.
+- Separate local QA blocker: `auth_state_missing`; credentials, OTP, CAPTCHA, and synthetic auth state are not used.
+- Next action: after an authorized current auth-state readback and official capability update, use a fresh Profile 2 owner for beginner UX and then fabric/printing production proof.
+- Restart point: fresh official Profile 2 owner after both required state changes. Do not reuse this browser binding, old tabs, old runs, or old artifacts.
+
+## 2026-08-20 Local printing readiness contract r23
+
+- Repaired the stale focused printing-order assertion to match the current rights-confirmation-aware `handleGenerate` closure while preserving the requirement that the readiness summary precede the pinned generation action.
+- Printing foundation/composition 244/244, provider coverage 17/17, material contract 17/17, provider adapter 16/16, persistence/readback 12/12, Library/Canvas 3/3, workspace routing 12/12, entry/parity routes 8/8, resume input 6/6, typecheck, lint, build 2607 modules, non-video 31/31, unified desktop 228/228, and internal UX all passed.
+- Artifact: `work/heavy-local-printing-readiness-contract-20260820-r23.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式Profile 2配布物のforeground capability未広告により、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric/printingのproduction same-run proofを完了してからAIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。旧binding／旧tab／旧Run、selected／focus、別surfaceは再利用しない。
+
+## 2026-08-20 Profile 2 capability readback r24
+
+- Fresh official Profile 2 browser-client `-64b2-4670-b78d-4e30a761188f` passed `openTabs()` under selector revision 30.
+- Current capabilities remain browser `viewport`, tab `pageAssets`/`cdp`; the required `foreground_activation` and `management` capabilities are not advertised.
+- The inventory had two unrelated job tabs and no Heavy/Lightchain target. No target operation or external effect was performed.
+- Artifact: `work/heavy-profile2-capability-readback-20260820-r24.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Next action: official capability distribution update, then a fresh Profile 2 owner and one same-run fabric/printing production proof before AI fitting.
+- Restart point: capability state change followed by a fresh official owner; do not reuse this browser id, tabs, bindings, or runs.
+
+## 2026-08-20 Local result-destination continuity r25
+
+- `LightchainResultDestinations`を追加し、generic result modalとspecial fitting／lab／workspace-style／marketing／print／wear／custom-style result cardの全てからGallery／History／Jobs／Canvasへ遷移できる共通導線を維持した。
+- Verification: provider coverage 18/18、非動画workflow 31/31、internal UX `ok=true`、typecheck、lint、build 2607 modules、diff check PASS。
+- Artifact: `work/heavy-local-result-destination-continuity-20260820-r25.md`。
+- Chrome共通層、録画、AOS、provider backend、deploy、外部効果は未変更。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式signed Profile 2のforeground capability未広告により、本番provider生成・保存・再利用・reloadおよびAIフィッティング同一run proofは `PENDING_CONFIRMATION`。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printing proofを一度行い、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。r24 browser id／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Local Library all-feature handoff r26
+
+- Libraryに動画を除く31機能の共通機能選択を追加し、選択素材をAIフィッティング／生地／プリントの専用ワークベンチまたは各`/lightchain/:toolId`へ引き継ぐようにした。
+- Generic workbenchはcanonical storage pathの再署名を含むLibrary artifact hydrationでprimary入力を復元する。
+- Verification: Library/Canvas/handoff 5/5、provider/result continuity 18/18、非動画31/31、internal UX PASS、typecheck、lint、build 2607 modules、diff check PASS。
+- Artifact: `work/heavy-local-library-all-feature-handoff-20260820-r26.md`。
+- Chrome共通層、録画、AOS、provider backend、deploy、外部効果は未変更。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。本番provider生成・保存・再利用・reload、Mac／Windows実Chrome acceptance、社内βセッションは`PENDING_CONFIRMATION`。
+- Next action: 公式capability更新後、fresh revision-30 ownerでfabric／printing proofを一度行い、その後AIフィッティングへ進む。
+- Restart point: capability状態変化後のfresh official owner。r24 browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Lightchain Profile 2 fresh parity readback r27
+
+- Fresh official Chrome Plugin/Profile 2 browser-client `-2128-4baa-8bdc-647dce2fb2a9` passed `openTabs()` and target-scoped readback for the homepage and `/tools/fabric`, `/tools/printing`, `/model`.
+- Artifact: `work/lightchain-profile2-fresh-parity-readback-20260820-r27.md`。
+- Four task-owned tabs were closed and only the pre-existing unrelated job tabs remained. No foreground operation, generation, save/reuse, recording, or external effect occurred.
+- Exact blocker remains `chrome_foreground_activation_capability_unavailable`; production proof is still `PENDING_CONFIRMATION` until the signed extension advertises the required capability.
+- Next action: fresh owner after capability update, then fabric/printing production proof before AI fitting. Do not reuse r27 browser/tab/binding/run.
+
+## 2026-08-20 Local non-video copy parity r28
+
+- Lightchain homepage case-share label is now `生産`, and the generic non-video workbench homepage copy no longer exposes video.
+- Artifact: `work/heavy-local-lightchain-non-video-copy-parity-20260820-r28.md`。
+- Verification: launcher parity 6/6, typecheck, and `git diff --check` PASS.
+- Exact blocker remains `chrome_foreground_activation_capability_unavailable`; production provider proof, real Chrome acceptance, and G619/H601 remain open.
+
+## 2026-08-20 Local Lightchain homepage heading parity r29
+
+- Heavy homepage main heading is aligned to the fresh Lightchain heading `アパレル特化のAIデザインワークスペース`; the header logo remains separate.
+- Artifact: `work/heavy-local-lightchain-home-heading-parity-20260820-r29.md`。
+- Verification: launcher parity 7/7, typecheck, lint PASS.
+- Production generation/save/reuse, real Mac/Windows Chrome, G619, H601, and launch-ops remain `PENDING_CONFIRMATION`.
+
+## 2026-08-20 Local Lightchain desktop parity r30
+
+- The isolated unified desktop verification completed after the r29 homepage heading parity change: 228/228 cases, 1280／1440／1920／2560px, 0 failures, no global timeout, and `cleanupLeftovers=0`.
+- The earlier concurrent run with operation failures is not used as current proof. Artifact: `work/heavy-local-lightchain-desktop-parity-20260820-r30.md`。
+- Production build transformed 2607 modules; `git diff --check` and Goal context JSON validation passed.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式signed Profile 2配布物がforeground activation／managementを広告していないため、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingの本番同一run proofを取得し、その後AIフィッティングへ進む。
+- Restart point: capability state change後の新規official owner。旧browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Local Lightchain extra-count cleanup r31
+
+- Removed the Heavy-only `{visibleFeatures.length} tools` indicator beside the homepage category heading because it is not present in the current Lightchain readback.
+- Added a focused launcher regression. Launcher parity 8/8, typecheck, lint with zero warnings, build 2607 modules, and `git diff --check` passed.
+- Artifact: `work/heavy-local-lightchain-extra-count-cleanup-20260820-r31.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式signed Profile 2配布物のforeground capability未広告により、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingの本番同一run proofを取得し、その後AIフィッティングへ進む。
+- Restart point: capability state change後の新規official owner。旧browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Local Lightchain current recheck r32
+
+- After r31, the current source passed the non-video workflow verifier at 31/31 (`ok=true`, `failed=[]`).
+- Unified desktop layout passed 228/228 across 1280／1440／1920／2560px with 0 failures, no global timeout, and `cleanupLeftovers=0`.
+- Artifacts: `output/playwright/lightchain-all-feature-workflows-20260820T032822Z/SUMMARY.json`, `output/playwright/unified-desktop-layout-extra-count-r31/SUMMARY.json`, and `work/heavy-local-lightchain-current-recheck-20260820-r32.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式signed Profile 2配布物のforeground capability未広告により、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingの本番同一run proofを取得し、その後AIフィッティングへ進む。
+- Restart point: capability state change後の新規official owner。旧browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Local Lightchain home spacing parity r33
+
+- Removed the Heavy-only `py-10` wrapper around the homepage entry surface; `GenerateLightchainEntry` now renders directly inside the unified shell.
+- Launcher parity 9/9, typecheck, lint with zero warnings, build 2607 modules, and diff check passed.
+- Artifact: `work/heavy-local-lightchain-home-spacing-parity-20260820-r33.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式signed Profile 2配布物のforeground capability未広告により、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingの本番同一run proofを取得し、その後AIフィッティングへ進む。
+- Restart point: capability state change後の新規official owner。旧browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Local Lightchain current recheck r34
+
+- r33後の現行ソースを追加変更なしで再確認した。
+- 非動画workflow verifierは31/31、`ok=true`、`failed=[]`。
+- Unified desktop layoutは1280／1440／1920／2560pxで228/228、failed=0、global timeoutなし。
+- cleanupはbrowser/context/preview closed、`cleanupLeftovers=0`。Artifacts: `output/playwright/lightchain-all-feature-workflows-20260820T033753Z/SUMMARY.json`、`output/playwright/unified-desktop-layout-home-spacing-r33/SUMMARY.json`、`work/heavy-local-lightchain-current-recheck-20260820-r34.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。公式signed Profile 2配布物のforeground capability未広告により、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingの本番同一run proofを取得し、その後AIフィッティングへ進む。
+- Restart point: capability state change後の新規official owner。旧browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Heavy target-scoped authenticated readback r35
+
+- Fresh official Chrome Plugin/Profile 2 target-scoped readbackで、Heavy `/tools/fabric`の認証済みhydrated stateを確認した。`ログイン`、`ワークスペースを準備しています`、認証／ブランド準備表示はなく、生地入力、比率、生地バリエーション、権利確認、`AI生成`、`生成履歴`が表示された。
+- Browser `-864b-4bca-af5f-8619b1b2537e`、target tab `1980903951`、selector revision 30、同一run URL/title/DOM PASS、`readyState=complete`。
+- task-owned tabはcleanup確認済み。既存のCanva／SmartRecruitersタブは未操作。selected／focus／claim／foreground lease、upload、権利確認、provider生成、保存／再利用、録画、AOS変更、外部効果はなし。
+- Artifact: `work/heavy-chain-target-scoped-authenticated-readback-20260820-r35.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。認証／workspace hydration blockerは解消済み。公式signed extensionのforeground capability未広告により、本番provider生成・保存・再利用・reloadは未確認。
+- Next action: 公式capability更新後、fresh revision-30 Profile 2 ownerでfabric／printingの本番同一run proofを取得し、その後AIフィッティングへ進む。
+- Restart point: capability state change後の新規official owner。r35 browser／tab／binding／Run、selected／claim／focus、別surface fallbackは再利用しない。
+
+## 2026-08-20 Heavy completion audit r2
+
+- 現行ソース・fresh Lightchain r27・fresh Heavy target-scoped r35を再照合した。
+- focused practical-flow suite 74/74、非動画31/31、unified desktop 228/228、launcher parity 9/9 PASS。local契約に新たな欠落はない。
+- Heavy r35で認証／workspace hydrationはclear。production provider flowは公式Profile 2 capability不足のためfail-closed。
+- Artifact: `work/heavy-chain-completion-audit-20260820-r2.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式signed extension/backendが`foreground_activation`／`management`を広告した後、fresh revision-30 ownerでfabric／printingのproduction same-run proof、次にAI fittingを実施する。
+- Other PENDING_CONFIRMATION gates: Mac／Windows実Chrome、G619、H601、launch-ops、Zeabur source association。
+- Restart point: capability state change後のfresh official owner。旧binding／旧tab／旧Run、selected／claim／focus、別surface fallbackは使わない。

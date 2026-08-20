@@ -12,6 +12,7 @@ import {
   Laptop,
   Loader2,
   Plus,
+  RefreshCw,
   Scissors,
   Sparkles,
   Trash2,
@@ -66,11 +67,13 @@ import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
 import {
   deleteWorkspaceArtifactsPersisted,
+  getWorkspaceArtifactCanonicalStoragePath,
+  listWorkspaceArtifacts,
   listWorkspaceGeneratedImages,
   saveWorkspaceArtifactPersisted,
 } from '../lib/localWorkspaceArtifacts';
 import { persistProviderResultArtifact } from '../lib/providerResultPersistence';
-import { withSignedImageUrls } from '../lib/storage';
+import { resolveGeneratedImageUrl, withSignedImageUrls } from '../lib/storage';
 import {
   buildDerivedPrintGarmentMaskCandidates,
   buildPrintGarmentCutoutDataUrl,
@@ -527,6 +530,33 @@ function WorkbenchResultCard({
             </button>
           )}
         </div>
+        <nav
+          className="grid grid-cols-3 gap-2 pt-1"
+          aria-label={`${result.title}の保存先`}
+          data-testid={`material-result-destinations-${result.id}`}
+        >
+          <Link
+            to="/gallery"
+            data-testid={`material-result-gallery-link-${result.id}`}
+            className="rounded-lg border border-white/10 px-2 py-1.5 text-center text-[11px] font-semibold text-white/65 transition hover:border-cyan-300/40 hover:text-cyan-100"
+          >
+            Gallery
+          </Link>
+          <Link
+            to="/history"
+            data-testid={`material-result-history-link-${result.id}`}
+            className="rounded-lg border border-white/10 px-2 py-1.5 text-center text-[11px] font-semibold text-white/65 transition hover:border-cyan-300/40 hover:text-cyan-100"
+          >
+            History
+          </Link>
+          <Link
+            to="/jobs"
+            data-testid={`material-result-jobs-link-${result.id}`}
+            className="rounded-lg border border-white/10 px-2 py-1.5 text-center text-[11px] font-semibold text-white/65 transition hover:border-cyan-300/40 hover:text-cyan-100"
+          >
+            Jobs
+          </Link>
+        </nav>
       </div>
     </div>
   );
@@ -1348,6 +1378,13 @@ export function LightchainMaterialWorkbenchPage() {
   const { createProject, deleteProject, addObject, selectObject, saveCurrentProject } = useCanvasStore();
   const mode: WorkbenchMode = location.pathname.includes('printing') ? 'printing' : 'fabric';
   const isPrinting = mode === 'printing';
+  const libraryHandoff = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return {
+      artifactId: params.get('libraryArtifactId'),
+      slot: params.get('librarySlot'),
+    };
+  }, [location.search]);
   // The recorded Light Chain print flow is intentionally direct: reference image
   // -> print upload -> spot/full -> AI generation. Heavy's mask/placement editor
   // remains available as an explicit advanced editor, but it must not become a
@@ -1366,6 +1403,9 @@ export function LightchainMaterialWorkbenchPage() {
   const userClearedSelectionRef = useRef(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [providerRightsConfirmed, setProviderRightsConfirmed] = useState(false);
+  const [rightsConfirmationOpen, setRightsConfirmationOpen] = useState(false);
+  const [rightsConfirmationDraft, setRightsConfirmationDraft] = useState(false);
+  const pendingRightsGenerationRef = useRef(false);
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
   const [progressivePrintRun, setProgressivePrintRun] = useState<ProgressivePrintRun | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -1631,6 +1671,7 @@ export function LightchainMaterialWorkbenchPage() {
     generationSequenceRef.current += 1;
     generationRequestRef.current = null;
     generationRequestSignatureRef.current = null;
+    pendingRightsGenerationRef.current = false;
     if (printDesignReturnFrameRef.current !== null) {
       cancelAnimationFrame(printDesignReturnFrameRef.current);
       printDesignReturnFrameRef.current = null;
@@ -1640,6 +1681,7 @@ export function LightchainMaterialWorkbenchPage() {
   useEffect(() => {
     if (generationInputEffectSignatureRef.current === generationInputSignature) return;
     generationInputEffectSignatureRef.current = generationInputSignature;
+    pendingRightsGenerationRef.current = false;
     setProviderRightsConfirmed(false);
     if (generatedResults.length > 0) setGeneratedResultsStale(true);
     setPendingSurfaceJob(null);
@@ -2447,9 +2489,8 @@ export function LightchainMaterialWorkbenchPage() {
     }
 
     if (!providerRightsConfirmed) {
-      const message = 'rights_confirmation_required';
-      setGenerationError(message);
-      toast.error('AI生成前に、アップロード素材の権利・利用許諾を確認してください');
+      setRightsConfirmationDraft(false);
+      setRightsConfirmationOpen(true);
       return;
     }
 
@@ -2766,7 +2807,7 @@ export function LightchainMaterialWorkbenchPage() {
 
   void handleLegacyPreviewGenerate;
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (options?: { rightsAlreadyConfirmed?: boolean }) => {
     if (isPrinting) invalidatePrintableSuggestion();
     let generationBrand = currentBrand;
     if (!generationBrand?.id) {
@@ -2784,12 +2825,13 @@ export function LightchainMaterialWorkbenchPage() {
       toast.error(message);
       return;
     }
-    if (!providerRightsConfirmed) {
-      const message = 'rights_confirmation_required';
-      setGenerationError(message);
-      toast.error('AI生成前に、アップロード素材の権利・利用許諾を確認してください');
+    if (!providerRightsConfirmed && !options?.rightsAlreadyConfirmed) {
+      pendingRightsGenerationRef.current = true;
+      setRightsConfirmationDraft(false);
+      setRightsConfirmationOpen(true);
       return;
     }
+    const rightsConfirmedForRequest = providerRightsConfirmed || options?.rightsAlreadyConfirmed === true;
     if (!isPrinting && (!fabricBase || !fabricDesign)) {
       toast.error('生地画像とデザイン画像を入れてください');
       return;
@@ -2934,7 +2976,7 @@ export function LightchainMaterialWorkbenchPage() {
                 providerModel: 'gpt-image-1',
                 inputFidelity: 'high',
                 quality: 'high',
-                rightsConfirmed: providerRightsConfirmed,
+                rightsConfirmed: rightsConfirmedForRequest,
                 lightchainCompat: {
                   lightchainFeatureId: 'printing-image',
                   lightchainFeatureTitle: 'プリントイメージ',
@@ -2990,7 +3032,7 @@ export function LightchainMaterialWorkbenchPage() {
                 providerModel: 'gpt-image-1',
                 inputFidelity: 'high',
                 quality: 'high',
-                rightsConfirmed: providerRightsConfirmed,
+                rightsConfirmed: rightsConfirmedForRequest,
                 lightchainCompat: {
                   lightchainFeatureId: 'fabric-image',
                   lightchainFeatureTitle: '生地イメージ',
@@ -3550,7 +3592,66 @@ export function LightchainMaterialWorkbenchPage() {
   };
 
   useEffect(() => {
-    if (!isPrinting || !isAuthInitialized || isAuthLoading || !currentBrand?.id) return;
+    if (
+      !libraryHandoff.artifactId
+      || !isAuthInitialized
+      || isAuthLoading
+      || !currentBrand?.id
+    ) return;
+    let cancelled = false;
+    const artifact = listWorkspaceArtifacts(currentBrand.id, user?.id)
+      .find((candidate) => candidate.id === libraryHandoff.artifactId);
+    if (!artifact) return;
+
+    const restoreLibraryMaterial = async () => {
+      const sourceStoragePath = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
+      let imageUrl = artifact.imageUrl;
+      if (sourceStoragePath) {
+        try {
+          imageUrl = await resolveGeneratedImageUrl(sourceStoragePath);
+        } catch {
+          if (!cancelled) toast.error('Library素材の再署名に失敗しました。Libraryから素材を選び直してください。');
+          return;
+        }
+      }
+      if (!imageUrl || cancelled) return;
+
+      const sourceValue = artifact.metadata.sourceImageId ?? artifact.metadata.remoteImageId;
+      const selectedImage: SelectedImage = {
+        url: imageUrl,
+        referenceType: libraryHandoff.slot === 'printing-design' ? 'pattern' : 'base',
+        fromGallery: true,
+        galleryImageId: typeof sourceValue === 'string' ? sourceValue : artifact.id,
+        ...(sourceStoragePath ? { storagePath: sourceStoragePath } : {}),
+        ...(libraryHandoff.slot === 'printing-design'
+          ? { printDesignAssetPurpose: PRINT_DESIGN_ASSET_PURPOSE }
+          : {}),
+      };
+
+      if (isPrinting) {
+        if (libraryHandoff.slot === 'printing-design') {
+          const result = await addDesigns([selectedImage]);
+          if (!result.ok && !cancelled) toast.error(`Library素材のプリント登録に失敗しました: ${result.reason}`);
+        } else {
+          selectPrintGarment(selectedImage);
+        }
+      } else if (libraryHandoff.slot === 'fabric-base') {
+        setFabricBase(selectedImage);
+      } else {
+        setFabricDesign(selectedImage);
+      }
+    };
+
+    void restoreLibraryMaterial();
+    return () => {
+      cancelled = true;
+    };
+    // addDesigns/selectPrintGarment intentionally bind to the current workbench session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBrand?.id, isAuthInitialized, isAuthLoading, isPrinting, libraryHandoff.artifactId, libraryHandoff.slot, user?.id]);
+
+  useEffect(() => {
+    if (!isPrinting || libraryHandoff.artifactId || !isAuthInitialized || isAuthLoading || !currentBrand?.id) return;
     const brandId = currentBrand.id;
     const hydrationGeneration = ++printInputHydrationGenerationRef.current;
     printInputHydratedBrandRef.current = null;
@@ -3591,7 +3692,7 @@ export function LightchainMaterialWorkbenchPage() {
     };
     // addDesigns/selectPrintGarment intentionally bind to the current workbench session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentBrand?.id, isAuthInitialized, isAuthLoading, isPrinting]);
+  }, [currentBrand?.id, isAuthInitialized, isAuthLoading, isPrinting, libraryHandoff.artifactId]);
 
   useEffect(() => () => {
     restoredPrintInputImagesRef.current.forEach((image) => releaseRestoredPrintInput(image));
@@ -4944,7 +5045,7 @@ export function LightchainMaterialWorkbenchPage() {
           )}
 
           <Button
-            onClick={handleGenerate}
+            onClick={() => void handleGenerate()}
             isLoading={isGenerating}
             disabled={isGenerating || (!isPrinting
               ? !(fabricBase && fabricDesign)
@@ -5555,21 +5656,10 @@ export function LightchainMaterialWorkbenchPage() {
                   )}
                 </div>
 
-                <label data-testid="lightchain-material-provider-gate" className="flex items-start gap-3 rounded-xl border border-emerald-300/25 bg-emerald-300/[0.06] px-3 py-3 text-xs leading-relaxed text-emerald-50">
-                  <input
-                    type="checkbox"
-                    data-testid="lightchain-material-rights-confirmation"
-                    checked={providerRightsConfirmed}
-                    onChange={(event) => setProviderRightsConfirmed(event.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-400"
-                  />
-                  <span>入力素材の利用権限を確認しました。AIプロバイダーへ送信して生成します。</span>
-                </label>
-
                 <Button
-                  onClick={handleGenerate}
+                  onClick={() => void handleGenerate()}
                   isLoading={isGenerating}
-                  disabled={isGenerating || !lightchainPrintReady || !providerRightsConfirmed}
+                  disabled={isGenerating || !lightchainPrintReady}
                   className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
                   size="lg"
                   leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
@@ -5578,21 +5668,25 @@ export function LightchainMaterialWorkbenchPage() {
                 </Button>
 
                 {generationError && (
-                  <p role="alert" className="rounded-xl border border-rose-300/25 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-100">
-                    {generationError}
-                  </p>
+                  <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300/25 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-100">
+                    <p className="min-w-0 flex-1">{generationError}</p>
+                    <button
+                      type="button"
+                      data-testid="lightchain-material-retry-printing"
+                      onClick={() => { void handleGenerate(); }}
+                      disabled={isGenerating}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-200/35 bg-rose-200/10 px-2.5 py-1.5 font-semibold text-rose-50 transition hover:bg-rose-200/20 disabled:cursor-wait disabled:opacity-50"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                      再試行
+                    </button>
+                  </div>
                 )}
                 {surfaceConformStatus && (
                   <p role="status" className="rounded-xl border border-cyan-300/20 bg-cyan-950/25 px-3 py-2 text-xs leading-relaxed text-cyan-100">
                     {surfaceConformStatus}
                   </p>
                 )}
-                <p className="rounded-lg border border-amber-300/20 bg-amber-950/20 px-3 py-2 text-[11px] leading-relaxed text-amber-100/80">
-                  この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください{' '}
-                  <Link to="/designProduction" className="font-semibold underline underline-offset-2 hover:text-white">
-                    今すぐ体験
-                  </Link>
-                </p>
               </div>
             </section>
 
@@ -5712,12 +5806,6 @@ export function LightchainMaterialWorkbenchPage() {
               </nav>
 
               <div className="space-y-4">
-                <p className="rounded-xl border border-emerald-300/25 bg-emerald-300/[0.08] px-3 py-2 text-[11px] leading-relaxed text-emerald-100">
-                  この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください{' '}
-                  <Link to="/designProduction" className="font-semibold underline underline-offset-2 hover:text-white">
-                    今すぐ体験
-                  </Link>
-                </p>
 
                 <section data-testid="lightchain-fabric-design-input" className="rounded-xl border border-white/10 bg-[#202629] p-3">
                   <p className="mb-2 text-sm font-semibold text-white">モデル/デザイン画像 *</p>
@@ -5826,22 +5914,11 @@ export function LightchainMaterialWorkbenchPage() {
                   </div>
                 </div>
 
-                  <label data-testid="lightchain-material-provider-gate" className="flex items-start gap-3 rounded-xl border border-emerald-300/25 bg-emerald-300/[0.06] px-3 py-3 text-xs leading-relaxed text-emerald-50">
-                    <input
-                      type="checkbox"
-                      data-testid="lightchain-material-rights-confirmation"
-                      checked={providerRightsConfirmed}
-                      onChange={(event) => setProviderRightsConfirmed(event.target.checked)}
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-400"
-                    />
-                    <span>入力素材の利用権限を確認しました。AIプロバイダーへ送信して生成します。</span>
-                  </label>
-
                   <Button
                     data-testid="lightchain-fabric-generate"
-                    onClick={handleGenerate}
+                    onClick={() => void handleGenerate()}
                     isLoading={isGenerating}
-                    disabled={isGenerating || fabricPreviewState !== 'done' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0 || !providerRightsConfirmed}
+                    disabled={isGenerating || fabricPreviewState !== 'done' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
                   className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
                   size="lg"
                   leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
@@ -5858,9 +5935,19 @@ export function LightchainMaterialWorkbenchPage() {
                   </p>
                 ) : null}
                 {generationError && (
-                  <p role="alert" className="rounded-xl border border-rose-300/25 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-100">
-                    {generationError}
-                  </p>
+                  <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300/25 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-100">
+                    <p className="min-w-0 flex-1">{generationError}</p>
+                    <button
+                      type="button"
+                      data-testid="lightchain-material-retry-fabric"
+                      onClick={() => { void handleGenerate(); }}
+                      disabled={isGenerating}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-200/35 bg-rose-200/10 px-2.5 py-1.5 font-semibold text-rose-50 transition hover:bg-rose-200/20 disabled:cursor-wait disabled:opacity-50"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                      再試行
+                    </button>
+                  </div>
                 )}
               </div>
             </section>
@@ -5929,6 +6016,59 @@ export function LightchainMaterialWorkbenchPage() {
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={rightsConfirmationOpen}
+        onClose={() => {
+          pendingRightsGenerationRef.current = false;
+          setRightsConfirmationDraft(false);
+          setRightsConfirmationOpen(false);
+        }}
+        title="権利確認"
+        size="md"
+        footer={(
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                pendingRightsGenerationRef.current = false;
+                setRightsConfirmationDraft(false);
+                setRightsConfirmationOpen(false);
+              }}
+            >
+              キャンセル
+            </Button>
+            <Button
+              onClick={() => {
+                const pending = pendingRightsGenerationRef.current;
+                pendingRightsGenerationRef.current = false;
+                setProviderRightsConfirmed(true);
+                setRightsConfirmationDraft(false);
+                setRightsConfirmationOpen(false);
+                if (pending) void handleGenerate({ rightsAlreadyConfirmed: true });
+              }}
+              disabled={!rightsConfirmationDraft}
+            >
+              確認して続ける
+            </Button>
+          </div>
+        )}
+      >
+        <div data-testid="lightchain-material-rights-confirmation" className="space-y-4">
+          <p className="text-sm leading-6 text-neutral-600 dark:text-white/70">
+            AI生成へ進む前に、アップロードした画像・生地・プリント素材を利用する権利があることを確認してください。
+          </p>
+          <label className="flex items-start gap-3 rounded-xl border border-neutral-200 p-4 text-sm leading-6 dark:border-white/10">
+            <input
+              type="checkbox"
+              checked={rightsConfirmationDraft}
+              onChange={(event) => setRightsConfirmationDraft(event.target.checked)}
+              className="mt-1 h-4 w-4 shrink-0 accent-cyan-500"
+            />
+            <span>入力素材の利用権限を確認しました。確認後、AIプロバイダーへ送信して生成します。</span>
+          </label>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={favoriteTargetResult !== null}

@@ -701,7 +701,11 @@ const getInitialFeatureFromLocation = () => {
   if (typeof window === 'undefined') return null;
   const params = new URLSearchParams(window.location.search);
   const workflow = getWorkflowMetadata(params.get('workflow'));
-  const featureParam = workflow?.primaryFeature ?? params.get('feature');
+  // Lightchain's direct color-change route is an actual feature entry point,
+  // not a launcher. Keep the route stable while hydrating the same colorize
+  // workflow that is used by the shared generation surface.
+  const routeFeature = window.location.pathname === '/editor/changeColor' ? 'colorize' : null;
+  const featureParam = workflow?.primaryFeature ?? params.get('feature') ?? routeFeature;
   return featureParam ? findFeatureFromQuery(featureParam) ?? null : null;
 };
 
@@ -1356,7 +1360,7 @@ export function GeneratePage() {
     setBackgroundReferenceImage(null);
     setPatternReferenceImage(null);
     setShowSuccessCard(false);
-    navigate('/lightchain', { replace: true });
+    navigate(window.location.pathname === '/editor/changeColor' ? '/editor/changeColor' : '/lightchain', { replace: true });
   };
 
   // 画像を圧縮する関数
@@ -3862,7 +3866,6 @@ export function GeneratePage() {
   const selectedParityGoal = selectedCatalogFeature
     ? lightchainParityGoals.find((goal) => goal.title === selectedCatalogFeature.title) ?? null
     : null;
-  const visibleParityGoals = lightchainParityGoals.filter((goal) => goal.priority === 'P0');
 
   if (!selectedFeature) {
     const nextPath = categoryParam
@@ -4056,45 +4059,6 @@ export function GeneratePage() {
           </div>
         </div>
       </div>
-
-      <section className="mb-4 rounded-3xl border border-cyan-300/20 bg-cyan-300/8 p-5 shadow-[0_0_30px_rgba(34,211,238,0.08)]">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">
-              P0 IMPLEMENTATION
-            </p>
-            <h3 className="mt-2 text-lg font-semibold text-white">
-              まず直す3つの軸
-            </h3>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-300">
-              入口、生成状態、編集の3点から先に整えると迷いが減ります。
-            </p>
-          </div>
-          <span className="inline-flex w-fit items-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1.5 text-xs font-semibold text-cyan-100">
-            {visibleParityGoals.length} goals
-          </span>
-        </div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-3">
-          {visibleParityGoals.map((goal) => (
-            <article key={goal.matrixId} className="rounded-2xl border border-white/10 bg-white/[0.05] p-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-200">
-                  {goal.matrixId}
-                </span>
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-semibold text-neutral-300">
-                  {goal.priority}
-                </span>
-                <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-100">
-                  {goal.status === 'done' ? '完了' : goal.status === 'in_progress' ? '進行中' : '待機'}
-                </span>
-              </div>
-              <h4 className="mt-3 text-sm font-semibold text-white">{goal.title}</h4>
-              <p className="mt-2 text-xs leading-5 text-neutral-400">{goal.rationale}</p>
-              <p className="mt-3 text-xs leading-5 text-neutral-300">{goal.owningSurface}</p>
-            </article>
-          ))}
-        </div>
-      </section>
 
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[320px_minmax(760px,1fr)_minmax(360px,0.7fr)]">
         <motion.div

@@ -25,7 +25,7 @@ import {
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../stores/authStore';
 import { useCanvasStore } from '../stores/canvasStore';
-import { Modal } from '../components/ui';
+import { Button, Modal } from '../components/ui';
 import { supabase } from '../lib/supabase';
 import {
   buildMaterialCutoutDataUrl,
@@ -43,7 +43,7 @@ import {
   type WorkspaceArtifact,
 } from '../lib/localWorkspaceArtifacts';
 import { hydrateGenerationIntentSource } from '../lib/workspaceHandoff';
-import { readLightchainResumeInput } from '../lib/lightchainResume';
+import { readLightchainResumeInput, readLightchainResumeResult } from '../lib/lightchainResume';
 import { compactLightchainWorkbenchStateForPersistence } from '../lib/lightchainPersistence';
 import { prepareFittingDraftMaterialReferenceForPersistence } from '../lib/fittingPersistence';
 import { getErrorMessage } from '../lib/errorMessages';
@@ -121,6 +121,17 @@ type LightchainResult = {
   artifactId?: string | null;
   parityRuntime?: ReturnType<typeof serializeLightchainParityRuntime>;
 };
+
+type LightchainPreviewOverrides = {
+  summary?: string;
+  title?: string;
+  brief?: string;
+  allowBriefOnly?: boolean;
+};
+
+type PendingRightsGeneration =
+  | { kind: 'printing' }
+  | { kind: 'generic'; overrides?: LightchainPreviewOverrides };
 
 const PRINTING_CUTOUT_TIMEOUT_MS = 30_000;
 
@@ -788,6 +799,24 @@ function getOverlayPosition(placement: string, scale: number) {
   return { x: 225 - offset, y: 250 - offset };
 }
 
+/**
+ * Keep every completed Lightchain result on the same durable-workspace path.
+ * Special Lightchain-shaped pages use their own result cards, so this small
+ * shared action group prevents those pages from dropping Gallery/History/Jobs
+ * continuity while preserving their visual frame.
+ */
+function LightchainResultDestinations() {
+  const linkClass = 'rounded-lg border border-white/10 px-2 py-2 text-center text-[11px] font-semibold text-neutral-300 transition hover:border-cyan-300/50 hover:text-white';
+  return (
+    <nav className="mt-3 grid grid-cols-4 gap-2" aria-label="生成結果の移動先" data-testid="lightchain-special-result-destinations">
+      <Link to="/gallery" data-testid="lightchain-special-result-gallery-link" className={linkClass}>Gallery</Link>
+      <Link to="/history" data-testid="lightchain-special-result-history-link" className={linkClass}>History</Link>
+      <Link to="/jobs" data-testid="lightchain-special-result-jobs-link" className={linkClass}>Jobs</Link>
+      <Link to="/canvas/new" data-testid="lightchain-special-result-canvas-link" className="rounded-lg bg-cyan-300 px-2 py-2 text-center text-[11px] font-semibold text-neutral-950 transition hover:bg-cyan-200">Canvas</Link>
+    </nav>
+  );
+}
+
 const defaultMaskCandidates: MaskCandidate[] = ['トップス', '無地部分', '柄'];
 
 const materialTabDescriptions: Record<MaterialTab, string> = {
@@ -1085,6 +1114,9 @@ export function LightchainWorkbenchPage() {
   lightchainResultRef.current = lightchainResult;
   const [lightchainResultPreviewOpen, setLightchainResultPreviewOpen] = useState(false);
   const [providerRightsConfirmed, setProviderRightsConfirmed] = useState(false);
+  const [rightsConfirmationOpen, setRightsConfirmationOpen] = useState(false);
+  const [rightsConfirmationDraft, setRightsConfirmationDraft] = useState(false);
+  const pendingRightsGenerationRef = useRef<PendingRightsGeneration | null>(null);
   const [lightchainGenerationRunning, setLightchainGenerationRunning] = useState(false);
   const [lightchainGenerationError, setLightchainGenerationError] = useState<string | null>(null);
   const [resumeInputReadback, setResumeInputReadback] = useState<'restored' | 'unavailable' | null>(null);
@@ -1237,6 +1269,7 @@ export function LightchainWorkbenchPage() {
   const printingGenerationRequestRef = useRef<number | null>(null);
   const printingGenerationSequenceRef = useRef(0);
   const printingCutoutRequestRef = useRef<Record<MaterialSlotKey, number>>({ primary: 0, secondary: 0 });
+  const lightchainGenerationRequestRef = useRef<number | null>(null);
   const lightchainGenerationSequenceRef = useRef(0);
 
   const renderLightchainResultPreviewImage = (className: string, alt: string) => {
@@ -1306,6 +1339,7 @@ export function LightchainWorkbenchPage() {
             >
               ダウンロード
             </button>
+            <LightchainResultDestinations />
           </div>
         </div>
       )}
@@ -1352,13 +1386,32 @@ export function LightchainWorkbenchPage() {
       ? { label: '生成準備', detail: '入力を確認してAI生成へ進めます。', tone: 'ready' as const }
       : { label: '入力待ち', detail: 'まず素材か依頼内容を追加します。', tone: 'waiting' as const };
 
+  const directRouteToolId: Record<string, string> = {
+    '/tools/line-draft-to-tile': 'line-to-real',
+    '/tools/svg-convert': 'svg-convert',
+    '/tools/reactor': 'image-repair',
+    '/tools/vector-special': 'pattern-vector-pro',
+    '/printing': 'print-design-project',
+    '/editor/pattern': 'pattern-vector',
+    '/editor/patternDesign': 'print-design-project',
+    '/model-base/style': 'custom-style',
+  };
+  const directRouteTitleOverride: Record<string, string> = {
+    '/tools/line-draft-to-tile': '線画から実写へ変換',
+    '/printing': 'AIグラフィックデザイン',
+    '/editor/pattern': 'デザインアレンジ',
+    '/editor/patternDesign': 'プリントデザイン',
+  };
+  const pathToolId = directRouteToolId[location.pathname];
   const isModelRoute = location.pathname === '/model';
   const routeTool = toolId
     ? visibleTools.find((tool) => tool.id === toolId) ?? null
     : isModelRoute
       ? visibleTools.find((tool) => tool.id === 'ai-fitting') ?? null
-      : null;
-  const isFeatureDetail = Boolean(toolId || isModelRoute);
+      : pathToolId
+        ? visibleTools.find((tool) => tool.id === pathToolId) ?? null
+        : null;
+  const isFeatureDetail = Boolean(toolId || isModelRoute || pathToolId);
   const selectedTool = routeTool ?? visibleTools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? visibleTools[0];
   const lightchainProviderRoute = getLightchainProviderRoute(selectedTool.id);
   const lightchainProviderSupported = isLightchainProviderSupported(selectedTool.id);
@@ -1377,7 +1430,9 @@ export function LightchainWorkbenchPage() {
   const currentModelPanel = selectedTool.id === 'model-library'
     ? modelPanelConfig['model-custom']
     : modelPanelConfig[selectedTool.id] ?? null;
-  const currentDisplayTitle = currentModelPanel?.title ?? selectedTool.title;
+  const currentDisplayTitle = currentModelPanel?.title
+    ?? directRouteTitleOverride[location.pathname]
+    ?? selectedTool.title;
   const isModelToolDetail = isFeatureDetail && Boolean(currentModelPanel);
   const workspaceStyle = selectedTool.id === 'custom-style' ? null : workspaceStyleConfig[selectedTool.id] ?? null;
   const selectedToolActionHref = isFittingDetail ? '/fitting#fitting-material-workbench' : selectedTool.heavyChainHref;
@@ -1559,9 +1614,8 @@ export function LightchainWorkbenchPage() {
       ? false
       : materialRequirementsMissing;
   const lightchainToolPanelConfig = useMemo(() => {
-    const sharedNotice = 'この機能はまもなく終了します。より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください';
     const base = {
-      notice: sharedNotice,
+      notice: null as string | null,
       primaryLabel: '参考画像をアップロードしてください',
       primaryHelp: '20MB以下の画像アップロードしてください',
       secondaryLabel: null as string | null,
@@ -1667,7 +1721,9 @@ export function LightchainWorkbenchPage() {
   const applyMaterialToSlot = async (slot: MaterialSlotKey, item: MaterialSlotFile) => {
     const shouldCutoutForPrinting = selectedTool.id === 'printing-image';
     lightchainGenerationSequenceRef.current += 1;
+    lightchainGenerationRequestRef.current = null;
     setLightchainGenerationRunning(false);
+    pendingRightsGenerationRef.current = null;
     setProviderRightsConfirmed(false);
     setLightchainGenerationError(null);
     setLightchainResult(null);
@@ -1753,10 +1809,12 @@ export function LightchainWorkbenchPage() {
     setPrintingCutoutErrors({ primary: null, secondary: null });
     setLightchainResult(null);
     setLightchainResultPreviewOpen(false);
+    pendingRightsGenerationRef.current = null;
     setProviderRightsConfirmed(false);
     setLightchainGenerationRunning(false);
     setLightchainGenerationError(null);
     lightchainGenerationSequenceRef.current += 1;
+    lightchainGenerationRequestRef.current = null;
     setModelFormState(defaultModelFormState);
     setPrintingGenerationStatus('idle');
     setPrintingGenerationError(null);
@@ -1808,6 +1866,7 @@ export function LightchainWorkbenchPage() {
 
   useEffect(() => {
     if (!toolId) return;
+    let cancelled = false;
     setResumeInputReadback(null);
     const source = hydrateGenerationIntentSource(searchParams);
     const briefParam = searchParams.get('brief')?.trim();
@@ -1820,10 +1879,20 @@ export function LightchainWorkbenchPage() {
         setMarketingProjectNameDraft(projectNameParam.slice(0, 80));
       }
       if (referenceNoteParam) setReferenceNote(referenceNoteParam);
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
-    if (!briefParam && !resumeJob) return;
-    if (!resumeJob && !source && !projectNameParam) return;
+    if (!briefParam && !resumeJob) {
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (!resumeJob && !source && !projectNameParam) {
+      return () => {
+        cancelled = true;
+      };
+    }
     if (briefParam) {
       setWorkspaceText(briefParam);
       if (toolId === 'marketing-detail') setMarketingDetailPrompt(briefParam);
@@ -1833,38 +1902,147 @@ export function LightchainWorkbenchPage() {
       setMarketingProjectNameDraft(projectNameParam.slice(0, 80));
     }
     if (referenceNoteParam) setReferenceNote(referenceNoteParam);
-    if (!resumeJob) return;
+    if (!resumeJob) {
+      return () => {
+        cancelled = true;
+      };
+    }
     if (!currentBrand?.id || !user?.id) {
       setResumeInputReadback('unavailable');
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
-    const resumed = readLightchainResumeInput(listWorkspaceArtifacts(currentBrand.id, user?.id), resumeJob);
-    if (!resumed) {
+    const artifacts = listWorkspaceArtifacts(currentBrand.id, user?.id);
+    const resumed = readLightchainResumeInput(artifacts, resumeJob);
+    const resumedResult = readLightchainResumeResult(artifacts, resumeJob);
+    const canRestoreResult = Boolean(resumedResult && (!toolId || resumedResult.toolId === selectedTool.id));
+    if (!resumed && !canRestoreResult) {
       setResumeInputReadback('unavailable');
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
-    const nextSlots = resumed.slots.reduce<Record<MaterialSlotKey, { name: string; kind: string; imageUrl: string } | null>>(
-      (slots, slot) => ({ ...slots, [slot.key]: slot }),
-      { primary: null, secondary: null },
-    );
-    setMaterialSlotFiles(nextSlots);
-    const primary = nextSlots.primary;
-    if (primary) {
-      setGarmentImageUrl(primary.imageUrl);
-      setGarmentFileName(primary.name);
-      setGarmentCategory(primary.kind);
+    if (resumed) {
+      const nextSlots = resumed.slots.reduce<Record<MaterialSlotKey, { name: string; kind: string; imageUrl: string } | null>>(
+        (slots, slot) => ({ ...slots, [slot.key]: slot }),
+        { primary: null, secondary: null },
+      );
+      setMaterialSlotFiles(nextSlots);
+      const primary = nextSlots.primary;
+      if (primary) {
+        setGarmentImageUrl(primary.imageUrl);
+        setGarmentFileName(primary.name);
+        setGarmentCategory(primary.kind);
+        setAnalysisStatus('ready');
+      }
+      if (resumed.modelFormState) {
+        setModelFormState((current) => ({ ...current, ...resumed.modelFormState }));
+      }
+    }
+
+    if (!canRestoreResult || !resumedResult) {
+      setResumeInputReadback('restored');
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const imageReference = {
+      storage_path: resumedResult.storagePath ?? resumedResult.imageUrl,
+      image_url: resumedResult.imageUrl,
+    };
+    void withSignedImageUrls([imageReference])
+      .then(([signedImage]) => {
+        if (cancelled) return;
+        const imageUrl = signedImage?.image_url?.trim();
+        if (!imageUrl) {
+          setResumeInputReadback(resumed ? 'restored' : 'unavailable');
+          return;
+        }
+        setLightchainResult({
+          toolId: resumedResult.toolId,
+          title: resumedResult.title,
+          summary: resumedResult.summary,
+          imageUrl,
+          generationMode: resumedResult.generationMode,
+          provider: resumedResult.provider,
+          backendProvider: resumedResult.backendProvider,
+          jobId: resumedResult.jobId,
+          imageId: resumedResult.imageId,
+          storagePath: resumedResult.storagePath,
+          artifactId: resumedResult.artifactId,
+          parityRuntime: resumedResult.parityRuntime,
+        });
+        setResumeInputReadback('restored');
+      })
+      .catch(() => {
+        if (!cancelled) setResumeInputReadback(resumed ? 'restored' : 'unavailable');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBrand?.id, searchParams, selectedTool.id, toolId, user?.id]);
+
+  useEffect(() => {
+    const libraryArtifactId = searchParams.get('libraryArtifactId');
+    if (!libraryArtifactId || !currentBrand?.id) return;
+    let cancelled = false;
+    const artifact = listWorkspaceArtifacts(currentBrand.id, user?.id)
+      .find((candidate) => candidate.id === libraryArtifactId);
+    if (!artifact) {
+      setResumeInputReadback('unavailable');
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const restoreLibraryArtifact = async () => {
+      const sourceStoragePath = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
+      const [signedArtifact] = await withSignedImageUrls([{
+        storage_path: sourceStoragePath ?? artifact.imageUrl,
+        image_url: artifact.imageUrl,
+      }]).catch(() => []);
+      const imageUrl = signedArtifact?.image_url?.trim() || (sourceStoragePath ? '' : artifact.imageUrl.trim());
+      if (cancelled) return;
+      if (!imageUrl) {
+        setResumeInputReadback('unavailable');
+        return;
+      }
+
+      const nextItem: MaterialSlotFile = {
+        name: artifact.title || 'Library素材',
+        kind: (metadataString(artifact, 'toolTitle') ?? artifact.featureType) || 'Library素材',
+        imageUrl,
+        sourceImageId: metadataString(artifact, 'sourceImageId') ?? artifact.id,
+        sourceStoragePath,
+      };
+      setMaterialSlotFiles({ primary: nextItem, secondary: null });
+      setGarmentImageUrl(imageUrl);
+      setGarmentFileName(nextItem.name);
+      setGarmentCategory(nextItem.kind);
       setAnalysisStatus('ready');
-    }
-    if (resumed.modelFormState) {
-      setModelFormState((current) => ({ ...current, ...resumed.modelFormState }));
-    }
-    setResumeInputReadback('restored');
-  }, [currentBrand?.id, searchParams, toolId, user?.id]);
+      setWorkspaceText((current) => current || artifact.prompt || '');
+      setReferenceNote((current) => current || `Library素材: ${nextItem.name}`);
+      resetWorkbenchMaskState();
+      setResumeInputReadback('restored');
+    };
+
+    void restoreLibraryArtifact();
+    return () => {
+      cancelled = true;
+    };
+    // Library handoff intentionally binds to the current workbench session.
+  }, [currentBrand?.id, searchParams, user?.id]);
 
   useEffect(() => {
     return () => {
+      lightchainGenerationSequenceRef.current += 1;
+      lightchainGenerationRequestRef.current = null;
       printingGenerationSequenceRef.current += 1;
       printingGenerationRequestRef.current = null;
+      pendingRightsGenerationRef.current = null;
     };
   }, []);
 
@@ -1899,7 +2077,7 @@ export function LightchainWorkbenchPage() {
     window.setTimeout(resolve, 48);
   });
 
-  const handlePrintingImageGenerate = async () => {
+  const handlePrintingImageGenerate = async (options?: { rightsAlreadyConfirmed?: boolean }) => {
     if (isPrintingImageGenerationLocked) return;
     if (aiGenerateDisabled) {
       toast.error(isPrintingCutoutProcessing ? '背景の透明化が完了するまでお待ちください' : '先に素材画像を選択してください');
@@ -1913,11 +2091,14 @@ export function LightchainWorkbenchPage() {
       toast.error('ブランドを選択してください');
       return;
     }
-    if (!providerRightsConfirmed) {
-      toast.error('AI生成前に、アップロード素材の権利・利用許諾を確認してください');
-      setLightchainGenerationError('rights_confirmation_required');
+    if (!providerRightsConfirmed && !options?.rightsAlreadyConfirmed) {
+      pendingRightsGenerationRef.current = { kind: 'printing' };
+      setRightsConfirmationDraft(false);
+      setRightsConfirmationOpen(true);
       return;
     }
+
+    const rightsConfirmedForRequest = providerRightsConfirmed || options?.rightsAlreadyConfirmed === true;
 
     const requestId = ++printingGenerationSequenceRef.current;
     printingGenerationRequestRef.current = requestId;
@@ -1956,7 +2137,7 @@ export function LightchainWorkbenchPage() {
         currentBrand.id,
         {
           referenceImageUrls: [materialSlotFiles.secondary.imageUrl],
-          rightsConfirmed: providerRightsConfirmed,
+          rightsConfirmed: rightsConfirmedForRequest,
           lightchainCompat: {
             lightchainFeatureId: selectedTool.id,
             lightchainFeatureTitle: selectedTool.title,
@@ -2203,12 +2384,10 @@ export function LightchainWorkbenchPage() {
     return true;
   };
 
-  const handleLightchainPreviewGenerate = async (overrides?: {
-    summary?: string;
-    title?: string;
-    brief?: string;
-    allowBriefOnly?: boolean;
-  }) => {
+  const handleLightchainPreviewGenerate = async (
+    overrides?: LightchainPreviewOverrides,
+    options?: { rightsAlreadyConfirmed?: boolean },
+  ) => {
     if (selectedTool.id === 'fabric-image' && materialRequirementsMissing) {
       setFabricNotice('先に生地をアップロードしてください');
       toast.error('先に生地をアップロードしてください');
@@ -2317,14 +2496,21 @@ export function LightchainWorkbenchPage() {
       toast.error('先に主素材画像を選択してください');
       return;
     }
-    if (!providerRightsConfirmed) {
-      const message = 'rights_confirmation_required';
-      setLightchainGenerationError(message);
-      toast.error('AI生成前に、アップロード素材の権利・利用許諾を確認してください');
+    if (!providerRightsConfirmed && !options?.rightsAlreadyConfirmed) {
+      pendingRightsGenerationRef.current = { kind: 'generic', overrides };
+      setRightsConfirmationDraft(false);
+      setRightsConfirmationOpen(true);
       return;
     }
 
+    const rightsConfirmedForRequest = providerRightsConfirmed || options?.rightsAlreadyConfirmed === true;
+
+    // Guard before the first state update so rapid clicks cannot submit two
+    // provider requests during the same render turn.
+    if (lightchainGenerationRequestRef.current !== null || lightchainGenerationRunning) return;
+
     const requestId = ++lightchainGenerationSequenceRef.current;
+    lightchainGenerationRequestRef.current = requestId;
     setLightchainGenerationRunning(true);
     setLightchainGenerationError(null);
     // Keep the last successful result visible while a retry is running. Input
@@ -2375,7 +2561,7 @@ export function LightchainWorkbenchPage() {
           gender,
           imageUrl: providerSourceImageUrl,
           modelReferenceImageUrl: materialSlotFiles.secondary?.imageUrl,
-          rightsConfirmed: providerRightsConfirmed,
+          rightsConfirmed: rightsConfirmedForRequest,
           lightchainCompat,
           materialReferences,
           layerPlan: { source: providerSourceImageUrl ? 'uploaded-primary' : 'brief-only', secondaryReference: Boolean(materialSlotFiles.secondary) },
@@ -2391,7 +2577,7 @@ export function LightchainWorkbenchPage() {
         if (!providerSourceImageUrl) throw new Error(`provider_input_missing:${selectedTool.id}`);
         const editResult = await editImageWithPrompt(providerSourceImageUrl, providerPrompt, currentBrand.id, {
           referenceImageUrls: materialSlotFiles.secondary?.imageUrl ? [materialSlotFiles.secondary.imageUrl] : [],
-          rightsConfirmed: providerRightsConfirmed,
+          rightsConfirmed: rightsConfirmedForRequest,
           lightchainCompat,
           materialReferences,
           layerPlan: { source: 'uploaded-primary', secondaryReference: Boolean(materialSlotFiles.secondary) },
@@ -2411,7 +2597,7 @@ export function LightchainWorkbenchPage() {
           lightchainCompat,
           materialReferences,
           compositionPreview: { summary: generationSummary, route: selectedTool.lightchainRoute, parityRuntime },
-          rightsConfirmed: providerRightsConfirmed,
+          rightsConfirmed: rightsConfirmedForRequest,
         });
         providerImageUrl = generatedResult.imageUrl;
         providerJobId = generatedResult.jobId;
@@ -2485,6 +2671,7 @@ export function LightchainWorkbenchPage() {
       toast.error(message);
     } finally {
       if (lightchainGenerationSequenceRef.current === requestId) {
+        lightchainGenerationRequestRef.current = null;
         setLightchainGenerationRunning(false);
         setImageRepairGenerating(false);
       }
@@ -2837,41 +3024,87 @@ export function LightchainWorkbenchPage() {
   };
 
   const specialProviderGenerationLocked = !lightchainProviderSupported || lightchainGenerationRunning;
-  const renderLightchainProviderGate = () => (
-    <div className="mt-4 space-y-2 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] p-3" data-testid="lightchain-special-provider-gate">
-      {lightchainProviderSupported ? (
-        <label className="flex cursor-pointer items-start gap-3 text-xs leading-5 text-cyan-50">
+  const renderLightchainProviderGate = () => {
+    if (!lightchainProviderSupported) {
+      if (!['video-workstation', 'video-detail'].includes(selectedTool.id)) return null;
+      return (
+        <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-3 text-xs font-semibold leading-5 text-amber-100" data-testid="lightchain-special-provider-gate">
+          この機能のプロバイダが未接続のため、生成は開始されません。
+        </p>
+      );
+    }
+    if (!lightchainGenerationRunning && !lightchainGenerationError) return null;
+    return (
+      <div className="mt-4 space-y-2" data-testid="lightchain-special-provider-gate">
+        {lightchainGenerationRunning && (
+          <p className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-2 text-xs font-semibold text-cyan-50">AI生成を実行中です。</p>
+        )}
+        {lightchainGenerationError && (
+          <p className="rounded-xl border border-rose-300/20 bg-rose-300/[0.08] px-3 py-2 text-xs font-semibold text-rose-100" data-testid="lightchain-generation-error">
+            {lightchainGenerationError}
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  const lightchainRightsConfirmationModal = (
+    <Modal
+      isOpen={rightsConfirmationOpen}
+      onClose={() => {
+        pendingRightsGenerationRef.current = null;
+        setRightsConfirmationDraft(false);
+        setRightsConfirmationOpen(false);
+      }}
+      title="権利確認"
+      size="md"
+      footer={(
+        <div className="flex justify-end gap-3">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              pendingRightsGenerationRef.current = null;
+              setRightsConfirmationDraft(false);
+              setRightsConfirmationOpen(false);
+            }}
+          >
+            キャンセル
+          </Button>
+          <Button
+            onClick={() => {
+              const pending = pendingRightsGenerationRef.current;
+              pendingRightsGenerationRef.current = null;
+              setProviderRightsConfirmed(true);
+              setRightsConfirmationDraft(false);
+              setRightsConfirmationOpen(false);
+              if (pending?.kind === 'printing') {
+                void handlePrintingImageGenerate({ rightsAlreadyConfirmed: true });
+              } else if (pending?.kind === 'generic') {
+                void handleLightchainPreviewGenerate(pending.overrides, { rightsAlreadyConfirmed: true });
+              }
+            }}
+            disabled={!rightsConfirmationDraft}
+          >
+            確認して続ける
+          </Button>
+        </div>
+      )}
+    >
+      <div data-testid="lightchain-rights-confirmation" className="space-y-4">
+        <p className="text-sm leading-6 text-neutral-600 dark:text-white/70">
+          AI生成へ進む前に、アップロードした画像・人物・柄・生地を利用する権利があることを確認してください。
+        </p>
+        <label className="flex items-start gap-3 rounded-xl border border-neutral-200 p-4 text-sm leading-6 dark:border-white/10">
           <input
             type="checkbox"
-            checked={providerRightsConfirmed}
-            onChange={(event) => {
-              setProviderRightsConfirmed(event.target.checked);
-              setLightchainGenerationError(null);
-            }}
-            className="mt-1 h-4 w-4 accent-[#65d3cf]"
-            data-testid="lightchain-rights-confirmation"
+            checked={rightsConfirmationDraft}
+            onChange={(event) => setRightsConfirmationDraft(event.target.checked)}
+            className="mt-1 h-4 w-4 shrink-0 accent-cyan-500"
           />
-          <span>
-            アップロードした画像・人物・柄・生地について、AI生成に利用する権利または許諾を確認済みです。
-            <span className="mt-1 block text-[11px] text-cyan-100/60">確認後のみ実プロバイダを実行します。未確認時は結果を作成しません。</span>
-          </span>
+          <span>入力素材の利用権限を確認しました。確認後、AIプロバイダーへ送信して生成します。</span>
         </label>
-      ) : (
-        <>
-          <p className="rounded-xl border border-amber-300/20 bg-amber-300/[0.08] px-3 py-2 text-xs font-semibold leading-5 text-amber-100" data-testid="lightchain-special-provider-error">
-            この機能のプロバイダが未接続のため、生成は開始されません。
-          </p>
-        </>
-      )}
-      {lightchainGenerationRunning && (
-        <p className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-2 text-xs font-semibold text-cyan-50">AI生成を実行中です。</p>
-      )}
-      {lightchainGenerationError && (
-        <p className="rounded-xl border border-rose-300/20 bg-rose-300/[0.08] px-3 py-2 text-xs font-semibold text-rose-100" data-testid="lightchain-generation-error">
-          {lightchainGenerationError}
-        </p>
-      )}
-    </div>
+      </div>
+    </Modal>
   );
 
   const handleOpenMaskAdjustment = () => {
@@ -3675,6 +3908,7 @@ export function LightchainWorkbenchPage() {
                         >
                           ダウンロード
                         </button>
+                        <LightchainResultDestinations />
                       </div>
                     </div>
                   </div>
@@ -3818,6 +4052,7 @@ export function LightchainWorkbenchPage() {
                       >
                         ダウンロード
                       </button>
+                      <LightchainResultDestinations />
                     </div>
                   </div>
                 </div>
@@ -4080,6 +4315,7 @@ export function LightchainWorkbenchPage() {
                   >
                     ダウンロード
                   </button>
+                  <LightchainResultDestinations />
                 </div>
               )}
             </div>
@@ -4313,34 +4549,6 @@ export function LightchainWorkbenchPage() {
                     </button>
                   ))}
                 </div>
-                {lightchainProviderSupported && (
-                  <div className="mt-4 space-y-2 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] p-3" data-testid="lightchain-provider-gate">
-                    <label className="flex cursor-pointer items-start gap-3 text-xs leading-5 text-cyan-50">
-                      <input
-                        type="checkbox"
-                        checked={providerRightsConfirmed}
-                        onChange={(event) => {
-                          setProviderRightsConfirmed(event.target.checked);
-                          setLightchainGenerationError(null);
-                        }}
-                        className="mt-1 h-4 w-4 accent-[#65d3cf]"
-                        data-testid="lightchain-rights-confirmation"
-                      />
-                      <span>
-                        アップロードした画像・人物・柄・生地について、AI生成に利用する権利または許諾を確認済みです。
-                        <span className="mt-1 block text-[11px] text-cyan-100/60">確認後のみ実プロバイダを実行します。未確認時は結果を作成しません。</span>
-                      </span>
-                    </label>
-                    {lightchainGenerationRunning && (
-                      <p className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-2 text-xs font-semibold text-cyan-50">AI生成を実行中です。</p>
-                    )}
-                    {lightchainGenerationError && (
-                      <p className="rounded-xl border border-rose-300/20 bg-rose-300/[0.08] px-3 py-2 text-xs font-semibold text-rose-100" data-testid="lightchain-generation-error">
-                        {lightchainGenerationError}
-                      </p>
-                    )}
-                  </div>
-                )}
                 <div className="mt-4 rounded-2xl border border-white/10 bg-[#111719] p-3">
                   <textarea
                     value={marketingDetailPrompt}
@@ -4384,6 +4592,7 @@ export function LightchainWorkbenchPage() {
                 <div className="flex items-center gap-2">
                   <button type="button" onClick={handleSaveToCanvas} disabled={isSaving || !lightchainResult} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-60">保存</button>
                   <button type="button" onClick={() => void handleDownloadLightchainResult()} disabled={!lightchainResult} data-testid="marketing-detail-result-download" className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-60">ダウンロード</button>
+                  <LightchainResultDestinations />
                 </div>
               </div>
               <p className="mt-3 text-sm font-semibold text-white">マーケティング詳細プレビュー</p>
@@ -4417,7 +4626,7 @@ export function LightchainWorkbenchPage() {
       <main className="dark min-h-screen bg-[#101010] px-4 py-4 text-white sm:px-6" data-testid="lightchain-print-design-project-page">
         <section className="mx-auto max-w-[1180px]">
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-base font-semibold text-white">柄・グラフィック</h1>
+            <h1 className="text-base font-semibold text-white">{currentDisplayTitle}</h1>
             <button
               type="button"
               onClick={handleProjectHomeGenerate}
@@ -4453,6 +4662,7 @@ export function LightchainWorkbenchPage() {
                 >
                   ダウンロード
                 </button>
+                <LightchainResultDestinations />
               </div>
             </div>
           )}
@@ -4640,6 +4850,7 @@ export function LightchainWorkbenchPage() {
                     <button type="button" onClick={() => void handleDownloadLightchainResult()} data-testid="lightchain-print-design-detail-result-download" className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
                       ダウンロード
                     </button>
+                    <LightchainResultDestinations />
                   </div>
                 )}
               </div>
@@ -4714,6 +4925,7 @@ export function LightchainWorkbenchPage() {
                 >
                   ダウンロード
                 </button>
+                <LightchainResultDestinations />
               </div>
             </div>
           )}
@@ -4894,6 +5106,7 @@ export function LightchainWorkbenchPage() {
                     <button type="button" onClick={() => void handleDownloadLightchainResult()} data-testid="lightchain-wear-design-detail-result-download" className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
                       ダウンロード
                     </button>
+                    <LightchainResultDestinations />
                   </div>
                 )}
               </div>
@@ -5045,6 +5258,7 @@ export function LightchainWorkbenchPage() {
                     >
                       ダウンロード
                     </button>
+                    <LightchainResultDestinations />
                   </div>
               </div>
               <div className="mt-3 grid gap-4 md:grid-cols-[260px_1fr]">
@@ -5107,6 +5321,7 @@ export function LightchainWorkbenchPage() {
           </div>
         )}
         {lightchainResultModal}
+        {lightchainRightsConfirmationModal}
       </main>
     );
   }
@@ -5126,10 +5341,10 @@ export function LightchainWorkbenchPage() {
                 {isFeatureDetail ? selectedTool.lightchainRoute : `制作 / ${totalToolCount}機能`}
               </p>
               <h1 className={`${isFeatureDetail ? 'mt-2 text-xl sm:text-2xl' : 'mt-4 text-2xl sm:text-3xl'} font-semibold tracking-tight text-neutral-950 dark:text-white`}>
-                {isFeatureDetail ? selectedTool.title : '用途を選んで、そのまま制作へ進む'}
+                {isFeatureDetail ? currentDisplayTitle : '用途を選んで、そのまま制作へ進む'}
               </h1>
               <p className={`${isFeatureDetail ? 'mt-1 max-w-4xl text-xs leading-6' : 'mt-2 max-w-3xl text-sm leading-7'} text-neutral-600 dark:text-neutral-300`}>
-                {isFeatureDetail ? selectedTool.description : '既存の生成、フィッティング、柄、モデル、動画、Canvasへつながる入口です。'}
+                {isFeatureDetail ? selectedTool.description : '既存の生成、フィッティング、柄、モデル、Canvasへつながる入口です。'}
               </p>
             </div>
             <label className={`${isFeatureDetail ? 'hidden xl:flex' : 'flex'} min-w-0 items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm dark:border-neutral-700 dark:bg-neutral-950 lg:w-[420px]`}>
@@ -5324,68 +5539,11 @@ export function LightchainWorkbenchPage() {
                   </Link>
                 ))}
               </div>
-              {lightchainProviderSupported ? (
-                <div className="mt-3 space-y-2 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] px-3 py-3" data-testid="lightchain-provider-gate">
-                  <label className="flex cursor-pointer items-start gap-3 text-xs leading-5 text-cyan-50">
-                    <input
-                      type="checkbox"
-                      checked={providerRightsConfirmed}
-                      onChange={(event) => {
-                        setProviderRightsConfirmed(event.target.checked);
-                        setLightchainGenerationError(null);
-                      }}
-                      className="mt-1 h-4 w-4 accent-[#65d3cf]"
-                      data-testid="lightchain-rights-confirmation"
-                    />
-                    <span>
-                      アップロードした画像・人物・柄・生地について、AI生成に利用する権利または許諾を確認済みです。
-                      <span className="mt-1 block text-[11px] text-cyan-100/60">確認後のみ実プロバイダを実行します。未確認時は結果を作成しません。</span>
-                    </span>
-                  </label>
-                  {lightchainGenerationRunning && (
-                    <p className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-2 text-xs font-semibold text-cyan-50" data-testid="lightchain-generation-running">
-                      AI生成を実行中です。
-                    </p>
-                  )}
-                  {lightchainGenerationError && (
-                    <p className="rounded-xl border border-rose-300/20 bg-rose-300/[0.08] px-3 py-2 text-xs font-semibold text-rose-100" data-testid="lightchain-generation-error">
-                      {lightchainGenerationError}
-                    </p>
-                  )}
-                </div>
-              ) : selectedTool.id === 'video-workstation' || selectedTool.id === 'video-detail' ? (
+              {!lightchainProviderSupported && (selectedTool.id === 'video-workstation' || selectedTool.id === 'video-detail') ? (
                 <p className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] px-3 py-3 text-xs font-semibold leading-5 text-amber-100" data-testid="lightchain-video-provider-blocker">
                   動画プロバイダの同一run tools/readback が未確認のため、AI生成は開始できません。
                 </p>
               ) : null}
-            </div>
-          )}
-
-          {isFeatureDetail && isModelToolDetail && lightchainProviderSupported && (
-            <div className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] px-3 py-3 lg:ml-[92px] lg:max-w-[636px]" data-testid="lightchain-provider-gate">
-              <label className="flex cursor-pointer items-start gap-3 text-xs leading-5 text-cyan-50">
-                <input
-                  type="checkbox"
-                  checked={providerRightsConfirmed}
-                  onChange={(event) => {
-                    setProviderRightsConfirmed(event.target.checked);
-                    setLightchainGenerationError(null);
-                  }}
-                  className="mt-1 h-4 w-4 accent-[#65d3cf]"
-                  data-testid="lightchain-rights-confirmation"
-                />
-                <span>アップロードした画像・人物について、AI生成に利用する権利または許諾を確認済みです。<span className="mt-1 block text-[11px] text-cyan-100/60">確認後のみ実プロバイダを実行します。</span></span>
-              </label>
-              {lightchainGenerationRunning && (
-                <p className="mt-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.08] px-3 py-2 text-xs font-semibold text-cyan-50" data-testid="lightchain-generation-running">
-                  AI生成を実行中です。
-                </p>
-              )}
-              {lightchainGenerationError && (
-                <p className="mt-2 rounded-xl border border-rose-300/20 bg-rose-300/[0.08] px-3 py-2 text-xs font-semibold text-rose-100" data-testid="lightchain-generation-error">
-                  {lightchainGenerationError}
-                </p>
-              )}
             </div>
           )}
 
@@ -5953,7 +6111,7 @@ export function LightchainWorkbenchPage() {
                         <button
                           type="button"
                           disabled={aiGenerateDisabled || isPrintingImageGenerationLocked}
-                          onClick={handlePrintingImageGenerate}
+                          onClick={() => void handlePrintingImageGenerate()}
                           className="inline-flex w-full items-center justify-center rounded-2xl bg-[#65d3cf] px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc] disabled:bg-[#243236] disabled:text-neutral-500"
                         >
                           {printingGenerationStatus === 'error'
@@ -6285,7 +6443,7 @@ export function LightchainWorkbenchPage() {
                     <p className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
                       {selectedTool.lightchainRoute}
                     </p>
-                    <h3 className="mt-1 text-xl font-semibold text-neutral-900 dark:text-white">{selectedTool.title}</h3>
+                    <h3 className="mt-1 text-xl font-semibold text-neutral-900 dark:text-white">{currentDisplayTitle}</h3>
                   </div>
                 </div>
 
@@ -6497,21 +6655,6 @@ export function LightchainWorkbenchPage() {
                       </div>
                       )}
 
-                      {lightchainProviderSupported && (
-                        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-cyan-200/20 bg-cyan-50 px-3 py-3 text-xs leading-5 text-cyan-900 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-50">
-                          <input
-                            type="checkbox"
-                            checked={providerRightsConfirmed}
-                            onChange={(event) => {
-                              setProviderRightsConfirmed(event.target.checked);
-                              setLightchainGenerationError(null);
-                            }}
-                            className="mt-1 h-4 w-4 accent-cyan-600"
-                            data-testid="lightchain-rights-confirmation"
-                          />
-                          <span>アップロード素材の権利・利用許諾を確認済みです。確認後のみ実プロバイダを実行します。</span>
-                        </label>
-                      )}
                       <button
                         type="button"
                         disabled={aiGenerateDisabled || lightchainGenerationRunning}
@@ -6744,6 +6887,7 @@ export function LightchainWorkbenchPage() {
                                   type="button"
                                   onClick={handleSaveToCanvas}
                                   disabled={isSaving}
+                                  data-testid="lightchain-result-save-to-canvas"
                                   className="w-full rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                                 >
                                   保存
@@ -6757,6 +6901,33 @@ export function LightchainWorkbenchPage() {
                                 >
                                   ダウンロード
                                 </button>
+                                <nav
+                                  className="grid grid-cols-3 gap-2 pt-1"
+                                  aria-label="生成結果の保存先"
+                                  data-testid="lightchain-result-destinations"
+                                >
+                                  <Link
+                                    to="/gallery"
+                                    data-testid="lightchain-result-gallery-link"
+                                    className="rounded-lg border border-white/10 px-2 py-2 text-center text-[11px] font-semibold text-neutral-300 transition hover:border-cyan-300/50 hover:text-white"
+                                  >
+                                    Gallery
+                                  </Link>
+                                  <Link
+                                    to="/history"
+                                    data-testid="lightchain-result-history-link"
+                                    className="rounded-lg border border-white/10 px-2 py-2 text-center text-[11px] font-semibold text-neutral-300 transition hover:border-cyan-300/50 hover:text-white"
+                                  >
+                                    History
+                                  </Link>
+                                  <Link
+                                    to="/jobs"
+                                    data-testid="lightchain-result-jobs-link"
+                                    className="rounded-lg border border-white/10 px-2 py-2 text-center text-[11px] font-semibold text-neutral-300 transition hover:border-cyan-300/50 hover:text-white"
+                                  >
+                                    Jobs
+                                  </Link>
+                                </nav>
                               </div>
 	                          </div>
 	                        </div>
@@ -6862,6 +7033,7 @@ export function LightchainWorkbenchPage() {
         </div>
       )}
       {lightchainResultModal}
+      {lightchainRightsConfirmationModal}
     </main>
   );
 }

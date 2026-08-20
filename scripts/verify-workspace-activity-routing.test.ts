@@ -113,8 +113,10 @@ test('provider artifacts reconstruct a completed Jobs entry when no generation_j
 test('Lightchain workbench accepts a resumeJob readback without a legacy source handoff', async () => {
   const source = await read('../src/pages/LightchainWorkbenchPage.tsx');
   assert.match(source, /const resumeJob = searchParams\.get\('resumeJob'\)/);
-  assert.match(source, /if \(!briefParam && !resumeJob\) return/);
-  assert.match(source, /readLightchainResumeInput\(listWorkspaceArtifacts\(currentBrand\.id, user\?\.id\), resumeJob\)/);
+  assert.match(source, /if \(!briefParam && !resumeJob\) \{[\s\S]{0,180}cancelled = true/);
+  assert.match(source, /const artifacts = listWorkspaceArtifacts\(currentBrand\.id, user\?\.id\)/);
+  assert.match(source, /readLightchainResumeInput\(artifacts, resumeJob\)/);
+  assert.match(source, /readLightchainResumeResult\(artifacts, resumeJob\)/);
   assert.match(source, /data-testid="lightchain-resume-input-unavailable"/);
   assert.match(source, /sourceResumePath: `\/lightchain\/\$\{selectedTool\.id\}`/);
 });

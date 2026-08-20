@@ -29,12 +29,27 @@ export function Layout() {
     .filter((route) => route !== '/brand/settings')
     .concat(['/generate', '/editor/changeColor']);
   const lightchainDirectRoutes = [
+    '/marketing',
     '/creator',
+    '/agent',
     '/model',
+    '/model-library/model-custom-form',
     '/tools/fabric',
+    '/tools/printing',
+    '/tools/line-draft-to-tile',
+    '/tools/svg-convert',
+    '/tools/reactor',
+    '/tools/vector-special',
+    '/printing',
+    '/editor/changeColor',
+    '/editor/pattern',
+    '/editor/patternDesign',
+    '/model-base/style',
     '/designProduction',
-    '/asset-center',
+    '/flow/integration',
+    '/flow/laboratory',
     '/flow/orientedDesign',
+    '/asset-center',
   ] as const;
   const lightchainWorkspaceRoutes = ['/gallery', '/history', '/jobs'] as const;
   const isLightchainRoute = location.pathname.startsWith('/lightchain')

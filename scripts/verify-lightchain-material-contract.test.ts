@@ -117,10 +117,17 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /data-testid="lightchain-fabric-input"/);
   assert.match(page, /data-testid="fabric-result-history"/);
   assert.match(page, /value=\{fabricPrompt\}[\s\S]*?onChange=\{\(event\) => setFabricPrompt\(event\.target\.value\)\}/);
-  assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState !== 'done' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0 \|\| !providerRightsConfirmed\}/);
+  assert.match(page, /disabled=\{isGenerating \|\| fabricPreviewState !== 'done' \|\| !fabricBase \|\| !fabricDesign \|\| fabricPresetIds\.length === 0\}/);
+  assert.match(page, /isOpen=\{rightsConfirmationOpen\}/);
+  assert.match(page, /title="権利確認"/);
   assert.match(page, /data-testid="lightchain-material-rights-confirmation"/);
   assert.match(page, /AIプロバイダーへ送信して生成します/);
-  assert.match(page, /<Link to="\/designProduction"[^>]*>\s*今すぐ体験\s*<\/Link>/);
+  assert.match(page, /setRightsConfirmationOpen\(true\)/);
+  assert.match(page, /checked=\{rightsConfirmationDraft\}/);
+  assert.doesNotMatch(page, /data-testid="lightchain-material-provider-gate"/);
+  assert.doesNotMatch(page, /この機能はまもなく終了します/);
+  assert.match(page, /data-testid="lightchain-material-retry-fabric"/);
+  assert.match(page, /data-testid="lightchain-material-retry-printing"/);
   assert.match(page, /切り抜き済み生地を衣服領域へ適用した参考/);
   assert.match(page, /buildFabricModelGarmentMask/);
   assert.match(page, /buildHighPrecisionMaterialCutoutDataUrl/);
@@ -148,7 +155,7 @@ test('fabric uses the Light-style parity shell while retaining the real generati
   assert.match(page, /const imageLoadCache = new Map<string, Promise<HTMLImageElement>>\(\)/);
   assert.ok(page.includes("img.crossOrigin = 'anonymous'"));
   assert.ok(page.includes("https?:"));
-  assert.match(page, /const handleGenerate = async \(\) => \{/);
+  assert.match(page, /const handleGenerate = async \(options\?: \{ rightsAlreadyConfirmed\?: boolean \}\) => \{/);
   assert.match(page, /const providerResult = await withTimeout\(/);
   assert.match(page, /lightchainFeatureId: 'fabric-image'/);
   assert.match(page, /maskApplied: true/);

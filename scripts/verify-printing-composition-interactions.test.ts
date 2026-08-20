@@ -273,7 +273,14 @@ test('printing exposes one ordered readiness funnel before generation', () => {
   assert.match(page, /printPlacementConfirmed && !printPlacementSessionOpen/);
   const readiness = page.indexOf('data-testid="printing-readiness-summary"');
   const details = page.indexOf('data-testid={isPrinting ? \'printing-control-rail-details\' : undefined}');
-  const generate = page.indexOf('onClick={handleGenerate}');
+  // The workbench handler accepts a request-local rights-confirmation option,
+  // so the pinned button intentionally invokes it through a no-argument
+  // closure rather than passing the React click event as that option object.
+  const generate = Math.max(
+    page.indexOf('onClick={() => void handleGenerate()}'),
+    page.indexOf('onClick={handleGenerate}'),
+  );
+  assert.ok(generate >= 0, 'printing must expose a pinned generate action');
   assert.ok(details < readiness && readiness < generate, 'readiness must appear before the pinned generate action');
 });
 
@@ -350,7 +357,7 @@ test('desktop printing keeps the primary composition and generate action pinned 
   assert.match(page, /↻ リセット/);
   assert.match(page, /data-testid=\{`print-coverage-\$\{coverage\.value\}`\}/);
   assert.match(page, /data-testid="print-result-run-history"/);
-  assert.match(page, /この機能はまもなく終了します/);
+  assert.doesNotMatch(page, /この機能はまもなく終了します/);
   assert.match(layout, /overflow-x-clip/);
   assert.doesNotMatch(layout, /overflow-x-hidden/);
   const results = page.indexOf('data-testid="print-result-run-history"');

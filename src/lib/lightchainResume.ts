@@ -1,4 +1,6 @@
 import type { WorkspaceArtifact } from './localWorkspaceArtifacts';
+import { normalizeGeneratedImageStoragePath } from './storagePathSafety.ts';
+import type { Json } from '../types/database';
 
 export type LightchainResumeSlot = {
   key: 'primary' | 'secondary';
@@ -13,6 +15,22 @@ export type LightchainResumeInput = {
   modelFormState: Record<string, string | number> | null;
 };
 
+export type LightchainResumeResult = {
+  artifactId: string;
+  toolId: string;
+  title: string;
+  summary: string;
+  /** Local/data/blob URL only. Remote results must be re-signed by the caller. */
+  imageUrl: string;
+  storagePath: string | null;
+  generationMode: 'provider' | 'preview';
+  provider: string | null;
+  backendProvider: string | null;
+  jobId: string | null;
+  imageId: string | null;
+  parityRuntime?: Json;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 );
@@ -21,6 +39,34 @@ const isResumableImageUrl = (value: unknown): value is string => (
   typeof value === 'string'
   && /^(?:data:image\/|blob:|local:|\/|\.\.?\/)/i.test(value.trim())
 );
+
+const CANONICAL_STORAGE_PATH_KEYS = new Set([
+  'remoteStoragePath',
+  'storagePath',
+  'storage_path',
+  'sourceStoragePath',
+  'backendStoragePath',
+]);
+
+const readCanonicalStoragePath = (value: unknown, depth = 0): string | null => {
+  if (depth > 6 || value === null || typeof value !== 'object') return null;
+  if (Array.isArray(value)) {
+    for (const child of value) {
+      const nested = readCanonicalStoragePath(child, depth + 1);
+      if (nested) return nested;
+    }
+    return null;
+  }
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (CANONICAL_STORAGE_PATH_KEYS.has(key)) {
+      const normalized = normalizeGeneratedImageStoragePath(child);
+      if (normalized) return normalized;
+    }
+    const nested = readCanonicalStoragePath(child, depth + 1);
+    if (nested) return nested;
+  }
+  return null;
+};
 
 const readSlot = (value: unknown): LightchainResumeSlot | null => {
   if (!isRecord(value)) return null;
@@ -66,6 +112,23 @@ const resumeArtifactMatchesJob = (artifact: WorkspaceArtifact, jobId: string) =>
   || artifact.metadata.remoteJobId === jobId
 );
 
+const readString = (value: unknown): string | null => (
+  typeof value === 'string' && value.trim() ? value.trim() : null
+);
+
+const readProviderResultToolId = (artifact: WorkspaceArtifact): string | null => {
+  const metadataToolId = readString(artifact.metadata.toolId);
+  if (metadataToolId) return metadataToolId;
+  const match = artifact.featureType.match(/^lightchain-(.+)-provider-result$/);
+  return match?.[1] ?? null;
+};
+
+const isProviderResultArtifact = (artifact: WorkspaceArtifact) => (
+  artifact.metadata.providerResultArtifact === true
+  || artifact.metadata.resultKind === 'provider'
+  || artifact.featureType.endsWith('-provider-result')
+);
+
 /**
  * Recover only local, non-expiring source inputs from the same brand's saved
  * workbench artifact. Remote signed URLs are intentionally excluded; a retry
@@ -103,6 +166,55 @@ export const readLightchainResumeInput = (
       artifactId: artifact.id,
       slots,
       modelFormState,
+    };
+  }
+
+  return null;
+};
+
+/**
+ * Read a same-job provider result without treating an old bearer URL as a
+ * durable image. The caller must resolve `storagePath` through the current
+ * signed-URL path before putting the result back into active UI state.
+ */
+export const readLightchainResumeResult = (
+  artifacts: WorkspaceArtifact[],
+  jobId: string | null | undefined,
+): LightchainResumeResult | null => {
+  const normalizedJobId = jobId?.trim();
+  if (!normalizedJobId) return null;
+
+  const candidates = artifacts
+    .filter((artifact) => resumeArtifactMatchesJob(artifact, normalizedJobId) && isProviderResultArtifact(artifact))
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+
+  for (const artifact of candidates) {
+    const toolId = readProviderResultToolId(artifact);
+    if (!toolId) continue;
+    const storagePath = readCanonicalStoragePath(artifact.metadata);
+    const localImageUrl = isResumableImageUrl(artifact.imageUrl) ? artifact.imageUrl.trim() : '';
+    if (!storagePath && !localImageUrl) continue;
+
+    return {
+      artifactId: artifact.id,
+      toolId,
+      title: artifact.title,
+      summary: readString(artifact.metadata.generationSummary)
+        ?? readString(artifact.metadata.resultSummary)
+        ?? artifact.prompt
+        ?? artifact.title,
+      imageUrl: localImageUrl,
+      storagePath,
+      generationMode: 'provider',
+      provider: readString(artifact.metadata.provider),
+      backendProvider: readString(artifact.metadata.backendProvider),
+      jobId: artifact.sourceJobId
+        ?? readString(artifact.metadata.remoteJobId)
+        ?? readString(artifact.metadata.generationJobId),
+      imageId: readString(artifact.metadata.imageId)
+        ?? readString(artifact.metadata.remoteImageId)
+        ?? readString(artifact.metadata.generatedImageId),
+      parityRuntime: artifact.metadata.parityRuntime,
     };
   }
 

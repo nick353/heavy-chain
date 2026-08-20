@@ -47,7 +47,7 @@ const galleryTabs = [
   { id: 'print', label: '柄・プリント' },
   { id: 'visual', label: 'ビジュアル素材' },
   { id: 'marketing', label: 'マーケティングコンテンツ' },
-  { id: 'production', label: '生産のつながりです' },
+  { id: 'production', label: '生産' },
 ] as const;
 
 const galleryCases = [
@@ -162,10 +162,9 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
       <section className="relative overflow-hidden px-5 pb-12 pt-12 sm:px-8 lg:px-10 lg:pt-14">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_55%_6%,rgba(24,78,83,0.22),transparent_40%),linear-gradient(180deg,rgba(5,10,12,0.1),rgba(5,7,8,0.92))]" />
         <div className="relative mx-auto max-w-[1400px]">
-          <div className="flex items-end gap-4">
-            <h1 className="text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">LIGHTCHAIN AI</h1>
-            <p className="pb-1 text-sm text-neutral-400 sm:text-base">アパレル特化のAIデザインワークスペース</p>
-          </div>
+          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+            アパレル特化のAIデザインワークスペース
+          </h1>
 
           <form
             className="mt-7 flex max-w-[520px] items-center rounded-full border border-cyan-300/75 bg-white/[0.035] px-4 py-2 shadow-[0_0_22px_rgba(56,189,248,0.12)] focus-within:border-indigo-300"
@@ -211,7 +210,6 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
               <h2 className="text-lg font-semibold text-white">{activeCategoryMeta.label}</h2>
               <p className="mt-1 text-sm text-neutral-400">{activeCategoryMeta.description}</p>
             </div>
-            <span className="hidden text-xs text-neutral-500 sm:inline">{visibleFeatures.length} tools</span>
           </div>
 
           <div className="mt-3 grid gap-2.5 md:grid-cols-2 xl:grid-cols-3" data-testid="lightchain-tool-grid">

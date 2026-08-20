@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
   getLightchainLauncherBadge,
@@ -85,4 +86,33 @@ test('launcher preserves the current Lightchain card order and display names', (
       'プリントデザイン',
     ],
   });
+});
+
+test('homepage case tabs use the current Lightchain labels', () => {
+  const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
+  assert.match(source, /\{ id: 'production', label: '生産' \}/);
+  assert.doesNotMatch(source, /生産のつながりです/);
+});
+
+test('homepage uses the current Lightchain workspace heading', () => {
+  const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
+  assert.match(source, /アパレル特化のAIデザインワークスペース/);
+  assert.doesNotMatch(source, /<h1[^>]*>LIGHTCHAIN AI<\/h1>/);
+});
+
+test('non-video workbench homepage copy does not expose the excluded video scope', () => {
+  const source = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  assert.match(source, /既存の生成、フィッティング、柄、モデル、Canvasへつながる入口です/);
+  assert.doesNotMatch(source, /既存の生成、フィッティング、柄、モデル、動画、Canvasへつながる入口です/);
+});
+
+test('homepage does not expose a Heavy-only tool count beside the Lightchain category heading', () => {
+  const source = readFileSync(new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /visibleFeatures\.length\} tools/);
+});
+
+test('Lightchain homepage route does not add a Heavy-only padding wrapper around the entry surface', () => {
+  const source = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /<div className="py-10">\s*<GenerateLightchainEntry \/>\s*<\/div>/s);
+  assert.match(source, /<LightchainUnifiedWorkspaceShell>\s*<GenerateLightchainEntry \/>\s*<\/LightchainUnifiedWorkspaceShell>/s);
 });

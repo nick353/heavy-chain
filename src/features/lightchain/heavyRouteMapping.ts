@@ -17,7 +17,7 @@ export const HEAVY_PRODUCT_ROUTE_BY_FEATURE_ID: Readonly<Record<ProductCatalogOb
   'lineart-to-real': '/tools/line-draft-to-tile',
   'change-color': '/editor/changeColor',
   'flat-vector': '/tools/svg-convert',
-  'custom-style': '/brand/settings',
+  'custom-style': '/model-base/style',
   'model-change-background': '/flow/integration',
   'model-body-shape': '/model-library/model-custom-form',
   'flat-to-model': '/fitting',

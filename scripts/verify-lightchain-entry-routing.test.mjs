@@ -4,6 +4,7 @@ import { test } from 'node:test';
 
 const catalogPath = new URL('../src/lib/lightchainParityCatalog.ts', import.meta.url);
 const entryPath = new URL('../src/components/GenerateLightchainEntry.tsx', import.meta.url);
+const appPath = new URL('../src/App.tsx', import.meta.url);
 
 test('keeps fabric try-on in the visible graphics category', async () => {
   const source = await readFile(catalogPath, 'utf8');
@@ -57,4 +58,14 @@ test('excludes deferred video features from the non-video launcher', async () =>
   assert.doesNotMatch(entry, /video-promotion/);
   assert.doesNotMatch(entry, /featureId: 'video-workstation'/);
   assert.doesNotMatch(navigation, /path: '\/video'/);
+});
+
+test('keeps the lazy Lightchain entry branded as Lightchain', async () => {
+  const source = await readFile(appPath, 'utf8');
+  const start = source.indexOf("if (pathname.startsWith('/lightchain'))");
+  const end = source.indexOf('\n  }', start);
+  assert.ok(start >= 0 && end > start, 'Lightchain loading branch is required');
+  const branch = source.slice(start, end);
+  assert.match(branch, /eyebrow: 'LIGHTCHAIN AI'/);
+  assert.doesNotMatch(branch, /eyebrow: 'Heavy Chain'/);
 });

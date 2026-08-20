@@ -143,6 +143,11 @@ try {
     }).catch((error) => {
       evidence.cleanup.contextCloseBlocker = error.message;
     });
+  } else {
+    // No browser context was created when the authenticated state preflight
+    // failed; report that there was nothing to close instead of inventing a
+    // cleanup failure on top of the real blocker.
+    evidence.cleanup.contextClosed = true;
   }
   if (browser) {
     await withTimeout(browser.close(), 10000).then(() => {
@@ -150,6 +155,8 @@ try {
     }).catch((error) => {
       evidence.cleanup.browserCloseBlocker = error.message;
     });
+  } else {
+    evidence.cleanup.browserClosed = true;
   }
   if (previewProcess) {
     previewProcess.kill('SIGTERM');

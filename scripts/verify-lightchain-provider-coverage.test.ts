@@ -128,7 +128,7 @@ test('keeps an uploaded workspace source on the edit-image route even when the U
   );
 });
 
-test('exposes the shared rights gate on every provider-backed early-return screen', () => {
+test('exposes generation-time rights confirmation without a persistent Lightchain gate', () => {
   const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
   const branches = [
     ['AI fitting', 'if (isFeatureDetail && isFittingDetail)', 'if (isFeatureDetail && selectedTool.id !== \'custom-style\' && workspaceStyle)'],
@@ -150,7 +150,50 @@ test('exposes the shared rights gate on every provider-backed early-return scree
 
   assert.match(workbench, /const specialProviderGenerationLocked = !lightchainProviderSupported \|\| lightchainGenerationRunning/);
   assert.match(workbench, /data-testid="lightchain-special-provider-gate"/);
+  assert.match(workbench, /const lightchainRightsConfirmationModal =/);
+  assert.match(workbench, /isOpen=\{rightsConfirmationOpen\}/);
+  assert.match(workbench, /setRightsConfirmationOpen\(true\)/);
+  assert.match(workbench, /data-testid="lightchain-rights-confirmation"/);
+  assert.doesNotMatch(workbench, /data-testid="lightchain-provider-gate"/);
   assert.match(workbench, /data-testid="lightchain-generation-error"/);
+});
+
+test('continues the generation that opened rights confirmation after the user confirms', () => {
+  const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  assert.match(workbench, /type PendingRightsGeneration =/);
+  assert.match(workbench, /const pendingRightsGenerationRef = useRef<PendingRightsGeneration \| null>\(null\)/);
+  assert.match(workbench, /pendingRightsGenerationRef\.current = \{ kind: 'printing' \}/);
+  assert.match(workbench, /pendingRightsGenerationRef\.current = \{ kind: 'generic', overrides \}/);
+  assert.match(workbench, /const pending = pendingRightsGenerationRef\.current/);
+  assert.match(workbench, /handlePrintingImageGenerate\(\{ rightsAlreadyConfirmed: true \}\)/);
+  assert.match(workbench, /handleLightchainPreviewGenerate\(pending\.overrides, \{ rightsAlreadyConfirmed: true \}\)/);
+  assert.match(workbench, /pendingRightsGenerationRef\.current = null;[\s\S]*setProviderRightsConfirmed\(true\)/);
+});
+
+test('passes the rights confirmation override into every provider route without stale React state', () => {
+  const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  assert.match(workbench, /const rightsConfirmedForRequest = providerRightsConfirmed \|\| options\?\.rightsAlreadyConfirmed === true/);
+  assert.equal(
+    (workbench.match(/rightsConfirmed: rightsConfirmedForRequest/g) ?? []).length,
+    4,
+    'printing plus model-matrix, edit-image, and generate-image routes must use the request-local confirmation value',
+  );
+  assert.doesNotMatch(workbench, /rightsConfirmed: providerRightsConfirmed/);
+});
+
+test('continues the dedicated material generation after rights confirmation', () => {
+  const material = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
+  assert.match(material, /const pendingRightsGenerationRef = useRef\(false\)/);
+  assert.match(material, /pendingRightsGenerationRef\.current = true/);
+  assert.match(material, /const pending = pendingRightsGenerationRef\.current/);
+  assert.match(material, /handleGenerate\(\{ rightsAlreadyConfirmed: true \}\)/);
+  assert.match(material, /const rightsConfirmedForRequest = providerRightsConfirmed \|\| options\?\.rightsAlreadyConfirmed === true/);
+  assert.equal(
+    (material.match(/rightsConfirmed: rightsConfirmedForRequest/g) ?? []).length,
+    2,
+    'printing and fabric provider routes must use the request-local confirmation value',
+  );
+  assert.match(material, /pendingRightsGenerationRef\.current = false;[\s\S]*setProviderRightsConfirmed\(true\)/);
 });
 
 test('keeps non-model catalog prompts feature-specific instead of using the generic fallback', () => {
@@ -193,6 +236,12 @@ test('keeps direct provider promotion behind durable result and Canvas lineage g
   assert.match(fitting, /fitting-history-\$\{item\.id\}/);
   assert.match(fitting, /data-testid=\{`fitting-result-download-\$\{item\.bodyType\}-\$\{item\.ageGroup\}-\$\{index\}`\}/);
   assert.match(fitting, /data-testid=\{`fitting-history-download-\$\{item\.id\}`\}/);
+  assert.match(fitting, /data-testid="fitting-result-destinations"/);
+  assert.match(fitting, /data-testid="fitting-result-gallery-link"/);
+  assert.match(fitting, /data-testid="fitting-result-history-link"/);
+  assert.match(fitting, /data-testid="fitting-result-jobs-link"/);
+  assert.match(fitting, /data-testid="fitting-result-save-to-canvas"/);
+  assert.match(fitting, /Canvasへ再利用/);
   assert.match(workbench, /to="\/fitting#fitting-history"/);
   assert.match(workbench, /data-testid="lightchain-fitting-history-link"/);
   assert.match(workbench, /to="\/history"/);
@@ -250,4 +299,52 @@ test('provider retries retain the last completed workbench result until inputs c
   const inputReset = workbench.indexOf('const applyMaterialToSlot');
   assert.ok(inputReset >= 0);
   assert.match(workbench.slice(inputReset, inputReset + 2400), /setLightchainResult\(null\)/);
+});
+
+test('generic Lightchain provider generation rejects rapid duplicate submits', () => {
+  const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  const handlerStart = workbench.indexOf('const handleLightchainPreviewGenerate = async');
+  const handler = workbench.slice(handlerStart, handlerStart + 18_000);
+
+  assert.ok(handlerStart >= 0, 'generic provider handler must remain discoverable');
+  assert.match(workbench, /const lightchainGenerationRequestRef = useRef<number \| null>\(null\)/);
+  assert.match(handler, /if \(lightchainGenerationRequestRef\.current !== null \|\| lightchainGenerationRunning\) return;/);
+  assert.match(handler, /const requestId = \+\+lightchainGenerationSequenceRef\.current;\s*lightchainGenerationRequestRef\.current = requestId;/);
+  assert.match(handler, /lightchainGenerationRequestRef\.current = null;\s*setLightchainGenerationRunning\(false\)/);
+});
+
+test('feature result cards expose connected Gallery, History, and Jobs destinations', () => {
+  const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  const resultCardStart = workbench.indexOf('data-testid="lightchain-result-destinations"');
+  const resultCard = workbench.slice(Math.max(0, resultCardStart - 1800), resultCardStart + 2200);
+
+  assert.ok(resultCardStart >= 0, 'feature result destination nav must remain visible in the result card');
+  assert.match(resultCard, /data-testid="lightchain-result-save-to-canvas"/);
+  assert.match(resultCard, /to="\/gallery"/);
+  assert.match(resultCard, /data-testid="lightchain-result-gallery-link"/);
+  assert.match(resultCard, /to="\/history"/);
+  assert.match(resultCard, /data-testid="lightchain-result-history-link"/);
+  assert.match(resultCard, /to="\/jobs"/);
+  assert.match(resultCard, /data-testid="lightchain-result-jobs-link"/);
+});
+
+test('special Lightchain result surfaces keep the shared workspace destinations', () => {
+  const workbench = readFileSync(new URL('../src/pages/LightchainWorkbenchPage.tsx', import.meta.url), 'utf8');
+  const specialDestinationUses = workbench.match(/<LightchainResultDestinations \/>/g) ?? [];
+
+  assert.ok(specialDestinationUses.length >= 9, 'modal and special result surfaces must expose shared destinations');
+  assert.match(workbench, /data-testid="lightchain-special-result-destinations"/);
+  assert.match(workbench, /data-testid="lightchain-special-result-gallery-link"/);
+  assert.match(workbench, /data-testid="lightchain-special-result-history-link"/);
+  assert.match(workbench, /data-testid="lightchain-special-result-jobs-link"/);
+  assert.match(workbench, /data-testid="lightchain-special-result-canvas-link"/);
+});
+
+test('material result cards expose connected Gallery, History, and Jobs destinations', () => {
+  const material = readFileSync(new URL('../src/pages/LightchainMaterialWorkbenchPage.tsx', import.meta.url), 'utf8');
+  assert.match(material, /data-testid=\{`material-result-destinations-\$\{result\.id\}`\}/);
+  assert.match(material, /data-testid=\{`material-result-gallery-link-\$\{result\.id\}`\}/);
+  assert.match(material, /data-testid=\{`material-result-history-link-\$\{result\.id\}`\}/);
+  assert.match(material, /data-testid=\{`material-result-jobs-link-\$\{result\.id\}`\}/);
+  assert.match(material, /data-testid=\{`result-save-to-canvas-\$\{result\.id\}`\}/);
 });

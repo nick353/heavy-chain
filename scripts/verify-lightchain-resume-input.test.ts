@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { readLightchainResumeInput } from '../src/lib/lightchainResume.ts';
+import { readLightchainResumeInput, readLightchainResumeResult } from '../src/lib/lightchainResume.ts';
 
 const artifact = (overrides: Record<string, unknown> = {}) => ({
   id: 'artifact-1',
@@ -89,6 +89,60 @@ test('resume input restores local slots from provider result materialSlotFiles',
     { key: 'primary', name: 'garment.png', kind: 'フーディー', imageUrl: 'data:image/png;base64,AAAA' },
     { key: 'secondary', name: 'print.png', kind: 'プリント', imageUrl: 'blob:https://example.test/print' },
   ]);
+});
+
+test('resume result keeps canonical storage identity and never reuses a stale bearer URL', () => {
+  const result = readLightchainResumeResult([
+    artifact({
+      imageUrl: 'https://example.test/signed.png?token=stale',
+      featureType: 'lightchain-ai-fitting-provider-result',
+      metadata: {
+        providerResultArtifact: true,
+        toolId: 'ai-fitting',
+        generationSummary: '衣服 / モデル / 無地背景',
+        provider: 'openai',
+        backendProvider: 'supabase-edge-function',
+        imageId: 'image-1',
+        storagePath: 'brand-1/job-1.png',
+      },
+    }),
+  ], 'job-1');
+
+  assert.deepEqual(result, {
+    artifactId: 'artifact-1',
+    toolId: 'ai-fitting',
+    title: 'Model change',
+    summary: '衣服 / モデル / 無地背景',
+    imageUrl: '',
+    storagePath: 'brand-1/job-1.png',
+    generationMode: 'provider',
+    provider: 'openai',
+    backendProvider: 'supabase-edge-function',
+    jobId: 'job-1',
+    imageId: 'image-1',
+    parityRuntime: undefined,
+  });
+});
+
+test('resume result accepts a local persisted image and rejects URL-only remote history', () => {
+  const local = readLightchainResumeResult([
+    artifact({
+      imageUrl: 'data:image/png;base64,AAAA',
+      featureType: 'lightchain-model-change-provider-result',
+      metadata: { providerResultArtifact: true, toolId: 'model-change' },
+    }),
+  ], 'job-1');
+  assert.equal(local?.imageUrl, 'data:image/png;base64,AAAA');
+  assert.equal(local?.storagePath, null);
+
+  const staleRemote = readLightchainResumeResult([
+    artifact({
+      imageUrl: 'https://example.test/signed.png?token=stale',
+      featureType: 'lightchain-model-change-provider-result',
+      metadata: { providerResultArtifact: true, toolId: 'model-change' },
+    }),
+  ], 'job-1');
+  assert.equal(staleRemote, null);
 });
 
 test('resume hydration is declared after the tool reset effect', async () => {

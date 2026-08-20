@@ -36,7 +36,7 @@ const CanvasEditorPage = lazy(() => import('./pages/CanvasEditorPage').then((mod
 const LightchainMaterialWorkbenchPage = lazy(() => import('./pages/LightchainMaterialWorkbenchPage').then((module) => ({ default: module.LightchainMaterialWorkbenchPage })));
 const LightchainCreatorPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainCreatorPage })));
 const LightchainDesignProductionPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainDesignProductionPage })));
-const LightchainAssetCenterPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainAssetCenterPage })));
+const LightchainAssetCenterPage = lazy(() => import('./pages/LightchainLibraryPage').then((module) => ({ default: module.LightchainLibraryPage })));
 const LightchainOrientedDesignPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainOrientedDesignPage })));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })));
@@ -149,7 +149,7 @@ function getLoadingCopy(pathname: string) {
   }
   if (pathname.startsWith('/lightchain')) {
     return {
-      eyebrow: 'Heavy Chain',
+      eyebrow: 'LIGHTCHAIN AI',
       title: '制作入口を準備しています',
     description: 'アップロード、マスク確認、抽出、Canvas保存の導線を準備しています。',
     actions: ['画像をアップロード', 'マスクを確認', 'Canvasに保存'],
@@ -688,9 +688,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <div className="py-10">
-                      <GenerateLightchainEntry />
-                    </div>
+                    <GenerateLightchainEntry />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -868,7 +866,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <PatternWorkspacePage />
+                    <LightchainWorkbenchPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -896,7 +894,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <PatternWorkspacePage />
+                    <LightchainWorkbenchPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -910,7 +908,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <PatternWorkspacePage />
+                    <LightchainWorkbenchPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -924,7 +922,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <PatternWorkspacePage />
+                    <LightchainWorkbenchPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -966,7 +964,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <BrandSettingsPage />
+                    <LightchainWorkbenchPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
