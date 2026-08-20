@@ -4473,6 +4473,18 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `heavy_target_workspace_authentication_not_ready`, current card-ledger target-session uncertainty, missing production auth state, and human-owned beta/legal acceptance inputs.
 - Next action: after official capability or supported target-session state change, create a fresh Profile 2 owner and enumerate the current Lightchain card ledger once, excluding video rows.
 
+## 2026-08-20 Lightchain homepage card presentation ledger r82
+
+- Fresh homepage readback confirmed the current category and example tabs plus visible feature text for design workspace, marketing workspace, AI fitting, wear design lab, video workstation, model planning library, fashion studio, and design agent.
+- Primary feature cards did not expose href/role/button targets in the fresh DOM, so exact routes remain `PENDING_CONFIRMATION` rather than inferred.
+- Browser `-f428-42e9-a4b7-cbad54b8b7c2`, task-owned tab `1980904382`, same-run owner lineage, and cleanup are recorded in `work/lightchain-profile2-homepage-card-ledger-20260820-r82.md`.
+
+### Proof boundary / current exact blocker / next action
+
+- Homepage presentation is current evidence, while the complete route/card ledger, per-feature production semantics, and Heavy production parity remain unverified.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `heavy_target_workspace_authentication_not_ready`, current card-ledger route exposure/target-session uncertainty, missing production auth state, and human-owned beta/legal acceptance inputs.
+- Next action: after a supported official target/session state change, create a fresh owner and use the documented route discovery/readback contract once without inferring routes or reusing this run.
+
 ## 2026-08-20 Local all-feature regression after provenance continuity r79
 
 - The current build's video-excluded workflow verifier passed after r78: 31 features, 277 assertions, `failed=[]`, zero unexpected console/page/request failures, and browser/context/preview cleanup passed.

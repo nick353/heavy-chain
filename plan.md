@@ -1495,3 +1495,16 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Homepage URL/title/DOM hydration is now fresh evidence. Complete current href/route card enumeration, per-feature production semantics, and Heavy-side production parity remain `PENDING_CONFIRMATION`.
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `heavy_target_workspace_authentication_not_ready`, current card-ledger target-session uncertainty, missing production auth state, and human-owned beta/legal acceptance inputs.
 - Next action: after official capability or supported target-session state change, create a fresh Profile 2 owner and enumerate the current Lightchain card ledger once, excluding video rows from Heavy scope.
+
+## 2026-08-20 Lightchain homepage card presentation ledger r82
+
+- Fresh target-scoped homepage readback confirmed category tabs `おすすめ / Hot`, `企画デザインツール`, `AIフィッティング`, `グラフィックツール` and example tabs `おすすめの事例`, `デザイン修正`, `柄・プリント`, `ビジュアル素材`, `マーケティングコンテンツ`, `生産`.
+- Visible feature text included design workspace, marketing workspace, AI fitting, wear design lab, video workstation, model planning library, fashion studio, and design agent.
+- The primary feature cards did not expose href/role/button targets in the fresh DOM; routes were not inferred and remain `PENDING_CONFIRMATION`.
+- Artifact: `work/lightchain-profile2-homepage-card-ledger-20260820-r82.md`.
+
+### Proof boundary / current exact blocker
+
+- This is current homepage presentation evidence only. Complete current route/card ledger, per-feature production semantics, and Heavy production parity remain unverified.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `heavy_target_workspace_authentication_not_ready`, current card-ledger route exposure/target-session uncertainty, missing production auth state, and human-owned beta/legal acceptance inputs.
+- Next action: after a supported official target/session state change, create a fresh owner and use the documented route discovery/readback contract once; do not infer routes from text or reuse this run.
