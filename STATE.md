@@ -2,6 +2,33 @@
 
 Updated: 2026-08-20
 
+## Current production print UI parity readback r109
+
+- Commit `93a2d9b` removed the visible Heavy-only print-area adjustment and
+  reset actions from the production `/tools/printing` parity view. Library /
+  upload inputs, `スポット` / `全体`, `AI生成`, and `生成履歴` remain.
+- Deployment `6a86cfbaacafc201d503219c` for the existing `heavy-chain` service
+  reached `RUNNING`.
+- Mandatory Profile 2 preflight passed with the current revision-30 selector.
+  A fresh list → get → `openTabs()` owner boundary and target-scoped
+  provisioning read `/tools/printing` at `readyState=complete`; the extra
+  controls were absent and the Lightchain controls were present.
+- Task-owned tab `1980904576` was closed and `cleanup_verified=true`.
+- Artifact: `work/heavy-local-print-ui-cleanup-20260820-r109.md`。
+
+### Current exact blocker / next action / restart point
+
+- Production provider generation → save → reuse → reload remains
+  `PENDING_CONFIRMATION` under
+  `chrome_foreground_activation_capability_unavailable`. The current fresh
+  advertisement still exposes only viewport/pageAssets/cdp capabilities.
+- Next action: after an official foreground capability advertisement, use a
+  new Profile 2 owner to prove printing/fabric generation and persistence, then
+  AI fitting. Until then, continue only independent local verification or
+  target-scoped read-only work.
+- Restart point: mandatory Profile 2 preflight followed by a fresh
+  list → get → `openTabs()` owner boundary after the capability state changes.
+
 ## Current desktop verification after source UI cleanup r108
 
 - `npm run --silent verify:unified-desktop-layout` passed after the r106/r107

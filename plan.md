@@ -2,6 +2,26 @@
 
 更新日: 2026-08-20
 
+## Current production print UI parity checkpoint r109
+
+- Removed the visible Heavy-only `画像のプリント領域を調整` and `↻ リセット`
+  controls from the production printing view while retaining the current
+  Lightchain input, `スポット` / `全体`, `AI生成`, and history flow.
+- Commit: `93a2d9b`; deployment:
+  `6a86cfbaacafc201d503219c`; status `RUNNING`.
+- Fresh Profile 2 target-scoped readback of
+  `https://heavy-chain.zeabur.app/tools/printing` confirmed
+  `readyState=complete`, both extra controls absent, Lightchain controls
+  present, and `cleanup_verified=true` for task tab `1980904576`.
+- Artifact: `work/heavy-local-print-ui-cleanup-20260820-r109.md`。
+
+### Boundary
+
+The confirmed printing UI mismatch is closed in production. Provider
+generation/result/save/reuse/reload remains pending because the official
+Profile 2 distribution does not advertise `foreground_activation` or
+`management`; this is not cleared by the read-only UI proof.
+
 ## Current desktop verification checkpoint r108
 
 - After the source-aligned UI cleanup and r107 deployment, the unified desktop
