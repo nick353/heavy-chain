@@ -252,3 +252,20 @@ test('direct fabric route keeps the Lightchain single-input surface without an e
   assert.match(directFabricDesign, /allowedReferenceTypes=\{\['base'\]\}/);
   assert.doesNotMatch(directFabricDesign, /allowedReferenceTypes=\{\['base', 'pattern'\]\}/);
 });
+
+test('unified fabric workbench keeps the rendered garment input on the Lightchain base-image contract', () => {
+  const page = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
+  const branchStart = page.indexOf('{!isPrinting ? (');
+  const branchEnd = page.indexOf(') : (', branchStart);
+  assert.ok(branchStart >= 0 && branchEnd > branchStart, 'unified fabric branch is required');
+
+  const fabricBranch = page.slice(branchStart, branchEnd);
+  const garmentSelectorStart = fabricBranch.indexOf('<ImageSelector');
+  const textileSelectorStart = fabricBranch.indexOf('<ImageSelector', garmentSelectorStart + 1);
+  assert.ok(garmentSelectorStart >= 0 && textileSelectorStart > garmentSelectorStart, 'unified fabric selectors are required');
+
+  const garmentSelector = fabricBranch.slice(garmentSelectorStart, textileSelectorStart);
+  assert.match(garmentSelector, /label=\{activeMaterialInputs\[0\]\.label\}/);
+  assert.match(garmentSelector, /allowedReferenceTypes=\{\['base'\]\}/);
+  assert.doesNotMatch(garmentSelector, /allowedReferenceTypes=\{\['base', 'pattern'\]\}/);
+});

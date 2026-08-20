@@ -4630,10 +4630,10 @@ export function LightchainMaterialWorkbenchPage() {
                 galleryTitle="素材を選択"
                 value={fabricDesign}
                 onChange={setFabricDesign}
-                allowedReferenceTypes={['base', 'pattern']}
+                allowedReferenceTypes={['base']}
                 defaultReferenceType="base"
                 platformAssetRole="garment"
-                hint="柄やロゴをそのまま重ねるか、切り抜いて重ねます"
+                hint="商品・モデル・デザインの基準画像を入れます"
               />
               <ImageSelector
                 label={activeMaterialInputs[1].label}
