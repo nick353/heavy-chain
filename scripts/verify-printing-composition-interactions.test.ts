@@ -354,7 +354,7 @@ test('desktop printing keeps the primary composition and generate action pinned 
   assert.match(page, /data-testid="lightchain-print-reference-input"/);
   assert.match(page, /参考画像をアップロード/);
   assert.match(page, /プリントをアップロード/);
-  assert.doesNotMatch(page, /↻ リセット/);
+  assert.match(page, /リセット/);
   assert.doesNotMatch(page, /画像のプリント領域を調整/);
   assert.match(page, /data-testid=\{`print-coverage-\$\{coverage\.value\}`\}/);
   assert.match(page, /data-testid="print-result-run-history"/);

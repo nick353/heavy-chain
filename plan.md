@@ -2,6 +2,20 @@
 
 更新日: 2026-08-20
 
+## Current Lightchain source correction checkpoint r110
+
+- Fresh current-selector readback showed that the current Lightchain printing
+  screen includes `リセット`. Heavy now restores that control while keeping
+  the Heavy-only print-area adjustment hidden.
+- Source route artifact:
+  `work/lightchain-profile2-current-selector-rev30-source-readback-20260820-r110.md`。
+
+### Boundary
+
+The source correction is local and still needs build, deployment, and fresh
+Heavy readback. Production provider generation/save/reuse/reload remains gated
+by the missing official foreground capability.
+
 ## Current production print UI parity checkpoint r109
 
 - Removed the visible Heavy-only `画像のプリント領域を調整` and `↻ リセット`

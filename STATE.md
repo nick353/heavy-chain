@@ -2,6 +2,30 @@
 
 Updated: 2026-08-20
 
+## Current Lightchain source parity correction r110
+
+- Fresh current-selector Profile 2 readback of Lightchain `/tools/printing`
+  confirmed that the source visibly includes `リセット` alongside
+  `スポット` / `全体` / `AI生成` / `生成履歴`.
+- Heavy's visible `リセット` action was restored; the Heavy-only
+  `画像のプリント領域を調整` action remains removed.
+- Source routes `/`, `/tools/fabric`, `/tools/printing`, and `/model` were
+  read in the same target-scoped run. Fabric and printing reached
+  `readyState=complete`; homepage and model returned the expected controls at
+  the bounded interactive readback point. All task-owned tabs were cleaned.
+- Artifact: `work/lightchain-profile2-current-selector-rev30-source-readback-20260820-r110.md`。
+
+### Current exact blocker / next action / restart point
+
+- Provider generation → save → reuse → reload remains
+  `chrome_foreground_activation_capability_unavailable`; the current official
+  advertisement still has only viewport/pageAssets/cdp.
+- Next action: build/deploy the reset correction and fresh-read Heavy printing;
+  after official capability change, prove printing/fabric then AI fitting
+  end-to-end.
+- Restart point: mandatory Profile 2 preflight followed by a fresh
+  list → get → `openTabs()` boundary after the capability state changes.
+
 ## Current production print UI parity readback r109
 
 - Commit `93a2d9b` removed the visible Heavy-only print-area adjustment and

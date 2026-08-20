@@ -2001,6 +2001,31 @@ export function LightchainMaterialWorkbenchPage() {
     });
   };
 
+  const resetPrintingInputs = useCallback(() => {
+    if (!isPrinting) return;
+    setPrintGarment(null);
+    setPrintDesigns([]);
+    setPrintDesignLayers([]);
+    setPrintDesignProcessedUrls({});
+    setPrintDesignCutoutResults({});
+    setPrintDesignMaskRevisions({});
+    setPrintDesignCutoutStates({});
+    setPrintDesignCutoutErrors({});
+    setPrintGarmentMaskExplicitlyConfirmed(false);
+    setPrintGarmentSelectionSource('automatic');
+    setPrintGarmentCutoutSourceUrl(null);
+    setPrintGarmentSelectionMaskUrl(null);
+    setPrintGarmentCutoutState('idle');
+    setPrintGarmentProcessed(null);
+    setPrintPlacementConfirmed(false);
+    setPrintPlacementSessionOpen(false);
+    printPlacementSessionOpenRef.current = false;
+    setPrintCoverageMode('spot');
+    setPrintOutputScale(1);
+    setGenerationError(null);
+    setSurfaceConformStatus(null);
+  }, [isPrinting]);
+
   useEffect(() => {
     if (!isPrinting) {
       if (!fabricLayer) {
@@ -5468,7 +5493,16 @@ export function LightchainMaterialWorkbenchPage() {
                 </div>
 
                 <div className="rounded-xl border border-white/10 bg-[#202629] p-3">
-                  <p className="mb-3 text-sm font-semibold text-white">プリントをアップロード</p>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-white">プリントをアップロード</p>
+                    <button
+                      type="button"
+                      onClick={resetPrintingInputs}
+                      className="text-xs text-white/55 transition hover:text-cyan-100"
+                    >
+                      リセット
+                    </button>
+                  </div>
                   <div className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-neutral-900 p-1" role="group" aria-label="プリント範囲">
                     {PRINT_COVERAGE_OPTIONS.map((coverage) => (
                       <button
