@@ -1155,3 +1155,14 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`.
 - Next action: after an official capability or Heavy authentication state change, create a new Profile 2 owner and perform advertisement → `openTabs()` → Heavy target-scoped readback once. Proceed to fabric/printing production proof and then AI fitting only if the workbench is hydrated.
 - Restart point: fresh official owner after the capability or Heavy state change. Do not reuse the r38 browser, tab, binding, run, or another surface.
+## 2026-08-20 Chrome Plugin/Profile 2 capability fresh readback r53
+
+- Chrome更新後のfresh official Profile 2 browser-client `-b306-4ee4-83be-1222537f2bf1`で、現行selector `chrome_plugin / Profile 2 / signed_chrome_extension_profile2 / revision=4`、`get(id)`、同一run `openTabs()`、owner lineageを確認した。
+- capability広告は`viewport`のみで、`foreground_activation`／`management`は未広告。`openTabs()`は3件で成功したが、Heavy対象の生成・保存・再利用・録画・外部効果は実施していない。
+- Artifact: `work/chrome-plugin-profile2-capability-readback-20260820-r53.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式署名済み拡張／backendがforeground capabilityを広告した後、新規Profile 2 ownerで広告→`openTabs()`→owner lineageを1回確認し、foreground workを再開する。更新前はtarget-scoped read-onlyのみ継続する。
+- Restart point: capability state change後のfresh official owner。r53のbinding／tab／Run、selected／claim／focus、別surface fallbackは再利用しない。

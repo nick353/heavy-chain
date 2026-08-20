@@ -4145,3 +4145,14 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
   official capability, auth-state, manifest, or operator evidence changes.
 - Restart point: the first changed dependency, with a fresh official Profile 2 owner and
   fresh beta/operator artifacts; do not reuse old browser runs or fabricate evidence.
+## 2026-08-20 Chrome Plugin/Profile 2 capability fresh readback r53
+
+- Fresh official browser-client boundary `66068f56-873e-4712-932c-bfec5e14de95`、browser `-b306-4ee4-83be-1222537f2bf1`で、現行selector revision 4、Profile 2 extension、同一run `openTabs()` 3件、session/thread/turn lineageを確認。
+- 公式capability広告は`viewport`のみ。`foreground_activation`／`management`は未広告のため、foreground-only provider generation、save、reuse、reloadはfail-closed。target-scoped read-onlyは継続可能。
+- Artifact: `work/chrome-plugin-profile2-capability-readback-20260820-r53.md`。
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`。
+- Next action: 公式capability広告後に新規Profile 2 ownerで広告→`openTabs()`→owner lineageを1回確認する。
+- Restart point: capability state change後のfresh official owner。r53のbinding／tab／Run、selected／claim／focus、別surface fallbackは再利用しない。
