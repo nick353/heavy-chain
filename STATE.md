@@ -4405,4 +4405,16 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 
 - Human/operator decisions and authorized production auth state are missing; do not synthesize them. Chrome production provider and current-selector card-readback blockers remain separate.
 - Next action: attach the safe operator/legal/launch inputs, then rerun the corresponding gates; continue dependency-independent local parity QA in the meantime.
+@@
 - Restart point: changed required human/auth state plus fresh official Profile 2 owner after any Chrome capability/session change.
+
+## 2026-08-20 Local all-feature workflow proof r75
+
+- Current build passed the video-excluded Lightchain workflow verifier: 31 features, 277 assertions, `failed=[]`, console/page/request failures all zero, and context/browser/preview cleanup passed. Build transformed 2608 modules.
+- Artifact: `work/heavy-local-lightchain-all-feature-workflows-20260820-r75.md`; raw summary: `output/playwright/lightchain-all-feature-workflows-20260820T072015Z/SUMMARY.json`.
+
+### Proof boundary / current exact blocker
+
+- This closes the local workflow contract checkpoint only. Production generation/persistence/reuse, current Lightchain card parity, and paired Mac/Windows Chrome acceptance remain unverified.
+- Chrome capability/target-session blockers and the fresh r74 beta/auth/operator blockers remain unchanged.
+- Next action: continue local parity QA and wait for the required official/session/human state changes before production proof.

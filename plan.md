@@ -1413,4 +1413,16 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 
 - Exact blockers: `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`, `operator_final_h601_decision_missing`, G619 acceptance not claimed, plus the separate Chrome capability and current-selector target-session blockers.
 - Next action: authorized operator supplies the safe H601/G619/launch inputs; meanwhile continue only local parity/contract QA and do not fabricate approval or auth evidence.
+@@
 - Restart point: required human/auth input changes and, for production provider work, an official Chrome capability or supported target-session state change followed by a fresh Profile 2 owner.
+
+## 2026-08-20 Local all-feature workflow proof r75
+
+- Re-ran the current build's video-excluded workflow verifier: 31 features, 277 assertions, `failed=[]`, zero console/page/request failures, and browser/context/preview cleanup passed. Build transformed 2608 modules.
+- Artifact: `work/heavy-local-lightchain-all-feature-workflows-20260820-r75.md`; raw summary: `output/playwright/lightchain-all-feature-workflows-20260820T072015Z/SUMMARY.json`.
+
+### Proof boundary / current exact blocker
+
+- This is local route/input/interaction-contract evidence only; production provider output, save/reuse/reload, current Lightchain card enumeration, Gallery/Canvas/History/Jobs same-run persistence, and paired Mac/Windows acceptance remain unverified.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable`, `chrome_extension_target_readback_target_session_not_owned`, missing production auth state, and human-owned beta/legal acceptance inputs.
+- Next action: continue dependency-independent QA; after the required official/session state changes, create a fresh Profile 2 owner for production parity and provider proof.
