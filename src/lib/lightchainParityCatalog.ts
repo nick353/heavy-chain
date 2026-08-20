@@ -234,11 +234,11 @@ export const lightchainFeatureCatalog: LightchainFeature[] = [
     title: 'カスタムスタイル',
     lightchainName: 'CustomStyle',
     description: 'ブランドのトーンを反映します。',
-    route: '/brand/settings',
+    route: '/model-base/style',
     category: 'planning',
     status: 'production',
     capability: 'ブランド設定、brand context、チーム管理',
-    evidence: 'production closeout baseline',
+    evidence: 'fresh Lightchain rev6 route readback r97 and unified style alias',
     tags: ['ブランド', 'トーン', 'ターゲット'],
   },
   {

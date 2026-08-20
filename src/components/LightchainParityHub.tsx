@@ -30,6 +30,7 @@ const routeIcon: Record<string, typeof Sparkles> = {
   '/models': UserRound,
   '/studio': Images,
   '/patterns/workbench': Palette,
+  '/model-base/style': CheckCircle2,
   '/brand/settings': CheckCircle2,
   '/canvas/new': Layers3,
 };

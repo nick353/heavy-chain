@@ -46,6 +46,16 @@ test('routes fabric search prompts to the simulation entry', async () => {
   assert.match(app, /path="\/lightchain\/printing-image"/);
 });
 
+test('routes the custom-style launcher card to the current Lightchain style route', async () => {
+  const source = await readFile(catalogPath, 'utf8');
+  const featureStart = source.indexOf("id: 'custom-style'");
+  assert.notEqual(featureStart, -1, 'custom-style catalog entry is required');
+  const featureEnd = source.indexOf("id: 'model-change-background'", featureStart);
+  const feature = source.slice(featureStart, featureEnd === -1 ? source.length : featureEnd);
+  assert.match(feature, /route: '\/model-base\/style'/);
+  assert.doesNotMatch(feature, /route: '\/brand\/settings'/);
+});
+
 test('does not expose the compact hub count as the detailed workbench count', async () => {
   const source = await readFile(new URL('../src/components/LightchainParityHub.tsx', import.meta.url), 'utf8');
   assert.match(source, /目的別の機能をすべて見る/);

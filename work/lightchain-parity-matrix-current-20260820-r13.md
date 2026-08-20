@@ -62,6 +62,7 @@ entries below remain historical provenance and are not current proof.
 |---|---|---|
 | Lightchain homepage IA, categories, non-video launcher, case tabs | `verified` | r88 source readback and r90 Heavy production readback |
 | 31 non-video local feature contracts | `verified` locally | local verifier `31/31`; current rev6 source route baseline is `19/19`, but card-to-route binding and per-feature behavior remain separate |
+| Custom-style launcher route | `verified` locally | r99 aligns the launcher to current Lightchain `/model-base/style`; fresh source route is r97 |
 | Fabric/printing/AI-fitting route inputs and visible controls | `verified` read-only | current Lightchain r97 source supplement plus Heavy r93 settled production route readback |
 | Provider generation and result quality | `PENDING_CONFIRMATION` | no current same-run provider generation proof |
 | Save and result persistence | `PENDING_CONFIRMATION` | no current same-run save/readback proof |

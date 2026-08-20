@@ -12,6 +12,7 @@
 - Fresh rev6 Lightchain target-scoped route ledger r97で非動画候補19/19のURL/title/non-empty DOMを確認し、2 routeはfocused hydration settle後に`readyState=complete`となった。Artifact: `work/lightchain-profile2-current-selector-rev6-non-video-route-ledger-20260820-r97.md`。これはroute/read-only proofであり、生成・保存・再利用の証明ではない。
 - Local current verification r98で`verify:lightchain-all-features`（`ok=true`、`featureCount=31`、`failed=[]`、build `2608 modules`）、route parity `8/8`、typecheckを再確認した。Artifact: `work/heavy-local-feature-verification-20260820-r98.md`。これはlocal contract proofであり、production provider生成・保存・再利用の代替ではない。
 - 同じfresh rev6 source runで`/tools/printing`を追加確認し、`プリントイメージ`、アップロード、`スポット`／`全体`、`AI生成`、`生成履歴`をreadbackした。fabric／printing／AI fittingのsource priority controlsが揃ったが、provider生成・保存・Gallery／Canvas／History／Jobs・再利用・reloadは未確認。
+- Fresh rev6 sourceで確認した`/model-base/style`へ`custom-style` launcherを揃え、focused route regression `9/9`とtypecheckをPASSした。Artifact: `work/heavy-local-route-parity-fix-20260820-r99.md`。
 
 ### Current exact blocker / next action / restart point
 
