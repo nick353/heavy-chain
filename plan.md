@@ -1273,3 +1273,16 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blocker: `chrome_foreground_activation_capability_unavailable` remains only for provider generation/save/reuse/reload; no target-scoped blocker remains for the priority UI readbacks.
 - Next action: after official `foreground_activation` or `management` advertisement, run the fabric/printing provider-to-reuse proof, then AI fitting, using a new owner-bound Profile 2 run.
 - Restart point: capability state change plus fresh official owner; do not reuse r63 browser/binding/tabs/run.
+
+## 2026-08-20 Beta and operator gate recheck r64
+
+- G619 remains `acceptance=not_claimed`, `readySessions=0`, `missingCount=1`.
+- H601 static safety guard passes, but operator acceptance remains `not_claimed` with `missingCount=10` human/operator/legal decisions.
+- Launch-ops remains blocked by `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`.
+- Artifact: `work/heavy-local-beta-gates-recheck-20260820-r64.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blockers: `chrome_foreground_activation_capability_unavailable`, `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`, and human-owned H601/G619 acceptance decisions.
+- Next action: official Chrome capability advertisement for provider proof; authorized operator supplies H601/G619/launch inputs. Do not fabricate evidence or cross human-only gates.
+- Restart point: capability state change plus fresh Profile 2 owner for business flow; separately rerun gates only after their required inputs change.

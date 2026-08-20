@@ -4272,3 +4272,14 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_foreground_activation_capability_unavailable` for foreground provider work; target-scoped read-only is currently healthy.
 - Next action: official capability advertisement後、fresh ownerで fabric/printing provider flow, then AI fitting, followed by beta/operator gates.
 - Restart point: new official Profile 2 owner after capability state change; do not reuse r63 browser/binding/tabs/run.
+
+## 2026-08-20 Beta and operator gate recheck r64
+
+- Current gate readback: G619 `not_claimed`, `readySessions=0`, `missingCount=1`; H601 static guard passes but operator acceptance is `not_claimed` with `missingCount=10`; launch-ops exact blocker is missing production auth state. Artifact: `work/heavy-local-beta-gates-recheck-20260820-r64.md`.
+- These human/authorization gates remain separate from the now-passing priority UI read-only parity proofs and are not filled with fabricated evidence.
+
+### Current exact blocker / next action / restart point
+
+- Exact blockers: `chrome_foreground_activation_capability_unavailable`; `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`; human-owned H601/G619 decisions.
+- Next action: await official foreground capability and authorized beta/operator inputs, then run the remaining production business-flow and acceptance gates.
+- Restart point: fresh official Profile 2 owner after capability change; rerun human/launch gates only after required inputs change.
