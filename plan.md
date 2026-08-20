@@ -20,6 +20,7 @@
 - Production case-tabs readback r90 confirmed deployment `6a86bb1d99ff31c1168ac1e7` is `RUNNING`; Heavy `/lightchain` showed the Lightchain-shaped hero, four categories, eight non-video launcher cards, and all six case tabs, with target-scoped cleanup verified. Artifact: `work/heavy-production-case-tabs-readback-20260820-r90.md`。provider生成・保存・Gallery/Canvas/History/Jobs系譜・再利用/reload、Mac/Windows実機受入れは未確認。
 - Local regression r91 passed route parity `8/8` and unified desktop layout `228/228` with zero failures at `1280/1440/1920/2560px`; the stale icon-map assertion now follows the current catalog/App route contract. Artifact: `work/heavy-local-case-tabs-regression-20260820-r91.md`。
 - Fresh production priority-route readback r92 obtained URL/title/DOM for `/tools/fabric`、`/tools/printing`、`/model`, but expected workbench controls were absent in all three routes; cleanup passed. `heavy_priority_route_expected_controls_absent` remains PENDING_CONFIRMATION and is not generation/auth proof. Artifact: `work/heavy-production-priority-routes-readback-20260820-r92.md`。
+- Settled production priority-route readback r93 supersedes the immediate r92 probe: after an 8-second auth/workspace settle, `/tools/fabric`、`/tools/printing`、`/model` all exposed expected controls and cleanup passed. Artifact: `work/heavy-production-priority-routes-readback-20260820-r93.md`。provider生成・保存・Gallery/Canvas/History/Jobs同一run系譜・再利用/reload、Mac/Windows実機受入れは未確認。
 
 ### Current exact blocker / next action / restart point
 
