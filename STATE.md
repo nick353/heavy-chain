@@ -4224,3 +4224,16 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Unified desktop layout verifier passed `228/228` across 1280/1440/1920/2560px with `failed=0`, `globalTimedOut=false`, and `cleanupLeftovers=0`.
 - The earlier single `1280px / alias-model-library-models` timeout did not reproduce; no source change was made. Artifact: `work/heavy-local-unified-desktop-layout-recheck-20260820-r58.md`.
 - Production provider generation/save/reuse/reload, real Chrome Mac/Windows acceptance, and human beta/operator gates remain open.
+
+## 2026-08-20 Heavy-only printing chrome cleanup and production readback r59-r60
+
+- The visible Heavy-only printing readiness panel was removed from the Lightchain-visible route by commit `ef3a3d8`; the state/accessibility marker remains `sr-only aria-live` and generation safety/persistence logic is intact.
+- Local verification remains strong: printing interaction `51/51`, material contract `17/17`, typecheck/lint/build, and desktop `228/228` with zero failures and zero cleanup leftovers.
+- The source-associated Zeabur deployment for `ef3a3d8` is `RUNNING`; HTTP `200` and remote/local bundle SHA-256 match were confirmed. Artifact: `work/heavy-production-ui-cleanup-readback-20260820-r60.md`.
+- Fresh target-scoped Profile 2 admission of Heavy `/tools/printing` passed URL/title and cleanup, but DOM readback failed at `Runtime.evaluate` timeout. Runtime visual absence of the extra readiness copy and current Lightchain controls are therefore `PENDING_CONFIRMATION`, not claimed complete.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable` for provider generation/save/reuse/reload; `chrome_extension_target_readback_timeout` for the latest visual DOM proof.
+- Next action: after a browser/runtime state change, create a new official Profile 2 owner and perform one target-scoped DOM readback. After official foreground capability advertisement, resume the same-run fabric/printing production flow and then AI fitting.
+- Restart point: new official owner after the relevant state change; do not reuse r60 browser/binding/tab/run.

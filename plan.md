@@ -1223,3 +1223,18 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - The focused recheck of the previous one-cell flake passed all 228 desktop checks across 1280/1440/1920/2560px: `failed=0`, `globalTimedOut=false`, `cleanupLeftovers=0`.
 - The prior `1280px / alias-model-library-models` `operation_timeout` did not reproduce; no product source change was required. Artifact: `work/heavy-local-unified-desktop-layout-recheck-20260820-r58.md`.
 - This closes the current local layout-flake checkpoint only. It does not close production provider proof, real Chrome Mac/Windows acceptance, or G619/H601/operator gates.
+
+## 2026-08-20 Heavy-only printing chrome cleanup and production readback r59-r60
+
+- Removed the visible Heavy-only printing readiness panel from the Lightchain-visible route. The readiness state remains available to the accessibility/state contract as `sr-only aria-live`; generation safety and persistence logic were not removed.
+- Focused printing interaction tests passed `51/51`; material contract tests passed `17/17`; typecheck, zero-warning lint, production build (`2607 modules transformed`), and unified desktop layout (`228/228`, failed `0`, cleanup leftovers `0`) passed.
+- Commit `ef3a3d8` is pushed to `origin/main`. Source-associated Zeabur deployment `6a8699130f08f89df0cd10cc` is `RUNNING` with Docker plan. Root HTTP is `200`; remote/local bundle SHA-256 matches.
+- A fresh Profile 2 target-scoped `/tools/printing` admission passed URL/title and task-owned cleanup, but DOM readback timed out at `Runtime.evaluate` after 3 seconds. The absence of the extra readiness text and the visible-control comparison remain `PENDING_CONFIRMATION`.
+- Artifacts: `work/heavy-local-lightchain-extra-ui-cleanup-20260820-r59.md`, `work/heavy-production-ui-cleanup-readback-20260820-r60.md`, and the source-thread artifact `/Users/nichikatanaka/Documents/New project/work/chrome-plugin-heavy-printing-target-readback-20260820.json`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker for production provider work: `chrome_foreground_activation_capability_unavailable`.
+- Readback blocker: `chrome_extension_target_readback_timeout` (fresh target-scoped DOM call; do not reuse its binding).
+- Next action: after a browser/runtime state change, use a new Profile 2 owner for one target-scoped DOM readback. If the official extension advertises `foreground_activation` or `management`, first perform the same-run capability/lineage check, then resume fabric/printing provider → save → Gallery/Canvas/History/Jobs → reuse → reload and AI fitting.
+- Restart point: new official Profile 2 browser-client after the relevant state change; do not reuse r60 browser, binding, tab, or run.
