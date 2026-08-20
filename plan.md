@@ -2,6 +2,33 @@
 
 更新日: 2026-08-20
 
+## Current Lightchain fresh source baseline checkpoint r118
+
+- Fresh current-selector Profile 2 target-scoped read-only source readback
+  completed under revision `30` with `status=ready` and
+  `exact_blocker=null`.
+- Same-run boundary `29a71ee8-15c8-4e98-9e3c-7a4a2d37ac41`, browser id
+  `-e668-4ff8-93a4-b6257ed1c079`, and `list -> get -> openTabs` handshake were
+  recorded before the source target was selected.
+- Lightchain homepage target `1980904692` was provisioned through the explicit
+  allowlisted target-scoped lane, read at `https://jp.linkaigc.com/` with title
+  `Lightchain AI`, and closed with verified cleanup. The fresh hydrated DOM
+  exposed the four current category controls:
+  `おすすめ`/`Hot`, `企画デザインツール`, `AIフィッティング`, and
+  `グラフィックツール`.
+- Artifact:
+  `work/lightchain-profile2-fresh-source-readback-20260820-r118.md`。
+
+### Boundary / next action
+
+This refreshes the current Lightchain source baseline only. It does not clear
+the foreground/provider blocker or prove generation, result/save,
+Gallery/Canvas/History/Jobs, reuse/reload, or internal operator acceptance.
+The exact blocker remains
+`chrome_foreground_activation_capability_unavailable`. After its official
+resolution, create a new Profile 2 owner and prove fabric/printing first,
+then AI fitting; do not reuse this read-only binding, tab, run, or artifact.
+
 ## Current dependency-independent beta QA checkpoint r115
 
 - Focused material/provider/persistence/handoff contracts passed `102/102`.

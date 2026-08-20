@@ -2,6 +2,43 @@
 
 Updated: 2026-08-20
 
+## Current Lightchain fresh source baseline r118
+
+- Fresh current-selector read-only source confirmation completed with the
+  official Profile 2 lane: selector revision `30`, `status=ready`,
+  `exact_blocker=null`.
+- Same-run `list -> get -> openTabs` used browser id
+  `-e668-4ff8-93a4-b6257ed1c079` and boundary
+  `29a71ee8-15c8-4e98-9e3c-7a4a2d37ac41`.
+- Lightchain homepage was provisioned only as a task-owned target-scoped
+  read-only tab: tab `1980904692`, URL `https://jp.linkaigc.com/`, title
+  `Lightchain AI`; hydrated DOM body length was `2047` with `40` visible
+  controls.
+- Current homepage category controls read back as `おすすめ`/`Hot`,
+  `企画デザインツール`, `AIフィッティング`, and `グラフィックツール`.
+- Cleanup was verified and the created tab was closed. No selected-tab, claim,
+  focus, writer lease, provider generation, save, rights confirmation, or
+  external effect was performed.
+- Artifact:
+  `work/lightchain-profile2-fresh-source-readback-20260820-r118.md`。
+
+### Boundary
+
+This is a fresh source homepage/category baseline only. It does not prove
+provider generation, durable result/save, Gallery/Canvas/History/Jobs lineage,
+reuse/reload, or internal-user acceptance. The official extension still
+advertised read-only capabilities only.
+
+### Current exact blocker / next action / restart point
+
+- `chrome_foreground_activation_capability_unavailable` remains current for
+  provider generation and external-effect stages.
+- Next action: after the official capability advertisement changes, run the
+  mandatory Profile 2 preflight and a new same-owner `list -> get -> openTabs()`
+  boundary, then prove fabric/printing end to end followed by AI fitting.
+- Restart point: discard this read-only binding, tab, run, and artifact for
+  foreground work; do not reuse them.
+
 ## Current dependency-independent beta QA completion r115
 
 - Focused material/provider/persistence/handoff contracts passed `102/102`.
