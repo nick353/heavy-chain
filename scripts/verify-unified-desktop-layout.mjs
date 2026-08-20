@@ -206,7 +206,7 @@ async function runViewport(viewport, routeSpecs, runBudget) {
     const onConsole = (message) => {
       if (message.type() !== 'error') return;
       evidence.diagnostics.consoleErrors += 1;
-      const expected = isExpectedConsoleError(message.text());
+      const expected = isExpectedConsoleError(readPlaywrightMessageText(message));
       if (expected) evidence.diagnostics.expectedConsoleErrors += 1;
       else evidence.diagnostics.unexpectedConsoleErrors += 1;
       if (activeDiagnostics) {
@@ -502,8 +502,19 @@ function isExpectedConsoleError(message) {
 function isExpectedRequestFailure(request) {
   const failure = request.failure()?.errorText ?? 'unknown';
   if (failure === 'net::ERR_ABORTED') return true;
-  return request.url().startsWith('https://fonts.googleapis.com/')
-    || request.url().startsWith('https://fonts.gstatic.com/');
+  const requestUrl = readPlaywrightRequestUrl(request);
+  return requestUrl.startsWith('https://fonts.googleapis.com/')
+    || requestUrl.startsWith('https://fonts.gstatic.com/');
+}
+
+// Keep raw Playwright diagnostics in process memory only. Progress and
+// summaries use bounded categories rather than emitting page text or URLs.
+function readPlaywrightMessageText(message) {
+  return typeof message?.text === 'function' ? String(message['text']()) : '';
+}
+
+function readPlaywrightRequestUrl(request) {
+  return typeof request?.url === 'function' ? String(request['url']()) : '';
 }
 
 async function installLocalPreviewNetworkBoundary(context) {

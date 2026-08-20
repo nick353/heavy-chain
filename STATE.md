@@ -22,8 +22,18 @@ Updated: 2026-08-20
   manifest at `output/playwright/g619-real-beta-evidence/manifest.json`.
 - `verify:launch-ops` remains blocked by
   `auth_state_missing: output/playwright/prod-auth-refresh-20260625/auth-state.json`.
+- The official G619 evidence template was initialized at
+  `output/playwright/g619-real-beta-evidence/manifest.json`. It contains only
+  a scaffold (`g619-beta-001`), so readiness still reports `readySessions=0`;
+  no real participant session or consent was created by Codex.
+- A focused logging-boundary regression in the unified desktop verifier was
+  fixed so raw Playwright text/URLs remain process-local and only bounded
+  categories reach progress/summary output. The focused route/provider/workspace
+  suite now passes `35/35`.
 - Artifact:
   `work/heavy-local-beta-qa-readback-20260820-r115.md`。
+  The scaffold boundary is recorded in
+  `work/heavy-beta-evidence-scaffold-readback-20260820-r116.md`。
 
 ### Boundary
 

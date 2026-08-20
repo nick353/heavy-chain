@@ -14,8 +14,14 @@
   human/operator evidence items missing. G619 has `readySessions=0` and no
   real-beta manifest; launch operations is blocked by the missing production
   auth-state artifact.
+- The official G619 evidence manifest scaffold is now initialized, but it does
+  not count as a real session or acceptance evidence. Real consented sessions
+  and redacted behavior artifacts are still required.
+- Fixed the unified desktop verifier's raw diagnostic access boundary; its
+  focused route/provider/workspace regression suite is now `35/35` passing.
 - Artifacts:
   `work/heavy-local-beta-qa-readback-20260820-r115.md`,
+  `work/heavy-beta-evidence-scaffold-readback-20260820-r116.md`,
   `output/playwright/lightchain-all-feature-workflows-20260820T111441Z/SUMMARY.json`,
   `output/playwright/unified-desktop-layout-current/SUMMARY.json`.
 
