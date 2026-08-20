@@ -62,6 +62,11 @@ const evidence = {
     consoleErrors: 0,
     pageErrors: 0,
     requestFailures: 0,
+    expectedConsoleErrors: 0,
+    expectedRequestFailures: 0,
+    unexpectedConsoleErrors: 0,
+    unexpectedPageErrors: 0,
+    unexpectedRequestFailures: 0,
   },
   cleanup: {
     browserClosed: false,
@@ -146,6 +151,9 @@ async function main() {
   evidence.ok = evidence.scheduled === EXPECTED_CHECK_COUNT
     && evidence.completed === EXPECTED_CHECK_COUNT
     && evidence.failed === 0
+    && evidence.diagnostics.unexpectedConsoleErrors === 0
+    && evidence.diagnostics.unexpectedPageErrors === 0
+    && evidence.diagnostics.unexpectedRequestFailures === 0
     && !evidence.globalTimedOut
     && evidence.cleanup.contextClosed
     && evidence.cleanup.previewExited
@@ -198,15 +206,33 @@ async function runViewport(viewport, routeSpecs, runBudget) {
     const onConsole = (message) => {
       if (message.type() !== 'error') return;
       evidence.diagnostics.consoleErrors += 1;
-      if (activeDiagnostics) activeDiagnostics.consoleErrors += 1;
+      const expected = isExpectedConsoleError(message.text());
+      if (expected) evidence.diagnostics.expectedConsoleErrors += 1;
+      else evidence.diagnostics.unexpectedConsoleErrors += 1;
+      if (activeDiagnostics) {
+        activeDiagnostics.consoleErrors += 1;
+        if (expected) activeDiagnostics.expectedConsoleErrors += 1;
+        else activeDiagnostics.unexpectedConsoleErrors += 1;
+      }
     };
     const onPageError = () => {
       evidence.diagnostics.pageErrors += 1;
-      if (activeDiagnostics) activeDiagnostics.pageErrors += 1;
+      evidence.diagnostics.unexpectedPageErrors += 1;
+      if (activeDiagnostics) {
+        activeDiagnostics.pageErrors += 1;
+        activeDiagnostics.unexpectedPageErrors += 1;
+      }
     };
-    const onRequestFailed = () => {
+    const onRequestFailed = (request) => {
       evidence.diagnostics.requestFailures += 1;
-      if (activeDiagnostics) activeDiagnostics.requestFailures += 1;
+      const expected = isExpectedRequestFailure(request);
+      if (expected) evidence.diagnostics.expectedRequestFailures += 1;
+      else evidence.diagnostics.unexpectedRequestFailures += 1;
+      if (activeDiagnostics) {
+        activeDiagnostics.requestFailures += 1;
+        if (expected) activeDiagnostics.expectedRequestFailures += 1;
+        else activeDiagnostics.unexpectedRequestFailures += 1;
+      }
     };
     for (const [event, listener] of [['console', onConsole], ['pageerror', onPageError], ['requestfailed', onRequestFailed]]) {
       page.on(event, listener);
@@ -225,7 +251,16 @@ async function runViewport(viewport, routeSpecs, runBudget) {
         routeId: route.id,
         ok: false,
         timing: { navigationMs: null, settleMs: null, domContentLoadedMs: null, loadEventMs: null },
-        diagnostics: { consoleErrors: 0, pageErrors: 0, requestFailures: 0 },
+        diagnostics: {
+          consoleErrors: 0,
+          pageErrors: 0,
+          requestFailures: 0,
+          expectedConsoleErrors: 0,
+          expectedRequestFailures: 0,
+          unexpectedConsoleErrors: 0,
+          unexpectedPageErrors: 0,
+          unexpectedRequestFailures: 0,
+        },
       };
       const cellBudget = runBudget.beginCell();
       activeDiagnostics = result.diagnostics;
@@ -270,8 +305,21 @@ async function runViewport(viewport, routeSpecs, runBudget) {
         result.ok = readback.documentScrollWidth <= viewport.width + 1
           && readback.bodyScrollWidth <= viewport.width + 1
           && (readback.shellScrollWidth == null || readback.shellScrollWidth <= viewport.width + 1)
-          && readback.heavyChrome === 0;
-        if (!result.ok) result.exactBlocker = readback.heavyChrome > 0 ? 'heavy_chrome_present' : 'layout_overflow';
+          && readback.heavyChrome === 0
+          && result.diagnostics.unexpectedConsoleErrors === 0
+          && result.diagnostics.unexpectedPageErrors === 0
+          && result.diagnostics.unexpectedRequestFailures === 0;
+        if (!result.ok) {
+          result.exactBlocker = readback.heavyChrome > 0
+            ? 'heavy_chrome_present'
+            : readback.documentScrollWidth > viewport.width + 1 || readback.bodyScrollWidth > viewport.width + 1
+              ? 'layout_overflow'
+              : result.diagnostics.unexpectedPageErrors > 0
+                ? 'unexpected_page_error'
+                : result.diagnostics.unexpectedConsoleErrors > 0
+                  ? 'unexpected_console_error'
+                  : 'unexpected_request_failure';
+        }
       } catch (error) {
         result.exactBlocker = classifyError(error);
         if (isGlobalTimeout(error) || runBudget.expired()) evidence.globalTimedOut = true;
@@ -388,6 +436,47 @@ async function installLocalProofAuth(context) {
   const userId = '00000000-0000-4000-8000-000000000033';
   const email = 'unified-desktop-layout-local-proof@example.test';
   const token = makeLocalJwt(userId, email);
+  const localProofUser = {
+    id: userId,
+    aud: 'authenticated',
+    role: 'authenticated',
+    email,
+    user_metadata: { name: 'Local Proof User' },
+    app_metadata: {},
+  };
+
+  // Keep the local proof session inside the preview harness. The unsigned test
+  // JWT must never reach the real Supabase project, and mocked responses prevent
+  // an expected refresh/401 from being reported as an application failure.
+  await context.route(`${supabaseUrl}/rest/v1/**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      body: '[]',
+    });
+  });
+  await context.route(`${supabaseUrl}/auth/v1/token**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        access_token: token,
+        token_type: 'bearer',
+        expires_in: 3600,
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        refresh_token: 'local-proof-refresh',
+        user: localProofUser,
+      }),
+    });
+  });
+  await context.route(`${supabaseUrl}/auth/v1/user**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(localProofUser),
+    });
+  });
+
   await context.addInitScript(({ userId: initUserId, email: initEmail, projectRef: initProjectRef, token: initToken }) => {
     const key = `sb-${initProjectRef}-auth-token`;
     window.localStorage.setItem(key, JSON.stringify({
@@ -399,6 +488,22 @@ async function installLocalProofAuth(context) {
       user: { id: initUserId, aud: 'authenticated', role: 'authenticated', email: initEmail, user_metadata: {}, app_metadata: {} },
     }));
   }, { userId, email, projectRef, token });
+}
+
+function isExpectedConsoleError(message) {
+  return /ERR_BLOCKED_BY_CLIENT/.test(message)
+    || /Failed to load resource: the server responded with a status of 401/.test(message)
+    || /Failed to load resource:.*fonts\.googleapis\.com/iu.test(message)
+    || /Failed to load resource:.*fonts\.gstatic\.com/iu.test(message)
+    || /Remote workspace artifact save failed; falling back to localStorage/.test(message)
+    || /Falling back to table usage summary/.test(message);
+}
+
+function isExpectedRequestFailure(request) {
+  const failure = request.failure()?.errorText ?? 'unknown';
+  if (failure === 'net::ERR_ABORTED') return true;
+  return request.url().startsWith('https://fonts.googleapis.com/')
+    || request.url().startsWith('https://fonts.gstatic.com/');
 }
 
 async function installLocalPreviewNetworkBoundary(context) {

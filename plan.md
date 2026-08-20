@@ -1386,5 +1386,19 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 ### Current exact blocker / next action / restart point
 
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+@@
 - Next action: keep foreground provider generation and persistence fail-closed; continue only target-scoped read-only when a fresh exact target descriptor is available, or local parity QA. Do not retry this capability fingerprint without an official capability/distribution state change.
 - Restart point: official `foreground_activation` or `management` advertisement, then a new Profile 2 owner and one same-run capability → `openTabs()` → lineage check. Do not reuse r72 browser/binding/tab/run/artifact.
+
+## 2026-08-20 Unified desktop QA diagnostic gate r73
+
+- Fixed the local desktop verifier so its local-proof Supabase responses are mocked consistently and diagnostic failures are classified instead of ignored. Unexpected console, page, or request failures now make a cell and the run fail closed.
+- Full matrix passed: 31 features, 57 targets, 4 desktop viewports, 228/228 cells, `failed=0`, zero unexpected diagnostics, and cleanup complete. Raw harness diagnostics remain visible as 228 expected console errors and 242 expected request failures; page errors are zero.
+- Artifact: `work/heavy-local-unified-desktop-layout-20260820-r73.md`.
+
+### Current exact blocker / next action / restart point
+
+- This closes the local desktop QA diagnostic gate only. Production provider generation, result quality, save/reuse/reload, current Lightchain card parity, and paired Mac/Windows acceptance remain unverified.
+- Exact blocker remains `chrome_foreground_activation_capability_unavailable` for the production provider lane; current-selector card enumeration separately remains `chrome_extension_target_readback_target_session_not_owned`.
+- Next action: continue local parity/beta-gate work; after official Chrome capability or supported target-session state changes, start a fresh Profile 2 owner for the production fabric/printing and AI-fitting proof.
+- Restart point: changed official/session state plus fresh owner; do not reuse prior browser, binding, tab, run, or artifact.

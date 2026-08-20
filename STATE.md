@@ -4378,5 +4378,19 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 ### Current exact blocker / next action / restart point
 
 - Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+@@
 - Next action: preserve foreground provider and persistence fail-closed; continue target-scoped read-only only from a fresh exact target descriptor, or local parity QA. Do not repeat this capability fingerprint until official distribution state changes.
 - Restart point: official foreground capability advertisement, then fresh Profile 2 owner → capability → `openTabs()` → lineage proof. Do not reuse the r72 browser/binding/tab/run/artifact.
+
+## 2026-08-20 Unified desktop QA diagnostic gate r73
+
+- `scripts/verify-unified-desktop-layout.mjs` now mocks the local-proof Supabase REST/auth boundary and distinguishes raw expected harness diagnostics from unexpected application diagnostics. Unexpected console/page/request failures are fail-closed.
+- Current full matrix passed: 31 features, 57 targets, 4 viewports, 228/228 cells, `failed=0`; unexpected console/page/request failures are all zero. Cleanup passed for browser, contexts, preview, and leftovers. Artifact: `work/heavy-local-unified-desktop-layout-20260820-r73.md`.
+- Raw diagnostics are retained for audit: 228 expected console errors and 242 expected request failures; page errors are zero. Local-only performance is navigation p50 221ms/p95 604ms and settle p50 967ms/p95 1960ms.
+
+### Current exact blocker / next action / restart point
+
+- This advances local QA only. Production provider generation/persistence/reuse, current Lightchain card parity, and paired Mac/Windows acceptance remain unverified.
+- Exact blockers remain `chrome_foreground_activation_capability_unavailable` and `chrome_extension_target_readback_target_session_not_owned` for their separate production/browser lanes.
+- Next action: continue dependency-independent local parity and beta-gate work; after the required official/session state change, create a fresh Profile 2 owner for the remaining production proof.
+- Restart point: changed official/session state plus fresh owner; do not reuse prior browser, binding, tab, run, or artifact.
