@@ -1361,3 +1361,16 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blockers remain `chrome_foreground_activation_capability_unavailable` for production provider stages and `chrome_extension_target_readback_target_session_not_owned` for the current-selector card enumeration attempt.
 - Next action: after an official capability or supported target-session state change, create a fresh Profile 2 owner. If foreground capability is advertised, run fabric/printing provider → result → save → Gallery/Canvas/History/Jobs → reuse → reload, then AI fitting; otherwise continue target-scoped/local QA only.
 - Restart point: changed official/session state plus a new owner; do not reuse prior browser, binding, tab, run, or artifact as current proof.
+
+## 2026-08-20 Fresh Chrome update capability proof r71
+
+- A new official Chrome Plugin/Profile 2 browser-client `-144b-47e8-9d8d-9d0d4ea44eff` passed same-run `get()` → `openTabs()` with 12 tabs.
+- Current selector is revision 4. The signed extension instance is `f48b15fe-59a8-4443-8369-44b169a4da68`; advertised capabilities remain browser `viewport` and tab `pageAssets/cdp` only. `foreground_activation` and `management` are not advertised.
+- No Heavy or Lightchain target appeared in this inventory. selected/focus/claim/foreground/provisioning/navigation/generation/save/reuse/recording/external effects were not performed.
+- Artifact: `work/chrome-plugin-capability-open-tabs-20260820-r5.json`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`; the current-selector card readback blocker remains `chrome_extension_target_readback_target_session_not_owned`.
+- Next action: do not retry this capability fingerprint. After official capability or supported target-session state change, create a new Profile 2 owner and resume the remaining production proof.
+- Restart point: changed official distribution/session state plus fresh same-run owner lineage; old binding, tab, run, and artifact remain historical.

@@ -4356,3 +4356,14 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Production provider generation/save/reuse/reload remains blocked by `chrome_foreground_activation_capability_unavailable`.
 - Current-selector Lightchain card enumeration remains blocked by `chrome_extension_target_readback_target_session_not_owned`.
 - Next action: wait for an official capability or supported target-session state change, then start a fresh Profile 2 owner and continue the remaining same-run production proof. Keep old browser/binding/tab/run/artifact out of current proof.
+
+## 2026-08-20 Fresh Chrome update capability proof r71
+
+- New official Chrome Plugin/Profile 2 browser-client `-144b-47e8-9d8d-9d0d4ea44eff` passed same-run `get()` → `openTabs()` with 12 tabs under selector revision 4.
+- Extension instance `f48b15fe-59a8-4443-8369-44b169a4da68` advertised `viewport` and tab `pageAssets/cdp` only; `foreground_activation` and `management` remain unadvertised. No Heavy/Lightchain target or external effect was touched.
+- Artifact: `work/chrome-plugin-capability-open-tabs-20260820-r5.json`.
+
+### Current exact blocker / next action / restart point
+
+- `chrome_foreground_activation_capability_unavailable` remains the production provider blocker; `chrome_extension_target_readback_target_session_not_owned` remains the current-selector card readback blocker.
+- Next action: wait for official capability or supported target-session state change, then use a fresh owner for the remaining production proof. Do not reuse old binding/tab/run/artifact.
