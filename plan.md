@@ -2,6 +2,28 @@
 
 更新日: 2026-08-20
 
+## Current Heavy production source-toolbar readback r121
+
+- Commit `6a087b8`のmaterial route修正を、確認済みのHeavy Chain Zeabur
+  serviceへdeployment `6a86e82aa158dec405723ee7`として反映し、`RUNNING`を
+  fresh確認した。
+- 必須Profile 2 preflightは`status=ready`、selector revision `30`、
+  `exact_blocker=null`。同一ownerの`list -> get -> openTabs`後に、
+  target-scoped `/tools/fabric` readbackを実施した。
+- 本番DOMで`lightchain-source-toolbar`と、Lightchain sourceと同じ5項目
+  （`ツールバー`、`デザインツール`、`フィッティングツール`、
+  `グラフィックデザインツール`、`衣類生産ツール`）を確認した。
+- Artifact:
+  `work/heavy-production-source-toolbar-readback-20260820-r121.md`。
+
+### Boundary / next action
+
+material routeのUI差分1件は修正・deploy・fresh readbackまで完了した。
+provider生成、保存、再利用、reload、Gallery/Canvas/History/Jobsの同一run
+証跡は未完了で、foreground capability未広告のためfail-closedを維持する。
+公式capability変更後にfresh ownerでfabric/printingを先に実証し、その後
+AIフィッティングへ進む。
+
 ## Current source-toolbar parity correction checkpoint r120
 
 - Fresh same-owner Lightchain `/tools/fabric` source readback exposed the

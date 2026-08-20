@@ -2,6 +2,41 @@
 
 Updated: 2026-08-20
 
+## Current Heavy production source-toolbar readback r121
+
+- The corrected material route is deployed and running as Zeabur Docker deployment
+  `6a86e82aa158dec405723ee7` from commit `6a087b8`.
+- Mandatory Profile 2 preflight passed with `status=ready`, current selector
+  revision `30`, and `exact_blocker=null`. Same-owner `list -> get -> openTabs`
+  handshake used browser `-b7cb-4f14-9d65-909dd3a4e7e3`.
+- Fresh target-scoped Heavy `/tools/fabric` readback confirmed the deployed
+  `lightchain-source-toolbar` with the exact source labels `ツールバー`,
+  `デザインツール`, `フィッティングツール`, `グラフィックデザインツール`,
+  and `衣類生産ツール`, mapped to Heavy's non-video catalog. The page also
+  retained the fabric inputs, Gallery entry points, ratio controls, `AI生成`,
+  and `生成履歴`.
+- Target `1980904700` returned the requested URL, page title `Lightchain AI`,
+  `readyState=complete`, `hydration_ready=true`, and `41` visible controls.
+- Artifact:
+  `work/heavy-production-source-toolbar-readback-20260820-r121.md`。
+
+### Boundary / current exact blocker / next action
+
+This closes the confirmed material-route source-toolbar UI parity correction.
+It does not prove provider generation, result quality, durable persistence,
+Gallery/Canvas/History/Jobs lineage, reuse/reload, or beta acceptance.
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable`.
+- Cleanup passed and only task-owned tab `1980904700` was closed. No provider,
+  upload, save, reuse, recording, AOS, or external effect was performed.
+- Next action: after official `foreground_activation` or `management`
+  advertisement, create a fresh Profile 2 owner and run fabric/printing
+  generation → result → save → Gallery/Canvas/History/Jobs → reuse → reload,
+  then run AI fitting. Keep the current read-only binding out of foreground
+  proof.
+- Restart point: official capability state change plus a fresh same-run owner;
+  do not reuse this browser, tab, binding, run, or artifact for provider work.
+
 ## Current source-toolbar parity correction r120
 
 - Fresh same-owner Lightchain `/tools/fabric` readback confirmed the current
