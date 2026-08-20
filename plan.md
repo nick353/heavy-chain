@@ -2,6 +2,24 @@
 
 更新日: 2026-08-20
 
+## Current target action cause-chain readback r126
+
+- Official Chrome Plugin/Profile 2 recovery succeeded and fresh handshake
+  completed with browser `-6775-4ccd-a47f-a32a470c1a47`.
+- One authorized target-scoped click on the exact Heavy input-preparation
+  control returned `chrome_extension_target_action_dispatch_failed`.
+- The new bounded cause chain records a 439ms CDP `Runtime.evaluate` timeout
+  inside a 3000ms selector wait. The tab was cleaned up and no replay occurred.
+- Artifact:
+  `work/heavy-target-action-cause-chain-20260820-r126.md`。
+
+### Boundary / next action
+
+The shared Chrome thread now has the actionable raw cause. Keep Heavy provider
+generation/save/reuse fail-closed until the target action timeout path changes.
+After that state change, use a new owner and repeat the exact approved action
+once, then continue fabric/printing and AI fitting.
+
 ## Current local beta QA and post-fix action gate r125
 
 - Fresh local verification passed all `31/31` non-video feature routes and

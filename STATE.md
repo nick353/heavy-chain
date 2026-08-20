@@ -2,6 +2,31 @@
 
 Updated: 2026-08-20
 
+## Current target action cause-chain readback r126
+
+- Official recovery re-advertised Chrome Plugin/Profile 2 as browser
+  `-6775-4ccd-a47f-a32a470c1a47`; fresh same-run `list -> get -> openTabs`
+  succeeded under owner turn `01a01f18-3fb6-7183-9b60-6993dbfb69ea`.
+- One authorized target-scoped click was attempted on Heavy `/tools/printing`
+  tab `1980904732`. It failed with
+  `chrome_extension_target_action_dispatch_failed`.
+- New bounded cause chain: selector wait timed out after 3000ms because the
+  CDP `Runtime.evaluate` command timed out after 439ms. The selector had been
+  visible in pre-action readback. The click was not replayed; cleanup passed.
+- Artifact:
+  `work/heavy-target-action-cause-chain-20260820-r126.md`。
+
+### Boundary / current exact blockers / next action
+
+- The new raw cause chain is now available to the shared Chrome thread.
+- Target-scoped mutating work remains blocked by
+  `chrome_extension_target_action_dispatch_failed` until the CDP evaluate /
+  action timeout path changes. Foreground-only work remains separately blocked
+  by `chrome_foreground_activation_capability_unavailable`.
+- Next action: after a shared-lane state change, use a new owner and execute
+  the approved target action once; do not replay tab `1980904732` or its
+  receipt.
+
 ## Current local beta QA and post-fix action gate r125
 
 - Fresh local non-video feature verification passed `31/31`; fresh unified
