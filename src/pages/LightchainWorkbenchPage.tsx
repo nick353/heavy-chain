@@ -198,6 +198,17 @@ const categories: Array<{ id: ToolCategory; label: string; icon: typeof Sparkles
   { id: 'lab', label: 'Lab', icon: Boxes, description: '実験機能、変換、品質確認を試します。' },
 ];
 
+// The current Lightchain production detail route keeps this compact toolbar
+// above the feature controls. Keep the labels and grouping source-aligned
+// while routing into Heavy's non-video compatibility catalog.
+const lightchainSourceToolbarItems: ReadonlyArray<{ label: string; to: string }> = Object.freeze([
+  { label: 'ツールバー', to: '/lightchain' },
+  { label: 'デザインツール', to: '/lightchain?category=planning' },
+  { label: 'フィッティングツール', to: '/lightchain?category=fitting' },
+  { label: 'グラフィックデザインツール', to: '/lightchain?category=graphics' },
+  { label: '衣類生産ツール', to: '/lightchain?category=lab' },
+]);
+
 const tools: CompatTool[] = [
   {
     id: 'marketing-home',
@@ -5366,6 +5377,23 @@ export function LightchainWorkbenchPage() {
       data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
     >
       <div className={isFeatureDetail ? 'space-y-4' : 'mx-auto max-w-7xl space-y-5'}>
+        {isFeatureDetail && (
+          <nav
+            aria-label="ツールバー"
+            data-testid="lightchain-source-toolbar"
+            className="flex flex-wrap items-center gap-1.5 rounded-xl border border-white/10 bg-[#111719] px-2 py-2 text-sm font-semibold text-neutral-300"
+          >
+            {lightchainSourceToolbarItems.map((item, index) => (
+              <Link
+                key={item.label}
+                to={item.to}
+                className={`rounded-lg px-3 py-2 transition hover:bg-white/[0.08] hover:text-white ${index === 0 ? 'bg-white/[0.08] text-white' : ''}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
         <section className={`rounded-2xl border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900 ${isFeatureDetail ? 'hidden' : 'p-5 sm:p-6'}`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">

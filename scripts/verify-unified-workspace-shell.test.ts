@@ -48,6 +48,12 @@ test('first complete apparel flows use the unified workspace shell', () => {
   const material = fs.readFileSync('src/pages/LightchainMaterialWorkbenchPage.tsx', 'utf8');
   const generate = fs.readFileSync('src/pages/GeneratePage.tsx', 'utf8');
   const workbench = fs.readFileSync('src/pages/LightchainWorkbenchPage.tsx', 'utf8');
+  assert.match(workbench, /data-testid="lightchain-source-toolbar"/);
+  assert.match(workbench, /ツールバー/);
+  assert.match(workbench, /デザインツール/);
+  assert.match(workbench, /フィッティングツール/);
+  assert.match(workbench, /グラフィックデザインツール/);
+  assert.match(workbench, /衣類生産ツール/);
   const auxiliaryPages = [
     'src/pages/MarketingWorkspacePage.tsx',
     'src/pages/FashionStudioPage.tsx',
