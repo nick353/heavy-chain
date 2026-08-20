@@ -1250,3 +1250,15 @@ fresh official Profile 2 ownerでforeground capabilityが広告された後、�
 - Exact blocker: `chrome_extension_target_readback_timeout` for the latest fresh target-scoped DOM proof; `chrome_foreground_activation_capability_unavailable` for provider work.
 - Next action: push this source change, wait for its source-associated deployment to reach `RUNNING`, then use a new official Profile 2 browser-client for one target-scoped `/tools/printing` DOM readback. Do not reuse the timed-out binding.
 - Restart point: new deployment plus fresh official owner; only after visual readback passes can this UI cleanup be promoted to production parity proof.
+
+## 2026-08-20 Fresh production printing parity proof r62
+
+- The new source-associated deployment for `0b71137` reached `RUNNING`; HTTP `200` and remote/local bundle SHA-256 match were independently confirmed.
+- Fresh official Profile 2 target-scoped readback of Heavy `/tools/printing` passed. The Heavy-only readiness summary/count/next-action and all preparation copy are absent from the DOM snapshot; the Lightchain controls `プリントイメージ`, `参考画像`, `スポット/全体`, `AI生成`, and `生成履歴` are all present.
+- Official task-owned provisioning and cleanup passed; no selected/focus/claim/foreground lease, upload, provider generation, save, reuse, recording, or external effect occurred. Artifact: `work/heavy-production-lightchain-printing-parity-readback-20260820-r62.md`.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker for production business flow: `chrome_foreground_activation_capability_unavailable` (foreground/management remains unadvertised).
+- Next action: after official capability advertisement, create a fresh Profile 2 owner and perform the same-run fabric/printing provider → result → save → Gallery/Canvas/History/Jobs → reuse → reload proof, then AI fitting. The printing UI parity proof itself is now current.
+- Restart point: official capability state change plus fresh owner; do not reuse the r62 browser/binding/tab/run.

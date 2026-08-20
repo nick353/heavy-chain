@@ -4249,3 +4249,15 @@ Current restart condition remains manual Heavy authentication in Profile 2 follo
 - Exact blocker: `chrome_extension_target_readback_timeout` for visual DOM proof; `chrome_foreground_activation_capability_unavailable` for provider generation/save/reuse/reload.
 - Next action: push and verify the source-associated deployment, then create a new official Profile 2 owner and run one target-scoped `/tools/printing` DOM readback. Keep foreground provider work fail-closed.
 - Restart point: new deployment plus fresh official owner; do not reuse r60 browser/binding/tab/run.
+
+## 2026-08-20 Fresh production printing parity proof r62
+
+- Heavy `/tools/printing` now has a fresh same-run official Profile 2 target-scoped proof after deployment `6a869ce70f08f89df0cd11b5`: Heavy-only readiness summary/count/next-action and preparation copy are absent, while the current Lightchain printing controls are present.
+- URL/title, exact target descriptor, DOM snapshot, owner lineage, cleanup, and no-effect boundaries are recorded in `work/heavy-production-lightchain-printing-parity-readback-20260820-r62.md`. `exact_blocker=null` for the read-only target lane.
+- This closes the current printing UI parity discrepancy only. Provider generation, result quality, save/reuse/reload, Gallery/Canvas/History/Jobs same-run proof, and AI fitting remain unverified.
+
+### Current exact blocker / next action / restart point
+
+- Exact blocker: `chrome_foreground_activation_capability_unavailable` for foreground provider work; no target-scoped blocker remains for this printing readback.
+- Next action: capability advertisement後のfresh ownerで printing/fabric production flow, then AI fitting, and only then beta acceptance gates.
+- Restart point: new official Profile 2 owner after capability state change; do not reuse r62 browser/binding/tab/run.
