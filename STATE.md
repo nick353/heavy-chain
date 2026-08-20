@@ -2,6 +2,42 @@
 
 Updated: 2026-08-20
 
+## Current Lightchain visual parity completion r114
+
+- Removed the generic Lightchain feature-detail vertical toolbar that was not
+  present in the current Lightchain source. The standalone `/canvas/new`
+  surface now sets the browser title to `Lightchain AI` as well.
+- Commit `9546ae4` removed the extra generic toolbar and commit `060c390`
+  aligned the standalone Canvas title. Deployment
+  `6a86df91a158dec405723d95` is `RUNNING` with Docker plan type.
+- Mandatory Profile 2 preflight passed with selector
+  `chrome_plugin` / Profile 2 / `signed_chrome_extension_profile2` revision
+  `30` and `exact_blocker=null`. Same-owner fresh session inventory and
+  `openTabs()` handshake returned 2 tabs.
+- Final same-run target-scoped Heavy readback covered all 28 distinct
+  non-video routes: `Lightchain AI` title `28/28`, non-empty DOM `28/28`,
+  `readyState=complete` `28/28`, authentication redirects `0`, and
+  standalone Heavy-only toolbars `0`.
+- `/tools/fabric`, `/tools/printing`, `/model`, and `/canvas/new` all returned
+  the Lightchain title/surface. Task-owned tab `1980904688` was closed and
+  cleanup was verified; pre-existing new-tab and unrelated job tabs were not
+  touched.
+- Artifact:
+  `work/heavy-lightchain-visual-parity-readback-20260820-r114.md`。
+
+### Current exact blocker / next action / restart point
+
+- Provider generation → result → save → Gallery/Canvas/History/Jobs → reuse
+  → reload remains `chrome_foreground_activation_capability_unavailable`.
+  The official Profile 2 lane still lacks the required foreground capability;
+  target-scoped read-only proof does not clear it.
+- Next action: continue dependency-independent local parity and beta QA. After
+  the official capability advertisement changes, prove fabric/printing first,
+  then AI fitting.
+- Restart point: mandatory Profile 2 preflight followed by a fresh owner
+  `list -> get -> openTabs()` boundary. Do not reuse this read-only binding,
+  tab, run, or artifact for foreground work.
+
 ## Current Lightchain visual parity readback r113
 
 - Removed the Heavy-only material toolbar from fabric and printing direct

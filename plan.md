@@ -2,6 +2,47 @@
 
 更新日: 2026-08-20
 
+## Current Lightchain visual parity completion checkpoint r114
+
+- Removed the generic Lightchain feature-detail vertical toolbar that was not
+  present in the current Lightchain source. The standalone `/canvas/new`
+  surface now uses the `Lightchain AI` browser title.
+- Commits `9546ae4` and `060c390` were deployed as Docker deployment
+  `6a86df91a158dec405723d95`, which reached `RUNNING` on the existing
+  `heavy-chain` service.
+- Mandatory Profile 2 preflight passed with the current revision-30 selector
+  and `exact_blocker=null`; same-owner fresh session inventory and
+  `openTabs()` handshake returned 2 tabs.
+- Final same-run target-scoped readback covered all 28 distinct non-video
+  routes. Results: `Lightchain AI` title `28/28`, non-empty DOM `28/28`,
+  `readyState=complete` `28/28`, authentication redirects `0`, and standalone
+  Heavy-only feature toolbars `0`.
+- Priority routes `/tools/fabric`, `/tools/printing`, `/model`, plus
+  `/canvas/new`, returned the Lightchain title/surface. Task-owned tab
+  `1980904688` was closed and cleanup verified; unrelated existing tabs were
+  untouched. Artifact:
+  `work/heavy-lightchain-visual-parity-readback-20260820-r114.md`。
+
+### Boundary
+
+This closes the confirmed read-only visual parity differences in the audited
+28 non-video route set. It does not prove provider generation, result/save,
+Gallery/Canvas/History/Jobs lineage, reuse/reload, Mac/Windows acceptance, or
+internal-beta operator acceptance.
+
+### Current exact blocker / next action / restart point
+
+- Production provider generation → result → save → Gallery/Canvas/History/
+  Jobs → reuse → reload remains
+  `chrome_foreground_activation_capability_unavailable`; the official Profile 2
+  distribution still lacks `foreground_activation`/`management`.
+- Next action: continue local parity and beta QA that do not require
+  foreground capability. After the official capability changes, prove the
+  fabric/printing practical flow, then AI fitting.
+- Restart point: mandatory Profile 2 preflight followed by a fresh owner
+  `list -> get -> openTabs()` boundary. Do not reuse this read-only binding,
+  tab, run, or artifact for foreground work.
+
 ## Current Lightchain visual parity checkpoint r113
 
 - Removed the Heavy-only material toolbar from `/tools/fabric` and
