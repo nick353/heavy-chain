@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MoreVertical, Trash2, Edit3, Search, X } from 'lucide-react';
-import { fetchAccessibleBrandsForCurrentUser, useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../stores/authStore';
 import {
   IconSparkles,
   IconArrowRight,
@@ -12,18 +12,21 @@ import {
   IconFolder
 } from '../components/icons';
 import { useCanvasStore, type CanvasProject } from '../stores/canvasStore';
-import { supabase } from '../lib/supabase';
+import { auth } from '../lib/auth';
 import { withSignedImageUrls } from '../lib/storage';
+import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
 import { Button, Modal, Input, Textarea } from '../components/ui';
 import { Onboarding, useOnboarding } from '../components/Onboarding';
 import { UsageStats } from '../components/UsageStats';
-import type { Brand, GeneratedImage } from '../types/database';
+import type { Brand, CanvasDocument } from '../types/database';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchWorkspaceActivity, emptyWorkspaceActivity, type WorkspaceActivity } from '../lib/workspaceActivity';
 import { getGeneratedImageSelectionKey } from '../lib/generatedImageIdentity';
+import type { GeneratedImageListRow } from '../lib/generatedImageQuery';
 import { CreditSummaryPanel, FailureRetryCard, JobQueuePanel, WorkspaceGuidePanel } from '../components/workspace';
 import { LightchainParityHub } from '../components/LightchainParityHub';
+import { buildDashboardCanvasProjectHref, mergeDashboardCanvasProjects, type DashboardCanvasProject } from '../lib/dashboardCanvasProjects';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -61,12 +64,20 @@ const canvasObjectTypeLabels: Record<CanvasProject['objects'][number]['type'], s
   frame: 'フレーム frame',
 };
 
+const DEFAULT_BRAND_FORM = {
+  name: 'LIGHTCHAIN STUDIO',
+  toneDescription: 'ミニマルで洗練された、自然体のプロダクト表現。清潔感と上質さを保ちながら、日常に馴染むトーン。',
+  targetAudience: 'EC・SNSで商品やブランドの魅力を伝えたいクリエイター・小規模チーム',
+};
+
+type RemoteCanvasProjectsStatus = 'idle' | 'loading' | 'success' | 'failure' | 'unavailable';
+
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { user, currentBrand, setCurrentBrand } = useAuthStore();
-  const { createProject, deleteProject, loadProject, clearCanvas, getRecentProjects, projects } = useCanvasStore();
+  const { user, currentBrand, refreshCurrentBrand, setCurrentBrand } = useAuthStore();
+  const { createProject, deleteProject, loadProject, clearCanvas, projects } = useCanvasStore();
   const { showOnboarding, completeOnboarding } = useOnboarding(user?.id);
-  const [recentImages, setRecentImages] = useState<GeneratedImage[]>([]);
+  const [recentImages, setRecentImages] = useState<GeneratedImageListRow[]>([]);
   const [failedRecentImageIds, setFailedRecentImageIds] = useState<Set<string>>(new Set());
   const [workspaceActivity, setWorkspaceActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
   const [isActivityLoading, setIsActivityLoading] = useState(false);
@@ -77,12 +88,11 @@ export function DashboardPage() {
   const [newProjectName, setNewProjectName] = useState('');
   const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [projectMenuOpen, setProjectMenuOpen] = useState<string | null>(null);
-  const [brandForm, setBrandForm] = useState({
-    name: '',
-    toneDescription: '',
-    targetAudience: ''
-  });
+  const [brandForm, setBrandForm] = useState(DEFAULT_BRAND_FORM);
   const [isCreatingBrand, setIsCreatingBrand] = useState(false);
+  const [remoteCanvasProjects, setRemoteCanvasProjects] = useState<CanvasDocument[]>([]);
+  const [remoteCanvasProjectsStatus, setRemoteCanvasProjectsStatus] = useState<RemoteCanvasProjectsStatus>('idle');
+  const canvasProjectsRequestRef = useRef(0);
 
   const checkBrands = useCallback(async (): Promise<Brand | null> => {
     if (!user) {
@@ -92,34 +102,35 @@ export function DashboardPage() {
 
     try {
       setIsLoading(true);
-      const userId = user.id;
-      const brands = await fetchAccessibleBrandsForCurrentUser(userId);
-      if (useAuthStore.getState().user?.id !== userId) return null;
-
-      if (!brands || brands.length === 0) {
-        setCurrentBrand(null);
+      const refreshedBrand = await refreshCurrentBrand();
+      const verifiedCurrentBrand = useAuthStore.getState().currentBrand;
+      const currentUserMatches = useAuthStore.getState().user?.id === user?.id;
+      if (!currentUserMatches) return null;
+      const state = useAuthStore.getState();
+      if (state.brandState.status === 'success_empty') {
         setShowBrandModal(true);
         setIsLoading(false);
         return null;
-      } else {
-        const latestCurrentBrand = useAuthStore.getState().currentBrand;
-        const currentBrandIsAccessible = latestCurrentBrand && brands.some((brand) => brand.id === latestCurrentBrand.id);
-        const nextBrand = currentBrandIsAccessible ? latestCurrentBrand : brands[0];
-        if (nextBrand.id !== latestCurrentBrand?.id) {
-          setCurrentBrand(nextBrand);
-        }
+      }
+      if (state.brandState.status === 'failure' || !refreshedBrand || !verifiedCurrentBrand) {
+        setShowBrandModal(false);
+        setIsLoading(false);
+        return null;
+      }
+      if (verifiedCurrentBrand) {
         setShowBrandModal(false);
         setIsLoading(false);
         // ブランド設定後にuseEffectが再実行されて画像を取得する
-        return nextBrand;
+        return verifiedCurrentBrand;
       }
+      return null;
     } catch (error) {
       logDashboardFetchError('Failed to check brands:', error);
       toast.error('ブランド情報の取得に失敗しました');
       setIsLoading(false);
       return null;
     }
-  }, [setCurrentBrand, user]);
+  }, [refreshCurrentBrand, user]);
 
   const fetchRecentImages = useCallback(async (brandOverride?: Brand | null) => {
     const targetBrand = brandOverride ?? currentBrand;
@@ -130,25 +141,12 @@ export function DashboardPage() {
     
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('generated_images')
-        .select('*')
-        .eq('brand_id', targetBrand.id)
-        .order('created_at', { ascending: false })
-        .limit(6);
-
-      if (error) {
-        logDashboardFetchError('Failed to fetch images:', error);
-        toast.error('画像の取得に失敗しました');
-        if (useAuthStore.getState().currentBrand?.id !== targetBrand.id) return;
-        setRecentImages([]);
-        setFailedRecentImageIds(new Set());
-      } else {
-        const signedImages = await withSignedImageUrls(data || []);
-        if (useAuthStore.getState().currentBrand?.id !== targetBrand.id) return;
-        setRecentImages(signedImages);
-        setFailedRecentImageIds(new Set());
-      }
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const data = await cloudflareDataPlane.listGeneratedImages(targetBrand.id, { limit: 6, offset: 0 });
+      const signedImages = await withSignedImageUrls(data.map(asGeneratedImageListRow));
+      if (useAuthStore.getState().currentBrand?.id !== targetBrand.id) return;
+      setRecentImages(signedImages);
+      setFailedRecentImageIds(new Set());
     } catch (error) {
       logDashboardFetchError('Failed to fetch images:', error);
       toast.error('画像の取得に失敗しました');
@@ -188,26 +186,77 @@ export function DashboardPage() {
     }
   }, [currentBrand, user?.id]);
 
+  const fetchCanvasProjects = useCallback(async (brandOverride?: Brand | null) => {
+    const requestId = ++canvasProjectsRequestRef.current;
+    const targetBrand = brandOverride ?? currentBrand;
+    const targetUserId = user?.id;
+    if (!targetBrand || !targetUserId) {
+      setRemoteCanvasProjects([]);
+      setRemoteCanvasProjectsStatus('idle');
+      return;
+    }
+    if (!cloudflareDataPlane) {
+      setRemoteCanvasProjects([]);
+      setRemoteCanvasProjectsStatus('unavailable');
+      return;
+    }
+
+    const targetBrandId = targetBrand.id;
+    setRemoteCanvasProjectsStatus('loading');
+    try {
+      const documents = await cloudflareDataPlane.listCanvasDocuments(targetBrandId);
+      if (requestId !== canvasProjectsRequestRef.current
+        || useAuthStore.getState().user?.id !== targetUserId
+        || useAuthStore.getState().currentBrand?.id !== targetBrandId) return;
+      setRemoteCanvasProjects(documents);
+      setRemoteCanvasProjectsStatus('success');
+    } catch (error) {
+      if (requestId !== canvasProjectsRequestRef.current
+        || useAuthStore.getState().user?.id !== targetUserId
+        || useAuthStore.getState().currentBrand?.id !== targetBrandId) return;
+      logDashboardFetchError('Failed to load saved Canvas projects:', error);
+      // A failed list must never be rendered as a confirmed empty state.
+      setRemoteCanvasProjects([]);
+      setRemoteCanvasProjectsStatus('failure');
+    }
+  }, [currentBrand, user?.id]);
+
   useEffect(() => {
     let mounted = true;
 
     const loadData = async () => {
       if (!user) {
         // ユーザーがいない場合はローディングを解除
-        if (mounted) setIsLoading(false);
+        if (mounted) {
+          setRemoteCanvasProjects([]);
+          setRemoteCanvasProjectsStatus('idle');
+          setIsLoading(false);
+        }
         return;
       }
 
       const resolvedBrand = await checkBrands();
-      if (resolvedBrand) await Promise.all([fetchRecentImages(resolvedBrand), fetchActivity(resolvedBrand)]);
+      if (!resolvedBrand) {
+        if (mounted) {
+          setRemoteCanvasProjects([]);
+          setRemoteCanvasProjectsStatus('idle');
+        }
+        return;
+      }
+      await Promise.all([
+        fetchRecentImages(resolvedBrand),
+        fetchActivity(resolvedBrand),
+        fetchCanvasProjects(resolvedBrand),
+      ]);
     };
 
     loadData();
 
     return () => {
       mounted = false;
+      canvasProjectsRequestRef.current += 1;
     };
-  }, [currentBrand, user, checkBrands, fetchRecentImages, fetchActivity]);
+  }, [currentBrand, user, checkBrands, fetchRecentImages, fetchActivity, fetchCanvasProjects]);
 
   const handleCreateBrand = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,23 +268,41 @@ export function DashboardPage() {
 
     setIsCreatingBrand(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await auth.getSession();
 
       if (!session) {
         toast.error('ログインが必要です');
         return;
       }
 
-      const { data, error } = await supabase
-        .rpc('create_brand', {
-          p_name: brandForm.name,
-          p_tone_description: brandForm.toneDescription || null,
-          p_target_audience: brandForm.targetAudience || null
-        });
-
-      if (error) throw error;
-
-      setCurrentBrand(data as Brand);
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const createdBrand = await cloudflareDataPlane.createBrand({
+        name: brandForm.name,
+        brand_colors: {
+          primary: '#806a54',
+          secondary: '#c4a57c',
+        },
+        tone_description: brandForm.toneDescription || null,
+        target_audience: brandForm.targetAudience || null,
+      });
+      await refreshCurrentBrand();
+      const state = useAuthStore.getState();
+      const confirmedCreatedBrand = createdBrand?.id
+        ? state.accessibleBrands.find((brand) => brand.id === createdBrand.id) || null
+        : null;
+      if (
+        state.user?.id !== session.user.id
+        || state.brandState.status !== 'success_nonempty'
+        || !confirmedCreatedBrand
+      ) {
+        toast.error('ブランドは作成済みです。ブランド一覧を再読み込みしてください。再作成は不要です');
+        return;
+      }
+      setCurrentBrand(confirmedCreatedBrand);
+      if (useAuthStore.getState().currentBrand?.id !== confirmedCreatedBrand.id) {
+        toast.error('ブランドは作成済みです。ブランド一覧から選択してください。再作成は不要です');
+        return;
+      }
       setShowBrandModal(false);
       toast.success('ブランドを作成しました');
     } catch (error: any) {
@@ -258,9 +325,9 @@ export function DashboardPage() {
     navigate(`/canvas/${projectId}`);
   };
 
-  const handleOpenProject = (project: CanvasProject) => {
-    loadProject(project.id);
-    navigate(`/canvas/${project.id}`);
+  const handleOpenProject = (project: DashboardCanvasProject) => {
+    if (projects.some((item) => item.id === project.id)) loadProject(project.id);
+    navigate(buildDashboardCanvasProjectHref(project.id));
   };
 
   const handleDeleteProject = (projectId: string, e: React.MouseEvent) => {
@@ -275,7 +342,7 @@ export function DashboardPage() {
     navigate('/canvas/new');
   };
 
-  const getImageUrl = (image: GeneratedImage) => {
+  const getImageUrl = (image: GeneratedImageListRow) => {
     // まずimage_urlを確認（直接URL）
     if (image.image_url) {
       return image.image_url;
@@ -315,12 +382,18 @@ export function DashboardPage() {
   };
 
   const normalizedProjectSearch = projectSearchQuery.trim().toLowerCase();
+  const dashboardProjects = useMemo(() => mergeDashboardCanvasProjects(
+    projects,
+    remoteCanvasProjectsStatus === 'success' ? remoteCanvasProjects : [],
+  ), [projects, remoteCanvasProjects, remoteCanvasProjectsStatus]);
   const visibleProjects = useMemo(() => {
     if (!normalizedProjectSearch) {
-      return getRecentProjects(6);
+      return [...dashboardProjects]
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(0, 6);
     }
 
-    return [...projects]
+    return [...dashboardProjects]
       .filter((project) => {
         const updatedDate = new Date(project.updatedAt);
         const objectTypes = project.objects
@@ -337,9 +410,11 @@ export function DashboardPage() {
       })
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .slice(0, 24);
-  }, [getRecentProjects, normalizedProjectSearch, projects]);
+  }, [dashboardProjects, normalizedProjectSearch]);
 
   const isSearchingProjects = normalizedProjectSearch.length > 0;
+  const remoteCanvasProjectsMayBeTruncated = remoteCanvasProjectsStatus === 'success' && remoteCanvasProjects.length >= 100;
+  const projectCountLabel = remoteCanvasProjectsMayBeTruncated ? '表示中' : '全';
   const displayableRecentImages = recentImages.filter((image) => Boolean(getImageUrl(image)) && !failedRecentImageIds.has(image.id));
   const unresolvedRecentImageCount = recentImages.length - displayableRecentImages.length;
 
@@ -472,7 +547,7 @@ export function DashboardPage() {
                     className="rounded-2xl border border-white/10 bg-white/[0.06] p-3"
                   >
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">残り</p>
-                    <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.creditSummary.billingTestAccountQuotaBypass ? '無制限' : workspaceActivity.creditSummary.remainingUnits.toLocaleString()}</p>
+                    <p className="mt-1 text-xl font-semibold text-neutral-950 dark:text-white">{workspaceActivity.creditSummary.billingTestAccountQuotaBypass ? '無制限' : workspaceActivity.creditSummary.remainingUnits?.toLocaleString() ?? '未取得'}</p>
                   </Link>
                 </div>
                 <Link
@@ -546,7 +621,23 @@ export function DashboardPage() {
             </button>
           </div>
 
-          {projects.length > 0 ? (
+          {remoteCanvasProjectsStatus === 'loading' && (
+            <p className="mb-4 text-xs text-neutral-500 dark:text-neutral-400" role="status">
+              保存済みCanvasを読み込んでいます…
+            </p>
+          )}
+          {remoteCanvasProjectsStatus === 'failure' && (
+            <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200" role="alert">
+              保存済みCanvasを取得できませんでした。ローカルのプロジェクトのみ表示しています。
+            </p>
+          )}
+          {remoteCanvasProjectsMayBeTruncated && (
+            <p className="mb-4 text-xs text-neutral-500 dark:text-neutral-400" role="status">
+              保存済みCanvasは最新の100件まで表示しています。
+            </p>
+          )}
+
+          {dashboardProjects.length > 0 ? (
             <>
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <label className="relative block sm:max-w-sm flex-1">
@@ -571,8 +662,8 @@ export function DashboardPage() {
                 </label>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">
                   {isSearchingProjects
-                    ? `${visibleProjects.length}件 / 全${projects.length}件`
-                    : `最近の${visibleProjects.length}件 / 全${projects.length}件`}
+                    ? `${visibleProjects.length}件 / ${projectCountLabel}${dashboardProjects.length}件`
+                    : `最近の${visibleProjects.length}件 / ${projectCountLabel}${dashboardProjects.length}件`}
                 </p>
               </div>
 
@@ -657,14 +748,16 @@ export function DashboardPage() {
                             <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             開く
                           </button>
-                          <button
-                            onClick={(e) => handleDeleteProject(project.id, e)}
-                            className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                            aria-label={`${project.name}を削除`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            削除
-                          </button>
+                          {project.source === 'local' && (
+                            <button
+                              onClick={(e) => handleDeleteProject(project.id, e)}
+                              className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-left text-xs sm:text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                              aria-label={`${project.name}を削除`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              削除
+                            </button>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -688,6 +781,35 @@ export function DashboardPage() {
                 </div>
               )}
             </>
+          ) : remoteCanvasProjectsStatus === 'loading' ? (
+            <div className="rounded-3xl border border-dashed border-neutral-200 bg-white/50 p-12 text-center dark:border-white/5 dark:bg-white/5">
+              <h3 className="text-xl font-semibold text-neutral-900 dark:text-white">保存済みCanvasを確認しています</h3>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                保存済みプロジェクトの一覧を読み込んでいます。
+              </p>
+            </div>
+          ) : remoteCanvasProjectsStatus === 'failure' ? (
+            <div className="rounded-3xl border border-dashed border-amber-200 bg-amber-50/60 p-12 text-center dark:border-amber-900/60 dark:bg-amber-950/20">
+              <h3 className="text-xl font-semibold text-neutral-900 dark:text-white">保存済みCanvasを確認できません</h3>
+              <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                一覧取得に失敗したため、保存済みプロジェクトがないとは判定していません。
+              </p>
+              <Button
+                size="lg"
+                className="mt-6 rounded-full"
+                leftIcon={<IconPlus className="h-5 w-5" size={20} />}
+                onClick={() => setShowNewProjectModal(true)}
+              >
+                新規プロジェクト作成
+              </Button>
+              <button
+                type="button"
+                className="mt-4 block mx-auto text-sm font-medium text-neutral-600 underline underline-offset-4 transition hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
+                onClick={() => void fetchCanvasProjects()}
+              >
+                再読み込み
+              </button>
+            </div>
           ) : (
             <div className="bg-white/50 dark:bg-white/5 backdrop-blur-sm rounded-3xl p-12 border border-neutral-200/50 dark:border-white/5 text-center">
               <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100/50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-3xl flex items-center justify-center mx-auto mb-8 animate-float">

@@ -26,6 +26,8 @@ import { Minimap } from '../components/canvas/Minimap';
 import { PropertiesPanel } from '../components/canvas/PropertiesPanel';
 import { ImageEditModal } from '../components/canvas/ImageEditModal';
 import { PartialEditModal, type PartialEditPayload } from '../components/canvas/PartialEditModal';
+import { ProtectedImageRecoveryPanel } from '../components/ProtectedImageRecoveryPanel';
+import type { PendingProtectedImageSummary } from '../lib/cloudflareImageInputCache';
 import { CanvasGuide, useCanvasGuide } from '../components/canvas/CanvasGuide';
 import { normalizeCanvasView, useCanvasStore, type CanvasObject } from '../stores/canvasStore';
 import { ChatEditor } from '../components/ChatEditor';
@@ -33,8 +35,8 @@ import { GallerySelector } from '../components/GallerySelector';
 import { TemplateSelector, type DesignTemplate, type SizeTemplate } from '../components/TemplateSelector';
 import { Button, Modal, Textarea, Input } from '../components/ui';
 import { ImageSelector, type SelectedImage } from '../components/ImageSelector';
-import { supabase } from '../lib/supabase';
-import { resolveGeneratedImageUrl } from '../lib/storage';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { resolveGeneratedImageUrl, resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { getWorkspaceArtifactCanonicalStoragePath, listWorkspaceArtifacts } from '../lib/localWorkspaceArtifacts';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import {
@@ -55,6 +57,8 @@ import {
   validateLegalSafetyInput,
 } from '../lib/legalSafetyGuard';
 import { useAuthStore } from '../stores/authStore';
+import { captureAuthBrandFence,assertAuthBrandFence } from '../lib/authBrandSelection';
+import { CLOUDFLARE_PROTECTED_EDIT_NOTICE } from '../lib/cloudflareProtectedImageEdit';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import type Konva from 'konva';
@@ -69,10 +73,16 @@ import {
   buildCanvasDocumentSnapshot,
   captureLegacyCanvasPayload,
   createCanvasDocument,
+  CanvasDocumentValidationError,
   getCanvasDocument,
   retainCanvasCacheAfterFailedReadback,
   updateCanvasDocument,
+  validateCanvasDocumentSnapshot,
 } from '../lib/canvasDocumentPersistence';
+import {
+  acceptCanvasRemoteVersion,initialCanvasDocumentId,inspectCanvasSaveRecovery,readCanvasSaveRecovery,retainCanvasSaveDraft,
+  saveCanvasDocumentRecoverably,sameCanvasSaveContent,type CanvasSaveScope,type CanvasSaveTransport,
+} from '../lib/canvasDocumentSaveRecovery';
 
 type ViewMode = 'canvas' | 'tree';
 type SidePanel = 'properties' | 'chat' | 'templates' | null;
@@ -93,6 +103,18 @@ type LocalRestoreState = {
   objectCount: number;
   missingCount: number;
 };
+
+async function invokeProviderAction(
+  action: string,
+  options: { body: Record<string, unknown> },
+): Promise<{ data: any; error: any }> {
+  try {
+    if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+    return { data: await cloudflareDataPlane.invokeProviderAction(action, options.body), error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+}
 const GENERATED_CANVAS_HANDOFF_KEY = 'heavy-chain-generated-canvas-handoff';
 const MAX_MODEL_MATRIX_PATTERNS = 3;
 const DerivationTree = lazy(() =>
@@ -141,6 +163,17 @@ const isUsableLoadedImage = (image?: HTMLImageElement | null) => (
 );
 
 const CANVAS_DOCUMENT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const canvasDocumentValidationMessage = (error: unknown) => {
+  if (!(error instanceof CanvasDocumentValidationError)) return null;
+  const targets = error.issues
+    .map((issue) => issue.label || issue.objectId)
+    .filter(Boolean)
+    .join('、');
+  return targets
+    ? `画像の保存先を確認できないためCanvasを保存できません。対象: ${targets}。再読込可能な素材を選び直してください。`
+    : '画像の保存先を確認できないためCanvasを保存できません。再読込可能な素材を選び直してください。';
+};
 
 const restoreCanvasObjects = (snapshot: unknown): CanvasObject[] => {
   if (!snapshot || typeof snapshot !== 'object' || !Array.isArray((snapshot as any).objects)) return [];
@@ -265,6 +298,30 @@ const loadLocalUploadImage = (source: string) => new Promise<HTMLImageElement>((
   image.src = source;
 });
 
+// Library handoffs can point at a private R2 object. Resolve the canonical
+// path through the authenticated gateway and load remote bytes before adding
+// them to Konva, matching the Gallery selector's readable Canvas path.
+const loadLibraryCanvasImage = async (source: string) => {
+  const localResolution = await resolveLocalCanvasAsset(source);
+  try {
+    const resolvedSource = localResolution?.source || await resolveGeneratedImageUrl(source);
+    if (!/^https?:/i.test(resolvedSource)) return await loadLocalUploadImage(resolvedSource);
+
+    const response = await fetch(resolvedSource);
+    if (!response.ok) throw new Error('画像を読み込めませんでした');
+    const blob = await response.blob();
+    if (/svg|xml/i.test(blob.type || '')) throw new Error('SVG画像はCanvas処理に使用できません');
+    const objectUrl = window.URL.createObjectURL(blob);
+    try {
+      return await loadLocalUploadImage(objectUrl);
+    } finally {
+      window.URL.revokeObjectURL(objectUrl);
+    }
+  } finally {
+    localResolution?.release();
+  }
+};
+
 export function CanvasEditorPage() {
   useEffect(() => {
     const previousTitle = document.title;
@@ -277,7 +334,14 @@ export function CanvasEditorPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const sourceArtifactId = searchParams.get('sourceArtifactId');
+  const sourceArtifactParam = searchParams.get('sourceArtifactId');
+  // Gallery/History canonical identity keys may be prefixed with `id:`.
+  // Canvas handoffs address browser-local workspace artifacts by their raw id,
+  // so normalize that transport prefix before the scoped lookup.
+  const sourceArtifactId = sourceArtifactParam?.startsWith('id:')
+    ? sourceArtifactParam.slice(3)
+    : sourceArtifactParam;
+  const canvasDebugEnabled = searchParams.get('debugCanvas') === '1';
   const containerRef = useRef<HTMLDivElement>(null);
   const projectNameInputRef = useRef<HTMLInputElement>(null);
   const localUploadInputRef = useRef<HTMLInputElement>(null);
@@ -309,9 +373,14 @@ export function CanvasEditorPage() {
   const localAssetReleasesRef = useRef<Map<string, () => void>>(new Map());
   const remoteDocumentIdRef = useRef<string | null>(null);
   const remoteRevisionRef = useRef<number | null>(null);
+  const remoteDocumentOwnerRef = useRef<string|null>(null);
+  const canvasRecoveryScopeRef = useRef<CanvasSaveScope|null>(null);
+  const canvasSourceProjectIdsRef = useRef<string[]>([]);
+  const activeCanvasSaveRef = useRef<{documentId:string;userId:string;brandId:string}|null>(null);
   const legacyCanvasCapturedRef = useRef(false);
   const suppressPersistenceDirtyRef = useRef(false);
   const [canvasPersistenceStatus, setCanvasPersistenceStatus] = useState<'unsaved' | 'loading' | 'saving' | 'verifying' | 'saved' | 'conflict' | 'failed'>('unsaved');
+  const [canvasDebugResolution, setCanvasDebugResolution] = useState<unknown[]>([]);
 
   // Generate modal states
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -355,6 +424,27 @@ export function CanvasEditorPage() {
   const [partialEditingObjectId, setPartialEditingObjectId] = useState<string | null>(null);
   const partialEditAttemptRef = useRef<{ attempted: boolean; idempotencyKey: string | null }>({ attempted: false, idempotencyKey: null });
   const inpaintAttemptRef = useRef<{ attempted: boolean; idempotencyKey: string | null }>({ attempted: false, idempotencyKey: null });
+  const imageEditEpochRef = useRef(0);
+  const imageEditRouteRef = useRef(projectId);
+  imageEditRouteRef.current = projectId;
+  useEffect(() => () => { imageEditEpochRef.current += 1; },[]);
+  const captureCanvasImageEditContext = (sourceId: string | null) => {
+    const state = useAuthStore.getState();
+    const authFence = captureAuthBrandFence(state.brandState,state.user?.id ?? null,state.currentBrand?.id ?? null);
+    const canvasId = useCanvasStore.getState().currentProjectId;
+    const routeId = imageEditRouteRef.current; const epoch = imageEditEpochRef.current;
+    const identity = () => {
+      const source = sourceId ? useCanvasStore.getState().objects.find(object=>object.id === sourceId) : null;
+      const path = source?.metadata?.storagePath ?? source?.metadata?.galleryStoragePath;
+      return sourceId ? JSON.stringify([source?.id,path,source?.metadata?.imageId,source?.metadata?.generation,source?.metadata?.sourceRevision,path ? null : source?.src]) : '';
+    };
+    const sourceIdentity = identity();
+    return () => {
+      const current = useAuthStore.getState();
+      assertAuthBrandFence(authFence,captureAuthBrandFence(current.brandState,current.user?.id ?? null,current.currentBrand?.id ?? null),'canvas_image_edit');
+      if (imageEditEpochRef.current !== epoch || imageEditRouteRef.current !== routeId || useCanvasStore.getState().currentProjectId !== canvasId || identity() !== sourceIdentity) throw new Error('canvas_image_edit_target_changed');
+    };
+  };
 
   // Invite modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -381,6 +471,38 @@ export function CanvasEditorPage() {
     renameProject,
     clearCanvas,
   } = useCanvasStore();
+
+  useEffect(() => {
+    if (!canvasDebugEnabled) {
+      setCanvasDebugResolution([]);
+      return;
+    }
+    let cancelled = false;
+    void Promise.all(objects
+      .filter((object) => object.type === 'image')
+      .slice(0, 12)
+      .map(async (object) => {
+        const source = object.metadata?.galleryStoragePath || object.metadata?.storagePath || object.src || '';
+        const result = await resolveGeneratedImageUrlWithStatus(source);
+        return { id: object.id, source, status: result.ok ? 'ok' : result.status, canonicalPath: result.canonicalPath };
+      }))
+      .then((results) => { if (!cancelled) setCanvasDebugResolution(results); });
+    return () => { cancelled = true; };
+  }, [canvasDebugEnabled, objects]);
+
+  const currentCanvasSaveContent = (documentId?:string) => {
+    const current=useCanvasStore.getState();const title=(current.currentProjectName||'無題のプロジェクト').trim().slice(0,160);
+    return {title,snapshot:buildCanvasDocumentSnapshot({projectId:documentId??current.currentProjectId,name:title,objects:current.objects,
+      view:{zoom:current.zoom,panX:current.panX,panY:current.panY},sourceProjectIds:canvasSourceProjectIdsRef.current})};
+  };
+  const makeCanvasSaveTransport = (scope:CanvasSaveScope,assertContext:()=>void):CanvasSaveTransport => {
+    const context={userId:scope.userId,assertContext};
+    return {
+      get:id=>getCanvasDocument(id,scope.brandId,context),
+      create:(id,content)=>createCanvasDocument({documentId:id,brandId:scope.brandId,...content},context),
+      update:(id,revision,content)=>updateCanvasDocument({documentId:id,brandId:scope.brandId,expectedRevision:revision,...content},context),
+    };
+  };
 
   const localRestoreReferences = useMemo(() => (
     Array.from(new Set(
@@ -491,8 +613,8 @@ export function CanvasEditorPage() {
     }
   }, [canvasSize.height, canvasSize.width, currentProjectId, objects, setPan, setZoom]);
 
-  // Load local projects immediately, then replace a remote UUID route with the
-  // server snapshot. A missing remote document never deletes the local draft.
+  // Resolve an old local bookmark through its scoped save identity first.
+  // A missing remote document never deletes or recreates the local draft.
   useEffect(() => {
     if (user?.id && currentBrand?.id && !legacyCanvasCapturedRef.current) {
       legacyCanvasCapturedRef.current = captureLegacyCanvasPayload(user.id, currentBrand.id);
@@ -501,6 +623,9 @@ export function CanvasEditorPage() {
     if (!projectId || projectId === 'new') {
       remoteDocumentIdRef.current = null;
       remoteRevisionRef.current = null;
+      remoteDocumentOwnerRef.current = null;
+      canvasRecoveryScopeRef.current = null;
+      canvasSourceProjectIdsRef.current = [];
       setCanvasPersistenceStatus('unsaved');
       if (projectId === 'new' && useCanvasStore.getState().currentProjectId) clearCanvas();
       return;
@@ -510,6 +635,29 @@ export function CanvasEditorPage() {
     if (!CANVAS_DOCUMENT_ID_PATTERN.test(projectId)) {
       remoteDocumentIdRef.current = null;
       remoteRevisionRef.current = null;
+      remoteDocumentOwnerRef.current = null;
+      canvasRecoveryScopeRef.current = null;
+      canvasSourceProjectIdsRef.current = [];
+      if(cloudflareDataPlane&&user?.id&&currentBrand?.id) {
+        let cancelled=false;
+        const scope:CanvasSaveScope={origin:cloudflareDataPlane.origin,userId:user.id,brandId:currentBrand.id};
+        const state=useAuthStore.getState();const fence=captureAuthBrandFence(state.brandState,state.user?.id??null,state.currentBrand?.id??null);
+        const assertLocalRoute=()=>{
+          const current=useAuthStore.getState();
+          assertAuthBrandFence(fence,captureAuthBrandFence(current.brandState,current.user?.id??null,current.currentBrand?.id??null),'canvas_local_route');
+          if(cancelled||imageEditRouteRef.current!==projectId)throw new Error('canvas_local_route_changed');
+        };
+        setCanvasPersistenceStatus('loading');
+        void initialCanvasDocumentId(scope,projectId).then(id=>{
+          assertLocalRoute();
+          // The first Save can remove the lightweight local index entry.
+          // Old bookmarks still lead to the exact same existing draft/row.
+          if(readCanvasSaveRecovery(scope,id)){navigate(`/canvas/${id}`,{replace:true});return;}
+          if(!localProject||localProject.brandId!==scope.brandId){clearCanvas();setCanvasPersistenceStatus('failed');return;}
+          loadProject(projectId);setCanvasPersistenceStatus('unsaved');
+        }).catch(()=>{try{assertLocalRoute();clearCanvas();setCanvasPersistenceStatus('failed');}catch{/* A later scope owns the page. */}});
+        return()=>{cancelled=true;};
+      }
       if (localProject) {
         loadProject(projectId);
         setCanvasPersistenceStatus('unsaved');
@@ -520,6 +668,61 @@ export function CanvasEditorPage() {
     if (!user?.id || !currentBrand?.id) {
       setCanvasPersistenceStatus('failed');
       return;
+    }
+
+    if (cloudflareDataPlane) {
+      const scope:CanvasSaveScope={origin:cloudflareDataPlane.origin,userId:user.id,brandId:currentBrand.id};
+      const active=activeCanvasSaveRef.current;
+      // The first Save intentionally adopts its pre-persisted UUID route.
+      // Its own navigation must not start a second read/hydration mid-write.
+      if(active?.documentId===projectId&&active.userId===scope.userId&&active.brandId===scope.brandId)return;
+      let cancelled=false;
+      const auth=useAuthStore.getState();const fence=captureAuthBrandFence(auth.brandState,auth.user?.id??null,auth.currentBrand?.id??null);
+      const epoch=imageEditEpochRef.current;
+      const assertRoute=()=>{
+        const current=useAuthStore.getState();
+        assertAuthBrandFence(fence,captureAuthBrandFence(current.brandState,current.user?.id??null,current.currentBrand?.id??null),'canvas_readback');
+        if(cancelled||imageEditEpochRef.current!==epoch||imageEditRouteRef.current!==projectId)throw new Error('canvas_readback_target_changed');
+      };
+      remoteDocumentIdRef.current=projectId;remoteRevisionRef.current=null;remoteDocumentOwnerRef.current=null;
+      canvasRecoveryScopeRef.current=null;canvasSourceProjectIdsRef.current=[];
+      const hydrateSnapshot=(entry:{title:string;snapshot:unknown},createdAt:string,updatedAt:string)=>{
+        const aliases=(entry.snapshot as {sourceProjectIds?:unknown})?.sourceProjectIds;
+        canvasSourceProjectIdsRef.current=Array.isArray(aliases)?aliases.filter((id):id is string=>typeof id==='string'&&id.length<=160).slice(0,16):[];
+        hydrateProject({id:projectId,name:entry.title,objects:restoreCanvasObjects(entry.snapshot),view:restoreCanvasView(entry.snapshot),
+          brandId:scope.brandId,createdAt,updatedAt});
+        suppressPersistenceDirtyRef.current=true;
+      };
+      try {
+        const cached=readCanvasSaveRecovery(scope,projectId);
+        if(cached) {
+          canvasRecoveryScopeRef.current=scope;remoteDocumentOwnerRef.current=cached.ownerId;remoteRevisionRef.current=cached.revision;
+          hydrateSnapshot(cached,cached.updatedAt,cached.updatedAt);
+        } else {
+          // The unscoped legacy working set is not an authenticated fallback
+          // for another user's or another brand's remote UUID route.
+          clearCanvas();
+        }
+      } catch {
+        clearCanvas();setCanvasPersistenceStatus('failed');
+        return()=>{cancelled=true;};
+      }
+      setCanvasPersistenceStatus('loading');
+      void inspectCanvasSaveRecovery({scope,documentId:projectId,transport:makeCanvasSaveTransport(scope,assertRoute),assertCurrent:assertRoute})
+        .then(result=>{
+          assertRoute();
+          const document=result.document;
+          if(document&&(document.id!==projectId||document.brandId!==scope.brandId||!document.ownerId))throw new Error('canvas_document_readback_mismatch');
+          let cached=readCanvasSaveRecovery(scope,projectId)??result.entry;
+          if(!cached&&document)cached=retainCanvasSaveDraft(scope,projectId,document,{ownerId:document.ownerId,revision:document.revision});
+          if(!cached){setCanvasPersistenceStatus('failed');return;}
+          canvasRecoveryScopeRef.current=scope;remoteDocumentOwnerRef.current=cached.ownerId;remoteRevisionRef.current=cached.revision;
+          hydrateSnapshot(cached,document?.createdAt??cached.updatedAt,document?.updatedAt??cached.updatedAt);
+          const confirmed=!!document&&!cached.pending&&sameCanvasSaveContent(cached,document);
+          setCanvasPersistenceStatus(result.state==='conflict'?'conflict':confirmed?'saved':'unsaved');
+        })
+        .catch(()=>{if(!cancelled){try{assertRoute();setCanvasPersistenceStatus('failed');}catch{/* A later user/route owns the screen. */}}});
+      return()=>{cancelled=true;};
     }
 
     let cancelled = false;
@@ -557,7 +760,7 @@ export function CanvasEditorPage() {
     return () => {
       cancelled = true;
     };
-  }, [projectId, user?.id, currentBrand?.id, loadProject, hydrateProject, clearCanvas]);
+  }, [projectId, user?.id, currentBrand?.id, loadProject, hydrateProject, clearCanvas, navigate]);
 
   useEffect(() => {
     if (projectId !== 'new' || !sourceArtifactId || !currentBrand?.id) return;
@@ -569,7 +772,7 @@ export function CanvasEditorPage() {
 
     importedLibraryArtifactRef.current = sourceArtifactId;
     let cancelled = false;
-    const source = artifact.imageUrl || getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
+    const source = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata) || artifact.imageUrl;
     if (!source) {
       toast.error('ライブラリー素材の保存先を復元できません');
       return;
@@ -577,8 +780,7 @@ export function CanvasEditorPage() {
 
     void (async () => {
       try {
-        const resolvedSource = await resolveGeneratedImageUrl(source);
-        const image = await loadLocalUploadImage(resolvedSource);
+        const image = await loadLibraryCanvasImage(source);
         if (cancelled) return;
 
         const sourceWorkspace = typeof artifact.metadata.sourceWorkspace === 'string'
@@ -608,7 +810,7 @@ export function CanvasEditorPage() {
           opacity: 1,
           locked: false,
           visible: true,
-          src: resolvedSource,
+          src: source,
           label: artifact.title,
           metadata: {
             feature: 'library-import',
@@ -731,8 +933,36 @@ export function CanvasEditorPage() {
     return { passed, zoom, panX, panY, bounds, screenBounds, allowed, objectCount: visibleObjects.length };
   }, [canvasSize.height, canvasSize.width, objects, panX, panY, zoom]);
   const canvasGenerationState = useMemo(() => buildCanvasGenerationState(objects), [objects]);
+  const observedCanvasContentRef = useRef({objects,name:currentProjectName,zoom,panX,panY});
+
+  useEffect(()=>{
+    if(!cloudflareDataPlane)return;
+    let timer:number|undefined;let reported=false;
+    const flush=()=>{
+      const scope=canvasRecoveryScopeRef.current;const id=remoteDocumentIdRef.current;
+      const auth=useAuthStore.getState();const canvas=useCanvasStore.getState();
+      if(!scope||!id||canvas.currentProjectId!==id||auth.user?.id!==scope.userId||auth.currentBrand?.id!==scope.brandId)return;
+      try {
+        if(readCanvasSaveRecovery(scope,id))retainCanvasSaveDraft(scope,id,currentCanvasSaveContent(id));
+        reported=false;
+      } catch {
+        setCanvasPersistenceStatus('failed');
+        if(!reported){toast.error('この端末に最新の編集を保持できません。保存領域を消さず、サーバーへの保存を確認してください。');reported=true;}
+      }
+    };
+    const unsubscribe=useCanvasStore.subscribe((next,previous)=>{
+      if(next.objects===previous.objects&&next.currentProjectName===previous.currentProjectName&&next.zoom===previous.zoom&&next.panX===previous.panX&&next.panY===previous.panY)return;
+      window.clearTimeout(timer);timer=window.setTimeout(flush,150);
+    });
+    const hidden=()=>{if(document.visibilityState==='hidden')flush();};
+    window.addEventListener('pagehide',flush);document.addEventListener('visibilitychange',hidden);
+    return()=>{window.clearTimeout(timer);unsubscribe();window.removeEventListener('pagehide',flush);document.removeEventListener('visibilitychange',hidden);};
+  },[user?.id,currentBrand?.id,currentProjectId]);
 
   useEffect(() => {
+    const previous = observedCanvasContentRef.current;
+    observedCanvasContentRef.current = {objects,name:currentProjectName,zoom,panX,panY};
+    if (previous.objects === objects && previous.name === currentProjectName && previous.zoom === zoom && previous.panX === panX && previous.panY === panY) return;
     if (suppressPersistenceDirtyRef.current) {
       suppressPersistenceDirtyRef.current = false;
       return;
@@ -740,7 +970,7 @@ export function CanvasEditorPage() {
     if (remoteDocumentIdRef.current && canvasPersistenceStatus === 'saved') {
       setCanvasPersistenceStatus('unsaved');
     }
-  }, [canvasPersistenceStatus, currentProjectName, objects]);
+  }, [canvasPersistenceStatus, currentProjectName, objects, zoom, panX, panY]);
 
   const getLightchainCompatForObject = (objectId: string | null) => {
     if (!objectId) return undefined;
@@ -782,11 +1012,29 @@ export function CanvasEditorPage() {
   };
 
   const resolveCanvasObjectImageUrl = useCallback(async (object: CanvasObject) => {
+    const parameters = object.metadata?.parameters && typeof object.metadata.parameters === 'object'
+      ? object.metadata.parameters as Record<string, unknown>
+      : {};
     const candidates = Array.from(new Set([
       object.metadata?.galleryStoragePath,
+      object.metadata?.storagePath,
+      parameters.galleryStoragePath,
+      parameters.storagePath,
+      parameters.remoteStoragePath,
+      parameters.sourceStoragePath,
+      parameters.backendStoragePath,
+      typeof object.metadata?.galleryImageId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(object.metadata.galleryImageId.trim())
+        ? `generated-images/${object.metadata.galleryImageId.trim()}`
+        : undefined,
+      typeof object.metadata?.imageId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(object.metadata.imageId.trim())
+        ? `generated-images/${object.metadata.imageId.trim()}`
+        : undefined,
+      typeof parameters.imageId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(parameters.imageId.trim())
+        ? `generated-images/${parameters.imageId.trim()}`
+        : undefined,
       object.src,
       object.metadata?.galleryImageUrl,
-    ].filter((source): source is string => Boolean(source))));
+    ].filter((source): source is string => typeof source === 'string' && Boolean(source.trim()))));
     let lastError: unknown;
 
     for (const source of candidates) {
@@ -947,15 +1195,20 @@ export function CanvasEditorPage() {
 
     const brandId = currentBrand.id;
     const documentId = remoteDocumentIdRef.current;
+    const assertContext=captureCanvasImageEditContext(null);assertContext();
+    const scope=cloudflareDataPlane?{origin:cloudflareDataPlane.origin,userId:user.id,brandId}:null;
     setCanvasPersistenceStatus('loading');
     try {
-      const document = await getCanvasDocument(documentId, brandId);
+      const document = await getCanvasDocument(documentId, brandId,{userId:user.id,assertContext});assertContext();
       if (document.id !== documentId || document.brandId !== brandId) {
         throw new Error('canvas_document_readback_mismatch');
       }
 
       remoteDocumentIdRef.current = document.id;
       remoteRevisionRef.current = document.revision;
+      remoteDocumentOwnerRef.current=document.ownerId;
+      if(scope){acceptCanvasRemoteVersion(scope,document);canvasRecoveryScopeRef.current=scope;}
+      canvasSourceProjectIdsRef.current=document.snapshot.sourceProjectIds??[];
       hydrateProject({
         id: document.id,
         name: document.title,
@@ -972,6 +1225,7 @@ export function CanvasEditorPage() {
       setCanvasPersistenceStatus('saved');
       toast.success('最新のCanvas状態を再読み込みしました');
     } catch (error: any) {
+      try{assertContext();}catch{return;}
       setCanvasPersistenceStatus('failed');
       const message = String(error?.message || error || '');
       toast.error(message === 'canvas_document_readback_mismatch'
@@ -986,22 +1240,66 @@ export function CanvasEditorPage() {
       toast.error('ブランドとログイン状態を確認してください');
       return;
     }
-    if (canvasPersistenceStatus === 'loading' || canvasPersistenceStatus === 'saving' || canvasPersistenceStatus === 'verifying') {
+    if (activeCanvasSaveRef.current || canvasPersistenceStatus === 'loading' || canvasPersistenceStatus === 'saving' || canvasPersistenceStatus === 'verifying') {
       return;
     }
 
     const brandId = currentBrand.id;
-    const title = (currentProjectName || '無題のプロジェクト').trim().slice(0, 160);
-    const snapshot = buildCanvasDocumentSnapshot({
+    let assertSaveContext = captureCanvasImageEditContext(null);
+    let title = (currentProjectName || '無題のプロジェクト').trim().slice(0, 160);
+    let snapshot = buildCanvasDocumentSnapshot({
       projectId: currentProjectId,
       name: title,
       objects,
       view: { zoom, panX, panY },
+      sourceProjectIds:canvasSourceProjectIdsRef.current,
     });
+    try {
+      validateCanvasDocumentSnapshot(snapshot);
+    } catch (error) {
+      setCanvasPersistenceStatus('failed');
+      toast.error(canvasDocumentValidationMessage(error) || 'Canvasを保存できませんでした');
+      return;
+    }
+    const active={documentId:remoteDocumentIdRef.current??'',userId:user.id,brandId};
+    activeCanvasSaveRef.current=active;
+    let scope:CanvasSaveScope|null=null;
     setCanvasPersistenceStatus('saving');
 
     try {
-      const document = remoteDocumentIdRef.current && remoteRevisionRef.current !== null
+      assertSaveContext();
+      let document;
+      if(cloudflareDataPlane) {
+        scope={origin:cloudflareDataPlane.origin,userId:user.id,brandId};
+        const local=useCanvasStore.getState();const localId=local.currentProjectId;
+        const localProject=local.projects.find(project=>project.id===localId);
+        if(localProject?.brandId&&localProject.brandId!==brandId)throw new Error('canvas_save_brand_mismatch');
+        const knownRemote=remoteDocumentIdRef.current||(projectId&&CANVAS_DOCUMENT_ID_PATTERN.test(projectId)?projectId:null);
+        const documentId=knownRemote??await initialCanvasDocumentId(scope,localId);assertSaveContext();
+        const cached=readCanvasSaveRecovery(scope,documentId);
+        if(knownRemote&&!cached&&remoteRevisionRef.current===null)throw new Error('canvas_save_remote_unverified');
+        if(localId&&localId!==documentId)canvasSourceProjectIdsRef.current=Array.from(new Set([...canvasSourceProjectIdsRef.current,localId])).slice(-16);
+        const desired=currentCanvasSaveContent(documentId);title=desired.title;snapshot=desired.snapshot;
+        const expectedRevision=remoteRevisionRef.current??cached?.revision??null;
+        const entry=retainCanvasSaveDraft(scope,documentId,desired,{ownerId:remoteDocumentOwnerRef.current??cached?.ownerId??user.id,
+          revision:expectedRevision});
+        assertSaveContext();
+        active.documentId=documentId;
+        remoteDocumentIdRef.current=documentId;remoteRevisionRef.current=expectedRevision;remoteDocumentOwnerRef.current=entry.ownerId;
+        canvasRecoveryScopeRef.current=scope;
+        if(useCanvasStore.getState().currentProjectId!==documentId) {
+          const current=useCanvasStore.getState();const now=new Date().toISOString();
+          hydrateProject({id:documentId,name:title,objects:current.objects,view:normalizeCanvasView({zoom:current.zoom,panX:current.panX,panY:current.panY}),
+            brandId,createdAt:localProject?.createdAt??now,updatedAt:now},localId??undefined);
+          suppressPersistenceDirtyRef.current=true;
+        }
+        // This synchronous own transition happens only after the scoped draft
+        // and destination ID have both been durably read back.
+        if(projectId!==documentId){imageEditRouteRef.current=documentId;navigate(`/canvas/${documentId}`,{replace:true});}
+        assertSaveContext=captureCanvasImageEditContext(null);
+        document=await saveCanvasDocumentRecoverably({scope,documentId,ownerId:entry.ownerId,expectedRevision,
+          content:desired,transport:makeCanvasSaveTransport(scope,assertSaveContext),assertCurrent:assertSaveContext});
+      } else document = remoteDocumentIdRef.current && remoteRevisionRef.current !== null
         ? await updateCanvasDocument({
           brandId,
           documentId: remoteDocumentIdRef.current,
@@ -1010,20 +1308,37 @@ export function CanvasEditorPage() {
           expectedRevision: remoteRevisionRef.current,
         })
         : await createCanvasDocument({ brandId, title, snapshot });
+      assertSaveContext();
 
       // Retain the server identity before the verification readback. If the
-      // write succeeded but the immediate readback fails, retry/reload must
-      // update the same document instead of creating a duplicate.
+      // write succeeded but the immediate readback fails, an in-page retry
+      // updates the same document instead of creating a duplicate.
       remoteDocumentIdRef.current = document.id;
       remoteRevisionRef.current = document.revision;
+      remoteDocumentOwnerRef.current = document.ownerId;
       setCanvasPersistenceStatus('verifying');
-      const readback = await getCanvasDocument(document.id, brandId);
+      const readback = cloudflareDataPlane ? document : await getCanvasDocument(document.id, brandId);
+      assertSaveContext();
       if (readback.id !== document.id || readback.brandId !== brandId || readback.revision !== document.revision) {
         throw new Error('canvas_document_readback_mismatch');
       }
 
       remoteDocumentIdRef.current = readback.id;
       remoteRevisionRef.current = readback.revision;
+      const latest = useCanvasStore.getState();
+      const latestSnapshot = buildCanvasDocumentSnapshot({projectId:latest.currentProjectId,
+        name:(latest.currentProjectName || '無題のプロジェクト').trim().slice(0,160),objects:latest.objects,
+        view:{zoom:latest.zoom,panX:latest.panX,panY:latest.panY},sourceProjectIds:canvasSourceProjectIdsRef.current});
+      if (JSON.stringify(latestSnapshot) !== JSON.stringify(snapshot)) {
+        // The write is verified, but a newer local edit must not be hydrated
+        // away or consume its recovery handle. The next save uses this remote
+        // document's retained identity/revision, not a second document.
+        retainCanvasCacheAfterFailedReadback(user.id,brandId,readback.id,latestSnapshot);
+        if(scope)retainCanvasSaveDraft(scope,readback.id,{title:latestSnapshot.name??title,snapshot:latestSnapshot});
+        setCanvasPersistenceStatus('unsaved');
+        toast.success('保存中に追加された編集は保持しています。もう一度保存して確定してください。');
+        return;
+      }
       hydrateProject({
         id: readback.id,
         name: readback.title,
@@ -1036,13 +1351,36 @@ export function CanvasEditorPage() {
       // The object update below is the verified server snapshot, not a local edit.
       suppressPersistenceDirtyRef.current = true;
       saveCurrentProject();
+      // A newly created Canvas intentionally changes its local ID to the
+      // verified remote ID. Rebind only after this synchronous own hydration.
+      assertSaveContext = captureCanvasImageEditContext(null);
       acknowledgeCanvasRemoteReadback(user.id, brandId, readback.id, readback.snapshot);
+      // Only a verified saved Canvas consumes the durable masked-edit handle.
+      // A failed write/readback or a tab close leaves the same ID recoverable.
+      if (cloudflareDataPlane) {
+        const acknowledged = new Set<string>();
+        for (const object of readback.snapshot.objects) {
+          const completion = (object.metadata as { parameters?: { imageAICompletion?: { requestId?: string; clientRecoveryKey?: string } } } | undefined)?.parameters?.imageAICompletion;
+          if (!completion?.requestId || !completion.clientRecoveryKey || acknowledged.has(completion.requestId)) continue;
+          assertSaveContext();
+          try { await cloudflareDataPlane.acknowledgeImageAction(completion); acknowledged.add(completion.requestId); }
+          catch { /* The Canvas is saved; retain the ID if client acknowledgement is unavailable. */ }
+        }
+      }
+      assertSaveContext();
       if (projectId !== readback.id) navigate(`/canvas/${readback.id}`, { replace: true });
       setCanvasPersistenceStatus('saved');
       toast.success('Canvasを保存し、サーバーで確認しました');
     } catch (error: any) {
+      try { assertSaveContext(); } catch { return; }
       const documentId = remoteDocumentIdRef.current;
-      if (documentId) retainCanvasCacheAfterFailedReadback(user.id, brandId, documentId, snapshot);
+      if (documentId) {
+        const working=currentCanvasSaveContent(documentId);
+        try {
+          retainCanvasCacheAfterFailedReadback(user.id, brandId, documentId, working.snapshot);
+          if(scope&&readCanvasSaveRecovery(scope,documentId))retainCanvasSaveDraft(scope,documentId,working);
+        } catch { /* Keep the original error and the previously confirmed cache. */ }
+      }
       const message = String(error?.message || error || '');
       setCanvasPersistenceStatus(/conflict|revision|409/i.test(message) ? 'conflict' : 'failed');
       const safeServerDetail = message.length > 0
@@ -1051,13 +1389,18 @@ export function CanvasEditorPage() {
         && !/https?:\/\//i.test(message)
         ? message
         : null;
+      const validationMessage = canvasDocumentValidationMessage(error);
       toast.error(
         /conflict|revision|409/i.test(message)
           ? '他の編集と競合しました。最新状態を読み直してください'
+          : validationMessage
+            ? validationMessage
           : safeServerDetail
             ? `Canvasをサーバーへ保存できませんでした（${safeServerDetail}）`
             : 'Canvasをサーバーへ保存できませんでした',
       );
+    } finally {
+      if(activeCanvasSaveRef.current===active)activeCanvasSaveRef.current=null;
     }
   };
 
@@ -1617,7 +1960,7 @@ export function CanvasEditorPage() {
             setIsGenerating(false);
             return;
           }
-          ({ data, error } = await supabase.functions.invoke('design-gacha', {
+          ({ data, error } = await invokeProviderAction('design-gacha', {
             body: {
               ...baseBody,
               brief: generatePrompt,
@@ -1643,7 +1986,7 @@ export function CanvasEditorPage() {
             setIsGenerating(false);
             return;
           }
-          ({ data, error } = await supabase.functions.invoke('product-shots', {
+          ({ data, error } = await invokeProviderAction('product-shots', {
             body: {
               ...baseBody,
               productDescription,
@@ -1673,7 +2016,7 @@ export function CanvasEditorPage() {
             setIsGenerating(false);
             return;
           }
-          ({ data, error } = await supabase.functions.invoke('model-matrix', {
+          ({ data, error } = await invokeProviderAction('model-matrix', {
             body: {
               ...baseBody,
               productDescription,
@@ -1701,7 +2044,7 @@ export function CanvasEditorPage() {
             setIsGenerating(false);
             return;
           }
-          ({ data, error } = await supabase.functions.invoke('multilingual-banner', {
+          ({ data, error } = await invokeProviderAction('multilingual-banner', {
             body: {
               ...baseBody,
               headline,
@@ -1729,13 +2072,13 @@ export function CanvasEditorPage() {
             setIsGenerating(false);
             return;
           }
-          ({ data, error } = await supabase.functions.invoke('generate-image', {
+          ({ data, error } = await invokeProviderAction('generate-image', {
             body: {
               ...baseBody,
               prompt: generatePrompt,
               width: 1024,
               height: 1024,
-              generationProvider: 'openai',
+              generationProvider: 'workers_ai',
             }
           }));
           if (Array.isArray(data?.images) && data.images.length > 0) {
@@ -1896,7 +2239,7 @@ export function CanvasEditorPage() {
       case 'remove-bg':
         toast.loading('背景削除を実行中...', { id: 'remove-bg' });
         try {
-          const { data, error } = await supabase.functions.invoke('remove-background', {
+          const { data, error } = await invokeProviderAction('remove-background', {
             body: { imageUrl: imageSrc, brandId: currentBrand.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
@@ -1918,7 +2261,7 @@ export function CanvasEditorPage() {
       case 'colorize':
         toast.loading('カラバリを生成中...', { id: 'colorize' });
         try {
-          const { data, error } = await supabase.functions.invoke('colorize', {
+          const { data, error } = await invokeProviderAction('colorize', {
             body: { imageUrl: imageSrc, brandId: currentBrand.id, colors: ['red', 'blue', 'green', 'yellow'], legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
@@ -1952,7 +2295,7 @@ export function CanvasEditorPage() {
       case 'upscale':
         toast.loading('アップスケール中...', { id: 'upscale' });
         try {
-          const { data, error } = await supabase.functions.invoke('upscale', {
+          const { data, error } = await invokeProviderAction('upscale', {
             body: { imageUrl: imageSrc, brandId: currentBrand.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
@@ -1975,7 +2318,7 @@ export function CanvasEditorPage() {
       case 'derive':
         toast.loading('バリエーションを生成中...', { id: 'variations' });
         try {
-          const { data, error } = await supabase.functions.invoke('generate-variations', {
+          const { data, error } = await invokeProviderAction('generate-variations', {
             body: { imageUrl: imageSrc, brandId: currentBrand.id, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata }
           });
           if (error) throw error;
@@ -2363,11 +2706,52 @@ export function CanvasEditorPage() {
     setSidePanel('properties');
   };
 
+  const findRecoveredCanvasCandidate = (imageId:string,batchId:string,parentObjectId:string|null) => useCanvasStore.getState().objects.find(object=>
+    object.metadata?.imageId === imageId && object.metadata?.parameters?.batchId === batchId &&
+    object.metadata?.parentObjectId === parentObjectId);
+
+  const recoverCanvasImageEdit = async(entry:PendingProtectedImageSummary):Promise<string> => {
+    if (!cloudflareDataPlane || (entry.canvasProjectId !== useCanvasStore.getState().currentProjectId &&
+      (!entry.canvasProjectId||!canvasSourceProjectIdsRef.current.includes(entry.canvasProjectId))) || !entry.parentObjectId) throw new Error('image_recovery_canvas_mismatch');
+    const source = useCanvasStore.getState().objects.find(object=>object.id === entry.parentObjectId);
+    if (!source) throw new Error('image_recovery_source_missing');
+    const assertContext = captureCanvasImageEditContext(entry.parentObjectId); assertContext();
+    const sourceUrl = await resolveCanvasObjectImageUrl(source); assertContext();
+    const result = await cloudflareDataPlane.resumeProtectedImageEdit(entry.brandId,entry.requestId,assertContext,sourceUrl);
+    const candidates = normalizeCanvasImageEditCandidates(result);
+    if (!result.success || result.requestedCandidateCount !== 4 || result.persistedCandidateCount !== 4 || candidates.length !== 4 || result.persistenceStatus !== 'completed') throw new Error(`image_recovery_${result.state}_batch_incomplete`);
+    const batchId = candidates[0].batchId ?? candidates[0].jobId;
+    const created:string[] = [];
+    try {
+      for (const candidate of candidates) {
+        assertContext();
+        if (findRecoveredCanvasCandidate(candidate.imageId,batchId,entry.parentObjectId)) continue;
+        const image = await loadCanvasImage(candidate.imageUrl); assertContext();
+        // Another same-tab invocation may have placed it while loading.
+        if (findRecoveredCanvasCandidate(candidate.imageId,batchId,entry.parentObjectId)) continue;
+        const parameters = {editMode:'inpaint',maskApplied:true,maskTreatment:result.maskTreatment,
+          batchId,candidateIndex:candidate.candidateIndex,provider:result.provider,backendProvider:result.backendProvider,
+          jobId:candidate.jobId,imageId:candidate.imageId,storagePath:candidate.storagePath,persistenceStatus:'completed',
+          requestedCandidateCount:4,persistedCandidateCount:4,clientSubmissionCount:1,
+          imageAICompletion:{requestId:result.requestId,clientRecoveryKey:result.clientRecoveryKey}};
+        const id = await addImageToCanvas(candidate.imageUrl,`復旧した範囲編集 ${candidate.candidateIndex + 1}`,{
+          parentId:entry.parentObjectId,parentObjectId:entry.parentObjectId,generation:entry.generation,feature:'partial-edit',prompt:entry.prompt,
+          maskApplied:true,provider:String(result.provider),backendProvider:String(result.backendProvider),status:'completed',
+          jobId:candidate.jobId,imageId:candidate.imageId,storagePath:candidate.storagePath,persistenceStatus:'completed',parameters,
+          ...buildDerivedLightchainMetadata(source,'partial-edit',{prompt:entry.prompt,parameters}),
+        },entry.parentObjectId,image);
+        assertContext(); if (!id) throw new Error('image_recovery_canvas_placement_failed'); created.push(id);
+      }
+      assertContext();
+      if (!candidates.every(candidate=>findRecoveredCanvasCandidate(candidate.imageId,batchId,entry.parentObjectId))) throw new Error('image_recovery_canvas_batch_incomplete');
+      return '4候補をこのCanvasへ復旧しました。重複配置はありません。「保存」でサーバーへ確定してください。';
+    } catch (error) {
+      assertContext(); created.forEach(id=>useCanvasStore.getState().deleteObject(id)); throw error;
+    }
+  };
+
   const handlePartialEditSubmit = async (payload: PartialEditPayload) => {
     if (!partialEditingImage) return;
-    if (partialEditAttemptRef.current.attempted) {
-      throw new Error('partial_edit_retry_blocked_after_external_request');
-    }
     if (!currentBrand?.id) {
       throw new Error('ブランドを選択してから実行してください');
     }
@@ -2381,13 +2765,14 @@ export function CanvasEditorPage() {
     const sourceObject = partialEditingObjectId
       ? objects.find((item) => item.id === partialEditingObjectId) ?? null
       : null;
+    const assertContext = captureCanvasImageEditContext(partialEditingObjectId);
+    assertContext();
     const generation = (sourceObject?.metadata?.generation || 0) + 1;
     const lightchainEditMetadata = buildLightchainEditMetadata(partialEditingObjectId);
     const editSource = sourceObject
       ? await resolveCanvasObjectImageUrl(sourceObject)
       : await resolveGeneratedImageUrl(partialEditingImage);
-    const idempotencyKey = `heavy-canvas-partial-edit-${crypto.randomUUID()}`;
-    partialEditAttemptRef.current = { attempted: true, idempotencyKey };
+    partialEditAttemptRef.current = { attempted: true, idempotencyKey: null };
     const result = await editImageWithPrompt(
       editSource,
       payload.prompt,
@@ -2396,12 +2781,15 @@ export function CanvasEditorPage() {
         rightsConfirmed,
         maskDataUrl: payload.maskDataUrl,
         parentObjectId: partialEditingObjectId,
+        canvasProjectId:useCanvasStore.getState().currentProjectId,
         generation,
         maskApplied: true,
         maskCoveragePercent: payload.maskCoveragePercent,
         maskWidth: payload.maskWidth,
         maskHeight: payload.maskHeight,
-        idempotencyKey,
+        count:4,
+        featureType:'canvas-partial-edit',
+        assertContext,
         ...lightchainEditMetadata,
       },
     );
@@ -2421,23 +2809,31 @@ export function CanvasEditorPage() {
       ].join(':'));
     }
 
-    const batchId = candidates[0].jobId;
+    assertContext();
+    const batchId = candidates[0].batchId ?? candidates[0].jobId;
     const preloadedImages = await Promise.all(candidates.map(async (candidate) => ({
       candidate,
       image: await loadCanvasImage(candidate.imageUrl),
     })));
     const preloadedImagesById = new Map(preloadedImages.map(({ candidate, image }) => [candidate.imageId, image]));
-    const backendProvider = result.backendProvider || 'supabase-edge-function';
-    const provider = result.provider || 'openai';
+    const backendProvider = result.backendProvider || 'cloudflare-provider-unreported';
+    const provider = result.provider || 'workers_ai';
     const status = result.status || result.persistenceStatus || 'completed';
+    assertContext();
+    const createdIds = new Set<string>();
     const placement = await settleCanvasImageEditCandidatesSequentially(candidates, async (candidate, placementIndex) => {
+      assertContext();
+      const existing = findRecoveredCanvasCandidate(candidate.imageId,batchId,partialEditingObjectId);
+      if (existing) return existing.id;
       const resultParameters = {
         editMode: 'inpaint',
         maskApplied: true,
         maskCoveragePercent: payload.maskCoveragePercent,
         maskWidth: payload.maskWidth,
         maskHeight: payload.maskHeight,
-        externalInpaintRequestCount: 1,
+        externalInpaintRequestCount: result.provider === 'workers_ai' ? result.requestedCandidateCount : 1,
+        clientSubmissionCount:1,
+        imageAICompletion:result.clientRecoveryKey ? { requestId:result.requestId,clientRecoveryKey:result.clientRecoveryKey } : null,
         requestedCandidateCount: result.requestedCandidateCount,
         persistedCandidateCount: result.persistedCandidateCount,
         backendProvider,
@@ -2453,7 +2849,7 @@ export function CanvasEditorPage() {
         storagePath: candidate.storagePath,
         persistenceStatus: candidate.persistenceStatus,
       };
-      return addImageToCanvas(candidate.imageUrl, `部分編集結果 ${placementIndex + 1}`, {
+      const placedId = await addImageToCanvas(candidate.imageUrl, `部分編集結果 ${placementIndex + 1}`, {
         parentId: partialEditingObjectId ?? undefined,
         parentObjectId: partialEditingObjectId ?? undefined,
         generation,
@@ -2473,9 +2869,13 @@ export function CanvasEditorPage() {
           parameters: resultParameters,
         }),
       }, partialEditingObjectId ?? undefined, preloadedImagesById.get(candidate.imageId));
+      assertContext();
+      if (placedId) createdIds.add(placedId);
+      return placedId;
     });
+    assertContext();
     if (placement.placed.length !== 4 || placement.failed.length > 0) {
-      placement.placed.forEach(({ value: objectId }) => useCanvasStore.getState().deleteObject(objectId));
+      placement.placed.forEach(({ value: objectId }) => { if (createdIds.has(objectId)) useCanvasStore.getState().deleteObject(objectId); });
       throw new Error(`partial_edit_canvas_candidate_placement_incomplete:${placement.placed.length}/4`);
     }
     const batchProof = buildCanvasImageEditBatchProof({
@@ -2522,6 +2922,8 @@ export function CanvasEditorPage() {
       generation: (sourceObject?.metadata?.generation || 0) + 1,
     };
     try {
+      const assertContext = captureCanvasImageEditContext(editingObjectId);
+      assertContext();
       const editSource = sourceObject
         ? await resolveCanvasObjectImageUrl(sourceObject)
         : await resolveGeneratedImageUrl(editingImage);
@@ -2547,9 +2949,6 @@ export function CanvasEditorPage() {
       }
 
       if (action === 'inpaint') {
-        if (inpaintAttemptRef.current.attempted) {
-          throw new Error('inpaint_retry_blocked_after_external_request');
-        }
         if (!params.prompt?.trim()) {
           toast.error('編集したい内容を入力してください');
           return false;
@@ -2562,15 +2961,17 @@ export function CanvasEditorPage() {
           toast.error(BRAND_LIKENESS_BLOCK_COPY);
           return false;
         }
-        const idempotencyKey = `heavy-canvas-inpaint-${crypto.randomUUID()}`;
-        inpaintAttemptRef.current = { attempted: true, idempotencyKey };
+        inpaintAttemptRef.current = { attempted: true, idempotencyKey: null };
         const result = await editImageWithPrompt(editSource, params.prompt, currentBrand.id, {
           rightsConfirmed,
           maskDataUrl: params.maskDataUrl,
           parentObjectId: editingObjectId,
+          canvasProjectId:useCanvasStore.getState().currentProjectId,
           generation: baseMetadata.generation,
           maskApplied: true,
-          idempotencyKey,
+          count:4,
+          featureType:'canvas-inpaint',
+          assertContext,
           ...lightchainEditMetadata,
         });
         const candidates = normalizeCanvasImageEditCandidates(result);
@@ -2588,17 +2989,23 @@ export function CanvasEditorPage() {
             `status=${result.persistenceStatus ?? 'unknown'}`,
           ].join(':'));
         }
-        const batchId = candidates[0].jobId;
+        assertContext();
+        const batchId = candidates[0].batchId ?? candidates[0].jobId;
         const preloadedImages = await Promise.all(candidates.map(async (candidate) => ({
           candidate,
           image: await loadCanvasImage(candidate.imageUrl),
         })));
         const preloadedImagesById = new Map(preloadedImages.map(({ candidate, image }) => [candidate.imageId, image]));
-        const backendProvider = result.backendProvider ?? 'supabase-edge-function';
-        const provider = result.provider ?? 'openai';
+        const backendProvider = result.backendProvider ?? 'cloudflare-provider-unreported';
+        const provider = result.provider ?? 'workers_ai';
         const status = result.status ?? result.persistenceStatus ?? 'completed';
-        const placement = await settleCanvasImageEditCandidatesSequentially(candidates, async (candidate, placementIndex) => (
-          await addImageToCanvas(candidate.imageUrl, `部分編集結果 ${placementIndex + 1}`, {
+        assertContext();
+        const createdIds = new Set<string>();
+        const placement = await settleCanvasImageEditCandidatesSequentially(candidates, async (candidate, placementIndex) => {
+          assertContext();
+          const existing = findRecoveredCanvasCandidate(candidate.imageId,batchId,editingObjectId);
+          if (existing) return existing.id;
+          const placedId = await addImageToCanvas(candidate.imageUrl, `部分編集結果 ${placementIndex + 1}`, {
             ...baseMetadata,
             parentObjectId: editingObjectId ?? null,
             feature: 'inpaint',
@@ -2619,21 +3026,27 @@ export function CanvasEditorPage() {
               provider,
               status,
               persistenceStatus: candidate.persistenceStatus,
-              externalInpaintRequestCount: 1,
+              externalInpaintRequestCount: result.provider === 'workers_ai' ? result.requestedCandidateCount : 1,
+              clientSubmissionCount:1,
+              imageAICompletion:result.clientRecoveryKey ? { requestId:result.requestId,clientRecoveryKey:result.clientRecoveryKey } : null,
               requestedCandidateCount: result.requestedCandidateCount,
               persistedCandidateCount: result.persistedCandidateCount,
               batchId,
               candidateIndex: candidate.candidateIndex,
-              idempotencyKey,
+              idempotencyKey: null,
             },
             ...buildDerivedLightchainMetadata(sourceObject, 'inpaint', {
               prompt: params.prompt,
-              parameters: { batchId, candidateIndex: candidate.candidateIndex, idempotencyKey },
+              parameters: { batchId, candidateIndex: candidate.candidateIndex, idempotencyKey: null },
             }),
-          }, editingObjectId ?? undefined, preloadedImagesById.get(candidate.imageId))
-        ));
+          }, editingObjectId ?? undefined, preloadedImagesById.get(candidate.imageId));
+          assertContext();
+          if (placedId) createdIds.add(placedId);
+          return placedId;
+        });
+        assertContext();
         if (placement.placed.length !== 4 || placement.failed.length > 0) {
-          placement.placed.forEach(({ value: objectId }) => useCanvasStore.getState().deleteObject(objectId));
+          placement.placed.forEach(({ value: objectId }) => { if (createdIds.has(objectId)) useCanvasStore.getState().deleteObject(objectId); });
           const firstFailure = placement.failed[0]?.error;
           throw firstFailure instanceof Error
             ? firstFailure
@@ -2665,7 +3078,7 @@ export function CanvasEditorPage() {
       }
 
       if (action === 'remove-bg') {
-        const { data, error } = await supabase.functions.invoke('remove-background', {
+        const { data, error } = await invokeProviderAction('remove-background', {
           body: { imageUrl: editSource, brandId: currentBrand.id, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
@@ -2685,7 +3098,7 @@ export function CanvasEditorPage() {
           return false;
         }
         const colors = params.prompt?.split(/[、,\\s]+/).map((item) => item.trim()).filter(Boolean);
-        const { data, error } = await supabase.functions.invoke('colorize', {
+        const { data, error } = await invokeProviderAction('colorize', {
           body: { imageUrl: editSource, brandId: currentBrand.id, colors: colors?.length ? colors : undefined, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
@@ -2712,7 +3125,7 @@ export function CanvasEditorPage() {
       }
 
       if (action === 'upscale') {
-        const { data, error } = await supabase.functions.invoke('upscale', {
+        const { data, error } = await invokeProviderAction('upscale', {
           body: { imageUrl: editSource, brandId: currentBrand.id, scale: 2, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
@@ -2731,7 +3144,7 @@ export function CanvasEditorPage() {
           toast.error(BRAND_LIKENESS_BLOCK_COPY);
           return false;
         }
-        const { data, error } = await supabase.functions.invoke('generate-variations', {
+        const { data, error } = await invokeProviderAction('generate-variations', {
           body: { imageUrl: editSource, brandId: currentBrand.id, prompt: params.prompt || undefined, count: 4, legalSafety: { rightsConfirmed }, ...lightchainEditMetadata },
         });
         if (error) throw error;
@@ -2964,9 +3377,34 @@ export function CanvasEditorPage() {
     conflict: '競合: 再読込が必要',
     failed: '保存失敗・再試行',
   }[canvasPersistenceStatus];
+  const canvasDebugSummary = canvasDebugEnabled ? JSON.stringify({
+    status: canvasPersistenceStatus,
+    remoteDocumentId: remoteDocumentIdRef.current,
+    objectCount: objects.length,
+    view: { zoom, panX, panY, canvasWidth: canvasSize.width, canvasHeight: canvasSize.height },
+    objects: objects.map((object) => ({
+      id: object.id,
+      type: object.type,
+      geometry: { x: object.x, y: object.y, width: object.width, height: object.height, scaleX: object.scaleX, scaleY: object.scaleY, visible: object.visible !== false, zIndex: object.zIndex },
+      src: object.src || null,
+      metadataKeys: object.metadata ? Object.keys(object.metadata) : [],
+      imageId: object.metadata?.imageId || object.metadata?.galleryImageId || null,
+      storagePath: object.metadata?.storagePath || object.metadata?.galleryStoragePath || null,
+      parameterKeys: object.metadata?.parameters && typeof object.metadata.parameters === 'object'
+        ? Object.keys(object.metadata.parameters)
+        : [],
+    })),
+    resolution: canvasDebugResolution,
+  }) : '';
 
   return (
     <div className="h-screen flex flex-col bg-[#050808] text-white">
+      {canvasDebugEnabled && (
+        <pre data-testid="canvas-debug-readback" className="fixed bottom-0 left-0 z-[100] max-w-full max-h-40 overflow-auto bg-black/90 p-2 text-[10px] text-cyan-200">
+          {canvasDebugSummary}
+        </pre>
+      )}
+      <ProtectedImageRecoveryPanel destination="canvas" canvasProjectId={currentProjectId} canvasProjectAliases={canvasSourceProjectIdsRef.current} onResume={recoverCanvasImageEdit}/>
       {/* Header */}
       <header className="h-12 sm:h-14 flex items-center justify-between border-b border-white/10 bg-[#070b0b]/95 px-2 sm:px-4 z-20 shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
@@ -3067,7 +3505,7 @@ export function CanvasEditorPage() {
             <span className="hidden sm:inline">招待</span>
           </Button>
 
-          <Button size="sm" className="shadow-glow hover:shadow-glow-lg text-xs sm:text-sm px-2 sm:px-3" onClick={() => void handleSave()} disabled={canvasPersistenceStatus === 'loading' || canvasPersistenceStatus === 'saving' || canvasPersistenceStatus === 'verifying'}>
+          <Button data-testid="canvas-save" size="sm" className="shadow-glow hover:shadow-glow-lg text-xs sm:text-sm px-2 sm:px-3" onClick={() => void handleSave()} disabled={canvasPersistenceStatus === 'loading' || canvasPersistenceStatus === 'saving' || canvasPersistenceStatus === 'verifying'}>
             <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 sm:mr-1.5" />
             <span className="hidden sm:inline">保存</span>
           </Button>
@@ -3249,7 +3687,7 @@ export function CanvasEditorPage() {
               </div>
             )}
 
-            {!selectedObject && (
+            {objects.length === 0 && !selectedObject && (
               <div className="absolute left-2 right-2 top-16 z-10 mx-auto max-w-5xl rounded-2xl border border-white/10 bg-[#0f1212]/95 p-2 shadow-[0_18px_70px_rgba(0,0,0,0.4)] backdrop-blur sm:left-20 sm:right-auto sm:w-[720px]">
                 <div className="grid gap-2 sm:grid-cols-6">
                   {canvasImageActions.map((action) => {
@@ -3593,11 +4031,13 @@ export function CanvasEditorPage() {
         <ImageEditModal
           isOpen={showEditModal}
           onClose={() => {
+            imageEditEpochRef.current += 1;
             setShowEditModal(false);
             setEditingImage(null);
             setEditingObjectId(null);
           }}
           imageUrl={editingImage}
+          providerNotice={cloudflareDataPlane ? `${CLOUDFLARE_PROTECTED_EDIT_NOTICE} 4候補を個別に推論します。` : undefined}
           onEdit={handleEditModalAction}
         />
       )}
@@ -3606,8 +4046,10 @@ export function CanvasEditorPage() {
         <PartialEditModal
           isOpen={showPartialEditModal}
           imageUrl={partialEditingImage}
+          providerNotice={cloudflareDataPlane ? `${CLOUDFLARE_PROTECTED_EDIT_NOTICE} 4候補を個別に推論します。` : undefined}
           onClose={() => {
             setShowPartialEditModal(false);
+            imageEditEpochRef.current += 1;
             setPartialEditingImage(null);
             setPartialEditingObjectId(null);
           }}

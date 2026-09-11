@@ -77,7 +77,7 @@ export function JobQueuePanel({ activeJobs, completedJobs = [], className = '' }
           const lightchainTask = getLightchainTaskRow(job);
           const lightchainSteps = getLightchainStepsRow(job);
           return (
-            <Link key={job.id} to="/gallery" className="flex items-center gap-3 rounded-xl bg-white/45 p-3 transition hover:bg-white dark:bg-surface-900/30 dark:hover:bg-surface-900/60">
+            <Link key={job.id} to={job.outputHref} className="flex items-center gap-3 rounded-xl bg-white/45 p-3 transition hover:bg-white dark:bg-surface-900/30 dark:hover:bg-surface-900/60">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/25 dark:text-emerald-200">
                 <CheckCircle2 className="h-5 w-5" />
               </span>

@@ -22,6 +22,7 @@ import {
   Globe,
   Layout
 } from 'lucide-react';
+import { formatShortcutLabel } from '../../lib/keyboardShortcutPlatform';
 
 interface ContextMenuProps {
   x: number;
@@ -98,7 +99,7 @@ interface MenuItem {
   const menuItems: MenuItem[] = selectedObjectId ? [
     // Edit actions
     { type: 'header', label: '編集' },
-    { id: 'duplicate', label: '複製', icon: Copy, shortcut: '⌘D' },
+    { id: 'duplicate', label: '複製', icon: Copy, shortcut: formatShortcutLabel('⌘+D') },
     { id: 'delete', label: '削除', icon: Trash2, shortcut: 'Del', danger: true },
     { type: 'separator', label: '' },
     
@@ -151,9 +152,9 @@ interface MenuItem {
     { type: 'header', label: 'キャンバス' },
     { id: 'addImage', label: '画像を追加', icon: Layers },
     { id: 'addText', label: 'テキストを追加', icon: Edit3 },
-    { id: 'paste', label: '貼り付け', icon: Copy, shortcut: '⌘V' },
+    { id: 'paste', label: '貼り付け', icon: Copy, shortcut: formatShortcutLabel('⌘+V') },
     { type: 'separator', label: '' },
-    { id: 'selectAll', label: 'すべて選択', shortcut: '⌘A' },
+    { id: 'selectAll', label: 'すべて選択', shortcut: formatShortcutLabel('⌘+A') },
     { id: 'resetView', label: '表示をリセット' },
   ];
 
@@ -210,8 +211,6 @@ interface MenuItem {
     </div>
   );
 }
-
-
 
 
 

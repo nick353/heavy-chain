@@ -27,7 +27,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
-import { supabase } from '../lib/supabase';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { Button, Textarea, Input } from '../components/ui';
 import { FEATURES, type Feature } from '../components/FeatureSelector';
 import { PromptHistory, usePromptHistory } from '../components/PromptHistory';
@@ -46,6 +46,7 @@ import {
   type MaterialReferenceState,
 } from '../lib/workspaceMaterialReferences';
 import { generateImage } from '../lib/imageApi';
+import { CLOUDFLARE_IMAGE_MODEL, CLOUDFLARE_IMAGE_NOTICE } from '../lib/cloudflareImageAI';
 import {
   buildGenerationIntentHref,
   hydrateGenerationIntentSource,
@@ -54,6 +55,10 @@ import {
 } from '../lib/workspaceHandoff';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
+import {
+  getLightchainUnifiedFeatureWorkflowContract,
+  UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
+} from '../features/lightchain/unifiedFeatureWorkflowContract';
 import { buildProductionImagePrompt, mergeProductionNegativePrompt } from '../lib/productPromptQuality';
 import {
   BRAND_LIKENESS_BLOCK_COPY,
@@ -98,7 +103,7 @@ const stylePresets = [
 const aspectRatios = [
   { id: '1:1', name: '正方形', width: 1024, height: 1024, usage: 'Instagram投稿・汎用' },
   { id: '4:3', name: '横長', width: 1024, height: 768, usage: 'Webバナー・LP' },
-  { id: '4:5', name: 'ポートレート', width: 819, height: 1024, usage: 'Instagram縦投稿・EC特集' },
+  { id: '4:5', name: 'ポートレート', width: 1024, height: 1280, usage: 'Instagram縦投稿・EC特集' },
   { id: '3:4', name: '縦長', width: 768, height: 1024, usage: 'Pinterest/フライヤー' },
   { id: '16:9', name: 'ワイド', width: 1024, height: 576, usage: 'YouTubeサムネ/ヒーロー' },
   { id: '9:16', name: 'ストーリー', width: 576, height: 1024, usage: 'IG/LINEストーリー・縦動画' }
@@ -612,67 +617,17 @@ const isPrintEligibleDesignGachaResult = (image: GeneratedResult) => (
 );
 
 const debugGeneration = import.meta.env.VITE_DEBUG_GENERATION === 'true';
-const generationProvider = String(import.meta.env.VITE_GENERATION_PROVIDER || 'openai').toLowerCase();
-const hostedImageGenerationMode = ['gemini', 'gemini-image', 'openai', 'openai-image'].includes(generationProvider);
-const noImageGenerationMode = generationProvider === 'planning';
+const generationProvider = 'workers_ai';
+const hostedImageGenerationMode = generationProvider === 'workers_ai';
+const noImageGenerationMode = false;
 
-const generationModelOptions = [
-  {
-    id: 'imagen-4.0-fast-generate-001',
-    provider: 'gemini',
-    label: '低コスト',
-    title: 'Imagen 4 Fast',
-    cost: '1枚 約$0.02',
-    description: '量産・社内確認向け',
-  },
-  {
-    id: 'imagen-4.0-generate-001',
-    provider: 'gemini',
-    label: '標準',
-    title: 'Imagen 4',
-    cost: '1枚 約$0.04',
-    description: '商品画像の標準品質',
-  },
-  {
-    id: 'gemini-3.1-flash-lite-image',
-    provider: 'gemini',
-    label: '編集向き',
-    title: 'Gemini Flash Lite Image',
-    cost: '1枚 約$0.0336',
-    description: '高速で安いGemini系',
-  },
-  {
-    id: 'gemini-3.1-flash-image',
-    provider: 'gemini',
-    label: '高品質',
-    title: 'Nano Banana 2',
-    cost: '1枚 約$0.067',
-    description: '文脈理解と編集に強い',
-  },
-  {
-    id: 'gpt-image-2',
-    provider: 'openai',
-    label: 'OpenAI標準',
-    title: 'GPT Image 2',
-    cost: '1枚 約$0.006-$0.211',
-    description: 'OpenAIの画像生成',
-  },
-  {
-    id: 'gpt-image-1-mini',
-    provider: 'openai',
-    label: 'OpenAI軽量',
-    title: 'GPT Image 1 mini',
-    cost: '1枚 約$0.005-$0.052',
-    description: '試作・社内確認向け',
-  },
-] as const;
+const generationModelOptions = [{
+  id: CLOUDFLARE_IMAGE_MODEL, provider: 'workers_ai' as const, label: 'Cloudflare候補', title: 'FLUX.2 Klein 4B',
+  cost: '実行後に利用量表示（請求額ではありません）', description: '品質検証中・参照512px',
+}] as const;
 
 const getInitialGenerationModel = () => {
-  const configuredModel = String(import.meta.env.VITE_DEFAULT_GENERATION_MODEL || '').trim();
-  if (generationModelOptions.some((option) => option.id === configuredModel)) {
-    return configuredModel;
-  }
-  return 'gpt-image-1-mini';
+  return CLOUDFLARE_IMAGE_MODEL;
 };
 
 const debugLog = (message: string, details?: Record<string, unknown>) => {
@@ -683,6 +638,18 @@ const debugLog = (message: string, details?: Record<string, unknown>) => {
     console.debug(message);
   }
 };
+
+async function invokeProviderAction(
+  action: string,
+  options: { body: Record<string, unknown> },
+): Promise<{ data: any; error: any }> {
+  try {
+    if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+    return { data: await cloudflareDataPlane.invokeProviderAction(action, options.body), error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+}
 
 const featureQueryAliases: Record<string, string> = {
   'generate-image': 'campaign-image',
@@ -846,13 +813,13 @@ function getModelMatrixVerificationState(image: GeneratedResult) {
   return {
     semanticVerification: null as ModelMatrixSemanticVerification | null,
     referenceSummary,
-    statusLabel: referenceSummary ? '検証済み' : '未確認',
+    statusLabel: referenceSummary ? '生成条件のみ確認' : '未確認',
     reason: referenceSummary
-      ? '保存された生成条件から検証結果を復元しました。'
+      ? '生成条件は保存されていますが、画像内容と衣服の一致は未検証です。'
       : '検証情報がありません。',
     model: image.modelUsed ?? '保存済み生成モデル',
     checkedAt: image.checkedAt ?? null,
-    warning: null,
+    warning: '画像内容の自動照合結果はありません。利用前に参照との一致を確認してください。',
     canUseActions: true,
   };
 }
@@ -1074,6 +1041,7 @@ export function GeneratePage() {
   const featureParam = searchParams.get('feature');
   const locationFeature = featureParam ? findFeatureFromQuery(featureParam) : null;
   const selectedFeature = locationFeature ?? (featureParam ? null : selectedFeatureState);
+  const currentPath = typeof window === 'undefined' ? '' : window.location.pathname;
   const [variationStrength, setVariationStrength] = useState(50);
   
   // Upscale options
@@ -1403,14 +1371,7 @@ export function GeneratePage() {
   ): Promise<GeneratedResult> => {
     let imageUrl = variation.imageUrl || '';
     if (!imageUrl && variation.storagePath) {
-      const { data, error } = await supabase.storage
-        .from('generated-images')
-        .createSignedUrl(variation.storagePath, 60 * 60);
-      if (error || !data?.signedUrl) {
-        const details = [variation.imageId, variation.storagePath].filter(Boolean).join(':');
-        throw error ?? new Error(`design_gacha_signed_url_failed:${details}`);
-      }
-      imageUrl = data.signedUrl;
+      imageUrl = await resolveGeneratedImageUrl(variation.storagePath);
     }
     if (!imageUrl) {
       const details = [variation.imageId, variation.storagePath].filter(Boolean).join(':');
@@ -1543,11 +1504,7 @@ export function GeneratePage() {
         featureId: selectedFeature?.id,
         sourceReadback,
         generationStartedAt: Date.now(),
-        generationLane: hostedImageGenerationMode
-          ? 'hosted-image'
-          : generationProvider === 'planning'
-            ? undefined
-            : 'edge-design-gacha',
+        generationLane: hostedImageGenerationMode ? 'hosted-image' : 'edge-design-gacha',
       });
 
       try {
@@ -1708,7 +1665,7 @@ export function GeneratePage() {
       });
 
       const planningFeature = selectedFeature;
-      if ((hostedImageGenerationMode || noImageGenerationMode) && planningFeature && planningFeature.id !== 'optimize-prompt') {
+      if (noImageGenerationMode && planningFeature && planningFeature.id !== 'optimize-prompt') {
         const shotLabels: Record<string, string> = {
           front: '正面',
           side: '側面',
@@ -1761,7 +1718,7 @@ export function GeneratePage() {
         })();
         if (hostedImageGenerationMode) {
           const ratio = aspectRatios.find(r => r.id === selectedRatio) || aspectRatios[0];
-          const geminiPrompt = buildProductionImagePrompt({
+          const generationPrompt = buildProductionImagePrompt({
             feature: planningFeature,
             userBrief: primaryBrief || fallbackBrief,
             styleLabel: selectedStyleLabel,
@@ -1772,10 +1729,10 @@ export function GeneratePage() {
           });
           const productionNegativePrompt = mergeProductionNegativePrompt(negativePrompt);
           const generationTotal = Math.max(1, Math.min(resultLabels.length || generateCount, 4));
-          const geminiResults: GeneratedResult[] = [];
+          const providerResults: GeneratedResult[] = [];
 
           for (let index = 0; index < generationTotal; index += 1) {
-            const result = await generateImage(geminiPrompt, currentBrand.id, {
+            const result = await generateImage(generationPrompt, currentBrand.id, {
               generationProvider: selectedGenerationModelOption.provider,
               generationModel: selectedGenerationModel,
               featureType: planningFeature.id,
@@ -1790,7 +1747,7 @@ export function GeneratePage() {
                 cta: campaignCTA,
               },
               rightsConfirmed,
-              ...buildRemoteGenerationContext(planningFeature, geminiPrompt, selectedRatio),
+              ...buildRemoteGenerationContext(planningFeature, generationPrompt, selectedRatio),
               ...generateMaterialMetadata,
             });
             if (!result.success) {
@@ -1801,8 +1758,8 @@ export function GeneratePage() {
               result.imageUrl
                 ? {
                   imageUrl: result.imageUrl,
-                  id: result.imageId ?? result.storagePath ?? `gemini-${Date.now()}-${index}`,
-                  prompt: geminiPrompt,
+                  id: result.imageId ?? result.storagePath ?? `generated-${Date.now()}-${index}`,
+                  prompt: generationPrompt,
                   storagePath: result.storagePath,
                   imageId: result.imageId,
                   jobId: result.jobId,
@@ -1810,10 +1767,10 @@ export function GeneratePage() {
                 : null
             );
             if (!image?.imageUrl) throw new Error('image_generation_image_missing');
-            geminiResults.push({
-              id: image.id || image.imageId || image.storagePath || `gemini-${Date.now()}-${index}`,
+            providerResults.push({
+              id: image.id || image.imageId || image.storagePath || `generated-${Date.now()}-${index}`,
               imageUrl: image.imageUrl,
-              prompt: image.prompt || geminiPrompt,
+              prompt: image.prompt || generationPrompt,
               label: resultLabels[index] || `${planningFeature.name} ${index + 1}`,
               jobId: image.jobId || result.jobId || undefined,
               imageId: image.imageId || undefined,
@@ -1824,14 +1781,14 @@ export function GeneratePage() {
             });
           }
 
-          replaceGeneratedImages(geminiResults);
-          saveLocalArtifactsWithReadback(geminiResults.map((image, index) => ({
+          replaceGeneratedImages(providerResults);
+          saveLocalArtifactsWithReadback(providerResults.map((image, index) => ({
             id: image.id ? `local-generated-${image.id}` : undefined,
             brandId: currentBrand.id,
             featureType: planningFeature.id,
             title: image.label || planningFeature.name,
             imageUrl: image.imageUrl,
-            prompt: image.prompt || geminiPrompt,
+            prompt: image.prompt || generationPrompt,
             sourceJobId: image.jobId ?? undefined,
             metadata: {
               artifactKind: image.artifactKind ?? 'image',
@@ -1931,7 +1888,7 @@ export function GeneratePage() {
             selectedBackground === 'reference' && backgroundReferenceImage ? 'use reference image' :
             backgroundOptions.find(b => b.id === selectedBackground)?.prompt || '';
           
-          ({ data, error } = await supabase.functions.invoke('remove-background', {
+          ({ data, error } = await invokeProviderAction('remove-background', {
             body: { 
               ...baseBody,
               ...generateMaterialMetadata,
@@ -1951,7 +1908,7 @@ export function GeneratePage() {
           break;
 
         case 'colorize':
-          ({ data, error } = await supabase.functions.invoke('colorize', {
+          ({ data, error } = await invokeProviderAction('colorize', {
             body: { 
               ...baseBody,
               ...generateMaterialMetadata,
@@ -1973,7 +1930,7 @@ export function GeneratePage() {
           break;
 
         case 'upscale':
-          ({ data, error } = await supabase.functions.invoke('upscale', {
+          ({ data, error } = await invokeProviderAction('upscale', {
             body: { 
               ...baseBody,
               ...generateMaterialMetadata,
@@ -1994,7 +1951,7 @@ export function GeneratePage() {
           break;
 
         case 'variations':
-          ({ data, error } = await supabase.functions.invoke('generate-variations', {
+          ({ data, error } = await invokeProviderAction('generate-variations', {
             body: { 
               ...baseBody,
               ...generateMaterialMetadata,
@@ -2022,7 +1979,7 @@ export function GeneratePage() {
             return;
           }
           debugLog('Invoking scene-coordinate', { hasImage: !!processedImageUrl });
-          ({ data, error } = await supabase.functions.invoke('generate-variations', {
+          ({ data, error } = await invokeProviderAction('generate-variations', {
             body: { 
               ...baseBody,
               ...generateMaterialMetadata,
@@ -2053,7 +2010,7 @@ export function GeneratePage() {
             fixedElementCount: fixedElements.length,
             randomizedElementCount: randomizedElements.length,
           });
-          ({ data, error } = await supabase.functions.invoke('design-gacha', {
+          ({ data, error } = await invokeProviderAction('design-gacha', {
             body: { 
               ...baseBody,
               ...generateMaterialMetadata,
@@ -2115,7 +2072,7 @@ export function GeneratePage() {
               setTimeout(() => reject(new Error('リクエストがタイムアウトしました（60秒）')), 60000)
             );
             
-            const invokePromise = supabase.functions.invoke('product-shots', {
+            const invokePromise = invokeProviderAction('product-shots', {
               body: requestBody
             });
             
@@ -2162,7 +2119,7 @@ export function GeneratePage() {
             return;
           }
           debugLog('Invoking model-matrix', { hasImage: !!processedImageUrl });
-          ({ data, error } = await supabase.functions.invoke('model-matrix', {
+          ({ data, error } = await invokeProviderAction('model-matrix', {
             body: { 
               ...baseBody,
               ...generateMaterialMetadata,
@@ -2177,16 +2134,8 @@ export function GeneratePage() {
             }
           }));
           if (data?.matrix) {
-            const fallbackSemanticVerification: ModelMatrixSemanticVerification = {
-              verdict: 'yes',
-              reason: processedImageUrl
-                ? '参照画像を分析し、着用条件を組み立てました'
-                : '商品説明をそのまま着用条件に反映しました',
-              model: selectedGenerationModel,
-              checkedAt: new Date().toISOString(),
-            };
             const topLevelSemanticVerification =
-              data.semanticVerification ?? data.verifier ?? data.verification ?? fallbackSemanticVerification;
+              data.semanticVerification ?? data.verifier ?? data.verification;
             const topLevelReferenceSummary = data.referenceSummary ?? data.productDescription ?? productDescription;
             replaceGeneratedImages(data.matrix.map((m: any) => ({
               id: m.storagePath,
@@ -2198,7 +2147,7 @@ export function GeneratePage() {
               verification: m.verification ?? m.semanticVerification ?? topLevelSemanticVerification,
               referenceSummary: m.referenceSummary ?? topLevelReferenceSummary,
               modelUsed: m.modelUsed ?? m.model_used ?? selectedGenerationModel,
-              checkedAt: m.checkedAt ?? m.checked_at ?? fallbackSemanticVerification.checkedAt,
+              checkedAt: m.checkedAt ?? m.checked_at,
             })));
           }
           break;
@@ -2209,7 +2158,7 @@ export function GeneratePage() {
             setIsGenerating(false);
             return;
           }
-          ({ data, error } = await supabase.functions.invoke('multilingual-banner', {
+          ({ data, error } = await invokeProviderAction('multilingual-banner', {
             body: { 
               ...baseBody,
               ...generateMaterialMetadata,
@@ -2235,7 +2184,7 @@ export function GeneratePage() {
             setIsGenerating(false);
             return;
           }
-          ({ data, error } = await supabase.functions.invoke('optimize-prompt', {
+          ({ data, error } = await invokeProviderAction('optimize-prompt', {
             body: { 
               prompt, 
               brandId: currentBrand.id,
@@ -2276,7 +2225,7 @@ export function GeneratePage() {
             ...materialPromptLines,
           ].filter(Boolean).join(', ');
 
-          ({ data, error } = await supabase.functions.invoke('generate-image', {
+          ({ data, error } = await invokeProviderAction('generate-image', {
             body: {
               ...baseBody,
               ...buildRemoteGenerationContext(selectedFeature, campaignPromptWithMaterial, selectedRatio),
@@ -2329,7 +2278,7 @@ export function GeneratePage() {
             ...materialPromptLines,
           ].filter(Boolean).join(', ');
           const ratio = aspectRatios.find(r => r.id === selectedRatio) || aspectRatios[0];
-          ({ data, error } = await supabase.functions.invoke('generate-image', {
+          ({ data, error } = await invokeProviderAction('generate-image', {
             body: {
               ...baseBody,
               ...buildRemoteGenerationContext(selectedFeature, fullPrompt, selectedRatio),
@@ -2474,7 +2423,7 @@ export function GeneratePage() {
         errorMessage = 'リクエストがタイムアウトしました。画像サイズを小さくして再試行してください。';
       }
       
-      // Supabaseエラーの詳細を取得
+      // APIエラーの詳細を取得
       if (error.context?.body) {
         try {
           const body = JSON.parse(error.context.body);
@@ -2539,7 +2488,7 @@ export function GeneratePage() {
       return;
     }
     try {
-      const { data, error } = await supabase.functions.invoke('bulk-download', {
+      const { data, error } = await invokeProviderAction('bulk-download', {
         body: { brandId: currentBrand.id, imageIds }
       });
       if (error || !data?.downloadUrl) {
@@ -3860,8 +3809,12 @@ export function GeneratePage() {
     ? lightchainFeatureCatalog.find((feature) => {
         if (lightchainCompat?.lightchainFeatureId === feature.id) return true;
         if (searchParams.get('lcFeature') === feature.id) return true;
+        if (feature.route === currentPath) return true;
         return getCatalogFeatureGenerateId(feature.route) === selectedFeature.id;
       }) ?? null
+    : null;
+  const generateWorkflowContract = selectedCatalogFeature
+    ? getLightchainUnifiedFeatureWorkflowContract(selectedCatalogFeature.id)
     : null;
   const selectedParityGoal = selectedCatalogFeature
     ? lightchainParityGoals.find((goal) => goal.title === selectedCatalogFeature.title) ?? null
@@ -3975,7 +3928,7 @@ export function GeneratePage() {
                 最終接続
               </div>
               <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                {noImageGenerationMode ? '企画書保存' : 'OpenAI画像API'}
+                {noImageGenerationMode ? '企画書保存' : 'Cloudflare画像AI'}
               </p>
             </div>
           </div>
@@ -3998,8 +3951,17 @@ export function GeneratePage() {
     <div
       className="mx-auto max-w-[1720px] px-4 py-4 sm:px-6 sm:py-6 lg:px-8"
       data-testid="heavy-generate-workspace"
+      data-lightchain-parity-shell="generate"
       data-flow-state={unifiedFlowState}
       data-flow-state-label={unifiedWorkspaceFlowLabels[unifiedFlowState]}
+      data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+      data-workflow-feature={generateWorkflowContract?.rowId ?? ''}
+      data-workflow-input-roles={generateWorkflowContract?.inputRoles.join(',') ?? ''}
+      data-workflow-result-destinations={generateWorkflowContract?.resultDestinations.join(',') ?? ''}
+      data-workflow-lifecycle={generateWorkflowContract?.lifecycle.join(',') ?? ''}
+      data-workflow-source-input-mode={generateWorkflowContract?.sourceInputMode ?? ''}
+      data-workflow-retry-policy={generateWorkflowContract?.retry.retainsLastCompletedResult && generateWorkflowContract.retry.preservesInputLineage && generateWorkflowContract.retry.blocksDuplicateSubmit ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit' : ''}
+      data-workflow-rights-gate={generateWorkflowContract?.rightsGate ?? ''}
     >
       <div className="mb-4 overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/95 text-white shadow-soft">
         <div className="flex flex-col gap-3 px-4 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
@@ -4314,6 +4276,7 @@ export function GeneratePage() {
             )}
 
             {renderFeatureForm()}
+            {cloudflareDataPlane && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">{CLOUDFLARE_IMAGE_NOTICE}</p>}
 
             {!isGenerating && !generationError && (
               <div className={`mt-5 rounded-2xl border p-4 shadow-soft ${
@@ -4454,7 +4417,7 @@ export function GeneratePage() {
                   最終接続
                 </div>
                 <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-                  {noImageGenerationMode ? '企画書保存' : 'OpenAI画像API'}
+                  {noImageGenerationMode ? '企画書保存' : 'Cloudflare画像AI'}
                 </p>
               </div>
             </div>

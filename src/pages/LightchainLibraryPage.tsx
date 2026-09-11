@@ -10,11 +10,12 @@ import {
   type WorkspaceArtifact,
 } from '../lib/localWorkspaceArtifacts';
 import { withSignedImageUrls } from '../lib/storage';
-import { supabase } from '../lib/supabase';
-import type { GeneratedImage } from '../types/database';
+import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
+import type { GeneratedImageListRow } from '../lib/generatedImageQuery';
 import {
   lightchainUnifiedFeatureCatalog,
 } from '../lib/lightchainUnifiedFeatureCatalog';
+import { buildLightchainLibraryFeatureHref } from '../lib/lightchainLibraryHandoff';
 
 const DEFAULT_LIBRARY_GROUPS = [
   'マイライブラリー',
@@ -60,11 +61,11 @@ const cardFeatureType = (card: LibraryCard) => card.kind === 'local' ? card.arti
 const cardImageUrl = (card: LibraryCard) => card.kind === 'local' ? card.artifact.imageUrl : card.asset.imageUrl;
 const cardPrompt = (card: LibraryCard) => card.kind === 'local' ? card.artifact.prompt : card.asset.prompt;
 
-const isVideoGeneratedImage = (image: GeneratedImage) => (
+const isVideoGeneratedImage = (image: GeneratedImageListRow) => (
   /video|動画/i.test(image.feature_type || '')
 );
 
-const remoteAssetFromImage = (image: GeneratedImage): RemoteLibraryAsset | null => {
+const remoteAssetFromImage = (image: GeneratedImageListRow): RemoteLibraryAsset | null => {
   if (!image.image_url || isVideoGeneratedImage(image)) return null;
   return {
     kind: 'remote',
@@ -102,20 +103,6 @@ const artifactGroup = (artifact: WorkspaceArtifact): string => (
 const artifactSource = (artifact: WorkspaceArtifact): string => (
   typeof artifact.metadata.librarySource === 'string' ? artifact.metadata.librarySource : 'generation'
 );
-
-const buildLibraryFeatureHref = (feature: typeof lightchainUnifiedFeatureCatalog[number], artifactId: string): string => {
-  const pathname = feature.id === 'ai-fitting' || feature.id === 'ai-fitting-reference'
-    ? '/fitting'
-    : feature.id === 'fabric-image'
-      ? '/lightchain/fabric-image'
-      : feature.id === 'printing-image'
-        ? '/lightchain/printing-image'
-        : feature.route;
-  const params = new URLSearchParams({ libraryArtifactId: artifactId });
-  if (feature.id === 'fabric-image') params.set('librarySlot', 'fabric-design');
-  if (feature.id === 'printing-image') params.set('librarySlot', 'printing-design');
-  return `${pathname}?${params.toString()}`;
-};
 
 export function LightchainLibraryPage() {
   const { currentBrand, user } = useAuthStore();
@@ -182,13 +169,9 @@ export function LightchainLibraryPage() {
 
     let cancelled = false;
     const loadRemoteAssets = async () => {
-      const { data, error } = await supabase
-        .from('generated_images')
-        .select('*')
-        .eq('brand_id', brandId)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (error || !data) {
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const data = (await cloudflareDataPlane.listGeneratedImages(brandId, { limit: 100, offset: 0 })).map(asGeneratedImageListRow);
+      if (!data) {
         if (!cancelled) setRemoteAssets([]);
         return;
       }
@@ -311,7 +294,7 @@ export function LightchainLibraryPage() {
         const destinationPath = typeof destination === 'object'
           ? (() => {
             const feature = lightchainUnifiedFeatureCatalog.find((item) => item.id === destination.featureId);
-            return feature ? buildLibraryFeatureHref(feature, result.artifact.id) : null;
+            return feature ? buildLightchainLibraryFeatureHref(feature, result.artifact.id) : null;
           })()
           : destination === 'fitting'
             ? `/fitting?libraryArtifactId=${encodeURIComponent(result.artifact.id)}`
@@ -336,7 +319,7 @@ export function LightchainLibraryPage() {
       await handleImportRemote(selectedAsset.asset, { kind: 'feature', featureId: selectedFeature.id });
       return;
     }
-    navigate(buildLibraryFeatureHref(selectedFeature, selectedAsset.artifact.id));
+    navigate(buildLightchainLibraryFeatureHref(selectedFeature, selectedAsset.artifact.id));
   };
 
   const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {

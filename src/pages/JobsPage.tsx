@@ -20,7 +20,11 @@ const statusIcon = {
 
 function JobRow({ job }: { job: WorkspaceJob }) {
   const StatusIcon = statusIcon[job.status];
-  const href = job.status === 'failed' ? job.retryHref : '/gallery';
+  const href = job.status === 'failed'
+    ? job.retryHref
+    : job.status === 'completed'
+      ? job.outputHref
+      : job.resumeHref;
   // Keep older persisted labels readable while rendering the current Lightchain labels.
   const lightchainRows = job.sourceSummaryRows.filter((row) => (
     row.label.startsWith('Heavy Chain') || row.label.startsWith('Lightchain')
@@ -94,27 +98,49 @@ function JobRow({ job }: { job: WorkspaceJob }) {
 }
 
 export function JobsPage() {
-  const { user, currentBrand, refreshCurrentBrand } = useAuthStore();
+  const {
+    user,
+    currentBrand,
+    refreshCurrentBrand,
+    isInitialized: authInitialized,
+    isLoading: authLoading,
+  } = useAuthStore();
   const [activity, setActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
   const [isLoading, setIsLoading] = useState(true);
   const [activityError, setActivityError] = useState<string | null>(null);
   const [showFailedJobs, setShowFailedJobs] = useState(false);
   const [showAllMobileJobs, setShowAllMobileJobs] = useState(false);
+  const [brandResolutionAttempted, setBrandResolutionAttempted] = useState(false);
 
   const loadActivity = useCallback(async () => {
-    if (!currentBrand && user) {
-      const refreshedBrand = await refreshCurrentBrand();
-      if (refreshedBrand) return;
-    }
-
-    if (!currentBrand) {
-      setActivity(emptyWorkspaceActivity);
-      setActivityError(null);
-      setIsLoading(false);
+    if (!authInitialized || authLoading) {
+      setIsLoading(true);
       return;
     }
 
-    const brandId = currentBrand.id;
+    let brand = currentBrand;
+    if (!brand && user) {
+      setBrandResolutionAttempted(false);
+      // A hard navigation can finish auth initialization before the async brand
+      // hydration callback. Resolve it here as a bounded read-only fallback.
+      for (let attempt = 0; attempt < 2 && !brand; attempt += 1) {
+        brand = await refreshCurrentBrand();
+        if (!brand && attempt === 0) {
+          await new Promise((resolve) => window.setTimeout(resolve, 500));
+        }
+      }
+    }
+
+    if (!brand) {
+      setActivity(emptyWorkspaceActivity);
+      setActivityError(null);
+      setIsLoading(false);
+      setBrandResolutionAttempted(true);
+      return;
+    }
+
+    setBrandResolutionAttempted(true);
+    const brandId = brand.id;
     setIsLoading(true);
     setActivityError(null);
     try {
@@ -130,7 +156,7 @@ export function JobsPage() {
         setIsLoading(false);
       }
     }
-  }, [currentBrand, refreshCurrentBrand, user]);
+  }, [authInitialized, authLoading, currentBrand, refreshCurrentBrand, user]);
 
   useEffect(() => {
     void loadActivity();
@@ -192,7 +218,13 @@ export function JobsPage() {
           </div>
         </div>
 
-        {!currentBrand ? (
+        {(!currentBrand && (authLoading || !authInitialized || (user && !brandResolutionAttempted))) ? (
+          <div className="mt-6 grid gap-3 lg:grid-cols-3" data-testid="jobs-brand-loading">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="h-24 animate-pulse rounded-2xl bg-neutral-100 dark:bg-surface-900" />
+            ))}
+          </div>
+        ) : !currentBrand ? (
           <div className="mt-6 rounded-2xl border border-dashed border-neutral-200 bg-white/45 p-6 text-center dark:border-white/10 dark:bg-surface-900/35">
             <p className="text-sm text-neutral-500 dark:text-neutral-400">ブランドを作成するとジョブが表示されます。</p>
           </div>

@@ -1,4 +1,4 @@
-import { supabase, withSupabaseSessionRecovery } from './supabase';
+import { cloudflareDataPlane } from './cloudflareApi';
 import type { CanvasObject } from '../stores/canvasStore';
 import { buildLocalCanvasAssetReference, hasLocalCanvasAsset } from './canvasLocalAssets';
 
@@ -18,6 +18,7 @@ export type CanvasDocumentSnapshot = {
   version: number;
   projectId?: string | null;
   localProjectId?: string | null;
+  sourceProjectIds?: string[];
   name?: string;
   objects: Array<Record<string, unknown>>;
   view?: {
@@ -29,6 +30,27 @@ export type CanvasDocumentSnapshot = {
     gridSize?: number;
   };
 };
+
+export type CanvasImageSourceIssue = {
+  objectId: string;
+  label: string | null;
+  source: string | null;
+};
+
+export class CanvasDocumentValidationError extends Error {
+  readonly code = 'canvas_image_source_invalid';
+  readonly issues: CanvasImageSourceIssue[];
+  readonly objectIds: string[];
+  readonly labels: string[];
+
+  constructor(issues: CanvasImageSourceIssue[]) {
+    super('canvas_image_source_invalid');
+    this.name = 'CanvasDocumentValidationError';
+    this.issues = issues;
+    this.objectIds = issues.map((issue) => issue.objectId);
+    this.labels = issues.flatMap((issue) => issue.label ? [issue.label] : []);
+  }
+}
 
 const LEGACY_CANVAS_KEY = 'heavy-chain-canvas';
 const MAX_TITLE_LENGTH = 160;
@@ -48,6 +70,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => (
 );
 
 const safeNamespacePart = (value: string) => value.trim().replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 96);
+const CLOUDFLARE_IMAGE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 
 export const getCanvasDocumentCacheKey = (userId: string, brandId: string, documentId: string) => (
   `heavy-chain-canvas:v2:${safeNamespacePart(userId)}:${safeNamespacePart(brandId)}:${safeNamespacePart(documentId)}`
@@ -83,6 +106,9 @@ const getRemoteSource = (object: CanvasObject) => {
     parameters.backendStoragePath,
   ].find((value): value is string => typeof value === 'string' && value.trim().length > 0);
   if (storagePath) return storagePath;
+  const imageId = [metadata?.galleryImageId, metadata?.imageId, parameters.imageId]
+    .find((value): value is string => typeof value === 'string' && CLOUDFLARE_IMAGE_ID.test(value.trim()));
+  if (imageId) return `generated-images/${imageId.trim()}`;
   const sourceRevision = metadata?.sourceRevision?.revision || metadata?.sourceRevision?.hash;
   if (sourceRevision && hasLocalCanvasAsset(sourceRevision)) return buildLocalCanvasAssetReference(sourceRevision);
   if (typeof object.src === 'string' && !/^(?:data|blob):/i.test(object.src)) return object.src;
@@ -128,13 +154,34 @@ export const buildCanvasDocumentSnapshot = (input: {
   name: string;
   objects: CanvasObject[];
   view?: CanvasDocumentSnapshot['view'];
+  sourceProjectIds?:string[];
 }): CanvasDocumentSnapshot => ({
   version: 1,
   localProjectId: input.projectId ?? null,
   name: input.name.slice(0, MAX_TITLE_LENGTH),
   objects: input.objects.map(buildRemoteObject),
   view: input.view,
+  ...(input.sourceProjectIds?.length?{sourceProjectIds:input.sourceProjectIds}:{}),
 });
+
+/** Validate the serialized snapshot, after buildRemoteObject has resolved
+ * canonical storage paths/image IDs into src. */
+export const validateCanvasDocumentSnapshot = (snapshot: CanvasDocumentSnapshot): void => {
+  const issues = snapshot.objects.flatMap((object) => {
+    if (object.type !== 'image') return [];
+    const source = typeof object.src === 'string' ? object.src : null;
+    const normalized = source?.trim() ?? '';
+    if (normalized && !/^(?:data|blob):/i.test(normalized) && !/^local-canvas-asset:\/\//i.test(normalized)) {
+      return [];
+    }
+    return [{
+      objectId: typeof object.id === 'string' && object.id ? object.id : '(unknown)',
+      label: typeof object.label === 'string' && object.label ? object.label : null,
+      source,
+    }];
+  });
+  if (issues.length) throw new CanvasDocumentValidationError(issues);
+};
 
 const mapDocument = (document: any): CanvasDocumentRecord => ({
   id: String(document.id),
@@ -148,58 +195,30 @@ const mapDocument = (document: any): CanvasDocumentRecord => ({
   updatedAt: String(document.updatedAt ?? document.updated_at ?? ''),
 });
 
-const invokeCanvasDocumentRequest = async (body: Record<string, unknown>) => {
-  const { data, error } = await supabase.functions.invoke('canvas-document', { body });
-  if (error) {
-    // Supabase FunctionsHttpError keeps the response in `context`. Preserve
-    // only the server's bounded error code so Canvas can report the real
-    // rejection reason without leaking headers, tokens, or the raw response.
-    const context = (error as { context?: unknown }).context;
-    const responseContext = context instanceof Response ? context : null;
-    if (responseContext) {
-      let serverMessage: string | null = null;
-      try {
-        const payload = await responseContext.clone().json() as { error?: unknown };
-        if (typeof payload.error === 'string' && payload.error.trim()) {
-          serverMessage = payload.error.trim().slice(0, 160);
-        }
-      } catch {
-        // Keep the SDK error when the response is not JSON.
-      }
-      if (serverMessage) throw new Error(serverMessage);
-    }
-    const errorName = error instanceof Error ? error.name : 'CanvasFunctionError';
-    const errorMessage = error instanceof Error ? error.message : 'Canvas persistence request failed';
-    const contextDetail = responseContext
-      ? `http_${responseContext.status}`
-      : context instanceof Error
-        ? `${context.name}:${context.message}`
-        : null;
-    const detail = contextDetail ? ` (${contextDetail})` : '';
-    throw new Error(`${errorName}: ${errorMessage}${detail}`.slice(0, 160));
-  }
-  if (!data?.success || !data.document) throw new Error(data?.error || 'canvas_document_request_failed');
-  return mapDocument(data.document);
+export type CanvasDocumentRequestContext={userId:string;assertContext:()=>void};
+
+export const getCanvasDocument = async (documentId: string, _brandId: string,context?:CanvasDocumentRequestContext) => {
+  const cloudflare = cloudflareDataPlane;
+  if (!cloudflare) throw new Error('cloudflare_api_not_configured');
+  return mapDocument(await cloudflare.getCanvasDocument(documentId,context));
 };
 
-const invokeCanvasDocument = async (body: Record<string, unknown>) => (
-  withSupabaseSessionRecovery(() => invokeCanvasDocumentRequest(body))
-);
-
-export const getCanvasDocument = async (documentId: string, brandId: string) => (
-  invokeCanvasDocument({ action: 'get', documentId, brandId })
-);
-
 export const createCanvasDocument = async (input: {
+  documentId?:string;
   brandId: string;
   title: string;
   snapshot: CanvasDocumentSnapshot;
-}) => invokeCanvasDocument({
-  action: 'upsert',
-  brandId: input.brandId,
-  title: input.title,
-  snapshot: input.snapshot,
-});
+},context?:CanvasDocumentRequestContext) => {
+  validateCanvasDocumentSnapshot(input.snapshot);
+  const cloudflare = cloudflareDataPlane;
+  if (!cloudflare) throw new Error('cloudflare_api_not_configured');
+  return mapDocument(await cloudflare.createCanvasDocument({
+      id:input.documentId,
+      brand_id: input.brandId,
+      title: input.title,
+      snapshot: input.snapshot,
+    },context));
+};
 
 export const updateCanvasDocument = async (input: {
   brandId: string;
@@ -207,14 +226,17 @@ export const updateCanvasDocument = async (input: {
   title: string;
   snapshot: CanvasDocumentSnapshot;
   expectedRevision: number;
-}) => invokeCanvasDocument({
-  action: 'upsert',
-  brandId: input.brandId,
-  documentId: input.documentId,
-  title: input.title,
-  snapshot: input.snapshot,
-  expectedRevision: input.expectedRevision,
-});
+},context?:CanvasDocumentRequestContext) => {
+  validateCanvasDocumentSnapshot(input.snapshot);
+  const cloudflare = cloudflareDataPlane;
+  if (!cloudflare) throw new Error('cloudflare_api_not_configured');
+  return mapDocument(await cloudflare.updateCanvasDocument({
+      documentId: input.documentId,
+      title: input.title,
+      snapshot: input.snapshot,
+      expected_revision: input.expectedRevision,
+    },context));
+};
 
 export const captureLegacyCanvasPayload = (userId: string, brandId: string) => {
   if (typeof window === 'undefined' || !userId || !brandId) return false;
@@ -222,7 +244,21 @@ export const captureLegacyCanvasPayload = (userId: string, brandId: string) => {
   if (!raw) return false;
   const key = getCanvasMigrationCacheKey(userId, brandId);
   if (!window.localStorage.getItem(key)) {
-    window.localStorage.setItem(key, JSON.stringify({ capturedAt: new Date().toISOString(), raw }));
+    // The legacy payload may contain base64 image data and can itself be
+    // several megabytes. This key is only a migration receipt; copying the
+    // payload here duplicates it and can make the receipt write exceed the
+    // browser quota before the Canvas route can even render.
+    const receipt = JSON.stringify({
+      capturedAt: new Date().toISOString(),
+      legacyKey: LEGACY_CANVAS_KEY,
+      rawLength: raw.length,
+    });
+    try {
+      window.localStorage.setItem(key, receipt);
+    } catch {
+      // Capturing legacy state is best-effort. A full localStorage bucket must
+      // never turn Canvas navigation into an application error.
+    }
   }
   return true;
 };

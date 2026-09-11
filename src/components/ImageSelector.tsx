@@ -62,6 +62,9 @@ interface ImageSelectorProps {
   selectionTestId?: string;
   galleryAssetPurpose?: PrintDesignAssetPurpose;
   platformAssetRole?: 'garment' | 'textile' | 'artwork';
+  lightchainSourceAppearance?: boolean;
+  sourceDropLabel?: string;
+  sourceDropHint?: string;
 }
 
 export function ImageSelector({
@@ -88,6 +91,9 @@ export function ImageSelector({
   selectionTestId,
   galleryAssetPurpose,
   platformAssetRole,
+  lightchainSourceAppearance = false,
+  sourceDropLabel = '参考画像をアップロードしてください',
+  sourceDropHint = '20MB以下の画像をアップロードしてください',
 }: ImageSelectorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -350,11 +356,13 @@ export function ImageSelector({
   // Single image view
   return (
     <div className="space-y-3" data-testid={selectionTestId}>
-      <div className="flex items-center justify-between">
-        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-      </div>
+      {!lightchainSourceAppearance && (
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            {label} {required && <span className="text-red-500">*</span>}
+          </label>
+        </div>
+      )}
 
       <input
         ref={fileInputRef}
@@ -388,40 +396,76 @@ export function ImageSelector({
           )}
 
           {/* Upload area */}
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
-              isDragging
-                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                : 'border-neutral-300 dark:border-neutral-600 hover:border-primary-400'
-            }`}
-          >
-            <div className="flex justify-center gap-3 mb-3">
+          {lightchainSourceAppearance ? (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              role="button"
+              tabIndex={0}
+              aria-label={sourceDropLabel}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              className={`relative flex h-[200px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 text-center transition-all ${
+                isDragging
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  : 'border-transparent bg-[#3a3f40] hover:border-primary-400'
+              }`}
+            >
+              <Upload className="mb-3 h-6 w-6 text-white/75" aria-hidden="true" />
+              <p className="text-sm text-white/85">{sourceDropLabel}</p>
+              <p className="mt-1 text-xs text-white/55">{sourceDropHint}</p>
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                aria-label="画像ファイルをアップロード"
-                className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                <Upload className="w-4 h-4" />
-                アップロード
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowGalleryModal(true)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setShowGalleryModal(true);
+                }}
                 aria-label="ギャラリーから画像を選択"
-                className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
-              >
-                <FolderOpen className="w-4 h-4" />
-                ギャラリーから
-              </button>
+                className="absolute bottom-2 right-2 rounded-md px-2 py-1 text-[11px] text-white/0 transition hover:bg-black/20 hover:text-white/75 focus-visible:bg-black/30 focus-visible:text-white/90"
+              />
             </div>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              またはドラッグ&ドロップ（PNG, JPG, WebP / 最大10MB）
-            </p>
-          </div>
+          ) : (
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
+                isDragging
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  : 'border-neutral-300 dark:border-neutral-600 hover:border-primary-400'
+              }`}
+            >
+              <div className="flex justify-center gap-3 mb-3">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="画像ファイルをアップロード"
+                  className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  アップロード
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowGalleryModal(true)}
+                  aria-label="ギャラリーから画像を選択"
+                  className="flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2 bg-neutral-100 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors"
+                >
+                  <FolderOpen className="w-4 h-4" />
+                  ギャラリーから
+                </button>
+              </div>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                またはドラッグ&ドロップ（PNG, JPG, WebP / 最大10MB）
+              </p>
+            </div>
+          )}
         </div>
       ) : (
         <div
@@ -472,14 +516,16 @@ export function ImageSelector({
               {REFERENCE_TYPES.find(t => t.id === value.referenceType)?.name}
             </span>
           </div>
-          <p className="mt-2 text-center text-xs text-neutral-500 dark:text-neutral-400">
-            別の画像をここへドラッグ&ドロップで差し替え
-          </p>
+          {!lightchainSourceAppearance && (
+            <p className="mt-2 text-center text-xs text-neutral-500 dark:text-neutral-400">
+              別の画像をここへドラッグ&ドロップで差し替え
+            </p>
+          )}
         </div>
       )}
 
       {fileError && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{fileError}</p>}
-      {hint && <p className="text-xs text-neutral-500 dark:text-neutral-400">{hint}</p>}
+      {!lightchainSourceAppearance && hint && <p className="text-xs text-neutral-500 dark:text-neutral-400">{hint}</p>}
 
       <GallerySelector
         isOpen={showGalleryModal}

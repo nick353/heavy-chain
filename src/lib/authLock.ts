@@ -1,20 +1,15 @@
 /**
- * Supabase Auth uses a browser-wide lock for session storage operations.
- *
- * The SDK's default lock uses an unlimited wait for operations such as
- * getSession(). A crashed or still-running tab can therefore leave a new
- * tab waiting forever while the app's own timeout only cancels the wrapper,
- * not the underlying Navigator Lock request. Keep the coordination
- * semantics, but bound the wait and fail closed on contention.
+ * The browser-wide auth lock is bounded so a crashed tab cannot leave a new
+ * tab waiting forever while the app's own timeout only cancels its wrapper.
  */
 
-export type SupabaseAuthLock = <T>(
+export type AuthLock = <T>(
   name: string,
   acquireTimeout: number,
   fn: () => Promise<T>,
 ) => Promise<T>;
 
-export const DEFAULT_SUPABASE_AUTH_LOCK_TIMEOUT_MS = 4_000;
+export const DEFAULT_AUTH_LOCK_TIMEOUT_MS = 4_000;
 
 type LockManagerLike = {
   request: (
@@ -25,7 +20,7 @@ type LockManagerLike = {
 };
 
 const lockTimeoutError = (name: string, timeoutMs: number) => {
-  const error = new Error(`supabase_auth_lock_timeout:${name}:${timeoutMs}`) as Error & {
+  const error = new Error(`auth_lock_timeout:${name}:${timeoutMs}`) as Error & {
     isAcquireTimeout?: boolean;
   };
   error.isAcquireTimeout = true;
@@ -40,9 +35,9 @@ const getLockManager = (): LockManagerLike | null => {
   return candidate && typeof candidate.request === 'function' ? candidate : null;
 };
 
-export const createBoundedSupabaseAuthLock = (
-  timeoutMs = DEFAULT_SUPABASE_AUTH_LOCK_TIMEOUT_MS,
-): SupabaseAuthLock => async <T>(
+export const createBoundedAuthLock = (
+  timeoutMs = DEFAULT_AUTH_LOCK_TIMEOUT_MS,
+): AuthLock => async <T>(
   name: string,
   acquireTimeout: number,
   fn: () => Promise<T>,
@@ -52,7 +47,7 @@ export const createBoundedSupabaseAuthLock = (
 
   const configuredTimeout = Number.isFinite(timeoutMs) && timeoutMs > 0
     ? timeoutMs
-    : DEFAULT_SUPABASE_AUTH_LOCK_TIMEOUT_MS;
+    : DEFAULT_AUTH_LOCK_TIMEOUT_MS;
   const effectiveTimeout = acquireTimeout === 0
     ? 0
     : acquireTimeout > 0

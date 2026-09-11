@@ -29,6 +29,12 @@ import {
 } from '../lib/workspaceMaterialReferences';
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
+import {
+  getLightchainUnifiedFeatureWorkflowContract,
+  UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
+} from '../features/lightchain/unifiedFeatureWorkflowContract';
+
+const marketingWorkflowContract = getLightchainUnifiedFeatureWorkflowContract('marketing-home');
 
 const channels = [
   { id: 'ec', label: 'EC', icon: ShoppingBag },
@@ -201,7 +207,7 @@ export function MarketingWorkspacePage() {
   const canHandoff = Boolean(
     currentBrand &&
     productImageUrl &&
-    (job.status === 'running' || job.status === 'stalled' || job.status === 'succeeded')
+    job.status === 'succeeded'
   );
   const marketingFlowState = deriveUnifiedWorkspaceFlowState({
     inputReady: canStart,
@@ -460,15 +466,28 @@ export function MarketingWorkspacePage() {
   }[job.status];
 
   return (
-    <div className="space-y-6" data-flow-state={marketingFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[marketingFlowState]}>
+    <div
+      className="space-y-6"
+      data-lightchain-parity-shell="marketing-home"
+      data-flow-state={marketingFlowState}
+      data-flow-state-label={unifiedWorkspaceFlowLabels[marketingFlowState]}
+      data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+      data-workflow-feature="marketing-home"
+      data-workflow-input-roles={marketingWorkflowContract?.inputRoles.join(',') ?? ''}
+      data-workflow-result-destinations={marketingWorkflowContract?.resultDestinations.join(',') ?? ''}
+      data-workflow-lifecycle={marketingWorkflowContract?.lifecycle.join(',') ?? ''}
+      data-workflow-source-input-mode={marketingWorkflowContract?.sourceInputMode ?? ''}
+      data-workflow-retry-policy={marketingWorkflowContract?.retry.retainsLastCompletedResult && marketingWorkflowContract.retry.preservesInputLineage && marketingWorkflowContract.retry.blocksDuplicateSubmit ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit' : ''}
+      data-workflow-rights-gate={marketingWorkflowContract?.rightsGate ?? ''}
+    >
       <section className="rounded-[28px] border border-white/10 bg-[#050707] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:p-9">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <h1 className="text-3xl font-semibold tracking-normal text-white sm:text-4xl">
-              マーケティングワークスペース
+              マーケティングワークスペースへようこそ
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-300">
-              商品画像、販促チャネル、テンプレート、コピーをまとめてローカルジョブ化し、制作中の状態からキャンバスへ渡せます。
+              今日は何を作りますか？リクエストを聞かせてください。一緒に始めましょう！
             </p>
           </div>
           <button
@@ -645,7 +664,7 @@ export function MarketingWorkspacePage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-neutral-950 dark:text-white">
-                  キャンペーン入力
+                  新規ファイル
                 </h2>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">{selectedTemplate} / {activeLabel}</p>
               </div>
@@ -681,11 +700,15 @@ export function MarketingWorkspacePage() {
 
               <div className="space-y-4">
                 <label htmlFor="campaign-copy" className="block text-sm font-semibold text-neutral-900 dark:text-white">
-                  キャンペーンコピー
+                  依頼文
+                  <span className="ml-2 text-xs font-normal text-neutral-500 dark:text-neutral-400">
+                    {campaignCopy.length} / 4000
+                  </span>
                 </label>
                 <textarea
                   id="campaign-copy"
                   value={campaignCopy}
+                  placeholder="商品画像をアップロードして、デザインのリクエストを教えてください"
                   onChange={(event) => { markWorkflowDirty(); setCampaignCopy(event.target.value); }}
                   rows={6}
                   className="w-full rounded-2xl border border-white/10 bg-[#050707] p-4 text-sm leading-6 text-white shadow-inner outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20"
@@ -741,7 +764,7 @@ export function MarketingWorkspacePage() {
               {[
                 { icon: CheckCircle2, label: '入力チェック', text: productImageUrl ? '商品画像を確認済み' : '商品画像を追加してください' },
                 { icon: Layers, label: 'レイヤー設計', text: '画像とコピーをキャンバスの初期レイヤーに変換' },
-                { icon: Settings2, label: '出力準備', text: job.status === 'succeeded' ? 'キャンバスへ渡せます' : '処理中でも制作を続行できます' },
+                { icon: Settings2, label: '出力準備', text: job.status === 'succeeded' ? 'キャンバスへ渡せます' : '完了後にキャンバスへ渡せます' },
               ].map((item) => (
                 <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-white">

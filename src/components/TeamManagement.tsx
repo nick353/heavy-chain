@@ -12,8 +12,8 @@ import {
   Check,
   Link2
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { Button, Input, Modal } from './ui';
 import toast from 'react-hot-toast';
 
@@ -63,18 +63,8 @@ export function TeamManagement() {
     if (!currentBrand) return;
 
     try {
-      const { data, error } = await supabase
-        .from('brand_members')
-        .select(`
-          user_id,
-          role,
-          joined_at,
-          user:users(id, name, email, avatar_url)
-        `)
-        .eq('brand_id', currentBrand.id);
-
-      if (error) throw error;
-      setMembers(data as any || []);
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      setMembers(await cloudflareDataPlane.listBrandMembers(currentBrand.id));
     } catch (error) {
       console.error('Failed to fetch members:', error);
     } finally {
@@ -86,15 +76,8 @@ export function TeamManagement() {
     if (!currentBrand) return;
 
     try {
-      const { data, error } = await supabase
-        .from('invitations')
-        .select('*')
-        .eq('brand_id', currentBrand.id)
-        .is('used_at', null)
-        .gt('expires_at', new Date().toISOString());
-
-      if (error) throw error;
-      setInvitations(data || []);
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      setInvitations(await cloudflareDataPlane.listInvitations(currentBrand.id));
     } catch (error) {
       console.error('Failed to fetch invitations:', error);
     }
@@ -112,33 +95,27 @@ export function TeamManagement() {
 
     setIsInviting(true);
     try {
-      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const data = await cloudflareDataPlane.createInvitation({
+        brand_id: currentBrand.id,
+        email: inviteEmail || null,
+        role: inviteRole,
+      });
+      if (!data) throw new Error('invitation_create_readback_missing');
 
-      const { data, error } = await supabase
-        .from('invitations')
-        .insert({
-          brand_id: currentBrand.id,
-          email: inviteEmail || null,
-          code,
-          role: inviteRole,
-          expires_at: expiresAt.toISOString()
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setInvitations([...invitations, data]);
+      setInvitations((current) => [...current, data]);
       setShowInviteModal(false);
       setInviteEmail('');
       toast.success('招待を作成しました');
 
       // Copy invite link to clipboard
-      const inviteLink = `${window.location.origin}/invite?code=${code}`;
-      await navigator.clipboard.writeText(inviteLink);
-      toast.success('招待リンクをコピーしました');
+      const inviteLink = `${window.location.origin}/invite?code=${data.code}`;
+      try {
+        await navigator.clipboard.writeText(inviteLink);
+        toast.success('招待リンクをコピーしました');
+      } catch {
+        toast.error('招待は作成済みです。リンクをコピーできなかったため、招待一覧からコピーしてください');
+      }
     } catch {
       toast.error('招待の作成に失敗しました');
     } finally {
@@ -156,14 +133,10 @@ export function TeamManagement() {
 
   const handleRevokeInvitation = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('invitations')
-        .delete()
-        .eq('id', id);
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      await cloudflareDataPlane.revokeInvitation(id);
 
-      if (error) throw error;
-
-      setInvitations(invitations.filter(i => i.id !== id));
+      setInvitations((current) => current.filter(i => i.id !== id));
       toast.success('招待を取り消しました');
     } catch {
       toast.error('招待の取り消しに失敗しました');
@@ -174,15 +147,10 @@ export function TeamManagement() {
     if (!confirm('このメンバーを削除しますか？')) return;
 
     try {
-      const { error } = await supabase
-        .from('brand_members')
-        .delete()
-        .eq('brand_id', currentBrand!.id)
-        .eq('user_id', userId);
+      if (!cloudflareDataPlane || !currentBrand) throw new Error('cloudflare_brand_required');
+      await cloudflareDataPlane.removeBrandMember(currentBrand.id, userId);
 
-      if (error) throw error;
-
-      setMembers(members.filter(m => m.user_id !== userId));
+      setMembers((current) => current.filter(m => m.user_id !== userId));
       toast.success('メンバーを削除しました');
     } catch {
       toast.error('メンバーの削除に失敗しました');
@@ -190,16 +158,16 @@ export function TeamManagement() {
   };
 
   const handleChangeRole = async (userId: string, newRole: string) => {
+    if (!['admin', 'editor', 'viewer'].includes(newRole)) return;
     try {
-      const { error } = await supabase
-        .from('brand_members')
-        .update({ role: newRole })
-        .eq('brand_id', currentBrand!.id)
-        .eq('user_id', userId);
+      if (!cloudflareDataPlane || !currentBrand) throw new Error('cloudflare_brand_required');
+      await cloudflareDataPlane.updateBrandMemberRole(
+        currentBrand.id,
+        userId,
+        newRole as 'admin' | 'editor' | 'viewer',
+      );
 
-      if (error) throw error;
-
-      setMembers(members.map(m => 
+      setMembers((current) => current.map(m =>
         m.user_id === userId ? { ...m, role: newRole as any } : m
       ));
       toast.success('権限を変更しました');
@@ -415,7 +383,3 @@ export function TeamManagement() {
     </div>
   );
 }
-
-
-
-

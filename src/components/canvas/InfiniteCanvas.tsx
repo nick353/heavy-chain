@@ -18,6 +18,32 @@ interface InfiniteCanvasProps {
   onRenderStateChange?: (state: { totalImageObjects: number; loadedImageObjects: number; renderAllObjects: boolean }) => void;
 }
 
+const getCanvasImageSourceCandidates = (obj: CanvasObject): string[] => {
+  const parameters = obj.metadata?.parameters && typeof obj.metadata.parameters === 'object'
+    ? obj.metadata.parameters as Record<string, unknown>
+    : {};
+  return Array.from(new Set([
+    obj.metadata?.galleryStoragePath,
+    obj.metadata?.storagePath,
+    parameters.galleryStoragePath,
+    parameters.storagePath,
+    parameters.remoteStoragePath,
+    parameters.sourceStoragePath,
+    parameters.backendStoragePath,
+    typeof obj.metadata?.galleryImageId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(obj.metadata.galleryImageId.trim())
+      ? `generated-images/${obj.metadata.galleryImageId.trim()}`
+      : undefined,
+    typeof obj.metadata?.imageId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(obj.metadata.imageId.trim())
+      ? `generated-images/${obj.metadata.imageId.trim()}`
+      : undefined,
+    typeof parameters.imageId === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(parameters.imageId.trim())
+      ? `generated-images/${parameters.imageId.trim()}`
+      : undefined,
+    obj.metadata?.galleryImageUrl,
+    obj.src,
+  ].filter((source): source is string => typeof source === 'string' && Boolean(source.trim()))));
+};
+
 export function InfiniteCanvas({
   width,
   height,
@@ -205,11 +231,7 @@ export function InfiniteCanvas({
           });
           return;
         }
-        const sourceCandidates = Array.from(new Set([
-          obj.metadata?.galleryStoragePath,
-          obj.metadata?.galleryImageUrl,
-          obj.src,
-        ].filter((source): source is string => Boolean(source))));
+        const sourceCandidates = getCanvasImageSourceCandidates(obj);
         const primarySource = sourceCandidates[0];
         const cachedSource = primarySource
           ? (loadedImageSourcesRef.current.has(primarySource) ? primarySource : undefined)
@@ -387,7 +409,7 @@ export function InfiniteCanvas({
   // Handle object select
   const handleObjectClick = useCallback((id: string, e: Konva.KonvaEventObject<MouseEvent>) => {
     e.cancelBubble = true;
-    const isMultiSelect = e.evt.shiftKey || e.evt.metaKey;
+    const isMultiSelect = e.evt.shiftKey || e.evt.metaKey || e.evt.ctrlKey;
     selectObject(id, isMultiSelect);
     onObjectSelect?.(id);
   }, [selectObject, onObjectSelect]);

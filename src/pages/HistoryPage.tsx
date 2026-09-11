@@ -6,25 +6,47 @@ import { ActivityTimeline } from '../components/workspace';
 import { emptyWorkspaceActivity, fetchWorkspaceActivity, type WorkspaceActivity } from '../lib/workspaceActivity';
 
 export function HistoryPage() {
-  const { user, currentBrand, refreshCurrentBrand } = useAuthStore();
+  const {
+    user,
+    currentBrand,
+    refreshCurrentBrand,
+    isInitialized: authInitialized,
+    isLoading: authLoading,
+  } = useAuthStore();
   const [activity, setActivity] = useState<WorkspaceActivity>(emptyWorkspaceActivity);
   const [isLoading, setIsLoading] = useState(true);
   const [activityError, setActivityError] = useState<string | null>(null);
+  const [brandResolutionAttempted, setBrandResolutionAttempted] = useState(false);
 
   const loadActivity = useCallback(async () => {
-    if (!currentBrand && user) {
-      const refreshedBrand = await refreshCurrentBrand();
-      if (refreshedBrand) return;
-    }
-
-    if (!currentBrand) {
-      setActivity(emptyWorkspaceActivity);
-      setActivityError(null);
-      setIsLoading(false);
+    if (!authInitialized || authLoading) {
+      setIsLoading(true);
       return;
     }
 
-    const brandId = currentBrand.id;
+    let brand = currentBrand;
+    if (!brand && user) {
+      setBrandResolutionAttempted(false);
+      // A hard navigation can finish auth initialization before the async brand
+      // hydration callback. Resolve it here as a bounded read-only fallback.
+      for (let attempt = 0; attempt < 2 && !brand; attempt += 1) {
+        brand = await refreshCurrentBrand();
+        if (!brand && attempt === 0) {
+          await new Promise((resolve) => window.setTimeout(resolve, 500));
+        }
+      }
+    }
+
+    if (!brand) {
+      setActivity(emptyWorkspaceActivity);
+      setActivityError(null);
+      setIsLoading(false);
+      setBrandResolutionAttempted(true);
+      return;
+    }
+
+    setBrandResolutionAttempted(true);
+    const brandId = brand.id;
     setIsLoading(true);
     setActivityError(null);
     try {
@@ -40,7 +62,7 @@ export function HistoryPage() {
         setIsLoading(false);
       }
     }
-  }, [currentBrand, refreshCurrentBrand, user]);
+  }, [authInitialized, authLoading, currentBrand, refreshCurrentBrand, user]);
 
   useEffect(() => {
     void loadActivity();
@@ -64,7 +86,13 @@ export function HistoryPage() {
           </Link>
         </div>
 
-        {!currentBrand ? (
+        {(!currentBrand && (authLoading || !authInitialized || (user && !brandResolutionAttempted))) ? (
+          <div className="mt-6 space-y-3" data-testid="history-brand-loading">
+            {[1, 2].map((item) => (
+              <div key={item} className="h-20 animate-pulse rounded-2xl bg-neutral-100 dark:bg-surface-900" />
+            ))}
+          </div>
+        ) : !currentBrand ? (
           <div className="mt-6 rounded-2xl border border-dashed border-neutral-200 bg-white/45 p-6 text-center dark:border-white/10 dark:bg-surface-900/35">
             <p className="text-sm text-neutral-500 dark:text-neutral-400">ブランドを作成すると履歴が表示されます。</p>
           </div>

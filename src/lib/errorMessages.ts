@@ -36,13 +36,13 @@ export const ERROR_MESSAGES: Record<string, string> = {
   BRAND_NOT_FOUND: 'ブランドが見つかりません。',
   BRAND_ACCESS_DENIED: 'このブランドで操作する権限がありません。ブランドを選び直してください。',
   BRAND_SUBSCRIPTION_UNAVAILABLE: 'このブランドの有効なサブスクが見つかりません。ブランド設定でプランの有効期間を確認してください。',
-  GEMINI_API_KEY_MISSING: 'Gemini生成のAPIキーがサーバーに設定されていません。管理者がSupabase Edge Function secretsにGEMINI_API_KEYを設定してから再試行してください。',
+  GEMINI_API_KEY_MISSING: 'Gemini生成の設定がサーバーにありません。管理者がCloudflare側のprovider設定を確認してから再試行してください。',
   IMAGE_PROVIDER_QUOTA_EXHAUSTED: '画像生成プロバイダの利用枠が不足しています。APIキーは届いていても、画像生成quota、課金設定、またはモデル利用権限が不足している可能性があります。',
   AI_FITTING_PROVIDER_QUOTA_EXHAUSTED: 'AI fittingの画像生成quotaまたはモデル利用権限が不足しています。課金設定・provider quota・モデル権限を確認してから同じ入力で再開してください。',
   VIDEO_PROVIDER_NOT_ADMITTED: '動画providerはまだ利用可能な状態ではありません。providerの接続状態を確認するまで生成は再開できません。',
   GEMINI_IMAGE_REQUEST_FAILED: 'Geminiでの画像生成に失敗しました。入力を少し短く具体化して再試行し、続く場合はAPIキー、モデル名、利用上限を確認してください。',
   GEMINI_IMAGE_EMPTY_RESPONSE: 'Geminiから画像が返りませんでした。プロンプトを調整して再試行してください。',
-  OPENAI_IMAGE_API_KEY_MISSING: 'OpenAI画像生成のAPIキーがサーバーに設定されていません。管理者がSupabase Edge Function secretsにOPENAI_IMAGE_API_KEYを設定してから再試行してください。',
+  OPENAI_IMAGE_API_KEY_MISSING: 'OpenAI画像生成の設定がサーバーにありません。管理者がCloudflare側のprovider設定を確認してから再試行してください。',
   OPENAI_IMAGE_REQUEST_FAILED: 'OpenAIでの画像生成に失敗しました。APIキー、モデル名、利用上限、請求状態を確認してください。',
   OPENAI_IMAGE_EMPTY_RESPONSE: 'OpenAIから画像が返りませんでした。プロンプトを調整して再試行してください。',
   MOCK_IMAGE_GENERATION_NOT_ENABLED: 'モック生成は現在の環境で有効化されていません。社内検証で使う場合は管理者がALLOW_MOCK_IMAGE_GENERATION=trueを設定してください。',
@@ -244,10 +244,9 @@ const getMappedKnownMessage = (message: string) => {
   return matched?.[1] ?? null;
 };
 
-const isSupabaseAuthError = (error: any) => (
-  error?.name === 'AuthApiError' ||
-  error?.name === 'AuthError' ||
-  error?.__isAuthError === true
+const isAuthRateLimitError = (error: any) => (
+  error?.code === 'auth_email_rate_limit' ||
+  error?.code === 'email_rate_limit'
 );
 
 // Map API error codes to user-friendly messages
@@ -284,14 +283,12 @@ export function getErrorMessage(error: any): string {
     }
   }
 
-  // Handle Supabase errors
+  // Handle Cloudflare API error codes
   if (error?.code) {
     switch (error.code) {
-      case 'PGRST116':
-        return ERROR_MESSAGES.PROJECT_NOT_FOUND;
-      case '23505':
+      case 'email_exists':
         return ERROR_MESSAGES.EMAIL_EXISTS;
-      case '42501':
+      case 'forbidden':
         return ERROR_MESSAGES.UNAUTHORIZED;
       case 'email_not_confirmed':
         return ERROR_MESSAGES.EMAIL_NOT_CONFIRMED;
@@ -316,7 +313,7 @@ export function getErrorMessage(error: any): string {
       case 413:
         return ERROR_MESSAGES.IMAGE_TOO_LARGE;
       case 429:
-        if (isSupabaseAuthError(error)) {
+        if (isAuthRateLimitError(error)) {
           return ERROR_MESSAGES.AUTH_EMAIL_RATE_LIMIT;
         }
         return getMappedKnownMessage(error.message || '') || ERROR_MESSAGES.RATE_LIMIT;

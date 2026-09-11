@@ -1,52 +1,72 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronDown, Plus, Check, Building2 } from 'lucide-react';
-import { fetchAccessibleBrandsForCurrentUser, useAuthStore } from '../stores/authStore';
-import { selectCurrentBrand } from '../lib/authBrandSelection';
+import { useAuthStore } from '../stores/authStore';
 import type { Brand } from '../types/database';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
 
 export function BrandSwitcher() {
-  const { user, currentBrand, setCurrentBrand } = useAuthStore();
-  const [brands, setBrands] = useState<Brand[]>([]);
+  const {
+    user,
+    currentBrand,
+    accessibleBrands,
+    brandState,
+    refreshCurrentBrand,
+    setCurrentBrand,
+  } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [failedLogoUrls, setFailedLogoUrls] = useState<Set<string>>(() => new Set());
+  const [resolvedLogoUrls, setResolvedLogoUrls] = useState<Record<string, string>>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const fetchBrands = useCallback(async () => {
-    const userId = user?.id ?? null;
-    setIsLoading(true);
-
-    try {
-      if (!userId) {
-        setBrands([]);
-        return;
-      }
-
-      const brandsData = await fetchAccessibleBrandsForCurrentUser(userId);
-      if (useAuthStore.getState().user?.id !== userId) return;
-      setBrands(brandsData || []);
-
-      // Preserve the selected brand across transient empty refreshes while
-      // still moving to the first brand after a non-empty membership refresh.
-      const latestCurrentBrand = useAuthStore.getState().currentBrand;
-      const nextBrand = selectCurrentBrand(latestCurrentBrand, brandsData);
-      if (nextBrand !== latestCurrentBrand) {
-        setCurrentBrand(nextBrand);
-      }
-    } catch (error) {
-      console.error('Failed to fetch brands:', error);
-    } finally {
-      if (!userId || useAuthStore.getState().user?.id === userId) {
-        setIsLoading(false);
-      }
-    }
-  }, [setCurrentBrand, user]);
+  const userId = user?.id;
 
   useEffect(() => {
-    if (user) {
-      fetchBrands();
+    if (!userId) {
+      setIsLoading(false);
+      return;
     }
-  }, [user, fetchBrands]);
+    void refreshCurrentBrand();
+  }, [refreshCurrentBrand, userId]);
+
+  const brands = useMemo(
+    () => brandState.status === 'success_nonempty' ? accessibleBrands : [],
+    [accessibleBrands, brandState.status],
+  );
+  useEffect(() => {
+    setIsLoading(brandState.status === 'pending');
+  }, [brandState.status]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const objectUrls: string[] = [];
+    void Promise.all(brands.map(async (brand) => {
+      const source = brand.logo_url;
+      if (!source || !cloudflareDataPlane || !source.startsWith('media/v1/')) {
+        return [brand.id, source ?? ''] as const;
+      }
+      try {
+        const url = await cloudflareDataPlane.readMediaObjectUrl(source);
+        objectUrls.push(url);
+        return [brand.id, url] as const;
+      } catch {
+        return [brand.id, ''] as const;
+      }
+    })).then((entries) => {
+      if (!cancelled) setResolvedLogoUrls(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [brands]);
+
+  const logoUrlFor = (brand: Brand | null): string | null => {
+    if (!brand?.logo_url) return null;
+    if (cloudflareDataPlane && brand.logo_url.startsWith('media/v1/')) {
+      return resolvedLogoUrls[brand.id] || null;
+    }
+    return brand.logo_url;
+  };
 
   const markLogoFailed = (url: string) => {
     setFailedLogoUrls((current) => {
@@ -91,12 +111,12 @@ export function BrandSwitcher() {
         className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors min-w-[160px]"
       >
         <div className="w-6 h-6 rounded bg-primary-100 flex items-center justify-center flex-shrink-0">
-          {currentBrand?.logo_url && !failedLogoUrls.has(currentBrand.logo_url) ? (
+          {logoUrlFor(currentBrand) && !failedLogoUrls.has(logoUrlFor(currentBrand)!) ? (
             <img 
-              src={currentBrand.logo_url} 
+              src={logoUrlFor(currentBrand)!}
               alt="" 
               className="w-full h-full rounded object-cover"
-              onError={() => markLogoFailed(currentBrand.logo_url!)}
+              onError={() => markLogoFailed(logoUrlFor(currentBrand)!)}
             />
           ) : (
             <span className="text-xs font-bold text-primary-600">
@@ -127,12 +147,12 @@ export function BrandSwitcher() {
                 `}
               >
                 <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
-                  {brand.logo_url && !failedLogoUrls.has(brand.logo_url) ? (
+                  {logoUrlFor(brand) && !failedLogoUrls.has(logoUrlFor(brand)!) ? (
                     <img 
-                      src={brand.logo_url} 
+                      src={logoUrlFor(brand)!}
                       alt="" 
                       className="w-full h-full rounded-lg object-cover"
-                      onError={() => markLogoFailed(brand.logo_url!)}
+                      onError={() => markLogoFailed(logoUrlFor(brand)!)}
                     />
                   ) : (
                     <Building2 className="w-4 h-4 text-primary-600" />

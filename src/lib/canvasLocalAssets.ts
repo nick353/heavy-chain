@@ -62,7 +62,8 @@ export async function putLocalCanvasAsset(revision: string, blob: Blob): Promise
 
 export const hasLocalCanvasAsset = (revision: string) => availableAssetKeys.has(revision);
 
-const getLocalCanvasAsset = async (reference: string): Promise<Blob | null> => {
+export const getLocalCanvasAsset = async (reference: string): Promise<Blob | null> => {
+  if (!isLocalCanvasAssetReference(reference)) throw new Error('canvas_local_asset_reference_invalid');
   const database = await openDatabase();
   return new Promise<Blob | null>((resolve, reject) => {
     const transaction = database.transaction(STORE_NAME, 'readonly');
@@ -76,6 +77,21 @@ const getLocalCanvasAsset = async (reference: string): Promise<Blob | null> => {
     };
   });
 };
+
+/** Delete one resolved reference only. Higher-level callers own its scope. */
+export async function deleteLocalCanvasAsset(reference: string): Promise<void> {
+  if (!isLocalCanvasAssetReference(reference)) throw new Error('canvas_local_asset_reference_invalid');
+  const key = referenceKey(reference);
+  const database = await openDatabase();
+  await new Promise<void>((resolve,reject) => {
+    const transaction = database.transaction(STORE_NAME,'readwrite');
+    transaction.onerror = () => reject(transaction.error || new Error('canvas_local_asset_delete_failed'));
+    transaction.onabort = () => reject(transaction.error || new Error('canvas_local_asset_delete_aborted'));
+    transaction.oncomplete = () => resolve();
+    transaction.objectStore(STORE_NAME).delete(key);
+  }).finally(() => database.close());
+  availableAssetKeys.delete(key);
+}
 
 /**
  * Resolve a persisted local-upload reference to a temporary object URL.

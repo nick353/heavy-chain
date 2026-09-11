@@ -22,8 +22,9 @@ import {
   Share2,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
-import { supabase, withSupabaseSessionRecovery } from '../lib/supabase';
+import { withAuthSessionRecovery } from '../lib/auth';
 import { withSignedImageUrls } from '../lib/storage';
+import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
 import { clearCanonicalRemoteImageUrls } from '../lib/storagePathSafety';
 import {
   deleteWorkspaceArtifact,
@@ -37,6 +38,10 @@ import {
   mergeGeneratedImagesByCanonicalIdentity,
 } from '../lib/generatedImageIdentity';
 import {
+  toGeneratedImageListRow,
+  type GeneratedImageListRow,
+} from '../lib/generatedImageQuery';
+import {
   setPrintResultFavorite,
   type PrintResultFavoriteValue,
   type PrintResultKind,
@@ -44,13 +49,15 @@ import {
 import { buildSourceContextSummaryRows } from '../lib/sourceContextSummary';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { Button, SearchInput } from '../components/ui';
-import type { GeneratedImage } from '../types/database';
+import { ProtectedImageRecoveryPanel } from '../components/ProtectedImageRecoveryPanel';
+import { captureAuthBrandFence,assertAuthBrandFence } from '../lib/authBrandSelection';
 import type { GenerationIntent } from '../lib/workspaceHandoff';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type FilterType = 'all' | 'favorites' | 'recent';
 type SortType = 'newest' | 'oldest' | 'name';
+type GalleryImage = GeneratedImageListRow;
 const INITIAL_VISIBLE_IMAGE_COUNT = 60;
 const VISIBLE_IMAGE_INCREMENT = 30;
 const GALLERY_REMOTE_TIMEOUT_MS = 10_000;
@@ -61,25 +68,25 @@ const isGenerationIntent = (value: unknown): value is GenerationIntent => {
   return Boolean(intent.href && typeof intent.href === 'string');
 };
 
-const getGenerationIntent = (image: GeneratedImage | null) => {
+const getGenerationIntent = (image: GalleryImage | null) => {
   const metadata = image?.metadata;
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
   return isGenerationIntent(metadata.generationIntent) ? metadata.generationIntent : null;
 };
 
-const getMetadataString = (image: GeneratedImage | null, key: string) => {
+const getMetadataString = (image: GalleryImage | null, key: string) => {
   const metadata = image?.metadata;
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
   const value = metadata[key];
   return typeof value === 'string' && value.trim() ? value : null;
 };
 
-const getPrintResultKind = (image: GeneratedImage): PrintResultKind | undefined => {
+const getPrintResultKind = (image: GalleryImage): PrintResultKind | undefined => {
   const value = getMetadataString(image, 'printResultKind');
   return value === 'exact' || value === 'fabric' || value === 'surface' || value === 'provider' ? value : undefined;
 };
 
-const getLocalPrintResult = (image: GeneratedImage): PrintResultFavoriteValue | null => {
+const getLocalPrintResult = (image: GalleryImage): PrintResultFavoriteValue | null => {
   const imageUrl = image.image_url;
   if (!imageUrl) return null;
   const metadata = image.metadata;
@@ -109,18 +116,29 @@ const getLocalPrintResult = (image: GeneratedImage): PrintResultFavoriteValue | 
 
 export function GalleryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, currentBrand, refreshCurrentBrand } = useAuthStore();
+  const {
+    user,
+    currentBrand,
+    refreshCurrentBrand,
+    isInitialized: authInitialized,
+    isLoading: authLoading,
+  } = useAuthStore();
 
-  const [images, setImages] = useState<GeneratedImage[]>([]);
+  const [images, setImages] = useState<GalleryImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Local workspace images can render before the authenticated remote list
+  // settles. Keep URL-driven selection pending during that first snapshot so
+  // a remote-only canonical image key is not cleared prematurely.
+  const [hasResolvedImageSources, setHasResolvedImageSources] = useState(false);
   const [isLoadingStalled, setIsLoadingStalled] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
   const [favoriteDestinationFilter, setFavoriteDestinationFilter] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortType>('newest');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
+  const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [gridSize, setGridSize] = useState<'small' | 'large'>('large');
   const [visibleImageCount, setVisibleImageCount] = useState(INITIAL_VISIBLE_IMAGE_COUNT);
+  const [brandResolutionAttempted, setBrandResolutionAttempted] = useState(false);
   const fetchImagesSeqRef = useRef(0);
   const selectedGenerationIntent = getGenerationIntent(selectedImage);
   const selectedSourceLabel = getMetadataString(selectedImage, 'sourceLabel');
@@ -128,7 +146,7 @@ export function GalleryPage() {
   const selectedSourceSummaryRows = buildSourceContextSummaryRows(selectedImage?.metadata);
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
 
-  const selectImage = useCallback((image: GeneratedImage | null) => {
+  const selectImage = useCallback((image: GalleryImage | null) => {
     setSelectedImage(image);
     setSearchParams(image ? { image: getGeneratedImageSelectionKey(image) } : {});
   }, [setSearchParams]);
@@ -148,7 +166,7 @@ export function GalleryPage() {
     }
   });
 
-  const getImageUrl = useCallback((image: GeneratedImage | string) => {
+  const getImageUrl = useCallback((image: GalleryImage | string) => {
     // 文字列の場合（レガシーコードサポート）
     if (typeof image === 'string') {
       const path = image;
@@ -184,26 +202,36 @@ export function GalleryPage() {
     }
   }, []);
 
-  const fetchImages = useCallback(async () => {
-    if (!currentBrand) {
+  const fetchImages = useCallback(async (brandOverride = currentBrand) => {
+    if (!brandOverride) {
       setIsLoading(false);
       setIsLoadingStalled(false);
       return;
     }
 
-    const brandId = currentBrand.id;
+    const brandId = brandOverride.id;
     const requestSeq = ++fetchImagesSeqRef.current;
     const isCurrentRequest = () => (
       fetchImagesSeqRef.current === requestSeq &&
       useAuthStore.getState().currentBrand?.id === brandId
     );
     setIsLoading(true);
+    setHasResolvedImageSources(false);
     setIsLoadingStalled(false);
     setFailedImageIds(new Set());
     try {
       const localImages = listWorkspaceGeneratedImages(brandId, user?.id)
         .filter((image) => filter !== 'favorites' || image.is_favorite);
-      const resolveLocalImages = async (candidates: GeneratedImage[]) => {
+      const localListImages = localImages.map(toGeneratedImageListRow);
+      // Render the locally persisted result set immediately. Remote rows and
+      // signed URLs are an enhancement; they must not hide a saved Canvas/
+      // provider result behind a slow authenticated request.
+      const localFallbackImages = clearCanonicalRemoteImageUrls(localListImages);
+      if (isCurrentRequest()) {
+        setImages(localFallbackImages);
+        setIsLoading(false);
+      }
+      const resolveLocalImages = async (candidates: GalleryImage[]) => {
         try {
           return await withTimeout(
             withSignedImageUrls(candidates),
@@ -214,34 +242,22 @@ export function GalleryPage() {
           return clearCanonicalRemoteImageUrls(candidates);
         }
       };
-      const signedLocalImages = await resolveLocalImages(localImages);
+      const signedLocalImages = await resolveLocalImages(localListImages);
+      if (isCurrentRequest()) {
+        setImages(signedLocalImages);
+      }
       const fetchRemoteImages = async () => {
-        let query = supabase
-          .from('generated_images')
-          .select('*')
-          .eq('brand_id', brandId);
-
-        if (filter === 'favorites') {
-          query = query.eq('is_favorite', true);
-        }
-
-        if (sortBy === 'newest') {
-          query = query.order('created_at', { ascending: false });
-        } else if (sortBy === 'oldest') {
-          query = query.order('created_at', { ascending: true });
-        }
-
-        const { data, error } = await withTimeout(
-          query,
-          GALLERY_REMOTE_TIMEOUT_MS,
-          'gallery_remote_images_timeout',
-        );
-        if (error) throw error;
-        return data || [];
+        if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+        return (await cloudflareDataPlane.listGeneratedImages(brandId, {
+          favorite: filter === 'favorites' ? true : undefined,
+          order: sortBy === 'oldest' ? 'oldest' : 'newest',
+          limit: 100,
+          offset: 0,
+        })).map(asGeneratedImageListRow);
       };
 
-      let remoteImages: GeneratedImage[] = [];
-      const remoteRows = await withSupabaseSessionRecovery(fetchRemoteImages);
+      let remoteImages: GalleryImage[] = [];
+      const remoteRows = await withAuthSessionRecovery(fetchRemoteImages);
       try {
         remoteImages = await withTimeout(
           withSignedImageUrls(remoteRows),
@@ -262,22 +278,15 @@ export function GalleryPage() {
         });
       if (!isCurrentRequest()) return;
       setImages(mergedImages);
+      setHasResolvedImageSources(true);
     } catch {
       const localImages = listWorkspaceGeneratedImages(brandId, user?.id)
         .filter((image) => filter !== 'favorites' || image.is_favorite);
-      let signedLocalImages = localImages;
-      try {
-        signedLocalImages = await withTimeout(
-          withSignedImageUrls(localImages),
-          GALLERY_REMOTE_TIMEOUT_MS,
-          'gallery_local_signed_urls_fallback_timeout',
-        );
-      } catch {
-        // Keep legacy URL-only local entries readable if re-signing is unavailable.
-        signedLocalImages = clearCanonicalRemoteImageUrls(localImages);
-      }
+      const localListImages = localImages.map(toGeneratedImageListRow);
       if (!isCurrentRequest()) return;
-      setImages(signedLocalImages);
+      // The local-first snapshot above is already a complete safe fallback.
+      // Do not start a second signing round after a remote failure.
+      setImages(clearCanonicalRemoteImageUrls(localListImages));
     } finally {
       if (isCurrentRequest()) {
         setIsLoading(false);
@@ -290,18 +299,33 @@ export function GalleryPage() {
     let mounted = true;
 
     const loadData = async () => {
-      if (!currentBrand && user) {
-        const refreshedBrand = await refreshCurrentBrand();
-        if (refreshedBrand) return;
-      }
-
-      if (!currentBrand) {
-        // ブランドがない場合はローディングを解除
-        if (mounted) setIsLoading(false);
+      if (!authInitialized || authLoading) {
+        setIsLoading(true);
         return;
       }
 
-      await fetchImages();
+      let brand = currentBrand;
+      if (!brand && user) {
+        setBrandResolutionAttempted(false);
+        // A hard navigation can finish auth initialization before the async brand
+        // hydration callback. Resolve it here before showing an empty Gallery.
+        for (let attempt = 0; attempt < 2 && !brand; attempt += 1) {
+          brand = await refreshCurrentBrand();
+          if (!brand && attempt === 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, 500));
+          }
+        }
+      }
+
+      if (!brand) {
+        // No accessible brand is a real empty state only after bounded resolution.
+        if (mounted) setIsLoading(false);
+        if (mounted) setBrandResolutionAttempted(true);
+        return;
+      }
+
+      if (mounted) setBrandResolutionAttempted(true);
+      await fetchImages(brand);
     };
 
     loadData();
@@ -309,7 +333,7 @@ export function GalleryPage() {
     return () => {
       mounted = false;
     };
-  }, [currentBrand, fetchImages, refreshCurrentBrand, user]);
+  }, [authInitialized, authLoading, currentBrand, fetchImages, refreshCurrentBrand, user]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -337,13 +361,13 @@ export function GalleryPage() {
     ));
     if (image) {
       setSelectedImage(image);
-    } else if (!isLoading && images.length > 0) {
+    } else if (!isLoading && hasResolvedImageSources) {
       setSelectedImage(null);
       setSearchParams({});
     }
-  }, [images, isLoading, searchParams, selectedImage, setSearchParams]);
+  }, [images, isLoading, searchParams, selectedImage, setSearchParams, hasResolvedImageSources]);
 
-  const handleDownload = async (image: GeneratedImage, format: 'png' | 'jpeg' | 'webp' = 'png'): Promise<boolean> => {
+  const handleDownload = async (image: GalleryImage, format: 'png' | 'jpeg' | 'webp' = 'png'): Promise<boolean> => {
     try {
       if (!currentBrand || image.brand_id !== currentBrand.id) {
         throw new Error('gallery_image_brand_mismatch');
@@ -399,7 +423,7 @@ export function GalleryPage() {
     }
   };
 
-  const handleToggleFavorite = useCallback(async (image: GeneratedImage) => {
+  const handleToggleFavorite = useCallback(async (image: GalleryImage) => {
     if (isLocalWorkspaceImage(image)) {
       if (image.feature_type !== 'printing-result') {
         toast('このローカル成果物は、現在の保存形式ではお気に入りを変更できません');
@@ -441,10 +465,8 @@ export function GalleryPage() {
 
     try {
       const newValue = !image.is_favorite;
-      await supabase
-        .from('generated_images')
-        .update({ is_favorite: newValue })
-        .eq('id', image.id);
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      await cloudflareDataPlane.setGeneratedImageFavorite(image.id, newValue);
 
       setImages(prev =>
         prev.map(img =>
@@ -462,7 +484,7 @@ export function GalleryPage() {
     }
   }, [filter, selectImage, selectedImage]);
 
-  const handleDelete = async (image: GeneratedImage) => {
+  const handleDelete = async (image: GalleryImage) => {
     if (!confirm('この画像を削除しますか？')) return;
 
     if (isLocalWorkspaceImage(image)) {
@@ -479,16 +501,8 @@ export function GalleryPage() {
     }
 
     try {
-      const { error: storageError } = await supabase.storage
-        .from('generated-images')
-        .remove([image.storage_path]);
-      if (storageError) throw storageError;
-
-      const { error: deleteError } = await supabase
-        .from('generated_images')
-        .delete()
-        .eq('id', image.id);
-      if (deleteError) throw deleteError;
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      await cloudflareDataPlane.deleteGeneratedImage(image.id);
 
       setImages(prev => prev.filter(img => img.id !== image.id));
       if (selectedImage?.id === image.id) selectImage(null);
@@ -517,16 +531,9 @@ export function GalleryPage() {
       }
 
       if (remoteImagesToDelete.length > 0) {
-        const { error: storageError } = await supabase.storage
-          .from('generated-images')
-          .remove(remoteImagesToDelete.map(img => img.storage_path));
-        if (storageError) throw storageError;
-
-        const { error: deleteError } = await supabase
-          .from('generated_images')
-          .delete()
-          .in('id', remoteImagesToDelete.map((image) => image.id));
-        if (deleteError) throw deleteError;
+        if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+        const cloudflare = cloudflareDataPlane;
+        await Promise.all(remoteImagesToDelete.map((image) => cloudflare.deleteGeneratedImage(image.id)));
       }
 
       setImages(prev => prev.filter(img => !selectedIds.has(img.id)));
@@ -591,7 +598,7 @@ export function GalleryPage() {
     toast.success(message);
   };
 
-  const handleCreateShareLink = async (image: GeneratedImage) => {
+  const handleCreateShareLink = async (image: GalleryImage) => {
     if (isLocalWorkspaceImage(image)) {
       const imageUrl = getImageUrl(image);
       if (!imageUrl) {
@@ -722,6 +729,24 @@ export function GalleryPage() {
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <ProtectedImageRecoveryPanel destination="gallery" onResume={async entry=>{
+          if (!cloudflareDataPlane) throw new Error('cloudflare_unavailable');
+          const state = useAuthStore.getState();
+          const fence = captureAuthBrandFence(state.brandState,state.user?.id ?? null,state.currentBrand?.id ?? null);
+          const assertContext = () => {
+            const next = useAuthStore.getState();
+            assertAuthBrandFence(fence,captureAuthBrandFence(next.brandState,next.user?.id ?? null,next.currentBrand?.id ?? null),'gallery_image_recovery');
+            if (next.currentBrand?.id !== entry.brandId) throw new Error('image_recovery_brand_changed');
+          };
+          assertContext();
+          const result = await cloudflareDataPlane.resumeProtectedImageEdit(entry.brandId,entry.requestId,assertContext);
+          if (!result.success) throw new Error(`image_recovery_${result.state}`);
+          // Finalizer readback already proves these private Gallery artifacts.
+          // Keep Canvas-bound handles until the original Canvas is saved.
+          if (!entry.canvasProjectId) await cloudflareDataPlane.acknowledgeImageAction(result);
+          assertContext(); await fetchImages(); assertContext();
+          return entry.canvasProjectId ? '結果をGalleryに保存しました。Canvas画面で復旧・保存すると、この依頼の確認が完了します。' : '結果をGalleryに保存し、確認しました。';
+        }}/>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -783,7 +808,7 @@ export function GalleryPage() {
           </div>
         </motion.div>
 
-        {isLoading ? (
+        {(isLoading || authLoading || !authInitialized || (user && !brandResolutionAttempted)) ? (
           <div className="mb-6 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-neutral-200 backdrop-blur-sm">
             <div className="spinner h-5 w-5" />
             <div className="min-w-0 flex-1">
@@ -797,7 +822,7 @@ export function GalleryPage() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={fetchImages}
+                onClick={() => { void fetchImages(); }}
                 className="inline-flex rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10"
               >
                 再読み込み
@@ -1043,7 +1068,7 @@ export function GalleryPage() {
               <Button
                 size="lg"
                 className="rounded-full shadow-glow hover:shadow-glow-lg"
-                onClick={fetchImages}
+                onClick={() => { void fetchImages(); }}
               >
                 再読み込み
               </Button>

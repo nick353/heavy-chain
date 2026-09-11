@@ -1,11 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import html2canvas from 'html2canvas';
 import { Camera, MessageSquare, RefreshCw, X, Send, ThumbsUp } from 'lucide-react';
 import { Button } from './index';
 import toast from 'react-hot-toast';
-import { supabase } from '../../lib/supabase';
+import { cloudflareDataPlane } from '../../lib/cloudflareApi';
 import { useAuthStore } from '../../stores/authStore';
 
 interface FeedbackFormProps {
@@ -28,11 +28,13 @@ interface FeedbackScreenshotState {
 const MAX_SCREENSHOT_DATA_URL_LENGTH = 6_500_000;
 
 export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: FeedbackFormProps) {
-  const { user, currentBrand, profile } = useAuthStore();
+  const { user, currentBrand } = useAuthStore();
+  const submission = useRef<{ userId: string; body: Record<string, unknown> } | null>(null);
   const type: FeedbackType = 'other';
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [confirmingReceipt, setConfirmingReceipt] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,12 +51,14 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
         throw new Error('ログインが必要です');
       }
 
-      const { error } = await supabase.functions.invoke('submit-feedback', {
-        body: {
+      if (!cloudflareDataPlane) throw new Error('フィードバック接続が未設定です');
+      // Keep the exact payload/ID after a lost response; a retry completes the
+      // same receipt instead of creating a duplicate with a new screenshot.
+      if (!submission.current || submission.current.userId !== user.id) submission.current = { userId: user.id, body: {
+          request_id: crypto.randomUUID(),
           brand_id: currentBrand?.id || null,
           type,
           message: message.trim(),
-          email: profile?.email || user.email || null,
           page_url: window.location.href,
           pathname: window.location.pathname,
           viewport: {
@@ -69,22 +73,26 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
           screenshot_capture_status: screenshot.dataUrl && screenshot.dataUrl.length > MAX_SCREENSHOT_DATA_URL_LENGTH
             ? 'screenshot_upload_failed'
             : screenshot.status,
-        },
-      });
-
-      if (error) throw error;
+        } };
+      const result = await cloudflareDataPlane.submitFeedback(submission.current.body);
+      if (result.ok !== true || result.feedback.submission_state !== 'accepted') throw new Error('受付結果を確認できません。同じ送信を再確認してください');
       
       setSubmitted(true);
+      setConfirmingReceipt(false);
       toast.success('フィードバックを送信しました');
       
       // Reset after delay
       setTimeout(() => {
         setSubmitted(false);
         setMessage('');
+        submission.current = null;
         onClose();
       }, 2000);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '送信に失敗しました。再度お試しください。');
+      setConfirmingReceipt(submission.current !== null);
+      toast.error(error instanceof Error && error.message.includes('feedback_request_conflict')
+        ? '前回の送信と内容が一致しません。受付状況を確認してください。'
+        : '送信の完了を確認できません。再送ボタンで同じ内容の受付を確認できます。');
     } finally {
       setIsSubmitting(false);
     }
@@ -94,6 +102,8 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
     if (!isSubmitting) {
       setSubmitted(false);
       setMessage('');
+      submission.current = null;
+      setConfirmingReceipt(false);
       onClose();
     }
   };
@@ -182,7 +192,7 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
                       <button
                         type="button"
                         onClick={onRecapture}
-                        disabled={isSubmitting || screenshot.isCapturing}
+                        disabled={isSubmitting || confirmingReceipt || screenshot.isCapturing}
                         className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary-600 transition hover:bg-primary-50 disabled:opacity-50 dark:text-primary-300 dark:hover:bg-primary-900/20"
                       >
                         <RefreshCw className={`h-3.5 w-3.5 ${screenshot.isCapturing ? 'animate-spin' : ''}`} />
@@ -222,6 +232,8 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
                     <textarea
                       id="feedback-message"
                       value={message}
+                      maxLength={4000}
+                      disabled={isSubmitting || confirmingReceipt}
                       onChange={(e) => setMessage(e.target.value)}
                       rows={5}
                       required
@@ -231,6 +243,10 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
                       className="block w-full resize-none rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-base leading-7 text-neutral-950 shadow-sm outline-none transition placeholder:text-neutral-400 focus:border-primary-400 focus:ring-4 focus:ring-primary-200/50 dark:border-neutral-700 dark:bg-surface-950 dark:text-white dark:placeholder:text-neutral-500 dark:focus:border-primary-400"
                     />
                   </div>
+
+                  {confirmingReceipt && <p role="status" className="text-sm text-amber-800 dark:text-amber-200">
+                    前回の送信結果を確認中です。「受付を再確認」で同じ内容と添付の受付を確認します。
+                  </p>}
 
                   {/* Submit */}
                   <div className="flex items-center justify-end gap-3 pt-2">
@@ -245,9 +261,10 @@ export function FeedbackForm({ isOpen, onClose, screenshot, onRecapture }: Feedb
                     <Button
                       type="submit"
                       isLoading={isSubmitting}
+                      disabled={screenshot.isCapturing && !confirmingReceipt}
                       leftIcon={<Send className="w-4 h-4" />}
                     >
-                      送信する
+                      {confirmingReceipt ? '受付を再確認' : '送信する'}
                     </Button>
                   </div>
                 </motion.form>

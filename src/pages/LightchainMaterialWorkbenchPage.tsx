@@ -7,7 +7,6 @@ import {
   Check,
   FolderHeart,
   Heart,
-  History,
   Layers3,
   Laptop,
   Loader2,
@@ -64,6 +63,14 @@ import {
   savePrintResultFavorite,
 } from '../features/printing/history/printResultFavorite';
 import { useAuthStore } from '../stores/authStore';
+import {
+  assertAuthBrandFence,
+  captureAuthBrandFence,
+  type AuthBrandFenceSnapshot,
+} from '../lib/authBrandSelection';
+// The runtime catch below uses this constructor for the no-cleanup fence abort path.
+import { AuthBrandAccessFenceError } from '../lib/authBrandSelection';
+void AuthBrandAccessFenceError;
 import { useCanvasStore } from '../stores/canvasStore';
 import {
   deleteWorkspaceArtifactsPersisted,
@@ -74,6 +81,16 @@ import {
 } from '../lib/localWorkspaceArtifacts';
 import { persistProviderResultArtifact } from '../lib/providerResultPersistence';
 import { resolveGeneratedImageUrl, withSignedImageUrls } from '../lib/storage';
+import { buildLocalCanvasAssetReference, putLocalCanvasAsset } from '../lib/canvasLocalAssets';
+import {
+  buildLocalUploadSourceMetadata,
+  sanitizeCanvasSourceMetadata,
+  type CanvasSourceMetadata,
+} from '../features/canvasSourceMetadata';
+import {
+  getLightchainUnifiedFeatureWorkflowContract,
+  UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
+} from '../features/lightchain/unifiedFeatureWorkflowContract';
 import {
   buildDerivedPrintGarmentMaskCandidates,
   buildPrintGarmentCutoutDataUrl,
@@ -83,6 +100,7 @@ import {
   buildEncodedManualPrintableSurface,
   buildPrintableSurfaceStageMaskDataUrl,
   buildPrintDesignCutoutDataUrl,
+  buildPrintRequestSnapshot,
   buildPrintRequestSignature,
   preparePrintGarmentClothModel,
   renderExperimentalSurfaceComposition,
@@ -125,13 +143,16 @@ import {
   persistPrintResultHistory,
   releaseRestoredPrintResult,
   restorePrintResultHistory,
+  printResultHistoryScopeKey,
 } from '../lib/printResultHistoryPersistence';
 import {
   persistPrintInputState,
   releaseRestoredPrintInput,
   restorePrintInputState,
+  printInputScopeKey,
   type RestoredPrintInputImage,
   type PrintInputProcessedState,
+  type PrintInputEditorState,
 } from '../lib/printInputPersistence';
 import {
   canExplicitlyConfirmProcessedGarmentMask,
@@ -165,22 +186,55 @@ import {
   composeProviderProtectedResult,
 } from '../features/lightchain/providerMask';
 import { assertCompletedImageEditResult, editImageWithPrompt } from '../lib/imageApi';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { CLOUDFLARE_IMAGE_MODEL } from '../lib/cloudflareImageAI';
+import { CLOUDFLARE_PROTECTED_EDIT_NOTICE } from '../lib/cloudflareProtectedImageEdit';
+import { CLOUDFLARE_PRINT_INPUT_NOTICE, printProviderPrompt, renderPrintProviderInput } from '../lib/printProviderInput';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import type { GeneratedImage, Json } from '../types/database';
 
 type WorkbenchMode = 'fabric' | 'printing';
 type PrintCoverageMode = 'spot' | 'full';
 
-// The current Lightchain production material routes keep this compact source
-// toolbar above the feature controls. Keep the labels and grouping aligned
-// with the source while routing into Heavy's non-video compatibility catalog.
-const lightchainSourceToolbarItems: ReadonlyArray<{ label: string; to: string }> = Object.freeze([
-  { label: 'ツールバー', to: '/lightchain' },
-  { label: 'デザインツール', to: '/lightchain?category=planning' },
-  { label: 'フィッティングツール', to: '/lightchain?category=fitting' },
-  { label: 'グラフィックデザインツール', to: '/lightchain?category=graphics' },
-  { label: '衣類生産ツール', to: '/lightchain?category=lab' },
+const lightchainMaterialSourceRailItems: ReadonlyArray<{
+  label: string;
+  iconUrl: string;
+  active?: boolean;
+}> = Object.freeze([
+  {
+    label: 'おすすめ',
+    iconUrl: '/assets/lightchain-toolbar.svg',
+  },
+  {
+    label: '企画デザインツール',
+    iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%A8%88%E5%B7%A5%E5%85%B7-%E9%81%B8%E4%B8%AD.svg',
+    active: true,
+  },
+  {
+    label: 'AIフィッティング',
+    iconUrl: 'https://jp.linkaigc.com/routeIcons/%E6%A8%A1%E7%89%B9%E8%A9%A6%E8%A1%A3%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg',
+  },
+  {
+    label: 'グラフィックツール',
+    iconUrl: 'https://jp.linkaigc.com/routeIcons/%E5%9B%B3%E6%A1%88%E5%89%B5%E4%BD%9C%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg',
+  },
+  {
+    label: 'グラフィックツール（詳細）',
+    iconUrl: 'https://jp.linkaigc.com/routeIcons/%E7%94%9F%E7%94%A3%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg',
+  },
 ]);
+
+const lightchainSourceToolbarItems: ReadonlyArray<{ label: string; category: 'recommended' | 'planning' | 'fitting' | 'graphics'; to: string }> = Object.freeze([
+  { label: 'おすすめ', category: 'recommended', to: '/lightchain?category=recommended' },
+  { label: '企画デザインツール', category: 'planning', to: '/lightchain?category=planning' },
+  { label: 'AIフィッティング', category: 'fitting', to: '/lightchain?category=fitting' },
+  { label: 'グラフィックツール', category: 'graphics', to: '/lightchain?category=graphics' },
+]);
+
+void lightchainMaterialSourceRailItems;
+
+const LIGHTCHAIN_FABRIC_EMPTY_PREVIEW_VIDEO =
+  'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/tools/ja/%E9%9D%A2%E6%96%99%E4%B8%8A%E8%BA%AB.mp4';
 
 const PRINT_COVERAGE_OPTIONS: Array<{ value: PrintCoverageMode; label: string }> = [
   { value: 'spot', label: 'スポット' },
@@ -257,6 +311,35 @@ type WorkbenchResult = {
   parityRuntime?: ReturnType<typeof serializeLightchainParityRuntime>;
 };
 
+const prepareProviderCanvasSource = async (result: WorkbenchResult) => {
+  if (result.storagePath) {
+    return { source: result.imageUrl, sourceMetadata: null };
+  }
+
+  const source = result.imageUrl.trim();
+  if (!source) throw new Error('canvas_provider_result_source_missing');
+
+  let response: Response;
+  try {
+    response = await fetch(source);
+  } catch (error) {
+    throw new Error(`canvas_provider_result_fetch_failed:${error instanceof Error ? error.message : 'unknown'}`);
+  }
+  if (!response.ok) throw new Error(`canvas_provider_result_fetch_failed:${response.status}`);
+
+  const blob = await response.blob();
+  const sourceMetadata = sanitizeCanvasSourceMetadata(await buildLocalUploadSourceMetadata(
+    blob,
+    result.outputSize ?? { width: 1, height: 1 },
+  )) as CanvasSourceMetadata;
+  await putLocalCanvasAsset(sourceMetadata.sourceRevision.revision, blob);
+
+  return {
+    source: buildLocalCanvasAssetReference(sourceMetadata.sourceRevision.revision),
+    sourceMetadata,
+  };
+};
+
 type MaterialInputLineage = {
   role: 'garment' | 'print-artwork' | 'model-or-design' | 'textile';
   sourceImageId: string | null;
@@ -265,6 +348,12 @@ type MaterialInputLineage = {
 };
 
 const FABRIC_PROVIDER_RESULT_FEATURE_TYPE = 'lightchain-fabric-image-provider-result';
+const FABRIC_LOCAL_RESULT_FEATURE_TYPE = 'lightchain-fabric-image-local-result';
+const PRINT_LOCAL_RESULT_FEATURE_TYPE = 'lightchain-printing-image-local-result';
+const FABRIC_RESULT_FEATURE_TYPES = new Set([
+  FABRIC_PROVIDER_RESULT_FEATURE_TYPE,
+  FABRIC_LOCAL_RESULT_FEATURE_TYPE,
+]);
 
 const jsonRecord = (value: Json | null | undefined): Record<string, Json | undefined> => (
   value && typeof value === 'object' && !Array.isArray(value)
@@ -323,9 +412,10 @@ const restoredMaterialInputFidelity = (value: Json | undefined): WorkbenchResult
 };
 
 const restoredFabricProviderResult = (image: GeneratedImage): WorkbenchResult | null => {
-  if (image.feature_type !== FABRIC_PROVIDER_RESULT_FEATURE_TYPE) return null;
+  if (typeof image.feature_type !== 'string' || !FABRIC_RESULT_FEATURE_TYPES.has(image.feature_type)) return null;
   const metadata = jsonRecord(image.metadata);
-  if (metadata.providerResultArtifact !== true) return null;
+  const isLocalPreview = image.feature_type === FABRIC_LOCAL_RESULT_FEATURE_TYPE;
+  if (!isLocalPreview && metadata.providerResultArtifact !== true) return null;
   const imageUrl = image.image_url?.trim();
   if (!imageUrl) return null;
 
@@ -334,15 +424,15 @@ const restoredFabricProviderResult = (image: GeneratedImage): WorkbenchResult | 
     id: image.id,
     brandId: image.brand_id,
     runId: jsonString(metadata.providerJobId) ?? image.job_id ?? undefined,
-    resultKind: 'provider',
+    resultKind: isLocalPreview ? 'fabric' : 'provider',
     generatedAt: Number.isFinite(generatedAt) ? generatedAt : undefined,
-    title: jsonString(metadata.title) ?? '生地イメージ AI生成',
+    title: jsonString(metadata.title) ?? (isLocalPreview ? '生地イメージ プレビュー' : '生地イメージ AI生成'),
     note: image.prompt ?? jsonString(metadata.brief) ?? '生地画像を衣服領域へ反映',
     imageUrl,
     outputSize: restoredMaterialOutputSize(metadata.outputSize),
-    generationMode: 'provider',
-    provider: jsonString(metadata.provider),
-    backendProvider: jsonString(metadata.backendProvider),
+    generationMode: isLocalPreview ? 'preview' : 'provider',
+    provider: isLocalPreview ? null : jsonString(metadata.provider),
+    backendProvider: isLocalPreview ? 'browser-local-fabric-composition-v1' : jsonString(metadata.backendProvider),
     jobId: jsonString(metadata.providerJobId) ?? image.job_id,
     imageId: jsonString(metadata.remoteImageId) ?? jsonString(metadata.providerImageId),
     storagePath: image.storage_path,
@@ -355,7 +445,7 @@ const restoredFabricProviderResult = (image: GeneratedImage): WorkbenchResult | 
     inputFidelity: restoredMaterialInputFidelity(metadata.inputFidelity),
     quality: restoredMaterialQuality(metadata.quality),
     protectedRegionComposited: jsonBoolean(metadata.protectedRegionComposited) ?? false,
-    persistenceStatus: jsonString(metadata.persistenceStatus),
+    persistenceStatus: jsonString(metadata.persistenceStatus) ?? (isLocalPreview ? 'completed' : null),
     artifactId: image.id,
     inputLineage: restoredMaterialInputLineage(metadata.inputLineage),
     parityRuntime: metadata.parityRuntime,
@@ -399,7 +489,7 @@ function WorkbenchResultCard({
   onOpen: (result: WorkbenchResult) => void;
   onFavorite?: (result: WorkbenchResult) => void;
   onDeleteRun?: (result: WorkbenchResult) => void;
-  onSaveToCanvas?: (result: WorkbenchResult) => void;
+  onSaveToCanvas?: (result: WorkbenchResult) => void | Promise<void>;
   isFavorite?: boolean;
 }) {
   const surfaceBadge = result.resultKind === 'exact'
@@ -502,7 +592,7 @@ function WorkbenchResultCard({
           {onSaveToCanvas && (
             <button
               type="button"
-              onClick={() => onSaveToCanvas(result)}
+              onClick={() => void onSaveToCanvas(result)}
               data-testid={`result-save-to-canvas-${result.id}`}
               className="inline-flex rounded-lg border border-emerald-300/30 px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-300/10"
             >
@@ -735,6 +825,7 @@ const FABRIC_OUTPUT_BACKGROUND = '#0b1113';
 
 const printPreviewStageSize = { width: 720, height: 900 };
 const IMAGE_LOAD_TIMEOUT_MS = 30_000;
+const PRINT_PROVIDER_INPUT_TIMEOUT_MS = 30_000;
 const CUTOUT_TIMEOUT_MS = 75_000;
 const CLOTH_CUTOUT_TIMEOUT_MS = 105_000;
 const FABRIC_MODEL_MASK_TIMEOUT_MS = 150_000;
@@ -1351,13 +1442,47 @@ function LayerPreview({
 }
 
 export function LightchainMaterialWorkbenchPage() {
+  const { user, currentBrand } = useAuthStore();
+  const location = useLocation();
+  // A new Cloudflare identity never inherits the previous user's in-memory
+  // inputs, unconfirmed rights, or async generation callbacks.
+  const sessionKey = cloudflareDataPlane
+    ? JSON.stringify([cloudflareDataPlane.origin, user?.id, currentBrand?.id, location.pathname.includes('printing')])
+    : 'legacy-material-session';
+  return <LightchainMaterialWorkbenchSession key={sessionKey} />;
+}
+
+function LightchainMaterialWorkbenchSession() {
   const { setFlowState } = useUnifiedWorkspaceFlow();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, currentBrand, isInitialized: isAuthInitialized, isLoading: isAuthLoading } = useAuthStore();
+  const {
+    user,
+    currentBrand,
+    brandState,
+    isInitialized: isAuthInitialized,
+    isLoading: isAuthLoading,
+  } = useAuthStore();
+  const captureCurrentAuthBrandFence = (brandId: string | null) => {
+    const state = useAuthStore.getState();
+    return captureAuthBrandFence(state.brandState, state.user?.id ?? null, brandId);
+  };
+  const assertCurrentAuthBrandFence = (captured: AuthBrandFenceSnapshot | null, phase: string) => {
+    const state = useAuthStore.getState();
+    assertAuthBrandFence(
+      captured,
+      captureAuthBrandFence(state.brandState, state.user?.id ?? null, state.currentBrand?.id ?? null),
+      phase,
+    );
+  };
   const { createProject, deleteProject, addObject, selectObject, saveCurrentProject } = useCanvasStore();
   const mode: WorkbenchMode = location.pathname.includes('printing') ? 'printing' : 'fabric';
   const isPrinting = mode === 'printing';
+  const brandResolutionPending = !isAuthInitialized
+    || isAuthLoading
+    || brandState.status !== 'success_nonempty'
+    || !currentBrand?.id;
+  const workflowContract = getLightchainUnifiedFeatureWorkflowContract(isPrinting ? 'printing-image' : 'fabric-image');
   const libraryHandoff = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return {
@@ -1370,6 +1495,19 @@ export function LightchainMaterialWorkbenchPage() {
   // remains available as an explicit advanced editor, but it must not become a
   // mandatory extra step in the parity path.
   const lightchainPrintParity = isPrinting;
+  const printInputScope = useMemo(() => cloudflareDataPlane && user?.id
+    ? { origin: cloudflareDataPlane.origin, userId: user.id } : undefined, [user?.id]);
+  const printInputCurrentScopeKey = currentBrand?.id ? printInputScopeKey(currentBrand.id, printInputScope) : null;
+  const printHistoryScope = useMemo(() => user?.id
+    ? { origin: cloudflareDataPlane?.origin ?? window.location.origin, userId: user.id } : null, [user?.id]);
+  const printHistoryCurrentScopeKey = currentBrand?.id && printHistoryScope
+    ? printResultHistoryScopeKey(currentBrand.id, printHistoryScope) : null;
+  const [printHistoryVisibleScope, setPrintHistoryVisibleScope] = useState<string | null>(null);
+  const [printInputHydratedScope, setPrintInputHydratedScope] = useState<string | null>(null);
+  const [printInputStorageError, setPrintInputStorageError] = useState<string | null>(null);
+  const [pendingPrintEditorRestore, setPendingPrintEditorRestore] = useState<{
+    editorState: PrintInputEditorState; garmentUrl: string | null; scopeKey: string;
+  } | null>(null);
   const [printCoverageMode, setPrintCoverageMode] = useState<PrintCoverageMode>('spot');
   const [printOutputScale, setPrintOutputScale] = useState<1 | 2>(1);
   const printOutputStageSize = useMemo(() => ({
@@ -1387,6 +1525,8 @@ export function LightchainMaterialWorkbenchPage() {
   const [rightsConfirmationDraft, setRightsConfirmationDraft] = useState(false);
   const pendingRightsGenerationRef = useRef(false);
   const [generatedResults, setGeneratedResults] = useState<WorkbenchResult[]>([]);
+  const generatedResultsRef = useRef(generatedResults);
+  generatedResultsRef.current = generatedResults;
   const [progressivePrintRun, setProgressivePrintRun] = useState<ProgressivePrintRun | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [surfaceConformStatus, setSurfaceConformStatus] = useState<string | null>(null);
@@ -1475,14 +1615,14 @@ export function LightchainMaterialWorkbenchPage() {
   const generationRequestRef = useRef<number | null>(null);
   const generationRequestSignatureRef = useRef<string | null>(null);
   const printHistoryHydrationGenerationRef = useRef(0);
-  const printHistoryHydratedBrandRef = useRef<string | null>(null);
+  const printHistoryHydratedScopeRef = useRef<string | null>(null);
   const restoredPrintResultUrlsRef = useRef(new Map<string, string>());
   const printHistoryPersistenceGenerationRef = useRef(0);
   const printInputHydrationGenerationRef = useRef(0);
-  const printInputHydratedBrandRef = useRef<string | null>(null);
   const restoredPrintInputImagesRef = useRef<RestoredPrintInputImage[]>([]);
   const restoredPrintGarmentArtifactsRef = useRef<RestoredPrintInputImage | null>(null);
   const printInputPersistenceGenerationRef = useRef(0);
+  const printInputReplaceUnreadableRef = useRef(false);
   const selectedPrintGarmentMaskCandidateIdRef = useRef(selectedPrintGarmentMaskCandidateId);
   const printGarmentMaskRevisionRef = useRef(printGarmentMaskRevision);
   const printGarmentProcessedRef = useRef(printGarmentProcessed);
@@ -1512,11 +1652,13 @@ export function LightchainMaterialWorkbenchPage() {
     hasProcessedMask: Boolean(printGarmentProcessed),
     explicitlyConfirmed: printGarmentMaskExplicitlyConfirmed,
   });
+  const canDisplayPrintHistory = !brandResolutionPending && Boolean(printHistoryCurrentScopeKey)
+    && printHistoryVisibleScope === printHistoryCurrentScopeKey;
   const visibleGeneratedResults = useMemo(
     () => isPrinting
-      ? generatedResults.filter((result) => result.id.startsWith('print-'))
+      ? generatedResults.filter((result) => canDisplayPrintHistory && result.id.startsWith('print-'))
       : generatedResults.filter((result) => !result.id.startsWith('print-')),
-    [generatedResults, isPrinting],
+    [generatedResults, isPrinting, canDisplayPrintHistory],
   );
   const printResultRuns = useMemo(
     () => groupPrintResultHistory(visibleGeneratedResults),
@@ -1675,17 +1817,27 @@ export function LightchainMaterialWorkbenchPage() {
   }, [generatedResults.length, generationInputSignature]);
 
   useEffect(() => {
-    if (!isPrinting || !currentBrand?.id) return;
-    const brandId = currentBrand.id;
     const hydrationGeneration = ++printHistoryHydrationGenerationRef.current;
-    printHistoryHydratedBrandRef.current = null;
+    ++printHistoryPersistenceGenerationRef.current;
+    printHistoryHydratedScopeRef.current = null;
+    setPrintHistoryVisibleScope(null);
     restoredPrintResultUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     restoredPrintResultUrlsRef.current.clear();
-    setGeneratedResults((current) => current.filter(
-      (result) => !result.id.startsWith('print-') || result.brandId === brandId,
-    ));
+    setGeneratedResults((current) => current.filter((result) => !result.id.startsWith('print-')));
+    setSelectedResult(null);
+    setFavoriteTargetResult(null);
+    setFavoriteTargetBrandId(null);
+    setShowResultComparison(false);
+    if (!isPrinting || !currentBrand?.id || !printHistoryScope || brandResolutionPending) return;
+    const brandId = currentBrand.id;
+    const scopeKey = printHistoryCurrentScopeKey;
+    const authBrandFence = captureCurrentAuthBrandFence(brandId);
     let cancelled = false;
-    void restorePrintResultHistory(brandId)
+    const assertCurrent = () => {
+      if (cancelled || hydrationGeneration !== printHistoryHydrationGenerationRef.current) throw new Error('print_history_scope_changed');
+      assertCurrentAuthBrandFence(authBrandFence, 'print_history_restore');
+    };
+    void restorePrintResultHistory(brandId, { ...printHistoryScope, assertCurrent })
       .then((restoredResults) => {
         if (cancelled || hydrationGeneration !== printHistoryHydrationGenerationRef.current) {
           restoredResults.forEach(releaseRestoredPrintResult);
@@ -1694,7 +1846,8 @@ export function LightchainMaterialWorkbenchPage() {
         restoredResults.forEach((result) => {
           restoredPrintResultUrlsRef.current.set(result.id, result.imageUrl);
         });
-        printHistoryHydratedBrandRef.current = brandId;
+        printHistoryHydratedScopeRef.current = scopeKey;
+        setPrintHistoryVisibleScope(scopeKey);
         if (restoredResults.length) setGeneratedResultsStale(true);
         setGeneratedResults((current) => {
           if (current.some((result) => result.id.startsWith('print-'))) return current;
@@ -1702,13 +1855,16 @@ export function LightchainMaterialWorkbenchPage() {
         });
       })
       .catch((error) => {
-        if (cancelled) return;
+        try { assertCurrent(); } catch { return; }
+        // Keep new previews visible without treating an unreadable history as empty.
+        // hydratedScope stays null, so automatic writes cannot replace that history.
+        setPrintHistoryVisibleScope(scopeKey);
         console.warn('Printing result history restore skipped.', error);
       });
     return () => {
       cancelled = true;
     };
-  }, [currentBrand?.id, isPrinting]);
+  }, [currentBrand?.id, isPrinting, printHistoryCurrentScopeKey, printHistoryScope, brandResolutionPending]);
 
   useEffect(() => () => {
     restoredPrintResultUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -1716,11 +1872,17 @@ export function LightchainMaterialWorkbenchPage() {
   }, []);
 
   useEffect(() => {
-    if (!isPrinting || !currentBrand?.id || printHistoryHydratedBrandRef.current !== currentBrand.id) return;
+    if (!isPrinting || !currentBrand?.id || !printHistoryScope || !canDisplayPrintHistory
+      || printHistoryHydratedScopeRef.current !== printHistoryCurrentScopeKey) return;
     const brandId = currentBrand.id;
+    const authBrandFence = captureCurrentAuthBrandFence(brandId);
     const persistenceGeneration = ++printHistoryPersistenceGenerationRef.current;
     const results = generatedResults.filter((result) => result.id.startsWith('print-'));
-    void persistPrintResultHistory(brandId, results)
+    const assertCurrent = () => {
+      if (persistenceGeneration !== printHistoryPersistenceGenerationRef.current) throw new Error('print_history_write_superseded');
+      assertCurrentAuthBrandFence(authBrandFence, 'print_history_persist');
+    };
+    void persistPrintResultHistory(brandId, results, { ...printHistoryScope, assertCurrent })
       .then(({ assetRefs }) => {
         if (persistenceGeneration !== printHistoryPersistenceGenerationRef.current) return;
         setGeneratedResults((current) => {
@@ -1739,7 +1901,7 @@ export function LightchainMaterialWorkbenchPage() {
       .catch((error) => {
         console.warn('Printing result history persistence skipped.', error);
       });
-  }, [currentBrand?.id, generatedResults, isPrinting]);
+  }, [currentBrand?.id, generatedResults, isPrinting, printHistoryCurrentScopeKey, printHistoryScope, canDisplayPrintHistory]);
 
   useEffect(() => {
     if (isPrinting || !currentBrand?.id) return;
@@ -1752,7 +1914,7 @@ export function LightchainMaterialWorkbenchPage() {
 
     const hydrateFabricHistory = async () => {
       const persistedImages = listWorkspaceGeneratedImages(brandId, user?.id)
-        .filter((image) => image.feature_type === FABRIC_PROVIDER_RESULT_FEATURE_TYPE);
+        .filter((image) => typeof image.feature_type === 'string' && FABRIC_RESULT_FEATURE_TYPES.has(image.feature_type));
       const signedImages = await withSignedImageUrls(persistedImages).catch(() => persistedImages);
       const restoredResults = signedImages
         .map(restoredFabricProviderResult)
@@ -2004,7 +2166,11 @@ export function LightchainMaterialWorkbenchPage() {
     setPrintOutputScale(1);
     setGenerationError(null);
     setSurfaceConformStatus(null);
-  }, [isPrinting]);
+    setPendingPrintEditorRestore(null);
+    setPrintInputStorageError(null);
+    printInputReplaceUnreadableRef.current = true;
+    setPrintInputHydratedScope(printInputCurrentScopeKey);
+  }, [isPrinting, printInputCurrentScopeKey]);
 
   useEffect(() => {
     if (!isPrinting) {
@@ -2492,6 +2658,13 @@ export function LightchainMaterialWorkbenchPage() {
       toast.error(message);
       return;
     }
+    const authBrandFence = captureCurrentAuthBrandFence(generationBrand.id);
+    if (!authBrandFence) {
+      const message = 'ブランドのアクセス確認が完了していないため、生成を開始できません';
+      setGenerationError(message);
+      toast.error(message);
+      return;
+    }
 
     if (!providerRightsConfirmed) {
       setRightsConfirmationDraft(false);
@@ -2569,10 +2742,37 @@ export function LightchainMaterialWorkbenchPage() {
         const fabricOverlayUrl = fabricPreviewOverlayUrl ?? await buildFabricReferenceOverlay(fabricBase!.url);
         const fabricModelMaskResult = fabricModelGarmentMaskResult ?? await buildFabricModelGarmentMask(fabricDesign!.url);
         if (!isCurrentRequest()) return;
+        const localInputLineage: MaterialInputLineage[] = [
+          {
+            role: 'model-or-design',
+            sourceImageId: fabricDesign?.galleryImageId ?? null,
+            sourceStoragePath: fabricDesign?.storagePath ?? null,
+            referenceType: fabricDesign?.referenceType ?? null,
+          },
+          {
+            role: 'textile',
+            sourceImageId: fabricBase?.galleryImageId ?? null,
+            sourceStoragePath: fabricBase?.storagePath ?? null,
+            referenceType: fabricBase?.referenceType ?? null,
+          },
+        ];
+        const localParityRuntime = serializeLightchainParityRuntime(buildLightchainParityRuntime({
+          rowId: 'fabric-image',
+          inputRoles: ['model-or-design', 'textile'],
+          fixtureId: `${fabricDesign!.url}|${fabricBase!.url}`,
+          settings: {
+            mode: 'fabric',
+            fabricImageRatio,
+            fabricPresetIds,
+          },
+        }));
 
         const variantResults: WorkbenchResult[] = [];
+        const attemptedLocalArtifactIds: string[] = [];
+        const localJobId = `local-fabric-preview-job-${Date.now()}`;
         for (const preset of fabricVariants.filter((variant) => fabricPresetIds.includes(variant.id))) {
           await yieldToBrowser();
+          assertCurrentAuthBrandFence(authBrandFence, 'fabric_preview_after_yield');
           const imageUrl = await withTimeout(
             renderFabricTryOnComposition({
               stageWidth: width,
@@ -2586,14 +2786,79 @@ export function LightchainMaterialWorkbenchPage() {
             COMPOSITION_TIMEOUT_MS,
             '生地プレビューの描画がタイムアウトしました。素材を確認して再試行してください',
           );
+          assertCurrentAuthBrandFence(authBrandFence, 'fabric_preview_after_render');
           if (!isCurrentRequest()) return;
-          variantResults.push({
-            id: `${preset.id}-${Date.now()}`,
+          const generatedAt = Date.now();
+          const resultId = `fabric-preview-${generatedAt}-${preset.id}`;
+          attemptedLocalArtifactIds.push(resultId);
+          const resultTitle = `生地バリエーション: ${preset.name}`;
+          const resultNote = `${preset.name} の質感で重ねた見本${fabricPrompt.trim() ? ` / ${fabricPrompt.trim()}` : ''}`;
+          assertCurrentAuthBrandFence(authBrandFence, 'fabric_preview_before_persistence');
+          const persisted = saveWorkspaceArtifactPersisted({
+            id: resultId,
             brandId: generationBrand.id,
-            title: `生地バリエーション: ${preset.name}`,
-            note: `${preset.name} の質感で重ねた見本${fabricPrompt.trim() ? ` / ${fabricPrompt.trim()}` : ''}`,
+            scopeId: user?.id,
+            featureType: FABRIC_LOCAL_RESULT_FEATURE_TYPE,
+            title: resultTitle,
+            imageUrl,
+            prompt: resultNote,
+            sourceJobId: localJobId,
+            metadata: {
+              feature: 'fabric-image',
+              localPreviewArtifact: true,
+              localJobId,
+              sourceJobId: localJobId,
+              resultKind: 'fabric',
+              generationMode: 'preview',
+              title: resultTitle,
+              brief: resultNote,
+              outputSize: { width, height },
+              generatedAt,
+              fabricPresetId: preset.id,
+              fabricPresetName: preset.name,
+              fabricImageRatio,
+              sourceWorkspace: 'lightchain-material-workbench-local-preview',
+              sourceLabel: '生地イメージ',
+              sourceResumePath: '/lightchain/fabric-image',
+              generationIntent: {
+                href: '/lightchain/fabric-image',
+                feature: 'fabric-image',
+                mode: 'preview',
+              },
+              materialReferences: [
+                { role: 'model-or-design', referenceType: fabricDesign?.referenceType ?? null, hasImage: true },
+                { role: 'textile', referenceType: fabricBase?.referenceType ?? null, hasImage: true },
+              ],
+              inputLineage: localInputLineage,
+              parityRuntime: localParityRuntime,
+            },
+          });
+          assertCurrentAuthBrandFence(authBrandFence, 'fabric_preview_after_persistence');
+          if (!persisted.ok) {
+            const cleanup = deleteWorkspaceArtifactsPersisted(
+              generationBrand.id,
+              attemptedLocalArtifactIds,
+              user?.id,
+            );
+            const cleanupMessage = cleanup.ok ? '' : ` 保存済みの一部プレビューも削除確認できませんでした: ${cleanup.error.message}`;
+            throw new Error(`生地プレビューの保存確認に失敗しました。${persisted.error.message}${cleanupMessage}`);
+          }
+          variantResults.push({
+            id: resultId,
+            artifactId: persisted.artifact.id,
+            jobId: localJobId,
+            brandId: generationBrand.id,
+            title: resultTitle,
+            note: resultNote,
             imageUrl,
             outputSize: { width, height },
+            generationMode: 'preview',
+            resultKind: 'fabric',
+            persistenceStatus: 'completed',
+            backendProvider: 'browser-local-fabric-composition-v1',
+            generatedAt,
+            inputLineage: localInputLineage,
+            parityRuntime: localParityRuntime,
           });
         }
         if (!variantResults.length) {
@@ -2710,7 +2975,7 @@ export function LightchainMaterialWorkbenchPage() {
         throw error;
       }
       if (!isCurrentRequest()) return;
-      const exactResult: WorkbenchResult = {
+      const previewExactResult: WorkbenchResult = {
         id: `${runId}-exact`,
         brandId: generationBrand.id,
         runId,
@@ -2722,7 +2987,7 @@ export function LightchainMaterialWorkbenchPage() {
         outputSize: { ...printOutputStageSize },
       };
       setProgressivePrintRun((current) => current?.runId === runId
-        ? { ...current, exact: { status: 'ready', result: exactResult, error: null } }
+        ? { ...current, exact: { status: 'ready', result: previewExactResult, error: null } }
         : current);
       await waitForCommittedPaint();
       if (!isCurrentRequest()) return;
@@ -2751,18 +3016,145 @@ export function LightchainMaterialWorkbenchPage() {
         throw error;
       }
       if (!isCurrentRequest()) return;
-      const fabricResult: WorkbenchResult = {
-        id: `${runId}-fabric`,
+      const localPrintInputLineage: MaterialInputLineage[] = [
+        {
+          role: 'garment',
+          sourceImageId: printGarment?.galleryImageId ?? null,
+          sourceStoragePath: printGarment?.storagePath ?? null,
+          referenceType: printGarment?.referenceType ?? null,
+        },
+        ...printDesigns.map((design) => ({
+          role: 'print-artwork' as const,
+          sourceImageId: design.galleryImageId ?? null,
+          sourceStoragePath: design.storagePath ?? null,
+          referenceType: design.referenceType ?? null,
+        })),
+      ];
+      const localPrintPlacement = nextSnapshot.designs.map((design) => ({
+        layerId: design.id,
+        x: design.transform.x,
+        y: design.transform.y,
+        scale: design.transform.scale,
+        rotation: design.transform.rotation,
+        opacity: design.transform.opacity,
+        flipX: design.transform.flipX,
+        flipY: design.transform.flipY,
+      }));
+      const localPrintParityRuntime = serializeLightchainParityRuntime(buildLightchainParityRuntime({
+        rowId: 'printing-image',
+        inputRoles: ['garment', 'print-artwork'],
+        fixtureId: [nextSnapshot.garment.sourceUrl, ...nextSnapshot.designs.map((design) => design.sourceUrl)].join('|'),
+        settings: {
+          mode,
+          coverage: nextSnapshot.coverageMode,
+          outputScale: printOutputScale,
+          placement: localPrintPlacement,
+        },
+      }));
+      const localPrintResultBase = {
         brandId: generationBrand.id,
         runId,
-        resultKind: 'fabric',
         generatedAt,
+        generationMode: 'preview' as const,
+        backendProvider: 'browser-local-print-composition-v1',
+        jobId: runId,
+        persistenceStatus: 'completed',
+        inputLineage: localPrintInputLineage,
+        parityRuntime: localPrintParityRuntime,
+      };
+      const exactResult: WorkbenchResult = {
+        ...localPrintResultBase,
+        id: `${runId}-exact`,
+        resultKind: 'exact',
+        title: '配置そのまま',
+        note: `${PRINT_COVERAGE_OPTIONS.find((option) => option.value === printCoverageMode)?.label ?? 'スポット'}範囲 / AI再描画なし / 元デザインの色・形・透明度を保持`,
+        imageUrl: previewExactResult.imageUrl,
+        outputSize: { ...printOutputStageSize },
+      };
+      const fabricResult: WorkbenchResult = {
+        ...localPrintResultBase,
+        id: `${runId}-fabric`,
+        resultKind: 'fabric',
         title: '布になじませる',
         note: `${PRINT_COVERAGE_OPTIONS.find((option) => option.value === printCoverageMode)?.label ?? 'スポット'}範囲 / 輪郭と透明度は固定 / Tシャツの明暗だけをデザインのRGBへ反映`,
         imageUrl: fabricComposition.imageUrl,
         outputSize: { ...printOutputStageSize },
       };
-      const nextResults: WorkbenchResult[] = [exactResult, fabricResult];
+      const attemptedLocalArtifactIds = [exactResult.id, fabricResult.id];
+      const persistedLocalResults: WorkbenchResult[] = [];
+      try {
+        for (const result of [exactResult, fabricResult]) {
+          assertCurrentAuthBrandFence(authBrandFence, 'printing_preview_before_persistence');
+          const persisted = saveWorkspaceArtifactPersisted({
+            id: result.id,
+            brandId: generationBrand.id,
+            scopeId: user?.id,
+            featureType: PRINT_LOCAL_RESULT_FEATURE_TYPE,
+            title: result.title,
+            imageUrl: result.imageUrl,
+            prompt: result.note,
+            sourceJobId: runId,
+            metadata: {
+              feature: 'printing-image',
+              localPreviewArtifact: true,
+              localJobId: runId,
+              sourceJobId: runId,
+              resultKind: result.resultKind ?? null,
+              generationMode: 'preview',
+              backendProvider: result.backendProvider,
+              title: result.title,
+              brief: result.note,
+              outputSize: result.outputSize ?? null,
+              generatedAt,
+              coverageMode: nextSnapshot.coverageMode,
+              outputScale: printOutputScale,
+              printPlacement: localPrintPlacement,
+              sourceWorkspace: 'lightchain-material-workbench-local-preview',
+              sourceLabel: 'プリントイメージ',
+              sourceResumePath: '/lightchain/printing-image',
+              generationIntent: {
+                href: '/lightchain/printing-image',
+                feature: 'printing-image',
+                mode: 'preview',
+                coverageMode: nextSnapshot.coverageMode,
+                designCount: nextSnapshot.designs.length,
+              },
+              materialReferences: [
+                { role: 'garment', referenceType: printGarment?.referenceType ?? null, hasImage: true },
+                ...printDesigns.map((design, index) => ({
+                  role: 'print-artwork',
+                  index,
+                  referenceType: design.referenceType,
+                  hasImage: true,
+                })),
+              ],
+              inputLineage: localPrintInputLineage,
+              parityRuntime: localPrintParityRuntime,
+            },
+          });
+          if (!persisted.ok) {
+            throw new Error(`プリントプレビューの保存確認に失敗しました。${persisted.error.message}`);
+          }
+          persistedLocalResults.push({ ...result, artifactId: persisted.artifact.id });
+        }
+      } catch (error) {
+        const cleanup = error instanceof AuthBrandAccessFenceError
+          ? null
+          : deleteWorkspaceArtifactsPersisted(
+            generationBrand.id,
+            attemptedLocalArtifactIds,
+            user?.id,
+          );
+        const cleanupMessage = !cleanup || cleanup.ok ? '' : ` 保存済みの一部プレビューも削除確認できませんでした: ${cleanup.error.message}`;
+        throw new Error(`${error instanceof Error ? error.message : String(error)}${cleanupMessage}`);
+      }
+      if (!isCurrentRequest()) {
+        assertCurrentAuthBrandFence(authBrandFence, 'printing_preview_stale_cleanup_guard');
+        deleteWorkspaceArtifactsPersisted(generationBrand.id, attemptedLocalArtifactIds, user?.id);
+        return;
+      }
+      assertCurrentAuthBrandFence(authBrandFence, 'printing_preview_before_ui_commit');
+      const nextResults: WorkbenchResult[] = persistedLocalResults;
       setGeneratedResults((previous) => mergePrintResultHistory(
         nextResults,
         previous.filter((result) => result.id.startsWith('print-')),
@@ -2813,6 +3205,12 @@ export function LightchainMaterialWorkbenchPage() {
   void handleLegacyPreviewGenerate;
 
   const handleGenerate = async (options?: { rightsAlreadyConfirmed?: boolean }) => {
+    if (!cloudflareDataPlane) {
+      const message = 'Cloudflare画像AIが未設定のため生成できません';
+      setGenerationError(message);
+      toast.error(message);
+      return;
+    }
     if (isPrinting) invalidatePrintableSuggestion();
     let generationBrand = currentBrand;
     if (!generationBrand?.id) {
@@ -2826,6 +3224,13 @@ export function LightchainMaterialWorkbenchPage() {
     }
     if (!generationBrand?.id) {
       const message = '保存先ブランドを取得できませんでした。ブランド設定を確認して再試行してください';
+      setGenerationError(message);
+      toast.error(message);
+      return;
+    }
+    const authBrandFence = captureCurrentAuthBrandFence(generationBrand.id);
+    if (!authBrandFence) {
+      const message = 'ブランドのアクセス確認が完了していないため、生成を開始できません';
       setGenerationError(message);
       toast.error(message);
       return;
@@ -2855,6 +3260,10 @@ export function LightchainMaterialWorkbenchPage() {
       toast.error('プリント画像の透明化が完了するまでお待ちください');
       return;
     }
+    if (isPrinting && (!printDesignsReady || placedPrintDesignLayers.length !== printDesigns.length)) {
+      toast.error('すべてのプリント画像の表示と透明化を確認してください。未準備の画像は省略しません。');
+      return;
+    }
 
     const requestId = ++generationSequenceRef.current;
     const requestSignature = generationInputSignatureRef.current;
@@ -2873,10 +3282,14 @@ export function LightchainMaterialWorkbenchPage() {
     );
 
     try {
-      const printReferenceUrls = printDesigns.map((design) => design.url).filter(Boolean).slice(0, 15);
+      const allPrintReferenceUrls = printDesigns.map((design) => design.url);
+      const printReferenceUrls = allPrintReferenceUrls;
+      const printSourcesByLayerId = new Map(printDesigns.map(design => [getPrintDesignLayerId(design), design]));
       const printPlacementSummary = placedPrintDesignLayers.map((layer, index) => ({
         index,
         layerId: layer.id,
+        sourceImageId: printSourcesByLayerId.get(layer.id)?.galleryImageId ?? null,
+        sourceStoragePath: printSourcesByLayerId.get(layer.id)?.storagePath ?? null,
         x: layer.transform.x,
         y: layer.transform.y,
         scale: layer.transform.scale,
@@ -2891,7 +3304,37 @@ export function LightchainMaterialWorkbenchPage() {
       if (!providerGarmentCutout) {
         throw new Error('provider_garment_mask_required');
       }
-      const providerGarmentMask = await withTimeout(
+      let printProviderInput: Awaited<ReturnType<typeof renderPrintProviderInput>> | null = null;
+      if (isPrinting) {
+        const printState = { ...currentPrintStateRef.current };
+        const assertPrintInputCurrent = () => {
+          assertCurrentAuthBrandFence(authBrandFence, 'print_provider_input');
+          if (!isCurrentRequest() || currentPrintStateRef.current.revision !== printState.revision
+            || currentPrintStateRef.current.signature !== printState.signature) throw new Error('protected_print_input_changed');
+        };
+        const snapshot = await withTimeout(buildPrintRequestSnapshot({
+          revision: printState.revision,
+          brandId: generationBrand.id,
+          brandName: generationBrand.name || 'brand',
+          coverageMode: printCoverageMode,
+          garmentUrl: printGarmentProcessed!,
+          garmentReferenceType: printGarment?.referenceType ?? null,
+          garmentMaskCandidateId: selectedPrintGarmentMaskCandidateId,
+          garmentMaskRevision: printGarmentMaskRevision,
+          ...(printableSurfaceEnabled && manualPrintableSurface ? { printableSurface: manualPrintableSurface } : {}),
+          designs: placedPrintDesignLayers.map(layer => ({ id: layer.id, sourceUrl: layer.originalUrl,
+            maskRevision: layer.maskRevision, transform: { ...layer.transform } })),
+          stageSize: printOutputStageSize,
+        }), PRINT_PROVIDER_INPUT_TIMEOUT_MS, 'プリント配置の準備がタイムアウトしました。入力は保持されています');
+        assertPrintInputCurrent();
+        if (snapshot.signature !== printState.signature) throw new Error('protected_print_snapshot_changed');
+        printProviderInput = await withTimeout(renderPrintProviderInput({ snapshot,
+          sourceImageUrl: printGarment!.url, garmentCutout: providerGarmentCutout,
+          assertCurrent: assertPrintInputCurrent,
+        }), PRINT_PROVIDER_INPUT_TIMEOUT_MS, 'プリント配置の描画がタイムアウトしました。入力は保持されています');
+        assertPrintInputCurrent();
+      }
+      const providerGarmentMask = printProviderInput?.providerMask ?? await withTimeout(
         buildProviderGarmentEditMask({
           sourceImageUrl: isPrinting ? printGarment!.url : fabricDesign!.url,
           garmentCutout: providerGarmentCutout,
@@ -2899,8 +3342,9 @@ export function LightchainMaterialWorkbenchPage() {
         FABRIC_MODEL_MASK_TIMEOUT_MS,
         '衣服領域マスクの生成がタイムアウトしました。画像を確認して再試行してください',
       );
+      assertCurrentAuthBrandFence(authBrandFence, 'after_provider_mask');
       if (!isCurrentRequest()) return;
-      const providerPrompt = isPrinting
+      const baseProviderPrompt = isPrinting
         ? buildLightchainProviderPrompt({
             toolId: 'printing-image',
             toolTitle: 'プリントイメージ',
@@ -2919,6 +3363,9 @@ export function LightchainMaterialWorkbenchPage() {
             brief: fabricPrompt.trim() || '白い衣服に指定した生地の質感と柄を自然に反映する',
             referenceNote: 'モデル/デザイン画像を主画像、生地画像を質感・柄の参照として扱い、衣服の形・構造・人物を変更しない',
           });
+      const providerPrompt = printProviderInput
+        ? printProviderPrompt(baseProviderPrompt, printProviderInput.metadata.designCount)
+        : baseProviderPrompt;
       const parityRuntime = buildLightchainParityRuntime({
         rowId: isPrinting ? 'printing-image' : 'fabric-image',
         inputRoles: isPrinting ? ['garment', 'print-artwork'] : ['model-or-design', 'textile'],
@@ -2965,22 +3412,26 @@ export function LightchainMaterialWorkbenchPage() {
               referenceType: fabricBase?.referenceType ?? null,
             },
           ];
+      assertCurrentAuthBrandFence(authBrandFence, 'before_provider');
       const providerResult = await withTimeout(
         isPrinting
           ? editImageWithPrompt(
-              printGarment!.url,
+              printProviderInput?.imageUrl ?? printGarment!.url,
               providerPrompt,
               generationBrand.id,
               {
-                referenceImageUrls: printReferenceUrls,
+                referenceImageUrls: printProviderInput?.referenceImageUrls ?? printReferenceUrls,
                 maskDataUrl: providerGarmentMask.dataUrl,
                 maskApplied: true,
                 maskCoveragePercent: providerGarmentMask.coveragePercent,
                 maskWidth: providerGarmentMask.width,
                 maskHeight: providerGarmentMask.height,
-                providerModel: 'gpt-image-1',
-                inputFidelity: 'high',
-                quality: 'high',
+                providerModel: CLOUDFLARE_IMAGE_MODEL,
+                featureType: 'lightchain-printing-image',
+                assertContext: () => {
+                  assertCurrentAuthBrandFence(authBrandFence,'protected_print_context');
+                  if (!isCurrentRequest()) throw new Error('protected_print_input_changed');
+                },
                 rightsConfirmed: rightsConfirmedForRequest,
                 lightchainCompat: {
                   lightchainFeatureId: 'printing-image',
@@ -3020,6 +3471,7 @@ export function LightchainMaterialWorkbenchPage() {
                   outputScale: printOutputScale,
                   placement: printPlacementSummary,
                   parityRuntime: parityRuntimeJson,
+                  ...(printProviderInput ? { printProviderInput: printProviderInput.metadata } : {}),
                 },
               },
             )
@@ -3034,9 +3486,12 @@ export function LightchainMaterialWorkbenchPage() {
                 maskCoveragePercent: providerGarmentMask.coveragePercent,
                 maskWidth: providerGarmentMask.width,
                 maskHeight: providerGarmentMask.height,
-                providerModel: 'gpt-image-1',
-                inputFidelity: 'high',
-                quality: 'high',
+                providerModel: CLOUDFLARE_IMAGE_MODEL,
+                featureType: 'lightchain-fabric-image',
+                assertContext: () => {
+                  assertCurrentAuthBrandFence(authBrandFence,'protected_fabric_context');
+                  if (!isCurrentRequest()) throw new Error('protected_fabric_input_changed');
+                },
                 rightsConfirmed: rightsConfirmedForRequest,
                 lightchainCompat: {
                   lightchainFeatureId: 'fabric-image',
@@ -3076,9 +3531,12 @@ export function LightchainMaterialWorkbenchPage() {
         PROVIDER_GENERATION_TIMEOUT_MS,
         isPrinting ? 'プリント画像のAI生成がタイムアウトしました。素材を確認して再試行してください' : '生地画像のAI生成がタイムアウトしました。素材を確認して再試行してください',
       );
+      assertCurrentAuthBrandFence(authBrandFence, 'after_provider');
       if (!isCurrentRequest()) return;
       assertCompletedImageEditResult(providerResult, `provider_${mode}_result`);
-      const protectedComposite = await withTimeout(
+      const protectedComposite = cloudflareDataPlane && providerResult.protectedRegionComposited === true
+        ? { dataUrl:providerResult.imageUrl }
+        : await withTimeout(
         composeProviderProtectedResult({
           sourceImageUrl: isPrinting ? printGarment!.url : fabricDesign!.url,
           providerImageUrl: providerResult.imageUrl,
@@ -3087,10 +3545,13 @@ export function LightchainMaterialWorkbenchPage() {
         30_000,
         'AI生成結果の衣服外領域を元画像へ戻せませんでした。画像を確認して再試行してください',
       );
+      assertCurrentAuthBrandFence(authBrandFence, 'after_protected_composite');
       const outputImage = await loadImage(protectedComposite.dataUrl);
+      assertCurrentAuthBrandFence(authBrandFence, 'after_output_decode');
       if (!isCurrentRequest()) return;
-      const generatedAt = Date.now();
-      const runId = isPrinting ? `print-provider-${generatedAt}` : `fabric-provider-${generatedAt}`;
+      const generatedAt = providerResult.createdAt && Number.isFinite(Date.parse(providerResult.createdAt)) ? Date.parse(providerResult.createdAt) : Date.now();
+      const runId = isPrinting ? `print-provider-${providerResult.requestId ?? generatedAt}` : `fabric-provider-${providerResult.requestId ?? generatedAt}`;
+      const editProviderLabel = providerResult.provider === 'workers_ai' ? 'Cloudflare画像編集・範囲外は元画素を保持' : '画像編集';
       const result: WorkbenchResult = {
         id: `${runId}-result`,
         brandId: generationBrand.id,
@@ -3099,32 +3560,33 @@ export function LightchainMaterialWorkbenchPage() {
         generatedAt,
         title: isPrinting ? 'プリントイメージ AI生成' : '生地イメージ AI生成',
         note: isPrinting
-          ? `${PRINT_COVERAGE_OPTIONS.find((option) => option.value === printCoverageMode)?.label ?? 'スポット'}範囲 / OpenAI画像編集 / 服の形状を保持`
-          : `${fabricImageRatio} / OpenAI画像編集 / 選択した生地参照を衣服領域へ反映`,
+          ? `${PRINT_COVERAGE_OPTIONS.find((option) => option.value === printCoverageMode)?.label ?? 'スポット'}範囲 / ${editProviderLabel}`
+          : `${fabricImageRatio} / ${editProviderLabel} / 選択した生地参照を衣服領域へ反映`,
         imageUrl: protectedComposite.dataUrl,
         outputSize: {
           width: Math.max(1, outputImage.naturalWidth || outputImage.width),
           height: Math.max(1, outputImage.naturalHeight || outputImage.height),
         },
         generationMode: 'provider',
-        provider: providerResult.provider ?? 'openai',
-        backendProvider: providerResult.backendProvider ?? 'supabase-edge-function:edit-image',
+        provider: providerResult.provider ?? 'workers_ai',
+        backendProvider: providerResult.backendProvider ?? 'cloudflare-workers-ai',
         jobId: providerResult.jobId ?? null,
         imageId: providerResult.imageId ?? null,
         storagePath: providerResult.storagePath ?? null,
-        inputImageCount: providerResult.inputImageCount ?? (1 + (isPrinting ? printReferenceUrls.length : 1)),
+        inputImageCount: providerResult.inputImageCount ?? (printProviderInput ? 3 : 1 + (isPrinting ? printReferenceUrls.length : 1)),
         maskApplied: providerResult.maskApplied === true,
         maskCoveragePercent: providerResult.maskCoveragePercent ?? providerGarmentMask.coveragePercent,
         maskWidth: providerResult.maskWidth ?? providerGarmentMask.width,
         maskHeight: providerResult.maskHeight ?? providerGarmentMask.height,
-        providerModel: providerResult.providerModel ?? 'gpt-image-1',
-        inputFidelity: providerResult.inputFidelity ?? 'high',
-        quality: providerResult.quality ?? 'high',
+        providerModel: providerResult.providerModel ?? CLOUDFLARE_IMAGE_MODEL,
+        inputFidelity: providerResult.inputFidelity ?? null,
+        quality: providerResult.quality ?? null,
         protectedRegionComposited: true,
         persistenceStatus: providerResult.persistenceStatus ?? null,
         inputLineage,
         parityRuntime: parityRuntimeJson,
       };
+      assertCurrentAuthBrandFence(authBrandFence, 'before_provider_persistence');
       const persistedProviderArtifact = await persistProviderResultArtifact({
         brandId: generationBrand.id,
         scopeId: user?.id,
@@ -3135,7 +3597,7 @@ export function LightchainMaterialWorkbenchPage() {
         sourceJobId: result.jobId,
         storagePath: result.storagePath,
         requireRemote: true,
-        reuseCanonicalRemoteArtifact: false,
+        reuseCanonicalRemoteArtifact: Boolean(cloudflareDataPlane && providerResult.protectedRegionComposited),
         metadata: {
           sourceWorkspace: 'lightchain-material-workbench-provider-result',
           resultKind: result.resultKind ?? 'provider',
@@ -3150,9 +3612,9 @@ export function LightchainMaterialWorkbenchPage() {
           sourceLabel: result.title,
           sourceResumePath: `/lightchain/${isPrinting ? 'printing-image' : 'fabric-image'}`,
           mode,
-          providerJobId: result.jobId ?? null,
-          providerImageId: result.imageId ?? null,
-          providerStoragePath: result.storagePath ?? null,
+          providerJobId: providerResult.providerJobId ?? result.jobId ?? null,
+          providerImageId: providerResult.providerImageId ?? result.imageId ?? null,
+          providerStoragePath: providerResult.providerStoragePath ?? result.storagePath ?? null,
           provider: result.provider ?? null,
           backendProvider: result.backendProvider ?? null,
           imageId: result.imageId ?? null,
@@ -3166,7 +3628,9 @@ export function LightchainMaterialWorkbenchPage() {
           protectedRegionComposited: result.protectedRegionComposited ?? false,
           maskApplied: result.maskApplied ?? false,
           maskCoveragePercent: result.maskCoveragePercent ?? null,
-          generationInputSignature: generationInputSignatureRef.current,
+          generationInputSignature: requestSignature,
+          ...(printProviderInput ? { compositionPreview: { printProviderInput: printProviderInput.metadata,
+            coverageMode: printCoverageMode, outputScale: printOutputScale, placement: printPlacementSummary } } : {}),
           generationIntent: isPrinting
             ? {
                 feature: 'printing-image',
@@ -3225,6 +3689,7 @@ export function LightchainMaterialWorkbenchPage() {
           parityRuntime: parityRuntimeJson,
         },
       });
+      assertCurrentAuthBrandFence(authBrandFence, 'after_provider_persistence');
       let persistedResult: WorkbenchResult = {
         ...result,
         jobId: persistedProviderArtifact.remote?.jobId ?? result.jobId,
@@ -3233,10 +3698,27 @@ export function LightchainMaterialWorkbenchPage() {
         artifactId: persistedProviderArtifact.artifact.id,
       };
       if (isPrinting) {
-        const { assetRefs } = await persistPrintResultHistory(generationBrand.id, [persistedResult]);
+        assertCurrentAuthBrandFence(authBrandFence, 'before_print_history_persistence');
+        if (!printHistoryScope) throw new Error('print_history_scope_missing');
+        const persistenceGeneration = ++printHistoryPersistenceGenerationRef.current;
+        const history = mergePrintResultHistory([persistedResult], generatedResultsRef.current.filter((candidate) => candidate.id.startsWith('print-')));
+        const { assetRefs } = await persistPrintResultHistory(generationBrand.id, history, {
+          ...printHistoryScope,
+          assertCurrent: () => {
+            if (persistenceGeneration !== printHistoryPersistenceGenerationRef.current) throw new Error('print_history_write_superseded');
+            assertCurrentAuthBrandFence(authBrandFence, 'print_provider_history_persist');
+          },
+        });
+        assertCurrentAuthBrandFence(authBrandFence, 'after_print_history_persistence');
         const assetRef = assetRefs[persistedResult.id];
         if (!assetRef) throw new Error('print_result_history_persistence_unverified');
         persistedResult = { ...persistedResult, assetRef };
+      }
+      assertCurrentAuthBrandFence(authBrandFence, 'before_provider_ui_commit');
+      if (!isCurrentRequest()) return;
+      if (cloudflareDataPlane && providerResult.clientRecoveryKey) {
+        await cloudflareDataPlane.acknowledgeImageAction(providerResult);
+        assertCurrentAuthBrandFence(authBrandFence, 'after_provider_final_ack');
       }
       setGeneratedResults((previous) => isPrinting
         ? mergePrintResultHistory([persistedResult], previous.filter((candidate) => candidate.id.startsWith('print-')))
@@ -3246,7 +3728,7 @@ export function LightchainMaterialWorkbenchPage() {
       setSurfaceConformStatus(null);
       setGeneratedResultsStale(false);
       setGenerationError(null);
-      toast.success('OpenAI画像編集の生成結果を履歴に追加しました');
+      toast.success(`${providerResult.provider === 'workers_ai' ? 'Cloudflare' : 'OpenAI'}画像編集の生成結果を履歴に追加しました`);
     } catch (error: any) {
       console.error('Provider generation failed', error);
       if (isCurrentRequest()) {
@@ -3623,15 +4105,25 @@ export function LightchainMaterialWorkbenchPage() {
   }, [currentBrand?.id, isAuthInitialized, isAuthLoading, isPrinting, libraryHandoff.artifactId, libraryHandoff.slot, user?.id]);
 
   useEffect(() => {
-    if (!isPrinting || libraryHandoff.artifactId || !isAuthInitialized || isAuthLoading || !currentBrand?.id) return;
+    if (!isPrinting || libraryHandoff.artifactId || !isAuthInitialized || isAuthLoading || !currentBrand?.id
+      || (cloudflareDataPlane && !printInputScope)) return;
     const brandId = currentBrand.id;
+    const scopeKey = printInputScopeKey(brandId, printInputScope);
     const hydrationGeneration = ++printInputHydrationGenerationRef.current;
-    printInputHydratedBrandRef.current = null;
+    setPrintInputHydratedScope(null);
+    setPrintInputStorageError(null);
     restoredPrintInputImagesRef.current.forEach((image) => releaseRestoredPrintInput(image));
     restoredPrintInputImagesRef.current = [];
     let cancelled = false;
 
-    void restorePrintInputState(brandId)
+    const assertRestoreCurrent = () => {
+      const state = useAuthStore.getState();
+      if (cancelled || hydrationGeneration !== printInputHydrationGenerationRef.current
+        || state.currentBrand?.id !== brandId || (printInputScope && state.user?.id !== printInputScope.userId)) {
+        throw new Error('print_input_context_changed');
+      }
+    };
+    void restorePrintInputState(brandId, { scope: printInputScope, assertContext: assertRestoreCurrent })
       .then(async (restored) => {
         const restoredImages = [
           ...(restored.garment ? [restored.garment] : []),
@@ -3642,6 +4134,18 @@ export function LightchainMaterialWorkbenchPage() {
           return;
         }
         restoredPrintInputImagesRef.current = restoredImages;
+        if (restored.editorState) {
+          restored.editorState.layers.forEach(({ designIndex, layerId }) => {
+            printDesignLayerIdsRef.current.set(printDesignIdentity(restored.designs[designIndex]), layerId);
+            printDesignLayerSequenceRef.current = Math.max(printDesignLayerSequenceRef.current, Number(layerId.slice('print-design-'.length)));
+          });
+          setPrintDesignLayers(restored.editorState.layers.map(({ designIndex, layerId, transform }) => {
+            const design = restored.designs[designIndex];
+            return { id: layerId, label: `デザイン ${designIndex + 1}`, originalUrl: design.processedUrl ?? '',
+              displayUrl: design.processedUrl ?? design.url, transform: { ...transform }, autoCutout: true,
+              cutoutState: design.processedUrl ? 'done' : 'processing', maskRevision: design.maskRevision ?? 0 };
+          }));
+        }
         if (restored.garment) selectPrintGarment(restored.garment, restored.garment);
         if (restored.designs.length > 0) {
           const result = await addDesigns(restored.designs);
@@ -3650,13 +4154,15 @@ export function LightchainMaterialWorkbenchPage() {
           }
         }
         if (!cancelled && hydrationGeneration === printInputHydrationGenerationRef.current) {
-          printInputHydratedBrandRef.current = brandId;
+          if (restored.editorState) setPendingPrintEditorRestore({ editorState: restored.editorState,
+            garmentUrl: restored.garment?.processedUrl ?? null, scopeKey });
+          else setPrintInputHydratedScope(scopeKey);
         }
       })
       .catch((error) => {
         if (cancelled) return;
         console.warn('Printing input restore skipped.', error);
-        printInputHydratedBrandRef.current = brandId;
+        setPrintInputStorageError('保存済みの入力を復元できませんでした。旧データは保持しています。入力を作り直す場合は「クリア」を押してください。');
       });
 
     return () => {
@@ -3664,7 +4170,41 @@ export function LightchainMaterialWorkbenchPage() {
     };
     // addDesigns/selectPrintGarment intentionally bind to the current workbench session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentBrand?.id, isAuthInitialized, isAuthLoading, isPrinting, libraryHandoff.artifactId]);
+  }, [currentBrand?.id, isAuthInitialized, isAuthLoading, isPrinting, libraryHandoff.artifactId, printInputScope]);
+
+  useEffect(() => {
+    const pending = pendingPrintEditorRestore;
+    if (!pending || pending.scopeKey !== printInputCurrentScopeKey
+      || (pending.garmentUrl && (printGarmentProcessed !== pending.garmentUrl || printGarmentCutoutState !== 'done'))) return;
+    let cancelled = false;
+    void (async () => {
+      const editor = pending.editorState;
+      const surface = editor.manualPrintableSurface;
+      const stageMask = surface && printGarmentProcessed
+        ? await buildPrintableSurfaceStageMaskDataUrl({ surface, garmentUrl: printGarmentProcessed, stageSize: printPreviewStageSize }) : null;
+      if (surface && !stageMask) throw new Error('print_input_surface_source_missing');
+      if (cancelled) return;
+      setPrintCoverageMode(editor.coverageMode);
+      setPrintOutputScale(editor.outputScale);
+      setPrintPlacementConfirmed(editor.placementConfirmed);
+      setPrintPlacementSessionOpen(false);
+      printPlacementSessionOpenRef.current = false;
+      if (surface) {
+        printableSurfaceRevisionRef.current = surface.identity.manualRevision;
+        manualPrintableSurfaceRef.current = surface;
+        setManualPrintableSurface(surface);
+        setPrintableSurfaceStageMaskUrl(stageMask);
+        setPrintableSurfaceEnabled(editor.printableSurfaceEnabled);
+      }
+      setPendingPrintEditorRestore(null);
+      setPrintInputHydratedScope(pending.scopeKey);
+    })().catch(error => {
+      if (cancelled) return;
+      console.warn('Printing layout restore failed.', error);
+      setPrintInputStorageError('保存済みの印刷範囲を検証できませんでした。旧データは保持しています。「クリア」から入力を作り直せます。');
+    });
+    return () => { cancelled = true; };
+  }, [pendingPrintEditorRestore, printInputCurrentScopeKey, printGarmentProcessed, printGarmentCutoutState]);
 
   useEffect(() => () => {
     restoredPrintInputImagesRef.current.forEach((image) => releaseRestoredPrintInput(image));
@@ -3672,7 +4212,9 @@ export function LightchainMaterialWorkbenchPage() {
   }, []);
 
   useEffect(() => {
-    if (!isPrinting || !currentBrand?.id || printInputHydratedBrandRef.current !== currentBrand.id) return;
+    if (!isPrinting || !currentBrand?.id || printInputHydratedScope !== printInputCurrentScopeKey
+      || pendingPrintEditorRestore || (cloudflareDataPlane && !printInputScope)
+      || printDesignLayers.length !== printDesigns.length) return;
     const brandId = currentBrand.id;
     const persistenceGeneration = ++printInputPersistenceGenerationRef.current;
     const processedState: PrintInputProcessedState = {
@@ -3694,11 +4236,34 @@ export function LightchainMaterialWorkbenchPage() {
         maskRevision: printDesignMaskRevisions[index] ?? 0,
       })),
     };
-    void persistPrintInputState(brandId, printGarment, printDesigns, processedState)
+    const editorState: PrintInputEditorState = { version: 1,
+      layers: printDesignLayers.map(layer => ({ layerId: layer.id, transform: { ...layer.transform },
+        designIndex: printDesigns.findIndex(design => getPrintDesignLayerId(design) === layer.id) })),
+      coverageMode: printCoverageMode, outputScale: printOutputScale, placementConfirmed: printPlacementConfirmed,
+      printableSurfaceEnabled, ...(manualPrintableSurface ? { manualPrintableSurface } : {}),
+    };
+    const assertPersistenceCurrent = () => {
+      const state = useAuthStore.getState();
+      if (persistenceGeneration !== printInputPersistenceGenerationRef.current
+        || state.currentBrand?.id !== brandId || (printInputScope && state.user?.id !== printInputScope.userId)) {
+        throw new Error('print_input_context_changed');
+      }
+    };
+    // Pointer moves do not rewrite every source/mask Blob for every frame.
+    const timer = window.setTimeout(() => void persistPrintInputState(brandId, printGarment, printDesigns, processedState,
+      { scope: printInputScope, editorState, assertContext: assertPersistenceCurrent,
+        replaceUnreadableSnapshot: printInputReplaceUnreadableRef.current })
+      .then(() => {
+        if (persistenceGeneration !== printInputPersistenceGenerationRef.current) return;
+        printInputReplaceUnreadableRef.current = false;
+        setPrintInputStorageError(null);
+      })
       .catch((error) => {
         if (persistenceGeneration !== printInputPersistenceGenerationRef.current) return;
         console.warn('Printing input persistence skipped.', error);
-      });
+        setPrintInputStorageError('この入力を端末へ保存できませんでした。再読み込みすると最後に保存できた入力へ戻ります。');
+      }), 250);
+    return () => { window.clearTimeout(timer); printInputPersistenceGenerationRef.current += 1; };
   }, [
     currentBrand?.id,
     isPrinting,
@@ -3715,6 +4280,9 @@ export function LightchainMaterialWorkbenchPage() {
     printDesignProcessedUrls,
     selectedPrintGarmentMaskCandidate,
     selectedPrintGarmentMaskCandidateId,
+    printInputScope, printInputCurrentScopeKey, printInputHydratedScope, pendingPrintEditorRestore,
+    getPrintDesignLayerId, printDesignLayers, printCoverageMode, printOutputScale, printPlacementConfirmed,
+    printableSurfaceEnabled, manualPrintableSurface,
   ]);
 
   const openGarmentMaskEditor = async () => {
@@ -4161,29 +4729,76 @@ export function LightchainMaterialWorkbenchPage() {
     toast.success(`「${destinationLabel}」へお気に入り保存しました`);
   };
 
-  const saveResultToCanvas = (result: WorkbenchResult) => {
+  const saveResultToCanvas = async (result: WorkbenchResult) => {
     if (!currentBrand?.id || result.brandId !== currentBrand.id) {
       toast.error('ブランドが変わったためCanvasへ保存できません。現在のブランドで再生成してください');
       return;
     }
-    const projectId = createProject(`Lightchain: ${result.title}`, currentBrand.id);
+    const saveAuthBrandFence = captureCurrentAuthBrandFence(currentBrand.id);
+    if (!saveAuthBrandFence) {
+      toast.error('ブランドのアクセス確認が完了していないため、保存を開始できません');
+      return;
+    }
+    const canContinueWithAuthBrandFence = (phase: string): boolean => {
+      try {
+        assertCurrentAuthBrandFence(saveAuthBrandFence, phase);
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'ブランドのアクセス確認が失効しました');
+        return false;
+      }
+    };
+
+    let canvasSource: string;
+    let localSourceMetadata: Awaited<ReturnType<typeof prepareProviderCanvasSource>>['sourceMetadata'];
+    try {
+      const preparedSource = await prepareProviderCanvasSource(result);
+      if (!canContinueWithAuthBrandFence('canvas_after_prepare')) return;
+      canvasSource = preparedSource.source;
+      localSourceMetadata = preparedSource.sourceMetadata;
+    } catch (error) {
+      console.error('Provider result Canvas handoff preparation failed:', error);
+      toast.error('生成結果をCanvas用に保存できませんでした。結果を再生成せず、保存状態を確認してください');
+      return;
+    }
+
+    if (!canContinueWithAuthBrandFence('canvas_before_project')) return;
+    const saveBrand = useAuthStore.getState().currentBrand;
+    if (!saveBrand || saveBrand.id !== saveAuthBrandFence.brandId) {
+      toast.error('ブランドのアクセス確認が失効しました');
+      return;
+    }
+    const projectId = createProject(`Lightchain: ${result.title}`, saveBrand.id);
     // Provider results are rendered from the protected in-memory composite,
     // which is intentionally a data URL. Once the provider artifact has been
     // persisted, keep only its canonical Storage path in the local artifact
     // ledger so a large PNG cannot exhaust localStorage before Canvas opens.
     // The Canvas object below still receives result.imageUrl for the active
     // session and carries the same path for remote/local readback.
-    const canvasArtifactImageUrl = result.storagePath ? '' : result.imageUrl;
+    const canvasArtifactImageUrl = result.storagePath ? '' : canvasSource;
+    const isLocalFabricPreview = result.generationMode === 'preview'
+      && result.resultKind === 'fabric'
+      && result.backendProvider === 'browser-local-fabric-composition-v1';
+    const isLocalPrintPreview = result.generationMode === 'preview'
+      && (result.resultKind === 'exact' || result.resultKind === 'fabric' || result.resultKind === 'surface')
+      && result.backendProvider === 'browser-local-print-composition-v1';
+    const isLocalMaterialPreview = isLocalFabricPreview || isLocalPrintPreview;
+    const canvasArtifactFeatureType = isLocalFabricPreview
+      ? FABRIC_LOCAL_RESULT_FEATURE_TYPE
+      : isLocalPrintPreview
+        ? PRINT_LOCAL_RESULT_FEATURE_TYPE
+      : 'lightchain-material-result';
     const parityRuntimeJson = result.parityRuntime ?? serializeLightchainParityRuntime(buildLightchainParityRuntime({
       rowId: isPrinting ? 'printing-image' : 'fabric-image',
       inputRoles: isPrinting ? ['garment', 'print-artwork'] : ['model-or-design', 'textile'],
       fixtureId: `${result.id}:${result.jobId ?? 'unknown'}`,
     }));
+    if (!canContinueWithAuthBrandFence('canvas_before_persistence')) return;
     const artifact = saveWorkspaceArtifactPersisted({
       id: result.id,
-      brandId: currentBrand.id,
+      brandId: saveBrand.id,
       scopeId: user?.id,
-      featureType: 'lightchain-material-result',
+      featureType: canvasArtifactFeatureType,
       title: result.title,
       imageUrl: canvasArtifactImageUrl,
       prompt: result.note,
@@ -4191,8 +4806,12 @@ export function LightchainMaterialWorkbenchPage() {
       sourceJobId: result.jobId ?? undefined,
       metadata: {
         title: result.title,
-        source: 'lightchain-material-provider-v1',
-        sourceProviderResultArtifactId: result.artifactId ?? null,
+        source: isLocalMaterialPreview
+          ? 'lightchain-material-local-preview-v1'
+          : 'lightchain-material-provider-v1',
+        ...(isLocalMaterialPreview
+          ? { sourceLocalPreviewArtifactId: result.artifactId ?? null, localPreviewArtifact: true }
+          : { sourceProviderResultArtifactId: result.artifactId ?? null }),
         generationMode: result.generationMode ?? 'provider',
         provider: result.provider ?? null,
         backendProvider: result.backendProvider ?? null,
@@ -4215,6 +4834,11 @@ export function LightchainMaterialWorkbenchPage() {
         printResultOutputSize: result.outputSize ?? null,
         printResultGeneratedAt: result.generatedAt ?? null,
         parityRuntime: parityRuntimeJson,
+        ...(localSourceMetadata ? {
+          sourceIdentity: JSON.parse(JSON.stringify(localSourceMetadata.sourceIdentity)) as Json,
+          sourceRevision: JSON.parse(JSON.stringify(localSourceMetadata.sourceRevision)) as Json,
+          sourceReadback: JSON.parse(JSON.stringify(localSourceMetadata.sourceReadback)) as Json,
+        } : {}),
       },
     });
     if (!artifact.ok) {
@@ -4222,6 +4846,7 @@ export function LightchainMaterialWorkbenchPage() {
       toast.error('Canvas保存に失敗しました。生成結果の保存先証跡を確認してください');
       return;
     }
+    if (!canContinueWithAuthBrandFence('canvas_before_ui_commit')) return;
     const objectId = addObject({
       type: 'image',
       x: 96,
@@ -4234,10 +4859,12 @@ export function LightchainMaterialWorkbenchPage() {
       opacity: 1,
       locked: false,
       visible: true,
-      src: result.imageUrl,
+      src: canvasSource,
       label: result.title,
       metadata: {
-        feature: 'lightchain-material-provider',
+        feature: isLocalMaterialPreview
+          ? 'lightchain-material-local-preview'
+          : 'lightchain-material-provider',
         prompt: result.note,
         generation: 1,
         provider: result.provider ?? null,
@@ -4257,11 +4884,17 @@ export function LightchainMaterialWorkbenchPage() {
           lightchainFeatureTitle: isPrinting ? 'プリントイメージ' : '生地イメージ',
           lightchainTaskCodes: [isPrinting ? 'printing_image' : 'fabric_image'],
         },
-        parameters: {
-          sourceProviderResultArtifactId: result.artifactId ?? null,
-        },
+        parameters: isLocalMaterialPreview
+          ? { sourceLocalPreviewArtifactId: result.artifactId ?? null }
+          : { sourceProviderResultArtifactId: result.artifactId ?? null },
         legalSafety: { rightsConfirmed: true },
         timestamp: new Date().toISOString(),
+        ...(localSourceMetadata ? {
+          sourceIdentity: localSourceMetadata.sourceIdentity,
+          sourceRevision: localSourceMetadata.sourceRevision,
+          sourceReadback: localSourceMetadata.sourceReadback,
+          persistenceStatus: 'persistent-local-canvas-asset',
+        } : {}),
       },
     });
     selectObject(objectId);
@@ -4338,7 +4971,7 @@ export function LightchainMaterialWorkbenchPage() {
     }
     const fabricResultIds = new Set(fabricResults.map((result) => result.id));
     setGeneratedResults((current) => current.filter((result) => !fabricResultIds.has(result.id)));
-    setSelectedResult((current) => current && fabricResultIds.has(current.id) ? null : current);
+    closeDeletedResultSurfaces(fabricResultIds);
     setGeneratedResultsStale(false);
     toast.success('生地生成履歴をすべて削除しました');
   };
@@ -4420,27 +5053,36 @@ export function LightchainMaterialWorkbenchPage() {
       data-testid="lightchain-material-workbench"
       data-workbench-mode={isPrinting ? 'printing' : 'fabric'}
       data-workbench-state="hydrated"
-      className="min-h-screen bg-[#0b1113] text-white"
+      data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+      data-workflow-feature={isPrinting ? 'printing-image' : 'fabric-image'}
+      data-workflow-input-roles={workflowContract?.inputRoles.join(',') ?? ''}
+      data-workflow-result-destinations={workflowContract?.resultDestinations.join(',') ?? ''}
+      data-workflow-lifecycle={workflowContract?.lifecycle.join(',') ?? ''}
+      data-workflow-source-input-mode={workflowContract?.sourceInputMode ?? ''}
+      data-workflow-retry-policy={workflowContract?.retry.retainsLastCompletedResult && workflowContract.retry.preservesInputLineage && workflowContract.retry.blocksDuplicateSubmit ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit' : ''}
+      data-workflow-rights-gate={workflowContract?.rightsGate ?? ''}
+      className={isPrinting ? 'min-h-screen bg-[#0b1113] text-white' : 'h-full min-h-0 bg-[#0b1113] text-white'}
     >
-      <nav
-        aria-label="ツールバー"
-        data-testid="lightchain-source-toolbar"
-        className="mb-4 flex flex-wrap items-center gap-1.5 rounded-xl border border-white/10 bg-[#111719] px-2 py-2 text-sm font-semibold text-neutral-300"
-      >
-        {lightchainSourceToolbarItems.map((item, index) => (
-          <Link
-            key={item.label}
-            to={item.to}
-            className={`rounded-lg px-3 py-2 transition hover:bg-white/[0.08] hover:text-white ${index === 0 ? 'bg-white/[0.08] text-white' : ''}`}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-      <div className="hidden">
+      <div className="contents">
+        <nav
+          aria-label="ツールカテゴリ"
+          data-testid="lightchain-source-toolbar"
+          className="grid grid-cols-2 gap-1 border-b border-white/10 bg-[#0b1113] p-2 text-xs font-semibold text-neutral-300 sm:grid-cols-4 sm:text-sm"
+        >
+          {lightchainSourceToolbarItems.map((item) => (
+            <Link
+              key={item.label}
+              to={item.to}
+              aria-current={item.category === 'graphics' ? 'page' : undefined}
+              className={`rounded-lg px-3 py-2 text-center transition hover:bg-white/[0.08] hover:text-white ${item.category === 'graphics' ? 'bg-white/[0.08] text-white' : ''}`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
         <aside
           aria-label="Light Chainグラフィックツール"
-          className="hidden rounded-2xl border border-white/10 bg-[#111719] p-2 shadow-2xl shadow-black/20 lg:block"
+          className="hidden"
         >
           <div className="sticky top-[88px] flex flex-col items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-300/15 text-cyan-200" aria-hidden="true">
@@ -4467,7 +5109,7 @@ export function LightchainMaterialWorkbenchPage() {
           </div>
         </aside>
 
-        <main className="min-w-0" data-flow-state={materialFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[materialFlowState]}>
+        <main className="hidden" data-flow-state={materialFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[materialFlowState]}>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <button
@@ -4481,6 +5123,9 @@ export function LightchainMaterialWorkbenchPage() {
             {activeMaterialTab.label}
           </h1>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-white/55">{activeMaterialTab.description}</p>
+          {cloudflareDataPlane && <p className="mt-2 max-w-2xl text-xs leading-5 text-amber-200" data-testid="cloudflare-protected-edit-notice">
+            {isPrinting ? CLOUDFLARE_PRINT_INPUT_NOTICE : `${CLOUDFLARE_PROTECTED_EDIT_NOTICE} 現在は品質検証中で、元画像＋追加参照2枚までに対応します。`}
+          </p>}
           <div className="mt-3 flex flex-wrap gap-2" data-testid="lightchain-material-input-contract">
             {activeMaterialInputs.map((slot, index) => (
               <span key={slot.id} className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/55">
@@ -4875,7 +5520,7 @@ export function LightchainMaterialWorkbenchPage() {
                 </div>
               </div>
               <label className="block">
-                <span className="mb-2 block font-semibold text-white">出力解像度</span>
+        <span className="mb-2 block font-semibold text-white">最終合成の出力解像度</span>
                 <select
                   value={printOutputScale}
                   disabled={isGenerating}
@@ -5376,7 +6021,7 @@ export function LightchainMaterialWorkbenchPage() {
                           </p>
                           <p className="mt-1 text-[10px] text-white/40">
                             {run.results.some((result) => result.resultKind === 'provider')
-                              ? 'provider / OpenAI画像編集'
+                              ? `provider / ${run.results.some(result=>result.provider === 'workers_ai') ? 'Cloudflare' : 'OpenAI'}画像編集`
                               : `exact / fabric${run.results.some((result) => result.resultKind === 'surface') ? ' / experimental' : ''}`}
                           </p>
                         </div>
@@ -5427,6 +6072,7 @@ export function LightchainMaterialWorkbenchPage() {
           className="min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
         >
           <div className="mx-auto max-w-[1680px]">
+            {printInputStorageError && <p role="alert" data-testid="print-input-storage-error" className="mb-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3 text-sm text-amber-100">{printInputStorageError}</p>}
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
 
             <section className="min-w-0 rounded-2xl border border-white/10 bg-[#171d20] p-4 shadow-2xl shadow-black/20 lg:p-5">
@@ -5434,24 +6080,18 @@ export function LightchainMaterialWorkbenchPage() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/70">プリントイメージ</p>
                   <p className="mt-1 text-sm text-white/60">プリントイメージを使用し、版下を作成せずに印刷効果を確認できます</p>
+                  {cloudflareDataPlane && <p data-testid="cloudflare-print-provider-input-notice" className="mt-2 text-xs leading-5 text-amber-100/80">{CLOUDFLARE_PRINT_INPUT_NOTICE}</p>}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => navigate('/history')}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-white/75 transition hover:border-cyan-300/40 hover:text-cyan-100"
-                >
-                  <History className="h-4 w-4" aria-hidden="true" />
-                  生成履歴
-                </button>
               </div>
 
-              <nav className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#111719] p-1 sm:grid-cols-4" aria-label="素材ツール">
+              <nav className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#111719] p-1 sm:grid-cols-4" aria-label="素材ツール" role="tablist">
                 {LIGHTCHAIN_MATERIAL_TABS.map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => navigate(tab.route)}
-                    aria-current={tab.id === activeMaterialTab.id ? 'page' : undefined}
+                    role="tab"
+                    aria-selected={tab.id === activeMaterialTab.id}
                     className={`rounded-lg px-2 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${tab.id === activeMaterialTab.id
                       ? 'bg-[#737d84] text-white shadow-lg shadow-black/20'
                       : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
@@ -5515,6 +6155,12 @@ export function LightchainMaterialWorkbenchPage() {
                     label="画像をアップロード"
                     required
                     value={printDesigns[0] ?? null}
+                    multiple={Boolean(cloudflareDataPlane)}
+                    maxImages={6}
+                    multipleValue={printDesigns}
+                    onMultipleChange={addDesigns}
+                    multiplePreviewUrls={printDesigns.map((_, index) => printDesignCutoutStates[index] === 'done' ? printDesignProcessedUrls[index] ?? null : null)}
+                    multipleProcessingStates={printDesigns.map((_, index) => printDesignCutoutStates[index] === 'processing')}
                     galleryTitle="素材を選択"
                     confirmGallerySelection
                     galleryConfirmLabel="適用"
@@ -5532,18 +6178,83 @@ export function LightchainMaterialWorkbenchPage() {
                     previewUrl={printDesignCutoutStates[0] === 'done' ? printDesignProcessedUrls[0] : null}
                     processingLabel="プリントを処理中"
                   />
+                  {cloudflareDataPlane && <p className="mt-2 text-xs text-white/55">{printDesigns.length} / 6件。表示中の素材をすべて同じ配置画像へ含めます。</p>}
                 </div>
 
-                <Button
-                  onClick={() => void handleGenerate()}
-                  isLoading={isGenerating}
-                  disabled={isGenerating || !lightchainPrintReady}
-                  className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
-                  size="lg"
-                  leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
-                >
-                  {isGenerating ? '生成中…' : 'AI生成'}
-                </Button>
+                {cloudflareDataPlane && printGarmentProcessed && printDesigns.length > 0 && (
+                  <details data-testid="cloudflare-print-placement-controls" className="rounded-xl border border-white/10 bg-[#202629] p-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-cyan-100">配置・マスク・出力サイズを調整</summary>
+                    <p className="my-3 text-xs leading-5 text-white/55">現在の服の切り抜きに配置します。画像を選び、ドラッグ・拡大・回転・反転・重なり順を調整できます。配置は端末へ自動保存されます。</p>
+                    <PrintingCompositionStage
+                      garmentUrl={printGarmentProcessed}
+                      garmentMaskUrl={printGarmentProcessed}
+                      garmentMaskConfirmed={printGarmentCutoutState === 'done'}
+                      garmentMaskReviewed={hasConfirmedPrintGarmentMask}
+                      designClipMaskUrl={printCoverageMode === 'spot' && printableSurfaceEnabled ? printableSurfaceStageMaskUrl : null}
+                      layers={stageLayers}
+                      selectedLayerId={selectedLayerId}
+                      onSelectLayer={selectLayer}
+                      onCommitLayer={({ id, transform }) => {
+                        setPrintPlacementConfirmed(false);
+                        setPrintDesignLayers(previous => previous.map(layer => layer.id === id ? { ...layer, transform } : layer));
+                      }}
+                      onReorderLayer={({ id, action }) => {
+                        setPrintPlacementConfirmed(false);
+                        setPrintDesignLayers(previous => reorderPrintDesignLayers(previous, id, action));
+                      }}
+                    />
+                    {printDesignLayers.find(layer => layer.id === selectedLayerId) && <label className="mt-3 flex items-center gap-3 text-xs text-white/70">
+                      選択プリントの不透明度
+                      <input type="range" min="0" max="1" step="0.05" aria-label="選択プリントの不透明度"
+                        value={printDesignLayers.find(layer => layer.id === selectedLayerId)!.transform.opacity}
+                        onChange={event => {
+                          const opacity = Number(event.target.value);
+                          setPrintPlacementConfirmed(false);
+                          setPrintDesignLayers(previous => previous.map(layer => layer.id === selectedLayerId ? { ...layer, transform: { ...layer.transform, opacity } } : layer));
+                        }} />
+                    </label>}
+                    <label className="mt-3 flex items-center justify-between gap-3 text-xs text-white/70">
+                      最終合成の出力解像度
+                      <select aria-label="最終合成の出力解像度" value={printOutputScale} onChange={event => setPrintOutputScale(Number(event.target.value) === 2 ? 2 : 1)} className="rounded bg-[#111719] p-2">
+                        <option value="1">720 × 900</option><option value="2">1440 × 1800</option>
+                      </select>
+                    </label>
+                    <div className="mt-3 flex flex-wrap gap-3 text-xs text-cyan-100">
+                      <button type="button" onClick={() => void openGarmentMaskEditor()}>服の輪郭を調整</button>
+                      <button type="button" onClick={() => void openPrintableSurfaceEditor()}>印刷可能面を指定</button>
+                      {manualPrintableSurface && <label className="flex items-center gap-2"><input type="checkbox" checked={printableSurfaceEnabled}
+                        onChange={event => setPrintableSurfaceEnabled(event.target.checked)} />手動の印刷可能面を使用</label>}
+                    </div>
+                  </details>
+                )}
+
+                {!providerRightsConfirmed ? (
+                  <button
+                    type="button"
+                    data-testid="lightchain-print-generate"
+                    onClick={() => {
+                      pendingRightsGenerationRef.current = true;
+                      setRightsConfirmationDraft(false);
+                      setRightsConfirmationOpen(true);
+                    }}
+                    disabled={isGenerating}
+                    className="w-full rounded-xl bg-[#343a3d] px-4 py-3 text-sm font-semibold text-white/65 transition hover:bg-[#40484c] hover:text-white disabled:cursor-wait disabled:opacity-50"
+                  >
+                    権利を確認してAI生成
+                  </button>
+                ) : (
+                  <Button
+                    data-testid="lightchain-print-generate"
+                    onClick={() => void handleGenerate()}
+                    isLoading={isGenerating}
+                    disabled={isGenerating || !lightchainPrintReady}
+                    className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
+                    size="lg"
+                    leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
+                  >
+                    {isGenerating ? '生成中…' : 'AI生成'}
+                  </Button>
+                )}
 
                 {generationError && (
                   <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300/25 bg-rose-950/30 px-3 py-2 text-xs leading-relaxed text-rose-100">
@@ -5613,7 +6324,7 @@ export function LightchainMaterialWorkbenchPage() {
                       <div>
                         <p className="text-xs font-semibold text-white/80">プリントイメージ {runIndex + 1}{runIndex === 0 && !progressivePrintRun ? '（最新）' : ''}</p>
                         <p className="mt-1 text-[10px] text-white/40">
-                          {run.results.some((result) => result.resultKind === 'provider') ? 'provider / OpenAI画像編集' : 'スポット／全体の生成結果'}
+                          {run.results.some((result) => result.resultKind === 'provider') ? `provider / ${run.results.some(result=>result.provider === 'workers_ai') ? 'Cloudflare' : 'OpenAI'}画像編集` : 'スポット／全体の生成結果'}
                         </p>
                       </div>
                       <span className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-[10px] text-white/45">{run.results.length}結果</span>
@@ -5643,35 +6354,22 @@ export function LightchainMaterialWorkbenchPage() {
       {!isPrinting && (
         <div
           data-testid="lightchain-fabric-parity-view"
-          className="min-h-screen bg-[#0b1113] px-3 py-4 text-white sm:px-5 lg:px-6 lg:py-6"
+          className="min-h-screen overflow-hidden bg-[#0b1113] px-3 py-4 text-white sm:px-4 lg:h-[calc(100vh-50px)] lg:min-h-0 lg:overflow-hidden lg:px-4 lg:py-4"
         >
-          <div className="mx-auto max-w-[1680px]">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
+          <div className="h-full w-full">
+            <div className="grid h-full gap-4 lg:grid-cols-[minmax(0,596px)_minmax(360px,1fr)]">
 
-            <section className="min-w-0 rounded-2xl border border-white/10 bg-[#171d20] p-4 shadow-2xl shadow-black/20 lg:p-5">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/70">生地イメージ</p>
-                  <p className="mt-1 text-sm text-white/60">異なる生地の質感を商品画像で確認できます</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigate('/history')}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/15 px-3 py-2 text-xs font-semibold text-white/75 transition hover:border-cyan-300/40 hover:text-cyan-100"
-                >
-                  <History className="h-4 w-4" aria-hidden="true" />
-                  生成履歴
-                </button>
-              </div>
+            <section className="min-w-0 overflow-y-auto scrollbar-hide rounded-lg bg-[#171d20] p-4 shadow-2xl shadow-black/20">
 
-              <nav className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#111719] p-1 sm:grid-cols-4" aria-label="素材ツール">
+              <nav className="mb-4 grid grid-cols-2 gap-0 rounded-xl border border-white/10 px-[3px] py-[1.5px] sm:grid-cols-4" aria-label="素材ツール" role="tablist">
                 {LIGHTCHAIN_MATERIAL_TABS.map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => navigate(tab.route)}
-                    aria-current={tab.id === activeMaterialTab.id ? 'page' : undefined}
-                    className={`rounded-lg px-2 py-2 text-xs font-semibold transition sm:px-3 sm:text-sm ${tab.id === activeMaterialTab.id
+                    role="tab"
+                    aria-selected={tab.id === activeMaterialTab.id}
+                    className={`min-h-[31px] rounded-lg px-2 py-1 text-xs font-semibold transition sm:px-3 sm:text-sm ${tab.id === activeMaterialTab.id
                       ? 'bg-[#737d84] text-white shadow-lg shadow-black/20'
                       : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
                   >
@@ -5680,11 +6378,26 @@ export function LightchainMaterialWorkbenchPage() {
                 ))}
               </nav>
 
-              <div className="space-y-4">
+              <div
+                data-testid="lightchain-fabric-deprecation-banner"
+                className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300/20 bg-rose-950/25 px-4 py-3"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-rose-100">この機能はまもなく終了します。</p>
+                  <p className="mt-1 text-xs leading-5 text-white/55">より高機能な画像生成機能はデザイン制作ワークスペースでご利用ください</p>
+                </div>
+                <Link
+                  to="/designProduction"
+                  className="shrink-0 text-xs font-semibold text-cyan-200 transition hover:text-cyan-100"
+                >
+                  今すぐ体験
+                </Link>
+              </div>
 
-                <section data-testid="lightchain-fabric-design-input" className="rounded-xl border border-white/10 bg-[#202629] p-3">
-                  <p className="mb-2 text-sm font-semibold text-white">モデル/デザイン画像 *</p>
-                  <p className="mb-3 text-xs text-white/50">20MB以下の画像アップロードしてください</p>
+              <div className="flex flex-col gap-4">
+
+                <section data-testid="lightchain-fabric-design-input" className="order-1 mt-0.5 rounded-none bg-transparent p-0">
+                  <h6 className="mb-4 text-base font-semibold text-white">モデル/デザイン画像*</h6>
                   <ImageSelector
                     label="モデル/デザイン画像"
                     required
@@ -5697,13 +6410,14 @@ export function LightchainMaterialWorkbenchPage() {
                     allowedReferenceTypes={['base']}
                     defaultReferenceType="base"
                     platformAssetRole="garment"
-                    hint="商品・モデル・デザインの基準画像を入れます"
+                    lightchainSourceAppearance
+                    sourceDropLabel="参考画像をアップロードしてください"
+                    sourceDropHint="20MB以下の画像アップロードしてください"
                   />
                 </section>
 
-                <section data-testid="lightchain-fabric-input" className="rounded-xl border border-white/10 bg-[#202629] p-3">
-                  <p className="mb-2 text-sm font-semibold text-white">生地画像 *</p>
-                  <p className="mb-3 text-xs text-white/50">質感を反映する生地の参照画像をアップロードしてください</p>
+                <section data-testid="lightchain-fabric-input" className="order-2 rounded-none bg-transparent p-0">
+                  <h6 className="mb-1 text-base font-semibold text-white">生地画像*</h6>
                   <ImageSelector
                     label="生地画像"
                     required
@@ -5716,39 +6430,78 @@ export function LightchainMaterialWorkbenchPage() {
                     allowedReferenceTypes={['base']}
                     defaultReferenceType="base"
                     platformAssetRole="textile"
-                    hint="布・編地・光沢などの質感素材を入れます"
+                    lightchainSourceAppearance
+                    sourceDropLabel="参考画像をアップロードしてください"
+                    sourceDropHint="20MB以下の画像アップロードしてください"
                   />
                 </section>
 
-                <label className="block rounded-xl border border-white/10 bg-[#202629] p-3" htmlFor="lightchain-fabric-prompt">
-                  <span className="text-sm font-semibold text-white">キーワードを追加してください（任意）</span>
+                <section className="order-4 block rounded-xl border border-white/10 bg-[#202629] p-3">
+                  <h6 className="text-sm font-semibold text-white">キーワードを追加してください（任意）</h6>
                   <textarea
                     id="lightchain-fabric-prompt"
                     value={fabricPrompt}
                     onChange={(event) => setFabricPrompt(event.target.value)}
-                    placeholder="白い衣服に指定した生地の質感を自然に反映"
+                    placeholder="素材はシルクサテンで、柔らかく光沢感があります。それを上衣またはパンツに置き換えてください。"
+                    maxLength={500}
                     rows={3}
                     className="mt-3 w-full resize-none rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-300/50"
                   />
-                </label>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="rounded-xl border border-white/10 bg-[#202629] p-3">
-                    <span className="block text-xs font-semibold text-white/75">画像比率</span>
-                    <select
-                      value={fabricImageRatio}
-                      onChange={(event) => setFabricImageRatio(event.target.value)}
-                      className="mt-2 w-full rounded-lg border border-white/10 bg-[#111719] px-3 py-2 text-sm text-white outline-none focus:border-cyan-300/50"
+                  <div className="mt-1 flex items-center justify-between text-xs text-white/45">
+                    <span>{fabricPrompt.length} / 500</span>
+                    <button
+                      type="button"
+                      onClick={() => setFabricPrompt('')}
+                      disabled={!fabricPrompt}
+                      className="rounded px-1.5 py-0.5 transition hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-100"
                     >
-                      <option>画像比率自動</option>
-                      <option>正方形 1:1</option>
-                      <option>縦長 4:5</option>
-                      <option>横長 16:9</option>
-                    </select>
-                  </label>
+                      全削除
+                    </button>
+                  </div>
+                </section>
+
+                <div className="order-2 relative h-[73px]">
+                  <select
+                    aria-label="画像比率"
+                    value={fabricImageRatio}
+                    onChange={(event) => setFabricImageRatio(event.target.value)}
+                    className="absolute left-0 top-[23px] h-[42px] w-[202px] rounded-md border border-white/10 bg-[#111719] px-3 text-sm text-white outline-none focus:border-cyan-300/50"
+                  >
+                    <option>画像比率自動</option>
+                    <option>正方形 1:1</option>
+                    <option>縦長 4:5</option>
+                    <option>横長 16:9</option>
+                  </select>
+                  {!providerRightsConfirmed ? (
+                    <button
+                      type="button"
+                      data-testid="lightchain-fabric-generate"
+                      onClick={() => {
+                        pendingRightsGenerationRef.current = true;
+                        setRightsConfirmationDraft(false);
+                        setRightsConfirmationOpen(true);
+                      }}
+                      disabled={isGenerating}
+                      className="absolute right-0 top-[25px] h-[40px] w-[288px] rounded-md bg-[#343a3d] px-4 text-sm font-semibold text-white/65 transition hover:bg-[#40484c] hover:text-white disabled:cursor-wait disabled:opacity-50"
+                    >
+                      権利を確認してAI生成
+                    </button>
+                  ) : (
+                    <Button
+                      data-testid="lightchain-fabric-generate"
+                      onClick={() => void handleGenerate()}
+                      isLoading={isGenerating}
+                      disabled={isGenerating || fabricPreviewState !== 'done' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
+                      className="absolute right-0 top-[25px] h-[40px] w-[288px] bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
+                      size="lg"
+                      leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
+                    >
+                      {isGenerating ? '生成中…' : 'AI生成'}
+                    </Button>
+                  )}
                 </div>
 
-                <div ref={stageRef} data-testid="lightchain-fabric-preview" className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-neutral-900">
+                <div ref={stageRef} data-testid="lightchain-fabric-preview" className={`order-5 relative aspect-[4/5] overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 ${fabricDesign || fabricBase ? '' : 'hidden'}`}>
                   {fabricTryOnPreviewUrl ? (
                     <img src={fabricTryOnPreviewUrl} alt="生地を衣服領域へ適用したプレビュー" className="absolute inset-0 h-full w-full object-contain bg-black/10" />
                   ) : fabricDesign ? (
@@ -5771,23 +6524,12 @@ export function LightchainMaterialWorkbenchPage() {
                   </div>
                 </div>
 
-                  <Button
-                    data-testid="lightchain-fabric-generate"
-                    onClick={() => void handleGenerate()}
-                    isLoading={isGenerating}
-                    disabled={isGenerating || fabricPreviewState !== 'done' || !fabricBase || !fabricDesign || fabricPresetIds.length === 0}
-                  className="w-full bg-gradient-to-r from-cyan-300 via-teal-300 to-violet-300 text-slate-950 hover:brightness-105"
-                  size="lg"
-                  leftIcon={isGenerating ? undefined : <Sparkles className="h-5 w-5" />}
-                >
-                  {isGenerating ? '生成中…' : 'AI生成'}
-                </Button>
-                {!isAuthInitialized || isAuthLoading ? (
-                  <p role="status" className="rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] px-3 py-2 text-xs leading-relaxed text-cyan-100">
+                {brandResolutionPending ? (
+                  <p role="status" className={`order-6 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] px-3 py-2 text-xs leading-relaxed text-cyan-100 ${fabricDesign || fabricBase ? '' : 'hidden'}`}>
                     ブランド情報を読み込んでいます…
                   </p>
                 ) : !currentBrand?.id ? (
-                  <p role="status" className="rounded-xl border border-amber-300/20 bg-amber-950/20 px-3 py-2 text-xs leading-relaxed text-amber-100">
+                  <p role="status" className={`order-6 rounded-xl border border-amber-300/20 bg-amber-950/20 px-3 py-2 text-xs leading-relaxed text-amber-100 ${fabricDesign || fabricBase ? '' : 'hidden'}`}>
                     ブランド情報を確認中です。生成時に保存先を再取得します。
                   </p>
                 ) : null}
@@ -5809,54 +6551,41 @@ export function LightchainMaterialWorkbenchPage() {
               </div>
             </section>
 
-            <aside className="min-w-0 rounded-2xl border border-white/10 bg-[#111719] p-4 shadow-2xl shadow-black/20 lg:p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-white">生成履歴</h2>
-                  <span className="text-xs text-white/45">ⓘ</span>
-                </div>
-                {visibleGeneratedResults.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearFabricResultHistory}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-2.5 py-2 text-xs font-semibold text-white/65 transition hover:border-red-300/35 hover:text-red-100"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    全削除
-                  </button>
-                )}
-              </div>
-
-              <div className="mb-4 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.05] p-3">
-                <p className="text-sm font-semibold text-cyan-100">生地イメージ</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-white/50">異なる生地の質感を生成して比較できます</p>
-                <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-black/30">
-                  {fabricDesign && fabricBase ? (
-                    <div className="relative h-full w-full">
-                      <img src={fabricTryOnPreviewUrl ?? fabricDesign.url} alt="切り抜き済み生地を衣服領域へ適用した参考" className="absolute inset-0 h-full w-full object-contain bg-black/10" />
-                      {fabricPreviewState === 'processing' && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-slate-950/35 text-[11px] text-cyan-100 backdrop-blur-[1px]">
-                          生地の背景を分離しています…
-                        </div>
-                      )}
-                      {fabricPreviewState === 'error' && (
-                        <div role="alert" className="absolute inset-0 flex items-center justify-center bg-rose-950/45 px-4 text-center text-[11px] text-rose-100">
-                          {fabricPreviewError ?? '生地の背景を分離できませんでした'}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-xs text-white/35">入力待ち</div>
-                  )}
-                </div>
-              </div>
+            <aside className="relative min-w-0 overflow-hidden rounded-none bg-[#232728] shadow-2xl shadow-black/20">
+              <button
+                type="button"
+                onClick={() => navigate('/history')}
+                className="absolute right-4 top-4 z-10 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-white/15 bg-[#171b1c]/80 px-2.5 text-sm font-medium text-white/80 shadow-xs backdrop-blur-sm transition hover:bg-white/[0.08]"
+              >
+                生成履歴
+              </button>
+              {visibleGeneratedResults.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearFabricResultHistory}
+                  className="absolute right-4 top-14 z-10 inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-white/15 bg-[#171b1c]/80 px-2.5 text-xs font-medium text-white/65 shadow-xs backdrop-blur-sm transition hover:border-red-300/35 hover:text-red-100"
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  全削除
+                </button>
+              )}
 
               {visibleGeneratedResults.length === 0 ? (
-                <div className="flex min-h-[20rem] items-center justify-center rounded-xl border border-dashed border-white/10 px-5 text-center text-sm text-white/40">
-                  生成履歴はここに表示されます
+                <div className="flex h-full w-full flex-col items-center justify-center gap-0 px-14 text-center">
+                  <h5 className="text-[20px] font-bold leading-[25.2px] text-white">生地イメージ</h5>
+                  <p className="mt-2 max-w-[28rem] text-sm leading-[21px] text-neutral-400">異なる生地の効果を生成できます</p>
+                  <video
+                    data-testid="lightchain-fabric-source-preview-video"
+                    className="mt-4 h-[340px] w-full object-contain"
+                    src={LIGHTCHAIN_FABRIC_EMPTY_PREVIEW_VIDEO}
+                    autoPlay
+                    controls
+                    muted
+                    playsInline
+                  />
                 </div>
               ) : (
-                <div data-testid="fabric-result-history" className="space-y-3">
+                <div data-testid="fabric-result-history" className="h-full overflow-y-auto px-10 pb-6 pt-16">
                   {[...visibleGeneratedResults].reverse().map((result) => (
                     <WorkbenchResultCard
                       key={result.id}
@@ -5927,7 +6656,7 @@ export function LightchainMaterialWorkbenchPage() {
       </Modal>
 
       <Modal
-        isOpen={favoriteTargetResult !== null}
+        isOpen={favoriteTargetResult !== null && (!favoriteTargetResult.id.startsWith('print-') || canDisplayPrintHistory)}
         onClose={closeFavoriteDialog}
         title="お気に入りに追加"
         size="lg"
@@ -6053,12 +6782,12 @@ export function LightchainMaterialWorkbenchPage() {
       </Modal>
 
       <Modal
-        isOpen={selectedResult !== null}
+        isOpen={selectedResult !== null && (!selectedResult.id.startsWith('print-') || canDisplayPrintHistory)}
         onClose={() => setSelectedResult(null)}
         title={selectedResult?.title || '生成結果'}
         size="xl"
       >
-        {selectedResult && (
+        {selectedResult && (!selectedResult.id.startsWith('print-') || canDisplayPrintHistory) && (
           <div className="space-y-4">
             <div className="flex justify-center rounded-2xl bg-black/50 p-4">
               <img

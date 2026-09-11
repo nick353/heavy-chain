@@ -302,7 +302,7 @@ const buildLightchainRows = (metadata: JsonRecord, intent: JsonRecord | null) =>
 
   pushIfValue(rows, 'Lightchain機能', readNonEmptyString(lightchainCompat, 'lightchainFeatureTitle'));
   if (taskCodes) rows.push({ label: 'Lightchain task', value: taskCodes.join(' / ') });
-  if (taskSteps.length) rows.push({ label: 'Lightchain steps', value: taskSteps.join(' / ') });
+  if (taskSteps.length) rows.push({ label: '入力工程（申告）', value: taskSteps.join(' / ') });
 
   return rows;
 };

@@ -1,6 +1,6 @@
 import type { GeneratedImage, Json } from '../types/database';
-import { supabase } from './supabase';
-import { normalizeGeneratedImageStoragePath } from './storagePathSafety';
+import { cloudflareDataPlane } from './cloudflareApi';
+import { normalizeGeneratedImageStoragePath, normalizeCloudflareGeneratedImageStoragePath } from './storagePathSafety';
 import { shouldClearWorkspaceArtifactImageUrl } from './generatedImageIdentity';
 import { buildWorkspaceArtifactLineage } from './workspaceArtifactLineage';
 
@@ -77,16 +77,6 @@ export class WorkspaceArtifactPersistenceError extends Error {
 
 type RemoteSaveStage = 'function' | 'auth' | 'prepare' | 'storage' | 'job' | 'image' | 'timeout' | 'completed';
 type RemoteCleanupStatus = 'none' | 'attempted' | 'failed';
-const REMOTE_WORKSPACE_ARTIFACT_TIMEOUT_MS = 8000;
-
-interface RemoteSaveFunctionResult {
-  success?: boolean;
-  remote?: WorkspaceArtifactBestEffortResult['remote'];
-  remoteSaveStage?: RemoteSaveStage;
-  remoteCleanupStatus?: RemoteCleanupStatus;
-  cleanupError?: unknown;
-  error?: unknown;
-}
 
 const getStorageKey = (brandId: string, scopeId?: string) => {
   const normalizedScopeId = scopeId?.trim();
@@ -107,6 +97,10 @@ const CANONICAL_STORAGE_PATH_KEYS = [
   'backendStoragePath',
 ] as const;
 
+const normalizeWorkspaceStoragePath = (source: unknown) => (
+  normalizeCloudflareGeneratedImageStoragePath(source) ?? normalizeGeneratedImageStoragePath(source)
+);
+
 const findNestedCanonicalStoragePath = (value: Json | undefined, depth = 0): string | null => {
   if (depth > 6 || value === null || value === undefined) return null;
   if (Array.isArray(value)) {
@@ -120,7 +114,7 @@ const findNestedCanonicalStoragePath = (value: Json | undefined, depth = 0): str
 
   for (const [key, child] of Object.entries(value as Record<string, Json | undefined>)) {
     if (CANONICAL_STORAGE_PATH_KEYS.includes(key as typeof CANONICAL_STORAGE_PATH_KEYS[number])) {
-      const normalized = typeof child === 'string' ? normalizeGeneratedImageStoragePath(child) : null;
+      const normalized = typeof child === 'string' ? normalizeWorkspaceStoragePath(child) : null;
       if (normalized) return normalized;
     }
     const nested = findNestedCanonicalStoragePath(child, depth + 1);
@@ -134,7 +128,7 @@ export const getWorkspaceArtifactCanonicalStoragePath = (
 ): string | null => {
   for (const key of CANONICAL_STORAGE_PATH_KEYS) {
     const value = metadata[key];
-    const normalized = typeof value === 'string' ? normalizeGeneratedImageStoragePath(value) : null;
+    const normalized = typeof value === 'string' ? normalizeWorkspaceStoragePath(value) : null;
     if (normalized) return normalized;
   }
   return findNestedCanonicalStoragePath(metadata);
@@ -259,31 +253,6 @@ const generateArtifactId = () => {
   return `local-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
-const readRemoteSaveErrorBody = async (response?: Response): Promise<RemoteSaveFunctionResult | null> => {
-  if (!response) return null;
-  try {
-    return await response.clone().json() as RemoteSaveFunctionResult;
-  } catch {
-    return null;
-  }
-};
-
-const withRemoteSaveTimeout = async <T,>(promise: Promise<T>): Promise<T> => {
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error(`Remote workspace artifact save timed out after ${REMOTE_WORKSPACE_ARTIFACT_TIMEOUT_MS}ms.`));
-        }, REMOTE_WORKSPACE_ARTIFACT_TIMEOUT_MS);
-      }),
-    ]);
-  } finally {
-    if (timeoutId) clearTimeout(timeoutId);
-  }
-};
-
 const parseArtifacts = (value: string | null): WorkspaceArtifact[] => {
   if (!value) return [];
   try {
@@ -311,7 +280,7 @@ const isWorkspaceArtifact = (value: unknown): value is WorkspaceArtifact => {
   );
 };
 
-export const isLocalWorkspaceImage = (image: GeneratedImage) => {
+export const isLocalWorkspaceImage = (image: Pick<GeneratedImage, 'storage_path' | 'user_id'>) => {
   return image.storage_path.startsWith('local/') || image.user_id === LOCAL_USER_ID;
 };
 
@@ -498,47 +467,32 @@ export const saveWorkspaceArtifactBestEffort = async (
   input: WorkspaceArtifactInput,
   options: { reuseCanonicalRemoteArtifact?: boolean } = {},
 ): Promise<WorkspaceArtifactBestEffortResult> => {
+  // Keep the Cloudflare save identity in the local failure record so a manual
+  // retry resumes the same remote save even after a lost response.
+  const previousRequestId = input.metadata?.cloudflareWorkspaceRequestId;
+  const requestId = typeof previousRequestId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(previousRequestId)
+    ? previousRequestId : crypto.randomUUID();
+  const stableInput = { ...input, id: input.id ?? generateArtifactId(), metadata: { ...input.metadata, cloudflareWorkspaceRequestId: requestId } };
   let remote: WorkspaceArtifactBestEffortResult['remote'];
   let remoteError: unknown;
-  let cleanupError: unknown;
+  const cleanupError: unknown = undefined;
   let remoteSaveStage: RemoteSaveStage = 'function';
-  let remoteCleanupStatus: RemoteCleanupStatus = 'none';
+  const remoteCleanupStatus: RemoteCleanupStatus = 'none';
 
   try {
-    const { data, error, response } = await withRemoteSaveTimeout(
-      supabase.functions.invoke('marketing-workspace-artifact', {
-        body: {
-          brandId: input.brandId,
-          featureType: input.featureType,
-          title: input.title,
-          imageUrl: input.imageUrl,
-          prompt: input.prompt ?? null,
-          createdAt: input.createdAt ?? new Date().toISOString(),
-          metadata: input.metadata ?? {},
-          canvasProjectId: input.canvasProjectId ?? null,
-          sourceJobId: input.sourceJobId ?? null,
-          sourceStoragePath: options.reuseCanonicalRemoteArtifact === false
-            ? null
-            : (() => {
-                const candidate = getWorkspaceArtifactCanonicalStoragePath(input.metadata ?? {});
-                return candidate && !/^local(?:\/|$)/i.test(candidate) ? candidate : null;
-              })(),
-        },
-      })
-    );
-
-    const result = (data ?? await readRemoteSaveErrorBody(response)) as RemoteSaveFunctionResult | null;
-
-    remoteSaveStage = result?.remoteSaveStage ?? remoteSaveStage;
-    remoteCleanupStatus = result?.remoteCleanupStatus ?? remoteCleanupStatus;
-    cleanupError = result?.cleanupError ?? cleanupError;
-
-    if (error || !result?.success || !result.remote) {
-      throw error ?? result?.error ?? new Error('Remote workspace artifact function failed.');
-    }
-
-    remoteSaveStage = 'completed';
-    remote = result.remote;
+    if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const source = getWorkspaceArtifactCanonicalStoragePath(input.metadata ?? {});
+      const metadata = Object.fromEntries(Object.entries(input.metadata ?? {}).filter(([key]) =>
+        !key.startsWith('remote') && key !== 'workspaceLineage' && key !== 'cloudflareWorkspaceRequestId'));
+      const result = await cloudflareDataPlane.saveWorkspaceArtifact({
+        requestId, brandId: input.brandId, featureType: input.featureType,
+        title: input.title, imageUrl: input.imageUrl, prompt: input.prompt ?? null,
+        metadata, canvasProjectId: input.canvasProjectId ?? null, sourceJobId: input.sourceJobId ?? null,
+        sourceStoragePath: options.reuseCanonicalRemoteArtifact === false || !source || /^local(?:\/|$)/i.test(source) ? null : source,
+      });
+      if (!result.success || !result.remote) throw new Error('cloudflare_workspace_save_failed');
+      remote = result.remote;
+      remoteSaveStage = 'completed';
   } catch (error) {
     remoteError = error;
     if (error instanceof Error && error.message.includes('timed out')) remoteSaveStage = 'timeout';
@@ -551,9 +505,9 @@ export const saveWorkspaceArtifactBestEffort = async (
   }
 
   const artifact = saveWorkspaceArtifact({
-    ...input,
+    ...stableInput,
     metadata: {
-      ...input.metadata,
+      ...stableInput.metadata,
       remoteSaveStatus: remote ? 'succeeded' : 'failed',
       remoteSaveStage,
       remoteJobId: remote?.jobId ?? null,

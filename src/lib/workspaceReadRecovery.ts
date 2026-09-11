@@ -1,4 +1,4 @@
-import { isSupabaseAuthFailure } from './supabaseSessionRecovery.ts';
+import { isAuthFailure } from './authSessionRecovery.ts';
 
 /**
  * Optional workspace reads may fall back for ordinary failures, but an auth
@@ -14,7 +14,7 @@ export async function readOptionalWorkspaceValue<T>(
     return await operation();
   } catch (error) {
     onError(error);
-    if (isSupabaseAuthFailure(error)) throw error;
+    if (isAuthFailure(error)) throw error;
     return fallback;
   }
 }

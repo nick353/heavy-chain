@@ -17,8 +17,13 @@ import {
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
+import {
+  UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
+  getLightchainUnifiedFeatureWorkflowContract,
+} from '../features/lightchain/unifiedFeatureWorkflowContract';
 
 const intents = ['EC標準', 'LOOK確認', '広告検証'] as const;
+const modelCustomizationTabs = ['顔変更', 'モデル変更', '体型', '服のサイズ', 'ポーズ', '背景', 'アングル'] as const;
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
 
 type Intent = (typeof intents)[number];
@@ -111,6 +116,8 @@ const modelCandidates: ModelCandidate[] = [
     modelMatrixHairStyle: 'long',
   },
 ];
+
+const modelLibraryWorkflowContract = getLightchainUnifiedFeatureWorkflowContract('model-library');
 
 const initialModelMaterial: MaterialReferenceState = {
   imageUrl: '',
@@ -219,6 +226,7 @@ export function ModelLibraryPage() {
   const { user, currentBrand } = useAuthStore();
   const { setFlowState } = useUnifiedWorkspaceFlow();
   const [activeIntent, setActiveIntent] = useState<Intent>(intents[0]);
+  const [activeCustomizationTab, setActiveCustomizationTab] = useState<(typeof modelCustomizationTabs)[number]>('顔変更');
   const [selectedCandidateId, setSelectedCandidateId] = useState(modelCandidates[0].id);
   const [progress, setProgress] = useState(34);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -279,7 +287,9 @@ export function ModelLibraryPage() {
   const activeIntentMeta = intentMeta[activeIntent];
   const modelLibraryFlowState = deriveUnifiedWorkspaceFlowState({
     inputReady: Boolean(face.trim() && pose.trim() && bodyType.trim() && skinTone.trim() && ageGroup.trim() && productDescription.trim()),
-    rightsReady: true,
+    // This route prepares the model-library handoff. The provider generation
+    // route owns the generation-time confirmation before model-matrix runs.
+    rightsReady: false,
     generating: false,
     completed: Boolean(savedArtifactId),
     failed: false,
@@ -506,7 +516,20 @@ export function ModelLibraryPage() {
   };
 
   return (
-    <div className="space-y-6 text-white" data-flow-state={modelLibraryFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[modelLibraryFlowState]}>
+    <div
+      className="space-y-6 text-white"
+      data-lightchain-parity-shell="model-customization"
+      data-flow-state={modelLibraryFlowState}
+      data-flow-state-label={unifiedWorkspaceFlowLabels[modelLibraryFlowState]}
+      data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+      data-workflow-feature="model-library"
+      data-workflow-input-roles={modelLibraryWorkflowContract?.inputRoles.join(',') ?? ''}
+      data-workflow-result-destinations={modelLibraryWorkflowContract?.resultDestinations.join(',') ?? ''}
+      data-workflow-lifecycle={modelLibraryWorkflowContract?.lifecycle.join(',') ?? ''}
+      data-workflow-source-input-mode={modelLibraryWorkflowContract?.sourceInputMode ?? ''}
+      data-workflow-retry-policy={modelLibraryWorkflowContract?.retry.retainsLastCompletedResult && modelLibraryWorkflowContract.retry.preservesInputLineage && modelLibraryWorkflowContract.retry.blocksDuplicateSubmit ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit' : ''}
+      data-workflow-rights-gate={modelLibraryWorkflowContract?.rightsGate ?? ''}
+    >
       <section className="overflow-hidden rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -514,22 +537,41 @@ export function ModelLibraryPage() {
               LIGHTCHAIN / MODELS
             </p>
             <h1 className="mt-2 font-display text-3xl font-semibold text-white">
-              モデルライブラリ
+              モデルカスタマイズ
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">
-              用途、モデル候補、出力先を選んでモデルマトリクスへ渡します。
+              顔、モデル、体型、服のサイズ、ポーズ、背景、アングルを選択してモデルマトリクスへ渡します。
             </p>
           </div>
           <button
             type="button"
             onClick={handoffToCanvas}
             disabled={!currentBrand}
+            data-testid="model-library-save-to-canvas"
             className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             保存
             <ChevronRight className="h-4 w-4" />
           </button>
+        </div>
+        <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="モデルカスタマイズ">
+          {modelCustomizationTabs.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={activeCustomizationTab === tab}
+              onClick={() => { markWorkflowDirty(); setActiveCustomizationTab(tab); }}
+              className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                activeCustomizationTab === tab
+                  ? 'border-cyan-300 bg-cyan-300 text-neutral-950'
+                  : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
         <div className="mt-6 grid gap-3 lg:grid-cols-3">
           {intents.map((intent) => (
@@ -594,6 +636,7 @@ export function ModelLibraryPage() {
           <div data-testid="model-library-next-actions" className="grid gap-2">
             <Link
               to={directModelMatrixHref}
+              data-testid="model-library-model-matrix-link"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200"
             >
               <Sparkles className="h-4 w-4" />
@@ -604,6 +647,7 @@ export function ModelLibraryPage() {
               type="button"
               onClick={handoffToCanvas}
               disabled={!currentBrand}
+              data-testid="model-library-save-and-stack"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
@@ -611,10 +655,17 @@ export function ModelLibraryPage() {
             </button>
             <Link
               to="/gallery"
+              data-testid="model-library-gallery-link"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/40 hover:bg-white/[0.07] hover:text-white"
             >
               Galleryで結果を見る
             </Link>
+            <p
+              data-testid="model-library-rights-gate"
+              className="rounded-xl border border-amber-300/20 bg-amber-300/[0.08] px-3 py-2 text-xs leading-5 text-amber-100"
+            >
+              生成直前に権利確認を行います。モデル条件の保存・Canvas引き渡しと、provider生成の承認を分けて扱います。
+            </p>
           </div>
         </div>
       </section>
@@ -757,6 +808,7 @@ export function ModelLibraryPage() {
           <div className="rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft">
             <h2 className="text-lg font-semibold text-white">保存状態</h2>
             <p className="mt-2 text-sm text-neutral-400">{activeIntent} / {progress}%</p>
+            <p className="mt-2 text-xs text-neutral-500">現在のカスタマイズ: {activeCustomizationTab}</p>
             <div className="mt-4 h-2 rounded-full bg-white/10">
               <div className="h-full rounded-full bg-cyan-300" style={{ width: `${progress}%` }} />
             </div>

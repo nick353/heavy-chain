@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Tag, Plus, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import toast from 'react-hot-toast';
 
 interface TagItem {
@@ -33,14 +33,8 @@ export function TagManager({ imageId, selectedTags, onTagsChange, compact = fals
     if (!currentBrand) return;
 
     try {
-      const { data, error } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('brand_id', currentBrand.id)
-        .order('name');
-
-      if (error) throw error;
-      setTags(data || []);
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      setTags(await cloudflareDataPlane.listTags(currentBrand.id));
     } catch (error) {
       console.error('Failed to fetch tags:', error);
     }
@@ -64,16 +58,9 @@ export function TagManager({ imageId, selectedTags, onTagsChange, compact = fals
     try {
       const randomColor = TAG_COLORS[Math.floor(Math.random() * TAG_COLORS.length)];
       
-      const { data, error } = await supabase
-        .from('tags')
-        .insert({
-          brand_id: currentBrand.id,
-          name: newTagName.trim(),
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const data = await cloudflareDataPlane.createTag({ brand_id: currentBrand.id, name: newTagName.trim() });
+      if (!data) throw new Error('tag_create_readback_missing');
 
       setTags([...tags, { ...data, color: randomColor }]);
       setNewTagName('');
@@ -98,19 +85,11 @@ export function TagManager({ imageId, selectedTags, onTagsChange, compact = fals
     // If imageId is provided, update the database
     if (imageId) {
       try {
+        if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
         if (isSelected) {
-          await supabase
-            .from('image_tags')
-            .delete()
-            .eq('image_id', imageId)
-            .eq('tag_id', tagId);
+          await cloudflareDataPlane.deleteImageTag(imageId, tagId);
         } else {
-          await supabase
-            .from('image_tags')
-            .insert({
-              image_id: imageId,
-              tag_id: tagId,
-            });
+          await cloudflareDataPlane.addImageTag(imageId, tagId);
         }
       } catch (error) {
         console.error('Failed to update image tags:', error);
@@ -126,12 +105,8 @@ export function TagManager({ imageId, selectedTags, onTagsChange, compact = fals
     if (!confirm('このタグを削除しますか？すべての画像からこのタグが外れます。')) return;
 
     try {
-      const { error } = await supabase
-        .from('tags')
-        .delete()
-        .eq('id', tagId);
-
-      if (error) throw error;
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      await cloudflareDataPlane.deleteTag(tagId);
 
       setTags(tags.filter(t => t.id !== tagId));
       onTagsChange(selectedTags.filter(id => id !== tagId));

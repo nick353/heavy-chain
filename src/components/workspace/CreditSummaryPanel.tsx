@@ -10,8 +10,8 @@ interface CreditSummaryPanelProps {
 export function CreditSummaryPanel({ summary, className = '' }: CreditSummaryPanelProps) {
   const isUnlimited = summary.billingTestAccountQuotaBypass;
   const activityPercent =
-    !isUnlimited && summary.monthlyQuota > 0
-      ? Math.min(((summary.usedUnits + summary.reservedUnits) / summary.monthlyQuota) * 100, 100)
+    !isUnlimited && summary.monthlyQuota !== null && summary.remainingUnits !== null && summary.monthlyQuota > 0
+      ? Math.min(((summary.monthlyQuota - summary.remainingUnits) / summary.monthlyQuota) * 100, 100)
       : 0;
 
   return (
@@ -29,11 +29,12 @@ export function CreditSummaryPanel({ summary, className = '' }: CreditSummaryPan
       <div className="mt-5">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-3xl font-semibold text-neutral-950 dark:text-white">{isUnlimited ? '無制限' : summary.remainingUnits.toLocaleString()}</p>
+            <p className="text-3xl font-semibold text-neutral-950 dark:text-white">{isUnlimited ? '無制限' : summary.remainingUnits?.toLocaleString() ?? '未取得'}</p>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              {isUnlimited
+              {!summary.available ? '利用状況を取得できていません'
+                : isUnlimited
                 ? '月間生成 quota 無制限'
-                : `今月残り / ${summary.appleSandboxTesterNoRealCharge ? 'Sandbox' : summary.planName} 上限 ${summary.monthlyQuota.toLocaleString()}`}
+                : `今月残り / ${summary.appleSandboxTesterNoRealCharge ? 'Sandbox' : summary.planName} 上限 ${summary.monthlyQuota?.toLocaleString() ?? '—'}`}
             </p>
             {summary.billingTestAccountQuotaBypass && (
               <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
@@ -42,14 +43,16 @@ export function CreditSummaryPanel({ summary, className = '' }: CreditSummaryPan
             )}
           </div>
           <div className="text-right text-xs text-neutral-500 dark:text-neutral-400">
-            <p>使用 {summary.usedUnits.toLocaleString()}</p>
-            <p>処理中 {summary.reservedUnits.toLocaleString()}</p>
+            <p>完了 {summary.usedUnits?.toLocaleString() ?? '—'}</p>
+            <p>処理中 {summary.reservedUnits?.toLocaleString() ?? '—'}</p>
+            <p>未確定 {summary.uncertainUnits?.toLocaleString() ?? '—'}</p>
           </div>
         </div>
 
-        <div className="mt-4 h-2 rounded-full bg-neutral-100 dark:bg-surface-800">
+        {summary.available && <div className="mt-4 h-2 rounded-full bg-neutral-100 dark:bg-surface-800">
           <div className="h-full rounded-full bg-gradient-to-r from-primary-500 to-gold-DEFAULT" style={{ width: `${activityPercent}%` }} />
-        </div>
+        </div>}
+        <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">画像AIの内部利用枠です。Cloudflareアカウント全体の無料残高・請求額ではありません。失敗・未確定の処理も枠を消費する場合があります。</p>
 
         <Link to="/credits" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-white/70 px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:text-primary-700 dark:bg-white/10 dark:text-neutral-200">
           <Gauge className="h-3.5 w-3.5" />

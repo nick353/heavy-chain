@@ -16,6 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { assertCompletedModelMatrixResult, generateModelMatrix } from '../lib/imageApi';
 import { getErrorMessage } from '../lib/errorMessages';
 import { downloadValidatedImage } from '../lib/imageDownload';
@@ -32,8 +33,13 @@ import {
   listWorkspaceGeneratedImages,
   saveWorkspaceArtifactPersisted,
 } from '../lib/localWorkspaceArtifacts';
-import { readFittingDraftMaterial, readFittingResumeMaterial } from '../lib/fittingResume';
+import {
+  readFittingDraftMaterial,
+  readFittingResumeMaterial,
+  readFittingResumeMaterialReference,
+} from '../lib/fittingResume';
 import { buildGenerationIntentHref } from '../lib/workspaceHandoff';
+import { buildFittingPreviewBlockers } from '../lib/fittingPreviewReadiness';
 import { readFittingDraftCutout, saveFittingDraftCutout } from '../lib/fittingDraftCutoutStore';
 import { getFittingMaterialIdentity } from '../lib/fittingMaterialIdentity';
 import {
@@ -41,9 +47,19 @@ import {
   prepareFittingDraftMaterialReferenceForPersistence,
 } from '../lib/fittingPersistence';
 import { resolveGeneratedImageUrl, withSignedImageUrls } from '../lib/storage';
+import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
+import { CLOUDFLARE_IMAGE_NOTICE } from '../lib/cloudflareImageAI';
 import { mergeGeneratedImagesByCanonicalIdentity } from '../lib/generatedImageIdentity';
-import { supabase } from '../lib/supabase';
+import {
+  toGeneratedImageListRow,
+  type GeneratedImageListRow,
+} from '../lib/generatedImageQuery';
 import { useAuthStore } from '../stores/authStore';
+import {
+  assertAuthBrandFence,
+  captureAuthBrandFence,
+  type AuthBrandFenceSnapshot,
+} from '../lib/authBrandSelection';
 import { useCanvasStore } from '../stores/canvasStore';
 import { GallerySelector } from '../components/GallerySelector';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
@@ -60,8 +76,12 @@ import {
   buildLightchainParityRuntime,
   serializeLightchainParityRuntime,
 } from '../features/lightchain/parityRuntime';
+import {
+  getLightchainUnifiedFeatureWorkflowContract,
+  UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
+} from '../features/lightchain/unifiedFeatureWorkflowContract';
 import type { ParityJsonValue } from '../features/lightchain/parityContract';
-import type { GeneratedImage, Json } from '../types/database';
+import type { Json } from '../types/database';
 
 type Gender = 'female' | 'male';
 const FITTING_SOURCE_READBACK = {
@@ -71,6 +91,9 @@ const FITTING_SOURCE_READBACK = {
   sourceResumePath: '/fitting',
   sourceMode: 'local-workflow-intake',
 } as const;
+const FITTING_LOCAL_PREVIEW_FEATURE_TYPE = 'model-matrix-local-preview';
+const fittingWorkflowContract = getLightchainUnifiedFeatureWorkflowContract('ai-fitting');
+const FITTING_LOCAL_PREVIEW_BACKEND = 'browser-local-fitting-brief-v1';
 type FittingSourceReadback = typeof FITTING_SOURCE_READBACK;
 
 type MatrixItem = {
@@ -150,6 +173,9 @@ type HistoryItem = {
   providerModels?: Array<string | null>;
   providerTaskIds?: Array<string | null>;
   backendProvider?: string | null;
+  resultKind?: 'fitting';
+  generationMode?: 'provider' | 'preview';
+  persistenceStatus?: 'completed' | 'pending' | 'failed' | null;
   sourceMaterialImageUrl?: string;
   modelReferenceImageUrl?: string;
   modelReferenceFileName?: string;
@@ -166,20 +192,35 @@ type HistoryItem = {
   gender?: Gender;
 };
 
-const getGeneratedImageMetadata = (image: GeneratedImage): Record<string, unknown> => {
+const getGeneratedImageMetadata = (image: GeneratedImageListRow): Record<string, unknown> => {
   const metadata = image.metadata;
   return metadata && typeof metadata === 'object' && !Array.isArray(metadata)
     ? metadata as Record<string, unknown>
     : {};
 };
 
-const getGeneratedImageMetadataString = (image: GeneratedImage, key: string): string | null => {
+const getGeneratedImageMetadataString = (image: GeneratedImageListRow, key: string): string | null => {
   const value = getGeneratedImageMetadata(image)[key];
   return typeof value === 'string' && value.trim() ? value : null;
 };
 
+const getPersistedFittingResultStatus = (
+  image: GeneratedImageListRow,
+): 'completed' | 'pending' | 'failed' => {
+  const explicitStatus = getGeneratedImageMetadataString(image, 'persistenceStatus')
+    ?? getGeneratedImageMetadataString(image, 'remotePersistenceStatus')
+    ?? getGeneratedImageMetadataString(image, 'remoteSaveStatus');
+  if (!explicitStatus || explicitStatus === 'completed' || explicitStatus === 'succeeded') {
+    return 'completed';
+  }
+  if (['pending', 'processing', 'not_started'].includes(explicitStatus)) {
+    return 'pending';
+  }
+  return 'failed';
+};
+
 const getGeneratedImageMetadataObject = <T extends Record<string, unknown>>(
-  image: GeneratedImage,
+  image: GeneratedImageListRow,
   key: string,
 ): T | undefined => {
   const value = getGeneratedImageMetadata(image)[key];
@@ -190,7 +231,7 @@ const getGeneratedImageMetadataObject = <T extends Record<string, unknown>>(
 
 /** Rebuild Fitting history from the persisted model-matrix artifact readback. */
 export const buildFittingHistoryFromPersistedImages = (
-  images: readonly GeneratedImage[],
+  images: readonly GeneratedImageListRow[],
 ): HistoryItem[] => {
   type HistoryGroup = {
     id: string;
@@ -206,6 +247,9 @@ export const buildFittingHistoryFromPersistedImages = (
     providerModels: Array<string | null>;
     providerTaskIds: Array<string | null>;
     backendProvider: string | null;
+    resultKind: 'fitting';
+    generationMode: 'provider' | 'preview';
+    persistenceStatus: 'completed' | 'pending' | 'failed' | null;
     sourceMaterialImageUrl?: string;
     modelReferenceImageUrl?: string;
     modelReferenceFileName?: string;
@@ -225,10 +269,12 @@ export const buildFittingHistoryFromPersistedImages = (
   const groups = new Map<string, HistoryGroup>();
   for (const image of images) {
     const metadata = getGeneratedImageMetadata(image);
-    if (
-      image.feature_type !== 'model-matrix'
-      || (metadata.feature !== 'model-matrix' && metadata.source !== 'model-matrix')
-    ) continue;
+    const isLocalPreview = image.feature_type === FITTING_LOCAL_PREVIEW_FEATURE_TYPE;
+    const isProviderArtifact = image.feature_type === 'model-matrix';
+    if (!isLocalPreview && !isProviderArtifact) continue;
+    if (isLocalPreview
+      ? metadata.feature !== FITTING_LOCAL_PREVIEW_FEATURE_TYPE
+      : (metadata.feature !== 'model-matrix' && metadata.source !== 'model-matrix')) continue;
 
     const remoteJobId = image.job_id ?? getGeneratedImageMetadataString(image, 'remoteJobId');
     const groupId = remoteJobId ? `fit-${remoteJobId}` : `fit-artifact-${image.id}`;
@@ -259,7 +305,12 @@ export const buildFittingHistoryFromPersistedImages = (
       providerNames: [],
       providerModels: [],
       providerTaskIds: [],
-      backendProvider: 'supabase-edge-function:model-matrix',
+      backendProvider: isLocalPreview
+        ? getGeneratedImageMetadataString(image, 'backendProvider') ?? FITTING_LOCAL_PREVIEW_BACKEND
+        : getGeneratedImageMetadataString(image, 'backendProvider') ?? 'unknown',
+      resultKind: 'fitting',
+      generationMode: isLocalPreview ? 'preview' : 'provider',
+      persistenceStatus: getPersistedFittingResultStatus(image),
       sourceMaterialImageUrl: persistedSourceMaterialImageUrl,
       modelReferenceImageUrl: (() => {
         const value = getGeneratedImageMetadataString(image, 'modelReferenceImageUrl');
@@ -291,6 +342,9 @@ export const buildFittingHistoryFromPersistedImages = (
     group.providerNames.push(getGeneratedImageMetadataString(image, 'provider'));
     group.providerModels.push(image.model_used ?? getGeneratedImageMetadataString(image, 'providerModel'));
     group.providerTaskIds.push(getGeneratedImageMetadataString(image, 'providerTaskId'));
+    if (getPersistedFittingResultStatus(image) === 'failed') {
+      group.persistenceStatus = 'failed';
+    }
     const bodyType = getGeneratedImageMetadataString(image, 'bodyType');
     const ageGroup = getGeneratedImageMetadataString(image, 'ageGroup');
     const gender = getGeneratedImageMetadataString(image, 'gender');
@@ -311,7 +365,11 @@ export const buildFittingHistoryFromPersistedImages = (
     .map((group) => ({
       id: group.id,
       title: `${group.title} / ${group.artifactIds.length}枚`,
-      status: '完了',
+      status: group.persistenceStatus === 'failed'
+        ? '保存失敗'
+        : group.persistenceStatus === 'pending'
+          ? '保存中'
+          : '完了',
       time: new Date(group.createdAt).toLocaleString('ja-JP'),
       prompt: group.prompt,
       previewUrl: group.imageUrls[0],
@@ -325,6 +383,9 @@ export const buildFittingHistoryFromPersistedImages = (
       providerModels: group.providerModels,
       providerTaskIds: group.providerTaskIds,
       backendProvider: group.backendProvider,
+      resultKind: group.resultKind,
+      generationMode: group.generationMode,
+      persistenceStatus: group.persistenceStatus,
       sourceMaterialImageUrl: group.sourceMaterialImageUrl,
       modelReferenceImageUrl: group.modelReferenceImageUrl,
       modelReferenceFileName: group.modelReferenceFileName,
@@ -546,6 +607,18 @@ export function FittingPage() {
   const { setFlowState } = useUnifiedWorkspaceFlow();
   const [searchParams] = useSearchParams();
   const { user, currentBrand } = useAuthStore();
+  const captureCurrentAuthBrandFence = (): AuthBrandFenceSnapshot | null => {
+    const state = useAuthStore.getState();
+    return captureAuthBrandFence(state.brandState, state.user?.id ?? null, state.currentBrand?.id ?? null);
+  };
+  const assertCurrentAuthBrandFence = (captured: AuthBrandFenceSnapshot | null, phase: string) => {
+    const state = useAuthStore.getState();
+    assertAuthBrandFence(
+      captured,
+      captureAuthBrandFence(state.brandState, state.user?.id ?? null, state.currentBrand?.id ?? null),
+      phase,
+    );
+  };
   const { createProject, addObject, saveCurrentProject } = useCanvasStore();
   const [productDescription, setProductDescription] = useState(
     '春夏向けのリネン混シャツ。自然光、EC商品ページのメイン画像として使える落ち着いた構図。'
@@ -627,16 +700,88 @@ export function FittingPage() {
 
   useEffect(() => {
     if (!resumeJob || !currentBrand?.id || !user?.id) return;
+    let cancelled = false;
     setResumeInputReadback(null);
-    const resumed = readFittingResumeMaterial(listWorkspaceArtifacts(currentBrand.id, user?.id), resumeJob);
-    if (!resumed) {
-      setResumeInputReadback('unavailable');
-      return;
-    }
     resetFittingDraftPersistenceState();
-    setMaterialReference(resumed.materialReference);
-    setErrorMessage('');
-    setResumeInputReadback('restored');
+    const restoreResumeMaterial = async () => {
+      let resumed = readFittingResumeMaterial(listWorkspaceArtifacts(currentBrand.id, user?.id), resumeJob);
+      if (!resumed) {
+        if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+        const [remoteImage] = await cloudflareDataPlane.listGeneratedImages(currentBrand.id, {
+          featureType: 'model-matrix', jobId: resumeJob, limit: 1, offset: 0,
+        });
+        const remoteMetadata = remoteImage?.metadata;
+        const remoteReferences = remoteMetadata && typeof remoteMetadata === 'object' && !Array.isArray(remoteMetadata)
+          ? (remoteMetadata as Record<string, unknown>).materialReferences
+          : null;
+        const remoteMaterial = Array.isArray(remoteReferences)
+          ? remoteReferences
+            .map((reference) => readFittingResumeMaterialReference(reference))
+            .find((reference): reference is MaterialReferenceState => Boolean(reference))
+          : null;
+        if (remoteMaterial) {
+          resumed = { artifactId: `remote-resume-${resumeJob}`, materialReference: remoteMaterial };
+        }
+      }
+      if (!resumed || cancelled) {
+        if (!cancelled) setResumeInputReadback('unavailable');
+        return;
+      }
+
+      let restored = resumed.materialReference;
+      if (!restored.imageUrl && restored.sourceStoragePath) {
+        try {
+          restored = {
+            ...restored,
+            imageUrl: await resolveGeneratedImageUrl(restored.sourceStoragePath),
+          };
+        } catch (error) {
+          if (!cancelled) {
+            setResumeInputReadback('unavailable');
+            setFittingDraftPersistenceStatus('unavailable');
+            setFittingDraftPersistenceMessage(
+              error instanceof Error
+                ? `保存済みGallery素材の再署名に失敗しました。${error.message}`
+                : '保存済みGallery素材を再署名できませんでした。素材を選び直してください。',
+            );
+          }
+          return;
+        }
+      }
+
+      try {
+        const persistedCutout = await readFittingDraftCutout(currentBrand.id, user.id, restored);
+        if (persistedCutout) restored = { ...restored, ...persistedCutout };
+      } catch (error) {
+        if (!cancelled) {
+          fittingDraftPersistenceErrorRef.current = true;
+          setFittingDraftPersistenceStatus('failed');
+          setFittingDraftPersistenceMessage(
+            error instanceof Error
+              ? `保存済み切り抜きの再読込に失敗しました。${error.message}`
+              : '保存済み切り抜きを再読込できませんでした。切り抜きを確認してください。',
+          );
+        }
+      }
+
+      if (!cancelled && restored.imageUrl) {
+        setMaterialReference(restored);
+        setErrorMessage('');
+        setResumeInputReadback('restored');
+        if (!fittingDraftPersistenceErrorRef.current) {
+          setFittingDraftPersistenceStatus('restored');
+          setFittingDraftPersistenceMessage(
+            restored.nextStepReady
+              ? '保存済みのFitting素材と切り抜き状態を復元しました。'
+              : '保存済みのFitting素材を復元しました。切り抜き状態を再確認してください。',
+          );
+        }
+      }
+    };
+    void restoreResumeMaterial();
+    return () => {
+      cancelled = true;
+    };
   }, [currentBrand?.id, resetFittingDraftPersistenceState, resumeJob, user?.id]);
 
   useEffect(() => {
@@ -846,19 +991,22 @@ export function FittingPage() {
 
     const hydrateHistory = async () => {
       const localImages = listWorkspaceGeneratedImages(currentBrand.id, user?.id)
-        .filter((image) => image.feature_type === 'model-matrix');
-      const { data: remoteImages, error: remoteError } = await supabase
-        .from('generated_images')
-        .select('*')
-        .eq('brand_id', currentBrand.id)
-        .eq('feature_type', 'model-matrix')
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (remoteError && import.meta.env.DEV) console.warn('Failed to hydrate remote fitting history:', remoteError);
-      const signedRemoteImages = await withSignedImageUrls(remoteImages ?? []).catch(() => remoteImages ?? []);
+        .filter((image) => (
+          image.feature_type === 'model-matrix'
+          || image.feature_type === FITTING_LOCAL_PREVIEW_FEATURE_TYPE
+        ))
+        .map(toGeneratedImageListRow);
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const remoteImages = (await cloudflareDataPlane.listGeneratedImages(currentBrand.id, {
+        featureType: 'model-matrix', limit: 100, offset: 0,
+      })).map(asGeneratedImageListRow);
+      const signedRemoteImages = await withSignedImageUrls(remoteImages).catch(() => remoteImages);
       const signedLocalImages = await withSignedImageUrls(localImages).catch(() => localImages);
       const signedImages = mergeGeneratedImagesByCanonicalIdentity(signedRemoteImages, signedLocalImages)
-        .filter((image) => image.feature_type === 'model-matrix');
+        .filter((image) => (
+          image.feature_type === 'model-matrix'
+          || image.feature_type === FITTING_LOCAL_PREVIEW_FEATURE_TYPE
+        ));
       if (!cancelled) setHistory(buildFittingHistoryFromPersistedImages(signedImages));
     };
 
@@ -922,6 +1070,26 @@ export function FittingPage() {
     selectedBodyTypes.length,
     patternCount,
   ]);
+  const fittingPreviewBlockers = useMemo(() => buildFittingPreviewBlockers({
+    currentBrandLoaded: Boolean(currentBrand),
+    rightsConfirmed,
+    isGenerating,
+    garmentImageUrl,
+    productDescription,
+    selectedBodyTypesCount: selectedBodyTypes.length,
+    selectedAgeGroupsCount: selectedAgeGroups.length,
+    patternCount,
+  }), [
+    currentBrand,
+    garmentImageUrl,
+    isGenerating,
+    patternCount,
+    productDescription,
+    rightsConfirmed,
+    selectedAgeGroups.length,
+    selectedBodyTypes.length,
+  ]);
+  const canSaveFittingBriefPreview = fittingPreviewBlockers.length === 0;
   const activeWorkflow = fittingWorkflows.find((workflow) => workflow.id === activeWorkflowId) ?? fittingWorkflows[0];
   const selectedBodyTypeLabels = bodyTypeOptions
     .filter((option) => selectedBodyTypes.includes(option.id))
@@ -980,6 +1148,111 @@ export function FittingPage() {
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'fitting_result_download_failed');
     }
+  };
+
+  const handleSaveFittingBriefPreview = () => {
+    if (!canSaveFittingBriefPreview) {
+      setErrorMessage(`条件プレビューを保存するには${fittingPreviewBlockers.join(' / ')}が必要です。`);
+      return;
+    }
+    if (!currentBrand?.id) {
+      setErrorMessage('保存先ブランドを取得できませんでした。ブランド設定を確認してください。');
+      return;
+    }
+    if (!rightsConfirmed) {
+      setErrorMessage('保存前に、素材を利用する権利確認へ同意してください。');
+      return;
+    }
+
+    const generatedAt = Date.now();
+    const localJobId = `local-fitting-preview-${generatedAt}`;
+    const persistedMaterialReference = compactFittingMaterialReferenceForPersistence(
+      buildMaterialReferenceMetadata(materialReference),
+      garmentImageUrl,
+    );
+    const parityRuntime = serializeLightchainParityRuntime(buildLightchainParityRuntime({
+      rowId: 'ai-fitting',
+      inputRoles: ['primary'],
+      fixtureId: materialReference.sourceImageId
+        ?? materialReference.sourceStoragePath
+        ?? materialReference.fileName
+        ?? activeWorkflow.id,
+      settings: {
+        workflowId: activeWorkflow.id,
+        bodyTypes: selectedBodyTypes,
+        ageGroups: selectedAgeGroups,
+        gender,
+        patternCount,
+      },
+    }));
+    const persisted = saveWorkspaceArtifactPersisted({
+      id: localJobId,
+      brandId: currentBrand.id,
+      scopeId: user?.id,
+      featureType: FITTING_LOCAL_PREVIEW_FEATURE_TYPE,
+      title: `${activeWorkflow.title} 条件プレビュー`,
+      imageUrl: fittingPreviewImageUrl,
+      prompt: productDescription,
+      sourceJobId: localJobId,
+      metadata: {
+        feature: FITTING_LOCAL_PREVIEW_FEATURE_TYPE,
+        localPreviewArtifact: true,
+        localJobId,
+        sourceJobId: localJobId,
+        title: `${activeWorkflow.title} 条件プレビュー`,
+        resultKind: 'fitting',
+        generationMode: 'preview',
+        backendProvider: FITTING_LOCAL_PREVIEW_BACKEND,
+        persistenceStatus: 'completed',
+        sourceWorkspace: FITTING_SOURCE_READBACK.sourceWorkspace,
+        workflowVersion: FITTING_SOURCE_READBACK.workflowVersion,
+        sourceLabel: FITTING_SOURCE_READBACK.sourceLabel,
+        sourceResumePath: FITTING_SOURCE_READBACK.sourceResumePath,
+        sourceMode: FITTING_SOURCE_READBACK.sourceMode,
+        generationIntent: { feature: 'ai-fitting', href: '/fitting', mode: 'preview' },
+        materialReference: persistedMaterialReference,
+        materialReferences: persistedMaterialReference ? [persistedMaterialReference] : [],
+        modelReferenceImageUrl: modelReference.imageUrl ? '[provided]' : null,
+        modelReferenceFileName: modelReference.fileName || null,
+        modelReferenceSourceImageId: modelReference.sourceImageId ?? null,
+        modelReferenceSourceStoragePath: modelReference.sourceStoragePath ?? null,
+        bodyTypes: selectedBodyTypes,
+        ageGroups: selectedAgeGroups,
+        gender,
+        layerPlan: {
+          activeLayer: materialReference.activeLayer,
+          placement: materialReference.placement,
+          scale: materialReference.scale,
+        },
+        maskPlan: { maskMode: materialReference.maskMode },
+        compositionPreview: {
+          workflowId: activeWorkflow.id,
+          workflowTitle: activeWorkflow.title,
+          previewKind: 'fitting-brief-local-v1',
+          patternCount,
+        },
+        sourceReadback: FITTING_SOURCE_READBACK,
+        parityRuntime,
+      },
+    });
+    if (!persisted.ok) {
+      setErrorMessage(`条件プレビューの保存確認に失敗しました。${getErrorMessage(persisted.error)}`);
+      return;
+    }
+
+    const savedImages = listWorkspaceGeneratedImages(currentBrand.id, user?.id)
+      .filter((image) => image.id === persisted.artifact.id);
+    const savedHistory = buildFittingHistoryFromPersistedImages(savedImages);
+    if (!savedHistory.length) {
+      setErrorMessage('条件プレビューの保存後readbackを確認できませんでした。再保存は行わず状態を確認してください。');
+      return;
+    }
+    setHistory((current) => [
+      ...savedHistory,
+      ...current.filter((item) => !savedHistory.some((saved) => saved.id === item.id)),
+    ]);
+    setErrorMessage('');
+    toast.success('AI生成前の条件プレビューを保存しました（provider未実行）');
   };
 
   const handleModelReferenceUpload = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -1130,16 +1403,28 @@ export function FittingPage() {
       ...(request.compositionPreview ?? {}),
       parityRuntime: parityRuntimeJson,
     };
+    const authBrandFence = captureCurrentAuthBrandFence();
+    if (!authBrandFence) {
+      setIsGenerating(false);
+      setErrorMessage('ブランドのアクセス確認が完了していないため、生成を開始できません。');
+      return;
+    }
+    const generationBrandId = authBrandFence.brandId;
     setLastRequest({ ...request, compositionPreview: providerCompositionPreview });
 
     let response: Awaited<ReturnType<typeof generateModelMatrix>>;
     try {
-      response = await generateModelMatrix(request.productDescription, currentBrand.id, {
+      assertCurrentAuthBrandFence(authBrandFence, 'before_provider');
+      response = await generateModelMatrix(request.productDescription, generationBrandId, {
         imageUrl: request.imageUrl,
         modelReferenceImageUrl: request.modelReferenceImageUrl,
+        modelReferenceFileName: request.modelReferenceFileName,
+        modelReferenceSourceImageId: request.modelReferenceSourceImageId,
+        modelReferenceSourceStoragePath: request.modelReferenceSourceStoragePath,
         bodyTypes: request.bodyTypes,
         ageGroups: request.ageGroups,
         gender: request.gender,
+        materialReference: request.materialReference,
         materialReferences: request.materialReferences,
         layerPlan: request.layerPlan,
         maskPlan: request.maskPlan,
@@ -1147,6 +1432,14 @@ export function FittingPage() {
         sourceReadback: request.sourceReadback,
         rightsConfirmed,
       });
+    } catch (error) {
+      setIsGenerating(false);
+      setErrorMessage(getErrorMessage(error instanceof Error ? error : 'モデルセット写真を生成できませんでした。'));
+      return;
+    }
+
+    try {
+      assertCurrentAuthBrandFence(authBrandFence, 'after_provider');
     } catch (error) {
       setIsGenerating(false);
       setErrorMessage(getErrorMessage(error instanceof Error ? error : 'モデルセット写真を生成できませんでした。'));
@@ -1162,6 +1455,13 @@ export function FittingPage() {
       return;
     }
     const matrix = response.matrix;
+
+    try {
+      assertCurrentAuthBrandFence(authBrandFence, 'before_persistence');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error instanceof Error ? error : 'モデルセット写真を生成できませんでした。'));
+      return;
+    }
 
     const attemptedArtifactIds: string[] = [];
     const artifactIds: string[] = [];
@@ -1180,7 +1480,7 @@ export function FittingPage() {
       attemptedArtifactIds.push(artifactId);
       const persisted = saveWorkspaceArtifactPersisted({
         id: artifactId,
-        brandId: currentBrand.id,
+        brandId: generationBrandId,
         scopeId: user?.id,
         featureType: 'model-matrix',
         title,
@@ -1193,6 +1493,9 @@ export function FittingPage() {
         prompt: request.productDescription,
         metadata: {
           feature: 'model-matrix',
+          resultKind: 'fitting',
+          generationMode: 'provider',
+          providerResultArtifact: true,
           bodyType: item.bodyType,
           bodyTypeName: item.bodyTypeName,
           ageGroup: item.ageGroup,
@@ -1205,7 +1508,8 @@ export function FittingPage() {
           provider: item.provider ?? null,
           providerModel: item.modelUsed ?? null,
           providerTaskId: item.providerTaskId ?? null,
-          backendProvider: 'supabase-edge-function:model-matrix',
+          backendProvider: response.backendProvider ?? 'cloudflare-workers-ai',
+          persistenceStatus: item.persistenceStatus ?? response.persistenceStatus ?? null,
           remotePersistenceStatus: item.persistenceStatus ?? response.persistenceStatus ?? null,
           sourceArtifactId: artifactId,
           sourceStoragePath: item.storagePath ?? null,
@@ -1231,7 +1535,7 @@ export function FittingPage() {
       });
 
       if (!persisted.ok) {
-        const cleanup = deleteWorkspaceArtifactsPersisted(currentBrand.id, attemptedArtifactIds, user?.id);
+        const cleanup = deleteWorkspaceArtifactsPersisted(generationBrandId, attemptedArtifactIds, user?.id);
         const cleanupMessage = cleanup.ok
           ? ''
           : ` 保存済みの一部成果物も削除確認できませんでした: ${cleanup.error.message}`;
@@ -1239,6 +1543,13 @@ export function FittingPage() {
         return;
       }
       artifactIds.push(persisted.artifact.id);
+    }
+
+    try {
+      assertCurrentAuthBrandFence(authBrandFence, 'before_ui_commit');
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error instanceof Error ? error : 'モデルセット写真を生成できませんでした。'));
+      return;
     }
 
     setResultMatrix(matrix);
@@ -1259,7 +1570,10 @@ export function FittingPage() {
         providerNames: matrix.map((item) => item.provider ?? null),
         providerModels: matrix.map((item) => item.modelUsed ?? null),
         providerTaskIds: matrix.map((item) => item.providerTaskId ?? null),
-        backendProvider: 'supabase-edge-function:model-matrix',
+        backendProvider: response.backendProvider ?? 'cloudflare-workers-ai',
+        resultKind: 'fitting',
+        generationMode: 'provider',
+        persistenceStatus: response.persistenceStatus ?? 'completed',
         sourceMaterialImageUrl: request.sourceMaterialImageUrl ?? request.imageUrl,
         materialReference: request.materialReference,
         materialReferences: request.materialReferences,
@@ -1375,6 +1689,7 @@ export function FittingPage() {
 
   const handleEditHistory = async (item: HistoryItem) => {
     if (!currentBrand || !item.previewUrl) return;
+    const isLocalPreview = item.generationMode === 'preview';
 
     let modelReferenceImageUrl = item.modelReferenceImageUrl;
     if (!modelReferenceImageUrl && item.modelReferenceSourceStoragePath) {
@@ -1475,11 +1790,11 @@ export function FittingPage() {
         src: imageUrl,
         label: imageUrls.length > 1 ? `${item.title} ${index + 1}` : item.title,
         metadata: {
-          feature: 'model-matrix',
+          feature: isLocalPreview ? FITTING_LOCAL_PREVIEW_FEATURE_TYPE : 'model-matrix',
           prompt,
           generation: 0,
           parameters: {
-            source: 'fitting-history',
+            source: isLocalPreview ? 'fitting-local-preview-history' : 'fitting-history',
             prompt,
             bodyTypes: item.bodyTypes ?? lastRequest?.bodyTypes ?? [],
             ageGroups: item.ageGroups ?? lastRequest?.ageGroups ?? [],
@@ -1492,7 +1807,14 @@ export function FittingPage() {
             provider: item.providerNames?.[index] ?? null,
             providerModel: item.providerModels?.[index] ?? null,
             providerTaskId: item.providerTaskIds?.[index] ?? null,
-            backendProvider: item.backendProvider ?? 'supabase-edge-function:model-matrix',
+            backendProvider: item.backendProvider ?? (
+              isLocalPreview ? FITTING_LOCAL_PREVIEW_BACKEND : 'unknown'
+            ),
+            resultKind: item.resultKind ?? 'fitting',
+            generationMode: item.generationMode ?? 'provider',
+            providerResultArtifact: !isLocalPreview,
+            localPreviewArtifact: isLocalPreview,
+            persistenceStatus: item.persistenceStatus ?? null,
             materialReference: item.materialReference ?? lastRequest?.materialReference,
             materialReferences: item.materialReferences ?? lastRequest?.materialReferences,
             layerPlan: item.layerPlan ?? lastRequest?.layerPlan,
@@ -1508,7 +1830,20 @@ export function FittingPage() {
   };
 
   return (
-    <div className="space-y-6" data-flow-state={fittingFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[fittingFlowState]}>
+    <div
+      className="space-y-6"
+      data-lightchain-parity-shell="ai-fitting"
+      data-flow-state={fittingFlowState}
+      data-flow-state-label={unifiedWorkspaceFlowLabels[fittingFlowState]}
+      data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+      data-workflow-feature="ai-fitting"
+      data-workflow-input-roles={fittingWorkflowContract?.inputRoles.join(',') ?? ''}
+      data-workflow-result-destinations={fittingWorkflowContract?.resultDestinations.join(',') ?? ''}
+      data-workflow-lifecycle={fittingWorkflowContract?.lifecycle.join(',') ?? ''}
+      data-workflow-source-input-mode={fittingWorkflowContract?.sourceInputMode ?? ''}
+      data-workflow-retry-policy={fittingWorkflowContract?.retry.retainsLastCompletedResult && fittingWorkflowContract.retry.preservesInputLineage && fittingWorkflowContract.retry.blocksDuplicateSubmit ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit' : ''}
+      data-workflow-rights-gate={fittingWorkflowContract?.rightsGate ?? ''}
+    >
       <section className="grid gap-5">
         <div className="glass-panel rounded-2xl p-5 sm:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1516,6 +1851,7 @@ export function FittingPage() {
               <h1 className="font-display text-3xl font-semibold text-neutral-950 dark:text-white">
                 AIフィッティング
               </h1>
+              {cloudflareDataPlane && <p className="mt-3 text-xs leading-5 text-amber-800 dark:text-amber-200">{CLOUDFLARE_IMAGE_NOTICE}</p>}
               <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300">
                 衣服画像と商品説明から、体型・年齢別のモデルセット写真を生成します。
               </p>
@@ -1925,7 +2261,19 @@ export function FittingPage() {
                     {isGenerating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     {isGenerating ? '生成中' : 'AI生成'}
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveFittingBriefPreview}
+                    disabled={!canSaveFittingBriefPreview}
+                    data-testid="fitting-save-brief-preview"
+                    className="btn-secondary inline-flex w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                  >
+                    条件プレビューを保存
+                  </button>
                 </div>
+                <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+                  条件プレビューはprovider未実行のローカル確認用です。実際の着用画像生成は「AI生成」から実行します。
+                </p>
                 {!canGenerate && generationBlockers.length > 0 && (
                   <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold leading-5 text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
                     AI生成までに必要なもの: {generationBlockers.join(' / ')}
@@ -1959,7 +2307,9 @@ export function FittingPage() {
 
           {resumeInputReadback === 'restored' && (
             <p className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm font-semibold leading-6 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100" data-testid="fitting-resume-input-restored">
-              保存済みの同一Jobの高精度フィッティング入力を復元しました。モデル参照画像は再選択が必要な場合があります。
+              {materialReference.nextStepReady
+                ? '保存済みの同一Jobの高精度フィッティング入力を復元しました。モデル参照画像は再選択が必要な場合があります。'
+                : '保存済みの同一JobのGallery素材を復元しました。切り抜き状態を再確認してから生成できます。'}
             </p>
           )}
           {resumeInputReadback === 'unavailable' && (
@@ -2063,6 +2413,11 @@ export function FittingPage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{item.title}</p>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400">{item.status} / {item.time} / {item.count}枚</p>
+                    {item.generationMode === 'preview' && (
+                      <p data-testid={`fitting-history-preview-${item.id}`} className="text-xs font-semibold text-sky-700 dark:text-sky-300">
+                        条件プレビュー / provider未実行
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">

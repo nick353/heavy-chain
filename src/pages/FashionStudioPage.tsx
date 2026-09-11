@@ -18,8 +18,14 @@ import {
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
+import {
+  getLightchainUnifiedFeatureWorkflowContract,
+  UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
+} from '../features/lightchain/unifiedFeatureWorkflowContract';
 
-const choices = ['ライン企画', '素材確認', 'EC準備'];
+const fashionStudioWorkflowContract = getLightchainUnifiedFeatureWorkflowContract('fashion-studio');
+
+const choices = ['スタジオ案', 'コーディネート', '360度表示'];
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
 const optionCardClass = 'rounded-xl border px-4 py-3 text-left text-sm transition';
 
@@ -214,6 +220,7 @@ export function FashionStudioPage() {
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
   const { setFlowState } = useUnifiedWorkspaceFlow();
+  const [studioOverview, setStudioOverview] = useState(true);
   const [activeChoice, setActiveChoice] = useState(choices[0]);
   const [progress, setProgress] = useState(35);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -225,7 +232,7 @@ export function FashionStudioPage() {
   const [background, setBackground] = useState('白背景の自然光スタジオ、薄い影');
   const [props, setProps] = useState('シルバーアクセサリー、ミニバッグ');
   const [productLine, setProductLine] = useState('2026 SS シアージャケット');
-  const [referenceImage, setReferenceImage] = useState('参照画像: lookbook_ref_01.jpg / fabric_ref_02.png');
+  const [referenceImage, setReferenceImage] = useState('');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialStudioMaterial);
   const [savedArtifactId, setSavedArtifactId] = useState<string | null>(null);
   const nextHistoryId = useRef(1);
@@ -462,8 +469,104 @@ export function FashionStudioPage() {
     }
   };
 
+  if (studioOverview) {
+    const projectArtifacts = currentBrand?.id
+      ? listWorkspaceArtifacts(currentBrand.id, user?.id)
+        .filter((artifact) => artifact.featureType === 'fashion-studio')
+        .slice(0, 40)
+      : [];
+    const referenceExamples = [
+      'スタジオ撮影を屋外風の写真に変える',
+      'スマート画像検索＋コーデ調整',
+      '新作Look‐SNSマーケティング',
+      '着用画像を物画像に変換',
+      'モデルの雰囲気マーケティング画像',
+    ];
+
+    return (
+      <main
+        className="dark min-h-screen bg-[#101010] px-4 py-5 text-white sm:px-6"
+        data-testid="lightchain-fashion-studio-overview"
+        data-lightchain-parity-shell="fashion-studio-overview"
+        data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+        data-workflow-feature="fashion-studio"
+        data-workflow-input-roles={fashionStudioWorkflowContract?.inputRoles.join(',') ?? ''}
+        data-workflow-result-destinations={fashionStudioWorkflowContract?.resultDestinations.join(',') ?? ''}
+      >
+        <section className="mx-auto max-w-[1180px]">
+          <h1 className="text-base font-semibold text-white">ファッションスタジオ</h1>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <button
+              type="button"
+              onClick={() => setStudioOverview(false)}
+              data-testid="lightchain-fashion-studio-new-file"
+              className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
+            >
+              <div className="flex h-40 items-center justify-center bg-[radial-gradient(circle_at_28%_24%,#e7ffe8,#5d646b_52%,#181f22)]">
+                <div className="relative flex h-16 w-20 items-center justify-center text-xs font-bold text-white">
+                  PROJECT
+                  <span className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-neutral-200 text-xl font-bold text-neutral-700">+</span>
+                </div>
+              </div>
+              <div className="px-4 py-4">
+                <p className="text-sm font-semibold text-neutral-200">新規ファイル</p>
+              </div>
+            </button>
+            {projectArtifacts.map((artifact) => (
+              <button
+                key={artifact.id}
+                type="button"
+                onClick={() => setStudioOverview(false)}
+                className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
+              >
+                <div className="flex h-40 items-center justify-center bg-[#171c1f]">
+                  {artifact.imageUrl ? <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-neutral-500">プレビュー未取得</span>}
+                </div>
+                <div className="px-4 py-4">
+                  <p className="truncate text-sm font-semibold text-neutral-200">{artifact.title || 'Untitled'}</p>
+                  <p className="mt-2 text-xs text-neutral-500">{new Date(artifact.createdAt).toLocaleDateString('ja-JP')} 修正</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <h2 className="mt-7 text-base font-semibold text-white">参考事例</h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {referenceExamples.map((title) => (
+              <button
+                key={title}
+                type="button"
+                onClick={() => setStudioOverview(false)}
+                className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
+              >
+                <div className="h-40 bg-[linear-gradient(135deg,#dbeafe,#f8fafc_52%,#65d3cf_53%)]" />
+                <div className="px-4 py-4">
+                  <p className="line-clamp-2 text-sm font-semibold text-neutral-200">{title}</p>
+                  <p className="mt-2 text-xs text-neutral-500">参考事例</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
-    <div className="space-y-6 text-white" data-flow-state={studioFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[studioFlowState]}>
+    <div
+      className="space-y-6 text-white"
+      data-lightchain-parity-shell="fashion-studio"
+      data-flow-state={studioFlowState}
+      data-flow-state-label={unifiedWorkspaceFlowLabels[studioFlowState]}
+      data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+      data-workflow-feature="fashion-studio"
+      data-workflow-input-roles={fashionStudioWorkflowContract?.inputRoles.join(',') ?? ''}
+      data-workflow-result-destinations={fashionStudioWorkflowContract?.resultDestinations.join(',') ?? ''}
+      data-workflow-lifecycle={fashionStudioWorkflowContract?.lifecycle.join(',') ?? ''}
+      data-workflow-source-input-mode={fashionStudioWorkflowContract?.sourceInputMode ?? ''}
+      data-workflow-retry-policy={fashionStudioWorkflowContract?.retry.retainsLastCompletedResult && fashionStudioWorkflowContract.retry.preservesInputLineage && fashionStudioWorkflowContract.retry.blocksDuplicateSubmit ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit' : ''}
+      data-workflow-rights-gate={fashionStudioWorkflowContract?.rightsGate ?? ''}
+    >
       <section className="overflow-hidden rounded-[28px] border border-white/10 bg-neutral-950 p-5 shadow-soft sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -471,10 +574,10 @@ export function FashionStudioPage() {
               LIGHTCHAIN / STUDIO
             </p>
             <h1 className="mt-2 font-display text-3xl font-semibold text-white">
-              Fashion Studio
+              ファッションスタジオ
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-300">
-              商品企画の切り口と進捗メモを、Canvas に渡せるスタジオワークスペースです。
+              衣服、モデル、シーン、小物を組み合わせて撮影スタジオ案を作ります。
             </p>
           </div>
           <button

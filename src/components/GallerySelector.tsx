@@ -2,10 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Check, Image as ImageIcon, Heart, Folder as FolderIcon, ChevronRight, House } from 'lucide-react';
 import { Modal } from './ui';
-import { supabase } from '../lib/supabase';
 import { withSignedImageUrls } from '../lib/storage';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { useAuthStore } from '../stores/authStore';
-import type { Folder, GeneratedImage } from '../types/database';
+import type { Folder } from '../types/database';
+import {
+  type GeneratedImageGallerySelectorRow,
+} from '../lib/generatedImageQuery';
 import {
   getGalleryPendingImageUrl,
   getGallerySelectionStoragePath,
@@ -49,7 +52,7 @@ const GALLERY_SKELETON_TILE_COUNT = 12;
 // Platform assets are product-owned, same-origin files. Keep this list small
 // and explicit until a first-class platform-assets table exists; never mix a
 // generated brand image into this tab by inference.
-const PLATFORM_GALLERY_ASSETS: GeneratedImage[] = [
+const PLATFORM_GALLERY_ASSETS: GeneratedImageGallerySelectorRow[] = [
   {
     id: 'platform-blank-white-tshirt-v1',
     job_id: null,
@@ -57,17 +60,11 @@ const PLATFORM_GALLERY_ASSETS: GeneratedImage[] = [
     user_id: 'platform',
     storage_path: '/assets/printing/blank-white-tshirt.svg',
     image_url: '/assets/printing/blank-white-tshirt.svg',
-    thumbnail_path: '/assets/printing/blank-white-tshirt.svg',
-    version: 1,
-    parent_image_id: null,
     is_favorite: false,
     created_at: '2026-01-01T00:00:00.000Z',
-    expires_at: null,
     prompt: '無地の白いTシャツ',
     negative_prompt: null,
     feature_type: 'platform-asset',
-    style_preset: null,
-    model_used: null,
     generation_params: null,
     metadata: { assetOrigin: 'platform', assetRole: 'garment' },
   },
@@ -78,17 +75,11 @@ const PLATFORM_GALLERY_ASSETS: GeneratedImage[] = [
     user_id: 'platform',
     storage_path: '/assets/fabric/cotton-knit-neutral.svg',
     image_url: '/assets/fabric/cotton-knit-neutral.svg',
-    thumbnail_path: '/assets/fabric/cotton-knit-neutral.svg',
-    version: 1,
-    parent_image_id: null,
     is_favorite: false,
     created_at: '2026-01-01T00:00:00.000Z',
-    expires_at: null,
     prompt: '自社標準コットンニット（ニュートラル）',
     negative_prompt: null,
     feature_type: 'platform-asset',
-    style_preset: null,
-    model_used: null,
     generation_params: null,
     metadata: { assetOrigin: 'platform', assetRole: 'textile', material: 'cotton-knit' },
   },
@@ -106,7 +97,7 @@ const normalizeSearchText = (value: unknown): string => {
   }
 };
 
-const getImageSearchText = (image: GeneratedImage) => [
+const getImageSearchText = (image: GeneratedImageGallerySelectorRow) => [
   image.prompt,
   image.negative_prompt,
   image.feature_type,
@@ -130,11 +121,10 @@ export function GallerySelector({
 }: GallerySelectorProps) {
   const {
     currentBrand,
-    user,
     isLoading: authLoading,
     isInitialized: authInitialized,
   } = useAuthStore();
-  const [images, setImages] = useState<GeneratedImage[]>([]);
+  const [images, setImages] = useState<GeneratedImageGallerySelectorRow[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [folderMemberships, setFolderMemberships] = useState<GalleryFolderMembership[]>([]);
   const [loadedBrandId, setLoadedBrandId] = useState<string | null>(null);
@@ -220,63 +210,34 @@ export function GallerySelector({
       return;
     }
     try {
-      let imageQuery = supabase
-        .from('generated_images')
-        .select('*')
-        .eq('brand_id', currentBrand.id)
-        .order('created_at', { ascending: false });
-
-      if (activeLibraryTab === 'my-library' && user) {
-        imageQuery = imageQuery.eq('user_id', user.id);
-      }
-
-      if (activeLibraryTab === 'generation-history') {
-        imageQuery = imageQuery.not('job_id', 'is', null);
-      }
-
-      if (assetPurpose === PRINT_DESIGN_ASSET_PURPOSE) {
-        imageQuery = imageQuery.contains('metadata', { assetPurpose: PRINT_DESIGN_ASSET_PURPOSE });
-      }
-
-      if (filter === 'favorites') {
-        imageQuery = imageQuery.eq('is_favorite', true);
-      }
-
-      if (filter === 'recent') {
-        imageQuery = imageQuery.limit(20);
-      } else {
-        imageQuery = imageQuery.limit(50);
-      }
-
-      const [imageResult, folderResult] = await Promise.all([
-        imageQuery,
-        supabase
-          .from('folders')
-          .select('*')
-          .eq('brand_id', currentBrand.id)
-          .order('name', { ascending: true }),
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const [remoteImages, nextFolders, nextMemberships] = await Promise.all([
+        cloudflareDataPlane.listGeneratedImages(currentBrand.id, {
+          limit: filter === 'recent' ? 20 : 50, offset: 0,
+          favorite: filter === 'favorites' ? true : undefined,
+          assetPurpose: assetPurpose === PRINT_DESIGN_ASSET_PURPOSE ? PRINT_DESIGN_ASSET_PURPOSE : undefined,
+          hasJob: activeLibraryTab === 'generation-history' ? true : undefined,
+        }),
+        cloudflareDataPlane.listFolders(currentBrand.id),
+        cloudflareDataPlane.listImageFolderMemberships(currentBrand.id),
       ]);
+      const imageRows = remoteImages
+        .filter((image) => activeLibraryTab !== 'generation-history' || image.job_id !== null)
+        .filter((image) => filter !== 'favorites' || image.is_favorite)
+        .filter((image) => assetPurpose !== PRINT_DESIGN_ASSET_PURPOSE || (
+          image.metadata && typeof image.metadata === 'object' && !Array.isArray(image.metadata)
+          && image.metadata.assetPurpose === PRINT_DESIGN_ASSET_PURPOSE
+        ))
+        .slice(0, filter === 'recent' ? 20 : 50)
+        .map((image) => ({
+          ...image,
+          is_favorite: image.is_favorite,
+          generation_params: image.generation_params,
+        }));
 
+      const signedImages = await withSignedImageUrls(imageRows);
       if (requestRevision !== fetchRequestRevisionRef.current) return;
-      if (imageResult.error) throw imageResult.error;
-      if (folderResult.error) throw folderResult.error;
-
-      const nextFolders = folderResult.data || [];
       const folderNavigation = createGalleryFolderNavigation(nextFolders);
-      const folderIds = Array.from(folderNavigation.foldersById.keys());
-      let nextMemberships: GalleryFolderMembership[] = [];
-      if (folderIds.length > 0) {
-        const membershipResult = await supabase
-          .from('image_folders')
-          .select('image_id,folder_id')
-          .in('folder_id', folderIds);
-        if (requestRevision !== fetchRequestRevisionRef.current) return;
-        if (membershipResult.error) throw membershipResult.error;
-        nextMemberships = membershipResult.data || [];
-      }
-
-      const signedImages = await withSignedImageUrls(imageResult.data || []);
-      if (requestRevision !== fetchRequestRevisionRef.current) return;
       setImages(signedImages);
       setFolders(nextFolders);
       setFolderMemberships(nextMemberships);
@@ -294,7 +255,7 @@ export function GallerySelector({
         setIsLoading(false);
       }
     }
-  }, [activeLibraryTab, assetPurpose, authInitialized, authLoading, currentBrand, filter, platformAssetRole, user]);
+  }, [activeLibraryTab, assetPurpose, authInitialized, authLoading, currentBrand, filter, platformAssetRole]);
 
   useEffect(() => {
     if (isOpen) {
@@ -384,7 +345,7 @@ export function GallerySelector({
     });
   };
 
-  const handleImageClick = (image: GeneratedImage, event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleImageClick = (image: GeneratedImageGallerySelectorRow, event: React.MouseEvent<HTMLButtonElement>) => {
     if (multiple) {
       const newSelected = new Set(selectedImages);
       

@@ -8,7 +8,7 @@ import {
   Trash2,
   FolderOpen
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { useAuthStore } from '../stores/authStore';
 import { Button, Input, Modal } from './ui';
 import toast from 'react-hot-toast';
@@ -40,13 +40,8 @@ export function FolderManager({ onSelectFolder, selectedFolderId }: FolderManage
     if (!currentBrand) return;
 
     try {
-      const { data, error } = await supabase
-        .from('folders')
-        .select('*')
-        .eq('brand_id', currentBrand.id)
-        .order('name');
-
-      if (error) throw error;
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const data = await cloudflareDataPlane.listFolders(currentBrand.id);
 
       // Build folder tree
       const folderMap = new Map<string, FolderItem>();
@@ -87,17 +82,12 @@ export function FolderManager({ onSelectFolder, selectedFolderId }: FolderManage
     if (!currentBrand || !newFolderName.trim()) return;
 
     try {
-      const { error } = await supabase
-        .from('folders')
-        .insert({
-          brand_id: currentBrand.id,
-          name: newFolderName.trim(),
-          parent_folder_id: parentFolderId,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      await cloudflareDataPlane.createFolder({
+        brand_id: currentBrand.id,
+        name: newFolderName.trim(),
+        parent_folder_id: parentFolderId,
+      });
 
       await fetchFolders();
       setShowCreateModal(false);
@@ -113,12 +103,8 @@ export function FolderManager({ onSelectFolder, selectedFolderId }: FolderManage
     if (!confirm('このフォルダを削除しますか？中の画像はフォルダから外れます。')) return;
 
     try {
-      const { error } = await supabase
-        .from('folders')
-        .delete()
-        .eq('id', folderId);
-
-      if (error) throw error;
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      await cloudflareDataPlane.deleteFolder(folderId);
 
       await fetchFolders();
       if (selectedFolderId === folderId) {
@@ -134,12 +120,8 @@ export function FolderManager({ onSelectFolder, selectedFolderId }: FolderManage
     if (!editingFolder || !newFolderName.trim()) return;
 
     try {
-      const { error } = await supabase
-        .from('folders')
-        .update({ name: newFolderName.trim() })
-        .eq('id', editingFolder.id);
-
-      if (error) throw error;
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      await cloudflareDataPlane.updateFolder(editingFolder.id, { name: newFolderName.trim() });
 
       await fetchFolders();
       setEditingFolder(null);

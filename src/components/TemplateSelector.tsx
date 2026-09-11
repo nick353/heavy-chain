@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { 
-  Image, 
   Square, 
   RectangleHorizontal, 
   RectangleVertical,
@@ -20,7 +19,6 @@ export interface DesignTemplate {
   id: string;
   name: string;
   description: string;
-  thumbnail: string;
   category: 'sns' | 'sale' | 'lookbook' | 'product';
   elements: any[];
 }
@@ -49,7 +47,6 @@ const designTemplates: DesignTemplate[] = [
     id: 'sale-banner',
     name: 'セールバナー',
     description: 'シンプルなセール告知用',
-    thumbnail: '/templates/sale-banner.png',
     category: 'sale',
     elements: [
       { type: 'text', content: 'SALE', fontSize: 72, fontWeight: 'bold', x: 'center', y: 100 },
@@ -61,7 +58,6 @@ const designTemplates: DesignTemplate[] = [
     id: 'new-arrival',
     name: '新作紹介',
     description: '新商品告知用',
-    thumbnail: '/templates/new-arrival.png',
     category: 'sns',
     elements: [
       { type: 'text', content: 'NEW ARRIVAL', fontSize: 48, fontWeight: 'bold', x: 'center', y: 80 },
@@ -72,7 +68,6 @@ const designTemplates: DesignTemplate[] = [
     id: 'lookbook-2col',
     name: 'ルックブック（2列）',
     description: '2商品並列レイアウト',
-    thumbnail: '/templates/lookbook-2col.png',
     category: 'lookbook',
     elements: [
       { type: 'frame', x: 50, y: 100, width: 450, height: 600 },
@@ -84,7 +79,6 @@ const designTemplates: DesignTemplate[] = [
     id: 'product-card',
     name: '商品カード',
     description: 'EC用商品紹介',
-    thumbnail: '/templates/product-card.png',
     category: 'product',
     elements: [
       { type: 'frame', x: 'center', y: 50, width: 400, height: 400 },
@@ -96,7 +90,6 @@ const designTemplates: DesignTemplate[] = [
     id: 'seasonal',
     name: '季節キャンペーン',
     description: '季節プロモーション用',
-    thumbnail: '/templates/seasonal.png',
     category: 'sale',
     elements: [
       { type: 'text', content: 'SPRING', fontSize: 64, fontWeight: 'bold', x: 'center', y: 80 },
@@ -108,7 +101,6 @@ const designTemplates: DesignTemplate[] = [
     id: 'minimal-product',
     name: 'ミニマル商品',
     description: 'シンプルな商品写真',
-    thumbnail: '/templates/minimal-product.png',
     category: 'product',
     elements: [
       { type: 'frame', x: 'center', y: 'center', width: 600, height: 600 },
@@ -144,13 +136,94 @@ export function TemplateSelector({
     { id: 'banner', label: 'バナー' },
   ];
 
-  const designCategories = [
+const designCategories = [
     { id: 'all', label: 'すべて' },
     { id: 'sns', label: 'SNS' },
     { id: 'sale', label: 'セール' },
     { id: 'lookbook', label: 'ルックブック' },
     { id: 'product', label: '商品' },
   ];
+
+  const previewPosition = (value: unknown, canvasSize: number) => {
+    if (typeof value === 'number') return `${(value / canvasSize) * 100}%`;
+    if (value === 'center') return '50%';
+    return typeof value === 'string' ? value : '0%';
+  };
+
+  const previewSize = (value: unknown, canvasSize: number) => {
+    if (typeof value === 'number') return `${(value / canvasSize) * 100}%`;
+    return typeof value === 'string' ? value : '0%';
+  };
+
+  const TemplatePreview = ({ template }: { template: DesignTemplate }) => (
+    <div
+      className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-neutral-50 via-white to-neutral-100"
+      data-template-preview={template.id}
+      aria-label={`${template.name}プレビュー`}
+    >
+      {template.elements.map((element, index) => {
+        const left = previewPosition(element.x, 1000);
+        const top = previewPosition(element.y, 800);
+        const transform = [element.x, element.y].includes('center')
+          ? `translate(${element.x === 'center' ? '-50%' : '0'}, ${element.y === 'center' ? '-50%' : '0'})`
+          : undefined;
+
+        if (element.type === 'text') {
+          return (
+            <span
+              key={`${template.id}-text-${index}`}
+              className="absolute max-w-[90%] truncate text-neutral-700"
+              style={{
+                left,
+                top,
+                transform,
+                fontSize: `${Math.max(9, Math.min(24, Number(element.fontSize ?? 16) * 0.3))}px`,
+                fontWeight: element.fontWeight ?? '500',
+              }}
+            >
+              {element.content}
+            </span>
+          );
+        }
+
+        if (element.type === 'frame') {
+          return (
+            <span
+              key={`${template.id}-frame-${index}`}
+              className="absolute rounded border-2 border-dashed border-neutral-300 bg-neutral-200/40"
+              style={{
+                left,
+                top,
+                width: previewSize(element.width, 1000),
+                height: previewSize(element.height, 800),
+                transform,
+              }}
+              aria-hidden="true"
+            />
+          );
+        }
+
+        if (element.type === 'shape') {
+          return (
+            <span
+              key={`${template.id}-shape-${index}`}
+              className="absolute bg-primary-500/70"
+              style={{
+                left,
+                top,
+                width: previewSize(element.width, 1000),
+                height: previewSize(element.height, 800),
+                transform,
+              }}
+              aria-hidden="true"
+            />
+          );
+        }
+
+        return null;
+      })}
+    </div>
+  );
 
   const categories = mode === 'size' ? sizeCategories : designCategories;
   
@@ -263,12 +336,7 @@ export function TemplateSelector({
                   </div>
                 )}
                 
-                {/* Thumbnail preview */}
-                <div className="aspect-[4/3] bg-neutral-100 flex items-center justify-center">
-                  <div className="w-24 h-24 bg-neutral-200 rounded-lg flex items-center justify-center">
-                    <Image className="w-8 h-8 text-neutral-400" />
-                  </div>
-                </div>
+                <TemplatePreview template={template} />
                 
                 <div className="p-3">
                   <p className="font-medium text-sm text-neutral-800 mb-0.5">

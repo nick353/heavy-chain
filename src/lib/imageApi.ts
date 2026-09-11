@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { cloudflareDataPlane } from './cloudflareApi';
 import type { Json } from '../types/database';
 export { assertCompletedImageEditResult, assertCompletedModelMatrixResult } from './providerResultReadback';
 
@@ -54,6 +54,15 @@ export async function edgeFunctionErrorMessage(error: any, response?: Response |
 
 export interface ImageEditResult {
   success: boolean;
+  requestId?: string;
+  clientRecoveryKey?: string;
+  createdAt?: string;
+  batchId?: string;
+  providerJobId?: string;
+  providerImageId?: string;
+  providerStoragePath?: string;
+  protectedRegionComposited?: boolean;
+  maskTreatment?: string;
   jobId?: string | null;
   imageId?: string | null;
   imageUrl?: string;
@@ -134,6 +143,15 @@ export interface SharedImagePayload {
   error?: string;
 }
 
+async function invokeImageAction<T>(
+  action: string,
+  body: Record<string, unknown>,
+  options: { idempotencyKey?: string; assertContext?: ()=>void } = {},
+): Promise<T> {
+  if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+  return cloudflareDataPlane.invokeProviderAction<T>(action, body, options);
+}
+
 /**
  * Remove background from an image
  */
@@ -144,12 +162,12 @@ export async function removeBackground(
   legalSafety?: LegalSafetyOptions,
 ): Promise<ImageEditResult> {
   try {
-    const { data, error } = await supabase.functions.invoke('remove-background', {
-      body: { imageUrl, brandId, lightchainCompat, legalSafety: { rightsConfirmed: legalSafety?.rightsConfirmed === true } },
+    return await invokeImageAction<ImageEditResult>('remove-background', {
+      imageUrl,
+      brandId,
+      lightchainCompat,
+      legalSafety: { rightsConfirmed: legalSafety?.rightsConfirmed === true },
     });
-
-    if (error) throw error;
-    return data as ImageEditResult;
   } catch (error: any) {
     console.error('Remove background error:', error);
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
@@ -168,12 +186,14 @@ export async function generateColorVariations(
   legalSafety?: LegalSafetyOptions,
 ): Promise<ColorVariationResult> {
   try {
-    const { data, error } = await supabase.functions.invoke('colorize', {
-      body: { imageUrl, brandId, colors, count, lightchainCompat, legalSafety: { rightsConfirmed: legalSafety?.rightsConfirmed === true } },
+    return await invokeImageAction<ColorVariationResult>('colorize', {
+      imageUrl,
+      brandId,
+      colors,
+      count,
+      lightchainCompat,
+      legalSafety: { rightsConfirmed: legalSafety?.rightsConfirmed === true },
     });
-
-    if (error) throw error;
-    return data as ColorVariationResult;
   } catch (error: any) {
     console.error('Colorize error:', error);
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
@@ -191,12 +211,13 @@ export async function upscaleImage(
   legalSafety?: LegalSafetyOptions,
 ): Promise<ImageEditResult> {
   try {
-    const { data, error } = await supabase.functions.invoke('upscale', {
-      body: { imageUrl, brandId, scale, lightchainCompat, legalSafety: { rightsConfirmed: legalSafety?.rightsConfirmed === true } },
+    return await invokeImageAction<ImageEditResult>('upscale', {
+      imageUrl,
+      brandId,
+      scale,
+      lightchainCompat,
+      legalSafety: { rightsConfirmed: legalSafety?.rightsConfirmed === true },
     });
-
-    if (error) throw error;
-    return data as ImageEditResult;
   } catch (error: any) {
     console.error('Upscale error:', error);
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
@@ -219,19 +240,14 @@ export async function generateVariations(
   }
 ): Promise<VariationsResult> {
   try {
-    const { data, error } = await supabase.functions.invoke('generate-variations', {
-      body: {
-        imageUrl,
-        brandId,
-        prompt,
-        count,
-        ...options,
-        legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
-      },
+    return await invokeImageAction<VariationsResult>('generate-variations', {
+      imageUrl,
+      brandId,
+      prompt,
+      count,
+      ...options,
+      legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
     });
-
-    if (error) throw error;
-    return data as VariationsResult;
   } catch (error: any) {
     console.error('Generate variations error:', error);
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
@@ -245,7 +261,8 @@ export async function generateImage(
   prompt: string,
   brandId: string,
   options?: {
-    generationProvider?: 'gemini' | 'gemini_image' | 'openai' | 'openai_image' | 'mock' | 'mock_image';
+    generationProvider?: 'gemini' | 'gemini_image' | 'openai' | 'openai_image' | 'mock' | 'mock_image' | 'workers_ai';
+    imageUrls?: string[];
     generationModel?: string;
     featureType?: string;
     style?: string;
@@ -267,19 +284,14 @@ export async function generateImage(
   }
 ): Promise<ImageEditResult> {
   try {
-    const { data, error } = await supabase.functions.invoke('generate-image', {
-      body: {
-        prompt,
-        brandId,
-        ...options,
-        legalSafety: {
-          rightsConfirmed: options?.rightsConfirmed === true,
-        },
+    const result = await invokeImageAction<ImageEditResult>('generate-image', {
+      prompt,
+      brandId,
+      ...options,
+      legalSafety: {
+        rightsConfirmed: options?.rightsConfirmed === true,
       },
     });
-
-    if (error) throw error;
-    const result = data as ImageEditResult;
     return {
       ...result,
       imageUrl: result.imageUrl ?? result.images?.[0]?.imageUrl,
@@ -369,7 +381,11 @@ export async function editImageWithPrompt(
     outputBackground?: 'auto' | 'transparent';
     maskDataUrl?: string;
     parentObjectId?: string | null;
+    canvasProjectId?: string | null;
     generation?: number;
+    count?: number;
+    featureType?: string;
+    assertContext?: ()=>void;
     maskApplied?: boolean;
     maskCoveragePercent?: number;
     maskWidth?: number;
@@ -388,10 +404,11 @@ export async function editImageWithPrompt(
   },
 ): Promise<ImageEditResult> {
   try {
-    const inputImageUrls = [imageUrl, ...(options?.referenceImageUrls ?? [])]
-      .filter((value, index, values): value is string => typeof value === 'string' && value.trim().length > 0 && values.indexOf(value) === index)
-      .slice(0, 16);
+    options?.assertContext?.();
+    if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+    const inputImageUrls = [imageUrl, ...(options?.referenceImageUrls ?? [])];
     if (!inputImageUrls.length) throw new Error('image_edit_input_missing');
+    if (inputImageUrls.some(value=>typeof value !== 'string' || !value.trim())) throw new Error('image_edit_input_missing');
     const inputImages = await Promise.all(inputImageUrls.map(async (inputImageUrl, index) => {
       const response = await fetch(inputImageUrl);
       if (!response.ok) throw new Error(`image_edit_input_fetch_failed:${index}:${response.status}`);
@@ -408,38 +425,38 @@ export async function editImageWithPrompt(
       return dataUrl;
     }));
     const imageInput = inputImages[0];
-    const { data, error } = await supabase.functions.invoke('edit-image', {
-      body: {
-        imageUrl: imageInput,
-        imageUrls: inputImages,
-        prompt,
-        brandId,
-        maskDataUrl: options?.maskDataUrl,
-        outputBackground: options?.outputBackground === 'transparent' ? 'transparent' : 'auto',
-        parentObjectId: options?.parentObjectId ?? null,
-        generation: options?.generation,
-        maskApplied: options?.maskApplied === true,
-        maskCoveragePercent: options?.maskCoveragePercent,
-        maskWidth: options?.maskWidth,
-        maskHeight: options?.maskHeight,
-        providerModel: options?.providerModel,
-        inputFidelity: options?.inputFidelity,
-        quality: options?.quality,
-        lightchainCompat: options?.lightchainCompat,
-        generationIntent: options?.generationIntent,
-        materialReferences: options?.materialReferences,
-        layerPlan: options?.layerPlan,
-        maskPlan: options?.maskPlan,
-        compositionPreview: options?.compositionPreview,
-        legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
-      },
-      ...(options?.idempotencyKey
-        ? { headers: { 'Idempotency-Key': options.idempotencyKey } }
-        : {}),
+    options?.assertContext?.();
+    const result = await invokeImageAction<ImageEditResult>('edit-image', {
+      imageUrl: imageInput,
+      imageUrls: inputImages,
+      prompt,
+      brandId,
+      maskDataUrl: options?.maskDataUrl,
+      outputBackground: options?.outputBackground === 'transparent' ? 'transparent' : 'auto',
+      parentObjectId: options?.parentObjectId ?? null,
+      canvasProjectId: options?.canvasProjectId ?? null,
+      generation: options?.generation,
+      count: options?.count,
+      featureType: options?.featureType,
+      maskApplied: options?.maskApplied === true,
+      maskCoveragePercent: options?.maskCoveragePercent,
+      maskWidth: options?.maskWidth,
+      maskHeight: options?.maskHeight,
+      providerModel: options?.providerModel,
+      inputFidelity: options?.inputFidelity,
+      quality: options?.quality,
+      lightchainCompat: options?.lightchainCompat,
+      generationIntent: options?.generationIntent,
+      materialReferences: options?.materialReferences,
+      layerPlan: options?.layerPlan,
+      maskPlan: options?.maskPlan,
+      compositionPreview: options?.compositionPreview,
+      legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
+    }, {
+      idempotencyKey: options?.idempotencyKey,
+      assertContext: options?.assertContext,
     });
-
-    if (error) throw error;
-    const result = data as ImageEditResult;
+    options?.assertContext?.();
     return {
       ...result,
       imageUrl: result.imageUrl ?? result.images?.[0]?.imageUrl,
@@ -470,12 +487,7 @@ export async function optimizePrompt(
   error?: string;
 }> {
   try {
-    const { data, error } = await supabase.functions.invoke('optimize-prompt', {
-      body: { prompt, brandId, style, targetPlatform },
-    });
-
-    if (error) throw error;
-    return data;
+    return await invokeImageAction('optimize-prompt', { prompt, brandId, style, targetPlatform });
   } catch (error: any) {
     console.error('Optimize prompt error:', error);
     return { success: false, error: error.message };
@@ -506,12 +518,13 @@ export async function designGacha(
   error?: string;
 }> {
   try {
-    const { data, error } = await supabase.functions.invoke('design-gacha', {
-      body: { brief, brandId, directions, ...options, legalSafety: { rightsConfirmed: options?.rightsConfirmed === true } },
+    return await invokeImageAction('design-gacha', {
+      brief,
+      brandId,
+      directions,
+      ...options,
+      legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
     });
-
-    if (error) throw error;
-    return data;
   } catch (error: any) {
     console.error('Design gacha error:', error);
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
@@ -541,12 +554,13 @@ export async function generateProductShots(
   error?: string;
 }> {
   try {
-    const { data, error } = await supabase.functions.invoke('product-shots', {
-      body: { productDescription, brandId, shots, ...options, legalSafety: { rightsConfirmed: options?.rightsConfirmed === true } },
+    return await invokeImageAction('product-shots', {
+      productDescription,
+      brandId,
+      shots,
+      ...options,
+      legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
     });
-
-    if (error) throw error;
-    return data;
   } catch (error: any) {
     console.error('Product shots error:', error);
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
@@ -555,6 +569,7 @@ export async function generateProductShots(
 
 export interface ModelMatrixResult {
   success: boolean;
+  backendProvider?: string;
   jobId?: string | null;
   persistenceStatus?: 'not_started' | 'processing' | 'completed' | 'failed';
   failedStage?: string | null;
@@ -588,7 +603,11 @@ export async function generateModelMatrix(
     imageUrl?: string;
     modelReferenceImageUrl?: string;
     generationModel?: string;
+    modelReferenceFileName?: string;
+    modelReferenceSourceImageId?: string | null;
+    modelReferenceSourceStoragePath?: string | null;
     sourceReadback?: unknown;
+    materialReference?: unknown;
     materialReferences?: unknown;
     layerPlan?: unknown;
     maskPlan?: unknown;
@@ -599,12 +618,12 @@ export async function generateModelMatrix(
   }
 ): Promise<ModelMatrixResult> {
   try {
-    const { data, error } = await supabase.functions.invoke('model-matrix', {
-      body: { productDescription, brandId, ...options, legalSafety: { rightsConfirmed: options?.rightsConfirmed === true } },
+    return await invokeImageAction<ModelMatrixResult>('model-matrix', {
+      productDescription,
+      brandId,
+      ...options,
+      legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
     });
-
-    if (error) throw error;
-    return data;
   } catch (error: any) {
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
   }
@@ -635,12 +654,12 @@ export async function generateMultilingualBanners(
   error?: string;
 }> {
   try {
-    const { data, error } = await supabase.functions.invoke('multilingual-banner', {
-      body: { headline, brandId, ...options, legalSafety: { rightsConfirmed: options?.rightsConfirmed === true } },
+    return await invokeImageAction('multilingual-banner', {
+      headline,
+      brandId,
+      ...options,
+      legalSafety: { rightsConfirmed: options?.rightsConfirmed === true },
     });
-
-    if (error) throw error;
-    return data;
   } catch (error: any) {
     console.error('Multilingual banner error:', error);
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
@@ -663,12 +682,7 @@ export async function bulkDownload(
   error?: string;
 }> {
   try {
-    const { data, error } = await supabase.functions.invoke('bulk-download', {
-      body: { brandId, ...options },
-    });
-
-    if (error) throw error;
-    return data;
+    return await invokeImageAction('bulk-download', { brandId, ...options });
   } catch (error: any) {
     console.error('Bulk download error:', error);
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
@@ -689,12 +703,8 @@ export async function createShareLink(
   error?: string;
 }> {
   try {
-    const { data, error } = await supabase.functions.invoke('share-link', {
-      body: { imageId, expiresInDays },
-    });
-
-    if (error) throw error;
-    return data;
+    if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+    return await cloudflareDataPlane.createShareLink(imageId, expiresInDays);
   } catch (error: any) {
     console.error('Create share link error:', error);
     return { success: false, error: await edgeFunctionErrorMessage(error, (error as any)?.response) };
@@ -706,30 +716,8 @@ export async function createShareLink(
  */
 export async function getSharedImage(token: string): Promise<SharedImagePayload> {
   try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Missing Supabase environment variables');
-    }
-
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/share-link?token=${encodeURIComponent(token)}`,
-      {
-        method: 'GET',
-        headers: {
-          apikey: supabaseAnonKey,
-          'Content-Type': 'application/json',
-        },
-      },
-    );
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data?.error ?? 'Shared image not found');
-    }
-
-    return data as SharedImagePayload;
+    if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+    return await cloudflareDataPlane.getSharedImage(token);
   } catch (error: any) {
     console.error('Get shared image error:', error);
     return { success: false, error: error.message };

@@ -139,6 +139,7 @@ export function PrintingCompositionStage({
   garmentUrl,
   garmentMaskUrl,
   garmentMaskConfirmed,
+  garmentMaskReviewed = garmentMaskConfirmed,
   designClipMaskUrl,
   layers,
   selectedLayerId,
@@ -150,6 +151,8 @@ export function PrintingCompositionStage({
   garmentUrl: string | null;
   garmentMaskUrl: string | null;
   garmentMaskConfirmed: boolean;
+  /** Interaction readiness and a user's explicit mask review are distinct. */
+  garmentMaskReviewed?: boolean;
   designClipMaskUrl?: string | null;
   layers: PrintingLayer[];
   selectedLayerId: string | null;
@@ -772,9 +775,11 @@ export function PrintingCompositionStage({
         >
           <div className="flex items-center gap-2 font-semibold">
             <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.95)]" />
-            認識範囲を確認済み
+            {garmentMaskReviewed ? '認識範囲を確認済み' : '認識範囲は未確認です'}
           </div>
-          <div className="mt-1 text-cyan-100/75">デザインは確定した服の内側だけに適用されます</div>
+          <div className="mt-1 text-cyan-100/75">{garmentMaskReviewed
+            ? 'デザインは確定した服の内側だけに適用されます'
+            : '配置を調整できます。必要に応じて服の切り抜きとプリント範囲を確認・修正してください。'}</div>
         </div>
       )}
       {interactive && hasConfirmedGarmentMask && (

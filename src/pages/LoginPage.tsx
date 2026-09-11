@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Chrome, Eye, Globe2, HelpCircle, LockKeyhole, Mail } from 'lucide-react';
 import { Button } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
+import { getAuthErrorMessage } from '../lib/authErrorMessage';
+import { probeAuthService } from '../lib/auth';
 import toast from 'react-hot-toast';
 
 export function LoginPage() {
@@ -11,6 +13,41 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authServiceWarning, setAuthServiceWarning] = useState<string | null>(null);
+  const [authServiceChecking, setAuthServiceChecking] = useState(false);
+
+  const checkAuthService = useCallback(async (signal?: AbortSignal) => {
+    setAuthServiceChecking(true);
+    try {
+      await probeAuthService({ signal });
+      if (!signal?.aborted) setAuthServiceWarning(null);
+    } catch (error: unknown) {
+      if (signal?.aborted) return;
+      const message = getAuthErrorMessage(error, '');
+      setAuthServiceWarning(message.startsWith('認証サービスが利用制限中です') ? message : null);
+    } finally {
+      // An aborted probe can be the 5s bounded timeout rather than an
+      // unmount. Always clear this local gate so login remains actionable.
+      setAuthServiceChecking(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      setAuthServiceWarning(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 5000);
+    void checkAuthService(controller.signal).finally(() => window.clearTimeout(timeout));
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
+  }, [checkAuthService, user]);
 
   const validate = () => {
     const nextErrors: { email?: string; password?: string } = {};
@@ -24,28 +61,37 @@ export function LoginPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!validate()) return;
+    setAuthError(null);
     try {
       await signInWithEmail(email, password);
       toast.success('ログインしました');
       navigate('/lightchain', { replace: true });
     } catch (error: any) {
-      toast.error(error.message || 'ログインに失敗しました');
+      const message = getAuthErrorMessage(error, 'ログインに失敗しました');
+      setAuthError(message);
+      toast.error(message);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setAuthError(null);
     try {
       await signInWithGoogle();
     } catch (error: any) {
-      toast.error(error.message || 'Googleログインに失敗しました');
+      const message = getAuthErrorMessage(error, 'Googleログインに失敗しました');
+      setAuthError(message);
+      toast.error(message);
     }
   };
 
   const handleAppleLogin = async () => {
+    setAuthError(null);
     try {
       await signInWithApple();
     } catch (error: any) {
-      toast.error(error.message || 'Appleログインに失敗しました');
+      const message = getAuthErrorMessage(error, 'Appleログインに失敗しました');
+      setAuthError(message);
+      toast.error(message);
     }
   };
 
@@ -113,6 +159,29 @@ export function LoginPage() {
               <h2 className="mt-6 text-2xl font-semibold">ログイン</h2>
             </div>
 
+            {authError && (
+              <div role="alert" className="mb-6 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm leading-6 text-amber-100">
+                {authError}
+              </div>
+            )}
+
+            {authServiceWarning && !authError && (
+              <div role="status" data-testid="auth-service-warning" className="mb-6 rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm leading-6 text-amber-100">
+                <div className="flex items-start justify-between gap-4">
+                  <span>{authServiceWarning}</span>
+                  <button
+                    type="button"
+                    data-testid="auth-service-recheck"
+                    onClick={() => void checkAuthService()}
+                    disabled={authServiceChecking}
+                    className="shrink-0 rounded-lg border border-amber-200/30 px-2.5 py-1.5 text-xs font-semibold text-amber-50 transition hover:bg-amber-200/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {authServiceChecking ? '確認中…' : '認証状態を再確認'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-5">
               <label className="block">
                 <span className="sr-only">メールアドレス</span>
@@ -155,7 +224,7 @@ export function LoginPage() {
                 </Link>
               </div>
 
-              <Button type="submit" isLoading={isLoading} size="lg" className="min-h-[58px] w-full rounded-2xl bg-gradient-to-r from-cyan-300 via-sky-300 to-indigo-300 text-base font-semibold text-neutral-950 hover:opacity-95">
+              <Button type="submit" isLoading={isLoading} disabled={isLoading} size="lg" className="min-h-[58px] w-full rounded-2xl bg-gradient-to-r from-cyan-300 via-sky-300 to-indigo-300 text-base font-semibold text-neutral-950 hover:opacity-95">
                 ログイン
               </Button>
             </form>

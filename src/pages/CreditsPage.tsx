@@ -79,7 +79,7 @@ export function CreditsPage() {
           </div>
         ) : isLoading ? (
           <div className="mt-6 h-52 animate-pulse rounded-2xl bg-neutral-100 dark:bg-surface-900" />
-        ) : activityError ? (
+        ) : activityError || !summary.available ? (
           <div className="mt-6 rounded-2xl border border-red-200 bg-red-50/70 p-6 text-center dark:border-red-900/60 dark:bg-red-950/25">
             <h2 className="text-base font-semibold text-red-800 dark:text-red-200">読み込み失敗</h2>
             <p className="mt-2 text-sm text-red-700 dark:text-red-300">
@@ -110,19 +110,19 @@ export function CreditsPage() {
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-xl bg-white/60 p-4 dark:bg-surface-950/45">
                     <Gauge className="h-5 w-5 text-primary-600 dark:text-primary-300" />
-                    <p className="mt-3 text-2xl font-semibold text-neutral-950 dark:text-white">{summary.billingTestAccountQuotaBypass ? '無制限' : summary.remainingUnits.toLocaleString()}</p>
+                    <p className="mt-3 text-2xl font-semibold text-neutral-950 dark:text-white">{summary.billingTestAccountQuotaBypass ? '無制限' : summary.remainingUnits?.toLocaleString() ?? '—'}</p>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      {summary.billingTestAccountQuotaBypass ? '月間生成 quota 無制限' : `今月残り / 上限 ${summary.monthlyQuota.toLocaleString()}`}
+                      {summary.billingTestAccountQuotaBypass ? '月間生成 quota 無制限' : `今月残り / 上限 ${summary.monthlyQuota?.toLocaleString() ?? '—'}`}
                     </p>
                   </div>
                   <div className="rounded-xl bg-white/60 p-4 dark:bg-surface-950/45">
                     <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-300" />
-                    <p className="mt-3 text-2xl font-semibold text-neutral-950 dark:text-white">{summary.usedUnits.toLocaleString()}</p>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">使用済み</p>
+                    <p className="mt-3 text-2xl font-semibold text-neutral-950 dark:text-white">{summary.usedUnits?.toLocaleString() ?? '—'}</p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">完了画像</p>
                   </div>
                   <div className="rounded-xl bg-white/60 p-4 dark:bg-surface-950/45">
                     <Loader2 className="h-5 w-5 text-amber-600 dark:text-amber-300" />
-                    <p className="mt-3 text-2xl font-semibold text-neutral-950 dark:text-white">{summary.reservedUnits.toLocaleString()}</p>
+                    <p className="mt-3 text-2xl font-semibold text-neutral-950 dark:text-white">{summary.reservedUnits?.toLocaleString() ?? '—'}</p>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400">処理中</p>
                   </div>
                 </div>

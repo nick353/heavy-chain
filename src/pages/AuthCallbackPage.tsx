@@ -1,25 +1,33 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { auth } from '../lib/auth';
 import { Layers } from 'lucide-react';
-import { ensureUserProfile } from '../stores/authStore';
+import { ensureUserProfile, useAuthStore } from '../stores/authStore';
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
+  const adoptAuthenticatedSession = useAuthStore((state) => state.adoptAuthenticatedSession);
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session }, error } = await auth.getSession();
         
         if (error) throw error;
         
-        if (session) {
-          await ensureUserProfile(
-            session.user,
-            session.user.user_metadata?.full_name || session.user.user_metadata?.name || null
-          );
-          
+        if (session?.user) {
+          let profile = null;
+          try {
+            profile = await ensureUserProfile(session.user);
+          } catch (profileError) {
+            // A valid auth session must not be downgraded to "not logged in"
+            // just because the optional profile read is slow or
+            // temporarily unavailable. The protected workspace resolves its
+            // brand/profile state separately and shows its own gate.
+            console.warn('Auth callback profile hydration deferred:', profileError);
+          }
+          adoptAuthenticatedSession(session.user, profile);
+
           navigate('/lightchain', { replace: true });
         } else {
           navigate('/login');
@@ -31,7 +39,7 @@ export function AuthCallbackPage() {
     };
 
     handleAuthCallback();
-  }, [navigate]);
+  }, [adoptAuthenticatedSession, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-primary-50/30 to-accent-50/20 flex items-center justify-center">
@@ -45,6 +53,3 @@ export function AuthCallbackPage() {
     </div>
   );
 }
-
-
-

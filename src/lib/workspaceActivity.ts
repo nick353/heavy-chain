@@ -1,4 +1,4 @@
-import { supabase, withSupabaseSessionRecovery } from './supabase';
+import { withAuthSessionRecovery } from './auth';
 import { readOptionalWorkspaceValue } from './workspaceReadRecovery';
 import {
   listWorkspaceArtifacts,
@@ -9,22 +9,27 @@ import {
   mergeGeneratedImagesByCanonicalIdentity,
 } from './generatedImageIdentity';
 import { withSignedImageUrls } from './storage';
+import type { GeneratedImageListRow } from './generatedImageQuery';
+import { asGeneratedImageListRow, cloudflareDataPlane } from './cloudflareApi';
 import { buildSourceContextSummaryRows, type SourceContextSummaryRow } from './sourceContextSummary';
 import { getFailureRecoveryGuidance, type FailureRecoveryKind } from './errorMessages';
 import type { GenerationIntent } from './workspaceHandoff';
-import type { Database, GeneratedImage, Json } from '../types/database';
+import type { Database, Json } from '../types/database';
+import type { WorkspaceExecutionStep as LightchainTaskStep } from './workspaceExecution';
 
 type GenerationJob = Database['public']['Tables']['generation_jobs']['Row'];
-type LightchainTaskStep = Database['public']['Tables']['lightchain_task_steps']['Row'];
 
 export type WorkspaceJobStatus = GenerationJob['status'];
 
 export interface CreditSummary {
+  available: boolean;
   planName: string;
-  monthlyQuota: number;
-  usedUnits: number;
-  reservedUnits: number;
-  remainingUnits: number;
+  monthlyQuota: number | null;
+  /** Completed images, not billable usage or all allocated quota. */
+  usedUnits: number | null;
+  reservedUnits: number | null;
+  uncertainUnits: number | null;
+  remainingUnits: number | null;
   billingTestAccountQuotaBypass: boolean;
   appleSandboxTesterNoRealCharge: boolean;
 }
@@ -39,6 +44,8 @@ export interface WorkspaceJob {
   createdAt: string;
   completedAt: string | null;
   outputCount: number;
+  /** Opens the first verified output for this job, preserving Gallery identity. */
+  outputHref: string;
   resumeHref: string;
   generationHref?: string;
   sourceLabel?: string;
@@ -95,18 +102,6 @@ export interface WorkspaceActivity {
   timelineItems: TimelineItem[];
 }
 
-interface UsageSummaryRow {
-  plan_code: string | null;
-  monthly_quota: number | null;
-  used_units: number | null;
-  reserved_units: number | null;
-  remaining_units: number | null;
-  billing_test_account_quota_bypass?: boolean | null;
-  apple_sandbox_tester_no_real_charge?: boolean | null;
-}
-
-const FREE_PLAN_QUOTA = 25;
-
 const logWorkspaceActivityFetchError = (message: string, error: unknown) => {
   if (import.meta.env.DEV) {
     console.warn(message, error);
@@ -115,11 +110,13 @@ const logWorkspaceActivityFetchError = (message: string, error: unknown) => {
 
 export const emptyWorkspaceActivity: WorkspaceActivity = {
   creditSummary: {
-    planName: 'Free',
-    monthlyQuota: FREE_PLAN_QUOTA,
-    usedUnits: 0,
-    reservedUnits: 0,
-    remainingUnits: FREE_PLAN_QUOTA,
+    available: false,
+    planName: '未取得',
+    monthlyQuota: null,
+    usedUnits: null,
+    reservedUnits: null,
+    uncertainUnits: null,
+    remainingUnits: null,
     billingTestAccountQuotaBypass: false,
     appleSandboxTesterNoRealCharge: false,
   },
@@ -128,23 +125,6 @@ export const emptyWorkspaceActivity: WorkspaceActivity = {
   completedJobs: [],
   recentOutputs: [],
   timelineItems: [],
-};
-
-const toNumber = (value: unknown, fallback = 0) => {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : fallback;
-};
-
-const getPlanCodeLabel = (planCode: string | null | undefined) => {
-  switch (planCode) {
-    case 'pro':
-      return 'Pro';
-    case 'business':
-      return 'Business';
-    case 'free':
-    default:
-      return 'Free';
-  }
 };
 
 const featureLabels: Record<string, string> = {
@@ -158,6 +138,9 @@ const featureLabels: Record<string, string> = {
   upscale: 'アップスケール',
   'optimize-prompt': 'プロンプト最適化',
   'model-matrix': 'モデルマトリクス',
+  'model-matrix-local-preview': 'AIフィッティング（条件プレビュー）',
+  'lightchain-fabric-image-local-result': '生地イメージ（ローカルプレビュー）',
+  'lightchain-printing-image-local-result': 'プリントイメージ（ローカルプレビュー）',
   'marketing-workflow': 'マーケティングワークフロー',
   'fashion-studio': 'Fashion Studio',
   'model-library-workspace': 'モデルライブラリ',
@@ -301,7 +284,12 @@ const getRetryHref = (job: GenerationJob, resumeHref: string) => {
   return resumeHref;
 };
 
-const mapJob = (job: GenerationJob, outputCount: number, lightchainTaskSteps: LightchainTaskStep[] = []): WorkspaceJob => {
+const mapJob = (
+  job: GenerationJob,
+  outputCount: number,
+  lightchainTaskSteps: LightchainTaskStep[] = [],
+  primaryOutput?: GeneratedImageListRow,
+): WorkspaceJob => {
   const recoveryGuidance = getJobRecoveryGuidance(job);
   const resumeHref = buildResumeHref(job);
   return {
@@ -314,6 +302,7 @@ const mapJob = (job: GenerationJob, outputCount: number, lightchainTaskSteps: Li
     createdAt: job.created_at,
     completedAt: job.completed_at,
     outputCount,
+    outputHref: getOutputHref(primaryOutput),
     resumeHref,
     generationHref: getGenerationHref(job.input_params),
     sourceLabel: getMetadataString(job.input_params, 'sourceLabel'),
@@ -408,26 +397,6 @@ const hasLightchainCompat = (metadata: Json | null | undefined) => {
   return false;
 };
 
-const lightchainCompatFromMetadata = (metadata: Json | null | undefined) => {
-  const activityMetadata = getWorkspaceActivityMetadata(metadata);
-  if (!activityMetadata || typeof activityMetadata !== 'object' || Array.isArray(activityMetadata)) return null;
-  const lightchainCompat = activityMetadata.lightchainCompat;
-  if (lightchainCompat && typeof lightchainCompat === 'object' && !Array.isArray(lightchainCompat)) return lightchainCompat as Record<string, unknown>;
-  const generationIntent = activityMetadata.generationIntent;
-  if (generationIntent && typeof generationIntent === 'object' && !Array.isArray(generationIntent)) {
-    const intentCompat = generationIntent.lightchainCompat;
-    if (intentCompat && typeof intentCompat === 'object' && !Array.isArray(intentCompat)) return intentCompat as Record<string, unknown>;
-  }
-  return null;
-};
-
-const getLightchainTaskCodes = (metadata: Json | null | undefined) => {
-  const compat = lightchainCompatFromMetadata(metadata);
-  const rawTaskCodes = compat?.lightchainTaskCodes;
-  if (!Array.isArray(rawTaskCodes)) return [];
-  return rawTaskCodes.filter((taskCode): taskCode is string => typeof taskCode === 'string' && taskCode.trim().length > 0);
-};
-
 const lightchainStatusLabel: Record<WorkspaceJobStatus | 'output', string> = {
   pending: '待機中',
   processing: '処理中',
@@ -441,7 +410,8 @@ const durableLightchainStatusLabel: Record<LightchainTaskStep['status'], string>
   processing: '処理中',
   completed: '完了',
   failed: '失敗',
-  retryable: '失敗・再試行可',
+  unknown: '未確定',
+  not_started: '未着手',
 };
 
 const buildDurableLightchainStepValue = (steps: LightchainTaskStep[]) => {
@@ -458,25 +428,25 @@ const buildSourceSummaryRows = (
   durableLightchainTaskSteps: LightchainTaskStep[] = [],
 ) => {
   const rows = buildSourceContextSummaryRows(getWorkspaceActivityMetadata(metadata));
-  if (!status || !hasLightchainCompat(metadata)) return rows;
-  const hasStepRow = rows.some((row) => row.label === 'Lightchain steps' || row.label === 'Heavy Chain steps');
-  const taskCodes = getLightchainTaskCodes(metadata);
   const durableStepValue = buildDurableLightchainStepValue(durableLightchainTaskSteps);
-  const baseRows = durableStepValue
-    ? rows.filter((row) => row.label !== 'Lightchain steps' && row.label !== 'Heavy Chain steps')
-    : rows;
+  const hasCompat = hasLightchainCompat(metadata);
   return [
-    ...baseRows,
+    ...rows,
     ...(durableStepValue
-      ? [{ label: 'Lightchain steps', value: durableStepValue }]
-      : !hasStepRow && taskCodes.length
-        ? [{ label: 'Lightchain steps', value: taskCodes.map((taskCode) => `${taskCode}=${lightchainStatusLabel[status]}`).join(' / ') }]
+      ? [{ label: '実行記録', value: durableStepValue }]
+      : hasCompat
+        ? [{ label: '実行記録', value: '工程別の実行記録は未取得です' }]
         : []),
-    { label: 'Lightchain状態', value: lightchainStatusLabel[status] },
+    ...(status && hasCompat ? [{ label: 'Lightchain状態', value: lightchainStatusLabel[status] }] : []),
   ];
 };
 
-const mapOutput = (image: GeneratedImage, lightchainTaskSteps: LightchainTaskStep[] = []): RecentOutput => ({
+const getOutputHref = (image: GeneratedImageListRow | null | undefined) => {
+  if (!image) return '/gallery';
+  return `/gallery?image=${encodeURIComponent(getGeneratedImageSelectionKey(image))}`;
+};
+
+const mapOutput = (image: GeneratedImageListRow, lightchainTaskSteps: LightchainTaskStep[] = []): RecentOutput => ({
   id: image.id,
   jobId: image.job_id,
   imageUrl: image.image_url,
@@ -491,12 +461,46 @@ const mapOutput = (image: GeneratedImage, lightchainTaskSteps: LightchainTaskSte
   sourceSummaryRows: buildSourceSummaryRows(image.metadata, 'output', lightchainTaskSteps),
 });
 
-const buildOutputCounts = (images: GeneratedImage[]) => {
+const buildOutputCounts = (images: GeneratedImageListRow[]) => {
   return images.reduce<Record<string, number>>((counts, image) => {
     if (!image.job_id) return counts;
     counts[image.job_id] = (counts[image.job_id] ?? 0) + 1;
     return counts;
   }, {});
+};
+
+const getLocalArtifactSourceReadback = (artifact: ReturnType<typeof listWorkspaceArtifacts>[number]) => {
+  const sourceLabel = getMetadataString(artifact.metadata, 'sourceLabel');
+  const sourceResumePath = getMetadataString(artifact.metadata, 'sourceResumePath');
+  if (sourceLabel && sourceResumePath) {
+    return { sourceLabel, sourceResumePath };
+  }
+
+  // Older local artifacts may predate the shared source-readback metadata.
+  // Infer only the three durable material lanes here so Jobs/History do not
+  // send a fabric or print result to the unrelated fitting workspace.
+  if (artifact.featureType.includes('printing-image')) {
+    return {
+      sourceLabel: sourceLabel ?? 'プリントイメージ',
+      sourceResumePath: sourceResumePath ?? '/lightchain/printing-image',
+    };
+  }
+  if (artifact.featureType.includes('fabric-image')) {
+    return {
+      sourceLabel: sourceLabel ?? '生地イメージ',
+      sourceResumePath: sourceResumePath ?? '/lightchain/fabric-image',
+    };
+  }
+  if (artifact.featureType === 'model-matrix' || artifact.featureType === 'model-matrix-local-preview') {
+    return {
+      sourceLabel: sourceLabel ?? 'AIフィッティング',
+      sourceResumePath: sourceResumePath ?? '/fitting',
+    };
+  }
+  return {
+    sourceLabel,
+    sourceResumePath,
+  };
 };
 
 /**
@@ -525,11 +529,12 @@ const buildLocalWorkspaceJobs = (
     ));
     const first = ordered[0];
     const latest = ordered[ordered.length - 1];
+    const sourceReadback = getLocalArtifactSourceReadback(latest);
     const inputParams = JSON.parse(JSON.stringify({
       ...latest.metadata,
       metadata: latest.metadata,
-      sourceLabel: getMetadataString(latest.metadata, 'sourceLabel') ?? 'AIフィッティング',
-      sourceResumePath: getMetadataString(latest.metadata, 'sourceResumePath') ?? '/fitting',
+      sourceLabel: sourceReadback.sourceLabel,
+      sourceResumePath: sourceReadback.sourceResumePath,
     })) as Json;
     return {
       id: jobId,
@@ -553,7 +558,7 @@ const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[]): Time
     description: job.status === 'failed' ? job.errorMessage || '生成に失敗しました' : `${job.outputCount} outputs`,
     prompt: job.prompt,
     status: job.status,
-    href: job.status === 'failed' ? job.retryHref : '/gallery',
+    href: job.status === 'failed' ? job.retryHref : job.status === 'completed' ? job.outputHref : job.resumeHref,
     createdAt: job.createdAt,
     completedAt: job.completedAt,
     outputCount: job.outputCount,
@@ -592,27 +597,30 @@ const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[]): Time
 
 const fetchCreditSummary = async (brandId: string): Promise<CreditSummary> => {
   try {
-    const result = await (supabase as any)
-      .rpc('get_brand_usage_summary', { p_brand_id: brandId })
-      .maybeSingle();
-
-    if (result.error) {
-      throw result.error;
+    if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+    const summary = await cloudflareDataPlane.getImageUsage(brandId);
+    const count = (value: unknown): number => {
+      if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+        throw new Error('invalid_cloudflare_usage_summary');
+      }
+      return value;
+    };
+    const monthlyQuota = count(summary.monthlyQuota);
+    const remainingUnits = count(summary.remainingUnits);
+    if (remainingUnits > monthlyQuota || typeof summary.planName !== 'string' || !summary.planName.trim()) {
+      throw new Error('invalid_cloudflare_usage_summary');
     }
-
-    if (!result.data) {
-      return emptyWorkspaceActivity.creditSummary;
-    }
-
-    const summary = result.data as UsageSummaryRow;
     return {
-      planName: getPlanCodeLabel(summary.plan_code),
-      monthlyQuota: toNumber(summary.monthly_quota, FREE_PLAN_QUOTA),
-      usedUnits: toNumber(summary.used_units),
-      reservedUnits: toNumber(summary.reserved_units),
-      remainingUnits: toNumber(summary.remaining_units, FREE_PLAN_QUOTA),
-      billingTestAccountQuotaBypass: summary.billing_test_account_quota_bypass === true,
-      appleSandboxTesterNoRealCharge: summary.apple_sandbox_tester_no_real_charge === true,
+      available: true,
+      planName: summary.planName,
+      monthlyQuota,
+      remainingUnits,
+      // SQL SUM returns null when the scoped month has no candidates.
+      usedUnits: count(summary.completedImages === null ? 0 : summary.completedImages),
+      reservedUnits: count(summary.runningImages === null ? 0 : summary.runningImages),
+      uncertainUnits: count(summary.uncertainImages === null ? 0 : summary.uncertainImages),
+      billingTestAccountQuotaBypass: false,
+      appleSandboxTesterNoRealCharge: false,
     };
   } catch (error) {
     logWorkspaceActivityFetchError('Failed to fetch workspace credit summary:', error);
@@ -622,59 +630,34 @@ const fetchCreditSummary = async (brandId: string): Promise<CreditSummary> => {
 
 const fetchJobs = async (brandId: string): Promise<GenerationJob[]> => {
   try {
-    const { data, error } = await supabase
-      .from('generation_jobs')
-      .select('*')
-      .eq('brand_id', brandId)
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    if (error) {
-      throw error;
-    }
-
-    return data ?? [];
+    if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+    return await cloudflareDataPlane.listGenerationJobs(brandId, { limit: 50, offset: 0 });
   } catch (error) {
     logWorkspaceActivityFetchError('Failed to fetch workspace jobs:', error);
     throw error;
   }
 };
 
-const fetchOutputs = async (brandId: string): Promise<GeneratedImage[]> => {
+const fetchOutputs = async (brandId: string): Promise<GeneratedImageListRow[]> => {
   try {
-    const { data, error } = await supabase
-      .from('generated_images')
-      .select('*')
-      .eq('brand_id', brandId)
-      .order('created_at', { ascending: false })
-      .limit(50);
-
-    if (error) {
-      throw error;
-    }
-
-    return withSignedImageUrls(data ?? []);
+    if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+    const images = await cloudflareDataPlane.listGeneratedImages(brandId, { limit: 50, offset: 0 });
+    return withSignedImageUrls(images.map(asGeneratedImageListRow));
   } catch (error) {
     logWorkspaceActivityFetchError('Failed to fetch workspace outputs:', error);
     throw error;
   }
 };
 
-const fetchLightchainTaskSteps = async (brandId: string): Promise<LightchainTaskStep[]> => {
+const fetchLightchainTaskSteps = async (brandId: string, jobIds: string[]): Promise<LightchainTaskStep[]> => {
   return readOptionalWorkspaceValue(
     async () => {
-      const { data, error } = await supabase
-        .from('lightchain_task_steps')
-        .select('*')
-        .eq('brand_id', brandId)
-        .order('step_index', { ascending: true })
-        .limit(500);
-
-      if (error) {
-        throw error;
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const steps: LightchainTaskStep[] = [];
+      for (let offset = 0; offset < jobIds.length; offset += 100) {
+        steps.push(...await cloudflareDataPlane.listWorkspaceExecutionSteps(brandId, jobIds.slice(offset, offset + 100)));
       }
-
-      return data ?? [];
+      return steps;
     },
     [],
     (error) => logWorkspaceActivityFetchError('Failed to fetch Lightchain task steps:', error),
@@ -713,35 +696,60 @@ const throwWorkspaceActivityFetchError = (failedSources: string[]) => {
 async function fetchWorkspaceActivityRequest(brandId: string, scopeId?: string): Promise<WorkspaceActivity> {
   if (!brandId) return emptyWorkspaceActivity;
 
-  const [creditResult, jobsResult, outputsResult, lightchainStepsResult] = await Promise.allSettled([
+  const [creditResult, jobsResult, outputsResult] = await Promise.allSettled([
     // Keep auth recovery at the individual request boundary. Promise.allSettled
     // intentionally aggregates failures below, which would otherwise erase the
     // original 401/expired-token signal before the shared recovery wrapper sees it.
-    withSupabaseSessionRecovery(() => fetchCreditSummary(brandId)),
-    withSupabaseSessionRecovery(() => fetchJobs(brandId)),
-    withSupabaseSessionRecovery(() => fetchOutputs(brandId)),
-    withSupabaseSessionRecovery(() => fetchLightchainTaskSteps(brandId)),
+    withAuthSessionRecovery(() => fetchCreditSummary(brandId)),
+    withAuthSessionRecovery(() => fetchJobs(brandId)),
+    withAuthSessionRecovery(() => fetchOutputs(brandId)),
   ]);
-
-  throwWorkspaceActivityFetchError([
-    creditResult.status === 'rejected' ? 'credit summary' : '',
-    jobsResult.status === 'rejected' ? 'jobs' : '',
-    outputsResult.status === 'rejected' ? 'outputs' : '',
-  ].filter(Boolean));
 
   const creditSummary = creditResult.status === 'fulfilled' ? creditResult.value : emptyWorkspaceActivity.creditSummary;
   const jobs = jobsResult.status === 'fulfilled' ? jobsResult.value : [];
   const remoteOutputs = outputsResult.status === 'fulfilled' ? outputsResult.value : [];
-  const lightchainTaskSteps = lightchainStepsResult.status === 'fulfilled' ? lightchainStepsResult.value : [];
+  // Provider-backed workflows persist a scoped local artifact before/alongside
+  // their remote rows. Resolve those artifacts before promoting a remote query
+  // failure to a page-level error, so a missing generation_jobs row or a
+  // transient RLS/readback failure does not hide a proven completed result.
+  const localArtifacts = listWorkspaceArtifacts(brandId, scopeId);
+  const localOutputs: GeneratedImageListRow[] = await withSignedImageUrls(listWorkspaceGeneratedImages(brandId, scopeId));
+  const localJobs = buildLocalWorkspaceJobs(localArtifacts, new Set(jobs.map((job) => job.id)));
+  const localJobsForFailureFallback = localJobs;
+  const failedRemoteSources = [
+    jobsResult.status === 'rejected' && localJobsForFailureFallback.length === 0 ? 'jobs' : '',
+    outputsResult.status === 'rejected' && localOutputs.length === 0 ? 'outputs' : '',
+  ].filter(Boolean);
+  // Credit summary is advisory for Jobs/History. Keep the workspace usable
+  // when its quota endpoint is unavailable; unknown is not a Free allowance.
+  if (creditResult.status === 'rejected') {
+    logWorkspaceActivityFetchError('Workspace credit summary unavailable.', creditResult.reason);
+  }
+  throwWorkspaceActivityFetchError(failedRemoteSources);
+
+  const outputs = mergeGeneratedImagesByCanonicalIdentity<GeneratedImageListRow>(remoteOutputs, localOutputs)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const jobIds = [...new Set([
+    ...jobs.map(job => job.id), ...localJobs.map(job => job.id),
+    ...outputs.flatMap(output => [output.job_id, getMetadataString(output.metadata, 'remoteJobId'), getMetadataString(output.metadata, 'sourceJobId')]),
+  ].filter((id): id is string => typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(id)))];
+  const lightchainTaskSteps = await withAuthSessionRecovery(() => fetchLightchainTaskSteps(brandId, jobIds)).catch(error => {
+    logWorkspaceActivityFetchError('Workspace execution records unavailable.', error);
+    return [];
+  });
   const lightchainStepsByJob = groupLightchainStepsByJob(lightchainTaskSteps);
   const lightchainStepsByImage = groupLightchainStepsByImage(lightchainTaskSteps);
-  const localArtifacts = listWorkspaceArtifacts(brandId, scopeId);
-  const localOutputs = await withSignedImageUrls(listWorkspaceGeneratedImages(brandId, scopeId));
-  const outputs = mergeGeneratedImagesByCanonicalIdentity(remoteOutputs, localOutputs)
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const outputCounts = buildOutputCounts(outputs);
-  const localJobs = buildLocalWorkspaceJobs(localArtifacts, new Set(jobs.map((job) => job.id)));
-  const mappedJobs = [...jobs, ...localJobs].map((job) => mapJob(job, outputCounts[job.id] ?? 0, lightchainStepsByJob[job.id] ?? []));
+  const firstOutputByJob = outputs.reduce<Record<string, GeneratedImageListRow>>((byJob, output) => {
+    if (output.job_id && !byJob[output.job_id]) byJob[output.job_id] = output;
+    return byJob;
+  }, {});
+  const mappedJobs = [...jobs, ...localJobs].map((job) => mapJob(
+    job,
+    outputCounts[job.id] ?? 0,
+    lightchainStepsByJob[job.id] ?? [],
+    firstOutputByJob[job.id],
+  ));
   const activeJobs = mappedJobs.filter((job) => job.status === 'pending' || job.status === 'processing').slice(0, 20);
   const failedJobs = mappedJobs.filter((job) => job.status === 'failed').slice(0, 20);
   const completedJobs = mappedJobs.filter((job) => job.status === 'completed').slice(0, 20);
@@ -766,5 +774,5 @@ async function fetchWorkspaceActivityRequest(brandId: string, scopeId?: string):
 }
 
 export async function fetchWorkspaceActivity(brandId: string, scopeId?: string): Promise<WorkspaceActivity> {
-  return withSupabaseSessionRecovery(() => fetchWorkspaceActivityRequest(brandId, scopeId));
+  return withAuthSessionRecovery(() => fetchWorkspaceActivityRequest(brandId, scopeId));
 }

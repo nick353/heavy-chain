@@ -1,5 +1,9 @@
-import { supabase } from './supabase';
+import { auth } from './auth';
 import type { GeneratedImage } from '../types/database';
+import {
+  createMediaGatewayClient,
+  readMediaRuntimeConfig,
+} from './mediaGateway';
 import {
   classifyGeneratedImageReference,
   clearCanonicalRemoteImageUrls,
@@ -9,6 +13,7 @@ import {
   isDirectImageUrl,
   isLocalWorkspaceStoragePath,
   resolveGeneratedImageStoragePath,
+  normalizeCloudflareGeneratedImageStoragePath,
 } from './storagePathSafety';
 export {
   classifyGeneratedImageReference,
@@ -32,8 +37,27 @@ export type {
 } from './storagePathSafety';
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60;
-const SIGNED_URL_BATCH_SIZE = 50;
 const SIGNED_URL_BATCH_CONCURRENCY = 4;
+
+const mediaRuntimeConfig = readMediaRuntimeConfig(import.meta.env);
+const mediaGateway = createMediaGatewayClient({
+  baseUrl: mediaRuntimeConfig.gatewayUrl,
+  getAccessToken: async () => {
+    try {
+      const { data } = await auth.getSession();
+      return data.session?.access_token ?? null;
+    } catch {
+      return null;
+    }
+  },
+});
+
+/** Resolve private images only through the authenticated Cloudflare gateway. */
+const createSignedMediaUrl = async (path: string): Promise<string | null> => {
+  if (mediaRuntimeConfig.configError || !mediaRuntimeConfig.providerOrder.includes('cloudflare_r2')) return null;
+  const result = await mediaGateway.createSignedReadUrl({ bucket: 'generated-images', objectPath: path, expiresInSeconds: SIGNED_URL_TTL_SECONDS });
+  return result.ok ? result.url : null;
+};
 
 export type GeneratedImageUrlResolutionFailureCode =
   | 'missing_url'
@@ -73,15 +97,10 @@ export async function resolveGeneratedImageUrlWithStatus(source: string): Promis
 
   const storagePath = extractGeneratedImageStoragePath(trimmed);
   if (storagePath) {
-    const { data, error } = await supabase.storage
-      .from('generated-images')
-      .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS);
+    const signedUrl = await createSignedMediaUrl(storagePath);
+    if (signedUrl) return { ok: true, url: signedUrl, canonicalPath: storagePath };
 
-    if (!error && data?.signedUrl) {
-      return { ok: true, url: data.signedUrl, canonicalPath: storagePath };
-    }
-
-    // A URL that already contains a Supabase signing route is stale when it
+    // A URL that already contains a retired signing route is stale when it
     // cannot be re-signed; never fall through and return that expired bearer
     // URL to a canvas or other caller.
     const resolutionError = new GeneratedImageUrlResolutionError('signing_failed', '画像URLの再署名に失敗しました', storagePath);
@@ -98,23 +117,21 @@ export async function resolveGeneratedImageUrlWithStatus(source: string): Promis
     return { ok: true, url: trimmed, canonicalPath: null };
   }
 
-  const pathResolution = resolveGeneratedImageStoragePath(trimmed);
+  const cloudflarePath = normalizeCloudflareGeneratedImageStoragePath(trimmed);
+  const pathResolution = cloudflarePath ? { ok: true as const, path: cloudflarePath } : resolveGeneratedImageStoragePath(trimmed);
   if (!pathResolution.ok) {
     const code = pathResolution.code === 'empty_path' ? 'missing_canonical_path' : 'invalid_canonical_path';
     const resolutionError = new GeneratedImageUrlResolutionError(code, '画像の正規ストレージパスを解決できません');
     return { ok: false, status: resolutionError.code, error: resolutionError, canonicalPath: null };
   }
 
-  const { data, error } = await supabase.storage
-    .from('generated-images')
-    .createSignedUrl(pathResolution.path, SIGNED_URL_TTL_SECONDS);
-
-  if (error || !data?.signedUrl) {
+  const signedUrl = await createSignedMediaUrl(pathResolution.path);
+  if (!signedUrl) {
     const resolutionError = new GeneratedImageUrlResolutionError('resolution_failed', '画像URLの解決に失敗しました', pathResolution.path);
     return { ok: false, status: resolutionError.code, error: resolutionError, canonicalPath: pathResolution.path };
   }
 
-  return { ok: true, url: data.signedUrl, canonicalPath: pathResolution.path };
+  return { ok: true, url: signedUrl, canonicalPath: pathResolution.path };
 }
 
 export async function resolveGeneratedImageUrl(source: string) {
@@ -129,6 +146,8 @@ export async function withSignedImageUrls<T extends Pick<GeneratedImage, 'storag
     images
       .map((image) => image.storage_path)
       .map((path) => {
+        const cloudflarePath = normalizeCloudflareGeneratedImageStoragePath(path);
+        if (cloudflarePath) return cloudflarePath;
         const reference = classifyGeneratedImageReference(path);
         return reference.kind === 'storage_path' || reference.kind === 'signed'
           ? reference.canonicalPath
@@ -137,53 +156,31 @@ export async function withSignedImageUrls<T extends Pick<GeneratedImage, 'storag
       .filter((path): path is string => Boolean(path)),
   ));
 
-  const chunks: string[][] = [];
-  for (let index = 0; index < paths.length; index += SIGNED_URL_BATCH_SIZE) {
-    chunks.push(paths.slice(index, index + SIGNED_URL_BATCH_SIZE));
-  }
-
-  const signChunk = async (chunk: string[]) => {
+  const signWithExplicitProviderOrder = async (pathsToResolve: string[]) => {
     const resolved = new Map<string, string>();
-    const { data, error } = await supabase.storage
-      .from('generated-images')
-      .createSignedUrls(chunk, SIGNED_URL_TTL_SECONDS)
-      .catch(() => ({ data: null, error: true }));
-
-    data?.forEach((item, itemIndex) => {
-      if (item.error || !item.signedUrl) return;
-      resolved.set(chunk[itemIndex], item.signedUrl);
-    });
-
-    // A single stale object can make a whole batch fail on some Supabase
-    // versions. Retry only the unresolved paths individually so valid Gallery
-    // images in that batch remain viewable and downloadable.
-    if (error || !data || resolved.size < chunk.length) {
-      const unresolvedPaths = chunk.filter((path) => !resolved.has(path));
-      const individualResults = await Promise.all(unresolvedPaths.map(async (path) => {
-        const result = await supabase.storage
-          .from('generated-images')
-          .createSignedUrl(path, SIGNED_URL_TTL_SECONDS)
-          .catch(() => ({ data: null, error: true }));
-        return result.data?.signedUrl ? { path, url: result.data.signedUrl } : null;
-      }));
-      individualResults.forEach((result) => {
-        if (result) resolved.set(result.path, result.url);
-      });
-    }
-
+    let nextIndex = 0;
+    const worker = async () => {
+      while (nextIndex < pathsToResolve.length) {
+        const path = pathsToResolve[nextIndex];
+        nextIndex += 1;
+        if (!path) continue;
+        const signedUrl = await createSignedMediaUrl(path);
+        if (signedUrl) resolved.set(path, signedUrl);
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(SIGNED_URL_BATCH_CONCURRENCY, pathsToResolve.length) }, () => worker()),
+    );
     return resolved;
   };
 
-  for (let index = 0; index < chunks.length; index += SIGNED_URL_BATCH_CONCURRENCY) {
-    const batchResults = await Promise.all(
-      chunks.slice(index, index + SIGNED_URL_BATCH_CONCURRENCY).map(signChunk),
-    );
-    batchResults.forEach((resolved) => {
-      resolved.forEach((url, path) => signedUrlByPath.set(path, url));
-    });
-  }
+  const resolvedByProviderOrder = await signWithExplicitProviderOrder(paths);
+
+  resolvedByProviderOrder.forEach((url, path) => signedUrlByPath.set(path, url));
 
   return images.map((image) => {
+    const cloudflarePath = normalizeCloudflareGeneratedImageStoragePath(image.storage_path);
+    if (cloudflarePath) return { ...image, image_url: signedUrlByPath.get(cloudflarePath) ?? null };
     const reference = classifyGeneratedImageReference(image.storage_path);
     if (reference.kind === 'empty' || reference.kind === 'local') {
       return image;

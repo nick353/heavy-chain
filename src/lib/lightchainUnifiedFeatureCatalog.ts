@@ -39,7 +39,7 @@ const entries: Record<NonVideoGoalCandidateRowId, Omit<LightchainFeature, 'id' |
     category: 'fitting',
     status: 'workspace',
     capability: '衣服画像、説明、モデル、ポーズ、背景',
-    evidence: 'priority route; production generation pending',
+    evidence: 'priority route; local contract verified; production provider/save/reuse PENDING_CONFIRMATION',
     tags: ['着用画像', 'モデル', 'EC'],
   },
   'ai-fitting-reference': {
@@ -159,7 +159,7 @@ const entries: Record<NonVideoGoalCandidateRowId, Omit<LightchainFeature, 'id' |
     category: 'graphics',
     status: 'workspace',
     capability: '衣服、デザイン、生地、キーワード、保存',
-    evidence: 'priority route; production generation pending',
+    evidence: 'priority route; local contract verified; production provider/persistence/destination/reuse PENDING_CONFIRMATION',
     tags: ['生地', '質感', '試着'],
   },
   'line-generation': {
@@ -209,7 +209,7 @@ const entries: Record<NonVideoGoalCandidateRowId, Omit<LightchainFeature, 'id' |
     category: 'graphics',
     status: 'workspace',
     capability: '服、プリント、配置範囲、出力解像度、保存',
-    evidence: 'priority route; production generation pending',
+    evidence: 'priority route; local contract verified; production provider/persistence/destination/reuse PENDING_CONFIRMATION',
     tags: ['プリント', '配置', '印刷'],
   },
   'image-repair': {
@@ -328,7 +328,7 @@ const routeAliases: Partial<Record<NonVideoGoalCandidateRowId, readonly string[]
   'marketing-home': ['/marketing'],
   'ai-fitting': ['/model', '/fitting'],
   'wear-design-lab': ['/flow/orientedDesign'],
-  'model-library': ['/model-library/model-custom-form', '/models'],
+  'model-library': ['/model-library/model-custom-form', '/model-library', '/models'],
   'fashion-studio': ['/flow/integration', '/studio'],
   'design-agent': ['/agent', '/creator'],
   lab: ['/flow/laboratory', '/lab'],

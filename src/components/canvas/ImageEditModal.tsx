@@ -21,6 +21,7 @@ interface ImageEditModalProps {
   onClose: () => void;
   imageUrl: string;
   initialMode?: 'prompt' | 'inpaint';
+  providerNotice?: string;
   onEdit: (action: string, params: { prompt?: string; maskDataUrl?: string }) => Promise<boolean>;
 }
 
@@ -28,7 +29,7 @@ type EditMode = 'prompt' | 'remove-bg' | 'colorize' | 'upscale' | 'variations' |
 type MaskPoint = { x: number; y: number };
 type MaskStroke = { points: MaskPoint[]; size: number; erase: boolean };
 
-export function ImageEditModal({ isOpen, onClose, imageUrl, initialMode = 'prompt', onEdit }: ImageEditModalProps) {
+export function ImageEditModal({ isOpen, onClose, imageUrl, initialMode = 'prompt', onEdit,providerNotice }: ImageEditModalProps) {
   const [mode, setMode] = useState<EditMode>('prompt');
   const [prompt, setPrompt] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -207,6 +208,7 @@ export function ImageEditModal({ isOpen, onClose, imageUrl, initialMode = 'promp
       title="画像を編集"
       size="lg"
     >
+      {providerNotice && mode === 'inpaint' && <p className="mb-3 text-xs leading-5 text-amber-800 dark:text-amber-200" data-testid="cloudflare-protected-edit-notice">{providerNotice}</p>}
       <div className="flex gap-6">
         {/* Preview */}
         <div className="w-72 flex-shrink-0">

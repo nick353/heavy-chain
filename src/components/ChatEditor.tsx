@@ -115,8 +115,8 @@ export function ChatEditor({
       } else {
         // Generate new image
         result = await generateImage(userInput, currentBrand.id, {
-          generationProvider: 'openai',
-          generationModel: 'gpt-image-1-mini',
+          generationProvider: 'workers_ai',
+          generationModel: 'flux-2-klein-4b',
           featureType: 'chat-edit',
           width: 1024,
           height: 1024,

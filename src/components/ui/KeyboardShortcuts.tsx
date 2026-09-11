@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Keyboard, X } from 'lucide-react';
+import { formatShortcutKeys } from '../../lib/keyboardShortcutPlatform';
 
 interface Shortcut {
   keys: string[];
@@ -112,7 +113,7 @@ export function KeyboardShortcuts({ shortcuts, triggerKey = '?' }: KeyboardShort
                             {shortcut.description}
                           </span>
                           <div className="flex items-center gap-1">
-                            {shortcut.keys.map((key, j) => (
+                            {formatShortcutKeys(shortcut.keys).map((key, j) => (
                               <span key={j} className="flex items-center">
                                 <kbd className="px-2 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-md text-xs font-mono text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700">
                                   {key}

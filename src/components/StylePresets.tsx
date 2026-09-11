@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import { Button, Input, Modal } from './ui';
 import toast from 'react-hot-toast';
 
@@ -79,14 +79,8 @@ export function StylePresets({ onSelect, selectedPresetId }: StylePresetsProps) 
     if (!currentBrand) return;
     
     try {
-      const { data, error } = await supabase
-        .from('style_presets')
-        .select('*')
-        .eq('brand_id', currentBrand.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setPresets(data || []);
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      setPresets(await cloudflareDataPlane.listStylePresets(currentBrand.id));
     } catch (error) {
       console.error('Failed to fetch presets:', error);
     }
@@ -102,22 +96,19 @@ export function StylePresets({ onSelect, selectedPresetId }: StylePresetsProps) 
     if (!currentBrand || !formData.name.trim()) return;
 
     try {
-      const { data, error } = await supabase
-        .from('style_presets')
-        .insert({
-          brand_id: currentBrand.id,
-          name: formData.name,
-          prompt_template: formData.promptTemplate || '{prompt}',
-          settings: {
-            style: formData.style,
-            aspectRatio: formData.aspectRatio,
-            negativePrompt: formData.negativePrompt
-          }
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const input = {
+        brand_id: currentBrand.id,
+        name: formData.name,
+        prompt_template: formData.promptTemplate || '{prompt}',
+        settings: {
+          style: formData.style,
+          aspectRatio: formData.aspectRatio,
+          negativePrompt: formData.negativePrompt,
+        },
+      };
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const data = await cloudflareDataPlane.createStylePreset(input);
+      if (!data) throw new Error('style_preset_create_readback_missing');
 
       setPresets([data, ...presets]);
       setShowCreateModal(false);
@@ -132,26 +123,18 @@ export function StylePresets({ onSelect, selectedPresetId }: StylePresetsProps) 
     if (!editingPreset) return;
 
     try {
-      const { error } = await supabase
-        .from('style_presets')
-        .update({
-          name: formData.name,
-          prompt_template: formData.promptTemplate,
-          settings: {
-            style: formData.style,
-            aspectRatio: formData.aspectRatio,
-            negativePrompt: formData.negativePrompt
-          }
-        })
-        .eq('id', editingPreset.id);
-
-      if (error) throw error;
-
-      setPresets(presets.map(p => 
-        p.id === editingPreset.id 
-          ? { ...p, name: formData.name, prompt_template: formData.promptTemplate, settings: { style: formData.style, aspectRatio: formData.aspectRatio, negativePrompt: formData.negativePrompt } }
-          : p
-      ));
+      const input = {
+        name: formData.name,
+        prompt_template: formData.promptTemplate,
+        settings: {
+          style: formData.style,
+          aspectRatio: formData.aspectRatio,
+          negativePrompt: formData.negativePrompt,
+        },
+      };
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const updated = await cloudflareDataPlane.updateStylePreset(editingPreset.id, input);
+      setPresets(presets.map((preset) => preset.id === editingPreset.id ? updated : preset));
       setEditingPreset(null);
       resetForm();
       toast.success('プリセットを更新しました');
@@ -164,12 +147,8 @@ export function StylePresets({ onSelect, selectedPresetId }: StylePresetsProps) 
     if (!confirm('このプリセットを削除しますか？')) return;
 
     try {
-      const { error } = await supabase
-        .from('style_presets')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      await cloudflareDataPlane.deleteStylePreset(id);
 
       setPresets(presets.filter(p => p.id !== id));
       toast.success('プリセットを削除しました');

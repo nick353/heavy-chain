@@ -12,7 +12,7 @@ import {
   lightchainUnifiedFeatureCatalog,
 } from '../../lib/lightchainUnifiedFeatureCatalog';
 import { HeavyChainLogo } from '../icons';
-import { ChevronDown, Globe2, HelpCircle, History, UserCircle } from 'lucide-react';
+import { ChevronDown, Globe2, HelpCircle, History, User, UserCircle } from 'lucide-react';
 
 export function Layout() {
   const { user, profile } = useAuthStore();
@@ -59,7 +59,8 @@ export function Layout() {
     '/workflows/sns-campaign',
   ] as const;
   const lightchainWorkspaceRoutes = ['/gallery', '/history', '/jobs'] as const;
-  const isLightchainRoute = location.pathname.startsWith('/lightchain')
+  const isLightchainRoute = location.pathname === '/dashboard'
+    || location.pathname.startsWith('/lightchain')
     || lightchainParityAliases.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`))
     || lightchainDirectRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`))
     || lightchainWorkspaceRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
@@ -96,12 +97,12 @@ export function Layout() {
       
       {showSidebar ? (
         <div className="dark min-h-screen bg-[#070b0d] text-white">
-          <header className={`sticky top-0 z-40 border-b border-white/10 bg-[#070b0d]/95 backdrop-blur-xl ${isLightchainPrintRoute ? 'lightchain-route-header' : ''}`}>
-            <div className="mx-auto flex h-[70px] max-w-[1800px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 lightchain-route-header-inner">
-              <div className="flex items-center gap-7">
+          <header className={`sticky top-0 z-40 border-b border-white/10 bg-[#070b0d]/95 backdrop-blur-xl ${isLightchainRoute ? 'h-[50px]' : ''} ${isLightchainPrintRoute ? 'lightchain-route-header' : ''}`}>
+            <div className={`mx-auto flex items-center justify-between gap-4 lightchain-route-header-inner ${isLightchainRoute ? 'h-[49px] max-w-none px-6' : 'h-[70px] max-w-[1800px] px-4 sm:px-6 lg:px-8'}`}>
+              <div className={`flex items-center ${isLightchainRoute ? 'gap-4' : 'gap-7'}`}>
                 {isLightchainRoute ? (
-                  <Link to="/lightchain" aria-label="Lightchain AI" className="flex items-center gap-2 text-sm font-semibold tracking-[0.24em] text-white">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full border border-white/80 bg-white text-[11px] font-black tracking-normal text-neutral-950">◌</span>
+                  <Link to="/" aria-label="Lightchain AI" className="flex h-6 shrink-0 items-center gap-2 text-[13px] font-semibold tracking-[0.24em] text-white">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/80 bg-white text-[10px] font-black tracking-normal text-neutral-950">◌</span>
                     LIGHTCHAIN
                   </Link>
                 ) : (
@@ -109,6 +110,17 @@ export function Layout() {
                     <HeavyChainLogo height={28} showText={false} className="shrink-0" />
                     HEAVY CHAIN
                   </Link>
+                )}
+                {isLightchainRoute && (
+                  <button
+                    type="button"
+                    className="hidden h-8 w-[100px] items-center justify-center gap-1 rounded-full px-0 py-1.5 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
+                    aria-label="日本語"
+                  >
+                    <Globe2 className="h-4 w-4" />
+                    日本語
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
                 )}
                 {!isLightchainRoute && (
                   <div className="hidden items-center gap-2 text-sm text-neutral-300 md:flex">
@@ -124,18 +136,7 @@ export function Layout() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-neutral-300">
-                {isLightchainRoute && (
-                  <button
-                    type="button"
-                    className="hidden items-center gap-1 rounded-full px-3 py-2 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
-                    aria-label="日本語"
-                  >
-                    <Globe2 className="h-4 w-4" />
-                    日本語
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
-                )}
+              <div className={`flex items-center text-neutral-300 ${isLightchainRoute ? 'gap-4' : 'gap-2'}`}>
                 {!isLightchainRoute && (
                   <Link to="/history" className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm transition hover:bg-white/10 hover:text-white sm:flex">
                     <History className="h-4 w-4" />
@@ -145,7 +146,7 @@ export function Layout() {
                 {isLightchainRoute ? (
                   <button
                     type="button"
-                    className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
+                    className="hidden h-8 w-[132px] items-center justify-center gap-2 rounded-full px-0 py-1.5 text-sm text-neutral-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
                     aria-label="ヘルプセンター"
                   >
                     <HelpCircle className="h-4 w-4" />
@@ -158,10 +159,11 @@ export function Layout() {
                   </Link>
                 )}
                 {isLightchainRoute ? (
-                  <div className="relative">
+                  <div className="flex h-8 w-[61px] items-center justify-end border-l border-white/10 pl-4">
+                    <div className="relative">
                     <button
                       type="button"
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15"
+                      className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-[#62666a]/90 text-[#202426] transition hover:bg-[#74797d]"
                       aria-label="avatar"
                       aria-expanded={isLightAccountMenuOpen}
                       onClick={() => setIsLightAccountMenuOpen((open) => !open)}
@@ -169,7 +171,7 @@ export function Layout() {
                       {lightchainAvatarUrl ? (
                         <img src={lightchainAvatarUrl} alt="avatar" className="h-full w-full rounded-full object-cover" />
                       ) : (
-                        <UserCircle className="h-5 w-5" aria-hidden="true" />
+                        <User className="h-4 w-4" strokeWidth={2.25} aria-hidden="true" />
                       )}
                     </button>
                     {isLightAccountMenuOpen && (
@@ -183,6 +185,7 @@ export function Layout() {
                         <button type="button" className="block w-full px-4 py-3 text-left text-neutral-500 transition hover:bg-neutral-100">ログアウト</button>
                       </div>
                     )}
+                    </div>
                   </div>
                 ) : (
                   <Link to="/brand/settings" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/15" aria-label="アカウント">
@@ -206,7 +209,7 @@ export function Layout() {
             )}
           </header>
 
-          <main id="main-content" className={`${isLightchainPrintRoute ? 'min-h-[calc(100vh-48px)] bg-[#070b0d]' : 'min-h-[calc(100vh-70px)] bg-[#070b0d]'} ${isLightchainRoute ? 'px-0 py-0' : 'px-3 py-5 sm:px-5 lg:px-8'}`} tabIndex={-1}>
+          <main id="main-content" className={`${isLightchainPrintRoute ? 'min-h-[calc(100vh-48px)] bg-[#070b0d]' : isLightchainRoute ? 'min-h-[calc(100vh-50px)] bg-[#171b1c]' : 'min-h-[calc(100vh-70px)] bg-[#070b0d]'} ${isLightchainRoute ? 'px-0 py-0' : 'px-3 py-5 sm:px-5 lg:px-8'}`} tabIndex={-1}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}

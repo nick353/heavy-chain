@@ -1,4 +1,4 @@
-import { classifyGeneratedImageReference, normalizeGeneratedImageStoragePath } from './storagePathSafety.ts';
+import { classifyGeneratedImageReference, normalizeGeneratedImageStoragePath, normalizeCloudflareGeneratedImageStoragePath } from './storagePathSafety.ts';
 import type { GeneratedImage, Json } from '../types/database';
 
 type GeneratedImageIdentityCarrier = Pick<GeneratedImage, 'id' | 'storage_path'> & Partial<Pick<GeneratedImage, 'user_id' | 'image_url'>> & {
@@ -49,7 +49,7 @@ export const getGeneratedImageIdentityKeys = (
   for (const reference of storageReferences) {
     if (typeof reference !== 'string') continue;
     const classified = classifyGeneratedImageReference(reference);
-    const canonicalPath = classified.canonicalPath
+    const canonicalPath = normalizeCloudflareGeneratedImageStoragePath(reference) ?? classified.canonicalPath
       ?? normalizeGeneratedImageStoragePath(reference);
     addKey(keys, 'storage', canonicalPath);
   }
@@ -81,11 +81,11 @@ export const getGeneratedImageSelectionKey = (
  * remote query is unavailable. Duplicate rows are identified by canonical
  * storage path or remote image id, never by a signed URL.
  */
-export const mergeGeneratedImagesByCanonicalIdentity = (
-  remoteImages: GeneratedImage[],
-  localImages: GeneratedImage[],
-): GeneratedImage[] => {
-  const merged: GeneratedImage[] = [];
+export const mergeGeneratedImagesByCanonicalIdentity = <T extends GeneratedImageIdentityCarrier>(
+  remoteImages: T[],
+  localImages: T[],
+): T[] => {
+  const merged: T[] = [];
   const indexByKey = new Map<string, number>();
 
   const isDisplayable = (image: GeneratedImageIdentityCarrier) => (

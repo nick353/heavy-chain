@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Layers, Chrome } from 'lucide-react';
 import { Button, Input, PasswordStrengthMeter } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
+import { cloudflareAuthEnabled } from '../lib/auth';
+import { getAuthErrorMessage } from '../lib/authErrorMessage';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
@@ -36,8 +38,8 @@ export function SignupPage() {
     
     if (!password) {
       newErrors.password = 'パスワードを入力してください';
-    } else if (password.length < 8) {
-      newErrors.password = 'パスワードは8文字以上で入力してください';
+    } else if (password.length < (cloudflareAuthEnabled ? 12 : 8)) {
+      newErrors.password = `パスワードは${cloudflareAuthEnabled ? 12 : 8}文字以上で入力してください`;
     }
     
     if (password !== confirmPassword) {
@@ -56,9 +58,9 @@ export function SignupPage() {
     try {
       await signUpWithEmail(email, password, name);
       toast.success('アカウントを作成しました。メールを確認してください。');
-      navigate('/dashboard');
+      navigate(cloudflareAuthEnabled ? '/login' : '/dashboard');
     } catch (error: any) {
-      toast.error(error.message || 'アカウント作成に失敗しました');
+      toast.error(getAuthErrorMessage(error, 'アカウント作成に失敗しました'));
     }
   };
 
@@ -66,7 +68,7 @@ export function SignupPage() {
     try {
       await signInWithGoogle();
     } catch (error: any) {
-      toast.error(error.message || 'Googleログインに失敗しました');
+      toast.error(getAuthErrorMessage(error, 'Googleログインに失敗しました'));
     }
   };
 
@@ -74,7 +76,7 @@ export function SignupPage() {
     try {
       await signInWithApple();
     } catch (error: any) {
-      toast.error(error.message || 'Appleログインに失敗しました');
+      toast.error(getAuthErrorMessage(error, 'Appleログインに失敗しました'));
     }
   };
 

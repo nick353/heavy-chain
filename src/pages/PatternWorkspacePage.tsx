@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Check, ChevronRight, ImagePlus, Palette, Repeat2, Save, Shapes, Shirt, Upload, WandSparkles } from 'lucide-react';
+import { Check, ChevronRight, Palette, Repeat2, Save, Shapes, Shirt, Upload, WandSparkles } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { MaterialWorkbench } from '../components/workspace/MaterialWorkbench';
 import { useUnifiedWorkspaceFlow } from '../components/workspace/LightchainUnifiedWorkspaceShell';
@@ -19,6 +19,10 @@ import {
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
+import {
+  getLightchainUnifiedFeatureWorkflowContract,
+  UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
+} from '../features/lightchain/unifiedFeatureWorkflowContract';
 
 const modes = ['グラフィック', '総柄', 'ベクター化'] as const;
 
@@ -110,12 +114,6 @@ const vectorPresets = [
     label: '総柄タイル',
     value: 'リピート境界がつながるタイルと、単体モチーフを分けて整理',
   },
-];
-
-const referenceSlots = [
-  { label: 'ロゴ', value: 'chain_mark_ref.svg' },
-  { label: '柄参考', value: 'vintage_bandana_grid.png' },
-  { label: '服モック', value: 'tee_mockup_front.jpg' },
 ];
 
 const initialMaterialReference: MaterialReferenceState = {
@@ -265,6 +263,7 @@ const buildPatternPreviewSvg = ({
 };
 
 export function PatternWorkspacePage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { user, currentBrand } = useAuthStore();
   const { setFlowState } = useUnifiedWorkspaceFlow();
@@ -277,7 +276,7 @@ export function PatternWorkspacePage() {
   const [garmentTarget, setGarmentTarget] = useState('ブラックのヘビーウェイトTシャツ / 胸元ワンポイントと背面総柄');
   const [paletteNotes, setPaletteNotes] = useState('墨黒、オフホワイト、くすんだシルバー、差し色に深い赤');
   const [vectorIntent, setVectorIntent] = useState('刺繍とシルクスクリーンに使える2色ベクターへ整理');
-  const [referenceAssets, setReferenceAssets] = useState('chain_mark_ref.svg, vintage_bandana_grid.png, tee_mockup_front.jpg');
+  const [referenceAssets, setReferenceAssets] = useState('');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialMaterialReference);
   const [savedArtifactId, setSavedArtifactId] = useState<string | null>(null);
   const nextHistoryId = useRef(1);
@@ -334,6 +333,10 @@ export function PatternWorkspacePage() {
     failed: false,
     persisted: Boolean(savedArtifactId),
   });
+  const patternWorkflowFeature = location.pathname.endsWith('/workbench')
+    ? 'print-design-detail'
+    : 'print-design-project';
+  const patternWorkflowContract = getLightchainUnifiedFeatureWorkflowContract(patternWorkflowFeature);
 
   useEffect(() => {
     setFlowState(patternFlowState);
@@ -390,18 +393,6 @@ export function PatternWorkspacePage() {
     if (nextPreview) setSelectedPreviewId(nextPreview.id);
     setProgress((current) => Math.min(current + 14, 96));
     setHistory((items) => [historyItem, ...items].slice(0, 4));
-  };
-
-  const toggleReferenceAsset = (asset: string) => {
-    setSavedArtifactId(null);
-    const currentAssets = referenceAssets
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean);
-    const nextAssets = currentAssets.includes(asset)
-      ? currentAssets.filter((item) => item !== asset)
-      : [...currentAssets, asset];
-    setReferenceAssets(nextAssets.join(', '));
   };
 
   const handoffToCanvas = () => {
@@ -571,7 +562,20 @@ export function PatternWorkspacePage() {
   };
 
   return (
-    <div className="space-y-6" data-flow-state={patternFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[patternFlowState]}>
+    <div
+      className="space-y-6"
+      data-lightchain-parity-shell="pattern-workspace"
+      data-flow-state={patternFlowState}
+      data-flow-state-label={unifiedWorkspaceFlowLabels[patternFlowState]}
+      data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+      data-workflow-feature={patternWorkflowContract?.rowId ?? ''}
+      data-workflow-input-roles={patternWorkflowContract?.inputRoles.join(',') ?? ''}
+      data-workflow-result-destinations={patternWorkflowContract?.resultDestinations.join(',') ?? ''}
+      data-workflow-lifecycle={patternWorkflowContract?.lifecycle.join(',') ?? ''}
+      data-workflow-source-input-mode={patternWorkflowContract?.sourceInputMode ?? ''}
+      data-workflow-retry-policy={patternWorkflowContract?.retry.retainsLastCompletedResult && patternWorkflowContract.retry.preservesInputLineage && patternWorkflowContract.retry.blocksDuplicateSubmit ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit' : ''}
+      data-workflow-rights-gate={patternWorkflowContract?.rightsGate ?? ''}
+    >
       <section className="glass-panel rounded-2xl p-5 sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -710,6 +714,7 @@ export function PatternWorkspacePage() {
 	                onChange={(next) => {
 	                  setSavedArtifactId(null);
 	                  setMaterialReference(next);
+	                  setReferenceAssets(next.fileName || '');
 	                }}
 	                materialKinds={['柄画像', 'ロゴ', '服モック', '刺繍版下', '生地テクスチャ']}
 	                layerOptions={['プリント', 'マスク', '服', 'ロゴ', '版下']}
@@ -721,29 +726,14 @@ export function PatternWorkspacePage() {
                   <Upload className="h-4 w-4 text-cyan-300" />
                   <h3 className="text-sm font-semibold text-neutral-950 dark:text-white">素材スロット</h3>
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {referenceSlots.map((slot) => {
-                    const active = referenceAssets.includes(slot.value);
-                    return (
-                      <button
-                        key={slot.value}
-                        type="button"
-                        onClick={() => toggleReferenceAsset(slot.value)}
-                        className={`rounded-xl border px-3 py-3 text-left transition ${
-                          active
-                            ? 'border-cyan-300 bg-cyan-300 text-neutral-950 dark:border-cyan-300 dark:bg-cyan-300 dark:text-neutral-950'
-                            : 'border-white/10 bg-white/[0.04] text-neutral-300 hover:border-cyan-300/50 hover:bg-white/[0.07]'
-                        }`}
-                      >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.08] text-cyan-200">
-                          <ImagePlus className="h-4 w-4" />
-                        </span>
-                        <span className="mt-2 block text-sm font-semibold">{slot.label}</span>
-                        <span className="mt-1 block text-xs text-neutral-400">{slot.value}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <p className="mt-3 text-sm text-neutral-500">
+                  {referenceAssets
+                    ? `選択中のライブラリー素材: ${referenceAssets}`
+                    : 'Galleryまたはアップロードから実素材を選択してください。固定サンプルは使用しません。'}
+                </p>
+                <Link to="/gallery" className="mt-3 inline-flex rounded-xl border border-cyan-300/40 px-3 py-2 text-sm font-semibold text-cyan-200 transition hover:border-cyan-200 hover:bg-cyan-200/10">
+                  Galleryを開く
+                </Link>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">

@@ -157,7 +157,7 @@ export interface CanvasState {
   // Project actions
   createProject: (name: string, brandId?: string, initialObjects?: CanvasObject[]) => string;
   loadProject: (projectId: string) => void;
-  hydrateProject: (project: CanvasProject) => void;
+  hydrateProject: (project: CanvasProject,replaceCurrentLocalId?:string) => void;
   saveCurrentProject: () => void;
   deleteProject: (projectId: string) => void;
   renameProject: (projectId: string, name: string) => void;
@@ -224,8 +224,14 @@ const sanitizePersistedObject = (obj: CanvasObject): CanvasObject => {
       || obj.metadata?.feature === 'local-upload'
       || obj.metadata?.sourceIdentity?.kind === 'local-upload'
     ) {
-      const revision = obj.metadata?.sourceRevision?.revision || obj.metadata?.sourceIdentity?.hash;
-      candidate = revision && hasLocalCanvasAsset(revision)
+      const sourceRevision = obj.metadata?.sourceRevision?.revision;
+      const revision = sourceRevision || obj.metadata?.sourceIdentity?.hash;
+      const hasPersistentLocalUploadRevision =
+        obj.metadata?.sourceIdentity?.kind === 'local-upload'
+        && obj.metadata?.persistenceStatus === 'persistent'
+        && typeof sourceRevision === 'string'
+        && sourceRevision.length > 0;
+      candidate = typeof revision === 'string' && (hasPersistentLocalUploadRevision || (revision && hasLocalCanvasAsset(revision)))
         ? { ...obj, src: buildLocalCanvasAssetReference(revision) }
         : { ...obj, src: '' };
     }
@@ -295,17 +301,24 @@ export const useCanvasStore = create<CanvasState>()(
       },
 
       loadProject: (projectId) => {
-        const { projects } = get();
+        const { projects, currentProjectId, objects: activeObjects } = get();
         const project = projects.find(p => p.id === projectId);
         
         if (project) {
           const view = normalizeCanvasView(project.view);
+          // The persisted project index intentionally omits object payloads to
+          // stay below localStorage limits. When a routed Canvas remounts the
+          // same project, keep the separately persisted active working set
+          // instead of replacing it with that lightweight empty index entry.
+          const projectObjects = currentProjectId === projectId && activeObjects.length > 0
+            ? activeObjects
+            : project.objects;
           set({
             currentProjectId: project.id,
             currentProjectName: project.name,
-            objects: project.objects,
+            objects: projectObjects,
             selectedIds: [],
-            history: [project.objects],
+            history: [projectObjects],
             historyIndex: 0,
             zoom: view.zoom,
             panX: view.panX,
@@ -314,11 +327,12 @@ export const useCanvasStore = create<CanvasState>()(
         }
       },
 
-      hydrateProject: (project) => {
+      hydrateProject: (project,replaceCurrentLocalId) => {
         const view = normalizeCanvasView(project.view);
         const hydratedProject = { ...project, view };
         set((state) => ({
-          projects: [hydratedProject, ...state.projects.filter((item) => item.id !== project.id)],
+          projects: [hydratedProject, ...state.projects.filter((item) => item.id !== project.id &&
+            !(replaceCurrentLocalId===state.currentProjectId&&item.id===replaceCurrentLocalId))],
           currentProjectId: hydratedProject.id,
           currentProjectName: hydratedProject.name,
           objects: hydratedProject.objects,
@@ -431,9 +445,25 @@ export const useCanvasStore = create<CanvasState>()(
           id,
           zIndex: maxZIndex,
         };
+
+        // Keep the in-memory project snapshot in sync with the working
+        // object list. Lightchain workbench handoffs create a project, add
+        // several objects, then navigate immediately to Canvas; updating
+        // only `objects` leaves the route loader with the original empty
+        // project snapshot during that boundary.
+        const nextObjects = [...objects, newObject];
         
         set((state) => ({
-          objects: [...state.objects, newObject],
+          objects: nextObjects,
+          projects: state.currentProjectId
+            ? state.projects.map((project) => project.id === state.currentProjectId
+              ? {
+                ...project,
+                objects: nextObjects,
+                updatedAt: new Date().toISOString(),
+              }
+              : project)
+            : state.projects,
         }));
         
         get().saveToHistory();
@@ -648,11 +678,11 @@ export const useCanvasStore = create<CanvasState>()(
         };
       },
       partialize: (state) => ({
-        // Durable document snapshots live in Supabase. Keep only lightweight
+        // Durable document snapshots live in the selected server data plane. Keep only lightweight
         // project metadata plus a bounded current-session working set here so
         // a large canvas cannot exhaust localStorage again.
-        projects: state.projects.map((project) => ({
-          ...sanitizePersistedProject(project),
+        projects: state.projects.map(sanitizePersistedProject).map((project) => ({
+          ...project,
           objects: [],
           thumbnail: undefined,
         })),

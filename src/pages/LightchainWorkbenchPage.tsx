@@ -24,9 +24,14 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../stores/authStore';
+import {
+  assertAuthBrandFence,
+  captureAuthBrandFence,
+  AuthBrandAccessFenceError,
+  type AuthBrandFenceSnapshot,
+} from '../lib/authBrandSelection';
 import { useCanvasStore } from '../stores/canvasStore';
 import { Button, Modal } from '../components/ui';
-import { supabase } from '../lib/supabase';
 import {
   buildMaterialCutoutDataUrl,
   buildPrintDesignCutoutDataUrl,
@@ -50,6 +55,8 @@ import { getErrorMessage } from '../lib/errorMessages';
 import { persistProviderResultArtifact } from '../lib/providerResultPersistence';
 import { downloadValidatedImage } from '../lib/imageDownload';
 import { withSignedImageUrls } from '../lib/storage';
+import { asGeneratedImageListRow, cloudflareDataPlane } from '../lib/cloudflareApi';
+import type { Json } from '../types/database';
 import {
   buildPrintingImagePreviewDataUrl,
   defaultPrintArtworkTransform,
@@ -74,6 +81,11 @@ import {
   buildLightchainParityRuntime,
   serializeLightchainParityRuntime,
 } from '../features/lightchain/parityRuntime';
+import {
+  buildLocalUploadSourceMetadata,
+  sanitizeCanvasSourceMetadata,
+  type CanvasSourceMetadata,
+} from '../features/canvasSourceMetadata';
 import { resolveHeavyRouteForRow } from '../features/lightchain/heavyRouteMapping';
 import {
   assertCompletedImageEditResult,
@@ -82,8 +94,10 @@ import {
   generateImage,
   generateModelMatrix,
 } from '../lib/imageApi';
+import { putLocalCanvasAsset } from '../lib/canvasLocalAssets';
 
 type ToolCategory = 'home' | 'marketing' | 'fitting' | 'planning' | 'graphics' | 'model' | 'video' | 'lab';
+type LightchainVisibleCategoryId = 'recommended' | 'planning' | 'fitting' | 'graphics';
 type ToolStatus = 'ready' | 'workspace' | 'needs-image' | 'coming-soon';
 type MaskCandidate = 'トップス' | '無地部分' | '柄' | '手動範囲';
 type WorkbenchStep = 'asset' | 'mask' | 'extracted' | 'next';
@@ -95,6 +109,8 @@ type MaterialSlotFile = {
   imageUrl: string;
   sourceImageId?: string | null;
   sourceStoragePath?: string | null;
+  sourceMetadata?: CanvasSourceMetadata;
+  persistenceStatus?: 'persistent' | 'session-only' | 'unknown';
 };
 type MaterialTabItem = {
   id: string;
@@ -108,6 +124,10 @@ type MaterialTabItem = {
 type ModelPanelVariant = 'uploadPair' | 'body' | 'size' | 'angle' | 'custom';
 type PrintingGenerationStatus = 'idle' | 'pending' | 'processing' | 'success' | 'error';
 type PrintingCutoutStatus = 'idle' | 'processing' | 'done' | 'error';
+type MarketingCanvasViewState = {
+  tool: string;
+  zoom: number;
+};
 
 type LightchainResult = {
   toolId: string;
@@ -138,6 +158,43 @@ type PendingRightsGeneration =
   | { kind: 'generic'; overrides?: LightchainPreviewOverrides };
 
 const PRINTING_CUTOUT_TIMEOUT_MS = 30_000;
+
+/**
+ * The platform garment is intentionally shipped as a small SVG so the
+ * library can render it without a binary asset. The model-matrix Edge
+ * Function accepts PNG/JPEG/WebP references only, so rasterize same-origin
+ * SVG library assets in the browser before the provider request.
+ */
+async function prepareProviderImageUrl(imageUrl?: string): Promise<string | undefined> {
+  if (!imageUrl || !/\.svg(?:[?#]|$)/i.test(imageUrl) || typeof window === 'undefined' || typeof document === 'undefined') {
+    return imageUrl;
+  }
+
+  let objectUrl: string | null = null;
+  try {
+    const response = await fetch(imageUrl, { credentials: 'same-origin' });
+    if (!response.ok) return imageUrl;
+    const sourceBlob = await response.blob();
+    objectUrl = URL.createObjectURL(new Blob([sourceBlob], { type: 'image/svg+xml' }));
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('provider_svg_decode_failed'));
+      element.src = objectUrl!;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, image.naturalWidth || 1024);
+    canvas.height = Math.max(1, image.naturalHeight || 1024);
+    const context = canvas.getContext('2d');
+    if (!context) return imageUrl;
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png');
+  } catch {
+    return imageUrl;
+  } finally {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }
+}
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
   let timeoutId: number | undefined;
@@ -189,24 +246,34 @@ type CompatTool = {
 
 const categories: Array<{ id: ToolCategory; label: string; icon: typeof Sparkles; description: string }> = [
   { id: 'home', label: 'おすすめ', icon: Sparkles, description: '主要ワークスペースをまとめた入口です。' },
-  { id: 'marketing', label: 'マーケティング', icon: MessageSquareText, description: 'EC、SNS、ブランド、店舗、ライブ配信、販促素材を一括で作ります。' },
-  { id: 'fitting', label: 'AIフィッティング', icon: Shirt, description: '商品画像からモデル着用、ポーズ、背景、体型差分を作ります。' },
-  { id: 'planning', label: '企画デザイン', icon: ClipboardList, description: '企画書、ディテール変更、シリーズ案、スタイル方向を作ります。' },
-  { id: 'graphics', label: 'グラフィック', icon: Palette, description: '生地、プリント、線画、ベクター化、生産向け素材を扱います。' },
-  { id: 'model', label: 'モデル企画', icon: UserRound, description: '顔、体型、服サイズ、ポーズ、背景、アングルを変更します。' },
-  { id: 'video', label: '動画', icon: Film, description: '商品動画、着せ替え、ショート動画構成を作ります。' },
-  { id: 'lab', label: 'Lab', icon: Boxes, description: '実験機能、変換、品質確認を試します。' },
+  { id: 'planning', label: '企画デザインツール', icon: ClipboardList, description: '企画、修正、色変更、スタイル設計をまとめます。' },
+  { id: 'fitting', label: 'AIフィッティング', icon: Shirt, description: 'モデル条件と着用画像をつなぎます。' },
+  { id: 'graphics', label: 'グラフィックツール', icon: Palette, description: '生地、プリント、柄、配置、変換をまとめます。' },
 ];
+
+/** Keep internal workflow classifications separate from Lightchain's four visible buckets. */
+const getLightchainTopLevelCategory = (category: ToolCategory): ToolCategory => {
+  if (category === 'marketing') return 'home';
+  if (category === 'model' || category === 'lab') return 'fitting';
+  return category;
+};
+
+const getLightchainVisibleCategoryId = (category: ToolCategory): LightchainVisibleCategoryId => {
+  const topLevelCategory = getLightchainTopLevelCategory(category);
+  if (topLevelCategory === 'planning' || topLevelCategory === 'fitting' || topLevelCategory === 'graphics') {
+    return topLevelCategory;
+  }
+  return 'recommended';
+};
 
 // The current Lightchain production detail route keeps this compact toolbar
 // above the feature controls. Keep the labels and grouping source-aligned
 // while routing into Heavy's non-video compatibility catalog.
-const lightchainSourceToolbarItems: ReadonlyArray<{ label: string; to: string }> = Object.freeze([
-  { label: 'ツールバー', to: '/lightchain' },
-  { label: 'デザインツール', to: '/lightchain?category=planning' },
-  { label: 'フィッティングツール', to: '/lightchain?category=fitting' },
-  { label: 'グラフィックデザインツール', to: '/lightchain?category=graphics' },
-  { label: '衣類生産ツール', to: '/lightchain?category=lab' },
+const lightchainSourceToolbarItems: ReadonlyArray<{ label: string; category: LightchainVisibleCategoryId; to: string }> = Object.freeze([
+  { label: 'おすすめ', category: 'recommended', to: '/lightchain?category=recommended' },
+  { label: '企画デザインツール', category: 'planning', to: '/lightchain?category=planning' },
+  { label: 'AIフィッティング', category: 'fitting', to: '/lightchain?category=fitting' },
+  { label: 'グラフィックツール', category: 'graphics', to: '/lightchain?category=graphics' },
 ]);
 
 const tools: CompatTool[] = [
@@ -356,7 +423,7 @@ const tools: CompatTool[] = [
   {
     id: 'fashion-studio',
     title: 'ファッションスタジオ',
-    lightchainRoute: '/studio-equivalent',
+    lightchainRoute: '/flow/integration',
     category: 'home',
     status: 'workspace',
     description: '衣服、シーン、小物、モデルを組み合わせ、コーディネート案や360度表示に接続する撮影スタジオ。',
@@ -651,7 +718,7 @@ for (const [index, tool] of tools.entries()) {
 // Keep legacy video definitions available to the provider-boundary tests, but
 // never expose them through the Lightchain non-video beta workbench.
 const visibleTools = tools.filter((tool) => !tool.id.startsWith('video-'));
-const visibleCategories = categories.filter((category) => category.id !== 'video');
+const visibleCategories = categories;
 const totalToolCount = visibleTools.length;
 
 const categoryWorkbenchLabels: Record<ToolCategory, {
@@ -804,6 +871,23 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+function readImageDimensions(imageUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const width = image.naturalWidth || image.width;
+      const height = image.naturalHeight || image.height;
+      if (!width || !height) {
+        reject(new Error('画像の寸法を読み込めませんでした。'));
+        return;
+      }
+      resolve({ width, height });
+    };
+    image.onerror = () => reject(new Error('画像の寸法を読み込めませんでした。'));
+    image.src = imageUrl;
+  });
+}
+
 function getOverlayPosition(placement: string, scale: number) {
   const clampedScale = Math.max(20, Math.min(90, scale));
   const offset = Math.round((clampedScale - 46) * 0.8);
@@ -855,6 +939,18 @@ const emptyMaterialTabItems: Record<MaterialTab, MaterialTabItem[]> = {
   'team-library': [],
   'platform-assets': [],
 };
+
+const bundledPlatformMaterialItems: MaterialTabItem[] = [
+  {
+    id: 'platform-garment-blank-white-tshirt',
+    title: '白Tシャツ（プラットフォーム素材）',
+    kind: 'garment',
+    note: 'AIフィッティングの入力例として使える権利確認済みのサンプル素材',
+    imageUrl: '/assets/printing/blank-white-tshirt.svg',
+    sourceImageId: null,
+    sourceStoragePath: null,
+  },
+];
 
 const metadataString = (artifact: WorkspaceArtifact, key: string): string | null => {
   const value = artifact.metadata[key];
@@ -926,6 +1022,24 @@ const buildWorkspaceProjectCards = (
       imageUrl: artifact.imageUrl,
     })),
 ];
+
+const isPersistedLightchainResultForTool = (artifact: WorkspaceArtifact, toolId: string): boolean => {
+  if (metadataString(artifact, 'toolId') !== toolId || !artifact.imageUrl.trim()) return false;
+  const isProviderResult = metadataBoolean(artifact, 'providerResultArtifact')
+    || metadataString(artifact, 'resultKind') === 'provider'
+    || artifact.featureType.endsWith('-provider-result');
+  const isLocalPreview = metadataBoolean(artifact, 'localPreviewArtifact')
+    || metadataString(artifact, 'generationMode') === 'preview';
+  const isSavedProviderHandoff = Boolean(metadataString(artifact, 'sourceProviderResultArtifactId'));
+  return isProviderResult || isLocalPreview || isSavedProviderHandoff;
+};
+
+const findLatestPersistedLightchainResult = (
+  artifacts: WorkspaceArtifact[],
+  toolId: string,
+): WorkspaceArtifact | null => artifacts
+  .filter((artifact) => isPersistedLightchainResultForTool(artifact, toolId))
+  .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0] ?? null;
 
 const modelToolOrder = [
   'model-custom',
@@ -1084,7 +1198,26 @@ export function LightchainWorkbenchPage() {
   const location = useLocation();
   const { toolId } = useParams<{ toolId?: string }>();
   const [searchParams] = useSearchParams();
-  const { user, currentBrand } = useAuthStore();
+  const {
+    user,
+    currentBrand,
+    brandState,
+    refreshCurrentBrand,
+    isInitialized: isAuthInitialized,
+    isLoading: isAuthLoading,
+  } = useAuthStore();
+  const captureCurrentAuthBrandFence = (brandId: string | null) => {
+    const state = useAuthStore.getState();
+    return captureAuthBrandFence(state.brandState, state.user?.id ?? null, brandId);
+  };
+  const assertCurrentAuthBrandFence = (captured: AuthBrandFenceSnapshot | null, phase: string) => {
+    const state = useAuthStore.getState();
+    assertAuthBrandFence(
+      captured,
+      captureAuthBrandFence(state.brandState, state.user?.id ?? null, state.currentBrand?.id ?? null),
+      phase,
+    );
+  };
   const { setFlowState } = useUnifiedWorkspaceFlow();
   const { createProject, deleteProject, addObject, selectObject, saveCurrentProject } = useCanvasStore();
   const [activeCategory, setActiveCategory] = useState<ToolCategory>('home');
@@ -1123,6 +1256,7 @@ export function LightchainWorkbenchPage() {
     primary: null,
     secondary: null,
   });
+  const [platformAssetRightsConfirmed, setPlatformAssetRightsConfirmed] = useState(false);
   const [modelFormState, setModelFormState] = useState<ModelFormState>(defaultModelFormState);
   const [lightchainResult, setLightchainResult] = useState<LightchainResult | null>(null);
   const lightchainResultRef = useRef<typeof lightchainResult>(null);
@@ -1178,6 +1312,8 @@ export function LightchainWorkbenchPage() {
   const [marketingProjectNameEditing, setMarketingProjectNameEditing] = useState(false);
   const [marketingCanvasTool, setMarketingCanvasTool] = useState('選択');
   const [marketingCanvasZoom, setMarketingCanvasZoom] = useState(20);
+  const [marketingCanvasHistory, setMarketingCanvasHistory] = useState<MarketingCanvasViewState[]>([]);
+  const [marketingCanvasFuture, setMarketingCanvasFuture] = useState<MarketingCanvasViewState[]>([]);
   const [marketingTutorialStep, setMarketingTutorialStep] = useState(1);
   const [marketingTutorialDismissed, setMarketingTutorialDismissed] = useState(false);
   const [workspaceTutorialStep, setWorkspaceTutorialStep] = useState(1);
@@ -1231,17 +1367,13 @@ export function LightchainWorkbenchPage() {
     }
 
     const hydrateRemoteGallery = async () => {
-      const { data, error } = await supabase
-        .from('generated_images')
-        .select('*')
-        .eq('brand_id', brandId)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      if (error || !data) {
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const data = (await cloudflareDataPlane.listGeneratedImages(brandId, { limit: 100, offset: 0 })).map(asGeneratedImageListRow);
+      if (!data) {
         if (!cancelled) setRemoteMaterialTabItems(emptyMaterialTabItems);
         return;
       }
-      const signedImages = await withSignedImageUrls(data).catch(() => data);
+      const signedImages = await withSignedImageUrls(data).catch(() => []);
       const generationItems = signedImages.flatMap((image) => {
         if (!image.image_url) return [];
         const promptTitle = image.prompt?.split('\n')[0]?.trim().slice(0, 80);
@@ -1277,15 +1409,22 @@ export function LightchainWorkbenchPage() {
     return {
       ...localItems,
       'generation-history': [...localItems['generation-history'], ...remoteGenerationItems],
+      'platform-assets': bundledPlatformMaterialItems,
     };
   }, [remoteMaterialTabItems, workspaceArtifacts]);
 
   const [marketingDetailPrompt, setMarketingDetailPrompt] = useState('');
+  const [brandRefreshRunning, setBrandRefreshRunning] = useState(false);
   const printingGenerationRequestRef = useRef<number | null>(null);
   const printingGenerationSequenceRef = useRef(0);
   const printingCutoutRequestRef = useRef<Record<MaterialSlotKey, number>>({ primary: 0, secondary: 0 });
   const lightchainGenerationRequestRef = useRef<number | null>(null);
   const lightchainGenerationSequenceRef = useRef(0);
+
+  useEffect(() => {
+    if (!isAuthInitialized || isAuthLoading || !user?.id || currentBrand?.id) return;
+    void useAuthStore.getState().refreshCurrentBrand();
+  }, [currentBrand?.id, isAuthInitialized, isAuthLoading, user?.id]);
 
   const renderLightchainResultPreviewImage = (className: string, alt: string) => {
     if (!lightchainResult) return null;
@@ -1364,7 +1503,7 @@ export function LightchainWorkbenchPage() {
   const filteredTools = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return visibleTools.filter((tool) => {
-      const categoryMatch = tool.category === activeCategory || activeCategory === 'home' && tool.category === 'home';
+      const categoryMatch = getLightchainTopLevelCategory(tool.category) === activeCategory;
       if (!categoryMatch) return false;
       if (!normalized) return true;
       return [
@@ -1395,20 +1534,32 @@ export function LightchainWorkbenchPage() {
       || workspaceText.trim()
       || Object.values(materialSlotFiles).some(Boolean),
   );
-  const workflowPhase = lightchainResult
-    ? { label: '結果あり', detail: '保存して再利用できます。', tone: 'success' as const }
-    : hasCurrentInput
-      ? { label: '生成準備', detail: '入力を確認してAI生成へ進めます。', tone: 'ready' as const }
-      : { label: '入力待ち', detail: 'まず素材か依頼内容を追加します。', tone: 'waiting' as const };
 
   const directRouteToolId: Record<string, string> = {
+    '/agent': 'design-agent',
+    '/marketing': 'marketing-home',
+    '/marketing/detail': 'marketing-detail',
+    '/model/clothing': 'fitting-clothing-reference',
+    '/model/background-reference': 'fitting-background-reference',
+    '/flow/orientedDesign': 'wear-design-lab',
+    '/flow/orientedDesign/detail': 'wear-design-detail',
+    '/tools/line': 'line-generation',
     '/tools/line-draft-to-tile': 'line-to-real',
+    '/tools/pattern-to-vector': 'pattern-vector',
     '/tools/svg-convert': 'svg-convert',
     '/tools/reactor': 'image-repair',
     '/tools/vector-special': 'pattern-vector-pro',
     '/printing': 'print-design-project',
     '/editor/pattern': 'pattern-vector',
     '/editor/patternDesign': 'print-design-project',
+    '/editor/patternDesign/detail': 'print-design-detail',
+    '/model-library/head-form': 'model-face',
+    '/model-library/model-change-form': 'model-change',
+    '/model-library/body-form': 'body-shape',
+    '/model-library/size-form': 'clothing-size',
+    '/model-library/pose-form': 'pose-change',
+    '/model-library/background-form': 'background-change',
+    '/model-library/perspective-form': 'angle-change',
     '/model-base/style': 'custom-style',
   };
   const directRouteTitleOverride: Record<string, string> = {
@@ -1419,23 +1570,35 @@ export function LightchainWorkbenchPage() {
   };
   const pathToolId = directRouteToolId[location.pathname];
   const isModelRoute = location.pathname === '/model';
+  const isModelReferenceRoute = isModelRoute && searchParams.get('tab') === '参考図';
+  const modelTool = visibleTools.find((tool) => tool.id === 'ai-fitting') ?? null;
+  const modelReferenceTool = visibleTools.find((tool) => tool.id === 'ai-fitting-reference') ?? modelTool;
   const routeTool = toolId
     ? visibleTools.find((tool) => tool.id === toolId) ?? null
     : isModelRoute
-      ? visibleTools.find((tool) => tool.id === 'ai-fitting') ?? null
+      ? (isModelReferenceRoute ? modelReferenceTool : modelTool)
       : pathToolId
         ? visibleTools.find((tool) => tool.id === pathToolId) ?? null
         : null;
   const isFeatureDetail = Boolean(toolId || isModelRoute || pathToolId);
   const selectedTool = routeTool ?? visibleTools.find((tool) => tool.id === selectedToolId) ?? filteredTools[0] ?? visibleTools[0];
   const selectedFeatureWorkflow = getLightchainUnifiedFeatureWorkflowContract(selectedTool.id);
+  const workflowLifecycle = selectedFeatureWorkflow?.lifecycle.join(',') ?? '';
+  const workflowSourceInputMode = selectedFeatureWorkflow?.sourceInputMode ?? '';
+  const workflowRetryPolicy = selectedFeatureWorkflow?.retry.retainsLastCompletedResult
+    && selectedFeatureWorkflow.retry.preservesInputLineage
+    && selectedFeatureWorkflow.retry.blocksDuplicateSubmit
+    ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit'
+    : '';
+  const workflowRightsGate = selectedFeatureWorkflow?.rightsGate ?? '';
   const lightchainProviderRoute = selectedFeatureWorkflow?.providerRoute ?? 'unsupported';
   const lightchainProviderSupported = selectedFeatureWorkflow !== null;
+  const activeSourceCategory = getLightchainVisibleCategoryId(selectedTool.category);
   const isPrintingImageGenerationRunning = printingGenerationStatus === 'pending' || printingGenerationStatus === 'processing';
   const isPrintingImageGenerationLocked = isPrintingImageGenerationRunning || printingGenerationRequestRef.current !== null;
   const isPrintingCutoutProcessing = selectedTool.id === 'printing-image'
     && (printingCutoutStatus.primary === 'processing' || printingCutoutStatus.secondary === 'processing');
-  const selectedCategory = categories.find((category) => category.id === (isFeatureDetail ? selectedTool.category : activeCategory)) ?? categories[0];
+  const selectedCategory = categories.find((category) => category.id === (isFeatureDetail ? getLightchainTopLevelCategory(selectedTool.category) : activeCategory)) ?? categories[0];
   const isPatternVectorProFlow = selectedTool.id === 'pattern-vector' || selectedTool.id === 'pattern-vector-pro';
   const isFittingDetail = [
     'ai-fitting',
@@ -1443,6 +1606,7 @@ export function LightchainWorkbenchPage() {
     'fitting-clothing-reference',
     'fitting-background-reference',
   ].includes(selectedTool.id);
+  const fittingGarmentCount = materialSlotFiles.primary ? 1 : 0;
   const currentModelPanel = selectedTool.id === 'model-library'
     ? modelPanelConfig['model-custom']
     : modelPanelConfig[selectedTool.id] ?? null;
@@ -1622,7 +1786,13 @@ export function LightchainWorkbenchPage() {
   // model flows that intentionally support brief-only generation.
   const modelSourceRequired = selectedTool.category === 'model'
     && currentModelPanel?.variant !== 'custom';
-  const aiGenerateDisabled = selectedTool.id === 'printing-image'
+  const brandResolutionPending = !isAuthInitialized
+    || isAuthLoading
+    || brandState.status !== 'success_nonempty'
+    || !currentBrand?.id;
+  const aiGenerateDisabled = brandResolutionPending
+    ? true
+    : selectedTool.id === 'printing-image'
     ? printingCutoutBlocked
     : modelSourceRequired
       ? materialRequirementsMissing
@@ -1741,6 +1911,7 @@ export function LightchainWorkbenchPage() {
     setLightchainGenerationRunning(false);
     pendingRightsGenerationRef.current = null;
     setProviderRightsConfirmed(false);
+    setPlatformAssetRightsConfirmed(false);
     setLightchainGenerationError(null);
     setLightchainResult(null);
     setLightchainResultPreviewOpen(false);
@@ -1865,6 +2036,8 @@ export function LightchainWorkbenchPage() {
     setMarketingProjectNameEditing(false);
     setMarketingCanvasTool('選択');
     setMarketingCanvasZoom(20);
+    setMarketingCanvasHistory([]);
+    setMarketingCanvasFuture([]);
     setMarketingTutorialStep(1);
     setMarketingTutorialDismissed(false);
     setWorkspaceTutorialStep(1);
@@ -1879,6 +2052,37 @@ export function LightchainWorkbenchPage() {
     setWorkspaceText(nextWorkspaceText);
     resetWorkbenchMaskState();
   }, [selectedTool.category, selectedTool.id]);
+
+  const marketingCanvasState: MarketingCanvasViewState = {
+    tool: marketingCanvasTool,
+    zoom: marketingCanvasZoom,
+  };
+
+  const commitMarketingCanvasState = (next: MarketingCanvasViewState) => {
+    if (next.tool === marketingCanvasTool && next.zoom === marketingCanvasZoom) return;
+    setMarketingCanvasHistory((current) => [...current.slice(-19), marketingCanvasState]);
+    setMarketingCanvasFuture([]);
+    setMarketingCanvasTool(next.tool);
+    setMarketingCanvasZoom(next.zoom);
+  };
+
+  const handleMarketingCanvasUndo = () => {
+    const previous = marketingCanvasHistory[marketingCanvasHistory.length - 1];
+    if (!previous) return;
+    setMarketingCanvasHistory((current) => current.slice(0, -1));
+    setMarketingCanvasFuture((current) => [...current.slice(-19), marketingCanvasState]);
+    setMarketingCanvasTool(previous.tool);
+    setMarketingCanvasZoom(previous.zoom);
+  };
+
+  const handleMarketingCanvasRedo = () => {
+    const next = marketingCanvasFuture[marketingCanvasFuture.length - 1];
+    if (!next) return;
+    setMarketingCanvasFuture((current) => current.slice(0, -1));
+    setMarketingCanvasHistory((current) => [...current.slice(-19), marketingCanvasState]);
+    setMarketingCanvasTool(next.tool);
+    setMarketingCanvasZoom(next.zoom);
+  };
 
   useEffect(() => {
     if (!toolId) return;
@@ -2053,6 +2257,52 @@ export function LightchainWorkbenchPage() {
   }, [currentBrand?.id, searchParams, user?.id]);
 
   useEffect(() => {
+    if (!currentBrand?.id || !user?.id || searchParams.get('resumeJob') || lightchainResultRef.current) return;
+    const artifact = findLatestPersistedLightchainResult(workspaceArtifacts, selectedTool.id);
+    if (!artifact) return;
+
+    let cancelled = false;
+    const storagePath = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
+    void withSignedImageUrls([{
+      storage_path: storagePath ?? artifact.imageUrl,
+      image_url: artifact.imageUrl,
+    }])
+      .then(([signedArtifact]) => {
+        if (cancelled || lightchainResultRef.current) return;
+        const imageUrl = signedArtifact?.image_url?.trim() || (storagePath ? '' : artifact.imageUrl.trim());
+        if (!imageUrl) return;
+        const generationMode = metadataString(artifact, 'generationMode') === 'preview' ? 'preview' : 'provider';
+        setLightchainResult({
+          toolId: selectedTool.id,
+          title: artifact.title,
+          summary: metadataString(artifact, 'generationSummary')
+            ?? metadataString(artifact, 'resultSummary')
+            ?? artifact.prompt
+            ?? artifact.title,
+          imageUrl,
+          generationMode,
+          provider: metadataString(artifact, 'provider'),
+          backendProvider: metadataString(artifact, 'backendProvider'),
+          providerModel: metadataString(artifact, 'providerModel'),
+          providerTaskId: metadataString(artifact, 'providerTaskId'),
+          jobId: artifact.sourceJobId ?? metadataString(artifact, 'generationJobId'),
+          imageId: metadataString(artifact, 'imageId') ?? metadataString(artifact, 'generatedImageId'),
+          storagePath,
+          artifactId: artifact.id,
+        });
+        setResumeInputReadback('restored');
+      })
+      .catch(() => {
+        // Gallery/History keep their own re-signing path; a stale URL must not
+        // be promoted into the active workbench result.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBrand?.id, searchParams, selectedTool.id, user?.id, workspaceArtifacts]);
+
+  useEffect(() => {
     return () => {
       lightchainGenerationSequenceRef.current += 1;
       lightchainGenerationRequestRef.current = null;
@@ -2086,7 +2336,7 @@ export function LightchainWorkbenchPage() {
     setActiveCategory(categoryId);
     setQuery('');
     setMobileToolsExpanded(false);
-    setSelectedToolId(visibleTools.find((tool) => tool.category === categoryId)?.id ?? visibleTools[0].id);
+    setSelectedToolId(visibleTools.find((tool) => getLightchainTopLevelCategory(tool.category) === categoryId)?.id ?? visibleTools[0].id);
   };
 
   const yieldNextTick = () => new Promise<void>((resolve) => {
@@ -2103,10 +2353,17 @@ export function LightchainWorkbenchPage() {
       toast.error('参考画像とプリント画像を選択してください');
       return;
     }
-    if (!currentBrand) {
+    const generationBrand = currentBrand ?? await refreshCurrentBrand();
+    if (!generationBrand) {
       toast.error('ブランドを選択してください');
       return;
     }
+    const authBrandFence = captureCurrentAuthBrandFence(generationBrand.id);
+    if (!authBrandFence) {
+      toast.error('ブランドのアクセス確認が完了していないため、生成を開始できません');
+      return;
+    }
+    const generationBrandId = authBrandFence.brandId;
     if (!providerRightsConfirmed && !options?.rightsAlreadyConfirmed) {
       pendingRightsGenerationRef.current = { kind: 'printing' };
       setRightsConfirmationDraft(false);
@@ -2130,12 +2387,15 @@ export function LightchainWorkbenchPage() {
 
     try {
       await yieldNextTick();
+      assertCurrentAuthBrandFence(authBrandFence, 'printing_before_provider');
       if (printingGenerationRequestRef.current !== requestId) return;
 
       setPrintingGenerationStatus('processing');
       await yieldNextTick();
+      assertCurrentAuthBrandFence(authBrandFence, 'printing_before_provider');
       if (printingGenerationRequestRef.current !== requestId) return;
 
+      assertCurrentAuthBrandFence(authBrandFence, 'printing_before_provider');
       if (printingGenerationRequestRef.current !== requestId) return;
       const parityRuntime = buildCurrentParityRuntime();
       const providerPrompt = buildLightchainProviderPrompt({
@@ -2150,7 +2410,7 @@ export function LightchainWorkbenchPage() {
       const providerResult = await editImageWithPrompt(
         materialSlotFiles.primary.imageUrl,
         providerPrompt,
-        currentBrand.id,
+        generationBrandId,
         {
           referenceImageUrls: [materialSlotFiles.secondary.imageUrl],
           rightsConfirmed: rightsConfirmedForRequest,
@@ -2172,10 +2432,12 @@ export function LightchainWorkbenchPage() {
           },
         },
       );
+      assertCurrentAuthBrandFence(authBrandFence, 'printing_after_provider');
       assertCompletedImageEditResult(providerResult, 'printing_provider_result');
       const resultTitle = `${selectedTool.title} AI生成結果`;
+      assertCurrentAuthBrandFence(authBrandFence, 'printing_before_persistence');
       const persistedResult = await persistProviderResultArtifact({
-        brandId: currentBrand.id,
+        brandId: generationBrandId,
         scopeId: user?.id,
         featureType: `lightchain-${selectedTool.id}-provider-result`,
         title: resultTitle,
@@ -2193,15 +2455,15 @@ export function LightchainWorkbenchPage() {
           referenceNote,
           sourceLabel: selectedTool.title,
           sourceResumePath: `/lightchain/${selectedTool.id}`,
-          provider: providerResult.provider ?? 'openai',
-          backendProvider: providerResult.backendProvider ?? 'supabase-edge-function',
+          provider: providerResult.provider ?? 'workers_ai',
+          backendProvider: providerResult.backendProvider ?? 'cloudflare-workers-ai',
           imageId: providerResult.imageId ?? null,
           providerModel: providerResult.providerModel ?? null,
           inputFidelity: providerResult.inputFidelity ?? null,
           quality: providerResult.quality ?? null,
           inputImageCount: providerResult.inputImageCount ?? null,
           persistenceStatus: providerResult.persistenceStatus ?? null,
-          materialSlotFiles,
+          materialSlotFiles: JSON.parse(JSON.stringify(materialSlotFiles)) as Json,
           materialSlots: Object.entries(materialSlotFiles).flatMap(([key, file]) => file ? [{
             key,
             fileName: file.name,
@@ -2213,14 +2475,16 @@ export function LightchainWorkbenchPage() {
           parityRuntime: serializeLightchainParityRuntime(parityRuntime),
         },
       });
+      assertCurrentAuthBrandFence(authBrandFence, 'printing_after_persistence');
+      assertCurrentAuthBrandFence(authBrandFence, 'printing_before_ui_commit');
       setLightchainResult({
         toolId: selectedTool.id,
         title: selectedTool.title,
         summary: `${printingMode} / ${materialSlotFiles.primary?.name ?? '参考画像'} / ${materialSlotFiles.secondary?.name ?? 'プリント画像'} / ${describePrintPlacement(printArtworkTransform)} / ${describePrintScale(printArtworkTransform)}%`,
         imageUrl: providerResult.imageUrl,
         generationMode: 'provider',
-        provider: providerResult.provider ?? 'openai',
-        backendProvider: providerResult.backendProvider ?? 'supabase-edge-function',
+        provider: providerResult.provider ?? 'workers_ai',
+        backendProvider: providerResult.backendProvider ?? 'cloudflare-workers-ai',
         providerModel: providerResult.providerModel ?? null,
         providerTaskId: providerResult.jobId ?? null,
         jobId: persistedResult.remote?.jobId ?? providerResult.jobId ?? null,
@@ -2229,7 +2493,7 @@ export function LightchainWorkbenchPage() {
         artifactId: persistedResult.artifact.id,
         parityRuntime: serializeLightchainParityRuntime(parityRuntime),
       });
-      setPrintingNotice('OpenAI画像編集の生成結果を生成履歴に反映しました');
+      setPrintingNotice('画像編集の生成結果を生成履歴に反映しました');
       setPrintingGenerationStatus('success');
       toast.success('AI生成結果を履歴に追加しました');
       committed = true;
@@ -2271,6 +2535,21 @@ export function LightchainWorkbenchPage() {
 
     try {
       const imageUrl = await readFileAsDataUrl(file);
+      let sourceMetadata: CanvasSourceMetadata | undefined;
+      let persistenceStatus: MaterialSlotFile['persistenceStatus'];
+      if (isFittingDetail && selectedTool.id === 'fitting-clothing-reference' && slot === 'primary') {
+        sourceMetadata = sanitizeCanvasSourceMetadata(await buildLocalUploadSourceMetadata(
+          file,
+          await readImageDimensions(imageUrl),
+        )) as CanvasSourceMetadata;
+        persistenceStatus = 'persistent';
+        try {
+          await putLocalCanvasAsset(sourceMetadata.sourceRevision.revision, file);
+        } catch (persistenceError) {
+          persistenceStatus = 'session-only';
+          console.warn('Lightchain fitting local upload persistence unavailable; keeping this upload session-scoped', persistenceError);
+        }
+      }
       const slotConfig = materialSlots.find((materialSlot) => materialSlot.key === slot);
       const applied = await applyMaterialToSlot(slot, {
         name: file.name,
@@ -2280,6 +2559,8 @@ export function LightchainWorkbenchPage() {
         imageUrl,
         sourceImageId: null,
         sourceStoragePath: null,
+        sourceMetadata,
+        persistenceStatus,
       });
       if (applied) toast.success('素材画像を読み込み、編集レイヤーを準備しました');
     } catch (error) {
@@ -2299,6 +2580,7 @@ export function LightchainWorkbenchPage() {
         sourceStoragePath: item.sourceStoragePath ?? null,
       });
       if (applied) {
+        setPlatformAssetRightsConfirmed(item.id === 'platform-garment-blank-white-tshirt');
         setMaterialModalOpen(false);
         toast.success(`${item.title}を使用しました`);
       }
@@ -2406,6 +2688,11 @@ export function LightchainWorkbenchPage() {
     overrides?: LightchainPreviewOverrides,
     options?: { rightsAlreadyConfirmed?: boolean },
   ) => {
+    const providerSourceImageUrl = materialSlotFiles.primary?.imageUrl || garmentImageUrl || undefined;
+    const explicitBriefOnlyModel = lightchainProviderRoute === 'model-matrix'
+      && currentModelPanel?.variant === 'custom'
+      && !providerSourceImageUrl;
+    const briefOnlyProviderRequest = overrides?.allowBriefOnly === true || explicitBriefOnlyModel;
     if (selectedTool.id === 'fabric-image' && materialRequirementsMissing) {
       setFabricNotice('先に生地をアップロードしてください');
       toast.error('先に生地をアップロードしてください');
@@ -2421,7 +2708,7 @@ export function LightchainWorkbenchPage() {
         return;
       }
     }
-    if (aiGenerateDisabled && !isFittingDetail && !overrides?.allowBriefOnly) {
+    if (aiGenerateDisabled && !brandResolutionPending && !isFittingDetail && !briefOnlyProviderRequest) {
       toast.error('先に素材画像を選択してください');
       return;
     }
@@ -2490,25 +2777,40 @@ export function LightchainWorkbenchPage() {
       : selectedTool.title;
     const generationSummary = overrides?.summary ?? modelSummary;
     const generationTitle = overrides?.title ?? currentDisplayTitle;
-    const providerSourceImageUrl = materialSlotFiles.primary?.imageUrl || garmentImageUrl || undefined;
     // Do not silently convert an image-edit route into a brief-only image
-    // generation route. The explicit `allowBriefOnly` path is the only place
-    // where a workspace may request a text-driven preview.
+    // generation route. The explicit `allowBriefOnly` path and the two
+    // explicitly source-free custom-model entries are the only brief-only
+    // paths; every other model-matrix/edit-image route still requires input.
     const effectiveProviderRoute = lightchainProviderRoute === 'edit-image' && overrides?.allowBriefOnly && !providerSourceImageUrl
       ? 'generate-image'
-      : lightchainProviderRoute;
+      : explicitBriefOnlyModel
+        ? 'generate-image'
+        : lightchainProviderRoute;
 
-    if (!currentBrand) {
+    const generationBrand = currentBrand ?? await refreshCurrentBrand();
+    if (!generationBrand) {
+      setLightchainGenerationError('brand_not_available');
       toast.error('ブランドを選択してください');
       return;
     }
+    let authBrandFence = captureCurrentAuthBrandFence(generationBrand.id);
+    if (!authBrandFence) {
+      const refreshedBrand = await refreshCurrentBrand();
+      authBrandFence = captureCurrentAuthBrandFence(refreshedBrand?.id ?? generationBrand.id);
+    }
+    if (!authBrandFence) {
+      setLightchainGenerationError('auth_brand_access_not_confirmed');
+      toast.error('ブランドのアクセス確認が完了していないため、生成を開始できません');
+      return;
+    }
+    const generationBrandId = authBrandFence.brandId;
     if (!lightchainProviderSupported) {
       const message = 'video_provider_not_admitted: 動画providerの利用可能状態が未確認です';
       setLightchainGenerationError(message);
       toast.error(message);
       return;
     }
-    if (effectiveProviderRoute === 'edit-image' && !providerSourceImageUrl && !overrides?.allowBriefOnly) {
+    if (effectiveProviderRoute === 'edit-image' && !providerSourceImageUrl && !briefOnlyProviderRequest) {
       const message = `provider_input_missing:${selectedTool.id}`;
       setLightchainGenerationError(message);
       toast.error('先に主素材画像を選択してください');
@@ -2546,7 +2848,7 @@ export function LightchainWorkbenchPage() {
         secondaryName: materialSlotFiles.secondary?.name,
         brief: overrides?.brief ?? brief,
         referenceNote,
-        briefOnly: effectiveProviderRoute === 'generate-image'
+        briefOnly: briefOnlyProviderRequest || effectiveProviderRoute === 'generate-image'
           || (effectiveProviderRoute === 'model-matrix' && !providerSourceImageUrl && !modelSourceRequired),
       });
       const materialReferences = Object.entries(materialSlotFiles)
@@ -2566,20 +2868,23 @@ export function LightchainWorkbenchPage() {
       let providerJobId: string | null | undefined;
       let providerImageId: string | null | undefined;
       let providerStoragePath: string | undefined;
-      let providerName = 'openai';
-      let backendProvider = 'supabase-edge-function';
+      let providerName = 'workers_ai';
+      let backendProvider = 'cloudflare-workers-ai';
       let providerModel = effectiveProviderRoute;
       let providerTaskId: string | null = null;
 
       if (effectiveProviderRoute === 'model-matrix') {
+        const providerRequestImageUrl = await prepareProviderImageUrl(providerSourceImageUrl);
+        assertCurrentAuthBrandFence(authBrandFence, 'model_matrix_after_input_prepare');
         const bodyType = modelFormState.bodyType.includes('スマート') ? 'slim' : modelFormState.bodyType.includes('プラス') ? 'plus' : 'regular';
         const ageGroup = modelFormState.age.includes('30') ? '30s' : modelFormState.age.includes('40') ? '40s' : modelFormState.age.includes('50') ? '50s' : '20s';
         const gender = (modelFormState.gender || modelFormState.bodyGender).includes('男') ? 'male' : 'female';
-        const modelResult = await generateModelMatrix(generationSummary, currentBrand.id, {
+          assertCurrentAuthBrandFence(authBrandFence, 'model_matrix_before_provider');
+          const modelResult = await generateModelMatrix(generationSummary, generationBrandId, {
           bodyTypes: [bodyType],
           ageGroups: [ageGroup],
           gender,
-          imageUrl: providerSourceImageUrl,
+          imageUrl: providerRequestImageUrl,
           modelReferenceImageUrl: materialSlotFiles.secondary?.imageUrl,
           rightsConfirmed: rightsConfirmedForRequest,
           lightchainCompat,
@@ -2587,6 +2892,7 @@ export function LightchainWorkbenchPage() {
           layerPlan: { source: providerSourceImageUrl ? 'uploaded-primary' : 'brief-only', secondaryReference: Boolean(materialSlotFiles.secondary) },
           compositionPreview: { summary: generationSummary, route: selectedTool.lightchainRoute, parityRuntime },
         });
+        assertCurrentAuthBrandFence(authBrandFence, 'model_matrix_after_provider');
         assertCompletedModelMatrixResult(modelResult);
         providerImageUrl = modelResult.matrix[0].imageUrl;
         providerJobId = modelResult.jobId;
@@ -2595,10 +2901,11 @@ export function LightchainWorkbenchPage() {
         providerName = modelResult.matrix[0].provider ?? providerName;
         providerModel = modelResult.matrix[0].modelUsed ?? providerModel;
         providerTaskId = modelResult.matrix[0].providerTaskId ?? null;
-        backendProvider = 'supabase-edge-function:model-matrix';
+        backendProvider = modelResult.backendProvider ?? backendProvider;
       } else if (effectiveProviderRoute === 'edit-image') {
         if (!providerSourceImageUrl) throw new Error(`provider_input_missing:${selectedTool.id}`);
-        const editResult = await editImageWithPrompt(providerSourceImageUrl, providerPrompt, currentBrand.id, {
+        assertCurrentAuthBrandFence(authBrandFence, 'edit_image_before_provider');
+        const editResult = await editImageWithPrompt(providerSourceImageUrl, providerPrompt, generationBrandId, {
           referenceImageUrls: materialSlotFiles.secondary?.imageUrl ? [materialSlotFiles.secondary.imageUrl] : [],
           rightsConfirmed: rightsConfirmedForRequest,
           lightchainCompat,
@@ -2606,6 +2913,7 @@ export function LightchainWorkbenchPage() {
           layerPlan: { source: 'uploaded-primary', secondaryReference: Boolean(materialSlotFiles.secondary) },
           compositionPreview: { summary: generationSummary, route: selectedTool.lightchainRoute, parityRuntime },
         });
+        assertCurrentAuthBrandFence(authBrandFence, 'edit_image_after_provider');
         providerImageUrl = editResult.imageUrl;
         providerJobId = editResult.jobId;
         providerImageId = editResult.imageId;
@@ -2616,14 +2924,16 @@ export function LightchainWorkbenchPage() {
         providerTaskId = editResult.jobId ?? null;
         assertCompletedImageEditResult(editResult, 'provider_edit_result');
       } else {
-        const generatedResult = await generateImage(providerPrompt, currentBrand.id, {
-          generationProvider: 'openai_image',
+        assertCurrentAuthBrandFence(authBrandFence, 'generate_image_before_provider');
+        const generatedResult = await generateImage(providerPrompt, generationBrandId, {
+          generationProvider: 'workers_ai',
           featureType: `lightchain-${selectedTool.id}`,
           lightchainCompat,
           materialReferences,
           compositionPreview: { summary: generationSummary, route: selectedTool.lightchainRoute, parityRuntime },
           rightsConfirmed: rightsConfirmedForRequest,
         });
+        assertCurrentAuthBrandFence(authBrandFence, 'generate_image_after_provider');
         providerImageUrl = generatedResult.imageUrl;
         providerJobId = generatedResult.jobId;
         providerImageId = generatedResult.imageId;
@@ -2635,11 +2945,12 @@ export function LightchainWorkbenchPage() {
         assertCompletedImageEditResult(generatedResult, 'provider_generate_result');
       }
 
+      assertCurrentAuthBrandFence(authBrandFence, 'before_provider_persistence');
       if (lightchainGenerationSequenceRef.current !== requestId) return;
       if (!providerImageUrl) throw new Error('provider_result_image_missing');
       const resultTitle = `${generationTitle} AI生成結果`;
       const persistedResult = await persistProviderResultArtifact({
-        brandId: currentBrand.id,
+        brandId: generationBrandId,
         scopeId: user?.id,
         featureType: `lightchain-${selectedTool.id}-provider-result`,
         title: resultTitle,
@@ -2675,6 +2986,8 @@ export function LightchainWorkbenchPage() {
           generationSummary,
         },
       });
+      assertCurrentAuthBrandFence(authBrandFence, 'after_provider_persistence');
+      assertCurrentAuthBrandFence(authBrandFence, 'before_provider_ui_commit');
       setLightchainResult({
         toolId: selectedTool.id,
         title: resultTitle,
@@ -2892,105 +3205,44 @@ export function LightchainWorkbenchPage() {
     toast.success('カスタムスタイルをライブラリに保存しました');
   };
 
-  const handleWearDesignStart = async (mode: 'guide' | 'no-guide') => {
+  const handleWearDesignStart = (mode: 'guide' | 'no-guide') => {
     setWearDesignMode(mode);
     setWearDesignDetailStarted(true);
+  };
+
+  const handleWearDesignGenerate = () => {
     const summary = [
-      mode === 'guide' ? 'ガイドを見る' : 'ガイド無しで開始します',
+      wearDesignMode === 'guide' ? 'ガイドを見る' : 'ガイド無しで開始します',
       `変更箇所: ${wearDesignFocus}`,
       materialSlotFiles.primary?.name ?? '画像追加待ち',
       wearDesignPrompt.trim() || 'ディテール変更',
     ].join(' / ');
-    await handleLightchainPreviewGenerate({
+    void handleLightchainPreviewGenerate({
       title: 'ディテール変更AI生成',
       summary,
       brief: `${wearDesignFocus}のディテール変更: ${wearDesignPrompt.trim() || 'ディテール変更'}`,
       allowBriefOnly: true,
-    });
-    return;
-    if (setUploadedAssetResult({
-      toolId: 'wear-design-detail',
-      title: 'ディテール変更プレビュー',
-      summary,
-      mode: 'asset',
-    })) {
-      toast.success(mode === 'guide' ? '入力素材を保持したガイドを表示しました' : '入力素材を保持した詳細プレビューを作成しました');
-      return;
-    }
-    const preview = encodeSvgDataUrl(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
-        <rect width="900" height="560" fill="#090d0f"/>
-        <rect x="68" y="58" width="764" height="444" rx="30" fill="#151b1e" stroke="#263034" stroke-width="3"/>
-        <rect x="116" y="112" width="262" height="330" rx="22" fill="#f8fafc"/>
-        <path d="M188 188h118l44 78-38 118H182l-38-118z" fill="#ffffff" stroke="#111827" stroke-width="10" stroke-linejoin="round"/>
-        <path d="M170 282c28-18 54-18 82 0s54 18 82 0" fill="none" stroke="#65d3cf" stroke-width="18" stroke-linecap="round"/>
-        <rect x="438" y="132" width="282" height="36" rx="18" fill="#65d3cf" opacity="0.34"/>
-        <rect x="438" y="204" width="210" height="22" rx="11" fill="#ffffff" opacity="0.16"/>
-        <rect x="438" y="252" width="248" height="22" rx="11" fill="#ffffff" opacity="0.12"/>
-        <rect x="438" y="332" width="156" height="46" rx="23" fill="#65d3cf"/>
-        <text x="516" y="362" text-anchor="middle" fill="#062c2b" font-family="Arial, sans-serif" font-size="20" font-weight="800">AI生成</text>
-        <text x="116" y="472" fill="#65d3cf" font-family="Arial, sans-serif" font-size="26" font-weight="800">ウェアデザイン詳細</text>
-        <text x="438" y="430" fill="#a3a3a3" font-family="Arial, sans-serif" font-size="18">${escapeSvgText(truncateSvgText(summary, 48))}</text>
-      </svg>
-    `);
-    setLightchainResult({
-      toolId: 'wear-design-detail',
-      title: 'ディテール変更プレビュー',
-      summary,
-      imageUrl: preview,
-    });
-    toast.success(mode === 'guide' ? 'ガイドを表示しました' : 'ガイド無しで開始します');
+    }, { rightsAlreadyConfirmed: platformAssetRightsConfirmed });
   };
 
-  const handlePrintDesignStart = async (mode: 'guide' | 'no-guide') => {
+  const handlePrintDesignStart = (mode: 'guide' | 'no-guide') => {
     setPrintDesignMode(mode);
     setPrintDesignDetailStarted(true);
+  };
+
+  const handlePrintDesignGenerate = () => {
     const summary = [
-      mode === 'guide' ? 'ガイドを表示する' : 'ガイド無しで開始します',
+      printDesignMode === 'guide' ? 'ガイドを表示する' : 'ガイド無しで開始します',
       `用途: ${printDesignStyle}`,
       materialSlotFiles.primary?.name ?? '画像追加待ち',
       printDesignPrompt.trim() || 'プリント編集',
     ].join(' / ');
-    await handleLightchainPreviewGenerate({
-      title: '柄・グラフィックAI生成',
+    void handleLightchainPreviewGenerate({
+      title: '柄・グラフィック詳細 AI生成',
       summary,
-      brief: `${printDesignStyle}向けのプリント編集: ${printDesignPrompt.trim() || 'プリント編集'}`,
+      brief: `${printDesignStyle}の柄・グラフィック編集: ${printDesignPrompt.trim() || 'プリント編集'}`,
       allowBriefOnly: true,
-    });
-    return;
-    if (setUploadedAssetResult({
-      toolId: 'print-design-detail',
-      title: '柄・グラフィックプレビュー',
-      summary,
-      mode: 'pattern',
-    })) {
-      toast.success(mode === 'guide' ? '入力素材を保持したガイドを表示しました' : '入力素材を保持した柄プレビューを作成しました');
-      return;
-    }
-    const preview = encodeSvgDataUrl(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
-        <rect width="900" height="560" fill="#0a0d0f"/>
-        <rect x="62" y="54" width="776" height="452" rx="30" fill="#151b1e" stroke="#263034" stroke-width="3"/>
-        <rect x="118" y="106" width="282" height="334" rx="24" fill="#f8fafc"/>
-        <path d="M142 178c52-36 104 36 156 0s78-36 118 0v214H142z" fill="#0f172a" opacity="0.94"/>
-        <path d="M142 246c52-36 104 36 156 0s78-36 118 0" fill="none" stroke="#65d3cf" stroke-width="18" stroke-linecap="round"/>
-        <path d="M142 314c52-36 104 36 156 0s78-36 118 0" fill="none" stroke="#fbbf24" stroke-width="18" stroke-linecap="round"/>
-        <rect x="462" y="124" width="282" height="38" rx="19" fill="#65d3cf" opacity="0.36"/>
-        <rect x="462" y="194" width="214" height="22" rx="11" fill="#ffffff" opacity="0.16"/>
-        <rect x="462" y="242" width="250" height="22" rx="11" fill="#ffffff" opacity="0.12"/>
-        <rect x="462" y="320" width="158" height="46" rx="23" fill="#65d3cf"/>
-        <text x="541" y="350" text-anchor="middle" fill="#062c2b" font-family="Arial, sans-serif" font-size="20" font-weight="800">AI生成</text>
-        <text x="118" y="472" fill="#65d3cf" font-family="Arial, sans-serif" font-size="28" font-weight="800">柄・グラフィック詳細</text>
-        <text x="462" y="428" fill="#a3a3a3" font-family="Arial, sans-serif" font-size="18">${escapeSvgText(truncateSvgText(summary, 50))}</text>
-      </svg>
-    `);
-    setLightchainResult({
-      toolId: 'print-design-detail',
-      title: '柄・グラフィックプレビュー',
-      summary,
-      imageUrl: preview,
-    });
-    toast.success(mode === 'guide' ? 'ガイドを表示しました' : 'ガイド無しで開始します');
+    }, { rightsAlreadyConfirmed: platformAssetRightsConfirmed });
   };
 
   const handleMarketingDetailGenerate = async () => {
@@ -3053,8 +3305,60 @@ export function LightchainWorkbenchPage() {
     setMarketingProjectNameEditing(false);
   };
 
-  const specialProviderGenerationLocked = !lightchainProviderSupported || lightchainGenerationRunning;
+  const specialProviderGenerationLocked = !lightchainProviderSupported || brandResolutionPending || lightchainGenerationRunning;
+  const handleBrandRefresh = async () => {
+    if (brandRefreshRunning) return;
+    setBrandRefreshRunning(true);
+    try {
+      const refreshedBrand = await refreshCurrentBrand();
+      if (refreshedBrand) {
+        toast.success('ブランド情報を確認しました');
+      } else if (useAuthStore.getState().brandState.status === 'failure') {
+        toast.error('ブランド情報を取得できませんでした。もう一度お試しください。');
+      } else {
+        toast.error('利用できるブランドが見つかりません。ブランド設定を確認してください。');
+      }
+    } finally {
+      setBrandRefreshRunning(false);
+    }
+  };
   const renderLightchainProviderGate = () => {
+    if (brandResolutionPending) {
+      return (
+        <div
+          className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.08] p-3 text-xs font-semibold leading-5 text-amber-100"
+          data-testid="lightchain-brand-resolution-gate"
+        >
+          <p>
+            {!isAuthInitialized || isAuthLoading || brandState.status === 'pending'
+              ? 'ブランド情報を確認しています。確認が完了するまでAI生成は開始できません。'
+              : brandState.status === 'success_empty'
+              ? '利用できるブランドがありません。ブランド設定を確認してから、もう一度お試しください。'
+              : 'ブランド情報を確認できません。ブランド設定を確認してから、もう一度お試しください。'}
+          </p>
+          {isAuthInitialized && !isAuthLoading && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void handleBrandRefresh()}
+                disabled={brandRefreshRunning}
+                data-testid="lightchain-brand-refresh"
+                className="rounded-lg border border-amber-200/30 px-3 py-1.5 text-xs font-semibold text-amber-50 transition hover:bg-amber-200/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {brandRefreshRunning ? '再確認中…' : 'ブランド情報を再確認'}
+              </button>
+              <Link
+                to="/brand/settings"
+                data-testid="lightchain-brand-settings-link"
+                className="rounded-lg border border-amber-200/30 px-3 py-1.5 text-xs font-semibold text-amber-50 transition hover:bg-amber-200/10"
+              >
+                ブランド設定を開く
+              </Link>
+            </div>
+          )}
+        </div>
+      );
+    }
     if (!lightchainProviderSupported) {
       if (!['video-workstation', 'video-detail'].includes(selectedTool.id)) return null;
       return (
@@ -3286,6 +3590,11 @@ export function LightchainWorkbenchPage() {
       if (!currentBrand) toast.error('ブランドを選択してください');
       return;
     }
+    const saveAuthBrandFence = captureCurrentAuthBrandFence(currentBrand.id);
+    if (!saveAuthBrandFence) {
+      toast.error('ブランドのアクセス確認が完了していないため、保存を開始できません');
+      return;
+    }
     if (selectedTool.id === 'printing-image' && (
       printingCutoutStatus.primary !== 'done'
       || printingCutoutStatus.secondary !== 'done'
@@ -3313,6 +3622,7 @@ export function LightchainWorkbenchPage() {
           candidate: selectedMaskCandidate,
         })
         : null;
+      assertCurrentAuthBrandFence(saveAuthBrandFence, 'save_after_cutout');
       const finalExtractedImageUrl = extractedGarmentImageUrl || ensuredCutout?.dataUrl || null;
       const finalCutoutBounds = cutoutBounds || ensuredCutout?.bounds || null;
       const finalCutoutOutputSize = cutoutOutputSize || ensuredCutout?.outputSize || null;
@@ -3322,7 +3632,12 @@ export function LightchainWorkbenchPage() {
       const finalMaskEngine = maskEngine || ensuredCutout?.engine || null;
       const parityRuntimeJson = lightchainResult?.parityRuntime
         ?? serializeLightchainParityRuntime(buildCurrentParityRuntime());
-      const projectId = createProject(`制作: ${selectedTool.title}`, currentBrand.id);
+      assertCurrentAuthBrandFence(saveAuthBrandFence, 'save_before_project');
+      const saveBrand = useAuthStore.getState().currentBrand;
+      if (!saveBrand || saveBrand.id !== saveAuthBrandFence.brandId) {
+        throw new AuthBrandAccessFenceError('save_before_project');
+      }
+      const projectId = createProject(`制作: ${selectedTool.title}`, saveBrand.id);
       const lightchainWorkbenchState = workbenchEnabled ? {
         toolId: selectedTool.id,
         toolCategory: selectedTool.category,
@@ -3356,6 +3671,8 @@ export function LightchainWorkbenchPage() {
 	          materialKind: materialSlotFiles[slot.key]?.kind ?? slot.label,
 	          hasImage: Boolean(materialSlotFiles[slot.key]),
 	          imageUrl: materialSlotFiles[slot.key]?.imageUrl ?? null,
+	          sourceMetadata: materialSlotFiles[slot.key]?.sourceMetadata ?? null,
+	          persistenceStatus: materialSlotFiles[slot.key]?.persistenceStatus ?? null,
 	        })),
 	        garmentFileName: garmentFileName || null,
 	        materialKind: garmentCategory,
@@ -3501,8 +3818,9 @@ export function LightchainWorkbenchPage() {
         outputs: selectedTool.outputs,
       });
       const artifactPreview = lightchainResult?.imageUrl ?? orderSheetPreview;
+      assertCurrentAuthBrandFence(saveAuthBrandFence, 'save_before_persistence');
       const artifact = await saveWorkspaceArtifactBestEffort({
-        brandId: currentBrand.id,
+        brandId: saveBrand.id,
         scopeId: user?.id,
         featureType: `lightchain-${selectedTool.id}`,
         title: selectedTool.title,
@@ -3528,9 +3846,10 @@ export function LightchainWorkbenchPage() {
           inputs: selectedTool.inputs,
           outputs: selectedTool.outputs,
           heavyChainHref: selectedTool.heavyChainHref,
-          ...workbenchParameters,
+          ...JSON.parse(JSON.stringify(workbenchParameters)) as Record<string, Json | undefined>,
         },
       });
+      assertCurrentAuthBrandFence(saveAuthBrandFence, 'save_after_persistence');
       if (!artifact.remote && !artifact.localPersisted) {
         deleteProject(projectId);
         throw artifact.localError ?? artifact.remoteError ?? new Error('workspace_artifact_persistence_unverified');
@@ -3585,6 +3904,12 @@ export function LightchainWorkbenchPage() {
         } else {
           const processedMaterialImageUrl = finalExtractedImageUrl || garmentImageUrl;
           const overlayPosition = getOverlayPosition(printPlacement, printScale);
+          const fittingMaterialSource = selectedTool.id === 'fitting-clothing-reference'
+            ? materialSlotFiles.primary?.sourceMetadata
+            : undefined;
+          const fittingMaterialPersistenceStatus = selectedTool.id === 'fitting-clothing-reference'
+            ? materialSlotFiles.primary?.persistenceStatus
+            : undefined;
           if (extractedLayerReady) {
             addObject({
               type: 'image',
@@ -3635,6 +3960,12 @@ export function LightchainWorkbenchPage() {
               prompt: selectedTool.promptTemplate,
               generation: 0,
               lightchainCompat,
+              ...(fittingMaterialSource ? {
+                sourceIdentity: fittingMaterialSource.sourceIdentity,
+                sourceRevision: fittingMaterialSource.sourceRevision,
+                sourceReadback: fittingMaterialSource.sourceReadback,
+                persistenceStatus: fittingMaterialPersistenceStatus ?? 'session-only',
+              } : {}),
               parameters: {
                 toolId: selectedTool.id,
                 artifactId: artifact.artifact.id,
@@ -3780,6 +4111,7 @@ export function LightchainWorkbenchPage() {
       if (resultObjectId ?? overlayObjectId ?? materialObjectId) {
         selectObject((resultObjectId ?? overlayObjectId ?? materialObjectId) as string);
       }
+      assertCurrentAuthBrandFence(saveAuthBrandFence, 'save_before_ui_commit');
       saveCurrentProject();
       toast.success('制作内容を保存しました');
       navigate(`/canvas/${projectId}`);
@@ -3801,6 +4133,20 @@ export function LightchainWorkbenchPage() {
         data-workflow-feature={selectedTool.id}
         data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
         data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
+        data-workflow-lifecycle={workflowLifecycle}
+        data-workflow-source-input-mode={workflowSourceInputMode}
+        data-workflow-retry-policy={workflowRetryPolicy}
+        data-workflow-rights-gate={workflowRightsGate}
+        data-lightchain-provider-route={lightchainProviderRoute}
+        data-lightchain-provider-supported={String(lightchainProviderSupported)}
+        data-lightchain-brand-pending={String(brandResolutionPending)}
+        data-lightchain-ai-disabled={String(aiGenerateDisabled)}
+        data-lightchain-provider-rights={String(providerRightsConfirmed)}
+        data-lightchain-rights-open={String(rightsConfirmationOpen)}
+        data-lightchain-request-active={String(lightchainGenerationRequestRef.current !== null)}
+        data-lightchain-brand-status={brandState.status}
+        data-lightchain-brand-error={brandState.error ?? ''}
+        data-lightchain-current-brand={currentBrand?.id ?? ''}
       >
         {renderLightchainProviderGate()}
         <div className="relative grid min-h-[calc(100vh-70px)] lg:grid-cols-[432px_minmax(0,1fr)]">
@@ -3822,12 +4168,24 @@ export function LightchainWorkbenchPage() {
                 ))}
               </div>
             </div>
-            <div className="space-y-4 p-4">
+            <div className="space-y-4 p-4 pb-32">
               <div>
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-base font-semibold text-white">衣服の画像 (0/4)</p>
+                    <p
+                      className="text-base font-semibold text-white"
+                      data-testid="lightchain-fitting-garment-count"
+                      data-count={`${fittingGarmentCount}/4`}
+                    >
+                      衣服の画像 ({fittingGarmentCount}/4)
+                    </p>
                     <p className="mt-2 text-sm text-neutral-400">自動でアパレル平置き画像に変換</p>
+                    <p
+                      className="mt-1 truncate text-xs text-neutral-500"
+                      data-testid="lightchain-fitting-garment-selection"
+                    >
+                      {materialSlotFiles.primary?.name ?? '未選択'}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -3866,7 +4224,81 @@ export function LightchainWorkbenchPage() {
                     )}
                   </div>
                 </label>
+                <button
+                  type="button"
+                  data-testid="fitting-model-gallery-select"
+                  onClick={() => {
+                    setActiveMaterialSlot('primary');
+                    setActiveMaterialTab('platform-assets');
+                    setMaterialModalOpen(true);
+                  }}
+                  className="mt-2 w-full rounded-xl border border-cyan-300/35 bg-cyan-300/10 px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-300/20"
+                >
+                  Gallery素材を選択
+                </button>
               </div>
+              {garmentImageUrl && (
+                <section
+                  className="rounded-xl border border-white/10 bg-[#181d1f] p-3"
+                  data-testid="lightchain-fitting-mask-controls"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-neutral-300">切り抜き / マスク</p>
+                    <span className="rounded-full bg-cyan-400/10 px-2 py-1 text-[11px] font-semibold text-cyan-200">
+                      {workbenchStep === 'next' ? '次ステップ可' : workbenchStep === 'extracted' ? '抽出済み' : workbenchStep === 'mask' ? 'マスク調整' : '素材選択'}
+                    </span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {[
+                      ['auto', '自動カット'],
+                      ['manual', '手動マスク'],
+                      ['keep', '背景維持'],
+                    ].map(([mode, label]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => handleSetCutMode(mode as typeof cutMode)}
+                        className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${cutMode === mode ? 'bg-cyan-600 text-white' : 'bg-[#24292c] text-neutral-300 hover:bg-[#30383c]'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-3 grid gap-2">
+                    <button
+                      type="button"
+                      onClick={handleOpenMaskAdjustment}
+                      className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50"
+                    >
+                      クリッピング
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRecognizeMask}
+                      className="rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-500"
+                    >
+                      AIマスク認識
+                    </button>
+                  </div>
+                  {maskCandidates.length > 0 && (
+                    <div className="mt-3 rounded-lg border border-cyan-400/20 bg-cyan-400/10 p-2">
+                      <p className="text-[11px] font-semibold text-cyan-100">保存したい範囲を選択してください</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {maskCandidates.map((candidate) => (
+                          <button
+                            key={candidate}
+                            type="button"
+                            onClick={() => handleSelectMaskCandidate(candidate)}
+                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${selectedMaskCandidate === candidate ? 'border-cyan-300 bg-cyan-600 text-white' : 'border-cyan-200/40 bg-[#20272a] text-cyan-100 hover:border-cyan-300'}`}
+                          >
+                            {candidate}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
               <div className="grid grid-cols-3 border-b border-white/10" role="tablist" aria-label="AIフィッティング入力">
                 {['説明生成', '参考画像', 'モデルのセット写真'].map((tab) => (
                   <button
@@ -3893,6 +4325,54 @@ export function LightchainWorkbenchPage() {
                   : 'シングルタスクでは1つの衣服画像から最短で着用イメージを作ります。'}
                 <span className="mt-1 block text-[#65d3cf]">{activeFittingInputTab}</span>
               </div>
+              {garmentImageUrl && (
+                <details
+                  className="rounded-xl border border-white/10 bg-[#181d1f] p-3"
+                  data-testid="lightchain-fitting-layer-controls"
+                >
+                  <summary className="cursor-pointer text-sm font-semibold text-neutral-100">
+                    レイヤー詳細
+                    <span className="ml-2 text-xs font-medium text-neutral-400">{activeLayer} / {printPlacement}</span>
+                  </summary>
+                  <p className="mt-3 text-xs font-semibold text-neutral-400">デザインレイヤー</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {workbenchLabels.layers.map(([layer, label]) => (
+                      <button
+                        key={layer}
+                        type="button"
+                        onClick={() => handleSelectDesignLayer(layer)}
+                        className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${activeLayer === layer ? 'bg-cyan-600 text-white' : 'bg-[#24292c] text-neutral-300 hover:bg-[#30383c]'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="mt-3 block">
+                    <span className="text-xs font-semibold text-neutral-400">配置</span>
+                    <select
+                      value={printPlacement}
+                      onChange={(event) => setPrintPlacement(event.target.value)}
+                      className="mt-1 w-full rounded-lg border border-white/10 bg-[#20272a] px-2 py-2 text-sm text-white outline-none"
+                    >
+                      {workbenchLabels.placements.map((placement) => <option key={placement}>{placement}</option>)}
+                    </select>
+                  </label>
+                  <label className="mt-3 block">
+                    <span className="flex items-center justify-between text-xs font-semibold text-neutral-400">サイズ <span>{printScale}%</span></span>
+                    <input type="range" min="20" max="90" value={printScale} onChange={(event) => setPrintScale(Number(event.target.value))} className="mt-2 w-full accent-cyan-600" />
+                  </label>
+                </details>
+              )}
+              <button
+                type="button"
+                onClick={handleSaveToCanvas}
+                disabled={brandResolutionPending || !currentBrand || !garmentImageUrl || isSaving}
+                data-testid="lightchain-fitting-canvas-save"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-300/40 bg-cyan-300/10 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/70 hover:bg-cyan-300/20 disabled:opacity-50"
+              >
+                <Layers3 className="h-4 w-4" />
+                Canvasに注文票を保存
+              </button>
             </div>
             <div className="absolute bottom-0 left-0 grid w-full gap-2 border-t border-white/10 bg-[#141717] p-2 sm:grid-cols-[1fr_1fr_2fr] lg:w-[432px]">
               {['スマート', '1K'].map((control) => (
@@ -3935,6 +4415,7 @@ export function LightchainWorkbenchPage() {
                           type="button"
                           onClick={handleSaveToCanvas}
                           disabled={isSaving}
+                          data-testid="lightchain-fitting-result-save"
                           className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                         >
                           保存
@@ -4002,7 +4483,7 @@ export function LightchainWorkbenchPage() {
                     {materialTabs.find((tab) => tab.id === activeMaterialTab)?.description}
                   </p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    {materialTabItems[activeMaterialTab].length > 0 ? materialTabItems[activeMaterialTab].map((item) => (
+                    {materialTabItems[activeMaterialTab].length > 0 ? materialTabItems[activeMaterialTab].map((item, itemIndex) => (
                       <div key={`fitting-${activeMaterialTab}-${item.title}`} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
                         <div className="relative flex min-h-[92px] items-center justify-center overflow-hidden rounded-lg bg-white text-sm font-semibold text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
                           <img src={item.imageUrl} alt="" className="h-28 w-full object-cover" />
@@ -4015,6 +4496,7 @@ export function LightchainWorkbenchPage() {
                           <button
                             type="button"
                             onClick={() => handleUseMaterialAsset(item)}
+                            data-testid={`lightchain-material-use-${activeMaterialTab}-${itemIndex}`}
                             className="shrink-0 rounded-lg bg-neutral-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950"
                           >
                             使用
@@ -4036,7 +4518,8 @@ export function LightchainWorkbenchPage() {
                           </p>
                         )}
                       </div>
-		                      )}
+	                      )}
+        {lightchainRightsConfirmationModal}
       </main>
     );
   }
@@ -4044,7 +4527,27 @@ export function LightchainWorkbenchPage() {
   if (isFeatureDetail && selectedTool.id !== 'custom-style' && workspaceStyle) {
     if (workspaceStyle.kind === 'lab') {
       return (
-        <main className="dark min-h-[calc(100vh-70px)] bg-[#111111] px-4 py-4 text-white" data-testid="lightchain-lab-home">
+        <main
+          className="dark min-h-[calc(100vh-70px)] bg-[#111111] px-4 py-4 text-white"
+          data-testid="lightchain-lab-home"
+          data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+          data-workflow-feature={selectedTool.id}
+          data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
+          data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
+          data-workflow-lifecycle={workflowLifecycle}
+          data-workflow-source-input-mode={workflowSourceInputMode}
+      data-workflow-retry-policy={workflowRetryPolicy}
+      data-workflow-rights-gate={workflowRightsGate}
+          data-lightchain-provider-route={lightchainProviderRoute}
+          data-lightchain-provider-supported={String(lightchainProviderSupported)}
+          data-lightchain-brand-pending={String(brandResolutionPending)}
+          data-lightchain-brand-status={brandState.status}
+          data-lightchain-brand-error={brandState.error ?? ''}
+          data-lightchain-current-brand={currentBrand?.id ?? ''}
+          data-lightchain-provider-rights={String(providerRightsConfirmed)}
+          data-lightchain-request-active={String(lightchainGenerationRequestRef.current !== null)}
+          data-lightchain-generation-error={lightchainGenerationError ?? ''}
+      >
           <h1 className="text-base font-semibold">{workspaceStyle.title}</h1>
           {renderLightchainProviderGate()}
           <section className="mt-5 grid max-w-[520px] gap-5">
@@ -4079,6 +4582,7 @@ export function LightchainWorkbenchPage() {
                         type="button"
                         onClick={handleSaveToCanvas}
                         disabled={isSaving}
+                        data-testid="lightchain-lab-result-save"
                         className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                       >
                         保存
@@ -4099,6 +4603,7 @@ export function LightchainWorkbenchPage() {
               </div>
             )}
           </section>
+          {lightchainRightsConfirmationModal}
         </main>
       );
     }
@@ -4170,7 +4675,26 @@ export function LightchainWorkbenchPage() {
     ];
 
     return (
-      <main className="dark min-h-[calc(100vh-70px)] bg-[#101313] text-white" data-testid={`lightchain-workspace-${workspaceStyle.kind}`}>
+      <main
+        className="dark min-h-[calc(100vh-70px)] bg-[#101313] text-white"
+        data-testid={`lightchain-workspace-${workspaceStyle.kind}`}
+        data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+        data-workflow-feature={selectedTool.id}
+        data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
+        data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
+        data-workflow-lifecycle={workflowLifecycle}
+        data-workflow-source-input-mode={workflowSourceInputMode}
+        data-workflow-retry-policy={workflowRetryPolicy}
+        data-workflow-rights-gate={workflowRightsGate}
+        data-lightchain-provider-route={lightchainProviderRoute}
+        data-lightchain-brand-pending={String(brandResolutionPending)}
+          data-lightchain-ai-disabled={String(aiGenerateDisabled)}
+          data-lightchain-provider-rights={String(providerRightsConfirmed)}
+          data-lightchain-request-active={String(lightchainGenerationRequestRef.current !== null)}
+          data-lightchain-brand-status={brandState.status}
+        data-lightchain-brand-error={brandState.error ?? ''}
+        data-lightchain-current-brand={currentBrand?.id ?? ''}
+      >
         <section className="relative min-h-[calc(100vh-70px)] overflow-hidden px-4 py-14 sm:px-8">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_52%_20%,rgba(101,211,207,0.22),transparent_38%),linear-gradient(90deg,rgba(15,23,42,0.15),rgba(34,197,94,0.1),rgba(59,130,246,0.12))]" />
           {workspaceStyle.kind === 'marketing' && (
@@ -4277,6 +4801,7 @@ export function LightchainWorkbenchPage() {
                   type="button"
                   onClick={handleWorkspaceStyleGenerate}
                   disabled={specialProviderGenerationLocked}
+                  data-testid="lightchain-workspace-generate"
                   className="flex h-11 w-11 items-center justify-center rounded-full bg-[#253034] text-[#65d3cf] transition hover:bg-[#65d3cf] hover:text-neutral-950"
                   aria-label="AI生成"
                 >
@@ -4342,6 +4867,7 @@ export function LightchainWorkbenchPage() {
                     type="button"
                     onClick={handleSaveToCanvas}
                     disabled={isSaving}
+                    data-testid="lightchain-workspace-result-save"
                     className="rounded-xl border border-white/10 bg-[#20272a] px-4 py-2 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                   >
                     保存
@@ -4379,6 +4905,7 @@ export function LightchainWorkbenchPage() {
             </div>
           )}
         </section>
+        {lightchainRightsConfirmationModal}
       </main>
     );
   }
@@ -4402,8 +4929,20 @@ export function LightchainWorkbenchPage() {
     const canvasTools = ['選択', '手のひら', '戻る', '進む', '矩形', 'グリッド', 'テキスト', '画像'];
 
     return (
-      <main className="dark min-h-screen bg-[#0b0f10] px-4 py-4 text-white sm:px-6" data-testid="lightchain-marketing-detail-page">
+      <main
+        className="dark min-h-screen bg-[#0b0f10] px-4 py-4 text-white sm:px-6"
+        data-testid="lightchain-marketing-detail-page"
+        data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+        data-workflow-feature={selectedTool.id}
+        data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
+        data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
+        data-workflow-lifecycle={workflowLifecycle}
+        data-workflow-source-input-mode={workflowSourceInputMode}
+        data-workflow-retry-policy={workflowRetryPolicy}
+        data-workflow-rights-gate={workflowRightsGate}
+      >
         <section className="grid min-h-[calc(100vh-102px)] gap-4 xl:grid-cols-[280px_minmax(0,1fr)_420px]">
+          {renderLightchainProviderGate()}
           <aside className="rounded-2xl border border-white/10 bg-[#151a1d] p-4">
             <button
               type="button"
@@ -4525,13 +5064,21 @@ export function LightchainWorkbenchPage() {
               )}
             </label>
             <div className="mx-auto mt-[-24px] flex items-center gap-2 rounded-2xl border border-white/10 bg-[#181f22] p-2 shadow-xl">
-              {canvasTools.map((tool, index) => (
+              {canvasTools.map((tool) => (
                 <button
                   key={tool}
                   type="button"
-                  disabled={index === 2 || index === 3}
+                  disabled={tool === '戻る' ? marketingCanvasHistory.length === 0 : tool === '進む' ? marketingCanvasFuture.length === 0 : false}
                   onClick={() => {
-                    setMarketingCanvasTool(tool);
+                    if (tool === '戻る') {
+                      handleMarketingCanvasUndo();
+                      return;
+                    }
+                    if (tool === '進む') {
+                      handleMarketingCanvasRedo();
+                      return;
+                    }
+                    commitMarketingCanvasState({ tool, zoom: marketingCanvasZoom });
                     if (tool === '画像') openMaterialModalForSlot('primary');
                   }}
                   data-testid={`lightchain-marketing-canvas-tool-${tool}`}
@@ -4542,7 +5089,10 @@ export function LightchainWorkbenchPage() {
               ))}
               <button
                 type="button"
-                onClick={() => setMarketingCanvasZoom((current) => current >= 100 ? 20 : current + 20)}
+                onClick={() => commitMarketingCanvasState({
+                  tool: marketingCanvasTool,
+                  zoom: marketingCanvasZoom >= 100 ? 20 : marketingCanvasZoom + 20,
+                })}
                 data-testid="lightchain-marketing-zoom-value"
                 aria-label="ズーム倍率"
                 className="rounded-lg bg-[#20272a] px-3 py-2 text-sm font-semibold text-neutral-300 transition hover:bg-[#2d383c]"
@@ -4551,7 +5101,7 @@ export function LightchainWorkbenchPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setMarketingCanvasZoom(100)}
+                onClick={() => commitMarketingCanvasState({ tool: marketingCanvasTool, zoom: 100 })}
                 data-testid="lightchain-marketing-zoom-fit"
                 className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#20272a] text-neutral-300 transition hover:bg-[#2d383c]"
                 aria-label="ズーム"
@@ -4630,7 +5180,7 @@ export function LightchainWorkbenchPage() {
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-white">生成履歴</p>
                 <div className="flex items-center gap-2">
-                  <button type="button" onClick={handleSaveToCanvas} disabled={isSaving || !lightchainResult} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-60">保存</button>
+                  <button type="button" onClick={handleSaveToCanvas} disabled={isSaving || !lightchainResult} data-testid="marketing-detail-result-save" className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-60">保存</button>
                   <button type="button" onClick={() => void handleDownloadLightchainResult()} disabled={!lightchainResult} data-testid="marketing-detail-result-download" className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 disabled:opacity-60">ダウンロード</button>
                   <LightchainResultDestinations />
                 </div>
@@ -4647,6 +5197,8 @@ export function LightchainWorkbenchPage() {
             </section>
           </aside>
         </section>
+        {lightchainResultModal}
+        {lightchainRightsConfirmationModal}
       </main>
     );
   }
@@ -4663,14 +5215,27 @@ export function LightchainWorkbenchPage() {
     ];
 
     return (
-      <main className="dark min-h-screen bg-[#101010] px-4 py-4 text-white sm:px-6" data-testid="lightchain-print-design-project-page">
+      <main
+        className="dark min-h-screen bg-[#101010] px-4 py-4 text-white sm:px-6"
+        data-testid="lightchain-print-design-project-page"
+        data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+        data-workflow-feature={selectedTool.id}
+        data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
+        data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
+        data-workflow-lifecycle={workflowLifecycle}
+        data-workflow-source-input-mode={workflowSourceInputMode}
+        data-workflow-retry-policy={workflowRetryPolicy}
+        data-workflow-rights-gate={workflowRightsGate}
+      >
         <section className="mx-auto max-w-[1180px]">
+          {lightchainRightsConfirmationModal}
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-base font-semibold text-white">{currentDisplayTitle}</h1>
             <button
               type="button"
               onClick={handleProjectHomeGenerate}
               disabled={specialProviderGenerationLocked}
+              data-testid="lightchain-workspace-generate"
               className="rounded-xl bg-[#65d3cf] px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc]"
             >
               生成へ
@@ -4689,6 +5254,7 @@ export function LightchainWorkbenchPage() {
                   type="button"
                   onClick={handleSaveToCanvas}
                   disabled={isSaving}
+                  data-testid="lightchain-print-design-project-result-save"
                   className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                 >
                   保存
@@ -4758,8 +5324,20 @@ export function LightchainWorkbenchPage() {
 
   if (selectedTool.id === 'print-design-detail') {
     return (
-      <main className="dark min-h-screen bg-[#0d1112] px-4 py-4 text-white sm:px-6" data-testid="lightchain-print-design-detail-page">
+      <main
+        className="dark min-h-screen bg-[#0d1112] px-4 py-4 text-white sm:px-6"
+        data-testid="lightchain-print-design-detail-page"
+        data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+        data-workflow-feature={selectedTool.id}
+        data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
+        data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
+        data-workflow-lifecycle={workflowLifecycle}
+        data-workflow-source-input-mode={workflowSourceInputMode}
+        data-workflow-retry-policy={workflowRetryPolicy}
+        data-workflow-rights-gate={workflowRightsGate}
+      >
         {renderLightchainProviderGate()}
+        {lightchainRightsConfirmationModal}
         {!printDesignDetailStarted ? (
           <section className="mx-auto flex min-h-[calc(100vh-112px)] max-w-[780px] items-center justify-center">
             <div className="w-full">
@@ -4873,7 +5451,7 @@ export function LightchainWorkbenchPage() {
                   </div>
                 </div>
 
-                <button type="button" onClick={() => handlePrintDesignStart(printDesignMode)} disabled={specialProviderGenerationLocked} className="mt-4 flex w-full items-center justify-center rounded-xl bg-[#65d3cf] px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc] disabled:cursor-not-allowed disabled:opacity-50">
+                <button type="button" onClick={handlePrintDesignGenerate} disabled={specialProviderGenerationLocked} data-testid="lightchain-print-design-generate" className="mt-4 flex w-full items-center justify-center rounded-xl bg-[#65d3cf] px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc] disabled:cursor-not-allowed disabled:opacity-50">
                   つくる <Sparkles className="ml-2 h-4 w-4" />
                 </button>
               </div>
@@ -4884,7 +5462,7 @@ export function LightchainWorkbenchPage() {
                 <h2 className="text-sm font-semibold text-white">生成履歴</h2>
                 {lightchainResult && (
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={handleSaveToCanvas} disabled={isSaving} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
+                    <button type="button" onClick={handleSaveToCanvas} disabled={isSaving} data-testid="lightchain-print-design-detail-result-save" className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
                       保存
                     </button>
                     <button type="button" onClick={() => void handleDownloadLightchainResult()} data-testid="lightchain-print-design-detail-result-download" className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
@@ -4926,14 +5504,37 @@ export function LightchainWorkbenchPage() {
     ];
 
     return (
-      <main className="dark min-h-screen bg-[#101010] px-4 py-4 text-white sm:px-6" data-testid="lightchain-wear-design-lab-page">
+      <main
+        className="dark min-h-screen bg-[#101010] px-4 py-4 text-white sm:px-6"
+        data-testid="lightchain-wear-design-lab-page"
+        data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+        data-workflow-feature={selectedTool.id}
+        data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
+        data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
+        data-workflow-lifecycle={workflowLifecycle}
+        data-workflow-source-input-mode={workflowSourceInputMode}
+        data-workflow-retry-policy={workflowRetryPolicy}
+        data-workflow-rights-gate={workflowRightsGate}
+        data-lightchain-provider-route={lightchainProviderRoute}
+        data-lightchain-provider-supported={String(lightchainProviderSupported)}
+        data-lightchain-brand-pending={String(brandResolutionPending)}
+        data-lightchain-ai-disabled={String(aiGenerateDisabled)}
+        data-lightchain-provider-rights={String(providerRightsConfirmed)}
+        data-lightchain-rights-open={String(rightsConfirmationOpen)}
+        data-lightchain-request-active={String(lightchainGenerationRequestRef.current !== null)}
+        data-lightchain-brand-status={brandState.status}
+        data-lightchain-brand-error={brandState.error ?? ''}
+        data-lightchain-current-brand={currentBrand?.id ?? ''}
+      >
         <section className="mx-auto max-w-[1180px]">
+          {lightchainRightsConfirmationModal}
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-base font-semibold text-white">ウェアデザインラボ</h1>
             <button
               type="button"
               onClick={handleProjectHomeGenerate}
               disabled={specialProviderGenerationLocked}
+              data-testid="lightchain-workspace-generate"
               className="rounded-xl bg-[#65d3cf] px-4 py-2 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc]"
             >
               AI生成
@@ -4952,6 +5553,7 @@ export function LightchainWorkbenchPage() {
                   type="button"
                   onClick={handleSaveToCanvas}
                   disabled={isSaving}
+                  data-testid="lightchain-wear-design-lab-result-save"
                   className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                 >
                   保存
@@ -5021,8 +5623,20 @@ export function LightchainWorkbenchPage() {
 
   if (selectedTool.id === 'wear-design-detail') {
     return (
-      <main className="dark min-h-screen bg-[#0d1112] px-4 py-4 text-white sm:px-6" data-testid="lightchain-wear-design-detail-page">
+      <main
+        className="dark min-h-screen bg-[#0d1112] px-4 py-4 text-white sm:px-6"
+        data-testid="lightchain-wear-design-detail-page"
+        data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+        data-workflow-feature={selectedTool.id}
+        data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
+        data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
+        data-workflow-lifecycle={workflowLifecycle}
+        data-workflow-source-input-mode={workflowSourceInputMode}
+        data-workflow-retry-policy={workflowRetryPolicy}
+        data-workflow-rights-gate={workflowRightsGate}
+      >
         {renderLightchainProviderGate()}
+        {lightchainRightsConfirmationModal}
         {!wearDesignDetailStarted ? (
           <section className="mx-auto flex min-h-[calc(100vh-112px)] max-w-[780px] items-center justify-center">
             <div className="grid w-full gap-8 md:grid-cols-2">
@@ -5094,6 +5708,14 @@ export function LightchainWorkbenchPage() {
                     </>
                   )}
                 </label>
+                <button
+                  type="button"
+                  onClick={() => openMaterialModalForSlot('primary')}
+                  className="mt-3 flex w-full items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-300/60 hover:bg-cyan-300/15"
+                  data-testid="lightchain-wear-design-library-open"
+                >
+                  ライブラリから選択
+                </button>
 
                 <div className="mt-5 grid gap-3">
                   <div className="rounded-xl border border-white/10 bg-[#111719] p-4">
@@ -5129,7 +5751,7 @@ export function LightchainWorkbenchPage() {
                   </div>
                 </div>
 
-                <button type="button" onClick={() => handleWearDesignStart(wearDesignMode)} disabled={specialProviderGenerationLocked} className="mt-4 flex w-full items-center justify-center rounded-xl bg-[#65d3cf] px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc] disabled:cursor-not-allowed disabled:opacity-50">
+                <button type="button" onClick={handleWearDesignGenerate} disabled={specialProviderGenerationLocked} className="mt-4 flex w-full items-center justify-center rounded-xl bg-[#65d3cf] px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-[#78e0dc] disabled:cursor-not-allowed disabled:opacity-50">
                   AI生成 <Sparkles className="ml-2 h-4 w-4" />
                 </button>
               </div>
@@ -5140,7 +5762,7 @@ export function LightchainWorkbenchPage() {
                 <h2 className="text-sm font-semibold text-white">生成履歴</h2>
                 {lightchainResult && (
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={handleSaveToCanvas} disabled={isSaving} className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
+                    <button type="button" onClick={handleSaveToCanvas} disabled={isSaving} data-testid="lightchain-wear-design-detail-result-save" className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
                       保存
                     </button>
                     <button type="button" onClick={() => void handleDownloadLightchainResult()} data-testid="lightchain-wear-design-detail-result-download" className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60">
@@ -5166,6 +5788,57 @@ export function LightchainWorkbenchPage() {
             </aside>
           </section>
         )}
+        {materialModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-end bg-neutral-950/70 p-3 backdrop-blur-md sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-label="ウェアデザイン素材ライブラリ">
+            <div className="max-h-[88vh] w-full overflow-hidden rounded-[28px] border border-white/10 bg-[#0d1112] shadow-2xl sm:max-w-4xl">
+              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                <div>
+                  <h2 className="text-base font-semibold text-white">素材ライブラリ</h2>
+                  <p className="mt-0.5 text-xs text-neutral-400">対象画像をライブラリから選択します。</p>
+                </div>
+                <button type="button" onClick={() => setMaterialModalOpen(false)} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-neutral-200 transition hover:border-cyan-300/30 hover:bg-cyan-300/10">閉じる</button>
+              </div>
+              <div className="grid max-h-[calc(88vh-64px)] overflow-y-auto md:grid-cols-[220px_1fr]">
+                <div className="border-b border-white/10 p-3 md:border-b-0 md:border-r">
+                  <div className="flex gap-2 overflow-x-auto md:block md:space-y-2">
+                    {materialTabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveMaterialTab(tab.id)}
+                        className={`w-full shrink-0 rounded-2xl px-3 py-2 text-left text-sm font-semibold transition ${activeMaterialTab === tab.id ? 'bg-cyan-300 text-neutral-950' : 'bg-white/[0.04] text-neutral-300 hover:bg-white/[0.08]'}`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-4">
+                  <p className="text-sm font-semibold text-white">{materialTabs.find((tab) => tab.id === activeMaterialTab)?.label}</p>
+                  <p className="mt-1 text-sm text-neutral-400">{materialTabs.find((tab) => tab.id === activeMaterialTab)?.description}</p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {materialTabItems[activeMaterialTab].length > 0 ? materialTabItems[activeMaterialTab].map((item, itemIndex) => (
+                      <div key={`wear-design-${activeMaterialTab}-${item.title}`} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+                        <div className="relative flex min-h-[92px] items-center justify-center overflow-hidden rounded-xl bg-white/[0.04]">
+                          <img src={item.imageUrl} alt="" className="h-28 w-full object-cover" />
+                        </div>
+                        <div className="mt-3 flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-white">{item.title}</p>
+                            <p className="mt-1 text-xs text-neutral-400">{item.note}</p>
+                          </div>
+                          <button type="button" onClick={() => handleUseMaterialAsset(item)} data-testid={`lightchain-wear-design-library-use-${activeMaterialTab}-${itemIndex}`} className="shrink-0 rounded-full bg-cyan-300 px-3 py-2 text-xs font-semibold text-neutral-950 transition hover:bg-cyan-200">使用</button>
+                        </div>
+                      </div>
+                    )) : (
+                      <p className="rounded-xl border border-dashed border-white/15 px-4 py-8 text-center text-sm text-neutral-500 sm:col-span-2">このタブに使える保存済み素材はありません。プラットフォーム素材または生成履歴を選択してください。</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     );
   }
@@ -5179,7 +5852,18 @@ export function LightchainWorkbenchPage() {
     ];
 
     return (
-      <main className="dark min-h-screen bg-[#0d1112] px-4 py-4 text-white sm:px-6" data-testid="lightchain-custom-style-page">
+      <main
+        className="dark min-h-screen bg-[#0d1112] px-4 py-4 text-white sm:px-6"
+        data-testid="lightchain-custom-style-page"
+        data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+        data-workflow-feature={selectedTool.id}
+        data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
+        data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
+        data-workflow-lifecycle={workflowLifecycle}
+        data-workflow-source-input-mode={workflowSourceInputMode}
+        data-workflow-retry-policy={workflowRetryPolicy}
+        data-workflow-rights-gate={workflowRightsGate}
+      >
         <div className="grid gap-4 lg:grid-cols-[84px_minmax(0,1fr)]">
           <aside className="hidden rounded-2xl border border-neutral-800 bg-neutral-900/90 p-3 lg:block">
             <div className="flex flex-col items-center gap-5">
@@ -5285,6 +5969,7 @@ export function LightchainWorkbenchPage() {
                       type="button"
                       onClick={handleSaveToCanvas}
                       disabled={isSaving}
+                      data-testid="lightchain-custom-style-result-save"
                       className="rounded-lg border border-white/10 bg-[#20272a] px-3 py-2 text-xs font-semibold text-neutral-200 transition hover:border-cyan-300/50 disabled:opacity-60"
                     >
                       保存
@@ -5338,7 +6023,7 @@ export function LightchainWorkbenchPage() {
                 <div>
                   <p className="text-sm font-semibold text-neutral-900 dark:text-white">{materialTabs.find((tab) => tab.id === activeMaterialTab)?.label}</p>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    {materialTabItems[activeMaterialTab].length > 0 ? materialTabItems[activeMaterialTab].map((item) => (
+                    {materialTabItems[activeMaterialTab].length > 0 ? materialTabItems[activeMaterialTab].map((item, itemIndex) => (
                       <article key={item.title} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
                         <div className="flex items-center gap-3">
                           <img src={item.imageUrl} alt="" className="h-16 w-16 rounded-lg object-cover" />
@@ -5347,7 +6032,7 @@ export function LightchainWorkbenchPage() {
                             <p className="mt-1 text-xs text-neutral-500">{item.note}</p>
                           </div>
                         </div>
-                        <button type="button" onClick={() => handleUseMaterialAsset(item)} className="mt-3 w-full rounded-lg bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950">使用</button>
+                        <button type="button" onClick={() => handleUseMaterialAsset(item)} data-testid={`lightchain-material-use-${activeMaterialTab}-${itemIndex}`} className="mt-3 w-full rounded-lg bg-neutral-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 dark:bg-white dark:text-neutral-950">使用</button>
                       </article>
                     )) : (
                       <p className="rounded-xl border border-dashed border-neutral-300 px-4 py-8 text-center text-sm text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
@@ -5375,19 +6060,33 @@ export function LightchainWorkbenchPage() {
       data-workflow-feature={selectedTool.id}
       data-workflow-input-roles={selectedFeatureWorkflow?.inputRoles.join(',') ?? ''}
       data-workflow-result-destinations={selectedFeatureWorkflow?.resultDestinations.join(',') ?? ''}
+      data-workflow-lifecycle={workflowLifecycle}
+      data-workflow-source-input-mode={workflowSourceInputMode}
+      data-workflow-retry-policy={workflowRetryPolicy}
+      data-workflow-rights-gate={workflowRightsGate}
+      data-lightchain-provider-route={lightchainProviderRoute}
+      data-lightchain-provider-supported={String(lightchainProviderSupported)}
+      data-lightchain-brand-pending={String(brandResolutionPending)}
+      data-lightchain-brand-status={brandState.status}
+      data-lightchain-brand-error={brandState.error ?? ''}
+      data-lightchain-current-brand={currentBrand?.id ?? ''}
+      data-lightchain-provider-rights={String(providerRightsConfirmed)}
+      data-lightchain-request-active={String(lightchainGenerationRequestRef.current !== null)}
+      data-lightchain-generation-error={lightchainGenerationError ?? ''}
     >
       <div className={isFeatureDetail ? 'space-y-4' : 'mx-auto max-w-7xl space-y-5'}>
         {isFeatureDetail && (
           <nav
-            aria-label="ツールバー"
+            aria-label="ツールカテゴリ"
             data-testid="lightchain-source-toolbar"
-            className="flex flex-wrap items-center gap-1.5 rounded-xl border border-white/10 bg-[#111719] px-2 py-2 text-sm font-semibold text-neutral-300"
+            className="grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#111719] p-1 text-xs font-semibold text-neutral-300 sm:grid-cols-4 sm:text-sm"
           >
-            {lightchainSourceToolbarItems.map((item, index) => (
+            {lightchainSourceToolbarItems.map((item) => (
               <Link
                 key={item.label}
                 to={item.to}
-                className={`rounded-lg px-3 py-2 transition hover:bg-white/[0.08] hover:text-white ${index === 0 ? 'bg-white/[0.08] text-white' : ''}`}
+                aria-current={item.category === activeSourceCategory ? 'page' : undefined}
+                className={`rounded-lg px-3 py-2 transition hover:bg-white/[0.08] hover:text-white ${item.category === activeSourceCategory ? 'bg-white/[0.08] text-white' : ''}`}
               >
                 {item.label}
               </Link>
@@ -5483,50 +6182,13 @@ export function LightchainWorkbenchPage() {
             </section>
           )}
 
-          {isFeatureDetail && (
-            <section
-              className="rounded-2xl border border-white/10 bg-[#111719] p-3 text-white shadow-soft sm:p-4"
-              data-testid="lightchain-workflow-rail"
-            >
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-300/15 text-cyan-200"><Sparkles className="h-4 w-4" /></span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{currentDisplayTitle}</p>
-                    <p className="mt-0.5 truncate text-xs text-neutral-400">{workflowPhase.detail}</p>
-                  </div>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${workflowPhase.tone === 'success' ? 'bg-emerald-400/15 text-emerald-200' : workflowPhase.tone === 'ready' ? 'bg-cyan-400/15 text-cyan-200' : 'bg-amber-400/15 text-amber-200'}`}>
-                    {workflowPhase.label}
-                  </span>
-                </div>
-                <nav className="flex flex-wrap items-center gap-2 text-xs font-semibold" aria-label="制作の次の操作">
-                  <Link to="/history" className="rounded-lg border border-white/10 px-3 py-2 text-neutral-300 transition hover:border-cyan-300/40 hover:text-white">生成履歴</Link>
-                  <Link to="/gallery" className="rounded-lg border border-white/10 px-3 py-2 text-neutral-300 transition hover:border-cyan-300/40 hover:text-white">Gallery</Link>
-                  <Link to="/jobs" className="rounded-lg border border-white/10 px-3 py-2 text-neutral-300 transition hover:border-cyan-300/40 hover:text-white">Jobs</Link>
-                  <Link to="/canvas/new" className="rounded-lg bg-cyan-300 px-3 py-2 text-neutral-950 transition hover:bg-cyan-200">Canvasへ</Link>
-                </nav>
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] font-semibold text-neutral-400 sm:max-w-xl">
-                {[
-                  ['1', '素材・依頼', hasCurrentInput],
-                  ['2', 'AI生成', Boolean(lightchainResult)],
-                  ['3', '保存・再利用', Boolean(lightchainResult)],
-                ].map(([step, label, done]) => (
-                  <div key={step as string} className={`rounded-lg px-3 py-2 ${done ? 'bg-emerald-400/10 text-emerald-200' : 'bg-white/[0.05]'}`}>
-                    <span className="mr-1.5">{done ? '✓' : step}</span>{label}
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
           {!isFeatureDetail && (
           <div className="rounded-2xl border border-neutral-200 bg-white p-2 shadow-soft dark:border-neutral-800 dark:bg-neutral-900">
             <div className="flex gap-1.5 overflow-x-auto">
               {visibleCategories.map((category) => {
                 const Icon = category.icon;
                 const active = category.id === activeCategory;
-                const count = visibleTools.filter((tool) => tool.category === category.id).length;
+                const count = visibleTools.filter((tool) => getLightchainTopLevelCategory(tool.category) === category.id).length;
                 return (
                   <button
                     key={category.id}
@@ -6862,6 +7524,7 @@ export function LightchainWorkbenchPage() {
                     type="button"
                     onClick={handleSaveToCanvas}
                     disabled={isSaving}
+                    data-testid="lightchain-feature-input-save"
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 transition hover:border-primary-300 hover:text-primary-700 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200"
                   >
                     <Layers3 className="h-4 w-4" />
@@ -7029,7 +7692,7 @@ export function LightchainWorkbenchPage() {
                   {materialTabs.find((tab) => tab.id === activeMaterialTab)?.description}
                 </p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {materialTabItems[activeMaterialTab].length > 0 ? materialTabItems[activeMaterialTab].map((item) => (
+                  {materialTabItems[activeMaterialTab].length > 0 ? materialTabItems[activeMaterialTab].map((item, itemIndex) => (
                     <div key={`${activeMaterialTab}-${item.title}`} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
                       <div className="relative flex min-h-[92px] items-center justify-center overflow-hidden rounded-xl bg-white/[0.04] text-sm font-semibold text-neutral-400">
                         <img src={item.imageUrl} alt="" className="h-28 w-full object-cover" />
@@ -7042,6 +7705,7 @@ export function LightchainWorkbenchPage() {
                         <button
                           type="button"
                           onClick={() => handleUseMaterialAsset(item)}
+                          data-testid={`lightchain-material-use-${activeMaterialTab}-${itemIndex}`}
                           className="shrink-0 rounded-full bg-cyan-300 px-3 py-2 text-xs font-semibold text-neutral-950 transition hover:bg-cyan-200"
                         >
                           使用

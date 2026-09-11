@@ -16,6 +16,7 @@ interface PartialEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   imageUrl: string;
+  providerNotice?: string;
   onSubmit: (payload: PartialEditPayload) => Promise<void>;
 }
 
@@ -23,7 +24,7 @@ type MaskTool = 'brush' | 'eraser';
 
 const DEFAULT_BRUSH_SIZE = 72;
 
-export function PartialEditModal({ isOpen, onClose, imageUrl, onSubmit }: PartialEditModalProps) {
+export function PartialEditModal({ isOpen, onClose, imageUrl, onSubmit,providerNotice }: PartialEditModalProps) {
   const imageRef = useRef<HTMLImageElement>(null);
   const visualMaskRef = useRef<HTMLCanvasElement>(null);
   const apiMaskRef = useRef<HTMLCanvasElement>(null);
@@ -215,6 +216,7 @@ export function PartialEditModal({ isOpen, onClose, imageUrl, onSubmit }: Partia
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="部分編集（Inpaint）" size="xl">
+      {providerNotice && <p className="mb-3 text-xs leading-5 text-amber-800 dark:text-amber-200" data-testid="cloudflare-protected-edit-notice">{providerNotice}</p>}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
         <div>
           <div className="mb-3 flex items-center justify-between gap-3">

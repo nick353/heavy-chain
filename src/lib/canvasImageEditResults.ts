@@ -1,4 +1,5 @@
 import type { ImageEditResult } from './imageApi';
+import { PROTECTED_IMAGE_EDIT_MODE } from './protectedImageEditContract.ts';
 
 export type CanvasImageEditCandidate = {
   imageUrl: string;
@@ -7,6 +8,7 @@ export type CanvasImageEditCandidate = {
   storagePath: string;
   candidateIndex: number;
   persistenceStatus: 'completed';
+  batchId?: string;
 };
 
 export function normalizeCanvasImageEditCandidates(
@@ -23,6 +25,7 @@ export function normalizeCanvasImageEditCandidates(
           storagePath: result.storagePath,
           persistenceStatus: result.persistenceStatus,
           candidateIndex: 0,
+          batchId:result.batchId,
         }]
       : [];
   const seenImageIds = new Set<string>();
@@ -30,6 +33,8 @@ export function normalizeCanvasImageEditCandidates(
   const seenUrls = new Set<string>();
   const seenCandidateIndices = new Set<number>();
   let batchJobId = '';
+  const protectedBatch = result.provider === 'workers_ai' && result.protectedRegionComposited === true &&
+    result.maskTreatment === PROTECTED_IMAGE_EDIT_MODE && typeof result.batchId === 'string' && !!result.batchId;
 
   return rawCandidates.flatMap((candidate, responseIndex) => {
     const imageUrl = typeof candidate.imageUrl === 'string' ? candidate.imageUrl.trim() : '';
@@ -42,7 +47,8 @@ export function normalizeCanvasImageEditCandidates(
     if (!imageUrl || !jobId || !imageId || !storagePath || candidate.persistenceStatus !== 'completed') {
       return [];
     }
-    if (batchJobId && jobId !== batchJobId) return [];
+    const candidateBatch = protectedBatch ? candidate.batchId : jobId;
+    if (!candidateBatch || protectedBatch && candidateBatch !== result.batchId || batchJobId && candidateBatch !== batchJobId) return [];
     if (
       seenImageIds.has(imageId)
       || seenStoragePaths.has(storagePath)
@@ -51,7 +57,7 @@ export function normalizeCanvasImageEditCandidates(
     ) {
       return [];
     }
-    batchJobId = jobId;
+    batchJobId = candidateBatch;
     seenImageIds.add(imageId);
     seenStoragePaths.add(storagePath);
     seenUrls.add(imageUrl);
@@ -63,6 +69,7 @@ export function normalizeCanvasImageEditCandidates(
       storagePath,
       candidateIndex,
       persistenceStatus: 'completed' as const,
+      ...(protectedBatch ? { batchId:candidateBatch } : {}),
     }];
   }).slice(0, Math.max(1, Math.min(4, Math.trunc(limit))));
 }

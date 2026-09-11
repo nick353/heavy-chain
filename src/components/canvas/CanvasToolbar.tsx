@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useState } from 'react';
+import { getShortcutModifier } from '../../lib/keyboardShortcutPlatform';
 
 interface CanvasToolbarProps {
   onAddText?: () => void;
@@ -59,6 +60,7 @@ export function CanvasToolbar({
   const hasSelection = selectedIds.length > 0;
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
+  const shortcutModifier = getShortcutModifier();
 
   const zoomIn = () => setZoom(zoom * 1.2);
   const zoomOut = () => setZoom(zoom / 1.2);
@@ -158,10 +160,10 @@ export function CanvasToolbar({
           <Divider />
 
           {/* History - always visible */}
-          <ToolButton onClick={undo} disabled={!canUndo} title="元に戻す (Ctrl+Z)">
+          <ToolButton onClick={undo} disabled={!canUndo} title={`元に戻す (${shortcutModifier}+Z)`}>
             <Undo2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </ToolButton>
-          <ToolButton onClick={redo} disabled={!canRedo} title="やり直し (Ctrl+Shift+Z)">
+          <ToolButton onClick={redo} disabled={!canRedo} title={`やり直し (${shortcutModifier}+Shift+Z)`}>
             <Redo2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </ToolButton>
 
@@ -171,7 +173,7 @@ export function CanvasToolbar({
             <ToolButton
               onClick={duplicateSelected}
               disabled={!hasSelection}
-              title="複製 (Ctrl+D)"
+              title={`複製 (${shortcutModifier}+D)`}
             >
               <Copy className="w-4 h-4" />
             </ToolButton>

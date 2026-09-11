@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
-import { Layout } from './components/layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LightchainUnifiedWorkspaceShell } from './components/workspace/LightchainUnifiedWorkspaceShell';
 import {
@@ -21,7 +20,6 @@ const GeneratePage = lazy(() => import('./pages/GeneratePage').then((module) => 
 const GenerateLightchainEntry = lazy(() => import('./components/GenerateLightchainEntry').then((module) => ({ default: module.GenerateLightchainEntry })));
 const WorkflowBoardPage = lazy(() => import('./pages/WorkflowBoardPage').then((module) => ({ default: module.WorkflowBoardPage })));
 const FittingPage = lazy(() => import('./pages/FittingPage').then((module) => ({ default: module.FittingPage })));
-const MarketingWorkspacePage = lazy(() => import('./pages/MarketingWorkspacePage').then((module) => ({ default: module.MarketingWorkspacePage })));
 const FashionStudioPage = lazy(() => import('./pages/FashionStudioPage').then((module) => ({ default: module.FashionStudioPage })));
 const ModelLibraryPage = lazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
 const PatternWorkspacePage = lazy(() => import('./pages/PatternWorkspacePage').then((module) => ({ default: module.PatternWorkspacePage })));
@@ -37,10 +35,11 @@ const LightchainMaterialWorkbenchPage = lazy(() => import('./pages/LightchainMat
 const LightchainCreatorPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainCreatorPage })));
 const LightchainDesignProductionPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainDesignProductionPage })));
 const LightchainAssetCenterPage = lazy(() => import('./pages/LightchainLibraryPage').then((module) => ({ default: module.LightchainLibraryPage })));
-const LightchainOrientedDesignPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainOrientedDesignPage })));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })));
 const BrandSettingsPage = lazy(() => import('./pages/BrandSettingsPage').then((module) => ({ default: module.BrandSettingsPage })));
+const Layout = lazy(() => import('./components/layout/Layout').then((module) => ({ default: module.Layout })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +49,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const WORKSPACE_LOADING_STALL_TIMEOUT_MS = 10_000;
 
 const loadingRouteCopy: Record<string, { eyebrow: string; title: string; description: string; actions: string[] }> = {
   '/dashboard': {
@@ -166,11 +167,20 @@ function getLoadingCopy(pathname: string) {
 function WorkspaceLoadingFallback({ authRecovery = false }: { authRecovery?: boolean }) {
   const location = useLocation();
   const copy = getLoadingCopy(location.pathname);
+  const [loadingStalled, setLoadingStalled] = useState(false);
+
+  useEffect(() => {
+    if (authRecovery) return undefined;
+    const timeoutId = window.setTimeout(() => setLoadingStalled(true), WORKSPACE_LOADING_STALL_TIMEOUT_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [authRecovery]);
+
+  const showRecoveryActions = authRecovery || loadingStalled;
 
   return (
     <div
       data-testid="workspace-loading-fallback"
-      data-loading-state={authRecovery ? 'auth-recovery' : 'lazy-page'}
+      data-loading-state={authRecovery ? 'auth-recovery' : loadingStalled ? 'stalled' : 'lazy-page'}
       className="min-h-screen bg-[#05090b] px-4 py-8 text-white dark:bg-[#05090b]"
     >
       <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-[1800px] flex-col">
@@ -197,10 +207,21 @@ function WorkspaceLoadingFallback({ authRecovery = false }: { authRecovery?: boo
             <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-neutral-400">
               {authRecovery ? 'ログイン後にLightchainの制作ワークスペースへ進めます。' : copy.description}
             </p>
-            {authRecovery ? (
-              <a href="/login" className="mt-6 inline-flex rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200">
-                ログイン
-              </a>
+            {showRecoveryActions ? (
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <a href="/login" className="inline-flex rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200">
+                  ログイン
+                </a>
+                {loadingStalled ? (
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="inline-flex rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/40"
+                  >
+                    再読み込み
+                  </button>
+                ) : null}
+              </div>
             ) : null}
           </div>
         </main>
@@ -215,6 +236,10 @@ function PageLoading() {
 
 function lazyPage(page: React.ReactNode) {
   return <Suspense fallback={<PageLoading />}>{page}</Suspense>;
+}
+
+function LazyLayout() {
+  return <Suspense fallback={<PageLoading />}><Layout /></Suspense>;
 }
 
 // Protected Route wrapper
@@ -438,6 +463,7 @@ function AppRoutes() {
         }
       />
       <Route path="/auth/callback" element={lazyPage(<AuthCallbackPage />)} />
+      <Route path="/reset-password" element={lazyPage(<ResetPasswordPage />)} />
       <Route path="/share/:token" element={lazyPage(<SharedImagePage />)} />
       <Route
         path="/terms"
@@ -541,9 +567,23 @@ function AppRoutes() {
       />
 
       {/* Protected routes with layout */}
-      <Route element={<Layout />}>
+      <Route element={<LazyLayout />}>
         <Route
           path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <GenerateLightchainEntry />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workspace"
           element={
             <ProtectedRoute>
               <ErrorBoundary>
@@ -601,7 +641,21 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <MarketingWorkspacePage />
+                    <LightchainWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/marketing/detail"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -624,6 +678,20 @@ function AppRoutes() {
         />
         <Route
           path="/models"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <ModelLibraryPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/model-library"
           element={
             <ProtectedRoute>
               <ErrorBoundary>
@@ -811,6 +879,20 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/model/:modelMode"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/tools/fabric"
           element={
             <ProtectedRoute>
@@ -840,6 +922,34 @@ function AppRoutes() {
         />
         <Route
           path="/tools/line-draft-to-tile"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/line"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/pattern-to-vector"
           element={
             <ProtectedRoute>
               <ErrorBoundary>
@@ -937,6 +1047,20 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/editor/patternDesign/detail"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/editor/changeColor"
           element={
             <ProtectedRoute>
@@ -958,6 +1082,20 @@ function AppRoutes() {
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
                     <ModelLibraryPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/model-library/:modelTool"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -1013,7 +1151,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainCreatorPage />
+                    <LightchainWorkbenchPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -1069,7 +1207,21 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainOrientedDesignPage />
+                    <LightchainWorkbenchPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/flow/orientedDesign/detail"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <LightchainWorkbenchPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>

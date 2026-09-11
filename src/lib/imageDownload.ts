@@ -36,6 +36,73 @@ export const fetchValidatedImageBlob = async (
   return blob;
 };
 
+const renderImageSourceToBlob = async (
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  format: ImageDownloadFormat,
+  errorPrefix: string,
+): Promise<Blob> => {
+  const mimeType = IMAGE_DOWNLOAD_MIME_TYPES[format];
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, width);
+  canvas.height = Math.max(1, height);
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error(`${errorPrefix}_canvas_unavailable`);
+
+  if (format === 'jpeg') {
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  context.drawImage(source, 0, 0, canvas.width, canvas.height);
+
+  // Chromium can leave the asynchronous canvas encoding callback pending
+  // indefinitely for large remote images in extension-backed sessions.
+  // Encode synchronously and rebuild a Blob so a requested JPEG/WebP
+  // download cannot report success while no file is actually handed to the
+  // browser download pipeline.
+  const dataUrl = canvas.toDataURL(mimeType, format === 'jpeg' ? 0.92 : undefined);
+  const match = dataUrl.match(/^data:([^;,]+);base64,(.*)$/s);
+  if (!match || match[1].toLowerCase() !== mimeType) {
+    throw new Error(`${errorPrefix}_format_conversion_failed`);
+  }
+  const binary = atob(match[2]);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  const converted = new Blob([bytes], { type: mimeType });
+  if (converted.size <= 0 || converted.type !== mimeType) {
+    throw new Error(`${errorPrefix}_format_conversion_failed`);
+  }
+  return converted;
+};
+
+const rasterizeWithImageElement = async (
+  source: Blob,
+  format: ImageDownloadFormat,
+  errorPrefix: string,
+): Promise<Blob> => {
+  if (typeof document === 'undefined' || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') {
+    throw new Error(`${errorPrefix}_format_conversion_unavailable`);
+  }
+  const objectUrl = URL.createObjectURL(source);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error(`${errorPrefix}_format_conversion_failed`));
+      element.src = objectUrl;
+    });
+    return await renderImageSourceToBlob(
+      image,
+      image.naturalWidth || image.width,
+      image.naturalHeight || image.height,
+      format,
+      errorPrefix,
+    );
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
 const convertImageBlob = async (
   source: Blob,
   format: ImageDownloadFormat,
@@ -44,44 +111,21 @@ const convertImageBlob = async (
   const mimeType = IMAGE_DOWNLOAD_MIME_TYPES[format];
   if (source.type.toLowerCase() === mimeType) return source;
 
-  if (typeof createImageBitmap !== 'function') {
-    throw new Error(`${errorPrefix}_format_conversion_unavailable`);
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(source);
+      try {
+        return await renderImageSourceToBlob(bitmap, bitmap.width, bitmap.height, format, errorPrefix);
+      } finally {
+        bitmap.close();
+      }
+    } catch {
+      // Chromium may display an SVG while createImageBitmap rejects it. Fall
+      // through to the HTMLImageElement path, which supports that case.
+    }
   }
 
-  const bitmap = await createImageBitmap(source);
-  try {
-    const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error(`${errorPrefix}_canvas_unavailable`);
-
-    if (format === 'jpeg') {
-      context.fillStyle = '#ffffff';
-      context.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    context.drawImage(bitmap, 0, 0);
-
-    // Chromium can leave the asynchronous canvas encoding callback pending
-    // indefinitely for large remote images in extension-backed sessions.
-    // Encode synchronously and rebuild a Blob so a requested JPEG/WebP
-    // download cannot report success while no file is actually handed to the
-    // browser download pipeline.
-    const dataUrl = canvas.toDataURL(mimeType, format === 'jpeg' ? 0.92 : undefined);
-    const match = dataUrl.match(/^data:([^;,]+);base64,(.*)$/s);
-    if (!match || match[1].toLowerCase() !== mimeType) {
-      throw new Error(`${errorPrefix}_format_conversion_failed`);
-    }
-    const binary = atob(match[2]);
-    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-    const converted = new Blob([bytes], { type: mimeType });
-    if (converted.size <= 0 || converted.type !== mimeType) {
-      throw new Error(`${errorPrefix}_format_conversion_failed`);
-    }
-    return converted;
-  } finally {
-    bitmap.close();
-  }
+  return await rasterizeWithImageElement(source, format, errorPrefix);
 };
 
 export const downloadValidatedImage = async (

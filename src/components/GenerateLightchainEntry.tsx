@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
+  Search,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -16,6 +17,13 @@ import {
   type LightchainCategoryId,
   type LightchainFeature,
 } from '../lib/lightchainParityCatalog';
+import {
+  getWorkspaceArtifactCanonicalStoragePath,
+  listWorkspaceArtifacts,
+  type WorkspaceArtifact,
+} from '../lib/localWorkspaceArtifacts';
+import { withSignedImageUrls } from '../lib/storage';
+import { useAuthStore } from '../stores/authStore';
 
 const galleryTabs = [
   { id: 'recommended', label: 'おすすめの事例' },
@@ -216,61 +224,64 @@ const galleryCasesByTab = {
   ],
 } as const;
 
-type GalleryCase = (typeof galleryCasesByTab)[keyof typeof galleryCasesByTab][number];
+type GalleryCase = {
+  id: string;
+  title: string;
+  description: string;
+  step: string;
+  featureId: string;
+  artifactId?: string;
+  imageUrl?: string;
+};
+
+const resolveArtifactFeatureId = (artifact: WorkspaceArtifact, fallback: string) => {
+  const candidate = artifact.metadata.toolId;
+  return typeof candidate === 'string' && lightchainFeatureCatalog.some((feature) => feature.id === candidate)
+    ? candidate
+    : fallback;
+};
 
 const isBetaFeature = (feature: LightchainFeature | undefined): feature is LightchainFeature => Boolean(feature && feature.betaIncluded !== false);
 
-const launcherFeatureVisuals: Record<string, { background: string; accent: string; detail: string }> = {
-  'design-workspace': { background: '#213b3c', accent: '#b3ddd0', detail: '#e7f2e9' },
-  'marketing-workspace': { background: '#5d3830', accent: '#e9b4a2', detail: '#f8e5d7' },
-  'virtual-fitting': { background: '#355167', accent: '#c9ddea', detail: '#f5e8d3' },
-  'wear-design-lab': { background: '#7a493d', accent: '#f0c0aa', detail: '#f9e8ce' },
-  'model-library': { background: '#a87861', accent: '#f1cfb4', detail: '#fff0dc' },
-  'fashion-studio': { background: '#4c4e67', accent: '#d1cfee', detail: '#f6e9da' },
-  'design-agent': { background: '#31545a', accent: '#b5dfd7', detail: '#f3eee1' },
+// The home mirrors Lightchain's complete recommended card inventory. Video remains
+// visibly discoverable here while its /video destination stays fail-closed.
+const isHomepageVisibleFeature = (feature: LightchainFeature): boolean => (
+  feature.id === 'video-workstation' || isBetaFeature(feature)
+);
+
+/**
+ * Keep the launcher shell close to the Lightchain information architecture,
+ * while using Heavy-owned generated category artwork instead of copying
+ * remote production samples or proprietary image assets.
+ */
+const launcherCategoryImages: Record<LightchainCategoryId, string> = {
+  recommended: '/assets/lightchain-cards/marketing-v1.png',
+  planning: '/assets/lightchain-cards/design-v1.png',
+  fitting: '/assets/lightchain-cards/fitting-v1.png',
+  graphics: '/assets/lightchain-cards/graphics-v1.png',
 };
 
-const encodeSvgDataUrl = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.trim())}`;
-
-const buildLauncherFeatureImage = (featureId: string) => {
-  const visual = launcherFeatureVisuals[featureId] ?? launcherFeatureVisuals['design-workspace'];
-  return encodeSvgDataUrl(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="960" height="560" viewBox="0 0 960 560">
-      <defs>
-        <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="${visual.background}"/>
-          <stop offset="1" stop-color="#11191b"/>
-        </linearGradient>
-        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#081012" flood-opacity=".35"/>
-        </filter>
-      </defs>
-      <rect width="960" height="560" fill="url(#background)"/>
-      <circle cx="820" cy="90" r="170" fill="${visual.accent}" opacity=".16"/>
-      <circle cx="120" cy="520" r="210" fill="${visual.detail}" opacity=".08"/>
-      <path d="M0 416 C180 356 274 470 458 416 S770 344 960 424 V560 H0Z" fill="#0d1618" opacity=".55"/>
-      <g filter="url(#shadow)">
-        <rect x="74" y="72" width="300" height="384" rx="28" fill="${visual.detail}" opacity=".95"/>
-        <rect x="108" y="108" width="232" height="18" rx="9" fill="${visual.background}" opacity=".55"/>
-        <rect x="108" y="145" width="154" height="12" rx="6" fill="${visual.background}" opacity=".26"/>
-        <path d="M185 206 L135 255 L163 286 L192 263 L192 385 L288 385 L288 263 L317 286 L345 255 L295 206 L256 187 L224 187Z" fill="${visual.accent}"/>
-        <path d="M215 188 C220 228 261 228 266 188" fill="none" stroke="${visual.background}" stroke-width="10" opacity=".72"/>
-        <rect x="108" y="408" width="118" height="10" rx="5" fill="${visual.background}" opacity=".38"/>
-        <rect x="238" y="408" width="74" height="10" rx="5" fill="${visual.background}" opacity=".2"/>
-      </g>
-      <g opacity=".92">
-        <rect x="492" y="112" width="362" height="52" rx="18" fill="#f3f0e8" opacity=".12"/>
-        <rect x="526" y="130" width="168" height="14" rx="7" fill="${visual.detail}" opacity=".72"/>
-        <rect x="714" y="130" width="92" height="14" rx="7" fill="${visual.accent}" opacity=".55"/>
-        <rect x="492" y="202" width="164" height="224" rx="24" fill="${visual.accent}" opacity=".42"/>
-        <rect x="680" y="202" width="174" height="104" rx="24" fill="${visual.detail}" opacity=".2"/>
-        <rect x="680" y="322" width="174" height="104" rx="24" fill="${visual.accent}" opacity=".2"/>
-        <circle cx="574" cy="316" r="58" fill="${visual.detail}" opacity=".82"/>
-        <path d="M526 374 Q574 302 622 374" fill="${visual.background}" opacity=".72"/>
-      </g>
-    </svg>
-  `);
+const launcherFeatureImages: Partial<Record<string, string>> = {
+  'design-workspace': '/assets/lightchain-cards/design-v1.png',
+  'marketing-workspace': '/assets/lightchain-cards/marketing-v1.png',
+  'virtual-fitting': '/assets/lightchain-cards/fitting-v1.png',
+  'wear-design-lab': '/assets/lightchain-cards/design-v1.png',
+  'model-library': '/assets/lightchain-cards/fitting-v1.png',
+  'fashion-studio': '/assets/lightchain-cards/marketing-v1.png',
+  'design-agent': '/assets/lightchain-cards/design-v1.png',
+  'heavychain-lab': '/assets/lightchain-cards/graphics-v1.png',
 };
+
+const buildGalleryExampleImage = (featureId: string) => {
+  const feature = lightchainFeatureCatalog.find((candidate) => candidate.id === featureId);
+  return feature
+    ? (launcherFeatureImages[feature.id] ?? launcherCategoryImages[feature.category])
+    : launcherCategoryImages.recommended;
+};
+
+const buildLauncherFeatureImage = (feature: LightchainFeature) => (
+  launcherFeatureImages[feature.id] ?? launcherCategoryImages[feature.category]
+);
 
 const findFeatureFromPrompt = (prompt: string) => {
   const normalizedPrompt = prompt.trim().toLowerCase();
@@ -307,10 +318,14 @@ interface GenerateLightchainEntryProps {
 export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLightchainEntryProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { currentBrand, user } = useAuthStore();
   const [activeCategory, setActiveCategory] = useState<LightchainCategoryId>('recommended');
   const [command, setCommand] = useState('');
   const [galleryTab, setGalleryTab] = useState<(typeof galleryTabs)[number]['id']>('recommended');
+  const [gallerySearchOpen, setGallerySearchOpen] = useState(false);
+  const [galleryQuery, setGalleryQuery] = useState('');
   const [selectedCase, setSelectedCase] = useState<GalleryCase | null>(null);
+  const [galleryArtifacts, setGalleryArtifacts] = useState<WorkspaceArtifact[]>([]);
   const categoryParam = searchParams.get('category');
 
   useEffect(() => {
@@ -320,12 +335,76 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   }, [categoryParam]);
 
   const visibleFeatures = useMemo(
-    () => getLightchainLauncherFeatures(activeCategory).filter(isBetaFeature),
+    () => getLightchainLauncherFeatures(activeCategory).filter(isHomepageVisibleFeature),
     [activeCategory],
   );
   const commandFeature = findFeatureFromPrompt(command);
   const commandHref = buildLightchainFeatureHref(commandFeature);
-  const galleryItems: readonly GalleryCase[] = galleryCasesByTab[galleryTab];
+  const galleryItems = useMemo<GalleryCase[]>(() => {
+    const templates = galleryCasesByTab[galleryTab];
+    const persistedItems = galleryArtifacts.slice(0, templates.length).flatMap((artifact, index) => {
+      const template = templates[index];
+      const imageUrl = artifact.imageUrl.trim();
+      if (!imageUrl) return [];
+      return [{
+        ...template,
+        id: `saved-${artifact.id}`,
+        artifactId: artifact.id,
+        title: artifact.title || template.title,
+        description: artifact.prompt?.trim() || template.description,
+        featureId: resolveArtifactFeatureId(artifact, template.featureId),
+        imageUrl,
+      }];
+    });
+    const exampleItems = templates.slice(persistedItems.length).map((template) => ({
+      ...template,
+      id: `example-${template.id}`,
+      imageUrl: buildGalleryExampleImage(template.featureId),
+    }));
+    return [...persistedItems, ...exampleItems];
+  }, [galleryArtifacts, galleryTab]);
+
+  const filteredGalleryItems = useMemo(() => {
+    const normalizedQuery = galleryQuery.trim().toLocaleLowerCase();
+    if (!normalizedQuery) return galleryItems;
+    return galleryItems.filter((item) => (
+      `${item.title} ${item.description} ${item.step}`.toLocaleLowerCase().includes(normalizedQuery)
+    ));
+  }, [galleryItems, galleryQuery]);
+
+  useEffect(() => {
+    if (!currentBrand?.id) {
+      setGalleryArtifacts([]);
+      return;
+    }
+    let cancelled = false;
+    const localArtifacts = listWorkspaceArtifacts(currentBrand.id, user?.id)
+      .filter((artifact) => Boolean(artifact.imageUrl || getWorkspaceArtifactCanonicalStoragePath(artifact.metadata)));
+    setGalleryArtifacts(localArtifacts);
+
+    const imageReferences = localArtifacts.map((artifact) => ({
+      storage_path: getWorkspaceArtifactCanonicalStoragePath(artifact.metadata) ?? artifact.imageUrl,
+      image_url: artifact.imageUrl,
+    }));
+    void withSignedImageUrls(imageReferences)
+      .then((signedArtifacts) => {
+        if (cancelled) return;
+        setGalleryArtifacts(localArtifacts.map((artifact, index) => {
+          const canonicalStoragePath = getWorkspaceArtifactCanonicalStoragePath(artifact.metadata);
+          return {
+            ...artifact,
+            imageUrl: signedArtifacts[index]?.image_url || (canonicalStoragePath ? '' : artifact.imageUrl),
+          };
+        }));
+      })
+      .catch(() => {
+        // Local data URLs remain usable when remote signing is unavailable.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentBrand?.id, user?.id]);
 
   const handleCategoryChange = (categoryId: LightchainCategoryId) => {
     setActiveCategory(categoryId);
@@ -335,17 +414,17 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   };
 
   return (
-    <div className="min-h-[calc(100vh-70px)] bg-[#050708] text-white">
-      <section className="relative overflow-hidden px-5 pb-12 pt-12 sm:px-8 lg:px-10 lg:pt-14">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_55%_6%,rgba(24,78,83,0.22),transparent_40%),linear-gradient(180deg,rgba(5,10,12,0.1),rgba(5,7,8,0.92))]" />
-        <div className="relative mx-auto max-w-[1400px]">
+    <div className="min-h-[calc(100vh-50px)] bg-[#171b1c] text-white">
+      <section className="relative overflow-hidden px-10 pb-4 pt-14">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_55%_6%,rgba(24,78,83,0.12),transparent_40%)]" />
+        <div className="relative mx-auto max-w-none">
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-            <h1 className="text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">LIGHTCHAIN AI</h1>
+            <h1 className="text-3xl font-[Montserrat] font-bold tracking-[-0.04em] text-white sm:text-4xl lg:text-5xl">LIGHTCHAIN AI</h1>
             <p className="text-sm font-medium text-neutral-300 sm:text-base">アパレル特化のAIデザインワークスペース</p>
           </div>
 
           <form
-            className="mt-7 flex max-w-[520px] items-center rounded-full border border-cyan-300/75 bg-white/[0.035] px-4 py-2 shadow-[0_0_22px_rgba(56,189,248,0.12)] focus-within:border-indigo-300"
+            className="mt-5 flex h-10 max-w-[520px] items-center rounded-full border border-cyan-300/75 bg-white/[0.035] px-4 shadow-[0_0_22px_rgba(56,189,248,0.12)] focus-within:border-indigo-300"
             onSubmit={(event) => {
               event.preventDefault();
               navigate(`${commandHref}${commandHref.includes('?') ? '&' : '?'}prompt=${encodeURIComponent(command.trim())}`);
@@ -355,13 +434,13 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
             <input
               value={command}
               onChange={(event) => setCommand(event.target.value)}
-              className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-white outline-none placeholder:text-neutral-500"
+              className="min-w-0 flex-1 border-0 bg-transparent px-3 py-0 text-sm text-white outline-none placeholder:text-neutral-500"
               placeholder="指示を入力してください... 例：『モデルの着せ替え』"
               aria-label="指示を入力してください"
             />
           </form>
 
-          <div role="tablist" aria-label="Light Chainカテゴリ" className="mt-12 flex max-w-[650px] overflow-hidden rounded-lg border border-white/15 bg-white/[0.07] p-1">
+          <div role="tablist" aria-label="Light Chainカテゴリ" className="mt-12 flex h-10 max-w-[650px] overflow-hidden rounded-lg border border-white/15 bg-white/[0.07] p-1">
             {lightchainCategories.map((category) => {
               const active = category.id === activeCategory;
               return (
@@ -372,8 +451,8 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   aria-selected={active}
                   aria-pressed={active}
                   onClick={() => handleCategoryChange(category.id)}
-                  className={`min-w-0 flex-1 whitespace-nowrap rounded-md px-3 py-2.5 text-xs font-semibold transition sm:px-5 sm:text-sm ${
-                    active ? 'bg-gradient-to-r from-cyan-300 to-indigo-200 text-neutral-950 shadow-[0_0_20px_rgba(103,232,249,0.18)]' : 'text-neutral-400 hover:bg-white/[0.08] hover:text-white'
+                  className={`min-w-0 flex-1 whitespace-nowrap rounded-md px-3 py-0 text-xs font-semibold transition sm:px-5 sm:text-sm ${
+                    active ? 'bg-[#63cbc7] text-neutral-950 shadow-[0_0_20px_rgba(99,203,199,0.18)]' : 'text-neutral-400 hover:bg-white/[0.08] hover:text-white'
                   }`}
                 >
                   {category.label}
@@ -383,7 +462,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
             })}
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="lightchain-tool-grid">
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4" data-testid="lightchain-tool-grid">
             {visibleFeatures.map((feature, index) => {
               const hiddenOnMobile = compactOnMobile && index > 5;
               return (
@@ -391,20 +470,17 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   key={feature.id}
                   to={buildLightchainFeatureHref(feature)}
                   data-testid="lightchain-tool-card"
-                  className={`${hiddenOnMobile ? 'hidden md:block' : ''} group overflow-hidden rounded-2xl border border-white/10 bg-[#171b1d] transition hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-[#1b2022]`}
+                  className={`${hiddenOnMobile ? 'hidden md:flex' : ''} relative flex w-full cursor-pointer gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#262a2b] p-3 transition hover:border-cyan-300/50 xl:gap-4 xl:p-4`}
                 >
-                  <div className="relative aspect-[1.72] overflow-hidden bg-[#263235]">
-                    <img src={buildLauncherFeatureImage(feature.id)} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]" />
-                    {getLightchainLauncherBadge(feature) && <span className="absolute right-2 top-2 rounded-full bg-fuchsia-500 px-2 py-1 text-[10px] font-bold">{getLightchainLauncherBadge(feature)}</span>}
-                    <span className="absolute bottom-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/25 text-white opacity-0 backdrop-blur transition group-hover:opacity-100">
-                      <ArrowRight className="h-4 w-4" />
-                    </span>
+                  {getLightchainLauncherBadge(feature) && <span className="absolute right-0 top-0 z-10 rounded-bl-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 px-3 py-1 text-[10px] font-medium leading-3 text-white">{getLightchainLauncherBadge(feature)}</span>}
+                  <div className="relative h-[80px] w-[112px] shrink-0 overflow-hidden rounded-[5px] bg-white xl:h-[88px] xl:w-[132px]">
+                    <img src={buildLauncherFeatureImage(feature)} alt="" className="h-full w-full object-cover" loading="lazy" />
                   </div>
-                  <div className="p-4">
-                    <div className="flex items-center gap-2">
-                      <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{getLightchainLauncherTitle(feature)}</h3>
+                  <div className="flex min-h-[80px] min-w-0 flex-1 flex-col gap-1 xl:min-h-[88px]">
+                    <div className="relative flex min-h-7 items-center xl:min-h-8">
+                      <h3 className="min-w-0 truncate bg-gradient-to-r from-white to-cyan-100 bg-clip-text text-sm font-medium leading-5 text-transparent xl:text-base xl:leading-6">{getLightchainLauncherTitle(feature)}</h3>
                     </div>
-                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-neutral-400">{getLightchainLauncherDescription(feature)}</p>
+                    <p className="line-clamp-3 text-sm leading-4 text-neutral-300">{getLightchainLauncherDescription(feature)}</p>
                   </div>
                 </Link>
               );
@@ -414,9 +490,10 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
       </section>
 
       <section className="border-t border-white/10 px-5 py-8 sm:px-8 lg:px-10">
-        <div className="mx-auto max-w-[1400px]">
-          <h2 className="text-xs font-semibold text-neutral-300">事例共有</h2>
-          <div role="tablist" aria-label="事例共有カテゴリ" className="mt-4 flex gap-5 overflow-x-auto border-b border-white/10 pb-2 text-xs text-neutral-500">
+        <div className="mx-auto max-w-none">
+          <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white">事例共有</h2>
+          <div className="mt-5 flex flex-wrap items-center gap-4">
+            <div role="tablist" aria-label="事例共有カテゴリ" className="flex w-fit gap-0 overflow-x-auto rounded-lg border border-white/10 bg-[#262a2b] p-1 text-sm text-neutral-400">
             {galleryTabs.map((tab) => (
               <button
                 key={tab.id}
@@ -424,29 +501,48 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                 role="tab"
                 aria-selected={galleryTab === tab.id}
                 onClick={() => setGalleryTab(tab.id)}
-                className={`shrink-0 border-b-2 pb-2 transition ${galleryTab === tab.id ? 'border-cyan-300 text-cyan-200' : 'border-transparent hover:text-white'}`}
+                className={`shrink-0 rounded-md px-7 py-2 transition ${galleryTab === tab.id ? 'bg-[#63cbc7] font-medium text-neutral-950' : 'hover:bg-white/[0.06] hover:text-white'}`}
               >
                 {tab.label}
               </button>
             ))}
+            </div>
+            <button type="button" aria-label="事例を検索" aria-expanded={gallerySearchOpen} onClick={() => setGallerySearchOpen((open) => !open)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-[#262a2b] text-neutral-400 transition hover:bg-white/[0.08] hover:text-white ${gallerySearchOpen ? 'border-cyan-200/60 text-cyan-100' : ''}`}>
+              <Search className="h-5 w-5" />
+            </button>
+            {gallerySearchOpen && (
+              <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-full border border-white/15 bg-[#262a2b] px-4 py-2 text-sm text-neutral-300 sm:max-w-sm" aria-label="事例を検索する入力">
+                <Search className="h-4 w-4 shrink-0 text-neutral-500" />
+                <input
+                  autoFocus
+                  value={galleryQuery}
+                  onChange={(event) => setGalleryQuery(event.target.value)}
+                  className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-neutral-500"
+                  placeholder="事例を検索"
+                  aria-label="事例を検索する入力"
+                />
+                {galleryQuery && <button type="button" aria-label="事例検索をクリア" onClick={() => setGalleryQuery('')} className="text-neutral-500 hover:text-white"><X className="h-4 w-4" /></button>}
+              </label>
+            )}
           </div>
 
-          {galleryItems.length === 0 ? (
-            <div className="py-14 text-center text-sm text-neutral-500">該当する結果が見つかりません</div>
+          {filteredGalleryItems.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-5 py-14 text-center text-sm text-neutral-400">
+              {galleryQuery.trim() ? '検索条件に一致する事例はありません。' : 'このカテゴリに表示できる保存済み成果物はまだありません。生成結果を保存すると、ここに表示されます。'}
+            </div>
           ) : (
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {galleryItems.map((item) => (
+            <div className="mt-4 columns-1 gap-2 sm:columns-2 xl:columns-4 2xl:columns-5">
+              {filteredGalleryItems.map((item) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => setSelectedCase(item)}
-                  className="group rounded-2xl border border-white/10 bg-white/[0.035] p-4 text-left transition hover:border-cyan-300/50 hover:bg-white/[0.07]"
+                  className="group relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-xl bg-[#262a2b] text-left shadow-md transition hover:shadow-xl"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="rounded-full bg-cyan-300/10 px-2 py-1 text-[10px] font-semibold text-cyan-100">CASE</span>
-                    <ArrowRight className="h-4 w-4 text-neutral-600 transition group-hover:translate-x-1 group-hover:text-cyan-200" />
+                  <img src={item.imageUrl} alt="" loading="lazy" className="block h-auto w-full object-cover transition duration-500 group-hover:scale-[1.01]" />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-4 pt-14 opacity-0 transition group-hover:opacity-100">
+                    <p className="text-sm font-medium leading-5 text-white">{item.title}</p>
                   </div>
-                  <p className="mt-4 line-clamp-3 text-sm font-semibold leading-6 text-white">{item.title}</p>
                 </button>
               ))}
             </div>

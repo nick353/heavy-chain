@@ -31,6 +31,8 @@ export const UNIFIED_WORKFLOW_LIFECYCLE = Object.freeze([
   'retry',
 ] as const);
 
+export const UNIFIED_RIGHTS_GATE = 'generation-time-confirmation' as const;
+
 export type UnifiedResultDestination = (typeof UNIFIED_RESULT_DESTINATIONS)[number];
 export type UnifiedWorkflowLifecycle = (typeof UNIFIED_WORKFLOW_LIFECYCLE)[number];
 export type NonVideoGoalCandidateRowId = Exclude<GoalCandidateRowId, 'video-workstation' | 'video-detail'>;
@@ -43,6 +45,7 @@ export interface UnifiedFeatureWorkflowContract {
   readonly resultDestinations: readonly UnifiedResultDestination[];
   readonly lifecycle: readonly UnifiedWorkflowLifecycle[];
   readonly sourceInputMode: 'library-or-upload';
+  readonly rightsGate: typeof UNIFIED_RIGHTS_GATE;
   readonly retry: {
     readonly retainsLastCompletedResult: true;
     readonly preservesInputLineage: true;
@@ -74,6 +77,7 @@ const contracts = Object.fromEntries(
       resultDestinations: UNIFIED_RESULT_DESTINATIONS,
       lifecycle: UNIFIED_WORKFLOW_LIFECYCLE,
       sourceInputMode: 'library-or-upload',
+      rightsGate: UNIFIED_RIGHTS_GATE,
       retry: Object.freeze({
         retainsLastCompletedResult: true,
         preservesInputLineage: true,

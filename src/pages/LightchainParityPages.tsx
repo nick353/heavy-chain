@@ -18,12 +18,115 @@ import {
 import { buildGenerationIntentHref, workspaceSourceConfig } from '../lib/workspaceHandoff';
 import { listWorkspaceArtifacts, type WorkspaceArtifact } from '../lib/localWorkspaceArtifacts';
 import { useAuthStore } from '../stores/authStore';
+import {
+  getLightchainUnifiedFeatureWorkflowContract,
+  UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
+} from '../features/lightchain/unifiedFeatureWorkflowContract';
 
 const darkPanel = 'rounded-2xl border border-white/10 bg-[#151a1c]';
 const mutedButton = 'rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-neutral-300 transition hover:border-cyan-200/50 hover:bg-white/[0.08] hover:text-white';
 
-function ParityShell({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`min-h-[calc(100vh-70px)] bg-[#050708] text-white ${className}`}>{children}</div>;
+const designHistoryFeatureTypes = new Set([
+  'campaign-image',
+  'text-to-image',
+  'generate-image',
+  'generate-variations',
+  'marketing-workflow',
+  'fashion-studio',
+  'graphic-pattern-workspace',
+  'design-gacha',
+]);
+
+const fittingHistoryFeatureTypes = new Set(['model-matrix', 'model-matrix-local-preview']);
+
+const formatArtifactDate = (createdAt: string) => {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return '日時未確認';
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
+
+function PersistedHistoryPanel({
+  artifacts,
+  emptyMessage,
+  reuseLabel,
+  onReuse,
+}: {
+  artifacts: WorkspaceArtifact[];
+  emptyMessage: string;
+  reuseLabel: string;
+  onReuse: (artifact: WorkspaceArtifact) => void;
+}) {
+  if (artifacts.length === 0) {
+    return <p className="mt-3 text-sm text-neutral-500">{emptyMessage}</p>;
+  }
+
+  return (
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      {artifacts.slice(0, 8).map((artifact) => (
+        <article key={artifact.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="flex items-start gap-3">
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white/[0.06]">
+              {artifact.imageUrl ? (
+                <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+              ) : (
+                <ImageIcon className="m-5 h-6 w-6 text-neutral-500" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{artifact.title}</p>
+              <p className="mt-1 truncate text-xs text-neutral-500">{artifact.featureType}</p>
+              <p className="mt-1 text-xs text-neutral-500">{formatArtifactDate(artifact.createdAt)}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="mt-3 w-full rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-neutral-300 transition hover:border-cyan-200/50 hover:text-white"
+            onClick={() => onReuse(artifact)}
+            data-testid={`persisted-history-reuse-${artifact.id}`}
+          >
+            {reuseLabel}
+          </button>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function ParityShell({
+  children,
+  className = '',
+  workflowFeature,
+}: {
+  children: ReactNode;
+  className?: string;
+  workflowFeature?: string;
+}) {
+  const workflowContract = workflowFeature
+    ? getLightchainUnifiedFeatureWorkflowContract(workflowFeature)
+    : null;
+
+  return (
+    <div
+      className={`min-h-[calc(100vh-70px)] bg-[#050708] text-white ${className}`}
+      data-lightchain-parity-shell={workflowFeature ?? 'support'}
+      data-workflow-contract={workflowContract ? UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION : undefined}
+      data-workflow-feature={workflowContract?.rowId ?? undefined}
+      data-workflow-input-roles={workflowContract?.inputRoles.join(',') ?? undefined}
+      data-workflow-result-destinations={workflowContract?.resultDestinations.join(',') ?? undefined}
+      data-workflow-lifecycle={workflowContract?.lifecycle.join(',') ?? undefined}
+      data-workflow-source-input-mode={workflowContract?.sourceInputMode ?? undefined}
+      data-workflow-retry-policy={workflowContract?.retry.retainsLastCompletedResult && workflowContract.retry.preservesInputLineage && workflowContract.retry.blocksDuplicateSubmit ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit' : undefined}
+      data-workflow-rights-gate={workflowContract?.rightsGate ?? undefined}
+    >
+      {children}
+    </div>
+  );
 }
 
 function SegmentedTabs({
@@ -63,9 +166,28 @@ const creatorCategories = [
 export function LightchainCreatorPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [keywords, setKeywords] = useState('');
+  const [activeCreatorTab, setActiveCreatorTab] = useState('企画案');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [dictionaryOpen, setDictionaryOpen] = useState(false);
+  const [historyArtifacts, setHistoryArtifacts] = useState<WorkspaceArtifact[]>([]);
+  const { currentBrand, user, profile } = useAuthStore();
   const navigate = useNavigate();
+  const creatorDisplayName = profile?.name?.trim()
+    || String(user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? '').trim()
+    || user?.email?.split('@')[0]
+    || 'チームメンバー';
+
+  useEffect(() => {
+    if (!currentBrand?.id) {
+      setHistoryArtifacts([]);
+      return;
+    }
+    setHistoryArtifacts(
+      listWorkspaceArtifacts(currentBrand.id, user?.id)
+        .filter((artifact) => designHistoryFeatureTypes.has(artifact.featureType))
+        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    );
+  }, [currentBrand?.id, user?.id]);
 
   const openGenerationWorkspace = () => {
     const params = new URLSearchParams({
@@ -77,18 +199,39 @@ export function LightchainCreatorPage() {
   };
 
   return (
-    <ParityShell>
+    <ParityShell workflowFeature="design-agent">
       <div className="mx-auto max-w-[1420px] px-5 py-8 sm:px-8 lg:px-10">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">LIGHTCHAIN AI / CREATOR</p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em]">デザインを選択してください <span className="text-sm font-normal text-rose-300">必須項目</span></h1>
-            <p className="mt-2 text-sm text-neutral-400">カテゴリとキーワードから、アパレルデザインの方向性を決めます。</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em]">Hello, {creatorDisplayName}</h1>
+            <p className="mt-2 text-sm text-neutral-400">今日はどんなデザインが必要ですか?</p>
+            <SegmentedTabs items={['企画案', 'インスピレーション', 'AIグラフィックデザイン']} active={activeCreatorTab} onChange={setActiveCreatorTab} />
           </div>
           <button type="button" className={mutedButton} onClick={() => setHistoryOpen((open) => !open)}>
-            <Clock3 className="mr-2 inline h-4 w-4" />生成履歴
+            <Clock3 className="mr-2 inline h-4 w-4" />履歴を表示
           </button>
         </div>
+
+        <section className={`${darkPanel} mt-6 p-5 sm:p-7`} data-lightchain-parity-shell="design-agent">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold">{activeCreatorTab}</h2>
+            <span className="text-xs text-neutral-500">{keywords.length} / 4000</span>
+          </div>
+          <textarea
+            value={keywords}
+            onChange={(event) => setKeywords(event.target.value)}
+            className="mt-4 min-h-32 w-full resize-y rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-cyan-200/60"
+            placeholder="デザインのリクエストを教えてください"
+            aria-label="デザインのリクエスト"
+            maxLength={4000}
+          />
+          <div className="mt-3 flex justify-end">
+            <button type="button" className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200" onClick={openGenerationWorkspace}>
+              送信 <ArrowRight className="ml-1 inline h-4 w-4" />
+            </button>
+          </div>
+        </section>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <section className={`${darkPanel} p-5 sm:p-7`}>
@@ -151,7 +294,17 @@ export function LightchainCreatorPage() {
           </aside>
         </div>
 
-        {historyOpen && <div className={`${darkPanel} mt-6 p-5`}><h2 className="font-semibold">生成履歴</h2><p className="mt-3 text-sm text-neutral-500">生成履歴はここに表示されます。</p></div>}
+        {historyOpen && (
+          <section className={`${darkPanel} mt-6 p-5`} data-testid="creator-persisted-history">
+            <h2 className="font-semibold">生成履歴</h2>
+            <PersistedHistoryPanel
+              artifacts={historyArtifacts}
+              emptyMessage="保存確認できたデザイン成果物はまだありません。provider生成後に保存すると、ここから再利用できます。"
+              reuseLabel="Canvasへ再利用"
+              onReuse={(artifact) => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)}
+            />
+          </section>
+        )}
       </div>
 
       {dictionaryOpen && (
@@ -177,7 +330,21 @@ export function LightchainModelPage() {
   const [posePreset, setPosePreset] = useState('正面');
   const [lightingPreset, setLightingPreset] = useState('自然光');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyArtifacts, setHistoryArtifacts] = useState<WorkspaceArtifact[]>([]);
+  const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!currentBrand?.id) {
+      setHistoryArtifacts([]);
+      return;
+    }
+    setHistoryArtifacts(
+      listWorkspaceArtifacts(currentBrand.id, user?.id)
+        .filter((artifact) => fittingHistoryFeatureTypes.has(artifact.featureType))
+        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    );
+  }, [currentBrand?.id, user?.id]);
 
   const openFittingWorkspace = (entryPoint: 'material' | 'reference' | 'permission') => {
     const params = new URLSearchParams({
@@ -196,7 +363,7 @@ export function LightchainModelPage() {
   };
 
   return (
-    <ParityShell>
+    <ParityShell workflowFeature="ai-fitting">
       <div className="mx-auto max-w-[1420px] px-5 py-8 sm:px-8 lg:px-10">
         <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">LIGHTCHAIN AI / FITTING</p><h1 className="mt-3 text-3xl font-semibold">AIフィッティング</h1><p className="mt-2 text-sm text-neutral-400">服、モデル、背景を組み合わせて着用イメージを作成します。</p></div><button type="button" className={mutedButton} onClick={() => setHistoryOpen((open) => !open)}><Clock3 className="mr-2 inline h-4 w-4" />生成履歴</button></div>
         <div className="mt-7"><SegmentedTabs items={['シングルタスク', 'マルチタスク']} active={mode} onChange={setMode} /></div>
@@ -210,17 +377,21 @@ export function LightchainModelPage() {
           </section>
           <aside className="space-y-6"><section className={`${darkPanel} p-5`}><div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-cyan-200" /><h2 className="font-semibold">モデル条件</h2></div><div className="mt-4 grid grid-cols-2 gap-2"><button type="button" aria-pressed={modelPreset === 'Smart'} onClick={() => setModelPreset('Smart')} className={`rounded-xl border px-3 py-3 text-sm transition ${modelPreset === 'Smart' ? 'border-cyan-200 bg-cyan-200/10 text-white' : 'border-white/10 text-neutral-300 hover:border-cyan-200/50'}`}>Smart</button><button type="button" aria-pressed={modelPreset === '1K'} onClick={() => setModelPreset('1K')} className={`rounded-xl border px-3 py-3 text-sm transition ${modelPreset === '1K' ? 'border-cyan-200 bg-cyan-200/10 text-white' : 'border-white/10 text-neutral-300 hover:border-cyan-200/50'}`}>1K</button><button type="button" aria-pressed={posePreset === '正面'} onClick={() => setPosePreset('正面')} className={`rounded-xl border px-3 py-3 text-sm transition ${posePreset === '正面' ? 'border-cyan-200 bg-cyan-200/10 text-white' : 'border-white/10 text-neutral-300 hover:border-cyan-200/50'}`}>正面</button><button type="button" aria-pressed={lightingPreset === '自然光'} onClick={() => setLightingPreset('自然光')} className={`rounded-xl border px-3 py-3 text-sm transition ${lightingPreset === '自然光' ? 'border-cyan-200 bg-cyan-200/10 text-white' : 'border-white/10 text-neutral-300 hover:border-cyan-200/50'}`}>自然光</button></div><button type="button" className="mt-3 w-full rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-cyan-200" onClick={() => openFittingWorkspace('permission')}>AIフィッティングを開く <ArrowRight className="ml-1 inline h-4 w-4" /></button></section><section className={`${darkPanel} p-5`}><h2 className="font-semibold">参考画像</h2><p className="mt-2 text-sm leading-6 text-neutral-500">顔、ポーズ、背景の参考画像を追加できます。</p><button type="button" className={`${mutedButton} mt-4`} onClick={() => openFittingWorkspace('reference')}><Plus className="mr-2 inline h-4 w-4" />追加</button></section></aside>
         </div>
-        {historyOpen && <div className={`${darkPanel} mt-6 p-5`}><h2 className="font-semibold">生成履歴</h2><p className="mt-3 text-sm text-neutral-500">過去のフィッティング結果を再利用できます。</p></div>}
+        {historyOpen && (
+          <section className={`${darkPanel} mt-6 p-5`} data-testid="model-persisted-history">
+            <h2 className="font-semibold">生成履歴</h2>
+            <PersistedHistoryPanel
+              artifacts={historyArtifacts}
+              emptyMessage="保存確認できたフィッティング成果物はまだありません。AI生成後に保存すると、ここから再利用できます。"
+              reuseLabel="フィッティングへ再利用"
+              onReuse={(artifact) => navigate(`/fitting?resumeJob=${encodeURIComponent(artifact.sourceJobId ?? artifact.id)}`)}
+            />
+          </section>
+        )}
       </div>
     </ParityShell>
   );
 }
-
-const projects = [
-  ['サンプルプロジェクト', 'デザイン修正', '2026/08/14'],
-  ['2026AW アウター企画', 'ウェアデザインラボ', '2026/08/13'],
-  ['新作ワンピース', 'AIフィッティング', '2026/08/12'],
-] as const;
 
 const dialogueScenes = [
   ['生地パターン適用', '画像1の色と生地を変えず、画像2の生地パターンを適用してください', '面料套版'],
@@ -229,41 +400,85 @@ const dialogueScenes = [
   ['プリント修正', '画像1の要素を参考に、四方連続のプリントパターンをデザインし、画像2をレイアウトの参考にしてください', '印花设计'],
 ] as const;
 
-const galleryReferenceAssets = [
-  {
-    id: 'gallery-style-reference',
-    label: 'カスタムスタイル参考',
-    src: 'https://static-cn.linkaigc.com/workbenches/2025-12/df10791a7dd0780edc6104e667296440.png',
-  },
-  {
-    id: 'gallery-inspiration-reference',
-    label: 'インスピレーション参考',
-    src: 'https://static-cn.linkaigc.com/workbenches/2025-12/be3af912abe064e00de44914259b7f54.jpeg',
-  },
-  {
-    id: 'gallery-material-reference',
-    label: '生地・柄参考',
-    src: 'https://static-cn.linkaigc.com/workbenches/2025-12/8a41649e6a68ed471ff3630c7efc9257.jpeg',
-  },
-] as const;
+type GalleryReferenceAsset = {
+  id: string;
+  label: string;
+  src: string;
+};
 
 export function LightchainDesignProductionPage() {
   const [activeTab, setActiveTab] = useState('プロジェクトから開始');
   const [dialoguePrompt, setDialoguePrompt] = useState('');
   const [activeScene, setActiveScene] = useState('');
   const [activeAssetSlot, setActiveAssetSlot] = useState<0 | 1>(0);
-  const [selectedAssets, setSelectedAssets] = useState<[typeof galleryReferenceAssets[number], typeof galleryReferenceAssets[number]]>([
-    galleryReferenceAssets[0],
-    galleryReferenceAssets[1],
-  ]);
+  const [galleryReferenceAssets, setGalleryReferenceAssets] = useState<GalleryReferenceAsset[]>([]);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<[string | null, string | null]>([null, null]);
+  const [persistedDesignArtifacts, setPersistedDesignArtifacts] = useState<WorkspaceArtifact[]>([]);
+  const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
+
+  const selectedAssets = useMemo(
+    () => selectedAssetIds.map((id) => galleryReferenceAssets.find((asset) => asset.id === id) ?? {
+      id: '',
+      label: 'ライブラリーから素材を選択',
+      src: '',
+    }) as [GalleryReferenceAsset, GalleryReferenceAsset],
+    [galleryReferenceAssets, selectedAssetIds],
+  );
+  const resolvedSelectedAssets = useMemo(
+    () => selectedAssetIds
+      .map((id) => galleryReferenceAssets.find((asset) => asset.id === id))
+      .filter((asset): asset is GalleryReferenceAsset => Boolean(asset)),
+    [galleryReferenceAssets, selectedAssetIds],
+  );
+  const trimmedDialoguePrompt = dialoguePrompt.trim();
+  const hasUnresolvableSelectedAssetId = selectedAssetIds.some(
+    (id) => Boolean(id) && !galleryReferenceAssets.some((asset) => asset.id === id),
+  );
+  const hasTwoReferenceAssets = resolvedSelectedAssets.length === 2;
+  const canOpenProposal = Boolean(trimmedDialoguePrompt) && hasTwoReferenceAssets;
+  const referenceRequirementMessage = galleryReferenceAssets.length === 0
+    ? '参考素材を2件選択してください。素材がない場合はライブラリーから追加してください。'
+    : hasUnresolvableSelectedAssetId
+      ? '選択中の参考素材をライブラリーから確認できません。参考素材を2件選択し直してください。'
+      : resolvedSelectedAssets.length === 0
+        ? '参考素材を2件選択してください。'
+        : '参考素材をあと1件選択してください。';
+  const setSelectedAssets = (update: (current: [GalleryReferenceAsset, GalleryReferenceAsset]) => [GalleryReferenceAsset, GalleryReferenceAsset]) => {
+    const next = update(selectedAssets);
+    setSelectedAssetIds([next[0].id || null, next[1].id || null]);
+  };
+
+  useEffect(() => {
+    if (!currentBrand?.id) {
+      setPersistedDesignArtifacts([]);
+      setGalleryReferenceAssets([]);
+      setSelectedAssetIds([null, null]);
+      return;
+    }
+    const artifacts = listWorkspaceArtifacts(currentBrand.id, user?.id);
+    setPersistedDesignArtifacts(
+      artifacts
+        .filter((artifact) => designHistoryFeatureTypes.has(artifact.featureType))
+        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    );
+    const nextReferenceAssets = artifacts
+      .filter((artifact) => Boolean(artifact.imageUrl))
+      .slice(0, 12)
+      .map((artifact) => ({
+        id: artifact.id,
+        label: artifact.title,
+        src: artifact.imageUrl,
+      }));
+    setGalleryReferenceAssets(nextReferenceAssets);
+    setSelectedAssetIds([nextReferenceAssets[0]?.id ?? null, nextReferenceAssets[1]?.id ?? null]);
+  }, [currentBrand?.id, user?.id]);
   const openProposal = () => {
-    const brief = dialoguePrompt.trim();
-    if (!brief) return;
-    const referenceLabels = selectedAssets.map((asset) => asset.label).join('、');
+    if (!canOpenProposal) return;
+    const referenceLabels = resolvedSelectedAssets.map((asset) => asset.label).join('、');
     navigate(buildGenerationIntentHref({
       feature: 'design-gacha',
-      prompt: `${brief}\n参考素材: ${referenceLabels}`,
+      prompt: `${trimmedDialoguePrompt}\n参考素材: ${referenceLabels}`,
       sourceWorkspace: 'design-production',
       workflowVersion: 'design-production-brief-local-v1',
       sourceLabel: workspaceSourceConfig['design-production'].label,
@@ -272,10 +487,10 @@ export function LightchainDesignProductionPage() {
     }));
   };
   return (
-    <ParityShell className="bg-white text-neutral-900">
+    <ParityShell className="bg-white text-neutral-900" workflowFeature="print-design-project">
       <div className="mx-auto max-w-[1380px] px-5 py-10 sm:px-8 lg:px-10"><div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-xs font-semibold tracking-[0.25em] text-neutral-400">LIGHTCHAIN AI / DESIGN PRODUCTION</p><h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em]">デザインワークスペースへようこそ</h1><p className="mt-3 text-sm text-neutral-500">プロジェクトまたは対話から、デザイン制作を開始できます。</p></div><div className="flex gap-2"><button type="button" className="rounded-xl border border-neutral-200 px-4 py-2 text-sm hover:bg-neutral-50" onClick={() => navigate('/canvas/new')}><Plus className="mr-2 inline h-4 w-4" />新規ファイル</button><button type="button" className="rounded-xl bg-neutral-950 px-4 py-2 text-sm text-white hover:bg-neutral-800" onClick={() => navigate('/designProduction/detail?boardProjectCode=new')}>新規プロジェクト</button></div></div>
         <div className="mt-10 border-b border-neutral-200"><div className="flex gap-6">{['プロジェクトから開始', '対話から開始'].map((tab) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`border-b-2 px-1 pb-3 text-sm font-medium ${activeTab === tab ? 'border-neutral-950 text-neutral-950' : 'border-transparent text-neutral-400'}`}>{tab}</button>)}</div></div>
-        {activeTab === '対話から開始' ? <section className="mt-8 rounded-3xl border border-neutral-200 bg-neutral-50 p-8"><div className="flex items-center gap-3"><WandSparkles className="h-5 w-5" /><h2 className="font-semibold">対話から開始</h2></div><p className="mt-3 max-w-xl text-sm leading-6 text-neutral-500">既存のGallery素材を組み合わせ、作りたい変更内容を対話で指定します。</p><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{dialogueScenes.map(([title, prompt, iconLabel]) => <button key={title} type="button" onClick={() => { setActiveScene(title); setDialoguePrompt(prompt); }} className={`rounded-2xl border bg-white p-4 text-left transition hover:border-neutral-500 ${activeScene === title ? 'border-neutral-950 ring-1 ring-neutral-950' : 'border-neutral-200'}`}><div className="flex h-20 items-center justify-center rounded-xl bg-neutral-100 text-xs font-semibold text-neutral-500">{iconLabel}</div><p className="mt-3 text-sm font-semibold">{title}</p><span className="mt-2 block text-xs text-neutral-500">使ってみる</span></button>)}</div>{activeScene && <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4"><p className="text-xs font-semibold text-neutral-500">Gallery素材を組み合わせる</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{galleryReferenceAssets.map((asset) => <button key={asset.id} type="button" onClick={() => setSelectedAssets((current) => { const next: [typeof galleryReferenceAssets[number], typeof galleryReferenceAssets[number]] = [...current]; next[activeAssetSlot] = asset; return next; })} className={`overflow-hidden rounded-xl border text-left transition ${selectedAssets[activeAssetSlot].id === asset.id ? 'border-neutral-950 ring-1 ring-neutral-950' : 'border-neutral-200 hover:border-neutral-500'}`}><div className="h-24 bg-neutral-100"><img src={asset.src} alt={asset.label} className="h-full w-full object-cover" loading="lazy" /></div><div className="px-3 py-2 text-xs text-neutral-600">{asset.label}</div></button>)}</div><div className="mt-3 flex flex-wrap gap-2 text-xs text-neutral-500"><button type="button" onClick={() => setActiveAssetSlot(0)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 0 ? 'border-neutral-950 text-neutral-950' : 'border-neutral-200'}`}>画像1を選択</button><button type="button" onClick={() => setActiveAssetSlot(1)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 1 ? 'border-neutral-950 text-neutral-950' : 'border-neutral-200'}`}>画像2を選択</button></div></div>}{activeScene && <div className="mt-5 grid gap-4 rounded-2xl border border-neutral-200 bg-white p-4 sm:grid-cols-[180px_180px_minmax(0,1fr)]"><div className="overflow-hidden rounded-xl bg-neutral-100"><img src={selectedAssets[0].src} alt="画像1" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-500">画像1: {selectedAssets[0].label}</p></div><div className="overflow-hidden rounded-xl bg-neutral-100"><img src={selectedAssets[1].src} alt="画像2" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-500">画像2: {selectedAssets[1].label}</p></div><div><textarea value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-h-28 w-full resize-y rounded-xl border border-neutral-200 p-3 text-sm outline-none focus:border-neutral-950" aria-label="商品画像をアップロードして、デザインのリクエストを教えてください" /><div className="mt-2 text-right text-xs text-neutral-400">{dialoguePrompt.length} / 4000</div></div></div>}<div className="mt-5 flex max-w-2xl items-center rounded-xl border border-neutral-200 bg-white px-4 py-2"><Sparkles className="h-4 w-4 text-neutral-400" /><input value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-w-0 flex-1 border-0 px-3 py-2 text-sm outline-none" placeholder="作りたいデザインを入力してください" /><button type="button" className="rounded-lg bg-neutral-950 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40" disabled={!dialoguePrompt.trim()} onClick={openProposal}>提案を見る</button></div></section> : <><section className="mt-8 grid gap-4 sm:grid-cols-3"><button type="button" className="rounded-2xl border border-neutral-200 p-5 text-left hover:border-neutral-500" onClick={() => navigate('/canvas/new')}><FileCardIcon icon={<Plus />} title="新規ファイル" description="白紙のキャンバスから始める" /></button><button type="button" className="rounded-2xl bg-neutral-950 px-4 py-2 text-sm text-white hover:bg-neutral-800" onClick={() => navigate('/designProduction/detail?boardProjectCode=new')}>新規プロジェクト</button><button type="button" className="rounded-2xl border border-neutral-200 p-5 text-left hover:border-neutral-500" onClick={() => navigate('/asset-center')}><FileCardIcon icon={<FolderOpen />} title="インスピレーション" description="ライブラリーの素材を見る" /></button></section><section className="mt-12"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">マイプロジェクト</h2><button type="button" className="text-sm text-neutral-500 hover:text-neutral-950">すべて見る</button></div><div className="mt-4 grid gap-4 md:grid-cols-3">{projects.map(([name, kind, date]) => <button type="button" key={name} className="overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left hover:border-neutral-500" onClick={() => navigate('/designProduction/detail?boardProjectCode=2088009465900642306')}><div className="h-36 bg-[radial-gradient(circle_at_35%_35%,rgba(14,116,144,0.22),transparent_30%),linear-gradient(135deg,#e5e7eb,#f8fafc)]" /><div className="p-4"><p className="font-medium">{name}</p><p className="mt-2 text-xs text-neutral-500">{kind} ・ {date}</p></div></button>)}</div></section></>}
+        {activeTab === '対話から開始' ? <section className="mt-8 rounded-3xl border border-neutral-200 bg-neutral-50 p-8"><div className="flex items-center gap-3"><WandSparkles className="h-5 w-5" /><h2 className="font-semibold">対話から開始</h2></div><p className="mt-3 max-w-xl text-sm leading-6 text-neutral-500">既存のGallery素材を組み合わせ、作りたい変更内容を対話で指定します。</p><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{dialogueScenes.map(([title, prompt, iconLabel]) => <button key={title} type="button" onClick={() => { setActiveScene(title); setDialoguePrompt(prompt); }} className={`rounded-2xl border bg-white p-4 text-left transition hover:border-neutral-500 ${activeScene === title ? 'border-neutral-950 ring-1 ring-neutral-950' : 'border-neutral-200'}`}><div className="flex h-20 items-center justify-center rounded-xl bg-neutral-100 text-xs font-semibold text-neutral-500">{iconLabel}</div><p className="mt-3 text-sm font-semibold">{title}</p><span className="mt-2 block text-xs text-neutral-500">使ってみる</span></button>)}</div>{activeScene && <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4"><p className="text-xs font-semibold text-neutral-500">Gallery素材を組み合わせる</p><div className="mt-3 grid gap-3 sm:grid-cols-3">{galleryReferenceAssets.map((asset) => <button key={asset.id} type="button" onClick={() => setSelectedAssets((current) => { const next: [typeof galleryReferenceAssets[number], typeof galleryReferenceAssets[number]] = [...current]; next[activeAssetSlot] = asset; return next; })} className={`overflow-hidden rounded-xl border text-left transition ${selectedAssets[activeAssetSlot].id === asset.id ? 'border-neutral-950 ring-1 ring-neutral-950' : 'border-neutral-200 hover:border-neutral-500'}`}><div className="h-24 bg-neutral-100"><img src={asset.src} alt={asset.label} className="h-full w-full object-cover" loading="lazy" /></div><div className="px-3 py-2 text-xs text-neutral-600">{asset.label}</div></button>)}</div><div className="mt-3 flex flex-wrap gap-2 text-xs text-neutral-500"><button type="button" onClick={() => setActiveAssetSlot(0)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 0 ? 'border-neutral-950 text-neutral-950' : 'border-neutral-200'}`}>画像1を選択</button><button type="button" onClick={() => setActiveAssetSlot(1)} className={`rounded-full border px-3 py-1.5 ${activeAssetSlot === 1 ? 'border-neutral-950 text-neutral-950' : 'border-neutral-200'}`}>画像2を選択</button></div></div>}{activeScene && <div className="mt-5 grid gap-4 rounded-2xl border border-neutral-200 bg-white p-4 sm:grid-cols-[180px_180px_minmax(0,1fr)]"><div className="overflow-hidden rounded-xl bg-neutral-100"><img src={selectedAssets[0].src} alt="画像1" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-500">画像1: {selectedAssets[0].label}</p></div><div className="overflow-hidden rounded-xl bg-neutral-100"><img src={selectedAssets[1].src} alt="画像2" className="h-28 w-full object-cover" loading="lazy" /><p className="px-2 py-1 text-xs text-neutral-500">画像2: {selectedAssets[1].label}</p></div><div><textarea value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-h-28 w-full resize-y rounded-xl border border-neutral-200 p-3 text-sm outline-none focus:border-neutral-950" aria-label="商品画像をアップロードして、デザインのリクエストを教えてください" /><div className="mt-2 text-right text-xs text-neutral-400">{dialoguePrompt.length} / 4000</div></div></div>}<div className="mt-5 max-w-2xl"><div className="flex items-center rounded-xl border border-neutral-200 bg-white px-4 py-2"><Sparkles className="h-4 w-4 text-neutral-400" /><input value={dialoguePrompt} onChange={(event) => setDialoguePrompt(event.target.value)} className="min-w-0 flex-1 border-0 px-3 py-2 text-sm outline-none" placeholder="作りたいデザインを入力してください" /><button type="button" className="rounded-lg bg-neutral-950 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40" disabled={!canOpenProposal} onClick={openProposal}>提案を見る</button></div>{(!trimmedDialoguePrompt || !hasTwoReferenceAssets) && <div id="design-production-proposal-requirements" className="mt-2 space-y-1 text-xs text-neutral-500" aria-live="polite">{!trimmedDialoguePrompt && <p>依頼文を入力してください。</p>}{!hasTwoReferenceAssets && <div className="flex flex-wrap items-center gap-2"><p>{referenceRequirementMessage}</p>{galleryReferenceAssets.length === 0 && <button type="button" className="rounded-lg border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-700 hover:border-neutral-500" onClick={() => navigate('/asset-center')}>ライブラリーを開く</button>}</div>}</div>}</div></section> : <><section className="mt-8 grid gap-4 sm:grid-cols-3"><button type="button" className="rounded-2xl border border-neutral-200 p-5 text-left hover:border-neutral-500" onClick={() => navigate('/canvas/new')}><FileCardIcon icon={<Plus />} title="新規ファイル" description="白紙のキャンバスから始める" /></button><button type="button" className="rounded-2xl bg-neutral-950 px-4 py-2 text-sm text-white hover:bg-neutral-800" onClick={() => navigate('/designProduction/detail?boardProjectCode=new')}>新規プロジェクト</button><button type="button" className="rounded-2xl border border-neutral-200 p-5 text-left hover:border-neutral-500" onClick={() => navigate('/asset-center')}><FileCardIcon icon={<FolderOpen />} title="インスピレーション" description="ライブラリーの素材を見る" /></button></section><section className="mt-12" data-testid="design-production-persisted-projects"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">保存済みデザイン</h2><span className="text-sm text-neutral-500">{persistedDesignArtifacts.length}件</span></div>{persistedDesignArtifacts.length === 0 ? <div className="mt-4 rounded-2xl border border-dashed border-neutral-200 px-5 py-12 text-center text-sm text-neutral-500">保存確認できたデザイン成果物はまだありません。生成結果を保存すると、ここに表示されます。</div> : <div className="mt-4 grid gap-4 md:grid-cols-3">{persistedDesignArtifacts.slice(0, 12).map((artifact) => <button type="button" key={artifact.id} className="overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left hover:border-neutral-500" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)}><div className="h-36 bg-[radial-gradient(circle_at_35%_35%,rgba(14,116,144,0.22),transparent_30%),linear-gradient(135deg,#e5e7eb,#f8fafc)]">{artifact.imageUrl && <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />}</div><div className="p-4"><p className="truncate font-medium">{artifact.title}</p><p className="mt-2 truncate text-xs text-neutral-500">{artifact.featureType} ・ {formatArtifactDate(artifact.createdAt)}</p></div></button>)}</div>}</section></>}
       </div>
     </ParityShell>
   );
@@ -305,16 +520,14 @@ export function LightchainAssetCenterPage() {
   }, [currentBrand?.id, user?.id]);
 
   const assets = useMemo(() => {
-    const seeded = activeGroup === 'ウェアデザインラボ生成結果'
-      ? []
-      : ['素材サンプル 01', '素材サンプル 02', 'プリント参考 03', 'モデル参考 04'].map((title) => ({
-        id: `seed-${title}`,
-        title,
-        imageUrl: '',
-        featureType: 'library-seed',
-        persisted: false,
-        favorite: false,
-      }));
+    const seeded: Array<{
+      id: string;
+      title: string;
+      imageUrl: string;
+      featureType: string;
+      persisted: boolean;
+      favorite: boolean;
+    }> = [];
     const matchingArtifacts = persistedArtifacts
       .filter((artifact) => activeGroup !== 'ウェアデザインラボ生成結果' || /wear|design|detail/i.test(artifact.featureType));
     const combined = [
@@ -339,5 +552,52 @@ export function LightchainAssetCenterPage() {
 }
 
 export function LightchainOrientedDesignPage() {
-  return <ParityShell><div className="mx-auto max-w-[1380px] px-5 py-8 sm:px-8 lg:px-10"><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">LIGHTCHAIN AI / LAB</p><h1 className="mt-3 text-3xl font-semibold">ウェアデザインラボ</h1><p className="mt-2 text-sm text-neutral-400">参考素材を組み合わせ、デザイン候補を比較する作業台です。</p></div><Link to="/designProduction" className={mutedButton}>デザインワークスペースへ</Link></div><div className="mt-8 grid gap-4 lg:grid-cols-3">{['新しいデザインを作成', '既存プロジェクトを続ける', '参考画像を整理する'].map((title, index) => <Link key={title} to={index === 1 ? '/designProduction/detail?boardProjectCode=2088009465900642306' : index === 2 ? '/asset-center' : '/creator'} className={`${darkPanel} group p-5 transition hover:-translate-y-0.5 hover:border-cyan-200/50`}><div className="flex h-28 items-center justify-center rounded-xl bg-[radial-gradient(circle_at_35%_35%,rgba(103,232,249,0.24),transparent_25%),linear-gradient(135deg,#263438,#111719)]"><WandSparkles className="h-9 w-9 text-cyan-100" /></div><h2 className="mt-4 font-semibold">{title}<ArrowRight className="float-right h-4 w-4 text-neutral-500 transition group-hover:translate-x-1" /></h2><p className="mt-2 text-sm text-neutral-500">作業の状態と次のアクションを確認できます。</p></Link>)}</div><section className={`${darkPanel} mt-6 p-5`}><div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-cyan-200" /><h2 className="font-semibold">タスク履歴</h2></div><p className="mt-3 text-sm text-neutral-500">完了した生成、差し替え、マスク編集の履歴をここで確認できます。</p></section></div></ParityShell>;
+  const { currentBrand, user } = useAuthStore();
+  const [historyArtifacts, setHistoryArtifacts] = useState<WorkspaceArtifact[]>([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!currentBrand?.id) {
+      setHistoryArtifacts([]);
+      return;
+    }
+    setHistoryArtifacts(
+      listWorkspaceArtifacts(currentBrand.id, user?.id)
+        .filter((artifact) => designHistoryFeatureTypes.has(artifact.featureType))
+        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+    );
+  }, [currentBrand?.id, user?.id]);
+
+  return (
+    <ParityShell workflowFeature="wear-design-lab">
+      <div className="mx-auto max-w-[1380px] px-5 py-8 sm:px-8 lg:px-10">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.25em] text-cyan-200">LIGHTCHAIN AI / LAB</p>
+            <h1 className="mt-3 text-3xl font-semibold">ウェアデザインラボ</h1>
+            <p className="mt-2 text-sm text-neutral-400">参考素材を組み合わせ、デザイン候補を比較する作業台です。</p>
+          </div>
+          <Link to="/designProduction" className={mutedButton}>デザインワークスペースへ</Link>
+        </div>
+        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          {['新しいデザインを作成', '既存プロジェクトを続ける', '参考画像を整理する'].map((title, index) => (
+            <Link key={title} to={index === 1 ? '/designProduction' : index === 2 ? '/asset-center' : '/creator'} className={`${darkPanel} group p-5 transition hover:-translate-y-0.5 hover:border-cyan-200/50`}>
+              <div className="flex h-28 items-center justify-center rounded-xl bg-[radial-gradient(circle_at_35%_35%,rgba(103,232,249,0.24),transparent_25%),linear-gradient(135deg,#263438,#111719)]"><WandSparkles className="h-9 w-9 text-cyan-100" /></div>
+              <h2 className="mt-4 font-semibold">{title}<ArrowRight className="float-right h-4 w-4 text-neutral-500 transition group-hover:translate-x-1" /></h2>
+              <p className="mt-2 text-sm text-neutral-500">作業の状態と次のアクションを確認できます。</p>
+            </Link>
+          ))}
+        </div>
+        <section className={`${darkPanel} mt-6 p-5`} data-testid="oriented-design-persisted-history">
+          <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-cyan-200" /><h2 className="font-semibold">タスク履歴</h2></div>
+          <PersistedHistoryPanel
+            artifacts={historyArtifacts}
+            emptyMessage="保存確認できたデザインタスクはまだありません。生成結果を保存すると、ここからCanvasへ再利用できます。"
+            reuseLabel="Canvasへ再利用"
+            onReuse={(artifact) => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(artifact.id)}`)}
+          />
+        </section>
+      </div>
+    </ParityShell>
+  );
 }

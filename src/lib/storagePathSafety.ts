@@ -1,7 +1,7 @@
 /**
  * Pure helpers for generated-image storage references.
  *
- * These checks are intentionally independent of Supabase so callers can
+ * These checks are intentionally independent of any storage provider so callers can
  * validate an untrusted path before URL parsing or any storage request.
  */
 
@@ -99,6 +99,14 @@ export const normalizeGeneratedImageStoragePath = (source: unknown): string | nu
   const result = resolveGeneratedImageStoragePath(source);
   return result.ok ? result.path : null;
 };
+
+/** Cloudflare's image-ID key is distinct from a retired bucket-relative path.
+ * Do not relax resolveGeneratedImageStoragePath or pass this key to a legacy provider.
+ */
+export const normalizeCloudflareGeneratedImageStoragePath = (source: unknown): string | null => (
+  typeof source === 'string' && /^generated-images\/[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(source)
+    ? source : null
+);
 
 export const isSafeGeneratedImageStoragePath = (source: unknown): boolean => (
   resolveGeneratedImageStoragePath(source).ok

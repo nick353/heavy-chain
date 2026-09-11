@@ -13,12 +13,11 @@ import {
 } from 'lucide-react';
 import { Button, Input, Textarea, Modal } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
-import { supabase } from '../lib/supabase';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
 interface BrandMember {
-  id: string;
   user_id: string;
   role: string;
   joined_at: string;
@@ -39,8 +38,15 @@ const ROLE_LABELS: Record<string, string> = {
 
 export function BrandSettingsPage() {
   const navigate = useNavigate();
-  const { currentBrand, setCurrentBrand, user } = useAuthStore();
+  const {
+    currentBrand,
+    setCurrentBrand,
+    user,
+    brandState,
+    refreshCurrentBrand,
+  } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const brandRetryInFlightRef = useRef(false);
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,6 +58,8 @@ export function BrandSettingsPage() {
   const [isInviting, setIsInviting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [logoLoadFailed, setLogoLoadFailed] = useState(false);
+  const [logoDisplayUrl, setLogoDisplayUrl] = useState<string | null>(null);
+  const [isRetryingBrand, setIsRetryingBrand] = useState(false);
   
   const [form, setForm] = useState({
     name: '',
@@ -66,25 +74,8 @@ export function BrandSettingsPage() {
     
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('brand_members')
-        .select(`
-          id,
-          user_id,
-          role,
-          joined_at,
-          user:users(id, name, email, avatar_url)
-        `)
-        .eq('brand_id', currentBrand.id);
-
-      if (error) {
-        console.error('Failed to fetch members:', error);
-        toast.error('メンバー情報の取得に失敗しました');
-        setMembers([]);
-        return;
-      }
-      
-      setMembers((data || []) as unknown as BrandMember[]);
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      setMembers(await cloudflareDataPlane.listBrandMembers(currentBrand.id));
     } catch (error) {
       console.error('Failed to fetch members:', error);
       toast.error('メンバー情報の取得に失敗しました');
@@ -108,27 +99,49 @@ export function BrandSettingsPage() {
     }
   }, [currentBrand, fetchMembers]);
 
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    const source = currentBrand?.logo_url ?? null;
+    if (!source) {
+      setLogoDisplayUrl(null);
+      return () => { cancelled = true; };
+    }
+    if (!cloudflareDataPlane || !source.startsWith('media/v1/')) {
+      setLogoDisplayUrl(source);
+      return () => { cancelled = true; };
+    }
+    setLogoDisplayUrl(null);
+    void cloudflareDataPlane.readMediaObjectUrl(source).then((url) => {
+      objectUrl = url;
+      if (!cancelled) setLogoDisplayUrl(url);
+      else URL.revokeObjectURL(url);
+    }).catch(() => {
+      if (!cancelled) setLogoDisplayUrl(null);
+    });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [currentBrand?.logo_url]);
+
   const handleSave = async () => {
     if (!currentBrand) return;
     
     setIsSaving(true);
     try {
-      const { data, error } = await supabase
-        .from('brands')
-        .update({
-          name: form.name,
-          tone_description: form.toneDescription || null,
-          target_audience: form.targetAudience || null,
-          brand_colors: {
-            primary: form.primaryColor,
-            secondary: form.secondaryColor,
-          },
-        })
-        .eq('id', currentBrand.id)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const updates = {
+        name: form.name,
+        tone_description: form.toneDescription || null,
+        target_audience: form.targetAudience || null,
+        brand_colors: {
+          primary: form.primaryColor,
+          secondary: form.secondaryColor,
+        },
+      };
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const data = await cloudflareDataPlane.updateBrand(currentBrand.id, updates);
+      if (!data) throw new Error('brand_update_readback_missing');
       
       setCurrentBrand(data);
       toast.success('ブランド情報を保存しました');
@@ -144,30 +157,11 @@ export function BrandSettingsPage() {
     if (!file || !currentBrand || !user) return;
 
     try {
-      const ext = file.name.split('.').pop();
-      const path = `${user.id}/${currentBrand.id}/logo.${ext}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('brand-assets')
-        .upload(path, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData, error: signedUrlError } = await supabase.storage
-        .from('brand-assets')
-        .createSignedUrl(path, 60 * 60 * 24 * 7);
-
-      if (signedUrlError || !urlData?.signedUrl) throw signedUrlError || new Error('Failed to create signed logo URL');
-
-      const { error: updateError } = await supabase
-        .from('brands')
-        .update({ logo_url: urlData.signedUrl })
-        .eq('id', currentBrand.id);
-
-      if (updateError) throw updateError;
-
-      setCurrentBrand({ ...currentBrand, logo_url: urlData.signedUrl });
-      toast.success('ロゴをアップロードしました');
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const objectPath = await cloudflareDataPlane.uploadBrandLogo(currentBrand.id, file);
+      const updatedBrand = await cloudflareDataPlane.updateBrand(currentBrand.id, { logo_url: objectPath });
+      setCurrentBrand(updatedBrand);
+      toast.success('ロゴをCloudflare R2へアップロードしました');
     } catch (error: any) {
       toast.error(error.message || 'アップロードに失敗しました');
     }
@@ -175,27 +169,17 @@ export function BrandSettingsPage() {
 
   const handleInvite = async () => {
     if (!inviteEmail.trim() || !currentBrand) return;
+    if (inviteRole !== 'admin' && inviteRole !== 'editor' && inviteRole !== 'viewer') return;
 
     setIsInviting(true);
     try {
-      // Generate invite code
-      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
-
-      const { error } = await supabase
-        .from('invitations')
-        .insert({
-          brand_id: currentBrand.id,
-          email: inviteEmail,
-          code,
-          role: inviteRole,
-          expires_at: expiresAt.toISOString(),
-        });
-
-      if (error) throw error;
-
-      setInviteCode(code);
+      if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+      const invitation = await cloudflareDataPlane.createInvitation({
+        brand_id: currentBrand.id,
+        email: inviteEmail.trim(),
+        role: inviteRole,
+      });
+      setInviteCode(invitation.code);
       toast.success('招待を作成しました');
     } catch (error: any) {
       toast.error(error.message || '招待の作成に失敗しました');
@@ -204,42 +188,37 @@ export function BrandSettingsPage() {
     }
   };
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(inviteCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast.success('コードをコピーしました');
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success('コードをコピーしました');
+    } catch {
+      toast.error('コードをコピーできませんでした。表示されたコードを手動でコピーしてください');
+    }
   };
 
-  const handleRemoveMember = async (memberId: string) => {
+  const handleRemoveMember = async (userId: string) => {
     if (!confirm('このメンバーを削除しますか？')) return;
 
     try {
-      const { error } = await supabase
-        .from('brand_members')
-        .delete()
-        .eq('id', memberId);
-
-      if (error) throw error;
-
-      setMembers(members.filter(m => m.id !== memberId));
+      if (!cloudflareDataPlane || !currentBrand) throw new Error('cloudflare_brand_required');
+      await cloudflareDataPlane.removeBrandMember(currentBrand.id, userId);
+      setMembers(members.filter(m => m.user_id !== userId));
       toast.success('メンバーを削除しました');
     } catch (error: any) {
       toast.error(error.message || 'メンバーの削除に失敗しました');
     }
   };
 
-  const handleRoleChange = async (memberId: string, newRole: string) => {
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    if (newRole !== 'admin' && newRole !== 'editor' && newRole !== 'viewer') return;
     try {
-      const { error } = await supabase
-        .from('brand_members')
-        .update({ role: newRole })
-        .eq('id', memberId);
-
-      if (error) throw error;
-
+      if (!cloudflareDataPlane || !currentBrand) throw new Error('cloudflare_brand_required');
+      await cloudflareDataPlane.updateBrandMemberRole(currentBrand.id, userId, newRole);
       setMembers(members.map(m => 
-        m.id === memberId ? { ...m, role: newRole } : m
+        m.user_id === userId ? { ...m, role: newRole } : m
       ));
       toast.success('権限を変更しました');
     } catch (error: any) {
@@ -247,10 +226,76 @@ export function BrandSettingsPage() {
     }
   };
 
-  if (!currentBrand) {
+  const handleRetryBrand = useCallback(async () => {
+    if (brandRetryInFlightRef.current) return;
+    brandRetryInFlightRef.current = true;
+    setIsRetryingBrand(true);
+    try {
+      await refreshCurrentBrand();
+    } finally {
+      brandRetryInFlightRef.current = false;
+      setIsRetryingBrand(false);
+    }
+  }, [refreshCurrentBrand]);
+
+  const isEmptyBrandState = brandState.status === 'success_empty';
+
+  if (!currentBrand && !isEmptyBrandState) {
+    if (brandState.status === 'pending') {
+      return (
+        <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center px-6">
+          <div className="glass-panel w-full rounded-2xl p-8 text-center">
+            <div className="spinner mx-auto mb-4" />
+            <h1 className="text-2xl font-semibold text-neutral-900 dark:text-white">ブランド情報を確認中です</h1>
+            <p className="mt-3 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+              ブランド情報の確認が完了するまでお待ちください。
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    if (brandState.status === 'failure') {
+      return (
+        <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center px-6">
+          <div className="glass-panel w-full rounded-2xl p-8 text-center">
+            <h1 className="text-2xl font-semibold text-neutral-900 dark:text-white">ブランド情報を取得できませんでした</h1>
+            <p className="mt-3 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+              もう一度お試しください。
+            </p>
+            <Button className="mt-6" onClick={() => void handleRetryBrand()} disabled={isRetryingBrand} isLoading={isRetryingBrand}>
+              再試行
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // A non-empty resolution should normally always have currentBrand. Keep
+    // this fail-closed if that invariant is briefly out of sync.
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-neutral-500">ブランドが選択されていません</p>
+      <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center px-6">
+        <div className="glass-panel w-full rounded-2xl p-8 text-center">
+          <div className="spinner mx-auto mb-4" />
+          <h1 className="text-2xl font-semibold text-neutral-900 dark:text-white">ブランド情報を確認中です</h1>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentBrand) {
+
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center px-6">
+        <div className="glass-panel w-full rounded-2xl p-8 text-center">
+          <h1 className="text-2xl font-semibold text-neutral-900 dark:text-white">ブランドを設定してください</h1>
+          <p className="mt-3 text-sm leading-6 text-neutral-500 dark:text-neutral-400">
+            ブランドを作成すると、Lightchainの生成・保存・履歴をあなたの作業領域に紐づけられます。
+          </p>
+          <Button className="mt-6" onClick={() => navigate('/dashboard')}>
+            ブランド作成へ進む
+          </Button>
+        </div>
       </div>
     );
   }
@@ -298,9 +343,9 @@ export function BrandSettingsPage() {
           {/* Logo */}
           <div className="flex items-center gap-6 mb-8">
             <div className="w-24 h-24 bg-neutral-100 dark:bg-neutral-800 rounded-2xl flex items-center justify-center overflow-hidden shadow-inner">
-              {currentBrand.logo_url && !logoLoadFailed ? (
+              {(logoDisplayUrl || currentBrand.logo_url) && !logoLoadFailed ? (
                 <img 
-                  src={currentBrand.logo_url} 
+                  src={logoDisplayUrl || currentBrand.logo_url || undefined}
                   alt="Logo" 
                   className="w-full h-full object-cover"
                   onError={() => setLogoLoadFailed(true)}
@@ -438,7 +483,7 @@ export function BrandSettingsPage() {
             <div className="space-y-3">
               {members.map((member) => (
                 <div
-                  key={member.id}
+                  key={member.user_id}
                   className="flex items-center justify-between p-4 bg-white/50 dark:bg-neutral-800/50 rounded-xl border border-neutral-100 dark:border-neutral-700/50 transition-all hover:bg-white/80 dark:hover:bg-neutral-800"
                 >
                   <div className="flex items-center gap-3">
@@ -475,7 +520,7 @@ export function BrandSettingsPage() {
                       <>
                         <select
                           value={member.role}
-                          onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                          onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
                           className="px-3 py-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg text-sm text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-primary-500"
                         >
                           <option value="admin">管理者</option>
@@ -483,7 +528,7 @@ export function BrandSettingsPage() {
                           <option value="viewer">閲覧者</option>
                         </select>
                         <button
-                          onClick={() => handleRemoveMember(member.id)}
+                          onClick={() => handleRemoveMember(member.user_id)}
                           className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />

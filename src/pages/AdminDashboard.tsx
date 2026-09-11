@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
   Users, 
@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   Bell,
   Search,
-  Filter,
   CheckCircle,
   Eye,
   Activity,
@@ -17,67 +16,19 @@ import {
   ExternalLink,
   MessageSquare
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { cloudflareDataPlane, type CloudflareAdminStats, type CloudflareAdminUser,
+  type CloudflareFeedback, type CloudflareAnnouncement } from '../lib/cloudflareApi';
 import { Button, Input, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
-interface DashboardStats {
-  totalUsers: number;
-  activeUsers: number;
-  totalImages: number;
-  totalCost: number;
-  totalUsageUnits: number;
-  edgeRunCount: number;
-  averageDurationMs: number;
-}
-
-interface User {
-  id: string;
-  email: string;
-  name: string | null;
-  created_at: string;
-  is_admin: boolean;
-}
-
-interface ModerationItem {
-  id: string;
-  image_url: string;
-  reported_at: string;
-  reason: string;
-  user_id: string;
-  status: 'pending' | 'approved' | 'rejected';
-}
+type DashboardStats = CloudflareAdminStats;
+type User = CloudflareAdminUser;
 
 type FeedbackStatus = 'new' | 'in_progress' | 'done';
 type FeedbackType = 'lost' | 'cutout' | 'result' | 'save' | 'speed' | 'other';
 
-interface FeedbackSubmission {
-  id: string;
-  user_id: string;
-  brand_id: string | null;
-  type: FeedbackType;
-  message: string;
-  email: string | null;
-  page_url: string;
-  pathname: string;
-  viewport: any;
-  user_agent: string | null;
-  screenshot_path: string | null;
-  screenshot_capture_status: 'captured' | 'screenshot_capture_failed' | 'screenshot_upload_failed';
-  status: FeedbackStatus;
-  admin_note: string | null;
-  created_at: string;
-  updated_at: string;
-  resolved_at: string | null;
-  user?: {
-    email: string | null;
-    name: string | null;
-  } | null;
-  brand?: {
-    name: string | null;
-  } | null;
-}
+type FeedbackSubmission = CloudflareFeedback;
 
 const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, string> = {
   new: '未対応',
@@ -101,15 +52,17 @@ const FEEDBACK_TYPE_LABELS: Record<FeedbackType, string> = {
 };
 
 const SAFE_FEEDBACK_URL_ORIGINS = new Set([
-  'https://heavy-chain.zeabur.app',
   'https://heavy-chain.com',
+  'https://heavy-chain-web.nichika2000823.workers.dev',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
 ]);
 
 const getSafeFeedbackUrl = (value: string) => {
   try {
-    const url = value.startsWith('/') ? new URL(value, 'https://heavy-chain.zeabur.app') : new URL(value);
+    const url = value.startsWith('/')
+      ? new URL(value, 'https://heavy-chain-web.nichika2000823.workers.dev')
+      : new URL(value);
     if (!['http:', 'https:'].includes(url.protocol) || !SAFE_FEEDBACK_URL_ORIGINS.has(url.origin)) {
       return null;
     }
@@ -132,20 +85,28 @@ export function AdminDashboard() {
     totalUsers: 0,
     activeUsers: 0,
     totalImages: 0,
-    totalCost: 0,
-    totalUsageUnits: 0,
-    edgeRunCount: 0,
-    averageDurationMs: 0,
+    totalCost: null,
+    totalUsageUnits: null,
+    edgeRunCount: null,
+    averageDurationMs: null,
+    meteringStatus: 'not_configured',
+    activeUsersBasis: 'profile_updated_last_30_days',
   });
   const [users, setUsers] = useState<User[]>([]);
   const [feedbackItems, setFeedbackItems] = useState<FeedbackSubmission[]>([]);
-  const [_moderationQueue, _setModerationQueue] = useState<ModerationItem[]>([]);
+  const [announcements, setAnnouncements] = useState<CloudflareAnnouncement[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const announcementRequest = useRef<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingFeedbackId, setUpdatingFeedbackId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'feedback' | 'moderation' | 'announcements'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
+  const [adminsOnly, setAdminsOnly] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackSubmission | null>(null);
   const [feedbackScreenshotUrl, setFeedbackScreenshotUrl] = useState<string | null>(null);
+  const [feedbackScreenshotError, setFeedbackScreenshotError] = useState(false);
   const [feedbackNoteDraft, setFeedbackNoteDraft] = useState('');
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({
@@ -155,10 +116,20 @@ export function AdminDashboard() {
   });
 
   useEffect(() => {
-    fetchStats();
-    fetchUsers();
-    fetchFeedbackItems();
+    void loadDashboard();
   }, []);
+
+  useEffect(() => {
+    setFeedbackScreenshotUrl(null);
+    setFeedbackScreenshotError(false);
+    if (!selectedFeedback?.screenshot_path || selectedFeedback.submission_state !== 'accepted' || !cloudflareDataPlane) return;
+    let active = true; let blobURL: string | null = null;
+    cloudflareDataPlane.readFeedbackScreenshot(selectedFeedback.id).then(blob => {
+      if (!active) return;
+      blobURL = URL.createObjectURL(blob); setFeedbackScreenshotUrl(blobURL);
+    }).catch(() => { if (active) { setFeedbackScreenshotError(true); toast.error('添付画像を確認できませんでした'); } });
+    return () => { active = false; if (blobURL) URL.revokeObjectURL(blobURL); };
+  }, [selectedFeedback?.id, selectedFeedback?.screenshot_path, selectedFeedback?.submission_state]);
 
   useEffect(() => {
     if (
@@ -172,91 +143,18 @@ export function AdminDashboard() {
     }
   }, [requestedTab]);
 
-  const fetchStats = async () => {
+  const loadDashboard = async () => {
+    setIsLoading(true); setLoadError(null);
     try {
-      // Get user count
-      const { count: userCount, error: userError } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true });
-
-      if (userError) {
-        console.error('Failed to fetch user count:', userError);
-      }
-
-      // Get image count
-      const { count: imageCount, error: imageError } = await supabase
-        .from('generated_images')
-        .select('*', { count: 'exact', head: true });
-
-      if (imageError) {
-        console.error('Failed to fetch image count:', imageError);
-      }
-
-      // Get total API cost
-      const { data: costData, error: costError } = await supabase
-        .from('api_usage_logs')
-        .select('cost_usd');
-
-      if (costError) {
-        console.error('Failed to fetch cost data:', costError);
-      }
-
-      const totalCost = costData?.reduce((sum, log) => sum + (log.cost_usd || 0), 0) || 0;
-
-      const { data: usageData, error: usageError } = await supabase
-        .from('usage_events')
-        .select('units,status');
-
-      if (usageError) {
-        console.error('Failed to fetch usage events:', usageError);
-      }
-
-      const totalUsageUnits = usageData?.reduce((sum, event) => (
-        event.status === 'reserved' || event.status === 'succeeded'
-          ? sum + (event.units || 0)
-          : sum
-      ), 0) || 0;
-
-      const { data: edgeRunData, error: edgeRunError } = await supabase
-        .from('edge_function_runs')
-        .select('duration_ms,status');
-
-      if (edgeRunError) {
-        console.error('Failed to fetch edge run data:', edgeRunError);
-      }
-
-      const completedDurations = edgeRunData
-        ?.map((run) => run.duration_ms)
-        .filter((duration): duration is number => typeof duration === 'number') || [];
-      const averageDurationMs = completedDurations.length > 0
-        ? Math.round(completedDurations.reduce((sum, duration) => sum + duration, 0) / completedDurations.length)
-        : 0;
-
-      // Get active users (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { count: activeCount, error: activeError } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .gte('updated_at', thirtyDaysAgo.toISOString());
-
-      if (activeError) {
-        console.error('Failed to fetch active users:', activeError);
-      }
-
-      setStats({
-        totalUsers: userCount || 0,
-        activeUsers: activeCount || 0,
-        totalImages: imageCount || 0,
-        totalCost,
-        totalUsageUnits,
-        edgeRunCount: edgeRunData?.length || 0,
-        averageDurationMs,
-      });
+      if (!cloudflareDataPlane) throw new Error('管理画面のCloudflare接続が未設定です');
+      const [nextStats, nextUsers, nextFeedback, nextAnnouncements] = await Promise.all([
+        cloudflareDataPlane.getAdminStats(), cloudflareDataPlane.listAdminUsers(),
+        cloudflareDataPlane.listAdminFeedback(), cloudflareDataPlane.listAnnouncements(),
+      ]);
+      setStats(nextStats); setUsers(nextUsers); setFeedbackItems(nextFeedback); setAnnouncements(nextAnnouncements);
     } catch (error) {
-      console.error('Failed to fetch stats:', error);
-      toast.error('統計情報の取得に失敗しました');
+      setLoadError(error instanceof Error && error.message.includes('_403_')
+        ? '管理者権限を確認できません。' : '管理情報を読み込めませんでした。接続を確認して再読み込みしてください。');
     } finally {
       setIsLoading(false);
     }
@@ -264,46 +162,9 @@ export function AdminDashboard() {
 
   const fetchFeedbackItems = async () => {
     try {
-      const { data, error } = await supabase
-        .from('feedback_submissions')
-        .select('*, user:users(email, name), brand:brands(name)')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (error) {
-        console.error('Failed to fetch feedback:', error);
-        setFeedbackItems([]);
-        return;
-      }
-
-      setFeedbackItems((data || []) as unknown as FeedbackSubmission[]);
-    } catch (error) {
-      console.error('Failed to fetch feedback:', error);
-      setFeedbackItems([]);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (error) {
-        console.error('Failed to fetch users:', error);
-        toast.error('ユーザー情報の取得に失敗しました');
-        setUsers([]);
-        return;
-      }
-      
-      setUsers(data || []);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-      toast.error('ユーザー情報の取得に失敗しました');
-      setUsers([]);
-    }
+      if (!cloudflareDataPlane) throw new Error('unavailable');
+      setFeedbackItems(await cloudflareDataPlane.listAdminFeedback());
+    } catch { toast.error('フィードバックの更新を確認できませんでした'); }
   };
 
   const handlePublishAnnouncement = async () => {
@@ -313,39 +174,27 @@ export function AdminDashboard() {
     }
 
     try {
-      const { error } = await supabase.from('admin_announcements').insert({
-        title: announcementForm.title,
-        content: announcementForm.content,
-        type: announcementForm.type,
-      });
-
-      if (error) throw error;
+      if (isPublishing) return;
+      setIsPublishing(true);
+      if (!cloudflareDataPlane) throw new Error('unavailable');
+      announcementRequest.current ??= crypto.randomUUID();
+      const published = await cloudflareDataPlane.publishAnnouncement({ ...announcementForm, request_id: announcementRequest.current });
+      setAnnouncements(current => [published, ...current.filter(item => item.id !== published.id)]);
+      announcementRequest.current = null;
 
       toast.success('お知らせを公開しました');
       setShowAnnouncementModal(false);
       setAnnouncementForm({ title: '', content: '', type: 'info' });
     } catch {
-      toast.error('公開に失敗しました');
-    }
+      toast.error('公開結果を確認できません。同じ内容で再確認してください。');
+    } finally { setIsPublishing(false); }
   };
 
-  const openFeedbackDetail = async (item: FeedbackSubmission) => {
+  const openFeedbackDetail = (item: FeedbackSubmission) => {
     setSelectedFeedback(item);
     setFeedbackNoteDraft(item.admin_note || '');
     setFeedbackScreenshotUrl(null);
 
-    if (!item.screenshot_path) return;
-
-    const { data, error } = await supabase.storage
-      .from('feedback-screenshots')
-      .createSignedUrl(item.screenshot_path, 60 * 10);
-
-    if (error) {
-      console.error('Failed to create feedback screenshot URL:', error);
-      return;
-    }
-
-    setFeedbackScreenshotUrl(data.signedUrl);
   };
 
   const updateFeedback = async (
@@ -354,32 +203,24 @@ export function AdminDashboard() {
   ) => {
     try {
       setUpdatingFeedbackId(item.id);
-      const nextStatus = updates.status || item.status;
-      const { error } = await supabase
-        .from('feedback_submissions')
-        .update({
-          ...updates,
-          resolved_at: nextStatus === 'done' ? new Date().toISOString() : null,
-        })
-        .eq('id', item.id);
-
-      if (error) throw error;
+      if (!cloudflareDataPlane) throw new Error('unavailable');
+      const updated = await cloudflareDataPlane.updateAdminFeedback(item.id, { ...updates, revision: item.revision });
 
       toast.success('フィードバックを更新しました');
-      await fetchFeedbackItems();
+      setFeedbackItems(current => current.map(row => row.id === item.id ? updated : row));
       setSelectedFeedback((current) => current?.id === item.id
-        ? { ...current, ...updates, resolved_at: nextStatus === 'done' ? new Date().toISOString() : null }
+        ? updated
         : current);
     } catch (error: any) {
-      toast.error(error.message || 'フィードバック更新に失敗しました');
+      toast.error(error.message?.includes('_409_') ? '別の更新がありました。一覧を更新して内容を確認してください。' : 'フィードバック更新を確認できませんでした');
     } finally {
       setUpdatingFeedbackId(null);
     }
   };
 
   const filteredUsers = users.filter(user =>
-    user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    (!adminsOnly || user.is_admin) && (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.name?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
   const feedbackOpenCount = feedbackItems.filter((item) => item.status !== 'done').length;
 
@@ -397,7 +238,7 @@ export function AdminDashboard() {
         )}
       </div>
       <p className="text-3xl font-bold text-neutral-800 dark:text-white mb-1 font-display">
-        {typeof value === 'number' && label.includes('コスト') 
+        {value === null ? '未計測' : typeof value === 'number' && label.includes('コスト')
           ? `$${value.toFixed(2)}` 
           : value.toLocaleString()}
       </p>
@@ -412,6 +253,10 @@ export function AdminDashboard() {
       </div>
     );
   }
+
+  if (loadError) return <div className="p-12 text-center text-neutral-900 dark:text-white" role="alert">
+    <p>{loadError}</p><Button onClick={loadDashboard} className="mt-4">再読み込み</Button>
+  </div>;
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
@@ -479,44 +324,41 @@ export function AdminDashboard() {
                 icon={Users}
                 label="総ユーザー数"
                 value={stats.totalUsers}
-                trend={12}
                 color="bg-blue-500"
               />
               <StatCard
                 icon={Users}
-                label="アクティブユーザー"
+                label="30日以内のプロフィール更新"
                 value={stats.activeUsers}
-                trend={8}
                 color="bg-green-500"
               />
               <StatCard
                 icon={Image}
                 label="生成画像数"
                 value={stats.totalImages}
-                trend={24}
                 color="bg-purple-500"
               />
               <StatCard
                 icon={DollarSign}
-                label="API総コスト"
-                value={stats.totalCost}
+                label="画像AI推計費用（USD）"
+                value={stats.estimatedImageCostUSD ?? null}
                 color="bg-orange-500"
               />
               <StatCard
                 icon={Activity}
-                label="利用ユニット"
+                label="画像AI保存済み枚数"
                 value={stats.totalUsageUnits}
                 color="bg-cyan-500"
               />
               <StatCard
                 icon={Clock}
-                label="Edge実行数"
-                value={stats.edgeRunCount}
+                label="画像AI推論試行数"
+                value={stats.inferenceAttempts ?? null}
                 color="bg-rose-500"
               />
               <StatCard
                 icon={MessageSquare}
-                label="未完了フィードバック"
+                label="未完了フィードバック（最新100件）"
                 value={feedbackOpenCount}
                 color="bg-indigo-500"
               />
@@ -527,7 +369,11 @@ export function AdminDashboard() {
               <h2 className="text-lg font-semibold text-neutral-800 dark:text-white mb-4">利用状況</h2>
               <div className="h-64 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800/50 rounded-xl border border-neutral-100 dark:border-neutral-700/50">
                 <p className="text-neutral-500 dark:text-neutral-400">
-                  平均 Edge 実行時間: {stats.averageDurationMs.toLocaleString()}ms
+                  {stats.averageImageInferenceMs == null ? '画像AIの推論時間は未計測です。'
+                    : `平均画像AI推論時間: ${stats.averageImageInferenceMs.toLocaleString()}ms。`}
+                  {' '}費用はモデル単価による推計で、実請求・無料枠残量ではありません。
+                  {stats.unmeasuredInferenceAttempts ? ` 未計測の推論: ${stats.unmeasuredInferenceAttempts}件。` : ''}
+                  {' '}全APIのCPU時間・実行数・R2/D1料金は未計測です。
                 </p>
               </div>
             </div>
@@ -547,15 +393,15 @@ export function AdminDashboard() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                   <input
                     type="text"
-                    placeholder="ユーザーを検索..."
+                    placeholder="最新100ユーザーを検索..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                   />
                 </div>
-                <Button variant="secondary" size="sm" leftIcon={<Filter className="w-4 h-4" />}>
-                  フィルター
-                </Button>
+                <label className="text-sm text-neutral-800 dark:text-neutral-200">
+                  <input type="checkbox" checked={adminsOnly} onChange={event => setAdminsOnly(event.target.checked)} className="mr-2" />管理者のみ
+                </label>
               </div>
             </div>
 
@@ -600,7 +446,7 @@ export function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <button className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition-colors text-neutral-500 dark:text-neutral-400">
+                          <button onClick={() => setSelectedUser(user)} aria-label={`${user.name || user.email}の詳細`} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-lg transition-colors text-neutral-500 dark:text-neutral-400">
                             <Eye className="w-4 h-4" />
                           </button>
                         </div>
@@ -746,10 +592,10 @@ export function AdminDashboard() {
               <AlertTriangle className="w-10 h-10 text-neutral-400" />
             </div>
             <h3 className="text-xl font-medium text-neutral-700 dark:text-white mb-2">
-              レビュー待ちのコンテンツはありません
+              コンテンツ通報機能は未接続です
             </h3>
             <p className="text-neutral-500 dark:text-neutral-400">
-              不適切なコンテンツが報告されると、ここに表示されます
+              旧画面にも通報一覧の実データ接続はありません。問い合わせはフィードバックタブで確認できます。
             </p>
           </motion.div>
         )}
@@ -773,9 +619,27 @@ export function AdminDashboard() {
             <Button onClick={() => setShowAnnouncementModal(true)} className="shadow-glow">
               新規お知らせを作成
             </Button>
+            <div className="mt-8 space-y-4 text-left">
+              {announcements.length === 0 && <p className="text-neutral-600 dark:text-neutral-300">公開済みのお知らせはありません。</p>}
+              {announcements.map(item => <article key={item.id} className="rounded-xl border border-neutral-200 p-5 dark:border-neutral-700">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">{new Date(item.created_at).toLocaleString('ja-JP')} · {item.type}</p>
+                <h4 className="mt-2 font-semibold text-neutral-900 dark:text-white">{item.title}</h4>
+                <p className="mt-2 whitespace-pre-wrap break-words text-neutral-700 dark:text-neutral-200">{item.content}</p>
+              </article>)}
+            </div>
           </motion.div>
         )}
       </div>
+
+      <Modal isOpen={Boolean(selectedUser)} onClose={() => setSelectedUser(null)} title="ユーザー詳細" size="md">
+        {selectedUser && <dl className="space-y-3 break-words text-neutral-900 dark:text-white">
+          <div><dt>名前</dt><dd>{selectedUser.name || '未設定'}</dd></div>
+          <div><dt>メール</dt><dd>{selectedUser.email}</dd></div>
+          <div><dt>ユーザーID</dt><dd>{selectedUser.id}</dd></div>
+          <div><dt>権限</dt><dd>{selectedUser.is_admin ? '管理者' : '一般ユーザー'}</dd></div>
+          <div><dt>登録日時</dt><dd>{new Date(selectedUser.created_at).toLocaleString('ja-JP')}</dd></div>
+        </dl>}
+      </Modal>
 
       {/* Feedback Detail Modal */}
       <Modal
@@ -849,7 +713,9 @@ export function AdminDashboard() {
                 />
               ) : (
                 <div className="flex h-40 items-center justify-center rounded-lg bg-neutral-100 text-sm text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300">
-                  スクショはありません
+                  {selectedFeedback.submission_state === 'pending' ? '本文は受付済み・添付画像の保存は未完了です'
+                    : feedbackScreenshotError ? '添付画像を取得できませんでした。開き直して再確認してください'
+                    : selectedFeedback.screenshot_path ? '添付画像を読み込み中です' : '添付画像はありません'}
                 </div>
               )}
             </div>
@@ -895,7 +761,7 @@ export function AdminDashboard() {
       {/* Announcement Modal */}
       <Modal
         isOpen={showAnnouncementModal}
-        onClose={() => setShowAnnouncementModal(false)}
+        onClose={() => { if (!isPublishing) { setShowAnnouncementModal(false); announcementRequest.current = null; } }}
         title="お知らせを配信"
         size="md"
       >
@@ -948,10 +814,10 @@ export function AdminDashboard() {
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
-            <Button variant="ghost" onClick={() => setShowAnnouncementModal(false)}>
+            <Button variant="ghost" disabled={isPublishing} onClick={() => { setShowAnnouncementModal(false); announcementRequest.current = null; }}>
               キャンセル
             </Button>
-            <Button onClick={handlePublishAnnouncement} className="shadow-glow">
+            <Button onClick={handlePublishAnnouncement} isLoading={isPublishing} className="shadow-glow">
               配信
             </Button>
           </div>

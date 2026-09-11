@@ -743,37 +743,19 @@ const applyMaskToCanvas = async (canvas: HTMLCanvasElement, maskUrl: string) => 
 
 export type PrintCompositionMode = 'exact' | 'fabric';
 
-export async function renderPrintRequestComposition(
-  snapshot: PrintRequestSnapshot,
-  mode: PrintCompositionMode = 'exact',
-) {
+/** The same ordered, transformed and clipped artwork raster used by the
+ * exact/fabric preview and the Cloudflare source-frame reference. */
+export async function renderPrintRequestArtworkCanvas(snapshot: PrintRequestSnapshot) {
   if (
     (snapshot.surfaceIdentity?.status === 'manual-ready' || snapshot.surfaceIdentity?.status === 'semantic-ready')
     && !snapshot.printableSurface
   ) {
     throw new PrintableSurfaceError('PRINTABLE_SURFACE_MISSING');
   }
-  const canvas = document.createElement('canvas');
-  canvas.width = snapshot.stageSize.width;
-  canvas.height = snapshot.stageSize.height;
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) throw new Error('Canvasを初期化できませんでした');
-  context.clearRect(0, 0, canvas.width, canvas.height);
   const geometryScale = getIntegerStageScale(snapshot.stageSize, PRINT_BASE_STAGE_SIZE);
-
-  const garmentImage = await loadImageElement(snapshot.garment.sourceUrl);
-  drawContainedImage(
-    context,
-    garmentImage,
-    snapshot.garment.containBounds,
-    snapshot.garment.sourceSize,
-    1,
-    geometryScale,
-  );
-
   const clippedDesignCanvas = document.createElement('canvas');
-  clippedDesignCanvas.width = canvas.width;
-  clippedDesignCanvas.height = canvas.height;
+  clippedDesignCanvas.width = snapshot.stageSize.width;
+  clippedDesignCanvas.height = snapshot.stageSize.height;
   const clippedDesignContext = clippedDesignCanvas.getContext('2d', { willReadFrequently: true });
   if (!clippedDesignContext) throw new Error('Canvasを初期化できませんでした');
   for (const design of snapshot.designs) {
@@ -803,6 +785,24 @@ export async function renderPrintRequestComposition(
       ? snapshot.garment.mask.url
       : snapshot.printableSurface?.stageMask.url ?? snapshot.garment.mask.url,
   );
+  return clippedDesignCanvas;
+}
+
+export async function renderPrintRequestComposition(
+  snapshot: PrintRequestSnapshot,
+  mode: PrintCompositionMode = 'exact',
+) {
+  const clippedDesignCanvas = await renderPrintRequestArtworkCanvas(snapshot);
+  const clippedDesignContext = clippedDesignCanvas.getContext('2d', { willReadFrequently: true });
+  if (!clippedDesignContext) throw new Error('Canvasを初期化できませんでした');
+  const canvas = document.createElement('canvas');
+  canvas.width = snapshot.stageSize.width;
+  canvas.height = snapshot.stageSize.height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Canvasを初期化できませんでした');
+  const geometryScale = getIntegerStageScale(snapshot.stageSize, PRINT_BASE_STAGE_SIZE);
+  const garmentImage = await loadImageElement(snapshot.garment.sourceUrl);
+  drawContainedImage(context, garmentImage, snapshot.garment.containBounds, snapshot.garment.sourceSize, 1, geometryScale);
   if (mode === 'fabric') {
     const designData = clippedDesignContext.getImageData(0, 0, clippedDesignCanvas.width, clippedDesignCanvas.height);
     const garmentData = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -1680,7 +1680,7 @@ let clothPredictionInFlight: Promise<HTMLCanvasElement[]> | null = null;
 const rembgModelBaseUrl = String(import.meta.env.VITE_REMBG_MODEL_BASE_URL || '/models').replace(/\/$/, '');
 const rembgSiluetaModelUrl = String(
   import.meta.env.VITE_REMBG_SILUETA_MODEL_URL
-  || '/models/silueta.onnx',
+  || '/assets/silueta.onnx',
 ).trim();
 const rembgIsnetGeneralUseModelUrl = String(
   import.meta.env.VITE_REMBG_ISNET_GENERAL_USE_MODEL_URL

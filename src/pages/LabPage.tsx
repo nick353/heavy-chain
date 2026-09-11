@@ -18,6 +18,12 @@ import {
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
+import {
+  getLightchainUnifiedFeatureWorkflowContract,
+  UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION,
+} from '../features/lightchain/unifiedFeatureWorkflowContract';
+
+const labWorkflowContract = getLightchainUnifiedFeatureWorkflowContract('lab');
 
 const choices = ['プロンプト実験', '品質評価', '採用候補'];
 const fieldClass = 'mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white outline-none transition placeholder:text-neutral-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/20';
@@ -429,7 +435,19 @@ export function LabPage() {
   };
 
   return (
-    <div className="space-y-6" data-flow-state={labFlowState} data-flow-state-label={unifiedWorkspaceFlowLabels[labFlowState]}>
+    <div
+      className="space-y-6"
+      data-flow-state={labFlowState}
+      data-flow-state-label={unifiedWorkspaceFlowLabels[labFlowState]}
+      data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
+      data-workflow-feature="lab"
+      data-workflow-input-roles={labWorkflowContract?.inputRoles.join(',') ?? ''}
+      data-workflow-result-destinations={labWorkflowContract?.resultDestinations.join(',') ?? ''}
+      data-workflow-lifecycle={labWorkflowContract?.lifecycle.join(',') ?? ''}
+      data-workflow-source-input-mode={labWorkflowContract?.sourceInputMode ?? ''}
+      data-workflow-retry-policy={labWorkflowContract?.retry.retainsLastCompletedResult && labWorkflowContract.retry.preservesInputLineage && labWorkflowContract.retry.blocksDuplicateSubmit ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit' : ''}
+      data-workflow-rights-gate={labWorkflowContract?.rightsGate ?? ''}
+    >
       <section className="glass-panel rounded-2xl p-5 sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>

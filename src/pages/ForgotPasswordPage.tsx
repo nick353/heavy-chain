@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { Layers, ArrowLeft, Mail, Check } from 'lucide-react';
 import { Button, Input } from '../components/ui';
 import { useAuthStore } from '../stores/authStore';
-import { supabase } from '../lib/supabase';
+import { auth } from '../lib/auth';
+import { getAuthErrorMessage } from '../lib/authErrorMessage';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
@@ -34,7 +35,7 @@ export function ForgotPasswordPage() {
     
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
@@ -43,7 +44,7 @@ export function ForgotPasswordPage() {
       setIsSent(true);
       toast.success('リセットメールを送信しました');
     } catch (error: any) {
-      toast.error(error.message || 'メールの送信に失敗しました');
+      toast.error(getAuthErrorMessage(error, 'メールの送信に失敗しました'));
     } finally {
       setIsLoading(false);
     }

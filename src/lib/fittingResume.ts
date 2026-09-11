@@ -116,6 +116,15 @@ const readMaterialReference = (
   };
 };
 
+/**
+ * Read the durable material identity embedded in a remote fitting result.
+ * Signed/provider URLs are intentionally ignored; the canonical Gallery path
+ * is re-signed by the page before it is put back into the workbench.
+ */
+export const readFittingResumeMaterialReference = (
+  value: unknown,
+): MaterialReferenceState | null => readMaterialReference(value, { allowSourceOnly: true });
+
 const resumeArtifactMatchesJob = (artifact: WorkspaceArtifact, jobId: string) => (
   artifact.featureType === 'model-matrix'
   && (
@@ -141,11 +150,15 @@ export const readFittingResumeMaterial = (
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 
   for (const artifact of candidates) {
-    const materialReference = readMaterialReference(artifact.metadata.materialReference);
+    const materialReference = readMaterialReference(artifact.metadata.materialReference, {
+      allowSourceOnly: true,
+    });
     if (materialReference) return { artifactId: artifact.id, materialReference };
     const references = artifact.metadata.materialReferences;
     if (Array.isArray(references)) {
-      const first = references.map((value) => readMaterialReference(value)).find((item): item is MaterialReferenceState => Boolean(item));
+      const first = references
+        .map((value) => readMaterialReference(value, { allowSourceOnly: true }))
+        .find((item): item is MaterialReferenceState => Boolean(item));
       if (first) return { artifactId: artifact.id, materialReference: first };
     }
   }
