@@ -1408,8 +1408,8 @@ export function LightchainWorkbenchPage() {
   const [printDesignPrompt, setPrintDesignPrompt] = useState('');
   const [printDesignStyle, setPrintDesignStyle] = useState('ファッション');
   const [marketingDetailTab, setMarketingDetailTab] = useState<'assistant' | 'layers'>('assistant');
-  const [marketingProjectName, setMarketingProjectName] = useState('Untitled');
-  const [marketingProjectNameDraft, setMarketingProjectNameDraft] = useState('Untitled');
+  const [marketingProjectName, setMarketingProjectName] = useState('マーケティングキャンバス');
+  const [marketingProjectNameDraft, setMarketingProjectNameDraft] = useState('マーケティングキャンバス');
   const [marketingProjectNameEditing, setMarketingProjectNameEditing] = useState(false);
   const [marketingCanvasTool, setMarketingCanvasTool] = useState('選択');
   const [marketingCanvasZoom, setMarketingCanvasZoom] = useState(20);
@@ -2164,8 +2164,8 @@ export function LightchainWorkbenchPage() {
     setPrintDesignStyle('ファッション');
     setMarketingDetailTab('assistant');
     setMarketingDetailPrompt('');
-    setMarketingProjectName('Untitled');
-    setMarketingProjectNameDraft('Untitled');
+    setMarketingProjectName('マーケティングキャンバス');
+    setMarketingProjectNameDraft('マーケティングキャンバス');
     setMarketingProjectNameEditing(false);
     setMarketingCanvasTool('選択');
     setMarketingCanvasZoom(20);

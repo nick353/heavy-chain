@@ -3617,3 +3617,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `npm run test:printing-foundation`を実行し、印刷基盤・素材選択・マスク・配置・履歴・Gallery境界を含む244/244 PASS。
 - 外部AI provider送信、アップロード、課金、Light本番操作は行っていないため、provider receipt／source sync／reconciliation／pixel-level parityの証明には使用しない。
+
+## 2026-09-14 Heavyレイアウト・UX監査
+
+- `npm run verify:unified-desktop-layout`を現行checkoutで実行し、248/248 route・viewport cell PASS、failed 0、cleanup leftovers 0。
+- `npm run verify:internal-ux`は`Untitled`初期表示を検出したため、マーケティングキャンバスの既定名を日本語化して修正し、再実行でfailed 0のPASSになった。
+- `verify:lightchain-clone-layout`はauth-stateファイルを要求する旧検証器だったため、`auth-state.json`を作成・使用せず実行不能として分離した。
+- これらはHeavyのローカルUI／ルート監査であり、Light本番とのpixel-level比較やprovider receiptを証明しない。
