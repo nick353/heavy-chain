@@ -3707,3 +3707,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy公開トップをCompanionのtask-owned sessionでfresh navigateし、最終URL `/lightchain`、タイトル `Lightchain AI`、認証済みavatar、4カテゴリtab、事例共有6タブ、主要ランチャー6件をnative accessibility＋screenshotで確認した。
 - ブラウザ操作は`local_ui`のnavigateのみで、外部効果・provider送信はなし。session/tab/leaseはcleanup receiptで閉鎖済み（foreign_tabs_mutated false、external_action_executed false）。
 - 公開Companion readbackはPASS。ただしLight本番との直接pixel比較、provider receipt、source sync、reconciliation、logout→login回帰は未完了。
+
+## 2026-09-14 Heavyモデル・部分編集回帰
+
+- Model matrix verificationは3/3 PASS。semantic／legacy payloadの正規化と不正payloadの拒否を確認した。
+- Canvas partial editは15/15 PASS。可逆PNG mask、protected-edit経路、SVG rasterize、4候補batch、部分成功の配置、private readback、親Canvas lineageを確認した。
+- Image API input normalizationは1/1 PASS。SVG/XML入力のrasterize fallbackを確認した。
+- 外部providerの新規送信やLight本番操作は行っていないため、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
