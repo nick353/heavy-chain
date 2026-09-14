@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { ChevronRight, Download, FolderOpen, Grid2X2, Image as ImageIcon, Plus, Search, Trash2, Upload, X } from 'lucide-react';
+import { ChevronRight, Download, FolderOpen, Grid2X2, Image as ImageIcon, Plus, Trash2, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
@@ -108,7 +108,6 @@ export function LightchainLibraryPage() {
   const navigate = useNavigate();
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [activeGroup, setActiveGroup] = useState<string>('マイライブラリー');
-  const [query, setQuery] = useState('');
   const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
   const [remoteAssets, setRemoteAssets] = useState<RemoteLibraryAsset[]>([]);
   const [customGroups, setCustomGroups] = useState<string[]>([]);
@@ -237,12 +236,7 @@ export function LightchainLibraryPage() {
     card.kind === 'local' ? card.artifact.id === selectedAssetId : card.asset.id === selectedAssetId
   )) ?? null;
 
-  const visibleArtifacts = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return libraryCards.filter((card) => (
-      !normalizedQuery || `${cardTitle(card)} ${cardFeatureType(card)} ${cardPrompt(card) || ''}`.toLowerCase().includes(normalizedQuery)
-    ));
-  }, [libraryCards, query]);
+  const visibleArtifacts = libraryCards;
 
   const handleImportRemote = async (
     asset: RemoteLibraryAsset,
@@ -508,13 +502,6 @@ export function LightchainLibraryPage() {
                 <Plus className="mr-2 inline h-4 w-4" />新規グループ作成
               </button>
             </div>
-          </div>
-
-          <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-            <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-400">
-              <Search className="h-4 w-4" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-40 bg-transparent outline-none" placeholder="検索" aria-label="ライブラリー検索" />
-            </label>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
