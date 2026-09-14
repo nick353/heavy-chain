@@ -6478,7 +6478,7 @@ function LightchainMaterialWorkbenchSession() {
                   </div>
                 </section>
 
-                <div className="order-4 relative h-[73px]">
+                <div data-testid="lightchain-material-fabric-controls" className="order-4 relative h-[73px]">
                   <select
                     aria-label="画像比率"
                     value={fabricImageRatio}

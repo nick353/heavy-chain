@@ -427,4 +427,26 @@
     bottom: 40px;
     margin: 0;
   }
+
+  [data-testid="lightchain-fabric-parity-view"] > div > section:first-child {
+    position: relative;
+  }
+
+  [data-testid="lightchain-material-fabric-controls"] {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    z-index: 20;
+    height: 56px;
+    background: #171d20;
+  }
+
+  [data-testid="lightchain-material-fabric-controls"] select {
+    top: 14px;
+  }
+
+  [data-testid="lightchain-material-fabric-controls"] button {
+    top: 16px;
+  }
 }
