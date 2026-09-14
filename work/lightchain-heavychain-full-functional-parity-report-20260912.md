@@ -4371,3 +4371,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - commit `9beed7c`のZeabur deployment `6aa859a89f9bd1aa61482b67`が`RUNNING`であることを確認後、Heavyを15秒待って再読込した。fresh AX／screenshotでサイドバー`312px`、カード7件、6列、Lightと同じ横方向のライブラリー配置を確認した。
 - Heavyで`一括操作`を実クリックし、`全選択`、`キャンバスをコピー`、`ダウンロード`、`削除`、`一括操作を閉じる`をfresh AXで確認して通常表示へ戻した。削除・ダウンロード・外部送信は実行していない。
 - `npm run typecheck`、`npm run lint`、`npm run test:lightchain-parity-routes`（19/19）、`npm run build`（2550 modules）をPASS。画像・ユーザー別データの同一性、全画面pixel-level一致、生成成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+### 最新commit反映確認
+
+- サイドバー操作の追加commit `c4cf5c4`をpushし、Zeabur deployment `6aa85b839f9bd1aa61482b99`が`RUNNING`であることを確認した。
+- Heavy `/asset-center`を同じCompanionタブでreload後15秒待機し、fresh AXで`アップロード`と`新規グループ作成`のaria-label付き操作を各1件、サイドバー幅312px、カード7件、6列grid（x=328、right=1882）を確認した。
+- 現在のライブラリーdesktop layoutはLightの同一viewport基準へ反映済み。Light／Heavyの保存データ件数・画像内容はユーザー／環境依存の`DATA_SCOPE_DIFF`であり、同一成果物のprovider receipt／source sync／reconciliation／cleanup、全画面完全pixel一致、logout→login回帰は未完了。
