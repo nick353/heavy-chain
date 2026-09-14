@@ -3770,6 +3770,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `auth-state.json`／`storageState.json`は使用していない。local proofは本番認証stateの代替ではなく、Heavy画面・導線回帰の証拠に限定する。
 - Light本番操作、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy parity test entrypoints整備
+
+- 既存の`verify-lightchain-ui-control-boundaries.test.ts`と`verify-lightchain-permission-parity.test.ts`を正式なnpm scriptsとして登録した。
+- 登録後に`npm run test:lightchain-ui-control-boundaries`（11/11）、`npm run test:lightchain-permission-parity`（4/4）、`npm run typecheck`、`npm run build`を再実行し、すべてPASS。
+- 変更は検証入口のみで配布runtimeの挙動変更はないため、Heavy本番の再デプロイは不要と判断した。Light本番操作・外部provider送信は行っていない。
+
 ## 2026-09-14 Heavy公開Asset Center Companion readback
 
 - 新規task-owned Companion sessionで`https://heavy-chain.zeabur.app/asset-center`をnavigateし、URL／title、semantic snapshot、screenshotを取得した。transactionは`verified`、`external_action_executed=false`、cleanup／lease release完了。
