@@ -4377,3 +4377,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - サイドバー操作の追加commit `c4cf5c4`をpushし、Zeabur deployment `6aa85b839f9bd1aa61482b99`が`RUNNING`であることを確認した。
 - Heavy `/asset-center`を同じCompanionタブでreload後15秒待機し、fresh AXで`アップロード`と`新規グループ作成`のaria-label付き操作を各1件、サイドバー幅312px、カード7件、6列grid（x=328、right=1882）を確認した。
 - 現在のライブラリーdesktop layoutはLightの同一viewport基準へ反映済み。Light／Heavyの保存データ件数・画像内容はユーザー／環境依存の`DATA_SCOPE_DIFF`であり、同一成果物のprovider receipt／source sync／reconciliation／cleanup、全画面完全pixel一致、logout→login回帰は未完了。
+
+### 最新版ライブラリー操作回帰
+
+- `c4cf5c4`の本番反映後、Heavyのfresh AXでサイドバーに`アップロード`と`新規グループ作成`が各1件存在することを確認した。
+- `一括操作`を開いて無選択時のdisabled状態（`キャンバスをコピー`、`ダウンロード`、`削除`）、`全選択`、`一括操作を閉じる`を確認し、閉じて通常状態へ戻した。
+- 先頭カードの`プレビュー`を実クリックし、選択済み素材、名前編集、コピー、Canvas／AIフィッティング／生地／プリントへのhandoff、31機能selectを確認後、`選択した素材を閉じる`で一覧へ戻した。外部送信、削除、download、生成は実行していない。
