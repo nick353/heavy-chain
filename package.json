@@ -56,6 +56,8 @@
     "test:lightchain-asset-anchored-preview": "node --experimental-strip-types --test scripts/verify-lightchain-asset-anchored-preview.test.ts",
   "test:lightchain-provider-adapter": "node --experimental-strip-types --test scripts/verify-lightchain-provider-adapter.test.ts",
   "test:lightchain-download": "node --experimental-strip-types --test scripts/verify-image-download.test.ts",
+  "test:lightchain-ui-control-boundaries": "node --experimental-strip-types --test scripts/verify-lightchain-ui-control-boundaries.test.ts",
+  "test:lightchain-permission-parity": "node --experimental-strip-types --test scripts/verify-lightchain-permission-parity.test.ts",
   "test:lightchain-parity-routes": "node --test scripts/verify-heavy-catalog-route-integrity.test.mjs scripts/verify-lightchain-entry-routing.test.mjs",
     "test:point-guided-selection": "node --experimental-strip-types --test scripts/verify-point-guided-selection.test.ts scripts/verify-point-prompt-segmentation.test.ts",
     "test:print-shortcuts": "node --experimental-strip-types --test scripts/verify-print-design-handoff.test.ts scripts/verify-print-shortcuts-source.test.ts",
