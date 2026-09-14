@@ -4303,3 +4303,16 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 衣服画像の`0 / 4`、自動変換checkbox、`Gallery素材を選択`、モデル条件のentry area、`Canvasに注文票を保存` disabled、`スマート 1K`、`AI生成` disabled、生成履歴導線を確認した。
 - `Gallery素材を選択`を開き、`履歴アップロード`、`生成履歴`、`マイライブラリー`、`チームライブラリー`、`プラットフォームアセット`の5カテゴリと、権利確認済みサンプル素材、`使用`を確認した。モーダルは閉じてシングルタスクへ復帰した。
 - 素材使用、upload、生成、外部AI送信、権利確認操作は行っていない。Light同一画面とのpixel-level比較、全内部操作、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Heavyグラフィック系主要導線readback
+
+- Heavyグラフィックカテゴリの`AIグラフィックデザイン`を実画面へ遷移し、`/printing`で画像upload欄（jpg／jpeg／png／webp、最大20M、2枚まで）、生成履歴、生成結果領域を確認した。uploadは行っていない。
+- `プリントデザイン`カードから`/editor/patternDesign`へ遷移し、`PRINT + 新規ファイル`、参考事例2件を確認した。新規ファイルを選び、ガイド表示／ガイドなしの選択画面を確認した。
+- ガイドなしを選択し、`/lightchain/print-design-detail`の入力画面で用途checkbox（ファッション、ホーム、総柄、ワンポイント）、指示entry area、`0 / 200`、`全削除` disabled、`つくる`、生成履歴領域を確認した。戻る操作でガイド選択画面へ復帰した。
+- 生成、画像upload、外部AI送信、権利確認操作は行っていない。Light同一画面とのpixel-level比較、全カード内部操作、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Heavyベクター変換・デザインアレンジreadback
+
+- Heavyグラフィックカテゴリからベクター変換の通常版／プロフェッショナル版タブを実クリックし、画像upload案内、レイヤー分け（積み重ね／分割）、使用回数、AI生成、生成履歴の状態を確認した。プロ版では終了予定の案内とデザイン制作ワークスペースへの導線も表示された。
+- `デザインアレンジ`を実画面へ遷移し、既存プロジェクト一覧、参考事例4件、`PROJECT + 新規ファイル`を確認した。新規ファイルから詳細へ進み、画像追加（jpg／jpeg／png／webp、最大20M）、一覧へ戻る、画像未選択時の作業台ボタンdisabledを確認した。
+- upload、生成、外部AI送信、権利確認操作は行っていない。Light同一画面とのpixel-level比較、全カード内部操作、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
