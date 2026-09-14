@@ -2293,3 +2293,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [x] context／browser／previewのcleanup完了を確認
 - [x] 証跡を`output/playwright/lightchain-all-feature-workflows-20260914T065455Z-dlTRMH/SUMMARY.json`へ記録
 - [ ] 本番Lightとのpixel-level一致、provider receipt、source sync／reconciliation、logout→login回帰は引き続き未完了
+
+### 2026-09-15 Light／Heavy `/printing` 動画媒体parity再確認
+
+- [x] Light／Heavy本番`/printing`を同一Companionセッションで比較し、15秒待機後のfresh DOMを取得
+- [x] Heavyの動画ラッパーをLight基準の`max-w-[1056px]`へ修正し、動画をmuted autoplay controlsへ統一
+- [x] typecheck、lint、route tests 19/19、build、push、Zeabur deployment `6aa862a79f9bd1aa61482c62`の`RUNNING`を確認
+- [x] deploy後Heavyを15秒待機して、動画`1056x340`、`autoplay=true`、`controls=true`、`muted=true`をreadback
+- [ ] `/printing`の入力カード内部・注意表示・全画面pixel-level一致、実生成成果物のreceipt／source sync／reconciliation／cleanup、logout→login回帰
+
+判定: 動画媒体の主要差分はPASS。計画全体の完了条件は未達のためGoalは継続。
