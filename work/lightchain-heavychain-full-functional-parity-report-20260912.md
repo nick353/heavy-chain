@@ -4290,3 +4290,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Lightホームで事例共有の`検索`を開き、検索キーワード入力欄を表示した。未一致語を入力して検索し、`該当する結果が見つかりません`を確認した後、入力をclearした。
 - Heavy `/lightchain?category=graphics`でも同じ`検索`を開き、未一致語による空結果、`事例検索をクリア`、検索UIの開閉を実操作で確認した。clear後は通常の事例カード表示へ戻った。
 - 両環境で外部送信や生成は行っていない。検索結果カードの詳細・作成導線全件、完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Heavyウェアデザインラボ実画面・内部操作readback
+
+- Heavy企画カテゴリの`ウェアデザインラボ`を実クリックし、`/flow/orientedDesign`へ到達した。`新規ファイル`から`/flow/orientedDesign/detail?boardProjectCode=新規ファイル&boardProjectType=orientedDesignSystem`へ遷移した。
+- 詳細画面でメイン画像、参考画像、必須の指示テキスト、強化モードswitch、生成設定（自動）、解像度（4K／2K）、生成権限ボタン、Canvas操作（選択、手のひら、画像を追加、元に戻す、やり直す、25%表示）を確認した。生成設定・解像度メニューの開閉、手のひら／選択モード切替を実操作した。
+- 生成権限ボタンは`権限がありません`でdisabledだったため、権利確認・権限付与・生成・upload・外部AI送信は行っていない。Light同一画面とのpixel-level比較、全内部操作、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
