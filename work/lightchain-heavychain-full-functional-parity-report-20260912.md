@@ -4415,3 +4415,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `/printing`動画修正を含む現行HEADで`npm run typecheck`、`npm run lint`、`npm run test:lightchain-parity-routes`（19/19）、`npm run build`（2550 modules）を再実行し、すべてPASSした。
 - これはローカルの静的・回帰ゲートの証跡であり、本番の全画面pixel-level一致、実成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰を完了したことを意味しない。
+
+## 2026-09-15 Light／Heavy `/marketing/detail` 未生成状態parity修正・postdeploy readback
+
+- Light本番とHeavy本番を同一Companionセッション・同一viewportで15秒待機して比較した。Heavyだけに初回チュートリアル、Canvasツールバー、生成履歴パネル、レイヤー／アセット補助ボタンが表示され、プロジェクト名も`マーケティングキャンバス`だった。
+- `src/pages/LightchainWorkbenchPage.tsx`を修正し、Light基準の未生成状態ではチュートリアル、Canvasツールバー、生成履歴パネル、補助ナビゲーションを隠し、初期名を`Untitled`へ統一した。生成後に必要な保存・ダウンロード・Canvas操作の実装は残した。
+- `0dec8e9`のZeabur deployment `6aa86ccc9f9bd1aa61482d29`が`RUNNING`であることを確認後、Heavyを15秒待機してfresh DOMを取得した。`tutorial=false`、`toolbar=false`、`resultPanel=false`、`assetNav=false`、`layerNav=false`、名称`Untitled`を確認した。
+- typecheck、lint、route tests 19/19、buildは修正前後でPASS。生成、upload、外部AI送信、権利確認操作は行っていない。生成後状態の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。

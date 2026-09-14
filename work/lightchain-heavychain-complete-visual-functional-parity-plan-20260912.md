@@ -2303,3 +2303,13 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] `/printing`の入力カード内部・注意表示・全画面pixel-level一致、実生成成果物のreceipt／source sync／reconciliation／cleanup、logout→login回帰
 
 判定: 動画媒体の主要差分はPASS。計画全体の完了条件は未達のためGoalは継続。
+
+### 2026-09-15 Light／Heavy `/marketing/detail` 未生成状態parity修正
+
+- [x] 同一CompanionセッションでLight／Heavyの詳細画面を15秒待機して比較し、Heavyだけに出る初回チュートリアル、Canvasツールバー、生成履歴パネル、補助ナビゲーションを特定
+- [x] Heavyの初期プロジェクト名を`Untitled`へ統一し、未生成状態ではLightにない補助UIを表示しないよう修正
+- [x] typecheck、lint、route tests 19/19、build、push、Zeabur deployment `6aa86ccc9f9bd1aa61482d29`の`RUNNING`を確認
+- [x] deploy後Heavyを15秒待機し、`tutorial=false`、`toolbar=false`、`resultPanel=false`、`assetNav=false`、`layerNav=false`、名称`Untitled`をfresh DOMで確認
+- [ ] Light／Heavyの生成後状態・全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
+
+判定: 未生成状態の主要表示差分はPASS。生成後および計画全体の完了条件は未達のためGoalは継続。
