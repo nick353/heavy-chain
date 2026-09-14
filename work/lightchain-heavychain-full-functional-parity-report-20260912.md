@@ -4330,6 +4330,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `SNS`シーンをクリックし、promptが`SNS向けに商品画像をアップロードして、デザインのリクエストを教えてください`へ更新されることを確認した。画像upload、AI生成、外部AI送信、権利確認操作は行っていない。
 - Light同一画面とのpixel-level比較、チュートリアル全ステップ、生成結果・保存・再表示、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
 
+## 2026-09-15 Light／Heavyホーム同一viewport visual readback
+
+- Light本番`https://jp.linkaigc.com/`とHeavy本番`https://heavy-chain.zeabur.app/lightchain`を同一Companion profileで同一viewportに読み込み、両方のスクリーンショットとfresh AX treeを取得した。
+- 共通して、ヘッダー、Lightchainロゴ、言語、ヘルプ、アバター、`LIGHTCHAIN AI`見出し、prompt欄、主要4カテゴリ、事例共有領域が表示され、6つの主要制作カードが同じ2段構成で配置されていることを確認した。
+- 差分として、Heavyの主要カテゴリselected labelは`おすすめ Hot`、Lightは`おすすめ`＋Hotバッジで表現され、事例カードの画像・文言・データ件数も異なった。これは完全pixel-level／データ同一性の未達として記録する。Heavy側の初回AXは認証シェルだったが、同一readback中に認証済みホームへhydrationした。
+- この比較では生成、upload、外部送信、権利確認操作は行っていない。差分修正、全画面比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
 ## 2026-09-15 Heavyモデルライブラリー／候補切替readback
 
 - Heavy `/models`を新規Companionタブで開き、認証確認シェルから認証済みの`モデルカスタマイズ`画面へ復帰するまで待機した。顔変更、モデル変更、体型、服のサイズ、ポーズ、背景、アングルの7タブ、候補3件、Gallery素材選択、保存、モデルマトリクス生成導線を確認した。
@@ -4348,3 +4355,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Heavy `/editor/changeColor`を実画面で開き、戻る、対話編集、計画、作業モード、詳細操作、デザイン作成、Gallery素材選択、素材upload、色変更の対象画像、色と柄の詳細設定、生成モデル、生成導線を確認した。
 - 画像未選択状態では`入力不足`、`まだ送信できません`、`生成する` disabledが表示され、権利・許可確認checkboxも未選択であることを確認した。生成、upload、外部AI送信、権利確認操作は行っていない。
 - Light同一画面とのpixel-level比較、色変更の入力後フロー、provider receipt／source sync／reconciliation／cleanup、logout→login回帰は未完了。
+
+## 2026-09-15 Light／HeavyホームHotタブ差分修正・postdeploy readback
+
+- 同一viewportのfresh DOM比較で、Lightのカテゴリタブはselected `104x32`、タブ間隔8px、system font `14px / 21px`、Heavyは修正前に`106x32`、間隔0px、境界線込み、`14px / 20px`だったことを特定した。Hotバッジは両方とも`21.71875x12`で、selected時に表示されていた。
+- `src/components/GenerateLightchainEntry.tsx`のLight Chainカテゴリtablistへ`gap-2`を追加し、tabの境界線を`border-0`、行高を`21px`、Lightと同じsystem font stackへ修正した。commit `5b1bd2f`をpushし、Zeabur deployment `6aa856df9f9bd1aa61482b0f`（commit `5b1bd2f`由来のイメージ）を`RUNNING`まで確認した。
+- postdeployにHeavyを15秒待って再読込し、fresh AX tree・同一viewport screenshot・DOM計測を取得した。Heavyはselected `104x32`、非selected`174x32`／`158.890625x32`／`174x32`、tab間隔8px、font `14px / 21px`、Hotバッジ表示`21.71875x12`となり、Lightの計測値と一致した。主要4カテゴリ、ログイン済みホーム、6カードの2段配置も表示確認した。
+- `npm run typecheck`、`npm run lint`、`npm run test:lightchain-parity-routes`（19/19）、`npm run build`（2550 modules）をPASS。生成、upload、外部AI送信、権利確認操作、provider receipt／source sync／reconciliation／cleanupはこの検証では行っていない。
+- 画面全体の完全pixel-level一致、ユーザー固有データ／画像の同一性、全カード内部操作、全生成成果物の保存・再表示・再利用、logout→本人login回帰、provider receipt／source sync／reconciliation／cleanupは未完了。
