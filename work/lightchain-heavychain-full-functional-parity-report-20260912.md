@@ -3571,3 +3571,8 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run test:auth-lock`＝4/4、`npm run test:auth-bootstrap-hydration`＝7/7、`npm run test:auth-session-recovery`＝3/3、`npm run test:lightchain-entry-routing`＝17/17 PASS。
 - 認証ロック、profile／brandのbootstrap完了待ち、認証失敗時の1回限定refresh、Light互換入口のルーティング契約を現行checkoutで再確認した。
 - これは外部provider receipt、成果物source sync、Light本番とのpixel-level比較、ユーザー操作による再ログインの証跡ではないため、それらの判定は未完了のまま維持する。
+
+## 2026-09-14 Heavy現行main desktop/mobile全機能再検証
+
+- `npm run verify:lightchain-all-features -- --mode=local`を現行mainで再実行し、Heavy実装の31機能をdesktop 31/31、mobile 31/31で確認した。`failed: []`、cleanup（context／browser／preview）も完了した。
+- これはローカルの独立認証・Cloudflare mock境界によるUI／導線マトリクス証拠であり、Light本番とのpixel-level比較、本番provider receipt、実成果物source sync／reconciliation、logout→login回帰を代替しない。
