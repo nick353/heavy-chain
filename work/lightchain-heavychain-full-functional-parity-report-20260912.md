@@ -3931,3 +3931,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run test:lightchain-unified-workflow-contract`は6/6 PASS。動画を除く全機能の共通workflow契約、優先入力role、決定的なlifecycle語彙、Workbench共有契約、動画定義の除外を確認した。
 - `npm run test:lightchain-provider-coverage`は22/22 PASS。非動画goalのprovider route、動画のfail-closed、feature別prompt、brief-only分岐、素材保持、権利確認後の継続、重複submit防止、Gallery／History／Jobs接続、save／continuation markerを確認した。
 - いずれもHeavyのlocal／source contract証拠であり、Light本番の再操作、画面・成果物の同一性、実provider receipt、source sync／reconciliation、logout→login回帰の代替にはしない。Lightはユーザー指示どおり停止中。
+
+## 2026-09-14 Light停止中のHeavyパリティ台帳／provider adapter再検証
+
+- `npm run test:lightchain-parity-behavior-ledger`は6/6 PASS。31件の非動画row、8層のparity、生成artifact、fresh source readback、local evidenceと未解決production layerの分離を確認した。
+- `npm run test:lightchain-provider-adapter`は17/17 PASS。material／print／modelの明示route、動画のfail-closed、未登録feature拒否、source-preserving入力、Cloudflare provenance、durable result actionを確認した。
+- Heavy側の静的・local契約はPASSだが、Light本番の直接比較、実生成、provider receipt、source sync／reconciliation、全画面pixel一致、logout→login回帰は未完了。Lightはユーザー指示どおり操作していない。
