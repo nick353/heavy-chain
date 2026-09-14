@@ -4012,3 +4012,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - `npm run verify:lightchain-all-features`は`ok:true`、`failed:[]`、featureCount `31`。desktop 31/31、mobile 31/31を完了した。
 - verifier cleanupで`contextClosed:true`、`browserClosed:true`、`previewStopped:true`を確認した。summaryは`output/playwright/lightchain-all-feature-workflows-20260914T125641Z-qEdEly/SUMMARY.json`に保存された。
 - これはHeavyのlocal smoke／cleanup証拠であり、Light本番との画面・成果物同一性、実provider receipt、source sync／reconciliation、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 旧視覚検証器のauth-state依存確認
+
+- `npm run verify:lightchain-clone-layout`は、開始時に`output/playwright/prod-auth-refresh-20260625/auth-state.json`が存在しないため`auth_state_missing`で終了した。
+- `scripts/verify-lightchain-clone-layout.mjs`はPlaywright `storageState`を前提とする旧検証器であり、ログイン済みCompanionセッションを受け取る実装ではない。方針に反してauth-stateを作成・使用せず、終了結果を未実行として扱う。
+- この未実行はHeavy製品の失敗判定ではないが、視覚検証器が現在のauth-state不使用方針と不整合であることを確認した。Light停止中のため、Companionベースの視覚比較へ置換する作業はLight再開後に行う。
