@@ -4006,3 +4006,9 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - `npm run lint`は終了コード0でPASS。Light停止中の現行Heavy worktreeについて静的lintが完了した。
 - lint成功はコード品質の証拠であり、Light本番との実操作、全画面pixel一致、実provider receipt、source sync／reconciliation、logout→login回帰の証拠ではない。Lightは停止中。
+
+## 2026-09-14 Light停止中のHeavy全機能desktop／mobile fresh smoke
+
+- `npm run verify:lightchain-all-features`は`ok:true`、`failed:[]`、featureCount `31`。desktop 31/31、mobile 31/31を完了した。
+- verifier cleanupで`contextClosed:true`、`browserClosed:true`、`previewStopped:true`を確認した。summaryは`output/playwright/lightchain-all-feature-workflows-20260914T125641Z-qEdEly/SUMMARY.json`に保存された。
+- これはHeavyのlocal smoke／cleanup証拠であり、Light本番との画面・成果物同一性、実provider receipt、source sync／reconciliation、logout→login回帰の証拠ではない。Lightは停止中。
