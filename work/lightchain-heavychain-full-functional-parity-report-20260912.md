@@ -4389,3 +4389,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Light基準のカード媒体領域を再測定し、Heavyの画像領域を`320px`、`object-contain`、チェッカー背景へ変更した。これにより人物・Tシャツ等の画像がcover cropされず、Lightと同じ縦方向のカード構造になった。
 - `7283e5a`のZeabur deploymentが`RUNNING`であることを確認後、Heavy `/asset-center`をreloadして15秒待機した。fresh DOMでgrid`x=328`、幅`1554`、先頭画像`320px`、`object-fit=contain`、カード7件、6列を確認した。
 - 画像・ユーザー別保存データそのものは`DATA_SCOPE_DIFF`として残る。全画面の完全pixel-level比較、実生成成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰は引き続き未完了。
+
+## 2026-09-15 ライブラリーmobile幅readback
+
+- Companionの一時的なCDP viewport emulation（390x844）でLight／Heavyの`/asset-center`を同一幅に表示した。auth-stateやcookieの取得・保存は行っていない。
+- Heavyはサイドバーを折りたたみ、アップロード／新規グループ作成／一括操作／カード操作が画面内に収まり、`documentElement.scrollWidth=390`で横overflowなし、カードは1列で表示された。
+- Light正本は同じ幅でも固定312pxサイドバーとデスクトップ用コンテンツが残り、右側が画面外へクリップされる状態だった（同じくscrollWidthは390）。HeavyはLightのこの欠点をコピーせず、操作可能性を優先した差分として記録する。
+- emulationを解除し、Heavyの通常viewportへ戻して認証済みライブラリーをfresh AXで確認した。mobile／desktopとも全画面完全pixel一致は未達で、provider receipt／source sync／reconciliation／cleanup、logout→login回帰も未完了。
