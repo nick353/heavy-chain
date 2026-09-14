@@ -3909,6 +3909,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Companionのtask-ownedセッションを`taskTerminal=true`で閉鎖し、cleanup receiptは`ok=true`、closed tab `[1980921429]`、leases released `1`、retained／missing／skipped／unknown_effectは空と確認した。
 - 判定: Light今回レーン＝`STOPPED_BY_USER`、cleanup＝`PASS`。Lightの残り比較・成果物フローは次回再開待ちとし、Heavy側のGoalは継続する。
 
+## 2026-09-14 Light停止中のHeavy公開read-only確認
+
+- Light Chainには触れず、Heavy正規Zeabur公開入口をread-onlyで確認した。`https://heavy-chain.zeabur.app/`、`/_health`、`/api/auth/ok`はいずれもHTTP 200だった。
+- これはHeavyの公開到達性・ヘルス確認であり、Lightとの画面比較、認証回帰、provider receipt、source sync／reconciliation、成果物フローの完了証拠には昇格させない。
+
 ## 2026-09-14 現行Heavy build再検証
 
 - `npm run typecheck`は終了コード0でPASS。
