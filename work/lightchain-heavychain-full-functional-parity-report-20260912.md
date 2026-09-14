@@ -3762,3 +3762,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 
 - 現行ソースで`npm run typecheck`と`npm run build`を再実行し、いずれもPASS。今回の差分は監査文書のみで、デプロイ済みHeavyコードからの追加変更はない。
 - Light本番が利用中のため、Light側の実操作を必要とする比較・同一run成果物照合・logout→loginは引き続き未完了。
+
+## 2026-09-14 Heavy公開Companion fresh readback
+
+- 新規task-owned Companion sessionでHeavy正規URLをfresh navigateし、URL`https://heavy-chain.zeabur.app/`、title`Heavy Chain | AI制作ワークスペース`、same-run semantic snapshot＋screenshotを確認した。
+- transactionは`verified`、`browser_readback=verified`、`external_action_executed=false`、provider completion／source syncは未実施、tab close／lease releaseは完了した。
+- 初回のaction schema誤入力はdispatch前のvalidation rejectionであり、外部効果はない。正しい`tabs.navigate`を新規idempotency keyで一度だけ実行した。
+- Light本番操作、外部provider送信、同一成果物のprovider receipt／source sync／reconciliation、pixel-level parity、logout→login回帰は未完了。
