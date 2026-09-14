@@ -604,7 +604,11 @@ export function GallerySelector({
                     aria-busy={!isImageLoaded && !hasImageLoadFailed}
                     aria-label={`${imageLabel}を選択`}
                     title={imageLabel}
-                    disabled={!isImageLoaded || hasImageLoadFailed}
+                    // The image may already be painted from the browser cache before
+                    // React observes its load event. Keep a valid gallery asset
+                    // selectable in that case; the handoff path performs its own
+                    // source validation and load before placing it on the canvas.
+                    disabled={hasImageLoadFailed}
                     className={`relative aspect-square rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 transition-all ${
                       isSelected
                         ? 'ring-2 ring-primary-500 ring-offset-2'

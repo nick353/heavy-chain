@@ -435,7 +435,7 @@ const lightchainLauncherDesignWorkspace: LightchainFeature = {
   id: 'design-workspace',
   title: 'デザインワークスペース',
   lightchainName: 'ProductionDesign',
-  description: 'スマート対話、高解像度画像生成、部分修正、AI試着、生地差し替え、ベクター変換を一つのワークスペースで作成します。',
+  description: 'スマート対話、高解像度画像生成、部分修正、AI試着、生地差し替え、ベクター変換などの機能を備えた、服装デザイン制作のためのオールインワンワークスペースです。デザインから制作までの全工程をスムーズに進められます',
   route: '/designProduction',
   category: 'recommended',
   status: 'production',
@@ -446,14 +446,12 @@ const lightchainLauncherDesignWorkspace: LightchainFeature = {
 
 const lightchainLauncherFeatureIdsByCategory: Record<LightchainCategoryId, readonly string[]> = {
   recommended: [
+    'design-agent',
     'design-workspace',
     'marketing-workspace',
-    'virtual-fitting',
-    'wear-design-lab',
-    'video-workstation',
-    'model-library',
     'fashion-studio',
-    'design-agent',
+    'video-workstation',
+    'virtual-fitting',
   ],
   planning: [
     'design-workspace',
@@ -470,6 +468,7 @@ const lightchainLauncherFeatureIdsByCategory: Record<LightchainCategoryId, reado
     'virtual-fitting',
     'model-library',
     'fashion-studio',
+    'video-workstation',
     'heavychain-lab',
     'remove-background',
   ],
@@ -483,6 +482,7 @@ const lightchainLauncherFeatureIdsByCategory: Record<LightchainCategoryId, reado
 };
 
 const lightchainLauncherTitleOverrides: Record<string, string> = {
+  'design-agent': '企画ワークスペース',
   'inspiration-design': 'インスピレーション',
   'heavychain-lab': 'Lightchain Lab',
   'pattern-vector-pro': 'パターンをベクター画像に変換（プロフェッショナル版）',
@@ -513,8 +513,7 @@ const lightchainLauncherDescriptionOverrides: Record<string, string> = {
 };
 
 const lightchainLauncherBadges: Record<string, 'Beta' | 'まもなく提供終了'> = {
-  'design-workspace': 'Beta',
-  'marketing-workspace': 'Beta',
+  'design-agent': 'Beta',
   'fabric-simulation': 'まもなく提供終了',
   'lineart-to-real': 'まもなく提供終了',
   'flat-vector': 'まもなく提供終了',

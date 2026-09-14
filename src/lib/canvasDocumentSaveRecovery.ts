@@ -24,8 +24,21 @@ const contentValid=(value:unknown):value is CanvasSaveContent=>{
   return !!v&&typeof v.title==='string'&&v.title.length<=160&&!!v.snapshot&&v.snapshot.version===1&&Array.isArray(v.snapshot.objects);
 };
 const validateContent=(content:CanvasSaveContent)=>validateCanvasDocumentSnapshot(content.snapshot);
+// Older Canvas snapshots may serialize empty relationship fields as `null`,
+// while the current serializer omits those optional fields. Treat the two
+// representations as the same durable content so a readback does not turn a
+// confirmed document into a false unsaved/conflict state.
+const comparableSnapshot=(snapshot:CanvasDocumentSnapshot)=>({
+  ...snapshot,
+  objects:snapshot.objects.map((object)=>{
+    const comparable={...object};
+    if(comparable.parentId==null)delete comparable.parentId;
+    if(comparable.derivedFrom==null)delete comparable.derivedFrom;
+    return comparable;
+  }),
+});
 export const sameCanvasSaveContent=(a:CanvasSaveContent,b:CanvasSaveContent)=>
-  a.title===b.title&&JSON.stringify(a.snapshot)===JSON.stringify(b.snapshot);
+  a.title===b.title&&JSON.stringify(comparableSnapshot(a.snapshot))===JSON.stringify(comparableSnapshot(b.snapshot));
 
 export function canvasSaveRecoveryKey(scope:CanvasSaveScope,documentId:string) {
   if(!scope.origin||!scope.userId||!scope.brandId||!UUID.test(documentId))throw new Error('canvas_save_scope_invalid');

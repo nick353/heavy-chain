@@ -2,7 +2,8 @@ import { withAuthSessionRecovery } from './auth';
 import { readOptionalWorkspaceValue } from './workspaceReadRecovery';
 import {
   listWorkspaceArtifacts,
-  listWorkspaceGeneratedImages,
+  listWorkspaceGeneratedImagesForActivity,
+  listWorkspaceArtifactsForActivity,
 } from './localWorkspaceArtifacts';
 import {
   getGeneratedImageSelectionKey,
@@ -551,6 +552,53 @@ const buildLocalWorkspaceJobs = (
   });
 };
 
+/**
+ * Older provider runs can have a durable generated_images row with its job_id
+ * while the corresponding generation_jobs row is unavailable to the viewer.
+ * Gallery already proves that output identity; reconstruct the completed job
+ * from that same remote row so History and Jobs do not silently report zero.
+ */
+const buildRemoteWorkspaceJobs = (
+  outputs: GeneratedImageListRow[],
+  existingJobIds: Set<string>,
+): GenerationJob[] => {
+  const grouped = new Map<string, GeneratedImageListRow[]>();
+  outputs.forEach((output) => {
+    const jobId = output.job_id;
+    if (!jobId || existingJobIds.has(jobId)) return;
+    const current = grouped.get(jobId) ?? [];
+    current.push(output);
+    grouped.set(jobId, current);
+  });
+
+  return [...grouped.entries()].map(([jobId, entries]) => {
+    const ordered = [...entries].sort((a, b) => (
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    ));
+    const first = ordered[0];
+    const latest = ordered[ordered.length - 1];
+    const metadataFields = latest.metadata && typeof latest.metadata === 'object' && !Array.isArray(latest.metadata)
+      ? latest.metadata
+      : {};
+    const inputParams = JSON.parse(JSON.stringify({
+      ...metadataFields,
+      metadata: latest.metadata,
+    })) as Json;
+    return {
+      id: jobId,
+      brand_id: latest.brand_id,
+      user_id: latest.user_id,
+      feature_type: latest.feature_type ?? 'generate-image',
+      input_params: inputParams,
+      optimized_prompt: latest.prompt,
+      status: 'completed',
+      error_message: null,
+      created_at: first.created_at,
+      completed_at: latest.created_at,
+    } satisfies GenerationJob;
+  });
+};
+
 const buildTimelineItems = (jobs: WorkspaceJob[], outputs: RecentOutput[]): TimelineItem[] => {
   const jobItems: TimelineItem[] = jobs.map((job) => ({
     id: `job-${job.id}`,
@@ -712,9 +760,10 @@ async function fetchWorkspaceActivityRequest(brandId: string, scopeId?: string):
   // their remote rows. Resolve those artifacts before promoting a remote query
   // failure to a page-level error, so a missing generation_jobs row or a
   // transient RLS/readback failure does not hide a proven completed result.
-  const localArtifacts = listWorkspaceArtifacts(brandId, scopeId);
-  const localOutputs: GeneratedImageListRow[] = await withSignedImageUrls(listWorkspaceGeneratedImages(brandId, scopeId));
+  const localArtifacts = listWorkspaceArtifactsForActivity(brandId, scopeId);
+  const localOutputs: GeneratedImageListRow[] = await withSignedImageUrls(listWorkspaceGeneratedImagesForActivity(brandId, scopeId));
   const localJobs = buildLocalWorkspaceJobs(localArtifacts, new Set(jobs.map((job) => job.id)));
+  const remoteJobs = buildRemoteWorkspaceJobs(remoteOutputs, new Set([...jobs, ...localJobs].map((job) => job.id)));
   const localJobsForFailureFallback = localJobs;
   const failedRemoteSources = [
     jobsResult.status === 'rejected' && localJobsForFailureFallback.length === 0 ? 'jobs' : '',
@@ -730,7 +779,7 @@ async function fetchWorkspaceActivityRequest(brandId: string, scopeId?: string):
   const outputs = mergeGeneratedImagesByCanonicalIdentity<GeneratedImageListRow>(remoteOutputs, localOutputs)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   const jobIds = [...new Set([
-    ...jobs.map(job => job.id), ...localJobs.map(job => job.id),
+    ...jobs.map(job => job.id), ...localJobs.map(job => job.id), ...remoteJobs.map(job => job.id),
     ...outputs.flatMap(output => [output.job_id, getMetadataString(output.metadata, 'remoteJobId'), getMetadataString(output.metadata, 'sourceJobId')]),
   ].filter((id): id is string => typeof id === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(id)))];
   const lightchainTaskSteps = await withAuthSessionRecovery(() => fetchLightchainTaskSteps(brandId, jobIds)).catch(error => {
@@ -744,7 +793,7 @@ async function fetchWorkspaceActivityRequest(brandId: string, scopeId?: string):
     if (output.job_id && !byJob[output.job_id]) byJob[output.job_id] = output;
     return byJob;
   }, {});
-  const mappedJobs = [...jobs, ...localJobs].map((job) => mapJob(
+  const mappedJobs = [...jobs, ...localJobs, ...remoteJobs].map((job) => mapJob(
     job,
     outputCounts[job.id] ?? 0,
     lightchainStepsByJob[job.id] ?? [],

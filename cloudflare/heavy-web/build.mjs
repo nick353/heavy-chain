@@ -167,7 +167,14 @@ export async function build() {
   }
   // Wrangler excludes these generated files from Static Assets; upload them to
   // the separate R2 app-asset bucket before deploying the generated config.
-  await fs.writeFile(path.join(site, '.assetsignore'), Object.keys(manifest).map(x => x.slice(1)).join('\n') + '\n');
+  // Wrangler evaluates ignore patterns against the relative asset path. Keep
+  // the exact manifest paths and add an extension-level guard so duplicate
+  // Vite-emitted model filenames cannot leave an oversized copy in Static
+  // Assets while the Worker serves every manifest route from R2.
+  const ignoredAssets = new Set(Object.keys(manifest).map(x => x.slice(1)));
+  if ([...ignoredAssets].some(x => x.endsWith('.wasm'))) ignoredAssets.add('assets/*.wasm');
+  if ([...ignoredAssets].some(x => x.endsWith('.onnx'))) ignoredAssets.add('assets/*.onnx');
+  await fs.writeFile(path.join(site, '.assetsignore'), [...ignoredAssets].sort().join('\n') + '\n');
   const config = {
     name: 'heavy-chain-web',
     account_id: 'ffa9a931fec21b22273fd2c311bb771d',
@@ -175,7 +182,7 @@ export async function build() {
     compatibility_date: '2026-09-05',
     workers_dev: true,
     preview_urls: false,
-    assets: { directory: './site', binding: 'ASSETS', not_found_handling: 'single-page-application', run_worker_first: ['/_health', '/api/auth/*', '/reset-password', ...Object.keys(manifest)] },
+    assets: { directory: './site', binding: 'ASSETS', not_found_handling: 'single-page-application', run_worker_first: ['/*'] },
     services: [{ binding: 'AUTH_SERVICE', service: 'consumer-auth' }],
     r2_buckets: [{ binding: 'PUBLIC_ASSETS', bucket_name: 'heavy-chain-public-assets' }],
     vars: { PUBLIC_ASSETS_JSON: JSON.stringify(manifest) },

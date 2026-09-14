@@ -32,7 +32,7 @@ const METADATA_KEYS = new Set([
   'feature', 'prompt', 'parentId', 'generation', 'parameters', 'parentObjectId', 'maskApplied',
   'protectedRegionComposited', 'backendProvider', 'provider', 'status', 'jobId', 'imageId',
   'storagePath', 'persistenceStatus', 'lightchainCompat', 'galleryStoragePath', 'galleryImageId',
-  'galleryImageUrl', 'parityRuntime', 'legalSafety', 'sourceIdentity', 'sourceRevision',
+  'galleryImageUrl', 'inputLineage', 'parityRuntime', 'legalSafety', 'sourceIdentity', 'sourceRevision',
   'sourceReadback', 'lightchainEditStages', 'timestamp',
 ]);
 

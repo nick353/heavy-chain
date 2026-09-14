@@ -23,18 +23,30 @@ export default {
       return Response.json({ service: 'heavy-chain-web', hosting: 'cloudflare', authProvider: env.AUTH_SERVICE ? 'cloudflare' : 'unavailable' },
         { headers: { 'cache-control': 'no-store' } });
     }
-    if (path === '/reset-password') {
+    const serveHtml = async () => {
       const response = await env.ASSETS.fetch(request);
       const headers = new Headers(response.headers);
-      headers.set('referrer-policy', 'no-referrer');
+      if (headers.get('content-type')?.includes('text/html')) {
+        headers.set('cache-control', 'no-store');
+        headers.set('cdn-cache-control', 'no-store');
+      }
+      return new Response(response.body, { status: response.status, headers });
+    };
+    if (path === '/reset-password') {
+      const response = await serveHtml();
+      const headers = new Headers(response.headers);
+      // The reset token is carried in the URL. Apply the no-store boundary even
+      // when the asset binding returns a non-HTML fixture or error response.
       headers.set('cache-control', 'no-store');
+      headers.set('cdn-cache-control', 'no-store');
+      headers.set('referrer-policy', 'no-referrer');
       return new Response(response.body, { status: response.status, headers });
     }
     const manifest = JSON.parse(env.PUBLIC_ASSETS_JSON || '{}');
     const asset = Object.hasOwn(manifest, path) ? manifest[path] : null;
     if (!asset) {
       if (path.startsWith('/assets/') && /\.(onnx|wasm)$/.test(path)) return new Response('Not found', { status: 404 });
-      return env.ASSETS.fetch(request);
+      return serveHtml();
     }
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, HEAD' } });

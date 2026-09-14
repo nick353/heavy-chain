@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { FolderOpen, Grid2X2, Image as ImageIcon, Plus, Search, Upload, X } from 'lucide-react';
+import { Download, FolderOpen, Grid2X2, Image as ImageIcon, Plus, Search, Trash2, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import {
   getWorkspaceArtifactCanonicalStoragePath,
+  deleteWorkspaceArtifactsPersisted,
   listWorkspaceArtifacts,
+  saveWorkspaceArtifactPersisted,
   saveWorkspaceArtifactBestEffort,
   type WorkspaceArtifact,
 } from '../lib/localWorkspaceArtifacts';
@@ -16,6 +18,7 @@ import {
   lightchainUnifiedFeatureCatalog,
 } from '../lib/lightchainUnifiedFeatureCatalog';
 import { buildLightchainLibraryFeatureHref } from '../lib/lightchainLibraryHandoff';
+import { downloadValidatedImage } from '../lib/imageDownload';
 
 const DEFAULT_LIBRARY_GROUPS = [
   'マイライブラリー',
@@ -65,13 +68,19 @@ const isVideoGeneratedImage = (image: GeneratedImageListRow) => (
   /video|動画/i.test(image.feature_type || '')
 );
 
+const metadataLibraryTitle = (metadata: GeneratedImageListRow['metadata']) => {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return null;
+  const title = (metadata as Record<string, unknown>).libraryTitle;
+  return typeof title === 'string' && title.trim() ? title.trim() : null;
+};
+
 const remoteAssetFromImage = (image: GeneratedImageListRow): RemoteLibraryAsset | null => {
   if (!image.image_url || isVideoGeneratedImage(image)) return null;
   return {
     kind: 'remote',
     id: `remote-library-${image.id}`,
     remoteImageId: image.id,
-    title: image.prompt?.split('\n')[0]?.trim().slice(0, 80) || image.feature_type || '生成画像',
+    title: metadataLibraryTitle(image.metadata) || image.prompt?.split('\n')[0]?.trim().slice(0, 80) || image.feature_type || '生成画像',
     featureType: image.feature_type || 'generated-image',
     imageUrl: image.image_url,
     prompt: image.prompt,
@@ -94,22 +103,11 @@ const readFileAsDataUrl = (file: File): Promise<string> => new Promise((resolve,
   reader.readAsDataURL(file);
 });
 
-const artifactGroup = (artifact: WorkspaceArtifact): string => (
-  typeof artifact.metadata.libraryGroup === 'string' && artifact.metadata.libraryGroup.trim()
-    ? artifact.metadata.libraryGroup
-    : 'マイライブラリー'
-);
-
-const artifactSource = (artifact: WorkspaceArtifact): string => (
-  typeof artifact.metadata.librarySource === 'string' ? artifact.metadata.librarySource : 'generation'
-);
-
 export function LightchainLibraryPage() {
   const { currentBrand, user } = useAuthStore();
   const navigate = useNavigate();
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [activeGroup, setActiveGroup] = useState<string>('マイライブラリー');
-  const [filter, setFilter] = useState<'画像' | 'お気に入り'>('画像');
   const [query, setQuery] = useState('');
   const [artifacts, setArtifacts] = useState<WorkspaceArtifact[]>([]);
   const [remoteAssets, setRemoteAssets] = useState<RemoteLibraryAsset[]>([]);
@@ -117,8 +115,12 @@ export function LightchainLibraryPage() {
   const [groupsHydrated, setGroupsHydrated] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupOpen, setNewGroupOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
   const [uploading, setUploading] = useState(false);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedFeatureId, setSelectedFeatureId] = useState('ai-fitting');
 
   const groupsKey = currentBrand?.id ? groupStorageKey(currentBrand.id, user?.id) : null;
@@ -236,28 +238,11 @@ export function LightchainLibraryPage() {
   )) ?? null;
 
   const visibleArtifacts = useMemo(() => {
-    const groupFiltered = libraryCards.filter((card) => {
-      if (card.kind === 'remote') {
-        if (customGroups.includes(activeGroup)) return false;
-        if (activeGroup === '履歴アップロード') return false;
-        if (activeGroup === 'ウェアデザインラボ生成結果') return /wear|design|detail/i.test(card.asset.featureType);
-        return activeGroup === '生成履歴' || activeGroup === 'マイライブラリー' || DEFAULT_LIBRARY_GROUPS.includes(activeGroup as typeof DEFAULT_LIBRARY_GROUPS[number]);
-      }
-      const artifact = card.artifact;
-      if (customGroups.includes(activeGroup)) return artifactGroup(artifact) === activeGroup;
-      if (activeGroup === '履歴アップロード') return artifactSource(artifact) === 'upload';
-      if (activeGroup === '生成履歴') return artifactSource(artifact) !== 'upload';
-      if (activeGroup === 'ウェアデザインラボ生成結果') return /wear|design|detail/i.test(artifact.featureType);
-      return true;
-    });
     const normalizedQuery = query.trim().toLowerCase();
-    return groupFiltered.filter((card) => (
-      (!normalizedQuery || `${cardTitle(card)} ${cardFeatureType(card)} ${cardPrompt(card) || ''}`.toLowerCase().includes(normalizedQuery))
-      && (filter !== 'お気に入り' || (card.kind === 'remote'
-        ? card.asset.isFavorite
-        : card.artifact.metadata.favorite === true || card.artifact.metadata.isFavorite === true))
+    return libraryCards.filter((card) => (
+      !normalizedQuery || `${cardTitle(card)} ${cardFeatureType(card)} ${cardPrompt(card) || ''}`.toLowerCase().includes(normalizedQuery)
     ));
-  }, [activeGroup, customGroups, filter, libraryCards, query]);
+  }, [libraryCards, query]);
 
   const handleImportRemote = async (
     asset: RemoteLibraryAsset,
@@ -387,13 +372,116 @@ export function LightchainLibraryPage() {
     toast.success(`「${group}」を作成しました`);
   };
 
+  const getCardId = (card: LibraryCard) => card.kind === 'local' ? card.artifact.id : card.asset.id;
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkCopy = async () => {
+    const card = visibleArtifacts.find((candidate) => selectedIds.has(getCardId(candidate)));
+    if (!card) return;
+    if (card.kind === 'remote') await handleImportRemote(card.asset);
+    else navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(card.artifact.id)}`);
+  };
+
+  const handleBulkDownload = async () => {
+    const cards = visibleArtifacts.filter((card) => selectedIds.has(getCardId(card)) && cardImageUrl(card));
+    await Promise.all(cards.map((card) => downloadValidatedImage(cardImageUrl(card), `${cardTitle(card) || getCardId(card)}.png`, 'library_bulk_download')));
+  };
+
+  const handleBulkDelete = () => {
+    if (!currentBrand?.id || selectedIds.size === 0) return;
+    const localIds = visibleArtifacts
+      .filter((card): card is Extract<LibraryCard, { kind: 'local' }> => card.kind === 'local' && selectedIds.has(getCardId(card)))
+      .map((card) => card.artifact.id);
+    if (localIds.length === 0) return;
+    if (!window.confirm(`${localIds.length}件の素材を削除しますか？`)) return;
+    const result = deleteWorkspaceArtifactsPersisted(currentBrand.id, localIds, user?.id);
+    if (!result.ok) return;
+    setArtifacts(listWorkspaceArtifacts(currentBrand.id, user?.id));
+    setSelectedIds(new Set());
+    setSelectMode(false);
+    setSelectedAssetId(null);
+  };
+
+  const handleRenameSelected = async () => {
+    if (!selectedAsset) return;
+    const title = renameValue.trim();
+    if (!title) return;
+    if (selectedAsset.kind === 'remote') {
+      try {
+        if (!cloudflareDataPlane) throw new Error('cloudflare_api_not_configured');
+        await cloudflareDataPlane.updateGeneratedImageLibraryTitle(selectedAsset.asset.remoteImageId, title);
+        setRemoteAssets((current) => current.map((asset) => asset.id === selectedAsset.asset.id ? { ...asset, title } : asset));
+        setRenameOpen(false);
+        setSelectedAssetId(selectedAsset.asset.id);
+        toast.success('名前を保存しました');
+      } catch {
+        toast.error('名前の保存に失敗しました');
+      }
+      return;
+    }
+    if (!currentBrand?.id) return;
+    const result = saveWorkspaceArtifactPersisted({
+      ...selectedAsset.artifact,
+      title,
+    });
+    if (!result.ok) {
+      toast.error('名前の保存確認に失敗しました');
+      return;
+    }
+    setArtifacts(listWorkspaceArtifacts(currentBrand.id, user?.id));
+    setRenameOpen(false);
+    setSelectedAssetId(result.artifact.id);
+    toast.success('名前を保存しました');
+  };
+
+  const handleCopySelected = async () => {
+    if (!selectedAsset || !currentBrand?.id) return;
+    if (selectedAsset.kind === 'remote') {
+      await handleImportRemote(selectedAsset.asset);
+      return;
+    }
+
+    const source = selectedAsset.artifact;
+    const result = saveWorkspaceArtifactPersisted({
+      brandId: source.brandId,
+      scopeId: source.scopeId,
+      featureType: source.featureType,
+      title: `${source.title} (コピー)`,
+      imageUrl: source.imageUrl,
+      prompt: source.prompt,
+      metadata: {
+        ...source.metadata,
+        librarySource: 'library-copy',
+        copiedFromArtifactId: source.id,
+      },
+      canvasProjectId: source.canvasProjectId,
+      sourceJobId: source.sourceJobId,
+    });
+    if (!result.ok) {
+      toast.error('コピーの保存確認に失敗しました');
+      return;
+    }
+    const nextArtifacts = listWorkspaceArtifacts(currentBrand.id, user?.id);
+    setArtifacts(nextArtifacts);
+    setSelectedAssetId(result.artifact.id);
+    toast.success('コピーを作成しました');
+  };
+
   return (
     <div className="min-h-[calc(100vh-70px)] bg-[#050708] text-white">
       <div className="mx-auto flex max-w-[1480px] gap-6 px-5 py-8 sm:px-8 lg:px-10">
         <aside className={`${darkPanel} hidden w-64 shrink-0 p-3 lg:block`}>
           <div className="px-3 py-3 text-xs font-semibold tracking-[0.2em] text-neutral-400">LIBRARY</div>
           {allGroups.map((group) => (
-            <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAssetId(null); }} className={`flex w-full items-center rounded-xl px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-400 hover:bg-white/[0.06] hover:text-white'}`}>
+            <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAssetId(null); setSelectedIds(new Set()); }} className={`flex w-full items-center rounded-xl px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-400 hover:bg-white/[0.06] hover:text-white'}`}>
               <FolderOpen className="mr-2 h-4 w-4" />{group}
             </button>
           ))}
@@ -418,16 +506,26 @@ export function LightchainLibraryPage() {
           </div>
 
           <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-            <div className="flex gap-2">
-              {(['画像', 'お気に入り'] as const).map((value) => (
-                <button key={value} type="button" className={`rounded-lg px-3 py-2 text-sm ${filter === value ? 'bg-white text-neutral-950' : 'text-neutral-400'}`} onClick={() => setFilter(value)}>{value}</button>
-              ))}
-            </div>
             <label className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-neutral-400">
               <Search className="h-4 w-4" />
               <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-40 bg-transparent outline-none" placeholder="検索" aria-label="ライブラリー検索" />
             </label>
           </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <span className="text-sm text-neutral-400">選択済み ： {selectedIds.size} / {visibleArtifacts.length}</span>
+            {selectMode ? (
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0 || uploading} onClick={() => void handleBulkCopy()}>キャンバスをコピー</button>
+                <button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={selectedIds.size === 0} onClick={() => void handleBulkDownload()}><Download className="mr-2 inline h-4 w-4" />ダウンロード</button>
+                <button type="button" className={`${mutedButton} disabled:opacity-40`} disabled={!visibleArtifacts.some((card) => card.kind === 'local' && selectedIds.has(getCardId(card)))} onClick={handleBulkDelete}><Trash2 className="mr-2 inline h-4 w-4" />削除</button>
+                <button type="button" className={mutedButton} onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}>一括操作を閉じる</button>
+              </div>
+            ) : (
+              <button type="button" className={mutedButton} onClick={() => setSelectMode(true)}>一括操作</button>
+            )}
+          </div>
+          {selectMode && <button type="button" className="mt-2 text-sm text-neutral-300 underline" onClick={() => setSelectedIds(new Set(visibleArtifacts.map(getCardId)))}>全選択</button>}
 
           {visibleArtifacts.length === 0 ? (
             <div className="mt-10 flex min-h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.02] text-center">
@@ -439,7 +537,8 @@ export function LightchainLibraryPage() {
           ) : (
             <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {visibleArtifacts.map((card) => (
-                <article key={card.kind === 'local' ? card.artifact.id : card.asset.id} className={`overflow-hidden rounded-2xl border bg-[#151a1c] ${selectedAssetId === (card.kind === 'local' ? card.artifact.id : card.asset.id) ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>
+                <article key={card.kind === 'local' ? card.artifact.id : card.asset.id} className={`overflow-hidden rounded-2xl border bg-[#151a1c] ${selectedAssetId === (card.kind === 'local' ? card.artifact.id : card.asset.id) || selectedIds.has(getCardId(card)) ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>
+                  {selectMode && <button type="button" className="w-full border-b border-white/10 px-3 py-2 text-left text-xs text-neutral-300" onClick={() => toggleSelected(getCardId(card))} aria-pressed={selectedIds.has(getCardId(card))}>{selectedIds.has(getCardId(card)) ? '✓ 選択中' : '選択'}</button>}
                   <button type="button" className="flex h-44 w-full items-center justify-center bg-[radial-gradient(circle_at_35%_35%,rgba(103,232,249,0.22),transparent_24%),linear-gradient(135deg,#263438,#111719)]" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)} aria-label={`${cardTitle(card)}を選択`}>
                     {cardImageUrl(card) ? <img src={cardImageUrl(card)} alt="" className="h-full w-full object-cover" loading="lazy" /> : <ImageIcon className="h-10 w-10 text-cyan-100/60" />}
                   </button>
@@ -447,6 +546,7 @@ export function LightchainLibraryPage() {
                     <p className="truncate text-sm font-medium">{cardTitle(card)}</p>
                     <p className="mt-1 truncate text-xs text-neutral-500">{cardFeatureType(card)}</p>
                     <div className="mt-3 flex gap-2">
+                      <button type="button" className="rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-300 hover:text-white" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)}>プレビュー</button>
                       {card.kind === 'local' ? (
                         <button type="button" className="flex-1 rounded-lg border border-white/10 px-2 py-2 text-xs text-neutral-300 hover:text-white" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(card.artifact.id)}`)}>ボードにコピー</button>
                       ) : (
@@ -464,9 +564,14 @@ export function LightchainLibraryPage() {
             <aside className="mt-6 rounded-2xl border border-cyan-200/20 bg-cyan-200/[0.05] p-5" aria-live="polite">
               <div className="flex items-center justify-between gap-4">
                 <div><p className="text-xs font-semibold tracking-[0.2em] text-cyan-200">SELECTED ASSET</p><h2 className="mt-2 font-semibold">{cardTitle(selectedAsset)}</h2></div>
+                <button type="button" className="text-sm text-neutral-400 hover:text-white" onClick={() => { setRenameValue(cardTitle(selectedAsset)); setRenameOpen(true); }}>名前を編集</button>
                 <button type="button" className="text-sm text-neutral-400 hover:text-white" onClick={() => setSelectedAssetId(null)} aria-label="選択した素材を閉じる"><X className="h-4 w-4" /></button>
               </div>
+              {renameOpen && <div className="mt-4 flex flex-wrap gap-2"><input value={renameValue} onChange={(event) => setRenameValue(event.target.value)} className="min-w-56 flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none focus:border-cyan-200/60" aria-label="素材名" /><button type="button" className="rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950 disabled:opacity-40" disabled={!renameValue.trim()} onClick={handleRenameSelected}>保存</button><button type="button" className="rounded-lg border border-white/10 px-3 py-2 text-xs text-neutral-300" onClick={() => setRenameOpen(false)}>キャンセル</button></div>}
               <p className="mt-3 text-sm text-neutral-400">{cardPrompt(selectedAsset) || '保存済み素材'}</p>
+              <button type="button" className="mt-4 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/80 hover:bg-white/[0.06]" onClick={() => void handleCopySelected()} disabled={uploading}>
+                {selectedAsset.kind === 'remote' ? 'ライブラリーに登録してコピー' : 'コピーを作成します'}
+              </button>
               {selectedAsset.kind === 'local' ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button type="button" className="rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => navigate(`/canvas/new?sourceArtifactId=${encodeURIComponent(selectedAsset.artifact.id)}`)}>Canvasへ送る</button>

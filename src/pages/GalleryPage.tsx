@@ -81,6 +81,9 @@ const getMetadataString = (image: GalleryImage | null, key: string) => {
   return typeof value === 'string' && value.trim() ? value : null;
 };
 
+const getProviderRequestId = (image: GalleryImage | null) =>
+  getMetadataString(image, 'providerRequestId') ?? getMetadataString(image, 'requestId');
+
 const getPrintResultKind = (image: GalleryImage): PrintResultKind | undefined => {
   const value = getMetadataString(image, 'printResultKind');
   return value === 'exact' || value === 'fabric' || value === 'surface' || value === 'provider' ? value : undefined;
@@ -136,6 +139,8 @@ export function GalleryPage() {
   const [sortBy, setSortBy] = useState<SortType>('newest');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+  const [providerReceipt, setProviderReceipt] = useState<Record<string, unknown> | null>(null);
+  const [providerReceiptLoading, setProviderReceiptLoading] = useState(false);
   const [gridSize, setGridSize] = useState<'small' | 'large'>('large');
   const [visibleImageCount, setVisibleImageCount] = useState(INITIAL_VISIBLE_IMAGE_COUNT);
   const [brandResolutionAttempted, setBrandResolutionAttempted] = useState(false);
@@ -144,6 +149,27 @@ export function GalleryPage() {
   const selectedSourceLabel = getMetadataString(selectedImage, 'sourceLabel');
   const selectedSourceResumePath = getMetadataString(selectedImage, 'sourceResumePath');
   const selectedSourceSummaryRows = buildSourceContextSummaryRows(selectedImage?.metadata);
+  const selectedProviderRequestId = getProviderRequestId(selectedImage);
+
+  useEffect(() => {
+    setProviderReceipt(null);
+    setProviderReceiptLoading(false);
+  }, [selectedImage?.id]);
+
+  const readProviderReceipt = async () => {
+    if (!selectedProviderRequestId || !cloudflareDataPlane) return;
+    setProviderReceiptLoading(true);
+    try {
+      const receipt = await cloudflareDataPlane.readImageAIRequest(selectedProviderRequestId);
+      setProviderReceipt(receipt);
+      toast.success('provider receiptを読み戻しました');
+    } catch {
+      setProviderReceipt(null);
+      toast.error('provider receiptの読み戻しに失敗しました');
+    } finally {
+      setProviderReceiptLoading(false);
+    }
+  };
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
 
   const selectImage = useCallback((image: GalleryImage | null) => {
@@ -975,7 +1001,19 @@ export function GalleryPage() {
                     className={`group relative aspect-square overflow-hidden rounded-xl bg-white/[0.04] cursor-pointer transition-all shadow-sm hover:shadow-lg backdrop-blur-sm ${
                       selectMode && selectedIds.has(image.id) ? 'ring-2 ring-cyan-300 ring-offset-2 ring-offset-[#050607]' : 'hover:ring-2 hover:ring-cyan-300'
                     }`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${image.prompt || '生成画像'}の詳細を見る`}
                     onClick={() => selectMode ? toggleSelectImage(image.id) : selectImage(image)}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter' && event.key !== ' ') return;
+                      event.preventDefault();
+                      if (selectMode) {
+                        toggleSelectImage(image.id);
+                      } else {
+                        selectImage(image);
+                      }
+                    }}
                   >
                     {getImageUrl(image) ? (
                       <img
@@ -1216,6 +1254,27 @@ export function GalleryPage() {
                       <Info className="w-4 h-4 flex-shrink-0" />
                       <span className="font-mono text-xs">ID: {selectedImage.id.slice(0, 8)}</span>
                     </div>
+
+                    {selectedProviderRequestId && (
+                      <div className="rounded-xl bg-white/5 p-3 text-sm text-white/80">
+                        <div className="font-mono text-xs break-all">provider request: {selectedProviderRequestId}</div>
+                        <button
+                          type="button"
+                          onClick={readProviderReceipt}
+                          disabled={providerReceiptLoading}
+                          className="mt-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/20 disabled:cursor-wait disabled:opacity-60"
+                        >
+                          {providerReceiptLoading ? 'receiptを確認中…' : 'provider receiptを読む'}
+                        </button>
+                        {providerReceipt && (
+                          <div className="mt-2 space-y-1 text-xs text-white/60" role="status">
+                            <div>state: {String(providerReceipt.state ?? 'unknown')}</div>
+                            <div>persistence: {String(providerReceipt.persistenceStatus ?? 'unknown')}</div>
+                            <div>job: {String(providerReceipt.jobId ?? 'unknown')}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Prompt Display */}
@@ -1308,6 +1367,15 @@ export function GalleryPage() {
                       >
                         <Sparkles className="w-4 h-4" />
                         この内容で生成
+                      </Link>
+                    )}
+                    {!isLocalWorkspaceImage(selectedImage) && (
+                      <Link
+                        to={`/canvas/new?galleryImageId=${encodeURIComponent(selectedImage.id)}`}
+                        className="flex w-full items-center gap-3 rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-neutral-950 transition-all hover:bg-cyan-200"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Canvasで再編集
                       </Link>
                     )}
                     <button

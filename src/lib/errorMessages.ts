@@ -21,6 +21,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   IMAGE_CORRUPT: '画像ファイルが破損しています。別の画像をお試しください。',
   NSFW_CONTENT: '不適切なコンテンツが検出されました。ガイドラインに沿った内容でお試しください。',
   GENERATION_FAILED: '画像の生成に失敗しました。入力内容を少し具体化し、参照画像がある場合は読み込める画像に差し替えて再試行してください。',
+  IMAGE_OUTCOME_UNKNOWN: '画像providerの応答を観測できず、生成結果が未確定です。重複生成を避けるため、同じ依頼の状態を確認してから再開してください。',
   PROMPT_TOO_LONG: 'プロンプトが長すぎます。500文字以内で入力してください。',
   PROMPT_EMPTY: 'プロンプトを入力してください。',
   
@@ -219,6 +220,7 @@ const KNOWN_MESSAGE_MAP: Array<[RegExp, string]> = [
   [/LOCAL_WORKSPACE_SAVE_READBACK_FAILED/i, ERROR_MESSAGES.LOCAL_WORKSPACE_SAVE_READBACK_FAILED],
   [/LOCAL_WORKSPACE_DELETE_READBACK_FAILED/i, ERROR_MESSAGES.LOCAL_WORKSPACE_DELETE_READBACK_FAILED],
   [/provider_model_result_storage_path_missing/i, ERROR_MESSAGES.PROVIDER_MODEL_RESULT_STORAGE_PATH_MISSING],
+  [/image_outcome_unknown/i, ERROR_MESSAGES.IMAGE_OUTCOME_UNKNOWN],
   [/email rate limit exceeded/i, ERROR_MESSAGES.AUTH_EMAIL_RATE_LIMIT],
   [/brand usage quota exceeded/i, ERROR_MESSAGES.BRAND_USAGE_QUOTA_EXCEEDED],
   [/user usage rate limit exceeded/i, ERROR_MESSAGES.USER_USAGE_RATE_LIMIT],

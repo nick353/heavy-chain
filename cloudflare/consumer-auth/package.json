@@ -1,0 +1,25 @@
+{
+  "name": "@heavy-chain/consumer-auth",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "test:integration": "node --experimental-strip-types --test test/cross-app.integration.ts",
+    "test:isolation": "node --experimental-strip-types --test test/app-isolation.integration.ts",
+    "dry-run": "wrangler deploy --dry-run --config wrangler.example.jsonc"
+  },
+  "dependencies": {
+    "better-auth": "1.7.2",
+    "jose": "6.2.11"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260903.1",
+    "@types/node": "24.10.1",
+    "esbuild": "0.28.1",
+    "miniflare": "5.20260831.0-alpha",
+    "typescript": "5.9.3",
+    "wrangler": "4.128.0"
+  }
+}

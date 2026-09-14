@@ -1,0 +1,19 @@
+{
+  "name": "@heavy-chain/heavy-api",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/index.test.ts test/domain.test.ts test/core.test.ts test/client.test.ts test/migration.test.ts test/auth.test.ts test/workspace.test.ts test/identity.test.ts test/feedback-admin.test.ts test/image-ai.test.ts test/durable-job-claim.test.ts test/canvas.test.ts test/gallery.test.ts",
+    "dry-run": "wrangler deploy --dry-run --config wrangler.example.jsonc --outdir .wrangler/dry-run",
+    "test:feedback-runtime": "node --experimental-strip-types --test test/feedback-admin.runtime.ts",
+    "test:image-runtime": "node --experimental-strip-types --test test/image-ai.runtime.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260903.1",
+    "@types/node": "24.10.1",
+    "typescript": "5.9.3",
+    "wrangler": "4.128.0"
+  }
+}

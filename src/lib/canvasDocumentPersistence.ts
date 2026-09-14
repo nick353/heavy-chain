@@ -141,8 +141,8 @@ const buildRemoteObject = (object: CanvasObject): Record<string, unknown> => {
     stroke: object.stroke,
     strokeWidth: object.strokeWidth,
     shapeType: object.shapeType,
-    parentId: object.parentId,
-    derivedFrom: object.derivedFrom,
+    parentId: typeof object.parentId === 'string' ? object.parentId : undefined,
+    derivedFrom: typeof object.derivedFrom === 'string' ? object.derivedFrom : undefined,
     label: object.label,
     metadata,
   });

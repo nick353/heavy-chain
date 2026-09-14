@@ -8,9 +8,17 @@ RUN npm ci --include=dev
 COPY . .
 
 ENV NODE_ENV=production
-EXPOSE 8080
+ENV VITE_CLOUDFLARE_API_ENABLED=true \
+    VITE_CLOUDFLARE_API_BASE_URL=https://heavy-chain-api.nichika2000823.workers.dev \
+    VITE_MEDIA_PROVIDER_ORDER=cloudflare_r2 \
+    VITE_MEDIA_GATEWAY_URL=https://heavy-chain-api.nichika2000823.workers.dev \
+    VITE_GENERATION_PROVIDER=workers_ai \
+    PUBLIC_URL=https://heavy-chain.zeabur.app
 
-# Vite embeds Supabase/model configuration at build time, so build after
-# Zeabur injects the service environment and then serve the SPA on PORT.
-# Repository-only readiness checks run in CI before deployment.
-CMD ["sh", "-lc", "npm run build && npm run preview -- --host 0.0.0.0 --port ${PORT:-8080}"]
+# Public Vite configuration is embedded once in the image; no build is done at startup.
+RUN npm run build \
+    && test -s dist/assets/silueta.onnx \
+    && echo heavy-chain-model-asset-ready:$(wc -c < dist/assets/silueta.onnx)
+
+EXPOSE 8080
+CMD ["node", "scripts/serve-zeabur.mjs"]

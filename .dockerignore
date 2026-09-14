@@ -3,6 +3,15 @@ dist
 .git
 output
 coverage
-.env
+.env*
 *.log
 .DS_Store
+
+# Local QA artifacts and Codex/session state must never enter a production build context.
+work
+recordings
+test-results
+.playwright-cli
+.codex
+screenshots
+--output

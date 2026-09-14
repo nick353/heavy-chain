@@ -199,8 +199,8 @@ const restoreCanvasObjects = (snapshot: unknown): CanvasObject[] => {
     stroke: typeof item.stroke === 'string' ? item.stroke : undefined,
     strokeWidth: Number.isFinite(item.strokeWidth) ? item.strokeWidth : undefined,
     shapeType: item.shapeType,
-    parentId: typeof item.parentId === 'string' ? item.parentId : null,
-    derivedFrom: typeof item.derivedFrom === 'string' ? item.derivedFrom : null,
+    parentId: typeof item.parentId === 'string' ? item.parentId : undefined,
+    derivedFrom: typeof item.derivedFrom === 'string' ? item.derivedFrom : undefined,
     label: typeof item.label === 'string' ? item.label : undefined,
     metadata: item.metadata && typeof item.metadata === 'object' ? item.metadata : undefined,
   }));
@@ -209,6 +209,34 @@ const restoreCanvasObjects = (snapshot: unknown): CanvasObject[] => {
 const restoreCanvasView = (snapshot: unknown) => {
   const view = snapshot && typeof snapshot === 'object' ? (snapshot as any).view : undefined;
   return normalizeCanvasView(view);
+};
+
+const canvasPersistenceFingerprint = (content: {
+  name: string;
+  objects: CanvasObject[];
+  zoom: number;
+  panX: number;
+  panY: number;
+}) => JSON.stringify({
+  name: content.name,
+  objects: content.objects,
+  view: normalizeCanvasView({ zoom: content.zoom, panX: content.panX, panY: content.panY }),
+});
+
+const canvasSnapshotDifferencePaths = (left: unknown, right: unknown) => {
+  const differences: string[] = [];
+  const visit = (a: unknown, b: unknown, path: string) => {
+    if (differences.length >= 24) return;
+    if (Object.is(a, b)) return;
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) !== Array.isArray(b)) {
+      differences.push(path || '$');
+      return;
+    }
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    for (const key of keys) visit((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key], `${path}.${key}`);
+  };
+  visit(left, right, '');
+  return differences;
 };
 
 const LOCAL_UPLOAD_READ_TIMEOUT_MS = 15_000;
@@ -341,6 +369,7 @@ export function CanvasEditorPage() {
   const sourceArtifactId = sourceArtifactParam?.startsWith('id:')
     ? sourceArtifactParam.slice(3)
     : sourceArtifactParam;
+  const galleryImageId = searchParams.get('galleryImageId');
   const canvasDebugEnabled = searchParams.get('debugCanvas') === '1';
   const containerRef = useRef<HTMLDivElement>(null);
   const projectNameInputRef = useRef<HTMLInputElement>(null);
@@ -379,6 +408,8 @@ export function CanvasEditorPage() {
   const activeCanvasSaveRef = useRef<{documentId:string;userId:string;brandId:string}|null>(null);
   const legacyCanvasCapturedRef = useRef(false);
   const suppressPersistenceDirtyRef = useRef(false);
+  const confirmedCanvasFingerprintRef = useRef<string | null>(null);
+  const canvasReadbackDebugRef = useRef<Record<string, unknown> | null>(null);
   const [canvasPersistenceStatus, setCanvasPersistenceStatus] = useState<'unsaved' | 'loading' | 'saving' | 'verifying' | 'saved' | 'conflict' | 'failed'>('unsaved');
   const [canvasDebugResolution, setCanvasDebugResolution] = useState<unknown[]>([]);
 
@@ -410,6 +441,7 @@ export function CanvasEditorPage() {
   });
   const localUploadEventKeysRef = useRef<Set<string>>(new Set());
   const importedLibraryArtifactRef = useRef<string | null>(null);
+  const importedGalleryImageRef = useRef<string | null>(null);
 
   // Reference image states for generate modal
   const [referenceImage, setReferenceImage] = useState<SelectedImage | null>(null);
@@ -626,6 +658,7 @@ export function CanvasEditorPage() {
       remoteDocumentOwnerRef.current = null;
       canvasRecoveryScopeRef.current = null;
       canvasSourceProjectIdsRef.current = [];
+      confirmedCanvasFingerprintRef.current = null;
       setCanvasPersistenceStatus('unsaved');
       if (projectId === 'new' && useCanvasStore.getState().currentProjectId) clearCanvas();
       return;
@@ -689,8 +722,12 @@ export function CanvasEditorPage() {
       const hydrateSnapshot=(entry:{title:string;snapshot:unknown},createdAt:string,updatedAt:string)=>{
         const aliases=(entry.snapshot as {sourceProjectIds?:unknown})?.sourceProjectIds;
         canvasSourceProjectIdsRef.current=Array.isArray(aliases)?aliases.filter((id):id is string=>typeof id==='string'&&id.length<=160).slice(0,16):[];
-        hydrateProject({id:projectId,name:entry.title,objects:restoreCanvasObjects(entry.snapshot),view:restoreCanvasView(entry.snapshot),
+        const restoredObjects=restoreCanvasObjects(entry.snapshot);
+        const restoredView=restoreCanvasView(entry.snapshot);
+        hydrateProject({id:projectId,name:entry.title,objects:restoredObjects,view:restoredView,
           brandId:scope.brandId,createdAt,updatedAt});
+        confirmedCanvasFingerprintRef.current=canvasPersistenceFingerprint({name:entry.title,objects:restoredObjects,
+          zoom:restoredView.zoom,panX:restoredView.panX,panY:restoredView.panY});
         suppressPersistenceDirtyRef.current=true;
       };
       try {
@@ -719,6 +756,10 @@ export function CanvasEditorPage() {
           canvasRecoveryScopeRef.current=scope;remoteDocumentOwnerRef.current=cached.ownerId;remoteRevisionRef.current=cached.revision;
           hydrateSnapshot(cached,document?.createdAt??cached.updatedAt,document?.updatedAt??cached.updatedAt);
           const confirmed=!!document&&!cached.pending&&sameCanvasSaveContent(cached,document);
+          canvasReadbackDebugRef.current={state:result.state,documentRevision:document?.revision??null,
+            cachedRevision:cached.revision,pending:cached.pending?{kind:cached.pending.kind,expectedRevision:cached.pending.expectedRevision}:null,
+            contentMatch:document?sameCanvasSaveContent(cached,document):false,
+            differencePaths:document?canvasSnapshotDifferencePaths(cached.snapshot,document.snapshot):['$document_missing'],confirmed};
           setCanvasPersistenceStatus(result.state==='conflict'?'conflict':confirmed?'saved':'unsaved');
         })
         .catch(()=>{if(!cancelled){try{assertRoute();setCanvasPersistenceStatus('failed');}catch{/* A later user/route owns the screen. */}}});
@@ -732,15 +773,19 @@ export function CanvasEditorPage() {
         if (cancelled) return;
         remoteDocumentIdRef.current = document.id;
         remoteRevisionRef.current = document.revision;
+        const restoredObjects=restoreCanvasObjects(document.snapshot);
+        const restoredView=restoreCanvasView(document.snapshot);
         hydrateProject({
           id: document.id,
           name: document.title,
-          objects: restoreCanvasObjects(document.snapshot),
-          view: restoreCanvasView(document.snapshot),
+          objects: restoredObjects,
+          view: restoredView,
           createdAt: document.createdAt,
           updatedAt: document.updatedAt,
           brandId: document.brandId,
         });
+        confirmedCanvasFingerprintRef.current=canvasPersistenceFingerprint({name:document.title,objects:restoredObjects,
+          zoom:restoredView.zoom,panX:restoredView.panX,panY:restoredView.panY});
         // Hydration is a read operation; it must not be reported as a user edit.
         suppressPersistenceDirtyRef.current = true;
         setCanvasPersistenceStatus('saved');
@@ -848,6 +893,77 @@ export function CanvasEditorPage() {
       cancelled = true;
     };
   }, [addObject, canvasSize.height, canvasSize.width, currentBrand?.id, projectId, selectObject, sourceArtifactId, user?.id]);
+
+  useEffect(() => {
+    if (projectId !== 'new' || !galleryImageId || !currentBrand?.id || !cloudflareDataPlane) return;
+    if (importedGalleryImageRef.current === galleryImageId) return;
+
+    const state = useAuthStore.getState();
+    const fence = captureAuthBrandFence(state.brandState, state.user?.id ?? null, state.currentBrand?.id ?? null);
+    const assertContext = () => {
+      const current = useAuthStore.getState();
+      assertAuthBrandFence(fence, captureAuthBrandFence(current.brandState, current.user?.id ?? null, current.currentBrand?.id ?? null), 'canvas_gallery_import');
+    };
+    let cancelled = false;
+    void (async () => {
+      try {
+        const images = await cloudflareDataPlane.listGeneratedImages(currentBrand.id, { limit: 100, order: 'newest' });
+        assertContext();
+        const image = images.find((candidate) => candidate.id === galleryImageId);
+        if (!image) throw new Error('canvas_gallery_image_not_found');
+        const source = image.storage_path || image.image_url;
+        if (!source) throw new Error('canvas_gallery_image_source_missing');
+        const loaded = await loadLibraryCanvasImage(source);
+        if (cancelled) return;
+        assertContext();
+        const alreadyPlaced = useCanvasStore.getState().objects.some((object) => (
+          object.type === 'image' && (
+            object.metadata?.galleryImageId === galleryImageId ||
+            object.metadata?.imageId === galleryImageId
+          )
+        ));
+        if (alreadyPlaced) {
+          importedGalleryImageRef.current = galleryImageId;
+          return;
+        }
+        importedGalleryImageRef.current = galleryImageId;
+        const objectId = addObject({
+          type: 'image',
+          x: Math.max(24, canvasSize.width / 2 - Math.min(loaded.naturalWidth || loaded.width || 440, 440) / 2),
+          y: Math.max(24, canvasSize.height / 2 - Math.min(loaded.naturalHeight || loaded.height || 440, 440) / 2),
+          width: Math.min(loaded.naturalWidth || loaded.width || 440, 440),
+          height: Math.min(loaded.naturalHeight || loaded.height || 440, 440),
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          opacity: 1,
+          locked: false,
+          visible: true,
+          src: source,
+          label: image.feature_type || 'Gallery素材',
+          metadata: {
+            feature: 'gallery-import',
+            generation: 0,
+            source: 'gallery-detail',
+            imageId: image.id,
+            galleryImageId: image.id,
+            galleryStoragePath: image.storage_path || undefined,
+            galleryImageUrl: image.image_url || undefined,
+            parameters: {
+              galleryImageId: image.id,
+              sourceFeatureType: image.feature_type,
+              sourceCreatedAt: image.created_at,
+            },
+          },
+        });
+        selectObject(objectId);
+        toast.success('Gallery画像をCanvasへ配置しました');
+      } catch (error) {
+        if (!cancelled) toast.error(error instanceof Error ? error.message : 'Gallery画像をCanvasへ配置できませんでした');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [addObject, canvasSize.height, canvasSize.width, currentBrand?.id, galleryImageId, projectId, selectObject]);
 
   const selectedObject = selectedIds.length === 1
     ? objects.find((obj) => obj.id === selectedIds[0]) || null
@@ -963,6 +1079,8 @@ export function CanvasEditorPage() {
     const previous = observedCanvasContentRef.current;
     observedCanvasContentRef.current = {objects,name:currentProjectName,zoom,panX,panY};
     if (previous.objects === objects && previous.name === currentProjectName && previous.zoom === zoom && previous.panX === panX && previous.panY === panY) return;
+    const currentFingerprint=canvasPersistenceFingerprint({name:currentProjectName,objects,zoom,panX,panY});
+    if (confirmedCanvasFingerprintRef.current===currentFingerprint) return;
     if (suppressPersistenceDirtyRef.current) {
       suppressPersistenceDirtyRef.current = false;
       return;
@@ -1209,15 +1327,19 @@ export function CanvasEditorPage() {
       remoteDocumentOwnerRef.current=document.ownerId;
       if(scope){acceptCanvasRemoteVersion(scope,document);canvasRecoveryScopeRef.current=scope;}
       canvasSourceProjectIdsRef.current=document.snapshot.sourceProjectIds??[];
+      const restoredObjects=restoreCanvasObjects(document.snapshot);
+      const restoredView=restoreCanvasView(document.snapshot);
       hydrateProject({
         id: document.id,
         name: document.title,
-        objects: restoreCanvasObjects(document.snapshot),
-        view: restoreCanvasView(document.snapshot),
+        objects: restoredObjects,
+        view: restoredView,
         createdAt: document.createdAt,
         updatedAt: document.updatedAt,
         brandId: document.brandId,
       });
+      confirmedCanvasFingerprintRef.current=canvasPersistenceFingerprint({name:document.title,objects:restoredObjects,
+        zoom:restoredView.zoom,panX:restoredView.panX,panY:restoredView.panY});
       suppressPersistenceDirtyRef.current = true;
       saveCurrentProject();
       acknowledgeCanvasRemoteReadback(user.id, brandId, document.id, document.snapshot);
@@ -1339,15 +1461,19 @@ export function CanvasEditorPage() {
         toast.success('保存中に追加された編集は保持しています。もう一度保存して確定してください。');
         return;
       }
+      const restoredObjects=restoreCanvasObjects(readback.snapshot);
+      const restoredView=restoreCanvasView(readback.snapshot);
       hydrateProject({
         id: readback.id,
         name: readback.title,
-        objects: restoreCanvasObjects(readback.snapshot),
-        view: restoreCanvasView(readback.snapshot),
+        objects: restoredObjects,
+        view: restoredView,
         createdAt: readback.createdAt,
         updatedAt: readback.updatedAt,
         brandId: readback.brandId,
       });
+      confirmedCanvasFingerprintRef.current=canvasPersistenceFingerprint({name:readback.title,objects:restoredObjects,
+        zoom:restoredView.zoom,panX:restoredView.panX,panY:restoredView.panY});
       // The object update below is the verified server snapshot, not a local edit.
       suppressPersistenceDirtyRef.current = true;
       saveCurrentProject();
@@ -1728,7 +1854,7 @@ export function CanvasEditorPage() {
       visible: true,
       src: canvasImageSource,
       label,
-      derivedFrom: parentId || null,
+      derivedFrom: parentId || undefined,
       metadata: metadata ? {
         ...metadata,
         timestamp: new Date().toISOString(),
@@ -3395,6 +3521,7 @@ export function CanvasEditorPage() {
         : [],
     })),
     resolution: canvasDebugResolution,
+    readback: canvasReadbackDebugRef.current,
   }) : '';
 
   return (

@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Each protected request is checked by the dedicated Heavy Auth service.
+  "name": "heavy-chain-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-03",
+  "ai": { "binding": "AI" },
+  "services": [{ "binding": "AUTH_SERVICE", "service": "consumer-auth" }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "heavy-chain-production-db",
+      "database_id": "f2a6ef3b-14d0-4527-94eb-59ed22a469d9",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PRIVATE_MEDIA",
+      "bucket_name": "heavy-chain-private-media"
+    }
+  ],
+  "vars": {
+    "AUTH_ISSUER": "https://consumer-auth.nichika2000823.workers.dev",
+    "FRONTEND_ORIGINS": "https://heavy-chain-web.nichika2000823.workers.dev,https://heavy-chain.zeabur.app",
+    "AI_IMAGE_ENABLED": "true",
+    "AI_IMAGE_ALLOWED_ACTIONS": "generate-image,edit-image,model-matrix",
+    "AI_IMAGE_TIMEOUT_MS": "90000",
+    "AI_MONTHLY_IMAGE_UNITS": "25",
+    "AI_ACCOUNT_MONTHLY_IMAGE_UNITS": "25",
+    "AI_DAILY_IMAGE_UNITS": "100",
+    "AI_DAILY_ESTIMATED_NEURONS": "5000",
+    "PUBLIC_SHARE_ENABLED": "false",
+    "PUBLIC_APP_ORIGIN": "https://heavy-chain-web.nichika2000823.workers.dev"
+  }
+}

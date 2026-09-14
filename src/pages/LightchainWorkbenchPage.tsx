@@ -8,16 +8,24 @@ import {
   Clock3,
   ClipboardList,
   Film,
+  Grid2X2,
+  Hand,
   Layers3,
   ImagePlus,
+  Image as ImageIcon,
   LayoutGrid,
   Maximize2,
   MessageSquareText,
+  MousePointer2,
   Palette,
+  Redo2,
   Search,
   Shirt,
   ShieldCheck,
   Sparkles,
+  Square,
+  Type,
+  Undo2,
   UserRound,
   WandSparkles,
   Upload,
@@ -158,6 +166,88 @@ type PendingRightsGeneration =
   | { kind: 'generic'; overrides?: LightchainPreviewOverrides };
 
 const PRINTING_CUTOUT_TIMEOUT_MS = 30_000;
+const WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-workspace-tutorial-dismissed-v1';
+const MARKETING_TUTORIAL_DISMISSED_STORAGE_KEY = 'heavy-chain-marketing-detail-tutorial-dismissed-v1';
+const getWorkspaceTutorialStorageKey = (userId?: string | null) => (
+  userId ? `${WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY}:${userId}` : WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY
+);
+const getMarketingTutorialStorageKey = (userId?: string | null) => (
+  userId ? `${MARKETING_TUTORIAL_DISMISSED_STORAGE_KEY}:${userId}` : MARKETING_TUTORIAL_DISMISSED_STORAGE_KEY
+);
+
+function readWorkspaceTutorialDismissed(userId?: string | null): boolean {
+  if (typeof window === 'undefined') return false;
+  const storageKey = getWorkspaceTutorialStorageKey(userId);
+  try {
+    if (window.localStorage.getItem(storageKey) === 'true') return true;
+    if (userId && window.localStorage.getItem(WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY) === 'true') return true;
+  } catch {
+    // Continue through the independent fallbacks when localStorage is unavailable.
+  }
+  try {
+    if (window.sessionStorage.getItem(storageKey) === 'true') return true;
+    if (userId && window.sessionStorage.getItem(WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY) === 'true') return true;
+  } catch {
+    // Continue through the cookie and same-tab fallbacks.
+  }
+  try {
+    const cookieValue = document.cookie
+      .split(';')
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${storageKey}=`))
+      ?.slice(storageKey.length + 1);
+    if (cookieValue === 'true') return true;
+    if (userId) {
+      const legacyCookieValue = document.cookie
+        .split(';')
+        .map((part) => part.trim())
+        .find((part) => part.startsWith(`${WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY}=`))
+        ?.slice(WORKSPACE_TUTORIAL_DISMISSED_STORAGE_KEY.length + 1);
+      if (legacyCookieValue === 'true') return true;
+    }
+  } catch {
+    // Continue through the same-tab fallback.
+  }
+  return false;
+}
+
+function persistWorkspaceTutorialDismissed(userId?: string | null): void {
+  if (typeof window === 'undefined') return;
+  const storageKey = getWorkspaceTutorialStorageKey(userId);
+  try {
+    window.localStorage.setItem(storageKey, 'true');
+  } catch {
+    // Private-mode storage failures are handled by the cookie fallback below.
+  }
+  try {
+    window.sessionStorage.setItem(storageKey, 'true');
+  } catch {
+    // Session storage is an additional best-effort fallback.
+  }
+  try {
+    document.cookie = `${storageKey}=true; Max-Age=31536000; Path=/; SameSite=Lax`;
+  } catch {
+    // Tutorial dismissal is a convenience preference; cookie failures are non-fatal.
+  }
+}
+
+function readMarketingTutorialDismissed(userId?: string | null): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(getMarketingTutorialStorageKey(userId)) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function persistMarketingTutorialDismissed(userId?: string | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(getMarketingTutorialStorageKey(userId), 'true');
+  } catch {
+    // Tutorial persistence is a convenience preference; storage failures are non-fatal.
+  }
+}
 
 /**
  * The platform garment is intentionally shipped as a small SVG so the
@@ -1193,6 +1283,12 @@ const maskCandidateLayer: Record<MaskCandidate, string> = {
   手動範囲: 'mask',
 };
 
+const lightWearDesignDetailImages = [
+  'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/37cb1e7e309c3e3edf4870678b8625e0.png?x-oss-process=image/resize,m_lfit,w_1920,limit_1/format,webp',
+  'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/cae9b142c24f1137fd4a66111ef7e583.png?x-oss-process=image/resize,m_lfit,w_1920,limit_1/format,webp',
+  'https://lightchain-qlxy-test.oss-cn-hangzhou.aliyuncs.com/saas/2026-01/6a1d37284e65c215fe6fcd1994972a78.webp?x-oss-process=image/resize,m_lfit,w_1920,limit_1/format,webp',
+] as const;
+
 export function LightchainWorkbenchPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1302,13 +1398,18 @@ export function LightchainWorkbenchPage() {
   const [wearDesignMode, setWearDesignMode] = useState<'guide' | 'no-guide'>('no-guide');
   const [wearDesignPrompt, setWearDesignPrompt] = useState('');
   const [wearDesignFocus, setWearDesignFocus] = useState('襟');
+  const [wearBoardPrompt, setWearBoardPrompt] = useState('図1のダウンベストの乳白色を維持し、図2のダウンジャケットのキルティングを、図1のモデルが着用しているダウンベストに置き換えてください。');
+  const [wearBoardStrongMode, setWearBoardStrongMode] = useState(false);
+  const [wearBoardResolution, setWearBoardResolution] = useState('4K');
+  const [wearBoardGenerationSetting, setWearBoardGenerationSetting] = useState('自動');
+  const [wearBoardOpenMenu, setWearBoardOpenMenu] = useState<'generation' | 'resolution' | null>(null);
   const [printDesignDetailStarted, setPrintDesignDetailStarted] = useState(false);
   const [printDesignMode, setPrintDesignMode] = useState<'guide' | 'no-guide'>('no-guide');
   const [printDesignPrompt, setPrintDesignPrompt] = useState('');
   const [printDesignStyle, setPrintDesignStyle] = useState('ファッション');
   const [marketingDetailTab, setMarketingDetailTab] = useState<'assistant' | 'layers'>('assistant');
-  const [marketingProjectName, setMarketingProjectName] = useState('無題のプロジェクト');
-  const [marketingProjectNameDraft, setMarketingProjectNameDraft] = useState('無題のプロジェクト');
+  const [marketingProjectName, setMarketingProjectName] = useState('Untitled');
+  const [marketingProjectNameDraft, setMarketingProjectNameDraft] = useState('Untitled');
   const [marketingProjectNameEditing, setMarketingProjectNameEditing] = useState(false);
   const [marketingCanvasTool, setMarketingCanvasTool] = useState('選択');
   const [marketingCanvasZoom, setMarketingCanvasZoom] = useState(20);
@@ -1318,6 +1419,31 @@ export function LightchainWorkbenchPage() {
   const [marketingTutorialDismissed, setMarketingTutorialDismissed] = useState(false);
   const [workspaceTutorialStep, setWorkspaceTutorialStep] = useState(1);
   const [workspaceTutorialDismissed, setWorkspaceTutorialDismissed] = useState(false);
+  const dismissWorkspaceTutorial = () => {
+    persistWorkspaceTutorialDismissed(user?.id);
+    setWorkspaceTutorialDismissed(true);
+  };
+  const dismissMarketingTutorial = () => {
+    persistMarketingTutorialDismissed(user?.id);
+    setMarketingTutorialDismissed(true);
+  };
+  useEffect(() => {
+    if (workspaceTutorialDismissed) persistWorkspaceTutorialDismissed(user?.id);
+  }, [user?.id, workspaceTutorialDismissed]);
+  useEffect(() => {
+    // Match the app's existing user-scoped onboarding/CanvasGuide contract:
+    // hydrate only after the authenticated user is known, so one account's
+    // tutorial state cannot leak into another account or early route mount.
+    if (!isAuthInitialized || isAuthLoading) return;
+    setWorkspaceTutorialDismissed(readWorkspaceTutorialDismissed(user?.id));
+  }, [isAuthInitialized, isAuthLoading, user?.id]);
+  useEffect(() => {
+    if (marketingTutorialDismissed) persistMarketingTutorialDismissed(user?.id);
+  }, [marketingTutorialDismissed, user?.id]);
+  useEffect(() => {
+    if (!isAuthInitialized || isAuthLoading) return;
+    setMarketingTutorialDismissed(readMarketingTutorialDismissed(user?.id));
+  }, [isAuthInitialized, isAuthLoading, user?.id]);
 
   const [workspaceArtifacts, setWorkspaceArtifacts] = useState<WorkspaceArtifact[]>([]);
   const [remoteMaterialTabItems, setRemoteMaterialTabItems] = useState<Record<MaterialTab, MaterialTabItem[]>>(emptyMaterialTabItems);
@@ -1569,6 +1695,9 @@ export function LightchainWorkbenchPage() {
     '/editor/patternDesign': 'プリントデザイン',
   };
   const pathToolId = directRouteToolId[location.pathname];
+  const isDirectWearDesignDetail = location.pathname === '/flow/orientedDesign/detail'
+    && Boolean(searchParams.get('boardProjectCode'));
+  const wearBoardTitle = searchParams.get('boardProjectCode') ? 'デザイン要素融合' : 'ウェアデザイン詳細';
   const isModelRoute = location.pathname === '/model';
   const isModelReferenceRoute = isModelRoute && searchParams.get('tab') === '参考図';
   const modelTool = visibleTools.find((tool) => tool.id === 'ai-fitting') ?? null;
@@ -1599,7 +1728,11 @@ export function LightchainWorkbenchPage() {
   const isPrintingCutoutProcessing = selectedTool.id === 'printing-image'
     && (printingCutoutStatus.primary === 'processing' || printingCutoutStatus.secondary === 'processing');
   const selectedCategory = categories.find((category) => category.id === (isFeatureDetail ? getLightchainTopLevelCategory(selectedTool.category) : activeCategory)) ?? categories[0];
-  const isPatternVectorProFlow = selectedTool.id === 'pattern-vector' || selectedTool.id === 'pattern-vector-pro';
+  // The standard and Pro vector routes share input plumbing, but only the
+  // Pro route exposes Pro-only layer controls, usage counters, and generation
+  // cost. Keep the standard Light route from inheriting the Pro presentation.
+  const isPatternVectorProFlow = selectedTool.id === 'pattern-vector-pro';
+  const isPatternVectorFlow = selectedTool.id === 'pattern-vector' || isPatternVectorProFlow;
   const isFittingDetail = [
     'ai-fitting',
     'ai-fitting-reference',
@@ -2031,17 +2164,15 @@ export function LightchainWorkbenchPage() {
     setPrintDesignStyle('ファッション');
     setMarketingDetailTab('assistant');
     setMarketingDetailPrompt('');
-    setMarketingProjectName('無題のプロジェクト');
-    setMarketingProjectNameDraft('無題のプロジェクト');
+    setMarketingProjectName('Untitled');
+    setMarketingProjectNameDraft('Untitled');
     setMarketingProjectNameEditing(false);
     setMarketingCanvasTool('選択');
     setMarketingCanvasZoom(20);
     setMarketingCanvasHistory([]);
     setMarketingCanvasFuture([]);
     setMarketingTutorialStep(1);
-    setMarketingTutorialDismissed(false);
     setWorkspaceTutorialStep(1);
-    setWorkspaceTutorialDismissed(false);
     const nextWorkspaceStyle = workspaceStyleConfig[selectedTool.id];
     const nextWorkspaceTab = nextWorkspaceStyle?.tabs?.[0] ?? '';
     const nextWorkspaceText = ['agent', 'studio'].includes(nextWorkspaceStyle?.kind ?? '') ? nextWorkspaceStyle?.prompt ?? '' : '';
@@ -2570,23 +2701,28 @@ export function LightchainWorkbenchPage() {
     }
   };
 
-  const handleUseMaterialAsset = async (item: MaterialTabItem) => {
-    try {
-      const applied = await applyMaterialToSlot(activeMaterialSlot, {
-        name: item.title,
-        kind: item.kind,
-        imageUrl: item.imageUrl,
-        sourceImageId: item.sourceImageId ?? null,
-        sourceStoragePath: item.sourceStoragePath ?? null,
-      });
-      if (applied) {
+  const handleUseMaterialAsset = (item: MaterialTabItem) => {
+    // Capture the slot before closing the dialog. The dialog and slot controls
+    // can otherwise be re-rendered while an async cutout/apply path is still
+    // resolving, leaving the visible modal unchanged even though the click
+    // was dispatched.
+    const targetSlot = activeMaterialSlot;
+    setMaterialModalOpen(false);
+    void applyMaterialToSlot(targetSlot, {
+      name: item.title,
+      kind: item.kind,
+      imageUrl: item.imageUrl,
+      sourceImageId: item.sourceImageId ?? null,
+      sourceStoragePath: item.sourceStoragePath ?? null,
+    })
+      .then((applied) => {
+        if (!applied) return;
         setPlatformAssetRightsConfirmed(item.id === 'platform-garment-blank-white-tshirt');
-        setMaterialModalOpen(false);
         toast.success(`${item.title}を使用しました`);
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : '素材画像の背景を透明化できませんでした');
-    }
+      })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : '素材画像の背景を透明化できませんでした');
+      });
   };
 
   const persistFittingActionHandoff = () => {
@@ -3007,7 +3143,7 @@ export function LightchainWorkbenchPage() {
       toast.success('AI生成結果を履歴に追加しました');
     } catch (error) {
       if (lightchainGenerationSequenceRef.current !== requestId) return;
-      const message = error instanceof Error ? error.message : 'provider_generation_failed';
+      const message = getErrorMessage(error);
       setLightchainGenerationError(message);
       // Preserve the previous result so the user can inspect it or retry
       // without losing the last completed artifact.
@@ -4695,6 +4831,48 @@ export function LightchainWorkbenchPage() {
         data-lightchain-brand-error={brandState.error ?? ''}
         data-lightchain-current-brand={currentBrand?.id ?? ''}
       >
+        {workspaceStyle.kind === 'agent' && (
+          <aside
+            aria-label="企画ワークスペースサイドバー"
+            className="absolute left-3 top-3 z-10 hidden h-[calc(100vh-94px)] w-[326px] overflow-hidden rounded-2xl border border-white/10 bg-[#24282a] text-neutral-100 shadow-xl md:block"
+          >
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
+              <button type="button" onClick={() => navigate('/lightchain')} className="flex items-center gap-2 text-base font-semibold">
+                <span aria-hidden="true">‹</span>
+                企画ワークスペース
+              </button>
+              <div className="flex items-center gap-2">
+                <button type="button" aria-label="検索" className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><Search className="h-4 w-4" /></button>
+                <button type="button" aria-label="サイドバーを閉じる" className="rounded-md p-1.5 text-neutral-300 hover:bg-white/10"><LayoutGrid className="h-4 w-4" /></button>
+              </div>
+            </div>
+            <div className="space-y-2 px-4 py-3">
+              <button type="button" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-white/10">
+                <MessageSquareText className="h-4 w-4" />
+                新規タスク
+              </button>
+              <button type="button" onClick={() => setWorkspaceTutorialDismissed(false)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold hover:bg-white/10">
+                <ClipboardList className="h-4 w-4" />
+                業務プリファレンスプロファイル
+              </button>
+            </div>
+            <div className="border-t border-white/10 px-4 py-3">
+              <div className="mb-2 flex items-center justify-between text-xs font-semibold text-neutral-400">
+                <span>最近</span>
+                <button type="button" aria-label="新規ファイル" onClick={() => { setWorkspaceText(''); setLightchainResult(null); }} className="rounded-md p-1 hover:bg-white/10">＋</button>
+              </div>
+              <div className="space-y-1">
+                {['クリエイティブ企画2026080825', 'ZIMMERMANN風 2026年 Womenデザイン企画', 'クリエイティブ企画2026071123', 'クリエイティブ企画2026042922'].map((title) => (
+                  <button key={title} type="button" onClick={() => setWorkspaceText(title)} className="w-full rounded-lg px-3 py-2 text-left text-xs text-neutral-200 hover:bg-white/10">
+                    <span className="block truncate">{title}</span>
+                    <span className="mt-1 block text-[10px] text-neutral-500">テーマ企画</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="absolute inset-x-0 bottom-0 border-t border-white/10 px-4 py-4 text-xs text-neutral-300">残りクレジット <span aria-hidden="true">✦</span> 378911</div>
+          </aside>
+        )}
         <section className="relative min-h-[calc(100vh-70px)] overflow-hidden px-4 py-14 sm:px-8">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_52%_20%,rgba(101,211,207,0.22),transparent_38%),linear-gradient(90deg,rgba(15,23,42,0.15),rgba(34,197,94,0.1),rgba(59,130,246,0.12))]" />
           {workspaceStyle.kind === 'marketing' && (
@@ -4816,7 +4994,7 @@ export function LightchainWorkbenchPage() {
                     type="button"
                     onClick={() => {
                       if (workspaceTutorialStep >= workspaceTutorialSteps.length) {
-                        setWorkspaceTutorialDismissed(true);
+                        dismissWorkspaceTutorial();
                       } else {
                         setWorkspaceTutorialStep((current) => current + 1);
                       }
@@ -4828,7 +5006,7 @@ export function LightchainWorkbenchPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setWorkspaceTutorialDismissed(true)}
+                    onClick={dismissWorkspaceTutorial}
                     data-testid="lightchain-workspace-tutorial-skip"
                     className="shrink-0 underline"
                   >
@@ -4927,10 +5105,20 @@ export function LightchainWorkbenchPage() {
       { id: 'cta', label: 'CTAボタン' },
     ];
     const canvasTools = ['選択', '手のひら', '戻る', '進む', '矩形', 'グリッド', 'テキスト', '画像'];
+    const canvasToolIcons = {
+      '選択': MousePointer2,
+      '手のひら': Hand,
+      '戻る': Undo2,
+      '進む': Redo2,
+      '矩形': Square,
+      'グリッド': Grid2X2,
+      'テキスト': Type,
+      '画像': ImageIcon,
+    } as const;
 
     return (
       <main
-        className="dark min-h-screen bg-[#0b0f10] px-4 py-4 text-white sm:px-6"
+        className="dark min-h-screen bg-[#0b0f10] px-4 py-4 text-white sm:px-6 lg:px-8"
         data-testid="lightchain-marketing-detail-page"
         data-workflow-contract={UNIFIED_FEATURE_WORKFLOW_CONTRACT_VERSION}
         data-workflow-feature={selectedTool.id}
@@ -4941,7 +5129,7 @@ export function LightchainWorkbenchPage() {
         data-workflow-retry-policy={workflowRetryPolicy}
         data-workflow-rights-gate={workflowRightsGate}
       >
-        <section className="grid min-h-[calc(100vh-102px)] gap-4 xl:grid-cols-[280px_minmax(0,1fr)_420px]">
+        <section className="grid min-h-[calc(100vh-102px)] gap-4 xl:grid-cols-[296px_minmax(0,1fr)_420px]">
           {renderLightchainProviderGate()}
           <aside className="rounded-2xl border border-white/10 bg-[#151a1d] p-4">
             <button
@@ -5000,7 +5188,7 @@ export function LightchainWorkbenchPage() {
                   type="button"
                   onClick={() => {
                     if (marketingTutorialStep >= marketingTutorialSteps.length) {
-                      setMarketingTutorialDismissed(true);
+                      dismissMarketingTutorial();
                     } else {
                       setMarketingTutorialStep((current) => current + 1);
                     }
@@ -5012,7 +5200,7 @@ export function LightchainWorkbenchPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMarketingTutorialDismissed(true)}
+                  onClick={dismissMarketingTutorial}
                   data-testid="lightchain-marketing-tutorial-skip"
                   className="shrink-0 underline"
                 >
@@ -5082,9 +5270,11 @@ export function LightchainWorkbenchPage() {
                     if (tool === '画像') openMaterialModalForSlot('primary');
                   }}
                   data-testid={`lightchain-marketing-canvas-tool-${tool}`}
+                  aria-label={tool}
                   className={`flex h-9 min-w-9 items-center justify-center rounded-lg px-3 text-xs font-semibold ${marketingCanvasTool === tool ? 'bg-[#65d3cf] text-neutral-950' : 'bg-[#20272a] text-neutral-300 disabled:opacity-40'}`}
                 >
-                  {tool}
+                  {(() => { const Icon = canvasToolIcons[tool as keyof typeof canvasToolIcons]; return <Icon className="h-4 w-4" aria-hidden="true" />; })()}
+                  <span className="sr-only">{tool}</span>
                 </button>
               ))}
               <button
@@ -5576,7 +5766,7 @@ export function LightchainWorkbenchPage() {
               <button
                 key={`${card.title}-${index}`}
                 type="button"
-                onClick={() => navigate('/lightchain/wear-design-detail')}
+                onClick={() => navigate(`/flow/orientedDesign/detail?boardProjectCode=${encodeURIComponent(card.title)}&boardProjectType=orientedDesignSystem`)}
                 className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
               >
                 <div className="flex h-40 items-center justify-center bg-[#171c1f]">
@@ -5607,7 +5797,7 @@ export function LightchainWorkbenchPage() {
           <h2 className="mt-6 text-base font-semibold text-white">参考事例</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {exampleCards.map((card) => (
-              <button key={card.title} type="button" onClick={() => navigate('/lightchain/wear-design-detail')} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
+              <button key={card.title} type="button" onClick={() => navigate(`/flow/orientedDesign/detail?boardProjectCode=${encodeURIComponent(card.title)}&boardProjectType=orientedDesignSystem`)} className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60">
                 <div className={`h-40 ${card.tone}`} />
                 <div className="px-4 py-4">
                   <p className="text-sm font-semibold text-neutral-200">{card.title}</p>
@@ -5615,6 +5805,66 @@ export function LightchainWorkbenchPage() {
                 </div>
               </button>
             ))}
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (selectedTool.id === 'wear-design-detail' && isDirectWearDesignDetail) {
+    return (
+      <main
+        className="relative dark min-h-[calc(100vh-56px)] overflow-hidden bg-[#101516] text-white"
+        data-testid="lightchain-wear-design-board-detail-page"
+        data-board-project-code={searchParams.get('boardProjectCode') ?? ''}
+        data-board-project-type={searchParams.get('boardProjectType') ?? ''}
+      >
+          <div className="absolute right-4 top-4 z-30">
+          <button type="button" className="rounded-full bg-[#10c8c0] px-4 py-2 text-sm font-semibold text-neutral-950" data-testid="lightchain-wear-board-copy">
+            ⧉ コピーを作成します
+          </button>
+        </div>
+
+        <section className="relative min-h-[calc(100vh-56px)] overflow-hidden bg-[#101516]">
+          <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(#4b5b5f_0.7px,transparent_0.7px)] [background-size:22px_22px]" />
+          <div className="absolute left-4 top-6 z-20 w-[264px] overflow-hidden rounded-xl border border-white/10 bg-[#252b2d] text-sm text-neutral-200 shadow-xl">
+            <div className="border-b border-white/10 px-3 py-1.5 text-xs text-neutral-300"><span className="mr-2 inline-block rounded bg-fuchsia-600 px-1.5 py-1">✦</span>ウェアデザインラボ</div>
+            <div className="px-3 py-2"><span className="mr-5 text-lg">‹</span>{wearBoardTitle}</div>
+          </div>
+          <div className="absolute left-[9.25%] top-[19.6%] z-10 w-[13.1%] min-w-[180px] overflow-hidden rounded-xl bg-white shadow-2xl">
+            <img src={lightWearDesignDetailImages[1]} alt="デザイン要素融合の参考画像" className="aspect-[3/4] w-full object-cover" />
+          </div>
+          <div className="absolute left-[24.75%] top-[19.6%] z-10 w-[13.1%] min-w-[180px] overflow-hidden rounded-xl bg-white shadow-2xl">
+            <img src={lightWearDesignDetailImages[0]} alt="デザイン要素融合のメイン画像" className="aspect-[3/4] w-full object-cover" />
+          </div>
+
+          <div className="absolute left-[42.3%] top-[17.5%] z-10 w-[9.2%] min-w-[174px] max-w-[220px] rounded-xl border border-white/10 bg-[#202629] p-2 shadow-2xl">
+            <div className="rounded-lg bg-[#8a4bd5] px-2 py-2 text-[9px] leading-3 text-white">修正指示を入力し、服のデザインや仕様などを変更します。</div>
+            <p className="mt-2 text-[10px] font-semibold text-neutral-400">メイン画像</p>
+            <div className="mt-1 flex items-center gap-2 rounded-lg bg-[#30383b] p-1 text-[10px] text-neutral-200"><img src={lightWearDesignDetailImages[0]} alt="" className="h-6 w-4 rounded object-cover" />メイン画像</div>
+            <p className="mt-2 text-[10px] font-semibold text-neutral-400">参考画像</p>
+            <div className="mt-1 flex items-center gap-2 rounded-lg bg-[#30383b] p-1 text-[10px] text-neutral-200"><img src={lightWearDesignDetailImages[1]} alt="" className="h-6 w-4 rounded object-cover" />参考画像</div>
+            <label htmlFor="lightchain-wear-board-prompt" className="mt-2 block text-[10px] font-semibold text-neutral-400">指示テキスト *</label>
+            <textarea id="lightchain-wear-board-prompt" value={wearBoardPrompt} onChange={(event) => setWearBoardPrompt(event.target.value)} className="mt-1 min-h-16 w-full resize-none rounded-lg border border-white/10 bg-[#151b1d] p-2 text-[10px] leading-4 text-neutral-100 outline-none focus:border-cyan-300/60" />
+            <div className="mt-2 flex items-center justify-between text-[10px] text-neutral-400"><span>強化モード</span><button type="button" role="switch" aria-checked={wearBoardStrongMode} onClick={() => setWearBoardStrongMode((value) => !value)} className={`h-4 w-8 rounded-full p-0.5 ${wearBoardStrongMode ? 'bg-cyan-300' : 'bg-neutral-600'}`}><span className={`block h-3 w-3 rounded-full bg-white transition ${wearBoardStrongMode ? 'translate-x-4' : ''}`} /></button></div>
+            <div className="mt-3 grid grid-cols-2 gap-2"><div className="relative text-[10px] text-neutral-400">生成設定<button type="button" role="combobox" aria-label="生成設定" aria-expanded={wearBoardOpenMenu === 'generation'} onClick={() => setWearBoardOpenMenu((value) => value === 'generation' ? null : 'generation')} className="mt-1 flex w-full items-center justify-between rounded bg-[#30383b] px-2 py-1 text-left text-[10px] text-neutral-100">{wearBoardGenerationSetting}<span>⌄</span></button>{wearBoardOpenMenu === 'generation' && <div role="menu" className="absolute left-0 right-0 top-full z-30 rounded bg-[#30383b] p-1 shadow-xl"><button type="button" role="menuitem" className="w-full rounded px-2 py-1 text-left text-[10px] text-neutral-100 hover:bg-white/10" onClick={() => { setWearBoardGenerationSetting('自動'); setWearBoardOpenMenu(null); }}>自動</button></div>}</div><div className="relative text-[10px] text-neutral-400">解像度<button type="button" role="combobox" aria-label="解像度" aria-expanded={wearBoardOpenMenu === 'resolution'} onClick={() => setWearBoardOpenMenu((value) => value === 'resolution' ? null : 'resolution')} className="mt-1 flex w-full items-center justify-between rounded bg-[#30383b] px-2 py-1 text-left text-[10px] text-neutral-100">{wearBoardResolution}<span>⌄</span></button>{wearBoardOpenMenu === 'resolution' && <div role="menu" className="absolute left-0 right-0 top-full z-30 rounded bg-[#30383b] p-1 shadow-xl"><button type="button" role="menuitem" className="w-full rounded px-2 py-1 text-left text-[10px] text-neutral-100 hover:bg-white/10" onClick={() => { setWearBoardResolution('4K'); setWearBoardOpenMenu(null); }}>4K</button><button type="button" role="menuitem" className="w-full rounded px-2 py-1 text-left text-[10px] text-neutral-100 hover:bg-white/10" onClick={() => { setWearBoardResolution('2K'); setWearBoardOpenMenu(null); }}>2K</button></div>}</div></div>
+            <button type="button" disabled className="mt-3 w-full rounded-lg bg-[#10c8c0] px-3 py-0.5 text-[10px] font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-70" data-testid="lightchain-wear-board-permission">権限がありません</button>
+          </div>
+
+          <div className="absolute left-[55.8%] top-[19.6%] z-10 w-[13.1%] min-w-[180px] overflow-hidden rounded-xl bg-white shadow-2xl">
+            <img src={lightWearDesignDetailImages[2]} alt="デザイン要素融合の生成結果" className="aspect-[3/4] w-full object-cover" />
+          </div>
+
+          <div className="absolute bottom-10 left-1/2 z-20 flex -translate-x-1/2 items-center justify-center gap-1 rounded-xl border border-white/10 bg-[#202629]/95 px-2 py-1 text-xs text-neutral-300 shadow-xl">
+            <button type="button" className="rounded-lg bg-white/10 px-3 py-2" aria-label="選択">↖</button>
+            <button type="button" className="rounded-lg px-3 py-2" aria-label="手のひら">✋</button>
+            <button type="button" className="rounded-lg px-3 py-2" aria-label="画像を追加">▧+</button>
+            <button type="button" className="rounded-lg px-3 py-2" aria-label="元に戻す">↶</button>
+            <button type="button" className="rounded-lg px-3 py-2" aria-label="やり直す">↷</button>
+            <span className="ml-6">25%</span>
+          </div>
+          <div className="absolute bottom-10 right-16 z-20 flex items-center gap-2 rounded-full bg-[#202629]/95 px-3 py-2 text-xs text-neutral-300 shadow-xl">
+            <span>⌕</span><span className="rounded bg-[#30383b] px-3 py-1">25%⌄</span><span>⌕</span>
           </div>
         </section>
       </main>
@@ -5637,7 +5887,7 @@ export function LightchainWorkbenchPage() {
       >
         {renderLightchainProviderGate()}
         {lightchainRightsConfirmationModal}
-        {!wearDesignDetailStarted ? (
+        {!wearDesignDetailStarted && !isDirectWearDesignDetail ? (
           <section className="mx-auto flex min-h-[calc(100vh-112px)] max-w-[780px] items-center justify-center">
             <div className="grid w-full gap-8 md:grid-cols-2">
               {[
@@ -6074,12 +6324,26 @@ export function LightchainWorkbenchPage() {
       data-lightchain-request-active={String(lightchainGenerationRequestRef.current !== null)}
       data-lightchain-generation-error={lightchainGenerationError ?? ''}
     >
-      <div className={isFeatureDetail ? 'space-y-4' : 'mx-auto max-w-7xl space-y-5'}>
+      {isFeatureDetail && (
+        <aside className="fixed left-4 top-[66px] z-20 hidden w-20 flex-col gap-3 lg:flex" aria-label="ツールバー">
+          {[
+            ['ツールバー', LayoutGrid],
+            ['デザインツール', WandSparkles],
+            ['フィッティングツール', Shirt],
+            ['グラフィックデザインツール', ImagePlus],
+            ['衣類生産ツール', Boxes],
+          ].map(([label, Icon]) => {
+            const ToolIcon = Icon as typeof LayoutGrid;
+            return <div key={label as string} className={`flex min-h-20 flex-col items-center justify-center rounded-xl border border-white/10 bg-[#252a2d] px-1 text-center text-[10px] leading-4 ${activeSourceCategory === 'graphics' ? 'text-cyan-300' : 'text-neutral-400'}`}><ToolIcon className="mb-1 h-7 w-7" /><span>{label as string}</span></div>;
+          })}
+        </aside>
+      )}
+      <div className={isFeatureDetail ? 'space-y-4 lg:pl-24' : 'mx-auto max-w-7xl space-y-5'}>
         {isFeatureDetail && (
           <nav
             aria-label="ツールカテゴリ"
             data-testid="lightchain-source-toolbar"
-            className="grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#111719] p-1 text-xs font-semibold text-neutral-300 sm:grid-cols-4 sm:text-sm"
+            className={`grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-[#111719] p-1 text-xs font-semibold text-neutral-300 sm:grid-cols-4 sm:text-sm ${isFeatureDetail ? 'hidden' : ''}`}
           >
             {lightchainSourceToolbarItems.map((item) => (
               <Link
@@ -6218,12 +6482,6 @@ export function LightchainWorkbenchPage() {
             <div className={`rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,13,15,0.98),rgba(13,17,20,0.94))] p-3 shadow-soft lg:max-w-[636px] ${lightchainToolPanelConfig || selectedTool.id === 'printing-image' ? 'pb-3' : ''}`}>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-                  <Link
-                    to="/lightchain"
-                    className="shrink-0 rounded-lg border border-white/10 bg-[#111517] px-3 py-2 text-sm font-semibold text-neutral-300 transition hover:border-neutral-400"
-                  >
-                    すべての機能
-                  </Link>
                   {!lightchainToolPanelConfig && selectedTool.id !== 'printing-image' && flowTabs.map((step, index) => (
                     <span
                       key={step}
@@ -6247,7 +6505,7 @@ export function LightchainWorkbenchPage() {
                 {selectedCategoryTools.map((tool) => (
                   <Link
                     key={tool.id}
-                    to={`/lightchain/${tool.id}`}
+                    to={resolveHeavyRouteForRow(tool.id, `/lightchain/${tool.id}`)}
                     className={`shrink-0 rounded-full border px-3 py-2 text-sm font-semibold transition ${
                       selectedTool.id === tool.id
                         ? 'border-cyan-300/40 bg-cyan-300/10 text-white'
@@ -6957,7 +7215,7 @@ export function LightchainWorkbenchPage() {
                                 if (selectedTool.id === 'line-to-real') setLineDraftType('カラー線画');
                                 if (selectedTool.id === 'line-to-real') setLineToRealImageType('平置き画像');
                                 if (selectedTool.id === 'line-generation') setLineGenerationImageType('平置き画像');
-	                                if (isPatternVectorProFlow) setPatternVectorLayers(['積み重ね']);
+                                if (isPatternVectorFlow) setPatternVectorLayers(['積み重ね']);
                                   if (selectedTool.id === 'image-repair') setImageRepairMode('手足の変形を修正');
 	                              }}
                               className="text-xs font-semibold text-neutral-400 transition hover:text-white"
@@ -6974,7 +7232,7 @@ export function LightchainWorkbenchPage() {
 	                                    if (selectedTool.id === 'line-to-real') setLineDraftType(option as 'カラー線画' | 'モノクロ線画');
 	                                    if (selectedTool.id === 'line-generation') setLineGenerationImageType(option as '平置き画像' | 'モデル図');
                                       if (selectedTool.id === 'image-repair') setImageRepairMode(option as '手足の変形を修正' | 'マスクツール');
-	                                    if (isPatternVectorProFlow) {
+                                    if (isPatternVectorFlow) {
                                       const layer = option as '積み重ね' | '分割';
                                       setPatternVectorLayers((current) =>
                                         current.includes(layer)
@@ -6990,7 +7248,7 @@ export function LightchainWorkbenchPage() {
 	                                        ? lineGenerationImageType === option ? 'bg-[#737d84] text-white' : 'text-neutral-400'
                                       : selectedTool.id === 'image-repair'
                                         ? imageRepairMode === option ? 'bg-[#737d84] text-white' : 'text-neutral-400'
-	                                      : isPatternVectorProFlow
+                                      : isPatternVectorFlow
                                         ? patternVectorLayers.includes(option as '積み重ね' | '分割') ? 'bg-[#737d84] text-white' : 'text-neutral-400'
                                       : index === 0 ? 'bg-[#737d84] text-white' : 'text-neutral-400'
                                   }`}
@@ -7543,7 +7801,7 @@ export function LightchainWorkbenchPage() {
                   className="absolute right-0 top-0 z-10 rounded-full border border-white/15 bg-white/[0.05] px-4 py-2 text-sm font-semibold text-white"
                   data-testid="lightchain-feature-history-link"
                 >
-                  履歴
+                  生成履歴
                 </Link>
                 <section className="flex min-h-[560px] items-center justify-center">
                   <div className="w-full pt-16 text-center">

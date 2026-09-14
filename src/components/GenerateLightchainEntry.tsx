@@ -245,31 +245,39 @@ const isBetaFeature = (feature: LightchainFeature | undefined): feature is Light
 
 // The home mirrors Lightchain's complete recommended card inventory. Video remains
 // visibly discoverable here while its /video destination stays fail-closed.
-const isHomepageVisibleFeature = (feature: LightchainFeature): boolean => (
-  feature.id === 'video-workstation' || isBetaFeature(feature)
-);
+const isHomepageVisibleFeature = (_feature: LightchainFeature): boolean => true;
 
 /**
- * Keep the launcher shell close to the Lightchain information architecture,
- * while using Heavy-owned generated category artwork instead of copying
- * remote production samples or proprietary image assets.
+ * Lightchain is the visual source of truth for this launcher. These are the
+ * public production card assets observed on Lightchain, kept as remote
+ * references so Heavy does not invent substitute artwork or duplicate files.
  */
 const launcherCategoryImages: Record<LightchainCategoryId, string> = {
-  recommended: '/assets/lightchain-cards/marketing-v1.png',
-  planning: '/assets/lightchain-cards/design-v1.png',
-  fitting: '/assets/lightchain-cards/fitting-v1.png',
-  graphics: '/assets/lightchain-cards/graphics-v1.png',
+  recommended: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  planning: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/aiDesignCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  fitting: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  graphics: 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GeneratePrintingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
 };
 
 const launcherFeatureImages: Partial<Record<string, string>> = {
-  'design-workspace': '/assets/lightchain-cards/design-v1.png',
-  'marketing-workspace': '/assets/lightchain-cards/marketing-v1.png',
-  'virtual-fitting': '/assets/lightchain-cards/fitting-v1.png',
-  'wear-design-lab': '/assets/lightchain-cards/design-v1.png',
-  'model-library': '/assets/lightchain-cards/fitting-v1.png',
-  'fashion-studio': '/assets/lightchain-cards/marketing-v1.png',
-  'design-agent': '/assets/lightchain-cards/design-v1.png',
-  'heavychain-lab': '/assets/lightchain-cards/graphics-v1.png',
+  'design-workspace': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/designProduction.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'marketing-workspace': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GenerateMarketingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'virtual-fitting': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/VirtualFittingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'wear-design-lab': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/orientedDesignCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'model-library': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/FittingModelLibraryCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'fashion-studio': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/integrationCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'design-agent': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/AIAgentCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'heavychain-lab': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/laboratoryCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'inspiration-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/aiDesignCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'fabric-simulation': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/FabricBodyCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'lineart-to-real': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/LineArtToRealCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'change-color': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/OneClickChangeColorCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'flat-vector': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/LineArtVectorConvertCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'custom-style': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/fashionModelCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'graphic-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/GeneratePrintingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'pattern-vector-pro': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/SVGConvertCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'design-arrange': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/OneClickModifyPrintingCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
+  'print-design': 'https://lightchain-qlxy-prod.oss-cn-hangzhou.aliyuncs.com/light-chain-platform/home5_0_1/FlowerShapedDesignCover.png?x-oss-process=image/resize,m_lfit,w_256,limit_1/format,webp',
 };
 
 const buildGalleryExampleImage = (featureId: string) => {
@@ -324,6 +332,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   const [galleryTab, setGalleryTab] = useState<(typeof galleryTabs)[number]['id']>('recommended');
   const [gallerySearchOpen, setGallerySearchOpen] = useState(false);
   const [galleryQuery, setGalleryQuery] = useState('');
+  const [gallerySearchTerm, setGallerySearchTerm] = useState('');
   const [selectedCase, setSelectedCase] = useState<GalleryCase | null>(null);
   const [galleryArtifacts, setGalleryArtifacts] = useState<WorkspaceArtifact[]>([]);
   const categoryParam = searchParams.get('category');
@@ -365,12 +374,12 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
   }, [galleryArtifacts, galleryTab]);
 
   const filteredGalleryItems = useMemo(() => {
-    const normalizedQuery = galleryQuery.trim().toLocaleLowerCase();
+    const normalizedQuery = gallerySearchTerm.trim().toLocaleLowerCase();
     if (!normalizedQuery) return galleryItems;
     return galleryItems.filter((item) => (
       `${item.title} ${item.description} ${item.step}`.toLocaleLowerCase().includes(normalizedQuery)
     ));
-  }, [galleryItems, galleryQuery]);
+  }, [galleryItems, gallerySearchTerm]);
 
   useEffect(() => {
     if (!currentBrand?.id) {
@@ -424,7 +433,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
           </div>
 
           <form
-            className="mt-5 flex h-10 max-w-[520px] items-center rounded-full border border-cyan-300/75 bg-white/[0.035] px-4 shadow-[0_0_22px_rgba(56,189,248,0.12)] focus-within:border-indigo-300"
+            className="mt-4 flex h-10 max-w-[507px] items-center rounded-full border border-cyan-300/75 bg-white/[0.035] px-4 shadow-[0_0_22px_rgba(56,189,248,0.12)] focus-within:border-indigo-300"
             onSubmit={(event) => {
               event.preventDefault();
               navigate(`${commandHref}${commandHref.includes('?') ? '&' : '?'}prompt=${encodeURIComponent(command.trim())}`);
@@ -440,7 +449,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
             />
           </form>
 
-          <div role="tablist" aria-label="Light Chainカテゴリ" className="mt-12 flex h-10 max-w-[650px] overflow-hidden rounded-lg border border-white/15 bg-white/[0.07] p-1">
+          <div role="tablist" aria-label="Light Chainカテゴリ" className="mt-12 flex h-10 max-w-[645px] overflow-hidden rounded-lg border border-white/15 bg-white/[0.07] p-1">
             {lightchainCategories.map((category) => {
               const active = category.id === activeCategory;
               return (
@@ -456,7 +465,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
                   }`}
                 >
                   {category.label}
-                  {category.id === 'recommended' && <span className="ml-1 text-[10px]">Hot</span>}
+                  {category.id === 'recommended' && <><span aria-hidden="true">{' '}</span><span className="ml-1 text-[10px]">Hot</span></>}
                 </button>
               );
             })}
@@ -489,7 +498,7 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
         </div>
       </section>
 
-      <section className="border-t border-white/10 px-5 py-8 sm:px-8 lg:px-10">
+      <section className="border-t border-white/10 px-5 pb-8 pt-10 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-none">
           <h2 className="text-2xl font-semibold tracking-[-0.04em] text-white">事例共有</h2>
           <div className="mt-5 flex flex-wrap items-center gap-4">
@@ -507,28 +516,34 @@ export function GenerateLightchainEntry({ compactOnMobile = false }: GenerateLig
               </button>
             ))}
             </div>
-            <button type="button" aria-label="事例を検索" aria-expanded={gallerySearchOpen} onClick={() => setGallerySearchOpen((open) => !open)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-[#262a2b] text-neutral-400 transition hover:bg-white/[0.08] hover:text-white ${gallerySearchOpen ? 'border-cyan-200/60 text-cyan-100' : ''}`}>
+            <button type="button" aria-label="検索" aria-expanded={gallerySearchOpen} onClick={() => setGallerySearchOpen((open) => !open)} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-[#262a2b] text-neutral-400 transition hover:bg-white/[0.08] hover:text-white ${gallerySearchOpen ? 'border-cyan-200/60 text-cyan-100' : ''}`}>
               <Search className="h-5 w-5" />
             </button>
             {gallerySearchOpen && (
-              <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-full border border-white/15 bg-[#262a2b] px-4 py-2 text-sm text-neutral-300 sm:max-w-sm" aria-label="事例を検索する入力">
+              <label className="flex min-w-[220px] flex-1 items-center gap-2 rounded-full border border-white/15 bg-[#262a2b] px-4 py-2 text-sm text-neutral-300 sm:max-w-sm" aria-label="検索キーワードを入力してください...">
                 <Search className="h-4 w-4 shrink-0 text-neutral-500" />
                 <input
                   autoFocus
                   value={galleryQuery}
                   onChange={(event) => setGalleryQuery(event.target.value)}
                   className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-neutral-500"
-                  placeholder="事例を検索"
-                  aria-label="事例を検索する入力"
+                  placeholder="検索キーワードを入力してください..."
+                  aria-label="検索キーワードを入力してください..."
                 />
-                {galleryQuery && <button type="button" aria-label="事例検索をクリア" onClick={() => setGalleryQuery('')} className="text-neutral-500 hover:text-white"><X className="h-4 w-4" /></button>}
+                {galleryQuery && <button type="button" aria-label="事例検索をクリア" onClick={() => { setGalleryQuery(''); setGallerySearchTerm(''); }} className="text-neutral-500 hover:text-white"><X className="h-4 w-4" /></button>}
+                <button type="button" aria-label="検索" onClick={() => setGallerySearchTerm(galleryQuery.trim())} className="rounded-md bg-[#63cbc7] px-3 py-1 text-xs font-medium text-neutral-950 transition hover:bg-[#7edbd7]">検索</button>
               </label>
             )}
           </div>
 
           {filteredGalleryItems.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-5 py-14 text-center text-sm text-neutral-400">
-              {galleryQuery.trim() ? '検索条件に一致する事例はありません。' : 'このカテゴリに表示できる保存済み成果物はまだありません。生成結果を保存すると、ここに表示されます。'}
+              {gallerySearchTerm.trim() ? (
+                <>
+                  <span className="block">該当する結果が見つかりません</span>
+                  <span className="mt-1 block text-xs text-neutral-500">別のキーワードで検索してください</span>
+                </>
+              ) : 'このカテゴリに表示できる保存済み成果物はまだありません。生成結果を保存すると、ここに表示されます。'}
             </div>
           ) : (
             <div className="mt-4 columns-1 gap-2 sm:columns-2 xl:columns-4 2xl:columns-5">

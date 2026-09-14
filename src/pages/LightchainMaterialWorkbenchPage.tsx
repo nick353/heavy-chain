@@ -5061,13 +5061,13 @@ function LightchainMaterialWorkbenchSession() {
       data-workflow-source-input-mode={workflowContract?.sourceInputMode ?? ''}
       data-workflow-retry-policy={workflowContract?.retry.retainsLastCompletedResult && workflowContract.retry.preservesInputLineage && workflowContract.retry.blocksDuplicateSubmit ? 'retains-last-completed-result,preserves-input-lineage,blocks-duplicate-submit' : ''}
       data-workflow-rights-gate={workflowContract?.rightsGate ?? ''}
-      className={isPrinting ? 'min-h-screen bg-[#0b1113] text-white' : 'h-full min-h-0 bg-[#0b1113] text-white'}
+      className={isPrinting ? 'min-h-screen bg-[#0b1113] text-white' : 'relative h-full min-h-0 bg-[#0b1113] text-white'}
     >
       <div className="contents">
         <nav
           aria-label="ツールカテゴリ"
           data-testid="lightchain-source-toolbar"
-          className="grid grid-cols-2 gap-1 border-b border-white/10 bg-[#0b1113] p-2 text-xs font-semibold text-neutral-300 sm:grid-cols-4 sm:text-sm"
+          className="hidden"
         >
           {lightchainSourceToolbarItems.map((item) => (
             <Link
@@ -5082,30 +5082,48 @@ function LightchainMaterialWorkbenchSession() {
         </nav>
         <aside
           aria-label="Light Chainグラフィックツール"
-          className="hidden"
+          className="fixed left-4 top-[66px] z-20 flex h-[calc(100vh-82px)] w-20 flex-col items-center overflow-hidden rounded-xl border border-white/10 bg-[#252b2d] text-white/70 shadow-2xl"
         >
-          <div className="sticky top-[88px] flex flex-col items-center gap-3">
+            <div className="flex w-full flex-col items-center gap-2 px-2 py-4">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-300/15 text-cyan-200" aria-hidden="true">
-              <Layers3 className="h-5 w-5" />
+              <img
+                src="/assets/lightchain-toolbar.svg"
+                alt=""
+                className="h-7 w-7 object-contain"
+              />
             </div>
-            {LIGHTCHAIN_MATERIAL_TABS.map((tab) => {
-              const active = tab.id === activeMaterialTab.id;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => navigate(tab.route)}
-                  aria-label={tab.label}
-                  aria-pressed={active}
-                  className={`flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold leading-4 transition ${active
-                    ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30'
-                    : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
-                >
-                  <span aria-hidden="true" className={`h-2 w-2 rounded-full ${active ? 'bg-cyan-200 shadow-[0_0_10px_rgba(165,243,252,0.8)]' : 'bg-white/20'}`} />
-                  <span className="text-center">{tab.label.replace('イメージ', '').replace('の実写化', '実写')}</span>
-                </button>
-              );
-            })}
+            <span className="text-[10px] font-semibold text-white/65">ツールバー</span>
+            <div className="my-1 h-px w-10 bg-white/10" />
+            {([
+              ['デザインツール', '/tools/fabric', true, 'https://jp.linkaigc.com/routeIcons/%E6%9C%8D%E8%A3%85%E8%AE%BE%E8%A8%88%E5%B7%A5%E5%85%B7-%E9%80%89%E4%B8%AD.svg'],
+              ['フィッティング\nツール', '/model', false, 'https://jp.linkaigc.com/routeIcons/%E6%A8%A1%E7%89%B9%E8%AF%95%E8%A1%A3%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg'],
+              ['グラフィックデザイン\nツール', '/tools/printing', false, 'https://jp.linkaigc.com/routeIcons/%E5%9B%BE%E6%A1%88%E5%88%9B%E4%BD%9C%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg'],
+              ['衣類生産\nツール', '/tools/fabric', false, 'https://jp.linkaigc.com/routeIcons/%E7%94%9F%E4%BA%A7%E5%B7%A5%E5%85%B7-%E6%9C%AA%E9%81%B8.svg'],
+            ] as const).map(([label, route, active]) => (
+              <Link
+                key={label}
+                to={route}
+                aria-current={active ? 'page' : undefined}
+                className={`flex min-h-20 w-full flex-col items-center justify-center gap-2 rounded-xl px-1 text-center text-[10px] font-semibold leading-4 transition ${active
+                  ? 'bg-cyan-300/15 text-cyan-100 ring-1 ring-cyan-200/30'
+                  : 'text-white/45 hover:bg-white/[0.06] hover:text-white/80'}`}
+              >
+                <span aria-hidden="true" className={`flex h-8 w-8 items-center justify-center rounded-xl ${active ? 'bg-cyan-200/25' : 'bg-white/10'}`}>
+                  <img
+                    src={label.startsWith('デザイン')
+                      ? '/assets/lightchain-design.svg'
+                      : label.startsWith('フィッティング')
+                        ? '/assets/lightchain-fitting.svg'
+                        : label.startsWith('グラフィック')
+                          ? '/assets/lightchain-graphic.svg'
+                          : '/assets/lightchain-production.svg'}
+                    alt=""
+                    className="h-7 w-7 object-contain"
+                  />
+                </span>
+                <span className="whitespace-pre-line">{label}</span>
+              </Link>
+            ))}
           </div>
         </aside>
 
@@ -6354,10 +6372,10 @@ function LightchainMaterialWorkbenchSession() {
       {!isPrinting && (
         <div
           data-testid="lightchain-fabric-parity-view"
-          className="min-h-screen overflow-hidden bg-[#0b1113] px-3 py-4 text-white sm:px-4 lg:h-[calc(100vh-50px)] lg:min-h-0 lg:overflow-hidden lg:px-4 lg:py-4"
+          className="h-[calc(100vh-50px)] min-h-0 overflow-hidden bg-[#0b1113] px-4 py-4 pl-28 text-white"
         >
           <div className="h-full w-full">
-            <div className="grid h-full gap-4 lg:grid-cols-[minmax(0,596px)_minmax(360px,1fr)]">
+            <div className="grid h-full grid-cols-[minmax(0,596px)_minmax(360px,1fr)] gap-4">
 
             <section className="min-w-0 overflow-y-auto scrollbar-hide rounded-lg bg-[#171d20] p-4 shadow-2xl shadow-black/20">
 
@@ -6576,7 +6594,7 @@ function LightchainMaterialWorkbenchSession() {
                   <p className="mt-2 max-w-[28rem] text-sm leading-[21px] text-neutral-400">異なる生地の効果を生成できます</p>
                   <video
                     data-testid="lightchain-fabric-source-preview-video"
-                    className="mt-4 h-[340px] w-full object-contain"
+                    className="mt-4 h-[340px] w-full"
                     src={LIGHTCHAIN_FABRIC_EMPTY_PREVIEW_VIDEO}
                     autoPlay
                     controls

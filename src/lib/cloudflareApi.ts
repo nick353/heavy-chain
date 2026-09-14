@@ -685,6 +685,14 @@ class CloudflareDataPlaneClient {
     });
   }
 
+  async updateGeneratedImageLibraryTitle(imageId: string, title: string): Promise<CloudflareGeneratedImage> {
+    return this.request<CloudflareGeneratedImage>(`/v1/generated-images/${encodeURIComponent(imageId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ library_title: title }),
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
   async deleteGeneratedImage(imageId: string): Promise<void> {
     await this.request<unknown>(`/v1/generated-images/${encodeURIComponent(imageId)}`, { method: 'DELETE' });
   }

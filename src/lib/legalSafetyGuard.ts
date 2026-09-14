@@ -80,6 +80,13 @@ const safetyInstructionPhrases = [
   'do not copy third-party logos, protected brand identity, celebrity likeness, or another creator distinctive work',
   'do not copy third-party logos, protected brand identity, person likeness, or another creator distinctive work',
   'do not imply copyright registration, trademark clearance, exclusivity, or platform approval',
+  // These are generated guardrails, not user requests to imitate a protected
+  // brand. Keep them out of the prompt-risk scan when a legitimate brand is
+  // mentioned as context or inspiration.
+  'do not invent text, logos, trademarks, protected identities, or unrelated objects',
+  'return a clean production-ready image with no ui, labels, borders, or watermark',
+  'do not add a logo',
+  'do not add logos, text, or unrelated props',
 ];
 
 const stripKnownSafetyInstructions = (text: string) => {

@@ -532,46 +532,52 @@ export const handoffWorkspaceToCanvas = (input: WorkspaceHandoffInput) => {
       },
     });
   } else {
-    canvasStore.addObject({
-      type: 'image',
-      x: 96,
-      y: 96,
-      width: 420,
-      height: 280,
-      rotation: 0,
-      scaleX: 1,
-      scaleY: 1,
-      opacity: 1,
-      locked: false,
-      visible: true,
-      src: imageUrl,
-      label: input.title,
-      metadata: {
-        feature: input.featureType,
-        prompt: input.prompt,
-        generation: 0,
-        parameters: {
-          source: 'workspace-handoff',
-          sourceArtifactId: artifact.id,
-          sourceJobId: artifact.sourceJobId ?? null,
-          activeChoice: input.activeChoice,
-          progress: input.progress,
-          workflowVersion: input.workflow.workflowVersion,
-          handoffKind: input.workflow.handoffKind,
-          resumePath: input.workflow.resumePath,
-          generationIntent: input.workflow.generationIntent,
-          preview: input.previewMetadata,
-          selectedStudioSetup: input.selectedStudioSetup,
-          selectedModelCandidate: input.selectedModelCandidate,
-          selectedVideoStoryboard: input.selectedVideoStoryboard,
-          selectedLabExperiment: input.selectedLabExperiment,
-          materialReferences: input.materialReferences,
-          layerPlan: input.layerPlan,
-          maskPlan: input.maskPlan,
-          compositionPreview: input.compositionPreview,
+    // Data/blob previews are useful for the live handoff, but they are not
+    // durable server image references. Do not put an unsaveable image object
+    // into a Canvas document; the structured handoff note below remains the
+    // durable representation until a real Gallery/material asset is chosen.
+    if (!/^(?:data|blob):/i.test(imageUrl.trim())) {
+      canvasStore.addObject({
+        type: 'image',
+        x: 96,
+        y: 96,
+        width: 420,
+        height: 280,
+        rotation: 0,
+        scaleX: 1,
+        opacity: 1,
+        scaleY: 1,
+        locked: false,
+        visible: true,
+        src: imageUrl,
+        label: input.title,
+        metadata: {
+          feature: input.featureType,
+          prompt: input.prompt,
+          generation: 0,
+          parameters: {
+            source: 'workspace-handoff',
+            sourceArtifactId: artifact.id,
+            sourceJobId: artifact.sourceJobId ?? null,
+            activeChoice: input.activeChoice,
+            progress: input.progress,
+            workflowVersion: input.workflow.workflowVersion,
+            handoffKind: input.workflow.handoffKind,
+            resumePath: input.workflow.resumePath,
+            generationIntent: input.workflow.generationIntent,
+            preview: input.previewMetadata,
+            selectedStudioSetup: input.selectedStudioSetup,
+            selectedModelCandidate: input.selectedModelCandidate,
+            selectedVideoStoryboard: input.selectedVideoStoryboard,
+            selectedLabExperiment: input.selectedLabExperiment,
+            materialReferences: input.materialReferences,
+            layerPlan: input.layerPlan,
+            maskPlan: input.maskPlan,
+            compositionPreview: input.compositionPreview,
+          },
         },
-      },
-    });
+      });
+    }
   }
 
   canvasStore.addObject({

@@ -89,6 +89,7 @@
     "verify:browser-use:regression": "node scripts/verify-browser-use-proof.regression.mjs",
     "verify:error-messages": "node --experimental-strip-types scripts/verify-error-message-mapping.mjs",
     "verify:lightchain-ui": "node scripts/verify-lightchain-production-ui.mjs",
+    "verify:companion-auth": "node scripts/verify-companion-authenticated-evidence.mjs",
     "verify:lightchain-navigation": "node scripts/verify-lightchain-production-navigation.mjs",
     "verify:lightchain-clone-layout": "node scripts/verify-lightchain-clone-layout.mjs",
     "verify:lightchain-mask-layer": "npm run build && node scripts/verify-lightchain-mask-layer-flow.mjs",

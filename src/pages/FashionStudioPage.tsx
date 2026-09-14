@@ -17,6 +17,8 @@ import {
   restoreWorkspaceHandoffHistory,
   workspaceSourceConfig,
 } from '../lib/workspaceHandoff';
+import { cloudflareDataPlane } from '../lib/cloudflareApi';
+import { resolveGeneratedImageUrlWithStatus } from '../lib/storage';
 import { deriveUnifiedWorkspaceFlowState, unifiedWorkspaceFlowLabels } from '../lib/unifiedWorkspaceFlow';
 import {
   getLightchainUnifiedFeatureWorkflowContract,
@@ -129,6 +131,26 @@ const encodeSvg = (svg: string) => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };
 
+const formatProjectAge = (value: string) => {
+  const elapsedDays = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 86_400_000));
+  if (elapsedDays === 0) return '今日 修正';
+  if (elapsedDays === 1) return '1日前 修正';
+  if (elapsedDays < 30) return `${elapsedDays}日前 修正`;
+  const months = Math.max(1, Math.floor(elapsedDays / 30));
+  return `${months}ヶ月前 修正`;
+};
+
+const extractCanvasPreviewSource = (snapshot: unknown) => {
+  if (!snapshot || typeof snapshot !== 'object' || !Array.isArray((snapshot as { objects?: unknown }).objects)) return '';
+  const image = (snapshot as { objects: unknown[] }).objects.find((item) => (
+    item && typeof item === 'object' && (item as { type?: unknown }).type === 'image'
+  ));
+  const src = image && typeof (image as { src?: unknown }).src === 'string'
+    ? (image as { src: string }).src
+    : '';
+  return src;
+};
+
 const escapeSvgText = (value: string) => {
   return value
     .replaceAll('&', '&amp;')
@@ -235,6 +257,9 @@ export function FashionStudioPage() {
   const [referenceImage, setReferenceImage] = useState('');
   const [materialReference, setMaterialReference] = useState<MaterialReferenceState>(initialStudioMaterial);
   const [savedArtifactId, setSavedArtifactId] = useState<string | null>(null);
+  const [remoteProjects, setRemoteProjects] = useState<Array<{ id: string; title: string; updatedAt: string; imageUrl: string }>>([]);
+  const [remoteProjectsStatus, setRemoteProjectsStatus] = useState<'idle' | 'loading' | 'success' | 'failure'>('idle');
+  const [projectPage, setProjectPage] = useState(1);
   const nextHistoryId = useRef(1);
   const selectedStudioSetup = useMemo<StudioSetup>(() => ({
     model: modelOptions.find((option) => option.id === selectedModelId) ?? modelOptions[0],
@@ -270,6 +295,42 @@ export function FashionStudioPage() {
     setSavedArtifactId(savedArtifact?.id ?? null);
     setHistory(restoreWorkspaceHandoffHistory(currentBrand?.id, 'fashion-studio', user?.id));
   }, [currentBrand?.id, user?.id]);
+
+  useEffect(() => {
+    let active = true;
+    const brandId = currentBrand?.id;
+    if (!brandId || !cloudflareDataPlane) {
+      setRemoteProjects([]);
+      setRemoteProjectsStatus('idle');
+      return () => { active = false; };
+    }
+
+    setRemoteProjectsStatus('loading');
+    void cloudflareDataPlane.listCanvasDocuments(brandId)
+      .then(async (documents) => {
+        if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
+        const projectCards = await Promise.all(documents.slice(0, 40).map(async (document) => {
+          const source = extractCanvasPreviewSource(document.snapshot);
+          const resolved = source ? await resolveGeneratedImageUrlWithStatus(source) : null;
+          return {
+            id: document.id,
+            title: document.title || 'Untitled',
+            updatedAt: document.updated_at,
+            imageUrl: resolved?.ok ? resolved.url : '',
+          };
+        }));
+        if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
+        setRemoteProjects(projectCards);
+        setRemoteProjectsStatus('success');
+      })
+      .catch(() => {
+        if (!active || useAuthStore.getState().currentBrand?.id !== brandId) return;
+        setRemoteProjects([]);
+        setRemoteProjectsStatus('failure');
+      });
+
+    return () => { active = false; };
+  }, [currentBrand?.id]);
 
   const markWorkflowDirty = () => setSavedArtifactId(null);
 
@@ -475,6 +536,26 @@ export function FashionStudioPage() {
         .filter((artifact) => artifact.featureType === 'fashion-studio')
         .slice(0, 40)
       : [];
+    const localProjectCards = projectArtifacts.map((artifact) => ({
+      id: artifact.id,
+      title: artifact.title || 'Untitled',
+      updatedAt: artifact.createdAt,
+      imageUrl: artifact.imageUrl,
+      source: 'local' as const,
+    }));
+    const remoteProjectCards = remoteProjects.map((project) => ({
+      ...project,
+      source: 'remote' as const,
+    }));
+    const seenProjectIds = new Set<string>();
+    const allProjectCards = [...remoteProjectCards, ...localProjectCards].filter((project) => {
+      if (seenProjectIds.has(project.id)) return false;
+      seenProjectIds.add(project.id);
+      return true;
+    });
+    const projectsPerPage = 30;
+    const projectPageCount = Math.max(1, Math.ceil(allProjectCards.length / projectsPerPage));
+    const visibleProjectCards = allProjectCards.slice((projectPage - 1) * projectsPerPage, projectPage * projectsPerPage);
     const referenceExamples = [
       'スタジオ撮影を屋外風の写真に変える',
       'スマート画像検索＋コーデ調整',
@@ -493,9 +574,18 @@ export function FashionStudioPage() {
         data-workflow-input-roles={fashionStudioWorkflowContract?.inputRoles.join(',') ?? ''}
         data-workflow-result-destinations={fashionStudioWorkflowContract?.resultDestinations.join(',') ?? ''}
       >
-        <section className="mx-auto max-w-[1180px]">
-          <h1 className="text-base font-semibold text-white">ファッションスタジオ</h1>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="w-full">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-base font-semibold text-white">ファッションスタジオ</h1>
+            <Link
+              to="/credits"
+              aria-label="クレジットを確認"
+              className="shrink-0 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-neutral-300 transition hover:border-cyan-300/40 hover:text-white"
+            >
+              ✦ 378911
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-7">
             <button
               type="button"
               onClick={() => setStudioOverview(false)}
@@ -512,23 +602,32 @@ export function FashionStudioPage() {
                 <p className="text-sm font-semibold text-neutral-200">新規ファイル</p>
               </div>
             </button>
-            {projectArtifacts.map((artifact) => (
+            {visibleProjectCards.map((project) => (
               <button
-                key={artifact.id}
+                key={project.id}
                 type="button"
-                onClick={() => setStudioOverview(false)}
+                onClick={() => project.source === 'remote' ? navigate(`/canvas/${encodeURIComponent(project.id)}`) : setStudioOverview(false)}
                 className="overflow-hidden rounded-xl bg-[#171c1f] text-left transition hover:ring-1 hover:ring-cyan-300/60"
               >
                 <div className="flex h-40 items-center justify-center bg-[#171c1f]">
-                  {artifact.imageUrl ? <img src={artifact.imageUrl} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-neutral-500">プレビュー未取得</span>}
+                  {project.imageUrl ? <img src={project.imageUrl} alt="" className="h-full w-full object-cover" /> : <span className="text-xs text-neutral-500">PROJECT</span>}
                 </div>
                 <div className="px-4 py-4">
-                  <p className="truncate text-sm font-semibold text-neutral-200">{artifact.title || 'Untitled'}</p>
-                  <p className="mt-2 text-xs text-neutral-500">{new Date(artifact.createdAt).toLocaleDateString('ja-JP')} 修正</p>
+                  <p className="truncate text-sm font-semibold text-neutral-200">{project.title}</p>
+                  <p className="mt-2 text-xs text-neutral-500">{formatProjectAge(project.updatedAt)}</p>
                 </div>
               </button>
             ))}
           </div>
+          {remoteProjectsStatus === 'loading' && <p className="mt-3 text-xs text-neutral-500">プロジェクトを読み込んでいます…</p>}
+          {remoteProjectsStatus === 'failure' && <p className="mt-3 text-xs text-neutral-500">既存プロジェクトを読み込めませんでした。新規ファイルから開始できます。</p>}
+          {projectPageCount > 1 && (
+            <nav className="mt-4 flex items-center justify-center gap-2 text-xs text-neutral-400" aria-label="プロジェクトページ">
+              <button type="button" disabled={projectPage === 1} onClick={() => setProjectPage((page) => Math.max(1, page - 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">前のページ</button>
+              <span>{projectPage} / {projectPageCount}</span>
+              <button type="button" disabled={projectPage === projectPageCount} onClick={() => setProjectPage((page) => Math.min(projectPageCount, page + 1))} className="rounded border border-white/10 px-3 py-1.5 disabled:opacity-40">次のページ</button>
+            </nav>
+          )}
 
           <h2 className="mt-7 text-base font-semibold text-white">参考事例</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

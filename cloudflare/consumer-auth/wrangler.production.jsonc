@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "consumer-auth",
+  "account_id": "ffa9a931fec21b22273fd2c311bb771d",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [{
+    "binding": "AUTH_DB", "database_name": "consumer-auth-db",
+    "database_id": "d6ee3637-1212-40a3-b407-562fb9ccf6bc"
+  }],
+  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["heavy@notify.nisen.uk"] }],
+  "vars": {
+    "EMAIL_DAILY_ATTEMPT_LIMIT": "5",
+    "EMAIL_TOTAL_ATTEMPT_LIMIT": "20",
+    "EMAIL_FROM": "heavy@notify.nisen.uk",
+    "AUTH_BASE_URL": "https://consumer-auth.nichika2000823.workers.dev",
+    "WEB_ORIGINS": "https://heavy-chain-web.nichika2000823.workers.dev,https://heavy-chain.zeabur.app"
+  },
+  "observability": { "enabled": false },
+  "triggers": { "crons": ["17 * * * *"] }
+}

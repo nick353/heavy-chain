@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mypro-auth",
+  "account_id": "ffa9a931fec21b22273fd2c311bb771d",
+  "main": "src/mypro.ts",
+  "compatibility_date": "2026-09-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [{
+    "binding": "AUTH_DB",
+    "database_name": "mypro-auth-db",
+    "database_id": "9fa935e4-73d7-44ab-a56b-0c05c19259cf"
+  }],
+  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["mypro@notify.nisen.uk"] }],
+  "vars": {
+    "EMAIL_DAILY_ATTEMPT_LIMIT": "5",
+    "EMAIL_TOTAL_ATTEMPT_LIMIT": "20",
+    "APP_ID": "mypro",
+    "EMAIL_FROM": "mypro@notify.nisen.uk",
+    "AUTH_BASE_URL": "https://mypro-auth.nichika2000823.workers.dev",
+    "WEB_ORIGINS": ""
+  },
+  "observability": { "enabled": false },
+  "triggers": { "crons": ["17 * * * *"] }
+}

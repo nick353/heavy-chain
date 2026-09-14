@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "consumer-auth-local",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [{ "binding": "AUTH_DB", "database_name": "consumer-auth-db", "database_id": "00000000-0000-0000-0000-000000000000" }],
+  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["auth@example.test"] }],
+  "vars": {
+    "EMAIL_DAILY_ATTEMPT_LIMIT": "0",
+    "EMAIL_TOTAL_ATTEMPT_LIMIT": "0",
+    "EMAIL_FROM": "auth@example.test",
+    "AUTH_BASE_URL": "https://consumer-auth.example.test",
+    "WEB_ORIGINS": "https://heavy.example.test"
+  },
+  "observability": { "enabled": false },
+  "triggers": { "crons": ["17 * * * *"] }
+}

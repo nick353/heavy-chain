@@ -1,0 +1,17 @@
+node_modules
+.git
+.env*
+output
+work
+coverage
+recordings
+test-results
+playwright-report
+.playwright-cli
+.codex
+screenshots
+cloudflare
+benchmarks
+goals
+e2e
+*.log

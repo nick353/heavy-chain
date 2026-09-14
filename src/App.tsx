@@ -23,6 +23,8 @@ const FittingPage = lazy(() => import('./pages/FittingPage').then((module) => ({
 const FashionStudioPage = lazy(() => import('./pages/FashionStudioPage').then((module) => ({ default: module.FashionStudioPage })));
 const ModelLibraryPage = lazy(() => import('./pages/ModelLibraryPage').then((module) => ({ default: module.ModelLibraryPage })));
 const PatternWorkspacePage = lazy(() => import('./pages/PatternWorkspacePage').then((module) => ({ default: module.PatternWorkspacePage })));
+const PatternProjectDashboardPage = lazy(() => import('./pages/PatternProjectDashboardPage').then((module) => ({ default: module.PatternProjectDashboardPage })));
+const PatternDesignDetailPage = lazy(() => import('./pages/PatternDesignDetailPage').then((module) => ({ default: module.PatternDesignDetailPage })));
 const VideoWorkstationPage = lazy(() => import('./pages/VideoWorkstationPage').then((module) => ({ default: module.VideoWorkstationPage })));
 const LabPage = lazy(() => import('./pages/LabPage').then((module) => ({ default: module.LabPage })));
 const LightchainWorkbenchPage = lazy(() => import('./pages/LightchainWorkbenchPage').then((module) => ({ default: module.LightchainWorkbenchPage })));
@@ -33,6 +35,8 @@ const GalleryPage = lazy(() => import('./pages/GalleryPage').then((module) => ({
 const CanvasEditorPage = lazy(() => import('./pages/CanvasEditorPage').then((module) => ({ default: module.CanvasEditorPage })));
 const LightchainMaterialWorkbenchPage = lazy(() => import('./pages/LightchainMaterialWorkbenchPage').then((module) => ({ default: module.LightchainMaterialWorkbenchPage })));
 const LightchainCreatorPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainCreatorPage })));
+const LightchainPrintingPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainPrintingPage })));
+const LightchainVectorSpecialPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainVectorSpecialPage })));
 const LightchainDesignProductionPage = lazy(() => import('./pages/LightchainParityPages').then((module) => ({ default: module.LightchainDesignProductionPage })));
 const LightchainAssetCenterPage = lazy(() => import('./pages/LightchainLibraryPage').then((module) => ({ default: module.LightchainLibraryPage })));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
@@ -254,7 +258,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   // 初期化が完了していない、またはローディング中の場合
   if (!isInitialized || isLoading || authRecoveryRequired) {
-    return <WorkspaceLoadingFallback authRecovery />;
+    return <WorkspaceLoadingFallback authRecovery={authRecoveryRequired} />;
   }
 
   // 認証されていない場合
@@ -742,6 +746,29 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        {/* Lightchain production exposes the video workstation under this
+            path. Keep the production entry reachable while reusing Heavy's
+            guarded storyboard workspace and persistence handoffs. */}
+        <Route
+          path="/flow/GenerateShortVideo"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<VideoWorkstationPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/flow/GenerateShortVideo/detail"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(<VideoWorkstationPage />)}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/lab"
           element={
@@ -913,7 +940,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainMaterialWorkbenchPage />
+                    <LightchainPrintingPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -983,7 +1010,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainWorkbenchPage />
+                    <LightchainVectorSpecialPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -1011,7 +1038,7 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainWorkbenchPage />
+                    <LightchainPrintingPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>
@@ -1025,7 +1052,21 @@ function AppRoutes() {
               <ErrorBoundary>
                 {lazyPage(
                   <LightchainUnifiedWorkspaceShell>
-                    <LightchainWorkbenchPage />
+                    <PatternProjectDashboardPage />
+                  </LightchainUnifiedWorkspaceShell>,
+                )}
+              </ErrorBoundary>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/editor/pattern/detail"
+          element={
+            <ProtectedRoute>
+              <ErrorBoundary>
+                {lazyPage(
+                  <LightchainUnifiedWorkspaceShell>
+                    <PatternDesignDetailPage />
                   </LightchainUnifiedWorkspaceShell>,
                 )}
               </ErrorBoundary>

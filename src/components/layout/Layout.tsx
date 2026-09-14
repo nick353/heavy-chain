@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Header } from './Header';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
@@ -15,10 +15,12 @@ import { HeavyChainLogo } from '../icons';
 import { ChevronDown, Globe2, HelpCircle, History, User, UserCircle } from 'lucide-react';
 
 export function Layout() {
-  const { user, profile } = useAuthStore();
+  const { user, profile, signOut } = useAuthStore();
   const location = useLocation();
+  const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [isLightAccountMenuOpen, setIsLightAccountMenuOpen] = useState(false);
+  const [isLightAccountDetailOpen, setIsLightAccountDetailOpen] = useState(false);
   const lightchainAvatarUrl = profile?.avatar_url
     || (typeof user?.user_metadata?.avatar_url === 'string' ? user.user_metadata.avatar_url : null)
     || (typeof user?.user_metadata?.picture === 'string' ? user.user_metadata.picture : null);
@@ -40,6 +42,8 @@ export function Layout() {
     '/tools/fabric',
     '/tools/printing',
     '/tools/line-draft-to-tile',
+    '/tools/line',
+    '/tools/pattern-to-vector',
     '/tools/svg-convert',
     '/tools/reactor',
     '/tools/vector-special',
@@ -57,6 +61,7 @@ export function Layout() {
     '/workflows/design-exploration',
     '/workflows/ec-product-set',
     '/workflows/sns-campaign',
+    '/flow/GenerateShortVideo',
   ] as const;
   const lightchainWorkspaceRoutes = ['/gallery', '/history', '/jobs'] as const;
   const isLightchainRoute = location.pathname === '/dashboard'
@@ -65,6 +70,13 @@ export function Layout() {
     || lightchainDirectRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`))
     || lightchainWorkspaceRoutes.some((route) => location.pathname === route || location.pathname.startsWith(`${route}/`));
   const isLightchainPrintRoute = location.pathname === '/lightchain/printing-image';
+
+  const handleLightchainSignOut = async () => {
+    await signOut();
+    setIsLightAccountMenuOpen(false);
+    setIsLightAccountDetailOpen(false);
+    navigate('/login', { replace: true });
+  };
 
   // Handle scroll for header transparency effects
   useEffect(() => {
@@ -77,6 +89,7 @@ export function Layout() {
 
   useEffect(() => {
     setIsLightAccountMenuOpen(false);
+    setIsLightAccountDetailOpen(false);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -176,13 +189,29 @@ export function Layout() {
                     </button>
                     {isLightAccountMenuOpen && (
                       <div className="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-2xl border border-neutral-200 bg-white py-2 text-sm text-neutral-800 shadow-2xl">
-                        <Link to="/brand/settings" className="block px-4 py-3 transition hover:bg-neutral-100">マイアカウント</Link>
-                        <Link to="/designProduction" className="block px-4 py-3 transition hover:bg-neutral-100">デザインドキュメント</Link>
-                        <Link to="/asset-center" className="block px-4 py-3 transition hover:bg-neutral-100">ライブラリー</Link>
-                        <Link to="/brand/settings" className="block px-4 py-3 transition hover:bg-neutral-100">チーム管理</Link>
-                        <div className="my-1 border-t border-neutral-200" />
-                        <button type="button" className="block w-full px-4 py-3 text-left text-neutral-500 transition hover:bg-neutral-100">透かし（ウォーターマーク）表示</button>
-                        <button type="button" className="block w-full px-4 py-3 text-left text-neutral-500 transition hover:bg-neutral-100">ログアウト</button>
+                        {isLightAccountDetailOpen ? (
+                          <>
+                            <button type="button" onClick={() => setIsLightAccountDetailOpen(false)} className="flex w-full items-center gap-2 px-4 py-3 text-left font-semibold transition hover:bg-neutral-100">
+                              <span aria-hidden="true">‹</span> アカウント
+                            </button>
+                            <div className="border-t border-neutral-200 px-4 py-3">
+                              <p className="font-semibold">マイアカウント</p>
+                              <p className="mt-3 font-medium">{typeof user?.user_metadata?.full_name === 'string' ? user.user_metadata.full_name : 'ユーザー'}</p>
+                              <p className="mt-1 text-xs text-neutral-500">{user?.email ?? ''}</p>
+                              <Link to="/change-password" className="mt-4 block text-xs text-neutral-600 underline transition hover:text-neutral-900">パスワードを変更する</Link>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <button type="button" onClick={() => setIsLightAccountDetailOpen(true)} className="block w-full px-4 py-3 text-left transition hover:bg-neutral-100">マイアカウント</button>
+                            <Link to="/designProduction" className="block px-4 py-3 transition hover:bg-neutral-100">デザインドキュメント</Link>
+                            <Link to="/asset-center" className="block px-4 py-3 transition hover:bg-neutral-100">ライブラリー</Link>
+                            <Link to="/brand/settings" className="block px-4 py-3 transition hover:bg-neutral-100">チーム管理</Link>
+                            <div className="my-1 border-t border-neutral-200" />
+                            <button type="button" className="block w-full px-4 py-3 text-left text-neutral-500 transition hover:bg-neutral-100">透かし（ウォーターマーク）表示</button>
+                            <button type="button" onClick={() => void handleLightchainSignOut()} className="block w-full px-4 py-3 text-left text-neutral-500 transition hover:bg-neutral-100">ログアウト</button>
+                          </>
+                        )}
                       </div>
                     )}
                     </div>

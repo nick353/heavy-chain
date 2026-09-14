@@ -320,6 +320,24 @@ export const listWorkspaceArtifacts = (brandId: string, scopeId?: string): Works
   return [];
 };
 
+/**
+ * Activity pages may be opened by a user-scoped session while older provider
+ * saves were written under the brand-scoped key. Both keys are already
+ * partitioned by brand, so merge them for read-only activity/history views.
+ */
+export const listWorkspaceArtifactsForActivity = (brandId: string, scopeId?: string): WorkspaceArtifact[] => {
+  if (!scopeId?.trim()) return listWorkspaceArtifacts(brandId);
+  const scoped = listWorkspaceArtifacts(brandId, scopeId);
+  const brandScoped = listWorkspaceArtifacts(brandId);
+  const byId = new Map<string, WorkspaceArtifact>();
+  [...scoped, ...brandScoped].forEach((artifact) => {
+    if (!byId.has(artifact.id)) byId.set(artifact.id, artifact);
+  });
+  return [...byId.values()]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, MAX_ARTIFACTS_PER_BRAND);
+};
+
 export const findWorkspaceArtifactPersisted = (
   brandId: string,
   artifactId: string,
@@ -627,5 +645,10 @@ export const workspaceArtifactToGeneratedImage = (artifact: WorkspaceArtifact): 
 
 export const listWorkspaceGeneratedImages = (brandId: string, scopeId?: string): GeneratedImage[] => {
   return listWorkspaceArtifacts(brandId, scopeId)
+    .map(workspaceArtifactToGeneratedImage);
+};
+
+export const listWorkspaceGeneratedImagesForActivity = (brandId: string, scopeId?: string): GeneratedImage[] => {
+  return listWorkspaceArtifactsForActivity(brandId, scopeId)
     .map(workspaceArtifactToGeneratedImage);
 };
