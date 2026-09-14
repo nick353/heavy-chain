@@ -470,18 +470,21 @@ export function LightchainLibraryPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-70px)] bg-[#050708] text-white">
-      <div className="mx-auto flex max-w-[1480px] gap-6 px-5 py-8 sm:px-8 lg:px-10">
-        <aside className={`${darkPanel} hidden w-64 shrink-0 p-3 lg:block`}>
-          <div className="px-3 py-3 text-xs font-semibold tracking-[0.2em] text-neutral-400">LIBRARY</div>
+    <div className="min-h-[calc(100vh-70px)] bg-[#222627] text-white">
+      <div className="flex min-h-[calc(100vh-70px)] w-full gap-0">
+        <aside className="hidden w-[312px] shrink-0 border-r border-white/10 bg-[#262b2c] p-4 lg:block">
+          <div className="flex items-center justify-between px-0 py-2 text-lg font-semibold text-neutral-100">
+            <span>ライブラリー</span>
+            <button type="button" aria-label="ライブラリーを検索" className="rounded-full p-2 text-neutral-200 hover:bg-white/10">⌕</button>
+          </div>
           {allGroups.map((group) => (
-            <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAssetId(null); setSelectedIds(new Set()); }} className={`flex w-full items-center rounded-xl px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-400 hover:bg-white/[0.06] hover:text-white'}`}>
+            <button key={group} type="button" onClick={() => { setActiveGroup(group); setSelectedAssetId(null); setSelectedIds(new Set()); }} className={`flex w-full items-center rounded-lg px-3 py-3 text-left text-sm transition ${activeGroup === group ? 'bg-white text-neutral-950' : 'text-neutral-300 hover:bg-white/[0.06] hover:text-white'}`}>
               <FolderOpen className="mr-2 h-4 w-4" />{group}
             </button>
           ))}
         </aside>
 
-        <main className="min-w-0 flex-1">
+        <main className="min-w-0 flex-1 px-4 py-4 sm:px-5">
           <nav aria-label="パンくずナビゲーション" className="mb-5 flex items-center gap-2 text-xs text-neutral-500">
             <span>マイライブラリー</span>
             <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -527,14 +530,14 @@ export function LightchainLibraryPage() {
               <button type="button" className="mt-4 rounded-lg bg-cyan-200 px-3 py-2 text-xs font-semibold text-neutral-950" onClick={() => uploadInputRef.current?.click()}>最初の素材を追加</button>
             </div>
           ) : (
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
               {visibleArtifacts.map((card) => (
-                <article key={card.kind === 'local' ? card.artifact.id : card.asset.id} className={`overflow-hidden rounded-2xl border bg-[#151a1c] ${selectedAssetId === (card.kind === 'local' ? card.artifact.id : card.asset.id) || selectedIds.has(getCardId(card)) ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>
+                <article key={card.kind === 'local' ? card.artifact.id : card.asset.id} className={`overflow-hidden rounded-lg border bg-[#151a1c] ${selectedAssetId === (card.kind === 'local' ? card.artifact.id : card.asset.id) || selectedIds.has(getCardId(card)) ? 'border-cyan-200 ring-1 ring-cyan-200/50' : 'border-white/10'}`}>
                   {selectMode && <button type="button" className="w-full border-b border-white/10 px-3 py-2 text-left text-xs text-neutral-300" onClick={() => toggleSelected(getCardId(card))} aria-pressed={selectedIds.has(getCardId(card))}>{selectedIds.has(getCardId(card)) ? '✓ 選択中' : '選択'}</button>}
-                  <button type="button" className="flex h-44 w-full items-center justify-center bg-[radial-gradient(circle_at_35%_35%,rgba(103,232,249,0.22),transparent_24%),linear-gradient(135deg,#263438,#111719)]" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)} aria-label={`${cardTitle(card)}を選択`}>
+                  <button type="button" className="flex h-64 w-full items-center justify-center bg-[radial-gradient(circle_at_35%_35%,rgba(103,232,249,0.22),transparent_24%),linear-gradient(135deg,#263438,#111719)]" onClick={() => setSelectedAssetId(card.kind === 'local' ? card.artifact.id : card.asset.id)} aria-label={`${cardTitle(card)}を選択`}>
                     {cardImageUrl(card) ? <img src={cardImageUrl(card)} alt="" className="h-full w-full object-cover" loading="lazy" /> : <ImageIcon className="h-10 w-10 text-cyan-100/60" />}
                   </button>
-                  <div className="p-4">
+                  <div className="p-2.5">
                     <p className="truncate text-sm font-medium">{cardTitle(card)}</p>
                     <p className="mt-1 truncate text-xs text-neutral-500">{cardFeatureType(card)}</p>
                     <div className="mt-3 flex gap-2">
