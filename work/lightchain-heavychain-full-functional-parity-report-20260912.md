@@ -3656,6 +3656,13 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Fitting history readbackは12/12 PASS。persisted provider／local previewからの再構築、Library参照、reload recovery、Canvas resumeを確認した。
 - いずれも外部providerの新規送信やLight本番操作ではないため、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
 
+## 2026-09-14 Heavy Canvas保存・復旧回帰
+
+- Canvas save recoveryは23/23 PASS。lost response時のGET-only reconciliation、POST/PATCH再送禁止、foreign scope／owner／revision拒否、実browser transportを確認した。
+- Local upload persistenceは11/11 PASS。IndexedDB参照、revision保持、session-only fallback、保存前source blob書き込みを確認した。
+- View persistenceは5/5 PASS。zoom clamp、remote load／verified save readback、dirty tracking、scope-bound recoveryを確認した。
+- 外部provider送信やLight本番操作は行っていないため、provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
 ## 2026-09-14 Heavy activity／handoff／source metadata回帰
 
 - Workspace activity routingは13/13 PASS。Jobs／Historyのartifact metadata展開、Cloudflare fallback、認証失敗の限定retry、resume導線を確認した。
