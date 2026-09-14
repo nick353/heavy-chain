@@ -4464,3 +4464,12 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - deploy後HeavyをCompanionの同一ログイン済みタブで10秒待機し、外枠`564x64 (x=128,y=134)`、文言領域`508x48`、閉じる操作`24x24`、比率`202x42 (x=128,y=810)`、生成`288x40 (x=404,y=812)`をfresh DOMで確認した。
 - typecheck、lint、関連route tests 17/17、build（2550 modules）はPASS。スクリーンショットでも主要カード・右プレビュー・タブ・下部操作を確認した。upload、生成、外部AI送信、権利確認操作は行っていない。
 - 生成後状態の完全pixel-level比較、provider receipt／source sync／reconciliation／cleanup、logout→login回帰、残りの全画面・全導線は未完了。
+
+## 2026-09-15 Light／Heavy `/tools/printing` 未生成レイアウトparity修正・postdeploy readback
+
+- Light本番を同一Companionセッションで確認し、左パネル内が縦方向の参考画像カード、プリント範囲、プリント画像カード、下部AI生成操作の構成であることを実測した。Heavyは旧実装で2列の生ファイル入力を表示し、右動画も過大表示だった。
+- `src/pages/LightchainParityPages.tsx`を修正し、参考画像カードを縦配置`564x280`、プリント画像入力を`120x120`、AI生成を左下固定`288x40`へ統一した。左パネルを`596x802`、右パネルを`1158x802`、動画を`605x340`へ揃えた。アップロード・生成・保存のロジックは維持し、権利確認や外部送信のゲートは変更していない。
+- `87a09c9`をpushし、Zeabur deployment `6aa885389f9bd1aa61482f98`が`RUNNING`であることを確認した。
+- deploy後HeavyをCompanionの同一ログイン済みタブで10秒待機し、fresh DOM／screenshotを取得した。左パネル`596x802`、告知`564x64 (x=128,y=134)`、参考画像カード`564x280 (x=128,y=216)`、AI生成`288x40 (x=404,y=812)`、右パネル`1158x802 (x=724,y=66)`、動画`605x340`を確認した。
+- typecheck、lint、関連route tests 19/19、build（2550 modules）はPASS。upload、生成、外部AI送信、権利確認操作は行っていない。
+- `/tools/printing`の入力後・生成後状態、実成果物のprovider receipt／source sync／reconciliation／cleanup、logout→login回帰、残りの全画面・全導線は未完了。

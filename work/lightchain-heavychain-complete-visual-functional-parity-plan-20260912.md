@@ -2364,3 +2364,15 @@ Summary: `output/playwright/lightchain-all-feature-workflows-20260914T011140Z-Gf
 - [ ] 生成後状態・全画面pixel-level一致、provider receipt／source sync／reconciliation／cleanup、logout→login回帰
 
 判定: `/tools/fabric`未選択状態の告知バナー・下部操作geometryはPASS。入力後・生成後および計画全体の完了条件は未達のためGoalは継続。
+
+### 2026-09-15 Light／Heavy `/tools/printing` 未生成レイアウトparity
+
+- [x] Light本番の参考画像・プリント範囲・プリント画像入力・AI生成・右動画をCompanionで実測
+- [x] Heavyの2列生ファイル入力をLightの縦配置カードへ修正
+- [x] 左パネル`596x802`、参考画像カード`564x280`、プリント画像カード`120x120`、AI生成`288x40`、右動画`605x340`へ調整
+- [x] typecheck、lint、関連route tests 19/19、build、pushを確認
+- [x] Zeabur deployment `6aa885389f9bd1aa61482f98`の`RUNNING`を確認し、Companion同一ログイン済みタブでfresh DOM／screenshotを取得
+- [x] Heavy主要矩形がLightと一致することを確認
+- [ ] `/tools/printing`入力後・生成後、provider receipt／source sync／reconciliation／cleanup、logout→login回帰、全画面parity
+
+判定: `/tools/printing`未生成状態の主要レイアウトはPASS。入力後・生成後および計画全体の完了条件は未達のためGoalは継続。
