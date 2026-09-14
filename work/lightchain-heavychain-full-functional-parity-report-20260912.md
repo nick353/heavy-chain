@@ -3714,3 +3714,11 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - Canvas partial editは15/15 PASS。可逆PNG mask、protected-edit経路、SVG rasterize、4候補batch、部分成功の配置、private readback、親Canvas lineageを確認した。
 - Image API input normalizationは1/1 PASS。SVG/XML入力のrasterize fallbackを確認した。
 - 外部providerの新規送信やLight本番操作は行っていないため、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
+
+## 2026-09-14 Heavy生成前・artifact identity回帰
+
+- Pre-source gateは5/5 PASS。snapshotの保存1回、reload／hash、changed write拒否、cross-run／selector drift／external-effect snapshot拒否を確認した。
+- Generated image identityは8/8 PASS。remote／local fallbackのcanonical identity、signed URL rotationでの重複防止、同一job内画像の分離を確認した。
+- Print input artifacts runtimeは6/6 PASS。6 transformed layersのscope復元、失敗時の旧bytes保持、foreign参照拒否、manual planeのBlob永続化を確認した。
+- Asset-anchored previewは6/6 PASS。source／secondary material保持、presentation filter分離、非画像fail-closed、実result表示を確認した。
+- いずれも外部provider送信やLight本番操作ではないため、実provider receipt、source sync、reconciliation、pixel-level parity、logout→login回帰は未完了。
