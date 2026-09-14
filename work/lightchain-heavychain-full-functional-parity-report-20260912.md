@@ -4159,3 +4159,10 @@ Light Chainの4カテゴリ、カード順、表示名、ケースタブ、wide 
 - 新規のtask-owned Lightタブで`https://jp.linkaigc.com/asset-center`へ直接到達し、遅延ロード後に`ライブラリー`、`マイライブラリー`、`履歴アップロード`、`生成履歴`、`ウェアデザインラボ生成結果`、`2026AW`、`新規格`、`ノイズバリュー用ホリゾンカラー`、`ライブラリー`、`一括操作`、多数の`画像／動画`カード、各カードの`プレビュー`／`ボードにコピー`を確認した。
 - `生成履歴`を1回選択し、画面のtext hash変化とvisual readback verifiedを確認した。`2026AW`は同名の外側コンテナと実ボタンが同時に見えるsemantic locator ambiguityがあり、dispatch 0で停止した後、`button`要素へ絞り込んで1回だけ選択し、text hash変化とvisual readback verifiedを確認した。再送や削除操作は行っていない。
 - これはLightライブラリーのカテゴリ表示・カード操作UIのfresh evidenceであり、Heavy側の認証済み画面とのpixel-level一致、カードの詳細／コピー／ダウンロード／削除の成果物確認、provider receipt、source sync／reconciliation／cleanup、logout→login回帰完了の証拠ではない。権利確認・外部AI送信・生成・uploadは行っていない。
+
+## 2026-09-15 Heavyライブラリーパンくずparity修正・デプロイ後readback
+
+- Lightの`/asset-center`で確認した`マイライブラリー > [選択中グループ]`のパンくず表示を、Heavyの実ルート`src/pages/LightchainLibraryPage.tsx`へ追加した。既存の一括操作、プレビュー、ボードコピー、詳細、Canvas／各ツールへのhandoffは変更していない。
+- `e9e1731`をGitHub `main`へpushし、Git連携deployment `6aa83374a6ec7d5555ae4e9a`（commit一致、Docker、`RUNNING`）を確認した。ビルドログは`build completed`で、`/asset-center`のHTTP到達も200だった。
+- デプロイ後のHeavy task-ownedタブをCompanionでfresh readbackしたが、`ログイン状態を確認しています`と`ログイン`が残り、認証済みライブラリー画面には到達しなかった。したがってパンくずのHeavy本番visual readbackは`waiting_human／UNVERIFIED`である。
+- provider receipt、source sync、reconciliation、cleanup、logout→login回帰は今回対象外であり、実生成・upload・外部AI送信・権利確認操作は行っていない。
