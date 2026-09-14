@@ -5161,14 +5161,14 @@ export function LightchainWorkbenchPage() {
                   }}
                   data-testid="lightchain-marketing-project-name-input"
                   aria-label="プロジェクト名"
-                  className="min-w-0 flex-1 rounded-sm border-0 bg-transparent p-0 text-base font-medium text-neutral-200 outline-none"
+                  className="h-[29px] min-w-0 flex-1 rounded-sm border-0 bg-transparent p-0 text-base font-medium text-neutral-200 outline-none"
                 />
               ) : (
                 <button
                   type="button"
                   onClick={() => setMarketingProjectNameEditing(true)}
                   data-testid="lightchain-marketing-project-name"
-                  className="min-w-0 flex-1 rounded-sm border-0 bg-transparent p-0 text-left text-base font-medium text-neutral-200 transition hover:bg-white/5"
+                  className="h-[29px] min-w-0 flex-1 rounded-sm border-0 bg-transparent p-0 text-left text-base font-medium text-neutral-200 transition hover:bg-white/5"
                 >
                   {marketingProjectName}
                 </button>
